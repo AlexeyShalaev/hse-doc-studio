@@ -123,7 +123,7 @@ jobs:
 
       - name: Save image
         run: docker save -o image.tar "$IMAGE:$CI_TAG"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hse-studio-image
           path: image.tar
