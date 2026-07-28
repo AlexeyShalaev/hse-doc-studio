@@ -136,7 +136,8 @@
     "genericMessage": "The application couldn't open this screen.",
     "back": "Back",
     "home": "Home",
-    "reload": "Reload"
+    "reload": "Reload",
+    "report": "Report an issue"
   },
   "wizardPage": {
     "createTitle": "New project",
