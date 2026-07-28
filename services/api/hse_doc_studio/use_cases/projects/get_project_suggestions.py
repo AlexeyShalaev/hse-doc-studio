@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 
@@ -33,8 +34,11 @@ class GetProjectSuggestionsUC:
     can reuse a common location) and every distinct author (ranked by how often
     they appear — so co-authors autocomplete)."""
 
-    def __init__(self, list_projects: ListProjectsUC) -> None:
+    def __init__(self, list_projects: ListProjectsUC, default_projects_dir: Path) -> None:
         self._list_projects = list_projects
+        # `<data_dir>/projects` — создаётся приложением на старте, чтобы у
+        # свежей установки сразу было готовое место под работы.
+        self._default_projects_dir = default_projects_dir
 
     async def execute(self) -> ProjectSuggestionsOutput:
         projects = (await self._list_projects.execute()).projects
@@ -45,6 +49,12 @@ class GetProjectSuggestionsUC:
         folder_roots = [
             FolderRootSuggestion(path=path, count=count) for path, count in folder_counts.most_common(_MAX_FOLDER_ROOTS)
         ]
+
+        # Дефолтный корень в конце: привычные пользователю места (по числу
+        # проектов) важнее, но у пустой установки должен быть хотя бы один чип.
+        default = self._default_projects_dir
+        if default.is_dir() and str(default) not in {r.path for r in folder_roots}:
+            folder_roots.append(FolderRootSuggestion(path=str(default), count=0))
 
         # Distinct authors (by name + group), ranked by frequency across all
         # projects. Blank names (draft/system rows) are dropped.

@@ -125,6 +125,17 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         app.state.adopt_fonts_task = asyncio.create_task(_adopt())
 
     @app.on_event("startup")
+    async def _ensure_projects_dir() -> None:
+        # `<data>/projects` — готовое место под работы: мастер создания проекта
+        # предлагает его чипом, даже когда проектов ещё нет. В setup-режиме
+        # каталог данных не смонтирован — молча пропускаем, после мастера
+        # контейнер пересоздаётся и этот старт выполнится заново.
+        try:
+            (settings.data_dir.expanduser() / "projects").mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.info("projects dir not created", error=str(exc))
+
+    @app.on_event("startup")
     async def _sync_local_ai_provider() -> None:
         # Нативная Ollama могла работать ещё ДО установки приложения — тогда ни
         # pull, ни «Запустить» в настройках не происходят, и авто-управляемый
