@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.1.1",
+      "date": "2026-07-28",
+      "notes": [
+        {
+          "ru": "Установка одной командой работает и в стандартном Windows PowerShell 5.1",
+          "en": "The one-command install now also works in stock Windows PowerShell 5.1"
+        },
+        {
+          "ru": "Скрипты установки говорят по-английски, а с флагом HSE_STUDIO_LANG=ru — по-русски; документация подставляет флаг сама по языку страницы",
+          "en": "Install scripts speak English by default and Russian with HSE_STUDIO_LANG=ru; the docs pick the flag to match the page language"
+        },
+        {
+          "ru": "Запущенная локальная Ollama сама подключается как провайдер — вручную создавать его больше не нужно; в настройках появилось предложение подключить одним нажатием",
+          "en": "A running local Ollama now registers itself as a provider — no more manual setup; the settings offer a one-click connect as well"
+        },
+        {
+          "ru": "Все инструменты ИИ-агента переведены в меню выбора: чтение PDF, версии, проекты, вопрос пользователю",
+          "en": "Every AI-agent tool is now translated in the tools menu: PDF reading, versions, projects, ask-the-user"
+        },
+        {
+          "ru": "В папке данных появляется готовый каталог projects — мастер создания проекта сразу предлагает его как место для работ",
+          "en": "The data folder now ships with a ready-made projects directory — the project wizard suggests it right away"
+        }
+      ]
+    },
+    {
       "version": "0.1.0",
       "date": "2026-07-28",
       "notes": [
