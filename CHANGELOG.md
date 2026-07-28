@@ -6,14 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.1.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.1...v0.1.2) (2026-07-28)
+## [0.1.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.1...v0.1.2) - 2026-07-28
 
-
-### Bug Fixes
-
-* **app:** единственный экземпляр react-router — ответ агента больше не роняет экран ([674f532](https://github.com/AlexeyShalaev/hse-doc-studio/commit/674f5324f16c9740d4196003c953abdeddae5158))
-* **app:** кнопка «Сообщить о проблеме» на экране ошибки — готовая issue со стеком и окружением ([d91d6fc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d91d6fcccf6d887472427bdc7b10d5bb71af76c9))
-* агент больше не роняет экран, на ошибке — кнопка репорта ([308f0e1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/308f0e172237930af567fbb5607245aae6f6e2b0))
+- Fixed the app-error crash on the AI agent's very first reply (a duplicate router instance after a dependency update)
+- The error screen now has a “Report an issue” button: it opens GitHub with the error, stack trace and version pre-filled — just add what you were doing
 
 ## [0.1.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.0...v0.1.1) - 2026-07-28
 
