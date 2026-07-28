@@ -83,7 +83,10 @@
 }
 
 /* ── ② Кнопки ───────────────────────────────────────────────── */
-.hds-btn {
+/* Селектор a.hds-btn, а не .hds-btn: кнопки встречаются и внутри прозы
+   (.md-typeset), где правила ссылок той же специфичности перекрашивали текст
+   в синий по синему; файл 05 грузится после 02 — при равенстве побеждаем. */
+a.hds-btn {
   display: inline-block;
   font: 600 var(--hds-fs-ui) / 1 var(--hds-sans);
   padding: 0.8rem 1.35rem;
@@ -95,26 +98,26 @@
   transition: transform var(--hds-t) var(--hds-e-out), background var(--hds-t) var(--hds-e-out);
 }
 
-.hds-btn:hover,
-.hds-btn:focus-visible {
+a.hds-btn:hover,
+a.hds-btn:focus-visible {
   background: var(--hds-accent-hover);
   border-color: var(--hds-accent-hover);
   color: var(--hds-paper);
   transform: translateY(-1px);
 }
 
-[data-md-color-scheme="slate"] .hds-btn {
+[data-md-color-scheme="slate"] a.hds-btn {
   color: #fff;
 }
 
-.hds-btn--ghost {
+a.hds-btn--ghost {
   background: transparent;
   color: var(--hds-accent-ink);
   border-color: var(--hds-rule-2);
 }
 
-.hds-btn--ghost:hover,
-.hds-btn--ghost:focus-visible {
+a.hds-btn--ghost:hover,
+a.hds-btn--ghost:focus-visible {
   background: var(--hds-accent-soft);
   border-color: var(--hds-accent);
   color: var(--hds-accent-ink);
