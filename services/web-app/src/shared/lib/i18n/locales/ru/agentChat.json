@@ -102,7 +102,19 @@
     "setTheme": "Тема оформления",
     "setEngine": "Движок сборки",
     "setLanguage": "Язык проекта",
-    "setProjectMeta": "Метаданные проекта"
+    "setProjectMeta": "Метаданные проекта",
+    "groupVersions": "Версии",
+    "groupProjects": "Проекты",
+    "readPdf": "Чтение PDF",
+    "askUser": "Вопрос пользователю",
+    "vcsStatus": "Статус изменений",
+    "vcsListHistory": "История версий",
+    "vcsDiff": "Сравнение версий",
+    "vcsSaveSnapshot": "Сохранение версии",
+    "vcsRestore": "Откат к версии",
+    "createProject": "Создание проекта",
+    "listProjects": "Список проектов",
+    "listTemplates": "Список шаблонов"
   },
   "model": {
     "trigger": "Модель",

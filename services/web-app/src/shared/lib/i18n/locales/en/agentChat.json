@@ -100,7 +100,19 @@
     "setTheme": "Theme",
     "setEngine": "Build engine",
     "setLanguage": "Project language",
-    "setProjectMeta": "Project metadata"
+    "setProjectMeta": "Project metadata",
+    "groupVersions": "Versions",
+    "groupProjects": "Projects",
+    "readPdf": "Read PDF",
+    "askUser": "Ask the user",
+    "vcsStatus": "Version status",
+    "vcsListHistory": "Version history",
+    "vcsDiff": "Version diff",
+    "vcsSaveSnapshot": "Save a version",
+    "vcsRestore": "Restore a version",
+    "createProject": "Create a project",
+    "listProjects": "List projects",
+    "listTemplates": "List templates"
   },
   "model": {
     "trigger": "Model",
