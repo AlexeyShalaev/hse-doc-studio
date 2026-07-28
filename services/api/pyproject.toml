@@ -1,6 +1,6 @@
 [project]
 name = "hse-doc-studio"
-version = "0.1.2" # x-release-please-version
+version = "0.1.3" # x-release-please-version
 description = "hse-doc-studio Service (REST API)"
 authors = [{ name = "Alexey Shalaev", email = "shalaevad.alexey@gmail.com" }]
 requires-python = ">=3.12"

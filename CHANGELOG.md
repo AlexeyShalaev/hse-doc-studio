@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.1.3](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.2...v0.1.3) - 2026-07-28
+
+- The AI agent now works with any local model: if a model lacks tool support (e.g. phi3.5), it switches to a text protocol and keeps answering
+- Agent errors are no longer lost — the failure reason shows up right in the chat
+- Terminal updates: the update.sh and update.ps1 scripts run the same updater as the Update button — settings preserved, automatic rollback on failure
+- Docs site polish: the banner always announces the current release; fixed the What's-new link, tab underline and buttons
+
 ## [0.1.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.1...v0.1.2) - 2026-07-28
 
 - Fixed the app-error crash on the AI agent's very first reply (a duplicate router instance after a dependency update)
