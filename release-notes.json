@@ -1,6 +1,20 @@
 {
   "releases": [
     {
+      "version": "0.1.2",
+      "date": "2026-07-28",
+      "notes": [
+        {
+          "ru": "Исправлено падение экрана «Ошибка приложения» при первом же ответе ИИ-агента (двойной экземпляр маршрутизатора после обновления зависимостей)",
+          "en": "Fixed the app-error crash on the AI agent's very first reply (a duplicate router instance after a dependency update)"
+        },
+        {
+          "ru": "На экране ошибки появилась кнопка «Сообщить о проблеме»: открывает GitHub с уже заполненной ошибкой, стеком и версией — останется дописать, что вы делали",
+          "en": "The error screen now has a “Report an issue” button: it opens GitHub with the error, stack trace and version pre-filled — just add what you were doing"
+        }
+      ]
+    },
+    {
       "version": "0.1.1",
       "date": "2026-07-28",
       "notes": [
