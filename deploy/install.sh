@@ -27,12 +27,21 @@ PORT_ATTEMPTS=10
 HEALTH_TIMEOUT=120
 HEALTH_POLL=2
 
+# Язык сообщений: HSE_STUDIO_LANG=ru — русский, всё остальное (и умолчание) —
+# английский. Документация подставляет флаг сама по языку открытой страницы.
+case "${HSE_STUDIO_LANG:-en}" in
+    ru | RU | ru_* | ru-*) LANG_RU=1 ;;
+    *) LANG_RU=0 ;;
+esac
+
 OS="$(uname -s)"
 HTTP_TOOL=""
 
 say() { printf '%s\n' "$*"; }
+# loc "по-русски" "in English" — выбор строки по HSE_STUDIO_LANG.
+loc() { if [ "$LANG_RU" = 1 ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 die() {
-    printf 'ошибка: %s\n' "$*" >&2
+    printf '%s: %s\n' "$(loc 'ошибка' 'error')" "$*" >&2
     exit 1
 }
 
@@ -41,9 +50,11 @@ die() {
 check_docker() {
     if ! command -v docker >/dev/null 2>&1; then
         if [ "$OS" = "Darwin" ]; then
-            die "не найден docker. Поставьте Docker Desktop: https://www.docker.com/products/docker-desktop/"
+            die "$(loc 'не найден docker. Поставьте Docker Desktop: https://www.docker.com/products/docker-desktop/' \
+                'docker not found. Install Docker Desktop: https://www.docker.com/products/docker-desktop/')"
         fi
-        die "не найден docker. Поставьте Docker Engine: https://docs.docker.com/engine/install/"
+        die "$(loc 'не найден docker. Поставьте Docker Engine: https://docs.docker.com/engine/install/' \
+            'docker not found. Install Docker Engine: https://docs.docker.com/engine/install/')"
     fi
 
     # `docker info` вместо `docker version`: второй отвечает и без демона —
@@ -53,16 +64,21 @@ check_docker() {
     fi
     case "$_err" in
         *"permission denied"*)
-            die "нет доступа к докеру от текущего пользователя.
+            die "$(loc 'нет доступа к докеру от текущего пользователя.
   Добавьте себя в группу docker и перелогиньтесь:
-    sudo usermod -aG docker \$USER"
+    sudo usermod -aG docker $USER' \
+                "no access to docker for the current user.
+  Add yourself to the docker group and re-login:
+    sudo usermod -aG docker \$USER")"
             ;;
     esac
     if [ "$OS" = "Darwin" ]; then
-        die "демон докера не отвечает — запустите Docker Desktop и повторите.
+        die "$(loc 'демон докера не отвечает — запустите Docker Desktop и повторите.' \
+            'the docker daemon is not responding — start Docker Desktop and retry.')
 $_err"
     fi
-    die "демон докера не отвечает — запустите его (sudo systemctl start docker) и повторите.
+    die "$(loc 'демон докера не отвечает — запустите его (sudo systemctl start docker) и повторите.' \
+        'the docker daemon is not responding — start it (sudo systemctl start docker) and retry.')
 $_err"
 }
 
@@ -160,22 +176,30 @@ open_browser() {
 finish() {
     _url="http://localhost:$1"
     if [ -z "$HTTP_TOOL" ]; then
-        say "ни curl, ни wget не найдены — проверить готовность нечем, открываю адрес как есть."
+        say "$(loc 'ни curl, ни wget не найдены — проверить готовность нечем, открываю адрес как есть.' \
+            'neither curl nor wget found — cannot check readiness, opening the address as is.')"
     elif wait_healthy "$1"; then
-        say "приложение отвечает."
+        say "$(loc 'приложение отвечает.' 'the app is responding.')"
     else
-        say "приложение не ответило за ${HEALTH_TIMEOUT}с. Посмотрите логи: docker logs $NAME"
+        say "$(loc "приложение не ответило за ${HEALTH_TIMEOUT}с. Посмотрите логи: docker logs $NAME" \
+            "the app did not respond within ${HEALTH_TIMEOUT}s. Check the logs: docker logs $NAME")"
     fi
-    open_browser "$_url" || say "браузер открыть нечем — откройте адрес вручную."
+    open_browser "$_url" || say "$(loc 'браузер открыть нечем — откройте адрес вручную.' \
+        'no way to open a browser — open the address manually.')"
     say ""
     say "  $_url"
     say ""
-    say "При первом запуске приложение спросит папку для ваших файлов и перезапустится"
-    say "само — вкладку можно не закрывать, она дождётся."
+    say "$(loc 'При первом запуске приложение спросит папку для ваших файлов и перезапустится
+само — вкладку можно не закрывать, она дождётся.' \
+        'On first launch the app will ask for a folder for your files and restart
+itself — keep the tab open, it will wait.')"
     say ""
-    say "  логи:       docker logs -f $NAME"
-    say "  остановить: docker stop $NAME"
-    say "  удалить:    docker rm -f $NAME"
+    say "$(loc "  логи:       docker logs -f $NAME
+  остановить: docker stop $NAME
+  удалить:    docker rm -f $NAME" \
+        "  logs:    docker logs -f $NAME
+  stop:    docker stop $NAME
+  remove:  docker rm -f $NAME")"
 }
 
 # ── Сценарий ────────────────────────────────────────────────────────────────
@@ -186,10 +210,14 @@ pick_http_tool
 if [ ! -e "$DOCKER_SOCK" ]; then
     # Смонтировать несуществующий путь докер не откажется — он молча создаст
     # каталог, и приложение получит вместо сокета пустую папку.
-    die "не найден docker-сокет $DOCKER_SOCK.
+    die "$(loc "не найден docker-сокет $DOCKER_SOCK.
   Docker Desktop: включите «Allow the default Docker socket to be used» в настройках.
   Colima/Rancher: укажите свой путь, например
-    DOCKER_SOCK=\$HOME/.colima/default/docker.sock sh install.sh"
+    DOCKER_SOCK=\$HOME/.colima/default/docker.sock sh install.sh" \
+        "docker socket $DOCKER_SOCK not found.
+  Docker Desktop: enable \"Allow the default Docker socket to be used\" in settings.
+  Colima/Rancher: point to your own path, e.g.
+    DOCKER_SOCK=\$HOME/.colima/default/docker.sock sh install.sh")"
 fi
 
 # Уже установлено — не пересоздаём молча: у существующего контейнера может быть
@@ -197,27 +225,32 @@ fi
 # скрипта было бы худшим, что этот скрипт умеет.
 if docker inspect "$NAME" >/dev/null 2>&1; then
     if [ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null)" = "true" ]; then
-        say "контейнер $NAME уже запущен."
+        say "$(loc "контейнер $NAME уже запущен." "container $NAME is already running.")"
     else
-        say "контейнер $NAME существует, но остановлен — запускаю."
+        say "$(loc "контейнер $NAME существует, но остановлен — запускаю." \
+            "container $NAME exists but is stopped — starting it.")"
         docker start "$NAME" >/dev/null
     fi
     RUNNING_PORT="$(published_port)"
     if [ -z "$RUNNING_PORT" ]; then
-        die "контейнер $NAME запущен без публикации порта — снаружи он недоступен.
-  Пересоздайте его: docker rm -f $NAME && повторите этот скрипт."
+        die "$(loc "контейнер $NAME запущен без публикации порта — снаружи он недоступен.
+  Пересоздайте его: docker rm -f $NAME && повторите этот скрипт." \
+            "container $NAME runs without a published port — it is unreachable from outside.
+  Recreate it: docker rm -f $NAME && re-run this script.")"
     fi
-    say "чтобы поставить заново с нуля: docker rm -f $NAME, затем повторите скрипт."
+    say "$(loc "чтобы поставить заново с нуля: docker rm -f $NAME, затем повторите скрипт." \
+        "to reinstall from scratch: docker rm -f $NAME, then re-run the script.")"
     finish "$RUNNING_PORT"
     exit 0
 fi
 
-say "скачиваю образ $IMAGE"
+say "$(loc "скачиваю образ $IMAGE" "pulling image $IMAGE")"
 if ! PULL_ERR="$(docker pull "$IMAGE" 2>&1 >/dev/null)"; then
     if docker image inspect "$IMAGE" >/dev/null 2>&1; then
-        say "обновить образ не удалось, запускаю уже скачанный."
+        say "$(loc 'обновить образ не удалось, запускаю уже скачанный.' \
+            'could not update the image, starting the one already downloaded.')"
     else
-        die "не удалось скачать образ $IMAGE:
+        die "$(loc "не удалось скачать образ $IMAGE:" "failed to pull image $IMAGE:")
 $PULL_ERR"
     fi
 fi
@@ -246,18 +279,20 @@ while :; do
         *"address already in use"* | *"port is already allocated"* | *"Ports are not available"*)
             ATTEMPT=$((ATTEMPT + 1))
             if [ "$ATTEMPT" -gt "$PORT_ATTEMPTS" ]; then
-                die "порты с $FIRST_PORT по $PORT_NOW заняты. Освободите один или задайте свой:
-    PORT=18500 sh install.sh"
+                die "$(loc "порты с $FIRST_PORT по $PORT_NOW заняты. Освободите один или задайте свой:
+    PORT=18500 sh install.sh" \
+                    "ports $FIRST_PORT through $PORT_NOW are taken. Free one or set your own:
+    PORT=18500 sh install.sh")"
             fi
             PORT_NOW=$((PORT_NOW + 1))
-            say "порт занят, пробую $PORT_NOW"
+            say "$(loc "порт занят, пробую $PORT_NOW" "port taken, trying $PORT_NOW")"
             ;;
         *)
-            die "docker run не смог запустить контейнер:
+            die "$(loc 'docker run не смог запустить контейнер:' 'docker run failed to start the container:')
 $RUN_ERR"
             ;;
     esac
 done
 
-say "контейнер $NAME запущен на порту $PORT_NOW."
+say "$(loc "контейнер $NAME запущен на порту $PORT_NOW." "container $NAME is running on port $PORT_NOW.")"
 finish "$PORT_NOW"

@@ -1,0 +1,1 @@
+$env:HSE_STUDIO_LANG='ru'; irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex
