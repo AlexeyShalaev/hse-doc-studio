@@ -1,7 +1,11 @@
-import { AlertTriangle, ArrowLeft, Home, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bug, Home, RotateCcw } from "lucide-react";
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@shared/lib";
+
+const REPO_URL = "https://github.com/AlexeyShalaev/hse-doc-studio";
+// GitHub обрезает слишком длинные prefill-URL — стек ограничиваем заранее.
+const STACK_LIMIT = 1600;
 
 type ErrorPageProps = {
   status?: number;
@@ -72,6 +76,35 @@ const getErrorMeta = (
     title: copy.title,
     message: fallbackMessage ?? copy.message,
   };
+};
+
+// Готовая issue на GitHub: заголовок и тело с ошибкой, стеком и окружением уже
+// заполнены — пользователю остаётся дописать, что он делал, и нажать Submit.
+const buildIssueUrl = (meta: ErrorMeta, error: unknown): string => {
+  const stack =
+    error instanceof Error && error.stack
+      ? error.stack.slice(0, STACK_LIMIT)
+      : "";
+  const title = `[bug] ${meta.status}: ${(meta.detail ?? meta.title).slice(0, 120)}`;
+  const body = [
+    "**What happened**",
+    "",
+    "<!-- Что вы делали, когда возникла ошибка? / What were you doing when it broke? -->",
+    "",
+    "**Error**",
+    "```",
+    `${meta.status}: ${meta.detail ?? meta.title}`,
+    ...(stack ? ["", stack] : []),
+    "```",
+    "",
+    "**Environment**",
+    "",
+    `- Route: \`${window.location.pathname}\``,
+    `- App: ${__APP_VERSION__}`,
+    `- Browser: ${navigator.userAgent}`,
+  ].join("\n");
+  const params = new URLSearchParams({ title, body, labels: "bug" });
+  return `${REPO_URL}/issues/new?${params.toString()}`;
 };
 
 export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
@@ -200,6 +233,20 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
             >
               <RotateCcw size={11} />
               {t("errorPage.reload")}
+            </button>
+            <button
+              type="button"
+              className="btn xs"
+              onClick={() => {
+                window.open(
+                  buildIssueUrl(meta, routeError),
+                  "_blank",
+                  "noopener",
+                );
+              }}
+            >
+              <Bug size={11} />
+              {t("errorPage.report")}
             </button>
           </div>
         </section>

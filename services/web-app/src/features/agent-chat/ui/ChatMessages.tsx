@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import remarkGfm from "remark-gfm";
 
 import { useDocuments } from "@entities/document";
