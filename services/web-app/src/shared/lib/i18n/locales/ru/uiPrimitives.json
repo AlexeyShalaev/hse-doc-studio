@@ -1,0 +1,26 @@
+{
+  "statusBadge": {
+    "draft": "Черновик",
+    "building": "Сборка",
+    "warn": "Предупреждения",
+    "err": "Ошибки",
+    "locked": "Заблокирован"
+  },
+  "combobox": {
+    "selectPlaceholder": "Выбрать…",
+    "searchPlaceholder": "Поиск…",
+    "emptyText": "Ничего не найдено"
+  },
+  "toaster": {
+    "close": "Закрыть"
+  },
+  "spinner": {
+    "loading": "Загрузка"
+  },
+  "modal": {
+    "close": "Закрыть"
+  },
+  "router": {
+    "notFoundMessage": "Проверьте адрес или вернитесь на главный экран."
+  }
+}

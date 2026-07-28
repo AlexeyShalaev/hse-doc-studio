@@ -1,0 +1,160 @@
+{
+  "brand": {
+    "name": "HSE Doc Studio",
+    "tagline": "A workshop for HSE coursework and theses: templates, PDF builds, compliance checks and checkpoint submissions.",
+    "version": "version {{version}}"
+  },
+  "folder": {
+    "title": "Where to keep your work",
+    "subtitle": "Pick a folder on your computer — it will hold your projects, settings and fonts. Nothing else needs configuring.",
+    "typeLabel": "or type the path yourself",
+    "relativeWarning": "An absolute path is required. Docker reads a relative one as a volume name and mounts an empty directory.",
+    "readOnly": "This folder is not writable — pick another one or create a new one inside your home folder.",
+    "hint": {
+      "windows": "A full path with a drive letter, e.g. C:/Users/ivan/hse-doc-studio. Forward and back slashes both work.",
+      "macos": "A full path from the root, e.g. /Users/ivan/hse-doc-studio.",
+      "linux": "A full path from the root, e.g. /home/ivan/hse-doc-studio."
+    },
+    "previousInstall": "This is a previous HSE Doc Studio data folder: projects and settings will be picked up, nothing gets erased."
+  },
+  "browser": {
+    "missing": {
+      "title": "No such folder",
+      "hint": "Check the spelling, or go back and pick one from the list. You can also create it here with the button below."
+    },
+    "failed": {
+      "not_shared": {
+        "title": "Docker cannot reach this drive",
+        "hint": "Add it under Docker Desktop → Settings → Resources → File sharing."
+      },
+      "permission": {
+        "title": "No permission for this drive",
+        "hint": "Docker cannot read it. Pick a folder inside your home directory."
+      },
+      "mount_rejected": {
+        "title": "Docker refused to open this folder",
+        "hint": "Check the path: it must be absolute and point at an existing drive."
+      },
+      "docker_unavailable": {
+        "title": "Docker is not responding",
+        "hint": "While it is unavailable the folder contents cannot be listed."
+      },
+      "timeout": {
+        "title": "The check timed out",
+        "hint": "Docker did not answer. Please try again."
+      },
+      "unknown": {
+        "title": "Could not look inside the folder",
+        "hint": "Nothing is known about this folder, so it cannot be chosen."
+      }
+    },
+    "noSubfolders": {
+      "title": "No subfolders here",
+      "hint": "You can use this folder as is, or create a new one inside it."
+    },
+    "noMatches": {
+      "title": "Nothing matches “{{query}}”",
+      "hint": "The filter only looks inside this folder. Go up a level or clear it."
+    },
+    "filesOnly": {
+      "title": "Only files matched",
+      "hint": "No folders here carry that name. Only a folder can be chosen."
+    },
+    "filter": "Filter by name",
+    "filterCount_one": "Filter by name — {{count}} item",
+    "filterCount_other": "Filter by name — {{count}} items",
+    "matched_one": "{{count}} match",
+    "matched_other": "{{count}} matches",
+    "clearFilter": "Clear the filter",
+    "moreFiles_one": "and {{count}} more file",
+    "moreFiles_other": "and {{count}} more files"
+  },
+  "apply": {
+    "useThis": "Use “{{name}}”",
+    "createAndUse": "Create “{{name}}” and continue",
+    "createHere": "Create a {{name}} folder",
+    "reconnect": "Reconnect “{{name}}”"
+  },
+  "machine": {
+    "launch": "Launch parameters",
+    "cores": "{{count}} cores",
+    "coresHint": "CPU cores available to containers — this is what document builds run on.",
+    "memoryHint": "Memory available to containers. On Docker Desktop this is the virtual machine's quota, not the whole computer.",
+    "free": "{{size}} free",
+    "freeHint": "Free space on the disk holding the chosen folder.",
+    "lowDiskHint": "Running low. The first build pulls the TeX Live image — several gigabytes.",
+    "image": "Image",
+    "port": "Port",
+    "notPublished": "not published",
+    "socket": "Docker socket",
+    "socketOn": "mounted",
+    "socketOff": "not mounted",
+    "group": "Socket group",
+    "restart": "Restart policy",
+    "folders": "Folders",
+    "noFolders": "none attached yet",
+    "fontsTitle": "System fonts",
+    "fontsFound": "{{count}}",
+    "fontsMissing": "not found",
+    "fontsHint": "This is where the app will take Times New Roman and the other document fonts from.",
+    "fontsMissingHint": "None of the standard locations matched. Enter the path if your fonts live elsewhere.",
+    "fontsEdit": "Change",
+    "fontsCancel": "Cancel",
+    "fontsPlaceholder": "C:/Windows/Fonts",
+    "texTitle": "LaTeX engine",
+    "texPresent": "downloaded",
+    "texAbsent": "not downloaded, ~5 GB",
+    "texPrefetch": "Download right after setup — the first build won't have to wait"
+  },
+  "restarting": {
+    "title": "Setting the app up",
+    "hint": "This usually takes under a minute. No need to refresh — the page will do it itself.",
+    "steps": {
+      "saved": "Folder chosen",
+      "recreating": "Recreating the app with this folder",
+      "waiting": "Waiting for it to come back"
+    }
+  },
+  "docker": {
+    "ok": "Docker is running",
+    "recheck": "Check again",
+    "cli_missing": {
+      "title": "Docker unavailable",
+      "hint": "The Docker socket is not mounted into the container — the app cannot configure itself."
+    },
+    "socket_permission": {
+      "title": "No access to the Docker socket",
+      "hint": "The process lacks permission on /var/run/docker.sock. It needs to be started with --group-add."
+    },
+    "daemon_unreachable": {
+      "title": "Docker is not running",
+      "hint": "Start Docker Desktop and press “Check again”."
+    },
+    "timeout": {
+      "title": "Docker is not responding",
+      "hint": "The daemon did not answer in time."
+    },
+    "unknown": {
+      "title": "Docker unavailable",
+      "hint": "The app cannot configure itself."
+    }
+  },
+  "compose": {
+    "title": "This install is managed by docker compose ({{project}})",
+    "hint": "The wizard will not fix it for you: the next “docker compose up -d” would bring the old configuration back. Put the folder into the .env next to docker-compose.yml and bring the stack up again."
+  },
+  "manual": {
+    "title": "Run it manually",
+    "hint": "Stop the current container and run this command — your folder is already filled in.",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "error": {
+    "not_absolute": "An absolute path is required: Docker reads a relative one as a volume name and mounts an empty directory.",
+    "empty_path": "Please enter a folder.",
+    "recreate_failed": "Could not start the recreation. Check that the Docker socket is mounted into the container.",
+    "restart_timeout": "The app did not come back in time. It rolled back to the previous configuration — check the hse-studio-updater container log.",
+    "request_failed": "The server did not respond. Please try again.",
+    "unknown": "Something went wrong. Please try again."
+  }
+}

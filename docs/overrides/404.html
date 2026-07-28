@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+
+{% block content %}
+  {% set lang = config.theme.language %}
+  <div class="hds-404">
+    <span class="hds-stamp hds-stamp--big">{{ 'Не найдено' if lang == 'ru' else 'Not found' }}</span>
+    {% if lang == 'ru' %}
+      <h1>Такого листа в деле нет</h1>
+      <p>Страница переехала или никогда не существовала. Начните с одной из точек:</p>
+      <p>
+        <a href="{{ '.' | url }}">Главная</a> ·
+        <a href="{{ 'workbench/' | url }}">Мастерская</a> ·
+        <a href="{{ 'start/' | url }}">Начало</a> ·
+        <a href="{{ 'reference/' | url }}">Справочник</a>
+      </p>
+    {% else %}
+      <h1>No such sheet in the file</h1>
+      <p>The page has moved or never existed. Start from one of these:</p>
+      <p>
+        <a href="{{ '.' | url }}">Home</a> ·
+        <a href="{{ 'workbench/' | url }}">Workbench</a> ·
+        <a href="{{ 'start/' | url }}">Getting started</a> ·
+        <a href="{{ 'reference/' | url }}">Reference</a>
+      </p>
+    {% endif %}
+  </div>
+{% endblock %}

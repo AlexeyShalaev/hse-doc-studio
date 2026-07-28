@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      # Пути относительны каталога проекта compose — им становится папка первого -f,
+      # то есть scripts/dev (см. run-services в scripts/dev/Makefile).
+      context: ../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: production
+    profiles: [api, all]
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Префикс настроек — HSE_STUDIO__ (api/config.py: env_prefix), вложенность через "__".
+      HSE_STUDIO__SERVER__HOST: "0.0.0.0"
+      HSE_STUDIO__SERVER__PORT: "8000"
+      HSE_STUDIO__DATA_DIR: "/data"
+      HSE_STUDIO__CORS__ALLOW_ORIGINS: '["http://localhost:${WEB_PORT:-3000}","http://localhost:5173"]'
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+    volumes:
+      - hse-doc-studio-data:/data
+    networks:
+      - hse-doc-studio-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  hse-doc-studio-data:
+
+networks:
+  hse-doc-studio-network:
+    external: true

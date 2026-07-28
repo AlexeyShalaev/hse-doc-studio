@@ -1,0 +1,18 @@
+{
+  "modal": {
+    "a11yTitle": "Installing Docker image",
+    "a11yDescription": "Downloading the Docker image for LaTeX compilation. Progress is shown below.",
+    "title": "Install image",
+    "close": "Close"
+  },
+  "status": {
+    "running": "Downloading layers…",
+    "success": "Image installed",
+    "failure": "Installation failed"
+  },
+  "actions": {
+    "retry": "Retry",
+    "done": "Done",
+    "close": "Close"
+  }
+}

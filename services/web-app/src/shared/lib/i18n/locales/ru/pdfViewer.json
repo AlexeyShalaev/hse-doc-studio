@@ -1,0 +1,76 @@
+{
+  "outline": {
+    "collapse": "Свернуть",
+    "expand": "Развернуть"
+  },
+  "thumb": {
+    "pageTitle": "Страница {{n}}"
+  },
+  "sidebar": {
+    "outline": "Оглавление",
+    "thumbnails": "Миниатюры",
+    "thumbnailsTitle": "Миниатюры страниц"
+  },
+  "nav": {
+    "prevPage": "Предыдущая страница",
+    "nextPage": "Следующая страница",
+    "pageNumber": "Номер страницы"
+  },
+  "zoom": {
+    "out": "Уменьшить",
+    "in": "Увеличить",
+    "percentAria": "Масштаб в процентах",
+    "percentTitle": "Масштаб: введите процент и нажмите Enter",
+    "fitWidth": "По ширине"
+  },
+  "tools": {
+    "gostMargins": "Поля по ГОСТ",
+    "gostMarginsTitle": "Показать границы полей (ГОСТ)",
+    "ruler": "Линейка",
+    "rulerTitle": "Линейка: тяните по странице, чтобы измерить в мм",
+    "nightMode": "Ночной режим",
+    "nightModeTitle": "Ночной режим (инверсия)",
+    "print": "Печать",
+    "printTitle": "Печать / открыть PDF в новой вкладке",
+    "printDiffTitle": "Печать / открыть текущий PDF в новой вкладке"
+  },
+  "search": {
+    "placeholderWithShortcut": "Поиск… (Ctrl+F)",
+    "placeholder": "Поиск…",
+    "aria": "Поиск по PDF",
+    "prevMatch": "Предыдущее совпадение",
+    "nextMatch": "Следующее совпадение"
+  },
+  "content": {
+    "aria": "Содержимое PDF",
+    "loadError": "Не удалось загрузить PDF. Соберите документ заново."
+  },
+  "selection": {
+    "askAgent": "Спросить ИИ",
+    "findInSource": "В исходнике",
+    "copy": "Копировать"
+  },
+  "page": {
+    "linkTitle": "Перейти на стр. {{page}}",
+    "invisibleSignatureTitle": "{{label}} — невидимая крипто-подпись (не печатается)",
+    "invisibleSignature": "🔒 невидимая подпись",
+    "signatureFallbackLabel": "Подпись"
+  },
+  "measure": {
+    "mm": "{{value}} мм"
+  },
+  "diff": {
+    "compareWith": "Сравнить с:",
+    "noPreviousBuilds": "нет прошлых сборок",
+    "modeDiffTitle": "Подсветка изменений",
+    "modeFadeTitle": "Наложение",
+    "modeSwipeTitle": "Шторка",
+    "swipePositionAria": "Положение шторки",
+    "opacityAria": "Прозрачность",
+    "added": "добавлено",
+    "removed": "удалено",
+    "close": "Закрыть сравнение",
+    "noArchive": "Для этой сборки нет архивного PDF (она старше функции сравнения, либо завершилась с ошибкой). Соберите документ ещё раз или выберите другую сборку.",
+    "sizeChangedWarn": "Размер страницы изменился — попиксельное сравнение недоступно, используйте «шторку»."
+  }
+}

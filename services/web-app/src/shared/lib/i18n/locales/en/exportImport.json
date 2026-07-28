@@ -1,0 +1,48 @@
+{
+  "export": {
+    "heading": "Export",
+    "description": "Save AI providers and app settings to a file — to move to another machine or as a backup.",
+    "includeLabel": "What to include",
+    "includeSettings": "App settings",
+    "includeProviders": "AI providers",
+    "includePersonas": "Agent roles",
+    "typeLabel": "File type",
+    "modePlain": "Plain",
+    "modeEncrypted": "Encrypted",
+    "hintEncrypted": "API keys are encrypted with a password. You will need the same password on import.",
+    "hintPlain": "Provider API keys are saved in plain text. For local copies only.",
+    "hintNothingToEncrypt": "Nothing to encrypt — the selected providers have no API keys.",
+    "passwordLabel": "Encryption password",
+    "passwordPlaceholder": "Enter a password",
+    "downloadButton": "Download file",
+    "downloadButtonPending": "Saving…"
+  },
+  "import": {
+    "heading": "Import",
+    "description": "Upload a previously exported file. Matching is determined by the provider id.",
+    "mergeLabel": "On conflict",
+    "mergeSkip": "Skip existing",
+    "mergeReplace": "Replace existing",
+    "decryptPasswordLabel": "Decryption password",
+    "decryptPasswordPlaceholder": "Enter a password",
+    "decryptButton": "Decrypt and import",
+    "decryptButtonPending": "Importing…",
+    "pickFileButton": "Choose file…",
+    "pickFileButtonPending": "Importing…"
+  },
+  "toast": {
+    "selectWhatToExport": "Select what to export",
+    "enterEncryptionPassword": "Enter a password for encryption",
+    "fileSavedEncrypted": "File saved (encrypted)",
+    "fileSaved": "File saved",
+    "readFileError": "Could not read the file — it is not valid JSON",
+    "notAnExportFile": "This does not look like an HSE Studio export file",
+    "encryptedFileHint": "The file is encrypted — enter the password to import",
+    "enterDecryptionPassword": "Enter a password for decryption",
+    "importWithErrorsTitle": "Import completed with errors",
+    "importDoneTitle": "Import completed",
+    "resultSettings": "settings updated",
+    "resultProviders": "providers: +{{imported}}, skipped {{skipped}}",
+    "resultPersonas": "roles: +{{imported}}, skipped {{skipped}}"
+  }
+}

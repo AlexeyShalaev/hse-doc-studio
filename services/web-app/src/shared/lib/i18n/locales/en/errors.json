@@ -1,0 +1,27 @@
+{
+  "title": {
+    "generic": "Error",
+    "withStatus": "Error {{status}}",
+    "network": "Network",
+    "schemaMismatch": "Schema mismatch"
+  },
+  "message": {
+    "network": "Network error",
+    "unknown": "Unknown error",
+    "schemaConsole": "{{method}} {{url}} — open DevTools → Console for the full report with path/received. You can share it with the AI agent.",
+    "zodNoHttp": "ZodError without HTTP context. See console for details."
+  },
+  "compile": {
+    "imageMissingTitle": "Image not installed",
+    "imageMissing": "Image {{image}} is not installed — open Settings → Images and click «Install».",
+    "dockerUnavailableTitle": "Docker unavailable",
+    "notStartedTitle": "Build not started"
+  },
+  "code": {
+    "docker_unavailable": "Docker is unavailable — start Docker Desktop.",
+    "image_missing": "The Docker image is not installed.",
+    "compile_setup_error": "The build environment is not ready.",
+    "not_self_updatable": "This build does not support self-update.",
+    "self_update_failed": "Could not start the update."
+  }
+}

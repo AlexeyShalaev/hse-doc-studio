@@ -1,0 +1,265 @@
+{
+  "status": {
+    "ok": "Ready",
+    "warn": "With remarks",
+    "err": "Error",
+    "building": "Building…",
+    "locked": "Locked",
+    "draft": "Draft"
+  },
+  "type": {
+    "technical_specification": {
+      "code": "TS",
+      "name": "Technical specification"
+    },
+    "thesis": {
+      "code": "GQW",
+      "name": "Graduation qualification work"
+    },
+    "test_program_and_methodology": {
+      "code": "TPM",
+      "name": "Test program and methodology"
+    },
+    "source_listing": {
+      "code": "TP",
+      "name": "Technical project"
+    },
+    "programmer_manual": {
+      "code": "PG",
+      "name": "Programmer's guide"
+    },
+    "operator_manual": {
+      "code": "OG",
+      "name": "Operator's guide"
+    },
+    "presentation": {
+      "code": "PRES",
+      "name": "Presentation"
+    },
+    "project_proposal": {
+      "code": "PP",
+      "name": "Project Proposal"
+    },
+    "shared_technical_specification": {
+      "code": "SOW",
+      "name": "Shared Statement of Work"
+    },
+    "shared_test_program_and_methodology": {
+      "code": "STPM",
+      "name": "Shared Test Program & Methodology"
+    },
+    "nda": {
+      "code": "NDA",
+      "name": "Student undertaking (NDA)"
+    }
+  },
+  "template": {
+    "fallbackLabel": "Template"
+  },
+  "kind": {
+    "research": "Research",
+    "applied": "Applied"
+  },
+  "checksActions": {
+    "ruleDisabled": "Rule {{ruleId}} disabled for this document",
+    "ruleEnabled": "Rule {{ruleId}} enabled again"
+  },
+  "tabs": {
+    "ariaLabel": "Document sections",
+    "preview": "Preview",
+    "source": "Editor",
+    "office": "Document",
+    "checks": "Checks",
+    "compile": "Build",
+    "history": "History",
+    "signatures": "Signatures"
+  },
+  "header": {
+    "notFound": "Document not found",
+    "pages": "{{count}} p.",
+    "copyPath": "Copy file path",
+    "pathCopied": "File path copied",
+    "copyFailed": "Failed to copy",
+    "openInExternalEditor": "Open in external editor",
+    "noEditorsDetected": "No external editors detected",
+    "openInEditor": "Open in editor",
+    "building": "Building…",
+    "rebuild": "Rebuild",
+    "build": "Build",
+    "buildInProgress": "Build in progress…"
+  },
+  "nav": {
+    "collapse": "Collapse navigator (⌘B)",
+    "stopBuilds": "Stop current builds",
+    "cancel": "Cancel",
+    "buildAll": "Build all documents",
+    "build": "Build",
+    "stalledWarning": "The build has been silent for over 90 seconds — it looks stuck. Click “Cancel” to kill the process and try again.",
+    "buildInProgress": "Building…",
+    "sectionDocuments": "Documents",
+    "sectionTools": "Tools",
+    "sectionForms": "Forms",
+    "projectFiles": "Project files",
+    "packForSubmission": "Submission package",
+    "requirementsTraceability": "Requirements traceability",
+    "signatures": "Signatures",
+    "versions": "Versions",
+    "projectSettings": "Project settings",
+    "sharedDocuments": "Shared documents"
+  },
+  "history": {
+    "title": "Version history",
+    "subtitle": "Document change log",
+    "newEntry": "New entry",
+    "draftPlaceholder": "What changed?",
+    "cancel": "Cancel",
+    "add": "Add",
+    "empty": "History is empty. An entry will appear after the first build or a manual note.",
+    "enterDescription": "Enter a change description",
+    "entryAdded": "Entry added",
+    "kind": {
+      "compileOk": "build ok",
+      "compileFail": "build error",
+      "edit": "edit",
+      "manualNote": "note",
+      "sign": "signature",
+      "packSubmission": "submission"
+    }
+  },
+  "compile": {
+    "running": "running…",
+    "done": "done",
+    "donePages": "{{count}} p.",
+    "failed": "error",
+    "cancelled": "cancelled",
+    "cancel": "Cancel",
+    "rebuild": "Rebuild",
+    "explain": "Explain",
+    "explainTitle": "Explain the error in plain words (no edits)",
+    "fixWithAi": "Fix with AI",
+    "fixWithAiTitle": "Open the agent and fix the build",
+    "downloadLog": "Download .log",
+    "downloadLogTitle": "Download {{path}}",
+    "stalledWarning": "The build has been silent for over 90 seconds. Docker is most likely stuck on a network operation or a heavy page. Click “Cancel” to kill the process — the backend will clean up the record and unlock the buttons.",
+    "runBuild": "start the build",
+    "runXelatex": "Run xelatex",
+    "noCompilation": "no compilation",
+    "notification": {
+      "title": "Build finished",
+      "successPages": "{{code}}: done · {{count}} p.",
+      "success": "{{code}}: done",
+      "failure": "{{code}}: build error"
+    },
+    "fixPrompt": "The build of document [{{code}}](doc:{{docId}}) finished with errors. Study the log of the last build (`{{logPath}}`) and the source `{{file}}`, find the cause of the LaTeX errors and fix them. After the edits, rebuild the document with the compile_document tool and make sure the build passes without errors.",
+    "explainPrompt": "The build of document [{{code}}](doc:{{docId}}) failed. Read the log of the last build (`{{logPath}}`) and explain in plain language what causes the LaTeX error and how to fix it. Do NOT change files — just explain."
+  },
+  "preview": {
+    "passWord_one": "pass",
+    "passWord_other": "passes",
+    "askAgentPrompt": "Explain and check this excerpt from “{{name}}”:\n\n“{{text}}”",
+    "syncTexUnavailable": "SyncTeX unavailable — rebuild the document to enable jumping to the source",
+    "diffBasePages": "{{label}} · {{count}} p.",
+    "notBuilt": "not built",
+    "notBuiltHint": "The document has not been compiled yet. Click “Build”",
+    "notBuiltEngineHint": " — latexmk will run {{engine}} up to {{passes}} {{passWord}} (until references and the table of contents converge).",
+    "notBuiltCopyHint": "The document has not been built yet. Click “Build” — the build just runs the checks and publishes the file (no compilation).",
+    "nonPdfHint": "Preview is not available for this format — download the file or open it in an external application.",
+    "customNoPreviewHint": "This is a custom document — preview is not available for this format. Download the file or open it as text.",
+    "officeConvertHint": "The PDF preview will appear after installing the converter — Settings → Presentations",
+    "openAsText": "Open as text",
+    "convertedBadge": "PDF preview",
+    "customFileBadge": "Custom document",
+    "htmlPreviewBadge": "HTML preview",
+    "htmlPreviewTooltip": "Live render of the HTML presentation (slides are interactive right here). The RevealJS template loads its library from a CDN — offline it renders unstyled. The HTML file itself is what you submit.",
+    "refresh": "Reload",
+    "convertedTooltip": "Auto-converted from {{ext}} (LibreOffice). Layout may differ slightly — the {{ext}} itself is what you submit.",
+    "downloadOriginal": "Download {{ext}}",
+    "download": "Download",
+    "openInNewTab": "Open in a new tab",
+    "words": "{{count}} w",
+    "wordsChars": "{{count}} w · {{chars}} chars",
+    "compareWithPrevious": "Compare with the previous build",
+    "compare": "Compare",
+    "wordCountTooltip": "Words · characters of the document text (excluding commands, comments and the table of contents; imports included) — texcount",
+    "downloadArchiveTitle": "Download archive: PDF + detached .sig files (CAdES)",
+    "downloadSignedTitle": "Download PDF with signatures (sources on disk are unchanged)",
+    "pdfWithSig": "PDF + .sig",
+    "withSignatures": "With signatures"
+  },
+  "source": {
+    "binaryHint": "Binary source — edit it in PowerPoint or another external editor.",
+    "download": "Download"
+  },
+  "office": {
+    "starting": "Starting the document editor…",
+    "startingHint": "The first launch can take a minute or two.",
+    "autosaveNote": "Edits are saved automatically into the project's document file. The PDF preview refreshes on its own a few seconds after a save.",
+    "notInstalledTitle": "Editor not installed",
+    "notInstalledBody": "The built-in Word/Excel/PowerPoint editor runs on ONLYOFFICE Document Server. It is a separate Docker image (~4 GB) you install once — after that the editor starts automatically.",
+    "installInSettings": "Install in Settings",
+    "pullHintSecondary": "or pull the image manually:",
+    "copyCommand": "Copy command",
+    "commandCopied": "Command copied",
+    "copyFailed": "Failed to copy",
+    "checkAgain": "Check again",
+    "unavailableTitle": "Editor unavailable",
+    "retry": "Retry",
+    "scriptError": "Failed to load the editor script (api.js). Make sure the ONLYOFFICE container is running and try again."
+  },
+  "checks": {
+    "results": "Results",
+    "rules": "Rules",
+    "fixWithAi": "Fix with AI",
+    "fixWithAiTitle": "Open the agent and review the remarks",
+    "compliance": "Compliance: {{rate}}%",
+    "activeRules": "Active rules: {{enabled}} of {{total}}",
+    "rulesSubtitle": "Manage the set of checks for this document.",
+    "filterAll": "All",
+    "filterSkipped": "Skipped",
+    "customFileBanner": "This is a custom document. Some GOST/ESPD checks were skipped — they rely on the LaTeX structure of the template.",
+    "noneInCategory": "Nothing found in this category",
+    "passedLabel": "passed",
+    "skippedLabel": "skipped",
+    "violations_one": "violation",
+    "violations_other": "violations",
+    "fixAllPrompt": "Review the check remarks in document [{{code}}](doc:{{docId}}) and fix them in the .tex according to the ESPD/GOST requirements. List of remarks:\n{{list}}{{more}}\nProceed in order, briefly explaining each fix. After the edits, rebuild the document with the compile_document tool if needed.",
+    "fixAllMore": "\n…and {{count}} more remarks.",
+    "findingLocation": " in `{{path}}`",
+    "card": {
+      "openAtLine": "Open in editor at line {{line}}",
+      "line": "Line {{line}}",
+      "fixWithAi": "Fix with AI",
+      "ignoreFinding": "Ignore this remark (% hse-noqa)",
+      "openInEditorNamed": "Open in {{editor}}",
+      "editorFallback": "editor",
+      "openInEditor": "Open in editor",
+      "enableRuleBack": "Enable the rule again",
+      "ignoreRuleInDocument": "Ignore the rule in the document"
+    }
+  },
+  "signatures": {
+    "customUnsignableHint": "Signing is not available — this custom document isn't a PDF and can't be converted automatically. You are responsible for signing it yourself.",
+    "customConvertiblePendingPreview": "The exact signature position can be set once a PDF preview is available."
+  },
+  "customFile": {
+    "replaceMenuItem": "Replace with my own file…",
+    "revertMenuItem": "Revert to template",
+    "downloadMenuItem": "Download",
+    "badge": "Custom",
+    "uploadModalTitle": "Upload your own file",
+    "uploadModalDescription": "Replaces the template-generated document “{{name}}” with your own file. Word, PowerPoint, PDF — anything works.",
+    "dropTitle": "Drag a file here or click to choose one",
+    "dropActive": "Release to select the file",
+    "dropHint": "Any format — no restrictions",
+    "classConvertible": "Looks like a Word/PowerPoint document — we can offer to convert it to PDF when packaging.",
+    "classPdf": "PDF — preview and signing will work as usual.",
+    "classUnknown": "Format not recognized — the file will be included in the package as-is, with no conversion. You'll need to sign it yourself.",
+    "cancel": "Cancel",
+    "uploadAction": "Upload",
+    "uploadedToast": "File “{{name}}” uploaded in place of the template document",
+    "revertConfirmTitle": "Revert the document to the template?",
+    "revertConfirmDescription": "The uploaded file will stop being used. The file itself stays on disk — you can switch back to it later.",
+    "revertConfirmAction": "Revert to template",
+    "revertedToast": "Document reverted to the template version"
+  }
+}

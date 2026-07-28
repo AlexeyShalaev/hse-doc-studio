@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Локальный инструмент для подготовки учебных документов НИУ ВШЭ: ВКР, курсовая, ЕСПД, презентации — по ГОСТ, с проверками и сборкой PDF."
+    />
+    <title>HSE Doc Studio — оформление учебных документов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="/config.js"></script>
+    <script>
+      // Resolve the colour theme BEFORE any module loads so the first paint is
+      // already correct (no wrong-theme flash). Source of truth is the zustand
+      // store persisted under "hse-studio-theme" (theme under .state.theme).
+      // First run (no stored preference) or "system" → follow the OS scheme.
+      (function () {
+        var theme = "system";
+        try {
+          var raw = localStorage.getItem("hse-studio-theme");
+          if (raw) {
+            var stored = JSON.parse(raw);
+            var t = stored && stored.state && stored.state.theme;
+            if (
+              t === "system" ||
+              t === "dark" ||
+              t === "light" ||
+              t === "blueprint"
+            ) {
+              theme = t;
+            }
+          }
+        } catch (e) {
+          /* fall through to system */
+        }
+        if (theme === "system") {
+          theme =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <script>
+      // Resolve the interface language BEFORE any module loads so the first
+      // paint is already correct (no RU→EN flash). Source of truth is the
+      // zustand store persisted under "hse-studio-theme" (state under .state).
+      // First run (no stored preference) → auto-detect from navigator, else ru.
+      (function () {
+        function detect() {
+          try {
+            var raw = localStorage.getItem("hse-studio-theme");
+            if (raw) {
+              var stored = JSON.parse(raw);
+              var lang = stored && stored.state && stored.state.lang;
+              if (lang === "ru" || lang === "en") return lang;
+            }
+          } catch (e) {
+            /* fall through to navigator detection */
+          }
+          var nav = (navigator.language || "ru").toLowerCase();
+          return nav.indexOf("ru") === 0 ? "ru" : "en";
+        }
+        var initial = detect();
+        window.__INITIAL_LANG__ = initial;
+        document.documentElement.lang = initial;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

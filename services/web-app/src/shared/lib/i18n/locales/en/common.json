@@ -1,0 +1,7 @@
+{
+  "appName": "HSE Doc Studio",
+  "actions": {
+    "openSettings": "Open settings",
+    "reset": "Reset"
+  }
+}

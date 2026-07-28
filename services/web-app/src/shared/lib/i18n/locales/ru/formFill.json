@@ -1,0 +1,32 @@
+{
+  "toast": {
+    "saved": "Форма сохранена",
+    "copied": "Скопировано в буфер",
+    "copyFailed": "Не удалось скопировать"
+  },
+  "editor": {
+    "signedCheckbox": "Декларация заполнена и подписана"
+  },
+  "preview": {
+    "fallbackName": "предпросмотр",
+    "ready": "готово",
+    "incomplete": "не заполнено",
+    "unavailable": "Предпросмотр недоступен",
+    "save": "Сохранить",
+    "saveDirty": "Сохранить •"
+  },
+  "errors": {
+    "title": "Что нужно заполнить",
+    "saveHint": "Сохраните, чтобы обновить проверку."
+  },
+  "field": {
+    "charCount_one": "{{count}} символ · мин. {{min}}",
+    "charCount_few": "{{count}} символа · мин. {{min}}",
+    "charCount_many": "{{count}} символов · мин. {{min}}",
+    "charCount_other": "{{count}} символов · мин. {{min}}"
+  },
+  "table": {
+    "removeRow": "Удалить строку",
+    "addRow": "Добавить строку"
+  }
+}

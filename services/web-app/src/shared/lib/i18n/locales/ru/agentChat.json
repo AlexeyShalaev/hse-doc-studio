@@ -1,0 +1,128 @@
+{
+  "panel": {
+    "titleProject": "Агент проекта",
+    "titleAssistant": "Ассистент",
+    "newChat": "Новый чат",
+    "history": "История чатов",
+    "debug": "Отладка: лента событий рана",
+    "close": "Закрыть",
+    "loading": "Загрузка…",
+    "emptyProjectHint": "Агент проекта: правьте текст, собирайте проект, чините ошибки сборки и замечания — плюс создавайте проекты и меняйте настройки.",
+    "emptyAssistantHint": "Спросите ассистента: создать проект, показать шаблоны, сменить тему или движок сборки.",
+    "newChatShort": "Новый чат",
+    "deleteConfirm": "Удалить чат?",
+    "tokens": "токены: {{total}} (in {{input}} / out {{output}})"
+  },
+  "history": {
+    "searchPlaceholder": "Поиск чатов...",
+    "empty": "Чатов пока нет",
+    "notFound": "Чаты не найдены",
+    "running": "Агент генерирует ответ",
+    "rename": "Переименовать",
+    "delete": "Удалить",
+    "ageMinutes": "{{count}}м",
+    "ageHours": "{{count}}ч",
+    "ageDays": "{{count}}д"
+  },
+  "messages": {
+    "roleUser": "Вы",
+    "roleAssistant": "Агент",
+    "roleTool": "Инструмент",
+    "emptyHint": "Спросите агента о проекте, попросите внести правку, собрать документ или разобрать замечания.",
+    "thinking": "агент думает…",
+    "toolError": "ошибка",
+    "toolResult": "результат"
+  },
+  "composer": {
+    "waitingForAgent": "Дождитесь ответа агента…",
+    "messageAgent": "Сообщение агенту…",
+    "selectProvider": "Выберите провайдера и модель…",
+    "inputHint": "Enter — отправить, Shift+Enter — перенос строки",
+    "modeGroupLabel": "Режим агента",
+    "stop": "Остановить",
+    "send": "Отправить"
+  },
+  "approval": {
+    "prompt": "Агент хочет выполнить действие — подтвердите:",
+    "apply": "Применить",
+    "reject": "Отклонить"
+  },
+  "question": {
+    "multiSelect": "можно несколько",
+    "other": "Другое…",
+    "otherPlaceholder": "Свой вариант…",
+    "submit": "Ответить"
+  },
+  "debugPanel": {
+    "title": "Отладка · события рана",
+    "copyTitle": "Скопировать лог отладки",
+    "copied": "Скопировано",
+    "copy": "Копировать",
+    "noEvents": "событий пока нет",
+    "silentFor": "молчит {{seconds}}s",
+    "silentStalled": " — возможно, модель зависла",
+    "silentText": "(молчит {{seconds}}s)"
+  },
+  "debugEvent": {
+    "message": "сообщение",
+    "toolOk": "✓",
+    "toolError": "✗ ошибка",
+    "tokens_one": "{{count}} токен",
+    "tokens_few": "{{count}} токена",
+    "tokens_many": "{{count}} токенов",
+    "tokens_other": "{{count}} токенов",
+    "questionToUser": "вопрос пользователю",
+    "contextCompaction": "сжатие контекста",
+    "done": "done",
+    "error": "ошибка"
+  },
+  "stream": {
+    "connectionLost": "соединение прервано",
+    "error": "ошибка"
+  },
+  "tools": {
+    "menuTitle": "Инструменты агента ({{enabled}}/{{total}})",
+    "heading": "Инструменты агента",
+    "all": "Все",
+    "none": "Никакие",
+    "groupDocsText": "Документы и текст",
+    "groupBuildChecks": "Сборка и проверки",
+    "groupSettings": "Настройки",
+    "groupOther": "Прочее",
+    "readTex": "Чтение файлов",
+    "editTex": "Написание и правка текста",
+    "grepProject": "Поиск по проекту",
+    "listDocuments": "Список документов",
+    "compileDocument": "Сборка документа",
+    "packageProject": "Упаковка проекта",
+    "listCheckFindings": "Замечания проверок",
+    "traceRequirements": "Трассировка требований",
+    "previewRequirementsFormat": "Подбор формата требований (превью)",
+    "setRequirementsFormat": "Применение формата требований",
+    "setTheme": "Тема оформления",
+    "setEngine": "Движок сборки",
+    "setLanguage": "Язык проекта",
+    "setProjectMeta": "Метаданные проекта"
+  },
+  "model": {
+    "trigger": "Модель",
+    "searchPlaceholder": "Поиск моделей…",
+    "notFound": "Ничего не найдено",
+    "noModels": "Нет моделей",
+    "otherModels": "Другие модели",
+    "selectModel": "Выбрать модель",
+    "fallbackLabel": "Модель",
+    "titleWithProvider": "{{model}} · {{provider}}"
+  },
+  "persona": {
+    "roleTitle": "Роль агента: {{name}}",
+    "selectRole": "Выбрать роль агента",
+    "fallbackLabel": "Роль",
+    "customPlaceholder": "Опишите, каким должен быть агент…",
+    "apply": "Применить",
+    "manage": "Управление ролями…",
+    "chooserTitle": "Каким будет ваш агент?",
+    "chooserSubtitle": "Выберите роль — она задаёт тон и фокус ассистента. Можно сменить в любой момент.",
+    "applyRole": "Применить роль"
+  }
+}

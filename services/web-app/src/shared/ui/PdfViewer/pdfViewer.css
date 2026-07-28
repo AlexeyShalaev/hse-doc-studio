@@ -1,0 +1,349 @@
+/* Text layer for the PDF.js canvas — the EXACT positioning machinery pdf.js v6
+   uses (spans positioned in % of the unscaled page, font-size driven by
+   `--total-scale-factor` which the caller sets to the display scale; `TextLayer`
+   sets `--font-height`/`--scale-x`/`--min-font-size` per span). Getting this
+   verbatim is what keeps the transparent text aligned to the rendered page so
+   selection/copy/find look clean instead of doubled/offset. */
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: transparent;
+  z-index: 2;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x))
+    scale(var(--min-font-size-inv));
+}
+
+.textLayer .markedContent {
+  display: contents;
+}
+
+/* Selection: a clean translucent-blue rectangle over the canvas glyphs. The
+   text layer glyphs themselves MUST stay invisible while selected — otherwise
+   the browser (notably Chrome on Windows) forces the selected-text colour to
+   the system HighlightText (white), making the transparent glyphs visible and
+   producing the "doubled / disabled text over the PDF" look. Pinning both the
+   colour and the webkit text-fill to transparent in ::selection keeps only the
+   background rectangle visible. */
+.textLayer ::selection {
+  background: rgba(56, 132, 255, 0.35);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.textLayer ::-moz-selection {
+  background: rgba(56, 132, 255, 0.35);
+  color: transparent;
+}
+
+/* Search match highlight: the span text is transparent, so the mark's
+   background paints a coloured box exactly over the matched word. */
+.textLayer mark.pdf-search-hl {
+  background: rgba(255, 210, 0, 0.45);
+  color: transparent;
+  border-radius: 2px;
+  padding: 0;
+}
+
+.pdf-page-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+}
+
+/* Stamps (e.g. signatures) painted straight onto the page — clean, no frame,
+   and click-through so the text layer below stays selectable. */
+.pdf-stamp-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.pdf-stamp-layer img {
+  user-select: none;
+}
+/* Non-printing placeholder for an invisible crypto-signature field — shown only
+   in the preview so the user can locate it; never part of the real output. */
+.pdf-stamp-invisible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1.5px dashed color-mix(in oklch, var(--fg-3) 70%, transparent);
+  background: color-mix(in oklch, var(--fg-3) 8%, transparent);
+  border-radius: 3px;
+  color: var(--fg-2);
+  font-size: 9px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Night / invert reading mode — flips the rasterised page; hue-rotate keeps
+   coloured figures roughly true instead of colour-negated. */
+.pdf-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* GOST text-area guide: a dashed box inset by the page margins. Click-through. */
+.pdf-margin-guide {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  border: 1px dashed color-mix(in oklch, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 18%, transparent);
+}
+
+/* Clickable links surfaced from the PDF's own annotations (refs/cites/URLs). */
+.pdf-link-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.pdf-link {
+  position: absolute;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 2px;
+}
+.pdf-link:hover {
+  background: color-mix(in oklch, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent);
+}
+
+/* Drag-to-measure ruler overlay (only mounted while the tool is active). */
+.pdf-measure-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  cursor: crosshair;
+  touch-action: none;
+}
+.pdf-measure-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.pdf-measure-svg line {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.pdf-measure-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  color: var(--bg-0);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Visual diff view (current build vs an archived earlier build). */
+.pdf-diff {
+  display: flex;
+  flex-direction: column;
+}
+.pdf-diff-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.pdf-diff-select {
+  font-size: 11.5px;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  max-width: 240px;
+}
+.pdf-diff-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-0);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12px;
+}
+.pdf-diff-stage {
+  position: relative;
+  flex-shrink: 0;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+.pdf-diff-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.pdf-diff-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translateX(-1px);
+  z-index: 4;
+  pointer-events: none;
+}
+.pdf-diff-warn {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  z-index: 5;
+  background: var(--c-warn);
+  color: #000;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Floating action bar above a PDF text selection. */
+.pdf-sel-bar {
+  position: absolute;
+  z-index: 20;
+  transform: translate(-50%, calc(-100% - 8px));
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong, var(--border));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.pdf-sel-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.pdf-sel-bar button:hover {
+  background: color-mix(in oklch, var(--accent) 16%, transparent);
+  color: var(--fg-0);
+}
+
+/* SyncTeX forward jump — a brief highlight box that fades out, drawing the eye
+   to the spot in the PDF that corresponds to the editor line. */
+.pdf-sync-flash {
+  position: absolute;
+  z-index: 7;
+  pointer-events: none;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--accent) 32%, transparent);
+  box-shadow: 0 0 0 2px var(--accent);
+  animation: pdf-sync-flash 1.7s ease-out forwards;
+}
+@keyframes pdf-sync-flash {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Thumbnail sidebar */
+.pdf-thumbs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+}
+.pdf-thumb {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+.pdf-thumb canvas {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.pdf-thumb.active {
+  border-color: var(--accent);
+}
+.pdf-thumb-num {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 9.5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--bg-0) 70%, transparent);
+  color: var(--fg-2);
+  line-height: 1.4;
+}

@@ -1,0 +1,42 @@
+services:
+  hse-doc-studio:
+    # TAG позволяет закрепиться на конкретной версии (TAG=0.2.0) и используется
+    # CI-смоуком publish.yml, чтобы поднять локально собранный образ вместо :latest.
+    image: ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${PORT:-17240}:8000"
+    # Процесс в контейнере работает под непривилегированным `app`, а сокет ниже
+    # приезжает с правами владельца с ХОСТА — без членства в его группе любое
+    # обращение к докеру падает с "permission denied", то есть не собирается ни
+    # один документ. На Docker Desktop (Windows/macOS) сокет отдаётся как
+    # root:root → достаточно группы 0. На Linux он обычно root:docker: узнайте
+    # gid через `stat -c '%g' /var/run/docker.sock` и положите в DOCKER_GID.
+    group_add:
+      - "${DOCKER_GID:-0}"
+    # Ollama, которую пользователь поставил САМ, слушает loopback его машины —
+    # для контейнера это чужой адрес. Docker Desktop резолвит host.docker.internal
+    # сам, на Linux имя надо объявить. Соседей, которых приложение поднимает само
+    # (LanguageTool, Gotenberg, ONLYOFFICE), это не касается: они уезжают в общую
+    # docker-сеть и зовутся по имени контейнера.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      HSE_STUDIO__SERVER__HOST: "0.0.0.0"
+      HSE_STUDIO__SERVER__PORT: "8000"
+      HSE_STUDIO__DATA_DIR: "/data"
+      HSE_STUDIO__HOST_DATA_DIR: "${DATA_DIR:-./data}"
+      HSE_STUDIO__STATIC_DIR: "/app/static"
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+      # Пусто → официальные GitHub Releases продукта; `off` полностью выключает
+      # проверку обновлений (закрытый контур). См. .env.example.
+      HSE_STUDIO__UPDATE_FEED_URL: "${UPDATE_FEED_URL:-}"
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+      # Lets the backend spawn a sibling "updater" container for one-click
+      # self-update (record image -> pull new -> recreate -> health-check ->
+      # rollback). SECURITY: the docker socket is root-equivalent on the host;
+      # acceptable for a local single-user tool, and required by the in-app
+      # "Обновить" button. Remove it to disable self-update (the UI then falls
+      # back to a copy-command).
+      - /var/run/docker.sock:/var/run/docker.sock

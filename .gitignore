@@ -1,0 +1,114 @@
+# ── Project-specific ─────────────────────────────────────────────────────────
+examples-of-good-code/
+prototype/
+*.db
+*.sqlite3
+
+# ── Docs (generated) ─────────────────────────────────────────────────────────
+site/
+# Генерируется из release-notes.json (gen_changelog.py --site)
+docs/ru/whatsnew/index.md
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── Tests / Coverage ─────────────────────────────────────────────────────────
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+cobertura.xml
+coverage.json
+rspec.xml
+.benchmarks/
+.nox/
+
+# ── Environments ─────────────────────────────────────────────────────────────
+.env
+.env.test
+.env.local
+# Голый `.env` НЕ матчит эти имена, а Makefile'ы их ждут:
+#   scripts/tests/Makefile:5   TESTS_ENV_FILE = scripts/tests/.env.tests
+#   scripts/tools/Makefile:3   TOOLS_ENV_FILE = scripts/tools/.env.tools
+.env.tests
+.env.tools
+.venv
+env/
+venv/
+ENV/
+
+# ── Type checkers / Linters ───────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.pytest_cache/
+**/.venv/
+
+# ── Frontend ─────────────────────────────────────────────────────────────────
+node_modules/
+services/web-app/dist/
+services/web-app/coverage/
+*.tsbuildinfo
+
+# ── Deploy (локальные данные и заполненные .env рядом с compose-файлами) ─────
+deploy/*/data/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.mo
+*.pot
+*.session
+
+# ── LaTeX build artifacts (для шаблонов документов) ──────────────────────────
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+# beamer
+*.nav
+*.snm
+*.vrb
+# biber / biblatex
+*.bcf
+*.run.xml
+# xelatex + tikz externalize
+*.xdv
+*.auxlock
+*.figlist
+*.dpth
+*.md5

@@ -1,0 +1,296 @@
+% !TeX program = xelatex
+% ============================================================
+% pp/pp.tex — Project Proposal (IEEE conference layout, English)
+%
+% Требования ОП ПИ (Project Proposal 2026):
+%   • объём 1500–3000 слов (без abstract, keywords и references);
+%   • Abstract 100–150 слов (в объём не входит);
+%   • Keywords: 5–10, В АЛФАВИТНОМ ПОРЯДКЕ;
+%   • Introduction ≈300 слов; Main Body 1200–1500 слов
+%     (Literature Review, Methodology, Results ≈100 слов);
+%   • Conclusion ≈200 слов;
+%   • Библиография: МИНИМУМ 10 источников, из них ≥8 на английском
+%     (до 2 неанглоязычных допускается), стиль IEEE ([1], [2], …);
+%   • антиплагиат: не более 20% заимствований;
+%   • только английский язык, две колонки, Times New Roman 10 pt
+%     (поля 1,5 см слева/справа и 2 см сверху/снизу даёт класс IEEE);
+%   • научный (академический) стиль: пассив и безличные конструкции,
+%     без первого лица (I/we) и разговорной/«простой» лексики;
+%   • текст пишется САМОСТОЯТЕЛЬНО: автоматический перевод всего PP
+%     генеративными моделями или переводчиками ЗАПРЕЩЁН регламентом;
+%   • если использовался генеративный ИИ — его нужно ЗАДЕКЛАРИРОВАТЬ
+%     (см. блок REFERENCES ниже): сноска в тексте + запись в списке.
+%
+% Жёлтые блоки \hseFill{…} — места, которые нужно заменить своим
+% текстом. Данные автора приходят из настроек проекта через макросы
+% \hse… (common/meta.tex перегенерируется перед каждой сборкой).
+% ============================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ── Пакеты ──────────────────────────────────────────────────
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage[english]{babel}
+\usepackage{balance}  % выравнивание колонок на последней странице
+
+% Шрифты — из настроек проекта (Настройки → Шрифты), с фолбэком на
+% свободные клоны: сборка не падает, даже если шрифта нет в контейнере.
+\newcommand{\hseDefaultMono}{Courier New}
+\input{../common/fonts}
+
+% Данные проекта (автогенерируемые макросы \hse… и \hseFill)
+\input{../common/meta}
+
+% Кликабельные ссылки
+\hypersetup{
+    unicode=true,
+    breaklinks=true,
+    bookmarksopen=true,
+    bookmarksnumbered=true,
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+% Перенос длинных URL в библиографии
+\def\UrlBreaks{\do\/\do-\do.\do=\do?\do\&}
+\sloppy
+
+\begin{document}
+
+\title{\hseTitle}
+
+\author{\IEEEauthorblockN{\hseAuthorNameEn}
+\IEEEauthorblockA{\textit{\hseFacultyEn} \\
+\textit{\hseUniversityEn}\\
+\hseCityEn \\
+\hseAuthorEmail}}
+
+\maketitle
+
+% ── Abstract: 100–150 слов, что сделано/планируется — кратко ──
+\begin{abstract}
+\hseFill{Briefly state the problem you address, why it matters, what
+you propose to build, how you will evaluate it, and what results you
+expect. Keep it 100 to 150 words and write it after the rest of the
+proposal is done.}
+\end{abstract}
+
+% ── Keywords: 5–10 шт. (жёсткий минимум методички — 3), строго по
+%    алфавиту, через запятую. Первое слово с заглавной, остальные со
+%    строчной — кроме аббревиатур и имён собственных (IoT, Kubernetes).
+\begin{IEEEkeywords}
+\hseFill{five to ten keywords, in alphabetical order, comma separated}
+\end{IEEEkeywords}
+
+% ============================================================
+% INTRODUCTION — ≈300 слов. Ответьте по порядку на вопросы:
+%   1) какова область исследования (1–3 предложения);
+%   2) какую проблему решаете и почему она важна (2–4 предложения);
+%   3) как планируете решать (1–2 предложения);
+%   3a) сформулируйте ЦЕЛЬ (и задачи) и/или исследовательские вопросы;
+%   4) на какие работы опираетесь;
+%   5) в чём новизна подхода по сравнению с существующими;
+%   6) какие результаты ожидаются (1–4 предложения);
+%   7) как организована статья (3–4 предложения).
+% Проектная (не исследовательская) ВКР: вместо Literature Review —
+% анализ стейкхолдеров/целевой аудитории и обзор существующих
+% продуктов; вместо Methodology — раздел «Methods and/or Product
+% Design». Остальные разделы — общие.
+% ============================================================
+\section{Introduction}
+
+The research area of this work is \hseFill{name the research area in
+one to three sentences}.
+
+\hseFill{State the problem you are trying to solve and explain why it
+is important. Support the claim with evidence from the literature}
+\cite{samplebook}.
+
+This work proposes \hseFill{outline your solution approach in one or
+two sentences}. The approach builds upon \hseFill{name the studies or
+practices your research is based on} \cite{sampleweb}. The key novelty
+lies in \hseFill{explain what makes your approach new compared to the
+existing ones}.
+
+The aim of this work is \hseFill{state the aim of the project and the
+objectives (or research questions) through which it is achieved}.
+
+Expected results include \hseFill{describe the expected results in one
+to four sentences}.
+
+The rest of this proposal is organized as follows: Section II reviews
+the existing solutions, Section III describes the methodology, Section
+IV outlines the expected results, and Section V concludes the paper.
+
+% ============================================================
+% MAIN BODY — 1200–1500 слов суммарно (разделы II–IV).
+% Пишите СВЯЗНО: используйте linking words (However, Moreover,
+% Therefore, In contrast, As a result…) и делите текст на короткие
+% абзацы — логичность, связность и абзацное членение оценивают.
+%
+% Literature Review: введение в аспект → что говорит литература →
+% мини-вывод, чем ваша работа продвигает известное; затем следующий
+% аспект. Текст должен быть АНАЛИТИЧЕСКИМ, а не описательным: не
+% пересказ источников, а их сопоставление; поясняйте, какие источники
+% использованы и как. Сравнительная таблица аналогов приветствуется.
+% Проектный трек: здесь — анализ стейкхолдеров/целевой аудитории и
+% обзор существующих продуктов-аналогов.
+% ============================================================
+\section{Literature Review}
+
+\hseFill{Introduce the first aspect of your research area, summarize
+what the literature says about it, and add a mini-summary explaining
+how your work advances what is already known. Then move on to the next
+aspect. Cite every source you mention}
+\cite{samplebook, sampleweb, samplejournal, sampleimage}.
+
+\hseFill{Compare the closest existing solutions against your proposal.
+A comparison table is a compact way to do it; reference it from the
+text}, as shown in Table~\ref{table:comparison}.
+
+\begin{table}[h]
+\centering
+\caption{Comparative analysis of existing solutions}
+\label{table:comparison}
+\small
+\begin{tabular}{lccc}
+\hline
+\textbf{Criterion} & \textbf{Tool A} & \textbf{Tool B} & \textbf{Proposed} \\
+\hline
+Criterion 1 & + & - & + \\
+Criterion 2 & - & + & + \\
+Criterion 3 & - & - & + \\
+\hline
+\end{tabular}
+\end{table}
+
+% ============================================================
+% Methodology: что изучаете, какие гипотезы проверяете, как устроен
+% эксперимент, какие переменные измеряете и почему, какие ПО, ДАННЫЕ
+% и оборудование используете и ОТКУДА они; как и ПОЧЕМУ выбраны методы
+% анализа и выборка; ссылки на литературу; ожидаемые трудности.
+% Проектный трек: раздел называется «Methods and/or Product Design».
+% ============================================================
+\section{Methodology}
+
+\hseFill{Describe what you study and what hypotheses you test. Explain
+how the experiment or system is designed and what assumptions are
+made.}
+
+\hseFill{List the technology stack, the data and the equipment or
+infrastructure you use and where they come from, and justify the
+choice of analysis methods and sampling} \cite{samplesoft}.
+
+\hseFill{Mention the difficulties you expect to face and how you plan
+to mitigate them.}
+
+% ============================================================
+% Results — ≈100 слов: главные ожидаемые результаты, второстепенные,
+% подтверждающие данные; результаты, противоречащие гипотезе, тоже
+% упоминаются.
+% ============================================================
+\section{Expected Results}
+
+\hseFill{Summarize the main expected results and deliverables of the
+project in about one hundred words. Mention the metrics you will use
+to validate them and what would falsify your hypothesis. Make sure
+each result traces back to an objective from the Introduction and a
+method from the Methodology.}
+
+% ============================================================
+% CONCLUSION — ≈200 слов: кратко повторить главные положения, их
+% значимость, возможные улучшения и рекомендации для будущей работы.
+% ============================================================
+\section{Conclusion}
+
+\hseFill{Briefly revisit the most important points of the proposal and
+the significance of the expected findings. Relate the outcomes to the
+aim and objectives stated in the Introduction. Suggest improvements
+and recommendations for future work. Aim at about two hundred words.}
+
+% Подсчёт слов: тулбар «Превью» показывает число слов после каждой
+% сборки (texcount) — впишите его сюда перед сдачей.
+\vspace{2em}
+\begin{center}
+\rule{0.5\linewidth}{0.5pt}\\[0.5em]
+\textit{Word Count \hseFill{fill in before submission}}\\
+\textit{(excluding title, abstract, keywords, references, appendices,
+and the AI-use declaration)}\\
+\rule{0.5\linewidth}{0.5pt}
+\end{center}
+
+% ============================================================
+% REFERENCES — МИНИМУМ 10 источников, из них ≥8 на английском
+% (до 2 неанглоязычных допускается), стиль IEEE.
+%
+% Правила IEEE:
+%   • источники нумеруются В ПОРЯДКЕ ПЕРВОГО ЦИТИРОВАНИЯ в тексте,
+%     НЕ по алфавиту; повторная ссылка использует тот же номер;
+%   • в список включайте ТОЛЬКО то, на что есть \cite в тексте;
+%   • ресурсы Web 2.0 (вики, форумы, блоги, соцсети) как источники
+%     ЗАПРЕЩЕНЫ.
+%
+% Декларация ИИ (обязательна, если применялся генеративный ИИ):
+%   • сноска в тексте — модель и промпт (в объём слов не входит),
+%     например:  \footnote{Generated with ChatGPT (GPT-4o); prompt:
+%     ``...''.};
+%   • И отдельный пункт этого списка: название чата/модели, издатель,
+%     промпт, дата обращения — например «ChatGPT (GPT-4o), OpenAI.
+%     Prompt: ``...''. Accessed: ...».
+%
+% Ниже — образцы всех типов из методички (книга, статья в журнале,
+% веб-страница, изображение, ПО). Замените их своими источниками и
+% добавьте остальные по тем же образцам.
+% ============================================================
+\balance
+\begin{thebibliography}{99}
+
+% Книга: Автор(ы), Название, издание, издательство, год.
+\bibitem{samplebook}
+T. Brown, \textit{Introduction to Electronics}, 3rd ed., Pearson, 2020.
+
+% Веб-страница: Автор(ы), «Заголовок,» Сайт, дата.
+% [Online]. Available: URL. [Accessed: дата].
+\bibitem{sampleweb}
+K. Jacob, ``Future of climate change,'' Climate Talk, Mar. 20, 2024.
+[Online]. Available: \url{https://techtalk.com/climate-future}.
+[Accessed: Apr. 5, 2025].
+
+% Статья в журнале: Автор(ы), «Название,» Журнал (сокр.),
+% т., №, сс. xx--xx, месяц год.
+\bibitem{samplejournal}
+L. Chen and R. Patel, ``Advances in wireless technology,''
+\textit{IEEE Trans. Commun.}, vol.~68, no.~4, pp.~123--130, Apr. 2021.
+
+% Изображение: Автор(ы), «Название,» Источник, дата.
+% [Online]. Available: URL. [Accessed: дата].
+\bibitem{sampleimage}
+M. Clark, ``Neural network diagram,'' Neuralgraphics, Feb. 10, 2023.
+[Online]. Available: \url{https://neuralgraphics.com/nn-diagram}.
+[Accessed: Apr. 5, 2025].
+
+% Программное обеспечение: Название. (версия/год), издатель.
+% Accessed: дата. [Online]. Available: URL.
+\bibitem{samplesoft}
+Antenna Products. (2011), Antcom. Accessed: Feb. 12, 2014. [Online].
+Available: \url{http://www.antcom.com/documents/catalogs/L1L2GPSAntennas.pdf}
+
+\end{thebibliography}
+
+% ============================================================
+% APPENDICES (факультативно) — вспомогательный/справочный материал
+% (таблицы, графики, формулы), не критичный для основного текста; в
+% подсчёт слов НЕ входит. Раскомментируйте при необходимости:
+% \appendix
+% \section{Supplementary material}
+% \hseOptional{additional tables, figures or derivations}
+% ============================================================
+
+\end{document}

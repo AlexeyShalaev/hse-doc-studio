@@ -1,0 +1,83 @@
+# packs/hse-cs-se/templates/coursework/versions/2026.1/checks/hse-pi-checkpoint-2026.yaml
+# Требования к промежуточной отчётной документации контрольных точек КП
+# (§2.3.2.4 Программы практики ОП ПИ 2024): структура Промежуточного отчёта
+# исследовательского проекта. Зачёт за КТ даётся в т.ч. при условии
+# «соблюдена структура» — эти правила проверяют её автоматически.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Программа практики ОП ПИ
+  en: SE practice programme
+ref:
+  ru: Программа практики ОП «Программная инженерия» 2024, §2.3.2.4 — отчётная документация к КТ1/КТ2
+  en: HSE SE Practice Programme 2024, §2.3.2.4 — CP1/CP2 interim reporting
+source:
+  ru: Программа практики ОП «Программная инженерия», утв. Академсоветом ОП ПИ 23.08.2024
+  url: https://www.hse.ru/ba/se/
+
+rules:
+  # ── Обязательные части Промежуточного отчёта (исследовательский КП, КТ1) ──
+  - id: hse-pi-checkpoint-2026/interim-terms
+    title:       { ru: "Промежуточный отчёт: термины и сокращения", en: "Interim report: terms & abbreviations" }
+    description: { ru: "§2.3.2.4: промежуточный отчёт должен содержать раздел «Основные термины, определения и сокращения».", en: "§2.3.2.4: the interim report must contain a \"Key terms, definitions and abbreviations\" section." }
+    category:    structure
+    applies_to:  [interim_report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*interim_report/*.tex"
+      pattern: '(?i)\\(?:chapter|section)\*?\{[^}]*(?:[Тт]ермин|terms)'
+      negate: false
+      message: { ru: "В промежуточном отчёте нет раздела «Основные термины, определения и сокращения».", en: "The interim report is missing a \"Key terms, definitions and abbreviations\" section." }
+
+  - id: hse-pi-checkpoint-2026/interim-introduction
+    title:       { ru: "Промежуточный отчёт: введение", en: "Interim report: introduction" }
+    description: { ru: "§2.3.2.4: промежуточный отчёт должен содержать введение (актуальность, объект и предмет, методы, цели и задачи исследования).", en: "§2.3.2.4: the interim report must contain an introduction (relevance, object and subject, methods, aim and objectives)." }
+    category:    structure
+    applies_to:  [interim_report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*interim_report/*.tex"
+      pattern: '(?i)\\(?:chapter|section)\*?\{[^}]*(?:[Вв]ведени|introduction)'
+      negate: false
+      message: { ru: "В промежуточном отчёте нет раздела «Введение».", en: "The interim report is missing an \"Introduction\" section." }
+
+  - id: hse-pi-checkpoint-2026/interim-review
+    title:       { ru: "Промежуточный отчёт: обзор и анализ источников", en: "Interim report: review & analysis of sources" }
+    description: { ru: "§2.3.2.4: промежуточный отчёт должен содержать обзор и анализ источников с выбором методов, алгоритмов и моделей для решения поставленных задач.", en: "§2.3.2.4: the interim report must contain a review and analysis of sources with the selection of methods, algorithms and models." }
+    category:    structure
+    applies_to:  [interim_report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*interim_report/*.tex"
+      pattern: '(?i)\\(?:chapter|section)\*?\{[^}]*(?:[Оо]бзор|review)'
+      negate: false
+      message: { ru: "В промежуточном отчёте нет раздела «Обзор и анализ источников».", en: "The interim report is missing a \"Review and analysis of sources\" section." }
+
+  - id: hse-pi-checkpoint-2026/interim-bibliography
+    title:       { ru: "Промежуточный отчёт: список источников", en: "Interim report: reference list" }
+    description: { ru: "§2.3.2.4: промежуточный отчёт должен содержать список использованных источников, оформленный по ГОСТ (7.0.100-2018 / 7.0.5-2008); на каждый источник в тексте обязана быть ссылка.", en: "§2.3.2.4: the interim report must contain a GOST-formatted reference list (7.0.100-2018 / 7.0.5-2008); every listed source must be cited in the text." }
+    category:    bibliography
+    applies_to:  [interim_report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*interim_report/*.tex"
+      pattern: '\\begin\{thebibliography\}|\\bibliography\{'
+      negate: false
+      message: { ru: "В промежуточном отчёте нет списка использованных источников.", en: "The interim report has no reference list." }
+
+  - id: hse-pi-checkpoint-2026/interim-schedule
+    title:       { ru: "Промежуточный отчёт: календарный план", en: "Interim report: work schedule" }
+    description: { ru: "§2.3.2.4: приложение промежуточного отчёта — календарный план работ с указанием дат.", en: "§2.3.2.4: the interim report appendix must be a work schedule (calendar plan) with dates." }
+    category:    structure
+    applies_to:  [interim_report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*interim_report/*.tex"
+      pattern: '(?i)\\(?:chapter|section)\*?\{[^}]*(?:[Кк]алендарн|schedule)'
+      negate: false
+      message: { ru: "В промежуточном отчёте нет приложения «Календарный план работ».", en: "The interim report is missing the \"Work schedule\" appendix." }

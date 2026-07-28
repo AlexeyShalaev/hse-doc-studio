@@ -1,0 +1,25 @@
+{
+  "agentPersonaValidation": {
+    "labelRequired": "Укажите название роли",
+    "instructionRequired": "Опишите, каким должен быть агент"
+  },
+  "aiProviderValidation": {
+    "nameRequired": "Укажите название",
+    "apiKeyRequired": "Укажите API-ключ",
+    "timeoutPositive": "Таймаут должен быть больше 0"
+  },
+  "openFolder": {
+    "openInEditor": "Открыть в редакторе",
+    "noEditors": "Внешние редакторы не обнаружены"
+  },
+  "fixFinding": {
+    "prompt": "В документе [{{docCode}}](doc:{{docId}}) проверка «{{ruleId}}» нашла замечание: «{{message}}»{{location}}. Найди это место в .tex, объясни причину и исправь так, чтобы замечание было устранено по требованиям ЕСПД/ГОСТ.",
+    "location": " в `{{file}}`{{lineSuffix}}"
+  },
+  "requirementsFormat": {
+    "kindMacro": "Макросы (\\req / \\reqref)",
+    "kindId": "ID-паттерн",
+    "kindCustom": "Свои regex",
+    "prompt": "Помоги настроить формат распознавания требований для трассировки в этом проекте. Сейчас активен формат «{{kindLabel}}». Сначала посмотри, как на самом деле оформлены идентификаторы требований в исходниках — используй grep_project и read_tex по ТЗ и другим документам комплекта. Затем подбери подходящий формат: macro (определения \\req{ID}{текст} и ссылки \\reqref{ID}), id (regex идентификатора + документы-источники) или custom (свои def_pattern с (?P<id>…) и ref_pattern с (?P<ids>…)). Проверь кандидата инструментом preview_requirements_format и покажи, сколько требований найдено, покрыто, без ссылок и без определения. Когда вариант станет рабочим, примени его через set_requirements_format. Кратко поясняй каждый шаг."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "header": {
+    "eyebrow": "Connect a folder",
+    "title": "Open an existing project",
+    "description": "Choose a folder. If it already contains an HSE Studio project (<0>.hse-studio/</0>), we'll connect to it. If not, we'll offer to create a new one here."
+  },
+  "folder": {
+    "label": "Project folder",
+    "placeholder": "~/study/my-project or C:\\…",
+    "browse": "Browse…",
+    "hint": "Paste the path manually or click \"Browse…\""
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "connect": "Connect",
+    "createHere": "Create project here",
+    "connectFailed": "Failed to connect the folder"
+  },
+  "inspection": {
+    "empty": "Pick a folder to see what's inside.",
+    "checking": "Checking the folder…",
+    "notExists": "Path does not exist",
+    "notDir": "This is a file, not a folder",
+    "found": "Project found",
+    "fieldName": "Name:",
+    "fieldPack": "Pack / template:",
+    "fieldEngine": "Engine:",
+    "noProject": "No project in this folder",
+    "noProjectHint": "There is no <0>.hse-studio/project.json</0> file, so there hasn't been an HSE Studio project here yet. You can create a new one right here."
+  }
+}

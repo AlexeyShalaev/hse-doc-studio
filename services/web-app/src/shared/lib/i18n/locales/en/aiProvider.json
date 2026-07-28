@@ -1,0 +1,60 @@
+{
+  "type": {
+    "openaiCompat": "OpenAI-compatible"
+  },
+  "keyPlaceholder": {
+    "openaiCompat": "endpoint key"
+  },
+  "baseUrlPlaceholder": {
+    "openai": "https://api.openai.com/v1 (optional)",
+    "openaiCompat": "https://localhost:11434/v1"
+  },
+  "fetch": {
+    "emptyModels": "The provider returned no models",
+    "failed": "Failed to fetch models"
+  },
+  "validation": {
+    "timeoutsPositive": "Timeouts must be greater than 0",
+    "nameRequired": "Enter a name",
+    "checkFields": "Check the form fields"
+  },
+  "toast": {
+    "saved": "Provider «{{name}}» saved",
+    "added": "Provider «{{name}}» added"
+  },
+  "modal": {
+    "a11yDescription": "AI provider connection settings: type, API key, address, models, TLS, and timeouts.",
+    "titleEdit": "Edit provider",
+    "titleCreate": "Add provider",
+    "close": "Close"
+  },
+  "fields": {
+    "name": "Name",
+    "namePlaceholder": "E.g. OpenAI or Local vLLM",
+    "type": "Type",
+    "apiKey": "API key",
+    "apiKeyPlaceholderEdit": "Leave empty to keep unchanged",
+    "apiKeyHint": "Stored on the server, never returned to the browser.",
+    "baseUrl": "Base URL",
+    "models": "Models",
+    "tlsVerify": "TLS certificate verification",
+    "tlsOn": "Enabled",
+    "tlsOff": "Disabled",
+    "tlsWarning": "Without certificate verification the connection is vulnerable to MITM — use only for trusted internal addresses.",
+    "connectTimeout": "Connect timeout, s",
+    "requestTimeout": "Request timeout, s"
+  },
+  "models": {
+    "fetchFromApi": "Load from API",
+    "fetchTitle": "Request the list of models from the provider",
+    "removeModel": "Remove",
+    "emptyEdit": "The list is empty — add manually or load from API.",
+    "emptyCreate": "You can add manually; after saving — load from API.",
+    "newModelPlaceholder": "Model ID (e.g. gpt-4.1)"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "add": "Add"
+  }
+}

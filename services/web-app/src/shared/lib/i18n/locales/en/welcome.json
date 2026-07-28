@@ -1,0 +1,71 @@
+{
+  "header": {
+    "kicker": "Local · Docker · File system",
+    "title": "Projects",
+    "subtitle": "Thesis, coursework and Project Proposal documentation — locally, through the file system.",
+    "openFolder": "Open folder…",
+    "newProject": "New project"
+  },
+  "filters": {
+    "search": "Find a project…",
+    "searchHint": "Press \"/\" to search",
+    "label": "Show",
+    "active": "Active",
+    "all": "All",
+    "archived": "Archive"
+  },
+  "sort": {
+    "label": "Sort",
+    "recent": "Recent",
+    "pinned": "Pinned",
+    "name": "By name"
+  },
+  "recent": {
+    "title": "Recent"
+  },
+  "card": {
+    "company": "Company",
+    "university": "University",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "today": "Today, {{time}}"
+  },
+  "newCard": {
+    "title": "New project",
+    "description": "Coursework, thesis, Project Proposal or master's — from a template.",
+    "shortcutHint": "or ⌘K → \"New project\""
+  },
+  "empty": {
+    "title": "No projects yet",
+    "description": "Create a project from a template or connect an existing folder.",
+    "create": "New project",
+    "noMatchTitle": "Nothing found",
+    "noMatchDescription": "No projects match \"{{query}}\" — try part of the folder name or check your keyboard layout.",
+    "resetQuery": "Clear search"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "subtitle": "From local build logs",
+    "loading": "Loading…",
+    "empty": "No activity yet. Build your documents — events will appear here.",
+    "kind": {
+      "compileOk": "built",
+      "compileFail": "build failed",
+      "edit": "edit",
+      "manualNote": "note",
+      "sign": "signed",
+      "packSubmission": "packaged"
+    },
+    "time": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} min ago",
+      "minutesAgo_other": "{{count}} min ago",
+      "hoursAgo_one": "{{count}} hr ago",
+      "hoursAgo_other": "{{count}} hrs ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago"
+    }
+  }
+}

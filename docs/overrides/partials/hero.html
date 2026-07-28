@@ -1,0 +1,65 @@
+{#
+  Герой лендинга. Данные — из front matter страницы (page.meta.hero.*):
+    hero:
+      eyebrow: "…"        # надзаголовок
+      title: "…"          # H1 героя
+      lede: "…"           # лид-абзац
+      actions:            # кнопки
+        - text: "…"
+          href: "…"       # относительный URL от корня сайта
+          kind: primary | ghost
+      install: "curl …"   # команда установки (необязательно)
+      fine: "…"           # подстрочник (необязательно)
+      sheet:              # бланк «обходной лист» справа (необязательно)
+        title: "…"
+        stamp: "…"
+        items:
+          - { code: "ТЗ", tone: "st1", name: "…", done: true }
+  Разметка живёт вне .md-typeset, чтобы стили героя не воевали с прозой.
+#}
+{% set hero = page.meta.hero %}
+<section class="hds-hero">
+  <div class="hds-hero__inner md-grid">
+    <div class="hds-hero__copy">
+      {% if hero.eyebrow %}<p class="hds-eyebrow">{{ hero.eyebrow }}</p>{% endif %}
+      <h1 class="hds-hero__title">{{ hero.title }}</h1>
+      {% if hero.lede %}<p class="hds-hero__lede">{{ hero.lede }}</p>{% endif %}
+      {% if hero.actions %}
+        <div class="hds-hero__actions">
+          {% for a in hero.actions %}
+            <a class="hds-btn{% if a.kind == 'ghost' %} hds-btn--ghost{% endif %}"
+               href="{{ a.href | url }}">{{ a.text }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if hero.install %}
+        <div class="hds-cmd">
+          <span class="hds-cmd__dollar" aria-hidden="true">$</span>
+          <code>{{ hero.install }}</code>
+          <button type="button" class="hds-cmd__copy" data-hds-copy
+                  aria-label="{{ 'Скопировать команду' if config.theme.language == 'ru' else 'Copy command' }}">
+            {{ 'Копировать' if config.theme.language == 'ru' else 'Copy' }}
+          </button>
+        </div>
+      {% endif %}
+      {% if hero.fine %}<p class="hds-hero__fine">{{ hero.fine }}</p>{% endif %}
+    </div>
+    {% if hero.sheet %}
+      <div class="hds-rsheet" role="img"
+           aria-label="{{ hero.sheet.title }}">
+        <div class="hds-rsheet__head">{{ hero.sheet.title }}</div>
+        <ul>
+          {% for it in hero.sheet.items %}
+            <li>
+              <span class="hds-rsheet__code" style="--stc: var(--hds-{{ it.tone }})">{{ it.code }}</span>
+              <span class="hds-rsheet__name">{{ it.name }}</span>
+              <span class="hds-rsheet__st {{ 'done' if it.done else 'wait' }}"
+                    aria-hidden="true">{{ '✓' if it.done else '○' }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if hero.sheet.stamp %}<span class="hds-stamp">{{ hero.sheet.stamp }}</span>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>

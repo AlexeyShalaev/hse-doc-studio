@@ -1,0 +1,7 @@
+# Общие ассеты копируются из docs/ru скриптом scripts/docs/sync_shared.py —
+# источник правды один, эти копии не коммитятся.
+/stylesheets/
+/javascripts/
+/assets/
+# Генерируется из release-notes.json (gen_changelog.py --site en).
+/whatsnew/index.md

@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ── Backend ──────────────────────────────────────────────────────────────
+
+  backend-lint:
+    name: Backend · Lint & type check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          # Тот же интерпретатор, что в тестах и в публикуемом образе
+          # (deploy/all-in-one/Dockerfile: python:3.14-slim-bookworm).
+          python-version: "3.14"
+      - name: Sync
+        run: uv sync --frozen --extra dev
+      - name: Ruff lint
+        run: uv run ruff check
+      - name: Ruff format
+        run: uv run ruff format --check
+      - name: Mypy
+        run: uv run mypy hse_doc_studio
+      # Гейт релиза: release-notes.json корректен, у версии из __init__.py есть
+      # заметки, CHANGELOG.md им соответствует. Падает в релизном PR (там и бампится
+      # версия), то есть ДО тега и публикации образа. Скрипту хватает stdlib.
+      - name: Release notes valid and CHANGELOG.md in sync
+        working-directory: .
+        run: python3 scripts/gen_changelog.py --check
+
+  # Быстрый (~45 с) прогон unit-тестов там, где реально исполняются платформенные ветки.
+  # Полное покрытие и порог — в отдельном джобе ниже: полный прогон идёт ~7 минут, и
+  # гонять его на трёх ОС значило бы сделать его критическим путём CI.
+  backend-test-unit:
+    name: Backend · Unit (${{ matrix.os }}, py${{ matrix.python }})
+    needs: backend-lint
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: services/api
+    strategy:
+      fail-fast: false
+      # На PR — только ubuntu (нижняя и верхняя границы Python). На push в master
+      # добавляются windows и macos: единственное место, где исполняются
+      #   infra/fonts/system_fonts.py        win32-каталоги шрифтов
+      #   infra/ai/ollama/hardware_probe.py  win32 + darwin/arm64 (Apple Silicon)
+      #   infra/vcs/git_vcs_service.py       ветка os.name == "posix"
+      #   uvloop; sys_platform != 'win32'    на Windows иной граф зависимостей
+      #   tests/.../test_font_names.py       skipif снимается только на Windows
+      matrix:
+        include: >-
+          ${{ github.event_name == 'pull_request'
+              && fromJSON('[
+                   {"os":"ubuntu-latest","python":"3.14"},
+                   {"os":"ubuntu-latest","python":"3.12"}]')
+              || fromJSON('[
+                   {"os":"ubuntu-latest","python":"3.14"},
+                   {"os":"ubuntu-latest","python":"3.12"},
+                   {"os":"windows-latest","python":"3.14"},
+                   {"os":"macos-latest","python":"3.14"}]') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Sync
+        run: uv sync --frozen --all-extras
+      - name: Pytest (unit)
+        run: uv run pytest -m unit --no-cov
+
+  # Полный прогон (unit + integration) — единственный источник числа покрытия.
+  # Integration здесь дешёвая по инфраструктуре (реальный FastAPI + JSON-персистентность
+  # в tmp_path, без Docker), но по времени это ~7 минут.
+  backend-coverage:
+    name: Backend · Full suite & coverage
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
+        run: uv sync --frozen --all-extras
+      # Порог = текущий факт (замерено 80% на полном прогоне). Взят на 2 пункта ниже:
+      # часть строк — платформенные ветки win32/darwin, на ubuntu они не исполняются.
+      # Поднимать по мере добавления тестов, цель — 90.
+      - name: Pytest (unit + integration)
+        run: uv run pytest --cov-fail-under=78
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: services/api/coverage.xml
+          flags: backend
+        continue-on-error: true
+
+  # ── Frontend ─────────────────────────────────────────────────────────────
+  # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
+  # зависимостей — самая дорогая операция, и разделение гоняло её дважды.
+
+  frontend:
+    name: Frontend · Lint, types, test & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/web-app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          # Версия берётся из "packageManager" в package.json — один источник истины
+          # с образом (deploy/all-in-one/Dockerfile: corepack prepare pnpm@9.15.4).
+          package_json_file: services/web-app/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: services/web-app/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint (ESLint)
+        run: pnpm lint
+      - name: Format check (Prettier)
+        run: pnpm format:check
+      # Ключи локализации: скрипт падает, если t('…') ссылается на несуществующий ключ.
+      - name: i18n keys
+        run: pnpm lint:i18n
+      - name: Type check
+        run: pnpm typecheck
+      - name: Test (vitest)
+        run: pnpm test:coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: services/web-app/coverage/lcov.info
+          flags: frontend
+        continue-on-error: true
+      # Собираем здесь, а не только в publish.yml: иначе сломанная сборка фронта
+      # обнаруживается уже на релизном теге, когда чинить поздно.
+      - name: Build
+        run: pnpm build
+
+  # ── Sentinel — единственный required-статус в branch protection. ──────────
+  # Список джобов правится здесь, а не в настройках репозитория.
+
+  all-checks-passed:
+    name: All checks passed
+    if: always()
+    needs: [backend-lint, backend-test-unit, backend-coverage, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required checks failed."
+            exit 1
+          fi
+          echo "All checks passed."

@@ -1,0 +1,111 @@
+% !TeX program = xelatex
+% ============================================================
+% interim_report/interim_report.tex (EN) — "Thesis report" — the CP2
+% deliverable of a research (academic) thesis, SE programme.
+%
+% Genre per the "Thesis CP2 preparation instruction 2025/26": a GOST
+% 7.32-2017 document, AT LEAST 15–20 pages including the reference list
+% (>= 5 GOST-formatted sources). Carries the elaborated research
+% Approach. Sections mirror the instruction's list exactly; a part with
+% no information is omitted while the ORDER of the rest is preserved.
+% The title page is signed by the student and the supervisor.
+%
+% This is NOT the thesis text (that is the `thesis` document). The
+% thesis report extends the CP1 Annotation with the experimental
+% base, the data description and the experiment approach.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/annotation_preamble}
+\begin{document}
+\sloppy
+\input{title}
+
+
+\begin{center}
+  \textbf{\large Thesis Report}
+\end{center}
+
+\vspace{0.4em}
+
+% ── Keywords (GOST 7.32-2017): 5–15 words or phrases, UPPERCASE,
+%    nominative case, comma-separated, no full stop at the end. ──
+\noindent\textbf{Keywords:} \hseFill{5–15 WORDS IN UPPERCASE, NOMINATIVE CASE, SEPARATED BY COMMAS, NO FULL STOP AT THE END}
+
+\section{Assessment of the current state of the problem}
+The problem under consideration is~\hseFill{state the scientific problem}. Today it is addressed with \hseFill{existing approaches, methods, works with citations} \cite{example-en}. Their main limitations are: \hseFill{limitation 1}; \hseFill{limitation 2}. \hseFill{Expand the review: comparison of approaches, tables, conclusions — this is the main survey section of the report}.
+
+\section{Basis and initial data for the research}
+The work is based on the curriculum of the «\hseSpecialization» programme and the thesis topic approved by the HSE FCS order. Initial data: \hseFill{existing groundwork, data, publications and software the work builds upon}.
+
+\section{Relevance and novelty of the research topic}
+The relevance stems from \hseFill{the practical and scientific significance of the task}. The scientific novelty of the work lies in~\hseFill{what exactly is proposed for the first time}.
+
+\section{Object and subject of research}
+\textbf{Object of research (or development)}~--- \hseFill{what is studied as a whole}.
+
+\textbf{Subject of research}~--- \hseFill{the specific aspect of the object on which the work focuses}.
+
+\section{Aim of the research}
+\hseFill{a single formulation of the scientific result to be achieved}.
+
+\section{Research objectives}
+\begin{enumerate}[label=\arabic*), leftmargin=1.3cm, topsep=2pt, itemsep=2pt]
+  \item \hseFill{carry out a review of existing approaches};
+  \item \hseFill{propose and formalise a method (model, algorithm)};
+  \item \hseFill{implement a software tool for the experiments};
+  \item \hseFill{run a computational experiment and evaluate the results};
+  \item \hseFill{draw conclusions on the applicability}.
+\end{enumerate}
+
+\section{Methods and methodology of the research}
+\hseFill{describe the methods and the overall methodology: analytical review, formal modelling, computational experiment, statistical analysis; how they map to the objectives}.
+
+\section{Expected new results of the research}
+\begin{enumerate}[label=\arabic*), leftmargin=1.3cm, topsep=2pt, itemsep=2pt]
+  \item \hseFill{method / model / algorithm and its novelty};
+  \item \hseFill{software implementation for running the experiments};
+  \item \hseFill{experimental evaluation and comparison with baselines};
+  \item \hseFill{conclusions on the limits of applicability}.
+\end{enumerate}
+
+% ── The elaborated Approach (the core of CP2): base, data, experiments ──
+\section{Experimental base of the research}
+\hseFill{what the research runs on: computational environment, hardware, software infrastructure, testbeds}.
+
+\section{Description of the research data}
+\hseFill{the data the research will be run on: source, volume, structure, acquisition and preparation, usage constraints}.
+
+\section{Approach to conducting experiments and interpreting results}
+\hseFill{the experiment plan: which series, which quality metrics, baseline methods for comparison, how the results will be interpreted and validated (statistical significance, reproducibility)}.
+
+\section{Field of application of the research results}
+\hseFill{specify the field of application}.
+
+\section{Expected adoption of the research results}
+\hseFill{where and in what form the results are expected to be adopted: a product, a service, a publication, open-source code}.
+
+\section{Economic efficiency or significance of the research}
+\hseFill{where and by whom the results are applicable; what the practical or economic gain is}.
+
+\section{Forecast assumptions on the development of the object of research}
+\hseFill{how the object of research may evolve and how the work may be continued}.
+
+\bigskip
+% ── References in IEEE style (§2.5.3.1: English research theses cite in
+%    IEEE style): numbered [n], author initials first, article titles in
+%    quotes, venue/volume/number/pages, accessed date for online
+%    sources. Every source must be cited with \cite{…} in the text.
+%    CP2 instruction: AT LEAST FIVE sources. ──
+\noindent\textbf{References}
+\vspace{-0.3em}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+  \bibitem{example-en}
+  A.~B.~Author and C.~D.~Coauthor, \enquote{Title of the paper,} in \emph{Proc. of the Conference}, New York, NY, USA: ACM, 2024, pp.~10--20.
+
+  \bibitem{example-web}
+  Resource Name. (2026). Accessed: Jan.~1, 2026. [Online]. Available: \url{https://example.org}
+\end{thebibliography}
+
+
+\end{document}

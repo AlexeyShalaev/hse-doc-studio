@@ -1,0 +1,17 @@
+{
+  "addNote": {
+    "placeholder": "Добавить заметку…",
+    "submit": "Добавить"
+  },
+  "kind": {
+    "compileOk": "Сборка OK",
+    "compileFail": "Ошибка сборки",
+    "manualNote": "Заметка",
+    "packSubmission": "Упаковка",
+    "sign": "Подпись",
+    "edit": "Редактирование"
+  },
+  "timeline": {
+    "empty": "История пуста"
+  }
+}

@@ -1,0 +1,47 @@
+/* ============================================================
+   Слой 8: печать. Хрома убирается, поля 20 мм, ссылки с URL.
+   ============================================================ */
+
+@media print {
+  @page {
+    margin: 20mm;
+  }
+
+  .md-header,
+  .md-tabs,
+  .md-sidebar,
+  .md-banner,
+  .md-top,
+  .hds-colophon__cols,
+  .md-content__button {
+    display: none !important;
+  }
+
+  article.md-content__inner::before {
+    display: none;
+  }
+
+  .md-typeset a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: var(--hds-ink-3);
+    word-break: break-all;
+  }
+
+  .md-typeset details {
+    display: block;
+  }
+
+  .md-typeset details > summary::before,
+  .md-typeset details > summary::after {
+    display: none;
+  }
+
+  .md-typeset details[open] > summary ~ * {
+    display: block;
+  }
+
+  .hds-shot {
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "export": {
+    "heading": "Экспорт",
+    "description": "Сохраните провайдеров ИИ и настройки приложения в файл — для переноса на другую машину или резервной копии.",
+    "includeLabel": "Что включить",
+    "includeSettings": "Настройки приложения",
+    "includeProviders": "AI-провайдеры",
+    "includePersonas": "Роли агента",
+    "typeLabel": "Тип файла",
+    "modePlain": "Обычный",
+    "modeEncrypted": "Зашифрованный",
+    "hintEncrypted": "API-ключи шифруются паролем. Тот же пароль понадобится при импорте.",
+    "hintPlain": "API-ключи провайдеров сохраняются в открытом виде. Только для локальных копий.",
+    "hintNothingToEncrypt": "Шифровать нечего — у выбранных провайдеров нет API-ключей.",
+    "passwordLabel": "Пароль шифрования",
+    "passwordPlaceholder": "Введите пароль",
+    "downloadButton": "Скачать файл",
+    "downloadButtonPending": "Сохранение…"
+  },
+  "import": {
+    "heading": "Импорт",
+    "description": "Загрузите ранее экспортированный файл. Совпадение определяется по идентификатору провайдера.",
+    "mergeLabel": "При совпадении",
+    "mergeSkip": "Пропустить существующие",
+    "mergeReplace": "Заменить существующие",
+    "decryptPasswordLabel": "Пароль для расшифровки",
+    "decryptPasswordPlaceholder": "Введите пароль",
+    "decryptButton": "Расшифровать и импортировать",
+    "decryptButtonPending": "Импорт…",
+    "pickFileButton": "Выбрать файл…",
+    "pickFileButtonPending": "Импорт…"
+  },
+  "toast": {
+    "selectWhatToExport": "Выберите, что экспортировать",
+    "enterEncryptionPassword": "Введите пароль для шифрования",
+    "fileSavedEncrypted": "Файл сохранён (зашифрован)",
+    "fileSaved": "Файл сохранён",
+    "readFileError": "Не удалось прочитать файл — это не корректный JSON",
+    "notAnExportFile": "Это не похоже на файл экспорта HSE Studio",
+    "encryptedFileHint": "Файл зашифрован — введите пароль для импорта",
+    "enterDecryptionPassword": "Введите пароль для расшифровки",
+    "importWithErrorsTitle": "Импорт с ошибками",
+    "importDoneTitle": "Импорт завершён",
+    "resultSettings": "настройки обновлены",
+    "resultProviders": "провайдеры: +{{imported}}, пропущено {{skipped}}",
+    "resultPersonas": "роли: +{{imported}}, пропущено {{skipped}}"
+  }
+}

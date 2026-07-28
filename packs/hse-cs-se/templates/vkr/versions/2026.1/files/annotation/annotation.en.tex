@@ -1,0 +1,118 @@
+% !TeX program = xelatex
+% ============================================================
+% Аннотация — документ КТ1 исследовательской (академической) ВКР
+% ОП «Программная инженерия» ФКН НИУ ВШЭ.
+%
+% ЖАНР (Инструкция по подготовке документов к защите тем ВКР 2025/26 +
+% ГОСТ 7.32-2017 §5.3): набор ПОЛУЖИРНЫХ ЛЕЙБЛОВ — структурных частей
+% аннотации — со значением следом. НЕ ЕСПД: без штампа, без кода
+% документа, без листа утверждения, без содержания и без нумерованных
+% разделов. Требования КТ1: аннотация СО СПИСКОМ ИСТОЧНИКОВ — не менее
+% 7–8 страниц; источников — не менее 5; ТИТУЛЬНЫЙ ЛИСТ ПОДПИСЫВАЮТ
+% студент И руководитель (подписи размещаются в разделе «Подписи»).
+%
+% Как пользоваться: замените жёлтые \hseFill{…} своим текстом. Если по
+% какой-то структурной части сведений нет — часть опускается, при этом
+% ПОСЛЕДОВАТЕЛЬНОСТЬ остальных сохраняется (инструкция §3). Данные о
+% себе, руководителе и годе задаются в настройках проекта (макросы \hse…).
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/annotation_preamble}
+\begin{document}
+\sloppy
+\input{../common/annotation_title}
+
+
+% ============================================================
+%  ENGLISH ANNOTATION BODY (project.lang == en)
+%  §2.5.3.1 / §2.3.4.2: an English research VKR is written in English.
+%  A Russian AND an English abstract are BOTH required, but this light
+%  document is the annotation itself — here it is rendered in English.
+%  References follow IEEE style. Fill the yellow \hseFill{…} placeholders.
+% ============================================================
+\begin{center}
+  \textbf{\large Annotation}
+\end{center}
+
+\vspace{0.4em}
+
+% ── Keywords (GOST 7.32-2017 §5.3.2.1 / §6.12.2): 5–15 words or
+%    phrases, in UPPERCASE, in the nominative case, on one line separated
+%    by commas, without a full stop at the end. ──
+\noindent\textbf{Keywords:} \hseFill{5–15 WORDS IN UPPERCASE, NOMINATIVE CASE, SEPARATED BY COMMAS, NO FULL STOP AT THE END}
+
+\medskip
+\noindent\textbf{Assessment of the current state of the problem being solved.} The problem under consideration is~\hseFill{state the scientific problem briefly}. Today it is addressed with \hseFill{list existing approaches, methods, works} \cite{example-en}. Their main limitations are: \hseFill{limitation 1}; \hseFill{limitation 2}~--- which is what defines the direction of the present research.
+
+\medskip
+\noindent\textbf{Basis and initial data for the research.} The work is based on the curriculum of the «\hseSpecialization» programme and the thesis topic approved by the HSE FCS order. Initial data: \hseFill{existing groundwork, data, publications and software the work builds upon}.
+
+\medskip
+\noindent\textbf{Relevance and novelty of the research topic.} The relevance stems from \hseFill{the practical and scientific significance of the task}. The scientific novelty of the work lies in~\hseFill{what exactly is proposed for the first time}.
+
+\medskip
+\noindent\textbf{Object of study:} \hseFill{what is studied as a whole}.
+
+\smallskip
+\noindent\textbf{Subject of study:} \hseFill{the specific aspect of the object on which the work focuses}.
+
+\smallskip
+\noindent\textbf{Aim of the research:} \hseFill{a single formulation of the scientific result to be achieved}.
+
+\medskip
+\noindent\textbf{Research objectives:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.3cm, topsep=2pt, itemsep=2pt]
+  \item \hseFill{carry out a review of existing approaches};
+  \item \hseFill{propose and formalise a method (model, algorithm)};
+  \item \hseFill{implement a software tool for the experiments};
+  \item \hseFill{run a computational experiment and evaluate the results};
+  \item \hseFill{draw conclusions on the applicability}.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{Research methods:} \hseFill{list the methods: analytical review, formal modelling, computational experiment, statistical analysis, etc.}
+
+\medskip
+\noindent\textbf{Validity of the scientific results} is confirmed by \hseFill{reproducibility of the experiments, comparison with existing approaches, statistical significance of the differences}.
+
+\medskip
+\noindent\textbf{Expected results and their novelty:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.3cm, topsep=2pt, itemsep=2pt]
+  \item \hseFill{method / model / algorithm};
+  \item \hseFill{software implementation for running the experiments};
+  \item \hseFill{experimental evaluation and comparison with baseline methods};
+  \item \hseFill{conclusions on the limits of applicability}.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{Field of application of the results:} \hseFill{specify the field of application}.
+
+\medskip
+\noindent\textbf{Expected adoption of the results.} \hseFill{where and in what form the results are expected to be adopted: a product, a service, a publication, open-source code}.
+
+\medskip
+\noindent\textbf{Economic efficiency or significance of the work.} The results of the work can be used \hseFill{where and by whom the obtained results are applicable; what the practical or economic gain is}.
+
+\medskip
+\noindent\textbf{Forecast assumptions on the development of the object of study.} \hseFill{how the object of study may evolve and how the work may be continued}.
+
+\bigskip
+% ── References in IEEE style (§2.5.3.1): for an English research VKR the
+%    reference list and in-text citations follow IEEE style — numbered
+%    [n], author initials first, article titles in quotes,
+%    venue/volume/number/pages, accessed date for online sources. Every
+%    source must be cited with \cite{…} in the text. ──
+\noindent\textbf{References}
+\vspace{-0.3em}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+  \bibitem{example-en}
+  A.~B.~Author and C.~D.~Coauthor, \enquote{Title of the paper,} in \emph{Proc. of the Conference}, New York, NY, USA: ACM, 2024, pp.~10--20.
+
+  \bibitem{example-web}
+  Resource Name. (2026). Accessed: Jan.~1, 2026. [Online]. Available: \url{https://example.org}
+\end{thebibliography}
+
+
+
+\end{document}

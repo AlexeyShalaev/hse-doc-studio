@@ -1,0 +1,26 @@
+# Оверлей: собрать образ ИЗ ИСХОДНИКОВ вместо того, чтобы тянуть его из GHCR.
+# Применяется поверх docker-compose.yml, из корня репозитория:
+#
+#   docker compose -f deploy/all-in-one/docker-compose.yml \
+#                  -f deploy/all-in-one/compose.build.yml up -d --build
+#
+# Отдельного compose-файла в корне репозитория нет намеренно: топологии живут
+# в одном месте — здесь, — а различия между ними выражаются оверлеями.
+services:
+  hse-doc-studio:
+    build:
+      context: ../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: production
+    image: hse-doc-studio:dev
+    volumes:
+      # Пак шаблонов уже вкомпилирован в образ (COPY packs). Монтируем его поверх,
+      # чтобы правки .tex подхватывались без пересборки — в этом и смысл сборки
+      # из исходников. Пути относительны каталога первого -f, т.е. deploy/all-in-one.
+      - ../../packs:/app/packs:ro
+    environment:
+      HSE_STUDIO__PACKS_DIR: /app/packs
+
+# Живая перезагрузка бэкенда (uvicorn --reload) сюда НЕ переезжает: для неё есть
+# `make dev` — backend и Vite поднимаются нативно, без пересборки образа на каждую
+# правку. См. CONTRIBUTING.md.

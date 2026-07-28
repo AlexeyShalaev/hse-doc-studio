@@ -1,0 +1,371 @@
+% !TeX program = xelatex
+% ============================================================
+% ieee_829.tex — Software Test Documentation (Master Test Plan
+% + Test Design / Test Cases).
+%
+% International-standard ENGLISH analog of the ЕСПД «Программа и
+% методика испытаний» (ГОСТ 19.301-79). Per §2.3.4.2 of the HSE SE
+% practice program, a student writing in English may submit this
+% form instead of the translated GOST 19 document.
+%
+% Standard: IEEE 829-2008 / ISO/IEC/IEEE 29119-3
+%           «Software Test Documentation».
+%
+% Self-contained, compile-ready xelatex document. English-only:
+% there is no Russian branch and no project.lang conditional — the
+% Russian variant lives in test_program_and_methodology.tex.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+\usepackage[english]{babel}
+\usepackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{indentfirst}\setlength{\parindent}{1.25cm}\setlength{\parskip}{6pt}
+\usepackage{microtype}\usepackage{csquotes}\usepackage{amsmath}\usepackage{graphicx}
+\usepackage{xcolor}\usepackage{float}\usepackage{array}\usepackage{booktabs}
+\usepackage{longtable}\usepackage{tabularx}\usepackage{adjustbox}\usepackage{xurl}\urlstyle{same}
+\usepackage{hyphenat}\usepackage{caption}\usepackage{enumitem}\setlist{nosep}
+\usepackage{titlesec}\usepackage{hyperref}
+\hypersetup{unicode=true,colorlinks=true,linkcolor=black,urlcolor=blue}
+\input{../common/meta}    % provides \hseFill, \projectname, \hseProjectNameEn, \hseAuthorName, \hseGroup, \hseYear ...
+\input{../common/commands}
+
+\begin{document}\sloppy
+
+% ── Title block ─────────────────────────────────────────────
+\begin{center}
+{\large\bfseries Software Test Documentation\par}
+\vspace{0.2cm}
+{\normalsize Master Test Plan and Test Cases\par}
+\vspace{0.15cm}
+{\normalsize IEEE 829-2008 / ISO/IEC/IEEE 29119-3\par}
+\vspace{0.9cm}
+{\large System under test:\par}
+\vspace{0.2cm}
+{\Large\bfseries \enquote{\hseProjectNameEn}\par}
+\vspace{0.15cm}
+{\normalsize (\enquote{\projectname})\par}
+\vspace{1.2cm}
+{\normalsize Author: \hseAuthorName\par}
+\vspace{0.1cm}
+{\normalsize Group: \hseGroup\par}
+\vspace{0.1cm}
+{\normalsize \hseCity, \hseYear\par}
+\end{center}
+
+\vspace{0.5cm}
+
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\clearpage
+
+% ============================================================
+% PART I. MASTER TEST PLAN
+% ============================================================
+
+% ── 1. Introduction ─────────────────────────────────────────
+\section{Introduction}
+
+This document is the Master Test Plan for the software system \enquote{\hseProjectNameEn}. It defines the scope, approach, resources and schedule of the testing activities and follows the structure recommended by IEEE~829-2008 and ISO/IEC/IEEE~29119-3.
+
+\subsection{Purpose and Scope}
+
+The purpose of testing is to verify that \enquote{\projectname} conforms to the functional and non-functional requirements stated in the Software Requirements Specification (SRS). The scope of this plan covers \hseFill{system boundary under test} and excludes \hseFill{what is out of scope}.
+
+\subsection{Objectives}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item confirm that every functional requirement \texttt{SRS-F-XX} is covered by at least one test case;
+    \item detect defects before the acceptance of the release under test;
+    \item verify the non-functional characteristics: \hseFill{key quality attributes};
+    \item produce reproducible evidence (logs, reports) for each verified requirement.
+\end{itemize}
+
+\subsection{References}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item Software Requirements Specification for \enquote{\projectname};
+    \item IEEE~829-2008 Standard for Software and System Test Documentation;
+    \item ISO/IEC/IEEE~29119-3 Software Testing~--- Test Documentation.
+\end{itemize}
+
+% ── 2. Test items ───────────────────────────────────────────
+\section{Test Items}
+
+The following items are submitted for testing:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item the application \enquote{\hseProjectNameShort}, version \hseFill{version or tag under test};
+    \item source code at revision \hseFill{commit id or tag};
+    \item accompanying configuration and deployment scripts \hseFill{list of scripts};
+    \item user and programmer documentation \hseFill{list of documents}.
+\end{enumerate}
+
+The build under test is identified by \hseFill{build identifier} and is deployed according to \hseFill{deployment instructions reference}.
+
+% ── 3. Features to be tested ────────────────────────────────
+\section{Features to Be Tested}
+
+The features listed below are in scope. Each feature is traced to one or more functional requirements of the SRS and to the test cases in Part~II.
+
+\begin{longtable}{|p{0.16\textwidth}|p{0.50\textwidth}|p{0.22\textwidth}|}
+\caption{Features in scope and requirement traceability}\label{tab:features-in}\\
+\hline
+\textbf{Feature ID} & \textbf{Feature} & \textbf{Requirements} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Feature ID} & \textbf{Feature} & \textbf{Requirements} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+F-01 & \hseFill{feature name} & SRS-F-01 \\
+\hline
+F-02 & \hseFill{feature name} & SRS-F-02, SRS-F-03 \\
+\hline
+\end{longtable}
+
+% ── 4. Features not to be tested ────────────────────────────
+\section{Features Not to Be Tested}
+
+The following are out of scope for this test effort, together with the reason for exclusion:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{excluded feature} --- \hseFill{reason (e.g. third-party, unchanged, out of release scope)};
+    \item \hseFill{excluded feature} --- \hseFill{reason}.
+\end{itemize}
+
+% ── 5. Approach ─────────────────────────────────────────────
+\section{Approach}
+
+Testing is organised into several levels. For each level the table states the method used and the supporting tools.
+
+\begin{longtable}{|p{0.20\textwidth}|p{0.42\textwidth}|p{0.26\textwidth}|}
+\caption{Test levels, methods and tools}\label{tab:approach}\\
+\hline
+\textbf{Level} & \textbf{Method} & \textbf{Tools} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Level} & \textbf{Method} & \textbf{Tools} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+Unit & Automated white-box tests of individual modules & \hseFill{unit test framework} \\
+\hline
+Integration & Verification of interactions between components and external services & \hseFill{integration test tools} \\
+\hline
+System & End-to-end black-box scenarios against the deployed system & \hseFill{system/e2e test tools} \\
+\hline
+Static & Linting, static analysis and security checks & \hseFill{linters and analyzers} \\
+\hline
+\end{longtable}
+
+Test coverage is measured with \hseFill{coverage tool}, and results are recorded in \hseFill{CI/CD or test report location}.
+
+% ── 6. Item pass/fail criteria ──────────────────────────────
+\section{Item Pass/Fail Criteria}
+
+A test item is considered to have \emph{passed} when all of the following hold:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item every test case linked to an in-scope requirement has the status \enquote{Passed};
+    \item no open defect of severity \hseFill{blocking severity level} or higher remains;
+    \item the achieved test coverage is not lower than \hseFill{target coverage};
+    \item all static analysis and security gates report no critical findings.
+\end{enumerate}
+
+The item \emph{fails} if any of the above conditions is not met on the agreed version under test.
+
+% ── 7. Suspension criteria and resumption requirements ──────
+\section{Suspension Criteria and Resumption Requirements}
+
+Testing is suspended if:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the build under test cannot be deployed in the test environment;
+    \item a defect of severity \hseFill{blocking severity level} blocks execution of \hseFill{share of test cases};
+    \item the test environment is unavailable or unstable.
+\end{itemize}
+
+Testing resumes once the blocking condition is resolved, a new build is provided, and the previously blocked test cases are re-executed from the beginning.
+
+% ── 8. Test deliverables ────────────────────────────────────
+\section{Test Deliverables}
+
+The following artifacts are produced and submitted:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item this Master Test Plan;
+    \item the Test Design specification and the set of test cases (Part~II);
+    \item test execution logs and the summary test report;
+    \item the coverage report and the static analysis / security reports;
+    \item the defect list \hseFill{issue tracker reference}.
+\end{itemize}
+
+% ── 9. Test environment / environmental needs ───────────────
+\section{Test Environment}
+
+Testing is carried out in the environments described below.
+
+\begin{longtable}{|p{0.22\textwidth}|p{0.30\textwidth}|p{0.36\textwidth}|}
+\caption{Test environments}\label{tab:environments}\\
+\hline
+\textbf{Environment} & \textbf{Composition} & \textbf{Purpose} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Environment} & \textbf{Composition} & \textbf{Purpose} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+Local & \hseFill{local environment composition} & Fast test runs during development \\
+\hline
+Integration & \hseFill{integration environment composition} & Integration checks close to production \\
+\hline
+Acceptance & \hseFill{acceptance environment composition} & Acceptance of the deployed system \\
+\hline
+\end{longtable}
+
+Hardware baseline: \hseFill{OS, CPU, memory}. Required software: \hseFill{runtime, DBMS, brokers, containers}. Access, secrets and test data are prepared according to \hseFill{setup reference}.
+
+% ── 10. Responsibilities and staffing ───────────────────────
+\section{Responsibilities and Staffing}
+
+\begin{longtable}{|p{0.28\textwidth}|p{0.30\textwidth}|p{0.30\textwidth}|}
+\caption{Roles and responsibilities}\label{tab:responsibilities}\\
+\hline
+\textbf{Role} & \textbf{Person} & \textbf{Responsibility} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Role} & \textbf{Person} & \textbf{Responsibility} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+Test lead / author & \hseAuthorName & Plans and executes tests, reports results \\
+\hline
+Reviewer & \hseFill{reviewer name} & Reviews the plan and the test results \\
+\hline
+\end{longtable}
+
+% ── 11. Schedule ────────────────────────────────────────────
+\section{Schedule}
+
+\begin{longtable}{|p{0.34\textwidth}|p{0.28\textwidth}|p{0.26\textwidth}|}
+\caption{Test schedule}\label{tab:schedule}\\
+\hline
+\textbf{Activity} & \textbf{Start} & \textbf{End} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Activity} & \textbf{Start} & \textbf{End} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+Test planning and design & \hseFill{date} & \hseFill{date} \\
+\hline
+Test execution & \hseFill{date} & \hseFill{date} \\
+\hline
+Reporting and sign-off & \hseFill{date} & \hseFill{date} \\
+\hline
+\end{longtable}
+
+% ── 12. Risks and contingencies ─────────────────────────────
+\section{Risks and Contingencies}
+
+\begin{longtable}{|p{0.34\textwidth}|p{0.12\textwidth}|p{0.42\textwidth}|}
+\caption{Testing risks and mitigations}\label{tab:risks}\\
+\hline
+\textbf{Risk} & \textbf{Impact} & \textbf{Contingency} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Risk} & \textbf{Impact} & \textbf{Contingency} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+\hseFill{risk description} & \hseFill{high/med/low} & \hseFill{mitigation or contingency} \\
+\hline
+Unstable test environment & \hseFill{high/med/low} & Reserve a fallback environment and re-run affected cases \\
+\hline
+\end{longtable}
+
+\clearpage
+
+% ============================================================
+% PART II. TEST DESIGN AND TEST CASES
+% ============================================================
+\section{Test Design and Test Cases}
+
+This part specifies the requirements under test and the concrete test cases. Each test case has a unique identifier \texttt{TC-XX}, is mapped to a functional requirement \texttt{SRS-F-XX}, and records its preconditions, steps, expected result and status.
+
+\subsection{Requirements Under Test}
+
+\begin{longtable}{|p{0.16\textwidth}|p{0.62\textwidth}|p{0.14\textwidth}|}
+\caption{Functional requirements under test}\label{tab:srs}\\
+\hline
+\textbf{Req. ID} & \textbf{Requirement} & \textbf{Cases} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Req. ID} & \textbf{Requirement} & \textbf{Cases} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+SRS-F-01 & \hseFill{functional requirement text} & TC-01 \\
+\hline
+SRS-F-02 & \hseFill{functional requirement text} & TC-02, TC-03 \\
+\hline
+\end{longtable}
+
+\subsection{Test Cases}
+
+\begin{longtable}{|p{0.09\textwidth}|p{0.11\textwidth}|p{0.17\textwidth}|p{0.24\textwidth}|p{0.20\textwidth}|p{0.09\textwidth}|}
+\caption{Test cases}\label{tab:test-cases}\\
+\hline
+\textbf{ID} & \textbf{Req.} & \textbf{Preconditions} & \textbf{Steps} & \textbf{Expected result} & \textbf{Status} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Req.} & \textbf{Preconditions} & \textbf{Steps} & \textbf{Expected result} & \textbf{Status} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+TC-01 & SRS-F-01 & \hseFill{preconditions} & \hseFill{action steps} & \hseFill{expected result} & \hseFill{status} \\
+\hline
+TC-02 & SRS-F-02 & \hseFill{preconditions} & \hseFill{action steps} & \hseFill{expected result} & \hseFill{status} \\
+\hline
+TC-03 & SRS-F-02 & \hseFill{preconditions} & \hseFill{action steps} & \hseFill{expected result} & \hseFill{status} \\
+\hline
+\end{longtable}
+
+The \enquote{Status} column takes one of the values: Passed, Failed, Blocked or Not~Run. A requirement is considered verified only when every test case mapped to it has the status \enquote{Passed} on the agreed version under test.
+
+\end{document}

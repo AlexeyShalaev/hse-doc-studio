@@ -1,0 +1,25 @@
+{
+  "agentPersonaValidation": {
+    "labelRequired": "Enter a role name",
+    "instructionRequired": "Describe how the agent should behave"
+  },
+  "aiProviderValidation": {
+    "nameRequired": "Enter a name",
+    "apiKeyRequired": "Enter an API key",
+    "timeoutPositive": "Timeout must be greater than 0"
+  },
+  "openFolder": {
+    "openInEditor": "Open in editor",
+    "noEditors": "No external editors detected"
+  },
+  "fixFinding": {
+    "prompt": "In document [{{docCode}}](doc:{{docId}}) the «{{ruleId}}» check reported: «{{message}}»{{location}}. Find this spot in the .tex, explain the cause and fix it so the finding is resolved per ESPD/GOST requirements.",
+    "location": " in `{{file}}`{{lineSuffix}}"
+  },
+  "requirementsFormat": {
+    "kindMacro": "Macros (\\req / \\reqref)",
+    "kindId": "ID pattern",
+    "kindCustom": "Custom regex",
+    "prompt": "Help configure the requirements-recognition format for traceability in this project. The «{{kindLabel}}» format is currently active. First look at how requirement identifiers are actually written in the sources — use grep_project and read_tex on the TЗ and other documents in the package. Then pick a suitable format: macro (\\req{ID}{text} definitions and \\reqref{ID} references), id (identifier regex + source documents) or custom (your own def_pattern with (?P<id>…) and ref_pattern with (?P<ids>…)). Check your candidate with the preview_requirements_format tool and show how many requirements were found, covered, without references and without a definition. Once a variant works, apply it via set_requirements_format. Briefly explain each step."
+  }
+}

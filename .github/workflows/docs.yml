@@ -1,0 +1,76 @@
+name: Docs
+
+on:
+  push:
+    branches: [master]
+    # Собираем сайт только когда меняется его источник — иначе каждый push в master
+    # (в т.ч. релизный коммит сразу за merge фичи) плодит лишний деплой Pages и гонки.
+    paths:
+      - "docs/**"
+      - "pyproject.toml" # здесь пиньётся zensical
+      - "release-notes.json" # из него генерируется «Что нового» обоих языков
+      - "packs/**" # пак изменился → генерируемые страницы пересобираются
+      - "scripts/gen_changelog.py"
+      - "scripts/docs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "packs/**"
+      - "scripts/docs/**"
+  workflow_dispatch: # ручной перезапуск, если деплой Pages моргнул
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Один активный деплой Pages; при новом push в master отменяем ещё не завершившийся
+# предыдущий — иначе релизный коммит следом за merge гонится с ним на окружении
+# github-pages, и опоздавший падает с «Deployment failed, try again later».
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --no-dev --group docs
+      # Гейт релиза: у текущей версии есть заметки, CHANGELOG.md совпадает.
+      - run: python3 scripts/gen_changelog.py --check
+      # «Что нового» обоих языков + общие ассеты docs/ru → docs/en.
+      - run: python3 scripts/gen_changelog.py --site ru --out docs/ru/whatsnew/index.md
+      - run: python3 scripts/gen_changelog.py --site en --out docs/en/whatsnew/index.md
+      - run: python3 scripts/docs/sync_shared.py
+      # Контент-линтер: классы hds-*, запрет дат в «Маршруте», запрет чисел пака руками.
+      - run: python3 scripts/docs/lint_docs.py
+      # Порядок важен: RU с --clean в docs/site, затем EN в docs/site/en БЕЗ --clean.
+      - run: uv run zensical build --clean -f docs/zensical.toml
+      - run: uv run zensical build -f docs/zensical.en.toml
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/site
+
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      # Pages разрешает один активный деплой на окружение и «доводит» его асинхронно,
+      # поэтому push сразу за предыдущим (merge фичи → релизный коммит) ловит
+      # «Deployment failed, try again later» уже ПОСЛЕ того, как первый job завершился
+      # (отменять concurrency нечего). Это транзиентная гонка — делаем вторую попытку.
+      - id: deploy1
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - name: Settle before retry
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 45
+      - name: Retry Pages deployment
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,183 @@
+{
+  "steps": {
+    "pack": {
+      "title": "Pack",
+      "sub": "Template source — a bundle for your study programme."
+    },
+    "template": {
+      "title": "Template",
+      "sub": "Type of academic work within the pack."
+    },
+    "version": {
+      "title": "Version",
+      "sub": "Template version. Stable is recommended."
+    },
+    "kind": {
+      "title": "Type",
+      "sub": "Research or applied work."
+    },
+    "folder": {
+      "title": "Folder",
+      "sub": "Where the project will live on disk. The folder must be empty or not yet exist."
+    },
+    "lang": {
+      "title": "Language",
+      "sub": "Primary language of the documents."
+    },
+    "presentation": {
+      "title": "Presentation",
+      "sub": "Presentation file format."
+    },
+    "authors": {
+      "title": "Authors",
+      "sub": "Those who write the work."
+    },
+    "supervisor": {
+      "title": "Supervisor",
+      "sub": "Academic supervisor — will appear in the title block and signatures."
+    },
+    "meta": {
+      "title": "Meta",
+      "sub": "Group, topic code, NDA and other additional fields."
+    },
+    "review": {
+      "title": "Review",
+      "sub": "Final preview before creation."
+    }
+  },
+  "pack": {
+    "templatesCount_one": "{{count}} template",
+    "templatesCount_other": "{{count}} templates"
+  },
+  "template": {
+    "selectPackFirst": "Select a pack on the previous step."
+  },
+  "version": {
+    "selectTemplateFirst": "Select a template on the previous step.",
+    "default": "default"
+  },
+  "kind": {
+    "projectTitle": "Applied",
+    "projectSub": "Practical development, applied project",
+    "researchTitle": "Research",
+    "researchSub": "Research project, dissertation, research thesis"
+  },
+  "folder": {
+    "nameLabel": "Project name",
+    "namePlaceholder": "For example: Diff analytics for git repositories",
+    "nameHint": "This name will appear in the document title block and in the project list.",
+    "folderLabel": "Local folder",
+    "folderPlaceholder": "~/study/my-vkr",
+    "browse": "Browse…",
+    "folderHint": "Container folder. If it doesn't exist we'll create it; if it does, it must be empty.",
+    "autoSuggest": "Use path based on the name:",
+    "recentRoots": "Where you usually keep projects:"
+  },
+  "lang": {
+    "intro": "You can change this later. Some documents submitted to the department are always in Russian.",
+    "russian": "Russian",
+    "english": "English",
+    "fullEspd": "{{code}} · full ESPD set",
+    "fullSet": "{{code}} · full set",
+    "inclusionNote": "Documents without a mark in the selected language are still included — in their own language (e.g. the NDA undertaking is always in Russian).",
+    "noTranslations": "{{code}} · no translations",
+    "partial": "{{code}} · {{count}} of {{total}} documents",
+    "tableTitle": "Which documents are available in which language"
+  },
+  "presentation": {
+    "intro": "Choose the presentation format. You can change it later in project settings — but here you see the whole list so you don't miss the options.",
+    "none": "This template has no presentation variants.",
+    "descFallback": "Presentation format",
+    "desc": {
+      "pptx": "Editable in PowerPoint / OnlyOffice",
+      "reveal": "HTML slides, flip through in the browser",
+      "beamer": "Compiled to PDF via LaTeX"
+    }
+  },
+  "authors": {
+    "author": "Author {{index}}",
+    "removeTitle": "Remove author",
+    "removeAria": "Remove",
+    "nameLabel": "Full name",
+    "namePlaceholder": "Ivan Ivanovich Ivanov",
+    "groupLabel": "Group",
+    "groupPlaceholder": "BPI211",
+    "addMore": "Add another author",
+    "hint": "If the work is a team effort, add all co-authors. The first author's name becomes the default project name.",
+    "managedLabel": "Manage files in this project",
+    "needManaged": "At least one author must manage their files in this project.",
+    "notManagedHint": "The author's folder won't be scaffolded — they keep their part of the work elsewhere.",
+    "sharedAria": "Shared documents",
+    "sharedDescription": "The team's shared documents (e.g. the common spec) are scaffolded under shared/ and maintained alongside the personal ones.",
+    "sharedTitle": "Manage shared documents (shared/)",
+    "slugDuplicate": "Another author already uses this slug",
+    "slugHint": "The author's personal documents will live in this project folder.",
+    "slugInvalid": "The slug must start with a latin letter and contain only a–z, 0–9 and _",
+    "slugLabel": "Folder (slug)",
+    "teamIntro": "Team mode: the project name (the “Folder” step) names the whole system, while each author below has their own topic — their part of the system. An author's personal documents live in the folder named by their slug; shared ones live in shared/.",
+    "teamNotSupported": "The selected template version does not support team mode. Remove the extra authors or go back and pick a pack version that supports teams.",
+    "topicLabel": "Topic",
+    "topicPlaceholder": "Data analysis subsystem",
+    "topicRequired": "Enter the topic of this author's part"
+  },
+  "supervisor": {
+    "primaryTitle": "Main supervisor",
+    "coTitle": "Co-supervisor",
+    "optional": "(optional)",
+    "fromUniversity": "University",
+    "fromCompany": "Company",
+    "nameLabel": "Full name",
+    "namePlaceholderUniversity": "Alexey Konstantinovich Ivanov",
+    "namePlaceholderCompany": "Alexey Ivanov",
+    "titleLabelUniversity": "Position / degree",
+    "titleLabelCompany": "Position",
+    "titlePlaceholderUniversity": "PhD, associate professor at FCS",
+    "titlePlaceholderCompany": "Tech Lead, Yandex",
+    "removeCo": "Remove co-supervisor",
+    "addCo": "Add co-supervisor",
+    "required": "(required)",
+    "hint": "You can leave this empty — add it later in the project settings.",
+    "hintRequired": "A supervisor is required for this template. You can refine the position/degree later in settings."
+  },
+  "meta": {
+    "noRequired": "This template has no required meta fields.",
+    "requiredField": "Required field",
+    "ndaTitle": "Non-disclosure agreement (NDA)",
+    "ndaDescription": "If the work is on a company topic under an NDA, enable this. The agreement documents from the template will be added to the project and the final package.",
+    "ndaAria": "NDA",
+    "ndaWarning": "The NDA documents from the template will be included in the project and the final package."
+  },
+  "review": {
+    "untitled": "Untitled",
+    "research": "Research",
+    "project": "Applied",
+    "folderLabel": "Folder",
+    "packLabel": "Pack",
+    "versionLabel": "Version",
+    "presentationLabel": "Presentation format",
+    "authorsLabel": "Authors",
+    "noAuthors": "not specified",
+    "supervisorLabel": "Supervisor",
+    "coSupervisorLabel": "Co-supervisor",
+    "noSupervisor": "not specified",
+    "documentsTitle": "Documents to be created",
+    "documentsCount": "{{count}} docs",
+    "loadingStructure": "Loading template structure…",
+    "optionalDoc": "opt.",
+    "managedBadge": "managed",
+    "notManagedBadge": "not managed",
+    "sharedLabel": "Shared",
+    "sharedOff": "no shared documents",
+    "sharedOn": "shared/ — shared documents will be created"
+  },
+  "wizard": {
+    "newProject": "New project",
+    "stepCounter": "step {{current}} of {{total}}",
+    "stepBadge": "Step {{current}}/{{total}}",
+    "lockedStepTitle": "First go through the previous steps by clicking \"Next\"",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "create": "Create project"
+  }
+}

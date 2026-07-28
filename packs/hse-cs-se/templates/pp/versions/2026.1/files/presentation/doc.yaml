@@ -1,0 +1,48 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Презентация защиты
+  en: Defence Presentation
+code:
+  ru: ПРЕЗ
+  en: PRES
+required: true
+supported_langs:
+- en
+scope: personal
+checks:
+  disabled_categories:
+  - formatting
+variants:
+- id: pptx
+  label:
+    ru: PowerPoint (английский)
+    en: PowerPoint (English)
+  source_file: presentation/pptx/presentation.pptx
+  output_file: presentation/pptx/presentation.pptx
+  output_name:
+    ru: Presentation.pptx
+    en: Presentation.pptx
+  engine: none
+- id: reveal
+  label:
+    ru: RevealJS / HTML (английский)
+    en: RevealJS / HTML (English)
+  source_file: presentation/reveal/index.html
+  output_file: presentation/reveal/index.html
+  output_name:
+    ru: Presentation.html
+    en: Presentation.html
+  engine: none
+- id: beamer
+  label:
+    ru: LaTeX Beamer (английский)
+    en: LaTeX Beamer (English)
+  source_file: presentation/beamer/presentation.tex
+  output_file: presentation/beamer/presentation.pdf
+  output_name:
+    ru: Presentation.pdf
+    en: Presentation.pdf
+  engine: xelatex

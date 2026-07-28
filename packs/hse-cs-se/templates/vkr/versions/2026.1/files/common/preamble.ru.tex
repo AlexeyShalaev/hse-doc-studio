@@ -1,0 +1,120 @@
+% !TeX program = xelatex
+% ============================================================
+% common/preamble.tex — общая преамбула документов ЕСПД
+% (ТЗ, ПМИ, ТП, РП, РО) ОП «Программная инженерия» ФКН НИУ ВШЭ.
+% Геометрия с местом под основную надпись (штамп ГОСТ 19.104-78).
+% ВКР использует СВОЮ преамбулу (vkr/preamble.tex) — этот файл её
+% не касается. Данные приходят из common/meta.tex (\hse-макросы).
+% ============================================================
+
+% ── Шрифты (автогенерируются из настроек проекта) ───────────
+% Семейства (основной/рубленый/моноширинный) задаются в настройках
+% проекта и подставляются в common/fonts.tex ПЕРЕД каждой сборкой, каждый
+% с независимым фолбэком на свободный клон с кириллицей. Здесь НЕ правьте —
+% меняйте шрифты в настройках проекта (а устанавливайте их в Settings → Шрифты).
+% \hseDefaultMono — дефолт моношрифта документа, если он не выбран в настройках.
+\newcommand{\hseDefaultMono}{Courier New}
+\input{../common/fonts}
+% Язык оформления по project.lang. §2.3.4.2/§2.5.3.1: англоязычный документ
+% ЕСПД («переведённый ГОСТ 19») пишется на английском (главный язык — english);
+% русский — язык по умолчанию.
+
+\usepackage[english,russian]{babel}
+
+
+% ── Геометрия страницы по ГОСТ ЕСПД (с местом под штамп) ────
+\usepackage[a4paper,left=20mm,right=10mm,top=25mm,bottom=40mm,footskip=26mm,headheight=30pt,headsep=5mm]{geometry}
+
+% ── Основные пакеты ─────────────────────────────────────────
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{6pt}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Типографика ─────────────────────────────────────────────
+\usepackage{microtype}
+\usepackage{csquotes}
+
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+% ── Трассировка требований ──────────────────────────────────
+% \req{ID}{Текст} — определение требования (в ячейке «Требование»
+% таблицы ТЗ: печатается только текст); \reqref{ID} — ссылка на
+% требование из любого документа (печатается сам идентификатор).
+% Панель «Трассировка требований» связывает определения со ссылками
+% по этим макросам.
+\newcommand{\req}[2]{#2}
+\newcommand{\reqref}[1]{\mbox{#1}}
+
+% Жёлтые блоки-образцы: \begin{hseExample}…\end{hseExample} заливает
+% содержимое (в т.ч. списки, несколько абзацев) жёлтым фоном — знак
+% «это пример, замените своим». breakable — блок переносится по страницам.
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}
+\newtcolorbox{hseExample}{
+  breakable,
+  colback=yellow!25,
+  colframe=yellow!25,
+  boxrule=0pt, arc=0pt,
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  before skip=6pt, after skip=6pt,
+  parbox=false
+}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,fit,positioning,shapes.geometric}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{rotating}
+
+% ── URL и гиперссылки ───────────────────────────────────────
+\usepackage{url}
+\usepackage{xurl}
+\urlstyle{same}
+\def\UrlBreaks{\do\/\do-\do.\do=\do?\do\&\do\_}
+\usepackage{hyphenat}
+
+% ── Раскраска ячеек в таблицах сравнения ────────────────────
+\newcommand{\plus}{\cellcolor{green!20}+}
+\newcommand{\plusstar}{\cellcolor{green!20}+*}
+\newcommand{\minus}{\cellcolor{red!20}--}
+\newcommand{\planned}{\cellcolor{blue!15}\textcolor{blue}{$\pm$}}
+
+% ── Цитирование (ГОСТ-стиль, ссылки [n] в надстрочном виде) ──
+\usepackage{cite}
+\makeatletter
+\renewcommand\@biblabel[1]{#1.}
+\renewcommand{\@cite}[2]{\textsuperscript{[#1\if@tempswa , #2\fi]}}
+\makeatother
+
+\usepackage{hyperref}
+\hypersetup{
+    unicode=true,
+    breaklinks=true,
+    bookmarksopen=true,
+    bookmarksnumbered=true,
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+    pdfborder={0 0 0}
+}
+
+% ── Колонтитулы / заголовки / счётчики / списки ─────────────
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{titlesec}
+\usepackage{chngcntr}
+\usepackage{enumitem}
+
+% ── Данные проекта (автогенерируемые макросы \hse…) ─────────
+% Загружаются здесь, чтобы common/commands.tex (подключается
+% документом после преамбулы) мог раздать их под именами
+% \projectname, \studentname и т.д.
+\input{../common/meta}

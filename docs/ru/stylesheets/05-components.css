@@ -1,0 +1,771 @@
+/* ============================================================
+   Слой 6: фирменные компоненты .hds-* .
+   Протокол: сырой HTML-остров в Markdown или партиал в overrides/.
+   ============================================================ */
+
+/* ── ① Герой лендинга (overrides/partials/hero.html) ────────── */
+.hds-hero {
+  position: relative;
+  background: var(--hds-sheet);
+  box-shadow: 0 1px 0 var(--hds-rule);
+  padding: 3.4rem 0 3rem;
+}
+
+/* разлиновка живёт на псевдоэлементе: маска затухания не должна
+   гасить контент героя — только сами линии */
+.hds-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 26px,
+    var(--hds-ruled-line) 26px 27px
+  );
+  -webkit-mask-image: radial-gradient(130% 95% at 50% 0%, #000 0 40%, transparent 78%);
+  mask-image: radial-gradient(130% 95% at 50% 0%, #000 0 40%, transparent 78%);
+}
+
+.hds-hero__inner {
+  position: relative;
+}
+
+.hds-hero__inner {
+  display: grid;
+  grid-template-columns: 1.25fr 0.85fr;
+  gap: 3rem;
+  align-items: start;
+  padding: 0 1.2rem;
+}
+
+.hds-hero__copy {
+  min-width: 0;
+}
+
+.hds-hero__title {
+  font-family: var(--hds-serif);
+  font-size: var(--hds-fs-display);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.08;
+  color: var(--hds-ink);
+  text-wrap: balance;
+  margin: 1rem 0 0;
+}
+
+.hds-hero__lede {
+  font-size: var(--hds-fs-lede);
+  line-height: 1.62;
+  color: var(--hds-ink-2);
+  max-width: 34rem;
+  margin: 1.3rem 0 0;
+}
+
+.hds-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 1.7rem;
+}
+
+.hds-hero__fine {
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-4);
+  margin: 1.2rem 0 0;
+}
+
+@media screen and (max-width: 59.99em) {
+  .hds-hero__inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+/* ── ② Кнопки ───────────────────────────────────────────────── */
+.hds-btn {
+  display: inline-block;
+  font: 600 var(--hds-fs-ui) / 1 var(--hds-sans);
+  padding: 0.8rem 1.35rem;
+  border-radius: var(--hds-r-sm);
+  background: var(--hds-accent);
+  color: var(--hds-paper);
+  border: 1px solid var(--hds-accent);
+  cursor: pointer;
+  transition: transform var(--hds-t) var(--hds-e-out), background var(--hds-t) var(--hds-e-out);
+}
+
+.hds-btn:hover,
+.hds-btn:focus-visible {
+  background: var(--hds-accent-hover);
+  border-color: var(--hds-accent-hover);
+  color: var(--hds-paper);
+  transform: translateY(-1px);
+}
+
+[data-md-color-scheme="slate"] .hds-btn {
+  color: #fff;
+}
+
+.hds-btn--ghost {
+  background: transparent;
+  color: var(--hds-accent-ink);
+  border-color: var(--hds-rule-2);
+}
+
+.hds-btn--ghost:hover,
+.hds-btn--ghost:focus-visible {
+  background: var(--hds-accent-soft);
+  border-color: var(--hds-accent);
+  color: var(--hds-accent-ink);
+  transform: translateY(-1px);
+}
+
+/* ── ③ Команда установки с копированием ─────────────────────── */
+.hds-cmd {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1.4rem;
+  background: var(--hds-sheet-2);
+  border: 1px solid var(--hds-rule);
+  border-radius: var(--hds-r-sm);
+  padding: 0.7rem 0.8rem;
+  max-width: 36rem;
+}
+
+.hds-cmd__dollar {
+  color: var(--hds-ink-4);
+  font-family: var(--hds-mono);
+  flex: 0 0 auto;
+}
+
+.hds-cmd code {
+  background: none;
+  padding: 0;
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink);
+  white-space: nowrap;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: none;
+}
+
+.hds-cmd__copy {
+  flex: 0 0 auto;
+  font: 600 var(--hds-fs-micro) / 1 var(--hds-sans);
+  letter-spacing: 0.05em;
+  color: var(--hds-accent-ink);
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule-2);
+  border-radius: 5px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  transition: border-color var(--hds-t) var(--hds-e-out);
+}
+
+.hds-cmd__copy:hover {
+  border-color: var(--hds-accent);
+}
+
+.hds-cmd__copy.hds-done {
+  color: var(--hds-ok);
+  border-color: var(--hds-ok);
+}
+
+/* ── ④ Бланк «обходной лист» в герое ────────────────────────── */
+.hds-rsheet {
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule-2);
+  border-radius: var(--hds-r-md);
+  box-shadow: var(--hds-sh-stack);
+  padding: 1.3rem 1.4rem 1.5rem;
+  position: relative;
+}
+
+.hds-rsheet__head {
+  font: 700 var(--hds-fs-micro) / 1.4 var(--hds-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hds-ink-3);
+  border-bottom: 2px solid var(--hds-ink);
+  padding-bottom: 0.5rem;
+}
+
+.hds-rsheet ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+
+.hds-rsheet li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--hds-rule);
+  margin: 0;
+}
+
+.hds-rsheet li:last-child {
+  border-bottom: 0;
+}
+
+.hds-rsheet__code {
+  font: 700 var(--hds-fs-micro) / 1 var(--hds-mono);
+  color: var(--hds-paper);
+  background: var(--stc, var(--hds-ink-3));
+  border-radius: var(--hds-r-xs);
+  padding: 0.28rem 0.4rem;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+[data-md-color-scheme="slate"] .hds-rsheet__code {
+  color: #14120f;
+}
+
+.hds-rsheet__name {
+  flex: 1;
+  font-size: var(--hds-fs-ui);
+  color: var(--hds-ink-2);
+}
+
+.hds-rsheet__st {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-ui);
+}
+
+.hds-rsheet__st.done {
+  color: var(--hds-ok);
+}
+
+.hds-rsheet__st.wait {
+  color: var(--hds-ink-4);
+}
+
+.hds-rsheet .hds-stamp {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 0.9rem;
+  background: var(--hds-sheet);
+}
+
+/* ── ⑤ Штамп ────────────────────────────────────────────────── */
+.hds-stamp {
+  display: inline-block;
+  transform: rotate(-6.5deg);
+  border: 2px solid var(--hds-mark);
+  border-radius: var(--hds-r-xs);
+  color: var(--hds-mark);
+  opacity: 0.9;
+  font: 700 var(--hds-fs-micro) / 1 var(--hds-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.45em 0.7em;
+  white-space: nowrap;
+}
+
+@keyframes hds-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-6.5deg) scale(1.6);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: rotate(-6.5deg) scale(1);
+  }
+}
+
+.hds-hero .hds-stamp {
+  animation: hds-stamp-in var(--hds-t-slow) var(--hds-e-out) 600ms backwards;
+}
+
+.hds-stamp--big {
+  font-size: var(--hds-fs-ui);
+}
+
+/* ── ⑥ Полоса доказательства (лендинг) ──────────────────────── */
+.hds-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  border-block: 1px solid var(--hds-rule);
+  margin: 2rem 0;
+}
+
+.hds-stats > div {
+  text-align: center;
+  padding: 1.4rem 0.5rem;
+  border-left: 1px solid var(--hds-rule);
+}
+
+.hds-stats > div:first-child {
+  border-left: 0;
+}
+
+.hds-stats b {
+  display: block;
+  font: 600 2.2rem / 1.1 var(--hds-serif);
+  color: var(--hds-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.hds-stats span {
+  display: block;
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+/* ── ⑦ Рельс маршрута ───────────────────────────────────────── */
+.hds-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 6), 1fr);
+  gap: 0.7rem;
+  margin: 1.6rem 0;
+}
+
+.hds-rail::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 6%;
+  right: 6%;
+  height: 3px;
+  background: var(--hds-rule);
+  border-radius: 2px;
+}
+
+.hds-rail__stn {
+  position: relative;
+  padding-top: 2.1rem;
+}
+
+.hds-rail__halo {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--hds-paper);
+}
+
+.hds-rail__ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: conic-gradient(var(--stc) calc(var(--p, 0) * 1%), var(--hds-rule) 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 60%, #000 62%);
+  mask: radial-gradient(closest-side, transparent 60%, #000 62%);
+}
+
+.hds-rail__stn--sub .hds-rail__ring {
+  background: var(--hds-paper);
+  border: 2px dashed var(--stc);
+  width: 18px;
+  height: 18px;
+  -webkit-mask: none;
+  mask: none;
+}
+
+.hds-rail__kod {
+  font: 700 var(--hds-fs-micro) / 1 var(--hds-mono);
+  color: var(--stc);
+  letter-spacing: 0.06em;
+}
+
+.hds-rail__name {
+  font: 600 var(--hds-fs-ui) / 1.35 var(--hds-sans);
+  color: var(--hds-ink);
+  margin-top: 0.25rem;
+}
+
+.hds-rail__meta {
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}
+
+.hds-rail__meta b {
+  font-family: var(--hds-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--hds-ink-2);
+}
+
+.hds-rail a {
+  font-size: var(--hds-fs-small);
+}
+
+@media screen and (max-width: 44.99em) {
+  .hds-rail {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .hds-rail::before {
+    left: 10px;
+    top: 4%;
+    bottom: 4%;
+    width: 3px;
+    height: auto;
+    right: auto;
+  }
+
+  .hds-rail__stn {
+    padding: 0.7rem 0 0.7rem 2.6rem;
+  }
+
+  .hds-rail__ring {
+    left: 0;
+    top: 0.85rem;
+  }
+
+  .hds-rail__halo {
+    left: -4px;
+    top: 0.6rem;
+  }
+}
+
+/* переключатель треков над рельсом */
+.hds-tracks {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.4rem;
+}
+
+.hds-tracks button {
+  font: 600 var(--hds-fs-ui) / 1 var(--hds-sans);
+  color: var(--hds-ink-2);
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule-2);
+  border-radius: var(--hds-r-pill);
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  transition: all var(--hds-t) var(--hds-e-out);
+}
+
+.hds-tracks button[aria-pressed="true"] {
+  background: var(--hds-ink);
+  color: var(--hds-paper);
+  border-color: var(--hds-ink);
+}
+
+.hds-tracks button:hover:not([aria-pressed="true"]) {
+  border-color: var(--hds-accent);
+  color: var(--hds-accent-ink);
+}
+
+/* ── ⑧ Чек-лист состава пакета ──────────────────────────────── */
+.md-typeset .hds-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 1.2rem 0;
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule);
+  border-radius: var(--hds-r-md);
+}
+
+.md-typeset .hds-checklist > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.85rem 1.2rem;
+  border-bottom: 1px solid var(--hds-rule);
+  margin: 0;
+}
+
+.md-typeset .hds-checklist > li:last-child {
+  border-bottom: 0;
+}
+
+.hds-checklist__box {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--hds-rule-2);
+  border-radius: var(--hds-r-xs);
+  transform: translateY(2px);
+}
+
+.hds-checklist__doc {
+  font-weight: 600;
+  color: var(--hds-ink);
+}
+
+.hds-checklist__code {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+}
+
+.hds-checklist__sig {
+  font: 600 var(--hds-fs-micro) / 1 var(--hds-sans);
+  color: var(--hds-info);
+  background: var(--hds-info-soft);
+  border-radius: var(--hds-r-pill);
+  padding: 0.28rem 0.55rem;
+}
+
+.hds-checklist__cond {
+  font-style: italic;
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+  flex-basis: 100%;
+  padding-left: 1.6rem;
+}
+
+/* ── ⑨ Карточка документа: стопка листов ────────────────────── */
+.hds-docgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 1.4rem 0;
+}
+
+.hds-doccard {
+  position: relative;
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule);
+  border-radius: var(--hds-r-sm);
+  box-shadow: var(--hds-sh-stack);
+  padding: 1.1rem 1.1rem 1rem 1.35rem;
+  overflow: hidden;
+  transition: transform var(--hds-t) var(--hds-e-out), box-shadow var(--hds-t) var(--hds-e-out);
+}
+
+.hds-doccard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hds-sh-lift);
+}
+
+/* миниатюра полосы набора: линейка поля внутри карточки */
+.hds-doccard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--hds-margin-ratio);
+  width: 1px;
+  background: var(--hds-rule);
+}
+
+.hds-doccard__code {
+  display: inline-block;
+  font: 700 var(--hds-fs-small) / 1 var(--hds-mono);
+  color: var(--hds-ink);
+  background: var(--hds-sheet-2);
+  border: 1px solid var(--hds-rule-2);
+  border-radius: var(--hds-r-xs);
+  padding: 0.3rem 0.5rem;
+}
+
+.md-typeset .hds-doccard h4,
+.hds-doccard h4 {
+  font: 600 var(--hds-fs-ui) / 1.4 var(--hds-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--hds-ink);
+  margin: 0.7rem 0 0;
+}
+
+.hds-doccard__gost {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-micro);
+  color: var(--hds-ink-3);
+  margin-top: 0.35rem;
+}
+
+.hds-doccard__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+
+.hds-doccard__chips span {
+  font: 600 var(--hds-fs-micro) / 1 var(--hds-sans);
+  border-radius: var(--hds-r-pill);
+  padding: 0.26rem 0.5rem;
+  color: var(--hds-ink-3);
+  background: var(--hds-sheet-2);
+}
+
+.hds-doccard__chips .req {
+  color: var(--hds-accent-ink);
+  background: var(--hds-accent-soft);
+}
+
+/* ── ⑩ Находка нормоконтроля ────────────────────────────────── */
+.hds-finding {
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule);
+  border-left: 3px solid var(--tone, var(--hds-err));
+  border-radius: var(--hds-r-sm);
+  padding: 0.85rem 1.1rem 0.85rem 1rem;
+  margin-top: 0.8rem;
+}
+
+.hds-finding--err {
+  --tone: var(--hds-err);
+}
+
+.hds-finding--warn {
+  --tone: var(--hds-warn);
+}
+
+.hds-finding--info {
+  --tone: var(--hds-info);
+}
+
+.hds-finding__rule {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink);
+}
+
+/* корректорский знак вставки вместо иконки */
+.hds-finding__rule::before {
+  content: "‸ ";
+  color: var(--tone, var(--hds-err));
+  font-weight: 700;
+}
+
+.hds-finding__msg {
+  font-size: var(--hds-fs-ui);
+  color: var(--hds-ink-2);
+  margin-top: 0.35rem;
+}
+
+.hds-finding__loc {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-micro);
+  color: var(--hds-ink-4);
+  margin-top: 0.35rem;
+}
+
+/* ── ⑪ Плашка «понадобится на…» (страницы Мастерской) ───────── */
+.hds-needed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+  background: var(--hds-sheet);
+  border: 1px solid var(--hds-rule);
+  border-radius: var(--hds-r-sm);
+  padding: 0.6rem 0.9rem;
+  margin: 1rem 0 0;
+}
+
+.hds-needed b {
+  font: 700 var(--hds-fs-micro) / 1 var(--hds-mono);
+  color: var(--stc, var(--hds-ink-2));
+  letter-spacing: 0.06em;
+}
+
+/* ── ⑫ Колофон (overrides/partials/footer.html) ─────────────── */
+.hds-colophon {
+  margin-top: 4rem;
+}
+
+/* двойная типографская линейка завершения полосы */
+.hds-colophon__rule {
+  border-top: 2px solid var(--hds-ink);
+  height: 3px;
+  border-bottom: 1px solid var(--hds-ink);
+}
+
+.hds-colophon__inner {
+  background: var(--hds-sheet);
+  padding: 2rem 0 2.4rem;
+}
+
+.hds-colophon__cols {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 1.8rem;
+  padding: 0 1.2rem;
+}
+
+.hds-colophon h4 {
+  font: 700 var(--hds-fs-micro) / 1.4 var(--hds-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hds-ink-3);
+  margin: 0;
+}
+
+.hds-colophon p,
+.hds-colophon ul {
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+  margin: 0.6rem 0 0;
+  line-height: 1.6;
+}
+
+.hds-colophon ul {
+  list-style: none;
+  padding: 0;
+}
+
+.hds-colophon li {
+  margin-top: 0.25rem;
+}
+
+.hds-colophon a {
+  color: var(--hds-ink-2);
+}
+
+.hds-colophon a:hover {
+  color: var(--hds-accent-ink);
+}
+
+.hds-colophon__fin {
+  border-top: 1px solid var(--hds-rule);
+  margin-top: 1.6rem;
+  padding: 1rem 1.2rem 0;
+  font-size: var(--hds-fs-micro);
+  color: var(--hds-ink-4);
+  line-height: 1.7;
+}
+
+@media screen and (max-width: 50em) {
+  .hds-colophon__cols {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── скрытый доступный заголовок (лендинг: видимый H1 — в герое) ── */
+.md-typeset .hds-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── ⑬ Страница 404 ─────────────────────────────────────────── */
+.hds-404 {
+  text-align: center;
+  padding: 3rem 0 2rem;
+}
+
+.hds-404 .hds-stamp {
+  margin-bottom: 1.5rem;
+}

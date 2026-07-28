@@ -1,0 +1,16 @@
+# Оверлей: держать проекты в СВОЕЙ папке на хосте, а не внутри каталога данных.
+# По умолчанию (без этого оверлея) проекты лежат в ${DATA_DIR}, и внутриприложенческий
+# файловый браузер видит только его. Оверлей монтирует произвольную папку хоста как
+# /projects и включает трансляцию путей — она нужна, потому что docker-демон разрешает
+# `-v <src>:<dst>` относительно ХОСТА, а бэкенд знает только свой путь в контейнере.
+#
+#   PROJECTS_HOST_PATH=D:/study docker compose \
+#     -f deploy/all-in-one/docker-compose.yml \
+#     -f deploy/all-in-one/compose.projects.yml up -d
+services:
+  hse-doc-studio:
+    volumes:
+      - ${PROJECTS_HOST_PATH:?задайте PROJECTS_HOST_PATH — папку хоста с вашими проектами}:/projects
+    environment:
+      HSE_STUDIO__COMPILE__PROJECTS_CONTAINER_PATH: /projects
+      HSE_STUDIO__COMPILE__PROJECTS_HOST_PATH: ${PROJECTS_HOST_PATH}

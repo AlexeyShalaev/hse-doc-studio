@@ -1,0 +1,218 @@
+# packs/hse-cs-se/templates/pp/versions/2026.1/version.yaml
+# Манифест версии шаблона Project Proposal 2026.1
+
+id: "2026.1"
+released_at: 2026-07-24
+status: stable
+summary:
+  ru: Project Proposal 2025/2026 — статья IEEE conference на английском (1500–3000 слов) + презентация защиты. Основан на реальном PP и требованиях ОП ПИ.
+  en: Project Proposal 2025/2026 — an English IEEE conference paper (1500–3000 words) plus defence slides. Based on a real PP and the SE programme requirements.
+breaking_changes:
+  ru: []
+  en: []
+
+# ── что даёт эта версия шаблона ──
+# Заменяет прежний CHANGELOG.md: заметки живут рядом с версией, которую описывают,
+# и на обоих языках — как `summary` и `breaking_changes` выше. Списки ru и en
+# параллельны (пункт за пунктом) — это проверяет pack_lint.
+# Первая версия описывает СОСТАВ, а не историю правок: истории у неё ещё нет.
+changes:
+  ru:
+    - Project Proposal на английском в формате конференционной статьи IEEE (две колонки, IEEEtran) по реальному
+      Project Proposal ОП «Программная инженерия».
+    - 'Структура статьи по требованиям ОП: Abstract, Keywords, Introduction, Literature Review, Methodology,
+      Expected Results, Conclusion и список источников в стиле IEEE с образцами ссылок пяти типов.'
+    - 'Презентация защиты в трёх вариантах — PowerPoint, RevealJS и LaTeX Beamer: единый англоязычный сценарий
+      из 11 слайдов в фирменном стиле НИУ ВШЭ с английской эмблемой.'
+    - 'Два профиля сдачи: письменный Project Proposal и защита.'
+    - 'Проверки под требования ОП: объём статьи и разделов, число ключевых слов и источников, кегль, научный
+      стиль без «I/we», английский язык на слайдах и в тексте, ссылочный контроль и LanguageTool (en-US).'
+  en:
+    - An English Project Proposal in IEEE conference format (two columns, IEEEtran), built from a real HSE
+      SE Project Proposal.
+    - 'Paper structure per the programme requirements: Abstract, Keywords, Introduction, Literature Review,
+      Methodology, Expected Results, Conclusion and IEEE-style references with samples of five source types.'
+    - 'Defence presentation in three variants — PowerPoint, RevealJS and LaTeX Beamer: one English 11-slide
+      scenario in HSE branding with the English emblem.'
+    - 'Two submission profiles: the written Project Proposal and the defence.'
+    - 'Checks for the programme requirements: paper and section lengths, keyword and reference counts, font
+      size, academic style without I/we, English on the slides and in the text, reference control and LanguageTool
+      (en-US).'
+
+# ── классификация (для фильтров в каталоге) ──
+supported_kinds: [research, project]
+# Регламент ОП ПИ: даже в командных проектах каждый студент пишет и
+# защищает СВОЙ Project Proposal — командной раскладки у шаблона нет.
+supported_staffing: [solo]
+
+# ── движок компиляции ──
+engine:
+  default: xelatex
+  allowed: [xelatex]
+  passes: 3
+  flags: "-interaction=nonstopmode -halt-on-error -synctex=1"
+
+# ── требования к TeX Live (для on-demand install через tlmgr) ──
+latex_packages:
+  - scheme-basic
+  - ieeetran            # класс IEEEtran (conference)
+  - preprint            # balance.sty — выравнивание колонок на последней странице
+  - cite
+  - url
+  - xurl
+  - hyperref
+  - graphics
+  - xcolor
+  - amsmath
+  - amssymb
+  - fontspec
+  - babel-english
+  - etoolbox
+  - beamer              # презентация защиты
+  - pgf                 # tikz — вёрстка титула и шапки слайдов
+  - booktabs
+  - tabularx
+  - listings
+  - simple-thesis-dissertation  # шрифт Tinos (фолбэк Times New Roman)
+  - dejavu              # DejaVu Sans/Mono (фолбэки sans/mono)
+
+# ── состав документов (bundle-раскладка v2) ──
+# Каждый документ — самодостаточный bundle files/<id>/: его манифест doc.yaml,
+# все варианты и все языковые редакции лежат в одной папке; дерево пака
+# СОВПАДАЕТ с деревом проекта (папок applied/ и research/ больше нет —
+# состав по виду гейтится supported_kinds в doc.yaml).
+#
+# ЯЗЫК: суффикс имени файла <stem>.<код>.<ext> (коды — ТОЛЬКО из `langs:` ниже,
+# первый в списке = дефолт и фолбэк). Файл БЕЗ суффикса — единственная форма
+# для всех языков (ISO/IEEE-варианты, nda, ассеты, *.j2). Частичный перевод
+# валиден: нет файла языка проекта — берётся дефолтный. Новый язык = файлы
+# `<stem>.<код>.<ext>` рядом + код в `langs:`; правок кода не требуется.
+# Бинарные форматы (pptx) участвуют наравне с текстом.
+# Project Proposal пишется и защищается ТОЛЬКО на английском.
+langs: [en]
+
+# Roster: порядок = порядок в UI; каждая запись обязана иметь files/<id>/doc.yaml
+# (и наоборот — bundle без записи в roster не грузится: fail-fast при загрузке).
+documents:
+  - project_proposal
+  - presentation
+
+# ── динамические инклуды ──
+# Перегенерируются тулом из project.json ПЕРЕД каждой сборкой.
+dynamic_includes:
+  - template: common/meta.tex.j2
+    output:   common/meta.tex
+  - template: common/fonts.tex.j2
+    output:   common/fonts.tex
+
+# ── Группы мета-полей ──
+meta_groups:
+  - id: study
+    label: { ru: Учёба, en: Studies }
+  - id: pp_title
+    label: { ru: Шапка статьи (IEEE), en: Paper header (IEEE) }
+
+# ── meta-поля, которые тул запрашивает в wizard ──
+meta_fields:
+  year:
+    type: string
+    group:       study
+    label:       { ru: Учебный год (год защиты PP), en: Academic year (PP defence year) }
+    placeholder: "2026"
+    required_at: create
+    auto: academic_year
+
+  author_name_en:
+    type: string
+    group:       pp_title
+    scope:       author
+    label:       { ru: Имя автора латиницей, en: Author name in English }
+    placeholder: "Ivan I. Ivanov"
+    required_at: never
+    help:        { ru: "Печатается в шапке статьи (IEEE). Формат «Имя О. Фамилия». Пока не заполнено — в PDF жёлтый плейсхолдер.", en: "Printed in the IEEE author block, format “First M. Last”. Until filled in, the PDF shows a yellow placeholder." }
+
+  faculty_en:
+    type: string
+    group:       pp_title
+    label:       { ru: Факультет (по-английски), en: Faculty (English) }
+    placeholder: "Faculty of Computer Science"
+    required_at: never
+    default:     "Faculty of Computer Science"
+
+  university_en:
+    type: string
+    group:       pp_title
+    label:       { ru: Университет (по-английски), en: University (English) }
+    placeholder: "HSE University"
+    required_at: never
+    default:     "HSE University"
+
+  city_en:
+    type: string
+    group:       pp_title
+    label:       { ru: Город и страна (по-английски), en: City and country (English) }
+    placeholder: "Moscow, Russia"
+    required_at: never
+    default:     "Moscow, Russia"
+
+  # ── Шрифты (подставляются в common/fonts.tex; превью в настройках) ──
+  font_main:
+    type: font
+    label:       { ru: Основной шрифт, en: Main font }
+    placeholder: Times New Roman
+    required_at: never
+    default:     Times New Roman
+    options:     ["Times New Roman", "PT Serif", "Liberation Serif", "Tinos", "Georgia", "Cambria"]
+    help:        { ru: "Методичка PP рекомендует Times New Roman; смена шрифта помечается предупреждением норм-контроля.", en: "The PP guidelines recommend Times New Roman; changing it raises a norm-control warning." }
+
+  font_sans:
+    type: font
+    label:       { ru: Рубленый шрифт (презентация), en: Sans-serif font (slides) }
+    placeholder: Arial
+    required_at: never
+    default:     Arial
+    options:     ["Arial", "PT Sans", "Liberation Sans", "Helvetica", "Verdana"]
+
+  font_mono:
+    type: font
+    label:       { ru: Моноширинный шрифт (код, листинги), en: Monospace font }
+    placeholder: "Courier New"
+    required_at: never
+    options:     ["Consolas", "Courier New", "PT Mono", "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono"]
+
+  supervisor:
+    type: person
+    label:       { ru: Научный руководитель, en: Supervisor }
+    required_at: never
+    help:        { ru: "В тексте PP руководитель не печатается — используется на титульном слайде презентации.", en: "Not printed in the PP text; shown on the presentation title slide." }
+
+# ── pack submission: профили сборки для сдачи ──
+# На SmartLMS сдаются PDF статьи и отчёт антиплагиата; отчёт готовится
+# вне Студии, поэтому в пакете — статья и презентация.
+pack_submission:
+  profiles:
+    - id: written-pp
+      name:        { ru: Письменный Project Proposal, en: Written Project Proposal }
+      description: { ru: PDF статьи для загрузки на SmartLMS (плюс отчёт антиплагиата, готовится отдельно), en: The paper PDF for SmartLMS upload (plus the anti-plagiarism report prepared separately) }
+      items:
+        - doc_id: project_proposal
+
+          signatures: []
+
+    - id: defence
+      name:        { ru: Защита PP, en: PP defence }
+      description: { ru: Статья и презентация к устной защите (5–7 минут), en: The paper and the slides for the oral defence (5–7 minutes) }
+      items:
+        - doc_id: project_proposal
+
+          signatures: []
+        - doc_id: presentation
+
+          signatures: []
+
+# ── правила проверок ──
+# Тул автоматически читает все .yaml-файлы из checks/
+checks_version:
+  disabled_categories: []
+  disabled: []
+  severity_override: {}

@@ -1,0 +1,145 @@
+{
+  "commandPalette": {
+    "title": "Command palette",
+    "placeholder": "Command or project name…",
+    "empty": "Nothing found",
+    "newProject": "New project",
+    "settings": "Tool settings",
+    "themeSystem": "Theme: system",
+    "themeDark": "Theme: dark",
+    "themeLight": "Theme: light",
+    "themeBlueprint": "Theme: blueprint",
+    "callAgent": "Call the AI agent",
+    "docPreview": "Document · preview",
+    "docChecks": "Document · checks",
+    "docCompile": "Document · build log",
+    "docHistory": "Document · versions",
+    "openProject": "Open · {{name}}"
+  },
+  "compileStatus": {
+    "noBuilds": "No builds",
+    "success": "Success",
+    "failure": "Error",
+    "running": "Building",
+    "cancelled": "Cancelled",
+    "pending": "Pending"
+  },
+  "projectRail": {
+    "allProjects": "All projects",
+    "newProject": "New project",
+    "agent": "AI agent",
+    "settings": "Tool settings"
+  },
+  "projectSwitcher": {
+    "trigger": "Switch project",
+    "triggerHint": "Switch project (⌘P)",
+    "noProject": "Pick a project",
+    "search": "Project name or folder…",
+    "recent": "Recent",
+    "pinned": "Pinned",
+    "all": "All",
+    "allProjects": "All projects",
+    "newProject": "New project",
+    "connectFolder": "Connect folder…",
+    "empty": "No projects found"
+  },
+  "appStatusBar": {
+    "dockerRunning": "running",
+    "dockerStopped": "stopped",
+    "paletteTooltip": "Open command palette (⌘K)",
+    "commands": "commands"
+  },
+  "dockerBanner": {
+    "defaultDetail": "LaTeX builds won't run. Start Docker Desktop.",
+    "unavailable": "Docker unavailable",
+    "openSettings": "Open settings"
+  },
+  "diskBanner": {
+    "title": "Docker is using a lot of space",
+    "detail": "{{size}} can be freed up — old images, build cache.",
+    "open": "Open Disk",
+    "dismiss": "Dismiss"
+  },
+  "startupChecks": {
+    "updateAvailableTitle": "Update available",
+    "updateAvailable": "Version v{{version}} is out.",
+    "updateAvailableAction": "What's new"
+  },
+  "titlebar": {
+    "versionFallback": "Doc Workbench",
+    "version": "Doc Workbench v{{version}}",
+    "agentProject": "Project AI agent",
+    "agentAssistant": "AI assistant",
+    "projects": "Projects",
+    "settings": "Tool settings"
+  },
+  "chatDock": {
+    "resizeHint": "Resize agent panel"
+  },
+  "fileTree": {
+    "title": "Project files",
+    "showHidden": "Show generated files (.build, .pdf, .aux…)",
+    "hideHidden": "Hide generated files",
+    "projectRoot": "Project root",
+    "newFile": "New file",
+    "newFolder": "New folder",
+    "newFileHere": "New file here",
+    "newFolderHere": "New folder here",
+    "rename": "Rename",
+    "delete": "Delete",
+    "protectedTitle": "This file is part of the template: it can't be deleted, renamed or moved (but its contents are editable)",
+    "protected": "From template — protected",
+    "loadError": "Failed to load project files.",
+    "emptyTree": "No files found.",
+    "folderNamePlaceholder": "folder-name",
+    "fileNamePlaceholder": "file-name.tex",
+    "deleteFolderTitle": "Delete folder?",
+    "deleteFileTitle": "Delete file?",
+    "cancel": "Cancel",
+    "deleteFolderConfirm": "The folder and all its contents will be deleted permanently.",
+    "deleteFileConfirm": "The file will be deleted permanently."
+  },
+  "settingsPage": {
+    "sections": {
+      "appearance": "Appearance",
+      "compiler": "Compiler",
+      "fonts": "Fonts",
+      "checks": "Checks",
+      "presentations": "Presentations",
+      "providers": "Providers",
+      "localModels": "Local models",
+      "agentPersonas": "Agent roles",
+      "signing": "Signing certificates",
+      "disk": "Disk",
+      "data": "Import / Export",
+      "about": "About"
+    },
+    "title": "Settings",
+    "searchPlaceholder": "Search settings",
+    "empty": "Nothing found",
+    "close": "Close settings",
+    "groups": {
+      "general": "General",
+      "documents": "Documents",
+      "ai": "Artificial intelligence",
+      "system": "System"
+    }
+  },
+  "errorPage": {
+    "notFoundTitle": "Page not found",
+    "notFoundMessage": "No such route, or it's no longer available.",
+    "forbiddenTitle": "No access",
+    "forbiddenMessage": "You don't have permission for this action.",
+    "serverTitle": "Application error",
+    "serverMessage": "Something went wrong opening the screen.",
+    "genericTitle": "Error",
+    "genericMessage": "The application couldn't open this screen.",
+    "back": "Back",
+    "home": "Home",
+    "reload": "Reload"
+  },
+  "wizardPage": {
+    "createTitle": "New project",
+    "connectTitle": "Connect folder"
+  }
+}

@@ -1,0 +1,63 @@
+# Единая точка истины качества — те же проверки локально, в pre-commit и в CI.
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.25
+    hooks:
+      - id: uv-lock
+        alias: uv-lock-backend
+        name: uv-lock (backend)
+        files: ^services/api/(pyproject\.toml|uv\.lock)$
+        args: [--project, services/api]
+      # В репозитории ДВА uv-проекта: сервис выше и корневой (пинит zensical для docs).
+      - id: uv-lock
+        alias: uv-lock-docs
+        name: uv-lock (docs)
+        files: ^(pyproject\.toml|uv\.lock)$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-ast
+      - id: check-toml
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]  # шаблоны презентаций (packs/**/presentation/pptx/*.pptx) крупнее дефолтных 500 КБ
+      - id: check-case-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: debug-statements
+      - id: no-commit-to-branch
+        args: [--branch, master]
+
+  # Backend quality — ровно как `make check`/`make fmt` (ruff/mypy из uv-окружения сервиса).
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (backend)
+        entry: bash -c 'cd services/api && uv run ruff check --fix .'
+        language: system
+        types: [python]
+        files: ^services/api/
+        pass_filenames: false
+      - id: ruff-format
+        name: ruff format (backend)
+        entry: bash -c 'cd services/api && uv run ruff format .'
+        language: system
+        types: [python]
+        files: ^services/api/
+        pass_filenames: false
+      - id: mypy
+        name: mypy (backend)
+        entry: bash -c 'cd services/api && uv run mypy hse_doc_studio'
+        language: system
+        types: [python]
+        files: ^services/api/hse_doc_studio/
+        pass_filenames: false
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

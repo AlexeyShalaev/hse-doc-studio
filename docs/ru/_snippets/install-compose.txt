@@ -1,0 +1,4 @@
+mkdir hse-doc-studio && cd hse-doc-studio
+curl -O https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/all-in-one/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/all-in-one/.env.example
+docker compose up -d

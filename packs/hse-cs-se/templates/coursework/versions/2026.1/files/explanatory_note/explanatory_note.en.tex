@@ -1,0 +1,261 @@
+% !TeX program = xelatex
+% ============================================================
+% pz/pz.tex — Пояснительная записка (ГОСТ 19.404-79)
+%
+% Главный содержательный документ курсового проекта: описывает
+% назначение, постановку задачи, архитектуру и функционирование
+% программы, обоснование выбора средств и ожидаемые технико-
+% экономические показатели. По составу заменяет ВКР в курсовом
+% комплекте (та же роль «пояснительного» документа, но по ЕСПД
+% ГОСТ 19.404-79, а не по ГОСТ 7.32).
+%
+% Жёлтые блоки \hseFill{…} — места, которые нужно заменить своим
+% текстом. Данные (ФИО, название, коды) приходят из настроек
+% проекта через макросы \hse… (common/meta.tex).
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/preamble}
+\newcommand{\docname}{Explanatory Note}
+% ЕСПД-код пояснительной записки — тип «81» (ГОСТ 19.103-77).
+\newcommand{\doccode}{\hseDocCodeBase\ 81 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ 81 01-1-ЛУ}
+\input{../common/commands}
+\input{../common/styles}
+\begin{document}
+\sloppy
+\input{../common/title_template}
+
+
+% ============================================================
+%  ENGLISH BODY (project.lang == en)
+%  §2.3.4.2: an applied English project may present its ЕСПД documentation
+%  in English as a translation of GOST 19. The structure of GOST 19.404-79
+%  is preserved section-by-section; references follow IEEE style.
+%  Fill the yellow \hseFill placeholders with your own text.
+% ============================================================
+
+% ============================================
+% ANNOTATION
+% ============================================
+\section*{ANNOTATION}
+\addcontentsline{toc}{section}{ANNOTATION}
+
+The explanatory note is a document containing information about the algorithms used, the operating principles and other information related to the operation of the program.
+
+This explanatory note \enquote{\hseProjectName} contains the following sections: \enquote{Introduction}, \enquote{Purpose and Field of Application}, \enquote{Technical Characteristics}, \enquote{Expected Technical and Economic Indicators}, \enquote{Sources Used During Development}.
+
+The \enquote{Introduction} section states the name of the program and the conventional designation of the development topic, as well as the basis for the development.
+
+The \enquote{Purpose and Field of Application} section presents the purpose of the program and a brief characterisation of its field of application.
+
+The \enquote{Technical Characteristics} section contains the following subsections: statement of the task for the development of the program; description of the algorithm and functioning of the program; description and justification of the choice of the method for organising input and output data; description and justification of the choice of technical and software resources.
+
+The \enquote{Expected Technical and Economic Indicators} section states the anticipated demand and the economic advantages of the development compared with domestic and foreign models or analogues.
+
+\clearpage
+
+% ============================================
+% LIST OF STANDARDS USED
+% ============================================
+\noindent
+The software document \enquote{Explanatory Note} is formatted in accordance with the requirements of the ESPD (Unified System of Program Documentation):
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+\item GOST 19.101-77 Types of programs and program documents\cite{gost19101}.
+\item GOST 19.103-77 Designations of programs and program documents\cite{gost19103}.
+\item GOST 19.104-78 Basic inscriptions\cite{gost19104}.
+\item GOST 19.105-78 General requirements for program documents\cite{gost19105}.
+\item GOST 19.106-78 Requirements for program documents produced by printing\cite{gost19106}.
+\item GOST 19.404-79 Explanatory note. Requirements for content and formatting\cite{gost19404}.
+\end{enumerate}
+
+Changes to this explanatory note are made in accordance with GOST\,19.603-78\cite{gost19603}, GOST\,19.604-78\cite{gost19604}.
+
+\clearpage
+
+% ============================================
+% CONTENTS
+% ============================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================
+% 1. INTRODUCTION
+% ============================================
+\section{INTRODUCTION}
+
+\subsection{Name of the program}
+
+% The names are substituted automatically: the full name comes from the
+% project title, the English and short names come from the project settings.
+The name of the program is \enquote{\projectname}.
+
+The name of the program in English is \enquote{\hseProjectNameEn}.
+
+\subsection{Conventional designation of the development topic}
+
+The conventional designation of the development topic is \enquote{\hseProjectNameShort}.
+
+\subsection{Basis for the development}
+
+% Hint: refer to the curriculum of the study programme and to the topic of the
+% course project approved by the academic supervisor.
+The basis for the development is the bachelor's curriculum of the study field \hseFill{code and name of the study field} and the topic of the course project approved by the academic supervisor of the \enquote{\hseSpecialization} educational programme.
+
+\clearpage
+
+% ============================================
+% 2. PURPOSE AND FIELD OF APPLICATION
+% ============================================
+\section{PURPOSE AND FIELD OF APPLICATION}
+
+\subsection{Purpose of the program}
+
+\subsubsection{Functional purpose}
+
+% Hint: list the main functions the program performs.
+The functional purpose of the program is \hseFill{main functional purpose of the program}. This work implements \hseFill{list the key components and functions}.
+
+\subsubsection{Operational purpose}
+
+% Hint: describe by whom and under what conditions the program is operated.
+This program can be used for \hseFill{operation scenarios}. The target audience of the project is \hseFill{list the target users}.
+
+\subsection{Brief characterisation of the field of application}
+
+% Hint: 1--2 paragraphs about the purpose and the subject area in which the
+% program is applied and which tasks it solves.
+The program is intended for use in \hseFill{subject area and systems where the program is applied}. It can be used both as \hseFill{scenario 1} and as \hseFill{scenario 2}.
+
+\clearpage
+
+% ============================================
+% 3. TECHNICAL CHARACTERISTICS
+% ============================================
+\section{TECHNICAL CHARACTERISTICS}
+
+\subsection{Statement of the task for the development of the program}
+
+% Hint: formulate the task being solved and give the functional requirements
+% (you may refer to the requirements from the Statement of Work, prefix ТЗ-Ф-01...).
+This work is developed for \hseFill{purpose of developing the program}. The functional requirements for the program are given in the Statement of Work and detailed below.
+
+\begin{hseExample}
+Example list of tasks to be solved:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \hseFill{task 1};
+    \item \hseFill{task 2};
+    \item \hseFill{complete the list of tasks}.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Description of the algorithm and functioning of the program}
+
+% Hint: this is the central section of the explanatory note. Describe the
+% architecture, the key algorithms, data schemas and interaction between
+% components. Diagrams (component, sequence, class) and pseudocode are welcome.
+\subsubsection{Program architecture}
+
+\hseFill{Describe the architecture: the components, their purpose and interaction. Provide an architecture diagram.}
+
+\subsubsection{Description of functioning}
+
+\hseFill{Describe the main operating scenarios of the program: how requests are processed, what the key algorithms and data flows are.}
+
+\subsection{Description and justification of the choice of the method for organising input and output data}
+
+% Hint: formats, protocols, encodings, data schemas; why they were chosen.
+\hseFill{Describe the formats and protocols of the input and output data, the data storage schema, and justify the choice.}
+
+\subsection{Description and justification of the choice of technical and software resources}
+
+% Hint: languages, frameworks, DBMS, infrastructure; justification of the choice.
+\hseFill{List the languages, frameworks, libraries, DBMS and infrastructure used; justify the choice of each resource.}
+
+\clearpage
+
+% ============================================
+% 4. EXPECTED TECHNICAL AND ECONOMIC INDICATORS
+% ============================================
+\section{EXPECTED TECHNICAL AND ECONOMIC INDICATORS}
+
+\subsection{Anticipated demand}
+
+% Hint: describe the potential users and the anticipated demand.
+The developed program may be of interest to \hseFill{target audience}. The potential users are \hseFill{list the potential users}.
+
+\subsection{Economic advantages of the development compared with domestic and foreign models or analogues}
+
+% Hint: briefly describe the advantages of the development over analogues
+% (a comparison table may be used).
+\hseFill{Describe the economic and functional advantages of the development compared with existing analogues.}
+
+\clearpage
+% The source pages are printed without the bottom stamp (as in real
+% document sets) --- only the sheet number and the document code at the top.
+\pagestyle{appendix}
+
+% ============================================
+% SOURCES USED DURING DEVELOPMENT
+% ============================================
+\section*{SOURCES USED DURING DEVELOPMENT}
+\addcontentsline{toc}{section}{SOURCES USED DURING DEVELOPMENT}
+
+% Hint: add the sources on the technologies of your project BEFORE the GOSTs,
+% in IEEE style, for example:
+% \bibitem{fastapi}
+% FastAPI. Accessed: Mar.~14, 2026. [Online]. Available: \url{https://fastapi.tiangolo.com}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\bibitem{gost19101}
+\emph{GOST 19.101-77. Types of Programs and Program Documents}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19103}
+\emph{GOST 19.103-77. Designations of Programs and Program Documents}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19104}
+\emph{GOST 19.104-78. Basic Inscriptions}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19105}
+\emph{GOST 19.105-78. General Requirements for Program Documents}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19106}
+\emph{GOST 19.106-78. Requirements for Program Documents Produced by Printing}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19404}
+\emph{GOST 19.404-79. Explanatory Note. Requirements for Content and Formatting}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19603}
+\emph{GOST 19.603-78. General Rules for Making Changes}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+
+\bibitem{gost19604}
+\emph{GOST 19.604-78. Rules for Making Changes to Program Documents Produced by Printing}. Unified System of Program Documentation. Moscow, Russia: IPK Izdatelstvo Standartov, 2001.
+\end{thebibliography}
+
+\clearpage
+
+% ============================================
+% LIST OF TERMS AND DEFINITIONS
+% ============================================
+\section*{LIST OF TERMS AND DEFINITIONS}
+\addcontentsline{toc}{section}{LIST OF TERMS AND DEFINITIONS}
+
+% Hint: add the terms of the subject area and the technologies of your project.
+% Order --- alphabetical.
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+\item \textbf{\hseFill{term}}~--- \hseFill{definition of the term}.
+\item \textbf{\hseFill{another term}}~--- \hseFill{definition of the term}.
+\end{enumerate}
+
+\clearpage
+
+
+% ============================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================
+\input{../common/change_log}
+
+\end{document}

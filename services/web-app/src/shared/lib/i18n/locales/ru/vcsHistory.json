@@ -1,0 +1,92 @@
+{
+  "change": {
+    "added": "добавлен",
+    "modified": "изменён",
+    "deleted": "удалён",
+    "renamed": "переименован",
+    "copied": "скопирован"
+  },
+  "timeline": {
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "current": "сейчас",
+    "restore": "Вернуться",
+    "files_one": "{{count}} файл",
+    "files_few": "{{count}} файла",
+    "files_many": "{{count}} файлов",
+    "files_other": "{{count}} файлов"
+  },
+  "filters": {
+    "searchPlaceholder": "Поиск по изменениям…",
+    "presetAll": "Всё время",
+    "presetToday": "Сегодня",
+    "preset7d": "Последние 7 дней",
+    "preset30d": "Последние 30 дней",
+    "presetCustom": "Свой диапазон…",
+    "resetTitle": "Сбросить фильтры",
+    "reset": "Сбросить",
+    "rangeFrom": "с",
+    "rangeTo": "по",
+    "kindAll": "Все",
+    "shown": "Показано {{shown}} из {{total}}",
+    "changes_one": "{{count}} изменение",
+    "changes_few": "{{count}} изменения",
+    "changes_many": "{{count}} изменений",
+    "changes_other": "{{count}} изменений"
+  },
+  "changedFiles": {
+    "searchPlaceholder": "Поиск по файлам…",
+    "clear": "Очистить",
+    "viewTree": "Деревом",
+    "viewList": "Списком",
+    "empty": "Файлы не найдены."
+  },
+  "filePatch": {
+    "binary": "Бинарный файл — содержимое не показывается.",
+    "noTextChanges": "Нет текстовых изменений для показа."
+  },
+  "diffBrowser": {
+    "filesChanged_one": "{{count}} файл изменён",
+    "filesChanged_few": "{{count}} файла изменено",
+    "filesChanged_many": "{{count}} файлов изменено",
+    "filesChanged_other": "{{count}} файлов изменено",
+    "truncated": "· показана часть (большой diff)",
+    "emptyHint": "Выберите версию, чтобы увидеть изменения."
+  },
+  "branches": {
+    "currentTitle": "Текущая ветка",
+    "switchTitle": "Переключиться на ветку",
+    "namePlaceholder": "имя ветки",
+    "add": "Ветка",
+    "created": "Ветка «{{name}}» создана",
+    "createError": "Не удалось создать ветку",
+    "switched": "Переключено на «{{name}}»",
+    "switchError": "Не удалось переключить ветку",
+    "deleted": "Ветка «{{name}}» удалена",
+    "deleteError": "Не удалось удалить ветку"
+  },
+  "tags": {
+    "empty": "Меток пока нет.",
+    "placeholderForCommit": "имя метки для выбранной версии",
+    "placeholderForHead": "имя метки (для текущей версии)",
+    "kindTag": "Метка",
+    "kindRelease": "Релиз",
+    "create": "Создать",
+    "created": "Метка «{{name}}» создана",
+    "createError": "Не удалось создать метку",
+    "deleted": "Метка «{{name}}» удалена",
+    "deleteError": "Не удалось удалить метку"
+  },
+  "settings": {
+    "trackingLabel": "Сохранять каждую правку",
+    "trackingHint": "Автоматически фиксировать состояние при каждом сохранении файлов. Выключи, чтобы хранить только важные версии и сборки.",
+    "pdfLabel": "Хранить готовые PDF в истории",
+    "pdfHint": "Включать собранные PDF в версии. По умолчанию выключено — экономит место."
+  },
+  "restore": {
+    "title": "Откатить к этой версии?",
+    "cancel": "Отмена",
+    "confirm": "Откатить безопасно",
+    "explanation": "Это безопасный откат. Текущее состояние сначала сохраняется как отдельная версия, затем рабочие файлы возвращаются к выбранной версии новым снимком. Историю можно отменить — ничего не теряется."
+  }
+}

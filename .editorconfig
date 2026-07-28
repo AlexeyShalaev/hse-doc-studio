@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{yaml,yml,toml,json}]
+indent_size = 2
+
+# Фронтенд форматирует prettier/eslint — держим их отступ, чтобы редактор не спорил с ними.
+[*.{ts,tsx,js,jsx,mjs,cjs,css,scss,html}]
+indent_size = 2
+
+# Шаблоны документов в packs/: LaTeX-исходники и Jinja-обвязка.
+[*.{tex,cls,sty,bib}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false

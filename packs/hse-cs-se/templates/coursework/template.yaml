@@ -1,0 +1,19 @@
+# packs/hse-cs-se/templates/coursework/template.yaml
+# Манифест шаблона курсового проекта (инвариантен к версии)
+
+id: coursework
+name:
+  ru: Курсовой проект (бакалавриат)
+  en: Course Project (BSc)
+short_name:
+  ru: Курсовой
+  en: Course
+
+description:
+  ru: Курсовой проект ОП «Программная инженерия» ФКН НИУ ВШЭ. Полный комплект документов ЕСПД — ТЗ, Пояснительная записка, ПМИ, ТП, РП, РО и Презентация. От ВКР отличается документом «Пояснительная записка» (ГОСТ 19.404-79) вместо ВКР.
+  en: Course project for the HSE SE program. Full ESPD documentation set — SoW, Explanatory Note, Test Program, Source Listing, Programmer Manual, Operator Manual, and Presentation. Differs from the thesis by the Explanatory Note (GOST 19.404-79) instead of the thesis document.
+
+icon: NotebookPen                  # имя иконки lucide-react
+accent_hue: 265                    # OKLCH hue для accent-color в UI
+
+default_version: "2026.1"

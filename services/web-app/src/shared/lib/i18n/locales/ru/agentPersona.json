@@ -1,0 +1,28 @@
+{
+  "editor": {
+    "titleEdit": "Изменить роль",
+    "titleCreate": "Новая роль",
+    "srDescription": "Параметры роли агента: название, описание и инструкция-промпт.",
+    "close": "Закрыть",
+    "labelName": "Название",
+    "labelNamePlaceholder": "Напр. Технический писатель",
+    "labelDescription": "Описание",
+    "labelDescriptionOptional": "(необязательно)",
+    "labelDescriptionPlaceholder": "Короткая подпись для списка ролей",
+    "labelInstruction": "Инструкция",
+    "labelInstructionPlaceholder": "Опишите, как должен вести себя агент в этой роли…",
+    "instructionHint": "Этот текст добавляется в системный промпт, когда выбрана роль.",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "create": "Создать"
+  },
+  "validation": {
+    "nameRequired": "Укажите название роли",
+    "instructionRequired": "Опишите, каким должен быть агент",
+    "checkFields": "Проверьте поля формы"
+  },
+  "toast": {
+    "saved": "Роль «{{label}}» сохранена",
+    "added": "Роль «{{label}}» добавлена"
+  }
+}

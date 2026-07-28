@@ -1,0 +1,17 @@
+{
+  "modal": {
+    "title": "Установка образа LanguageTool",
+    "description": "Скачивание Docker-образа LanguageTool. Прогресс отображается ниже.",
+    "close": "Закрыть"
+  },
+  "status": {
+    "running": "Загрузка слоёв…",
+    "success": "Образ установлен",
+    "failure": "Установка не удалась"
+  },
+  "actions": {
+    "retry": "Повторить",
+    "done": "Готово",
+    "close": "Закрыть"
+  }
+}

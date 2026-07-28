@@ -1,0 +1,202 @@
+/* ============================================================
+   HSE Doc Studio · «Обходной лист, набранный по ГОСТ»
+   Слой 1: токены бренда + мост в переменные Material.
+
+   ВАЖНО: zensical ставит data-md-color-scheme на <body> и объявляет
+   свои --md-* внутри блоков схем, поэтому мост в --md-* повторён
+   в ОБОИХ блоках схемы — мост, объявленный один раз в :root,
+   молча проигрывает в тёмной теме.
+   ============================================================ */
+
+/* ── геометрия, ритм, шрифтовые стеки: схемонезависимы ──────── */
+:root {
+  --hds-serif: "STIX Two Text", Georgia, "Times New Roman", serif;
+  --hds-sans: "Golos Text", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --hds-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  --hds-r-xs: 3px;
+  --hds-r-sm: 6px;
+  --hds-r-md: 10px;
+  --hds-r-lg: 16px;
+  --hds-r-pill: 999px;
+
+  --hds-t-fast: 120ms;
+  --hds-t: 180ms;
+  --hds-t-slow: 320ms;
+  --hds-e-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+
+  --hds-baseline: 24px;
+  --hds-measure: 44rem;   /* колонка прозы, ~72 знака кириллицей */
+  --hds-shell: 1400px;    /* оболочка .md-grid — шире дефолта */
+  --hds-margin-ratio: 14.29%; /* 30 мм из 210 мм, ГОСТ 7.32-2017 */
+
+  --hds-fs-micro: 0.6875rem;  /* 11px — колонтитулы, штампы, шапки таблиц */
+  --hds-fs-small: 0.8125rem;  /* 13px — подписи, мета, марджиналии */
+  --hds-fs-ui: 0.875rem;      /* 14px — навигация, чипы, кнопки */
+  --hds-fs-body: 0.9375rem;   /* 15px — проза */
+  --hds-fs-lede: 1.0625rem;   /* 17px — лиды */
+  --hds-fs-h2: clamp(1.375rem, 1rem + 1vw, 1.75rem);
+  --hds-fs-h1: clamp(1.75rem, 1.2rem + 2vw, 2.625rem);
+  --hds-fs-display: clamp(2.1rem, 1.3rem + 3vw, 3.25rem);
+  --hds-fs-eyebrow: 0.72rem;
+}
+
+/* ── светлая схема: бумага ──────────────────────────────────── */
+[data-md-color-scheme="default"] {
+  --hds-paper: #FAF7F0;
+  --hds-sheet: #FFFDF8;
+  --hds-sheet-2: #F1EBDF;
+  --hds-rule: #E3DACA;
+  --hds-rule-2: #CBBFA9;
+
+  --hds-ink: #17140F;
+  --hds-ink-2: #423C32;
+  --hds-ink-3: #6E6555;
+  --hds-ink-4: #99907E;
+
+  --hds-accent-ink: #1D3E8F;   /* текст ссылок · 9.2:1 на paper */
+  --hds-accent: #1D3E8F;       /* заливки, бордеры, индикаторы */
+  --hds-accent-hover: #142E6E;
+  --hds-accent-soft: rgba(29, 62, 143, 0.1);
+
+  /* киноварь корректора: ТОЛЬКО правка и штамп, никогда — навигация */
+  --hds-mark: #A5301B;
+  --hds-mark-soft: rgba(165, 48, 27, 0.1);
+  --hds-redline: #C8342A;
+
+  --hds-ok: #1F7A4D;
+  --hds-ok-soft: rgba(31, 122, 77, 0.1);
+  --hds-warn: #9A6A00;
+  --hds-warn-soft: rgba(154, 106, 0, 0.12);
+  --hds-err: #B3271E;
+  --hds-err-soft: rgba(179, 39, 30, 0.1);
+  --hds-info: #1D5FA8;
+  --hds-info-soft: rgba(29, 95, 168, 0.1);
+
+  /* незаполненность — копия \hseFill из шаблона */
+  --hds-fill: #FFE9A3;
+  --hds-fill-edge: rgba(23, 20, 15, 0.22);
+
+  /* станции маршрута */
+  --hds-st1: #1E5FCC;
+  --hds-st2: #5B45CE;
+  --hds-st3: #8E3FA8;
+  --hds-st4: #C05621;
+  --hds-st5: #1F7A4D;
+  --hds-stsub: #6E6555;
+
+  /* тени: стопка листов, не material elevation */
+  --hds-sh-hair: 0 1px 0 var(--hds-rule);
+  --hds-sh-lift: 0 1px 0 0 var(--hds-rule-2), 0 14px 32px -26px rgba(23, 20, 15, 0.55);
+  --hds-sh-float: 0 1px 0 0 var(--hds-rule-2), 0 22px 46px -28px rgba(23, 20, 15, 0.6);
+  --hds-sh-stack: 3px 3px 0 var(--hds-sheet-2), 3px 3px 0 1px var(--hds-rule),
+    6px 6px 0 var(--hds-sheet-2), 6px 6px 0 1px var(--hds-rule);
+
+  --hds-ruled-line: rgba(23, 20, 15, 0.06);
+}
+
+/* ── тёмная схема: не инверсия, отдельно подобранные значения ── */
+[data-md-color-scheme="slate"] {
+  --hds-paper: #14120F;
+  --hds-sheet: #1C1916;
+  --hds-sheet-2: #262119;
+  --hds-rule: #322C24;
+  --hds-rule-2: #453E33;
+
+  --hds-ink: #F2EDE2;
+  --hds-ink-2: #C8C0B1;
+  --hds-ink-3: #948B7A;
+  --hds-ink-4: #6C6455;
+
+  --hds-accent-ink: #9DB8FF;   /* 9.6:1 на paper */
+  --hds-accent: #3D6BE0;
+  --hds-accent-hover: #C2D2FF;
+  --hds-accent-soft: rgba(157, 184, 255, 0.16);
+
+  --hds-mark: #E8735A;
+  --hds-mark-soft: rgba(232, 115, 90, 0.16);
+  --hds-redline: #FF8A7E;
+
+  --hds-ok: #4FCB8B;
+  --hds-ok-soft: rgba(79, 203, 139, 0.14);
+  --hds-warn: #E0A03A;
+  --hds-warn-soft: rgba(224, 160, 58, 0.14);
+  --hds-err: #FF7B6E;
+  --hds-err-soft: rgba(255, 123, 110, 0.14);
+  --hds-info: #7FB4F0;
+  --hds-info-soft: rgba(127, 180, 240, 0.14);
+
+  --hds-fill: #6A5410;
+  --hds-fill-edge: rgba(242, 237, 226, 0.22);
+
+  --hds-st1: #6FA6FF;
+  --hds-st2: #9C8CFF;
+  --hds-st3: #D08CE8;
+  --hds-st4: #F0954E;
+  --hds-st5: #4FCB8B;
+  --hds-stsub: #948B7A;
+
+  --hds-sh-hair: 0 1px 0 var(--hds-rule);
+  --hds-sh-lift: 0 1px 0 0 var(--hds-rule-2), 0 14px 32px -22px rgba(0, 0, 0, 0.8);
+  --hds-sh-float: 0 1px 0 0 var(--hds-rule-2), 0 22px 46px -24px rgba(0, 0, 0, 0.88);
+  --hds-sh-stack: 3px 3px 0 var(--hds-sheet-2), 3px 3px 0 1px var(--hds-rule),
+    6px 6px 0 var(--hds-sheet-2), 6px 6px 0 1px var(--hds-rule);
+
+  --hds-ruled-line: rgba(242, 237, 226, 0.07);
+}
+
+/* ============================================================
+   Слой 2: мост в Material — повторён в обоих блоках схемы.
+   Ключевая строка: primary = ЧЕРНИЛА, не акцент. Она превращает
+   «mkdocs с фирменным цветом» в продуктовый сайт.
+   ============================================================ */
+[data-md-color-scheme="default"],
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--hds-paper);
+  --md-default-fg-color: var(--hds-ink);
+  --md-default-fg-color--light: var(--hds-ink-2);
+  --md-default-fg-color--lighter: var(--hds-ink-3);
+  --md-default-fg-color--lightest: var(--hds-ink-4);
+
+  --md-primary-fg-color: var(--hds-ink);
+  --md-primary-fg-color--light: var(--hds-ink-2);
+  --md-primary-fg-color--dark: var(--hds-ink);
+  --md-primary-bg-color: var(--hds-paper);
+  --md-primary-bg-color--light: var(--hds-paper);
+
+  --md-accent-fg-color: var(--hds-accent-hover);
+  --md-accent-fg-color--transparent: var(--hds-accent-soft);
+
+  --md-typeset-color: var(--hds-ink-2);
+  --md-typeset-a-color: var(--hds-accent-ink);
+  --md-typeset-mark-color: var(--hds-fill);
+  --md-typeset-table-color: var(--hds-rule);
+  --md-typeset-kbd-color: var(--hds-sheet);
+  --md-typeset-kbd-accent-color: var(--hds-sheet-2);
+  --md-typeset-kbd-border-color: var(--hds-rule-2);
+
+  --md-code-bg-color: var(--hds-sheet-2);
+  --md-code-fg-color: var(--hds-ink);
+
+  --md-admonition-bg-color: var(--hds-sheet);
+  --md-admonition-fg-color: var(--hds-ink-2);
+
+  --md-footer-bg-color: var(--hds-sheet);
+  --md-footer-bg-color--dark: var(--hds-sheet);
+  --md-footer-fg-color: var(--hds-ink);
+  --md-footer-fg-color--light: var(--hds-ink-3);
+  --md-footer-fg-color--lighter: var(--hds-ink-4);
+
+  --md-shadow-z1: var(--hds-sh-hair);
+  --md-shadow-z2: var(--hds-sh-lift);
+  --md-shadow-z3: var(--hds-sh-float);
+
+  /* theme.font = false отключает и инлайновое объявление шрифтов
+     из base.html — поэтому они задаются здесь */
+  --md-text-font: "Golos Text", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --md-code-font: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+::selection {
+  background: var(--hds-accent-soft);
+}

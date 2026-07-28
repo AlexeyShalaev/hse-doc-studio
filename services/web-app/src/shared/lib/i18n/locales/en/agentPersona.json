@@ -1,0 +1,28 @@
+{
+  "editor": {
+    "titleEdit": "Edit role",
+    "titleCreate": "New role",
+    "srDescription": "Agent role settings: name, description and the prompt instruction.",
+    "close": "Close",
+    "labelName": "Name",
+    "labelNamePlaceholder": "e.g. Technical writer",
+    "labelDescription": "Description",
+    "labelDescriptionOptional": "(optional)",
+    "labelDescriptionPlaceholder": "A short caption for the role list",
+    "labelInstruction": "Instruction",
+    "labelInstructionPlaceholder": "Describe how the agent should behave in this role…",
+    "instructionHint": "This text is added to the system prompt when the role is selected.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create"
+  },
+  "validation": {
+    "nameRequired": "Enter a role name",
+    "instructionRequired": "Describe how the agent should behave",
+    "checkFields": "Check the form fields"
+  },
+  "toast": {
+    "saved": "Role “{{label}}” saved",
+    "added": "Role “{{label}}” added"
+  }
+}

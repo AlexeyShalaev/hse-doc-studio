@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{#
+  Один overrides/ на обе языковые сборки: языкозависимые строки ветвятся по
+  config.theme.language ("ru" | "en"). Шрифты self-hosted и подключаются через
+  stylesheets/00-fonts.css (theme.font = false в конфиге), поэтому блок fonts
+  не переопределяется — переопределение стёрло бы и инлайновые --md-*-font,
+  которые вместо base.html задаёт stylesheets/01-tokens.css.
+#}
+
+{% block extrahead %}
+  {% set lang = config.theme.language %}
+  {% set og_title = config.site_name %}
+  {% if page and page.meta and page.meta.title %}
+    {% set og_title = page.meta.title %}
+  {% elif page and page.title %}
+    {% set og_title = page.title | striptags %}
+  {% endif %}
+  {% set og_desc = config.site_description %}
+  {% if page and page.meta and page.meta.description %}
+    {% set og_desc = page.meta.description %}
+  {% endif %}
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF7F0">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14120F">
+  {# Прелоад двух критических шрифтов: кириллица прозы и заголовков.
+     hreflang-связку языков стоковый base.html делает сам из extra.alternate. #}
+  <link rel="preload" href="{{ 'assets/fonts/golos-cyrillic.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ 'assets/fonts/stix-cyrillic.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_desc }}">
+  <meta property="og:locale" content="{{ 'ru_RU' if lang == 'ru' else 'en_US' }}">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "HSE Doc Studio",
+      "operatingSystem": "Windows, macOS, Linux (Docker)",
+      "applicationCategory": "EducationalApplication",
+      "offers": { "@type": "Offer", "price": "0" },
+      "url": "{{ config.site_url }}"
+    }
+  </script>
+{% endblock %}
+
+{% block announce %}
+  {% set lang = config.theme.language %}
+  {% if lang == 'ru' %}
+    <strong>0.1.0</strong> · первый публичный релиз —
+    <a href="{{ 'whatsnew/' | url }}">что нового →</a>
+  {% else %}
+    <strong>0.1.0</strong> · first public release —
+    <a href="{{ 'whatsnew/' | url }}">what's new →</a>
+  {% endif %}
+{% endblock %}
+
+{% block hero %}
+  {% if page and page.meta and page.meta.hero %}
+    {% include "partials/hero.html" %}
+  {% endif %}
+{% endblock %}

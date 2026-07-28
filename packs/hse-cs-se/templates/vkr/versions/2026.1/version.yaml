@@ -1,0 +1,821 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/version.yaml
+# Манифест версии шаблона ВКР 2026.1
+
+id: "2026.1"
+released_at: 2026-07-24
+status: stable
+summary:
+  ru: Первая версия шаблона на основе реальных исходников ВКР 2025/2026. XeLaTeX, ГОСТ ЕСПД, полный комплект документов.
+  en: First version based on real 2025/2026 thesis sources. XeLaTeX, ESPD GOST, full document set.
+breaking_changes:
+  ru: []
+  en: []
+
+# ── что даёт эта версия шаблона ──
+# Заменяет прежний CHANGELOG.md: заметки живут рядом с версией, которую описывают,
+# и на обоих языках — как `summary` и `breaking_changes` выше. Списки ru и en
+# параллельны (пункт за пунктом) — это проверяет pack_lint.
+# Первая версия описывает СОСТАВ, а не историю правок: истории у неё ещё нет.
+changes:
+  ru:
+    - Полный комплект документов ЕСПД по реальным исходникам ВКР ОП «Программная инженерия» ФКН НИУ ВШЭ
+      — ТЗ (ГОСТ 19.201-78), ВКР (ГОСТ 7.32-2017), ПМИ (ГОСТ 19.301-79), Текст программы (ГОСТ 19.401-78),
+      Руководство программиста (ГОСТ 19.504-79), Руководство оператора (ГОСТ 19.505-79).
+    - 'Прикладной и исследовательский виды работы: в исследовательском комплект дополняется Аннотацией,
+      а состав документов и набор проверок подстраиваются под выбранный вид.'
+    - 'Одиночная и командная работа: в команде общие документы лежат в shared/, личные размножаются по авторам
+      со своими метаданными и подписями.'
+    - 'Русский и английский языки документов: редакция файла выбирается языковым суффиксом, оба комплекта
+      собираются из одного бандла.'
+    - Презентация защиты в трёх вариантах — PowerPoint, RevealJS и LaTeX Beamer — по официальному образцу
+      ОП в фирменном стиле НИУ ВШЭ; сценарий и объём зависят от вида работы и языка.
+    - 'Шесть профилей сдачи под календарь года: КТ1, КТ2, КТ3, заявление на ПДП, предзащита и финальная
+      загрузка на ГИА — каждый собирает свой архив и требует свой набор документов.'
+    - 'Документы преддипломной практики: индивидуальное задание, рабочий план, титульный лист отчёта и проект
+      отзыва руководителя.'
+    - 'Анкеты пака: декларация об использовании ИИ по официальной форме ОП и ссылка на репозиторий с кодом.'
+    - 'Расписка о неразглашении — отдельный документ комплекта: включается метаданными и печатается на каждого
+      автора.'
+    - Подписи в PNG (автор, руководитель, нормоконтроль) накладываются на собранный PDF по координатам слотов.
+    - Проверки нормоконтроля по ГОСТам комплекта, методическим указаниям и содержательным требованиям ОП,
+      плюс язык и типографика через LanguageTool.
+  en:
+    - Full ESPD document set built from real HSE SE thesis sources — Statement of Work (GOST 19.201-78),
+      Thesis (GOST 7.32-2017), Test Program (GOST 19.301-79), Program Text (GOST 19.401-78), Programmer
+      Manual (GOST 19.504-79), Operator Manual (GOST 19.505-79).
+    - 'Project and research kinds of work: the research one adds an Annotation, and both the document set
+      and the checks follow the chosen kind.'
+    - 'Solo and team work: in a team the shared documents live in shared/ while personal ones are produced
+      per author, each with its own metadata and signatures.'
+    - 'Russian and English document languages: the file edition is picked by its language suffix, and both
+      sets build from a single bundle.'
+    - Defence presentation in three variants — PowerPoint, RevealJS and LaTeX Beamer — following the programme's
+      official sample in HSE branding; the scenario and length follow the kind of work and the language.
+    - 'Six submission profiles matching the academic calendar: checkpoints 1-3, the internship application,
+      the pre-defence and the final upload — each builds its own archive and demands its own documents.'
+    - 'Pre-graduation internship paperwork: individual assignment, work plan, report title page and a draft
+      supervisor review.'
+    - 'Pack questionnaires: the AI usage declaration on the programme''s official form, and the source repository
+      link.'
+    - 'A non-disclosure statement as a document of its own: enabled through metadata and produced for every
+      author.'
+    - PNG signatures (author, supervisor, normative control) are stamped onto the built PDF at slot coordinates.
+    - Normative-control checks against the set's GOSTs, the programme guidelines and its content requirements,
+      plus language and typography via LanguageTool.
+
+# ── классификация (для фильтров в каталоге) ──
+supported_kinds: [research, project]
+# team: раскладка shared/ + папка на каждого ведомого автора; личные документы
+# (scope: personal) размножаются по авторам, общее ТЗ живёт в shared/.
+supported_staffing: [solo, team]
+
+# ── движок компиляции ──
+engine:
+  default: xelatex
+  allowed: [xelatex]
+  passes: 3
+  flags: "-interaction=nonstopmode -halt-on-error -synctex=1"
+
+# ── требования к TeX Live (для on-demand install через tlmgr) ──
+latex_packages:
+  - scheme-basic
+  - fontspec
+  - polyglossia
+  - babel-russian
+  - geometry
+  - indentfirst
+  - setspace
+  - microtype
+  - csquotes
+  - graphics
+  - xcolor
+  - pgf               # содержит tikz
+  - float
+  - tabularx
+  - longtable
+  - multirow
+  - makecell
+  - booktabs
+  - adjustbox
+  - rotating
+  - url
+  - xurl
+  - hyphenat
+  - cite
+  - hyperref
+  - fancyhdr
+  - lastpage
+  - titlesec
+  - chngcntr
+  - enumitem
+  - listings
+  - fvextra
+  - tempora           # Times New Roman-совместимый шрифт (fallback для pdflatex)
+  - caption
+  - subcaption
+  - amsmath
+  - amssymb
+  - extarticle        # класс документов ЕСПД (из extsizes)
+  - extsizes
+  - extreport         # класс ВКР: главы (из extsizes)
+  - letltxmacro       # безопасное переопределение \includegraphics в ВКР
+  - simple-thesis-dissertation  # шрифт Tinos (≈ Times New Roman, с кириллицей) для ВКР
+  - dejavu            # DejaVu Sans/Mono (sans + моноширинный с кириллицей) для ВКР
+
+# ── состав документов (bundle-раскладка v2) ──
+# Каждый документ — самодостаточный bundle files/<id>/: его манифест doc.yaml,
+# все варианты и все языковые редакции лежат в одной папке; дерево пака
+# СОВПАДАЕТ с деревом проекта (папок applied/ и research/ больше нет —
+# состав по виду гейтится supported_kinds в doc.yaml).
+#
+# ЯЗЫК: суффикс имени файла <stem>.<код>.<ext> (коды — ТОЛЬКО из `langs:` ниже,
+# первый в списке = дефолт и фолбэк). Файл БЕЗ суффикса — единственная форма
+# для всех языков (ISO/IEEE-варианты, nda, ассеты, *.j2). Частичный перевод
+# валиден: нет файла языка проекта — берётся дефолтный. Новый язык = файлы
+# `<stem>.<код>.<ext>` рядом + код в `langs:`; правок кода не требуется.
+# Бинарные форматы (pptx) участвуют наравне с текстом.
+# По §2.5.3.1 Программы практики англоязычная ВКР может вести софт-доки на
+# английском: переводом ГОСТ 19 ЕСПД или по ISO/IEC/IEEE (variants). Русский —
+# вариант по умолчанию; файлы вариантов при переключении НЕ удаляются.
+langs: [ru, en]
+
+# Roster: порядок = порядок в UI; каждая запись обязана иметь files/<id>/doc.yaml
+# (и наоборот — bundle без записи в roster не грузится: fail-fast при загрузке).
+# Порядок = порядок в навигации; визуальные блоки задаёт `group:` в doc.yaml
+# (espd → report → pdp → pres → work → nda), доки одной группы стоят подряд —
+# фронтенд рисует дивайдер на каждой смене группы.
+documents:
+  - technical_specification
+  - shared_technical_specification
+  - test_program_and_methodology
+  - shared_test_program_and_methodology
+  - source_listing
+  - programmer_manual
+  - operator_manual
+  - annotation
+  - shared_annotation
+  - interim_report
+  - pdp_assignment
+  - pdp_work_plan
+  - pdp_report_title
+  - pdp_review
+  - topic_presentation
+  - presentation
+  - thesis
+  - nda
+
+# ── динамические инклуды ──
+# Перегенерируются тулом из project.json ПЕРЕД каждой сборкой (и один раз
+# при создании проекта). `template` — Jinja-исходник относительно files/
+# (LaTeX-safe делимитеры (( )) / {{ }}), `output` — путь результата в папке
+# проекта. Так все ИЗМЕНЯЕМЫЕ данные (ФИО, группа, год, руководитель, NDA…)
+# всегда свежие в PDF, а .tex-файлы автора не перезаписываются: они лишь
+# \input этот результат и используют макросы \hse… из него.
+dynamic_includes:
+  - template: common/meta.tex.j2
+    output:   common/meta.tex
+  # Выбор шрифтов из настроек проекта (font_main/font_sans/font_mono) →
+  # \setmainfont/\setsansfont/\setmonofont с фолбэком на свободные клоны.
+  - template: common/fonts.tex.j2
+    output:   common/fonts.tex
+
+# ── Группы мета-полей (порядок объявления = порядок в настройках) ──
+meta_groups:
+  - id: study
+    label: { ru: Учёба, en: Studies }
+  # `section: documents` — группа показывается не в «Метаданных», а на странице
+  # «Документы», рядом с форматами шаблонов и ведением комплектов: состав
+  # комплекта — решение о документах, а не поле титульного листа.
+  - id: docset
+    label:   { ru: Состав документов, en: Document set }
+    section: documents
+  - id: naming
+    label: { ru: Наименования программы, en: Program names }
+  - id: vkr_title
+    label: { ru: Титульный лист ВКР, en: VKR title page }
+  - id: espd
+    label: { ru: Коды ЕСПД, en: ESPD codes }
+
+# ── meta-поля, которые тул запрашивает в wizard ──
+meta_fields:
+  year:
+    type: string
+    group:       study
+    label:       { ru: Учебный год (год защиты), en: Academic year (defense year) }
+    placeholder: "2026"
+    required_at: create
+    # Подставляется автоматически из текущей даты: год окончания учебного года
+    # (сент.–дек. → следующий календарный год, янв.–авг. → текущий). Можно изменить.
+    auto: academic_year
+
+  # Тип диплома не запрашивается: шаблон — только БАКАЛАВРИАТ (в магистратуре
+  # другой комплект документов), «бакалавриат» вшит в шаблоны (\hseDegreeLevel).
+  specialization:
+    type: string
+    group:       study
+    label:       { ru: Образовательная программа, en: Educational program }
+    placeholder: "Программная инженерия"
+    required_at: create
+    default:     "Программная инженерия"
+
+  # ── Руководства в комплекте (РП/РО) ──
+  # У каждого автора свой комплект: нужен только Руководство программиста (РП),
+  # только Руководство оператора (РО), либо оба. Выбор влияет на: показ файлов
+  # руководств в IDE, «Состав программной документации» в ТЗ (см. макрос
+  # \hseManualDocItems в common/meta.tex), состав пакета сдачи и запуск проверок
+  # РП/РО. Снятие выбора НЕ удаляет документ и его содержимое — при повторном
+  # выборе всё возвращается. `select` из трёх вариантов = «минимум один»
+  # автоматически (всегда выбрано ровно одно из трёх).
+  manuals:
+    type: select
+    group:       docset
+    scope:       author
+    # Руководства (РП/РО) есть только в прикладном виде — в исследовательской
+    # ВКР софт-документации нет, поле не показывается.
+    supported_kinds: [project]
+    label:       { ru: Руководства в комплекте, en: Manuals in the set }
+    required_at: never
+    default:     "Программиста и оператора"
+    options:     ["Программиста и оператора", "Только программиста", "Только оператора"]
+    help:        { ru: "Какие руководства входят в ваш комплект. В командном проекте задаётся у каждого автора отдельно.", en: "Which manuals are part of your set. In a team project each author sets it individually." }
+
+  name_en:
+    type: string
+    group:       naming
+    # team: у каждого автора своё англ. название его части; значение уровня
+    # проекта — английское название всей системы (для общего ТЗ).
+    scope:       author
+    label:       { ru: Название работы на английском, en: English title }
+    placeholder: "The Core of the Cloud Platform for IT Infrastructure Management"
+    required_at: never
+    help:        { ru: "Печатается в разделах «Наименование программы» ТЗ/ТП/ПМИ. Пока не заполнено — в PDF жёлтый плейсхолдер." }
+
+  name_short:
+    type: string
+    group:       naming
+    scope:       author
+    label:       { ru: Краткое наименование программы, en: Short program name }
+    placeholder: "CloudInfra"
+    required_at: never
+    help:        { ru: "Краткое (рабочее) имя программы, используемое в исходном коде." }
+
+  faculty:
+    type: string
+    group:       vkr_title
+    label:       { ru: Факультет, en: Faculty }
+    placeholder: "Факультет компьютерных наук"
+    required_at: never
+    # Все работы ОП ПИ идут на ФКН; значение подставляется сразу, его можно изменить.
+    default:     "Факультет компьютерных наук"
+
+  city:
+    type: string
+    group:       vkr_title
+    label:       { ru: Город, en: City }
+    placeholder: Москва
+    required_at: never
+
+  # ── Поля титульного листа ВКР (thesis/title.tex) ──
+  udc:
+    type: string
+    group:       vkr_title
+    # team: УДК у каждой ВКР свой.
+    scope:       author
+    label:       { ru: Код УДК, en: UDC code }
+    placeholder: "004"
+    required_at: finalize
+    help:        { ru: "Код по Универсальной десятичной классификации (например, 004.4)." }
+
+  program_code:
+    type: string
+    group:       vkr_title
+    label:       { ru: Код направления подготовки, en: Programme code }
+    placeholder: "09.03.04"
+    required_at: never
+    # Шаблон бакалаврский — код направления подготовки ПИ подставлен сразу.
+    default:     "09.03.04"
+    help:        { ru: "Направление подготовки бакалавриата ПИ — 09.03.04." }
+
+  course:
+    type: string
+    group:       study
+    label:       { ru: Курс обучения, en: Year of study }
+    placeholder: "4"
+    required_at: never
+
+  academic_supervisor:
+    type: person
+    label:       { ru: Академический руководитель ОП, en: Academic programme supervisor }
+    required_at: never
+    help:        { ru: "Блок «УТВЕРЖДАЮ» на титулах. Не задан — печатается руководитель ОП «Программная инженерия» по умолчанию." }
+
+  doc_code_base:
+    type: string
+    group:       espd
+    # team: свой код у комплекта каждого автора; значение уровня проекта —
+    # код системы, его использует общее ТЗ в shared/.
+    scope:       author
+    label:       { ru: Базовый код документа (ЕСПД), en: ESPD base document code }
+    placeholder: "RU.17701729.09.10-01"
+    required_at: finalize
+    help:        { ru: "Обозначение по ГОСТ 19.103-77; к нему документы добавляют суффикс (ТЗ 01-1, ПМИ 01-1, …)." }
+
+  # ── Шрифты (подставляются в common/fonts.tex; превью в настройках) ──
+  # type: font — UI рисует пикер с превью (рекомендованные из options +
+  # установленные в Студии). Значение = имя семейства. main/sans имеют дефолт
+  # (литерал попадает в fonts.tex), mono без дефолта → берётся дефолт документа
+  # (\hseDefaultMono: Courier New в ЕСПД, Consolas в ВКР).
+  font_main:
+    type: font
+    label:       { ru: Основной шрифт, en: Main font }
+    placeholder: Times New Roman
+    required_at: never
+    default:     Times New Roman
+    options:     ["Times New Roman", "PT Serif", "Liberation Serif", "Tinos", "Georgia", "Cambria"]
+    help:        { ru: "Шрифт основного текста. По требованиям ВШЭ/ГОСТ — Times New Roman 14 пт; смена помечается предупреждением норм-контроля.", en: "Body text font. HSE/GOST require Times New Roman 14 pt; changing it raises a norm-control warning." }
+
+  font_sans:
+    type: font
+    label:       { ru: Рубленый шрифт (заголовки, подписи), en: Sans-serif font }
+    placeholder: Arial
+    required_at: never
+    default:     Arial
+    options:     ["Arial", "PT Sans", "Liberation Sans", "Helvetica", "Verdana"]
+
+  font_mono:
+    type: font
+    label:       { ru: Моноширинный шрифт (код, листинги), en: Monospace font }
+    placeholder: "Consolas / Courier New"
+    required_at: never
+    options:     ["Consolas", "Courier New", "PT Mono", "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono"]
+    help:        { ru: "Шрифт листингов кода. Если не выбран — Courier New в ЕСПД-документах и Consolas в ВКР.", en: "Code listing font. If unset: Courier New in ESPD docs, Consolas in the thesis." }
+
+  nda:
+    type: bool
+    label:       { ru: Работа под NDA, en: NDA work }
+    default:     false
+    required_at: never
+
+  supervisor:
+    type: person
+    label:       { ru: Научный руководитель, en: Supervisor }
+    required_at: create
+
+  co_supervisor:
+    type: person
+    label:       { ru: Со-руководитель (опционально), en: Co-supervisor (optional) }
+    required_at: never
+
+# ── формы (движок анкет) ──
+# Пак описывает анкеты декларативно: блоки/поля/опции/валидацию. Бэк отдаёт
+# схему и хранит сырые ответы (field_id -> value), фронт рендерит поля generic-
+# рендером — ничего пер-польного в коде. `output` — отдельный Jinja-шаблон,
+# который бэк рендерит по project + answers в готовый артефакт.
+forms:
+  - id: ai_declaration
+    icon: bot                      # подсказка иконки для навигации (bot/clipboard/…)
+    title:
+      ru: Декларация об использовании ИИ
+      en: AI usage declaration
+    schema_version: 1
+    required_for_pack: true        # невалидна → предупреждение при сборке пакета (не блок)
+    # team: декларацию заполняет КАЖДЫЙ автор — инстансы "ai_declaration--<slug>"
+    # со своими ответами; в пакет сдачи автора попадает его декларация.
+    per_author: true
+    output:
+      template: files/ai-usage/form.md   # путь относительно version-папки
+      output_name: "Декларация ИИ.md"
+      format: markdown
+    sections:
+      - id: usage
+        title:
+          ru: Использование ИИ-инструментов
+          en: AI tool usage
+        fields:
+          - id: used_ai
+            type: select
+            widget: radio
+            required: true
+            default: "no"
+            label: { ru: "Использование ИИ", en: "AI usage" }
+            options:
+              - { id: "no",  label: { ru: "Я не использовал(а) ИИ", en: "I did not use AI" } }
+              - { id: "yes", label: { ru: "Я использовал(а) ИИ", en: "I used AI" } }
+
+          - id: tools
+            type: multiselect
+            widget: chips
+            label: { ru: "Какие инструменты", en: "Which tools" }
+            help: { ru: "Отметьте все, что использовали", en: "Mark all you used" }
+            visible_if: { field: used_ai, equals: "yes" }
+            options:
+              - { id: chatgpt,  label: { ru: "ChatGPT (OpenAI)", en: "ChatGPT (OpenAI)" } }
+              - { id: claude,   label: { ru: "Claude (Anthropic)", en: "Claude (Anthropic)" } }
+              - { id: copilot,  label: { ru: "GitHub Copilot", en: "GitHub Copilot" } }
+              - { id: gemini,   label: { ru: "Gemini (Google)", en: "Gemini (Google)" } }
+              - { id: deepseek, label: { ru: "DeepSeek", en: "DeepSeek" } }
+              - { id: yandex,   label: { ru: "YandexGPT", en: "YandexGPT" } }
+              - { id: gigachat, label: { ru: "GigaChat (Сбер)", en: "GigaChat (Sber)" } }
+              - { id: other,    label: { ru: "Другое", en: "Other" } }
+
+          - id: usage_table
+            type: table
+            label: { ru: "Детализация использования", en: "Usage detail" }
+            help:
+              ru: "По строке на каждый случай использования ИИ-инструмента"
+              en: "One row per AI tool usage"
+            visible_if: { field: used_ai, equals: "yes" }
+            columns:
+              - { id: tool,    label: { ru: "Инструмент", en: "Tool" } }
+              - { id: version, label: { ru: "Версия / Дата", en: "Version / Date" } }
+              - { id: kind,    label: { ru: "Тип использования", en: "Usage type" } }
+              - { id: scope,   label: { ru: "Область применения", en: "Scope" } }
+
+          - id: pct
+            type: number
+            widget: slider
+            min: 0
+            max: 100
+            step: 1
+            default: 15
+            label: { ru: "Оценка вклада ИИ, %", en: "Estimated AI contribution, %" }
+            help:
+              ru: "Субъективная оценка доли работы, выполненной с помощью ИИ"
+              en: "Subjective share of work done with AI"
+            visible_if: { field: used_ai, equals: "yes" }
+
+          - id: details
+            type: textarea
+            min_length: 80
+            required: true
+            label: { ru: "Подробное описание", en: "Detailed description" }
+            placeholder:
+              ru: "Опишите, как именно использовался ИИ и как вы проверяли результат…"
+              en: "Describe how AI was used and how you verified the result…"
+            visible_if: { field: used_ai, equals: "yes" }
+
+      - id: confirmation
+        title: { ru: "Подтверждение", en: "Confirmation" }
+        fields:
+          - id: clauses
+            type: markdown
+            label: { ru: "Подтверждение", en: "Confirmation" }
+            content:
+              ru: |
+                Подписывая декларацию, я подтверждаю, что:
+                1. Все научные идеи, концепции, выводы и заключения — результат моей
+                   самостоятельной исследовательской деятельности.
+                2. Использование ИИ-инструментов носило вспомогательный характер.
+                3. Итоговый текст работы я проверил(а), отредактировал(а) и скорректировал(а).
+                4. Я несу полную ответственность за достоверность представленных материалов.
+              en: |
+                By signing this declaration I confirm that:
+                1. All scientific ideas, conclusions and findings are the result of my
+                   own independent research.
+                2. AI tools were used in an auxiliary capacity only.
+                3. The final text was reviewed, edited and corrected by me.
+                4. I take full responsibility for the accuracy of the materials.
+
+          - id: consent
+            type: bool
+            required: true
+            label:
+              ru: "Я подтверждаю все пункты выше"
+              en: "I confirm all the statements above"
+
+  # ── Ссылка на код / работоспособное решение (деливерабл КТ4/ПДП) ──
+  # ЛМС «Отчет о ПДП»: программный формат сдаёт «работоспособное программное
+  # решение (архив, ссылка на репозиторий, на сервис или ресурс)»,
+  # исследовательский — «работоспособный программный проект или программу для
+  # вычислительных экспериментов». Форма доступна обоим форматам; рендерится
+  # в текстовый файл (files/code-link/link.txt) и попадает в пакет КТ4
+  # extra-пунктом; не заполнена — в файле явная пометка «не указана».
+  # В команде у каждого автора своя (per_author).
+  - id: code_link
+    icon: clipboard
+    title:
+      ru: Ссылка на код программы
+      en: Source code link
+    schema_version: 1
+    # true, потому что форма уходит в пакет КТ4 extra-пунктом (см. профиль
+    # final): пометка «не указана» вместо ссылки на решение — это провал сдачи,
+    # а не мягкая деградация. Флаг = «предупредить, если не заполнена» (не
+    # блок); пока он стоял false, приложение молчало о пустой ссылке.
+    required_for_pack: true
+    per_author: true
+    output:
+      template: files/code-link/link.txt
+      output_name: "Ссылка на код.txt"
+      format: markdown
+    sections:
+      - id: link
+        title:
+          ru: Работоспособное программное решение
+          en: Working software solution
+        fields:
+          - id: repo_url
+            type: text
+            required: true
+            label: { ru: "Ссылка на репозиторий / сервис", en: "Repository / service URL" }
+            placeholder:
+              ru: "https://github.com/username/project"
+              en: "https://github.com/username/project"
+            help:
+              ru: "Ссылка на репозиторий с кодом, сервис или ресурс с решением в исполняемом виде. Сдаётся файлом .txt в «Отчёт о ПДП» (КТ4)."
+              en: "Link to the source repository, a service or a resource with the runnable solution. Submitted as a .txt file with the CP4 practice report."
+
+          - id: branch
+            type: text
+            required: false
+            label: { ru: "Ветка / тег (опционально)", en: "Branch / tag (optional)" }
+            placeholder: { ru: "main", en: "main" }
+
+          - id: access
+            type: textarea
+            required: false
+            label: { ru: "Как получить доступ (опционально)", en: "Access notes (optional)" }
+            help:
+              ru: "Если репозиторий приватный — кому и как выдан доступ (например, приглашение руководителю)."
+              en: "If the repository is private — who has access and how (e.g. the supervisor is invited)."
+
+# ── слоты подписей ──
+# Слот = один из людей в проекте. PNG хранится один на (project, slot) в
+# .hse-studio/signatures/<slot>.png; позиция и страница задаются отдельно
+# для каждого (doc, slot) в .hse-studio/signatures.json — одну и ту же
+# подпись можно положить в разных местах на ТЗ и ВКР. default_placement
+# — координаты по умолчанию (мм от верхнего-левого угла страницы).
+signatures:
+  slots:
+    - id: author
+      label:             { ru: Автор работы, en: Author }
+      # team: слот размножается по авторам (рантайм-слоты author--<slug>, PNG у
+      # каждого свой). Личные доки подписывает владелец; общие доки (общее ТЗ,
+      # общая ПМИ) — ВСЕ авторы.
+      per_author:        true
+      applies_to:        [technical_specification, shared_technical_specification, annotation, shared_annotation, interim_report, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, pdp_assignment, pdp_work_plan, pdp_report_title]
+      # Аннотация (КТ1), Отчёт ВКР (КТ2), ИЗ/РПП/титул отчёта ПДП (КТ4):
+      # подписывает студент. Отзыв руководителя студент НЕ подписывает.
+      default_placement: { page: 1, x_mm: 60, y_mm: 230, width_mm: 50 }
+
+    - id: supervisor
+      label:             { ru: Научный руководитель, en: Supervisor }
+      applies_to:        [technical_specification, shared_technical_specification, annotation, shared_annotation, interim_report, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, pdp_assignment, pdp_work_plan, pdp_report_title, pdp_review]
+      # Аннотация (КТ1), Отчёт ВКР (КТ2), формы ПДП (КТ4: ИЗ, РПП, титул
+      # отчёта, отзыв): подписывает руководитель (= руководитель практики).
+      default_placement: { page: 1, x_mm: 60, y_mm: 250, width_mm: 50 }
+
+    - id: co_supervisor
+      label:             { ru: Со-руководитель, en: Co-supervisor }
+      # Финальная загрузка ВКР (ГИА): при внешнем соруководителе текст ВКР и
+      # ВСЯ программная документация подписываются им И формальным
+      # руководителем от ВШЭ → слот доступен на всех подписываемых доках.
+      # Обязательным не делаем — соруководитель есть не у всех.
+      applies_to:        [technical_specification, shared_technical_specification, annotation, shared_annotation, interim_report, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, pdp_assignment, pdp_work_plan, pdp_report_title, pdp_review]
+      default_placement: { page: 1, x_mm: 60, y_mm: 268, width_mm: 50 }
+
+# ── NDA ──
+# Расписка NDA теперь ПОЛНОЦЕННЫЙ документ (см. documents → id: nda), а не
+# отдельная группа файлов: компилируется в PDF, живёт в списке документов,
+# пер-автор. Показывается/входит в комплект только при project.meta.nda == true
+# (гейтинг в core/team.py::is_doc_active). Прежний блок `nda: {source_dir…}`
+# удалён — file-group больше не используется.
+
+# ── pack submission: профили сборки для сдачи ──
+pack_submission:
+  # Контрольные точки дипломного проектирования ОП «Программная инженерия» ФКН
+  # НИУ ВШЭ (ЛМС «Дипломное проектирование» + инструкции 2025/26 «Защита тем
+  # ВКР» и «ВКР КТ2» + оргсобрание по защите). Пять профилей: КТ1–КТ3, КТ4/ПДП
+  # (предзащита) и финальная загрузка ВКР к ГИА (единый дедлайн 15 мая).
+  # Комплект каждого отражает то, что реально загружается в ЛМС. Подписи: на
+  # КТ1 — титул Аннотации, на КТ2 — титул Отчёта ВКР (студент И руководитель);
+  # на КТ3 без подписей (финальный ТЗ — «можно без подписи»); на КТ4/ПДП и в
+  # финальной загрузке — полный подписанный комплект (научрук от ВШЭ; при
+  # внешнем соруководителе — и он; академрук НЕ подписывает).
+  profiles:
+    - id: checkpoint-1
+      name:        { ru: "КТ1 — Защита темы ВКР", en: "CP1 — Thesis topic defence" }
+      description: { ru: "Защита тем в комиссиях (до 30% объёма работы; выступление 5–7 минут + 3–5 минут вопросы, максимум 10 минут; загрузка — за день до защиты). Проектный формат: презентация защиты темы по шаблону + проект ТЗ (в команде — общее + индивидуальное; вместо приказа — наполнитель ХХХХ). Исследовательский формат: презентация + Аннотация с ПОДПИСАННЫМ титулом (студент и руководитель) и списком источников (≥ 5 по ГОСТ; аннотация со списком — не менее 7–8 страниц).", en: "Topic defence before the committees (up to 30% of the work; 5–7 min talk + 3–5 min questions, 10 min max; upload one day before the defence). Project format: topic defence presentation per template + draft SoW (team: shared + individual; a placeholder ХХХХ instead of the order number). Research format: presentation + Annotation with a SIGNED title page (student and supervisor) and a reference list (≥ 5 per GOST; the annotation with references is at least 7–8 pages)." }
+      items:
+        # Презентация ЗАЩИТЫ ТЕМЫ (16-пунктовый план §4.1 инструкции) — у обоих
+        # форматов; это отдельный документ topic_presentation, НЕ презентация
+        # защиты работы.
+        - doc_id: topic_presentation
+          signatures: []
+        - doc_id: technical_specification             # проект ТЗ — черновик, подписей нет (проектный формат)
+          signatures: []
+        # Существует только в командных проектах; в solo пункт пропускается.
+        - doc_id: shared_technical_specification
+
+          signatures: []
+        # Исследовательский формат: вместо ТЗ — Аннотация. Инструкция §3:
+        # «Титульный лист аннотации надо подписать студенту и его руководителю;
+        # ПОДПИСАННЫЕ титульный лист, аннотацию и список источников загружаете
+        # в СмартЛМС» — подписи обязательны уже на КТ1.
+        - doc_id: annotation
+          signatures: [author, supervisor]
+        - doc_id: shared_annotation
+
+          signatures: [author, supervisor]
+
+    - id: checkpoint-2
+      name:        { ru: "КТ2 — Промежуточная защита", en: "CP2 — Interim defence" }
+      description: { ru: "Защита промежуточных результатов (до 60% объёма работы; загрузка — за 2 дня до защиты). Оба формата: актуализированная презентация со статусом и прогрессом. Проектный: итоговый вариант ТЗ (в команде — общее + индивидуальное) + Отчёт ВКР с главами 1–2 (текст ВКР). Исследовательский: Отчёт ВКР по ГОСТ 7.32 с проработанным Подходом (структурные части + экспериментальная база, данные, подход к экспериментам; не менее 15–20 стр., ≥ 5 источников) с ПОДПИСАННЫМ титулом (студент и руководитель).", en: "Interim results defence (up to 60% of the work; upload 2 days before the defence). Both formats: an updated presentation with the work status and progress. Project format: the final SoW (team: shared + individual) + the thesis draft with chapters 1–2. Research format: the Thesis report per GOST 7.32 with the elaborated Approach (structural parts + experimental base, data, experiment approach; at least 15–20 pages, ≥ 5 sources) with a SIGNED title page (student and supervisor)." }
+      items:
+        # Актуализированная презентация (та же topic_presentation, дополненная
+        # статусом работы и прогрессом) — у обоих форматов.
+        - doc_id: topic_presentation
+          signatures: []
+        - doc_id: technical_specification             # итоговый вариант ТЗ (проектный формат)
+          signatures: []
+        - doc_id: shared_technical_specification
+
+          signatures: []
+        # Проектный формат: Отчёт ВКР = текст ВКР с главами 1–2. Пункт
+        # kind-гейтится (thesis существует и в research, но на КТ2 research
+        # сдаёт вместо него «Отчёт ВКР» — interim_report).
+        - doc_id: thesis
+          signatures: []
+          supported_kinds: [project]
+        # Исследовательский формат: «Отчёт ВКР» (ГОСТ 7.32, ≥ 15–20 стр.,
+        # проработанный Подход). Инструкция КТ2: титул подписывают студент
+        # и руководитель — подписи обязательны.
+        - doc_id: interim_report
+          signatures: [author, supervisor]
+
+    - id: checkpoint-3
+      name:        { ru: "КТ3 — Итоговая аттестация", en: "CP3 — Final assessment" }
+      description: { ru: "Итоговая аттестация по дипломному проектированию с ОЦЕНКОЙ (незачёт = академическая задолженность); до 85–90% объёма работы. Загрузка — накануне дня комиссии до 23:59; защита 5–7 минут + 2 минуты демонстрация реализации (можно записью) + 3–5 минут вопросы (максимум 15 минут). Программная ВКР: готовый текст ВКР (введение, главы 1–3 с выводами, заключение, приложения) + финальное ТЗ (загружается повторно — комиссии новые, проект сверяется с ТЗ; МОЖНО БЕЗ ПОДПИСЕЙ) + проекты ПМИ и ТП (в ТП — структура, компоненты, библиотеки, заимствования) + презентация защиты; ожидается рабочий проект по ТЗ, испытанный по ПМИ. Исследовательская: исследовательский отчёт (завершённое исследование с экспериментами, результатами и выводами) + презентация защиты. Руководство оператора НЕ требуется.", en: "Final assessment of the graduation project, GRADED (a fail = academic debt); up to 85–90% of the work. Upload by 23:59 the day before the committee; defence 5–7 min + 2 min demo of the implementation (a recording is allowed) + 3–5 min questions (15 min max). Software thesis: the finished thesis text (introduction, chapters 1–3 with conclusions, appendices) + the final SoW (re-uploaded — the committees are new and the project is checked against it; MAY BE UNSIGNED) + the Test Program and Source Listing drafts (the listing covers structure, components, libraries, borrowings) + the defence presentation; a working project per the SoW tested per the Test Program is expected. Research: the research report (a completed study with experiments, results and conclusions) + the defence presentation. The Operator manual is NOT required." }
+      items:
+        # Финальный ТЗ загружается ПОВТОРНО (комиссии новые, проект сверяется
+        # с ТЗ); ЛМС прямо: «собирать подписи не требуется, можно БЕЗ подписи».
+        - doc_id: technical_specification
+          signatures: []
+        - doc_id: shared_technical_specification
+
+          signatures: []
+        # Программный формат: готовый текст ВКР (введение + главы 1–3 +
+        # заключение + приложения). Research сдаёт вместо него
+        # исследовательский отчёт — пункт kind-гейтится.
+        - doc_id: thesis
+          signatures: []
+          supported_kinds: [project]
+        # Исследовательский формат: исследовательский отчёт («Отчёт ВКР»,
+        # актуализированный с КТ2: завершённое исследование, эксперименты,
+        # результаты, выводы). Про подписи на КТ3 ЛМС молчит (титул уже
+        # подписан с КТ2) — сборку не блокируем.
+        - doc_id: interim_report
+          signatures: []
+        - doc_id: test_program_and_methodology            # проект ПМИ (проектный формат)
+          signatures: []
+        - doc_id: shared_test_program_and_methodology
+
+          signatures: []
+        - doc_id: source_listing             # проект ТП (структура, компоненты, библиотеки, заимствования)
+          signatures: []
+        # Презентация ЗАЩИТЫ (документ presentation, «аналогичная защите
+        # ВКР»): цели/задачи, аналоги, технологии с обоснованием, реализация
+        # по ТЗ, результаты и выводы; research — исследование, эксперим. база,
+        # эксперименты и анализ. НЕ презентация защиты темы (topic_presentation).
+        - doc_id: presentation
+
+          signatures: []
+        # РО (руководство оператора) на КТ3 намеренно отсутствует — по ЛМС на
+        # данном этапе представлять его не требуется.
+
+    # ── Заявление на ПДП (организационные документы, до ~12 апреля) ──
+    # Отдельный ЛМС-блок ПЕРЕД отчётом о ПДП: подписанные Индивидуальное
+    # задание и Рабочий план практики. Порядок подписания: студент
+    # подписывает САМ → (при внешнем соруководителе) руководитель от
+    # профильной организации → формальный руководитель от НИУ ВШЭ.
+    - id: pdp-application
+      name:        { ru: "Заявление на ПДП", en: "Practice application" }
+      description: { ru: "Организационные документы преддипломной практики — в раздел «Заявление на ПДП» СмартЛМС, обычно до середины апреля (точная дата каждый год объявляется в ЛМС): подписанные Индивидуальное задание (ИЗ) и Рабочий план практики (РПП). Составляются совместно с руководителем практики (= руководителем ВКР). Порядок подписания: сначала студент, затем (при наличии) руководитель от профильной организации, последним — формальный руководитель от НИУ ВШЭ.", en: "Organisational documents of the pre-graduation practice — upload to the SmartLMS practice application section, usually by mid-April (the exact date is announced in the LMS each year): the signed Individual Assignment and the Work Plan. Prepared together with the practice supervisor (= thesis supervisor). Signing order: the student first, then (if any) the company supervisor, the formal HSE supervisor last." }
+      items:
+        - doc_id: pdp_assignment
+          signatures: [author, supervisor]
+        - doc_id: pdp_work_plan
+          signatures: [author, supervisor]
+
+    - id: final
+      name:        { ru: "КТ4 — Преддипломная практика (предзащита ВКР)", en: "CP4 — Pre-graduation practice (thesis pre-defence)" }
+      description: { ru: "ПДП (обычно апрель, до 95–100%): защита ПДП = предзащита ВКР; загрузка в «Отчёт о ПДП» накануне своей предзащиты (не загрузил — пересдача); точные даты каждый год объявляются в ЛМС. ОБА формата: ПОДПИСАННЫЙ полный текст ВКР с приложениями + презентация к предзащите + ссылка на работоспособное решение (форма «Ссылка на код»: репозиторий/сервис; research — программа для вычислительных экспериментов) + декларация ИИ + отдельно подписанный титульный лист Отчёта о ПДП + подписанный отзыв руководителя практики (= руководителя ВКР) с оценкой. Организационные документы (ИЗ, РПП) сдаются раньше — профиль «Заявление на ПДП». Программный: подписанная программная документация (ТЗ, ПМИ, РО/РП, ТП); под NDA Текст программы ФОРМИРУЕТСЯ с оговоркой «текст не приводится…» + скан NDA. Апробация при наличии (доклады, публикации, РОСПАТЕНТ, акт о внедрении). Антиплагиат ВКР ≤ 20%.", en: "Pre-graduation practice (usually April, up to 95–100%): its defence = the thesis pre-defence; upload to the practice report section the day before your slot (missed upload = resit); exact dates are announced in the LMS each year. BOTH formats: the SIGNED full thesis text with appendices + the pre-defence presentation + a link to the working solution (the “Source code link” form: repository/service; research — the program used for the computational experiments) + the AI declaration + the separately signed practice report title page + the signed practice supervisor's review with a grade. The organisational documents (assignment, work plan) are submitted earlier — the “Practice application” profile. Software format: the signed software documentation set (SoW, Test Program, Operator/Programmer manual, Source Listing); under an NDA the Source Listing IS produced with the “text withheld…” note + the NDA scan. Approbation if any (talks, publications, ROSPATENT, adoption act). Thesis anti-plagiarism ≤ 20%." }
+      items:
+        - doc_id: technical_specification
+
+          signatures: [author, supervisor]
+        - doc_id: shared_technical_specification
+
+          signatures: [author, supervisor]
+        # ЛМС КТ4: ОБА формата сдают ПОДПИСАННЫЙ полный текст ВКР (research —
+        # завершённое исследование с экспериментами и выводами). Аннотация и
+        # Отчёт ВКР в комплект ПДП НЕ входят (это деливераблы КТ1–КТ3).
+        - doc_id: thesis
+
+          signatures: [author, supervisor]
+        - doc_id: test_program_and_methodology
+
+          signatures: [author, supervisor]
+        - doc_id: shared_test_program_and_methodology
+
+          signatures: [author, supervisor]
+        - doc_id: source_listing
+
+          signatures: [author, supervisor]
+        - doc_id: programmer_manual
+
+          signatures: [author, supervisor]
+        - doc_id: operator_manual
+
+          signatures: [author, supervisor]
+        - doc_id: presentation
+
+          signatures: []
+        # ЛМС «Отчёт о ПДП»: отдельно подписанный титульный лист отчёта о
+        # ПДП (подписывают студент и руководитель, руководитель ставит
+        # оценку) + подписанный отзыв руководителя практики с оценкой
+        # (ОБЯЗАТЕЛЕН; пишет и подписывает руководитель — в паке это проект
+        # отзыва для согласования, поэтому подпись студента не требуется).
+        - doc_id: pdp_report_title
+          signatures: [author, supervisor]
+        - doc_id: pdp_review
+          signatures: [supervisor]
+        # Расписка NDA (подписывается от руки) — build_item_list пропустит её,
+        # если NDA выключен (is_doc_active по meta.nda). NB: Текст программы
+        # под NDA НЕ исключается — он формируется с оговоркой «текст не
+        # приводится…» (ветка в source_listing по meta.nda).
+        - doc_id: nda
+          signatures: []
+      extra_items:
+        - source: .hse-studio/forms/ai_declaration.json
+          output_name: "Декларация ИИ.md"
+          format: markdown   # рендерится из answers + forms[ai_declaration].output.template
+        # Работоспособное программное решение (ЛМС «Отчёт о ПДП»): ссылка на
+        # репозиторий/сервис файлом .txt — рендер формы code_link (оба формата).
+        - source: .hse-studio/forms/code_link.json
+          output_name: "Ссылка на код.txt"
+          format: markdown
+
+    # ── Финальная загрузка ВКР к ГИА (после ПДП; закрывает «терминальную»
+    #    сдачу, которой раньше не было ни в одном профиле) ──
+    - id: gia
+      name:        { ru: "Загрузка ВКР — ГИА", en: "Thesis upload — state examination" }
+      description: { ru: "Финальная загрузка диплома в модуль ВКР/КР старого ЛМС (lms.hse.ru; раздел БЕЗ слова «проект»). Единый дедлайн — обычно середина мая (точные дата и время объявляются каждый год); дедлайн железный, переносов нет, менять документы после загрузки нельзя. «Файл работы» — ТЕКСТ ВКР в PDF (проверьте текстовый слой: при копировании выделяются буквы, а не символы). «Файл приложения» — ОДИН архив всей программной документации (ТЗ, ПМИ, РО/РП, ТП, справка NDA, акт о внедрении, иное) — его отдают рецензенту и комиссии, проверьте полноту. Презентацию сюда можно не грузить — она с демонстрацией работы загружается в СмартЛМС за 2 дня до защиты. ПОДПИСИ: текст ВКР и вся документация — научным руководителем от ВШЭ (при внешнем соруководителе — им И формальным руководителем); академический руководитель НЕ подписывает. Заранее (минимум за 2 дня): проверить тему на двух языках и руководителя в форме, подготовить аннотации ru/en (до 4000 знаков; попадут на сайт ВШЭ), личную почту и телефон. Характер работы у всех «индивидуальная» (даже в команде). Отметка об ИИ + анкета в течение 24 часов после загрузки — иначе работа не уйдёт на Антиплагиат и загрузка обнулится. Соглашение о публикации: 7+ и разрешение → текст на сайте ВШЭ (запрет ни на что не влияет). Рецензия — за 5 рабочих дней до защиты, отзыв — за 3 (рассылает учебный офис, самим отправлять ничего не надо). Защиты — обычно первая половина июня; EN-работа защищается на английском; 15 минут на презентацию и демонстрацию + вопросы.", en: "Final thesis upload to the old LMS (lms.hse.ru, the section WITHOUT the word 'draft'). The single deadline is usually mid-May (the exact date and time are announced each year); it is hard, no extensions, and files cannot be changed after upload. 'Work file' — the THESIS TEXT as PDF (check the text layer: copying selects letters, not glyphs). 'Appendix file' — ONE archive with ALL software documentation (SoW, Test Program, Operator/Programmer manual, Source Listing, NDA note, adoption act, etc.) — it goes to the reviewer and the committee, verify completeness. The presentation may be skipped here — it is uploaded to SmartLMS with the demo 2 days before the defence. SIGNATURES: the thesis text and all documentation are signed by the HSE supervisor (with an external co-supervisor — by them AND the formal HSE supervisor); the academic supervisor does NOT sign. At least 2 days in advance: verify the topic in both languages and the supervisor in the form, prepare ru/en abstracts (≤4000 chars; published on the HSE site), personal e-mail and phone. Work nature is 'individual' for everyone (even in a team). AI usage mark + questionnaire within 24 hours of upload — otherwise the work is not sent to anti-plagiarism and the upload is void. Publication consent: 7+ with consent → the text appears on the HSE site (refusal has no effect). The review arrives 5 business days before the defence, the supervisor's assessment — 3 (the study office distributes everything). Defences usually take place in early June; an English thesis is defended in English; 15 minutes for the talk and demo + questions." }
+      items:
+        # «Файл работы»: подписанный текст ВКР (оба формата). При внешнем
+        # соруководителе добавьте и его подпись (слот co_supervisor доступен).
+        - doc_id: thesis
+          signatures: [author, supervisor]
+        # «Файл приложения» (программный формат): подписанная программная
+        # документация. Research-проекту ЕСПД-пунктов не достаётся (kind-гейт).
+        - doc_id: technical_specification
+          signatures: [author, supervisor]
+        - doc_id: shared_technical_specification
+
+          signatures: [author, supervisor]
+        - doc_id: test_program_and_methodology
+          signatures: [author, supervisor]
+        - doc_id: shared_test_program_and_methodology
+
+          signatures: [author, supervisor]
+        - doc_id: source_listing
+          signatures: [author, supervisor]
+        - doc_id: programmer_manual
+          signatures: [author, supervisor]
+        - doc_id: operator_manual
+          signatures: [author, supervisor]
+        # Справка/расписка NDA — в архив приложения (пропускается без NDA).
+        - doc_id: nda
+          signatures: []
+        # Акт о внедрении (при наличии) — внешний документ, добавляется в
+        # архив руками. Презентация и демонстрация — отдельная загрузка в
+        # СмартЛМС за 2 дня до защиты (профиль final/КТ4 уже содержит её).
+      extra_items:
+        # Анкета об использовании ИИ в ЛМС заполняется по этой декларации.
+        - source: .hse-studio/forms/ai_declaration.json
+          output_name: "Декларация ИИ.md"
+          format: markdown
+
+# ── правила проверок ──
+# Тул автоматически читает все .yaml-файлы из checks/
+checks_version:
+  disabled_categories: []
+  disabled: []
+  severity_override: {}
+
+# ── формат распознавания требований (панель «Трассировка требований») ──
+# Как находить определения требований и ссылки на них. Если блок опущен —
+# режим macro: \req{ID}{текст} в ТЗ + \reqref{ID} в остальных документах.
+# Проект может переопределить формат в UI (project.json → requirements).
+#
+# requirements:
+#   format: macro              # по умолчанию: \req / \reqref
+#
+#   # либо ID-паттерн — для таблиц вида «ТЗ-Ф-01 & ...»:
+#   # format: id
+#   # id_pattern: "ТЗ-Ф-\\d+"   # regex идентификатора требования
+#   # definition_docs: [technical_specification]     # документы, где живут определения
+#
+#   # либо полностью свои регулярки:
+#   # format: custom
+#   # def_pattern: "(?m)^(?P<id>ТЗ-Ф-\\d+)\\s*&\\s*(?P<title>[^&]*)"
+#   # ref_pattern: "(?P<ids>ТЗ-Ф-\\d+)"

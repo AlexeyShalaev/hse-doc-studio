@@ -1,0 +1,35 @@
+{
+  "modal": {
+    "title": "Выбор папки",
+    "close": "Закрыть"
+  },
+  "breadcrumbs": {
+    "loading": "загрузка…"
+  },
+  "filter": {
+    "placeholder": "Фильтр по имени…",
+    "clear": "Очистить фильтр",
+    "count": "{{shown}} из {{total}}"
+  },
+  "list": {
+    "up": ".. наверх",
+    "empty": "Папка пуста",
+    "noResults": "Ничего не найдено по запросу",
+    "file": "файл"
+  },
+  "manual": {
+    "toggle": "Ввести путь вручную",
+    "placeholder": "~/study или C:\\study — Enter чтобы перейти",
+    "go": "Перейти"
+  },
+  "preview": {
+    "willSelect": "Будет выбрана",
+    "navigateHint": "Перейдите в нужную папку"
+  },
+  "footer": {
+    "cancel": "Отмена",
+    "confirm": "Выбрать",
+    "confirmNamed": "Выбрать «{{name}}»",
+    "confirmDisabledHint": "Перейдите в нужную папку — клик на крошки, .., или папку в списке"
+  }
+}

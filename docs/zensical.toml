@@ -1,0 +1,158 @@
+# Конфиг русской (основной) версии сайта: docs/ru → docs/site .
+# Английская версия собирается вторым проходом из zensical.en.toml в docs/site/en .
+# Все пути ниже — относительно этого файла (root_dir zensical = папка конфига).
+# Сборка обоих языков: make docs-build; только RU: uv run zensical build -f docs/zensical.toml
+
+[project]
+site_name = "HSE Doc Studio"
+site_description = "Локальная студия учебных документов: ВКР и курсовые по ГОСТ — шаблоны, сборка LaTeX, нормоконтроль, подписи и упаковка пакета сдачи. Без облака и аккаунтов."
+site_author = "Шалаев Алексей Дмитриевич"
+site_url = "https://alexeyshalaev.github.io/hse-doc-studio/"
+repo_name = "AlexeyShalaev/hse-doc-studio"
+repo_url = "https://github.com/AlexeyShalaev/hse-doc-studio"
+edit_uri = "edit/master/docs/ru/"
+copyright = "© 2026 Шалаев А. Д. · Apache-2.0"
+docs_dir = "ru"
+site_dir = "site"
+
+extra_css = [
+    "stylesheets/00-fonts.css",
+    "stylesheets/01-tokens.css",
+    "stylesheets/02-typography.css",
+    "stylesheets/03-chrome.css",
+    "stylesheets/04-layout.css",
+    "stylesheets/05-components.css",
+    "stylesheets/06-shots.css",
+    "stylesheets/07-print.css",
+]
+extra_javascript = ["javascripts/hds.js"]
+
+nav = [
+    { "Главная" = "index.md" },
+    { "Начало" = [
+        { "С чего начать" = "start/index.md" },
+        { "Установка" = "start/install.md" },
+        { "Первый проект" = "start/first-project.md" },
+        { "Обновление и удаление" = "start/update.md" },
+        { "Если не поднялось" = "start/troubleshooting.md" },
+    ] },
+    { "Мастерская" = [
+        { "Обзор верстака" = "workbench/index.md" },
+        { "Документы" = "workbench/documents.md" },
+        { "Сборка и лог" = "workbench/compile.md" },
+        { "Замечания" = "workbench/checks.md" },
+        { "Сдача и упаковка" = "workbench/submit.md" },
+        { "Превью PDF" = "workbench/preview.md" },
+        { "Визуальный редактор" = "workbench/editor-visual.md" },
+        { "ИИ-агент" = "workbench/agent.md" },
+    ] },
+    { "Справочник" = [
+        { "Карта справочника" = "reference/index.md" },
+        { "Пак и шаблоны" = "reference/pack.md" },
+        { "Документы" = "reference/documents.md" },
+        { "Проверки и правила" = "reference/checks-rules.md" },
+        { "Профили сдачи" = "reference/checkpoints.md" },
+        { "Глоссарий" = "reference/glossary.md" },
+        { "Раскладка на диске" = "reference/layout.md" },
+        { "Что уходит в сеть" = "reference/privacy.md" },
+    ] },
+    { "Что нового" = "whatsnew/index.md" },
+]
+
+[project.theme]
+custom_dir = "overrides"
+language = "ru"
+# Шрифты self-hosted (docs/assets/fonts + stylesheets/00-fonts.css), Google CDN не используется.
+font = false
+logo = "assets/brand/mark.svg"
+favicon = "assets/brand/favicon.svg"
+features = [
+    "announce.dismiss",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.sections",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    "search.share",
+    "search.suggest",
+    "toc.follow",
+]
+# navigation.footer не включаем: футер заменён колофоном (overrides/partials/footer.html).
+# toc.integrate не включаем: правое заполье держит воздух полосы.
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Тёмная тема"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Светлая тема"
+
+# Переключатель языка в шапке (штатный partials/alternate.html).
+[[project.extra.alternate]]
+name = "Русский"
+link = "https://alexeyshalaev.github.io/hse-doc-studio/"
+lang = "ru"
+
+[[project.extra.alternate]]
+name = "English"
+link = "https://alexeyshalaev.github.io/hse-doc-studio/en/"
+lang = "en"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/AlexeyShalaev/hse-doc-studio"
+
+# ─── Генерация страниц из пака ───────────────────────────────────────────────
+# docs_macros.py лежит в корне репозитория: module_name не может содержать "/".
+[project.plugins.macros]
+module_name = "docs_macros"
+render_by_default = false # макросы только на страницах с `render_macros: true`
+on_undefined = "strict"   # опечатка в имени макроса роняет сборку
+
+[project.markdown_extensions.abbr]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.def_list]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.tables]
+[project.markdown_extensions.toc]
+permalink = "§"
+[project.markdown_extensions.pymdownx.betterem]
+[project.markdown_extensions.pymdownx.caret]
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+[project.markdown_extensions.pymdownx.inlinehilite]
+[project.markdown_extensions.pymdownx.keys]
+[project.markdown_extensions.pymdownx.mark]
+[project.markdown_extensions.pymdownx.smartsymbols]
+[project.markdown_extensions.pymdownx.snippets]
+base_path = ["docs/ru/_snippets"]
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+    { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+[project.markdown_extensions.pymdownx.tilde]

@@ -1,0 +1,36 @@
+% ============================================================
+% technical_specification/requirements_table.tex — functional requirements
+% table (SKELETON; filled in by the student).
+%
+% The source of requirement definitions (\req) for the traceability
+% panel. Included from technical_specification.tex
+% (\input{requirements_table}) and test_program_and_methodology.tex
+% (\input{../technical_specification/requirements_table}).
+%
+% Each requirement is declared with \req{ID}{Text} in the
+% "Requirement" cell: only the text is printed, while the
+% "Requirements traceability" panel links the definition to
+% \reqref{ID} references in the thesis/TPM/manuals. The ID in the
+% first cell and in \req must match; keep the single ТЗ-Ф-* prefix —
+% the sample \reqref references in other documents use it.
+% ============================================================
+\begin{longtable}{|l|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\centering\arraybackslash}p{0.22\textwidth}|}
+\caption{Functional requirements of the system} \label{tab:requirements} \\
+\hline
+\textbf{No.} & \textbf{User story} & \textbf{Requirement} & \textbf{Scope} \\
+\hline
+\endfirsthead
+\multicolumn{4}{l}{Table \thetable{} --- continued} \\
+\hline
+\textbf{No.} & \textbf{User story} & \textbf{Requirement} & \textbf{Scope} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+ТЗ-Ф-01 & As a user, I want \ldots, so that \ldots & \req{ТЗ-Ф-01}{The system shall …} & \ldots \\
+\hline
+ТЗ-Ф-02 & As a user, I want \ldots, so that \ldots & \req{ТЗ-Ф-02}{The system shall …} & \ldots \\
+\hline
+\end{longtable}

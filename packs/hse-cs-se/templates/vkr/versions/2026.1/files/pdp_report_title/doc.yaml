@@ -1,0 +1,26 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# «Титульный лист отчёта о ПДП» — официальная форма; загружается в
+# «Отчёт о ПДП» ОТДЕЛЬНО ПОДПИСАННЫМ вместе с подписанным текстом ВКР
+# (подписывают студент и руководитель(-и) практики; руководители ставят
+# оценку). Форма русская — документ один для всех языков проекта.
+name:
+  ru: Титульный лист отчёта о ПДП
+  en: Practice report title page
+code:
+  ru: ОТПДП
+  en: PRT
+source_file: pdp_report_title/pdp_report_title.tex
+output_file: pdp_report_title/pdp_report_title.pdf
+output_name:
+  ru: Титульный лист отчёта о ПДП.pdf
+  en: Practice report title page.pdf
+required: false
+supported_langs:
+- ru
+scope: personal
+checks:
+  disabled_categories:
+  - structure
+  - formatting
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: pdp

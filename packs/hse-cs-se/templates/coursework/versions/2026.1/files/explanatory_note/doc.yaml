@@ -1,0 +1,25 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Пояснительная записка
+  en: Explanatory Note
+code:
+  ru: ПЗ
+  en: EN
+source_file: explanatory_note/explanatory_note.tex
+supported_kinds:
+- project
+output_file: explanatory_note/explanatory_note.pdf
+output_name:
+  ru: Пояснительная записка.pdf
+  en: Explanatory Note.pdf
+gost_ref: gost-19.404-79
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: work

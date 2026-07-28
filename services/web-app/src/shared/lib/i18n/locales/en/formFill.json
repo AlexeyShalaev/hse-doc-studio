@@ -1,0 +1,30 @@
+{
+  "toast": {
+    "saved": "Form saved",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
+  },
+  "editor": {
+    "signedCheckbox": "Declaration filled in and signed"
+  },
+  "preview": {
+    "fallbackName": "preview",
+    "ready": "ready",
+    "incomplete": "not filled in",
+    "unavailable": "Preview unavailable",
+    "save": "Save",
+    "saveDirty": "Save •"
+  },
+  "errors": {
+    "title": "What needs to be filled in",
+    "saveHint": "Save to refresh the validation."
+  },
+  "field": {
+    "charCount_one": "{{count}} character · min. {{min}}",
+    "charCount_other": "{{count}} characters · min. {{min}}"
+  },
+  "table": {
+    "removeRow": "Remove row",
+    "addRow": "Add row"
+  }
+}

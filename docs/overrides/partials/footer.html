@@ -1,0 +1,61 @@
+{#
+  Колофон вместо стокового футера: «выходные данные» книги, а не маркетинговая
+  плита. Полностью замещает partials/footer.html из темы; фича navigation.footer
+  (prev/next) сознательно не включена в конфиге.
+#}
+{% set lang = config.theme.language %}
+<footer class="md-footer hds-colophon">
+  <div class="hds-colophon__rule" aria-hidden="true"></div>
+  <div class="hds-colophon__inner">
+    <div class="hds-colophon__cols md-grid">
+      <div>
+        <h4>HSE Doc Studio</h4>
+        {% if lang == 'ru' %}
+          <p>Мастерская учебных документов НИУ&nbsp;ВШЭ. Локально, поверх файловой
+             системы, без облака и&nbsp;аккаунтов.</p>
+        {% else %}
+          <p>A workbench for HSE University academic documents. Local-first, on top
+             of your file system — no cloud, no accounts.</p>
+        {% endif %}
+      </div>
+      <div>
+        <h4>{{ 'Документация' if lang == 'ru' else 'Documentation' }}</h4>
+        <ul>
+          <li><a href="{{ 'start/install/' | url }}">{{ 'Установка' if lang == 'ru' else 'Installation' }}</a></li>
+          <li><a href="{{ 'start/first-project/' | url }}">{{ 'Первый проект' if lang == 'ru' else 'First project' }}</a></li>
+          <li><a href="{{ 'workbench/' | url }}">{{ 'Мастерская' if lang == 'ru' else 'Workbench' }}</a></li>
+          <li><a href="{{ 'reference/' | url }}">{{ 'Справочник' if lang == 'ru' else 'Reference' }}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>{{ 'Сдача' if lang == 'ru' else 'Submission' }}</h4>
+        <ul>
+          <li><a href="{{ 'workbench/submit/' | url }}">{{ 'Пакет сдачи' if lang == 'ru' else 'Submission package' }}</a></li>
+          <li><a href="{{ 'reference/checkpoints/' | url }}">{{ 'Профили сдачи' if lang == 'ru' else 'Submission profiles' }}</a></li>
+          <li><a href="{{ 'workbench/checks/' | url }}">{{ 'Замечания' if lang == 'ru' else 'Findings' }}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>{{ 'Проект' if lang == 'ru' else 'Project' }}</h4>
+        <ul>
+          <li><a href="{{ config.repo_url }}">GitHub</a></li>
+          <li><a href="{{ config.repo_url }}/issues">Issues</a></li>
+          <li><a href="{{ config.repo_url }}/blob/master/LICENSE">Apache-2.0</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="hds-colophon__fin md-grid">
+      {% if lang == 'ru' %}
+        Набрано STIX Two Text, Golos Text и JetBrains Mono. Собрано
+        <a href="https://zensical.org/">Zensical</a>.
+        Учебный инструмент, официально не аффилированный с НИУ&nbsp;ВШЭ.<br>
+        {{ config.copyright }}
+      {% else %}
+        Set in STIX Two Text, Golos Text and JetBrains Mono. Built with
+        <a href="https://zensical.org/">Zensical</a>.
+        A study tool, not officially affiliated with HSE University.<br>
+        {{ config.copyright }}
+      {% endif %}
+    </div>
+  </div>
+</footer>

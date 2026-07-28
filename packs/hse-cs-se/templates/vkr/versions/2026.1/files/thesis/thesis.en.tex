@@ -1,0 +1,446 @@
+% !TeX program = xelatex
+% ============================================================
+% vkr/vkr.tex — Выпускная квалификационная работа
+% ОП «Программная инженерия» ФКН НИУ ВШЭ.
+% Оформление: ГОСТ 7.32-2017 «Отчёт о научно-исследовательской
+% работе. Структура и правила оформления». Класс extreport — главы.
+%
+% Структура (методичка ОП ПИ + ГОСТ 7.32):
+%   Титульный лист → Реферат → Abstract → Содержание →
+%   Термины и определения → Список сокращений → Введение →
+%   3 главы → Заключение → Список источников → Приложения.
+%
+% Как пользоваться: пишите свой текст вместо пояснений (строки,
+% начинающиеся с «%», в PDF не попадают). Данные о себе, научном
+% руководителе, группе и годе задайте в настройках проекта —
+% они подставятся в титул и реферат автоматически (макросы \hse…).
+% ============================================================
+\documentclass[12pt,a4paper]{extreport}
+\input{preamble}
+\begin{document}
+\input{title}
+
+% ============================================================
+\chapter*{Реферат}
+\addcontentsline{toc}{chapter}{Реферат}
+% ============================================================
+% Реферат (ГОСТ 7.32-2017 §5.3) — краткое и точное изложение работы.
+% Структура одного абзаца (150–250 слов): проблема и актуальность →
+% цель → что сделано (требования, проектирование, реализация) →
+% главный результат и область его применения.
+
+Здесь приводится краткое изложение работы: проблема и её
+актуальность, цель работы, выполненные задачи
+((* if project.kind == 'research' *))(аналитический обзор состояния проблемы, разработка
+модели и метода решения, экспериментальная проверка результатов)((* else *))(анализ предметной
+области, формирование требований, проектирование и реализация)((* endif *)),
+а также главный полученный результат и область его применения.
+
+\medskip
+\textbf{Работа содержит} \pageref{LastPage}~страниц, \ldots~глав,
+\ldots~рисунков, \ldots~таблиц, \ldots~источников и \ldots~приложения.
+
+\medskip
+% Ключевые слова (ГОСТ 7.32-2017 §5.3.2.1, §6.12.2): от 5 до 15 слов или
+% словосочетаний, ПРОПИСНЫМИ буквами, в именительном падеже, в строку
+% через запятую, без точки в конце.
+\textbf{Ключевые слова:} ПРОГРАММНАЯ ИНЖЕНЕРИЯ, \ldots
+
+\clearpage
+
+% ============================================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+% ============================================================
+% English abstract (150–250 words) — обязателен для ВКР ФКН НИУ ВШЭ
+% даже если работа написана на русском. Это перевод реферата.
+
+This section contains a concise English summary of the thesis: the
+problem and its relevance, the objective, the work carried out
+((* if project.kind == 'research' *))(a systematic review of the state of the art, the proposed
+model and method, and experimental evaluation)((* else *))(domain analysis, requirements,
+design and implementation)((* endif *)), and the
+main result with its area of application.
+
+\medskip
+\textbf{The work contains} \pageref{LastPage}~pages, \ldots~chapters,
+\ldots~figures, \ldots~tables, \ldots~sources and \ldots~appendices.
+
+\medskip
+\textbf{Keywords:} SOFTWARE ENGINEERING, \ldots
+
+\clearpage
+
+% ── Содержание / Contents ───────────────────────────────────
+\tableofcontents
+\clearpage
+
+
+% ============================================================
+%  ENGLISH THESIS BODY (project.lang == en)
+%  §2.5.3.1: an English VKR is written in English. The Реферат (Russian)
+%  and Abstract (English) above are BOTH mandatory regardless of language.
+%  References follow IEEE style (§2.5.3.2). Fill the yellow placeholders.
+% ============================================================
+\chapter*{Terms and Definitions}
+\addcontentsline{toc}{chapter}{Terms and Definitions}
+This thesis uses the following terms and their definitions.
+
+\begin{description}[leftmargin=0pt, labelindent=0pt, font=\bfseries, style=nextline]
+  \item[API] Application Programming Interface --- a set of conventions for
+    interaction between software components.
+  \item[Prototype] a partial implementation of the system built to validate
+    key architectural and functional decisions.
+  \item[\ldots] \ldots\ % add the remaining terms
+\end{description}
+
+\clearpage
+
+\chapter*{List of Abbreviations and Symbols}
+\addcontentsline{toc}{chapter}{List of Abbreviations and Symbols}
+This thesis uses the following abbreviations and symbols.
+
+\begin{description}[leftmargin=0pt, labelindent=0pt, font=\bfseries, style=nextline]
+  \item[API] Application Programming Interface.
+  \item[DBMS] Database Management System.
+  \item[UI] User Interface.
+  \item[\ldots] \ldots\ % add the remaining abbreviations
+\end{description}
+
+\clearpage
+
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+% The introduction must cover: relevance, aim, objectives, object, subject,
+% methods, novelty and practical value, and the structure of the work
+% (recommended length — at least 500 words).
+
+\section*{Relevance}
+Justify why the problem matters now: what problem is addressed, whom it
+affects, and why existing approaches are insufficient. Cite sources with
+\verb|\cite|, e.g.~\cite{article}.
+
+\section*{Aim and Objectives}
+\textbf{Aim} --- \ldots\ % one sentence: what exactly is built
+
+\textbf{Objectives:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+((* if project.kind == 'research' *))
+  \item carry out an analytical review of the literature and existing approaches;
+  \item identify open problems and formulate the research task;
+  \item develop a model (method, algorithm) that solves the stated task;
+  \item run a computational experiment and analyse the results.
+((* else *))
+  \item analyse the domain and existing solutions;
+  \item elicit functional and non-functional requirements;
+  \item design the architecture and the data model;
+  \item implement a prototype and test it.
+((* endif *))
+\end{enumerate}
+
+\section*{Object and Subject}
+\textbf{Object of study} --- \ldots
+
+\textbf{Subject of study} --- \ldots
+
+((* if project.kind == 'research' *))
+\section*{Research Methods}
+List the research methods (analytical review, formal modelling, statistical
+analysis, computational experiment) and the tools used in the work.
+((* else *))
+\section*{Methods and Tools}
+List the methods (literature analysis, comparison of analogues, modelling,
+experiment) and the tools used in the work.
+((* endif *))
+
+\section*{Scientific Novelty and Practical Value}
+Describe what is new in the work and where the result can be applied.
+
+\section*{Structure of the Thesis}
+The thesis consists of an introduction, the main body, a conclusion, the list
+of references and appendices. Chapter~1 \ldots; Chapter~2 \ldots; Chapter~3
+\ldots\ The work is formatted per GOST~7.32-2017~\cite{gost732}.
+
+\clearpage
+
+((* if project.kind == 'research' *))
+% ============================================================
+\chapter{LITERATURE REVIEW AND PROBLEM STATEMENT}
+% ============================================================
+\section{State of the Art}
+Give an analytical review of the domain: key concepts, existing theoretical
+results and approaches to the problem under study. Cite sources with
+\verb|\cite|, e.g.~\cite{article}.
+
+\section{Comparative Analysis of Existing Approaches}
+Compare known methods (approaches, models) against criteria relevant to the
+study; the comparison is given in Table~\ref{tab:approaches}. In the cells use
+\verb|\cmpplus| (present), \verb|\cmpminus| (absent), \verb|\cmpplanned| (partial).
+
+\begin{table}[H]
+\caption{Comparison of existing approaches}
+\label{tab:approaches}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Approach~A} & \textbf{Approach~B} & \textbf{Proposed} \\
+\hline
+Criterion~1 & \cmpplus  & \cmpminus  & \cmpplus \\
+\hline
+Criterion~2 & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Open Problems and Research Task}
+Based on the review, identify the gaps in existing approaches, state the
+research hypothesis and give a formal statement of the task (inputs, expected
+result, constraints, quality criteria).
+
+\section{Chapter Summary}
+Summarise the review and justify the chosen research direction.
+
+\clearpage
+
+% ============================================================
+\chapter{MODEL AND SOLUTION METHOD}
+% ============================================================
+\section{Formal Statement}
+Introduce the notation and state the task rigorously: inputs, expected result,
+constraints and quality criterion (e.g. an objective $f(x)\to\min$ or the
+hypothesis being tested).
+
+\section{Proposed Model (Method, Algorithm)}
+Describe the proposed method (model, algorithm): its main steps, assumptions
+and parameters. Explain formal derivations as you go.
+
+\section{Justification of Correctness}
+Provide a theoretical justification of the method: proofs of properties,
+estimates of computational complexity or accuracy, or a substantive argument.
+
+\section{Chapter Summary}
+State the key theoretical results of the chapter.
+
+\clearpage
+
+% ============================================================
+% The third chapter of a research thesis depends on the nature of the work
+% (the arc of the SE academic thesis is NOT fixed):
+%   • experimental study — keep "EXPERIMENTAL STUDY" (methodology, data,
+%     metrics, results — as below);
+%   • engineering/theoretical work without a computational experiment —
+%     replace the chapter with "IMPLEMENTATION AND EVALUATION".
+% ============================================================
+\chapter{EXPERIMENTAL STUDY}
+% ============================================================
+\section{Experimental Methodology}
+Describe the experimental plan: research questions, conditions and the
+procedure used to test the hypothesis.
+
+\section{Data and Metrics}
+Describe the datasets used (size, source, preparation) and the metrics for
+evaluating the quality of the results.
+
+\section{Results and Analysis}
+Present the results obtained (Table~\ref{tab:results}), compare them with the
+baselines and assess the significance of the differences.
+
+\begin{table}[H]
+\caption{Experimental results}
+\label{tab:results}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|}
+\hline
+\textbf{Method} & \textbf{Metric~1} & \textbf{Metric~2} \\
+\hline
+Baseline method  & \ldots & \ldots \\
+\hline
+Proposed method  & \ldots & \ldots \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+Interpret the results, state the limitations of the study and the conditions
+under which the conclusions apply.
+
+\section{Chapter Summary}
+Summarise the results of the experimental study.
+
+\clearpage
+
+((* else *))
+% ============================================================
+\chapter{DOMAIN ANALYSIS}
+% ============================================================
+\section{Domain Analysis}
+Describe the domain, its key concepts and the problem the work solves.
+
+\section{Review of Existing Solutions}
+Compare existing analogues against relevant criteria. Every table must be
+referenced in the text (e.g. the comparison is given in
+Table~\ref{tab:analogues}). In the cells use \verb|\cmpplus| (yes),
+\verb|\cmpminus| (no), \verb|\cmpplanned| (partial/planned).
+
+\begin{table}[H]
+\caption{Comparison of existing solutions}
+\label{tab:analogues}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Analogue~A} & \textbf{Analogue~B} & \textbf{Proposed} \\
+\hline
+Criterion~1 & \cmpplus  & \cmpminus  & \cmpplus \\
+\hline
+Criterion~2 & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{System Requirements}
+State the functional and non-functional requirements. If the requirements are
+defined in the Statement of Work via \verb|\req{ТЗ-Ф-01}{...}|, reference them
+in the text with \verb|\reqref{ТЗ-Ф-01}| --- the Requirements traceability
+panel links them automatically. The functional requirements are listed in
+Table~\ref{tab:func-req}.
+
+\begin{table}[H]
+\caption{Functional requirements}
+\label{tab:func-req}
+\centering
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{11cm}|}
+\hline
+\textbf{ID} & \textbf{Description} \\
+\hline
+ТЗ-Ф-01 & \ldots \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Chapter Summary}
+Summarise the analysis and justify the problem statement.
+
+\clearpage
+
+% ============================================================
+\chapter{DESIGN}
+% ============================================================
+\section{Solution Architecture}
+Describe the overall architecture. Every figure must be mentioned in the text
+% Пример ссылки показываем ТЕКСТОМ: живой \ref{fig:arch} ссылался на метку,
+% которой в шаблоне нет, — в PDF получалось «??», а нормоконтроль справедливо
+% ругался на висячую ссылку. В русской редакции это уже сделано через \verb,
+% но здесь пример стоит внутри аргумента \enquote{}, где \verb ломается.
+(e.g. \enquote{the overall diagram is shown in Figure~\texttt{\textbackslash ref\{fig:arch\}}}). Insert
+an image with \verb|\includegraphics| (a missing file is replaced by a
+placeholder) or draw it with \texttt{tikz}.
+
+\section{Data Model}
+Describe the main entities and relationships (an ER diagram or a text
+description).
+
+\section{Technology Stack}
+List the languages, frameworks and libraries with a justification of the choice.
+
+\section{Chapter Summary}
+State the design decisions made.
+
+\clearpage
+
+% ============================================================
+\chapter{IMPLEMENTATION AND TESTING}
+% ============================================================
+\section{Implementation Details}
+Describe the key modules and non-trivial decisions. Format code fragments with
+the \texttt{lstlisting} environment (see Listing~\ref{lst:example}).
+
+\begin{lstlisting}[language=Python, caption={Example function}, label={lst:example}]
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+\end{lstlisting}
+
+\section{Testing}
+Describe the testing strategy (unit, integration, e2e) and give the results in
+Table~\ref{tab:test-results}.
+
+\begin{table}[H]
+\caption{Testing results}
+\label{tab:test-results}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}p{8cm}|c|}
+\hline
+\textbf{Test type} & \textbf{What is verified} & \textbf{Result} \\
+\hline
+Unit & \ldots & \ldots \\
+\hline
+Integration & \ldots & \ldots \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Evaluation and Results}
+Describe where and how the solution was validated and the results obtained.
+
+\section{Chapter Summary}
+Summarise the implementation and testing.
+
+\clearpage
+((* endif *))
+
+\chapter*{Conclusion}
+\addcontentsline{toc}{chapter}{Conclusion}
+% Brief results per objective from the introduction, the main result, its
+% correspondence to the aim, and directions for further work.
+As a result of the work:
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item \ldots\ % result for objective 1
+  \item \ldots\ % result for objective 2
+\end{enumerate}
+
+The aim of the work has been achieved. Directions for further work: \ldots
+
+\clearpage
+
+% ── References (IEEE style, §2.5.3.2) ────────────────────────
+% For an English thesis the reference list and in-text citations follow IEEE
+% style: numbered [n], author initials first, article titles in quotes,
+% venue/volume/number/pages, accessed date for online sources.
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\renewcommand{\refname}{References}
+\begin{thebibliography}{99}
+
+  \bibitem{book}
+    A.~B.~Author, \emph{Title of the Book}, 2nd~ed. Moscow, Russia: Publisher,
+    2023.
+
+  \bibitem{article}
+    A.~B.~Author and C.~D.~Coauthor, \enquote{Title of the article,}
+    \emph{Journal Name}, vol.~12, no.~1, pp.~10--20, 2024.
+
+  \bibitem{webresource}
+    Resource Name. (2026). Accessed: Jan.~1, 2026. [Online]. Available:
+    \url{https://example.org}
+
+  \bibitem{gost732}
+    \emph{GOST 7.32-2017. System of Standards on Information, Librarianship and
+    Publishing. Research Report. Structure and Presentation Rules}. Moscow,
+    Russia: Standartinform, 2017.
+
+\end{thebibliography}
+
+\clearpage
+
+% ── Appendices (Latin letters A, B, C… for the English text) ──
+\appendix
+\renewcommand{\thechapter}{\Alph{chapter}}
+\titleformat{\chapter}[hang]
+  {\normalfont\large\bfseries\centering}{Appendix~\thechapter}{1ex}{}
+
+\chapter{Source Code Listings}
+\label{app:listing}
+Place large listings, diagrams, data tables and other supporting material here.
+
+
+
+\end{document}

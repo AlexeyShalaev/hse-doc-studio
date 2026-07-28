@@ -1,0 +1,15 @@
+services:
+  api-tests:
+    build:
+      # Пути относительны каталога проекта compose — им становится папка первого -f,
+      # то есть scripts/tests (см. run-tests-docker в scripts/tests/Makefile).
+      context: ../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: test
+    profiles: [api-tests]
+    networks:
+      - hse-doc-studio-test-network
+
+networks:
+  hse-doc-studio-test-network:
+    external: true

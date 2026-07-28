@@ -1,0 +1,281 @@
+% !TeX program = xelatex
+% ============================================================
+% Software Requirements Specification (SRS)
+% ISO/IEC/IEEE 29148-2018, clause 9.6.
+%
+% English international-standard ANALOG of the ЕСПД Statement
+% of Work (ТЗ). Per §2.3.4.2 of the HSE SE practice programme,
+% students writing in English may submit this form instead of
+% the translated GOST 19 Statement of Work.
+%
+% This file is a SWITCHABLE VARIANT: English-only, no Russian
+% branch and no project.lang conditionals. It is a fillable
+% template — fill every \hseFill{...} placeholder.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+\usepackage[english]{babel}
+\usepackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{indentfirst}\setlength{\parindent}{1.25cm}\setlength{\parskip}{6pt}
+\usepackage{microtype}\usepackage{csquotes}\usepackage{amsmath}\usepackage{graphicx}
+\usepackage{xcolor}\usepackage{float}\usepackage{array}\usepackage{booktabs}
+\usepackage{longtable}\usepackage{tabularx}\usepackage{adjustbox}\usepackage{xurl}\urlstyle{same}
+\usepackage{hyphenat}\usepackage{caption}\usepackage{enumitem}\setlist{nosep}
+\usepackage{titlesec}\usepackage{hyperref}
+\hypersetup{unicode=true,colorlinks=true,linkcolor=black,urlcolor=blue}
+\input{../common/meta}    % provides \hseFill, \projectname, \hseProjectNameEn, \hseAuthorName, \hseGroup, \hseYear ...
+\input{../common/commands}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}\sloppy
+
+% ============================================================
+% TITLE BLOCK
+% ============================================================
+\begin{center}
+{\large\bfseries Software Requirements Specification}\\[4pt]
+{\normalsize according to ISO/IEC/IEEE 29148-2018 (clause 9.6)}\\[18pt]
+{\large\bfseries \enquote{\hseProjectNameEn}}\\[4pt]
+{\normalsize (system name: \enquote{\projectname})}\\[24pt]
+\begin{tabular}{rl}
+Author: & \hseAuthorName \\
+Group:  & \hseGroup \\
+Year:   & \hseYear \\
+\end{tabular}
+\end{center}
+
+\vspace{12pt}
+
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\clearpage
+
+% ============================================================
+% 1. INTRODUCTION
+% ============================================================
+\section{Introduction}
+
+\subsection{Purpose}
+
+This document specifies the software requirements for the system \enquote{\hseProjectNameEn} (hereafter \enquote{the system}). It is the international-standard analogue of the ЕСПД Statement of Work and is prepared in accordance with ISO/IEC/IEEE 29148-2018. The intended readership is \hseFill{intended audience, e.g. supervisor, developers, reviewers}.
+
+\subsection{Scope}
+
+The software product to be produced is named \enquote{\projectname}. The system \hseFill{one-sentence statement of what the system does}. The principal benefits and objectives are \hseFill{main goals of the system}. Out of scope for this release: \hseFill{what is explicitly excluded}.
+
+\subsection{Product overview}
+
+\subsubsection{Product perspective}
+
+The system is \hseFill{self-contained product / component of a larger system}. It interacts with the following external entities: \hseFill{external systems, services, actors it depends on}.
+
+\subsubsection{Product functions}
+
+At a high level the system provides the following functions:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{high-level function 1};
+    \item \hseFill{high-level function 2};
+    \item \hseFill{complete the list of principal functions}.
+\end{itemize}
+
+\subsubsection{User characteristics}
+
+The intended classes of users and their characteristics are:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{\hseFill{user class, e.g. end user}}: \hseFill{expertise, frequency of use, privileges};
+    \item \textbf{\hseFill{user class, e.g. administrator}}: \hseFill{expertise, responsibilities}.
+\end{itemize}
+
+\subsubsection{Assumptions and dependencies}
+
+The requirements in this document rest on the following assumptions and dependencies:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{assumption, e.g. availability of an external service};
+    \item \hseFill{dependency, e.g. specific runtime or library versions}.
+\end{itemize}
+
+\subsection{Definitions and acronyms}
+
+\begin{longtable}{L{3.5cm} L{\dimexpr\textwidth-4.5cm\relax}}
+\toprule
+\textbf{Term} & \textbf{Definition} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Term} & \textbf{Definition} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+API & Application Programming Interface. \\
+SRS & Software Requirements Specification. \\
+\hseFill{term} & \hseFill{definition of the term}. \\
+\hseFill{acronym} & \hseFill{expansion and meaning}. \\
+\end{longtable}
+
+\clearpage
+
+% ============================================================
+% 2. REFERENCES
+% ============================================================
+\section{References}
+
+\begin{enumerate}[label={[}\arabic*{]}, leftmargin=1.25cm]
+\item ISO/IEC/IEEE 29148-2018. Systems and software engineering --- Life cycle processes --- Requirements engineering.
+\item \hseFill{referenced document, standard or specification};
+\item \hseFill{referenced document, standard or specification}.
+\end{enumerate}
+
+\clearpage
+
+% ============================================================
+% 3. SPECIFIC REQUIREMENTS
+% ============================================================
+\section{Specific requirements}
+
+\subsection{External interface requirements}
+\label{sec:external_interfaces}
+
+\subsubsection{User interfaces}
+
+\hseFill{describe the user interfaces: screens, layout standards, key interactions}. The user interface must follow \hseFill{applicable UI guidelines or style}.
+
+\subsubsection{Hardware interfaces}
+
+\hseFill{describe hardware interfaces, or state that the system imposes no direct hardware interface}.
+
+\subsubsection{Software interfaces}
+
+The system interacts with the following software components:
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{external service / API, purpose, protocol and data format};
+    \item \hseFill{database or message broker, version, mode of use}.
+\end{itemize}
+
+\subsubsection{Communications interfaces}
+
+\hseFill{describe network protocols, e.g. HTTP(S) with JSON (UTF-8), ports, security of the channel}.
+
+\subsection{Functional requirements}
+\label{sec:functional_reqs}
+
+Each functional requirement carries a stable identifier (SRS-F-01, \dots) for cross-referencing from the design documentation and the test cases in Section~\ref{sec:verification}.
+
+\begin{longtable}{L{2.3cm} L{\dimexpr\textwidth-6.8cm\relax} L{3.5cm}}
+\caption{Functional requirements}\label{tab:functional}\\
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Priority} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\small\itshape Table~\ref{tab:functional} (continued)}\\
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Priority} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+SRS-F-01 & The system shall \hseFill{observable behaviour of the system}. & \hseFill{must / should} \\
+SRS-F-02 & The system shall \hseFill{observable behaviour of the system}. & \hseFill{must / should} \\
+SRS-F-03 & The system shall \hseFill{observable behaviour of the system}. & \hseFill{must / should} \\
+\end{longtable}
+
+\subsection{Usability requirements}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item Learnability: a new user shall be able to \hseFill{key task} within \hseFill{time, e.g. 10 minutes} without training;
+    \item Accessibility: the interface shall conform to \hseFill{accessibility standard, if applicable};
+    \item Error prevention: the system shall \hseFill{how invalid actions are prevented or recovered}.
+\end{itemize}
+
+\subsection{Performance requirements}
+\label{sec:performance}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item Response time: \hseFill{e.g. p95 under 500 ms} for \hseFill{class of requests};
+    \item Throughput: at least \hseFill{target request rate, e.g. RPS} under normal load;
+    \item Capacity: up to \hseFill{number} concurrent active sessions;
+    \item Resource limits: \hseFill{constraints on memory, storage or bandwidth}.
+\end{itemize}
+
+\subsection{Logical database requirements}
+
+\hseFill{describe the principal entities the system persists and their relationships}. Data integrity constraints: \hseFill{key constraints, uniqueness, referential integrity}. Retention and backup: \hseFill{retention period and backup policy}.
+
+\subsection{Design constraints}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item Implementation language(s): \hseFill{languages and versions};
+    \item Frameworks and libraries: \hseFill{preferred frameworks};
+    \item Standards compliance: \hseFill{regulatory or organisational standards};
+    \item Deployment environment: \hseFill{e.g. Docker Compose, Kubernetes}.
+\end{itemize}
+
+\subsection{Software system attributes}
+
+\begin{description}[leftmargin=0cm, style=nextline]
+    \item[Reliability] The system shall \hseFill{reliability target, e.g. mean time between failures / graceful degradation}.
+    \item[Availability] The target availability (uptime) shall be at least \hseFill{e.g. 99.5\%}, excluding scheduled maintenance.
+    \item[Security] Access to protected functions shall require \hseFill{authentication and authorisation mechanism}; data in transit shall be protected by \hseFill{e.g. TLS}; secrets shall not be stored in source code.
+    \item[Maintainability] The code base shall \hseFill{maintainability requirement, e.g. automated tests, static analysis, coding standard}.
+    \item[Portability] The system shall run on \hseFill{target platforms and runtimes} without source modification.
+\end{description}
+
+\clearpage
+
+% ============================================================
+% 4. VERIFICATION
+% ============================================================
+\section{Verification}
+\label{sec:verification}
+
+This section states how each class of requirement is verified. The admissible methods are inspection (I), demonstration (D), test (T) and analysis (A). Each verifiable requirement is traced to a test case whose identifier (TC-01, \dots) is stable for cross-referencing from the Test Program and Methodology.
+
+\begin{longtable}{L{2.3cm} L{2.3cm} L{2.1cm} L{\dimexpr\textwidth-9.5cm\relax}}
+\caption{Requirement verification}\label{tab:verification}\\
+\toprule
+\textbf{Test case} & \textbf{Requirement} & \textbf{Method} & \textbf{Acceptance criterion} \\
+\midrule
+\endfirsthead
+\multicolumn{4}{l}{\small\itshape Table~\ref{tab:verification} (continued)}\\
+\toprule
+\textbf{Test case} & \textbf{Requirement} & \textbf{Method} & \textbf{Acceptance criterion} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+TC-01 & SRS-F-01 & \hseFill{I/D/T/A} & \hseFill{observable pass condition} \\
+TC-02 & SRS-F-02 & \hseFill{I/D/T/A} & \hseFill{observable pass condition} \\
+TC-03 & \hseFill{req. id} & \hseFill{I/D/T/A} & \hseFill{observable pass condition} \\
+\end{longtable}
+
+\noindent Verification approach per requirement class:
+\begin{itemize}[leftmargin=1.25cm]
+    \item External interfaces (Section~\ref{sec:external_interfaces}): verified by \hseFill{method, e.g. integration tests against the interface contract};
+    \item Functional requirements (Section~\ref{sec:functional_reqs}): verified by \hseFill{method, e.g. functional/acceptance tests};
+    \item Performance requirements (Section~\ref{sec:performance}): verified by \hseFill{method, e.g. load testing against the stated targets};
+    \item Software system attributes: verified by \hseFill{method, e.g. security review, availability monitoring}.
+\end{itemize}
+
+\clearpage
+
+% ============================================================
+% 5. SUPPORTING INFORMATION / APPENDICES
+% ============================================================
+\section{Supporting information}
+
+\subsection{Appendix A. Traceability}
+
+\hseFill{reference to the traceability matrix linking requirements to design elements and tests, if maintained separately}.
+
+\subsection{Appendix B. Assumptions log}
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{open question or assumption to be resolved};
+    \item \hseFill{open question or assumption to be resolved}.
+\end{itemize}
+
+\end{document}

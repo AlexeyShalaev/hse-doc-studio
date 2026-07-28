@@ -1,0 +1,95 @@
+% !TeX program = xelatex
+% ============================================================
+% pdp_work_plan/pdp_work_plan.tex — «Рабочий план проведения практики»
+% (РПП) по официальной форме «0-2-Форма рабочего плана ПДП».
+%
+% Блок «Заявление на ПДП» в СмартЛМС (дедлайн ~12 апреля): РПП и
+% Индивидуальное задание с подписями студента и руководителя(-ей)
+% практики (порядок: студент → руководитель от организации → формальный
+% от НИУ ВШЭ). Пункты плана берутся из «Содержания практики»
+% Индивидуального задания. Официальная форма русская. Данные — из
+% настроек (\hse…), жёлтые \hseFill заполняются вручную.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/preamble}
+\newcommand{\docname}{Рабочий план}
+\newcommand{\doccode}{}
+\newcommand{\doccodelu}{}
+\input{../common/commands}
+\begin{document}
+\pagestyle{empty}
+\sloppy
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+\begin{center}
+Федеральное государственное автономное образовательное учреждение\\
+высшего образования\\
+«Национальный исследовательский университет «Высшая школа экономики»
+
+\vspace{0.9em}
+\textbf{РАБОЧИЙ ПЛАН ПРОВЕДЕНИЯ ПРАКТИКИ}
+
+\hseAuthorName
+\end{center}
+
+\vspace{0.6em}
+\begin{tabularx}{\textwidth}{@{}p{6.4cm}X@{}}
+Направление подготовки & \hseProgramCode\ «\hseSpecialization» \\
+Наименование образовательной программы & «\hseSpecialization» \\
+Очной формы обучения, группы & \hseGroup \\
+Вид практики & производственная \\
+Тип практики & преддипломная \\
+Срок прохождения практики & с \hseFill{01 апреля \hseYear{} г.} по \hseFill{30 апреля \hseYear{} г.} \\
+Руководитель практики от НИУ ВШЭ & \hseSupervisorName, \hseSupervisorTitle \\
+\ifhseHasCoSupervisor
+Руководитель практики от профильной организации & \hseCoSupervisorName, \hseFill{должность в организации} \\
+\fi
+Тема ВКР & «\hseProjectName» \\
+\end{tabularx}
+
+\vspace{1.0em}
+\begin{tabularx}{\textwidth}{|p{1.2cm}|p{3.4cm}|X|}
+\hline
+\textbf{№ п/п} & \textbf{Сроки проведения} & \textbf{Планируемые работы} (из индивидуального задания на ПДП) \\
+\hline
+1 & \hseFill{01.04 -- 14.04} & \hseFill{работа 1} \\
+\hline
+2 & \hseFill{14.04 -- 20.04} & \hseFill{работа 2} \\
+\hline
+3 & \hseFill{20.04 -- 30.04} & \hseFill{работа 3} \\
+\hline
+\end{tabularx}
+
+\vspace{1.3em}
+Обучающийся
+
+\vspace{0.9em}
+\begin{tabularx}{\textwidth}{@{}Xp{3.2cm}p{2.8cm}@{}}
+\hseAuthorName & \hrulefill & \hrulefill \\
+{\scriptsize ФИО} & {\scriptsize (подпись)} & {\scriptsize (дата)} \\
+\end{tabularx}
+
+\vspace{0.9em}
+Руководитель практики от НИУ ВШЭ
+
+\vspace{0.9em}
+\begin{tabularx}{\textwidth}{@{}Xp{3.2cm}p{2.8cm}@{}}
+\hseSupervisorName & \hrulefill & \hrulefill \\
+{\scriptsize ФИО} & {\scriptsize (подпись)} & {\scriptsize (дата)} \\
+\end{tabularx}
+
+\ifhseHasCoSupervisor
+\vspace{0.9em}
+\textbf{СОГЛАСОВАНО}
+
+Руководитель практики от профильной организации
+
+\vspace{0.9em}
+\begin{tabularx}{\textwidth}{@{}Xp{3.2cm}p{2.8cm}@{}}
+\hseCoSupervisorName & \hrulefill & \hrulefill \\
+{\scriptsize ФИО} & {\scriptsize (подпись)} & {\scriptsize (дата)} \\
+\end{tabularx}
+\fi
+
+\end{document}

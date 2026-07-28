@@ -1,0 +1,117 @@
+{
+  "panel": {
+    "title": "Локальные модели (Ollama)",
+    "description": "Запуск моделей на вашем компьютере — данные не покидают машину. Предпочитается уже установленная нативная Ollama; иначе поднимается управляемый Docker-контейнер.",
+    "engineInstallTitle": "Установка движка Ollama",
+    "dockerUnavailable": "Docker недоступен. Запустите Docker Desktop, либо установите нативную Ollama — приложение подхватит её на 127.0.0.1:11434 автоматически.",
+    "downloadEngineFirst": "Сначала скачайте движок, затем можно ставить модели.",
+    "startRuntimeFirst": "Запустите рантайм, чтобы устанавливать модели."
+  },
+  "mode": {
+    "native": "Работает · нативная Ollama",
+    "docker": "Работает · контейнер",
+    "none": "Не запущен"
+  },
+  "controls": {
+    "stop": "Остановить",
+    "stopTitle": "Остановить контейнер",
+    "downloadEngine": "Скачать движок",
+    "start": "Запустить"
+  },
+  "toast": {
+    "pullStarted": "Загрузка «{{name}}» началась — можно закрыть окно",
+    "pullStartFailed": "Не удалось начать загрузку «{{name}}»",
+    "startRuntimeFailed": "Не удалось запустить рантайм. Проверьте Docker или движок.",
+    "startError": "Ошибка запуска рантайма",
+    "modelDeleted": "Модель «{{name}}» удалена",
+    "deleteFailed": "Не удалось удалить модель",
+    "modelLoaded": "Модель «{{name}}» загружена",
+    "loadFailed": "Не удалось загрузить «{{name}}»",
+    "modelUnloaded": "Модель «{{name}}» выгружена",
+    "unloadFailed": "Не удалось выгрузить модель"
+  },
+  "confirm": {
+    "deleteModel": "Удалить модель «{{name}}»?"
+  },
+  "hardware": {
+    "gpuNotDetected": "GPU не обнаружен",
+    "gb": "{{value}} ГБ",
+    "cpuCores_one": "{{count}} ядро",
+    "cpuCores_few": "{{count}} ядра",
+    "cpuCores_many": "{{count}} ядер",
+    "cpuCores_other": "{{count}} ядер",
+    "empty": "—",
+    "gpuLabel": "Видеокарта",
+    "ramLabel": "ОЗУ",
+    "cpuLabel": "CPU",
+    "note": {
+      "nvidiaSupported": "GPU-ускорение доступно (NVIDIA), в том числе в Docker-контейнере.",
+      "nvidiaUnsupported": "NVIDIA обнаружена, но проброс в Docker недоступен — контейнер пойдёт на CPU.",
+      "apple": "Docker на macOS не пробрасывает GPU — контейнер пойдёт на CPU. Для ускорения через Metal установите нативную Ollama.",
+      "amd": "AMD-видеокарта не пробрасывается в Docker — контейнер пойдёт на CPU. Нативная Ollama может использовать GPU.",
+      "none": "Видеокарта не найдена — модели работают на CPU (медленнее)."
+    }
+  },
+  "installModal": {
+    "description": "Загрузка выполняется локально. Прогресс отображается ниже.",
+    "close": "Закрыть",
+    "logEmpty": "[…]",
+    "loading": "Загрузка…",
+    "done": "Готово",
+    "failed": "Не удалось",
+    "retry": "Повторить",
+    "closeDone": "Готово",
+    "closeButton": "Закрыть"
+  },
+  "catalog": {
+    "installedModels": "Установленные модели",
+    "deleteModelTitle": "Удалить модель",
+    "searchPlaceholder": "Поиск моделей или точное имя (напр. mistral:7b)…",
+    "clear": "Очистить",
+    "matchingHardware": "Подбор под ваше железо…",
+    "catalog": "Каталог",
+    "fromCatalog": "Из каталога",
+    "fromRegistry": "Из реестра ollama.com",
+    "installExact": "Установить точное имя «{{name}}»",
+    "registryUnavailable": "Поиск реестра недоступен — введите точное имя модели.",
+    "nothingFound": "Ничего не найдено. Попробуйте другое название.",
+    "notEnoughMemory": "Недостаточно памяти — модель не поместится"
+  },
+  "registryRow": {
+    "installed": "установлена",
+    "installLatestTitle": "Установить (:latest)",
+    "install": "Установить"
+  },
+  "modelRow": {
+    "sizeGb": "~{{size}} ГБ",
+    "recommended": "рекомендуем",
+    "installed": "установлена",
+    "unavailable": "Недоступно",
+    "installTitle": "Установить",
+    "install": "Установить"
+  },
+  "downloads": {
+    "retry": "Повторить",
+    "retryTitle": "Повторить",
+    "dismissTitle": "Убрать",
+    "heading": "Загрузки"
+  },
+  "loaded": {
+    "inRam": "{{size}} · в ОЗУ (CPU)",
+    "inVram": "{{size}} · в видеопамяти",
+    "split": "{{vram}} в видеопамяти + {{ram}} в ОЗУ",
+    "unloadImminent": "выгрузка вот-вот",
+    "autoUnloadMin_one": "авто-выгрузка через ~{{count}} мин",
+    "autoUnloadMin_few": "авто-выгрузка через ~{{count}} мин",
+    "autoUnloadMin_many": "авто-выгрузка через ~{{count}} мин",
+    "autoUnloadMin_other": "авто-выгрузка через ~{{count}} мин",
+    "autoUnloadHr_one": "авто-выгрузка через ~{{count}} ч",
+    "autoUnloadHr_few": "авто-выгрузка через ~{{count}} ч",
+    "autoUnloadHr_many": "авто-выгрузка через ~{{count}} ч",
+    "autoUnloadHr_other": "авто-выгрузка через ~{{count}} ч",
+    "heading": "В памяти",
+    "unload": "Выгрузить",
+    "unloadTitle": "Освободить память сейчас",
+    "gb": "{{value}} ГБ"
+  }
+}

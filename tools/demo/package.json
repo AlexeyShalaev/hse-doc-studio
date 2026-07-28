@@ -1,0 +1,16 @@
+{
+  "name": "hse-doc-studio-demo-media",
+  "private": true,
+  "type": "module",
+  "description": "Генерация скриншотов документации и промо-ролика HSE Doc Studio: матрица RU/EN × светлая/тёмная",
+  "scripts": {
+    "shots": "node screenshots/capture.mjs",
+    "reel:assets": "node reel/gen-assets.mjs",
+    "reel:record": "node reel/record.mjs",
+    "reel:compose": "bash reel/compose.sh",
+    "reel": "node reel/gen-assets.mjs && node reel/record.mjs && bash reel/compose.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
+  }
+}

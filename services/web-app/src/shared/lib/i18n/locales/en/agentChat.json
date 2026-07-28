@@ -1,0 +1,126 @@
+{
+  "panel": {
+    "titleProject": "Project agent",
+    "titleAssistant": "Assistant",
+    "newChat": "New chat",
+    "history": "Chat history",
+    "debug": "Debug: run event timeline",
+    "close": "Close",
+    "loading": "Loading…",
+    "emptyProjectHint": "Project agent: edit text, build the project, fix build errors and findings — plus create projects and change settings.",
+    "emptyAssistantHint": "Ask the assistant: create a project, show templates, switch the theme or the build engine.",
+    "newChatShort": "New chat",
+    "deleteConfirm": "Delete chat?",
+    "tokens": "tokens: {{total}} (in {{input}} / out {{output}})"
+  },
+  "history": {
+    "searchPlaceholder": "Search chats...",
+    "empty": "No chats yet",
+    "notFound": "No chats found",
+    "running": "The agent is generating a response",
+    "rename": "Rename",
+    "delete": "Delete",
+    "ageMinutes": "{{count}}m",
+    "ageHours": "{{count}}h",
+    "ageDays": "{{count}}d"
+  },
+  "messages": {
+    "roleUser": "You",
+    "roleAssistant": "Agent",
+    "roleTool": "Tool",
+    "emptyHint": "Ask the agent about the project, request an edit, build a document or work through the findings.",
+    "thinking": "the agent is thinking…",
+    "toolError": "error",
+    "toolResult": "result"
+  },
+  "composer": {
+    "waitingForAgent": "Wait for the agent's response…",
+    "messageAgent": "Message the agent…",
+    "selectProvider": "Select a provider and model…",
+    "inputHint": "Enter — send, Shift+Enter — new line",
+    "modeGroupLabel": "Agent mode",
+    "stop": "Stop",
+    "send": "Send"
+  },
+  "approval": {
+    "prompt": "The agent wants to perform an action — please confirm:",
+    "apply": "Apply",
+    "reject": "Reject"
+  },
+  "question": {
+    "multiSelect": "multiple allowed",
+    "other": "Other…",
+    "otherPlaceholder": "Your own option…",
+    "submit": "Answer"
+  },
+  "debugPanel": {
+    "title": "Debug · run events",
+    "copyTitle": "Copy debug log",
+    "copied": "Copied",
+    "copy": "Copy",
+    "noEvents": "no events yet",
+    "silentFor": "silent for {{seconds}}s",
+    "silentStalled": " — the model may have stalled",
+    "silentText": "(silent for {{seconds}}s)"
+  },
+  "debugEvent": {
+    "message": "message",
+    "toolOk": "✓",
+    "toolError": "✗ error",
+    "tokens_one": "{{count}} token",
+    "tokens_other": "{{count}} tokens",
+    "questionToUser": "question to the user",
+    "contextCompaction": "context compaction",
+    "done": "done",
+    "error": "error"
+  },
+  "stream": {
+    "connectionLost": "connection lost",
+    "error": "error"
+  },
+  "tools": {
+    "menuTitle": "Agent tools ({{enabled}}/{{total}})",
+    "heading": "Agent tools",
+    "all": "All",
+    "none": "None",
+    "groupDocsText": "Documents and text",
+    "groupBuildChecks": "Build and checks",
+    "groupSettings": "Settings",
+    "groupOther": "Other",
+    "readTex": "Read files",
+    "editTex": "Write and edit text",
+    "grepProject": "Search the project",
+    "listDocuments": "List documents",
+    "compileDocument": "Build document",
+    "packageProject": "Package project",
+    "listCheckFindings": "Check findings",
+    "traceRequirements": "Requirements traceability",
+    "previewRequirementsFormat": "Pick requirements format (preview)",
+    "setRequirementsFormat": "Apply requirements format",
+    "setTheme": "Theme",
+    "setEngine": "Build engine",
+    "setLanguage": "Project language",
+    "setProjectMeta": "Project metadata"
+  },
+  "model": {
+    "trigger": "Model",
+    "searchPlaceholder": "Search models…",
+    "notFound": "Nothing found",
+    "noModels": "No models",
+    "otherModels": "Other models",
+    "selectModel": "Select a model",
+    "fallbackLabel": "Model",
+    "titleWithProvider": "{{model}} · {{provider}}"
+  },
+  "persona": {
+    "roleTitle": "Agent role: {{name}}",
+    "selectRole": "Select an agent role",
+    "fallbackLabel": "Role",
+    "customPlaceholder": "Describe what the agent should be like…",
+    "apply": "Apply",
+    "manage": "Manage roles…",
+    "chooserTitle": "What will your agent be like?",
+    "chooserSubtitle": "Pick a role — it sets the assistant's tone and focus. You can change it at any time.",
+    "applyRole": "Apply role"
+  }
+}

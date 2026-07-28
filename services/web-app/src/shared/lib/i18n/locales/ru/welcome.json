@@ -1,0 +1,77 @@
+{
+  "header": {
+    "kicker": "Локально · Docker · Файловая система",
+    "title": "Проекты",
+    "subtitle": "Документация ВКР, курсовых и Project Proposal — локально, через файловую систему.",
+    "openFolder": "Открыть папку…",
+    "newProject": "Новый проект"
+  },
+  "filters": {
+    "search": "Найти проект…",
+    "searchHint": "Нажмите «/», чтобы искать",
+    "label": "Показывать",
+    "active": "Активные",
+    "all": "Все",
+    "archived": "Архив"
+  },
+  "sort": {
+    "label": "Сортировка",
+    "recent": "Недавние",
+    "pinned": "Закреплённые",
+    "name": "По имени"
+  },
+  "recent": {
+    "title": "Недавние"
+  },
+  "card": {
+    "company": "Компания",
+    "university": "Вуз",
+    "pin": "Закрепить",
+    "unpin": "Открепить",
+    "archive": "Архивировать",
+    "unarchive": "Восстановить",
+    "today": "Сегодня, {{time}}"
+  },
+  "newCard": {
+    "title": "Новый проект",
+    "description": "Курсовая, Диплом, Project Proposal или магистерская — из шаблона.",
+    "shortcutHint": "или ⌘K → «Новый проект»"
+  },
+  "empty": {
+    "title": "Пока нет проектов",
+    "description": "Создайте проект из шаблона или подключите существующую папку.",
+    "create": "Новый проект",
+    "noMatchTitle": "Ничего не нашлось",
+    "noMatchDescription": "По запросу «{{query}}» проектов нет — попробуйте часть имени папки или проверьте раскладку.",
+    "resetQuery": "Сбросить поиск"
+  },
+  "activity": {
+    "title": "Недавняя активность",
+    "subtitle": "Из локальных журналов сборки",
+    "loading": "Загружаем…",
+    "empty": "Активности пока нет. Соберите документы — события появятся здесь.",
+    "kind": {
+      "compileOk": "собрано",
+      "compileFail": "ошибка сборки",
+      "edit": "правка",
+      "manualNote": "заметка",
+      "sign": "подпись",
+      "packSubmission": "упаковка"
+    },
+    "time": {
+      "justNow": "только что",
+      "minutesAgo_one": "{{count}} мин назад",
+      "minutesAgo_few": "{{count}} мин назад",
+      "minutesAgo_many": "{{count}} мин назад",
+      "minutesAgo_other": "{{count}} мин назад",
+      "hoursAgo_one": "{{count}} ч назад",
+      "hoursAgo_few": "{{count}} ч назад",
+      "hoursAgo_many": "{{count}} ч назад",
+      "hoursAgo_other": "{{count}} ч назад",
+      "daysAgo_one": "{{count}} дн назад",
+      "daysAgo_few": "{{count}} дн назад",
+      "daysAgo_many": "{{count}} дн назад",
+      "daysAgo_other": "{{count}} дн назад"
+    }
+  }
+}

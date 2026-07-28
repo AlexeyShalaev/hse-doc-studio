@@ -1,0 +1,27 @@
+{
+  "title": {
+    "generic": "Ошибка",
+    "withStatus": "Ошибка {{status}}",
+    "network": "Сеть",
+    "schemaMismatch": "Несовпадение схемы"
+  },
+  "message": {
+    "network": "Сетевая ошибка",
+    "unknown": "Неизвестная ошибка",
+    "schemaConsole": "{{method}} {{url}} — открой DevTools → Console, там полный отчёт с path/received. Можно скинуть ИИ-агенту.",
+    "zodNoHttp": "ZodError без HTTP-контекста. Подробности в консоли."
+  },
+  "compile": {
+    "imageMissingTitle": "Образ не установлен",
+    "imageMissing": "Образ {{image}} не установлен — открой Настройки → Образы и нажми «Установить».",
+    "dockerUnavailableTitle": "Docker не доступен",
+    "notStartedTitle": "Сборка не запущена"
+  },
+  "code": {
+    "docker_unavailable": "Docker не доступен — запусти Docker Desktop.",
+    "image_missing": "Docker-образ не установлен.",
+    "compile_setup_error": "Окружение сборки не готово.",
+    "not_self_updatable": "Это сборка не поддерживает автообновление.",
+    "self_update_failed": "Не удалось запустить обновление."
+  }
+}

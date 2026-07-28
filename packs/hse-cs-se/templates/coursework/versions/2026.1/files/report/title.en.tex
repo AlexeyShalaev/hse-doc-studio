@@ -1,0 +1,71 @@
+% ============================================================
+% research/report/title.tex — титульный лист Отчёта исследовательского
+% курсового проекта ОП «Программная инженерия» ФКН НИУ ВШЭ.
+% Чистый титул БЕЗ штампа/рамки/ЛУ. Ветвится по project.lang:
+%   RU — «Отчёт по исследовательскому курсовому проекту» (форма ОП ПИ);
+%   EN — «Research Project Report on the Topic» (форма ФКН на англ.).
+% Все данные — из макросов \hse… (common/meta), кроме англ. литералов
+% названия ОП/города (мета хранит их по-русски).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+
+\begin{center}
+\textbf{NATIONAL RESEARCH UNIVERSITY}\\
+\textbf{HIGHER SCHOOL OF ECONOMICS}
+
+\vspace{0.35cm}
+Faculty of Computer Science\\
+Bachelor's Programme ``Software Engineering''
+\end{center}
+
+\vspace{0.3cm}
+\noindent
+UDC~\hseUDC
+
+\vspace{1.2cm}
+\begin{center}
+\textbf{\normalsize Research Project Report on the Topic:}
+
+\vspace{0.45cm}
+\underline{\makebox[0.9\textwidth][c]{\hseProjectName}}
+\end{center}
+
+\vspace{1.4cm}
+\noindent
+\begin{minipage}[t]{0.5\textwidth}
+\raggedright
+Submitted by the Student:\\
+group \#\hseGroup, \hseCourse{} year of study
+
+\vspace{0.35cm}
+\strut\hseAuthorName\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Surname Name Patronymic}
+\end{minipage}
+
+\vspace{0.9cm}
+\noindent
+\begin{minipage}[t]{0.7\textwidth}
+\raggedright
+Approved by the Project Supervisor:\\
+\strut\hseSupervisorName\\
+\strut\hseSupervisorTitle\\
+Faculty of Computer Science, HSE University
+\end{minipage}
+
+\vfill
+\begin{center}
+\textbf{Moscow \hseYear}
+\end{center}
+
+\end{titlepage}
+
+% Титульный лист — страница 1 (без номера); нумерация со 2-й.
+\setcounter{page}{2}
+\clearpage

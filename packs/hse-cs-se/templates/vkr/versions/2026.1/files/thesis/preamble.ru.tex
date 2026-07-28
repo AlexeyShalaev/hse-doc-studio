@@ -1,0 +1,225 @@
+% !TeX program = xelatex
+% ============================================================
+% vkr/preamble.tex — преамбула ВКР ОП «Программная инженерия» ФКН
+% НИУ ВШЭ. Воспроизводит оформление реальной ВКР 2025/2026
+% (ГОСТ 7.32-2017): 12 pt, поля 30/15/20/20, интервал 1,5, абзац
+% 1,25 см, сквозная нумерация рисунков/таблиц, «Оглавление».
+%
+% Данные о работе (ФИО, группа, год, руководитель…) приходят из
+% common/meta.tex (\hse-макросы, перегенерируются перед сборкой) —
+% не правьте их здесь, задавайте в настройках проекта.
+% ============================================================
+
+% ── Шрифты (автогенерируются из настроек проекта) ───────────
+% Times New Roman 12 pt — как в реальной ВКР (ГОСТ 7.32). Семейства
+% (основной/рубленый/моноширинный) задаются в настройках проекта и
+% подставляются в common/fonts.tex ПЕРЕД каждой сборкой, каждый с
+% независимым фолбэком на свободный клон с кириллицей (Tinos/DejaVu) —
+% отсутствие шрифта не ломает сборку. Здесь НЕ правьте — меняйте в
+% настройках проекта (устанавливайте шрифты в Settings → Шрифты).
+% \hseDefaultMono — дефолт моношрифта ВКР, если он не выбран в настройках.
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+% Язык оформления по project.lang. §2.5.3.1: англоязычная ВКР пишется на
+% английском (главный язык — english); реферат остаётся двуязычным (Реферат +
+% Abstract) в обоих случаях. Русский — язык по умолчанию.
+
+\usepackage[english,russian]{babel}
+\addto\captionsrussian{\renewcommand{\bibname}{Список использованных источников}}
+
+\usepackage{url}
+\usepackage[a4paper,left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{6pt}
+
+\usepackage{microtype}
+\usepackage{fvextra}
+\usepackage{csquotes}
+\usepackage{graphicx}
+\usepackage{letltxmacro}
+\LetLtxMacro{\oldincludegraphics}{\includegraphics}
+\renewcommand{\includegraphics}[2][]{%
+  \IfFileExists{#2}{%
+    \oldincludegraphics[#1]{#2}%
+  }{%
+    \IfFileExists{#2.png}{%
+      \oldincludegraphics[#1]{#2.png}%
+    }{%
+      \IfFileExists{#2.jpg}{%
+        \oldincludegraphics[#1]{#2.jpg}%
+      }{%
+        \fcolorbox{red}{white}{%
+          \begin{minipage}{0.5\textwidth}
+            \centering
+            \textcolor{red}{\textbf{Файл не найден:}} \\
+            \texttt{\detokenize{#2}}
+          \end{minipage}%
+        }%
+      }%
+    }%
+  }%
+}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lastpage}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{adjustbox}
+\usepackage{xurl} % Allow long URLs to break
+\urlstyle{same}
+\usepackage{hyphenat} % Better hyphenation
+\usepackage{caption}
+\usepackage{cite} % Better citation handling
+\DeclareCaptionLabelSeparator{emdash}{~---~}
+\captionsetup[table]{position=top,labelsep=emdash,justification=raggedright,singlelinecheck=false}
+\captionsetup[figure]{position=bottom,labelsep=emdash}
+
+% --- Настройка подсветки кода ---
+\usepackage{listings}
+
+\renewcommand{\lstlistingname}{Листинг}
+\renewcommand{\lstlistlistingname}{Список листингов}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{keycolor}{rgb}{0.13,0.29,0.53}
+\definecolor{stringcolor}{rgb}{0.31,0.60,0.02}
+
+((* raw *))
+% raw-блок: в определении ниже есть литеральные двойные фигурные скобки
+% (listings literate), которые рендер иначе принял бы за начало Jinja-
+% выражения -> TemplateSyntaxError, и весь файл скопировался бы как есть
+% (языковые if-ветки не сработали бы). raw защищает эти скобки.
+\lstdefinelanguage{yaml}{
+  keywords={true,false,null,y,n},
+  keywordstyle=\color{darkgray}\bfseries,
+  basicstyle=\small\ttfamily,
+  breaklines=true,
+  comment=[l]{\#},
+  commentstyle=\color{codegray}\itshape,
+  stringstyle=\color{stringcolor},
+  moredelim=[l][\color{keycolor}\bfseries]{:},
+  morestring=[b]',
+  morestring=[b]",
+  literate={-}{{\textcolor{keycolor}{-}}}1
+}
+((* endraw *))
+
+\lstnewenvironment{CodeBlock}[1][]
+{
+    \lstset{
+        language=yaml,
+        backgroundcolor=\color{backcolour},
+        commentstyle=\color{codegreen},
+        keywordstyle=\color{magenta},
+        numberstyle=\tiny\color{codegray},
+        stringstyle=\color{codepurple},
+        basicstyle=\footnotesize\ttfamily,
+        breakatwhitespace=false,
+        breaklines=true,
+        captionpos=b,
+        keepspaces=true,
+        numbers=left,
+        numbersep=5pt,
+        showspaces=false,
+        showstringspaces=false,
+        showtabs=false,
+        tabsize=2,
+        frame=single,
+        rulecolor=\color{gray!30},
+        xleftmargin=10pt,
+        xrightmargin=10pt,
+        #1
+    }
+}{}
+% -------------------------------
+
+\usepackage{enumitem}
+\setlist{nosep}
+\setlist[itemize,1]{label=--}
+\usepackage{chngcntr}
+\counterwithout{table}{chapter}
+\counterwithout{figure}{chapter}
+\renewcommand{\thetable}{\arabic{table}}
+\renewcommand{\thefigure}{\arabic{figure}}
+\usepackage{fancyhdr}
+\pagestyle{plain}
+
+\usepackage{titlesec}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, calc, er, fit}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=red!30]
+\tikzstyle{io} = [trapezium, trapezium left angle=70, trapezium right angle=110, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30]
+\tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!30]
+\tikzstyle{decision} = [diamond, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\tikzstyle{box} = [rectangle, draw, text centered, minimum height=1cm, minimum width=2.5cm, rounded corners]
+\tikzstyle{database} = [cylinder, draw, shape border rotate=90, aspect=0.25, text centered, minimum height=1.5cm, minimum width=1.2cm]
+\tikzstyle{entity} = [rectangle, draw, text centered, minimum height=1cm, minimum width=2.5cm, fill=blue!10]
+\tikzstyle{relationship} = [diamond, draw, text centered, minimum height=1cm, minimum width=1.5cm, fill=red!10]
+
+\emergencystretch=5em % Help with overfull hboxes
+\tolerance=2000
+\hyphenpenalty=300
+\exhyphenpenalty=300
+\titleformat{\chapter}{\bfseries\centering}{\thechapter}{1em}{}
+\titleformat{\section}{\bfseries}{\thesection}{1em}{}
+\titlespacing*{\section}{1.25cm}{*2}{6pt}
+\titleformat{\subsection}{\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\subsection}{1.25cm}{*2}{6pt}
+\titleformat{\subsubsection}{\bfseries}{\thesubsubsection}{1em}{}
+
+
+\renewcommand{\contentsname}{Содержание}
+
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+\hypersetup{unicode=true,breaklinks=true,bookmarksopen=true,bookmarksnumbered=true,colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=blue}
+
+\newcommand{\cmpplus}{\textbf{+}}
+\newcommand{\cmpminus}{\textbf{--}}
+\newcommand{\cmpstar}{\textbf{+*}}
+\newcommand{\cmpplanned}{\textcolor{blue}{$\pm$}}
+
+% Сокращения для названий аналогов в матрицах сравнения с гиперссылками на официальные сайты
+\newcommand{\anYandexCloud}{\href{https://yandex.cloud/}{Yandex Cloud}}
+\newcommand{\anAWS}{\href{https://aws.amazon.com/}{AWS}}
+\newcommand{\anGoogleCloud}{\href{https://cloud.google.com/}{Google Cloud}}
+\newcommand{\anAzure}{\href{https://azure.microsoft.com/}{Azure}}
+\newcommand{\anOpenShift}{\href{https://www.redhat.com/en/technologies/cloud-computing/openshift}{OpenShift}}
+\newcommand{\anCloudRu}{\href{https://cloud.ru/}{Cloud.ru}}
+\newcommand{\anPortainer}{\href{https://www.portainer.io/}{Portainer}}
+\newcommand{\anMogenius}{\href{https://mogenius.com/}{Mogenius}}
+\newcommand{\anHeroku}{\href{https://www.heroku.com/}{Heroku}}
+\newcommand{\anPlatformSh}{\href{https://platform.sh/}{Platform.sh}}
+\newcommand{\anHumanitec}{\href{https://humanitec.com/}{Humanitec}}
+\newcommand{\anMiaPlatform}{\href{https://mia-platform.eu/}{Mia Platform}}
+\newcommand{\anExoscale}{\href{https://www.exoscale.com/}{Exoscale}}
+\newcommand{\anQovery}{\href{https://www.qovery.com/}{Qovery}}
+\newcommand{\anAppvia}{\href{https://www.appvia.io/}{Appvia}}
+\newcommand{\anNullstone}{\href{https://nullstone.io/}{Nullstone}}
+\newcommand{\anNagios}{\href{https://www.nagios.org/}{Nagios}}
+\newcommand{\anPorter}{\href{https://porter.run/}{Porter}}
+\newcommand{\anCoherence}{\href{https://withcoherences.webflow.io/}{Coherence}}
+\newcommand{\anDeployMe}{\href{https://deployme.app/}{Deploy Me}}
+
+% Трассировка требований (панель «Трассировка требований»):
+%   \req{ID}{Описание} — определение (в ТЗ); \reqref{ID} — ссылка (в ВКР и др.).
+\newcommand{\req}[2]{\phantomsection\label{req:#1}\textbf{#1.}\enspace #2}
+\newcommand{\reqref}[1]{\mbox{(треб.~#1)}}
+
+% Форматирование номеров в списке литературы с точкой
+\makeatletter
+\renewcommand\@biblabel[1]{#1.}
+\makeatother
+
+% ── Данные проекта (автогенерируемые макросы \hse…) ─────────
+\input{../common/meta}

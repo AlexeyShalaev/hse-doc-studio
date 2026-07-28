@@ -1,0 +1,38 @@
+{
+  "releases": [
+    {
+      "version": "0.1.0",
+      "date": "2026-07-28",
+      "notes": [
+        {
+          "ru": "Первый выпуск: локальная студия учебных документов — проекты из шаблонов (ВКР, курсовая, Project Proposal) со всеми сопутствующими документами и презентациями",
+          "en": "First release: a local studio for academic documents — projects from templates (thesis, coursework, Project Proposal) with every accompanying document and presentation"
+        },
+        {
+          "ru": "Сборка PDF одной кнопкой: LaTeX работает в Docker-контейнере, на компьютер ничего ставить не нужно",
+          "en": "One-click PDF builds: LaTeX runs inside a Docker container, nothing to install on your machine"
+        },
+        {
+          "ru": "Кодовый и визуальный редакторы, просмотр PDF с переходами между текстом и вёрсткой (SyncTeX)",
+          "en": "Code and visual editors with a built-in PDF viewer and text↔layout jumps (SyncTeX)"
+        },
+        {
+          "ru": "Проверки оформления по ГОСТ: находки привязаны к строкам исходника, многое чинится автоматически",
+          "en": "GOST formatting checks: findings are anchored to source lines, many fix themselves automatically"
+        },
+        {
+          "ru": "Сдачи: студия собирает пакет документов контрольной точки вместе с подписями и формами",
+          "en": "Submissions: the studio assembles the checkpoint package together with signatures and forms"
+        },
+        {
+          "ru": "ИИ-помощник в своём проекте: свой провайдер (Claude, OpenAI и совместимые) или локальная модель через Ollama",
+          "en": "An AI assistant inside your project: bring your own provider (Claude, OpenAI and compatibles) or a local model via Ollama"
+        },
+        {
+          "ru": "История версий проекта: таймлайн, сравнение и откат без знания git",
+          "en": "Project version history: timeline, diffs and restore — no git knowledge required"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "type": {
+    "openaiCompat": "OpenAI-совмест."
+  },
+  "keyPlaceholder": {
+    "openaiCompat": "ключ эндпоинта"
+  },
+  "baseUrlPlaceholder": {
+    "openai": "https://api.openai.com/v1 (необязательно)",
+    "openaiCompat": "https://localhost:11434/v1"
+  },
+  "fetch": {
+    "emptyModels": "Провайдер не вернул ни одной модели",
+    "failed": "Не удалось получить модели"
+  },
+  "validation": {
+    "timeoutsPositive": "Таймауты должны быть больше 0",
+    "nameRequired": "Укажите название",
+    "checkFields": "Проверьте поля формы"
+  },
+  "toast": {
+    "saved": "Провайдер «{{name}}» сохранён",
+    "added": "Провайдер «{{name}}» добавлен"
+  },
+  "modal": {
+    "a11yDescription": "Параметры подключения к ИИ-провайдеру: тип, API-ключ, адрес, модели, TLS и таймауты.",
+    "titleEdit": "Изменить провайдера",
+    "titleCreate": "Добавить провайдера",
+    "close": "Закрыть"
+  },
+  "fields": {
+    "name": "Название",
+    "namePlaceholder": "Напр. OpenAI или Local vLLM",
+    "type": "Тип",
+    "apiKey": "API-ключ",
+    "apiKeyPlaceholderEdit": "Оставьте пустым, чтобы не менять",
+    "apiKeyHint": "Хранится на сервере, в браузер не возвращается.",
+    "baseUrl": "Base URL",
+    "models": "Модели",
+    "tlsVerify": "Проверка TLS-сертификата",
+    "tlsOn": "Включена",
+    "tlsOff": "Отключена",
+    "tlsWarning": "Без проверки сертификата соединение уязвимо к MITM — только для доверенных внутренних адресов.",
+    "connectTimeout": "Таймаут подключения, с",
+    "requestTimeout": "Общий таймаут, с"
+  },
+  "models": {
+    "fetchFromApi": "Загрузить из API",
+    "fetchTitle": "Запросить список моделей у провайдера",
+    "removeModel": "Убрать",
+    "emptyEdit": "Список пуст — добавьте вручную или загрузите из API.",
+    "emptyCreate": "Можно добавить вручную; после сохранения — загрузить из API.",
+    "newModelPlaceholder": "ID модели (напр. gpt-4.1)"
+  },
+  "actions": {
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "add": "Добавить"
+  }
+}

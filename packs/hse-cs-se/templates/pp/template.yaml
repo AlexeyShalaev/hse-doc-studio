@@ -1,0 +1,19 @@
+# packs/hse-cs-se/templates/pp/template.yaml
+# Манифест шаблона Project Proposal (инвариантен к версии)
+
+id: pp
+name:
+  ru: Project Proposal (проект ВКР на английском)
+  en: Project Proposal
+short_name:
+  ru: PP
+  en: PP
+
+description:
+  ru: Project Proposal ОП «Программная инженерия» ФКН НИУ ВШЭ — научная статья о будущей ВКР на английском языке (IEEE conference, 1500–3000 слов) и презентация защиты.
+  en: Project Proposal for the HSE SE bachelor's programme — an IEEE-style English paper about the upcoming thesis (1500–3000 words) plus defence slides.
+
+icon: FileText                     # имя иконки lucide-react
+accent_hue: 150                    # OKLCH hue для accent-color в UI
+
+default_version: "2026.1"

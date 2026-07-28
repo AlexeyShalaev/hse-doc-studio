@@ -1,0 +1,781 @@
+<!doctype html>
+((* set en = project.lang == 'en' *))
+<!--
+  pres/reveal/index.html — Презентация защиты ВКР (RevealJS 5)
+  Воспроизводит официальный «Образец презентации ВКР» ОП «Программная
+  инженерия» ФКН НИУ ВШЭ (16:9, фирменный синий #102D69, рамки/логотипы
+  из ../assets/). Jinja2-плейсхолдеры подставляются ОДИН раз при создании
+  проекта (переменные через фильтр xmlesc; условные блоки — в LaTeX-safe
+  скобках рендерера, см. template_renderer.py).
+
+  Файл ВЕТВИТСЯ при создании: по project.kind (прикладной сценарий защиты
+  ИЛИ исследовательский научный поток) и по project.lang (ru / en).
+
+  Методические подсказки образца лежат в speaker notes (<aside class="notes">):
+  откройте окно докладчика клавишей S. Заглушки «TODO: …» замените своим
+  содержимым. Для работы офлайн замените CDN-ссылки на локальные файлы.
+-->
+<html lang="((* if en *))en((* else *))ru((* endif *))">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>((* if en *))Defense — ((* else *))Защита — ((* endif *)){{ author.topic | default(project.name, true) | xmlesc }}</title>
+
+  <!-- RevealJS 5 (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
+
+  <style>
+    /* ─── Фирменный стиль НИУ ВШЭ ─────────────────────────────────── */
+    :root {
+      --hse-blue: #102D69;
+      --hse-muted: #8a90a0;
+    }
+
+    .reveal-viewport { background: #fff; }
+
+    .reveal {
+      /* HSE Sans лицензионный и в пак не входит: используется, если
+         установлен в системе, иначе — системный гротеск. */
+      font-family: "HSE Sans", Arial, Helvetica, sans-serif;
+      font-size: 22px;
+      color: #000;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: inherit;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    /* Контентный слайд: белое окно тонкой рамки начинается ~2% от краёв;
+       заголовок ~21% высоты, контент ниже ~33%. */
+    .reveal .slides section {
+      height: 720px;
+      box-sizing: border-box;
+      text-align: left;
+      padding: 150px 72px 44px;
+      overflow: hidden;
+    }
+
+    .reveal h2 {
+      color: var(--hse-blue);
+      font-size: 34px;
+      font-weight: 500;
+      line-height: 1.15;
+      margin: 0 0 36px;
+    }
+
+    .reveal p { margin: 0 0 12px; }
+    .reveal ul, .reveal ol { display: block; margin: 0 0 0 1.1em; }
+    .reveal li { margin: 0 0 14px; line-height: 1.35; }
+
+    .todo { color: var(--hse-muted); font-style: italic; }
+
+    .subhead {
+      color: var(--hse-blue);
+      font-weight: 700;
+      font-size: 24px;
+      margin: 0 0 10px;
+    }
+
+    .cols { display: flex; gap: 48px; }
+    .col { flex: 1; min-width: 0; }
+
+    .goal-box {
+      border-left: 5px solid var(--hse-blue);
+      background: #eef2fa;
+      padding: 14px 20px;
+      margin: 0 0 26px;
+    }
+
+    .figure-box {
+      border: 1.5px dashed #9aa3b5;
+      border-radius: 6px;
+      color: var(--hse-muted);
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 190px;
+      margin: 4px 0 20px;
+      text-align: center;
+    }
+
+    table.cmp { width: 100%; border-collapse: collapse; font-size: 19px; }
+    table.cmp th {
+      background: var(--hse-blue);
+      color: #fff;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--hse-blue);
+    }
+    table.cmp td { border: 1px solid #c9cfdd; padding: 10px 14px; vertical-align: top; }
+
+    .refs p { font-size: 19px; line-height: 1.4; margin: 0 0 16px; }
+
+    /* ─── Шапка-колонтитул контентных слайдов (вставляется JS-ом) ── */
+    .slide-header {
+      position: absolute;
+      top: 26px;
+      left: 36px;
+      right: 36px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 13px;
+      line-height: 1.3;
+      color: #1a1a1a;
+      text-align: left;
+      font-weight: 400;
+    }
+    .slide-header img { height: 52px; width: 52px; flex: 0 0 auto; }
+    .slide-header .hb {
+      border-left: 1.5px solid var(--hse-blue);
+      padding-left: 18px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+    }
+    .slide-header .hb.first { border-left: none; padding-left: 0; }
+    .slide-header .h-fac { max-width: 210px; }
+    .slide-header .h-topic, .slide-header .h-name { color: var(--hse-blue); }
+    .slide-header .h-topic span {
+      display: block;
+      max-width: 330px;
+      max-height: 54px;
+      overflow: hidden;
+    }
+    .slide-header .spacer { flex: 1; }
+    .slide-header .hdr-num {
+      font-size: 30px;
+      color: var(--hse-blue);
+      padding-right: 20px;
+    }
+    .slide-header .hb.end { padding-left: 0; }
+
+    /* ─── Титульный слайд (белое окно рамки: x 6.6–93.3%, y 11–87%) ── */
+    .reveal .slides section.title-slide { padding: 0; }
+
+    .title-slide .t-top {
+      position: absolute;
+      left: 104px;
+      right: 104px;
+      top: 96px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      text-align: left;
+    }
+    .t-top img { height: 88px; width: 88px; flex: 0 0 auto; }
+    .t-top .tb { font-size: 19px; line-height: 1.3; }
+    .t-top .fac { color: #1a1a1a; max-width: 320px; }
+    .t-top .sep {
+      border-left: 1.5px solid var(--hse-blue);
+      padding-left: 22px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      color: var(--hse-blue);
+    }
+    .t-top .dep { max-width: 250px; }
+
+    .t-topic {
+      position: absolute;
+      left: 104px;
+      width: 600px;
+      top: 196px;
+      bottom: 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: left;
+    }
+    .t-topic .topic {
+      color: var(--hse-blue);
+      font-size: 44px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+    .t-topic .topic-en {
+      color: var(--hse-blue);
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1.25;
+      margin-top: 20px;
+    }
+
+    .t-author {
+      position: absolute;
+      right: 104px;
+      bottom: 100px;
+      width: 430px;
+      text-align: right;
+      color: var(--hse-blue);
+      font-weight: 700;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+    .t-author p { margin: 0 0 18px; }
+    .t-author p:last-child { margin-bottom: 0; }
+
+    /* ─── Финальный слайд ─────────────────────────────────────────── */
+    .reveal .slides section.final-slide { padding: 110px 120px 60px; }
+    .final-slide .f-wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .final-slide .f-thanks {
+      color: var(--hse-blue);
+      font-size: 46px;
+      font-weight: 500;
+      margin: 0 0 48px;
+    }
+    .final-slide .f-meta {
+      color: var(--hse-blue);
+      font-size: 26px;
+      line-height: 1.45;
+    }
+    .final-slide .f-email { margin-top: 22px; font-size: 22px; }
+  </style>
+</head>
+<body>
+
+<!-- Шаблон шапки контентных слайдов: клонируется JS-ом в каждую section
+     без класса no-header (см. injectHeaders ниже). -->
+<div id="hdr-template" hidden>
+  <div class="slide-header">
+    <img src="../assets/hse-logo-small.png" alt="((* if en *))HSE((* else *))НИУ ВШЭ((* endif *))">
+    <div class="hb first h-fac">{{ project.meta.faculty | default('Факультет компьютерных наук', true) | xmlesc }},<br>((* if en *))Programme «Software Engineering»((* else *))ОП «Программная инженерия»((* endif *))</div>
+    <div class="hb h-topic"><span>{{ author.topic | default(project.name, true) | xmlesc }}</span></div>
+    <div class="hb h-name">{{ author.name | default('', true) | xmlesc }}</div>
+    <div class="spacer"></div>
+    <div class="hdr-num">1</div>
+    <div class="hb end"></div>
+  </div>
+</div>
+
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Слайд 1: Титульный -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section class="title-slide no-header"
+             data-background-image="../assets/hse-frame-title.jpg"
+             data-background-size="cover">
+      <div class="t-top">
+        <img src="../assets/hse-logo-full.png" alt="((* if en *))HSE University((* else *))Высшая школа экономики((* endif *))">
+        <div class="tb fac">{{ project.meta.faculty | default('Факультет компьютерных наук', true) | xmlesc }}</div>
+        <div class="tb sep dep">((* if en *))School of Software Engineering((* else *))Департамент программной инженерии((* endif *))</div>
+        <div class="tb sep">{{ project.meta.city | default('Москва', true) | xmlesc }} {{ project.meta.year | default('', true) | xmlesc }}</div>
+      </div>
+
+      <div class="t-topic">
+        <div class="topic">{{ author.topic | default(project.name, true) | xmlesc }}</div>
+        ((* if project.meta.name_en *))
+        <div class="topic-en">{{ project.meta.name_en | xmlesc }}</div>
+        ((* endif *))
+      </div>
+
+      <div class="t-author">
+        <p>
+          ((* if en *))Student of group {{ author.group | default('', true) | xmlesc }}<br>
+          educational programme<br>
+          09.03.04 «Software Engineering»<br>((* else *))Выполнил студент группы {{ author.group | default('', true) | xmlesc }}<br>
+          образовательной программы<br>
+          09.03.04 «Программная инженерия»<br>((* endif *))
+          {{ author.name | default('', true) | xmlesc }}
+        </p>
+        <p>
+          ((* if en *))Supervisor:((* else *))Руководитель:((* endif *))<br>
+          {{ project.supervisor.title | default('должность', true) | xmlesc }}((* if project.supervisor.degree *)), {{ project.supervisor.degree | xmlesc }}((* endif *))<br>
+          {{ project.supervisor.name | default('', true) | xmlesc }}
+        </p>
+        ((* if project.co_supervisor.name *))
+        <p>
+          ((* if en *))Co-supervisor:((* else *))Соруководитель:((* endif *))<br>
+          {{ project.co_supervisor.name | xmlesc }}
+        </p>
+        ((* endif *))
+      </div>
+
+      <aside class="notes">
+        Должность руководителя: профессор / доцент / старший преподаватель /
+        преподаватель. Учёные степени: д.т.н., д.ф.-м.н., к.т.н. и т.п.
+        Блок соруководителя появляется только если он задан в настройках.
+      </aside>
+    </section>
+
+((* if project.kind == 'research' *))
+    <!-- ============================================================ -->
+    <!--  ИССЛЕДОВАТЕЛЬСКИЙ СЦЕНАРИЙ (научный доклад)                  -->
+    <!--  предметная область → мотивация → цель → обзор → метод →      -->
+    <!--  эксперимент → результаты → выводы.                          -->
+    <!-- ============================================================ -->
+
+    <!-- Слайд 2: Описание предметной области -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Subject area((* else *))Описание предметной области((* endif *))</h2>
+      <p class="subhead">((* if en *))Research area((* else *))Предметная область((* endif *))</p>
+      <p class="todo">((* if en *))TODO: 2–3 sentences introducing the research area.((* else *))TODO: 2–3 предложения — введение в предметную область.((* endif *))</p>
+      <p class="subhead" style="margin-top:30px;">((* if en *))Problem studied((* else *))Исследуемая проблема((* endif *))</p>
+      <p class="todo">((* if en *))TODO: the problem and why it is hard; object and subject of the study.((* else *))TODO: проблема и в чём её сложность; объект и предмет исследования.((* endif *))</p>
+    </section>
+
+    <!-- Слайд 3: Актуальность и мотивация -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Relevance and motivation((* else *))Актуальность и мотивация((* endif *))</h2>
+      <ul>
+        <li class="todo">((* if en *))TODO: why the problem matters now((* else *))TODO: почему проблема важна именно сейчас((* endif *))</li>
+        <li class="todo">((* if en *))TODO: limitations of existing approaches this work addresses((* else *))TODO: ограничения существующих подходов, которые снимает работа((* endif *))</li>
+        <li class="todo">((* if en *))TODO: who benefits from the result((* else *))TODO: кому и где нужен результат((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 4: Цель и задачи работы -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Goal and objectives((* else *))Цель и задачи работы((* endif *))</h2>
+      <div class="goal-box"><strong>((* if en *))Goal:((* else *))Цель:((* endif *))</strong> <span class="todo">((* if en *))TODO: one research goal((* else *))TODO: одна цель исследования((* endif *))</span></div>
+      <p class="subhead">((* if en *))Objectives((* else *))Задачи((* endif *))</p>
+      <ol>
+        <li class="todo">((* if en *))TODO: review the literature and existing approaches((* else *))TODO: провести обзор литературы и подходов((* endif *))</li>
+        <li class="todo">((* if en *))TODO: propose a method / model((* else *))TODO: предложить метод / модель((* endif *))</li>
+        <li class="todo">((* if en *))TODO: implement and evaluate experimentally((* else *))TODO: реализовать и проверить экспериментально((* endif *))</li>
+      </ol>
+    </section>
+
+    <!-- Слайд 5: Обзор существующих подходов -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Review of existing approaches((* else *))Обзор существующих подходов((* endif *))</h2>
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>((* if en *))Approach((* else *))Подход((* endif *))</th>
+            <th>((* if en *))Idea / source((* else *))Идея / источник((* endif *))</th>
+            <th>((* if en *))Limitations((* else *))Ограничения((* endif *))</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="todo">TODO</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+          <tr><td class="todo">TODO</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+          <tr><td class="todo">TODO</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:24px;"><strong>((* if en *))Gap:((* else *))Пробел:((* endif *))</strong> <span class="todo">((* if en *))TODO: what is missing / this work's niche.((* else *))TODO: чего не хватает / ниша данной работы.((* endif *))</span></p>
+    </section>
+
+    <!-- Слайд 6: Предлагаемый метод / модель (ЯДРО) -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Proposed method / model((* else *))Предлагаемый метод / модель((* endif *))</h2>
+      <div class="figure-box">((* if en *))[scheme of the proposed method / model]((* else *))[схема предлагаемого метода / модели]((* endif *))</div>
+      <ul>
+        <li class="todo">((* if en *))TODO: core idea of the method((* else *))TODO: ключевая идея метода((* endif *))</li>
+        <li class="todo">((* if en *))TODO: what is novel compared to prior work((* else *))TODO: чем отличается от предшествующих работ((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 7: Алгоритмы и детали реализации -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Algorithms and implementation((* else *))Алгоритмы и детали реализации((* endif *))</h2>
+      <div class="figure-box">((* if en *))[algorithm scheme / pseudocode / example]((* else *))[схема алгоритма / псевдокод / пример]((* endif *))</div>
+      <ul>
+        <li class="todo">((* if en *))TODO: key algorithm and its complexity((* else *))TODO: ключевой алгоритм и его сложность((* endif *))</li>
+        <li class="todo">((* if en *))TODO: language, libraries, tools((* else *))TODO: язык, библиотеки, инструменты((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 8: План эксперимента -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Experimental setup((* else *))План эксперимента((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))Data / datasets:((* else *))Данные / датасеты:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Metrics:((* else *))Метрики:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Baselines:((* else *))Базовые методы для сравнения:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Conditions:((* else *))Условия запуска:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 9: Результаты эксперимента (СЕРДЦЕ) -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Experimental results((* else *))Результаты эксперимента((* endif *))</h2>
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>((* if en *))Method((* else *))Метод((* endif *))</th>
+            <th>((* if en *))Metric 1((* else *))Метрика 1((* endif *))</th>
+            <th>((* if en *))Metric 2((* else *))Метрика 2((* endif *))</th>
+            <th>((* if en *))Metric 3((* else *))Метрика 3((* endif *))</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>baseline</td><td class="todo">TODO</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+          <tr><td><strong>((* if en *))ours((* else *))наш((* endif *))</strong></td><td class="todo">TODO</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+        </tbody>
+      </table>
+      <div class="figure-box" style="min-height:150px; margin-top:20px;">((* if en *))[chart / plot of the results]((* else *))[график / диаграмма результатов]((* endif *))</div>
+    </section>
+
+    <!-- Слайд 10: Анализ результатов -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Discussion of results((* else *))Анализ результатов((* endif *))</h2>
+      <ul>
+        <li class="todo">((* if en *))TODO: what the numbers mean((* else *))TODO: что означают полученные числа((* endif *))</li>
+        <li class="todo">((* if en *))TODO: where the method wins / loses((* else *))TODO: где метод выигрывает, где — нет((* endif *))</li>
+        <li class="todo">((* if en *))TODO: limitations and threats to validity((* else *))TODO: ограничения и угрозы валидности((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 11: Научная новизна и значимость -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Scientific novelty and significance((* else *))Научная новизна и значимость((* endif *))</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">((* if en *))Scientific novelty((* else *))Научная новизна((* endif *))</p>
+          <p class="todo">((* if en *))TODO: new scientific result.((* else *))TODO: новый научный результат.((* endif *))</p>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Significance((* else *))Значимость((* endif *))</p>
+          <p class="todo">((* if en *))TODO: what and for whom the result improves.((* else *))TODO: что и для кого улучшает результат.((* endif *))</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Слайд 12: Выводы и дальнейшая работа -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Conclusions and future work((* else *))Выводы и дальнейшая работа((* endif *))</h2>
+      <p class="subhead">((* if en *))Conclusions((* else *))Выводы((* endif *))</p>
+      <ol>
+        <li class="todo">((* if en *))TODO: conclusion on objective 1((* else *))TODO: вывод по задаче 1((* endif *))</li>
+        <li class="todo">((* if en *))TODO: conclusion on objective 2((* else *))TODO: вывод по задаче 2((* endif *))</li>
+      </ol>
+      <p class="subhead" style="margin-top:24px;">((* if en *))Future work((* else *))Дальнейшая работа((* endif *))</p>
+      <ul>
+        <li class="todo">((* if en *))TODO: direction 1((* else *))TODO: направление развития 1((* endif *))</li>
+        <li class="todo">((* if en *))TODO: direction 2((* else *))TODO: направление развития 2((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 13: Список источников -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))References((* else *))Список источников((* endif *))</h2>
+      <div class="refs">
+        <p>[1] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+        <p>[2] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+        <p>[3] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+      </div>
+    </section>
+
+((* else *))
+    <!-- ============================================================ -->
+    <!--  ПРИКЛАДНОЙ СЦЕНАРИЙ (защита ВКР — инженерный поток)          -->
+    <!-- ============================================================ -->
+
+    <!-- Слайд 2: Описание предметной области -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Subject area((* else *))Описание предметной области((* endif *))</h2>
+      <p class="subhead">((* if en *))Subject area((* else *))Предметная область((* endif *))</p>
+      <p class="todo">((* if en *))TODO: 2–3 sentences on the subject area from the thesis.((* else *))TODO: 2–3 предложения о предметной области из ВКР.((* endif *))</p>
+      <p class="subhead" style="margin-top:30px;">((* if en *))Informal problem statement((* else *))Неформальная постановка задачи((* endif *))</p>
+      <p class="todo">((* if en *))TODO: conditions under which the task was set.((* else *))TODO: в каких условиях ставилась задача на проект.((* endif *))</p>
+      <aside class="notes">
+        Приводится описание предметной области из ВКР и неформальная
+        постановка задачи. Не более 3 цветов и 3 шрифтов на слайде.
+      </aside>
+    </section>
+
+    <!-- Слайд 3: Основные термины, понятия и определения -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Key terms and definitions((* else *))Основные термины, понятия и определения((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))Term 1((* else *))Термин 1((* endif *))</strong> — <span class="todo">((* if en *))TODO: definition((* else *))TODO: определение((* endif *))</span></li>
+        <li><strong>((* if en *))Term 2((* else *))Термин 2((* endif *))</strong> — <span class="todo">((* if en *))TODO: definition((* else *))TODO: определение((* endif *))</span></li>
+        <li><strong>((* if en *))Term 3((* else *))Термин 3((* endif *))</strong> — <span class="todo">((* if en *))TODO: definition((* else *))TODO: определение((* endif *))</span></li>
+      </ul>
+      <aside class="notes">Термины по алфавиту. Слайд не зачитывать: назвать 1–2 важных.</aside>
+    </section>
+
+    <!-- Слайд 4: Актуальность -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Relevance((* else *))Актуальность((* endif *))</h2>
+      <ul>
+        <li class="todo">((* if en *))TODO: key relevance argument from the thesis((* else *))TODO: ключевой тезис актуальности (из ВКР)((* endif *))</li>
+        <li class="todo">((* if en *))TODO: conferences and companies working on the topic((* else *))TODO: конференции и компании, работающие по теме((* endif *))</li>
+        <li class="todo">((* if en *))TODO: applied tasks where the result is needed((* else *))TODO: прикладные задачи, где востребован результат((* endif *))</li>
+      </ul>
+      <aside class="notes">Только КЛЮЧЕВЫЕ ТЕЗИСЫ из раздела «Актуальность» ВКР.</aside>
+    </section>
+
+    <!-- Слайд 5: Цель и задачи ВКР -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Goal and objectives((* else *))Цель и задачи ВКР((* endif *))</h2>
+      <div class="goal-box"><strong>((* if en *))Goal:((* else *))Цель:((* endif *))</strong> <span class="todo">((* if en *))TODO: one goal of the work((* else *))TODO: одна цель работы((* endif *))</span></div>
+      <p class="subhead">((* if en *))Objectives((* else *))Задачи((* endif *))</p>
+      <ol>
+        <li class="todo">((* if en *))TODO: objective 1((* else *))TODO: задача 1((* endif *))</li>
+        <li class="todo">((* if en *))TODO: objective 2((* else *))TODO: задача 2((* endif *))</li>
+        <li class="todo">((* if en *))TODO: objective 3((* else *))TODO: задача 3((* endif *))</li>
+        <li class="todo">((* if en *))TODO: objective N((* else *))TODO: задача N((* endif *))</li>
+      </ol>
+      <aside class="notes">Цель — одна, задач — много. Дальше — по задачам.</aside>
+    </section>
+
+    <!-- Слайд 6: Анализ существующих решений -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Analysis of existing solutions((* else *))Анализ существующих решений((* endif *))</h2>
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>((* if en *))Solution((* else *))Решение((* endif *))</th>
+            <th>((* if en *))Developer, version, year((* else *))Разработчик, версия, год((* endif *))</th>
+            <th>((* if en *))Differences / limitations((* else *))Отличия / ограничения((* endif *))</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="todo">((* if en *))TODO: analogue 1((* else *))TODO: аналог 1((* endif *))</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+          <tr><td class="todo">((* if en *))TODO: analogue 2((* else *))TODO: аналог 2((* endif *))</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+          <tr><td class="todo">((* if en *))TODO: analogue 3((* else *))TODO: аналог 3((* endif *))</td><td class="todo">TODO</td><td class="todo">TODO</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:24px;"><strong>((* if en *))Conclusion:((* else *))Вывод:((* endif *))</strong> <span class="todo">((* if en *))TODO: why your own solution is needed.((* else *))TODO: почему требуется собственное решение.((* endif *))</span></p>
+      <aside class="notes">Подходы из российских и зарубежных источников; для аналогов — разработчик, версия, год, ссылка, эмблема.</aside>
+    </section>
+
+    <!-- Слайд 7: Функциональные требования -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Functional requirements((* else *))Функциональные требования((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))What the program does:((* else *))Что делает программа:((* endif *))</strong> <span class="todo">((* if en *))TODO: main functions((* else *))TODO: основные функции((* endif *))</span></li>
+        <li><strong>((* if en *))Input data:((* else *))Входные данные:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Output data:((* else *))Выходные данные:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Interface and settings:((* else *))Интерфейс и настройки:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 8: Анализ и выбор моделей, методов и алгоритмов -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Analysis and choice of models, methods and algorithms((* else *))Анализ и выбор моделей, методов и алгоритмов((* endif *))</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">((* if en *))Approaches considered((* else *))Рассмотренные подходы((* endif *))</p>
+          <ul>
+            <li class="todo">((* if en *))TODO: approach 1((* else *))TODO: подход 1((* endif *))</li>
+            <li class="todo">((* if en *))TODO: approach 2((* else *))TODO: подход 2((* endif *))</li>
+          </ul>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Choice and rationale((* else *))Выбор и обоснование((* endif *))</p>
+          <p class="todo">((* if en *))TODO: what was chosen and why.((* else *))TODO: что выбрано и почему.((* endif *))</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Слайд 9: Алгоритмы и структуры данных -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Algorithms and data structures((* else *))Алгоритмы и структуры данных((* endif *))</h2>
+      <div class="figure-box">((* if en *))[algorithm scheme / pseudocode / example]((* else *))[схема алгоритма / псевдокод / пример работы]((* endif *))</div>
+      <ul>
+        <li><strong>((* if en *))Data structures:((* else *))Структуры данных:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Class diagrams:((* else *))Схемы данных, диаграммы классов:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 10: Технологии и инструменты реализации -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Technologies and implementation tools((* else *))Технологии и инструменты реализации((* endif *))</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">((* if en *))Language and IDE((* else *))Язык и среда((* endif *))</p>
+          <p class="todo">((* if en *))TODO: language, IDE((* else *))TODO: язык, IDE((* endif *))</p>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Libraries((* else *))Библиотеки((* endif *))</p>
+          <ul>
+            <li class="todo">((* if en *))TODO: library — author, version, year((* else *))TODO: библиотека — автор, версия, год((* endif *))</li>
+          </ul>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Infrastructure((* else *))Инфраструктура((* endif *))</p>
+          <ul>
+            <li class="todo">((* if en *))TODO: version control, CI((* else *))TODO: контроль версий, CI((* endif *))</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:26px;" class="todo">((* if en *))TODO: technology logos (required).((* else *))TODO: эмблемы технологий (обязательно).((* endif *))</p>
+    </section>
+
+    <!-- Слайд 11: Архитектура приложения/системы/сервиса -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Application / system / service architecture((* else *))Архитектура приложения/системы/сервиса((* endif *))</h2>
+      <div class="figure-box">((* if en *))[architecture diagram in a known notation]((* else *))[Диаграмма архитектуры в известной нотации]((* endif *))</div>
+      <ul>
+        <li><strong>((* if en *))Done by the author:((* else *))Сделано автором:((* endif *))</strong> <span class="todo">((* if en *))TODO: components implemented by yourself((* else *))TODO: компоненты, реализованные именно вами((* endif *))</span></li>
+        <li><strong>((* if en *))Ready-made components:((* else *))Готовые компоненты:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+      <aside class="notes">ГЛАВНОЕ — выделить компоненты, сделанные именно вами: частый вопрос ГЭК.</aside>
+    </section>
+
+    <!-- Слайд 12: Входные и выходные данные -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Input and output data((* else *))Входные и выходные данные((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))Sources / datasets:((* else *))Источники данных / датасеты:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Data preparation:((* else *))Подготовка данных:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Output data:((* else *))Выходные данные:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+      <div class="figure-box" style="min-height:150px;">((* if en *))[data flow diagram]((* else *))[Диаграмма потоков данных]((* endif *))</div>
+    </section>
+
+    <!-- Слайд 13: Особенности программной реализации, тестирование -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Implementation details and testing((* else *))Особенности программной реализации, тестирование((* endif *))</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">((* if en *))Implementation details((* else *))Особенности реализации((* endif *))</p>
+          <ul>
+            <li class="todo">((* if en *))TODO: detail 1((* else *))TODO: особенность 1((* endif *))</li>
+            <li class="todo">((* if en *))TODO: detail 2((* else *))TODO: особенность 2((* endif *))</li>
+          </ul>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Testing((* else *))Испытания и тестирование((* endif *))</p>
+          <ul>
+            <li class="todo">((* if en *))TODO: test types, tools((* else *))TODO: виды тестирования, инструменты((* endif *))</li>
+            <li class="todo">((* if en *))TODO: test results((* else *))TODO: результаты испытаний((* endif *))</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Слайд 14: Вычислительный эксперимент -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Computational experiment((* else *))Вычислительный эксперимент((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))Experiment plan:((* else *))План эксперимента:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Input data:((* else *))Исходные данные:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Metrics:((* else *))Выходные данные и метрики:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Baselines:((* else *))С чем сравниваем:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 15: Основные результаты работы (демонстрация) -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Main results (demonstration)((* else *))Основные результаты работы (демонстрация)((* endif *))</h2>
+      <ol>
+        <li class="todo">((* if en *))TODO: objective 1 — result in 1–3 sentences((* else *))TODO: задача 1 — результат в 1–3 предложениях((* endif *))</li>
+        <li class="todo">((* if en *))TODO: objective 2 — result((* else *))TODO: задача 2 — результат((* endif *))</li>
+        <li class="todo">((* if en *))TODO: objective 3 — result((* else *))TODO: задача 3 — результат((* endif *))</li>
+      </ol>
+      <p style="margin-top:22px;" class="todo">((* if en *))TODO: product demonstration (screenshots, screencast, live demo).((* else *))TODO: демонстрация продукта (скриншоты, скринкаст, живое демо).((* endif *))</p>
+      <aside class="notes">РЕЗУЛЬТАТЫ ДОЛЖНЫ СООТВЕТСТВОВАТЬ ЗАДАЧАМ.</aside>
+    </section>
+
+    <!-- Слайд 16: Апробация работы (если есть) -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Approbation (if any)((* else *))Апробация работы (если есть)((* endif *))</h2>
+      <ul>
+        <li><strong>((* if en *))Conferences, abstracts:((* else *))Конференции, тезисы:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Publications:((* else *))Публикации:((* endif *))</strong> <span class="todo">TODO</span></li>
+        <li><strong>((* if en *))Deployment:((* else *))Внедрение:((* endif *))</strong> <span class="todo">((* if en *))TODO: deployment act, app store((* else *))TODO: акт о внедрении, магазин приложений((* endif *))</span></li>
+        <li><strong>((* if en *))ROSPATENT certificates:((* else *))Свидетельства РОСПАТЕНТ:((* endif *))</strong> <span class="todo">TODO</span></li>
+      </ul>
+    </section>
+
+    <!-- Слайд 17: Научная новизна / практическая значимость -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Scientific novelty / practical significance((* else *))Научная новизна / практическая значимость((* endif *))</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">((* if en *))Scientific novelty((* else *))Научная новизна((* endif *))</p>
+          <p class="todo">((* if en *))TODO: the new scientific result.((* else *))TODO: какой новый научный результат получен.((* endif *))</p>
+        </div>
+        <div class="col">
+          <p class="subhead">((* if en *))Practical significance((* else *))Практическая значимость((* endif *))</p>
+          <p class="todo">((* if en *))TODO: what and for whom the result improves.((* else *))TODO: что и для кого улучшает результат работы.((* endif *))</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Слайд 18: Пути дальнейшей работы -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))Future work((* else *))Пути дальнейшей работы((* endif *))</h2>
+      <ul>
+        <li class="todo">((* if en *))TODO: development direction 1((* else *))TODO: направление развития 1((* endif *))</li>
+        <li class="todo">((* if en *))TODO: development direction 2((* else *))TODO: направление развития 2((* endif *))</li>
+        <li class="todo">((* if en *))TODO: development direction 3((* else *))TODO: направление развития 3((* endif *))</li>
+      </ul>
+    </section>
+
+    <!-- Слайд 19: Список источников -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>((* if en *))References((* else *))Список источников((* endif *))</h2>
+      <div class="refs">
+        <p>[1] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+        <p>[2] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+        <p>[3] <span class="todo">((* if en *))TODO: reference (GOST R 7.0.100–2018)((* else *))TODO: источник по ГОСТ Р 7.0.100–2018((* endif *))</span></p>
+      </div>
+    </section>
+
+((* endif *))
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Финальный слайд: Спасибо за внимание! -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section class="final-slide"
+             data-background-image="../assets/hse-frame-content.jpg"
+             data-background-size="cover">
+      <div class="f-wrap">
+        <div class="f-thanks">((* if en *))Thank you for your attention!((* else *))Спасибо за внимание!((* endif *))</div>
+        <div class="f-meta">
+          {{ author.name | default('', true) | xmlesc }},<br>
+          {{ author.topic | default(project.name, true) | xmlesc }}
+          ((* if author.email *))
+          <div class="f-email">{{ author.email | xmlesc }}</div>
+          ((* endif *))
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/notes/notes.js"></script>
+<script>
+  // Вставляет шапку-колонтитул (малый логотип + факультет | тема | ФИО + номер)
+  // в каждый слайд, кроме титульного (class="no-header").
+  function injectHeaders() {
+    var tpl = document.getElementById('hdr-template');
+    var sections = document.querySelectorAll('.reveal .slides > section');
+    Array.prototype.forEach.call(sections, function (sec, i) {
+      if (sec.classList.contains('no-header')) return;
+      var hdr = tpl.firstElementChild.cloneNode(true);
+      hdr.querySelector('.hdr-num').textContent = i + 1;
+      sec.appendChild(hdr);
+    });
+  }
+
+  Reveal.initialize({
+    hash: true,
+    width: 1280,
+    height: 720,
+    margin: 0,
+    center: false,
+    controls: false,
+    progress: false,
+    slideNumber: false,
+    transition: 'none',
+    plugins: [RevealNotes]
+  }).then(function () {
+    injectHeaders();
+  });
+</script>
+
+</body>
+</html>

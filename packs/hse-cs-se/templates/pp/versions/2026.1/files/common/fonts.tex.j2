@@ -1,0 +1,49 @@
+% ((# ============================================================ #))
+% ((# common/fonts.tex — АВТОГЕНЕРИРУЕМЫЙ ФАЙЛ. НЕ РЕДАКТИРОВАТЬ.   #))
+% ((#                                                              #))
+% ((# Перегенерируется тулом из .hse-studio/project.json ПЕРЕД      #))
+% ((# каждой сборкой. Семейства шрифтов (основной/рубленый/моно-     #))
+% ((# ширинный) задаются в настройках проекта и подставляются сюда. #))
+% ((# Каждый шрифт выбирается с независимым фолбэком:               #))
+% ((#   1) по имени — системный ИЛИ установленный в Студии          #))
+% ((#      (Settings → Шрифты, папка монтируется в контейнер);      #))
+% ((#   2) свободный клон с кириллицей из дерева TeX Live, если      #))
+% ((#      выбранный шрифт недоступен (сборка никогда не падает).    #))
+% ((#                                                              #))
+% ((# Источник: common/fonts.tex.j2 (dynamic_includes в version.yaml).#))
+% ((# Литерал «{{ '{' }}» нужен, чтобы избежать последовательности   #))
+% ((# «{{{», которую Jinja принял бы за начало выражения.            #))
+% ((# ============================================================ #))
+\usepackage{fontspec}
+
+% ── Основной шрифт (по умолчанию Times New Roman → Tinos) ───
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_main | default('Times New Roman', true) }}{{ '}' }}{%
+  \setmainfont{{ '{' }}{{ project.meta.font_main | default('Times New Roman', true) }}{{ '}' }}%
+}{%
+  \setmainfont{Tinos}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]%
+}
+
+% ── Рубленый шрифт (по умолчанию Arial → DejaVuSans) ────────
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_sans | default('Arial', true) }}{{ '}' }}{%
+  \setsansfont{{ '{' }}{{ project.meta.font_sans | default('Arial', true) }}{{ '}' }}%
+}{%
+  \setsansfont{DejaVuSans}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
+}
+
+% ── Моноширинный шрифт (код/листинги) ───────────────────────
+% Если в настройках проекта не выбран — берётся дефолт документа
+% (\hseDefaultMono: Courier New в ЕСПД, Consolas в ВКР), заданный
+% в преамбуле ПЕРЕД \input этого файла.
+((* if project.meta.font_mono *))
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_mono }}{{ '}' }}{%
+  \setmonofont{{ '{' }}{{ project.meta.font_mono }}{{ '}' }}%
+}{%
+  \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
+}
+((* else *))
+\IfFontExistsTF{\hseDefaultMono}{%
+  \setmonofont{\hseDefaultMono}%
+}{%
+  \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
+}
+((* endif *))

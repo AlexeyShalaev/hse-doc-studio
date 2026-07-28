@@ -1,0 +1,72 @@
+% ============================================================
+% interim_report/title.tex — титульный лист Промежуточного отчёта (EN)
+% исследовательского курсового проекта ОП «Программная инженерия» (КТ1).
+%
+% Обязательной формы титула для промежуточного отчёта Программа практики
+% не задаёт; используется англ. форма Отчёта ФКН без блоков подписей — на
+% КТ1/КТ2 документация сдаётся БЕЗ подписей (зачёт/незачёт). УДК на
+% титуле обязателен (§2.3.2.4). Данные — из макросов \hse… (common/meta).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+
+\begin{center}
+\textbf{NATIONAL RESEARCH UNIVERSITY}\\
+\textbf{HIGHER SCHOOL OF ECONOMICS}
+
+\vspace{0.35cm}
+Faculty of Computer Science\\
+Bachelor's Programme ``Software Engineering''
+\end{center}
+
+\vspace{0.3cm}
+\noindent
+UDC~\hseUDC
+
+\vspace{1.6cm}
+\begin{center}
+\textbf{\normalsize Research Course Project Interim Report}
+
+\vspace{0.12cm}
+(Checkpoint 1)
+
+\vspace{0.45cm}
+on the topic
+\underline{\makebox[0.9\textwidth][c]{\hseProjectName}}
+\end{center}
+
+\vspace{1.4cm}
+\noindent
+\begin{minipage}[t]{0.5\textwidth}
+\raggedright
+Submitted by the Student:\\
+group \#\hseGroup, \hseCourse{} year of study
+
+\vspace{0.25cm}
+\strut\hseAuthorName
+\end{minipage}
+
+\vspace{0.9cm}
+\noindent
+\begin{minipage}[t]{0.7\textwidth}
+\raggedright
+Project Supervisor:\\
+\strut\hseSupervisorName\\
+\strut\hseSupervisorTitle
+\end{minipage}
+
+\vfill
+\begin{center}
+\textbf{Moscow \hseYear}
+\end{center}
+
+\end{titlepage}
+
+% Титульный лист — страница 1 (без номера); нумерация со 2-й.
+\setcounter{page}{2}
+\clearpage

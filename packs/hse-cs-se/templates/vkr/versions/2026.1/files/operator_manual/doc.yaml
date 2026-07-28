@@ -1,0 +1,44 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Руководство оператора
+  en: Operator's Manual
+code:
+  ru: РО
+  en: OM
+gost_ref: gost-19.505-79
+required: false
+supported_langs:
+- ru
+- en
+scope: personal
+variants:
+- id: espd
+  label:
+    ru: ГОСТ 19 ЕСПД (РО)
+    en: GOST 19 ESPD (РО)
+  source_file: operator_manual/operator_manual.tex
+  output_file: operator_manual/operator_manual.pdf
+  output_name:
+    ru: Руководство оператора.pdf
+    en: Operator Manual.pdf
+  engine: xelatex
+- id: ieee-1063
+  # Англоязычная редакция стандарта — выбирается только в en-проектах
+  # (§2.5.3.1: софт-доки английской работы — перевод ГОСТ или ISO/IEEE).
+  supported_langs: [en]
+  label:
+    ru: IEEE Std 1063 (User doc)
+    en: IEEE Std 1063 (User doc)
+  source_file: operator_manual/ieee_1063.tex
+  output_file: operator_manual/ieee_1063.pdf
+  output_name:
+    ru: User doc (IEEE 1063).pdf
+    en: User doc (IEEE 1063).pdf
+  engine: xelatex
+supported_kinds:
+- project
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: espd

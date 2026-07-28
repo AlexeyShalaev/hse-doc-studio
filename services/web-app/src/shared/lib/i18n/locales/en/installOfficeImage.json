@@ -1,0 +1,17 @@
+{
+  "modal": {
+    "title": "Install image",
+    "description": "Downloading the presentation service Docker image. Progress is shown below.",
+    "close": "Close"
+  },
+  "status": {
+    "running": "Downloading layers…",
+    "success": "Image installed",
+    "failure": "Installation failed"
+  },
+  "actions": {
+    "retry": "Retry",
+    "done": "Done",
+    "close": "Close"
+  }
+}

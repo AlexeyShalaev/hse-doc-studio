@@ -1,0 +1,356 @@
+% !TeX program = xelatex
+% ============================================================
+% topic_presentation/topic_presentation.tex — Презентация ЗАЩИТЫ ТЕМЫ
+% ВКР (КТ1) ОП «Программная инженерия» ФКН НИУ ВШЭ. LaTeX Beamer.
+%
+% Это НЕ презентация защиты работы (та — документ presentation): жанр
+% задан «Инструкцией по подготовке документов к защите тем ВКР» —
+% примерный план из 16 пунктов (§4.1), выступление 5–7 минут + 3–5
+% минут на вопросы (максимум 10 минут на защиту). Пункты 5 и 13 — только
+% исследовательский формат, пункт 10 — только проектный, пункт 15 —
+% при наличии NDA. Оформление — фирменный стиль ВШЭ (как у презентации
+% защиты): 16:9, синий #102D69, рамки и логотипы из assets/.
+%
+% Данные подставляются ТОЛЬКО через макросы \hse… из common/meta.tex.
+% Файл ВЕТВИТСЯ при создании проекта (Jinja, один раз): по project.kind
+% (исследовательский/проектный пункты плана) и project.lang (язык
+% печатаемых строк). Подсказки в комментариях — для автора, на слайд
+% не печатаются. Если у работы есть Консультант (руководитель из
+% сторонней организации без трудовых отношений с ВШЭ) — допишите его
+% на титульном слайде рядом с руководителем.
+% ============================================================
+((* set en = project.lang == 'en' *))
+\documentclass[aspectratio=169, 14pt]{beamer}
+
+% ── Шрифты и язык ───────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{polyglossia}
+((* if en *))
+\setdefaultlanguage{english}
+\setotherlanguage[spelling=modern]{russian}
+((* else *))
+\setdefaultlanguage[spelling=modern]{russian}
+\setotherlanguage{english}
+((* endif *))
+
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+
+% Фирменный шрифт вуза — HSE Sans (если установлен; иначе sans из настроек).
+\IfFontExistsTF{HSE Sans}{\setsansfont{HSE Sans}}{}
+
+% ── Пакеты ──────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{tikz}       % ручная вёрстка титула и шапки слайдов
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{etoolbox}   % \ifdefempty — условная печать учёной степени
+% enumitem тут НЕ подключать: с beamer он даёт бесконечную рекурсию
+% \labelenumi («TeX capacity exceeded») на первом же enumerate.
+
+% ── Данные проекта (автогенерируемые макросы) ───────────────
+\input{../common/meta}
+
+% ── Фирменный стиль (как в презентации защиты) ──────────────
+\definecolor{hseblue}{HTML}{102D69}   % фирменный синий НИУ ВШЭ
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0.9cm, text margin right=0.9cm}
+
+\setbeamercolor{normal text}{fg=black, bg=white}
+\setbeamercolor{structure}{fg=hseblue}
+\setbeamercolor{frametitle}{fg=hseblue}
+\setbeamerfont{frametitle}{size=\Large, series=\mdseries}
+\setbeamercolor{title}{fg=hseblue}
+\setbeamercolor{block title}{fg=hseblue, bg=hseblue!10}
+\setbeamercolor{block body}{fg=black, bg=hseblue!4}
+\setbeamercolor{alerted text}{fg=hseblue}
+\setbeamertemplate{itemize items}[circle]
+
+\newcommand{\hseBackground}[1]{%
+  \usebackgroundtemplate{\includegraphics[width=\paperwidth,
+    height=\paperheight]{#1}}}
+
+% ── Шапка контентных слайдов (логотип | факультет и ОП | тема | ФИО) ──
+\setbeamertemplate{headline}{%
+  \begin{tikzpicture}[remember picture, overlay,
+      shift={(current page.north west)}, x=1cm, y=-1cm]
+    \node[anchor=north west, inner sep=0pt] at (0.62, 0.44)
+      {\includegraphics[height=0.62cm]{assets/hse-logo-small.png}};
+    \node[anchor=north west, inner sep=0pt, text width=3.45cm,
+          align=flush left] at (1.45, 0.48)
+      {\tiny\color{black}\hseFaculty,\\((* if en *))Programme «\hseSpecialization»((* else *))ОП «\hseSpecialization»((* endif *))};
+    \draw[hseblue, line width=0.5pt] (4.95, 0.50) -- (4.95, 1.32);
+    \node[anchor=north west, inner sep=0pt, text width=4.30cm,
+          align=flush left] at (5.15, 0.48)
+      {\tiny\color{hseblue}\hseProjectName};
+    \draw[hseblue, line width=0.5pt] (9.65, 0.50) -- (9.65, 1.32);
+    \node[anchor=north west, inner sep=0pt, text width=5.00cm,
+          align=flush left] at (9.85, 0.48)
+      {\tiny\color{black}\hseAuthorName};
+    \draw[hseblue, line width=0.5pt] (4.95, 1.42) -- (15.35, 1.42);
+  \end{tikzpicture}%
+  \vskip1.45cm%
+}
+
+\setbeamertemplate{frametitle}[default][left,leftskip=0.6cm]
+
+% Номер слайда «N / total» — справа внизу мелким
+\setbeamerfont{footline}{size=\tiny}
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox to \paperwidth{\hfil
+    {\usebeamerfont{footline}\color{hseblue}%
+     \insertframenumber{} / \inserttotalframenumber}\hspace*{0.60cm}}%
+  \vskip0.38cm%
+}
+
+% Должность руководителя (+ учёная степень через запятую, если задана)
+\newcommand{\hseSupTitleLine}{%
+  \hseSupervisorTitle\ifdefempty{\hseSupervisorDegree}{}{, \hseSupervisorDegree}}
+
+% ── Команды для заглушек ────────────────────────────────────
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\begin{document}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 1 (план §4.1 п.1). ТИТУЛ
+% По инструкции титульный слайд несёт: тему на русском И английском,
+% ФОРМАТ РАБОТЫ (исследовательская/проектная), группу и ФИО студента,
+% данные руководителя (и соруководителя/консультанта — при наличии).
+% ════════════════════════════════════════════════════════════
+{% фон титульного слайда — фирменная рамка
+\hseBackground{assets/hse-frame-title.jpg}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture, overlay,
+      shift={(current page.north west)}, x=1cm, y=-1cm]
+    \node[anchor=north west, inner sep=0pt] at (1.30, 1.15)
+      {\includegraphics[height=1.12cm]{assets/hse-logo-full.png}};
+    \node[anchor=west, inner sep=0pt] at (2.70, 1.72)
+      {\scriptsize\color{black}\hseFaculty};
+    \draw[hseblue, line width=0.6pt] (7.98, 1.28) -- (7.98, 2.40);
+    \node[anchor=north west, inner sep=0pt, text width=3.00cm,
+          align=flush left, font=\tiny] at (8.20, 1.45)
+      {\color{hseblue}((* if en *))School of Software Engineering((* else *))Департамент программной инженерии((* endif *))};
+    \draw[hseblue, line width=0.6pt] (11.32, 1.28) -- (11.32, 2.40);
+    \node[anchor=north west, inner sep=0pt] at (11.54, 1.50)
+      {\tiny\color{hseblue}\hseCity{} \hseYear};
+    \draw[hseblue, line width=0.6pt] (7.98, 2.40) -- (14.66, 2.40);
+    % «Защита темы ВКР» + формат работы (исследовательская/проектная)
+    \node[anchor=north west, inner sep=0pt] at (1.35, 2.62)
+      {\small\color{black}((* if en *))Thesis topic defence~• ((* if project.kind == 'research' *))research (academic) format((* else *))project format((* endif *))((* else *))Защита темы ВКР~• ((* if project.kind == 'research' *))исследовательский (академический) формат((* else *))проектный формат((* endif *))((* endif *))};
+    % тема работы на двух языках (тело узла — одной логической строкой)
+    \node[anchor=north west, inner sep=0pt, text width=8.60cm,
+          align=flush left] at (1.35, 3.30)
+      {((* if en *))\Large\color{hseblue}\ifhseHasNameEn\textenglish{\hseProjectNameEn}\\[0.20cm]{\large\textrussian{\hseProjectName}}\else\textrussian{\hseProjectName}\fi((* else *))\Large\color{hseblue}\hseProjectName\ifhseHasNameEn\\[0.20cm]{\large\color{hseblue}\textenglish{\hseProjectNameEn}}\fi((* endif *))};
+    % блок автора и руководителя; если есть Консультант — допишите его
+    % строкой после руководителя (Consultant: …).
+    \node[anchor=south east, inner sep=0pt, text width=6.20cm,
+          align=flush right] at (14.66, 7.60)
+      {((* if en *))\scriptsize\bfseries\color{hseblue}Student of group \hseGroup\\educational programme\\\hseProgramCode\ «\hseSpecialization»\\\hseAuthorName\\[0.22cm]Supervisor:\\\ifhseHasSupervisorTitle\hseSupTitleLine\\\fi\hseSupervisorName\ifhseHasCoSupervisor\\[0.22cm]Co-supervisor:\\\hseCoSupervisorName\fi((* else *))\scriptsize\bfseries\color{hseblue}Выполнил студент группы \hseGroup\\образовательной программы\\\hseProgramCode\ «\hseSpecialization»\\\hseAuthorName\\[0.22cm]Руководитель:\\\ifhseHasSupervisorTitle\hseSupTitleLine\\\fi\hseSupervisorName\ifhseHasCoSupervisor\\[0.22cm]Соруководитель:\\\hseCoSupervisorName\fi((* endif *))};
+  \end{tikzpicture}
+\end{frame}
+}
+
+% фон контентных слайдов — тонкая фирменная рамка
+\hseBackground{assets/hse-frame-content.jpg}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 2 (п.2). Основные понятия, определения, термины
+% ПОДСКАЗКА: только термины, без которых доклад не понять; 3–5 штук.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Key concepts and terms((* else *))Основные понятия, определения, термины((* endif *))}
+  \begin{itemize}
+    \item \textbf{\todo{((* if en *))term 1((* else *))термин 1((* endif *))}} — \todo{((* if en *))short definition((* else *))краткое определение((* endif *))}
+    \item \textbf{\todo{((* if en *))term 2((* else *))термин 2((* endif *))}} — \todo{((* if en *))short definition((* else *))краткое определение((* endif *))}
+    \item \textbf{\todo{((* if en *))term 3((* else *))термин 3((* endif *))}} — \todo{((* if en *))short definition((* else *))краткое определение((* endif *))}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 3 (п.3). Описание предметной области и проблемы
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Subject area and the problem((* else *))Предметная область и проблема((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))what the area is and who works in it((* else *))что за область и кто в ней работает((* endif *))}
+    \item \todo{((* if en *))the problem being solved((* else *))какая проблема решается((* endif *))}
+    \item \todo{((* if en *))why it is hard((* else *))в чём её сложность((* endif *))}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 4 (п.4). Актуальность работы
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Relevance((* else *))Актуальность работы((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))why the problem matters now((* else *))почему проблема важна именно сейчас((* endif *))}
+    \item \todo{((* if en *))who needs the result((* else *))кому и где нужен результат((* endif *))}
+    \item \todo{((* if en *))significance / complexity of the work((* else *))значимость и сложность работы((* endif *))}
+  \end{itemize}
+\end{frame}
+
+((* if project.kind == 'research' *))
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 5 (п.5, только исследовательский формат).
+% Объект, предмет и методы исследований
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Object, subject and methods((* else *))Объект, предмет и методы исследований((* endif *))}
+  \textcolor{hseblue}{\textbf{((* if en *))Object((* else *))Объект((* endif *))}} — \todo{((* if en *))what is studied as a whole((* else *))что изучается в целом((* endif *))}
+
+  \smallskip
+  \textcolor{hseblue}{\textbf{((* if en *))Subject((* else *))Предмет((* endif *))}} — \todo{((* if en *))the specific aspect((* else *))конкретная сторона объекта((* endif *))}
+
+  \smallskip
+  \textcolor{hseblue}{\textbf{((* if en *))Methods((* else *))Методы((* endif *))}} — \todo{((* if en *))review, modelling, experiment…((* else *))обзор, моделирование, эксперимент…((* endif *))}
+\end{frame}
+((* endif *))
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 6 (п.6). Текущее состояние проблемы
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Current state of the problem((* else *))Текущее состояние проблемы((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))what has been achieved in the field((* else *))что уже достигнуто в области((* endif *))}
+    \item \todo{((* if en *))what remains unsolved((* else *))что остаётся нерешённым((* endif *))}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 7 (п.7). Анализ существующих решений
+% ПОДСКАЗКА: подходы/методы из литературы; чем не подходят.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Existing solutions((* else *))Анализ существующих решений((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))solution 1 — its limitation((* else *))решение 1 — его ограничение((* endif *))}
+    \item \todo{((* if en *))solution 2 — its limitation((* else *))решение 2 — его ограничение((* endif *))}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 8 (п.8). Анализ существующих аналогов
+% ПОДСКАЗКА: продукты/системы-аналоги; сравнение по критериям.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Existing analogues((* else *))Анализ существующих аналогов((* endif *))}
+  \begin{center}
+  \begin{tabularx}{\textwidth}{lXXX}
+    \toprule
+    ((* if en *))\textbf{Criterion}((* else *))\textbf{Критерий}((* endif *)) &
+    \todo{((* if en *))analogue 1((* else *))аналог 1((* endif *))} &
+    \todo{((* if en *))analogue 2((* else *))аналог 2((* endif *))} &
+    ((* if en *))\textbf{This work}((* else *))\textbf{Эта работа}((* endif *)) \\
+    \midrule
+    \todo{((* if en *))criterion 1((* else *))критерий 1((* endif *))} & + & -- & + \\
+    \todo{((* if en *))criterion 2((* else *))критерий 2((* endif *))} & -- & + & + \\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 9 (п.9). Цель и задачи работы
+% ПОДСКАЗКА: цель — ОДНА; задачи — 4–6, по ним строится план работы.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Goal and objectives((* else *))Цель и задачи работы((* endif *))}
+  \textcolor{hseblue}{\textbf{((* if en *))Goal((* else *))Цель((* endif *))}} — \todo{((* if en *))one goal of the work((* else *))одна цель работы((* endif *))}
+
+  \vspace{0.5em}
+  {\color{hseblue}\textbf{((* if en *))Objectives:((* else *))Задачи:((* endif *))}}
+  \begin{enumerate}
+    \item \todo{((* if en *))objective 1((* else *))задача 1((* endif *))}
+    \item \todo{((* if en *))objective 2((* else *))задача 2((* endif *))}
+    \item \todo{((* if en *))objective 3((* else *))задача 3((* endif *))}
+    \item \todo{((* if en *))objective 4((* else *))задача 4((* endif *))}
+  \end{enumerate}
+\end{frame}
+
+((* if project.kind != 'research' *))
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 10 (п.10, только проектный формат).
+% Функциональные требования к программе — ИЗ ПРОЕКТА ТЗ (раздел 4.1).
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Functional requirements (from the SoW)((* else *))Функциональные требования к программе (из ТЗ)((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))key requirement 1((* else *))ключевое требование 1((* endif *))}
+    \item \todo{((* if en *))key requirement 2((* else *))ключевое требование 2((* endif *))}
+    \item \todo{((* if en *))key requirement 3((* else *))ключевое требование 3((* endif *))}
+    \item \todo{((* if en *))key requirement 4((* else *))ключевое требование 4((* endif *))}
+  \end{itemize}
+\end{frame}
+((* endif *))
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 11 (п.11). Методы, модели, алгоритмы
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Methods, models, algorithms((* else *))Методы, модели, алгоритмы((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))method / model / algorithm to apply((* else *))какой метод / модель / алгоритм предполагается применить((* endif *))}
+    \item \todo{((* if en *))why it fits the problem((* else *))почему он подходит для задачи((* endif *))}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 12 (п.12). Технологии и инструменты реализации
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Technologies and tools((* else *))Технологии и инструменты реализации((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))programming languages((* else *))языки программирования((* endif *))}
+    \item \todo{((* if en *))frameworks and libraries((* else *))фреймворки и библиотеки((* endif *))}
+    \item \todo{((* if en *))IDE, infrastructure, CI((* else *))среды разработки, инфраструктура, CI((* endif *))}
+  \end{itemize}
+\end{frame}
+
+((* if project.kind == 'research' *))
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 13 (п.13, только исследовательский формат).
+% Планирование и проведение эксперимента
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Experiment planning((* else *))Планирование и проведение эксперимента((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))data: source, volume, preparation((* else *))данные: источник, объём, подготовка((* endif *))}
+    \item \todo{((* if en *))metrics and baselines((* else *))метрики качества и базовые методы для сравнения((* endif *))}
+    \item \todo{((* if en *))experiment plan((* else *))план эксперимента((* endif *))}
+  \end{itemize}
+\end{frame}
+((* endif *))
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 14 (п.14). Ожидаемые результаты
+% ПОДСКАЗКА: программа / приложение / результаты исследований и их
+% теоретическая и практическая значимость / научная новизна.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Expected results((* else *))Ожидаемые результаты((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))deliverable: program / application / research results((* else *))что будет получено: программа / приложение / результаты исследования((* endif *))}
+    \item \todo{((* if en *))theoretical / practical significance((* else *))теоретическая и практическая значимость((* endif *))}
+    \item \todo{((* if en *))novelty((* else *))научная новизна((* endif *))}
+  \end{itemize}
+\end{frame}
+
+((* if project.meta.nda *))
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 15 (п.15, при наличии NDA).
+% Перечень результатов, подпадающих под NDA
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))Results covered by the NDA((* else *))Результаты, подпадающие под NDA((* endif *))}
+  \begin{itemize}
+    \item \todo{((* if en *))which results cannot be disclosed and why((* else *))какие результаты не подлежат раскрытию и почему((* endif *))}
+    \item \todo{((* if en *))what will be shown at the defence instead((* else *))что будет показано на защите вместо них((* endif *))}
+  \end{itemize}
+\end{frame}
+((* endif *))
+
+% ════════════════════════════════════════════════════════════
+% СЛАЙД 16 (п.16). Список использованных источников
+% ПОДСКАЗКА: по ГОСТ (методические указания ФКН); 5–10 ключевых.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{((* if en *))References((* else *))Список использованных источников((* endif *))}
+  \footnotesize
+  \begin{enumerate}
+    \item \todo{((* if en *))source 1 (GOST format)((* else *))источник 1 (по ГОСТ)((* endif *))}
+    \item \todo{((* if en *))source 2 (GOST format)((* else *))источник 2 (по ГОСТ)((* endif *))}
+    \item \todo{((* if en *))source 3 (GOST format)((* else *))источник 3 (по ГОСТ)((* endif *))}
+  \end{enumerate}
+\end{frame}
+
+\end{document}

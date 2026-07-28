@@ -1,0 +1,86 @@
+{
+  "change": {
+    "added": "added",
+    "modified": "modified",
+    "deleted": "deleted",
+    "renamed": "renamed",
+    "copied": "copied"
+  },
+  "timeline": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "current": "current",
+    "restore": "Restore",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files"
+  },
+  "filters": {
+    "searchPlaceholder": "Search changes…",
+    "presetAll": "All time",
+    "presetToday": "Today",
+    "preset7d": "Last 7 days",
+    "preset30d": "Last 30 days",
+    "presetCustom": "Custom range…",
+    "resetTitle": "Reset filters",
+    "reset": "Reset",
+    "rangeFrom": "from",
+    "rangeTo": "to",
+    "kindAll": "All",
+    "shown": "Showing {{shown}} of {{total}}",
+    "changes_one": "{{count}} change",
+    "changes_other": "{{count}} changes"
+  },
+  "changedFiles": {
+    "searchPlaceholder": "Search files…",
+    "clear": "Clear",
+    "viewTree": "Tree",
+    "viewList": "List",
+    "empty": "No files found."
+  },
+  "filePatch": {
+    "binary": "Binary file — contents are not shown.",
+    "noTextChanges": "No text changes to show."
+  },
+  "diffBrowser": {
+    "filesChanged_one": "{{count}} file changed",
+    "filesChanged_other": "{{count}} files changed",
+    "truncated": "· partial view (large diff)",
+    "emptyHint": "Select a version to see the changes."
+  },
+  "branches": {
+    "currentTitle": "Current branch",
+    "switchTitle": "Switch to branch",
+    "namePlaceholder": "branch name",
+    "add": "Branch",
+    "created": "Branch «{{name}}» created",
+    "createError": "Failed to create branch",
+    "switched": "Switched to «{{name}}»",
+    "switchError": "Failed to switch branch",
+    "deleted": "Branch «{{name}}» deleted",
+    "deleteError": "Failed to delete branch"
+  },
+  "tags": {
+    "empty": "No tags yet.",
+    "placeholderForCommit": "tag name for the selected version",
+    "placeholderForHead": "tag name (for the current version)",
+    "kindTag": "Tag",
+    "kindRelease": "Release",
+    "create": "Create",
+    "created": "Tag «{{name}}» created",
+    "createError": "Failed to create tag",
+    "deleted": "Tag «{{name}}» deleted",
+    "deleteError": "Failed to delete tag"
+  },
+  "settings": {
+    "trackingLabel": "Save every edit",
+    "trackingHint": "Automatically record the state on every file save. Turn off to keep only important versions and builds.",
+    "pdfLabel": "Keep built PDFs in history",
+    "pdfHint": "Include built PDFs in versions. Off by default — saves space."
+  },
+  "restore": {
+    "title": "Restore to this version?",
+    "cancel": "Cancel",
+    "confirm": "Restore safely",
+    "explanation": "This is a safe restore. The current state is first saved as a separate version, then the working files are returned to the selected version as a new snapshot. The history can be undone — nothing is lost."
+  }
+}

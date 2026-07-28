@@ -1,0 +1,35 @@
+{
+  "modal": {
+    "title": "Select folder",
+    "close": "Close"
+  },
+  "breadcrumbs": {
+    "loading": "loading…"
+  },
+  "filter": {
+    "placeholder": "Filter by name…",
+    "clear": "Clear filter",
+    "count": "{{shown}} of {{total}}"
+  },
+  "list": {
+    "up": ".. up",
+    "empty": "Folder is empty",
+    "noResults": "Nothing found for",
+    "file": "file"
+  },
+  "manual": {
+    "toggle": "Enter path manually",
+    "placeholder": "~/study or C:\\study — Enter to navigate",
+    "go": "Go"
+  },
+  "preview": {
+    "willSelect": "Will be selected",
+    "navigateHint": "Navigate to the desired folder"
+  },
+  "footer": {
+    "cancel": "Cancel",
+    "confirm": "Select",
+    "confirmNamed": "Select «{{name}}»",
+    "confirmDisabledHint": "Navigate to the desired folder — click breadcrumbs, .., or a folder in the list"
+  }
+}

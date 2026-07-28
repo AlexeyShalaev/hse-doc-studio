@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <style>
+    .frame { stroke: #423C32; }
+    .line { stroke: #423C32; }
+    @media (prefers-color-scheme: dark) {
+      .frame { stroke: #C8C0B1; }
+      .line { stroke: #C8C0B1; }
+    }
+  </style>
+  <rect class="frame" x="2" y="2" width="20" height="20" rx="4.5" fill="none" stroke-width="2"/>
+  <line x1="7.6" y1="4.6" x2="7.6" y2="19.4" stroke="#3D6BE0" stroke-width="1.8" stroke-linecap="round"/>
+  <line class="line" x1="10.6" y1="8" x2="18" y2="8" stroke-width="1.6" stroke-linecap="round"/>
+  <line class="line" x1="10.6" y1="12" x2="17" y2="12" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="17.2" cy="16.8" r="2.4" fill="#D05038"/>
+</svg>

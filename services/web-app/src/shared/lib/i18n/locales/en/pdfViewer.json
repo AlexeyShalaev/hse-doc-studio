@@ -1,0 +1,76 @@
+{
+  "outline": {
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "thumb": {
+    "pageTitle": "Page {{n}}"
+  },
+  "sidebar": {
+    "outline": "Outline",
+    "thumbnails": "Thumbnails",
+    "thumbnailsTitle": "Page thumbnails"
+  },
+  "nav": {
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "pageNumber": "Page number"
+  },
+  "zoom": {
+    "out": "Zoom out",
+    "in": "Zoom in",
+    "percentAria": "Zoom percentage",
+    "percentTitle": "Zoom: enter a percentage and press Enter",
+    "fitWidth": "Fit width"
+  },
+  "tools": {
+    "gostMargins": "GOST margins",
+    "gostMarginsTitle": "Show margin boundaries (GOST)",
+    "ruler": "Ruler",
+    "rulerTitle": "Ruler: drag across the page to measure in mm",
+    "nightMode": "Night mode",
+    "nightModeTitle": "Night mode (invert)",
+    "print": "Print",
+    "printTitle": "Print / open PDF in a new tab",
+    "printDiffTitle": "Print / open current PDF in a new tab"
+  },
+  "search": {
+    "placeholderWithShortcut": "Search… (Ctrl+F)",
+    "placeholder": "Search…",
+    "aria": "Search the PDF",
+    "prevMatch": "Previous match",
+    "nextMatch": "Next match"
+  },
+  "content": {
+    "aria": "PDF content",
+    "loadError": "Failed to load the PDF. Rebuild the document."
+  },
+  "selection": {
+    "askAgent": "Ask AI",
+    "findInSource": "In source",
+    "copy": "Copy"
+  },
+  "page": {
+    "linkTitle": "Go to page {{page}}",
+    "invisibleSignatureTitle": "{{label}} — invisible crypto signature (not printed)",
+    "invisibleSignature": "🔒 invisible signature",
+    "signatureFallbackLabel": "Signature"
+  },
+  "measure": {
+    "mm": "{{value}} mm"
+  },
+  "diff": {
+    "compareWith": "Compare with:",
+    "noPreviousBuilds": "no previous builds",
+    "modeDiffTitle": "Highlight changes",
+    "modeFadeTitle": "Overlay",
+    "modeSwipeTitle": "Swipe",
+    "swipePositionAria": "Swipe position",
+    "opacityAria": "Opacity",
+    "added": "added",
+    "removed": "removed",
+    "close": "Close comparison",
+    "noArchive": "There is no archived PDF for this build (it predates the comparison feature, or it failed). Rebuild the document or choose another build.",
+    "sizeChangedWarn": "Page size changed — pixel comparison is unavailable, use the \"swipe\" mode."
+  }
+}

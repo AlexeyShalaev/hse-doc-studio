@@ -1,0 +1,198 @@
+% ((# ============================================================ #))
+% ((# common/meta.tex — АВТОГЕНЕРИРУЕМЫЙ ФАЙЛ. НЕ РЕДАКТИРОВАТЬ.    #))
+% ((#                                                              #))
+% ((# Тул перегенерирует его из .hse-studio/project.json ПЕРЕД      #))
+% ((# каждой сборкой. Здесь все ИЗМЕНЯЕМЫЕ данные проекта (ФИО,     #))
+% ((# группа, год, руководитель, NDA…) в виде макросов \hse…       #))
+% ((# Документы используют эти макросы вместо литералов, поэтому    #))
+% ((# правка данных в настройках сразу попадает в PDF, а твои       #))
+% ((# правки в .tex никто не трогает.                               #))
+% ((#                                                              #))
+% ((# Источник: common/meta.tex.j2 (см. dynamic_includes в         #))
+% ((# version.yaml). Двухстрочная форма \newcommand{..}{%<NL>val}   #))
+% ((# нужна, чтобы избежать последовательности «{{{» — её Jinja     #))
+% ((# принял бы за открытие выражения.                              #))
+% ((# ============================================================ #))
+
+% ── Проект ──────────────────────────────────────────────────
+% В командном проекте каждая база (папка автора / shared) получает СВОЙ
+% meta.tex: \hseProjectName в личной базе — тема автора («Серверная часть
+% Системы X»), в shared-базе и solo — название проекта. \hseSystemName —
+% всегда общее название системы (для ссылок на неё из личных доков).
+\newcommand{\hseProjectName}{%
+((* if author.topic *)){{ author.topic | texesc }}((* else *)){{ project.name | texesc }}((* endif *))}
+\newcommand{\hseSystemName}{%
+{{ project.name | texesc }}}
+
+% ── Наименования программы: английское и краткое ────────────
+% Задаются метой name_en / name_short. Пустое значение → жёлтый
+% \hseFill-плейсхолдер прямо в PDF: сразу видно, что поле нужно
+% заполнить в настройках проекта.
+\newcommand{\hseProjectNameEn}{%
+((* if project.meta.name_en *)){{ project.meta.name_en | texesc }}((* else *))\hseFill{укажите название на английском в настройках проекта}((* endif *))}
+\newcommand{\hseProjectNameShort}{%
+((* if project.meta.name_short *)){{ project.meta.name_short | texesc }}((* else *))\hseFill{укажите краткое наименование в настройках проекта}((* endif *))}
+
+% ── Автор (владелец базы) ───────────────────────────────────
+% Solo и личная база team — владелец комплекта; shared-база — первый автор
+% (титулы общих доков печатают весь состав через \hseExecutorsBlock).
+\newcommand{\hseAuthorName}{%
+((* if author.name *)){{ author.name | texesc }}((* elif project.authors *)){{ project.authors[0].name | texesc }}((* endif *))}
+% E-mail владельца базы (финальный слайд презентации); пусто — не печатается.
+\newcommand{\hseAuthorEmail}{%
+((* if author.email *)){{ author.email | texesc }}((* elif project.authors *)){{ project.authors[0].email | default('') | texesc }}((* endif *))}
+
+% ── Все авторы (для командных работ) ────────────────────────
+% \hseAuthorsList — ФИО через запятую; \hseAuthorsCount — их число.
+% Документы scope=shared могут печатать весь состав, не только первого.
+\newcommand{\hseAuthorsList}{%
+((* for a in project.authors *)){{ a.name | texesc }}((* if not loop.last *)), ((* endif *))((* endfor *))}
+\newcommand{\hseAuthorsCount}{%
+{{ project.authors | length }}}
+
+% ── Учебные метаданные ──────────────────────────────────────
+% Группа — у владельца базы (solo: единственный автор); отдельного
+% мета-поля нет, источник один: карточка автора.
+\newcommand{\hseGroup}{%
+((* if author.group *)){{ author.group | texesc }}((* elif project.authors *)){{ project.authors[0].group | default('') | texesc }}((* endif *))}
+\newcommand{\hseYear}{%
+{{ project.meta.year | default('') | texesc }}}
+% Шаблон бакалаврский: уровень подготовки вшит (магистратура — другой
+% комплект документов и другой шаблон), мета-поля degree_type больше нет.
+\newcommand{\hseDegreeType}{Бакалавриат}
+\newcommand{\hseSpecialization}{%
+{{ project.meta.specialization | default('') | texesc }}}
+\newcommand{\hseFaculty}{%
+{{ project.meta.faculty | default('Факультет компьютерных наук') | texesc }}}
+\newcommand{\hseCity}{%
+{{ project.meta.city | default('Москва') | texesc }}}
+
+% ── Руководитель и со-руководитель ──────────────────────────
+\newcommand{\hseSupervisorName}{%
+{{ project.supervisor.name | default('') | texesc }}}
+\newcommand{\hseSupervisorTitle}{%
+{{ project.supervisor.title | default('') | texesc }}}
+\newcommand{\hseSupervisorDegree}{%
+{{ project.supervisor.degree | default('') | texesc }}}
+\newcommand{\hseCoSupervisorName}{%
+{{ project.co_supervisor.name | default('') | texesc }}}
+\newcommand{\hseCoSupervisorTitle}{%
+{{ project.co_supervisor.title | default('') | texesc }}}
+\newcommand{\hseCoSupervisorDegree}{%
+{{ project.co_supervisor.degree | default('') | texesc }}}
+
+% ── Титул ВКР (доп. поля; есть разумные значения по умолчанию) ─
+% Используются только в vkr/title.tex. Академический руководитель ОП
+% — величина уровня программы, а не студента, поэтому задана по
+% умолчанию и переопределяется в настройках при смене руководителя.
+\newcommand{\hseUDC}{%
+{{ project.meta.udc | default('004') | texesc }}}
+\newcommand{\hseProgramCode}{%
+{{ project.meta.program_code | default('09.03.04') | texesc }}}
+\newcommand{\hseCourse}{%
+{{ project.meta.course | default('4') | texesc }}}
+% Уровень подготовки на титуле («N курса …») — шаблон только бакалаврский.
+\newcommand{\hseDegreeLevel}{бакалавриата}
+\newcommand{\hseAcademicSupervisorName}{%
+{{ project.academic_supervisor.name | default('Н. А. Павлочев') | texesc }}}
+\newcommand{\hseAcademicSupervisorTitle}{%
+{{ project.academic_supervisor.title | default('Академический руководитель образовательной программы «Программная инженерия», старший преподаватель департамента программной инженерии') | texesc }}}
+
+% ── Базовый код документа ЕСПД (ГОСТ 19.103-77) ─────────────
+% Каждый документ ЕСПД добавляет к нему свой суффикс, например:
+%   \newcommand{\doccode}{\hseDocCodeBase\ ТЗ 01-1}
+\newcommand{\hseDocCodeBase}{%
+{{ project.meta.doc_code_base | default('RU.XXXXXXXX.XX.XX-XX') | texesc }}}
+
+% ── Руководства в «Составе программной документации» (пер-автор) ────
+% Мета `manuals` (select: «Программиста и оператора» / «Только программиста»
+% / «Только оператора») задаёт, какие руководства входят в комплект автора.
+% Макрос раскрывается в \item'ы для перечня в ТЗ. По умолчанию — оба. В
+% team-проекте meta.tex перегенерируется per-автор, поэтому у каждого свой
+% набор. Значение подставляется как есть (это не пользовательский текст, а
+% фиксированная опция), сопоставление — по подстроке.
+\newcommand{\hseManualDocItems}{%
+((* set _man = (project.meta.manuals | default('Программиста и оператора', true)) | lower *))
+((* if 'программиста' in _man *))\item «\projectname». Руководство программиста (ГОСТ~19.504-79).
+((* endif *))((* if 'оператора' in _man *))\item «\projectname». Руководство оператора (ГОСТ~19.505-79).
+((* endif *))}
+
+% ── Плейсхолдер «заполните сами» ────────────────────────────
+% Жёлтая подсветка мест, которые студент заменяет своим содержимым:
+%   \hseFill{укажите используемые языки программирования}
+% Печатается как <текст> на жёлтом фоне — сразу видно, что дописать.
+% Каждое слово в своём \colorbox, между ними обычные пробелы — длинный
+% плейсхолдер переносится по словам и не вылезает за поле (сплошной
+% \colorbox не разрывается, а soul теряет слова из аргумента макроса).
+\ExplSyntaxOn
+\ProvideDocumentCommand{\hseFill}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { <#1> }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+% \hseOptional{…} — та же подсветка, но без угловых скобок: готовый текст,
+% который оставляют как есть или удаляют, если к проекту не относится.
+\ProvideDocumentCommand{\hseOptional}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { #1 }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+\ExplSyntaxOff
+
+% ── Булевы флаги для условной печати ────────────────────────
+\newif\ifhseHasSupervisorTitle
+((* if project.supervisor.title *))\hseHasSupervisorTitletrue((* else *))\hseHasSupervisorTitlefalse((* endif *))
+\newif\ifhseHasCoSupervisor
+((* if project.co_supervisor.name *))\hseHasCoSupervisortrue((* else *))\hseHasCoSupervisorfalse((* endif *))
+% Английское название задано (титул презентации печатает его отдельной
+% строкой; \hseProjectNameEn с жёлтым плейсхолдером тут не годится).
+\newif\ifhseHasNameEn
+((* if project.meta.name_en *))\hseHasNameEntrue((* else *))\hseHasNameEnfalse((* endif *))
+% E-mail владельца базы задан (финальный слайд презентации).
+\newif\ifhseHasAuthorEmail
+((* if author.email or (project.authors and project.authors[0].email) *))\hseHasAuthorEmailtrue((* else *))\hseHasAuthorEmailfalse((* endif *))
+% Командный режим: \ifhseTeam — проект командный; \ifhseSharedDoc — эта база
+% несёт ОБЩИЕ документы (shared/): их титулы печатают весь состав команды.
+\newif\ifhseTeam
+((* if team.is_team *))\hseTeamtrue((* else *))\hseTeamfalse((* endif *))
+\newif\ifhseSharedDoc
+((* if team.is_shared_base *))\hseSharedDoctrue((* else *))\hseSharedDocfalse((* endif *))
+
+% ── Блок исполнителей для ЛУ ЕСПД-документов ────────────────
+% title_template.tex печатает его внутри flushright. Личная база / solo —
+% один исполнитель (владелец комплекта, токены идентичны прежней вёрстке);
+% shared-база — строка подписи на КАЖДОГО автора: общее ТЗ подписывает вся
+% команда.
+\newcommand{\hseExecutorsBlock}{%
+((* if team.is_shared_base *))\textbf{Исполнители:}
+((* for a in project.authors *))
+студент группы {{ a.group | default('') | texesc }}
+
+\vspace{0.2cm}
+
+\authorsignatureline{7cm} {{ a.name | texesc }}
+
+\vspace{0.1cm}
+
+\signdateblank
+((* if not loop.last *))
+\vspace{0.35cm}
+((* endif *))((* endfor *))((* else *))\textbf{Исполнитель:}
+
+студент группы \studentgroup
+
+\vspace{0.2cm}
+
+\authorsignatureline{7cm} \studentname
+
+\vspace{0.1cm}
+
+\signdateblank((* endif *))}

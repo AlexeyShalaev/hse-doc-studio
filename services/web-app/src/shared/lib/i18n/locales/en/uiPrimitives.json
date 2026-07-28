@@ -1,0 +1,26 @@
+{
+  "statusBadge": {
+    "draft": "Draft",
+    "building": "Building",
+    "warn": "Warnings",
+    "err": "Errors",
+    "locked": "Locked"
+  },
+  "combobox": {
+    "selectPlaceholder": "Select…",
+    "searchPlaceholder": "Search…",
+    "emptyText": "Nothing found"
+  },
+  "toaster": {
+    "close": "Close"
+  },
+  "spinner": {
+    "loading": "Loading"
+  },
+  "modal": {
+    "close": "Close"
+  },
+  "router": {
+    "notFoundMessage": "Check the address or return to the home screen."
+  }
+}

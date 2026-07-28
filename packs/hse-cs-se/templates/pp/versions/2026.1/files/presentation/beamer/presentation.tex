@@ -1,0 +1,292 @@
+% !TeX program = xelatex
+% ============================================================
+% pres/beamer/pres.tex — Project Proposal defence slides (English)
+%
+% Оформление повторяет фирменный стиль НИУ ВШЭ (слайд 16:9, синий
+% #102D69, рамки и логотипы из ../assets) — тот же, что у презентации
+% защиты ВКР. Защита PP идёт НА АНГЛИЙСКОМ: 5–7 минут, 2–3 вопроса.
+%
+% Данные подставляются через макросы \hse… из common/meta.tex
+% (автогенерируется тулом из project.json перед каждой сборкой).
+% Красные \todo{…} — заглушки: замените содержимым своей работы.
+% ============================================================
+\documentclass[aspectratio=169, 14pt]{beamer}
+
+% ── Шрифты и язык ───────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage[english]{babel}
+
+% Семейства шрифтов — из настроек проекта через common/fonts.tex
+% (у каждого шрифта свой фолбэк на свободный клон).
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../../common/fonts}
+
+% Фирменный шрифт вуза — HSE Sans (лицензионный, в комплект не входит);
+% если установлен — используем, иначе остаётся рубленый из настроек.
+\IfFontExistsTF{HSE Sans}{\setsansfont{HSE Sans}}{}
+
+% ── Пакеты ──────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{tikz}       % ручная вёрстка титула и шапки слайдов
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{etoolbox}
+% enumitem тут НЕ подключать: beamer управляет списками сам.
+
+% ── Данные проекта (автогенерируемые макросы) ───────────────
+\input{../../common/meta}
+
+% ── Фирменный стиль ─────────────────────────────────────────
+\definecolor{hseblue}{HTML}{102D69}   % фирменный синий НИУ ВШЭ
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0.9cm, text margin right=0.9cm}
+
+\setbeamercolor{normal text}{fg=black, bg=white}
+\setbeamercolor{structure}{fg=hseblue}
+\setbeamercolor{frametitle}{fg=hseblue}
+\setbeamerfont{frametitle}{size=\Large, series=\mdseries}
+\setbeamercolor{title}{fg=hseblue}
+\setbeamercolor{block title}{fg=hseblue, bg=hseblue!10}
+\setbeamercolor{block body}{fg=black, bg=hseblue!4}
+\setbeamercolor{alerted text}{fg=hseblue}
+\setbeamertemplate{itemize items}[circle]
+
+% Фоновая рамка на весь слайд (титульная или контентная)
+\newcommand{\hseBackground}[1]{%
+  \usebackgroundtemplate{\includegraphics[width=\paperwidth,
+    height=\paperheight]{#1}}}
+
+% ── Шапка контентных слайдов ────────────────────────────────
+% Малый логотип слева, три блока в одну строку (факультет | тема |
+% автор), тонкие разделители — как в официальном образце.
+\setbeamertemplate{headline}{%
+  \begin{tikzpicture}[remember picture, overlay,
+      shift={(current page.north west)}, x=1cm, y=-1cm]
+    \node[anchor=north west, inner sep=0pt] at (0.62, 0.44)
+      {\includegraphics[height=0.62cm]{../assets/hse-logo-small.png}};
+    \node[anchor=north west, inner sep=0pt, text width=3.45cm,
+          align=flush left] at (1.45, 0.48)
+      {\tiny\color{black}\hseFacultyEn,\\Software Engineering};
+    \draw[hseblue, line width=0.5pt] (4.95, 0.50) -- (4.95, 1.32);
+    \node[anchor=north west, inner sep=0pt, text width=4.30cm,
+          align=flush left] at (5.15, 0.48)
+      {\tiny\color{hseblue}\hseTitle};
+    \draw[hseblue, line width=0.5pt] (9.65, 0.50) -- (9.65, 1.32);
+    \node[anchor=north west, inner sep=0pt, text width=5.00cm,
+          align=flush left] at (9.85, 0.48)
+      {\tiny\color{black}\hseAuthorNameEn};
+    \draw[hseblue, line width=0.5pt] (4.95, 1.42) -- (15.35, 1.42);
+  \end{tikzpicture}%
+  \vskip1.45cm%
+}
+
+\setbeamertemplate{frametitle}[default][left,leftskip=0.6cm]
+
+% Номер слайда «N / total» — справа внизу мелким
+\setbeamerfont{footline}{size=\tiny}
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox to \paperwidth{\hfil
+    {\usebeamerfont{footline}\color{hseblue}%
+     \insertframenumber{} / \inserttotalframenumber}\hspace*{0.60cm}}%
+  \vskip0.38cm%
+}
+
+% ── Команда для заглушек ────────────────────────────────────
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\begin{document}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 1. TITLE
+% Приветствие + имя + тема одним предложением. Все данные — из
+% настроек проекта, руками тут ничего править не надо.
+% ════════════════════════════════════════════════════════════
+{% фон титульного слайда — фирменная рамка
+\hseBackground{../assets/hse-frame-title.jpg}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture, overlay,
+      shift={(current page.north west)}, x=1cm, y=-1cm]
+    \node[anchor=north west, inner sep=0pt] at (1.30, 1.15)
+      {\includegraphics[height=1.12cm]{../assets/hse-logo-full.png}};
+    \node[anchor=west, inner sep=0pt] at (2.70, 1.72)
+      {\scriptsize\color{black}\hseFacultyEn};
+    \draw[hseblue, line width=0.6pt] (7.98, 1.28) -- (7.98, 2.40);
+    \node[anchor=north west, inner sep=0pt, text width=3.00cm,
+          align=flush left, font=\tiny] at (8.20, 1.45)
+      {\color{hseblue}BSc Programme\\``Software Engineering''};
+    \draw[hseblue, line width=0.6pt] (11.32, 1.28) -- (11.32, 2.40);
+    \node[anchor=north west, inner sep=0pt] at (11.54, 1.50)
+      {\tiny\color{hseblue}\hseCityEn, \hseYear};
+    \draw[hseblue, line width=0.6pt] (7.98, 2.40) -- (14.66, 2.40);
+    \node[anchor=north west, inner sep=0pt, text width=8.60cm,
+          align=flush left] at (1.35, 2.85)
+      {\Large\color{hseblue}Project Proposal\\[0.20cm]
+       {\large\color{hseblue}\hseTitle}};
+    \node[anchor=south east, inner sep=0pt, text width=6.20cm,
+          align=flush right] at (14.66, 7.60)
+      {\scriptsize\bfseries\color{hseblue}%
+       Presented by \hseAuthorNameEn\\
+       group \hseGroup%
+       \ifhseHasSupervisor\\[0.22cm]
+         Supervisor:\\
+         \hseSupervisorName\fi};
+  \end{tikzpicture}
+\end{frame}
+}
+
+% фон контентных слайдов — тонкая фирменная рамка
+\hseBackground{../assets/hse-frame-content.jpg}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 2. Problem & Motivation
+% 2–3 боли, почему они важны, чем плохи текущие обходные пути.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Problem and Motivation}
+  \todo{one or two sentences: the problem in plain words}
+
+  \vspace{0.4em}
+  \begin{itemize}
+    \item \todo{pain point 1 and who suffers from it}
+    \item \todo{pain point 2}
+    \item \todo{why existing workarounds are not enough}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 3. Aim and Objectives
+% Одна цель + 3–4 задачи, которыми она достигается.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Aim and Objectives}
+  {\color{hseblue}\textbf{Aim}} --- \todo{one sentence: what you build and why}
+
+  \vspace{0.4em}
+  \begin{enumerate}
+    \item \todo{objective 1}
+    \item \todo{objective 2}
+    \item \todo{objective 3}
+    \item \todo{objective 4}
+  \end{enumerate}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 4. Existing Solutions
+% Короткое сравнение аналогов; вывод — почему нужна своя разработка.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Existing Solutions}
+  \begin{center}
+    \small
+    \begin{tabular}{lccc}
+      \toprule
+      \textbf{Criterion} & \todo{tool A} & \todo{tool B} & \textbf{Proposed} \\
+      \midrule
+      \todo{criterion 1} & + & -- & + \\
+      \todo{criterion 2} & -- & + & + \\
+      \todo{criterion 3} & -- & -- & + \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.4em}
+  {\color{hseblue}\textbf{Takeaway:}} \todo{why a new solution is needed}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 5. Proposed Approach
+% Высокоуровневая архитектура/идея: одна схема лучше абзаца текста.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Proposed Approach}
+  \todo{one sentence: the essence of your approach}
+
+  \vspace{0.4em}
+  \begin{itemize}
+    \item \todo{key component or idea 1}
+    \item \todo{key component or idea 2}
+    \item \todo{key component or idea 3}
+  \end{itemize}
+
+  \vspace{0.4em}
+  \todo{replace this list with an architecture diagram if you have one}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 6. Methodology and Technology Stack
+% Как проверяете гипотезу, чем измеряете, какой стек используете.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Methodology and Technology Stack}
+  \begin{itemize}
+    \item \todo{hypothesis and how it will be validated}
+    \item \todo{metrics you will measure}
+    \item \todo{languages, frameworks, infrastructure}
+    \item \todo{experiment or testbed setup}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 7. Work Plan and Progress
+% Что уже сделано и что осталось: этапы с горизонтом до защиты ВКР.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Work Plan and Progress}
+  \begin{itemize}
+    \item \textbf{Done:} \todo{research, design, foundation already completed}
+    \item \textbf{Now:} \todo{what you are implementing at the moment}
+    \item \textbf{Next:} \todo{remaining steps until the thesis defence}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 8. Expected Results
+% Ожидаемые результаты и критерии успеха (~100 слов в тексте PP).
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Expected Results}
+  \begin{itemize}
+    \item \todo{main deliverable, e.g. a working prototype}
+    \item \todo{secondary results}
+    \item \todo{how success will be measured}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 9. Conclusion
+% Повторить главную мысль одним предложением + значимость работы.
+% ════════════════════════════════════════════════════════════
+\begin{frame}{Conclusion}
+  \todo{restate the core idea of the project in one sentence}
+
+  \vspace{0.4em}
+  \begin{itemize}
+    \item \todo{why the result matters}
+    \item \todo{future work after the proposal}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 10. References
+% Ключевые источники в стиле IEEE (нумерация по порядку упоминания).
+% ════════════════════════════════════════════════════════════
+\begin{frame}{References}
+  \begin{itemize}
+    \item[{[1]}] \todo{Author, Title, Publisher, Year (IEEE style)}
+    \item[{[2]}] \todo{Author, ``Paper title,'' Journal, vol., no., pp., Year}
+    \item[{[3]}] \todo{Title, Website, Year. Available: URL. Accessed: date}
+  \end{itemize}
+\end{frame}
+
+% ════════════════════════════════════════════════════════════
+% SLIDE 11. FINAL
+% Спасибо + контакты. Вопросы по презентации — часть оценки.
+% ════════════════════════════════════════════════════════════
+\begin{frame}[plain]
+  \begin{center}
+    \vspace{1.4cm}
+    {\Large\color{hseblue}Thank you for your attention!}\\[0.8cm]
+    {\normalsize\color{hseblue}\hseAuthorNameEn}\\[0.2cm]
+    \ifhseHasAuthorEmail
+      {\small\color{black}\hseAuthorEmail}\\[0.2cm]
+    \fi
+    {\small\color{black}\hseTitle}
+  \end{center}
+\end{frame}
+
+\end{document}

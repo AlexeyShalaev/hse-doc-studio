@@ -1,0 +1,18 @@
+{
+  "severity": {
+    "menuTitle": "Изменить уровень для этого документа",
+    "overriddenAria": "Severity переопределена",
+    "header": "Уровень"
+  },
+  "source": {
+    "misc": "Прочие"
+  },
+  "rules": {
+    "empty": "Нет применимых правил для этого документа.",
+    "categories": "Категории",
+    "enableCategory": "Включить категорию",
+    "disableCategory": "Отключить категорию",
+    "enableAll": "Включить все",
+    "disableAll": "Выключить все"
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "panel": {
+    "title": "Local models (Ollama)",
+    "description": "Run models on your own computer — your data never leaves the machine. An already-installed native Ollama is preferred; otherwise a managed Docker container is started.",
+    "engineInstallTitle": "Installing the Ollama engine",
+    "dockerUnavailable": "Docker is unavailable. Start Docker Desktop, or install native Ollama — the app will pick it up at 127.0.0.1:11434 automatically.",
+    "downloadEngineFirst": "Download the engine first, then you can install models.",
+    "startRuntimeFirst": "Start the runtime to install models."
+  },
+  "mode": {
+    "native": "Running · native Ollama",
+    "docker": "Running · container",
+    "none": "Not running"
+  },
+  "controls": {
+    "stop": "Stop",
+    "stopTitle": "Stop the container",
+    "downloadEngine": "Download engine",
+    "start": "Start"
+  },
+  "toast": {
+    "pullStarted": "Download of \"{{name}}\" started — you can close this window",
+    "pullStartFailed": "Failed to start the download of \"{{name}}\"",
+    "startRuntimeFailed": "Failed to start the runtime. Check Docker or the engine.",
+    "startError": "Runtime start error",
+    "modelDeleted": "Model \"{{name}}\" deleted",
+    "deleteFailed": "Failed to delete the model",
+    "modelLoaded": "Model \"{{name}}\" downloaded",
+    "loadFailed": "Failed to download \"{{name}}\"",
+    "modelUnloaded": "Model \"{{name}}\" unloaded",
+    "unloadFailed": "Failed to unload the model"
+  },
+  "confirm": {
+    "deleteModel": "Delete model \"{{name}}\"?"
+  },
+  "hardware": {
+    "gpuNotDetected": "GPU not detected",
+    "gb": "{{value}} GB",
+    "cpuCores_one": "{{count}} core",
+    "cpuCores_other": "{{count}} cores",
+    "empty": "—",
+    "gpuLabel": "GPU",
+    "ramLabel": "RAM",
+    "cpuLabel": "CPU",
+    "note": {
+      "nvidiaSupported": "GPU acceleration is available (NVIDIA), including inside the Docker container.",
+      "nvidiaUnsupported": "NVIDIA detected, but passthrough to Docker is unavailable — the container will run on CPU.",
+      "apple": "Docker on macOS does not pass through the GPU — the container will run on CPU. For Metal acceleration, install native Ollama.",
+      "amd": "An AMD GPU is not passed through to Docker — the container will run on CPU. Native Ollama may use the GPU.",
+      "none": "No GPU found — models run on CPU (slower)."
+    }
+  },
+  "installModal": {
+    "description": "The download runs locally. Progress is shown below.",
+    "close": "Close",
+    "logEmpty": "[…]",
+    "loading": "Downloading…",
+    "done": "Done",
+    "failed": "Failed",
+    "retry": "Retry",
+    "closeDone": "Done",
+    "closeButton": "Close"
+  },
+  "catalog": {
+    "installedModels": "Installed models",
+    "deleteModelTitle": "Delete model",
+    "searchPlaceholder": "Search models or an exact name (e.g. mistral:7b)…",
+    "clear": "Clear",
+    "matchingHardware": "Matching to your hardware…",
+    "catalog": "Catalog",
+    "fromCatalog": "From the catalog",
+    "fromRegistry": "From the ollama.com registry",
+    "installExact": "Install the exact name \"{{name}}\"",
+    "registryUnavailable": "Registry search is unavailable — enter the exact model name.",
+    "nothingFound": "Nothing found. Try a different name.",
+    "notEnoughMemory": "Not enough memory — the model will not fit"
+  },
+  "registryRow": {
+    "installed": "installed",
+    "installLatestTitle": "Install (:latest)",
+    "install": "Install"
+  },
+  "modelRow": {
+    "sizeGb": "~{{size}} GB",
+    "recommended": "recommended",
+    "installed": "installed",
+    "unavailable": "Unavailable",
+    "installTitle": "Install",
+    "install": "Install"
+  },
+  "downloads": {
+    "retry": "Retry",
+    "retryTitle": "Retry",
+    "dismissTitle": "Dismiss",
+    "heading": "Downloads"
+  },
+  "loaded": {
+    "inRam": "{{size}} · in RAM (CPU)",
+    "inVram": "{{size}} · in VRAM",
+    "split": "{{vram}} in VRAM + {{ram}} in RAM",
+    "unloadImminent": "unloading any moment now",
+    "autoUnloadMin_one": "auto-unload in ~{{count}} min",
+    "autoUnloadMin_other": "auto-unload in ~{{count}} min",
+    "autoUnloadHr_one": "auto-unload in ~{{count}} h",
+    "autoUnloadHr_other": "auto-unload in ~{{count}} h",
+    "heading": "In memory",
+    "unload": "Unload",
+    "unloadTitle": "Free the memory now",
+    "gb": "{{value}} GB"
+  }
+}

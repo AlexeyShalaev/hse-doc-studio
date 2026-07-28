@@ -1,0 +1,145 @@
+{
+  "commandPalette": {
+    "title": "Палитра команд",
+    "placeholder": "Команда или название проекта…",
+    "empty": "Ничего не найдено",
+    "newProject": "Новый проект",
+    "settings": "Настройки тула",
+    "themeSystem": "Тема: системная",
+    "themeDark": "Тема: тёмная",
+    "themeLight": "Тема: светлая",
+    "themeBlueprint": "Тема: blueprint",
+    "callAgent": "Позвать ИИ-агента",
+    "docPreview": "Документ · превью",
+    "docChecks": "Документ · проверки",
+    "docCompile": "Документ · лог сборки",
+    "docHistory": "Документ · версии",
+    "openProject": "Открыть · {{name}}"
+  },
+  "compileStatus": {
+    "noBuilds": "Нет сборок",
+    "success": "Успешно",
+    "failure": "Ошибка",
+    "running": "Сборка",
+    "cancelled": "Отменена",
+    "pending": "Ожидание"
+  },
+  "projectRail": {
+    "allProjects": "Все проекты",
+    "newProject": "Новый проект",
+    "agent": "ИИ-агент",
+    "settings": "Настройки тула"
+  },
+  "projectSwitcher": {
+    "trigger": "Переключить проект",
+    "triggerHint": "Переключить проект (⌘P)",
+    "noProject": "Выбрать проект",
+    "search": "Название проекта или папка…",
+    "recent": "Недавние",
+    "pinned": "Закреплённые",
+    "all": "Все",
+    "allProjects": "Все проекты",
+    "newProject": "Новый проект",
+    "connectFolder": "Подключить папку…",
+    "empty": "Проектов не нашлось"
+  },
+  "appStatusBar": {
+    "dockerRunning": "запущен",
+    "dockerStopped": "остановлен",
+    "paletteTooltip": "Открыть палитру команд (⌘K)",
+    "commands": "команды"
+  },
+  "dockerBanner": {
+    "defaultDetail": "Сборка LaTeX не запустится. Запусти Docker Desktop.",
+    "unavailable": "Docker не доступен",
+    "openSettings": "Открыть настройки"
+  },
+  "diskBanner": {
+    "title": "Docker занял много места",
+    "detail": "Можно освободить {{size}} — старые образы, кэш сборки.",
+    "open": "Открыть Диск",
+    "dismiss": "Скрыть"
+  },
+  "startupChecks": {
+    "updateAvailableTitle": "Доступно обновление",
+    "updateAvailable": "Вышла версия v{{version}}.",
+    "updateAvailableAction": "Что нового"
+  },
+  "titlebar": {
+    "versionFallback": "Doc Workbench",
+    "version": "Doc Workbench v{{version}}",
+    "agentProject": "ИИ-агент проекта",
+    "agentAssistant": "ИИ-ассистент",
+    "projects": "Проекты",
+    "settings": "Настройки тула"
+  },
+  "chatDock": {
+    "resizeHint": "Изменить ширину панели агента"
+  },
+  "fileTree": {
+    "title": "Файлы проекта",
+    "showHidden": "Показать сгенерированные файлы (.build, .pdf, .aux…)",
+    "hideHidden": "Скрыть сгенерированные файлы",
+    "projectRoot": "Корень проекта",
+    "newFile": "Новый файл",
+    "newFolder": "Новая папка",
+    "newFileHere": "Новый файл здесь",
+    "newFolderHere": "Новая папка здесь",
+    "rename": "Переименовать",
+    "delete": "Удалить",
+    "protectedTitle": "Файл входит в шаблон: его нельзя удалить, переименовать или переместить (но содержимое можно редактировать)",
+    "protected": "Из шаблона — защищён",
+    "loadError": "Не удалось загрузить файлы проекта.",
+    "emptyTree": "Файлов не найдено.",
+    "folderNamePlaceholder": "имя-папки",
+    "fileNamePlaceholder": "имя-файла.tex",
+    "deleteFolderTitle": "Удалить папку?",
+    "deleteFileTitle": "Удалить файл?",
+    "cancel": "Отмена",
+    "deleteFolderConfirm": "Папка и всё её содержимое будут удалены без возможности восстановления.",
+    "deleteFileConfirm": "Файл будет удалён без возможности восстановления."
+  },
+  "settingsPage": {
+    "sections": {
+      "appearance": "Внешний вид",
+      "compiler": "Компилятор",
+      "fonts": "Шрифты",
+      "checks": "Проверки",
+      "presentations": "Презентации",
+      "providers": "Провайдеры",
+      "localModels": "Локальные модели",
+      "agentPersonas": "Роли агента",
+      "signing": "Сертификаты подписи",
+      "disk": "Диск",
+      "data": "Импорт / Экспорт",
+      "about": "О программе"
+    },
+    "title": "Настройки",
+    "searchPlaceholder": "Поиск по настройкам",
+    "empty": "Ничего не найдено",
+    "close": "Закрыть настройки",
+    "groups": {
+      "general": "Общие",
+      "documents": "Документы",
+      "ai": "Искусственный интеллект",
+      "system": "Система"
+    }
+  },
+  "errorPage": {
+    "notFoundTitle": "Страница не найдена",
+    "notFoundMessage": "Такого маршрута нет или он больше недоступен.",
+    "forbiddenTitle": "Нет доступа",
+    "forbiddenMessage": "Для этого действия не хватает прав.",
+    "serverTitle": "Ошибка приложения",
+    "serverMessage": "Что-то пошло не так при открытии экрана.",
+    "genericTitle": "Ошибка",
+    "genericMessage": "Приложение не смогло открыть этот экран.",
+    "back": "Назад",
+    "home": "На главную",
+    "reload": "Обновить"
+  },
+  "wizardPage": {
+    "createTitle": "Новый проект",
+    "connectTitle": "Подключить папку"
+  }
+}

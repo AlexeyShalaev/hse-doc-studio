@@ -1,0 +1,108 @@
+/* ============================================================
+   Слой 5: раскладка. Оболочка 1400px, мера прозы 44rem,
+   поле по ГОСТ — волосяная линейка слева от колонки текста.
+   ============================================================ */
+
+.md-grid {
+  max-width: var(--hds-shell);
+}
+
+/* ── мера прозы: прямые потомки статьи ──────────────────────── */
+/* Прозаические блоки центрируются в колонке 44rem; острова .hds-*,
+   таблицы и растянутые блоки (.hds-wide) идут во всю ширину. */
+article.md-content__inner > p,
+article.md-content__inner > ul,
+article.md-content__inner > ol,
+article.md-content__inner > dl,
+article.md-content__inner > blockquote,
+article.md-content__inner > h1,
+article.md-content__inner > h2,
+article.md-content__inner > h3,
+article.md-content__inner > h4,
+article.md-content__inner > .highlight,
+article.md-content__inner > .highlighttable,
+article.md-content__inner > pre,
+article.md-content__inner > .admonition,
+article.md-content__inner > details,
+article.md-content__inner > .tabbed-set,
+article.md-content__inner > .hds-fig,
+article.md-content__inner > .hds-tab-caption,
+article.md-content__inner > .hds-margin-note,
+article.md-content__inner > .hds-finding {
+  max-width: var(--hds-measure);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+article.md-content__inner > .hds-wide,
+article.md-content__inner > .md-typeset__scrollwrap,
+article.md-content__inner > .md-typeset__table {
+  max-width: none;
+}
+
+/* ── поле по ГОСТ: линейка слева от колонки прозы ───────────── */
+article.md-content__inner {
+  position: relative;
+}
+
+@media screen and (min-width: 76.25em) {
+  article.md-content__inner::before {
+    content: "";
+    position: absolute;
+    top: 1.5rem;
+    bottom: 0;
+    left: calc(50% - var(--hds-measure) / 2 - 2.25rem);
+    width: 1px;
+    background: var(--hds-rule);
+    pointer-events: none;
+  }
+}
+
+/* ── марджиналия: врезка с левой линейкой ───────────────────── */
+.hds-margin-note {
+  font-size: var(--hds-fs-small);
+  line-height: 1.55;
+  color: var(--hds-ink-3);
+  border-left: 2px solid var(--hds-rule);
+  padding-left: 0.75rem;
+  margin-top: var(--hds-baseline);
+}
+
+.hds-margin-note b,
+.hds-margin-note strong {
+  color: var(--hds-ink-2);
+}
+
+/* ── разлиновка тетради: только «открывающие» блоки ─────────── */
+.hds-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 26px,
+    var(--hds-ruled-line) 26px 27px
+  );
+  -webkit-mask-image: radial-gradient(130% 95% at 50% 0%, #000 0 46%, transparent 80%);
+  mask-image: radial-gradient(130% 95% at 50% 0%, #000 0 46%, transparent 80%);
+}
+
+/* ── широкий блок-остров ────────────────────────────────────── */
+.hds-wide {
+  max-width: none;
+}
+
+/* ── лид под H1 ─────────────────────────────────────────────── */
+.md-typeset .hds-lede {
+  font-size: var(--hds-fs-lede);
+  line-height: 1.62;
+  color: var(--hds-ink-2);
+}
+
+/* ── движение: бумага не анимируется ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

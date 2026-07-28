@@ -1,0 +1,21 @@
+# packs/hse-cs-se/pack.yaml
+# Манифест пака: НИУ ВШЭ — ОП «Программная инженерия»
+
+id: hse-cs-se
+name:
+  ru: НИУ ВШЭ — ОП «Программная инженерия»
+  en: HSE — BSc Software Engineering
+# Комплекты документов у бакалавриата и магистратуры разные — этот пак
+# покрывает бакалавриат; магистратура потребует отдельного шаблона/пака.
+description:
+  ru: Шаблоны бакалавриата ОП ПИ ФКН НИУ ВШЭ — ВКР, курсовые, Project Proposal.
+  en: Templates for the HSE SE bachelor's programme at FCS — thesis, coursework, Project Proposal.
+
+maintainer:
+  name: Alex Shalaev
+  email: shalaevad.alexey@gmail.com
+  url: https://github.com/AlexeyShalaev/hse-doc-studio
+
+license: Apache-2.0
+source: https://github.com/AlexeyShalaev/hse-doc-studio/tree/master/packs/hse-cs-se
+created_at: 2026-05-24

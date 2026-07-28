@@ -1,0 +1,72 @@
+% !TeX program = xelatex
+% ============================================================
+% common/annotation_preamble.tex — преамбула Аннотации (документ КТ1
+% исследовательской ВКР ОП «Программная инженерия»).
+%
+% ЭТО НЕ ЕСПД-документ: без штампа/рамки, без кода документа, без листа
+% утверждения и без содержания. Оформление по ГОСТ 7.32-2017: поля
+% 30/15/20/20, Times New Roman 12 пт, интервал 1,5, обычный номер
+% страницы снизу. Данные — из common/meta (\hse-макросы). Ссылки [n]
+% печатаются В СТРОКУ, список источников — по ГОСТ Р 7.0.5-2008.
+% ============================================================
+
+% ── Шрифты (автогенерируются из настроек проекта) ───────────
+\newcommand{\hseDefaultMono}{Courier New}
+\input{../common/fonts}
+\usepackage[english,russian]{babel}
+
+% ── Геометрия по ГОСТ 7.32-2017 §6.1.1 (без места под штамп) ─
+\usepackage[a4paper,left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{6pt}
+
+% ── Типографика и таблицы ───────────────────────────────────
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{enumitem}
+\setlist[itemize,1]{label=--}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{float}
+
+% ── URL и переносы ──────────────────────────────────────────
+\usepackage{url}
+\usepackage{xurl}
+\urlstyle{same}
+\usepackage{hyphenat}
+
+% ── Цитирование: ссылки [n] В СТРОКУ (как в реальных аннотациях),
+%    список источников — ГОСТ Р 7.0.5-2008. НЕ переопределяем \@cite
+%    в надстрочный вид (в отличие от ЕСПД-преамбулы). ────────────
+\usepackage{cite}
+\makeatletter
+\renewcommand\@biblabel[1]{#1.}
+\makeatother
+
+\usepackage{lastpage}
+\usepackage{hyperref}
+\hypersetup{
+    unicode=true,
+    breaklinks=true,
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=blue,
+    pdfborder={0 0 0}
+}
+
+% ── Данные проекта (\hse…), затем «человеческие» имена (commands) ──
+% meta даёт \hseFill/\hseOptional и все \hse-макросы; commands —
+% \signdateblank, \hseExecutorsBlock-зависимости (\authorsignatureline,
+% \studentgroup, \studentname) для блока «Выполнил» в титуле.
+\input{../common/meta}
+\input{../common/commands}
+
+% Без штампа: обычный номер страницы снизу по центру (ГОСТ 7.32 §6.3.1).
+\pagestyle{plain}

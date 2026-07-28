@@ -1,0 +1,26 @@
+# vpn-hub этого файла не имеет — здесь он нужен: разработка идёт на Windows,
+# и именно eol=lf держит индекс в LF на всех текстовых файлах репозитория.
+* text=auto eol=lf
+
+# Windows-скрипты обязаны оставаться CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Явно бинарные ресурсы паков и документации: .pptx — zip-контейнеры (~750 КБ),
+# нормализация переносов в них означала бы порчу файла.
+*.pptx binary
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Лок-файлы генерируются инструментами — не показываем в diff и не мержим вручную.
+uv.lock linguist-generated=true -diff
+pnpm-lock.yaml linguist-generated=true -diff

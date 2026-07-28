@@ -1,0 +1,27 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+**/.coverage
+**/coverage
+**/htmlcov
+**/.mypy_cache
+**/.ruff_cache
+**/.git
+**/.idea
+**/.vscode
+**/.cursor
+**/.claude
+**/node_modules
+**/dist
+**/build
+**/*.log
+
+# Не нужно ни в одном образе — только раздувает контекст сборки.
+.github
+docs
+site
+test-projects
+**/.env

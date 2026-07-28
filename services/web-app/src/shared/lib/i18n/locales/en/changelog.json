@@ -1,0 +1,17 @@
+{
+  "addNote": {
+    "placeholder": "Add a note…",
+    "submit": "Add"
+  },
+  "kind": {
+    "compileOk": "Build OK",
+    "compileFail": "Build error",
+    "manualNote": "Note",
+    "packSubmission": "Packaging",
+    "sign": "Signature",
+    "edit": "Edit"
+  },
+  "timeline": {
+    "empty": "History is empty"
+  }
+}

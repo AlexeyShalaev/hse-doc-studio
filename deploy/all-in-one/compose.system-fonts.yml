@@ -1,0 +1,25 @@
+# Оверлей: показать в приложении шрифты, установленные НА ВАШЕЙ МАШИНЕ.
+#
+# Приложение работает в контейнере и по умолчанию видит только шрифты образа —
+# поэтому вкладка «Настройки → Шрифты → Системные» пуста, хотя при нативном
+# запуске те же шрифты видны. Оверлей монтирует системный каталог шрифтов внутрь
+# (только на чтение) и говорит приложению искать их именно там.
+#
+# Путь зависит от ОС:
+#   Windows  SYSTEM_FONTS_PATH=C:/Windows/Fonts
+#   macOS    SYSTEM_FONTS_PATH=/System/Library/Fonts
+#   Linux    SYSTEM_FONTS_PATH=/usr/share/fonts
+#
+#   SYSTEM_FONTS_PATH=C:/Windows/Fonts docker compose \
+#     -f deploy/all-in-one/docker-compose.yml \
+#     -f deploy/all-in-one/compose.system-fonts.yml up -d
+#
+# Сама СБОРКА документов от этого не зависит: в TeX-контейнер уезжает каталог
+# управляемых шрифтов (`<DATA_DIR>/fonts`). Оверлей нужен, чтобы «Системные» стали
+# источником импорта — выбранный шрифт копируется в управляемый каталог.
+services:
+  hse-doc-studio:
+    volumes:
+      - ${SYSTEM_FONTS_PATH:?задайте SYSTEM_FONTS_PATH — системный каталог шрифтов вашей ОС}:/host-fonts:ro
+    environment:
+      HSE_STUDIO__FONTS__SYSTEM_DIRS: '["/host-fonts"]'

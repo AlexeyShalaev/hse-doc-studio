@@ -1,0 +1,38 @@
+{
+  "button": "HSE staff member",
+  "title": "Find an HSE staff member",
+  "description": "Data from the official hse.ru directory. Pick a person — their name and position fill in automatically.",
+  "search": {
+    "placeholder": "Surname…"
+  },
+  "filters": {
+    "all": "All",
+    "campus": "Campus",
+    "campusNames": {
+      "moscow": "Moscow",
+      "spb": "Saint Petersburg",
+      "nn": "Nizhny Novgorod",
+      "perm": "Perm"
+    },
+    "department": "Department",
+    "departmentPlaceholder": "All departments",
+    "departmentEmpty": "Nothing found",
+    "letter": "Letter",
+    "category": "Category",
+    "scirank": "Rank / degree",
+    "position": "Position",
+    "interests": "Research interests",
+    "moreFilters": "More filters"
+  },
+  "results": {
+    "startHint": "Type at least {{min}} letters of the surname or pick a filter",
+    "loading": "Searching the HSE directory…",
+    "empty": "No one found. Refine your query or filters.",
+    "error": "Couldn't load directory data. Please try again later.",
+    "noPosition": "Resolving position…",
+    "pickHint": "Select this person",
+    "openProfile": "Open profile on hse.ru",
+    "count": "Found: {{count}}",
+    "source": "Source: hse.ru/org/persons. Requests are rate-limited to keep the site healthy."
+  }
+}

@@ -1,0 +1,176 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/hse-pi-methodology-2026.yaml
+# Требования методических указаний ОП «Программная инженерия» НИУ ВШЭ 2026/2027.
+# Источник: Методические рекомендации по выполнению ВКР ФКН НИУ ВШЭ, ОП ПИ.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Методические указания ОП ПИ
+  en: SE methodology guidelines
+ref:
+  ru: Методические указания по выполнению и защите ВКР ОП «Программная инженерия» НИУ ВШЭ 2026/2027
+  en: HSE FCS Software Engineering VKR Methodology Guidelines 2026/2027
+source:
+  ru: Методический офис ФКН НИУ ВШЭ, ОП «Программная инженерия»
+  url: https://cs.hse.ru/se/
+
+rules:
+  # ── Обязательные страницы: титульный лист ──
+  - id: hse-pi-methodology-2026/title-page
+    title:       { ru: Титульный лист, en: Title page }
+    description: { ru: "Каждый документ должен иметь титульный лист по форме НИУ ВШЭ с листом утверждения (ЛУ).", en: "Every document must have a title page in the HSE form together with an approval sheet (ЛУ)." }
+    category:    structure
+    applies_to:  "*"
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "**/*.tex"
+      pattern: '\\input\{[^}]*(title|titl)'
+      negate: false
+      message: { ru: "Документ не содержит подключения шаблона титульного листа.", en: "The document does not include the title page template." }
+
+  # ── Обязательные страницы: содержание ──
+  - id: hse-pi-methodology-2026/table-of-contents
+    title:       { ru: Содержание (оглавление), en: Table of contents }
+    description: { ru: "Каждый документ должен содержать автоматически сгенерированное оглавление.", en: "Every document must contain an automatically generated table of contents." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification, explanatory_note, interim_report, report, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "**/*.tex"
+      pattern: '\\tableofcontents'
+      negate: false
+      message: { ru: "Документ не содержит команды \\tableofcontents.", en: "The document does not contain a \\tableofcontents command." }
+
+  # ── Минимальный объём ВКР ──
+  - id: hse-pi-methodology-2026/vkr-min-pages
+    title:       { ru: Минимальный объём ВКР (40 стр.), en: Minimum thesis length (40 pp.) }
+    description: { ru: "По методичке ОП ПИ: объём основного текста ВКР должен составлять не менее 40 страниц (без приложений и списка источников).", en: "Per the SE programme guidelines: the main text of the thesis must be at least 40 pages (excluding appendices and the bibliography)." }
+    category:    structure
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: structural
+    params:
+      check: page_count
+      min: 40
+
+  # ── Минимальный объём ТЗ ──
+  - id: hse-pi-methodology-2026/tz-min-pages
+    title:       { ru: Минимальный объём ТЗ (20 стр.), en: Minimum TZ length (20 pp.) }
+    description: { ru: "По методичке ОП ПИ: объём ТЗ должен составлять не менее 20 страниц.", en: "Per the SE programme guidelines: the TZ (technical specification) must be at least 20 pages." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: info
+    engine: structural
+    params:
+      check: page_count
+      min: 20
+
+  # ── Минимальный объём ПМИ ──
+  - id: hse-pi-methodology-2026/pmi-min-pages
+    title:       { ru: Минимальный объём ПМИ (15 стр.), en: Minimum PMI length (15 pp.) }
+    description: { ru: "По методичке ОП ПИ: объём ПМИ должен составлять не менее 15 страниц.", en: "Per the SE programme guidelines: the PMI (program & test methodology) must be at least 15 pages." }
+    category:    structure
+    applies_to:  [test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: info
+    engine: structural
+    params:
+      check: page_count
+      min: 15
+
+  # ── Наличие AI-декларации ──
+  - id: hse-pi-methodology-2026/ai-declaration-required
+    title:       { ru: Декларация использования ИИ, en: AI usage declaration }
+    description: { ru: "С 2025/2026 уч. г. ФКН НИУ ВШЭ требует прикладывать декларацию об использовании инструментов ИИ при написании ВКР.", en: "From the 2025/2026 academic year, HSE FCS requires attaching a declaration on the use of AI tools when writing the thesis." }
+    category:    metadata
+    applies_to:  [explanatory_note, technical_specification, test_program_and_methodology]
+    default_severity: warn
+    engine: file_exists
+    params:
+      # Движок форм хранит ответы декларации здесь (см. forms: в version.yaml);
+      # старый путь .hse-studio/ai-usage.json — легаси, новые проекты его не создают.
+      path: .hse-studio/forms/ai_declaration.json
+      message: { ru: "Декларация об использовании ИИ ещё не заполнена. Заполните форму в разделе «Декларация об использовании ИИ» — она входит в комплект сдачи.", en: "The AI usage declaration has not been filled in yet. Complete the form in the “AI usage declaration” section — it is part of the submission package." }
+
+  # ── Шрифт Times New Roman (через fontspec) ──
+  - id: hse-pi-methodology-2026/font-times-new-roman
+    title:       { ru: Шрифт Times New Roman, en: Times New Roman font }
+    description: { ru: "По требованиям НИУ ВШЭ и ГОСТ (Прил. 10, ГОСТ 19/7.32): основной текст документов — шрифт Times New Roman 12 пт.", en: "Per HSE and GOST rules (App. 10, GOST 19/7.32): the body text of documents must use the Times New Roman 12 pt font." }
+    category:    formatting
+    applies_to:  [technical_specification, shared_technical_specification, explanatory_note, interim_report, report, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual]
+    default_severity: warn
+    # Основной шрифт берётся из настроек проекта и подставляется в
+    # common/fonts.tex (см. dynamic_includes). Проверяем сгенерированный файл:
+    # по умолчанию там \setmainfont{Times New Roman}; смена шрифта в настройках
+    # уберёт совпадение → предупреждение (severity: warn).
+    engine: regex
+    params:
+      file_glob: "**/fonts.tex"
+      pattern: '\\setmainfont\{Times New Roman\}'
+      negate: false
+      message: { ru: "Основной шрифт не Times New Roman. По требованиям ВШЭ/ГОСТ основной текст — Times New Roman; при необходимости смените шрифт в настройках проекта.", en: "The main font is not Times New Roman. HSE/GOST require Times New Roman for body text; change the main font in project settings if this is unintended." }
+
+  # ── Межстрочный интервал в ЕСПД-документах ──
+  - id: hse-pi-methodology-2026/espd-line-spacing
+    title:       { ru: Межстрочный интервал 1.5 в ЕСПД-документах, en: Line spacing 1.5 in ESPD documents }
+    description: { ru: "Все ЕСПД-документы должны иметь полуторный межстрочный интервал.", en: "All ESPD documents must use one-and-a-half (1.5) line spacing." }
+    category:    formatting
+    applies_to:  [technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual]
+    default_severity: warn
+    engine: structural
+    params:
+      check: line_spacing
+      expected: 1.5
+
+  # ── Список источников (не менее 20 для ВКР) ──
+  - id: hse-pi-methodology-2026/bibliography-count-vkr
+    title:       { ru: Количество источников в ВКР (не менее 20), en: Number of references in the thesis (at least 20) }
+    description: { ru: "По методичке ОП ПИ: список источников ВКР должен содержать не менее 20 позиций.", en: "Per the SE programme guidelines: the thesis bibliography must contain at least 20 entries." }
+    category:    bibliography
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: tex_command_count
+    params:
+      command: bibitem
+      file_glob: "**/*.tex"
+      min: 20
+
+  # ── Формат года (yearval) ──
+  - id: hse-pi-methodology-2026/year-in-commands
+    title:       { ru: Год в командах документа, en: Year in document commands }
+    description: { ru: "Год защиты должен быть задан в данных проекта (макрос \\hseYear в common/meta.tex) — он подставляется в титульный лист автоматически.", en: "The defense year must be set in the project data (the \\hseYear macro in common/meta.tex); it is substituted into the title page automatically." }
+    category:    metadata
+    applies_to:  "*"
+    default_severity: info
+    engine: regex
+    params:
+      file_glob: "common/meta.tex"
+      pattern: '\\hseYear\}\{[%\s]*\d{4}'
+      negate: false
+      message: { ru: "Не задан год защиты. Укажите год в настройках проекта.", en: "Defense year is not set. Specify the year in the project settings." }
+
+  # ── Наличие подписей (автор + руководитель) на финале ──
+  - id: hse-pi-methodology-2026/signatures-on-final
+    title:       { ru: Подписи автора и руководителя, en: Author and supervisor signatures }
+    description: { ru: "В финальном комплекте документы ТЗ и ВКР должны содержать подписи автора и научного руководителя.", en: "In the final package, the TZ and thesis documents must contain the signatures of the author and the academic supervisor." }
+    category:    metadata
+    applies_to:  [technical_specification, explanatory_note]
+    default_severity: warn
+    engine: file_exists
+    params:
+      path: .hse-studio/signatures.json
+      message: { ru: "Подписи ещё не добавлены. Загрузите подписи автора и научного руководителя в разделе «Подписи» — они нужны для финального комплекта ТЗ и ВКР.", en: "Signatures have not been added yet. Upload the author's and supervisor's signatures in the “Signatures” section — the final TZ and thesis package requires them." }
+
+  # ── Учебная группа формата БПИxxx ──
+  - id: hse-pi-methodology-2026/group-format
+    title:       { ru: Формат номера учебной группы, en: Student group number format }
+    description: { ru: "Учебная группа должна соответствовать формату ОП ПИ: БПИ/БИВ/МПИ + год + номер (например, БПИ222, БИВ211, МПИ221).", en: "The student group must match the SE programme format: БПИ/БИВ/МПИ + year + number (e.g. БПИ222, БИВ211, МПИ221)." }
+    category:    metadata
+    applies_to:  "*"
+    default_severity: info
+    engine: regex
+    params:
+      file_glob: "common/meta.tex"
+      pattern: '\\hseGroup\}\{[%\s]*(?:БПИ|БИВ|МПИ)\d{3}'
+      negate: false
+      message: { ru: "Номер учебной группы не задан или не соответствует формату ОП ПИ (БПИ/БИВ/МПИ + 3 цифры).", en: "The student group number is unset or does not match the SE programme format (БПИ/БИВ/МПИ + 3 digits)." }

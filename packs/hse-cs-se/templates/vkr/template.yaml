@@ -1,0 +1,19 @@
+# packs/hse-cs-se/templates/vkr/template.yaml
+# Манифест шаблона ВКР (инвариантен к версии)
+
+id: vkr
+name:
+  ru: Выпускная квалификационная работа (бакалавриат)
+  en: Thesis (BSc)
+short_name:
+  ru: ВКР
+  en: Thesis
+
+description:
+  ru: Бакалаврская ВКР ОП «Программная инженерия» ФКН НИУ ВШЭ. Полный комплект документов ЕСПД — ТЗ, ВКР, ПМИ, ТП, РП, РО и Презентация.
+  en: BSc thesis for HSE SE program. Full ESPD documentation set — SoW, Thesis, Test Program, Source Listing, Programmer Manual, Operator Manual, and Presentation.
+
+icon: GraduationCap                # имя иконки lucide-react
+accent_hue: 230                    # OKLCH hue для accent-color в UI
+
+default_version: "2026.1"

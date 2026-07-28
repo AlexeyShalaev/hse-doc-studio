@@ -1,0 +1,225 @@
+/* ============================================================
+   Слой 4: хрома Material — шапка, табы, навигация, поиск, ToC.
+   Перекраска через стоковые классы; структура темы не трогается.
+   ============================================================ */
+
+/* ── шапка: бумага + волосяная линейка, без цветной плиты ───── */
+.md-header {
+  background: var(--hds-paper);
+  color: var(--hds-ink);
+  box-shadow: 0 1px 0 var(--hds-rule);
+}
+
+.md-header--shadow {
+  box-shadow: 0 1px 0 var(--hds-rule-2), 0 8px 24px -20px rgba(0, 0, 0, 0.4);
+}
+
+.md-header__title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.35rem;
+}
+
+/* ── ленточка релиза ────────────────────────────────────────── */
+.md-banner {
+  background: var(--hds-sheet-2);
+  color: var(--hds-ink-2);
+  box-shadow: 0 1px 0 var(--hds-rule);
+}
+
+.md-banner a {
+  color: var(--hds-accent-ink);
+}
+
+.md-banner strong {
+  font-family: var(--hds-mono);
+  font-weight: 700;
+  color: var(--hds-ink);
+}
+
+/* ── табы: журнальная строка разделов ───────────────────────── */
+.md-tabs {
+  background: var(--hds-paper);
+  color: var(--hds-ink-2);
+  box-shadow: 0 1px 0 var(--hds-rule);
+}
+
+.md-tabs__link {
+  font-size: var(--hds-fs-ui);
+  font-weight: 600;
+  opacity: 1;
+  color: var(--hds-ink-3);
+  transition: color var(--hds-t-fast) var(--hds-e-out);
+}
+
+.md-tabs__link:hover {
+  color: var(--hds-accent-ink);
+}
+
+.md-tabs__item--active .md-tabs__link,
+.md-tabs__link--active {
+  color: var(--hds-ink);
+  box-shadow: 0 2px 0 var(--hds-accent);
+}
+
+/* ── левая навигация: линейка-акцент у активного пункта ─────── */
+.md-nav {
+  font-size: var(--hds-fs-ui);
+}
+
+.md-nav__title {
+  color: var(--hds-ink-3);
+  font-size: var(--hds-fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.md-nav__link {
+  color: var(--hds-ink-2);
+}
+
+.md-nav__link:hover {
+  color: var(--hds-accent-ink);
+}
+
+.md-nav__link--active {
+  color: var(--hds-ink);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--hds-accent);
+  padding-left: 0.6rem;
+  margin-left: -0.6rem;
+}
+
+/* ── поиск: пилюля на втором слое бумаги ────────────────────── */
+.md-search__form {
+  background: var(--hds-sheet-2);
+  border-radius: var(--hds-r-pill);
+  box-shadow: inset 0 0 0 1px var(--hds-rule);
+}
+
+.md-search__form:hover {
+  background: var(--hds-sheet);
+  box-shadow: inset 0 0 0 1px var(--hds-rule-2);
+}
+
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+  background: var(--hds-sheet);
+  border-radius: var(--hds-r-sm) var(--hds-r-sm) 0 0;
+}
+
+.md-search__input::placeholder {
+  color: var(--hds-ink-4);
+}
+
+.md-search__output {
+  box-shadow: var(--hds-sh-float);
+}
+
+/* ── ToC справа ─────────────────────────────────────────────── */
+.md-nav--secondary .md-nav__link--active {
+  box-shadow: none;
+  padding-left: 0;
+  margin-left: 0;
+  color: var(--hds-accent-ink);
+}
+
+/* ── кнопка «наверх» ────────────────────────────────────────── */
+.md-top {
+  background: var(--hds-sheet);
+  color: var(--hds-ink-2);
+  border: 1px solid var(--hds-rule-2);
+  box-shadow: var(--hds-sh-lift);
+}
+
+.md-top:hover {
+  background: var(--hds-sheet-2);
+  color: var(--hds-accent-ink);
+}
+
+/* ── admonition: лист с левой линейкой, без «material»-теней ── */
+.md-typeset .admonition,
+.md-typeset details {
+  border: 1px solid var(--hds-rule);
+  border-left-width: 3px;
+  border-radius: var(--hds-r-sm);
+  box-shadow: none;
+  font-size: var(--hds-fs-ui);
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-family: var(--hds-sans);
+  font-weight: 700;
+}
+
+/* «это задаёт пак» — врезка честности */
+.md-typeset .admonition.pack {
+  border-left-color: var(--hds-accent);
+  background: var(--hds-accent-soft);
+}
+
+.md-typeset .admonition.pack > .admonition-title {
+  background: none;
+}
+
+.md-typeset .admonition.pack > .admonition-title::before {
+  content: "§";
+  font-family: var(--hds-mono);
+  font-weight: 700;
+  color: var(--hds-accent-ink);
+  -webkit-mask: none;
+  mask: none;
+  background: none;
+}
+
+/* ── скроллбары ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hds-rule-2);
+  border-radius: var(--hds-r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hds-ink-4);
+}
+
+/* ── подвал-«колофон» перекрывает стоковые стили футера ─────── */
+.md-footer,
+.md-footer-meta {
+  background: transparent;
+  color: var(--hds-ink-3);
+}
+
+/* ── метки страницы: штатный partials/tags.html из `tags:` фронт-маттера,
+     рендерятся в конце статьи — оформляем как графу-подвал бланка ────── */
+.md-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 3rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hds-rule);
+}
+
+.md-tag {
+  font-family: var(--hds-sans);
+  font-size: var(--hds-fs-micro);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hds-ink-3);
+  background: var(--hds-sheet-2);
+  border: 1px solid var(--hds-rule);
+  border-radius: var(--hds-r-pill);
+  padding: 0.4em 0.85em;
+}

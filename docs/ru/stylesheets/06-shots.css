@@ -1,0 +1,140 @@
+/* ============================================================
+   Слой 7: рамка кадра .hds-shot — скриншоты с колонтитулом-маршрутом.
+   Каждый кадр — парой light/dark: суффиксы #only-light / #only-dark.
+   ============================================================ */
+
+.hds-shot {
+  border: 1px solid var(--hds-rule-2);
+  border-radius: var(--hds-r-md);
+  overflow: hidden;
+  background: var(--hds-sheet);
+  box-shadow: var(--hds-sh-lift);
+  position: relative;
+}
+
+/* колонтитул кадра: слева продукт, справа маршрут в приложении */
+.hds-shot__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: var(--hds-sheet-2);
+  border-bottom: 1px solid var(--hds-rule);
+  padding: 0.4rem 0.85rem;
+}
+
+.hds-shot__brand {
+  font: 700 var(--hds-fs-micro) / 1 var(--hds-sans);
+  letter-spacing: 0.14em;
+  color: var(--hds-ink-3);
+  white-space: nowrap;
+}
+
+.hds-shot__route {
+  font-family: var(--hds-mono);
+  font-size: var(--hds-fs-micro);
+  color: var(--hds-ink-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hds-shot img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* заглушка на месте будущего кадра */
+.hds-shot__placeholder {
+  min-height: 14rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hds-ink-4);
+  font-size: var(--hds-fs-small);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 14px,
+    var(--hds-ruled-line) 14px 15px
+  );
+}
+
+/* пары light/dark: показываем кадр текущей темы */
+[data-md-color-scheme="default"] img[src$="#only-dark"],
+[data-md-color-scheme="slate"] img[src$="#only-light"] {
+  display: none;
+}
+
+/* то же для любых элементов, где URL-фрагмент не работает (видео и обёртки) */
+[data-md-color-scheme="default"] .hds-only-dark,
+[data-md-color-scheme="slate"] .hds-only-light {
+  display: none !important;
+}
+
+/* промо-ролик: фон и тень уже вкомпонованы в кадр, докручиваем только скругление */
+.hds-reel {
+  margin: 1.6em 0;
+}
+
+.hds-reel video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--hds-r-md);
+  box-shadow: var(--hds-sh-lift);
+}
+
+/* выноски-DOM поверх кадра */
+.hds-shot__pin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hds-mark);
+  color: #fff;
+  font: 700 var(--hds-fs-micro) / 22px var(--hds-sans);
+  text-align: center;
+  cursor: default;
+  left: var(--x);
+  top: var(--y);
+  box-shadow: 0 0 0 3px var(--hds-mark-soft);
+  transition: transform var(--hds-t) var(--hds-e-out);
+}
+
+.hds-shot__pin:hover,
+.hds-shot__pin.hds-hot {
+  transform: scale(1.25);
+}
+
+/* легенда под кадром */
+.md-typeset .hds-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+  font-size: var(--hds-fs-small);
+  color: var(--hds-ink-3);
+}
+
+.md-typeset .hds-legend li {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.3rem 0.4rem;
+  margin: 0;
+  border-radius: var(--hds-r-xs);
+}
+
+.md-typeset .hds-legend li.hds-hot {
+  background: var(--hds-mark-soft);
+}
+
+.hds-legend__n {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--hds-mark);
+  color: #fff;
+  font: 700 0.62rem / 18px var(--hds-sans);
+  text-align: center;
+}

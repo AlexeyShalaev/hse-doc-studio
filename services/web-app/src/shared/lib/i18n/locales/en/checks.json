@@ -1,0 +1,18 @@
+{
+  "severity": {
+    "menuTitle": "Change severity for this document",
+    "overriddenAria": "Severity overridden",
+    "header": "Severity"
+  },
+  "source": {
+    "misc": "Other"
+  },
+  "rules": {
+    "empty": "No applicable rules for this document.",
+    "categories": "Categories",
+    "enableCategory": "Enable category",
+    "disableCategory": "Disable category",
+    "enableAll": "Enable all",
+    "disableAll": "Disable all"
+  }
+}

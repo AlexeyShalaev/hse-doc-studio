@@ -1,0 +1,547 @@
+% !TeX program = xelatex
+% ============================================================
+% pmi_shared/pmi_shared.tex — ОБЩАЯ программа и методика испытаний
+% командного проекта: испытания ВСЕЙ программной системы (\projectname
+% здесь — системное название), требования — из ОБЩЕГО технического
+% задания; частные ПМИ каждого участника — в его папке. Код документа
+% строится от СИСТЕМНОГО кода ЕСПД (метаданные проекта).
+% ГОСТ 19.301-79 «Программа и методика испытаний.
+% Требования к содержанию и оформлению»
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+
+\input{../common/preamble}
+
+\newcommand{\docname}{Test Program and Methodology}
+\newcommand{\doccode}{\hseDocCodeBase\ 51 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ 51 01-1-ЛУ}
+
+\input{../common/commands}
+\input{../common/styles}
+
+\begin{document}
+\sloppy
+
+% ── Титульный лист ──────────────────────────────────────────
+\input{../common/title_template}
+
+
+% ============================================================
+%  ENGLISH BODY (project.lang == en)
+%  §2.3.4.2 / §2.5.3.1: an English-language applied project may render its
+%  ESPD program documentation in English (translated GOST 19). Section order
+%  and structure follow GOST 19.301-79; references use IEEE citation style.
+% ============================================================
+
+% ============================================================
+% ANNOTATION
+% ============================================================
+\section*{ANNOTATION}
+\addcontentsline{toc}{section}{ANNOTATION}
+
+This Test Program and Methodology for the development of the program \enquote{\hseProjectName} comprises the following sections: \enquote{Object of Testing}, \enquote{Purpose of Testing}, \enquote{Requirements for the Program}, \enquote{Requirements for the Program Documentation}, \enquote{Testing Facilities and Procedure}, \enquote{Testing Methods}.
+
+The \enquote{Object of Testing} section states the name, field of application, and designation of the program under test.
+
+The \enquote{Purpose of Testing} section states the objective of the testing.
+
+The \enquote{Requirements for the Program} section contains the list of requirements from the shared statement of work that are subject to verification during testing.
+
+The \enquote{Requirements for the Program Documentation} section lists the program documentation submitted for testing.
+
+The \enquote{Testing Facilities and Procedure} section provides information on the hardware and software used during testing, as well as the procedure for carrying it out.
+
+The \enquote{Testing Methods} section describes the methods and specific checks that are used.
+
+% Hint: list what your PMI appendices contain.
+The appendices provide a glossary of terms, a traceability matrix of requirements to automated tests, and a list of supporting testing materials.
+
+\clearpage
+
+% ============================================================
+% LIST OF APPLICABLE STANDARDS
+% ============================================================
+\noindent
+This document has been developed in accordance with the requirements of:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+\item GOST 19.101-77 Types of programs and program documents\cite{gost19101}.
+\item GOST 19.103-77 Designations of programs and program documents\cite{gost19103}.
+\item GOST 19.104-78 Basic inscriptions\cite{gost19104}.
+\item GOST 19.105-78 General requirements for program documents\cite{gost19105}.
+\item GOST 19.106-78 Requirements for program documents prepared in printed
+      form\cite{gost19106}.
+\item GOST 19.301-79 Test program and methodology. Requirements for content
+      and presentation\cite{gost19301}.
+\end{enumerate}
+
+Amendments to this document are prepared in accordance with GOST\,19.604-78\cite{gost19604}.
+
+\clearpage
+
+% ============================================================
+% TABLE OF CONTENTS
+% ============================================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================================
+% 1. OBJECT OF TESTING
+% ============================================================
+\section{OBJECT OF TESTING}
+
+\subsection{Name of the program under test}
+
+The name of the program is \enquote{\projectname}.
+
+% The English name is taken from the project settings (the
+% \enquote{Название работы на английском} field).
+The name of the program in English is \enquote{\hseProjectNameEn}.
+
+\subsection{Field of application of the program under test}
+
+% Hint: briefly describe the purpose and field of application of the
+% program, and which part of the system is covered by the testing.
+
+The program \enquote{\projectname} is \hseFill{a brief description of the system's purpose}. The system covers \hseFill{the main domains and subsystems}.
+
+Within the scope of this document, the software system is considered as a whole: the testing covers the subsystems of all team members and their end-to-end interaction. The testing of individual subsystems is described in the private test programs and methodologies of the participants.
+
+\subsection{Designation of the program under test}
+
+The name of the development topic is \enquote{\projectname}.
+
+% The short name is taken from the project settings (the
+% \enquote{Краткое наименование программы} field).
+The short name of the program is \enquote{\hseProjectNameShort}.
+
+\clearpage
+
+% ============================================================
+% 2. PURPOSE OF TESTING
+% ============================================================
+\section{PURPOSE OF TESTING}
+
+The purpose of the testing is to verify that the characteristics of the developed software system conform to the functional and other requirements set out in the program documentation \enquote{Shared Statement of Work}.
+
+\clearpage
+
+% ============================================================
+% 3. REQUIREMENTS FOR THE PROGRAM
+% ============================================================
+\section{REQUIREMENTS FOR THE PROGRAM}
+
+\subsection{Requirements for functional characteristics}
+
+\subsubsection{Composition of the functions performed}
+
+% Hint: identifiers (ТЗ-Ф-01, etc.) link requirements to tests in the
+% \enquote{Requirements traceability} panel.
+
+The functional characteristics of the software system listed in the requirements table of the shared statement of work are subject to verification. Each functional requirement with an identifier of the form \texttt{ТЗ-Ф-XX} is mapped to an automated test, a test suite, or another check.
+
+\input{../shared_technical_specification/requirements_table}
+
+\clearpage
+
+\subsubsection{Organisation of input data}
+
+% Hint: list the input data and formats of your system that are checked
+% (request structure, validation, constraints).
+\begin{hseExample}
+During testing, the fulfilment of the statement of work requirements for the organisation of input data is verified. The following are subject to verification:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item acceptance of \hseFill{the type of requests or input data} with data transfer in the \hseFill{input data format} format;
+    \item validation of incoming data against the schemas and data types specified in the interface specification;
+    \item enforcement of size constraints \hseFill{the type of input data constraints};
+    \item \hseFill{other input data organisation checks}.
+\end{itemize}
+
+Verification is performed both on valid input data and on erroneous data sets intended to confirm that validation works.
+\end{hseExample}
+
+\subsubsection{Organisation of output data}
+
+% Hint: list the output data checked (response codes, formats, error
+% structure).
+\begin{hseExample}
+During testing, the fulfilment of the statement of work requirements for the organisation of output data is verified. The following are subject to verification:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item returning results in the \hseFill{output data format} format;
+    \item use of \hseFill{status codes or response statuses} for successful and erroneous responses;
+    \item returning a structured error description sufficient for diagnostics without disclosing confidential data;
+    \item \hseFill{other output data organisation checks}.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Requirements for timing characteristics}
+
+% Hint: list the timing metrics from the SOW subject to verification
+% (response time, throughput).
+\begin{hseExample}
+During testing, the timing characteristics established in the statement of work are verified:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the processing time of \hseFill{the type of requests or operations} must not exceed \hseFill{the target response time};
+    \item the specified metrics must be maintained under a nominal load of up to \hseFill{the target number of users};
+    \item the target request rate must fall within the range \hseFill{the target request rate}.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Requirements for the interface}
+
+% Hint: describe the checked requirements for the program interface
+% (API methods, contracts, specifications).
+\begin{hseExample}
+During testing, the fulfilment of the statement of work requirements for the program interface is verified. The following are subject to verification:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item implementation of \hseFill{the type of program interface} in accordance with \hseFill{the interface principles and specifications};
+    \item availability of an up-to-date interface specification \hseFill{location of the specification};
+    \item verification of access to protected functions based on \hseFill{the authentication and authorization mechanism};
+    \item uniformity of response structure, data formats, and field naming conventions.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Requirements for marking and versioning}
+
+% Hint: adjust the list to your SOW requirements, if specified.
+\begin{hseExample}
+During testing, the fulfilment of the statement of work requirements for marking and versioning of the system components is verified. The following are subject to verification:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item conformance of the program code versions to the \hseFill{the versioning scheme used} specification;
+    \item presence of version tags \hseFill{the type of build artefacts};
+    \item presence of build metadata with the build date and the source code version identifier;
+    \item storage of source code, configurations, and build artefacts in repositories that support version control.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 4. REQUIREMENTS FOR THE PROGRAM DOCUMENTATION
+% ============================================================
+\section{REQUIREMENTS FOR THE PROGRAM DOCUMENTATION}
+
+\subsection{Composition of the program documentation submitted for testing}
+
+% Hint: list the documents submitted for testing, indicating the
+% corresponding GOST standards.
+
+The following documentation for the software system must be submitted for testing:
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item \enquote{\projectname}. Shared Statement of Work (GOST 19.201-78).
+    \item \enquote{\projectname}. Shared Test Program and Methodology
+          (GOST 19.301-79) --- this document.
+    \item Sets of subsystem program documentation for each team member:
+          statement of work (GOST 19.201-78), source listing
+          (GOST 19.401-78), programmer's manual (GOST 19.504-79), test
+          program and methodology (GOST 19.301-79).
+\end{enumerate}
+
+\subsection{Special requirements}
+
+The program documents must be prepared in accordance with GOST 19.106-78\cite{gost19106} and the GOST standards for each type of document (see~clause~4.1).
+
+% Hint: if necessary, state other special requirements for the
+% documentation layout.
+Supporting testing materials may be presented as appendices to this document.
+
+\clearpage
+
+% ============================================================
+% 5. TESTING FACILITIES AND PROCEDURE
+% ============================================================
+\section{TESTING FACILITIES AND PROCEDURE}
+
+\subsection{Hardware used during testing}
+
+% Hint: describe the hardware environment (OS, processor, memory) and the
+% launch environments.
+\begin{hseExample}
+The testing is carried out on hardware with the following characteristics: \hseFill{OS, processor, memory}. The following test environments are used:
+
+% The table is typeset with \captionof (not \begin{table}[H]): floating
+% environments inside the yellow sample block are not allowed.
+\begin{center}
+\small
+\captionof{table}{Test environments}
+\label{tab:pmi_test_environments}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.21\textwidth}|>{\raggedright\arraybackslash}p{0.29\textwidth}|X|}
+\hline
+\textbf{Environment} & \textbf{Composition} & \textbf{Purpose} \\
+\hline
+Local environment & \hseFill{composition of the local environment} & Quick test runs without deploying the full environment. \\
+\hline
+\hseFill{integration environment} & \hseFill{composition of the integration environment} & Full integration checks in an environment as close as possible to production. \\
+\hline
+\hseFill{acceptance stand} & \hseFill{composition of the acceptance stand} & Acceptance checks of the operational characteristics of the deployed system. \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{Software used during testing}
+
+% Hint: list the software tools (runtime, testing frameworks, quality
+% control tools).
+\begin{hseExample}
+The following software is used during testing:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item runtime: \hseFill{languages and runtimes};
+    \item testing frameworks: \hseFill{testing frameworks};
+    \item static analysis tools: \hseFill{linters and analysers};
+    \item quality and coverage control tools: \hseFill{quality control tools};
+    \item infrastructure tools: \hseFill{DBMS, brokers, containerisation}.
+\end{itemize}
+
+The primary way of accepting functional requirements in this work is passing automated tests: input data, actions, and expected results are fixed in executable test scenarios, and the results of their execution are stored in \hseFill{CI/CD or test reports}.
+\end{hseExample}
+
+\subsection{Acceptance criterion for functional requirements}
+
+\begin{hseExample}
+A functional requirement with an identifier of the form \texttt{ТЗ-Ф-XX} is considered accepted if all the following conditions are met simultaneously:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item the requirement is present in the requirements table of the statement of work;
+    \item an automated test, a test suite, or an end-to-end scenario is specified for the requirement;
+    \item the corresponding check has completed successfully on the version of the program under test;
+    \item supporting artefacts are available for the check: an execution log, a test report, or a coverage report, if they are provided for by the given environment.
+\end{enumerate}
+
+The acceptance committee confirms the fulfilment of functional requirements in one of two ways:
+
+% Hint: refine the confirmation methods for your project.
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item request access to \hseFill{the project repository}, open the check results of the version under test, and verify that they completed successfully;
+    \item run the tests locally on the agreed source code version using the command \hseFill{the test run command}.
+\end{enumerate}
+
+A local run is used as an alternative confirmation method when there is no access to CI/CD or when independent reproduction of the result is required. In the event of discrepancies between a local run and CI/CD, the acceptance result is the run on the agreed version in an isolated CI/CD environment, since it records the code version, configuration, environment, and execution artefacts.
+\end{hseExample}
+
+\subsection{Testing procedure}
+
+% Hint: adjust the sequence of stages for your project.
+\begin{hseExample}
+The testing is carried out in the following order:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item \textbf{Preparation stage}: visual verification of the program documentation set, preparation of the test environment according to sections 5.1--5.2, and deployment of the program according to the programmer's manual.
+    \item \textbf{Functional acceptance}: verification of the statement of work requirements based on the check results according to section~\ref{sec:methods}.
+    \item \textbf{Static quality control}: running and analysing the results of \hseFill{linters and quality checks}.
+    \item \textbf{Module- and service-level testing}: running \hseFill{the testing commands or tasks} and analysing the test and coverage reports.
+    \item \textbf{End-to-end testing}: running end-to-end scenarios in \hseFill{the end-to-end test environment}.
+    \item \textbf{Recording of results}: comparing the obtained results with the expected ones and preparing a conclusion on the passing of the tests.
+\end{enumerate}
+\end{hseExample}
+
+\subsection{Quantitative and qualitative characteristics to be assessed}
+
+% Hint: adjust the list of assessed characteristics for your project
+% (observability, load, etc.).
+\begin{hseExample}
+During testing, the following characteristics are assessed:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the percentage of successfully passed tests and checks;
+    \item the absence of unforeseen failures, crashes, and inconsistent data states;
+    \item the correctness of \hseFill{the key aspects of the program being verified};
+    \item the presence and quality of supporting testing artefacts;
+    \item \hseFill{additional characteristics from the SOW}.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Conditions for carrying out the testing}
+
+% Hint: state the required conditions (access, source code versions,
+% environment, secrets).
+\begin{hseExample}
+The testing must be carried out under the following conditions:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item access to \hseFill{the project repository} and check artefacts;
+    \item a known identifier of the version under test: a commit identifier, a version tag, or a link to a merge request;
+    \item availability of \hseFill{the program runtime environment} and network access to the required resources;
+    \item prepared environment variables, secrets, and keys for the test environments;
+    \item running the tests on the agreed source code version and test configuration.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 6. TESTING METHODS
+% ============================================================
+\section{TESTING METHODS}
+\label{sec:methods}
+
+\begin{hseExample}
+The testing is performed through a combination of visual documentation control, automated test suites, quality control checks, and acceptance checks. For each functional requirement, traceability to a specific test, test suite, or check from the testing methods table is used.
+\end{hseExample}
+
+% Hint: for each requirement, describe the verification method, the
+% expected and the actual results. Fill in the testing methods table.
+% The testing methods table stays outside the yellow sample block:
+% a longtable inside hseExample is not allowed.
+
+\begin{longtable}{|p{0.18\textwidth}|p{0.22\textwidth}|p{0.25\textwidth}|p{0.22\textwidth}|}
+\caption{Testing methods}
+\label{tab:test-methods}\\
+\hline
+\textbf{Requirement under test} &
+\textbf{Verification method} &
+\textbf{Expected result} &
+\textbf{Actual result} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Requirement under test} &
+\textbf{Verification method} &
+\textbf{Expected result} &
+\textbf{Actual result} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+\reqref{ТЗ-Ф-01} &
+\hseFill{verification method} &
+\hseFill{expected result} &
+\hseFill{actual result} \\
+\hline
+\end{longtable}
+
+\subsection{Testing the fulfilment of the program documentation requirements}
+
+Verification is performed by a visual method. For each document from section~4.1, the following are checked:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the presence of the document in the set;
+    \item conformance to the designation, title page, and section structure;
+    \item the absence of references to obsolete components, interfaces, and test environments;
+    \item consistency of this document with the statement of work, the source listing, and the programmer's manual.
+\end{itemize}
+
+\subsection{Testing the functional requirements}
+
+% Hint: adjust the steps for your CI/CD or way of running tests.
+\begin{hseExample}
+Verification is performed by an automated method using the requirements-to-tests traceability table. The tester performs the following actions:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item open \hseFill{the project repository or CI/CD};
+    \item select the check corresponding to the commit or version tag under test;
+    \item verify that all testing jobs have completed successfully;
+    \item for each requirement \texttt{ТЗ-Ф-XX}, map the specified test or test suite to a successfully completed check;
+    \item save or attach screenshots and execution reports to the testing materials.
+\end{enumerate}
+
+The test is considered successful if all functional requirements are traceable to an automated check, and the corresponding checks have completed without unresolved test failures. If an individual test was re-run due to environment instability, the final successful run and a link to the re-run log are recorded in the testing materials.
+\end{hseExample}
+
+\subsection{Testing static quality control and security checks}
+
+% Hint: list the linters, quality analysers, and security checks used;
+% remove this subsection if they do not apply.
+\begin{hseExample}
+Verification is performed by an automated method. The following groups of checks are used:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{linters and formatters} for analysing formatting, linting, and basic quality rules;
+    \item \hseFill{quality analysis platform} for building quality analytics and aggregating test coverage;
+    \item \hseFill{security scanning tools} for finding dependency vulnerabilities and secrets in the source code.
+\end{itemize}
+
+The result of the test is the presence of generated reports and the absence of critical blockers that make acceptance of the version impossible.
+\end{hseExample}
+
+\subsection{Testing timing characteristics by a load method}
+
+% Hint: this subsection is needed if the SOW specifies timing
+% characteristics; otherwise remove it.
+\begin{hseExample}
+Verification confirms the timing characteristics declared in the statement of work. The testing tool is \hseFill{the load testing tool}.
+
+The testing procedure:
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item prepare the workstation and deploy the program under test in the test environment;
+    \item run a load run using the command \hseFill{the run command};
+    \item perform a stepped series of runs with the parameters \hseFill{number of users and duration}; treat the first \hseFill{warm-up period duration} as the warm-up period and exclude it from the acceptance metrics;
+    \item record the summary run metrics: the total number of requests, the number of failures, the aggregate request rate, and the response time percentiles (p50, p95, p99);
+    \item save or attach the report and screenshots of the summary statistics to the testing materials.
+\end{enumerate}
+
+Passing criteria:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item the aggregate request rate after the warm-up period is at least \hseFill{the target rate};
+    \item the proportion of successful responses after the warm-up period is not below \hseFill{the target proportion of successful responses};
+    \item there are no unhandled exceptions or service crashes during the run;
+    \item a report is generated with a table of requests, response time statistics, and load graphs.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Testing requirements traceability and artefact completeness}
+
+\begin{hseExample}
+For each functional requirement of the statement of work with an identifier of the form \texttt{ТЗ-Ф-XX}, an automated check and the location of the corresponding test must be specified. Non-functional requirements are confirmed by separate testing methods: \hseFill{methods for verifying non-functional requirements}. Additionally, the completeness of the supporting testing materials attached to this document is checked.
+\end{hseExample}
+
+\clearpage
+% Source pages are printed without the bottom stamp (as in real sets) ---
+% only the sheet number and document code at the top.
+\pagestyle{appendix}
+
+% ============================================================
+% LIST OF REFERENCES
+% ============================================================
+\section*{LIST OF REFERENCES}
+\addcontentsline{toc}{section}{LIST OF REFERENCES}
+
+% Hint: add sources on your project's technologies BEFORE the GOST
+% standards, in IEEE style, following the example:
+% \bibitem{pytest}
+% pytest documentation. Accessed: Mar.~14, 2026. [Online]. Available: \url{https://docs.pytest.org/}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\bibitem{gost19101}
+\emph{GOST 19.101-77. Types of Programs and Program Documents}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19103}
+\emph{GOST 19.103-77. Designations of Programs and Program Documents}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19104}
+\emph{GOST 19.104-78. Basic Inscriptions}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19105}
+\emph{GOST 19.105-78. General Requirements for Program Documents}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19106}
+\emph{GOST 19.106-78. Requirements for Program Documents Prepared in Printed Form}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19301}
+\emph{GOST 19.301-79. Test Program and Methodology. Requirements for Content and Presentation}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+
+\bibitem{gost19604}
+\emph{GOST 19.604-78. Rules for Making Amendments to Program Documents Prepared in Printed Form}. Unified System for Program Documentation. Moscow, Russia: IPK Standards Publishing House, 2001.
+\end{thebibliography}
+
+
+
+\clearpage
+
+% ============================================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================================
+\input{../common/change_log}
+
+\end{document}

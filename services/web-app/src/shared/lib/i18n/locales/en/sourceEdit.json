@@ -1,0 +1,211 @@
+{
+  "panel": {
+    "title": "Issues",
+    "hide": "Hide issues panel",
+    "empty": "No issues for this file.",
+    "line": "ln {{line}}"
+  },
+  "actionMenu": {
+    "ruleLine": "{{ruleId}} · ln {{line}}",
+    "applyFix": "Apply fix",
+    "fixWithAi": "Fix with AI",
+    "severity": "Level:",
+    "currentSeverity": "Current level",
+    "changeSeverity": "Change level to {{severity}}",
+    "resetSeverity": "Reset level to default",
+    "ignoreFinding": "Ignore this issue",
+    "ignoreRule": "Ignore rule in document"
+  },
+  "toolbar": {
+    "status": {
+      "saved": "Saved",
+      "dirty": "Unsaved",
+      "saving": "Saving…",
+      "error": "Save error"
+    },
+    "readOnly": "read-only",
+    "readOnlyDefault": "File is read-only",
+    "statsTooltip": "Words · characters · line:column",
+    "statsSelected": "sel. {{words}} w / {{chars}} ch",
+    "statsTotal": "{{words}} w · {{chars}} ch",
+    "statsCaret": "Ln {{line}}:{{column}}",
+    "togglePanel": "Show/hide issues panel",
+    "prevProblem": "Previous issue",
+    "nextProblem": "Next issue",
+    "inlineMessages": "Inline messages at lines",
+    "panelBottom": "Issues panel at bottom",
+    "wrapLines": "Wrap long lines",
+    "save": "Save",
+    "saveTooltip": "Save (⌘S)",
+    "diagnosticsLabel": "Document issues",
+    "mode": {
+      "label": "Editor mode",
+      "code": "Code",
+      "visual": "Visual"
+    }
+  },
+  "format": {
+    "toolbarLabel": "Document formatting",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Shift+Z)",
+    "bold": "Bold (Ctrl+B)",
+    "italic": "Italic (Ctrl+I)",
+    "underline": "Underline (Ctrl+U)",
+    "monospace": "Monospace",
+    "bulletList": "Bulleted list",
+    "numberedList": "Numbered list",
+    "inlineMath": "Inline formula",
+    "displayMath": "Display formula",
+    "headingLevel": "Heading level",
+    "headingNone": "Normal text",
+    "comments": "Show comments",
+    "fieldsRemaining_one": "{{count}} field left",
+    "fieldsRemaining_other": "{{count}} fields left",
+    "fieldsHint": "Unfilled template fields — Tab / Shift+Tab to navigate",
+    "nextField": "Next field (Tab)",
+    "prevField": "Previous field (Shift+Tab)",
+    "chapter": "Chapter",
+    "section": "Section",
+    "subsection": "Subsection",
+    "subsubsection": "Subsubsection"
+  },
+  "insert": {
+    "open": "Insert",
+    "title": "Insert block",
+    "slashHint": "Quick insert; you can also type / in the document",
+    "figure": "Figure",
+    "figureHint": "Image, caption and label",
+    "table": "Table",
+    "tableHint": "A 2×2 table with caption",
+    "citation": "Citation",
+    "citationHint": "Bibliography key",
+    "footnote": "Footnote",
+    "footnoteHint": "For selected text or the caret",
+    "quote": "Quote",
+    "quoteHint": "A separate quotation block",
+    "pageBreak": "Page break",
+    "pageBreakHint": "Continue on the next page"
+  },
+  "zoom": {
+    "label": "Document zoom",
+    "out": "Zoom out",
+    "in": "Zoom in",
+    "reset": "Reset zoom to 100%"
+  },
+  "focus": {
+    "enter": "Distraction-free mode",
+    "exit": "Exit distraction-free mode (Esc)"
+  },
+  "syncTex": {
+    "noPdfPosition": "SyncTeX: no position in the PDF for this line",
+    "unavailable": "SyncTeX unavailable — rebuild the document to enable jumping to the PDF"
+  },
+  "find": {
+    "notFound": "Not found in source"
+  },
+  "paste": {
+    "escaped": "Special characters were escaped for LaTeX. Ctrl+Z to undo, Ctrl+Shift+V to paste raw.",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageFailed": "Could not upload the image",
+    "imageInsertSkipped": "The image was uploaded, but the document was closed — insert \\includegraphics manually"
+  },
+  "slash": {
+    "chapter": "Chapter",
+    "section": "Section",
+    "subsection": "Subsection",
+    "subsubsection": "Subsubsection",
+    "bulletList": "Bulleted list",
+    "numberedList": "Numbered list",
+    "inlineMath": "Inline formula",
+    "displayMath": "Display formula",
+    "figure": "Figure",
+    "table": "Table",
+    "pageBreak": "Page break",
+    "footnote": "Footnote"
+  },
+  "outline": {
+    "title": "Navigation",
+    "toggle": "Headings navigation pane",
+    "close": "Close navigation",
+    "searchPlaceholder": "Find a section…",
+    "searchLabel": "Search document structure",
+    "clearSearch": "Clear search",
+    "progress": "{{current}} / {{total}}",
+    "total": "Sections: {{count}}",
+    "noResults": "No sections match “{{query}}”.",
+    "empty": "No headings yet — add a section from the formatting bar."
+  },
+  "externalChange": {
+    "title": "The file changed outside the app while you have unsaved edits. Autosave is paused.",
+    "takeDisk": "Take from disk",
+    "keepMine": "Keep mine",
+    "compare": "Compare",
+    "diffTitle": "What differs",
+    "diffLegend": "Left is the version on disk, right is your unsaved one. Red is what you don't have; green is your lines.",
+    "diffEmpty": "The texts are identical.",
+    "updatedExternally": "Updated externally"
+  },
+  "recovery": {
+    "message": "An unsaved draft of this file was recovered.",
+    "revert": "Revert to saved version",
+    "hide": "Hide"
+  },
+  "ignore": {
+    "success": "Issue hidden with a % hse-noqa comment",
+    "error": "Could not hide the issue"
+  },
+  "editor": {
+    "ariaLabel": "Editor: {{path}}",
+    "loadError": "Could not load file: {{detail}}",
+    "openFileFailed": "Could not resolve the file path: {{path}}"
+  },
+  "tableEditor": {
+    "title": "Table editor",
+    "description": "Edit cells as plain text, make text bold/italic, manage columns — the LaTeX updates itself.",
+    "column": "Column",
+    "columnLabel": "Column name",
+    "addRow": "Add row",
+    "deleteRow": "Delete row",
+    "addColumn": "Add column",
+    "deleteColumn": "Delete column",
+    "moveLeft": "Move left",
+    "moveRight": "Move right",
+    "align": {
+      "left": "Align left",
+      "center": "Align center",
+      "right": "Align right"
+    },
+    "bold": "Bold (Ctrl+B)",
+    "italic": "Italic (Ctrl+I)",
+    "underline": "Underline (Ctrl+U)",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "empty": "This table has no rows yet — add the first one.",
+    "unsupported": "This table can't be edited here yet — open its code instead.",
+    "columnsLocked": "This table's columns can't be changed here — edit them in code.",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "bibliographyEditor": {
+    "title": "References",
+    "description": "Edit references as plain text, reorder them and change keys — the LaTeX updates itself.",
+    "key": "Key",
+    "keyPlaceholder": "e.g. gost19101",
+    "text": "Reference",
+    "add": "Add reference",
+    "delete": "Delete reference",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "bold": "Bold (Ctrl+B)",
+    "italic": "Italic (Ctrl+I)",
+    "underline": "Underline (Ctrl+U)",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "count": "{{count}} refs",
+    "emptyKeyBlocked": "Every reference needs a key",
+    "empty": "No references yet — add the first one.",
+    "unsupported": "This list can't be edited here yet — open its code instead.",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
+}

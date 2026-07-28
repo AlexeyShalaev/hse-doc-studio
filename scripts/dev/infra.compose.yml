@@ -1,0 +1,4 @@
+networks:
+  hse-doc-studio-network:
+    name: hse-doc-studio-network
+    driver: bridge

@@ -1,0 +1,54 @@
+name: Release Please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write # чтобы задиспатчить publish.yml для нового тега (см. шаг ниже)
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # Чекаут нужен шагу с заметками ниже: на master уже лежит смерженный
+      # release-notes.json из релизного PR и бампнутая версия.
+      - uses: actions/checkout@v7
+
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # release-please собирает тело релиза из сообщений коммитов — англоязычный
+      # `feat(checks): ...` для разработчика. Заменяем его сразу после создания
+      # релиза курируемым текстом из release-notes.json: его пишут руками в том же
+      # релизном PR, который открыл release-please (см. CONTRIBUTING → Releasing).
+      # Этот же текст потом читает установленное приложение, когда сообщает о
+      # доступном обновлении (своих заметок про новую версию у него быть не может).
+      #
+      # Шаг стоит ДО публикации образа: если заметок нет, релиз ехать не должен.
+      # На практике не сработает — `make changelog-check` в CI не даёт смержить
+      # релизный PR без заметок.
+      - name: Replace release notes with the curated ones
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs['.--tag_name'] }}
+        run: |
+          set -euo pipefail
+          # Без venv: в этом режиме скрипту хватает stdlib.
+          python3 scripts/gen_changelog.py --notes-for "${TAG#v}" > /tmp/notes.md
+          gh release edit "$TAG" --repo "${{ github.repository }}" --notes-file /tmp/notes.md
+
+      # Тег создаёт release-please под GITHUB_TOKEN, а push от GITHUB_TOKEN НЕ триггерит другие
+      # воркфлоу — publish.yml сам бы не запустился. Но workflow_dispatch — исключение из этого
+      # правила, поэтому явно дёргаем publish.yml для нового тега. PAT/App не нужен.
+      - name: Trigger image publish for the new tag
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish.yml --repo "${{ github.repository }}" --ref "${{ steps.release.outputs['.--tag_name'] }}"

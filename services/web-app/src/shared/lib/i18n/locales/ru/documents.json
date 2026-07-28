@@ -1,0 +1,269 @@
+{
+  "status": {
+    "ok": "Готов",
+    "warn": "С замечаниями",
+    "err": "Ошибка",
+    "building": "Сборка…",
+    "locked": "Заблокирован",
+    "draft": "Черновик"
+  },
+  "type": {
+    "technical_specification": {
+      "code": "ТЗ",
+      "name": "Техническое задание"
+    },
+    "thesis": {
+      "code": "ВКР",
+      "name": "Выпускная квалификационная работа"
+    },
+    "test_program_and_methodology": {
+      "code": "ПМИ",
+      "name": "Программа и методика испытаний"
+    },
+    "source_listing": {
+      "code": "ТП",
+      "name": "Технический проект"
+    },
+    "programmer_manual": {
+      "code": "РП",
+      "name": "Руководство программиста"
+    },
+    "operator_manual": {
+      "code": "РО",
+      "name": "Руководство оператора"
+    },
+    "presentation": {
+      "code": "ПРЕЗ",
+      "name": "Презентация"
+    },
+    "project_proposal": {
+      "code": "ПП",
+      "name": "Project Proposal"
+    },
+    "shared_technical_specification": {
+      "code": "ОТЗ",
+      "name": "Общее техническое задание"
+    },
+    "shared_test_program_and_methodology": {
+      "code": "ОПМИ",
+      "name": "Общая программа и методика испытаний"
+    },
+    "nda": {
+      "code": "NDA",
+      "name": "Расписка (NDA)"
+    }
+  },
+  "template": {
+    "fallbackLabel": "Шаблон"
+  },
+  "kind": {
+    "research": "Исследовательский",
+    "applied": "Прикладной"
+  },
+  "checksActions": {
+    "ruleDisabled": "Правило {{ruleId}} отключено для этого документа",
+    "ruleEnabled": "Правило {{ruleId}} снова включено"
+  },
+  "tabs": {
+    "ariaLabel": "Разделы документа",
+    "preview": "Превью",
+    "source": "Редактор",
+    "office": "Документ",
+    "checks": "Проверки",
+    "compile": "Сборка",
+    "history": "История",
+    "signatures": "Подписи"
+  },
+  "header": {
+    "notFound": "Документ не найден",
+    "pages": "{{count}} стр.",
+    "copyPath": "Скопировать путь к файлу",
+    "pathCopied": "Путь к файлу скопирован",
+    "copyFailed": "Не удалось скопировать",
+    "openInExternalEditor": "Открыть во внешнем редакторе",
+    "noEditorsDetected": "Внешние редакторы не обнаружены",
+    "openInEditor": "Открыть в редакторе",
+    "building": "Сборка…",
+    "rebuild": "Пересобрать",
+    "build": "Собрать",
+    "buildInProgress": "Сборка идёт…"
+  },
+  "nav": {
+    "collapse": "Свернуть навигатор (⌘B)",
+    "stopBuilds": "Остановить текущие сборки",
+    "cancel": "Отменить",
+    "buildAll": "Собрать все документы",
+    "build": "Собрать",
+    "stalledWarning": "Сборка молчит больше 90 секунд — похоже, зависла. Нажмите «Отменить», чтобы убить процесс и попробовать снова.",
+    "buildInProgress": "Идёт сборка…",
+    "sectionDocuments": "Документы",
+    "sectionTools": "Инструменты",
+    "sectionForms": "Формы",
+    "projectFiles": "Файлы проекта",
+    "packForSubmission": "Упаковка для подачи",
+    "requirementsTraceability": "Трассировка требований",
+    "signatures": "Подписи",
+    "versions": "Версии",
+    "projectSettings": "Настройки проекта",
+    "sharedDocuments": "Общие документы"
+  },
+  "history": {
+    "title": "История версий",
+    "subtitle": "Журнал изменений документа",
+    "newEntry": "Новая запись",
+    "draftPlaceholder": "Что изменилось?",
+    "cancel": "Отмена",
+    "add": "Добавить",
+    "empty": "История пуста. Запись появится после первой сборки или ручной заметки.",
+    "enterDescription": "Введите описание изменения",
+    "entryAdded": "Запись добавлена",
+    "kind": {
+      "compileOk": "сборка ок",
+      "compileFail": "ошибка сборки",
+      "edit": "правка",
+      "manualNote": "заметка",
+      "sign": "подпись",
+      "packSubmission": "сабмишн"
+    }
+  },
+  "compile": {
+    "running": "выполняется…",
+    "done": "готово",
+    "donePages": "{{count}} стр.",
+    "failed": "ошибка",
+    "cancelled": "отменена",
+    "cancel": "Отменить",
+    "rebuild": "Пересобрать",
+    "explain": "Объяснить",
+    "explainTitle": "Объяснить ошибку простыми словами (без правок)",
+    "fixWithAi": "Починить с ИИ",
+    "fixWithAiTitle": "Открыть агента и починить сборку",
+    "downloadLog": "Скачать .log",
+    "downloadLogTitle": "Скачать {{path}}",
+    "stalledWarning": "Сборка молчит больше 90 секунд. Скорее всего, docker завис на сетевой операции или плотной странице. Нажмите «Отменить», чтобы убить процесс — бэк подчистит запись и разлочит кнопки.",
+    "runBuild": "запустите сборку",
+    "runXelatex": "Запустить xelatex",
+    "noCompilation": "без компиляции",
+    "notification": {
+      "title": "Сборка завершена",
+      "successPages": "{{code}}: готово · {{count}} стр.",
+      "success": "{{code}}: готово",
+      "failure": "{{code}}: ошибка сборки"
+    },
+    "fixPrompt": "Сборка документа [{{code}}](doc:{{docId}}) завершилась с ошибками. Изучи лог последней сборки (`{{logPath}}`) и исходный `{{file}}`, найди причину ошибок LaTeX и исправь их. После правок пересобери документ инструментом compile_document и убедись, что сборка проходит без ошибок.",
+    "explainPrompt": "Сборка документа [{{code}}](doc:{{docId}}) упала. Прочитай лог последней сборки (`{{logPath}}`) и объясни простым языком, в чём причина ошибки LaTeX и как её исправить. НЕ меняй файлы — только объясни."
+  },
+  "preview": {
+    "passWord_one": "проход",
+    "passWord_few": "прохода",
+    "passWord_many": "проходов",
+    "passWord_other": "проходов",
+    "askAgentPrompt": "Поясни и проверь этот фрагмент из «{{name}}»:\n\n«{{text}}»",
+    "syncTexUnavailable": "SyncTeX недоступен — пересоберите документ, чтобы включить переход к исходнику",
+    "diffBasePages": "{{label}} · {{count}} стр.",
+    "notBuilt": "не собран",
+    "notBuiltHint": "Документ ещё не компилировался. Нажмите «Собрать»",
+    "notBuiltEngineHint": " — latexmk прогонит {{engine}} до {{passes}} {{passWord}} (до сходимости ссылок и оглавления).",
+    "notBuiltCopyHint": "Документ ещё не собирался. Нажмите «Собрать» — сборка просто прогонит проверки и опубликует файл (без компиляции).",
+    "nonPdfHint": "Предпросмотр для этого формата недоступен — скачайте файл или откройте его во внешнем приложении.",
+    "customNoPreviewHint": "Это кастомный документ — предпросмотр недоступен для этого формата. Скачайте файл или откройте его как текст.",
+    "officeConvertHint": "PDF-предпросмотр появится после установки конвертера — Настройки → Презентации",
+    "openAsText": "Открыть как текст",
+    "convertedBadge": "PDF-предпросмотр",
+    "customFileBadge": "Кастомный документ",
+    "htmlPreviewBadge": "HTML-предпросмотр",
+    "htmlPreviewTooltip": "Живой рендер HTML-презентации (слайды листаются прямо здесь). Шаблон RevealJS грузит библиотеку с CDN — офлайн отобразится без стилей. Сдаётся сам HTML-файл.",
+    "refresh": "Обновить",
+    "convertedTooltip": "Автоконвертация из {{ext}} (LibreOffice). Вёрстка может немного отличаться — сдаётся сам {{ext}}.",
+    "downloadOriginal": "Скачать {{ext}}",
+    "download": "Скачать",
+    "openInNewTab": "Открыть в новой вкладке",
+    "words": "{{count}} сл",
+    "wordsChars": "{{count}} сл · {{chars}} симв.",
+    "compareWithPrevious": "Сравнить с предыдущей сборкой",
+    "compare": "Сравнить",
+    "wordCountTooltip": "Слова · символы текста документа (без команд, комментариев и оглавления; импорты учтены) — texcount",
+    "downloadArchiveTitle": "Скачать архив: PDF + отделённые .sig-файлы (CAdES)",
+    "downloadSignedTitle": "Скачать PDF с подписями (исходники на диске не меняются)",
+    "pdfWithSig": "PDF + .sig",
+    "withSignatures": "С подписями"
+  },
+  "source": {
+    "binaryHint": "Бинарный исходник — редактируйте его в PowerPoint или другом внешнем редакторе.",
+    "download": "Скачать"
+  },
+  "office": {
+    "starting": "Запускаю редактор документа…",
+    "startingHint": "Первый запуск может занять до минуты-двух.",
+    "autosaveNote": "Правки сохраняются автоматически в файл документа проекта. PDF-превью обновится само через несколько секунд после сохранения.",
+    "notInstalledTitle": "Редактор не установлен",
+    "notInstalledBody": "Встроенный редактор Word/Excel/PowerPoint работает на ONLYOFFICE Document Server. Это отдельный Docker-образ (~4 ГБ), который достаточно установить один раз — дальше редактор будет подниматься автоматически.",
+    "installInSettings": "Установить в настройках",
+    "pullHintSecondary": "или скачайте образ вручную:",
+    "copyCommand": "Скопировать команду",
+    "commandCopied": "Команда скопирована",
+    "copyFailed": "Не удалось скопировать",
+    "checkAgain": "Проверить снова",
+    "unavailableTitle": "Редактор недоступен",
+    "retry": "Повторить",
+    "scriptError": "Не удалось загрузить скрипт редактора (api.js). Убедитесь, что контейнер ONLYOFFICE запущен, и повторите."
+  },
+  "checks": {
+    "results": "Результаты",
+    "rules": "Правила",
+    "fixWithAi": "Починить с ИИ",
+    "fixWithAiTitle": "Открыть агента и разобрать замечания",
+    "compliance": "Соответствие: {{rate}}%",
+    "activeRules": "Активные правила: {{enabled}} из {{total}}",
+    "rulesSubtitle": "Управление набором проверок для этого документа.",
+    "filterAll": "Все",
+    "filterSkipped": "Пропущено",
+    "customFileBanner": "Это кастомный документ. Часть проверок ГОСТ/ЕСПД пропущена — она рассчитана на LaTeX-структуру шаблона.",
+    "noneInCategory": "Ничего не найдено в этой категории",
+    "passedLabel": "соблюдено",
+    "skippedLabel": "пропущено",
+    "violations_one": "нарушение",
+    "violations_few": "нарушения",
+    "violations_many": "нарушений",
+    "violations_other": "нарушений",
+    "fixAllPrompt": "Разбери замечания проверок в документе [{{code}}](doc:{{docId}}) и исправь их в .tex по требованиям ЕСПД/ГОСТ. Список замечаний:\n{{list}}{{more}}\nДействуй по порядку, кратко поясняя каждое исправление. После правок при необходимости пересобери документ инструментом compile_document.",
+    "fixAllMore": "\n…и ещё {{count}} замечаний.",
+    "findingLocation": " в `{{path}}`",
+    "card": {
+      "openAtLine": "Открыть в редакторе на строке {{line}}",
+      "line": "Строка {{line}}",
+      "fixWithAi": "Исправить с ИИ",
+      "ignoreFinding": "Игнорировать это замечание (% hse-noqa)",
+      "openInEditorNamed": "Открыть в {{editor}}",
+      "editorFallback": "редакторе",
+      "openInEditor": "Открыть в редакторе",
+      "enableRuleBack": "Включить правило обратно",
+      "ignoreRuleInDocument": "Игнорировать правило в документе"
+    }
+  },
+  "signatures": {
+    "customUnsignableHint": "Подписание недоступно — этот кастомный документ не в PDF и не может быть автоматически сконвертирован. Вы несёте ответственность за его подписание самостоятельно.",
+    "customConvertiblePendingPreview": "Точное положение подписи можно настроить после того, как появится PDF-предпросмотр."
+  },
+  "customFile": {
+    "replaceMenuItem": "Заменить на свой файл…",
+    "revertMenuItem": "Вернуть к шаблону",
+    "downloadMenuItem": "Скачать",
+    "badge": "Кастомный",
+    "uploadModalTitle": "Загрузить свой файл",
+    "uploadModalDescription": "Заменяет сгенерированный из шаблона документ «{{name}}» вашим файлом. Word, PowerPoint, PDF — что угодно.",
+    "dropTitle": "Перетащите файл сюда или нажмите, чтобы выбрать",
+    "dropActive": "Отпустите, чтобы выбрать файл",
+    "dropHint": "Любой формат — ограничений нет",
+    "classConvertible": "Похоже на документ Word/PowerPoint — при сборке пакета сможем предложить конвертацию в PDF.",
+    "classPdf": "PDF — предпросмотр и подписание будут работать как обычно.",
+    "classUnknown": "Формат не распознан — файл будет включён в пакет как есть, без конвертации. Подписать его нужно будет самостоятельно.",
+    "cancel": "Отмена",
+    "uploadAction": "Загрузить",
+    "uploadedToast": "Файл «{{name}}» загружен вместо шаблонного документа",
+    "revertConfirmTitle": "Вернуть документ к шаблону?",
+    "revertConfirmDescription": "Загруженный файл перестанет использоваться. Сам файл останется на диске — им можно будет воспользоваться снова.",
+    "revertConfirmAction": "Вернуть к шаблону",
+    "revertedToast": "Документ возвращён к шаблонной версии"
+  }
+}

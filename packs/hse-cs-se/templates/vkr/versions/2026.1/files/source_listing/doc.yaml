@@ -1,0 +1,25 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Текст программы
+  en: Source Listing
+code:
+  ru: ТП
+  en: SL
+source_file: source_listing/source_listing.tex
+output_file: source_listing/source_listing.pdf
+output_name:
+  ru: Текст программы.pdf
+  en: Source Listing.pdf
+gost_ref: gost-19.401-78
+required: false
+supported_langs:
+- ru
+- en
+scope: personal
+supported_kinds:
+- project
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: espd

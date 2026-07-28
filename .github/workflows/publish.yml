@@ -1,0 +1,130 @@
+name: Publish image
+
+# release-please пушит тег v<semver> при мерже релизного PR — на него собираем и
+# публикуем ОДИН Docker-образ (FastAPI: API + статика React) в GitHub Container Registry.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  CI_TAG: ci
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      # Тело релиза заполняет release-please.yml сразу после его создания —
+      # здесь только собираем и публикуем образ, права на запись не нужны.
+      contents: read
+      packages: write
+    steps:
+      # Гейт: публикуем только с тега vX.Y.Z. Push-триггер отфильтрован маской тега,
+      # а workflow_dispatch можно запустить с любого ref — здесь это ловится явно.
+      - name: Ref must be a vX.Y.Z tag
+        run: |
+          set -euo pipefail
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::publish.yml должен запускаться на теге vX.Y.Z (получено: $GITHUB_REF)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+      # QEMU нужен для кросс-сборки arm64 на amd64-раннере.
+      # Third-party actions запинены на commit-SHA (supply-chain); комментарий # vX — для Dependabot.
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      # Дата сборки в образ (HSE_STUDIO__BUILT → «О программе»). Версия туда НЕ едет:
+      # её бампит release-please прямо в исходниках, и образ собирается уже с тега.
+      - name: Build date
+        id: build
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # ── Сначала собираем образ локально и проверяем, что он РЕАЛЬНО стартует.
+      #    Слои кэшируются (gha) → финальный build-and-push ниже переиспользует их.
+      - name: Build for smoke
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: deploy/all-in-one/Dockerfile
+          target: production
+          load: true
+          platforms: linux/amd64
+          # lowercase-тег совпадает с image в deploy/all-in-one → compose поднимет локальный образ.
+          tags: ghcr.io/alexeyshalaev/hse-doc-studio:ci
+          build-args: |
+            HSE_STUDIO_BUILT=${{ steps.build.outputs.date }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke (compose) — не публикуем то, что не поднимается
+        working-directory: deploy/all-in-one
+        run: |
+          set -euo pipefail
+          # TAG=ci → compose поднимет локально собранный образ, а не тянет :latest из GHCR.
+          {
+            echo "TAG=$CI_TAG"
+            echo "PORT=17240"
+            echo "DATA_DIR=./data"
+          } > .env
+          # Каталог данных создаём заранее: иначе docker сделает его от root, а процесс
+          # в контейнере работает под непривилегированным `app` и не сможет туда писать.
+          mkdir -p data && chmod 777 data
+          docker compose up -d
+          ok=0
+          for _ in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:17240/health >/dev/null 2>&1 && { ok=1; break; }
+            sleep 3
+          done
+          [ "$ok" = 1 ] || { echo "::error::релизный образ не проходит /health — публикация отменена"; docker compose logs --no-color; exit 1; }
+          # release-notes.json едет в образ отдельным COPY: если его забыть, всё
+          # запустится, но «Что нового» окажется пустым — тихая потеря, ловим здесь.
+          notes=$(curl -fsS http://127.0.0.1:17240/api/v1/system/release-notes || echo '{}')
+          echo "$notes" | grep -q '"version"' || {
+            echo "::error::в образе нет заметок о релизах (release-notes.json не доехал): $notes"
+            docker compose logs --no-color; exit 1; }
+          docker compose down -v || true
+          echo "✅ smoke прошёл — публикуем"
+
+      - name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: deploy/all-in-one/Dockerfile
+          target: production
+          push: true
+          # amd64 — ПК/ноутбуки на Windows и Linux; arm64 — Mac на Apple Silicon.
+          # Без arm64 Docker Desktop на маке крутил бы образ через эмуляцию.
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          # Версия приложения приезжает не сборочным аргументом, а исходником:
+          # release-please бампит __version__/pyproject/package.json в релизном PR.
+          build-args: |
+            HSE_STUDIO_BUILT=${{ steps.build.outputs.date }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+

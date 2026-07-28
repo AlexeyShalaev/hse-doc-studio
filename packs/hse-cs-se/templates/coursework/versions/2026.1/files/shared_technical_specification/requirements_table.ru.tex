@@ -1,0 +1,35 @@
+% ============================================================
+% shared_technical_specification/requirements_table.tex — таблица функциональных
+% требований к системе (СКЕЛЕТ; заполняется студентом).
+%
+% СИСТЕМНАЯ таблица требований командного проекта (отдельный документ,
+% не копия личной). Подключается из shared_technical_specification.tex
+% (\input{requirements_table}) и shared_test_program_and_methodology.tex
+% (\input{../shared_technical_specification/requirements_table}).
+%
+% Каждое требование объявляется макросом \req{ID}{Текст} в ячейке
+% «Требование»: печатается только текст, а панель «Трассировка
+% требований» связывает определение со ссылками \reqref{ID} в
+% ВКР/ПМИ/РП/РО. Идентификатор в первой ячейке и в \req должен
+% совпадать; сохраняйте единый префикс (ТЗ-Ф-01, ТЗ-Ф-02, …).
+% ============================================================
+\begin{longtable}{|l|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\centering\arraybackslash}p{0.22\textwidth}|}
+\caption{Требования к функциональным характеристикам системы} \label{tab:requirements} \\
+\hline
+\textbf{№} & \textbf{Пользовательская история} & \textbf{Требование} & \textbf{Область} \\
+\hline
+\endfirsthead
+\multicolumn{4}{l}{Продолжение таблицы \thetable} \\
+\hline
+\textbf{№} & \textbf{Пользовательская история} & \textbf{Требование} & \textbf{Область} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+ТЗ-Ф-01 & Как пользователь, я~хочу \ldots, чтобы \ldots & \req{ТЗ-Ф-01}{Система должна …} & \ldots \\
+\hline
+ТЗ-Ф-02 & Как пользователь, я~хочу \ldots, чтобы \ldots & \req{ТЗ-Ф-02}{Система должна …} & \ldots \\
+\hline
+\end{longtable}

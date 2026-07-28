@@ -1,0 +1,20 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Project Proposal
+  en: Project Proposal
+code:
+  ru: PP
+  en: PP
+source_file: project_proposal/project_proposal.tex
+output_file: project_proposal/project_proposal.pdf
+output_name:
+  ru: Project Proposal.pdf
+  en: Project Proposal.pdf
+gost_ref: hse-pp-2026
+required: true
+supported_langs:
+- en
+scope: personal

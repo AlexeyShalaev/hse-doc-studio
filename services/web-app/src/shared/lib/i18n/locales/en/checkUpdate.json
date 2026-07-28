@@ -1,0 +1,33 @@
+{
+  "modal": {
+    "title": "What's new",
+    "description": "List of changes in the available version and the command to update.",
+    "close": "Close",
+    "emptyBody": "No change description available.",
+    "openOnGithub": "Open release on GitHub"
+  },
+  "oneClick": {
+    "done": "Updated. Reloading…",
+    "busy": "Updating — the container is being recreated, the page will reconnect automatically.",
+    "hint": "Install the update in one click. On failure, an automatic rollback to the current version is performed.",
+    "updating": "Updating…",
+    "updateTo": "Update to v{{version}}"
+  },
+  "manual": {
+    "instructions": "To update, run this in the project directory:",
+    "copyCommand": "Copy command",
+    "commandCopied": "Command copied"
+  },
+  "selfUpdate": {
+    "startFailed": "Failed to start the update.",
+    "timeout": "The update did not finish in time. An automatic rollback may have been performed — check the logs: docker logs hse-studio-updater."
+  },
+  "versions": {
+    "installed": "installed",
+    "switchUp": "Update",
+    "switchDown": "Install",
+    "hintUp": "The app will restart on the selected version.",
+    "hintDown": "An earlier version: the app restarts, your projects and settings stay where they are.",
+    "manualOnly": "Switching versions from the UI needs all-in-one mode with a reachable Docker."
+  }
+}

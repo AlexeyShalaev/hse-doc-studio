@@ -1,0 +1,54 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Презентация защиты
+  en: Defense Presentation
+code:
+  ru: ПРЕЗ
+  en: PRES
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+checks:
+  disabled_categories:
+  - formatting
+  disabled:
+  - gost-7.32-2017/page-margins
+  - gost-7.32-2017/line-spacing
+variants:
+- id: pptx
+  label:
+    ru: PowerPoint-шаблон
+    en: PowerPoint template
+  source_file: presentation/pptx/presentation.pptx
+  output_file: presentation/pptx/presentation.pptx
+  output_name:
+    ru: Презентация.pptx
+    en: Presentation.pptx
+  engine: none
+- id: reveal
+  label:
+    ru: RevealJS (HTML)
+    en: RevealJS (HTML)
+  source_file: presentation/reveal/index.html
+  output_file: presentation/reveal/index.html
+  output_name:
+    ru: Презентация.html
+    en: Presentation.html
+  engine: none
+- id: beamer
+  label:
+    ru: LaTeX Beamer
+    en: LaTeX Beamer
+  source_file: presentation/beamer/presentation.tex
+  output_file: presentation/beamer/presentation.pdf
+  output_name:
+    ru: Презентация.pdf
+    en: Presentation.pdf
+  engine: xelatex
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: pres
