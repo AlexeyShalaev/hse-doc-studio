@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## 0.1.0 (2026-07-28)
+
+
+### Features
+
+* HSE Doc Studio — локальная студия учебных документов по ГОСТ ([7b29d27](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7b29d27c57836ec407fdf66d8a43a3f8557b4634))
+
 ## 0.1.0 - 2026-07-28
 
 - First release: a local studio for academic documents — projects from templates (thesis, coursework, Project Proposal) with every accompanying document and presentation
