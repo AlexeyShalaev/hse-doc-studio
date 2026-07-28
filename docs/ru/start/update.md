@@ -18,23 +18,21 @@ tags:
 
 ### Обновление вручную { #manual-update }
 
-Если интерфейс недоступен: скачать свежий образ, удалить контейнер, поставить заново. Папка данных не трогается — мастер узнает прежнюю установку и предложит её же.
+Когда интерфейс недоступен — или просто удобнее из терминала. Механизм тот же, что у кнопки: соседний контейнер-апдейтер пересоздаёт студию со всеми её настройками, ждёт здоровья и сам откатывается при неудаче. Папка данных не трогается.
 
 === "macOS / Linux"
 
     ```sh
-    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
-    docker rm -f hse-doc-studio
-    curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | HSE_STUDIO_LANG=ru sh
+    --8<-- "update-sh.ru.txt"
     ```
 
 === "Windows (PowerShell)"
 
     ```powershell
-    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
-    docker rm -f hse-doc-studio
-    $env:HSE_STUDIO_LANG='ru'; irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex
+    --8<-- "update-ps1.ru.txt"
     ```
+
+Запасной путь — полная переустановка (данные целы, мастер узнает прежнюю установку): `docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest`, `docker rm -f hse-doc-studio`, затем [команда установки](install.md) заново.
 
 ## Удаление
 

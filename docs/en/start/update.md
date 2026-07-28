@@ -18,23 +18,21 @@ tags:
 
 ### Manual update { #manual-update }
 
-If the interface is unreachable: pull the fresh image, remove the container, install again. The data folder is untouched — the wizard recognises the previous install and offers the same folder.
+When the interface is unreachable — or the terminal is simply handier. Same mechanism as the button: a sibling updater container recreates the Studio with all its settings, waits for health and rolls back on failure. The data folder is untouched.
 
 === "macOS / Linux"
 
     ```sh
-    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
-    docker rm -f hse-doc-studio
-    curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh
+    --8<-- "update-sh.txt"
     ```
 
 === "Windows (PowerShell)"
 
     ```powershell
-    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
-    docker rm -f hse-doc-studio
-    irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex
+    --8<-- "update-ps1.txt"
     ```
+
+The fallback is a full reinstall (data stays, the wizard recognises the previous install): `docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest`, `docker rm -f hse-doc-studio`, then the [install command](install.md) again.
 
 ## Uninstalling
 
