@@ -60,10 +60,25 @@
   color: var(--hds-accent-ink);
 }
 
+/* Акцент активного раздела лежит НА нижней линейке бара (bottom: 0), а не под
+   текстом ссылки — иначе под активной вкладкой читались две черты сразу. */
+.md-tabs__item {
+  position: relative;
+}
+
 .md-tabs__item--active .md-tabs__link,
 .md-tabs__link--active {
   color: var(--hds-ink);
-  box-shadow: 0 2px 0 var(--hds-accent);
+}
+
+.md-tabs__item--active::after,
+.md-tabs__item:has(.md-tabs__link--active)::after {
+  content: "";
+  position: absolute;
+  /* -1px: перекрыть волосок линейки бара, чтобы читалась одна черта */
+  inset: auto 0.6rem -1px;
+  height: 3px;
+  background: var(--hds-accent);
 }
 
 /* ── левая навигация: линейка-акцент у активного пункта ─────── */
