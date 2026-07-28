@@ -4,10 +4,11 @@
 FROM node:26-alpine AS frontend-builder
 WORKDIR /app
 
-# Node 22 и pnpm 9.15.4 — ровно то, на чём фронт собирается в ci.yml
-# (setup-node node-version: 22, pnpm из "packageManager" в package.json).
+# Node 26 и pnpm 9.15.4 — ровно то, на чём фронт собирается в ci.yml
+# (setup-node node-version: 26, pnpm из "packageManager" в package.json).
 # pnpm@latest здесь означал бы 10.x с другим форматом lockfile'а (наш — 9.0).
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+# Node 25+ больше не включает corepack — pnpm ставится через npm.
+RUN npm install -g pnpm@9.15.4
 
 COPY services/web-app/package.json services/web-app/pnpm-lock.yaml services/web-app/.npmrc ./
 COPY services/web-app/patches ./patches
