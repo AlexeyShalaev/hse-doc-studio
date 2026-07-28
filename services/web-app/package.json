@@ -1,6 +1,6 @@
 {
   "name": "@hse-doc-studio/web-app",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "hse-doc-studio Web Application - Frontend",
