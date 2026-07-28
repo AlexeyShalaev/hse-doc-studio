@@ -36,6 +36,10 @@ ROOT = Path(__file__).resolve().parent.parent
 NOTES_PATH = ROOT / "release-notes.json"
 OUT_PATH = ROOT / "CHANGELOG.md"
 VERSION_PATH = ROOT / "services" / "api" / "hse_doc_studio" / "__init__.py"
+# Версия в баннере сайта (docs/overrides/main.html включает этот партиал).
+# Пишется вместе с CHANGELOG — то есть обновляется тем же `make changelog`
+# в релизном PR, и сайт всегда объявляет актуальный выпуск.
+VERSION_PARTIAL_PATH = ROOT / "docs" / "overrides" / "partials" / "latest-version.html"
 
 # Ссылки «сравнить версии» ведут туда же, куда `settings.source_url` в приложении.
 REPO_URL = "https://github.com/AlexeyShalaev/hse-doc-studio"
@@ -147,6 +151,12 @@ def check() -> int:
         actual = OUT_PATH.read_text(encoding="utf-8") if OUT_PATH.exists() else ""
         if actual != expected:
             problems.append("CHANGELOG.md is out of sync with release-notes.json — run `make changelog`")
+        if releases:
+            partial = VERSION_PARTIAL_PATH.read_text(encoding="utf-8") if VERSION_PARTIAL_PATH.exists() else ""
+            if partial.strip() != str(releases[0]["version"]):
+                problems.append(
+                    "docs/overrides/partials/latest-version.html is out of sync — run `make changelog`"
+                )
 
     for problem in problems:
         print(f"error: {problem}", file=sys.stderr)  # noqa: T201 — CLI-скрипт
@@ -302,6 +312,10 @@ def main() -> int:
         return 1
     OUT_PATH.write_text(build(releases), encoding="utf-8")
     print(f"wrote {OUT_PATH.relative_to(ROOT)} ({len(releases)} releases)")  # noqa: T201 — CLI-скрипт
+    if releases:
+        VERSION_PARTIAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        VERSION_PARTIAL_PATH.write_text(f"{releases[0]['version']}\n", encoding="utf-8")
+        print(f"wrote {VERSION_PARTIAL_PATH.relative_to(ROOT)}")  # noqa: T201 — CLI-скрипт
     return 0
 
 

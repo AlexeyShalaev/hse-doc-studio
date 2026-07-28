@@ -46,12 +46,14 @@
 {% endblock %}
 
 {% block announce %}
+  {# Версию пишет `make changelog` из release-notes.json (см. gen_changelog.py) —
+     баннер объявляет актуальный выпуск без ручных правок этого файла. #}
   {% set lang = config.theme.language %}
   {% if lang == 'ru' %}
-    <strong>0.1.0</strong> · первый публичный релиз —
+    <strong>{% include "partials/latest-version.html" %}</strong> · свежий выпуск —
     <a href="{{ 'whatsnew/' | url }}">что нового →</a>
   {% else %}
-    <strong>0.1.0</strong> · first public release —
+    <strong>{% include "partials/latest-version.html" %}</strong> · latest release —
     <a href="{{ 'whatsnew/' | url }}">what's new →</a>
   {% endif %}
 {% endblock %}

@@ -15,7 +15,26 @@ tags:
 - Settings → **About**: the update button, “What's new”, and switching to any published version, including rollback.
 - The updater recreates the container **with all your flags** and **rolls back automatically** if the new version does not come up.
 - Auto-update is on by default and never starts during a build; it is disabled in the same place. To fully stop feed requests: `HSE_STUDIO__UPDATE_FEED_URL=off`.
-- If the interface is unreachable — `docker pull`, `docker rm -f hse-doc-studio`, then run the install command again.
+
+### Manual update { #manual-update }
+
+If the interface is unreachable: pull the fresh image, remove the container, install again. The data folder is untouched — the wizard recognises the previous install and offers the same folder.
+
+=== "macOS / Linux"
+
+    ```sh
+    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
+    docker rm -f hse-doc-studio
+    curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh
+    ```
+
+=== "Windows (PowerShell)"
+
+    ```powershell
+    docker pull ghcr.io/alexeyshalaev/hse-doc-studio:latest
+    docker rm -f hse-doc-studio
+    irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex
+    ```
 
 ## Uninstalling
 
