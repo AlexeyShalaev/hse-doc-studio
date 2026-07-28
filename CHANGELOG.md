@@ -6,14 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.1.3](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.2...v0.1.3) (2026-07-28)
+## [0.1.3](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.2...v0.1.3) - 2026-07-28
 
-
-### Bug Fixes
-
-* **agent:** ошибка рана видна в чате, модели без tools получают prompt-инструменты вместо падения ([69974df](https://github.com/AlexeyShalaev/hse-doc-studio/commit/69974df40af2469ed06b58a5d2806c346078002a))
-* **deploy:** скрипты ручного обновления тем же апдейтером, что и кнопка (пересоздание с флагами + автооткат) ([9549d49](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9549d490d842bf1be7f3c1d4ddd7c5c29d8ff81b))
-* правки 0.1.3 — агент с любыми локальными моделями, скрипты обновления, докфиксы ([ce9f1b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ce9f1b88f097ddabfc83c54a0d11db8c85ef991b))
+- The AI agent now works with any local model: if a model lacks tool support (e.g. phi3.5), it switches to a text protocol and keeps answering
+- Agent errors are no longer lost — the failure reason shows up right in the chat
+- Terminal updates: the update.sh and update.ps1 scripts run the same updater as the Update button — settings preserved, automatic rollback on failure
+- Docs site polish: the banner always announces the current release; fixed the What's-new link, tab underline and buttons
 
 ## [0.1.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.1...v0.1.2) - 2026-07-28
 

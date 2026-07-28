@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.1.3",
+      "date": "2026-07-28",
+      "notes": [
+        {
+          "ru": "ИИ-агент работает с любыми локальными моделями: если модель не поддерживает инструменты (например phi3.5), он переключается на текстовый протокол и продолжает отвечать",
+          "en": "The AI agent now works with any local model: if a model lacks tool support (e.g. phi3.5), it switches to a text protocol and keeps answering"
+        },
+        {
+          "ru": "Ошибки агента больше не теряются — причина сбоя показывается прямо в чате",
+          "en": "Agent errors are no longer lost — the failure reason shows up right in the chat"
+        },
+        {
+          "ru": "Обновление из терминала: скрипты update.sh и update.ps1 запускают тот же апдейтер, что и кнопка «Обновить» — настройки сохраняются, при неудаче автооткат",
+          "en": "Terminal updates: the update.sh and update.ps1 scripts run the same updater as the Update button — settings preserved, automatic rollback on failure"
+        },
+        {
+          "ru": "Полировка сайта документации: баннер всегда объявляет актуальную версию, поправлены ссылка в «Что нового», подчёркивание вкладок и кнопки",
+          "en": "Docs site polish: the banner always announces the current release; fixed the What's-new link, tab underline and buttons"
+        }
+      ]
+    },
+    {
       "version": "0.1.2",
       "date": "2026-07-28",
       "notes": [
