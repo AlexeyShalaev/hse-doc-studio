@@ -103,7 +103,7 @@ jobs:
       # Поднимать по мере добавления тестов, цель — 90.
       - name: Pytest (unit + integration)
         run: uv run pytest --cov-fail-under=78
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: services/api/coverage.xml
@@ -145,7 +145,7 @@ jobs:
         run: pnpm typecheck
       - name: Test (vitest)
         run: pnpm test:coverage
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: services/web-app/coverage/lcov.info
