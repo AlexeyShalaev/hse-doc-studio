@@ -7,6 +7,8 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+import httpx
+import openai
 import pytest
 from hse_doc_studio.core.agent.entities import AgentMessage, NormalizedTurn, TokenUsage, ToolCall, ToolSpec
 from hse_doc_studio.core.entities import AIProvider
@@ -186,6 +188,52 @@ async def test__ollama__omits_tool_choice_and_stream_options() -> None:
     assert "tools" in record  # native tools still advertised
     assert "tool_choice" not in record  # ... but Ollama rejects tool_choice
     assert "stream_options" not in record
+
+
+class _NativeToolsRejectingClient(_FakeOpenAIClient):
+    """Как Ollama с моделью без tool-шаблона (phi3.5): любой запрос с `tools`
+    отклоняется 400, повтор без них обслуживается как обычно."""
+
+    def __init__(self, chunks: list[Any], record: dict[str, Any]) -> None:
+        super().__init__(chunks, record)
+        self.calls: list[dict[str, Any]] = []
+
+    async def _create(self, **kwargs: Any) -> _FakeStream:
+        self.calls.append(dict(kwargs))
+        if "tools" in kwargs:
+            raise openai.BadRequestError(
+                "registry.ollama.ai/library/phi3.5:latest does not support tools",
+                response=httpx.Response(400, request=httpx.Request("POST", "http://ollama/v1/chat/completions")),
+                body=None,
+            )
+        return await super()._create(**kwargs)
+
+
+@pytest.mark.unit
+async def test__ollama__model_without_tools__retries_with_prompt_injected_tools() -> None:
+    record: dict[str, Any] = {}
+    client = _NativeToolsRejectingClient([_chunk(content="привет", finish="stop")], record)
+    adapter = OpenAIShapedAgentProvider(_provider(AIProviderType.ollama), is_ollama=True, client=client)  # type: ignore[arg-type]
+
+    turn = await adapter.run_turn(
+        model="phi3.5:latest",
+        messages=[AgentMessage(role="user", content="hi")],
+        tools=[ToolSpec(name="read_tex", description="read a tex file", parameters={"type": "object"})],
+        system="base",
+        tool_choice_allowed=True,
+        max_output_tokens=100,
+        temperature=0.0,
+        sink=None,
+        cancel=asyncio.Event(),
+    )
+
+    assert turn.text == "привет"
+    assert len(client.calls) == 2
+    assert "tools" in client.calls[0]  # первая попытка — нативные инструменты
+    assert "tools" not in client.calls[1]  # повтор — без них...
+    retry_system = client.calls[1]["messages"][0]
+    assert retry_system["role"] == "system"
+    assert "read_tex" in retry_system["content"]  # ...схемы уехали в промпт
 
 
 @pytest.mark.unit
