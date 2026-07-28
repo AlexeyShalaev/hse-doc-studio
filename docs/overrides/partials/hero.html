@@ -8,7 +8,8 @@
         - text: "…"
           href: "…"       # относительный URL от корня сайта
           kind: primary | ghost
-      install: "curl …"   # команда установки (необязательно)
+      install: "curl …"   # команда установки, sh-вариант (необязательно)
+      install_ps: "irm …" # PowerShell-вариант; hds.js покажет его вместо sh на Windows
       fine: "…"           # подстрочник (необязательно)
       sheet:              # бланк «обходной лист» справа (необязательно)
         title: "…"
@@ -33,9 +34,20 @@
         </div>
       {% endif %}
       {% if hero.install %}
-        <div class="hds-cmd">
+        <div class="hds-cmd" data-hds-os="sh">
           <span class="hds-cmd__dollar" aria-hidden="true">$</span>
           <code>{{ hero.install }}</code>
+          <button type="button" class="hds-cmd__copy" data-hds-copy
+                  aria-label="{{ 'Скопировать команду' if config.theme.language == 'ru' else 'Copy command' }}">
+            {{ 'Копировать' if config.theme.language == 'ru' else 'Copy' }}
+          </button>
+        </div>
+      {% endif %}
+      {# Windows-вариант скрыт по умолчанию: без JS остаётся sh — безопасный дефолт #}
+      {% if hero.install_ps %}
+        <div class="hds-cmd" data-hds-os="ps" hidden>
+          <span class="hds-cmd__dollar" aria-hidden="true">&gt;</span>
+          <code>{{ hero.install_ps }}</code>
           <button type="button" class="hds-cmd__copy" data-hds-copy
                   aria-label="{{ 'Скопировать команду' if config.theme.language == 'ru' else 'Copy command' }}">
             {{ 'Копировать' if config.theme.language == 'ru' else 'Copy' }}

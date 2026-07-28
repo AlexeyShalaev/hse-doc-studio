@@ -17,6 +17,7 @@ hero:
       href: "start/first-project/"
       kind: ghost
   install: "curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh"
+  install_ps: "irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex"
   fine: "Apache-2.0 · linux/amd64 и arm64 · единственное требование — установленный и запущенный Docker."
   sheet:
     title: "Пакет сдачи · ВКР"

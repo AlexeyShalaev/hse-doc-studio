@@ -141,11 +141,26 @@
     });
   }
 
+  /* Команда установки в герое: посетителю с Windows показываем PowerShell-вариант
+     (data-hds-os="ps"), остальным — sh. Без JS остаётся sh — безопасный дефолт. */
+  function initOsCmd(root) {
+    if (!/Windows/i.test(navigator.userAgent || "")) return;
+    var ps = root.querySelectorAll('[data-hds-os="ps"]');
+    if (!ps.length) return;
+    ps.forEach(function (el) {
+      el.hidden = false;
+    });
+    root.querySelectorAll('[data-hds-os="sh"]').forEach(function (el) {
+      el.hidden = true;
+    });
+  }
+
   function boot() {
     initCopy(document);
     initTracks(document);
     initPins(document);
     initOsTabs(document);
+    initOsCmd(document);
     initKbd(document);
   }
 
