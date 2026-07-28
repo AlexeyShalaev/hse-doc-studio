@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Bot, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bot, Cpu, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  aiProviderKeys,
   useAIProviders,
   useDeleteAIProvider,
   type AIProvider,
   type AIProviderType,
 } from "@entities/ai-provider";
+import { useOllamaRuntimeStatus, useSyncProvider } from "@entities/ai-runtime";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
@@ -118,10 +121,31 @@ const ProviderRow = ({
 
 export const ProvidersSection = () => {
   const { t } = useTranslation("settings");
+  const queryClient = useQueryClient();
   const providersQuery = useAIProviders();
   const deleteProvider = useDeleteAIProvider();
   const settings = useAppSettings();
   const updateSettings = useUpdateAppSettings();
+  // Живая локальная Ollama без провайдера — предлагаем подключить одним нажатием.
+  // Бэкенд синкает провайдера сам (старт приложения, запуск/скачивание модели),
+  // так что баннер — страховка для «Ollama появилась позже», не основной путь.
+  const runtimeStatus = useOllamaRuntimeStatus();
+  const syncProvider = useSyncProvider();
+  const ollamaDetected = Boolean(runtimeStatus.data?.base_url);
+  const hasOllamaProvider = (providersQuery.data ?? []).some(
+    (p) => p.type === "ollama",
+  );
+  const showOllamaHint =
+    ollamaDetected && providersQuery.data !== undefined && !hasOllamaProvider;
+
+  const handleConnectOllama = () => {
+    syncProvider.mutate(undefined, {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: aiProviderKeys.all });
+        toast.success(t("providers.ollamaDetectedToast"));
+      },
+    });
+  };
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AIProvider | null>(null);
@@ -180,6 +204,45 @@ export const ProvidersSection = () => {
       />
 
       <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
+        {showOllamaHint && (
+          <div
+            className="flex items-center justify-between"
+            style={{
+              gap: 12,
+              padding: "10px 12px",
+              borderRadius: 6,
+              border: "1px solid var(--accent)",
+              background: "var(--bg-1)",
+            }}
+          >
+            <div className="flex items-center" style={{ gap: 10, minWidth: 0 }}>
+              <Cpu
+                size={14}
+                style={{ color: "var(--accent)", flexShrink: 0 }}
+              />
+              <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+                  {t("providers.ollamaDetectedTitle")}
+                </span>
+                <span className="dim" style={{ fontSize: 11.5 }}>
+                  {t("providers.ollamaDetectedText")}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn xs primary"
+              onClick={handleConnectOllama}
+              disabled={syncProvider.isPending}
+            >
+              {syncProvider.isPending ? (
+                <Spinner size="sm" />
+              ) : (
+                t("providers.ollamaDetectedAdd")
+              )}
+            </button>
+          </div>
+        )}
         {providersQuery.isLoading ? (
           <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
             <Spinner size="sm" />
