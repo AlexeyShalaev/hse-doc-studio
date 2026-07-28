@@ -122,6 +122,11 @@
 }
 
 /* ── ③ Команда установки с копированием ─────────────────────── */
+/* hidden-вариант команды под другую ОС: атрибут должен побеждать display:flex */
+.hds-cmd[hidden] {
+  display: none;
+}
+
 .hds-cmd {
   display: flex;
   align-items: center;

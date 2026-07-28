@@ -35,7 +35,7 @@ tags:
 
 The script asks nothing: it checks that Docker responds, pulls the image, starts the `hse-doc-studio` container and opens the browser. Default port is 17240 (if taken, it tries 17241…17250). Re-running is safe: an existing container is not recreated, your data folder is never lost.
 
-Environment variables: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, and in the sh version `DOCKER_SOCK` for Colima and Rancher Desktop:
+Environment variables: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, `HSE_STUDIO_LANG` (script message language: `ru` for Russian, English without the flag), and in the sh version `DOCKER_SOCK` for Colima and Rancher Desktop:
 
 ```sh
 DOCKER_SOCK="$HOME/.colima/default/docker.sock" curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh

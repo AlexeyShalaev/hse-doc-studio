@@ -40,13 +40,32 @@ const TOOL_META: Record<string, { labelKey: string; group: string }> = {
   set_engine: { labelKey: "tools.setEngine", group: "settings" },
   set_language: { labelKey: "tools.setLanguage", group: "settings" },
   set_project_meta: { labelKey: "tools.setProjectMeta", group: "settings" },
+  read_pdf: { labelKey: "tools.readPdf", group: "docsText" },
+  ask_user: { labelKey: "tools.askUser", group: "other" },
+  vcs_status: { labelKey: "tools.vcsStatus", group: "versions" },
+  vcs_list_history: { labelKey: "tools.vcsListHistory", group: "versions" },
+  vcs_diff: { labelKey: "tools.vcsDiff", group: "versions" },
+  vcs_save_snapshot: { labelKey: "tools.vcsSaveSnapshot", group: "versions" },
+  vcs_restore: { labelKey: "tools.vcsRestore", group: "versions" },
+  create_project: { labelKey: "tools.createProject", group: "projects" },
+  list_projects: { labelKey: "tools.listProjects", group: "projects" },
+  list_templates: { labelKey: "tools.listTemplates", group: "projects" },
 };
 
-const GROUP_ORDER = ["docsText", "buildChecks", "settings", "other"];
+const GROUP_ORDER = [
+  "docsText",
+  "buildChecks",
+  "versions",
+  "projects",
+  "settings",
+  "other",
+];
 
 const GROUP_LABEL_KEY: Record<string, string> = {
   docsText: "tools.groupDocsText",
   buildChecks: "tools.groupBuildChecks",
+  versions: "tools.groupVersions",
+  projects: "tools.groupProjects",
   settings: "tools.groupSettings",
   other: "tools.groupOther",
 };

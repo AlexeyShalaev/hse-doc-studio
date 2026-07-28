@@ -24,21 +24,21 @@ description: Скрипт одной командой, ручной docker run �
 === "macOS / Linux"
 
     ```sh
-    --8<-- "install-sh.txt"
+    --8<-- "install-sh.ru.txt"
     ```
 
 === "Windows (PowerShell)"
 
     ```powershell
-    --8<-- "install-ps1.txt"
+    --8<-- "install-ps1.ru.txt"
     ```
 
 Скрипт ничего не спрашивает: проверяет, что Docker отвечает, скачивает образ, запускает контейнер `hse-doc-studio` и открывает браузер. Порт по умолчанию 17240 (занят — переберёт 17241…17250). Повторный запуск безопасен: существующий контейнер не пересоздаётся, папка данных не теряется.
 
-Переменные окружения: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, в sh-версии — `DOCKER_SOCK` для Colima и Rancher Desktop:
+Переменные окружения: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, `HSE_STUDIO_LANG` (язык сообщений скрипта: `ru` — русский, без флага — английский), в sh-версии — `DOCKER_SOCK` для Colima и Rancher Desktop:
 
 ```sh
-DOCKER_SOCK="$HOME/.colima/default/docker.sock" curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh
+DOCKER_SOCK="$HOME/.colima/default/docker.sock" curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | HSE_STUDIO_LANG=ru sh
 ```
 
 ## Способ 2 · Вручную, без скриптов

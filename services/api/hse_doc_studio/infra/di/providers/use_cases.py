@@ -448,7 +448,10 @@ class UseCaseProvider(Provider):
         self,
         list_projects: ListProjectsUC,
     ) -> GetProjectSuggestionsUC:
-        return GetProjectSuggestionsUC(list_projects=list_projects)
+        return GetProjectSuggestionsUC(
+            list_projects=list_projects,
+            default_projects_dir=settings.data_dir.expanduser() / "projects",
+        )
 
     @provide
     def get_get_project_uc(

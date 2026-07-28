@@ -23,6 +23,7 @@ from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.update.auto_update_scheduler import AutoUpdateScheduler
 from hse_doc_studio.infra.update.deployment import docker_alive
+from hse_doc_studio.use_cases.ai_runtime.sync_local_provider import SyncLocalOllamaProviderUC
 from hse_doc_studio.use_cases.chat.recover_stale_chat_runs import RecoverStaleChatRunsUC
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.compile.recover_stale_compiles import RecoverStaleCompilesUC
@@ -122,6 +123,40 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 logger.exception("host font adoption failed")
 
         app.state.adopt_fonts_task = asyncio.create_task(_adopt())
+
+    @app.on_event("startup")
+    async def _ensure_projects_dir() -> None:
+        # `<data>/projects` — готовое место под работы: мастер создания проекта
+        # предлагает его чипом, даже когда проектов ещё нет. В setup-режиме
+        # каталог данных не смонтирован — молча пропускаем, после мастера
+        # контейнер пересоздаётся и этот старт выполнится заново.
+        try:
+            (settings.data_dir.expanduser() / "projects").mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.info("projects dir not created", error=str(exc))
+
+    @app.on_event("startup")
+    async def _sync_local_ai_provider() -> None:
+        # Нативная Ollama могла работать ещё ДО установки приложения — тогда ни
+        # pull, ни «Запустить» в настройках не происходят, и авто-управляемый
+        # провайдер не появлялся, пока пользователь не создаст его руками. Один
+        # фоновый синк на старте закрывает ровно этот случай: use case сам
+        # ничего не создаёт, если Ollama не отвечает. Только в настроенной
+        # установке — до мастера data_dir не смонтирован и писать провайдера некуда.
+        async def _sync() -> None:
+            try:
+                async with container() as request_container:
+                    inspect_uc = await request_container.get(InspectSetupUC)
+                    if not (await inspect_uc.execute()).report.is_ready:
+                        return
+                    uc = await request_container.get(SyncLocalOllamaProviderUC)
+                    result = await uc.execute()
+                    if result.provider_id is not None:
+                        logger.info("local ollama provider synced", models=len(result.models))
+            except Exception:
+                logger.exception("local ollama provider sync failed")
+
+        app.state.sync_ollama_provider_task = asyncio.create_task(_sync())
 
     @app.on_event("startup")
     async def _prefetch_tex_image() -> None:

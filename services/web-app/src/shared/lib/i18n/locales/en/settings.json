@@ -240,7 +240,11 @@
     "noModelsPlaceholder": "No models",
     "selectProviderFirst": "Pick a provider first",
     "modelSearchPlaceholder": "Search model…",
-    "noModelsEmpty": "No models"
+    "noModelsEmpty": "No models",
+    "ollamaDetectedTitle": "Local Ollama detected",
+    "ollamaDetectedText": "It is already running, but there is no provider for it — without one the agent cannot see local models. Connecting requires no keys.",
+    "ollamaDetectedAdd": "Connect",
+    "ollamaDetectedToast": "Local Ollama provider connected"
   },
   "agentPersonas": {
     "title": "Agent roles",

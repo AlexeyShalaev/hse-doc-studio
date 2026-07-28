@@ -242,7 +242,11 @@
     "noModelsPlaceholder": "Нет моделей",
     "selectProviderFirst": "Сначала провайдер",
     "modelSearchPlaceholder": "Поиск модели…",
-    "noModelsEmpty": "Нет моделей"
+    "noModelsEmpty": "Нет моделей",
+    "ollamaDetectedTitle": "Обнаружена локальная Ollama",
+    "ollamaDetectedText": "Она уже работает, но провайдера на неё нет — без него агент не увидит локальные модели. Подключение не требует ключей.",
+    "ollamaDetectedAdd": "Подключить",
+    "ollamaDetectedToast": "Локальный провайдер Ollama подключён"
   },
   "agentPersonas": {
     "title": "Роли агента",

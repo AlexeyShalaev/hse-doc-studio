@@ -9,6 +9,9 @@
 # Совместимость с Windows PowerShell 5.1: без тернарного оператора, ??, ?. и
 # прочего синтаксиса PowerShell 7 — на свежей Windows 5.1 по-прежнему то, что
 # открывается по «PowerShell» из меню Пуск.
+#
+# Файл сохранён БЕЗ BOM: `irm ... | iex` в 5.1 не считает BOM пробелом и падает
+# на «команде ﻿#». Кодировку строк при iex задаёт HTTP-заголовок (utf-8).
 
 # $ErrorActionPreference намеренно НЕ 'Stop': в 5.1 вывод нативной программы в
 # stderr при перенаправлении 2>&1 превращается в терминирующую ошибку, и скрипт
@@ -35,17 +38,27 @@ $PortAttempts = 10
 $HealthTimeoutSec = 120
 $HealthPollSec = 2
 
+# Язык сообщений: HSE_STUDIO_LANG=ru — русский, всё остальное (и умолчание) —
+# английский. Документация подставляет флаг сама по языку открытой страницы.
+$LangRu = ("$env:HSE_STUDIO_LANG" -match '^(?i)ru')
+
+# Loc "по-русски" "in English" — выбор строки по HSE_STUDIO_LANG.
+function Loc([string]$Ru, [string]$En) {
+    if ($LangRu) { return $Ru }
+    return $En
+}
+
 function Say([string]$Message) {
     Write-Host $Message
 }
 
 function Fail([string]$Message) {
-    Write-Host "ошибка: $Message" -ForegroundColor Red
+    Write-Host "$(Loc 'ошибка' 'error'): $Message" -ForegroundColor Red
     # throw, а не exit: скрипт чаще всего запускают как `irm ... | iex`, то есть
     # прямо в сессии пользователя, и `exit` закрыл бы окно вместе с только что
     # напечатанной причиной отказа. Необработанное исключение и видно, и даёт
     # ненулевой код возврата, когда скрипт запущен файлом.
-    throw 'установка прервана'
+    throw (Loc 'установка прервана' 'installation aborted')
 }
 
 # Единственный способ дозваться нативной программы и её stderr в 5.1: слить
@@ -63,14 +76,16 @@ function Invoke-Docker {
 
 function Test-Docker {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        Fail "не найден docker. Поставьте Docker Desktop: https://www.docker.com/products/docker-desktop/"
+        Fail (Loc 'не найден docker. Поставьте Docker Desktop: https://www.docker.com/products/docker-desktop/' `
+            'docker not found. Install Docker Desktop: https://www.docker.com/products/docker-desktop/')
     }
     # `docker info`, а не `docker version`: второй отвечает и без демона —
     # клиент печатает свою версию и молча выходит с нулём.
     $info = Invoke-Docker @('info')
     if ($info.Code -ne 0) {
-        Fail ("демон докера не отвечает — запустите Docker Desktop и дождитесь, " +
-            "пока он станет зелёным.`n$($info.Output.Trim())")
+        Fail ((Loc 'демон докера не отвечает — запустите Docker Desktop и дождитесь, пока он станет зелёным.' `
+            'the docker daemon is not responding — start Docker Desktop and wait until it turns green.') +
+            "`n$($info.Output.Trim())")
     }
 }
 
@@ -154,28 +169,32 @@ function Complete-Install {
 
     $url = "http://localhost:$HostPort"
     if (Wait-Healthy -HostPort $HostPort) {
-        Say "приложение отвечает."
+        Say (Loc 'приложение отвечает.' 'the app is responding.')
     }
     else {
-        Say "приложение не ответило за $HealthTimeoutSec с. Посмотрите логи: docker logs $Name"
+        Say (Loc "приложение не ответило за $HealthTimeoutSec с. Посмотрите логи: docker logs $Name" `
+            "the app did not respond within $HealthTimeoutSec s. Check the logs: docker logs $Name")
     }
 
     try {
         Start-Process $url | Out-Null
     }
     catch {
-        Say "браузер открыть не удалось — откройте адрес вручную."
+        Say (Loc 'браузер открыть не удалось — откройте адрес вручную.' `
+            'could not open a browser — open the address manually.')
     }
 
     Say ""
     Say "  $url"
     Say ""
-    Say "При первом запуске приложение спросит папку для ваших файлов и перезапустится"
-    Say "само — вкладку можно не закрывать, она дождётся."
+    Say (Loc 'При первом запуске приложение спросит папку для ваших файлов и перезапустится' `
+        'On first launch the app will ask for a folder for your files and restart')
+    Say (Loc 'само — вкладку можно не закрывать, она дождётся.' `
+        'itself — keep the tab open, it will wait.')
     Say ""
-    Say "  логи:       docker logs -f $Name"
-    Say "  остановить: docker stop $Name"
-    Say "  удалить:    docker rm -f $Name"
+    Say (Loc "  логи:       docker logs -f $Name" "  logs:    docker logs -f $Name")
+    Say (Loc "  остановить: docker stop $Name" "  stop:    docker stop $Name")
+    Say (Loc "  удалить:    docker rm -f $Name" "  remove:  docker rm -f $Name")
 }
 
 # ── Сценарий ────────────────────────────────────────────────────────────────
@@ -187,33 +206,40 @@ Test-Docker
 # скрипта было бы худшим, что этот скрипт умеет.
 if (Test-ContainerExists) {
     if (Test-ContainerRunning) {
-        Say "контейнер $Name уже запущен."
+        Say (Loc "контейнер $Name уже запущен." "container $Name is already running.")
     }
     else {
-        Say "контейнер $Name существует, но остановлен — запускаю."
+        Say (Loc "контейнер $Name существует, но остановлен — запускаю." `
+            "container $Name exists but is stopped — starting it.")
         $started = Invoke-Docker @('start', $Name)
         if ($started.Code -ne 0) {
-            Fail "не удалось запустить существующий контейнер:`n$($started.Output.Trim())"
+            Fail ((Loc 'не удалось запустить существующий контейнер:' `
+                'failed to start the existing container:') + "`n$($started.Output.Trim())")
         }
     }
     $runningPort = Get-PublishedPort
     if (-not $runningPort) {
-        Fail ("контейнер $Name запущен без публикации порта — снаружи он недоступен.`n" +
-            "  Пересоздайте его: docker rm -f $Name, затем повторите скрипт.")
+        Fail ((Loc "контейнер $Name запущен без публикации порта — снаружи он недоступен." `
+            "container $Name runs without a published port — it is unreachable from outside.") + "`n" +
+            (Loc "  Пересоздайте его: docker rm -f $Name, затем повторите скрипт." `
+            "  Recreate it: docker rm -f $Name, then re-run the script."))
     }
-    Say "чтобы поставить заново с нуля: docker rm -f $Name, затем повторите скрипт."
+    Say (Loc "чтобы поставить заново с нуля: docker rm -f $Name, затем повторите скрипт." `
+        "to reinstall from scratch: docker rm -f $Name, then re-run the script.")
     Complete-Install -HostPort ([int]$runningPort)
 }
 else {
-    Say "скачиваю образ $Image"
+    Say (Loc "скачиваю образ $Image" "pulling image $Image")
     $pull = Invoke-Docker @('pull', $Image)
     if ($pull.Code -ne 0) {
         $local = Invoke-Docker @('image', 'inspect', $Image)
         if ($local.Code -eq 0) {
-            Say "обновить образ не удалось, запускаю уже скачанный."
+            Say (Loc 'обновить образ не удалось, запускаю уже скачанный.' `
+                'could not update the image, starting the one already downloaded.')
         }
         else {
-            Fail "не удалось скачать образ ${Image}:`n$($pull.Output.Trim())"
+            Fail ((Loc "не удалось скачать образ ${Image}:" "failed to pull image ${Image}:") +
+                "`n$($pull.Output.Trim())")
         }
     }
 
@@ -232,17 +258,19 @@ else {
         # занять его нельзя. Лечится тем же — следующим портом.
         $busy = $run.Output -match 'address already in use|port is already allocated|Ports are not available'
         if (-not $busy) {
-            Fail "docker run не смог запустить контейнер:`n$($run.Output.Trim())"
+            Fail ((Loc 'docker run не смог запустить контейнер:' 'docker run failed to start the container:') +
+                "`n$($run.Output.Trim())")
         }
         $attempt++
         if ($attempt -gt $PortAttempts) {
-            Fail ("порты с $FirstPort по $port заняты. Освободите один или задайте свой:`n" +
-                "    `$env:PORT=18500; .\install.ps1")
+            Fail ((Loc "порты с $FirstPort по $port заняты. Освободите один или задайте свой:" `
+                "ports $FirstPort through $port are taken. Free one or set your own:") +
+                "`n    `$env:PORT=18500; .\install.ps1")
         }
         $port++
-        Say "порт занят, пробую $port"
+        Say (Loc "порт занят, пробую $port" "port taken, trying $port")
     }
 
-    Say "контейнер $Name запущен на порту $port."
+    Say (Loc "контейнер $Name запущен на порту $port." "container $Name is running on port $port.")
     Complete-Install -HostPort $port
 }
