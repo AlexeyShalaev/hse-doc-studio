@@ -220,9 +220,11 @@ _SITE_TEXT = {
         "title": "Что нового",
         "description": "Изменения по версиям — курируемые заметки к каждому релизу.",
         "lede": (
+            # Лид вставляется в HTML-блок <p class="hds-lede">, где markdown не
+            # обрабатывается — ссылка обязана быть готовым тегом <a>.
             "Заметки к релизам пишутся руками и двуязычны — те же тексты приложение "
             "показывает в «О программе». Обновиться одной кнопкой: "
-            "[Обновление и удаление](../start/update.md)."
+            '<a href="../start/update/">Обновление и удаление</a>.'
         ),
         "compare": "сравнить с предыдущей версией",
     },
@@ -231,7 +233,7 @@ _SITE_TEXT = {
         "description": "Release-by-release changes — curated notes for every version.",
         "lede": (
             "Release notes are hand-written and bilingual — the app shows the same texts "
-            "in About. One-click updates: [Updating and uninstalling](../start/update.md)."
+            'in About. One-click updates: <a href="../start/update/">Updating and uninstalling</a>.'
         ),
         "compare": "compare with the previous version",
     },

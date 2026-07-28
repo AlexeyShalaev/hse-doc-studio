@@ -161,7 +161,23 @@ class OpenAIShapedAgentProvider:
         client = self._build_client()
         acc = _Accumulator()
         try:
-            stream = await client.chat.completions.create(**kwargs)
+            try:
+                stream = await client.chat.completions.create(**kwargs)
+            except openai.BadRequestError as exc:
+                # Модели без tool-шаблона (например phi3.5 в Ollama) отвечают 400
+                # на ЛЮБОЙ запрос с `tools` — раньше это молча роняло весь ран.
+                # Переключаемся на prompt-injected инструменты (схемы в системном
+                # промпте + разбор свободного текста) и повторяем тот же ход.
+                if self._use_prompt_tools or not tools or "does not support tools" not in str(exc):
+                    raise
+                logger.info("model rejects native tools; retrying with prompt-injected tools", model=model)
+                trace("prompt_tools_fallback", model=model, error=str(exc))
+                self._use_prompt_tools = True
+                oai_messages = self._build_messages(messages, system, tools)
+                kwargs = self._build_request(
+                    model, oai_messages, tools, tool_choice_allowed, max_output_tokens, temperature
+                )
+                stream = await client.chat.completions.create(**kwargs)
             async for chunk in stream:
                 if cancel.is_set():
                     await stream.close()

@@ -37,7 +37,7 @@ from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.chat._support import find_project_folder
+from hse_doc_studio.use_cases.chat._support import describe_run_error, find_project_folder
 from hse_doc_studio.use_cases.chat.personas import apply_persona
 
 logger = structlog.get_logger()
@@ -337,7 +337,7 @@ class SystemStartChatTurnUC:
         except Exception as exc:  # noqa: BLE001 — background task must finalize, never crash the loop
             logger.warning("system agent run failed", run_id=str(run.id), error_type=type(exc).__name__)
             run.status = AgentRunStatus.failed
-            run.error = type(exc).__name__
+            run.error = describe_run_error(exc)
         finally:
             if run.status != AgentRunStatus.awaiting_approval:
                 run.finished_at = _now()

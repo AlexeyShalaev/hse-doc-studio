@@ -349,10 +349,21 @@ function reduceEvent(
       };
     case "done": {
       const status = asString(data.status) || "done";
+      // Упавший ран приходит терминальным `done` со status=failed и message —
+      // без этой ветки агент «молчал»: ошибка жила только в логах бэкенда.
+      const failed = status === "failed" || status === "interrupted";
       return {
         ...prev,
-        status: status === "awaiting_approval" ? "awaiting_approval" : "done",
+        status:
+          status === "awaiting_approval"
+            ? "awaiting_approval"
+            : failed
+              ? "error"
+              : "done",
         doneStatus: status,
+        error: failed
+          ? asString(data.message) || i18n.t("agentChat:stream.error")
+          : prev.error,
       };
     }
     case "error":
