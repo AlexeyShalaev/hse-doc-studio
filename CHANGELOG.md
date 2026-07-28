@@ -6,17 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.1.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.0...v0.1.1) (2026-07-28)
+## [0.1.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.0...v0.1.1) - 2026-07-28
 
-
-### Bug Fixes
-
-* **agent:** локализация новых инструментов в меню агента (PDF, версии, проекты, вопрос) ([4062aa4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4062aa4484f1b7ae9c29d70f33a6a34bd3d1aa71))
-* **ai:** живая Ollama сама становится провайдером (синк на старте) + предложение подключить в настройках ([bb56580](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bb565808ef71d907ebc5aade05bd9f06d92ac6f5))
-* **deploy:** BOM в install.ps1 ломал запуск через irm | iex в Windows PowerShell 5.1 ([8ec48a1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8ec48a199f0c06d594da6c0f122be2c2bd07d8c1))
-* **deploy:** инсталляторы говорят по-английски, HSE_STUDIO_LANG=ru включает русский; дока подставляет флаг по языку страницы ([6f45549](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6f45549dfbcf171b8657df97b42fa1a802a79c71))
-* **setup:** каталог данных получает готовую папку projects, мастер проектов предлагает её чипом ([7f98d50](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7f98d507dfe4220c2349f52729596e3356a91c70))
-* правки 0.1.1 по итогам живого тестирования ([ab7e679](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ab7e679e43f08b1fe1f4b9f984e4da9841ec4867))
+- The one-command install now also works in stock Windows PowerShell 5.1
+- Install scripts speak English by default and Russian with HSE_STUDIO_LANG=ru; the docs pick the flag to match the page language
+- A running local Ollama now registers itself as a provider — no more manual setup; the settings offer a one-click connect as well
+- Every AI-agent tool is now translated in the tools menu: PDF reading, versions, projects, ask-the-user
+- The data folder now ships with a ready-made projects directory — the project wizard suggests it right away
 
 ## 0.1.0 - 2026-07-28
 
