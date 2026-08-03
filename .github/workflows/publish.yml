@@ -66,7 +66,7 @@ jobs:
       # ── Сначала собираем образ локально и проверяем, что он РЕАЛЬНО стартует.
       #    Слои кэшируются (gha) → финальный build-and-push ниже переиспользует их.
       - name: Build for smoke
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: deploy/all-in-one/Dockerfile
@@ -110,7 +110,7 @@ jobs:
           echo "✅ smoke прошёл — публикуем"
 
       - name: Build and push
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: deploy/all-in-one/Dockerfile
