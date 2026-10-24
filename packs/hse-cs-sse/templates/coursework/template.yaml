@@ -1,0 +1,19 @@
+# packs/hse-cs-sse/templates/coursework/template.yaml
+# Манифест шаблона курсового проекта магистратуры СПИ (инвариантен к версии)
+
+id: coursework
+name:
+  ru: Курсовой проект (магистратура, 1 курс)
+  en: Course Project (MSc, 1st year)
+short_name:
+  ru: КП
+  en: Course
+
+description:
+  ru: Курсовой проект 1 курса магистратуры «Системная и программная инженерия» ФКН НИУ ВШЭ. Заявка на проект (предварительная и доработанная) и заявление о теме для SmartLMS, отчёт о КП по ГОСТ 7.32 и методичке программы, презентация для семинара наставника и защиты.
+  en: First-year course project of the HSE MSc programme in System and Software Engineering. The project proposal (preliminary and extended) and the topic application for SmartLMS, the course project report per GOST 7.32 and the programme guidelines, and slides for the mentor seminar and the defence.
+
+icon: NotebookPen                  # имя иконки lucide-react
+accent_hue: 200                    # OKLCH hue для accent-color в UI
+
+default_version: "2026.1"

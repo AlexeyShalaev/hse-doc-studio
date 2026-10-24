@@ -1,0 +1,194 @@
+# packs/hse-cs-sse/templates/coursework/versions/2026.1/checks/hse-sse-proposal-2026.yaml
+# «Описание проекта и заявка на выполнение» курсового проекта магистратуры
+# СПИ: обязательные разделы (звёздочка в форме ред. 2.1 и памятке «КП и ВКР
+# на СПИ» ред. 3), формат ключевых слов, ссылки на источники, заполненность.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Заявка на КП (СПИ)
+  en: Course project proposal (SSE)
+ref:
+  ru: Описание проекта и заявка на выполнение, ред. 2.1; памятка «КП и ВКР на СПИ», ред. 3
+  en: Project description and application, rev. 2.1; «Course projects and theses at SSE» memo, rev. 3
+source:
+  ru: Семинар наставника, магистерская ОП «Системная и программная инженерия» ФКН НИУ ВШЭ
+  url: https://www.hse.ru/ma/se/internships
+
+rules:
+  # ── Обязательные разделы (звёздочка) ────────────────────────────────
+  - id: hse-sse-proposal-2026/section-motivation
+    title:       { ru: Предметная область, актуальность и мотивация, en: Subject area, relevance and motivation }
+    description: { ru: "Обязательный раздел 7: что изучается, почему это важно сейчас и какой пробел закрывает работа.", en: "Required section 7: what is studied, why it matters now and which gap the work closes." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(актуальност|relevance)'
+      negate: false
+      message: { ru: "Нет раздела «Описание предметной области, актуальность и мотивация».", en: "The «Subject area, relevance and motivation» section is missing." }
+
+  - id: hse-sse-proposal-2026/related-work
+    title:       { ru: Обзор существующих работ, en: Related work }
+    description: { ru: "Памятка «КП и ВКР на СПИ»: краткий обзор литературы и существующих работ обязателен уже в предварительной редакции.", en: "The SSE memo: a short review of literature and existing work is required already in the preliminary edition." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '(?i)\\(?:sub)?section\*?\{[^}]*(обзор|related work|existing)'
+      negate: false
+      message: { ru: "Нет обзора существующих работ и решений.", en: "The review of related work and existing solutions is missing." }
+
+  - id: hse-sse-proposal-2026/problem-statement
+    title:       { ru: Постановка задачи, en: Problem statement }
+    description: { ru: "Постановка задачи с исследовательским вопросом, объектом и предметом исследования.", en: "The problem statement with the research question, object and subject of study." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '(?i)\\(?:sub)?section\*?\{[^}]*(постановка задачи|problem statement)'
+      negate: false
+      message: { ru: "Нет раздела «Постановка задачи».", en: "The «Problem statement» section is missing." }
+
+  - id: hse-sse-proposal-2026/object-subject
+    title:       { ru: Объект и предмет исследования, en: Object and subject of study }
+    description: { ru: "Объект — широкая область или процесс, предмет — изучаемый аспект объекта. Оба указаны в постановке задачи.", en: "The object is the broad area or process; the subject is the aspect of the object under study. Both belong to the problem statement." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        if text:
+            has_obj = re.search(r'(?i)(объект исследования|object of study)', text)
+            has_subj = re.search(r'(?i)(предмет исследования|subject of study)', text)
+            if not (has_obj and has_subj):
+                ctx.violation('В постановке задачи не названы объект и предмет исследования.')
+
+  - id: hse-sse-proposal-2026/aim
+    title:       { ru: Цель работы, en: Aim of the work }
+    description: { ru: "Обязательный раздел 9: одна цель по формуле «глагол действия + объект + на основе чего», по SMART.", en: "Required section 9: one aim — action verb + object + by what means, SMART." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(цель работы|aim of the work)'
+      negate: false
+      message: { ru: "Нет раздела «Цель работы».", en: "The «Aim of the work» section is missing." }
+
+  - id: hse-sse-proposal-2026/expected-results
+    title:       { ru: Ожидаемые результаты, en: Expected results }
+    description: { ru: "Обязательный раздел 11: измеримые результаты, по которым легко проверить, достигнуты ли они.", en: "Required section 11: measurable results that are easy to verify." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(ожидаемые результаты|expected results)'
+      negate: false
+      message: { ru: "Нет раздела «Ожидаемые результаты».", en: "The «Expected results» section is missing." }
+
+  - id: hse-sse-proposal-2026/references
+    title:       { ru: Список источников, en: References }
+    description: { ru: "Список источников обязателен уже в предварительной редакции.", en: "The reference list is required already in the preliminary edition." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/project_proposal.tex"
+      pattern: '\\begin\{thebibliography\}'
+      negate: false
+      message: { ru: "Нет списка источников.", en: "The reference list is missing." }
+
+  # ── Содержание ──────────────────────────────────────────────────────
+  - id: hse-sse-proposal-2026/single-aim
+    title:       { ru: Одна цель, en: A single aim }
+    description: { ru: "Семинар наставника: одно исследование — одна цель. Несколько целей обычно означают задачи.", en: "Mentor seminar: one study — one aim. Several aims are usually tasks." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        m = re.search(r'\\section\*?\{[^}]*(?:Цель работы|Aim of the work)[^}]*\}(.*?)\\section', text, re.S | re.I)
+        if m and re.search(r'\\begin\{(?:enumerate|itemize)\}', m.group(1)):
+            ctx.violation('В разделе «Цель работы» список — сформулируйте одну цель, остальное перенесите в задачи.')
+
+  - id: hse-sse-proposal-2026/tasks-count
+    title:       { ru: Число задач (3–7), en: Number of tasks (3–7) }
+    description: { ru: "Задачи — 3–7 последовательных шагов от анализа к реализации и оценке результатов.", en: "Tasks are 3–7 consecutive steps from analysis to implementation and evaluation." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        m = re.search(r'\\section\*?\{[^}]*(?:Задачи работы|Tasks)[^}]*\}(.*?)\\section', text, re.S | re.I)
+        if m:
+            n = len(re.findall(r'\\item\b', m.group(1)))
+            if n and (n < 3 or n > 7):
+                ctx.violation(f'В разделе «Задачи работы» {n} пунктов — обычно задач 3–7.')
+
+  - id: hse-sse-proposal-2026/keywords-separator
+    title:       { ru: Ключевые слова через «;», en: Keywords separated by «;» }
+    description: { ru: "Форма заявки: ключевые слова разделяются точкой с запятой.", en: "The proposal form: keywords are separated by semicolons." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        m = re.search(r'\\section\*?\{[^}]*(?:Ключевые слова|Keywords)[^}]*\}(.*?)\\section', text, re.S | re.I)
+        if m:
+            body = re.sub(r'(?m)%.*$', '', m.group(1)).strip()
+            if body and 'hseFill' not in body and ';' not in body and ',' in body:
+                ctx.violation('Ключевые слова разделены запятыми — в форме заявки разделитель «;».')
+
+  - id: hse-sse-proposal-2026/cited-sources
+    title:       { ru: Ссылки на источники в тексте, en: Sources cited in the text }
+    description: { ru: "Каждый источник из списка упомянут в тексте заявки (\\cite).", en: "Every listed source is cited in the proposal text (\\cite)." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        keys = re.findall(r'\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}', text)
+        cited = set()
+        for group in re.findall(r'\\cite[a-z]*(?:\[[^\]]*\])?\{([^}]+)\}', text):
+            cited.update(k.strip() for k in group.split(','))
+        missing = [k for k in keys if k not in cited]
+        if missing:
+            ctx.violation('Источники без ссылок в тексте: ' + ', '.join(missing) + '.')
+
+  - id: hse-sse-proposal-2026/placeholders-left
+    title:       { ru: Незаполненные поля, en: Unfilled placeholders }
+    description: { ru: "Жёлтые плейсхолдеры \\hseFill должны быть заменены текстом до подачи (в форме — «текст, выделенный жёлтым, должен быть заменён»).", en: "Yellow \\hseFill placeholders must be replaced before submission (the form: “yellow text must be replaced”)." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        # Только в тексте: без common/meta.tex и без закомментированных строк.
+        hits = [
+            h for h in ctx.doc_find(r'\\hseFill\{')
+            if not h[0].endswith('meta.tex') and '\\hseFill{' in re.split(r'(?<!\\)%', h[2], 1)[0]
+        ]
+        if hits:
+            f, line, _ = hits[0]
+            ctx.violation(f'Осталось незаполненных мест: {len(hits)} (первое — строка {line}).', file=f, line=line)

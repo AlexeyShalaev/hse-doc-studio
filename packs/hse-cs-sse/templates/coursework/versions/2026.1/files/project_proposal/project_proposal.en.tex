@@ -1,0 +1,151 @@
+% !TeX program = xelatex
+% ============================================================
+% project_proposal/project_proposal.tex — the course project description
+% and application, 1st year of the HSE MSc programme «System and Software
+% Engineering» (English edition of the mentor seminar form, rev. 2.1).
+%
+% Preliminary edition (PRP, due with the topic application by 15 November):
+% the starred sections are required. Extended edition (EPP, checkpoint CP1
+% in January): adds the abstract, terms, abbreviations, work plan, resources
+% and risks. Switch the edition in the project settings («Proposal edition»)
+% — the \ifhseExtendedProposal blocks below appear without editing the text.
+%
+% Replace the yellow \hseFill{…} with your text. Your data, the supervisor
+% and the titles come from the project settings.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+\input{preamble}
+\begin{document}
+
+\begin{center}
+{\Large\bfseries\color{hseprpblue} Course Project}\\[2pt]
+{\color{hseprpblue}(1st year of the MSc programme «System and Software Engineering»)}\\[10pt]
+{\Large\bfseries\color{hseprpblue} Project Description and Application}\\[2pt]
+{\color{hseprpblue}\ifhseExtendedProposal(extended)\else(preliminary)\fi}
+\end{center}
+
+\subsection*{Summary\hseReq}
+\noindent
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{0.3\textwidth}|>{\raggedright\arraybackslash}X|}
+\hline
+1. Title in Russian & \foreignlanguage{russian}{\hseTitleRu} \\
+\hline
+2. Title in English & \hseTitleEn \\
+\hline
+3. Language of the work & \hseWorkLangEn \\
+\hline
+4. Student (author) & \hseAuthorName, group \hseGroup \\
+\hline
+5. Supervisor: name, academic title, degree and position & \hseSupervisorFull
+\ifhseHasCoSupervisor\newline Consultant: \hseCoSupervisorName\ifdefempty{\hseCoSupervisorDegree}{}{, \hseCoSupervisorDegree}\ifdefempty{\hseCoSupervisorTitle}{}{, \hseCoSupervisorTitle}\fi \\
+\hline
+6. Supervisor's signature and date &
+\vspace{1.6cm}
+% Put the supervisor's signature in the Signatures tool (PNG) or by hand;
+% with a detached e-signature (GnuPG) replace the line below with
+% «Signed with a detached electronic signature».
+\rule{0.8cm}{0.4pt}.\rule{0.8cm}{0.4pt}.\the\year \\
+\hline
+\end{tabularx}
+
+\ifhseExtendedProposal
+\subsection*{Abstract}
+% One or two paragraphs (500–1500 characters): what the work is about —
+% problem, approach, expected result. Not a summary of results.
+\hseFill{what the work is about: problem, approach, expected result}
+\fi
+
+\setcounter{section}{6}
+\section{Subject area, relevance and motivation\hseReq}
+% Subject area: context and boundaries. Relevance: why it matters now and
+% to whom. Motivation: the research gap the work closes and why you.
+\hseFill{the subject area and the boundaries of the work}
+
+\hseFill{why the topic matters now: who benefits from the solution}
+
+\hseFill{motivation: which gap in existing solutions the work closes}
+
+\subsection*{Related work and existing solutions\hseReq}
+\hseFill{existing approaches and solutions with citations and their limitations}~\cite{denscombe2019}.
+
+\subsection*{Problem statement\hseReq}
+\hseFill{the specific problem the work solves}
+
+\noindent\textbf{Research question:} \hseFill{the question the work answers}.
+
+\noindent\textbf{Object of study:} \hseFill{the broad area, process or phenomenon the work addresses}.
+
+\noindent\textbf{Subject of study:} \hseFill{the specific part, property or aspect of the object under study}.
+
+\section{Keywords}
+% Keywords are separated by semicolons (;).
+\hseFill{keyword; keyword; keyword}
+
+\section{Aim of the work\hseReq}
+% One aim: action verb (develop, determine, evaluate) + object + by what
+% means. SMART.
+\hseFill{develop … for … based on …}
+
+\section{Tasks}
+% 3–7 steps from analysis to implementation and evaluation; they form the
+% basis of the work plan — do not merge them into coarse items.
+\begin{enumerate}[label=\arabic*)]
+  \item \hseFill{analyse existing solutions and approaches};
+  \item \hseFill{define the requirements};
+  \item \hseFill{design the architecture (method, model)};
+  \item \hseFill{implement a prototype};
+  \item \hseFill{test and evaluate the results}.
+\end{enumerate}
+
+\section{Expected results\hseReq}
+% Results are MEASURABLE: it must be easy to check whether they are
+% achieved; give the verification method (metric, threshold) if needed.
+\begin{enumerate}[label=\arabic*)]
+  \item \hseFill{result} --- \hseFill{how to verify: metric and threshold};
+  \item \hseFill{result} --- \hseFill{how to verify}.
+\end{enumerate}
+
+\section{Methods}
+\hseFill{expected methods}
+
+\section{Tools}
+\hseFill{expected tools}
+
+\subsection*{Additional sections (optional)}
+\ifhseExtendedProposal
+\medskip\noindent\textbf{Terms and definitions.}\par
+\begin{description}[leftmargin=0pt, font=\bfseries]
+  \item[\hseFill{term}] --- \hseFill{definition}.
+\end{description}
+
+\medskip\noindent\textbf{Abbreviations.}\par
+\begin{description}[leftmargin=0pt, font=\bfseries]
+  \item[\hseFill{ABBR}] --- \hseFill{expansion}.
+\end{description}
+
+\medskip\noindent\textbf{Work plan.}\par
+\noindent
+\begin{tabularx}{\textwidth}{|p{0.45\textwidth}|p{0.15\textwidth}|X|}
+\hline
+\textbf{Stage} & \textbf{Due} & \textbf{Deliverable} \\
+\hline
+\hseFill{task 1} & \hseFill{month} & \hseFill{artefact} \\
+\hline
+\hseFill{task 2} & \hseFill{month} & \hseFill{artefact} \\
+\hline
+\end{tabularx}
+
+\medskip\noindent\textbf{Resources and risks.}\par
+\hseFill{resources, constraints and main risks with responses}
+\else
+\hseOptional{Any further information needed to present the idea of the course project, for example appendices.}
+\fi
+
+\renewcommand{\refname}{References\hseReq}
+\begin{thebibliography}{99}
+  \bibitem{denscombe2019}
+  M.~Denscombe, \emph{Research Proposals: A Practical Guide}, 2nd~ed. London: Open University Press, 2019.
+\end{thebibliography}
+
+\end{document}

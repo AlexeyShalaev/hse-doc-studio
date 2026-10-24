@@ -1,0 +1,424 @@
+# packs/hse-cs-sse/templates/coursework/versions/2026.1/version.yaml
+# Манифест версии шаблона курсового проекта магистратуры СПИ 2026.1
+#
+# Источники требований (2026/27):
+#   * «Методические рекомендации по подготовке курсового проекта» ОП СПИ
+#     (hse.ru/ma/se/internships): форматы КП, структура отчёта (§5.1, §5.6),
+#     титульный лист (Прил. 4), заявление (Прил. 2), сроки (Прил. 1);
+#   * Программа практики ОП СПИ для набора 2026 г. (контрольные точки КП);
+#   * «Семинар наставника» (С. А. Шершаков): шаблон «Описание проекта и заявка
+#     на выполнение» ред. 2.1, памятка «КП и ВКР на СПИ» ред. 3, формула оценки
+#     G1 = 0.1·PPP + 0.2·CP1 + 0.3·PD + 0.15·TP + 0.15·THW + 0.1·CW;
+#   * задание SmartLMS «Заявка на проект и утверждение темы» и шаблон
+#     «Заявление об утверждении темы курсовой работы (КП) СПИ 2026».
+
+id: "2026.1"
+released_at: 2026-10-24
+status: stable
+summary:
+  ru: Курсовой проект 1 курса магистратуры СПИ 2026/27 — заявка на проект и заявление о теме для SmartLMS, отчёт о КП по ГОСТ 7.32 и методичке ОП, презентация для семинара наставника и защиты.
+  en: First-year MSc SSE course project 2026/27 — the project proposal and topic application for SmartLMS, the report per GOST 7.32 and the programme guidelines, slides for the mentor seminar and the defence.
+breaking_changes:
+  ru: []
+  en: []
+
+# ── что даёт эта версия шаблона ──
+# Списки ru и en параллельны (пункт за пунктом) — это проверяет pack_lint.
+changes:
+  ru:
+    - 'Описание проекта и заявка на выполнение по форме семинара наставника (ред. 2.1): сводка, предметная область
+      и актуальность, постановка задачи, ключевые слова, цель, задачи, измеримые результаты, методы, инструменты
+      и источники. Обязательные для предварительной редакции разделы помечены звёздочкой.'
+    - 'Редакция заявки (предварительная или доработанная) переключается в настройках проекта: доработанная
+      добавляет обзор существующих работ, объект и предмет, исследовательский вопрос, план работ и риски.'
+    - Заявление о выборе темы КП в двух языковых редакциях на одном PDF с визой научного руководителя и
+      согласием академического руководителя при внешнем руководителе.
+    - 'Отчёт о КП по методичке ОП СПИ и ГОСТ 7.32-2017: титул по Прил. 4, реферат, определения, введение,
+      основная часть под формат работы (проектно-исследовательский или академический), заключение, источники.'
+    - 'Презентация в трёх вариантах — PowerPoint, RevealJS и LaTeX Beamer: сценарий защиты заявки на семинаре
+      (8–9 минут) и защиты КП перед комиссией.'
+    - 'Четыре профиля сдачи: заявка на тему в SmartLMS (до 15 ноября), доработанная заявка (CP1), предзащита и
+      защита КП со ссылкой на репозиторий.'
+    - 'Проверки: обязательные разделы заявки и отчёта, разделитель ключевых слов, ссылки на источники,
+      оформление по ГОСТ 7.32 и русская типографика.'
+  en:
+    - 'The project description and application in the mentor seminar form (rev. 2.1): summary, subject area
+      and relevance, problem statement, keywords, aim, tasks, measurable results, methods, tools and references.
+      Sections required in the preliminary edition are starred.'
+    - 'The proposal edition (preliminary or extended) is switched in the project settings: the extended one adds
+      the related-work review, object and subject, research question, work plan and risks.'
+    - The course project topic application in both language versions in one PDF, with the supervisor's
+      approval and the academic supervisor's consent for an external supervisor.
+    - 'The course project report per the SSE guidelines and GOST 7.32-2017: title page per App. 4, abstract,
+      definitions, introduction, a main part for the work format (project-research or academic), conclusion,
+      references.'
+    - 'Slides in three variants — PowerPoint, RevealJS and LaTeX Beamer: a scenario for the proposal defence at
+      the seminar (8–9 minutes) and for the course project defence before the committee.'
+    - 'Four submission profiles: the topic application in SmartLMS (by 15 November), the extended proposal (CP1),
+      the pre-defence and the course project defence with the repository link.'
+    - 'Checks: required sections of the proposal and the report, the keyword separator, citations, GOST 7.32
+      formatting and Russian typography.'
+
+# ── классификация (для фильтров в каталоге) ──
+# Методичка ОП СПИ §2.1: КП выполняется в академическом (research) или
+# проектно-исследовательском (project) формате.
+supported_kinds: [project, research]
+# §2.2 допускает групповые проектно-исследовательские КП, но заявка, заявление,
+# отчёт и защита у каждого студента свои (§5.5, §7.5). Общие документы группы
+# (общее ТЗ и ПМИ системы) в этой версии не поставляются — только solo.
+supported_staffing: [solo]
+
+# ── движок компиляции ──
+engine:
+  default: xelatex
+  allowed: [xelatex]
+  passes: 3
+  flags: "-interaction=nonstopmode -halt-on-error -synctex=1"
+
+# ── требования к TeX Live (для on-demand install через tlmgr) ──
+latex_packages:
+  - scheme-basic
+  - fontspec
+  - polyglossia
+  - babel-russian
+  - babel-english
+  - geometry
+  - indentfirst
+  - setspace
+  - microtype
+  - csquotes
+  - graphics
+  - xcolor
+  - pgf               # tikz — вёрстка слайдов и схем
+  - float
+  - array
+  - tabularx
+  - longtable
+  - multirow
+  - makecell
+  - booktabs
+  - adjustbox
+  - url
+  - xurl
+  - hyphenat
+  - cite
+  - hyperref
+  - fancyhdr
+  - lastpage
+  - titlesec
+  - chngcntr
+  - enumitem
+  - listings
+  - fvextra
+  - caption
+  - amsmath
+  - amssymb
+  - etoolbox
+  - extsizes          # класс отчёта extreport
+  - letltxmacro       # безопасное переопределение \includegraphics
+  - beamer            # презентация
+  - simple-thesis-dissertation  # шрифт Tinos (≈ Times New Roman, с кириллицей)
+  - dejavu            # DejaVu Sans/Mono (фолбэки sans/mono)
+
+# ── состав документов (bundle-раскладка v2) ──
+# Каждый документ — самодостаточный bundle files/<id>/ с манифестом doc.yaml.
+# ЯЗЫК: суффикс <stem>.<код>.<ext>; первый код в `langs:` — дефолт и фолбэк.
+# Язык проекта = «Язык выполнения работы» из сводки заявки (методичка §1.3:
+# КП выполняется на русском ИЛИ английском).
+langs: [ru, en]
+
+# Roster: порядок = порядок в UI.
+documents:
+  - project_proposal
+  - topic_application
+  - report
+  - presentation
+
+# ── динамические инклуды ──
+# Перегенерируются тулом из project.json ПЕРЕД каждой сборкой.
+dynamic_includes:
+  - template: common/meta.tex.j2
+    output:   common/meta.tex
+  - template: common/fonts.tex.j2
+    output:   common/fonts.tex
+
+# ── Группы мета-полей (порядок объявления = порядок в настройках) ──
+meta_groups:
+  - id: study
+    label: { ru: Учёба, en: Studies }
+  - id: proposal
+    label: { ru: Заявка на проект, en: Project proposal }
+  - id: title
+    label: { ru: Титульные данные, en: Title data }
+
+# ── meta-поля, которые тул запрашивает в wizard ──
+meta_fields:
+  year:
+    type: string
+    group:       study
+    label:       { ru: Учебный год (год защиты КП), en: Academic year (defence year) }
+    placeholder: "2027"
+    required_at: create
+    # Год окончания учебного года: сент.–дек. → следующий календарный год.
+    auto: academic_year
+
+  name_en:
+    type: string
+    group:       proposal
+    label:       { ru: Название работы на английском, en: Title in English }
+    placeholder: "An Approval Gate for LLM Agents Acting on Corporate APIs"
+    required_at: never
+    help:        { ru: "Сводка заявки (п. 2), заявление о теме и титул отчёта печатают обе редакции названия. Русское название — имя проекта. Пока не заполнено — в PDF жёлтый плейсхолдер.", en: "The proposal summary (item 2), the topic application and the report title print both titles. The Russian title is the project name. Until filled in, the PDF shows a yellow placeholder." }
+
+  name_ru:
+    type: string
+    group:       proposal
+    label:       { ru: Название работы на русском (если проект назван по-английски), en: Title in Russian }
+    placeholder: "Контур согласования действий LLM-агента над корпоративными API"
+    required_at: never
+    help:        { ru: "Если работа выполняется на английском и проект назван по-английски, укажите здесь русское название — оно нужно в сводке и заявлении. Пусто — берётся имя проекта.", en: "If the work is in English and the project is named in English, give the Russian title here — the summary and the application need it. Empty — the project name is used." }
+
+  proposal_stage:
+    type: select
+    group:       proposal
+    label:       { ru: Редакция заявки, en: Proposal edition }
+    required_at: never
+    default:     "Предварительная"
+    options:     ["Предварительная", "Доработанная"]
+    help:        { ru: "Предварительная (PRP) подаётся с заявлением до 15 ноября: обязательны разделы со звёздочкой. Доработанная (EPP) — контрольная точка CP1 в январе: добавляются обзор работ, объект и предмет, план работ и риски.", en: "The preliminary edition (PRP) goes with the application by 15 November: starred sections are required. The extended one (EPP) is checkpoint CP1 in January: it adds the related-work review, object and subject, work plan and risks." }
+
+  specialization:
+    type: string
+    group:       study
+    label:       { ru: Образовательная программа, en: Educational programme }
+    placeholder: "Системная и программная инженерия"
+    required_at: never
+    default:     "Системная и программная инженерия"
+
+  program_code:
+    type: string
+    group:       title
+    label:       { ru: Код и направление подготовки, en: Field of study }
+    placeholder: "09.04.04 «Программная инженерия»"
+    required_at: never
+    default:     "09.04.04 «Программная инженерия»"
+
+  department:
+    type: string
+    group:       title
+    label:       { ru: Департамент, en: Department }
+    placeholder: "Департамент программной инженерии"
+    required_at: never
+    default:     "Департамент программной инженерии"
+
+  supervisor_department:
+    type: string
+    group:       title
+    label:       { ru: Кафедра / департамент / организация научного руководителя, en: Supervisor's department or organisation }
+    placeholder: "Департамент программной инженерии ФКН"
+    required_at: never
+    help:        { ru: "Шапка заявления о выборе темы. Пусто — печатается департамент программы.", en: "Header of the topic application. Empty — the programme department is printed." }
+
+  faculty:
+    type: string
+    group:       title
+    label:       { ru: Факультет, en: Faculty }
+    placeholder: "Факультет компьютерных наук"
+    required_at: never
+    default:     "Факультет компьютерных наук"
+
+  city:
+    type: string
+    group:       title
+    label:       { ru: Город, en: City }
+    placeholder: Москва
+    required_at: never
+    default:     Москва
+
+  udc:
+    type: string
+    group:       title
+    label:       { ru: Код УДК, en: UDC code }
+    placeholder: "004.4"
+    required_at: finalize
+    help:        { ru: "Титул отчёта (Прил. 4 методички): «УДК 004.Х». Несколько областей — номера через запятую.", en: "Report title page (App. 4): «UDC 004.X». Several areas — comma-separated." }
+
+  report_margins:
+    type: select
+    group:       title
+    label:       { ru: Поля страницы отчёта, en: Report page margins }
+    required_at: never
+    default:     "ГОСТ 7.32 — 30/15/20/20"
+    options:     ["ГОСТ 7.32 — 30/15/20/20", "ВШЭ — 25/10/20/20"]
+
+  # ── Шрифты (подставляются в common/fonts.tex) ──
+  font_main:
+    type: font
+    label:       { ru: Основной шрифт, en: Main font }
+    placeholder: Times New Roman
+    required_at: never
+    default:     Times New Roman
+    options:     ["Times New Roman", "PT Serif", "Liberation Serif", "Tinos", "Cambria", "Georgia"]
+    help:        { ru: "Отчёт по ГОСТ 7.32 — Times New Roman 12–14 пт; смена шрифта помечается предупреждением.", en: "The GOST 7.32 report uses Times New Roman 12–14 pt; changing it raises a warning." }
+
+  font_sans:
+    type: font
+    label:       { ru: Рубленый шрифт (слайды), en: Sans-serif font (slides) }
+    placeholder: Arial
+    required_at: never
+    default:     Arial
+    options:     ["Arial", "PT Sans", "Liberation Sans", "Helvetica", "Verdana"]
+
+  font_mono:
+    type: font
+    label:       { ru: Моноширинный шрифт (код, листинги), en: Monospace font }
+    placeholder: "Consolas"
+    required_at: never
+    options:     ["Consolas", "Courier New", "PT Mono", "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono"]
+
+  supervisor:
+    type: person
+    label:       { ru: Научный руководитель, en: Supervisor }
+    required_at: create
+    help:        { ru: "Должность и степень печатаются в сводке заявки, заявлении и на титуле, например «доцент департамента программной инженерии, к.т.н.». Руководитель из компании (не сотрудник ВШЭ) официально оформляется консультантом, а в заявлении печатается согласие академического руководителя.", en: "Position and degree go to the proposal summary, the application and the title page, e.g. «Associate Professor, School of Software Engineering, PhD». A company (non-HSE) supervisor is formally a consultant, and the application prints the academic supervisor's consent." }
+
+  co_supervisor:
+    type: person
+    label:       { ru: Консультант / соруководитель (если есть), en: Consultant / co-supervisor (optional) }
+    required_at: never
+
+  academic_supervisor:
+    type: person
+    label:       { ru: Академический руководитель ОП, en: Academic programme supervisor }
+    required_at: never
+    help:        { ru: "Гриф «УТВЕРЖДАЮ» на титуле отчёта и согласие в заявлении. Не задан — С. А. Шершаков.", en: "The approval block on the report title and the consent in the application. Unset — S. A. Shershakov." }
+
+# ── формы (движок анкет) ──
+forms:
+  # Методичка §5.3.1: в LMS загружается ссылка на проект в системе управления
+  # программными проектами с режимом доступа. Семинар наставника: код КП ведётся
+  # в GitLab ФКН (git.cs.hse.ru) или регулярно туда реплицируется.
+  - id: code_link
+    icon: clipboard
+    title:
+      ru: Ссылка на репозиторий
+      en: Repository link
+    schema_version: 1
+    required_for_pack: true
+    per_author: true
+    output:
+      template: files/code-link/link.txt
+      output_name: "Ссылка на репозиторий.txt"
+      format: markdown
+    sections:
+      - id: link
+        title:
+          ru: Исходный код и материалы проекта
+          en: Project source code and materials
+        fields:
+          - id: repo_url
+            type: text
+            required: true
+            label: { ru: "Ссылка на репозиторий", en: "Repository URL" }
+            placeholder:
+              ru: "https://git.cs.hse.ru/edu/sse/2026_27/term-papers/…"
+              en: "https://git.cs.hse.ru/edu/sse/2026_27/term-papers/…"
+            help:
+              ru: "Репозиторий КП в GitLab ФКН (или публичное зеркало). Регулярные коммиты, issues и wiki/docs там — критерии для 9–10."
+              en: "The course project repository in the FCS GitLab (or a public mirror). Regular commits, issues and wiki/docs there count for grades 9–10."
+
+          - id: branch
+            type: text
+            required: false
+            label: { ru: "Ветка / тег (опционально)", en: "Branch / tag (optional)" }
+            placeholder: { ru: "main", en: "main" }
+
+          - id: access
+            type: textarea
+            required: false
+            label: { ru: "Режим доступа", en: "Access" }
+            help:
+              ru: "Методичка §5.3.1: комиссия и учебный офис должны иметь доступ весь срок КП. Если репозиторий закрыт — укажите, как его получить."
+              en: "Guidelines §5.3.1: the committee and the programme office must have access for the whole project term. If the repository is private, say how to get access."
+
+# ── слоты подписей ──
+# SmartLMS: «оба документа должны иметь подпись научного руководителя»;
+# заявление подписывает и студент. Допустима графическая подпись или
+# открепленная НКЭП (GnuPG).
+signatures:
+  slots:
+    # default_placement — мм от левого верхнего угла страницы; по умолчанию
+    # подписи стоят там, где их ждёт подаваемый в SmartLMS комплект (п. 6
+    # сводки заявки, строки подписей заявления), на других документах их
+    # переносят в инструменте «Подписи».
+    - id: author
+      label:             { ru: Автор работы, en: Author }
+      applies_to:        [topic_application, report]
+      default_placement: { page: 1, x_mm: 160, y_mm: 208, width_mm: 30 }
+
+    - id: supervisor
+      label:             { ru: Научный руководитель, en: Supervisor }
+      applies_to:        [project_proposal, topic_application, report]
+      default_placement: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 }
+
+    - id: co_supervisor
+      label:             { ru: Консультант / соруководитель, en: Consultant / co-supervisor }
+      applies_to:        [topic_application]
+      default_placement: { page: 1, x_mm: 165, y_mm: 222, width_mm: 28 }
+
+    - id: academic_supervisor
+      label:             { ru: Академический руководитель ОП, en: Academic programme supervisor }
+      applies_to:        [topic_application]
+      default_placement: { page: 1, x_mm: 165, y_mm: 236, width_mm: 28 }
+
+# ── pack submission: профили сборки для сдачи ──
+pack_submission:
+  profiles:
+    - id: topic-approval
+      name:        { ru: "Заявка на тему КП (SmartLMS)", en: "Topic application (SmartLMS)" }
+      description: { ru: "Задание «Заявка на проект и утверждение темы», жёсткий дедлайн 15 ноября 23:59. Два PDF: «Описание проекта и заявка на выполнение» (можно предварительную редакцию, разделы со звёздочкой обязательны) и «Заявление о выборе темы» с визой научного руководителя. Подписи студента и руководителя — графические или открепленная ЭП (GnuPG). После «Отправить ответ» правка невозможна. Утверждение темы — до 20 ноября, могут вернуть на доработку.", en: "The “Project application and topic approval” assignment, hard deadline 15 November 23:59. Two PDFs: the project description and application (a preliminary edition is fine, starred sections are required) and the topic application with the supervisor's approval. Student and supervisor signatures — images or a detached e-signature (GnuPG). Editing is impossible after submitting. Topic approval by 20 November; it may be returned for revision." }
+      items:
+        # В форме заявки подпись только руководителя (п. 6 сводки).
+        - doc_id: project_proposal
+          signatures: [supervisor]
+        - doc_id: topic_application
+          signatures: [author, supervisor]
+
+    - id: extended-proposal
+      name:        { ru: "CP1 — доработанная заявка", en: "CP1 — extended proposal" }
+      description: { ru: "Контрольная точка семинара наставника (январь): доработанная заявка на проект (переключите «Редакцию заявки» в настройках) и презентация. Оцениваются текст и выступление; вес 0,2 в оценке за год.", en: "The mentor seminar checkpoint (January): the extended proposal (switch the proposal edition in the settings) and the slides. Text and talk are graded; weight 0.2 in the year grade." }
+      items:
+        - doc_id: project_proposal
+          signatures: []
+        - doc_id: presentation
+          signatures: []
+
+    - id: pre-defence
+      name:        { ru: "Предзащита КП", en: "Course project pre-defence" }
+      description: { ru: "За 3–4 недели до защит: готовность не менее 80 %, полностью готовы введение, постановка задачи, главы 1 и 2. Оцениваются текст (структура, последовательность, корректность формулировок) и презентация; вес 0,3.", en: "3–4 weeks before the defences: at least 80% ready, with the introduction, problem statement and chapters 1–2 complete. The text (structure, flow, wording) and the slides are graded; weight 0.3." }
+      items:
+        - doc_id: report
+          signatures: []
+        - doc_id: presentation
+          signatures: []
+
+    - id: final
+      name:        { ru: "Защита КП", en: "Course project defence" }
+      description: { ru: "Итоговый текст — научному руководителю не позднее 13 июня, загрузка в SmartLMS (модуль КП, затем «Антиплагиат») — не позднее 20 июня; защита в конце июня, 10 минут доклада и 5 минут вопросов, желательно живое демо. На защиту также идут отзыв руководителя, заявка на проект и ссылка на репозиторий. Заимствования больше 20 % требуют комментария руководителя.", en: "The final text goes to the supervisor by 13 June and to SmartLMS (course project module, then anti-plagiarism) by 20 June; the defence is at the end of June, 10 minutes talk plus 5 minutes questions, preferably with a live demo. The supervisor's review, the project proposal and the repository link also go to the defence. More than 20% borrowing needs a supervisor's comment." }
+      items:
+        - doc_id: report
+          signatures: [author]
+        - doc_id: presentation
+          signatures: []
+        - doc_id: project_proposal
+          signatures: []
+      extra_items:
+        - source: .hse-studio/forms/code_link.json
+          output_name: "Ссылка на репозиторий.txt"
+          format: markdown
+
+# ── правила проверок ──
+checks_version:
+  disabled_categories: []
+  disabled: []
+  severity_override: {}
