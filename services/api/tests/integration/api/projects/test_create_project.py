@@ -40,3 +40,36 @@ async def test__api__post_projects__rejected_create__leaves_no_folder_behind(
     await test_app.post("/api/v1/projects", json=payload)
 
     assert not project_folder.exists()
+
+
+async def test__api__post_projects__msc_sse_coursework__renders_proposal_and_application(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    # Пак магистратуры СПИ: заявка на проект и заявление о теме получают данные
+    # проекта (русская и английская тема, руководитель) через common/meta.tex.
+    project_folder = tmp_path / "my-kp"
+    payload = {
+        **project_api_payload(str(project_folder)),
+        "name": "Контур согласования действий LLM-агента",
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "kind": "project",
+        "supervisor": {"name": "И. И. Иванов", "role": "university", "title": "доцент", "degree": "к.т.н."},
+        "meta": {"name_en": "An Approval Gate for LLM Agents", "proposal_stage": "Доработанная"},
+    }
+
+    response = await test_app.post("/api/v1/projects", json=payload)
+
+    assert response.status_code == 201, response.text
+    for source in (
+        "project_proposal/project_proposal.tex",
+        "topic_application/topic_application.tex",
+        "report/report.tex",
+        "presentation/beamer/presentation.tex",
+    ):
+        assert (project_folder / source).is_file(), source
+    meta = (project_folder / "common" / "meta.tex").read_text(encoding="utf-8")
+    assert "An Approval Gate for LLM Agents" in meta
+    assert "И. И. Иванов" in meta
+    assert "\\hseSupervisorName, к.т.н., доцент" in meta
+    assert "\\hseExtendedProposaltrue" in meta
