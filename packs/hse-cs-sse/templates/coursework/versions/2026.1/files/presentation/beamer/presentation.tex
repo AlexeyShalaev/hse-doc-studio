@@ -186,10 +186,11 @@
     % строке между `at (x,y)` и `{` оставил бы пустую строку (=\par) —
     % tikz на это падает («A node must have a … delimiter»).
     % ширина 6.9 см: узел не заходит под блок автора справа (он начинается
-    % с 8.46 см) — длинные магистерские темы иначе наезжали на ФИО.
+    % с 8.46 см) — длинные магистерские темы иначе наезжали на ФИО. Вторая
+    % строка — тема на другом языке (\hseTitleRu/\hseTitleEn из сводки заявки).
     \node[anchor=north west, inner sep=0pt, text width=6.90cm,
           align=flush left] at (1.35, 2.85)
-      {((* if en *))\Large\color{hseblue}\ifhseHasNameEn\textenglish{\hseProjectNameEn}\\[0.20cm]{\large\textrussian{\hseProjectName}}\else\textrussian{\hseProjectName}\fi((* else *))\Large\color{hseblue}\hseProjectName\ifhseHasNameEn\\[0.20cm]{\large\color{hseblue}\textenglish{\hseProjectNameEn}}\fi((* endif *))};
+      {((* if en *))\large\color{hseblue}\ifhseHasNameEn\textenglish{\hseTitleEn}\\[0.20cm]{\small\textrussian{\hseTitleRu}}\else\textenglish{\hseProjectName}\fi((* else *))\large\color{hseblue}\hseProjectName\ifhseHasNameEn\\[0.20cm]{\small\color{hseblue}\textenglish{\hseTitleEn}}\fi((* endif *))};
     % блок автора и руководителя (растёт вверх от нижнего края окна);
     % тело узла — одной логической строкой (см. комментарий выше).
     \node[anchor=south east, inner sep=0pt, text width=6.20cm,
