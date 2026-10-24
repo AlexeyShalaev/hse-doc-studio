@@ -9,6 +9,7 @@ import type { DocumentItem } from "./lib/buildDocSections";
 // становится подписанной подгруппой; неизвестные идентификаторы падают в
 // «Прочее», чтобы новый блок из пака не исчезал молча.
 const GROUP_TITLE_KEYS: Record<string, string> = {
+  topic: "documents.groupTopic",
   espd: "documents.groupEspd",
   report: "documents.groupReport",
   work: "documents.groupWork",

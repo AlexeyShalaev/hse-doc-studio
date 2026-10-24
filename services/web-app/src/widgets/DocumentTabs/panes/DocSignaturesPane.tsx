@@ -37,6 +37,8 @@ const personNameForSlot = (
   if (slotId === "author") return project.authors?.[0]?.name ?? null;
   if (slotId === "supervisor") return project.supervisor?.name ?? null;
   if (slotId === "co_supervisor") return project.co_supervisor?.name ?? null;
+  if (slotId === "academic_supervisor")
+    return project.academic_supervisor?.name ?? null;
   return null;
 };
 
