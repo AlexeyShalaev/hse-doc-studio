@@ -10,6 +10,8 @@ dependencies = [
     "jinja2>=3.0",
     "gitpython>=3.1",
     "httpx>=0.28",
+    # HTTP-клиент SDK Anthropic 2.x / OpenAI 3.x: свои клиенты для них строим на нём.
+    "httpx2>=2.16",
     "dishka>=1.4",
     "sse-starlette>=2.2",
     "structlog>=25.0",

@@ -484,7 +484,7 @@ export const ImagesSection = () => {
       );
     }
     const data = dockerStatus.data;
-    if (!data || !data.available) {
+    if (!data?.available) {
       return (
         <DockerUnavailableNotice
           status={data}

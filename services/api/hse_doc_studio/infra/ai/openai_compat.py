@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ssl
 
-import httpx
+import httpx2
 import openai
 
 # Covers both the plain `openai` provider type (base_url=None → api.openai.com)
@@ -35,12 +35,12 @@ class OpenAICompatClient:
     ) -> None:
         # Pass the timeout to BOTH the SDK (governs per-request) and the httpx
         # client (governs the connect/TLS handshake).
-        timeout = httpx.Timeout(request_timeout_s, connect=connect_timeout_s)
+        timeout = httpx2.Timeout(request_timeout_s, connect=connect_timeout_s)
         self._client = openai.AsyncOpenAI(
             api_key=api_key,
             base_url=base_url or None,
             timeout=timeout,
-            http_client=httpx.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout),
+            http_client=httpx2.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout),
         )
 
     async def list_models(self) -> list[str]:

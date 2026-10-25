@@ -284,7 +284,7 @@ const CompareWithTemplate = ({
         {t("compare.hint")}
       </span>
       {isShown && isLoading && <Spinner size="sm" />}
-      {isShown && data && data.files.length === 0 && (
+      {isShown && data?.files.length === 0 && (
         <Hint icon="ok" text={t("compare.none")} />
       )}
       {isShown &&

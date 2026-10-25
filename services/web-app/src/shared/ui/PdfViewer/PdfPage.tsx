@@ -278,8 +278,17 @@ export const PdfPage = ({
         const url = a.url ?? a.unsafeUrl ?? null;
         const targetPage = url ? null : await destToPage(pdf, a.dest);
         if (!url && targetPage == null) continue;
-        const r = cssViewport.convertToViewportRectangle(a.rect) as number[];
-        const [rx1, ry1, rx2, ry2] = r;
+        // pdfjs 6.4 убрал convertToViewportRectangle: переводим два угла сами
+        // (ровно то, что метод делал внутри).
+        const [ax1, ay1, ax2, ay2] = a.rect;
+        const [rx1, ry1] = cssViewport.convertToViewportPoint(
+          ax1 ?? 0,
+          ay1 ?? 0,
+        ) as (number | undefined)[];
+        const [rx2, ry2] = cssViewport.convertToViewportPoint(
+          ax2 ?? 0,
+          ay2 ?? 0,
+        ) as (number | undefined)[];
         if (rx1 == null || ry1 == null || rx2 == null || ry2 == null) continue;
         rects.push({
           id: `${String(dim.num)}-${String(i)}`,
