@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import structlog
@@ -11,7 +11,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ISignatureRepository,
 )
-from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
+from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -78,7 +78,7 @@ class DeleteSignaturePngUC:
                     new_doc_placements[sid] = placement
             new_placements[doc_id] = new_doc_placements
 
-        new_state = SignaturesState(slots=new_slots, placements=new_placements)
+        new_state = replace(state, slots=new_slots, placements=new_placements)
         self._signature_repo.save_state(project.folder, new_state)
 
         logger.info(

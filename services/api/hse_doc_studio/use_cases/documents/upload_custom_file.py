@@ -19,7 +19,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
-from hse_doc_studio.core.value_objects import CustomFileOverride, SignaturesState
+from hse_doc_studio.core.value_objects import CustomFileOverride
 from hse_doc_studio.core.vcs.protocols import IVcsEditThrottle, IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
 from hse_doc_studio.use_cases.files._vcs_edit import maybe_edit_commit
@@ -174,7 +174,7 @@ class UploadCustomFileUC:
             return
         updated = {slot_id: replace(p, enabled=False) for slot_id, p in doc_placements.items()}
         new_placements = {**state.placements, doc_id: updated}
-        self._signature_repo.save_state(project_folder, SignaturesState(slots=state.slots, placements=new_placements))
+        self._signature_repo.save_state(project_folder, replace(state, placements=new_placements))
 
     async def _generate_preview(self, project_folder: Path, stored_path: str) -> bool:
         src_abs = project_folder / stored_path

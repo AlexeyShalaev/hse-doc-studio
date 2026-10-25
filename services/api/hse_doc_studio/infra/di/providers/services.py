@@ -72,8 +72,11 @@ from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
+from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
@@ -522,9 +525,23 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_submission_assembler(
-        self, pdf_stamper: PdfStamper, office_manager: OfficeConvertManager
+        self, pdf_stamper: PdfStamper, office_manager: OfficeConvertManager, keyring: GpgKeyring
     ) -> SubmissionAssembler:
-        return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager)
+        return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager, keyring=keyring)
+
+    @provide
+    def get_gpg_keyring(self) -> GpgKeyring:
+        return GpgKeyring(settings.data_dir.expanduser() / "gnupg")
+
+    @provide
+    def get_trusted_root_store(self) -> TrustedRootStore:
+        return TrustedRootStore(settings.data_dir.expanduser() / "trusted_roots")
+
+    @provide
+    def get_detached_signature_verifier(
+        self, keyring: GpgKeyring, root_store: TrustedRootStore
+    ) -> DetachedSignatureVerifier:
+        return DetachedSignatureVerifier(keyring, root_store.directory)
 
     @provide
     def get_vcs_service(self) -> IVcsService:

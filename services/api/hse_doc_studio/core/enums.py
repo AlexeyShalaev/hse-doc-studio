@@ -176,6 +176,7 @@ class SigningIdentityKind(StrEnum):
     self_signed = "self_signed"  # generated in-app, key stored locally (data_dir)
     pkcs12 = "pkcs12"  # imported .p12/.pfx bundle, key stored locally
     pkcs11 = "pkcs11"  # hardware token / smartcard via PKCS#11 library
+    openpgp = "openpgp"  # GnuPG secret key in the Studio keyring (data_dir/gnupg)
 
 
 class SignMode(StrEnum):
@@ -184,6 +185,26 @@ class SignMode(StrEnum):
     image_crypto = "image_crypto"  # PNG appearance + embedded PAdES signature
     crypto_invisible = "crypto_invisible"  # PAdES only, no visible appearance
     detached = "detached"  # produce a separate .sig (CAdES detached)
+    # Printed caption «Подписано с помощью открепленной электронной подписи»
+    # instead of a picture; the signature file is attached to the frozen PDF.
+    detached_text = "detached_text"
+
+
+class DetachedFormat(StrEnum):
+    openpgp = "openpgp"  # .asc / .sig, checked with gpg
+    cms = "cms"  # .sig / .p7s: CAdES / CMS, RSA, ECDSA or GOST
+
+
+class DetachedOrigin(StrEnum):
+    uploaded = "uploaded"  # produced outside the Studio and attached
+    studio = "studio"  # produced here with a stored key
+
+
+class DetachedVerdict(StrEnum):
+    valid = "valid"  # signature and digest check out for the frozen PDF
+    invalid = "invalid"  # the signature does not match the frozen PDF
+    unverified = "unverified"  # signer shown, but the algorithm cannot be checked here
+    unknown_key = "unknown_key"  # OpenPGP signature, public key not in the keyring yet
 
 
 class AIProviderType(StrEnum):

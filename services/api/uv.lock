@@ -685,6 +685,15 @@ wheels = [
 ]
 
 [[package]]
+name = "gostcrypto"
+version = "1.2.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/44/f0399c03dd36a628df53017c40a4ffc73f05a76acaf56aea706e2c12ec10/gostcrypto-1.2.5.tar.gz", hash = "sha256:1e69b5c89d22435e690307470d8f561fcc10d5edecb847b90eb572038c2b6c2e", size = 77753, upload-time = "2021-09-05T11:04:52.3Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/ab/ca495b239518791248491633041657ea0815bb3b8b81af8ad4d4aed432fa/gostcrypto-1.2.5-py3-none-any.whl", hash = "sha256:5cfc8b4c33d2a110fea0cfcb693b4a5f2b021004b9cf8d6bba8b78aab23d2001", size = 82400, upload-time = "2021-09-05T11:05:33.134Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -702,6 +711,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "dishka" },
     { name = "gitpython" },
+    { name = "gostcrypto" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "openai" },
@@ -752,6 +762,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.115" },
     { name = "freezegun", marker = "extra == 'test'", specifier = ">=1.5.1" },
     { name = "gitpython", specifier = ">=3.1" },
+    { name = "gostcrypto", specifier = ">=1.2.5" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "httpx", marker = "extra == 'test'", specifier = ">=0.28" },
     { name = "jinja2", specifier = ">=3.0" },

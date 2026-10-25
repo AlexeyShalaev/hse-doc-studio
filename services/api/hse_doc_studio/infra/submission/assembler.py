@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -15,11 +16,20 @@ from hse_doc_studio.core.catalog import (
     TemplateVersion,
 )
 from hse_doc_studio.core.entities import Document, Project
-from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.team import author_by_slug
-from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
 from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
-from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, Stamp, format_sign_date
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, Stamp
+from hse_doc_studio.infra.signatures.signing_package import (
+    PackageSignature,
+    build_readme,
+    public_key_files,
+    signature_arcname,
+)
+from hse_doc_studio.infra.signatures.stamp_builder import stamps_for_doc
 
 logger = structlog.get_logger()
 
@@ -146,10 +156,14 @@ class SubmissionAssembler:
     """
 
     def __init__(
-        self, pdf_stamper: PdfStamper | None = None, office_manager: OfficeConvertManager | None = None
+        self,
+        pdf_stamper: PdfStamper | None = None,
+        office_manager: OfficeConvertManager | None = None,
+        keyring: GpgKeyring | None = None,
     ) -> None:
         self._pdf_stamper = pdf_stamper or PdfStamper()
         self._office_manager = office_manager
+        self._keyring = keyring
 
     async def populate_dir(  # noqa: C901, PLR0912
         self,
@@ -202,6 +216,25 @@ class SubmissionAssembler:
                 logger.warning("assembler: doc output_name escapes folder", doc_id=item.doc_id, arcname=arcname)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
+            # A document with detached e-signatures goes into the package as the exact frozen
+            # bytes the signatures cover, with one signature file per signer next to it.
+            detached = self._detached_for_item(item.signatures, item.doc_id, signatures_state) if is_pdf else []
+            frozen = signatures_state.frozen.get(item.doc_id)
+            if detached and frozen is not None:
+                written.extend(
+                    self._write_frozen_doc(
+                        output_dir,
+                        project_folder,
+                        source_path,
+                        arcname,
+                        frozen,
+                        detached,
+                        template_version,
+                        project,
+                        lang,
+                    )
+                )
+                continue
             # Never attempt to stamp a non-PDF file — that would crash trying
             # to parse it as a PDF. An unsignable custom document (docx/pptx
             # kept as-is, or an unrecognized format) is copied in unstamped
@@ -212,6 +245,7 @@ class SubmissionAssembler:
                     doc_id=item.doc_id,
                     project_folder=project_folder,
                     signatures_state=signatures_state,
+                    lang=lang,
                 )
                 if is_pdf
                 else []
@@ -408,44 +442,87 @@ class SubmissionAssembler:
         doc_id: str,
         project_folder: Path,
         signatures_state: SignaturesState,
+        lang: str = "ru",
     ) -> list[Stamp]:
         # Only stamp slots the profile actually requested AND that have an
-        # enabled placement + on-disk PNG. We don't second-guess the profile:
-        # if the user enabled a slot in the UI but the profile didn't ask for
-        # it on this doc, we skip it.
-        doc_placements = signatures_state.placements.get(doc_id, {})
-        result: list[Stamp] = []
+        # enabled placement + on-disk PNG (or are a printed detached-signature
+        # caption). We don't second-guess the profile: if the user enabled a
+        # slot in the UI but the profile didn't ask for it on this doc, we skip it.
+        return stamps_for_doc(signatures_state, doc_id, project_folder, lang, item_signatures)
+
+    @staticmethod
+    def _detached_for_item(
+        item_signatures: tuple[str, ...], doc_id: str, state: SignaturesState
+    ) -> list[tuple[str, DetachedSignature]]:
+        attached = state.detached.get(doc_id, {})
+        result: list[tuple[str, DetachedSignature]] = []
         for slot_id in item_signatures:
-            placement = doc_placements.get(slot_id)
-            slot = signatures_state.slots.get(slot_id)
-            if placement is None or not placement.enabled:
-                continue
-            if slot is None or slot.png_path is None:
-                continue
-            png_path = project_folder / slot.png_path
-            if not png_path.exists():
-                logger.warning(
-                    "assembler: PNG missing for slot",
-                    doc_id=doc_id,
-                    slot_id=slot_id,
-                    path=str(png_path),
-                )
-                continue
-            aspect = 0.4
-            if slot.natural_width_px and slot.natural_height_px and slot.natural_width_px > 0:
-                aspect = slot.natural_height_px / slot.natural_width_px
-            result.append(
-                Stamp(
-                    page=placement.page,
-                    x_mm=placement.x_mm,
-                    y_mm=placement.y_mm,
-                    width_mm=placement.width_mm,
-                    png_path=png_path,
-                    aspect_ratio=aspect,
-                    date_text=format_sign_date(placement.sign_date),
+            slot = state.slots.get(slot_id)
+            sig = attached.get(slot_id)
+            if slot is not None and slot.sign_mode is SignMode.detached_text and sig is not None:
+                result.append((slot_id, sig))
+        return result
+
+    def _write_frozen_doc(
+        self,
+        output_dir: Path,
+        project_folder: Path,
+        source_path: Path,
+        arcname: str,
+        frozen: FrozenPdf,
+        detached: list[tuple[str, DetachedSignature]],
+        template_version: TemplateVersion,
+        project: Project | None,
+        lang: str,
+    ) -> list[str]:
+        """Frozen PDF + signature files + public keys + README; returns the arcnames written."""
+        frozen_path = project_folder / frozen.path
+        if not frozen_path.is_file():
+            raise ValueError(f"Frozen PDF is missing for {arcname}: freeze the document again")
+        if _sha256(source_path) != frozen.source_sha256:
+            raise ValueError(
+                f"{arcname}: the document was rebuilt after the PDF was frozen for signing. "
+                "Freeze it again and re-attach the signatures"
+            )
+        target = output_dir / arcname
+        shutil.copyfile(frozen_path, target)
+        written = [arcname]
+        pdf_name = PurePosixPath(arcname).name
+        parent = PurePosixPath(arcname).parent
+        slot_service = SignatureSlotService()
+
+        sigs: list[PackageSignature] = []
+        for slot_id, sig in detached:
+            src = project_folder / sig.file
+            if not src.is_file():
+                raise ValueError(f"Signature file is missing for {arcname}, slot {slot_id}")
+            rslot = slot_service.find_runtime_slot(project, template_version, slot_id) if project else None
+            label = (rslot.label.get(lang) or rslot.label.get("ru") or slot_id) if rslot else slot_id
+            sig_name = signature_arcname(pdf_name, label, src.suffix)
+            sig_arc = str(parent / sig_name)
+            shutil.copyfile(src, output_dir / sig_arc)
+            written.append(sig_arc)
+            sigs.append(
+                PackageSignature(
+                    slot_label=label,
+                    file=src,
+                    arcname=sig_name,
+                    format=sig.format,
+                    signer=sig.signer,
+                    signer_id=sig.signer_id,
                 )
             )
-        return result
+
+        keys = public_key_files(self._keyring, sigs) if self._keyring is not None else {}
+        for name, blob in keys.items():
+            (output_dir / parent / name).write_bytes(blob)
+            written.append(str(parent / name))
+        readme_name = f"{PurePosixPath(pdf_name).stem}.README.txt"
+        (output_dir / parent / readme_name).write_text(
+            build_readme(lang, pdf_name, frozen.sha256, sigs, list(keys)), encoding="utf-8"
+        )
+        written.append(str(parent / readme_name))
+        return written
 
     def _write_extra(
         self,
@@ -521,3 +598,11 @@ class SubmissionAssembler:
         else:
             logger.debug("assembler: added raw extra", source=str(source_path), arcname=extra.output_name)
             return extra.output_name
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()

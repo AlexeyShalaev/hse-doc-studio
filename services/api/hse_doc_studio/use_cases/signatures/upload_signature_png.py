@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 from uuid import UUID
 
@@ -20,7 +20,6 @@ from hse_doc_studio.core.services import RuntimeSlot, SignatureSlotService
 from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
-    SignaturesState,
 )
 from hse_doc_studio.infra.signatures.png_metadata import is_png, read_dimensions_from_bytes
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -144,7 +143,7 @@ class UploadSignaturePngUC:
         new_placements = {doc_id: dict(slots) for doc_id, slots in state.placements.items()}
         self._seed_default_placements(new_placements, project, rslot, inp.slot_id, slot_def.default_placement)
 
-        new_state = SignaturesState(slots=new_slots, placements=new_placements)
+        new_state = replace(state, slots=new_slots, placements=new_placements)
         self._signature_repo.save_state(project.folder, new_state)
 
         logger.info(

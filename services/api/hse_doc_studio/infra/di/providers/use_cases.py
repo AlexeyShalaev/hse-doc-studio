@@ -86,6 +86,8 @@ from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
+from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
@@ -302,9 +304,21 @@ from hse_doc_studio.use_cases.setup.apply_setup import ApplySetupUC
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 
 # --- Signatures ---
+from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
+    AttachDetachedSignatureUC,
+    RecheckDetachedSignatureUC,
+)
+from hse_doc_studio.use_cases.signatures.delete_detached_signature import DeleteDetachedSignatureUC
 from hse_doc_studio.use_cases.signatures.delete_signature_png import DeleteSignaturePngUC
+from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC, UnfreezePdfUC
+from hse_doc_studio.use_cases.signatures.get_detached_files import (
+    BuildDetachedPackageUC,
+    GetDetachedSignatureFileUC,
+    GetFrozenPdfUC,
+)
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
+from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import UpdateSignaturePlacementUC
 from hse_doc_studio.use_cases.signatures.update_slot_config import UpdateSlotConfigUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
@@ -312,6 +326,12 @@ from hse_doc_studio.use_cases.signing_identities.create_self_signed import Creat
 from hse_doc_studio.use_cases.signing_identities.delete_signing_identity import DeleteSigningIdentityUC
 from hse_doc_studio.use_cases.signing_identities.import_pkcs12 import ImportPkcs12UC
 from hse_doc_studio.use_cases.signing_identities.list_signing_identities import ListSigningIdentitiesUC
+from hse_doc_studio.use_cases.signing_identities.openpgp_keys import (
+    CreateOpenPgpKeyUC,
+    ExportOpenPgpPublicKeyUC,
+    ImportOpenPgpKeyUC,
+    ListOpenPgpKeysUC,
+)
 from hse_doc_studio.use_cases.submission.create_submission import CreateSubmissionUC
 from hse_doc_studio.use_cases.submission.get_submission_file import GetSubmissionFileUC
 
@@ -1896,12 +1916,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
     ) -> GetSignaturesUC:
         return GetSignaturesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
             template_repo=template_repo,
+            template_service=template_service,
         )
 
     @provide
@@ -1968,6 +1990,140 @@ class UseCaseProvider(Provider):
             template_service=template_service,
             pdf_stamper=pdf_stamper,
             pyhanko_signer=pyhanko_signer,
+        )
+
+    # ------------------------------------------------------- Detached e-signatures
+
+    @provide
+    def get_freeze_pdf_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        pdf_stamper: PdfStamper,
+    ) -> FreezePdfUC:
+        return FreezePdfUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            signature_repo=signature_repo,
+            template_repo=template_repo,
+            template_service=template_service,
+            pdf_stamper=pdf_stamper,
+        )
+
+    @provide
+    def get_unfreeze_pdf_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+    ) -> UnfreezePdfUC:
+        return UnfreezePdfUC(
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo
+        )
+
+    @provide
+    def get_attach_detached_signature_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        verifier: DetachedSignatureVerifier,
+        keyring: GpgKeyring,
+    ) -> AttachDetachedSignatureUC:
+        return AttachDetachedSignatureUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+        )
+
+    @provide
+    def get_recheck_detached_signature_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        verifier: DetachedSignatureVerifier,
+        keyring: GpgKeyring,
+    ) -> RecheckDetachedSignatureUC:
+        return RecheckDetachedSignatureUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+        )
+
+    @provide
+    def get_sign_in_studio_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        signing_identity_repo: ISigningIdentityRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        verifier: DetachedSignatureVerifier,
+        keyring: GpgKeyring,
+    ) -> SignInStudioUC:
+        return SignInStudioUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            signature_repo=signature_repo,
+            signing_identity_repo=signing_identity_repo,
+            template_repo=template_repo,
+            template_service=template_service,
+            verifier=verifier,
+            keyring=keyring,
+        )
+
+    @provide
+    def get_delete_detached_signature_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+    ) -> DeleteDetachedSignatureUC:
+        return DeleteDetachedSignatureUC(
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo
+        )
+
+    @provide
+    def get_get_detached_signature_file_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+    ) -> GetDetachedSignatureFileUC:
+        return GetDetachedSignatureFileUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service
+        )
+
+    @provide
+    def get_get_frozen_pdf_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+    ) -> GetFrozenPdfUC:
+        return GetFrozenPdfUC(project_repo, project_index_repo, signature_repo, template_repo, template_service)
+
+    @provide
+    def get_build_detached_package_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        keyring: GpgKeyring,
+    ) -> BuildDetachedPackageUC:
+        return BuildDetachedPackageUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, keyring
         )
 
     # ------------------------------------------------------------------ Submission
@@ -2395,5 +2551,24 @@ class UseCaseProvider(Provider):
     def get_delete_signing_identity_uc(
         self,
         repo: ISigningIdentityRepository,
+        keyring: GpgKeyring,
     ) -> DeleteSigningIdentityUC:
-        return DeleteSigningIdentityUC(repo=repo)
+        return DeleteSigningIdentityUC(repo=repo, keyring=keyring)
+
+    @provide
+    def get_create_openpgp_key_uc(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> CreateOpenPgpKeyUC:
+        return CreateOpenPgpKeyUC(repo=repo, keyring=keyring)
+
+    @provide
+    def get_import_openpgp_key_uc(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> ImportOpenPgpKeyUC:
+        return ImportOpenPgpKeyUC(repo=repo, keyring=keyring)
+
+    @provide
+    def get_export_openpgp_public_key_uc(
+        self, repo: ISigningIdentityRepository, keyring: GpgKeyring
+    ) -> ExportOpenPgpPublicKeyUC:
+        return ExportOpenPgpPublicKeyUC(repo=repo, keyring=keyring)
+
+    @provide
+    def get_list_openpgp_keys_uc(self, keyring: GpgKeyring) -> ListOpenPgpKeysUC:
+        return ListOpenPgpKeysUC(keyring=keyring)

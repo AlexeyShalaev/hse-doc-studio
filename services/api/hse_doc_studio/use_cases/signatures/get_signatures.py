@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
     ISignatureRepository,
     ITemplateRepository,
 )
-from hse_doc_studio.core.services import RuntimeSlot, SignatureSlotService
+from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
 
 logger = structlog.get_logger()
 
@@ -47,6 +50,8 @@ class RuntimeSlotItem:
 class GetSignaturesOutput:
     state: SignaturesState
     runtime_slots: list[RuntimeSlotItem]
+    # Docs whose compiled PDF changed after the PDF was frozen for signing.
+    stale_frozen: set[str] = field(default_factory=set)
 
 
 class GetSignaturesUC:
@@ -56,9 +61,11 @@ class GetSignaturesUC:
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService | None = None,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
+        self._template_service = template_service
         self._slot_service = SignatureSlotService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -97,4 +104,18 @@ class GetSignaturesUC:
                 for slot in self._slot_service.runtime_slots(project, version)
             ]
 
-        return GetSignaturesOutput(state=state, runtime_slots=runtime_slots)
+        stale: set[str] = set()
+        if version is not None and self._template_service is not None:
+            for doc_id, frozen in state.frozen.items():
+                doc = next((d for d in project.documents if d.id == doc_id), None)
+                if doc is None:
+                    continue
+                try:
+                    _, output_file = self._template_service.resolve_instance_source(project, doc, version)
+                except NotFoundError:
+                    continue
+                compiled = project.folder / output_file
+                if compiled.is_file() and await asyncio.to_thread(sha256_file, compiled) != frozen.source_sha256:
+                    stale.add(doc_id)
+
+        return GetSignaturesOutput(state=state, runtime_slots=runtime_slots, stale_frozen=stale)
