@@ -73,6 +73,8 @@ class Stamp:
     text: str | None = None
     # Signature plate rows («Сертификат», «Владелец», ...) under the bold caption.
     details: tuple[tuple[str, str], ...] = ()
+    # Second bold line under the caption (the signature level), empty = none.
+    subtitle: str = ""
     # Label of the date row when the plate has details («Дата подписания»).
     date_label: str = ""
     # Signing date rendered as text to the right of the PNG («12.05.2026»).
@@ -199,12 +201,15 @@ class PdfStamper:
 def _mark_lines(s: Stamp, font: str, width_pt: float) -> tuple[list[str], list[str]]:
     """(caption lines, body lines) of a text mark, wrapped to `width_pt`."""
     inner = width_pt - 2 * _TEXT_PAD_PT
-    caption = simpleSplit(s.text or "", _TEXT_FONT_BOLD if s.details else font, _TEXT_SIZE_PT, inner)
+    bold = _TEXT_FONT_BOLD if (s.details or s.subtitle) else font
+    caption = simpleSplit(s.text or "", bold, _TEXT_SIZE_PT, inner)
+    if s.subtitle:
+        caption += simpleSplit(s.subtitle, bold, _TEXT_SIZE_PT, inner)
     body: list[str] = []
     for label, value in s.details:
         body.extend(simpleSplit(f"{label}: {value}", font, _TEXT_SIZE_PT, inner))
     if s.date_text:
-        row = f"{s.date_label}: {s.date_text}" if s.details and s.date_label else s.date_text
+        row = f"{s.date_label}: {s.date_text}" if (s.details or s.subtitle) and s.date_label else s.date_text
         body.append(row)
     return caption, body
 
@@ -237,15 +242,16 @@ def _draw_text_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
     height_pt = (len(caption) + len(body)) * line_h + 2 * _TEXT_PAD_PT
     x_pt = s.x_mm * mm
     y_bottom = page_height_pt - s.y_mm * mm - height_pt
-    c.setLineWidth(0.5 if not s.details else 1.0)
+    plate = bool(s.details or s.subtitle)
+    c.setLineWidth(1.0 if plate else 0.5)
     c.setStrokeColorRGB(0.35, 0.35, 0.35)
-    if s.details:
+    if plate:
         c.roundRect(x_pt, y_bottom, width_pt, height_pt, _PLATE_RADIUS_PT, stroke=1, fill=0)
     else:
         c.rect(x_pt, y_bottom, width_pt, height_pt, stroke=1, fill=0)
     c.setFillColorRGB(0, 0, 0)
     y = y_bottom + height_pt - _TEXT_PAD_PT - _TEXT_SIZE_PT
-    c.setFont(_TEXT_FONT_BOLD if s.details else font, _TEXT_SIZE_PT)
+    c.setFont(_TEXT_FONT_BOLD if plate else font, _TEXT_SIZE_PT)
     for line in caption:
         c.drawString(x_pt + _TEXT_PAD_PT, y, line)
         y -= line_h

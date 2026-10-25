@@ -23,6 +23,7 @@ import {
   useDeleteDetachedSignature,
   useFreezePdf,
   useRecheckDetachedSignature,
+  useSetSignerLevel,
   useSetSlotSigner,
   useSignDetachedInStudio,
   useUnfreezePdf,
@@ -962,6 +963,7 @@ export const SignerPlateEditor = ({
   const { t } = useTranslation("signatureStamper");
   const setSigner = useSetSlotSigner();
   const clearSigner = useClearSlotSigner();
+  const setLevel = useSetSignerLevel();
   const { data: identities } = useSigningIdentities();
   const fileRef = useRef<HTMLInputElement>(null);
   const [manual, setManual] = useState(false);
@@ -1089,6 +1091,25 @@ export const SignerPlateEditor = ({
           </button>
         )}
       </div>
+      <label className="flex items-center" style={{ gap: 6 }}>
+        <span className="dim">{t("detached.plate.level")}</span>
+        <select
+          className="input"
+          value={signer?.level ?? ""}
+          disabled={busy || setLevel.isPending}
+          onChange={(e) => {
+            setLevel.mutate(
+              { projectId, slotId, level: e.target.value },
+              { onError },
+            );
+          }}
+          style={{ height: 22, fontSize: 10.5, padding: "0 4px" }}
+        >
+          <option value="">{t("detached.plate.levelNone")}</option>
+          <option value="ukep">{t("detached.plate.levelUkep")}</option>
+          <option value="unep">{t("detached.plate.levelUnep")}</option>
+        </select>
+      </label>
       {manual && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <input

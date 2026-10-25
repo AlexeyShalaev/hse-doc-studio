@@ -7,6 +7,7 @@ export {
   useDeleteSignaturePng,
   useFreezePdf,
   useRecheckDetachedSignature,
+  useSetSignerLevel,
   useSetSlotSigner,
   useSignaturesState,
   useSignDetachedInStudio,

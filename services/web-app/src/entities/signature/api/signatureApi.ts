@@ -143,6 +143,13 @@ export const signatureApi = {
       .put(`/projects/${projectId}/signatures/slots/${slotId}/signer`, data)
       .then(parseResp(SlotInfoSchema)),
 
+  setSignerLevel: (projectId: string, slotId: string, level: string) =>
+    apiClient
+      .put(`/projects/${projectId}/signatures/slots/${slotId}/signer/level`, {
+        level,
+      })
+      .then(parseResp(SlotInfoSchema)),
+
   clearSigner: (projectId: string, slotId: string) =>
     apiClient
       .delete(`/projects/${projectId}/signatures/slots/${slotId}/signer`)

@@ -14,6 +14,13 @@ class SignerInfoResponse(BaseModel):
     valid_from: str | None
     valid_to: str | None
     signer_id: str
+    level: str = ""
+
+
+class LevelRequest(BaseModel):
+    """PUT /signatures/slots/{slot_id}/signer/level."""
+
+    level: str = ""
 
 
 class ManualSignerRequest(BaseModel):
@@ -24,6 +31,7 @@ class ManualSignerRequest(BaseModel):
     cert_id: str = ""
     valid_from: str | None = None
     valid_to: str | None = None
+    level: str = ""
 
 
 class SlotInfoResponse(BaseModel):

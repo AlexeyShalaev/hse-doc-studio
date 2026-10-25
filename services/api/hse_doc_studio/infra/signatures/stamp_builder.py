@@ -52,6 +52,21 @@ _LABELS = {
 }
 
 
+_LEVELS = {
+    "ru": {
+        "ukep": "Усиленная квалифицированная электронная подпись",
+        "unep": "Усиленная неквалифицированная электронная подпись",
+    },
+    "en": {"ukep": "Enhanced qualified electronic signature", "unep": "Enhanced non-qualified electronic signature"},
+}
+
+
+def level_subtitle(signer: SignerInfo | None, lang: str) -> str:
+    if signer is None or not signer.level:
+        return ""
+    return (_LEVELS.get(lang) or _LEVELS["ru"]).get(signer.level, "")
+
+
 def date_row_label(lang: str) -> str:
     return (_LABELS.get(lang) or _LABELS["ru"])["date"]
 
@@ -111,6 +126,7 @@ def stamps_for_doc(
                     aspect_ratio=_DEFAULT_ASPECT,
                     text=detached_caption(lang),
                     details=signer_details(slot.signer, lang),
+                    subtitle=level_subtitle(slot.signer, lang),
                     date_label=date_row_label(lang),
                     date_text=format_sign_date(placement.sign_date),
                 )

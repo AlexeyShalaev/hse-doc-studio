@@ -527,6 +527,7 @@ def _deserialize_signer(raw: Any) -> SignerInfo | None:
             valid_from=raw.get("valid_from"),
             valid_to=raw.get("valid_to"),
             signer_id=str(raw.get("signer_id", "")),
+            level=str(raw.get("level", "")),
         )
     except (KeyError, TypeError):
         return None

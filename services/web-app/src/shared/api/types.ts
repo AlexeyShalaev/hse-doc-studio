@@ -440,6 +440,8 @@ export type SignerInfoResponse = {
   valid_from: string | null;
   valid_to: string | null;
   signer_id: string;
+  // "" | "ukep" | "unep": вторая строка заголовка плашки.
+  level?: string;
 };
 
 export type SlotInfoResponse = {

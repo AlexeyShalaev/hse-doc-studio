@@ -151,6 +151,9 @@ export const PdfStampEditor = ({
         year: "numeric",
       });
     const rows: string[] = [];
+    if (signer.level === "ukep" || signer.level === "unep") {
+      rows.push(t(`detached.plate.level_${signer.level}`));
+    }
     if (signer.cert_id) {
       rows.push(
         `${t(signer.kind === "openpgp" ? "detached.plate.key" : "detached.plate.certificate")}: ${signer.cert_id}`,

@@ -14,6 +14,7 @@ from hse_doc_studio.api.schemas.signature import (
     DetachedSignatureResponse,
     FreezePdfResponse,
     FrozenPdfResponse,
+    LevelRequest,
     ManualSignerRequest,
     PlacementResponse,
     ProfileRefResponse,
@@ -540,11 +541,29 @@ async def set_slot_signer(
             cert_id=body.cert_id.strip(),
             valid_from=body.valid_from,
             valid_to=body.valid_to,
+            level=body.level,
         )
     try:
         result = await uc.execute(
             UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, identity_id=body.identity_id, manual=manual)
         )
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.put(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer/level",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer_level(
+    project_id: UUID,
+    slot_id: str,
+    body: LevelRequest,
+    uc: FromDishka[UpdateSlotSignerUC],
+) -> SlotInfoResponse:
+    try:
+        result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, level=body.level))
     except (NotFoundError, ValueError) as exc:
         raise _signer_result(exc) from exc
     return _map_slot(result.slot)

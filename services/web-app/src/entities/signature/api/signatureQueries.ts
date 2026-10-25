@@ -220,3 +220,19 @@ export const useClearSlotSigner = () => {
     onSuccess: (_, { projectId }) => void invalidate(projectId),
   });
 };
+
+export const useSetSignerLevel = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+      level,
+    }: {
+      projectId: string;
+      slotId: string;
+      level: string;
+    }) => signatureApi.setSignerLevel(projectId, slotId, level),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};

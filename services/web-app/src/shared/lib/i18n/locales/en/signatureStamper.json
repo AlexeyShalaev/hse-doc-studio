@@ -238,7 +238,13 @@
       "fromTo": "from {{from}} to {{to}}",
       "until": "until {{to}}",
       "validUntil": "Valid until",
-      "signDate": "Signing date"
+      "signDate": "Signing date",
+      "level": "Level",
+      "levelNone": "do not show",
+      "levelUkep": "enhanced qualified",
+      "levelUnep": "enhanced non-qualified",
+      "level_ukep": "Enhanced qualified electronic signature",
+      "level_unep": "Enhanced non-qualified electronic signature"
     }
   }
 }

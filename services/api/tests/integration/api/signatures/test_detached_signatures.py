@@ -346,3 +346,22 @@ async def test__api__signer_from_garbage_file__400(test_app: AsyncClient, tmp_pa
         files={"file": ("x.cer", b"nope", "application/octet-stream")},
     )
     assert resp.status_code == 400, resp.text
+
+
+async def test__api__signature_level__printed_on_plate_and_kept_when_signer_changes(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
+    await _enable_detached_slot(test_app, project_id)
+    base = f"/api/v1/projects/{project_id}/signatures/slots/{_SLOT}/signer"
+
+    resp = await test_app.put(f"{base}/level", json={"level": "ukep"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["signer"]["level"] == "ukep"
+    resp = await test_app.post(f"{base}/file", files={"file": ("c.cer", make_identity("Петров Пётр").cert_der, "x")})
+    assert resp.json()["signer"]["level"] == "ukep"
+    await _freeze(test_app, project_id)
+    text = PdfReader(io.BytesIO(await _frozen_bytes(test_app, project_id))).pages[0].extract_text().replace("\n", " ")
+    assert "Усиленная квалифицированная электронная подпись" in text
+
+    assert (await test_app.put(f"{base}/level", json={"level": "bogus"})).status_code == 400

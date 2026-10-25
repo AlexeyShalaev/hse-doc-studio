@@ -67,6 +67,8 @@ class SignerInfo:
     valid_from: str | None = None  # ISO 8601
     valid_to: str | None = None
     signer_id: str = ""
+    # Printed under the caption: "" (nothing), "ukep" (enhanced qualified), "unep" (enhanced non-qualified).
+    level: str = ""
 
 
 @dataclass(frozen=True)

@@ -31,6 +31,8 @@ from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetPr
 
 logger = structlog.get_logger()
 
+_LEVELS = {"", "ukep", "unep"}
+
 
 @dataclass
 class UpdateSlotSignerInput:
@@ -40,6 +42,8 @@ class UpdateSlotSignerInput:
     certificate: bytes | None = None  # X.509 certificate or OpenPGP public key
     identity_id: UUID | None = None  # one of the Studio's own keys
     manual: SignerInfo | None = None
+    # Change only the printed signature level, keeping the signer.
+    level: str | None = None
 
 
 @dataclass
@@ -102,9 +106,17 @@ class UpdateSlotSignerUC:
         version = self._template_repo.get_version(project.lock.pack_id, project.lock.template_id, project.lock.version)
         if version is None or SignatureSlotService().find_runtime_slot(project, version, inp.slot_id) is None:
             raise NotFoundError(localized_error(f"Слот {inp.slot_id!r} не найден", f"Slot {inp.slot_id!r} not found"))
-        signer = await self._resolve(inp)
         state = self._signature_repo.get_state(project.folder)
         existing = state.slots.get(inp.slot_id) or SignatureSlot(None, None, None)
+        if inp.level is not None:
+            if inp.level not in _LEVELS:
+                raise ValueError(localized_error("Неизвестный уровень подписи", "Unknown signature level"))
+            signer = replace(existing.signer or SignerInfo(kind="manual", owner=""), level=inp.level)
+        else:
+            signer = await self._resolve(inp)
+            # Picking another signer keeps the level chosen before.
+            if signer is not None and existing.signer is not None and not signer.level:
+                signer = replace(signer, level=existing.signer.level)
         new_slot = replace(existing, signer=signer)
         self._signature_repo.save_state(project.folder, replace(state, slots={**state.slots, inp.slot_id: new_slot}))
         logger.info(

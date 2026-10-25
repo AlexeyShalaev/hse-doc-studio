@@ -15,6 +15,7 @@ export const SignerInfoSchema = z.object({
   valid_from: z.string().nullable(),
   valid_to: z.string().nullable(),
   signer_id: z.string(),
+  level: z.string().optional().default(""),
 });
 
 export const SlotInfoSchema = z.object({
