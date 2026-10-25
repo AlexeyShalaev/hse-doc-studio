@@ -1,7 +1,7 @@
 ############################
 # Stage 1: build frontend
 ############################
-FROM node:22-alpine AS frontend-builder
+FROM node:25-alpine AS frontend-builder
 WORKDIR /app
 
 # Node 22 и pnpm 9.15.4 — ровно то, на чём фронт собирается в ci.yml
