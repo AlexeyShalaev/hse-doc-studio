@@ -28,7 +28,7 @@ pytestmark = [
 def _project(tmp_path: Path):  # type: ignore[no-untyped-def]
     project = make_project(folder=tmp_path)
     (tmp_path / "doc").mkdir()
-    (tmp_path / "doc" / "a.tex").write_text("a\n", encoding="utf-8")
+    (tmp_path / "doc" / "a.tex").write_text("a\n", encoding="utf-8", newline="\n")
     vcs = GitVcsService(author_name="Test", author_email="t@t.local")
     vcs.init(project, list(DEFAULT_VCS_EXCLUDE))
     return project, vcs
@@ -78,7 +78,7 @@ def test__base_store__root_snapshot_and_trailer_search(tmp_path: Path) -> None:
     assert dict(root.files) == {"doc/a.tex": b"a\n"}
     assert "Hse-Kind: init" in root.message
 
-    (tmp_path / "doc" / "a.tex").write_text("b\n", encoding="utf-8")
+    (tmp_path / "doc" / "a.tex").write_text("b\n", encoding="utf-8", newline="\n")
     commit = vcs.commit(project, message="Обновление\n\nHse-Template-Update: abc", kind=VcsCommitKind.template_update)
     assert commit is not None
     assert store.find_commit(project, "Hse-Template-Update", "abc") == commit.id
@@ -109,7 +109,7 @@ def test__transaction__failure_rolls_back_every_file(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError):
         transaction.run(project, journal, writes, save_state=boom, message="Обновление")
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "a\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "a\n"
     assert not (tmp_path / "doc" / "new").exists()
     assert journals.get(tmp_path) is None
     assert not (tmp_path / ".hse-studio" / "update").exists()
@@ -125,12 +125,12 @@ def test__transaction__crash_before_commit_is_rolled_back_on_recovery(tmp_path: 
     journal = replace(journal, touched_paths=("doc/a.tex",), added_paths=("doc/c.tex",))
     journals.backup(tmp_path, ["doc/a.tex"])
     journals.save(tmp_path, journal)
-    (tmp_path / "doc" / "a.tex").write_text("half\n", encoding="utf-8")
-    (tmp_path / "doc" / "c.tex").write_text("added\n", encoding="utf-8")
+    (tmp_path / "doc" / "a.tex").write_text("half\n", encoding="utf-8", newline="\n")
+    (tmp_path / "doc" / "c.tex").write_text("added\n", encoding="utf-8", newline="\n")
 
     assert transaction.recover(project, journal) is False
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "a\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "a\n"
     assert not (tmp_path / "doc" / "c.tex").exists()
     assert journals.get(tmp_path) is None
 
@@ -149,12 +149,12 @@ def test__transaction__crash_after_commit_is_finalized(tmp_path: Path) -> None:
     )
     journal = transaction.start_journal(from_version="1", to_version="2", pre_commit=pre, base_commit=base_commit)
     journals.save(tmp_path, journal)
-    (tmp_path / "doc" / "a.tex").write_text("b\n", encoding="utf-8")
+    (tmp_path / "doc" / "a.tex").write_text("b\n", encoding="utf-8", newline="\n")
     vcs.commit(project, message=f"Обновление\n\nHse-Template-Update: {journal.id}", kind=VcsCommitKind.template_update)
 
     assert transaction.recover(project, journal) is True
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "b\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "b\n"
     assert store.load(project, "2") is not None
     assert journals.get(tmp_path) is None
 
