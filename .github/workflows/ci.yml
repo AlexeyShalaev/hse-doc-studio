@@ -122,7 +122,7 @@ jobs:
         working-directory: services/web-app
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # Версия берётся из "packageManager" в package.json — один источник истины
           # с образом (deploy/all-in-one/Dockerfile: corepack prepare pnpm@9.15.4).
