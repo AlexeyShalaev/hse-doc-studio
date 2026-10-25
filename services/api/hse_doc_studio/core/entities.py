@@ -25,6 +25,7 @@ from hse_doc_studio.core.enums import (
     SigningIdentityKind,
     ToolApprovalDecision,
 )
+from hse_doc_studio.core.project_schema import LEGACY_PROJECT_SCHEMA
 from hse_doc_studio.core.value_objects import (
     Author,
     CheckResult,
@@ -32,6 +33,7 @@ from hse_doc_studio.core.value_objects import (
     CustomFileOverride,
     Person,
     ProjectLock,
+    ProjectSchema,
     RequirementsFormat,
 )
 
@@ -88,6 +90,9 @@ class Project:
     # Per-project override of the requirements detection format. None → inherit
     # the pack template's RequirementsFormat (see TemplateVersion).
     requirements_format: RequirementsFormat | None = None
+    # Схема данных, в которой проект лежит на диске (core.project_schema). Её
+    # выставляет репозиторий при чтении; при записи он сам решает, что писать.
+    schema: ProjectSchema = LEGACY_PROJECT_SCHEMA
 
 
 @dataclass

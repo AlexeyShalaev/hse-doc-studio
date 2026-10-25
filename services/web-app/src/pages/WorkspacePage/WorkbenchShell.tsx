@@ -6,6 +6,8 @@ import { clsx } from "clsx";
 import { useDocuments } from "@entities/document";
 import { useCompileStreamStore } from "@entities/compile";
 import { useVcsStatus } from "@entities/vcs";
+import { useProject } from "@entities/project";
+import { ProjectAccessBanner } from "@features/template-update";
 import { ActivityBar } from "@widgets/ActivityBar";
 import { DocumentsPanel } from "@widgets/DocumentsPanel";
 import { ReviewPanel } from "@widgets/ReviewPanel";
@@ -65,6 +67,7 @@ export const WorkbenchShell = ({
 }: WorkbenchShellProps) => {
   const { t } = useTranslation("workbench");
   const navigate = useNavigate();
+  const { data: project } = useProject(projectId);
 
   const activity = useWorkspaceStore((state) => state.activity);
   const setActivity = useWorkspaceStore((state) => state.setActivity);
@@ -371,6 +374,10 @@ export const WorkbenchShell = ({
       )}
 
       <div className="workbench-center">
+        <ProjectAccessBanner
+          access={project?.access}
+          templateVersion={project?.lock.version ?? ""}
+        />
         <main className="workbench-canvas">{canvas}</main>
       </div>
 

@@ -46,6 +46,13 @@ class ChecksOverrideSchema(BaseModel):
     severity_override: dict[str, str] = {}
 
 
+class ProjectAccessResponse(BaseModel):
+    # Режим: full, read_only или files_only (core.project_access).
+    mode: str = "full"
+    reasons: list[str] = []
+    required_studio: str | None = None
+
+
 class ProjectDetailResponse(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
@@ -67,6 +74,8 @@ class ProjectDetailResponse(BaseModel):
     pinned: bool
     archived: bool
     checks_override: ChecksOverrideSchema
+    # Что эта Студия может делать с проектом; заполняется в GET /projects/{id}.
+    access: ProjectAccessResponse = ProjectAccessResponse()
 
 
 class NdaStatusResponse(BaseModel):

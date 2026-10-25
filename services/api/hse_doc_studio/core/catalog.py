@@ -12,6 +12,7 @@ from hse_doc_studio.core.enums import (
     MetaFieldAuto,
     MetaFieldType,
     RequiredAt,
+    TemplateUpdateClass,
     TemplateVersionStatus,
 )
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
@@ -406,9 +407,28 @@ class TemplateVersion:
     # — v1-раскладка (lang/-оверлеи), суффиксы не распознаются.
     langs: tuple[str, ...] = ()
     # Подсказка в поле «Группа» у авторов (визард и настройки проекта): у каждой
-    # программы свой формат шифра группы — «БПИ222», «МСПИН261». Пусто —
-    # фронтенд показывает общий плейсхолдер.
+    # программы свой формат шифра группы — «БПИ222», «МСПИН261». Объявляется в
+    # template.yaml (версия может переопределить). Пусто — общий плейсхолдер.
     author_group_placeholder: str = ""
+    # ── версионирование (core.template_versions) ──
+    # Формат самого манифеста (`manifest_format`, по умолчанию 1). Студия не
+    # загружает версии формата выше поддерживаемого — см. yaml-репозиторий.
+    manifest_format: int = 1
+    # Минимальная версия Студии, которой по силам эта версия шаблона.
+    min_studio: str | None = None
+    # Объявленный паком класс выпуска (`release.kind`): строже номера, не мягче.
+    release_kind: TemplateUpdateClass | None = None
+    # Дайджест содержимого из `releases.yaml` шаблона: версия выпущена, и её
+    # каталог неизменен. None — черновик или версия, ещё не внесённая в реестр.
+    frozen_digest: str | None = None
+    # Заметки версии (`changes:` / `breaking_changes:` version.yaml) по языкам
+    # интерфейса — их показывает карточка обновления.
+    changes: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    breaking_changes: dict[str, tuple[str, ...]] = field(default_factory=dict)
+
+    @property
+    def is_released(self) -> bool:
+        return self.frozen_digest is not None
 
     def get_form(self, form_id: str) -> FormDefinition | None:
         for form in self.forms:

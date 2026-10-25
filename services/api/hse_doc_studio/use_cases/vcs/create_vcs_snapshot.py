@@ -15,12 +15,13 @@ from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     IProjectIndexRepository,
     IProjectRepository,
+    ITemplateRepository,
 )
-from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
 from hse_doc_studio.core.vcs.entities import VcsCommit, VcsSettings
 from hse_doc_studio.core.vcs.errors import VcsUnavailableError
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.vcs.excludes import project_vcs_exclude
 
 logger = structlog.get_logger()
 
@@ -48,10 +49,12 @@ class CreateVcsSnapshotUC:
         vcs_service: IVcsService,
         changelog_repo: IChangeLogRepository,
         locks: IVcsFolderLocks,
+        template_repo: ITemplateRepository | None = None,
     ) -> None:
         self._vcs = vcs_service
         self._changelog_repo = changelog_repo
         self._locks = locks
+        self._template_repo = template_repo
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: CreateVcsSnapshotInput) -> CreateVcsSnapshotOutput:
@@ -67,7 +70,7 @@ class CreateVcsSnapshotUC:
 
         async with self._locks.for_folder(project.folder):
             if not self._vcs.is_initialized(project):
-                await asyncio.to_thread(self._vcs.init, project, list(DEFAULT_VCS_EXCLUDE))
+                await asyncio.to_thread(self._vcs.init, project, project_vcs_exclude(project, self._template_repo))
             commit = await asyncio.to_thread(
                 lambda: self._vcs.commit(
                     project,
