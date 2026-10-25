@@ -71,6 +71,24 @@ Per-service notes:
 - [services/api/CONTRIBUTING.md](services/api/CONTRIBUTING.md) — Python FastAPI backend
 - [services/web-app/CONTRIBUTING.md](services/web-app/CONTRIBUTING.md) — React TypeScript frontend
 
+## Template packs: versions are immutable
+
+Projects read a template version's manifest live (checks, submission profiles,
+signature slots, dynamic includes), so editing a **released** version in place
+silently changes every project created on it. Released versions are listed in
+`packs/<pack>/templates/<template>/releases.yaml` with a content digest, and
+`services/api/tests/unit/infra/template/test_releases.py` fails on any in-place edit.
+
+- Version numbers are `YEAR.MINOR.PATCH` (`2026.1` reads as `2026.1.0`): the year is
+  the intake's regulations (major), MINOR adds without breaking, PATCH only fixes.
+  Declare the class in `version.yaml` (`release: {kind: patch}`); it may be stricter
+  than the number, never looser.
+- To change a released template, copy its directory to the next version, set
+  `status: beta`, edit, fill `changes:` (ru and en), then switch to `stable` and run
+  `uv run python -m hse_doc_studio.infra.template.releases freeze <template dir> <version> --kind patch`.
+- Before releasing, preview the update on real projects (nothing is written):
+  `uv run python -m hse_doc_studio.infra.template_update.cli plan <project dir>… --to <version>`.
+
 ## Releasing (maintainers only)
 
 Versioning and tagging are automated via
