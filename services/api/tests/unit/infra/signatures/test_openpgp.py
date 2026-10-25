@@ -129,3 +129,11 @@ def test_deep_home_goes_through_short_symlink(tmp_path: Path) -> None:
         assert ring.get_key(key.fingerprint) is not None
     finally:
         ring.stop_agent()
+
+
+def test_public_key_sniffing_rejects_private_blocks() -> None:
+    from hse_doc_studio.infra.signatures.openpgp import looks_like_openpgp_public_key  # noqa: PLC0415
+
+    assert looks_like_openpgp_public_key(b"-----BEGIN PGP PUBLIC KEY BLOCK-----\n")
+    assert not looks_like_openpgp_public_key(b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n")
+    assert looks_like_openpgp_key(b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n")

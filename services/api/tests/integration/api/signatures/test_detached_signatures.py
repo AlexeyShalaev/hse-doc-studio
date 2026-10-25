@@ -272,3 +272,18 @@ async def test__api__submission__detached_slot_requires_signature_then_packages_
         assert len(sigs) == 1
         assert any(zf.read(n) == frozen_bytes for n in pdfs)
         assert any(n.endswith(".README.txt") for n in names)
+
+
+async def test__api__refreeze_of_unchanged_document__keeps_signature(test_app: AsyncClient, tmp_path: Path) -> None:
+    project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
+    await _enable_detached_slot(test_app, project_id)
+    first = await _freeze(test_app, project_id)
+    sig = make_detached_cms(make_identity(), await _frozen_bytes(test_app, project_id))
+    assert (await _attach(test_app, project_id, sig)).status_code == 200
+
+    again = await _freeze(test_app, project_id)
+
+    assert again["frozen"]["sha256"] == first["frozen"]["sha256"]
+    assert again["dropped_slots"] == []
+    state = (await test_app.get(f"/api/v1/projects/{project_id}/signatures")).json()
+    assert state["detached"][_DOC][_SLOT]["current"] is True

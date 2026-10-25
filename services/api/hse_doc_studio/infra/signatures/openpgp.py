@@ -229,6 +229,10 @@ def looks_like_openpgp_signature(blob: bytes) -> bool:
     return tag == 2
 
 
+def looks_like_openpgp_public_key(blob: bytes) -> bool:
+    return blob.lstrip()[:40].startswith(b"-----BEGIN PGP PUBLIC KEY BLOCK-----")
+
+
 def looks_like_openpgp_key(blob: bytes) -> bool:
     head = blob.lstrip()[:40]
     return head.startswith((b"-----BEGIN PGP PUBLIC KEY BLOCK-----", b"-----BEGIN PGP PRIVATE KEY BLOCK-----"))

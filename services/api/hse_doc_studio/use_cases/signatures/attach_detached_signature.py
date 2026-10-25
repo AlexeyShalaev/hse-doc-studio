@@ -25,7 +25,7 @@ from hse_doc_studio.infra.signatures.openpgp import (
     GpgError,
     GpgKeyring,
     GpgUnavailableError,
-    looks_like_openpgp_key,
+    looks_like_openpgp_public_key,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
@@ -56,7 +56,7 @@ class AttachDetachedSignatureOutput:
 
 
 def _import_public_key(keyring: GpgKeyring, blob: bytes) -> None:
-    if not looks_like_openpgp_key(blob):
+    if not looks_like_openpgp_public_key(blob):
         raise ValueError(
             localized_error(
                 "Файл не похож на открытый ключ OpenPGP (ожидается -----BEGIN PGP PUBLIC KEY BLOCK-----)",
