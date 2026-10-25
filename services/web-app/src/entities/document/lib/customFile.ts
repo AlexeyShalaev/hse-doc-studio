@@ -48,10 +48,7 @@ export type CustomFileLike = {
 };
 
 export type CustomFileSignability =
-  | "template"
-  | "pdf"
-  | "convertible"
-  | "unsignable";
+  "template" | "pdf" | "convertible" | "unsignable";
 
 /**
  * Derives the signing surface for a document from its custom-file state.

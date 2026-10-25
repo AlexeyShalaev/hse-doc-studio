@@ -117,7 +117,8 @@ export const CryptoProSignDialog = ({
         projectId,
         docId,
         slotId,
-        file: new File([signature], "signature.sig", {
+        // TS 6: Uint8Array<ArrayBufferLike> — не BlobPart; копия даёт ArrayBuffer.
+        file: new File([new Uint8Array(signature)], "signature.sig", {
           type: "application/octet-stream",
         }),
       });

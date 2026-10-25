@@ -2,13 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { setupApi, type ProbeFolderResult } from "@entities/setup";
 
 export type SetupFlowStatus =
-  | "idle"
-  | "probing"
-  | "probed"
-  | "applying"
-  | "restarting"
-  | "done"
-  | "failed";
+  "idle" | "probing" | "probed" | "applying" | "restarting" | "done" | "failed";
 
 const POLL_INTERVAL_MS = 2_000;
 const POLL_TIMEOUT_MS = 3 * 60 * 1_000;

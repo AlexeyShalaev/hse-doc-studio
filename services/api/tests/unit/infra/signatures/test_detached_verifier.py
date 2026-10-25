@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -63,7 +64,10 @@ def test_trusted_root_dir_is_used(pdf: Path, tmp_path: Path, ring: GpgKeyring) -
     assert "chain_untrusted_root" not in out.notes
 
 
-@pytest.mark.skipif(shutil.which("gpg") is None, reason="gpg is not installed")
+@pytest.mark.skipif(
+    shutil.which("gpg") is None or sys.platform == "win32",
+    reason="gpg is not installed (or Windows, where gpg-agent does not start in CI)",
+)
 def test_openpgp_flow(pdf: Path, tmp_path: Path, ring: GpgKeyring) -> None:
     key = ring.generate("Иван", "i@example.org")
     sig_path = tmp_path / "doc.asc"

@@ -197,19 +197,17 @@ export const DocumentsPanel = ({
       key: section.key,
       title: section.title ?? t("documents.title"),
       rows: section.docs
-        .map(
-          (doc): DocSectionRow => ({
-            doc,
-            // Pass the whole doc: def_id resolves the type name for team
-            // instances. Inside an author section the owner is already in the
-            // header, so the row shows the bare type name.
-            meta: getDocMeta(
-              doc.id,
-              section.hideOwnerSuffix ? { ...doc, owner_name: null } : doc,
-              lang,
-            ),
-          }),
-        )
+        .map((doc): DocSectionRow => ({
+          doc,
+          // Pass the whole doc: def_id resolves the type name for team
+          // instances. Inside an author section the owner is already in the
+          // header, so the row shows the bare type name.
+          meta: getDocMeta(
+            doc.id,
+            section.hideOwnerSuffix ? { ...doc, owner_name: null } : doc,
+            lang,
+          ),
+        }))
         .filter(
           (row) =>
             matchesStatus(row.doc, statusChip) &&

@@ -134,8 +134,7 @@ type PdfPageProps = {
   onLinkClick?: ((pageNum: number) => void) | undefined;
   /** Ctrl/Cmd+click on the page → (page, x, y in PDF points from top-left). */
   onInverseClick?:
-    | ((page: number, xPt: number, yPt: number) => void)
-    | undefined;
+    ((page: number, xPt: number, yPt: number) => void) | undefined;
   /** Transient highlight (SyncTeX forward jump), in PDF points from top-left. */
   flash?:
     | {
