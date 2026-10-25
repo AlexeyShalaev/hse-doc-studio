@@ -122,12 +122,12 @@ jobs:
         working-directory: services/web-app
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # Версия берётся из "packageManager" в package.json — один источник истины
           # с образом (deploy/all-in-one/Dockerfile: corepack prepare pnpm@9.15.4).
           package_json_file: services/web-app/package.json
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
