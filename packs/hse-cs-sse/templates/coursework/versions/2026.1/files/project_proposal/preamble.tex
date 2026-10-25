@@ -40,18 +40,17 @@
 \usepackage{xurl}
 \urlstyle{same}
 \usepackage{hyperref}
-\hypersetup{unicode=true,colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=blue}
+\hypersetup{unicode=true,colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black}
 \usepackage{cite}
 \usepackage{lastpage}
 \usepackage{fancyhdr}
 
 % ── Цвета и заголовки разделов (как в шаблоне семинара) ─────
-\definecolor{hseprpblue}{RGB}{54,95,145}
 \definecolor{hseprpnote}{RGB}{230,184,183}
 \usepackage{titlesec}
-\titleformat{\section}{\large\bfseries\color{hseprpblue}}{\thesection.}{0.4em}{}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.4em}{}
 \titlespacing*{\section}{0pt}{14pt}{6pt}
-\titleformat{\subsection}{\normalsize\bfseries\color{hseprpblue}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
 \titlespacing*{\subsection}{0pt}{10pt}{4pt}
 % Обязательный раздел (поле со звёздочкой в шаблоне ОП).
 \newcommand{\hseReq}{\textsuperscript{*}}
@@ -61,7 +60,7 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \fancyfoot[C]{\thepage}
-\fancyfoot[R]{\scriptsize\color{gray}((* if project.lang == 'en' *))Form rev. 2.1 of 1.11.2023((* else *))Ред. 2.1 от 1.11.2023((* endif *))}
+\fancyfoot[R]{\scriptsize ((* if project.lang == 'en' *))Form rev. 2.1 of 1.11.2023((* else *))Ред. 2.1 от 1.11.2023((* endif *))}
 
 % Номера в списке источников с точкой.
 \makeatletter
