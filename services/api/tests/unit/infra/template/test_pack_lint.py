@@ -14,7 +14,14 @@ import yaml
 from hse_doc_studio.infra.template.pack_lint import lint_version_dir
 
 # .../services/api/tests/unit/infra/template/<this> → корень репозитория.
-PACKS_ROOT = Path(__file__).resolve().parents[6] / "packs" / "hse-cs-se" / "templates"
+PACKS_ROOT = Path(__file__).resolve().parents[6] / "packs"
+
+
+def _real_version_dirs() -> list[Path]:
+    """Все версии всех шаблонов всех паков репозитория (новый пак проверяется сам)."""
+    dirs = sorted(p for p in PACKS_ROOT.glob("*/templates/*/versions/*") if p.is_dir())
+    assert dirs, f"в {PACKS_ROOT} не найдено ни одной версии шаблона"
+    return dirs
 
 
 def _write_version(version_dir: Path, manifest: dict) -> None:
@@ -94,12 +101,10 @@ def test__lint_version_dir__non_form_extra_item__is_ignored(tmp_path: Path) -> N
 def test__lint_version_dir__real_packs__satisfy_the_invariant() -> None:
     # Сам пак обязан быть чистым: правило появилось из реального расхождения
     # («Ссылка на код» уезжала в пакет ПДП/ГИА с required_for_pack: false).
-    for template in ("vkr", "coursework"):
-        version_dir = PACKS_ROOT / template / "versions" / "2026.1"
-
+    for version_dir in _real_version_dirs():
         report = lint_version_dir(version_dir)
 
-        assert report.errors == [], f"{template}: {report.errors}"
+        assert report.errors == [], f"{version_dir}: {report.errors}"
 
 
 # ── двуязычные заметки версии (`changes:`, заменили CHANGELOG.md шаблона) ──
@@ -147,12 +152,11 @@ def test__lint_version_dir__changes_with_a_blank_item__reports_error(tmp_path: P
 
 def test__lint_version_dir__real_packs__carry_bilingual_release_notes() -> None:
     # Заметки — данные без тайпчекера; сам пак обязан быть чистым.
-    for template in ("vkr", "coursework", "pp"):
-        version_dir = PACKS_ROOT / template / "versions" / "2026.1"
+    for version_dir in _real_version_dirs():
         manifest = yaml.safe_load((version_dir / "version.yaml").read_text(encoding="utf-8"))
 
         changes = manifest.get("changes", {})
 
-        assert changes.get("ru"), f"{template}: нет русских заметок о версии"
-        assert len(changes["ru"]) == len(changes["en"]), template
-        assert lint_version_dir(version_dir).errors == [], template
+        assert changes.get("ru"), f"{version_dir}: нет русских заметок о версии"
+        assert len(changes["ru"]) == len(changes["en"]), version_dir
+        assert lint_version_dir(version_dir).errors == [], version_dir

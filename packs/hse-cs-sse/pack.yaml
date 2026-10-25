@@ -1,0 +1,23 @@
+# packs/hse-cs-sse/pack.yaml
+# Манифест пака: НИУ ВШЭ — магистерская ОП «Системная и программная инженерия»
+
+id: hse-cs-sse
+name:
+  ru: НИУ ВШЭ — магистратура «Системная и программная инженерия»
+  en: HSE — MSc System and Software Engineering
+# Магистратура СПИ ФКН (направление 09.04.04): 1 курс — курсовой проект (КП),
+# 2 курс — ВКР. Комплект документов у магистратуры свой (заявка на проект
+# и заявление о теме вместо ЕСПД-комплекта бакалавриата), поэтому это
+# отдельный пак, а не ветка `hse-cs-se`. Шаблон ВКР 2 курса — следующим шагом.
+description:
+  ru: Шаблоны магистерской ОП СПИ ФКН НИУ ВШЭ — курсовой проект 1 курса (заявка на проект, заявление о теме, отчёт, презентация).
+  en: Templates for the HSE MSc System and Software Engineering programme at FCS — the 1st-year course project (project proposal, topic application, report, slides).
+
+maintainer:
+  name: Alex Shalaev
+  email: shalaevad.alexey@gmail.com
+  url: https://github.com/AlexeyShalaev/hse-doc-studio
+
+license: Apache-2.0
+source: https://github.com/AlexeyShalaev/hse-doc-studio/tree/master/packs/hse-cs-sse
+created_at: 2026-10-24

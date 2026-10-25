@@ -1,0 +1,246 @@
+% !TeX program = xelatex
+% ============================================================
+% report/report.tex — course project report, 1st year of the HSE MSc
+% programme «System and Software Engineering».
+%
+% Structure per the programme's course project guidelines: title page
+% (App. 4) → Abstract → Contents → Definitions and abbreviations →
+% Introduction → Main part → Conclusion → References → Appendices.
+% The main part depends on the work format chosen at project creation:
+%   project-research (§5.1) — analysis and problem statement, design,
+%     implementation and testing; technical documentation as an appendix or
+%     a link to the repository (§5.2);
+%   academic (§5.6) — 3–5 chapters: review and problem statement,
+%     theoretical results, implementation and/or experiment, analysis.
+% Mentor seminar: chapter 1 carries the problem statement and all proposal
+% sections (aim, tasks, methods, tools).
+%
+% Replace the yellow \hseFill{…} with your text.
+% ============================================================
+\documentclass[12pt,a4paper]{extreport}
+\input{preamble}
+\begin{document}
+\input{title}
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+% GOST 7.32 §5.3: volume, keywords, then the abstract text — content and
+% results, not just the topic.
+The report has \pageref{LastPage}~pages, \ldots~figures, \ldots~tables, \ldots~references, \ldots~appendices.
+
+\medskip
+\hseFill{KEYWORD, KEYWORD, KEYWORD, KEYWORD, KEYWORD}
+
+\medskip
+The object of study is \hseFill{object}. The aim of the work is \hseFill{aim}.
+
+\hseFill{what was done: methods, stages, experiments}.
+
+\hseFill{results with numbers: metrics, characteristics of the solution}.
+
+\hseFill{field of application, adoption, further development}.
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\chapter*{Definitions and Abbreviations}
+\addcontentsline{toc}{chapter}{Definitions and Abbreviations}
+\begin{description}[leftmargin=0pt, labelindent=0pt, font=\bfseries, style=nextline]
+  \item[\hseFill{Term}] \hseFill{definition}.
+  \item[\hseFill{ABBR}] --- \hseFill{expansion}.
+\end{description}
+
+\clearpage
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+\hseFill{relevance: the problem, who it affects and why existing solutions fall short}~\cite{gost732}.
+
+\textbf{Object of study:} \hseFill{object}.
+\textbf{Subject of study:} \hseFill{subject}.
+
+\textbf{Aim:} \hseFill{the aim from the project proposal}.
+
+The tasks are:
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item \hseFill{task 1};
+  \item \hseFill{task 2};
+  \item \hseFill{task 3}.
+\end{enumerate}
+
+((* if project.kind == 'research' *))
+\textbf{Novelty:} \hseFill{what is new compared to known work}.
+((* else *))
+\textbf{Novelty and practical significance:} \hseFill{how the solution differs from analogues and where it is used}.
+((* endif *))
+
+\hseFill{report structure: what each chapter covers}.
+
+((* if project.kind == 'research' *))
+\clearpage
+\chapter{Literature Review and Problem Statement}
+\section{State of the art}
+Review the work on the topic with citations.
+
+\section{Comparison of approaches}
+Compare the known approaches by relevant criteria (Table~\ref{tab:approaches}).
+
+\begin{table}[H]
+\caption{Comparison of existing approaches}
+\label{tab:approaches}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Approach~A} & \textbf{Approach~B} & \textbf{Proposed} \\
+\hline
+\hseFill{criterion 1} & \cmpplus & \cmpminus & \cmpplus \\
+\hline
+\hseFill{criterion 2} & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Problem statement}
+State the research question, the hypothesis and the formal problem.
+
+\section{Chapter summary}
+\hseFill{the open problem and the research task}.
+
+\clearpage
+\chapter{Theoretical Results}
+\section{Model (method, algorithm)}
+Describe the proposed model or method.
+
+\section{Justification}
+Give proofs of properties or complexity estimates.
+
+\section{Chapter summary}
+\hseFill{key results of the chapter}.
+
+\clearpage
+\chapter{Implementation and Experiment}
+\section{Implementation}
+Describe the prototype: architecture, technologies, limitations.
+
+\section{Experimental setup}
+Experiment plan, data and metrics.
+
+\section{Chapter summary}
+\hseFill{implementation and experiment outcomes}.
+
+\clearpage
+\chapter{Analysis of Results}
+\section{Results}
+Present the results (Table~\ref{tab:results}) against baselines.
+
+\begin{table}[H]
+\caption{Experimental results}
+\label{tab:results}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|}
+\hline
+\textbf{Method} & \textbf{Metric~1} & \textbf{Metric~2} \\
+\hline
+Baseline & \ldots & \ldots \\
+\hline
+Proposed & \ldots & \ldots \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Discussion and limitations}
+Assess significance, threats to validity and applicability.
+
+\section{Chapter summary}
+\hseFill{the answer to the research question}.
+((* else *))
+\clearpage
+\chapter{Domain Analysis and Problem Statement}
+\section{Domain}
+Describe the domain, the users and their tasks.
+
+\section{Review and comparison of existing solutions}
+Compare the analogues by functionality, efficiency and usability (Table~\ref{tab:analogues}).
+
+\begin{table}[H]
+\caption{Comparison of existing solutions}
+\label{tab:analogues}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Analogue~A} & \textbf{Analogue~B} & \textbf{This work} \\
+\hline
+\hseFill{criterion 1} & \cmpplus & \cmpminus & \cmpplus \\
+\hline
+\hseFill{criterion 2} & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Problem statement and requirements}
+State the problem, functional and non-functional requirements (details in
+the requirements specification, Appendix~A).
+
+\section{Chapter summary}
+\hseFill{what is to be built and why}.
+
+\clearpage
+\chapter{Design}
+\section{System architecture}
+Describe the architecture, components and their interaction; justify the choices.
+
+\section{Data model and interfaces}
+Describe the data model, APIs and the user interface.
+
+\section{Chapter summary}
+\hseFill{key design decisions}.
+
+\clearpage
+\chapter{Implementation and Testing}
+\section{Technologies and tools}
+Languages, frameworks, infrastructure, development methodology and project
+management tools.
+
+\section{Implementation details}
+Key decisions and size characteristics (components, lines of code, tests).
+
+\section{Testing and evaluation}
+Test method, results and comparison with analogues by the chosen metrics.
+
+\section{Chapter summary}
+\hseFill{implementation and testing outcomes}.
+((* endif *))
+
+\clearpage
+\chapter*{Conclusion}
+\addcontentsline{toc}{chapter}{Conclusion}
+In this work:
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item \hseFill{outcome of task 1};
+  \item \hseFill{outcome of task 2}.
+\end{enumerate}
+The aim has been achieved: \hseFill{how the expected results were confirmed}.
+Future work: \hseFill{development in the master's thesis}.
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\begin{thebibliography}{99}
+  \bibitem{gost732}
+  GOST 7.32--2017. Report on Research Work. Structure and Rules of Presentation. Moscow: Standartinform, 2017.
+\end{thebibliography}
+
+\clearpage
+\appendix
+\titleformat{\chapter}[hang]
+  {\normalfont\large\bfseries\centering}{Appendix~\thechapter}{1ex}{}
+((* if project.kind == 'research' *))
+\chapter{Source Code and Data}
+Repository with the program and the experiment data: \hseFill{repository URL in the FCS GitLab}.
+((* else *))
+\chapter{Technical Documentation}
+The technical documentation and the work plan are kept in the project
+repository: \hseFill{repository URL in the FCS GitLab}. Access: \hseFill{how to get access}.
+((* endif *))
+
+\end{document}

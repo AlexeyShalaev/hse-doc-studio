@@ -429,6 +429,7 @@ export const ProjectSettingsView = ({
             authors={authors}
             isTeam={isTeam}
             isTogglingManaged={updateTeamSet.isPending}
+            groupPlaceholder={versionDetail?.author_group_placeholder}
             onChangeAuthor={updateAuthor}
             onRemoveAuthor={(index) => {
               commitAuthors(

@@ -142,6 +142,8 @@ export type VersionDetailResponse = {
   // Staffing modes the pack version supports; a pack without "team" cannot be
   // selected for more than one author. Default ["solo"].
   supported_staffing?: string[];
+  // Pack-declared hint for the author «Group» field; empty — generic placeholder.
+  author_group_placeholder?: string;
   engine_config: {
     default: EngineType;
     allowed: EngineType[];

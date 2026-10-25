@@ -1,0 +1,120 @@
+# packs/hse-cs-sse/templates/coursework/versions/2026.1/checks/hse-sse-report-2026.yaml
+# Отчёт о курсовом проекте магистратуры СПИ: структура по «Методическим
+# рекомендациям по подготовке КП» ОП СПИ (§5.1, §5.6) и семинару наставника.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Методичка КП СПИ
+  en: SSE course project guidelines
+ref:
+  ru: Методические рекомендации по подготовке курсового проекта, ОП «Системная и программная инженерия», §5
+  en: Course project guidelines, MSc «System and Software Engineering», §5
+source:
+  ru: Факультет компьютерных наук НИУ ВШЭ, ОП магистратуры «Системная и программная инженерия»
+  url: https://www.hse.ru/ma/se/internships
+
+rules:
+  - id: hse-sse-report-2026/abstract
+    title:       { ru: Реферат, en: Abstract }
+    description: { ru: "Методичка §5.1/§5.6: после титула — реферат. Семинар наставника: в отчёте реферат по ГОСТ 7.9/7.32 со сведениями об объёме и ключевыми словами, а не аннотация.", en: "Guidelines §5.1/§5.6: the abstract follows the title page. Mentor seminar: a GOST 7.9/7.32 abstract with volume data and keywords, not an annotation." }
+    category:    structure
+    applies_to:  [report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "report/report.tex"
+      pattern: '(?i)\\chapter\*?\{[^}]*(реферат|abstract)'
+      negate: false
+      message: { ru: "Нет реферата.", en: "The abstract is missing." }
+
+  - id: hse-sse-report-2026/definitions
+    title:       { ru: Определения, обозначения и сокращения, en: Definitions and abbreviations }
+    description: { ru: "Методичка §5.1/§5.6: раздел «Определения, обозначения и сокращения» перед введением.", en: "Guidelines §5.1/§5.6: a «Definitions and abbreviations» section before the introduction." }
+    category:    structure
+    applies_to:  [report]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "report/report.tex"
+      pattern: '(?i)\\chapter\*?\{[^}]*(определени|сокращени|definitions|abbreviations)'
+      negate: false
+      message: { ru: "Нет раздела «Определения, обозначения и сокращения».", en: "The «Definitions and abbreviations» section is missing." }
+
+  - id: hse-sse-report-2026/toc
+    title:       { ru: Содержание, en: Contents }
+    description: { ru: "Методичка §5.1/§5.6: содержание после реферата.", en: "Guidelines §5.1/§5.6: the contents follow the abstract." }
+    category:    structure
+    applies_to:  [report]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "report/report.tex"
+      pattern: '\\tableofcontents'
+      negate: false
+      message: { ru: "Нет содержания (\\tableofcontents).", en: "The contents (\\tableofcontents) are missing." }
+
+  - id: hse-sse-report-2026/aim-in-introduction
+    title:       { ru: Цель и задачи во введении, en: Aim and tasks in the introduction }
+    description: { ru: "Семинар наставника: введение и первая глава содержат все разделы заявки — цель, задачи, объект и предмет.", en: "Mentor seminar: the introduction and chapter 1 carry all proposal sections — aim, tasks, object and subject." }
+    category:    content
+    applies_to:  [report]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('report/report.tex')
+        m = re.search(r'\\chapter\*?\{(?:ВВЕДЕНИЕ|Introduction)\}(.*?)\\chapter', text, re.S | re.I)
+        if m:
+            body = m.group(1)
+            if not re.search(r'(?i)(цель работы|aim)', body):
+                ctx.violation('Во введении не сформулирована цель работы.')
+            if not re.search(r'(?i)\\begin\{enumerate\}|задач|tasks', body):
+                ctx.violation('Во введении не перечислены задачи работы.')
+
+  - id: hse-sse-report-2026/main-chapters
+    title:       { ru: Главы основной части, en: Main part chapters }
+    description: { ru: "Методичка §5.6: основная часть академической работы — 3–5 глав; у проектно-исследовательской — не меньше 2 глав.", en: "Guidelines §5.6: an academic report has 3–5 main chapters; a project-research one has at least 2." }
+    category:    structure
+    applies_to:  [report]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('report/report.tex')
+        body = text.split('\\appendix', 1)[0]
+        n = len(re.findall(r'\\chapter\{', body))
+        if n < 2:
+            ctx.violation(f'В основной части {n} нумерованных глав — для КП ожидается не меньше 2 (академический формат — 3–5).')
+        elif n > 5:
+            ctx.violation(f'В основной части {n} глав — методичка для академического формата называет 3–5.')
+
+  - id: hse-sse-report-2026/repository-link
+    title:       { ru: Ссылка на репозиторий, en: Repository link }
+    description: { ru: "Методичка §5.2–5.3: программа, исходные коды или ссылка на ресурс с ними и режимом доступа прикладываются к КП.", en: "Guidelines §5.2–5.3: the program, sources or a link to them with access details accompany the report." }
+    category:    content
+    applies_to:  [report]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        hits = ctx.doc_find(r'\\url\{|https?://')
+        if not hits:
+            ctx.violation('В отчёте нет ссылки на репозиторий с программой и документацией.')
+
+  - id: hse-sse-report-2026/placeholders-left
+    title:       { ru: Незаполненные поля, en: Unfilled placeholders }
+    description: { ru: "Жёлтые плейсхолдеры \\hseFill нужно заменить текстом до предзащиты и загрузки в LMS.", en: "Replace the yellow \\hseFill placeholders before the pre-defence and the LMS upload." }
+    category:    content
+    applies_to:  [report]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        # Только в тексте: без common/meta.tex и без закомментированных строк.
+        hits = [
+            h for h in ctx.doc_find(r'\\hseFill\{')
+            if not h[0].endswith('meta.tex') and '\\hseFill{' in re.split(r'(?<!\\)%', h[2], 1)[0]
+        ]
+        if hits:
+            f, line, _ = hits[0]
+            ctx.violation(f'Осталось незаполненных мест: {len(hits)} (первое — строка {line}).', file=f, line=line)

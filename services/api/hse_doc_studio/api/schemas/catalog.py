@@ -145,3 +145,6 @@ class VersionDetailResponse(BaseModel):
     # Какие режимы состава поддерживает шаблон; визард блокирует team-создание
     # по пакам без "team".
     supported_staffing: list[str] = ["solo"]
+    # Подсказка в поле «Группа» у авторов (формат шифра группы программы);
+    # пусто — общий плейсхолдер фронтенда.
+    author_group_placeholder: str = ""

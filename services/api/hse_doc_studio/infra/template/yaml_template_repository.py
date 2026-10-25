@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal
@@ -261,6 +262,7 @@ def _parse_version(  # noqa: C901, PLR0915 — плоский разбор ма�
             nda=nda,
             supported_staffing=supported_staffing,
             langs=langs,
+            author_group_placeholder=str(data.get("author_group_placeholder") or "").strip(),
             manifest_format=manifest_format,
             min_studio=str(data["min_studio"]) if data.get("min_studio") else None,
             release_kind=_parse_release_kind(data.get("release"), release),
@@ -821,9 +823,12 @@ class YamlTemplateRepository:
             if tpl_data is None:
                 continue
             template_id = tpl_data.get("id", template_dir.name)
-            self._load_template_versions(pack_info, template_dir, template_id)
+            placeholder = str(tpl_data.get("author_group_placeholder") or "").strip()
+            self._load_template_versions(pack_info, template_dir, template_id, placeholder)
 
-    def _load_template_versions(self, pack_info: PackInfo, template_dir: Path, template_id: str) -> None:
+    def _load_template_versions(
+        self, pack_info: PackInfo, template_dir: Path, template_id: str, group_placeholder: str = ""
+    ) -> None:
         """Iterate versions_dir, parse each version, store in self._versions."""
         versions_dir = template_dir / "versions"
         if not versions_dir.exists():
@@ -839,6 +844,10 @@ class YamlTemplateRepository:
                 release=releases.get(version_dir.name),
             )
             if version_obj is not None:
+                # Подсказка группы — свойство шаблона (template.yaml), версия может
+                # её переопределить; так её правка не требует выпуска версии.
+                if not version_obj.author_group_placeholder and group_placeholder:
+                    version_obj = replace(version_obj, author_group_placeholder=group_placeholder)
                 key = (pack_info.id, template_id, version_obj.version)
                 self._versions[key] = version_obj
 

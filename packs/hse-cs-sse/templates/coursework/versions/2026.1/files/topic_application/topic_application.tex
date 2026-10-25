@@ -1,0 +1,200 @@
+% !TeX program = xelatex
+% ============================================================
+% topic_application/topic_application.tex — «Заявление о выборе темы
+% курсовой работы (проекта)» магистратуры СПИ, форма SmartLMS 2026
+% («Заявление об утверждении темы курсовой работы (КП) СПИ 2026.doc»).
+%
+% Один PDF, две страницы: русская и английская редакции формы — как в
+% исходном .doc. Подаётся вместе с «Описанием проекта и заявкой на
+% выполнение» до 15 ноября; нужна виза научного руководителя, при внешнем
+% руководителе — ещё согласие академического руководителя.
+% Все поля заполняются из настроек проекта; язык КП — язык проекта.
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+\usepackage[english,russian]{babel}
+\usepackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{xcolor}
+\usepackage{etoolbox}
+\usepackage{array}
+\usepackage{tabularx}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\usepackage{setspace}
+\setstretch{1.05}
+\input{../common/meta}
+
+% Строка подписи: линия + подпись мелким курсивом под ней.
+\newcommand{\hseSignField}[2]{%
+  \begin{minipage}[t]{#1}\centering
+    \rule{\linewidth}{0.4pt}\\[-2pt]{\footnotesize\itshape #2}
+  \end{minipage}}
+% Поле с данными над линией (ФИО, должность…), подпись под линией.
+\newcommand{\hseFilledField}[3]{%
+  \begin{minipage}[t]{#1}\centering
+    {\small #2}\\[-4pt]\rule{\linewidth}{0.4pt}\\[-2pt]{\footnotesize\itshape #3}
+  \end{minipage}}
+
+\begin{document}
+
+% ============================================================
+%  РУССКАЯ РЕДАКЦИЯ
+% ============================================================
+\begin{center}
+Правительство Российской Федерации\\[4pt]
+Федеральное государственное автономное образовательное\\
+учреждение высшего профессионального образования\\[4pt]
+\textbf{Национальный исследовательский университет}\\
+\textbf{«Высшая школа экономики»}\\[4pt]
+\textbf{\hseFaculty}\\[4pt]
+Образовательная программа \textit{«\hseSpecialization»}
+\end{center}
+
+\vspace{0.6cm}
+\begin{minipage}[t]{0.5\textwidth}\raggedright
+\small Кафедра/департамент/организация научного руководителя (ментора):\\
+\hseSupervisorDepartment
+\end{minipage}
+
+\vspace{0.6cm}
+\begin{center}
+\textbf{ЗАЯВЛЕНИЕ}\\
+\textbf{о выборе темы курсовой работы (проекта)}
+\end{center}
+
+\vspace{0.4cm}
+Студент \underline{\makebox[9cm][l]{\ \hseAuthorName}} группы \underline{\makebox[3cm][l]{\ \hseGroup}}
+
+\vspace{0.6cm}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}|X@{}}
+Тема:\newline{\small\itshape на русском языке} & \hseTitleRu \\[0.6cm]
+Тема:\newline{\small\itshape in English} & \foreignlanguage{english}{\hseTitleEn} \\
+\end{tabularx}
+
+\vspace{0.6cm}
+Язык выполнения КР: \underline{\makebox[4cm][l]{\ \hseWorkLang}}
+
+\vspace{0.5cm}
+$\bullet$ Согласен руководить курсовой работой (проектом)
+
+\vspace{0.3cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Научный руководитель:\end{minipage}%
+\hseFilledField{0.3\textwidth}{\hseSupervisorTitle\ifdefempty{\hseSupervisorDegree}{}{, \hseSupervisorDegree}}{Должность и уч. степень}\hfill
+\hseFilledField{0.22\textwidth}{\hseSupervisorName}{Фамилия И.О.}\hfill
+\hseSignField{0.15\textwidth}{Подпись}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.55\textwidth}
+$\bullet$ С темой работы (проекта) согласен;\\
+Детали работы были обсуждены,\\
+требования научного руководителя понятны
+\end{minipage}\hfill
+\begin{minipage}[t]{0.4\textwidth}
+\vspace{0.5cm}
+Студент: \hfill \hseSignField{0.5\textwidth}{Подпись}
+\end{minipage}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Консультант {\itshape(при наличии)}\end{minipage}%
+\ifhseHasCoSupervisor
+\hseFilledField{0.3\textwidth}{\hseCoSupervisorTitle\ifdefempty{\hseCoSupervisorDegree}{}{, \hseCoSupervisorDegree}}{Должность и уч. степень}\hfill
+\hseFilledField{0.22\textwidth}{\hseCoSupervisorName}{Фамилия И.О.}\hfill
+\else
+\hseSignField{0.3\textwidth}{Должность и уч. степень}\hfill
+\hseSignField{0.22\textwidth}{Фамилия И.О.}\hfill
+\fi
+\hseSignField{0.15\textwidth}{Подпись}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Согласие академического руководителя {\itshape(при внешнем научном руководителе)}\end{minipage}%
+\ifhseExternalSupervisor
+\hseFilledField{0.3\textwidth}{Академический руководитель ОП}{Должность и уч. степень}\hfill
+\hseFilledField{0.22\textwidth}{\hseAcademicSupervisorName}{Фамилия И.О.}\hfill
+\else
+\hseSignField{0.3\textwidth}{Должность и уч. степень}\hfill
+\hseFilledField{0.22\textwidth}{\hseAcademicSupervisorName}{Фамилия И.О.}\hfill
+\fi
+\hseSignField{0.15\textwidth}{Подпись}
+
+\vfill
+\begin{center}\hseCity, \the\year\end{center}
+
+\clearpage
+% ============================================================
+%  ENGLISH VERSION
+% ============================================================
+\begin{otherlanguage}{english}
+\begin{center}
+National Research University --- Higher School of Economics\\[4pt]
+\textbf{Faculty of Computer Science}\\[4pt]
+Master's Programme «System and Software Engineering»
+\end{center}
+
+\vspace{0.6cm}
+\begin{minipage}[t]{0.5\textwidth}\raggedright
+\small Research supervisor's (mentor's) department/organization:\\
+\foreignlanguage{russian}{\hseSupervisorDepartment}
+\end{minipage}
+
+\vspace{0.6cm}
+\begin{center}
+\textbf{APPLICATION FORM}\\
+\textbf{Coursework's (Project's) Topic Approval}
+\end{center}
+
+\vspace{0.4cm}
+Student \underline{\makebox[9cm][l]{\ \foreignlanguage{russian}{\hseAuthorName}}} group \underline{\makebox[3cm][l]{\ \foreignlanguage{russian}{\hseGroup}}}
+
+\vspace{0.6cm}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}|X@{}}
+Topic\newline{\small\itshape (in Russian)} & \foreignlanguage{russian}{\hseTitleRu} \\[0.6cm]
+Topic\newline{\small\itshape (in English)} & \hseTitleEn \\
+\end{tabularx}
+
+\vspace{0.6cm}
+Language of Coursework (Project): \underline{\makebox[4cm][l]{\ \hseWorkLangEn}}
+
+\vspace{0.5cm}
+$\bullet$ I agree to supervise the coursework (project)
+
+\vspace{0.3cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Research supervisor topic's approval:\end{minipage}%
+\hseFilledField{0.3\textwidth}{\foreignlanguage{russian}{\hseSupervisorTitle\ifdefempty{\hseSupervisorDegree}{}{, \hseSupervisorDegree}}}{Degree, department (place of work)}\hfill
+\hseFilledField{0.22\textwidth}{\foreignlanguage{russian}{\hseSupervisorName}}{Full name}\hfill
+\hseSignField{0.15\textwidth}{Signature}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.55\textwidth}
+$\bullet$ I agree with the topic of the work (project);\\
+details of the work were discussed,\\
+the requirements of supervisor are clear
+\end{minipage}\hfill
+\begin{minipage}[t]{0.4\textwidth}
+\vspace{0.5cm}
+Student: \hfill \hseSignField{0.5\textwidth}{Signature}
+\end{minipage}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Consultant {\itshape(if any)}\end{minipage}%
+\ifhseHasCoSupervisor
+\hseFilledField{0.3\textwidth}{\foreignlanguage{russian}{\hseCoSupervisorTitle\ifdefempty{\hseCoSupervisorDegree}{}{, \hseCoSupervisorDegree}}}{Degree, department (place of work)}\hfill
+\hseFilledField{0.22\textwidth}{\foreignlanguage{russian}{\hseCoSupervisorName}}{Full name}\hfill
+\else
+\hseSignField{0.3\textwidth}{Degree, department (place of work)}\hfill
+\hseSignField{0.22\textwidth}{Full name}\hfill
+\fi
+\hseSignField{0.15\textwidth}{Signature}
+
+\vspace{0.5cm}
+\begin{minipage}[t]{0.27\textwidth}\raggedright Consent of the academic supervisor {\itshape(in case of an external scientific supervisor)}\end{minipage}%
+\hseSignField{0.3\textwidth}{Degree, department (place of work)}\hfill
+\hseFilledField{0.22\textwidth}{Shershakov S.\,A.}{Full name}\hfill
+\hseSignField{0.15\textwidth}{Signature}
+
+\vfill
+\begin{center}Moscow, \the\year\end{center}
+\end{otherlanguage}
+
+\end{document}
