@@ -6,11 +6,13 @@ from pathlib import Path
 import structlog
 
 from hse_doc_studio.core.value_objects import FormState
+from hse_doc_studio.infra.persistence.project import assert_project_writable, read_json_or_none
 from hse_doc_studio.infra.persistence.serializers import (
     deserialize_form_state,
     migrate_legacy_ai_usage,
     serialize_form_state,
 )
+from hse_doc_studio.infra.persistence.unknown_fields import FORM_STATE_SHAPE, preserve_unknown
 
 logger = structlog.get_logger()
 
@@ -51,9 +53,10 @@ class JsonFormStateRepository:
         return None
 
     def save_state(self, project_folder: Path, form_id: str, state: FormState) -> None:
+        assert_project_writable(project_folder)
         forms_dir = project_folder / _HSE_STUDIO / _FORMS_DIR
         forms_dir.mkdir(parents=True, exist_ok=True)
         path = forms_dir / f"{form_id}.json"
-        data = serialize_form_state(state)
+        data = preserve_unknown(serialize_form_state(state), read_json_or_none(path), FORM_STATE_SHAPE)
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         logger.debug("form state saved", folder=str(project_folder), form_id=form_id)

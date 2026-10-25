@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 from datetime import datetime, timezone
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -41,6 +42,7 @@ from hse_doc_studio.core.enums import (
     SignMode,
     ToolApprovalDecision,
 )
+from hse_doc_studio.core.project_schema import LEGACY_PROJECT_SCHEMA
 from hse_doc_studio.core.value_objects import (
     Author,
     CheckFix,
@@ -53,12 +55,51 @@ from hse_doc_studio.core.value_objects import (
     FrozenPdf,
     Person,
     ProjectLock,
+    ProjectSchema,
     RequirementsFormat,
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
     SignerInfo,
 )
+
+
+def _enum_or[E: StrEnum](enum_cls: type[E], raw: Any, default: E) -> E:
+    """Значение enum или `default` для неизвестного (данные более новой Студии).
+
+    Падение на неизвестном значении делало проект неоткрываемым целиком: репозиторий
+    глотает исключение и возвращает None. Теперь такой проект читается, а писать
+    в него не даст `write_compat` (см. core.project_schema).
+    """
+    try:
+        return enum_cls(raw)
+    except ValueError:
+        return default
+
+
+def serialize_project_schema(schema: ProjectSchema) -> dict[str, Any]:
+    return {
+        "version": schema.version,
+        "read_compat": schema.read_compat,
+        "write_compat": schema.write_compat,
+        "written_by": schema.written_by,
+    }
+
+
+def deserialize_project_schema(raw: Any) -> ProjectSchema:
+    """Блок `schema` project.json; отсутствие или мусор — схема 1 (до блока)."""
+    if not isinstance(raw, dict):
+        return LEGACY_PROJECT_SCHEMA
+    try:
+        version = int(raw.get("version", 1))
+        return ProjectSchema(
+            version=version,
+            read_compat=int(raw.get("read_compat", version)),
+            write_compat=int(raw.get("write_compat", version)),
+            written_by=str(raw.get("written_by", "")),
+        )
+    except (TypeError, ValueError):
+        return LEGACY_PROJECT_SCHEMA
 
 
 def _parse_dt(value: str) -> datetime:
@@ -75,6 +116,7 @@ def _parse_dt(value: str) -> datetime:
 
 def serialize_project(project: Project) -> dict[str, Any]:
     return {
+        "schema": serialize_project_schema(project.schema),
         "id": str(project.id),
         "name": project.name,
         "lock": {
@@ -82,6 +124,8 @@ def serialize_project(project: Project) -> dict[str, Any]:
             "template_id": project.lock.template_id,
             "version": project.lock.version,
             "engine": project.lock.engine,
+            "digest": project.lock.digest,
+            "min_studio": project.lock.min_studio,
         },
         "kind": project.kind,
         "staffing": project.staffing,
@@ -115,11 +159,13 @@ def deserialize_project(data: dict[str, Any], folder: Path) -> Project:
             pack_id=lock_data["pack_id"],
             template_id=lock_data["template_id"],
             version=lock_data["version"],
-            engine=EngineType(lock_data["engine"]),
+            engine=_enum_or(EngineType, lock_data.get("engine"), EngineType.xelatex),
+            digest=lock_data.get("digest"),
+            min_studio=lock_data.get("min_studio"),
         ),
-        kind=ProjectKind(data["kind"]),
-        staffing=ProjectStaffing(data["staffing"]),
-        lang=Lang(data["lang"]),
+        kind=_enum_or(ProjectKind, data.get("kind"), ProjectKind.research),
+        staffing=_enum_or(ProjectStaffing, data.get("staffing"), ProjectStaffing.solo),
+        lang=_enum_or(Lang, data.get("lang"), Lang.ru),
         authors=[_deserialize_author(a) for a in data.get("authors", [])],
         meta=data.get("meta", {}),
         supervisor=_deserialize_person(data.get("supervisor")),
@@ -133,6 +179,7 @@ def deserialize_project(data: dict[str, Any], folder: Path) -> Project:
         archived=data.get("archived", False),
         checks_override=_deserialize_checks_override(data.get("checks_override", {})),
         requirements_format=_deserialize_requirements_format(data.get("requirements")),
+        schema=deserialize_project_schema(data.get("schema")),
     )
 
 
@@ -178,7 +225,7 @@ def _deserialize_person(data: dict[str, Any] | None) -> Person | None:
         return None
     return Person(
         name=data["name"],
-        role=PersonRole(data["role"]),
+        role=_enum_or(PersonRole, data.get("role"), PersonRole.university),
         title=data.get("title"),
         degree=data.get("degree"),
     )
@@ -200,7 +247,7 @@ def _serialize_document(doc: Document) -> dict[str, Any]:
 def _deserialize_document(data: dict[str, Any]) -> Document:
     return Document(
         id=data["id"],
-        status=DocumentStatus(data["status"]),
+        status=_enum_or(DocumentStatus, data.get("status"), DocumentStatus.draft),
         chosen_variant=data.get("chosen_variant"),
         last_compile_id=UUID(data["last_compile_id"]) if data.get("last_compile_id") else None,
         checks_override=_deserialize_checks_override(data.get("checks_override", {})),
@@ -220,12 +267,18 @@ def _serialize_checks_override(co: ChecksOverride) -> dict[str, Any]:
     }
 
 
+# Неизвестная строгость (данные более новой Студии) отбрасывается, а не роняет чтение.
+_SEVERITY_VALUES = frozenset(severity.value for severity in CheckSeverity)
+
+
 def _deserialize_checks_override(data: dict[str, Any]) -> ChecksOverride:
     return ChecksOverride(
         disabled_categories=tuple(data.get("disabled_categories", [])),
         disabled=tuple(data.get("disabled", [])),
         enabled=tuple(data.get("enabled", [])),
-        severity_override={k: CheckSeverity(v) for k, v in data.get("severity_override", {}).items()},
+        severity_override={
+            k: CheckSeverity(v) for k, v in data.get("severity_override", {}).items() if v in _SEVERITY_VALUES
+        },
     )
 
 

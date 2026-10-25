@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hse_doc_studio.core.enums import CheckSeverity, MetaFieldAuto, RequiredAt
+from hse_doc_studio.core.enums import CheckSeverity, MetaFieldAuto, RequiredAt, TemplateUpdateClass
+from hse_doc_studio.infra.template.releases import freeze
 from hse_doc_studio.infra.template.yaml_template_repository import (
     YamlTemplateRepository,
 )
@@ -350,3 +351,71 @@ def test__load__checks_file_with_no_rules__yields_no_source(tmp_path: Path) -> N
 
     assert version is not None
     assert version.check_sources == ()
+
+
+# ---------------------------------------------------------------------------
+# Versioning: manifest format, min_studio, release kind, notes, releases.yaml
+# ---------------------------------------------------------------------------
+
+
+def _write_version(tmp_path: Path, extra: str) -> Path:
+    _build_pack_dir(tmp_path)
+    ver_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0"
+    (ver_dir / "version.yaml").write_text(_VERSION_YAML + extra, encoding="utf-8")
+    return ver_dir
+
+
+def test__versioning_fields__parsed(tmp_path: Path) -> None:
+    _write_version(
+        tmp_path,
+        'manifest_format: 1\nmin_studio: "0.2.0"\nrelease: {kind: minor, from: "0.9"}\n'
+        "changes: {ru: [Новый раздел], en: [New section]}\n"
+        "breaking_changes: {ru: [], en: []}\n",
+    )
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.manifest_format == 1
+    assert version.min_studio == "0.2.0"
+    assert version.release_kind == TemplateUpdateClass.minor
+    assert version.changes == {"ru": ("Новый раздел",), "en": ("New section",)}
+    assert version.breaking_changes == {"ru": (), "en": ()}
+    assert version.frozen_digest is None
+    assert not version.is_released
+
+
+def test__newer_manifest_format__version_not_loaded(tmp_path: Path) -> None:
+    _write_version(tmp_path, "manifest_format: 99\n")
+    assert YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0") is None
+
+
+def test__unknown_item_types__skip_only_that_item(tmp_path: Path) -> None:
+    # Манифест от более новой Студии: неизвестный тип поля и неизвестный движок
+    # выкидывают только свой элемент, версия остаётся доступной проектам.
+    ver_dir = _write_version(tmp_path, "")
+    text = (ver_dir / "version.yaml").read_text(encoding="utf-8")
+    text = text.replace("allowed: [xelatex]", "allowed: [xelatex, tectonic]")
+    text = text.replace(
+        "meta_fields: {}",
+        "meta_fields:\n  ok: {type: string, label: {ru: Ок}}\n  future: {type: hologram, label: {ru: Будущее}}",
+    )
+    (ver_dir / "version.yaml").write_text(text, encoding="utf-8")
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert set(version.meta_fields) == {"ok"}
+    assert [e.value for e in version.engine_config.allowed] == ["xelatex"]
+
+
+def test__releases_yaml__marks_version_released(tmp_path: Path) -> None:
+    _write_version(tmp_path, "")
+    tmpl_dir = tmp_path / "test-pack" / "templates" / "test-tmpl"
+    entry = freeze(tmpl_dir, "1.0", TemplateUpdateClass.major)
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.is_released
+    assert version.frozen_digest == entry.digest
+    assert version.release_kind == TemplateUpdateClass.major

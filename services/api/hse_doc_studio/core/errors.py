@@ -13,3 +13,12 @@ class NotFoundError(Exception):
     domain exception) stays for actual bad-input/validation failures, which
     routers keep mapping to 400.
     """
+
+
+class ProjectReadOnlyError(Exception):
+    """Write refused: the project is read-only in this Studio.
+
+    Its data was saved by a newer Studio (`write_compat` above ours), its
+    template version is missing here, or a template update is in progress
+    (see core.project_access). Routers map it to HTTP 423 Locked.
+    """

@@ -69,6 +69,54 @@ class TemplateVersionStatus(StrEnum):
     deprecated = "deprecated"
 
 
+class TemplateUpdateClass(StrEnum):
+    # Класс перехода между версиями шаблона (см. core.template_versions):
+    # patch — исправления без новой поверхности, minor — новое без разрушения,
+    # major — новая редакция регламента (год набора).
+    patch = "patch"
+    minor = "minor"
+    major = "major"
+
+
+class TemplateFileAction(StrEnum):
+    # Что обновление шаблона делает с одним файлом проекта (core.template_update).
+    update = "update"  # пользователь файл не правил, шаблон изменил: берём новый
+    merge = "merge"  # правили обе стороны, слилось без конфликтов
+    conflict = "conflict"  # правили обе стороны, нужна развилка «моё / шаблон»
+    add = "add"  # новый файл шаблона
+    delete = "delete"  # шаблон убрал файл, который пользователь не трогал
+    orphan = "orphan"  # шаблон убрал файл, который пользователь правил: остаётся
+    user_deleted = "user_deleted"  # пользователь удалил файл, шаблон его изменил: не возвращаем
+    ignored = "ignored"  # пользователь снял файл с отслеживания шаблоном
+
+
+class ConflictResolution(StrEnum):
+    mine = "mine"  # оставить файл пользователя как есть
+    theirs = "theirs"  # взять файл шаблона (своя версия остаётся в истории)
+    markers = "markers"  # слить с маркерами конфликта (только текст)
+
+
+class TemplateBaseProvenance(StrEnum):
+    # Откуда взялась база трёхстороннего слияния (чистый рендер шаблона).
+    recorded = "recorded"  # записана Студией при создании и материализации
+    root = "root"  # восстановлена: корневой коммит чистый, рендер с его данными
+    approximate = "approximate"  # корень не чистый: рендер с текущими данными
+
+
+class ProjectAccessMode(StrEnum):
+    # Что Студия может делать с проектом (core.project_access).
+    full = "full"
+    read_only = "read_only"  # смотреть всё, ничего не менять
+    files_only = "files_only"  # данные проекта не читаются надёжно: только файлы
+
+
+class ProjectAccessReason(StrEnum):
+    schema_read = "schema_read"  # данные проекта записаны более новой Студией, читать нельзя
+    schema_write = "schema_write"  # данные проекта записаны более новой Студией, писать нельзя
+    template_missing = "template_missing"  # версии шаблона проекта нет в этой Студии
+    update_in_progress = "update_in_progress"  # идёт обновление шаблона
+
+
 class MetaFieldType(StrEnum):
     string = "string"
     bool_ = "bool"
@@ -143,6 +191,9 @@ class VcsCommitKind(StrEnum):
     compile = "compile"
     manual = "manual"
     restore = "restore"
+    # Обновление (или отмена обновления) шаблона проекта. Старые Студии не знают
+    # этого вида и читают его как manual (`_kind_from_body`).
+    template_update = "template_update"
 
 
 class VcsChange(StrEnum):

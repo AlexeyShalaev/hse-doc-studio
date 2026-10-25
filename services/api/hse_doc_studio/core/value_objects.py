@@ -21,6 +21,29 @@ class ProjectLock:
     template_id: str
     version: str
     engine: EngineType
+    # Дайджест содержимого версии шаблона, на которой проект создан или на
+    # которую обновлён (infra.template.releases.version_digest). Расхождение с
+    # реестром выпусков значит, что проект сделан на dev-сборке. None — проект
+    # старше этого поля.
+    digest: str | None = None
+    # `min_studio` версии шаблона: старая Студия, у которой этой версии нет,
+    # говорит пользователю, какая версия Студии нужна.
+    min_studio: str | None = None
+
+
+@dataclass(frozen=True)
+class ProjectSchema:
+    """Версия формата данных проекта (`.hse-studio/*.json`), см. core.project_schema.
+
+    `read_compat` / `write_compat` — минимальная версия схемы, которую должна
+    понимать Студия, чтобы читать / писать эти данные (как read/write version
+    в заголовке SQLite). `written_by` — версия Студии, записавшей файл.
+    """
+
+    version: int
+    read_compat: int
+    write_compat: int
+    written_by: str = ""
 
 
 @dataclass(frozen=True)
