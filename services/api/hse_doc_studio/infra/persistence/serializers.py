@@ -583,6 +583,8 @@ def _deserialize_detached(raw: Any) -> dict[str, dict[str, DetachedSignature]]:
                     not_before=item.get("not_before"),
                     not_after=item.get("not_after"),
                     chain=item.get("chain"),
+                    root_subject=str(item.get("root_subject", "")),
+                    root_fingerprint=str(item.get("root_fingerprint", "")),
                     notes=tuple(str(n) for n in item.get("notes", ())),
                 )
             except (KeyError, TypeError, ValueError):

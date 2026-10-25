@@ -515,6 +515,9 @@ export type DetachedSignatureResponse = {
   not_before: string | null;
   not_after: string | null;
   chain: string | null;
+  // Самоподписанный корень, которым кончается цепочка, пока без доверия.
+  root_subject: string;
+  root_fingerprint: string;
   // Стабильные коды (см. detached_verifier.py), переводятся на клиенте.
   notes: string[];
   added_at: string;

@@ -95,6 +95,8 @@ export const DetachedSignatureSchema = z.object({
   not_before: z.string().nullable(),
   not_after: z.string().nullable(),
   chain: z.string().nullable(),
+  root_subject: z.string().optional().default(""),
+  root_fingerprint: z.string().optional().default(""),
   notes: z.array(z.string()),
   added_at: z.string(),
   file_name: z.string(),

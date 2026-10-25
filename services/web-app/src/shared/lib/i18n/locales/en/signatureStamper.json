@@ -245,6 +245,47 @@
       "levelUnep": "enhanced non-qualified",
       "level_ukep": "Enhanced qualified electronic signature",
       "level_unep": "Enhanced non-qualified electronic signature"
+    },
+    "cryptopro": {
+      "title": "Sign with a qualified e-signature (CryptoPro)",
+      "button": "Token e-signature",
+      "buttonTitle": "Sign with an enhanced qualified e-signature from a token or the CryptoPro store through the browser plug-in. The Studio freezes the PDF itself.",
+      "loading": "Connecting to the CryptoPro Browser plug-in…",
+      "retry": "Retry",
+      "sign": "Sign",
+      "pick": "Choose a certificate. The private key stays on the token: CryptoPro asks for the PIN and the plug-in signs in your browser.",
+      "note": "The certificate data goes onto the plate, and the PDF is frozen again if the plate changed. The file does not leave your computer: the Studio runs locally.",
+      "step": {
+        "plate": "Reading the certificate for the plate…",
+        "freeze": "Freezing the PDF…",
+        "sign": "Sign on the token (CryptoPro may ask for the PIN)…",
+        "attach": "Checking the signature…"
+      },
+      "error": {
+        "not-loaded": {
+          "title": "Could not load cadesplugin_api.js",
+          "hint": "cryptopro.ru is unreachable. Download cadesplugin_api.js from the CryptoPro Browser plug-in page and put it into the Studio data folder: cadesplugin/cadesplugin_api.js."
+        },
+        "no-plugin": {
+          "title": "The plug-in does not respond",
+          "hint": "You need CryptoPro CSP, the CryptoPro Browser plug-in and the “CryptoPro Extension for CAdES Browser Plug-in” in Chrome or Edge. Restart the browser after installing and allow this site to use the plug-in."
+        },
+        "no-certs": {
+          "title": "No suitable certificates",
+          "hint": "The personal store has no valid certificates with a private key. Insert the token or install a certificate in CryptoPro CSP."
+        },
+        "failed": {
+          "title": "Could not read the certificates",
+          "hint": "The plug-in returned an error:"
+        }
+      }
+    },
+    "chain": {
+      "complete": "Complete the CA chain",
+      "completeTitle": "Downloads the CA certificates linked from the signer's certificate (a network request; the signature file goes nowhere).",
+      "root": "The chain ends in the root “{{subject}}”, which the Studio does not trust yet.",
+      "trust": "Trust this root",
+      "trustConfirm": "Trust the root certificate “{{subject}}”?\n\nSHA-256: {{fingerprint}}\n\nCompare the fingerprint with an official source (e.g. e-trust.gosuslugi.ru) before confirming."
     }
   }
 }

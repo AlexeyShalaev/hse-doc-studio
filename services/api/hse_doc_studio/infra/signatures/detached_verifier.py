@@ -56,6 +56,8 @@ class VerifiedSignature:
     not_before: str | None = None
     not_after: str | None = None
     chain: str | None = None
+    root_subject: str = ""
+    root_fingerprint: str = ""
     # Extension of the stored signature file: ".asc", ".sig" or ".p7s".
     extension: str = ".sig"
     # OpenPGP, unknown signer: key id the user has to supply a public key for.
@@ -81,14 +83,21 @@ def detect_format(blob: bytes) -> DetachedFormat | None:
 
 
 class DetachedSignatureVerifier:
-    def __init__(self, keyring: GpgKeyring, trusted_roots_dir: Path) -> None:
+    def __init__(self, keyring: GpgKeyring, trusted_roots_dir: Path, chain_cache_dir: Path | None = None) -> None:
         self._keyring = keyring
         self._roots_dir = trusted_roots_dir
+        self._cache_dir = chain_cache_dir
 
     def trusted_roots(self) -> list[bytes]:
         if not self._roots_dir.is_dir():
             return []
         return [p.read_bytes() for p in sorted(self._roots_dir.iterdir()) if p.suffix.lower() in _ROOT_SUFFIXES]
+
+    def intermediates(self) -> list[bytes]:
+        """Issuer certificates fetched earlier (chain_cache): they build the chain, never grant trust."""
+        if self._cache_dir is None or not self._cache_dir.is_dir():
+            return []
+        return [p.read_bytes() for p in sorted(self._cache_dir.glob("*.cer"))]
 
     def verify(self, pdf_path: Path, sig_bytes: bytes) -> VerifiedSignature:
         fmt = detect_format(sig_bytes)
@@ -146,7 +155,7 @@ class DetachedSignatureVerifier:
 
     def _verify_cms(self, pdf_path: Path, sig_bytes: bytes) -> VerifiedSignature:
         try:
-            reports = inspect_cms(sig_bytes, pdf_path.read_bytes(), self.trusted_roots())
+            reports = inspect_cms(sig_bytes, pdf_path.read_bytes(), self.trusted_roots(), self.intermediates())
         except CmsParseError as exc:
             raise UnknownSignatureFormatError(str(exc)) from exc
         return _map_cms(reports)
@@ -185,6 +194,8 @@ def _map_cms(reports: list[SignerReport]) -> VerifiedSignature:
         not_before=first.not_before.isoformat() if first.fingerprint_sha256 else None,
         not_after=first.not_after.isoformat() if first.fingerprint_sha256 else None,
         chain=first.chain,
+        root_subject=first.chain_root_subject,
+        root_fingerprint=first.chain_root_fingerprint,
         extension=".p7s",
         notes=notes,
     )

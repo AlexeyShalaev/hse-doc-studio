@@ -56,6 +56,13 @@ For documents signed with an enhanced electronic signature or through GnuPG (a t
 
 What is checked and what is not: file integrity and the signature itself (RSA, ECDSA, GOST R 34.10-2012 with Streebog, OpenPGP), the certificate validity at signing time. The chain to a CA root counts as trusted only after the root certificate is added in “Settings → Signatures”. Revocation lists (CRL, OCSP) are not checked. A qualified signature on a token cannot be made inside the Studio: sign the file in CryptoARM or CryptoPro and upload the result.
 
+
+#### Token e-signature and the chain of trust { #cryptopro }
+
+- **“Token e-signature”** on a slot opens a signing window that uses the CryptoPro Browser plug-in. Pick a certificate: the Studio takes the plate data from its public part, freezes the PDF again if needed, the plug-in signs the file on the token (CryptoPro asks for the PIN) and the signature is checked like any other. The private key never leaves the token. You need CryptoPro CSP, the plug-in and the browser extension for Chrome or Edge. The `cadesplugin_api.js` script comes from the CryptoPro site; offline, put it into the data folder: `cadesplugin/cadesplugin_api.js`.
+- **“Complete the CA chain”** downloads the CA certificates linked from the signer's certificate. It is the only network request made while checking a signature, and only on your click. When the chain reaches a self-signed root the Studio shows its name and SHA-256: compare the fingerprint with an official source (e.g. e-trust.gosuslugi.ru) and click “Trust this root”. After that the chain counts as trusted.
+- If the signer's certificate carries a CryptoPro class policy (KC1 and up), the plate level is set to “enhanced qualified”. It is a hint and can be changed.
+
 ## Requirements { #requirements }
 
 The traceability matrix: every requirement from the specification (`\req{…}`) and where it is referenced (`\reqref{…}`) — the “covered / not referenced” statuses expose gaps before the committee finds them. The recognition format is configurable, and “Suggest with AI” proposes one from your text.

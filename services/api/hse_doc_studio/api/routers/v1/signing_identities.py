@@ -4,8 +4,9 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.signing_identity import (
     CreateSelfSignedRequest,
     GenerateOpenPgpKeyRequest,
@@ -17,6 +18,7 @@ from hse_doc_studio.api.schemas.signing_identity import (
     map_openpgp_key,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRoot, TrustedRootStore
 from hse_doc_studio.use_cases.signing_identities.create_self_signed import (
     CreateSelfSignedInput,
@@ -162,6 +164,15 @@ async def export_openpgp_public_key(
     )
 
 
+@router.get("/crypto/cadesplugin_api.js")
+async def get_cadesplugin_api() -> FileResponse:
+    """The CryptoPro plug-in loader, when the user put a copy into <data>/cadesplugin/ (offline use)."""
+    path = settings.data_dir.expanduser() / "cadesplugin" / "cadesplugin_api.js"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="cadesplugin_api.js not installed")
+    return FileResponse(path, media_type="application/javascript")
+
+
 def _map_root(root: TrustedRoot) -> TrustedRootResponse:
     return TrustedRootResponse(
         fingerprint=root.fingerprint, subject=root.subject, not_before=root.not_before, not_after=root.not_after
@@ -177,6 +188,22 @@ async def list_trusted_roots(store: FromDishka[TrustedRootStore]) -> list[Truste
 async def add_trusted_root(store: FromDishka[TrustedRootStore], file: UploadFile = File(...)) -> TrustedRootResponse:
     try:
         return _map_root(store.add(await file.read()))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/trusted-roots/from-chain/{fingerprint}", response_model=TrustedRootResponse, status_code=201)
+async def trust_root_from_chain(
+    fingerprint: str,
+    store: FromDishka[TrustedRootStore],
+    fetcher: FromDishka[ChainFetcher],
+) -> TrustedRootResponse:
+    """Trust a root the Studio fetched while completing a signature's chain (the user confirmed its SHA-256)."""
+    blob = fetcher.load(fingerprint)
+    if blob is None:
+        raise HTTPException(status_code=404, detail="certificate not found among the fetched ones")
+    try:
+        return _map_root(store.add(blob))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

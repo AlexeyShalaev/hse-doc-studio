@@ -9,10 +9,12 @@ import {
   FileUp,
   HelpCircle,
   KeyRound,
+  Link2,
   Lock,
   PackageCheck,
   PenLine,
   RefreshCw,
+  ShieldCheck,
   Trash2,
   XCircle,
 } from "lucide-react";
@@ -20,12 +22,14 @@ import {
   signatureDownloadUrls,
   useAttachDetachedSignature,
   useClearSlotSigner,
+  useCompleteChain,
   useDeleteDetachedSignature,
   useFreezePdf,
   useRecheckDetachedSignature,
   useSetSignerLevel,
   useSetSlotSigner,
   useSignDetachedInStudio,
+  useTrustRoot,
   useUnfreezePdf,
 } from "@entities/signature";
 import {
@@ -42,6 +46,7 @@ import type {
 import { localeTag, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
+import { CryptoProSignDialog } from "./CryptoProSignDialog";
 
 const downloadUrl = (url: string) => {
   window.location.assign(url);
@@ -654,11 +659,19 @@ export const SlotDetachedSignature = ({
   const attach = useAttachDetachedSignature();
   const recheck = useRecheckDetachedSignature();
   const remove = useDeleteDetachedSignature();
+  const completeChain = useCompleteChain();
+  const trustRoot = useTrustRoot();
   const [signOpen, setSignOpen] = useState(false);
+  const [cryptoProOpen, setCryptoProOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const keyRef = useRef<HTMLInputElement>(null);
-  const busy = attach.isPending || recheck.isPending || remove.isPending;
+  const busy =
+    attach.isPending ||
+    recheck.isPending ||
+    remove.isPending ||
+    completeChain.isPending ||
+    trustRoot.isPending;
 
   const upload = (file: File) => {
     attach.mutate(
@@ -687,10 +700,44 @@ export const SlotDetachedSignature = ({
     );
   };
 
+  const cryptoProDialog = cryptoProOpen && (
+    <CryptoProSignDialog
+      projectId={projectId}
+      docId={docId}
+      slotId={slotId}
+      onClose={() => {
+        setCryptoProOpen(false);
+      }}
+    />
+  );
+
   if (!frozen) {
     return (
-      <div style={{ paddingLeft: 42, fontSize: 10.5, color: "var(--fg-2)" }}>
-        {t("detached.slot.needFreeze")}
+      <div
+        style={{
+          marginLeft: 42,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          fontSize: 10.5,
+          color: "var(--fg-2)",
+        }}
+      >
+        <span>{t("detached.slot.needFreeze")}</span>
+        <div>
+          <button
+            type="button"
+            className="btn xs"
+            onClick={() => {
+              setCryptoProOpen(true);
+            }}
+            title={t("detached.cryptopro.buttonTitle")}
+          >
+            <KeyRound size={10} />
+            {t("detached.cryptopro.button")}
+          </button>
+        </div>
+        {cryptoProDialog}
       </div>
     );
   }
@@ -834,6 +881,78 @@ export const SlotDetachedSignature = ({
         </div>
       )}
 
+      {signature?.format === "cms" &&
+        signature.notes.includes("chain_incomplete") && (
+          <div>
+            <button
+              type="button"
+              className="btn xs"
+              disabled={busy}
+              title={t("detached.chain.completeTitle")}
+              onClick={() => {
+                completeChain.mutate(
+                  { projectId, docId, slotId },
+                  { onError: (err) => toast.error(err.message) },
+                );
+              }}
+            >
+              {completeChain.isPending ? (
+                <Spinner size="sm" />
+              ) : (
+                <Link2 size={10} />
+              )}
+              {t("detached.chain.complete")}
+            </button>
+          </div>
+        )}
+      {signature?.root_fingerprint && (
+        <div
+          style={{
+            padding: "6px 8px",
+            borderRadius: 6,
+            border: "1px solid var(--border)",
+            fontSize: 10.5,
+            lineHeight: 1.5,
+          }}
+        >
+          <div>
+            {t("detached.chain.root", { subject: signature.root_subject })}
+          </div>
+          <div className="mono dim" style={{ wordBreak: "break-all" }}>
+            SHA-256: {signature.root_fingerprint}
+          </div>
+          <button
+            type="button"
+            className="btn xs"
+            style={{ marginTop: 4 }}
+            disabled={busy}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  t("detached.chain.trustConfirm", {
+                    subject: signature.root_subject,
+                    fingerprint: signature.root_fingerprint,
+                  }),
+                )
+              )
+                return;
+              trustRoot.mutate(
+                {
+                  projectId,
+                  docId,
+                  slotId,
+                  fingerprint: signature.root_fingerprint,
+                },
+                { onError: (err) => toast.error(err.message) },
+              );
+            }}
+          >
+            <ShieldCheck size={10} />
+            {t("detached.chain.trust")}
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
         {!signature && (
           <>
@@ -857,6 +976,18 @@ export const SlotDetachedSignature = ({
             >
               <PenLine size={10} />
               {t("detached.slot.signHere")}
+            </button>
+            <button
+              type="button"
+              className="btn xs"
+              disabled={busy || stale}
+              onClick={() => {
+                setCryptoProOpen(true);
+              }}
+              title={t("detached.cryptopro.buttonTitle")}
+            >
+              <KeyRound size={10} />
+              {t("detached.cryptopro.button")}
             </button>
           </>
         )}
@@ -928,6 +1059,7 @@ export const SlotDetachedSignature = ({
         </div>
       )}
 
+      {cryptoProDialog}
       {signOpen && (
         <SignDialog
           projectId={projectId}

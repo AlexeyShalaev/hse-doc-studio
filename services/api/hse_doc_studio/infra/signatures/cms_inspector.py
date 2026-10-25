@@ -50,6 +50,7 @@ _NAME_FIELDS = {
 }
 
 _MAX_CHAIN = 8
+_QUALIFIED_POLICY_PREFIX = "1.2.643.100.113."
 
 
 class CmsParseError(ValueError):
@@ -75,14 +76,22 @@ class SignerReport:
     chain: ChainStatus
     verdict: Verdict
     notes: list[str] = field(default_factory=list)
+    # Chain ends in a self-signed certificate nobody trusts yet: who it is, so the user can decide.
+    chain_root_subject: str = ""
+    chain_root_fingerprint: str = ""
 
 
 def inspect_cms(
     sig_bytes: bytes,
     content: bytes,
     trusted_roots: Sequence[bytes] = (),
+    intermediates: Sequence[bytes] = (),
 ) -> list[SignerReport]:
-    """Parse a detached CMS signature and verify each signer against `content`."""
+    """Parse a detached CMS signature and verify each signer against `content`.
+
+    `intermediates` (fetched issuer certificates) only help to build the chain: trust
+    comes from `trusted_roots` alone.
+    """
     der = _to_der(sig_bytes)
     try:
         info = cms.ContentInfo.load(der)
@@ -100,7 +109,8 @@ def inspect_cms(
 
     roots = [_load_cert(r) for r in trusted_roots]
     roots = [r for r in roots if r is not None]
-    return [_inspect_signer(si, embedded, roots, content) for si in signer_infos]
+    extra = [c for c in (_load_cert(i) for i in intermediates) if c is not None]
+    return [_inspect_signer(si, [*embedded, *extra], roots, content) for si in signer_infos]
 
 
 @dataclass(frozen=True)
@@ -110,6 +120,18 @@ class CertificateInfo:
     not_before: datetime
     not_after: datetime
     fingerprint_sha256: str
+    # The certificate carries a КриптоПро class policy (КС1-КА1, 1.2.643.100.113.x), which
+    # accredited CAs put into qualified certificates. A hint, not a legal conclusion.
+    qualified_hint: bool = False
+
+
+def _has_qualified_policy(cert: x509.Certificate) -> bool:
+    for ext in cert["tbs_certificate"]["extensions"] or []:
+        if ext["extn_id"].native == "certificate_policies":
+            return any(
+                p["policy_identifier"].dotted.startswith(_QUALIFIED_POLICY_PREFIX) for p in ext["extn_value"].parsed
+            )
+    return False
 
 
 def describe_certificate(blob: bytes) -> CertificateInfo:
@@ -123,6 +145,7 @@ def describe_certificate(blob: bytes) -> CertificateInfo:
             not_before=validity["not_before"].native,
             not_after=validity["not_after"].native,
             fingerprint_sha256=hashlib.sha256(cert.dump()).hexdigest(),
+            qualified_hint=_has_qualified_policy(cert),
         )
     except Exception as exc:
         raise CmsParseError(f"not an X.509 certificate: {exc}") from exc
@@ -269,7 +292,7 @@ def _inspect_signer(
         to_verify,
         signer["signature"].native,
     )
-    chain = _chain_status(cert, embedded, roots)
+    chain, chain_root = _chain_status(cert, embedded, roots)
 
     if digest_match is False or sig_valid is False:
         verdict: Verdict = "invalid"
@@ -296,6 +319,8 @@ def _inspect_signer(
         chain=chain,
         verdict=verdict,
         notes=notes,
+        chain_root_subject=subject_display(chain_root) if chain_root is not None else "",
+        chain_root_fingerprint=hashlib.sha256(chain_root.dump()).hexdigest() if chain_root is not None else "",
     )
 
 
@@ -439,7 +464,8 @@ def _chain_status(
     cert: x509.Certificate,
     embedded: Sequence[x509.Certificate],
     roots: Sequence[x509.Certificate],
-) -> ChainStatus:
+) -> tuple[ChainStatus, x509.Certificate | None]:
+    """(status, the untrusted self-signed root the chain ends in, if that is the case)."""
     root_fps = {hashlib.sha256(r.dump()).hexdigest() for r in roots}
     pool = [*embedded, *roots]
     current = cert
@@ -447,14 +473,35 @@ def _chain_status(
         fp = hashlib.sha256(current.dump()).hexdigest()
         if current.subject.dump() == current.issuer.dump():
             if _cert_signature_ok(current, current) is False:
-                return "broken"
-            return "trusted" if fp in root_fps else "untrusted_root"
+                return "broken", None
+            return ("trusted", None) if fp in root_fps else ("untrusted_root", current)
         if fp in root_fps:
-            return "trusted"
+            return "trusted", None
         issuer = next((c for c in pool if c.subject.dump() == current.issuer.dump() and c is not current), None)
         if issuer is None:
-            return "incomplete"
+            return "incomplete", None
         if _cert_signature_ok(current, issuer) is False:
-            return "broken"
+            return "broken", None
         current = issuer
-    return "incomplete"
+    return "incomplete", None
+
+
+def issuer_urls(cert: x509.Certificate) -> list[str]:
+    """`caIssuers` URLs of a certificate's Authority Information Access extension."""
+    urls: list[str] = []
+    for ext in cert["tbs_certificate"]["extensions"] or []:
+        if ext["extn_id"].native == "authority_information_access":
+            urls.extend(
+                str(desc["access_location"].native)
+                for desc in ext["extn_value"].parsed
+                if desc["access_method"].native == "ca_issuers"
+            )
+    return urls
+
+
+def embedded_certificates(sig_bytes: bytes) -> list[x509.Certificate]:
+    try:
+        signed = cms.ContentInfo.load(_to_der(sig_bytes))["content"]
+        return [c.chosen for c in (signed["certificates"] or []) if c.name == "certificate"]
+    except Exception as exc:
+        raise CmsParseError(f"cannot parse CMS: {exc}") from exc

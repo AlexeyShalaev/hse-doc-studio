@@ -108,6 +108,9 @@ class DetachedSignatureResponse(BaseModel):
     not_before: str | None
     not_after: str | None
     chain: str | None
+    # A self-signed root the chain ends in that is not trusted yet (to be confirmed by the user).
+    root_subject: str = ""
+    root_fingerprint: str = ""
     # Stable codes the web app translates (see detached_verifier).
     notes: list[str]
     added_at: str

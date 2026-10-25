@@ -148,6 +148,8 @@ class DetachedSignature:
     not_after: str | None = None
     chain: str | None = None
     notes: tuple[str, ...] = ()
+    root_subject: str = ""
+    root_fingerprint: str = ""
 
 
 @dataclass(frozen=True)

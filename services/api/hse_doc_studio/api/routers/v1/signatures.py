@@ -40,6 +40,8 @@ from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureInput,
     AttachDetachedSignatureOutput,
     AttachDetachedSignatureUC,
+    CompleteChainInput,
+    CompleteDetachedChainUC,
     RecheckDetachedSignatureInput,
     RecheckDetachedSignatureUC,
 )
@@ -159,6 +161,8 @@ def _map_detached(sig: DetachedSignature, frozen: FrozenPdf | None, stale: bool)
         not_before=sig.not_before,
         not_after=sig.not_after,
         chain=sig.chain,
+        root_subject=sig.root_subject,
+        root_fingerprint=sig.root_fingerprint,
         notes=list(sig.notes),
         added_at=sig.added_at,
         file_name=PurePosixPath(sig.file).name,
@@ -456,6 +460,25 @@ async def recheck_detached_signature(
         result = await uc.execute(
             RecheckDetachedSignatureInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id, public_key=key or None)
         )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_attached(result)
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/complete-chain",
+    response_model=AttachDetachedSignatureResponse,
+)
+async def complete_detached_chain(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[CompleteDetachedChainUC],
+) -> AttachDetachedSignatureResponse:
+    try:
+        result = await uc.execute(CompleteChainInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

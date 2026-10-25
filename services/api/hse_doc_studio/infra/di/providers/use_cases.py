@@ -86,6 +86,7 @@ from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
+from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
@@ -306,6 +307,7 @@ from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 # --- Signatures ---
 from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureUC,
+    CompleteDetachedChainUC,
     RecheckDetachedSignatureUC,
 )
 from hse_doc_studio.use_cases.signatures.delete_detached_signature import DeleteDetachedSignatureUC
@@ -2067,6 +2069,29 @@ class UseCaseProvider(Provider):
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
             project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+        )
+
+    @provide
+    def get_complete_detached_chain_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        verifier: DetachedSignatureVerifier,
+        keyring: GpgKeyring,
+        fetcher: ChainFetcher,
+    ) -> CompleteDetachedChainUC:
+        return CompleteDetachedChainUC(
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            verifier,
+            keyring,
+            fetcher,
         )
 
     @provide

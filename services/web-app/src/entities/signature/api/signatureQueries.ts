@@ -236,3 +236,38 @@ export const useSetSignerLevel = () => {
     onSuccess: (_, { projectId }) => void invalidate(projectId),
   });
 };
+
+export const useCompleteChain = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+    }) => signatureApi.completeChain(projectId, docId, slotId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useTrustRoot = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      fingerprint,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      fingerprint: string;
+    }) => signatureApi.trustRootFromChain(fingerprint),
+    // The signature is checked again so the chain flips to "trusted".
+    onSuccess: async (_, { projectId, docId, slotId }) => {
+      await signatureApi.recheckDetached(projectId, docId, slotId);
+      await invalidate(projectId);
+    },
+  });
+};

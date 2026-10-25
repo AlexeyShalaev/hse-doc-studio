@@ -74,6 +74,7 @@ def _x509_signer(blob: bytes) -> SignerInfo:
         valid_from=info.not_before.isoformat(),
         valid_to=info.not_after.isoformat(),
         signer_id=info.fingerprint_sha256,
+        level="ukep" if info.qualified_hint else "",
     )
 
 

@@ -92,6 +92,18 @@ export const signatureApi = {
       .then(parseResp(AttachDetachedResponseSchema));
   },
 
+  completeChain: (projectId: string, docId: string, slotId: string) =>
+    apiClient
+      .post(
+        `/projects/${projectId}/docs/${docId}/detached/${slotId}/complete-chain`,
+      )
+      .then(parseResp(AttachDetachedResponseSchema)),
+
+  trustRootFromChain: (fingerprint: string): Promise<void> =>
+    apiClient
+      .post(`/trusted-roots/from-chain/${fingerprint}`)
+      .then(() => undefined),
+
   signInStudio: (
     projectId: string,
     docId: string,
@@ -114,6 +126,13 @@ export const signatureApi = {
     apiClient
       .delete(`/projects/${projectId}/docs/${docId}/detached/${slotId}`)
       .then(() => undefined),
+
+  downloadFrozenPdf: (projectId: string, docId: string) =>
+    apiClient
+      .get(`/projects/${projectId}/docs/${docId}/frozen/pdf`, {
+        responseType: "arraybuffer",
+      })
+      .then((r) => new Uint8Array(r.data as ArrayBuffer)),
 
   setSignerFromFile: (projectId: string, slotId: string, file: File) => {
     const formData = new FormData();

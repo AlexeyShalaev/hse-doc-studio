@@ -17,6 +17,8 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.value_objects import DetachedSignature
+from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
+from hse_doc_studio.infra.signatures.cms_inspector import CmsParseError
 from hse_doc_studio.infra.signatures.detached_verifier import (
     DetachedSignatureVerifier,
     UnknownSignatureFormatError,
@@ -179,3 +181,53 @@ class RecheckDetachedSignatureUC(_DetachedUCBase):
 
     async def execute(self, inp: RecheckDetachedSignatureInput) -> AttachDetachedSignatureOutput:
         return await self._attach(inp.project_id, inp.doc_id, inp.slot_id, None, inp.public_key)
+
+
+@dataclass
+class CompleteChainInput:
+    project_id: UUID
+    doc_id: str
+    slot_id: str
+
+
+class CompleteDetachedChainUC(_DetachedUCBase):
+    """Downloads the issuer certificates the signature's certificate points to (AIA), then checks again.
+
+    A deliberate network action, triggered by the user. What it fetches only helps build the chain.
+    """
+
+    def __init__(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        verifier: DetachedSignatureVerifier,
+        keyring: GpgKeyring,
+        fetcher: ChainFetcher,
+    ) -> None:
+        super().__init__(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+        )
+        self._fetcher = fetcher
+
+    async def execute(self, inp: CompleteChainInput) -> AttachDetachedSignatureOutput:
+        ctx = await load_doc_context(
+            self._get_uc, self._template_repo, self._template_service, inp.project_id, inp.doc_id
+        )
+        existing = self._signature_repo.get_state(ctx.project.folder).detached.get(inp.doc_id, {}).get(inp.slot_id)
+        if existing is None:
+            raise NotFoundError(
+                localized_error("К слоту не приложена подпись", "No signature is attached to this slot")
+            )
+        blob = (ctx.project.folder / existing.file).read_bytes()
+        try:
+            await asyncio.to_thread(self._fetcher.complete, blob)
+        except CmsParseError as exc:
+            raise ValueError(
+                localized_error(
+                    "Цепочку можно достраивать только для подписи CMS/CAdES", "Only CMS/CAdES signatures have a chain"
+                )
+            ) from exc
+        return await self._attach(inp.project_id, inp.doc_id, inp.slot_id, None, None)

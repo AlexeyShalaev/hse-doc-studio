@@ -118,3 +118,14 @@ def test_garbage_is_rejected(tmp_path: Path) -> None:
     assert not looks_like_cms(b"-----BEGIN PGP SIGNATURE-----\n")
     with pytest.raises(CmsParseError):
         inspect_cms(b"\x30\x03\x02\x01\x01", CONTENT)
+
+
+def test_describe_certificate_reads_owner_serial_and_validity() -> None:
+    from hse_doc_studio.infra.signatures.cms_inspector import describe_certificate  # noqa: PLC0415
+
+    ident = make_identity("Петрова Анна")
+    info = describe_certificate(ident.cert_der)
+    assert info.owner == "Петрова Анна"
+    assert info.serial == format(ident.serial, "X")
+    assert info.not_after.year == 2049
+    assert info.qualified_hint is False

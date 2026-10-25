@@ -192,3 +192,24 @@ async def test__api__import_pkcs12__invalid_input__returns_400(
     )
 
     assert resp.status_code == 400, resp.text
+
+
+async def test__api__cadesplugin_loader__404_until_installed_then_served(test_app: AsyncClient) -> None:
+    from hse_doc_studio.api.config import settings  # noqa: PLC0415
+
+    assert (await test_app.get("/api/v1/crypto/cadesplugin_api.js")).status_code == 404
+
+    target = settings.data_dir / "cadesplugin"
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "cadesplugin_api.js").write_text("window.cadesplugin = 1;")
+    resp = await test_app.get("/api/v1/crypto/cadesplugin_api.js")
+
+    assert resp.status_code == 200
+    assert "javascript" in resp.headers["content-type"]
+    assert "cadesplugin" in resp.text
+
+
+async def test__api__trust_root_from_chain__unknown_fingerprint__404(test_app: AsyncClient) -> None:
+    resp = await test_app.post("/api/v1/trusted-roots/from-chain/deadbeef")
+
+    assert resp.status_code == 404

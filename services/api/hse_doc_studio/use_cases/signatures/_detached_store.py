@@ -92,6 +92,8 @@ def store_signature(
         not_before=verified.not_before,
         not_after=verified.not_after,
         chain=verified.chain,
+        root_subject=verified.root_subject,
+        root_fingerprint=verified.root_fingerprint,
         notes=tuple(verified.notes),
     )
     doc_sigs = {**state.detached.get(ctx.doc.id, {}), slot_id: sig}
