@@ -122,8 +122,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 USER app
 EXPOSE 8000
 
+# JSON-форма (hadolint DL3025); `|| exit 1` через sh: Docker понимает только 0 и 1.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+  CMD ["sh", "-c", "curl -f http://localhost:8000/health || exit 1"]
 
 CMD ["python", "-m", "hse_doc_studio.api.entrypoint"]
 

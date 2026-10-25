@@ -31,6 +31,11 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      # init и analyze обязаны быть одной версии: по отдельности CodeQL падает.
+      codeql:
+        patterns:
+          - "github/codeql-action*"
     open-pull-requests-limit: 5
 
   # Базовые образы единственного Dockerfile в репозитории.
@@ -44,4 +49,8 @@ updates:
       # Dependabot предлагал нечётную 25, в которой уже нет corepack.
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
+      # Python — вручную: на свежем минорном выпуске части зависимостей ещё нет
+      # колёс (lxml не собрался на 3.15), и образ не строится.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     open-pull-requests-limit: 5
