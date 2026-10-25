@@ -7,9 +7,13 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    # Минорные и патчевые — одним PR в неделю на экосистему: по PR на пакет
+    # выходили волны по пять штук, каждая со своим конфликтом в lock-файле.
     groups:
       dev-dependencies:
         dependency-type: "development"
+      minor-and-patch:
+        update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
@@ -20,6 +24,8 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+      minor-and-patch:
+        update-types: ["minor", "patch"]
     ignore:
       # Мажор TypeScript ждёт поддержки в typescript-eslint (7.0 он не умеет).
       - dependency-name: "typescript"
@@ -36,6 +42,9 @@ updates:
       codeql:
         patterns:
           - "github/codeql-action*"
+      actions:
+        patterns:
+          - "*"
     open-pull-requests-limit: 5
 
   # Базовые образы единственного Dockerfile в репозитории.
