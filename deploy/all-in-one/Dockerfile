@@ -21,7 +21,7 @@ RUN pnpm build
 ############################
 # Stage 2: build backend deps
 ############################
-FROM python:3.14-slim-bookworm AS backend-builder
+FROM python:3.15-slim-bookworm AS backend-builder
 WORKDIR /app
 
 # pipefail: без него упавший `uv export` даёт пустой requirements.txt, следующий
@@ -46,7 +46,7 @@ COPY services/api/hse_doc_studio /app/hse_doc_studio
 ############################
 # Stage 3: production image
 ############################
-FROM python:3.14-slim-bookworm AS production
+FROM python:3.15-slim-bookworm AS production
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
