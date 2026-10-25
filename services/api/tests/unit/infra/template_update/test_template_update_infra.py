@@ -109,7 +109,7 @@ def test__transaction__failure_rolls_back_every_file(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError):
         transaction.run(project, journal, writes, save_state=boom, message="Обновление")
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "a\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "a\n"
     assert not (tmp_path / "doc" / "new").exists()
     assert journals.get(tmp_path) is None
     assert not (tmp_path / ".hse-studio" / "update").exists()
@@ -130,7 +130,7 @@ def test__transaction__crash_before_commit_is_rolled_back_on_recovery(tmp_path: 
 
     assert transaction.recover(project, journal) is False
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "a\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "a\n"
     assert not (tmp_path / "doc" / "c.tex").exists()
     assert journals.get(tmp_path) is None
 
@@ -154,7 +154,7 @@ def test__transaction__crash_after_commit_is_finalized(tmp_path: Path) -> None:
 
     assert transaction.recover(project, journal) is True
 
-    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8", newline="\n") == "b\n"
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "b\n"
     assert store.load(project, "2") is not None
     assert journals.get(tmp_path) is None
 
