@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # на Apple Silicon образ должен идти нативным arm64, иначе Docker Desktop крутит
 # его через эмуляцию. Имена каталогов у download.docker.com — x86_64/aarch64.
 ARG TARGETARCH
-ARG DOCKER_CLI_VERSION=29.6.2
+ARG DOCKER_CLI_VERSION=29.9.2
 RUN set -eux; \
     case "${TARGETARCH}" in \
       amd64) dockerArch='x86_64' ;; \
@@ -82,6 +82,9 @@ RUN addgroup --system app && adduser --system --ingroup app \
 
 COPY --from=backend-builder /usr/local /usr/local
 COPY --from=backend-builder /app /app
+# pip в рантайме не нужен (зависимости поставлены ещё в backend-builder), а его
+# вендоренные msgpack и setuptools дают HIGH-уязвимости в скане образа.
+RUN python -m pip uninstall -y pip
 
 # Frontend built assets served as static files by FastAPI
 COPY --from=frontend-builder --chown=app:app /app/dist /app/static
