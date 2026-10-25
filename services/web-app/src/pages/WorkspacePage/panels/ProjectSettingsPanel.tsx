@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import { useDocuments } from "@entities/document";
 import { useProject } from "@entities/project";
 import { useVersionDetail } from "@entities/template-catalog";
+import { useTemplateUpdateSignal } from "@features/template-update";
 import {
   buildMetaGroupCards,
   collectMetaFields,
@@ -52,6 +53,8 @@ export const ProjectSettingsPanel = ({
     project?.lock.version ?? "",
   );
   const { data: projectDocuments } = useDocuments(projectId);
+  // Раздел «Версия шаблона» живёт в группе «Проект»: точка ведёт к нему.
+  const templateSignal = useTemplateUpdateSignal(projectId);
 
   const isTeam = project?.staffing === "team";
   const allMetaFields = collectMetaFields(versionDetail, project?.kind);
@@ -105,6 +108,18 @@ export const ProjectSettingsPanel = ({
                 <span className="truncate" style={{ minWidth: 0 }}>
                   {t(group.labelKey)}
                 </span>
+                {group.id === "project" && templateSignal.hasSignal && (
+                  <span
+                    className={clsx(
+                      "dot",
+                      templateSignal.markers.length > 0 ? "err" : "live",
+                    )}
+                    role="img"
+                    aria-label={t("templateUpdate:nav.badge")}
+                    title={t("templateUpdate:nav.badge")}
+                    style={{ marginLeft: "auto", flexShrink: 0 }}
+                  />
+                )}
               </button>
             );
           })}
