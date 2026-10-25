@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
     ISignatureRepository,
 )
-from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
+from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -60,6 +61,10 @@ class DeleteSignaturePngUC:
 
         state = self._signature_repo.get_state(project.folder)
         new_slots = {sid: slot for sid, slot in state.slots.items() if sid != inp.slot_id}
+        # A detached e-signature slot is configuration, not just a picture: keep it.
+        kept = state.slots.get(inp.slot_id)
+        if kept is not None and kept.sign_mode is SignMode.detached_text:
+            new_slots[inp.slot_id] = replace(kept, png_path=None, natural_width_px=None, natural_height_px=None)
         new_placements: dict[str, dict[str, SignaturePlacement]] = {}
         disabled_in: list[str] = []
         for doc_id, slots in state.placements.items():
@@ -78,7 +83,7 @@ class DeleteSignaturePngUC:
                     new_doc_placements[sid] = placement
             new_placements[doc_id] = new_doc_placements
 
-        new_state = SignaturesState(slots=new_slots, placements=new_placements)
+        new_state = replace(state, slots=new_slots, placements=new_placements)
         self._signature_repo.save_state(project.folder, new_state)
 
         logger.info(

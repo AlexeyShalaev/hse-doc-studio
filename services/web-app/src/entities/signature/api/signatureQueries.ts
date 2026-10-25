@@ -5,6 +5,8 @@ import { signatureApi } from "./signatureApi";
 type SignaturesState = Awaited<ReturnType<typeof signatureApi.getState>>;
 type Placement = Awaited<ReturnType<typeof signatureApi.updatePlacement>>;
 type UploadResult = Awaited<ReturnType<typeof signatureApi.uploadPng>>;
+type FreezeResult = Awaited<ReturnType<typeof signatureApi.freezePdf>>;
+type AttachResult = Awaited<ReturnType<typeof signatureApi.attachDetached>>;
 
 export const signatureKeys = {
   all: ["signatures"] as const,
@@ -72,6 +74,200 @@ export const useDeleteSignaturePng = () => {
       void queryClient.invalidateQueries({
         queryKey: signatureKeys.state(projectId),
       });
+    },
+  });
+};
+
+const useInvalidateSignatures = () => {
+  const queryClient = useQueryClient();
+  return (projectId: string) =>
+    queryClient.invalidateQueries({ queryKey: signatureKeys.state(projectId) });
+};
+
+export const useFreezePdf = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation<FreezeResult, Error, { projectId: string; docId: string }>(
+    {
+      mutationFn: ({ projectId, docId }) =>
+        signatureApi.freezePdf(projectId, docId),
+      onSuccess: (_, { projectId }) => void invalidate(projectId),
+    },
+  );
+};
+
+export const useUnfreezePdf = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({ projectId, docId }: { projectId: string; docId: string }) =>
+      signatureApi.unfreezePdf(projectId, docId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useAttachDetachedSignature = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation<
+    AttachResult,
+    Error,
+    {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      file: File;
+      publicKey?: File;
+    }
+  >({
+    mutationFn: ({ projectId, docId, slotId, file, publicKey }) =>
+      signatureApi.attachDetached(projectId, docId, slotId, file, publicKey),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useRecheckDetachedSignature = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation<
+    AttachResult,
+    Error,
+    { projectId: string; docId: string; slotId: string; publicKey?: File }
+  >({
+    mutationFn: ({ projectId, docId, slotId, publicKey }) =>
+      signatureApi.recheckDetached(projectId, docId, slotId, publicKey),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useSignDetachedInStudio = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation<
+    AttachResult,
+    Error,
+    {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      identityId: string;
+      passphrase: string;
+    }
+  >({
+    mutationFn: ({ projectId, docId, slotId, identityId, passphrase }) =>
+      signatureApi.signInStudio(
+        projectId,
+        docId,
+        slotId,
+        identityId,
+        passphrase,
+      ),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useDeleteDetachedSignature = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+    }) => signatureApi.deleteDetached(projectId, docId, slotId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useSetSlotSigner = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+      ...source
+    }: { projectId: string; slotId: string } & (
+      | { file: File }
+      | { identityId: string }
+      | { owner: string; certId?: string; validTo?: string | null }
+    )) => {
+      if ("file" in source) {
+        return signatureApi.setSignerFromFile(projectId, slotId, source.file);
+      }
+      if ("identityId" in source) {
+        return signatureApi.setSigner(projectId, slotId, {
+          identity_id: source.identityId,
+        });
+      }
+      return signatureApi.setSigner(projectId, slotId, {
+        owner: source.owner,
+        cert_id: source.certId ?? "",
+        valid_to: source.validTo ?? null,
+      });
+    },
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useClearSlotSigner = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+    }: {
+      projectId: string;
+      slotId: string;
+    }) => signatureApi.clearSigner(projectId, slotId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useSetSignerLevel = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+      level,
+    }: {
+      projectId: string;
+      slotId: string;
+      level: string;
+    }) => signatureApi.setSignerLevel(projectId, slotId, level),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useCompleteChain = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+    }) => signatureApi.completeChain(projectId, docId, slotId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useTrustRoot = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      fingerprint,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      fingerprint: string;
+    }) => signatureApi.trustRootFromChain(fingerprint),
+    // The signature is checked again so the chain flips to "trusted".
+    onSuccess: async (_, { projectId, docId, slotId }) => {
+      await signatureApi.recheckDetached(projectId, docId, slotId);
+      await invalidate(projectId);
     },
   });
 };

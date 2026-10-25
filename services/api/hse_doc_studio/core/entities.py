@@ -174,6 +174,10 @@ class SigningIdentity:
     not_after: datetime  # certificate expiry, UTC
     trusted: bool  # False for self-signed / internal
     created_at: datetime
+    # OpenPGP identities: the primary-key fingerprint inside the Studio keyring.
+    fingerprint: str | None = None
+    # OpenPGP: the secret key is passphrase-protected, so signing asks for it every time.
+    protected: bool = False
 
 
 @dataclass

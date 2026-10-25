@@ -43,6 +43,7 @@ const SIGN_MODE_LABEL_KEY: Record<SignMode, string> = {
   image_crypto: "slotPanel.signMode.imageCrypto",
   crypto_invisible: "slotPanel.signMode.cryptoInvisible",
   detached: "slotPanel.signMode.detached",
+  detached_text: "slotPanel.signMode.detachedText",
 };
 
 export const SlotPanel = ({
@@ -115,6 +116,15 @@ export const SlotPanel = ({
     });
   };
 
+  // Картинка ↔ открепленная ЭП: ключ PAdES сбрасывается, режимы взаимоисключающи.
+  const handleKindChange = (slotId: string, signMode: SignMode) => {
+    updateSlotConfig({
+      projectId,
+      slotId,
+      data: { signing_identity_id: null, sign_mode: signMode, sign_reason: "" },
+    });
+  };
+
   const handleModeChange = (
     slotId: string,
     signMode: SignMode,
@@ -166,6 +176,7 @@ export const SlotPanel = ({
           const currentIdentityId = slotInfo?.signing_identity_id ?? null;
           const currentMode: SignMode = slotInfo?.sign_mode ?? "image";
           const currentReason = slotInfo?.sign_reason ?? "";
+          const isDetachedText = currentMode === "detached_text";
           const hasIdentity = currentIdentityId != null;
           const identity = identities?.find(
             (id) => id.id === currentIdentityId,
@@ -316,109 +327,167 @@ export const SlotPanel = ({
                 </div>
               </div>
 
-              {/* ── Crypto row (optional signing identity + mode) ── */}
+              {/* ── Signature kind: picture or detached e-signature ── */}
               <div
                 className="flex items-center"
-                style={{ gap: 8, padding: "6px 0 0", flexWrap: "wrap" }}
+                style={{ gap: 8, flexWrap: "wrap" }}
+                title={t("slotPanel.kindHint")}
               >
-                {hasIdentity ? (
-                  <ShieldCheck
-                    size={12}
-                    style={{
-                      color: identity?.trusted
-                        ? "var(--accent)"
-                        : "var(--fg-3)",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <ShieldOff
-                    size={12}
-                    style={{ color: "var(--fg-3)", flexShrink: 0 }}
-                  />
-                )}
                 <span
                   style={{ fontSize: 11, color: "var(--fg-2)", flexShrink: 0 }}
                 >
-                  {t("slotPanel.cryptoSignature")}
+                  {t("slotPanel.kind")}
                 </span>
-                <select
+                {(["image", "detached_text"] as const).map((kind) => {
+                  const active =
+                    (isDetachedText ? "detached_text" : "image") === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      className={active ? "btn xs" : "btn xs ghost"}
+                      aria-pressed={active}
+                      disabled={isUpdatingConfig}
+                      style={
+                        active
+                          ? {
+                              background: "var(--accent-soft)",
+                              color: "var(--accent)",
+                            }
+                          : undefined
+                      }
+                      onClick={() => {
+                        if (!active) handleKindChange(slot.id, kind);
+                      }}
+                    >
+                      {kind === "image"
+                        ? t("slotPanel.kindImage")
+                        : t("slotPanel.kindDetached")}
+                    </button>
+                  );
+                })}
+              </div>
+              {isDetachedText && (
+                <div
                   style={{
                     fontSize: 11,
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 4,
-                    padding: "2px 4px",
-                    color: "var(--fg-0)",
-                  }}
-                  value={currentIdentityId ?? ""}
-                  disabled={isUpdatingConfig}
-                  onChange={(e) => {
-                    handleIdentityChange(
-                      slot.id,
-                      e.target.value,
-                      currentMode,
-                      currentReason,
-                    );
+                    color: "var(--fg-2)",
+                    lineHeight: 1.5,
                   }}
                 >
-                  <option value="">{t("slotPanel.identityNone")}</option>
-                  {(identities ?? []).map((id) => (
-                    <option key={id.id} value={id.id}>
-                      {id.label} ({id.subject_cn})
-                    </option>
-                  ))}
-                </select>
+                  {t("slotPanel.detachedExplain")}
+                </div>
+              )}
 
-                {hasIdentity && (
-                  <>
-                    <span
+              {/* ── Crypto row (optional signing identity + mode) ── */}
+              {!isDetachedText && (
+                <div
+                  className="flex items-center"
+                  style={{ gap: 8, padding: "6px 0 0", flexWrap: "wrap" }}
+                >
+                  {hasIdentity ? (
+                    <ShieldCheck
+                      size={12}
                       style={{
-                        fontSize: 11,
-                        color: "var(--fg-2)",
+                        color: identity?.trusted
+                          ? "var(--accent)"
+                          : "var(--fg-3)",
                         flexShrink: 0,
                       }}
-                    >
-                      {t("slotPanel.mode")}
-                    </span>
-                    <select
-                      style={{
-                        fontSize: 11,
-                        background: "var(--bg-2)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 4,
-                        padding: "2px 4px",
-                        color: "var(--fg-0)",
-                      }}
-                      value={currentMode}
-                      disabled={isUpdatingConfig}
-                      onChange={(e) => {
-                        handleModeChange(
-                          slot.id,
-                          e.target.value as SignMode,
-                          currentIdentityId,
-                          currentReason,
-                        );
-                      }}
-                    >
-                      {(
-                        [
-                          "image_crypto",
-                          "crypto_invisible",
-                          "detached",
-                        ] as SignMode[]
-                      ).map((m) => (
-                        <option key={m} value={m}>
-                          {t(SIGN_MODE_LABEL_KEY[m])}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
-              </div>
+                    />
+                  ) : (
+                    <ShieldOff
+                      size={12}
+                      style={{ color: "var(--fg-3)", flexShrink: 0 }}
+                    />
+                  )}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--fg-2)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {t("slotPanel.cryptoSignature")}
+                  </span>
+                  <select
+                    style={{
+                      fontSize: 11,
+                      background: "var(--bg-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      padding: "2px 4px",
+                      color: "var(--fg-0)",
+                    }}
+                    value={currentIdentityId ?? ""}
+                    disabled={isUpdatingConfig}
+                    onChange={(e) => {
+                      handleIdentityChange(
+                        slot.id,
+                        e.target.value,
+                        currentMode,
+                        currentReason,
+                      );
+                    }}
+                  >
+                    <option value="">{t("slotPanel.identityNone")}</option>
+                    {(identities ?? []).map((id) => (
+                      <option key={id.id} value={id.id}>
+                        {id.label} ({id.subject_cn})
+                      </option>
+                    ))}
+                  </select>
+
+                  {hasIdentity && (
+                    <>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "var(--fg-2)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {t("slotPanel.mode")}
+                      </span>
+                      <select
+                        style={{
+                          fontSize: 11,
+                          background: "var(--bg-2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 4,
+                          padding: "2px 4px",
+                          color: "var(--fg-0)",
+                        }}
+                        value={currentMode}
+                        disabled={isUpdatingConfig}
+                        onChange={(e) => {
+                          handleModeChange(
+                            slot.id,
+                            e.target.value as SignMode,
+                            currentIdentityId,
+                            currentReason,
+                          );
+                        }}
+                      >
+                        {(
+                          [
+                            "image_crypto",
+                            "crypto_invisible",
+                            "detached",
+                          ] as SignMode[]
+                        ).map((m) => (
+                          <option key={m} value={m}>
+                            {t(SIGN_MODE_LABEL_KEY[m])}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* ── Reason row (PAdES "reason" — shown in Acrobat) ── */}
-              {hasIdentity && (
+              {hasIdentity && !isDetachedText && (
                 <div
                   className="flex items-center"
                   style={{ gap: 8, paddingLeft: 20 }}

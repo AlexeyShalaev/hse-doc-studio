@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateSelfSignedRequest,
+  GenerateOpenPgpKeyRequest,
   UpdateSlotConfigRequest,
 } from "./signingIdentitySchemas";
 import { signingIdentityApi } from "./signingIdentityApi";
@@ -55,8 +56,74 @@ export const useDeleteSigningIdentity = () => {
     mutationFn: (id: string) => signingIdentityApi.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: signingIdentityKeys.list(),
+        queryKey: signingIdentityKeys.all,
       });
+    },
+  });
+};
+
+export const useOpenPgpKeys = () =>
+  useQuery({
+    queryKey: [...signingIdentityKeys.all, "openpgp-keys"] as const,
+    queryFn: () => signingIdentityApi.listOpenPgpKeys(),
+  });
+
+export const useGenerateOpenPgpKey = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: GenerateOpenPgpKeyRequest) =>
+      signingIdentityApi.generateOpenPgp(data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: signingIdentityKeys.all });
+    },
+  });
+};
+
+export const useImportOpenPgpKey = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      passphrase,
+      label,
+    }: {
+      file: File;
+      passphrase?: string;
+      label?: string;
+    }) => signingIdentityApi.importOpenPgp(file, passphrase, label),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: signingIdentityKeys.all });
+    },
+  });
+};
+
+export const trustedRootKeys = {
+  list: () => ["trusted-roots", "list"] as const,
+};
+
+export const useTrustedRoots = () =>
+  useQuery({
+    queryKey: trustedRootKeys.list(),
+    queryFn: () => signingIdentityApi.listTrustedRoots(),
+  });
+
+export const useAddTrustedRoot = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => signingIdentityApi.addTrustedRoot(file),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: trustedRootKeys.list() });
+    },
+  });
+};
+
+export const useDeleteTrustedRoot = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fingerprint: string) =>
+      signingIdentityApi.deleteTrustedRoot(fingerprint),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: trustedRootKeys.list() });
     },
   });
 };

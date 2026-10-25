@@ -3,6 +3,10 @@ export type {
   SigningIdentityKind,
   SignMode,
   CreateSelfSignedRequest,
+  GenerateOpenPgpKeyRequest,
+  OpenPgpKey,
+  OpenPgpKeys,
+  TrustedRoot,
   UpdateSlotConfigRequest,
 } from "./api/signingIdentitySchemas";
 export {
@@ -10,12 +14,18 @@ export {
   SignModeSchema,
   CreateSelfSignedRequestSchema,
 } from "./api/signingIdentitySchemas";
-export { signingIdentityApi } from "./api/signingIdentityApi";
+export { signingIdentityApi, publicKeyUrl } from "./api/signingIdentityApi";
 export {
   useSigningIdentities,
   useCreateSelfSigned,
   useImportPkcs12,
   useDeleteSigningIdentity,
   useUpdateSlotConfig,
+  useOpenPgpKeys,
+  useGenerateOpenPgpKey,
+  useImportOpenPgpKey,
+  useTrustedRoots,
+  useAddTrustedRoot,
+  useDeleteTrustedRoot,
   signingIdentityKeys,
 } from "./api/signingIdentityQueries";

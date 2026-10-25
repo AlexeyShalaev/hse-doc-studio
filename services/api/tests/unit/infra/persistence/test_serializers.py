@@ -17,6 +17,9 @@ from hse_doc_studio.core.enums import (
     ChangeLogKind,
     CheckSeverity,
     CompileStatus,
+    DetachedFormat,
+    DetachedOrigin,
+    DetachedVerdict,
     DocumentStatus,
     EngineType,
     PersonRole,
@@ -26,6 +29,8 @@ from hse_doc_studio.core.value_objects import (
     CheckResult,
     ChecksOverride,
     CustomFileOverride,
+    DetachedSignature,
+    FrozenPdf,
     Person,
     SignaturePlacement,
     SignatureSlot,
@@ -365,6 +370,36 @@ def test__serializers__signatures_state_roundtrip() -> None:
     assert placement.x_mm == 10.0
     assert placement.width_mm == 50.0
     assert restored.placements["vkr"]["supervisor"].enabled is False
+
+
+@pytest.mark.unit
+def test__serializers__signatures_state__detached_roundtrip_and_legacy_files() -> None:
+    frozen = FrozenPdf(path=".hse-studio/frozen/a.pdf", sha256="a" * 64, source_sha256="b" * 64, size=10, frozen_at="t")
+    sig = DetachedSignature(
+        file=".hse-studio/detached/a/s.asc",
+        format=DetachedFormat.openpgp,
+        origin=DetachedOrigin.studio,
+        pdf_sha256="a" * 64,
+        verdict=DetachedVerdict.valid,
+        signer="Иван",
+        signer_id="F" * 40,
+        added_at="t",
+        notes=("key_expired",),
+    )
+    state = SignaturesState(slots={}, placements={}, frozen={"a": frozen}, detached={"a": {"s": sig}})
+
+    restored = deserialize_signatures_state(serialize_signatures_state(state))
+
+    assert restored.frozen == {"a": frozen}
+    assert restored.detached == {"a": {"s": sig}}
+    # signatures.json written before detached signatures existed still loads.
+    legacy = deserialize_signatures_state({"slots": {}, "placements": {}})
+    assert legacy.frozen == {}
+    assert legacy.detached == {}
+    # A corrupt detached entry is skipped, not fatal.
+    broken = serialize_signatures_state(state)
+    broken["detached"]["a"]["s"]["verdict"] = "nonsense"
+    assert deserialize_signatures_state(broken).detached == {}
 
 
 @pytest.mark.unit

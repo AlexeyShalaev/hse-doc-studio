@@ -5,6 +5,9 @@ from typing import Any
 
 from hse_doc_studio.core.enums import (
     CheckSeverity,
+    DetachedFormat,
+    DetachedOrigin,
+    DetachedVerdict,
     EngineType,
     PersonRole,
     RequirementFormatKind,
@@ -49,6 +52,26 @@ class Person:
 
 
 @dataclass(frozen=True)
+class SignerInfo:
+    """Who is expected to sign a slot, as printed on the signature plate.
+
+    The plate sits inside the PDF the signature covers, so its data must be known
+    before the file is frozen: it comes from the signer's public certificate or
+    key (or a Studio key, or is typed in). `signer_id` is what the signature is
+    compared with later: certificate SHA-256 / OpenPGP fingerprint, empty when typed in.
+    """
+
+    kind: str  # "x509" | "openpgp" | "manual"
+    owner: str
+    cert_id: str = ""  # certificate serial (x509) or key id (openpgp), as printed
+    valid_from: str | None = None  # ISO 8601
+    valid_to: str | None = None
+    signer_id: str = ""
+    # Printed under the caption: "" (nothing), "ukep" (enhanced qualified), "unep" (enhanced non-qualified).
+    level: str = ""
+
+
+@dataclass(frozen=True)
 class SignatureSlot:
     """Global per-slot state — the uploaded PNG, shared across all docs.
 
@@ -63,6 +86,8 @@ class SignatureSlot:
     signing_identity_id: str | None = None
     sign_mode: SignMode = SignMode.image
     sign_reason: str = ""
+    # Detached e-signature slots: the expected signer printed on the plate.
+    signer: SignerInfo | None = None
 
 
 @dataclass(frozen=True)
@@ -86,15 +111,61 @@ class SignaturePlacement:
 
 
 @dataclass(frozen=True)
+class FrozenPdf:
+    """A PDF fixed for signing: stamped once, then never touched.
+
+    Detached signatures cover these exact bytes. `source_sha256` is the hash of
+    the compiled PDF the copy was made from — a different hash of the current
+    build means the document was rebuilt and every signature is out of date.
+    """
+
+    path: str  # relative to the project folder
+    sha256: str
+    source_sha256: str
+    size: int
+    frozen_at: str  # ISO 8601, UTC
+    # Hash of what was stamped (placements, plate data). A different current value
+    # means signers or positions changed after freezing: the plate is out of date.
+    stamps_digest: str = ""
+
+
+@dataclass(frozen=True)
+class DetachedSignature:
+    """A detached e-signature attached to a (doc, slot): the file plus what we learned from it."""
+
+    file: str  # relative to the project folder
+    format: DetachedFormat
+    origin: DetachedOrigin
+    pdf_sha256: str  # hash of the frozen PDF it was checked against
+    verdict: DetachedVerdict
+    signer: str
+    signer_id: str  # OpenPGP fingerprint / certificate SHA-256
+    added_at: str
+    issuer: str = ""
+    algorithm: str = ""
+    signed_at: str | None = None
+    not_before: str | None = None
+    not_after: str | None = None
+    chain: str | None = None
+    notes: tuple[str, ...] = ()
+    root_subject: str = ""
+    root_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
 class SignaturesState:
     """Project-level signatures state.
 
     `slots` holds the global PNG per slot (one upload, reused across docs).
     `placements` holds the per-(doc, slot) positioning.
+    `frozen` and `detached` back the detached e-signature flow: the PDF fixed
+    for signing per doc, and the signature files attached per (doc, slot).
     """
 
     slots: dict[str, SignatureSlot]
     placements: dict[str, dict[str, SignaturePlacement]]
+    frozen: dict[str, FrozenPdf] = field(default_factory=dict)
+    detached: dict[str, dict[str, DetachedSignature]] = field(default_factory=dict)
 
     @classmethod
     def empty(cls) -> SignaturesState:

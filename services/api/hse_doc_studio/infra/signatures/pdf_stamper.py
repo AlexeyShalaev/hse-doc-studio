@@ -9,6 +9,9 @@ from pathlib import Path
 import structlog
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib.units import mm
+from reportlab.lib.utils import simpleSplit
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 logger = structlog.get_logger()
@@ -16,6 +19,26 @@ logger = structlog.get_logger()
 # Date text placement relative to the signature image.
 _DATE_GAP_MM = 4.0
 _DATE_BASELINE_NUDGE_PT = 3.0
+
+# Text marks («Подписано с помощью открепленной электронной подписи») need
+# Cyrillic, which the built-in Helvetica lacks — a bundled DejaVu Sans does it.
+_TEXT_FONT = "DejaVuSans"
+_TEXT_FONT_FILE = Path(__file__).with_name("fonts") / "DejaVuSans.ttf"
+_TEXT_FONT_BOLD = "DejaVuSans-Bold"
+_TEXT_FONT_BOLD_FILE = Path(__file__).with_name("fonts") / "DejaVuSans-Bold.ttf"
+_PLATE_RADIUS_PT = 7.0
+_TEXT_SIZE_PT = 8.0
+_TEXT_LEADING = 1.25
+_TEXT_PAD_PT = 3.0
+
+
+def _ensure_text_font() -> str:
+    registered = pdfmetrics.getRegisteredFontNames()
+    if _TEXT_FONT not in registered:
+        pdfmetrics.registerFont(TTFont(_TEXT_FONT, str(_TEXT_FONT_FILE)))
+    if _TEXT_FONT_BOLD not in registered:
+        pdfmetrics.registerFont(TTFont(_TEXT_FONT_BOLD, str(_TEXT_FONT_BOLD_FILE)))
+    return _TEXT_FONT
 
 
 def format_sign_date(iso_date: str | None) -> str | None:
@@ -31,7 +54,7 @@ def format_sign_date(iso_date: str | None) -> str | None:
 
 @dataclass(frozen=True)
 class Stamp:
-    """A single PNG to place on a PDF page.
+    """A single PNG or text mark to place on a PDF page.
 
     Coordinates are in millimetres from the **top-left** corner of the page —
     the natural convention for the UI overlay layer. The stamper handles the
@@ -43,8 +66,17 @@ class Stamp:
     x_mm: float
     y_mm: float
     width_mm: float
-    png_path: Path
+    png_path: Path | None
     aspect_ratio: float  # height / width — preserves uploaded PNG proportions
+    # Text mark instead of a PNG: a framed, wrapped caption (the date, when
+    # set, goes on its own last line inside the frame).
+    text: str | None = None
+    # Signature plate rows («Сертификат», «Владелец», ...) under the bold caption.
+    details: tuple[tuple[str, str], ...] = ()
+    # Second bold line under the caption (the signature level), empty = none.
+    subtitle: str = ""
+    # Label of the date row when the plate has details («Дата подписания»).
+    date_label: str = ""
     # Signing date rendered as text to the right of the PNG («12.05.2026»).
     # ASCII-only by design so the built-in Helvetica suffices.
     date_text: str | None = None
@@ -124,6 +156,11 @@ class PdfStamper:
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(page_width_pt, page_height_pt))
         for s in stamps:
+            if s.text is not None:
+                _draw_text_mark(c, s, page_height_pt)
+                continue
+            if s.png_path is None:
+                continue
             width_pt = s.width_mm * mm
             height_pt = width_pt * s.aspect_ratio
             x_pt = s.x_mm * mm
@@ -159,3 +196,66 @@ class PdfStamper:
                 )
         c.save()
         return buf.getvalue()
+
+
+def _mark_lines(s: Stamp, font: str, width_pt: float) -> tuple[list[str], list[str]]:
+    """(caption lines, body lines) of a text mark, wrapped to `width_pt`."""
+    inner = width_pt - 2 * _TEXT_PAD_PT
+    bold = _TEXT_FONT_BOLD if (s.details or s.subtitle) else font
+    caption = simpleSplit(s.text or "", bold, _TEXT_SIZE_PT, inner)
+    if s.subtitle:
+        caption += simpleSplit(s.subtitle, bold, _TEXT_SIZE_PT, inner)
+    body: list[str] = []
+    for label, value in s.details:
+        body.extend(simpleSplit(f"{label}: {value}", font, _TEXT_SIZE_PT, inner))
+    if s.date_text:
+        row = f"{s.date_label}: {s.date_text}" if (s.details or s.subtitle) and s.date_label else s.date_text
+        body.append(row)
+    return caption, body
+
+
+def text_mark_height_mm(
+    text: str, width_mm: float, date_text: str | None = None, details: tuple[tuple[str, str], ...] = ()
+) -> float:
+    """Height of the framed text mark, so the UI can size the placement box."""
+    font = _ensure_text_font()
+    probe = Stamp(
+        page=1,
+        x_mm=0,
+        y_mm=0,
+        width_mm=width_mm,
+        png_path=None,
+        aspect_ratio=0,
+        text=text,
+        date_text=date_text,
+        details=details,
+    )
+    caption, body = _mark_lines(probe, font, width_mm * mm)
+    return ((len(caption) + len(body)) * _TEXT_SIZE_PT * _TEXT_LEADING + 2 * _TEXT_PAD_PT) / mm
+
+
+def _draw_text_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
+    font = _ensure_text_font()
+    width_pt = s.width_mm * mm
+    caption, body = _mark_lines(s, font, width_pt)
+    line_h = _TEXT_SIZE_PT * _TEXT_LEADING
+    height_pt = (len(caption) + len(body)) * line_h + 2 * _TEXT_PAD_PT
+    x_pt = s.x_mm * mm
+    y_bottom = page_height_pt - s.y_mm * mm - height_pt
+    plate = bool(s.details or s.subtitle)
+    c.setLineWidth(1.0 if plate else 0.5)
+    c.setStrokeColorRGB(0.35, 0.35, 0.35)
+    if plate:
+        c.roundRect(x_pt, y_bottom, width_pt, height_pt, _PLATE_RADIUS_PT, stroke=1, fill=0)
+    else:
+        c.rect(x_pt, y_bottom, width_pt, height_pt, stroke=1, fill=0)
+    c.setFillColorRGB(0, 0, 0)
+    y = y_bottom + height_pt - _TEXT_PAD_PT - _TEXT_SIZE_PT
+    c.setFont(_TEXT_FONT_BOLD if plate else font, _TEXT_SIZE_PT)
+    for line in caption:
+        c.drawString(x_pt + _TEXT_PAD_PT, y, line)
+        y -= line_h
+    c.setFont(font, _TEXT_SIZE_PT)
+    for line in body:
+        c.drawString(x_pt + _TEXT_PAD_PT, y, line)
+        y -= line_h

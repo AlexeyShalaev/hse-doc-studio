@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,9 @@ from hse_doc_studio.core.enums import (
     ChatMessageRole,
     CheckSeverity,
     CompileStatus,
+    DetachedFormat,
+    DetachedOrigin,
+    DetachedVerdict,
     DocumentStatus,
     EngineType,
     Lang,
@@ -44,13 +48,16 @@ from hse_doc_studio.core.value_objects import (
     CheckResult,
     ChecksOverride,
     CustomFileOverride,
+    DetachedSignature,
     FormState,
+    FrozenPdf,
     Person,
     ProjectLock,
     RequirementsFormat,
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignerInfo,
 )
 
 
@@ -483,6 +490,7 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
                 "signing_identity_id": slot.signing_identity_id,
                 "sign_mode": slot.sign_mode.value,
                 "sign_reason": slot.sign_reason,
+                "signer": dataclasses.asdict(slot.signer) if slot.signer else None,
             }
             for slot_id, slot in state.slots.items()
         },
@@ -500,7 +508,88 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
             }
             for doc_id, slot_map in state.placements.items()
         },
+        "frozen": {doc_id: dataclasses.asdict(f) for doc_id, f in state.frozen.items()},
+        "detached": {
+            doc_id: {slot_id: _serialize_detached(d) for slot_id, d in slot_map.items()}
+            for doc_id, slot_map in state.detached.items()
+        },
     }
+
+
+def _deserialize_signer(raw: Any) -> SignerInfo | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return SignerInfo(
+            kind=str(raw["kind"]),
+            owner=str(raw["owner"]),
+            cert_id=str(raw.get("cert_id", "")),
+            valid_from=raw.get("valid_from"),
+            valid_to=raw.get("valid_to"),
+            signer_id=str(raw.get("signer_id", "")),
+            level=str(raw.get("level", "")),
+        )
+    except (KeyError, TypeError):
+        return None
+
+
+def _serialize_detached(d: DetachedSignature) -> dict[str, Any]:
+    data = dataclasses.asdict(d)
+    data["format"] = d.format.value
+    data["origin"] = d.origin.value
+    data["verdict"] = d.verdict.value
+    data["notes"] = list(d.notes)
+    return data
+
+
+def _deserialize_frozen(raw: Any) -> dict[str, FrozenPdf]:
+    result: dict[str, FrozenPdf] = {}
+    for doc_id, item in (raw or {}).items() if isinstance(raw, dict) else []:
+        try:
+            result[doc_id] = FrozenPdf(
+                path=str(item["path"]),
+                sha256=str(item["sha256"]),
+                source_sha256=str(item["source_sha256"]),
+                size=int(item["size"]),
+                frozen_at=str(item["frozen_at"]),
+                stamps_digest=str(item.get("stamps_digest", "")),
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return result
+
+
+def _deserialize_detached(raw: Any) -> dict[str, dict[str, DetachedSignature]]:
+    result: dict[str, dict[str, DetachedSignature]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, slot_map in raw.items():
+        if not isinstance(slot_map, dict):
+            continue
+        for slot_id, item in slot_map.items():
+            try:
+                result.setdefault(doc_id, {})[slot_id] = DetachedSignature(
+                    file=str(item["file"]),
+                    format=DetachedFormat(item["format"]),
+                    origin=DetachedOrigin(item["origin"]),
+                    pdf_sha256=str(item["pdf_sha256"]),
+                    verdict=DetachedVerdict(item["verdict"]),
+                    signer=str(item.get("signer", "")),
+                    signer_id=str(item.get("signer_id", "")),
+                    added_at=str(item.get("added_at", "")),
+                    issuer=str(item.get("issuer", "")),
+                    algorithm=str(item.get("algorithm", "")),
+                    signed_at=item.get("signed_at"),
+                    not_before=item.get("not_before"),
+                    not_after=item.get("not_after"),
+                    chain=item.get("chain"),
+                    root_subject=str(item.get("root_subject", "")),
+                    root_fingerprint=str(item.get("root_fingerprint", "")),
+                    notes=tuple(str(n) for n in item.get("notes", ())),
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+    return result
 
 
 def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # noqa: C901
@@ -523,6 +612,7 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
             signing_identity_id=slot_data.get("signing_identity_id"),
             sign_mode=sign_mode,
             sign_reason=str(slot_data.get("sign_reason", "")),
+            signer=_deserialize_signer(slot_data.get("signer")),
         )
     placements: dict[str, dict[str, SignaturePlacement]] = {}
     for doc_id, slot_map in placements_raw.items():
@@ -542,7 +632,12 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
                 sign_date=str(sign_date) if sign_date else None,
             )
         placements[doc_id] = doc_placements
-    return SignaturesState(slots=slots, placements=placements)
+    return SignaturesState(
+        slots=slots,
+        placements=placements,
+        frozen=_deserialize_frozen(data.get("frozen")),
+        detached=_deserialize_detached(data.get("detached")),
+    )
 
 
 # ---------------------------------------------------------------------------

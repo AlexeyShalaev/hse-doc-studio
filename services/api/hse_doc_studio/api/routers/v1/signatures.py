@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import dataclasses
+from pathlib import PurePosixPath
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from hse_doc_studio.api.schemas.signature import (
+    AttachDetachedSignatureResponse,
+    DetachedSignatureResponse,
+    FreezePdfResponse,
+    FrozenPdfResponse,
+    LevelRequest,
+    ManualSignerRequest,
     PlacementResponse,
     ProfileRefResponse,
     RuntimeSlotResponse,
     SignaturesStateResponse,
+    SignerInfoResponse,
+    SignInStudioRequest,
     SlotInfoResponse,
     UpdatePlacementRequest,
     UpdateSlotConfigRequest,
@@ -19,13 +29,44 @@ from hse_doc_studio.api.schemas.signature import (
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.value_objects import (
+    DetachedSignature,
+    FrozenPdf,
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignerInfo,
+)
+from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
+    AttachDetachedSignatureInput,
+    AttachDetachedSignatureOutput,
+    AttachDetachedSignatureUC,
+    CompleteChainInput,
+    CompleteDetachedChainUC,
+    RecheckDetachedSignatureInput,
+    RecheckDetachedSignatureUC,
+)
+from hse_doc_studio.use_cases.signatures.delete_detached_signature import (
+    DeleteDetachedSignatureInput,
+    DeleteDetachedSignatureUC,
 )
 from hse_doc_studio.use_cases.signatures.delete_signature_png import (
     DeleteSignaturePngInput,
     DeleteSignaturePngUC,
+)
+from hse_doc_studio.use_cases.signatures.freeze_pdf import (
+    FreezePdfInput,
+    FreezePdfUC,
+    UnfreezePdfInput,
+    UnfreezePdfUC,
+)
+from hse_doc_studio.use_cases.signatures.get_detached_files import (
+    BuildDetachedPackageInput,
+    BuildDetachedPackageUC,
+    DetachedFileOutput,
+    GetDetachedSignatureFileInput,
+    GetDetachedSignatureFileUC,
+    GetFrozenPdfInput,
+    GetFrozenPdfUC,
 )
 from hse_doc_studio.use_cases.signatures.get_signatures import (
     GetSignaturesInput,
@@ -36,6 +77,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
     GetSignedDocPdfInput,
     GetSignedDocPdfUC,
 )
+from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import (
     UpdateSignaturePlacementInput,
     UpdateSignaturePlacementUC,
@@ -44,6 +86,7 @@ from hse_doc_studio.use_cases.signatures.update_slot_config import (
     UpdateSlotConfigInput,
     UpdateSlotConfigUC,
 )
+from hse_doc_studio.use_cases.signatures.update_slot_signer import UpdateSlotSignerInput, UpdateSlotSignerUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import (
     UploadSignaturePngInput,
     UploadSignaturePngUC,
@@ -60,6 +103,7 @@ def _map_slot(slot: SignatureSlot) -> SlotInfoResponse:
         signing_identity_id=slot.signing_identity_id,
         sign_mode=slot.sign_mode,
         sign_reason=slot.sign_reason,
+        signer=SignerInfoResponse(**dataclasses.asdict(slot.signer)) if slot.signer else None,
     )
 
 
@@ -94,8 +138,58 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
     )
 
 
-def _map_state(state: SignaturesState, runtime_slots: list[RuntimeSlotItem]) -> SignaturesStateResponse:
+def _map_frozen(frozen: FrozenPdf, stale: bool, plate_outdated: bool = False) -> FrozenPdfResponse:
+    return FrozenPdfResponse(
+        sha256=frozen.sha256,
+        size=frozen.size,
+        frozen_at=frozen.frozen_at,
+        stale=stale,
+        plate_outdated=plate_outdated,
+    )
+
+
+def _map_detached(sig: DetachedSignature, frozen: FrozenPdf | None, stale: bool) -> DetachedSignatureResponse:
+    return DetachedSignatureResponse(
+        format=sig.format,
+        origin=sig.origin,
+        verdict=sig.verdict,
+        signer=sig.signer,
+        signer_id=sig.signer_id,
+        issuer=sig.issuer,
+        algorithm=sig.algorithm,
+        signed_at=sig.signed_at,
+        not_before=sig.not_before,
+        not_after=sig.not_after,
+        chain=sig.chain,
+        root_subject=sig.root_subject,
+        root_fingerprint=sig.root_fingerprint,
+        notes=list(sig.notes),
+        added_at=sig.added_at,
+        file_name=PurePosixPath(sig.file).name,
+        current=frozen is not None and sig.pdf_sha256 == frozen.sha256 and not stale,
+    )
+
+
+def _map_state(
+    state: SignaturesState,
+    runtime_slots: list[RuntimeSlotItem],
+    stale_frozen: set[str] | None = None,
+    plate_outdated: set[str] | None = None,
+) -> SignaturesStateResponse:
+    stale_frozen = stale_frozen or set()
+    plate_outdated = plate_outdated or set()
     return SignaturesStateResponse(
+        frozen={
+            doc_id: _map_frozen(f, doc_id in stale_frozen, doc_id in plate_outdated)
+            for doc_id, f in state.frozen.items()
+        },
+        detached={
+            doc_id: {
+                slot_id: _map_detached(sig, state.frozen.get(doc_id), doc_id in stale_frozen)
+                for slot_id, sig in slot_map.items()
+            }
+            for doc_id, slot_map in state.detached.items()
+        },
         slots={sid: _map_slot(slot) for sid, slot in state.slots.items()},
         placements={
             doc_id: {sid: _map_placement(p) for sid, p in slot_map.items()}
@@ -119,7 +213,7 @@ async def get_signatures(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_state(result.state, result.runtime_slots)
+    return _map_state(result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated)
 
 
 @router.patch(
@@ -258,4 +352,270 @@ async def update_slot_config(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_slot(result.slot)
+
+
+def _file_response(result: DetachedFileOutput, media_type: str) -> FileResponse:
+    background = BackgroundTask(result.temp_path.unlink, missing_ok=True) if result.temp_path is not None else None
+    return FileResponse(
+        path=str(result.path), media_type=media_type, filename=result.download_name, background=background
+    )
+
+
+@router.post("/projects/{project_id}/docs/{doc_id}/frozen", response_model=FreezePdfResponse)
+async def freeze_pdf(project_id: UUID, doc_id: str, uc: FromDishka[FreezePdfUC]) -> FreezePdfResponse:
+    try:
+        result = await uc.execute(FreezePdfInput(project_id=project_id, doc_id=doc_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return FreezePdfResponse(frozen=_map_frozen(result.frozen, stale=False), dropped_slots=result.dropped_slots)
+
+
+@router.delete("/projects/{project_id}/docs/{doc_id}/frozen", status_code=204)
+async def unfreeze_pdf(project_id: UUID, doc_id: str, uc: FromDishka[UnfreezePdfUC]) -> None:
+    try:
+        await uc.execute(UnfreezePdfInput(project_id=project_id, doc_id=doc_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/projects/{project_id}/docs/{doc_id}/frozen/pdf")
+async def get_frozen_pdf(project_id: UUID, doc_id: str, uc: FromDishka[GetFrozenPdfUC]) -> FileResponse:
+    try:
+        result = await uc.execute(GetFrozenPdfInput(project_id=project_id, doc_id=doc_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _file_response(result, "application/pdf")
+
+
+@router.get("/projects/{project_id}/docs/{doc_id}/signing-package")
+async def get_signing_package(
+    project_id: UUID,
+    doc_id: str,
+    uc: FromDishka[BuildDetachedPackageUC],
+    mode: str = Query(default="request", pattern="^(request|signed)$"),
+) -> FileResponse:
+    try:
+        result = await uc.execute(
+            BuildDetachedPackageInput(
+                project_id=project_id, doc_id=doc_id, mode="signed" if mode == "signed" else "request"
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _file_response(result, "application/zip")
+
+
+def _map_attached(result: AttachDetachedSignatureOutput) -> AttachDetachedSignatureResponse:
+    return AttachDetachedSignatureResponse(
+        signature=_map_detached(result.signature, None, stale=False).model_copy(update={"current": True}),
+        missing_key_id=result.missing_key_id,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}",
+    response_model=AttachDetachedSignatureResponse,
+)
+async def attach_detached_signature(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[AttachDetachedSignatureUC],
+    file: UploadFile = File(...),
+    public_key: UploadFile | None = File(default=None),
+) -> AttachDetachedSignatureResponse:
+    content = await file.read()
+    key = await public_key.read() if public_key is not None else None
+    try:
+        result = await uc.execute(
+            AttachDetachedSignatureInput(
+                project_id=project_id, doc_id=doc_id, slot_id=slot_id, content=content, public_key=key or None
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_attached(result)
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/recheck",
+    response_model=AttachDetachedSignatureResponse,
+)
+async def recheck_detached_signature(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[RecheckDetachedSignatureUC],
+    public_key: UploadFile | None = File(default=None),
+) -> AttachDetachedSignatureResponse:
+    key = await public_key.read() if public_key is not None else None
+    try:
+        result = await uc.execute(
+            RecheckDetachedSignatureInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id, public_key=key or None)
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_attached(result)
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/complete-chain",
+    response_model=AttachDetachedSignatureResponse,
+)
+async def complete_detached_chain(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[CompleteDetachedChainUC],
+) -> AttachDetachedSignatureResponse:
+    try:
+        result = await uc.execute(CompleteChainInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_attached(result)
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/sign",
+    response_model=AttachDetachedSignatureResponse,
+)
+async def sign_detached_in_studio(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    body: SignInStudioRequest,
+    uc: FromDishka[SignInStudioUC],
+) -> AttachDetachedSignatureResponse:
+    try:
+        result = await uc.execute(
+            SignInStudioInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                slot_id=slot_id,
+                identity_id=body.identity_id,
+                passphrase=body.passphrase,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_attached(AttachDetachedSignatureOutput(signature=result.signature))
+
+
+@router.get("/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/file")
+async def get_detached_signature_file(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[GetDetachedSignatureFileUC],
+) -> FileResponse:
+    try:
+        result = await uc.execute(GetDetachedSignatureFileInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _file_response(result, "application/octet-stream")
+
+
+@router.delete("/projects/{project_id}/docs/{doc_id}/detached/{slot_id}", status_code=204)
+async def delete_detached_signature(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[DeleteDetachedSignatureUC],
+) -> None:
+    try:
+        await uc.execute(DeleteDetachedSignatureInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _signer_result(exc: Exception) -> HTTPException:
+    return HTTPException(status_code=404 if isinstance(exc, NotFoundError) else 400, detail=str(exc))
+
+
+@router.put(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer(
+    project_id: UUID,
+    slot_id: str,
+    body: ManualSignerRequest,
+    uc: FromDishka[UpdateSlotSignerUC],
+) -> SlotInfoResponse:
+    """Signer for the plate: one of the Studio's keys (`identity_id`) or typed-in fields."""
+    manual = None
+    if body.identity_id is None:
+        manual = SignerInfo(
+            kind="manual",
+            owner=body.owner.strip(),
+            cert_id=body.cert_id.strip(),
+            valid_from=body.valid_from,
+            valid_to=body.valid_to,
+            level=body.level,
+        )
+    try:
+        result = await uc.execute(
+            UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, identity_id=body.identity_id, manual=manual)
+        )
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.put(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer/level",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer_level(
+    project_id: UUID,
+    slot_id: str,
+    body: LevelRequest,
+    uc: FromDishka[UpdateSlotSignerUC],
+) -> SlotInfoResponse:
+    try:
+        result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, level=body.level))
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.post(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer/file",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer_from_file(
+    project_id: UUID,
+    slot_id: str,
+    uc: FromDishka[UpdateSlotSignerUC],
+    file: UploadFile = File(...),
+) -> SlotInfoResponse:
+    """Signer for the plate from the signer's public certificate (.cer/.pem) or OpenPGP public key (.asc)."""
+    try:
+        result = await uc.execute(
+            UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, certificate=await file.read())
+        )
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.delete("/projects/{project_id}/signatures/slots/{slot_id}/signer", response_model=SlotInfoResponse)
+async def clear_slot_signer(project_id: UUID, slot_id: str, uc: FromDishka[UpdateSlotSignerUC]) -> SlotInfoResponse:
+    try:
+        result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _map_slot(result.slot)

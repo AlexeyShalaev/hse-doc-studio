@@ -1,8 +1,12 @@
 import { apiClient, parseResp } from "@shared/api";
+import { env } from "@shared/config";
 import type { UpdatePlacementRequest } from "@shared/api/types";
 import {
+  AttachDetachedResponseSchema,
+  FreezePdfResponseSchema,
   SignaturesStateSchema,
   PlacementSchema,
+  SlotInfoSchema,
   UploadSignatureResponseSchema,
 } from "./signatureSchemas";
 
@@ -40,8 +44,154 @@ export const signatureApi = {
       .then(parseResp(UploadSignatureResponseSchema));
   },
 
+  freezePdf: (projectId: string, docId: string) =>
+    apiClient
+      .post(`/projects/${projectId}/docs/${docId}/frozen`)
+      .then(parseResp(FreezePdfResponseSchema)),
+
+  unfreezePdf: (projectId: string, docId: string): Promise<void> =>
+    apiClient
+      .delete(`/projects/${projectId}/docs/${docId}/frozen`)
+      .then(() => undefined),
+
+  attachDetached: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    file: File,
+    publicKey?: File,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (publicKey) formData.append("public_key", publicKey);
+    return apiClient
+      .post(
+        `/projects/${projectId}/docs/${docId}/detached/${slotId}`,
+        formData,
+        {
+          headers: { "Content-Type": null },
+        },
+      )
+      .then(parseResp(AttachDetachedResponseSchema));
+  },
+
+  recheckDetached: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    publicKey?: File,
+  ) => {
+    const formData = new FormData();
+    if (publicKey) formData.append("public_key", publicKey);
+    return apiClient
+      .post(
+        `/projects/${projectId}/docs/${docId}/detached/${slotId}/recheck`,
+        formData,
+        { headers: { "Content-Type": null } },
+      )
+      .then(parseResp(AttachDetachedResponseSchema));
+  },
+
+  completeChain: (projectId: string, docId: string, slotId: string) =>
+    apiClient
+      .post(
+        `/projects/${projectId}/docs/${docId}/detached/${slotId}/complete-chain`,
+      )
+      .then(parseResp(AttachDetachedResponseSchema)),
+
+  trustRootFromChain: (fingerprint: string): Promise<void> =>
+    apiClient
+      .post(`/trusted-roots/from-chain/${fingerprint}`)
+      .then(() => undefined),
+
+  signInStudio: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    identityId: string,
+    passphrase: string,
+  ) =>
+    apiClient
+      .post(`/projects/${projectId}/docs/${docId}/detached/${slotId}/sign`, {
+        identity_id: identityId,
+        passphrase,
+      })
+      .then(parseResp(AttachDetachedResponseSchema)),
+
+  deleteDetached: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(`/projects/${projectId}/docs/${docId}/detached/${slotId}`)
+      .then(() => undefined),
+
+  downloadFrozenPdf: (projectId: string, docId: string) =>
+    apiClient
+      .get(`/projects/${projectId}/docs/${docId}/frozen/pdf`, {
+        responseType: "arraybuffer",
+      })
+      .then((r) => new Uint8Array(r.data as ArrayBuffer)),
+
+  setSignerFromFile: (projectId: string, slotId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post(
+        `/projects/${projectId}/signatures/slots/${slotId}/signer/file`,
+        formData,
+        { headers: { "Content-Type": null } },
+      )
+      .then(parseResp(SlotInfoSchema));
+  },
+
+  setSigner: (
+    projectId: string,
+    slotId: string,
+    data:
+      | { identity_id: string }
+      | {
+          owner: string;
+          cert_id?: string;
+          valid_from?: string | null;
+          valid_to?: string | null;
+        },
+  ) =>
+    apiClient
+      .put(`/projects/${projectId}/signatures/slots/${slotId}/signer`, data)
+      .then(parseResp(SlotInfoSchema)),
+
+  setSignerLevel: (projectId: string, slotId: string, level: string) =>
+    apiClient
+      .put(`/projects/${projectId}/signatures/slots/${slotId}/signer/level`, {
+        level,
+      })
+      .then(parseResp(SlotInfoSchema)),
+
+  clearSigner: (projectId: string, slotId: string) =>
+    apiClient
+      .delete(`/projects/${projectId}/signatures/slots/${slotId}/signer`)
+      .then(parseResp(SlotInfoSchema)),
+
   deletePng: (projectId: string, slotId: string): Promise<void> =>
     apiClient
       .delete(`/projects/${projectId}/signatures/slots/${slotId}/png`)
       .then(() => undefined),
+};
+
+// Прямые ссылки для скачивания (браузер сам ставит имя файла из заголовка).
+const docBase = (projectId: string, docId: string): string =>
+  `${env.VITE_API_BASE_URL}/api/v1/projects/${projectId}/docs/${docId}`;
+
+export const signatureDownloadUrls = {
+  frozenPdf: (projectId: string, docId: string): string =>
+    `${docBase(projectId, docId)}/frozen/pdf`,
+  signingPackage: (
+    projectId: string,
+    docId: string,
+    mode: "request" | "signed",
+  ): string => `${docBase(projectId, docId)}/signing-package?mode=${mode}`,
+  detachedFile: (projectId: string, docId: string, slotId: string): string =>
+    `${docBase(projectId, docId)}/detached/${slotId}/file`,
 };

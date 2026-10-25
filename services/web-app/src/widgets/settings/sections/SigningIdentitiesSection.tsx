@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import {
+  Download,
   FileUp,
+  KeyRound,
   Plus,
   ShieldCheck,
   ShieldOff,
@@ -13,17 +15,26 @@ import {
   useCreateSelfSigned,
   useImportPkcs12,
   useDeleteSigningIdentity,
+  publicKeyUrl,
   type SigningIdentity,
   type SigningIdentityKind,
 } from "@entities/signing-identity";
 import { Spinner } from "@shared/ui/Spinner";
 import { localeTag, toast } from "@shared/lib";
 import { SettingHead } from "./Setting";
+import { formatFingerprint } from "./formatFingerprint";
+import {
+  OpenPgpCreateForm,
+  OpenPgpImportForm,
+  OpenPgpStatus,
+  TrustedRootsBlock,
+} from "./SigningExtras";
 
 const KIND_LABEL: Record<SigningIdentityKind, string> = {
   self_signed: "signing.kindSelfSigned",
   pkcs12: "signing.kindPkcs12",
   pkcs11: "signing.kindPkcs11",
+  openpgp: "signing.kindOpenpgp",
 };
 
 const formatDate = (iso: string): string => {
@@ -330,7 +341,20 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
             {expired ? t("signing.expired") : t("signing.validUntil")}
             {formatDate(identity.not_after)}
           </span>
-          {!identity.trusted && (
+          {identity.kind === "openpgp" && identity.fingerprint && (
+            <>
+              <span style={{ margin: "0 5px" }}>·</span>
+              <span className="mono" title={identity.fingerprint}>
+                {formatFingerprint(identity.fingerprint.slice(-16))}
+              </span>
+              {identity.protected && (
+                <span style={{ marginLeft: 6, color: "var(--fg-3)" }}>
+                  {t("signing.openpgp.protected")}
+                </span>
+              )}
+            </>
+          )}
+          {identity.kind !== "openpgp" && !identity.trusted && (
             <>
               <span style={{ margin: "0 5px" }}>·</span>
               <span style={{ color: "var(--fg-3)" }}>
@@ -340,6 +364,16 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
           )}
         </div>
       </div>
+      {identity.kind === "openpgp" && (
+        <a
+          className="btn btn-ghost icon"
+          href={publicKeyUrl(identity.id)}
+          title={t("signing.openpgp.exportPublic")}
+          style={{ padding: 4, color: "var(--fg-2)" }}
+        >
+          <Download size={14} />
+        </a>
+      )}
       <button
         className="btn btn-ghost icon"
         onClick={handleDelete}
@@ -355,7 +389,7 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
 
 // ── Main section ──────────────────────────────────────────────────────────────
 
-type Mode = "none" | "self-signed" | "pkcs12";
+type Mode = "none" | "self-signed" | "pkcs12" | "openpgp" | "openpgp-import";
 
 export const SigningIdentitiesSection = () => {
   const { t } = useTranslation("settings");
@@ -385,8 +419,30 @@ export const SigningIdentitiesSection = () => {
         </div>
       )}
 
+      <OpenPgpStatus />
+
       {mode === "none" && (
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setMode("openpgp");
+            }}
+            style={{ fontSize: 12, gap: 6 }}
+          >
+            <KeyRound size={14} />
+            {t("signing.openpgp.create")}
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setMode("openpgp-import");
+            }}
+            style={{ fontSize: 12, gap: 6 }}
+          >
+            <Upload size={14} />
+            {t("signing.openpgp.import")}
+          </button>
           <button
             className="btn btn-secondary"
             onClick={() => {
@@ -410,6 +466,20 @@ export const SigningIdentitiesSection = () => {
         </div>
       )}
 
+      {mode === "openpgp" && (
+        <OpenPgpCreateForm
+          onClose={() => {
+            setMode("none");
+          }}
+        />
+      )}
+      {mode === "openpgp-import" && (
+        <OpenPgpImportForm
+          onClose={() => {
+            setMode("none");
+          }}
+        />
+      )}
       {mode === "self-signed" && (
         <SelfSignedForm
           onClose={() => {
@@ -424,6 +494,7 @@ export const SigningIdentitiesSection = () => {
           }}
         />
       )}
+      <TrustedRootsBlock />
     </div>
   );
 };

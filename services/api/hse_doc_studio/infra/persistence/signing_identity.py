@@ -105,6 +105,8 @@ class JsonSigningIdentityRepository:
             "not_after": r.not_after.isoformat(),
             "trusted": r.trusted,
             "created_at": r.created_at.isoformat(),
+            "fingerprint": r.fingerprint,
+            "protected": r.protected,
         }
 
     @staticmethod
@@ -117,4 +119,6 @@ class JsonSigningIdentityRepository:
             not_after=datetime.fromisoformat(d["not_after"]).replace(tzinfo=timezone.utc),
             trusted=bool(d.get("trusted", False)),
             created_at=datetime.fromisoformat(d["created_at"]).replace(tzinfo=timezone.utc),
+            fingerprint=d.get("fingerprint"),
+            protected=bool(d.get("protected", False)),
         )

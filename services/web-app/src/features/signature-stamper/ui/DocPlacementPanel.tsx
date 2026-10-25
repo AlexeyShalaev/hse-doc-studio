@@ -1,7 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ExternalLink, ImageOff, MapPin, User } from "lucide-react";
 import { pickLocalized } from "@shared/lib";
+import {
+  FreezeCard,
+  SignerPlateEditor,
+  SlotDetachedSignature,
+} from "./DetachedSignatureBlocks";
 import type {
+  SignMode,
   SignatureProfileRef,
   SignaturesStateResponse,
   SignatureSlotDefResponse,
@@ -17,7 +23,10 @@ export type PlacementSlot = Omit<SignatureSlotDefResponse, "required_by"> & {
 };
 
 export type DocPlacementPanelProps = {
+  projectId: string;
   docId: string;
+  // Есть ли собранный PDF: без него нельзя зафиксировать файл на подпись.
+  pdfAvailable: boolean;
   slotDefs: readonly PlacementSlot[];
   state: SignaturesStateResponse;
   lang: string;
@@ -30,10 +39,16 @@ export type DocPlacementPanelProps = {
   onPlacementChange: (slotId: string, patch: UpdatePlacementRequest) => void;
   onJumpToPage: (page: number) => void;
   onOpenProjectSignatures: () => void;
+  // Переключает слот между картинкой и открепленной ЭП (надпись + файл подписи).
+  onSlotModeChange: (slotId: string, mode: SignMode) => void;
 };
 
+const MIN_CAPTION_WIDTH_MM = 70;
+
 export const DocPlacementPanel = ({
+  projectId,
   docId,
+  pdfAvailable,
   slotDefs,
   state,
   lang,
@@ -43,9 +58,16 @@ export const DocPlacementPanel = ({
   onPlacementChange,
   onJumpToPage,
   onOpenProjectSignatures,
+  onSlotModeChange,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
+  const frozen = state.frozen?.[docId];
+  const docSignatures = state.detached?.[docId] ?? {};
+  const hasDetachedSlot =
+    docSlots.some(
+      (slot) => state.slots[slot.id]?.sign_mode === "detached_text",
+    ) || frozen !== undefined;
 
   if (docSlots.length === 0) {
     return (
@@ -80,12 +102,22 @@ export const DocPlacementPanel = ({
           {t("docPlacement.managePng")}
         </button>
       </div>
+      {hasDetachedSlot && (
+        <FreezeCard
+          projectId={projectId}
+          docId={docId}
+          frozen={frozen}
+          signatureCount={Object.keys(docSignatures).length}
+          pdfAvailable={pdfAvailable}
+        />
+      )}
       {docSlots.map((slot, i) => {
         const slotInfo = state.slots[slot.id];
         const placement = state.placements[docId]?.[slot.id];
         const label = pickLocalized(slot.label, lang, slot.id);
         const personName = personNameForSlot(slot.id);
-        const hasPng = slotInfo?.png_path != null;
+        const isDetached = slotInfo?.sign_mode === "detached_text";
+        const hasPng = slotInfo?.png_path != null || isDetached;
         const isEnabled = Boolean(placement?.enabled);
         const placedPage = placement?.page ?? slot.default_placement.page;
         const isOnThisPage = placedPage === currentPage;
@@ -178,6 +210,17 @@ export const DocPlacementPanel = ({
                       onPlacementChange(slot.id, {
                         enabled: next,
                         ...(next && !isEnabled ? { page: currentPage } : {}),
+                        // Надпись шире картинки: на узкой рамке она переносится
+                        // на 4-5 строк, поэтому подпись не меньше 70 мм.
+                        ...(next && !isEnabled && isDetached
+                          ? {
+                              width_mm: Math.max(
+                                placement?.width_mm ??
+                                  slot.default_placement.width_mm,
+                                MIN_CAPTION_WIDTH_MM,
+                              ),
+                            }
+                          : {}),
                       });
                     }}
                   />
@@ -191,6 +234,41 @@ export const DocPlacementPanel = ({
                   <ImageOff size={11} /> {t("docPlacement.noPng")}
                 </span>
               )}
+            </div>
+
+            <div
+              className="flex items-center"
+              style={{ gap: 6, paddingLeft: 42, fontSize: 10.5 }}
+              title={t("detached.mode.hint")}
+            >
+              <span className="dim">{t("detached.mode.title")}</span>
+              {(["image", "detached_text"] as const).map((mode) => {
+                const active =
+                  (isDetached ? "detached_text" : "image") === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={active ? "btn xs" : "btn xs ghost"}
+                    aria-pressed={active}
+                    style={
+                      active
+                        ? {
+                            background: "var(--accent-soft)",
+                            color: "var(--accent)",
+                          }
+                        : undefined
+                    }
+                    onClick={() => {
+                      if (!active) onSlotModeChange(slot.id, mode);
+                    }}
+                  >
+                    {mode === "image"
+                      ? t("detached.mode.image")
+                      : t("detached.mode.detached")}
+                  </button>
+                );
+              })}
             </div>
 
             {hasPng && isEnabled && (
@@ -267,6 +345,27 @@ export const DocPlacementPanel = ({
                   </>
                 )}
               </div>
+            )}
+
+            {isDetached && (
+              <SignerPlateEditor
+                projectId={projectId}
+                slotId={slot.id}
+                signer={slotInfo?.signer}
+                personName={personName}
+              />
+            )}
+
+            {isDetached && (
+              <SlotDetachedSignature
+                projectId={projectId}
+                docId={docId}
+                slotId={slot.id}
+                label={label}
+                personName={personName}
+                frozen={frozen}
+                signature={docSignatures[slot.id]}
+              />
             )}
 
             {!hasPng && (

@@ -5,7 +5,18 @@ export const SignModeSchema = z.enum([
   "image_crypto",
   "crypto_invisible",
   "detached",
+  "detached_text",
 ]);
+
+export const SignerInfoSchema = z.object({
+  kind: z.enum(["x509", "openpgp", "manual"]),
+  owner: z.string(),
+  cert_id: z.string(),
+  valid_from: z.string().nullable(),
+  valid_to: z.string().nullable(),
+  signer_id: z.string(),
+  level: z.string().optional().default(""),
+});
 
 export const SlotInfoSchema = z.object({
   png_path: z.string().nullable(),
@@ -14,6 +25,7 @@ export const SlotInfoSchema = z.object({
   signing_identity_id: z.string().uuid().nullable().optional().default(null),
   sign_mode: SignModeSchema.optional().default("image"),
   sign_reason: z.string().optional().default(""),
+  signer: SignerInfoSchema.nullish().default(null),
 });
 
 export const PlacementSchema = z.object({
@@ -56,9 +68,58 @@ export const RuntimeSignatureSlotSchema = z.object({
   owner: z.string().nullish().default(null),
 });
 
+export const DetachedVerdictSchema = z.enum([
+  "valid",
+  "invalid",
+  "unverified",
+  "unknown_key",
+]);
+
+export const FrozenPdfSchema = z.object({
+  sha256: z.string(),
+  size: z.number(),
+  frozen_at: z.string(),
+  stale: z.boolean(),
+  plate_outdated: z.boolean().optional().default(false),
+});
+
+export const DetachedSignatureSchema = z.object({
+  format: z.enum(["openpgp", "cms"]),
+  origin: z.enum(["uploaded", "studio"]),
+  verdict: DetachedVerdictSchema,
+  signer: z.string(),
+  signer_id: z.string(),
+  issuer: z.string(),
+  algorithm: z.string(),
+  signed_at: z.string().nullable(),
+  not_before: z.string().nullable(),
+  not_after: z.string().nullable(),
+  chain: z.string().nullable(),
+  root_subject: z.string().optional().default(""),
+  root_fingerprint: z.string().optional().default(""),
+  notes: z.array(z.string()),
+  added_at: z.string(),
+  file_name: z.string(),
+  current: z.boolean(),
+});
+
+export const FreezePdfResponseSchema = z.object({
+  frozen: FrozenPdfSchema,
+  dropped_slots: z.array(z.string()),
+});
+
+export const AttachDetachedResponseSchema = z.object({
+  signature: DetachedSignatureSchema,
+  missing_key_id: z.string().nullish().default(null),
+});
+
 export const SignaturesStateSchema = z.object({
   slots: z.record(z.string(), SlotInfoSchema),
   placements: z.record(z.string(), z.record(z.string(), PlacementSchema)),
+  frozen: z.record(z.string(), FrozenPdfSchema).default({}),
+  detached: z
+    .record(z.string(), z.record(z.string(), DetachedSignatureSchema))
+    .default({}),
   runtime_slots: z.array(RuntimeSignatureSlotSchema).default([]),
 });
 

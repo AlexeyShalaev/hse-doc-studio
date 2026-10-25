@@ -1,10 +1,17 @@
 import { apiClient, parseResp } from "@shared/api";
+import { env } from "@shared/config";
 import { z } from "zod";
 import type {
   CreateSelfSignedRequest,
+  GenerateOpenPgpKeyRequest,
   UpdateSlotConfigRequest,
 } from "./signingIdentitySchemas";
-import { SigningIdentitySchema } from "./signingIdentitySchemas";
+import {
+  ImportOpenPgpKeyResponseSchema,
+  OpenPgpKeysSchema,
+  SigningIdentitySchema,
+  TrustedRootSchema,
+} from "./signingIdentitySchemas";
 
 // Inline schema matching SlotInfoResponse — avoids cross-entity imports (FSD).
 const SlotInfoResponseSchema = z.object({
@@ -13,7 +20,13 @@ const SlotInfoResponseSchema = z.object({
   natural_height_px: z.number().nullable(),
   signing_identity_id: z.string().uuid().nullable().optional().default(null),
   sign_mode: z
-    .enum(["image", "image_crypto", "crypto_invisible", "detached"])
+    .enum([
+      "image",
+      "image_crypto",
+      "crypto_invisible",
+      "detached",
+      "detached_text",
+    ])
     .optional()
     .default("image"),
   sign_reason: z.string().optional().default(""),
@@ -48,6 +61,42 @@ export const signingIdentityApi = {
       .then(parseResp(SigningIdentitySchema));
   },
 
+  generateOpenPgp: (data: GenerateOpenPgpKeyRequest) =>
+    apiClient
+      .post("/signing-identities/openpgp/generate", data)
+      .then(parseResp(SigningIdentitySchema)),
+
+  importOpenPgp: (file: File, passphrase?: string, label?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (passphrase) formData.append("passphrase", passphrase);
+    if (label) formData.append("label", label);
+    return apiClient
+      .post("/signing-identities/openpgp/import", formData, {
+        headers: { "Content-Type": null },
+      })
+      .then(parseResp(ImportOpenPgpKeyResponseSchema));
+  },
+
+  listOpenPgpKeys: () =>
+    apiClient
+      .get("/signing-identities/openpgp/keys")
+      .then(parseResp(OpenPgpKeysSchema)),
+
+  listTrustedRoots: () =>
+    apiClient.get("/trusted-roots").then(parseResp(z.array(TrustedRootSchema))),
+
+  addTrustedRoot: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post("/trusted-roots", formData, { headers: { "Content-Type": null } })
+      .then(parseResp(TrustedRootSchema));
+  },
+
+  deleteTrustedRoot: (fingerprint: string): Promise<void> =>
+    apiClient.delete(`/trusted-roots/${fingerprint}`).then(() => undefined),
+
   delete: (id: string): Promise<void> =>
     apiClient.delete(`/signing-identities/${id}`).then(() => undefined),
 
@@ -60,3 +109,6 @@ export const signingIdentityApi = {
       .patch(`/projects/${projectId}/signatures/slots/${slotId}/config`, data)
       .then(parseResp(SlotInfoResponseSchema)),
 };
+
+export const publicKeyUrl = (identityId: string): string =>
+  `${env.VITE_API_BASE_URL}/api/v1/signing-identities/${identityId}/public-key`;
