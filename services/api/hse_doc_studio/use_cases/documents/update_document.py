@@ -23,6 +23,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     instantiate_missing_doc_files,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService, extend_template_base
 
 logger = structlog.get_logger()
 
@@ -57,10 +58,12 @@ class UpdateDocumentUC:
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         template_renderer: TemplateRenderer,
+        base_service: TemplateBaseService | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._template_repo = template_repo
         self._template_renderer = template_renderer
+        self._base_service = base_service
         self._template_service = ProjectTemplateService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -122,13 +125,15 @@ class UpdateDocumentUC:
         # Best-effort материализация недостающих файлов варианта: сбой (нет
         # пака на диске и т.п.) не должен ронять PATCH — выбор уже применён.
         try:
-            instantiate_missing_doc_files(
+            created = instantiate_missing_doc_files(
                 project=project,
                 version=version,
                 template_repo=self._template_repo,
                 renderer=self._template_renderer,
                 doc=doc,
             )
+            if created:
+                extend_template_base(self._base_service, project, version)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "variant switch: materialisation failed",

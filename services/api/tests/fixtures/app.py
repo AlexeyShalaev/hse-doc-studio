@@ -7,6 +7,7 @@ from dishka import AsyncContainer, Provider, Scope, make_async_container, provid
 from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI, Request
 from hse_doc_studio.api.config import settings as app_settings
+from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.agent.protocols import IAgentProvider
 from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOllamaRuntime
@@ -222,6 +223,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     environment: IEnvironmentProbe | None = None,
     mount_probe: IMountProbe | None = None,
     setup_applier: ISetupApplier | None = None,
+    packs_dir: Path | None = None,
 ) -> AsyncContainer:
     # A handful of providers (font store, office-editor JWT secret, compile host
     # mounts, the agent loop's rules file) read the module-level `settings.data_dir`
@@ -250,7 +252,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
 
         @provide
         def get_template_repo(self) -> ITemplateRepository:
-            repo = YamlTemplateRepository(_PACKS_DIR)
+            repo = YamlTemplateRepository(packs_dir or _PACKS_DIR)
             repo.load()
             return repo
 
@@ -424,6 +426,7 @@ def create_test_app(container: AsyncContainer) -> FastAPI:
         return await call_next(request)
 
     app.include_router(api_router)
+    install_exception_handlers(app)
     setup_dishka(container, app)
     return app
 

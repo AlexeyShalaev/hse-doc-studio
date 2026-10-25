@@ -39,7 +39,6 @@ from hse_doc_studio.core.system_capacity import (
 )
 from hse_doc_studio.core.team import doc_base_dir
 from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
-from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.checks.runner import CheckRunner
@@ -70,6 +69,7 @@ from hse_doc_studio.use_cases.languagetool.list_languagetool_images import (
 from hse_doc_studio.use_cases.office_services.list_office_service_images import (
     resolve_active_office_image,
 )
+from hse_doc_studio.use_cases.vcs.excludes import project_vcs_exclude
 
 logger = structlog.get_logger()
 
@@ -756,7 +756,8 @@ class TriggerCompileUC:
             message = f"Сборка: {doc_id}{pages_part}"
             async with self._vcs_locks.for_folder(project_folder):
                 if not self._vcs_service.is_initialized(project):
-                    await asyncio.to_thread(self._vcs_service.init, project, list(DEFAULT_VCS_EXCLUDE))
+                    exclude = project_vcs_exclude(project, self._template_repo)
+                    await asyncio.to_thread(self._vcs_service.init, project, exclude)
                 await asyncio.to_thread(
                     lambda: self._vcs_service.commit(
                         project,

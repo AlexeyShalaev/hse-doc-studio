@@ -58,6 +58,15 @@ export const ProjectResponseSchema = z.object({
   checks_override: ChecksOverrideSchema.optional(),
   // Team mode: whether the shared/ docs group exists. Old backends omit it.
   shared_enabled: z.boolean().default(true),
+  // Что эта Студия может делать с проектом (только в GET /projects/{id}).
+  // mode ∈ full | read_only | files_only; reasons — коды причин ограничения.
+  access: z
+    .object({
+      mode: z.string(),
+      reasons: z.array(z.string()).default([]),
+      required_studio: z.string().nullish(),
+    })
+    .optional(),
 });
 
 export const CreateProjectRequestSchema = z.object({

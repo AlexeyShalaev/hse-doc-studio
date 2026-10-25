@@ -55,6 +55,12 @@ from hse_doc_studio.core.setup import (
     ISetupApplier,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_update.protocols import (
+    IMergeEngine,
+    ITemplateBaseStore,
+    ITemplateTrackingRepository,
+    IUpdateJournalRepository,
+)
 from hse_doc_studio.core.update.repositories import (
     ISelfUpdateGateway,
     IUpdateCheckRepository,
@@ -278,6 +284,7 @@ from hse_doc_studio.use_cases.projects.connect_project import ConnectProjectUC
 # --- Projects ---
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
+from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC, ProjectAccessService
 from hse_doc_studio.use_cases.projects.get_project_suggestions import (
     GetProjectSuggestionsUC,
 )
@@ -355,6 +362,18 @@ from hse_doc_studio.use_cases.system.cleanup_docker import (
 from hse_doc_studio.use_cases.system.get_docker_disk_usage import GetDockerDiskUsageUC
 from hse_doc_studio.use_cases.system.get_update_status import GetUpdateStatusUC
 from hse_doc_studio.use_cases.system.list_versions import ListVersionsUC
+from hse_doc_studio.use_cases.template_update.apply_template_update import ApplyTemplateUpdateUC
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+from hse_doc_studio.use_cases.template_update.compare_with_template import (
+    CompareWithTemplateUC,
+    GetTemplateFileDiffUC,
+)
+from hse_doc_studio.use_cases.template_update.get_template_update_status import GetTemplateUpdateStatusUC
+from hse_doc_studio.use_cases.template_update.plan_template_update import PlanTemplateUpdateUC
+from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
+from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
+from hse_doc_studio.use_cases.template_update.revert_template_update import RevertTemplateUpdateUC
+from hse_doc_studio.use_cases.template_update.set_template_tracking import SetTemplateTrackingUC
 
 # --- VCS (ProjectVCS / "Версии") ---
 from hse_doc_studio.use_cases.vcs.create_vcs_snapshot import CreateVcsSnapshotUC
@@ -415,6 +434,7 @@ class UseCaseProvider(Provider):
         template_service: ProjectTemplateService,
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
+        base_service: TemplateBaseService,
     ) -> CreateProjectUC:
         return CreateProjectUC(
             project_repo=project_repo,
@@ -423,6 +443,7 @@ class UseCaseProvider(Provider):
             template_service=template_service,
             template_renderer=template_renderer,
             vcs_service=vcs_service,
+            base_service=base_service,
         )
 
     @provide
@@ -433,6 +454,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
+        base_service: TemplateBaseService,
     ) -> UpdateTeamSetUC:
         return UpdateTeamSetUC(
             project_repo=project_repo,
@@ -440,6 +462,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             template_renderer=template_renderer,
             vcs_service=vcs_service,
+            base_service=base_service,
         )
 
     @provide
@@ -448,11 +471,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         vcs_service: IVcsService,
+        template_repo: ITemplateRepository,
     ) -> ConnectProjectUC:
         return ConnectProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             vcs_service=vcs_service,
+            template_repo=template_repo,
         )
 
     @provide
@@ -541,11 +566,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        base_service: TemplateBaseService,
     ) -> InstantiateNdaUC:
         return InstantiateNdaUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
+            base_service=base_service,
         )
 
     @provide
@@ -596,12 +623,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         template_renderer: TemplateRenderer,
+        base_service: TemplateBaseService,
     ) -> UpdateDocumentUC:
         return UpdateDocumentUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             template_renderer=template_renderer,
+            base_service=base_service,
         )
 
     @provide
@@ -860,8 +889,9 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         vcs_service: IVcsService,
+        template_repo: ITemplateRepository,
     ) -> EnsureVcsUC:
-        return EnsureVcsUC(project_repo, project_index_repo, vcs_service)
+        return EnsureVcsUC(project_repo, project_index_repo, vcs_service, template_repo)
 
     @provide
     def get_get_vcs_status_uc(
@@ -908,8 +938,11 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         changelog_repo: IChangeLogRepository,
         vcs_locks: IVcsFolderLocks,
+        template_repo: ITemplateRepository,
     ) -> CreateVcsSnapshotUC:
-        return CreateVcsSnapshotUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks)
+        return CreateVcsSnapshotUC(
+            project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks, template_repo
+        )
 
     @provide
     def get_restore_vcs_uc(
@@ -921,6 +954,136 @@ class UseCaseProvider(Provider):
         vcs_locks: IVcsFolderLocks,
     ) -> RestoreVcsUC:
         return RestoreVcsUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks)
+
+    # ------------------------------------------------------------------ Template updates
+
+    @provide
+    def get_project_access_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        access_service: ProjectAccessService,
+    ) -> GetProjectAccessUC:
+        return GetProjectAccessUC(project_repo, project_index_repo, access_service)
+
+    @provide
+    def get_template_update_status_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        tracking_repo: ITemplateTrackingRepository,
+        journal_repo: IUpdateJournalRepository,
+    ) -> GetTemplateUpdateStatusUC:
+        return GetTemplateUpdateStatusUC(project_repo, project_index_repo, template_repo, tracking_repo, journal_repo)
+
+    @provide
+    def get_plan_template_update_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        planner: TemplateUpdatePlanner,
+        vcs_locks: IVcsFolderLocks,
+    ) -> PlanTemplateUpdateUC:
+        return PlanTemplateUpdateUC(project_repo, project_index_repo, planner, vcs_locks)
+
+    @provide
+    def get_apply_template_update_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        planner: TemplateUpdatePlanner,
+        base_service: TemplateBaseService,
+        base_store: ITemplateBaseStore,
+        tracking_repo: ITemplateTrackingRepository,
+        journal_repo: IUpdateJournalRepository,
+        vcs_service: IVcsService,
+        vcs_locks: IVcsFolderLocks,
+    ) -> ApplyTemplateUpdateUC:
+        return ApplyTemplateUpdateUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            template_repo=template_repo,
+            planner=planner,
+            base_service=base_service,
+            base_store=base_store,
+            tracking_repo=tracking_repo,
+            journal_repo=journal_repo,
+            vcs_service=vcs_service,
+            vcs_locks=vcs_locks,
+        )
+
+    @provide
+    def get_revert_template_update_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        base_store: ITemplateBaseStore,
+        merge_engine: IMergeEngine,
+        tracking_repo: ITemplateTrackingRepository,
+        journal_repo: IUpdateJournalRepository,
+        vcs_service: IVcsService,
+        vcs_locks: IVcsFolderLocks,
+    ) -> RevertTemplateUpdateUC:
+        return RevertTemplateUpdateUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            template_repo=template_repo,
+            base_store=base_store,
+            merge_engine=merge_engine,
+            tracking_repo=tracking_repo,
+            journal_repo=journal_repo,
+            vcs_service=vcs_service,
+            vcs_locks=vcs_locks,
+        )
+
+    @provide
+    def get_compare_with_template_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        base_service: TemplateBaseService,
+        tracking_repo: ITemplateTrackingRepository,
+        vcs_locks: IVcsFolderLocks,
+    ) -> CompareWithTemplateUC:
+        return CompareWithTemplateUC(
+            project_repo, project_index_repo, template_repo, base_service, tracking_repo, vcs_locks
+        )
+
+    @provide
+    def get_template_file_diff_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        base_service: TemplateBaseService,
+        planner: TemplateUpdatePlanner,
+        vcs_locks: IVcsFolderLocks,
+    ) -> GetTemplateFileDiffUC:
+        return GetTemplateFileDiffUC(project_repo, project_index_repo, template_repo, base_service, planner, vcs_locks)
+
+    @provide
+    def get_set_template_tracking_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        tracking_repo: ITemplateTrackingRepository,
+    ) -> SetTemplateTrackingUC:
+        return SetTemplateTrackingUC(project_repo, project_index_repo, tracking_repo)
+
+    @provide
+    def get_recover_template_updates_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        journal_repo: IUpdateJournalRepository,
+        base_store: ITemplateBaseStore,
+        vcs_service: IVcsService,
+    ) -> RecoverTemplateUpdatesUC:
+        return RecoverTemplateUpdatesUC(project_repo, project_index_repo, journal_repo, base_store, vcs_service)
 
     @provide
     def get_get_vcs_settings_uc(

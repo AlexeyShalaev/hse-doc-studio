@@ -1,0 +1,114 @@
+{
+  "section": {
+    "title": "Template version",
+    "current": "The project is on version {{version}}",
+    "released": "released",
+    "draft": "draft",
+    "digestMismatch": "The project was created by a Studio build with different contents of this template version: comparing with the template may show extra edits.",
+    "upToDate": "This is the latest template version.",
+    "available": "Available updates",
+    "review": "Review the update…",
+    "breaking": "Needs attention",
+    "lastUpdate": "Last update: {{from}} → {{to}}",
+    "revert": "Revert the update",
+    "revertConfirmTitle": "Revert the template update?",
+    "revertConfirmText": "Files the update changed go back to their previous content and the project returns to version {{version}}. Edits you made after the update stay: where they overlap the update, the file is left alone.",
+    "revertDone": "The update was reverted",
+    "revertKept_one": "{{count}} file left as is: you edited it after the update",
+    "revertKept_other": "{{count}} files left as is: you edited them after the update",
+    "markers": "These files still contain conflict markers (<<<<<<<) — resolve them, otherwise the document won't build:",
+    "inProgress": "A template update is running…"
+  },
+  "class": {
+    "patch": "fixes",
+    "minor": "new features",
+    "major": "new edition"
+  },
+  "compare": {
+    "title": "Compare with the template",
+    "hint": "Which template files you edited or deleted. Updates merge your edits with the template's changes.",
+    "show": "Show my edits",
+    "none": "You haven't changed any template files.",
+    "modified": "modified",
+    "deleted": "deleted",
+    "approximate": "approximate",
+    "approximateHint": "This file's base was reconstructed approximately: some of the \"edits\" may be project data (names, topic) filled in at creation.",
+    "untrack": "Stop tracking",
+    "untrackHint": "Template updates will no longer touch this file",
+    "track": "Track again",
+    "ignored": "not tracked"
+  },
+  "card": {
+    "title": "Template fixes",
+    "text": "Version {{version}} of your project's template is out.",
+    "review": "Review and update",
+    "dismiss": "Not now"
+  },
+  "dialog": {
+    "title": "Template update {{from}} → {{to}}",
+    "loading": "Comparing your project with the new template version…",
+    "notes": "What's new",
+    "nothing": "The update changes no project files: only the new template version applies (checks, submission profiles).",
+    "files": "Files",
+    "cancel": "Cancel",
+    "apply": "Update",
+    "applying": "Updating…",
+    "applied": "The project is updated to version {{version}}",
+    "appliedMarkers": "Resolve the conflicts in the marked files — they won't build until then",
+    "outdated": "The project changed while you were reviewing. The preview is refreshed — please check again.",
+    "safety": "Before updating, the Studio saves a project snapshot in Versions, and the update can be reverted.",
+    "selectFile": "Select a file to see its changes",
+    "binary": "Binary file — no diff available; you can only pick one version as a whole.",
+    "provenance": {
+      "recorded": "",
+      "root": "The comparison base was reconstructed from the project history.",
+      "approximate": "The project's creation history is missing: the base was reconstructed approximately, so there may be more conflicts than actual edits."
+    }
+  },
+  "count": {
+    "update": "will update",
+    "merge": "will merge with your edits",
+    "conflict": "conflicts",
+    "add": "new",
+    "delete": "removed by the template",
+    "orphan": "kept for you",
+    "user_deleted": "deleted by you",
+    "ignored": "not tracked"
+  },
+  "action": {
+    "update": "update",
+    "merge": "merge",
+    "conflict": "conflict",
+    "add": "new",
+    "delete": "remove",
+    "orphan": "keep",
+    "user_deleted": "stays deleted",
+    "ignored": "not tracked"
+  },
+  "resolution": {
+    "label": "Decision",
+    "mine": "Keep mine",
+    "theirs": "Take the template's",
+    "markers": "Merge with markers"
+  },
+  "view": {
+    "template": "Template changes",
+    "mine": "My edits",
+    "result": "Result"
+  },
+  "warning": {
+    "approximate_base": "The comparison base was reconstructed approximately — some conflicts may be false.",
+    "frozen_documents": "The update changes documents frozen for signing or already signed ({{docs}}): signatures will be outdated after a rebuild. If a document is already submitted, update after the checkpoint.",
+    "signature_placements": "The template changed documents with placed signatures ({{docs}}): after building, check the page and position of each signature.",
+    "team_project": "Team project: teammates update their own projects — agree on moving to the same version."
+  },
+  "access": {
+    "readOnly": "The project is read-only",
+    "filesOnly": "This Studio version can't read the project data — only files are available",
+    "schema": "The project was saved by a newer Studio{{required}}.",
+    "template": "Template version {{version}} is not available in this Studio{{required}}.",
+    "updating": "The project template is being updated.",
+    "requiredSuffix": " (needs {{version}} or newer)",
+    "hint": "Update the Studio in Settings → About. You can return the project to an earlier snapshot in Versions."
+  }
+}

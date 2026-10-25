@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal
@@ -45,9 +46,12 @@ from hse_doc_studio.core.enums import (
     MetaFieldType,
     RequiredAt,
     RequirementFormatKind,
+    TemplateUpdateClass,
     TemplateVersionStatus,
 )
+from hse_doc_studio.core.template_versions import MANIFEST_FORMAT
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
+from hse_doc_studio.infra.template.releases import ReleaseEntry, load_releases, version_digest
 
 logger = structlog.get_logger()
 
@@ -123,7 +127,12 @@ def _parse_template_info(template_dir: Path, pack_id: str) -> TemplateInfo | Non
 # ---------------------------------------------------------------------------
 
 
-def _parse_version(version_dir: Path, pack_id: str, template_id: str) -> TemplateVersion | None:
+def _parse_version(  # noqa: C901, PLR0915 — плоский разбор манифеста: секция за секцией
+    version_dir: Path,
+    pack_id: str,
+    template_id: str,
+    release: ReleaseEntry | None = None,
+) -> TemplateVersion | None:
     ver_yaml = version_dir / "version.yaml"
     if not ver_yaml.exists():
         logger.warning("version.yaml not found", path=str(ver_yaml))
@@ -133,10 +142,22 @@ def _parse_version(version_dir: Path, pack_id: str, template_id: str) -> Templat
         if data is None:
             return None
 
+        manifest_format = int(data.get("manifest_format", 1))
+        if manifest_format > MANIFEST_FORMAT:
+            # Манифест более нового формата: эта Студия его не понимает. Версию не
+            # показываем вовсе — проекты на ней откроются только для чтения.
+            logger.warning(
+                "version.yaml manifest format is newer than supported",
+                path=str(ver_yaml),
+                manifest_format=manifest_format,
+                supported=MANIFEST_FORMAT,
+            )
+            return None
+
         engine_data = data.get("engine", {})
         engine_cfg = EngineConfig(
             default=EngineType(engine_data.get("default", "xelatex")),
-            allowed=tuple(EngineType(e) for e in engine_data.get("allowed", ["xelatex"])),
+            allowed=_known_engines(engine_data.get("allowed", ["xelatex"])),
             passes=int(engine_data.get("passes", 1)),
             flags=engine_data.get("flags", ""),
         )
@@ -150,21 +171,39 @@ def _parse_version(version_dir: Path, pack_id: str, template_id: str) -> Templat
         if isinstance(raw_langs, list):
             langs = tuple(dict.fromkeys(str(c).lower() for c in raw_langs if isinstance(c, str) and c.strip()))
 
+        # Поэлементно терпимый разбор: неизвестный тип поля, слота или профиля
+        # (манифест от более новой Студии) выкидывает только этот элемент, а не
+        # всю версию — иначе проекты на ней перестали бы открываться целиком.
         meta_fields: dict[str, MetaFieldDef] = {}
         for field_id, field_data in data.get("meta_fields", {}).items():
-            meta_fields[field_id] = _parse_meta_field(field_data)
+            meta_field = _tolerant(_parse_meta_field, field_data, f"meta_fields.{field_id}", ver_yaml)
+            if meta_field is not None:
+                meta_fields[field_id] = meta_field
         meta_groups = _parse_meta_groups(data.get("meta_groups", []))
 
         sig_data = data.get("signatures", {})
         signatures_config = SignaturesConfig(
-            slots=tuple(_parse_signature_slot(s) for s in sig_data.get("slots", [])),
+            slots=tuple(
+                slot
+                for slot in (
+                    _tolerant(_parse_signature_slot, s, "signatures.slots", ver_yaml) for s in sig_data.get("slots", [])
+                )
+                if slot is not None
+            ),
         )
 
         forms = tuple(f for f in (_parse_form(fd) for fd in data.get("forms", [])) if f is not None)
 
         sub_data = data.get("pack_submission", {})
         pack_submission = PackSubmissionConfig(
-            profiles=tuple(_parse_submission_profile(p) for p in sub_data.get("profiles", []))
+            profiles=tuple(
+                profile
+                for profile in (
+                    _tolerant(_parse_submission_profile, p, "pack_submission.profiles", ver_yaml)
+                    for p in sub_data.get("profiles", [])
+                )
+                if profile is not None
+            )
         )
 
         checks_ver_data = data.get("checks_version", {})
@@ -222,10 +261,57 @@ def _parse_version(version_dir: Path, pack_id: str, template_id: str) -> Templat
             nda=nda,
             supported_staffing=supported_staffing,
             langs=langs,
+            manifest_format=manifest_format,
+            min_studio=str(data["min_studio"]) if data.get("min_studio") else None,
+            release_kind=_parse_release_kind(data.get("release"), release),
+            frozen_digest=release.digest if release is not None else None,
+            changes=_localized_lists(data.get("changes")),
+            breaking_changes=_localized_lists(data.get("breaking_changes")),
         )
     except Exception as exc:
         logger.warning("version.yaml parse error", path=str(ver_yaml), exc=str(exc))
         return None
+
+
+def _known_engines(raw: Any) -> tuple[EngineType, ...]:
+    """`engine.allowed` без неизвестных движков (их не выбрать в этой Студии)."""
+    engines: list[EngineType] = []
+    for value in raw if isinstance(raw, list) else [raw]:
+        try:
+            engines.append(EngineType(value))
+        except ValueError:
+            logger.warning("unknown engine in version.yaml, skipped", engine=value)
+    return tuple(engines)
+
+
+def _tolerant[T](parse: Callable[[Any], T], raw: Any, where: str, source: Path) -> T | None:
+    try:
+        return parse(raw)
+    except Exception as exc:
+        logger.warning("version.yaml item skipped", path=str(source), item=where, exc=str(exc))
+        return None
+
+
+def _parse_release_kind(raw: Any, release: ReleaseEntry | None) -> TemplateUpdateClass | None:
+    """Класс выпуска: `release.kind` манифеста, иначе — из реестра выпусков."""
+    declared = raw.get("kind") if isinstance(raw, dict) else None
+    if declared:
+        try:
+            return TemplateUpdateClass(str(declared))
+        except ValueError:
+            logger.warning("unknown release.kind in version.yaml", kind=declared)
+    return release.kind if release is not None else None
+
+
+def _localized_lists(raw: Any) -> dict[str, tuple[str, ...]]:
+    """`{ru: [...], en: [...]}` → кортежи строк; прочее — пусто."""
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(lang): tuple(str(item) for item in items if str(item).strip())
+        for lang, items in raw.items()
+        if isinstance(items, list)
+    }
 
 
 def _parse_documents(data: dict[str, Any], version_dir: Path) -> tuple[DocumentDefinition, ...]:  # noqa: C901
@@ -742,6 +828,7 @@ class YamlTemplateRepository:
         versions_dir = template_dir / "versions"
         if not versions_dir.exists():
             return
+        releases = load_releases(template_dir)
         for version_dir in sorted(versions_dir.iterdir()):
             if not version_dir.is_dir():
                 continue
@@ -749,6 +836,7 @@ class YamlTemplateRepository:
                 version_dir,
                 pack_id=pack_info.id,
                 template_id=template_id,
+                release=releases.get(version_dir.name),
             )
             if version_obj is not None:
                 key = (pack_info.id, template_id, version_obj.version)
@@ -779,3 +867,9 @@ class YamlTemplateRepository:
         self._ensure_loaded()
         candidate = self._packs_dir / pack_id / "templates" / template_id / "versions" / version
         return candidate if candidate.exists() else None
+
+    def content_digest(self, pack_id: str, template_id: str, version: str) -> str | None:
+        """Дайджест каталога версии, посчитанный по диску (а не взятый из реестра):
+        так lock проекта честно отражает, на каком содержимом он создан."""
+        directory = self.version_dir(pack_id, template_id, version)
+        return version_digest(directory) if directory is not None else None

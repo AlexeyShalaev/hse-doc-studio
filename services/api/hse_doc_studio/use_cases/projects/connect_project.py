@@ -12,9 +12,10 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
+    ITemplateRepository,
 )
-from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
 from hse_doc_studio.core.vcs.protocols import IVcsService
+from hse_doc_studio.use_cases.vcs.excludes import project_vcs_exclude
 
 logger = structlog.get_logger()
 
@@ -41,10 +42,12 @@ class ConnectProjectUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         vcs_service: IVcsService,
+        template_repo: ITemplateRepository | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._vcs = vcs_service
+        self._template_repo = template_repo
 
     async def execute(self, inp: ConnectProjectInput) -> ConnectProjectOutput:
         folder = inp.folder.expanduser().resolve()
@@ -78,7 +81,7 @@ class ConnectProjectUC:
         # Best-effort: never block connecting a project on a VCS hiccup.
         try:
             if self._vcs.is_available(project) and not self._vcs.is_initialized(project):
-                await asyncio.to_thread(self._vcs.init, project, list(DEFAULT_VCS_EXCLUDE))
+                await asyncio.to_thread(self._vcs.init, project, project_vcs_exclude(project, self._template_repo))
         except Exception as exc:  # noqa: BLE001
             logger.warning("vcs init failed on connect", project_id=str(project.id), exc=str(exc))
 

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { FileText, LayoutDashboard } from "lucide-react";
 import { useDocuments } from "@entities/document";
+import { TemplateUpdateCard } from "@features/template-update";
 import { Spinner } from "@shared/ui";
 import { PageHead } from "./PageHead";
 import { SectionCard } from "./SectionCard";
@@ -55,6 +56,10 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
         title={t("overview.title")}
         sub={t("overview.subtitle")}
       />
+
+      <div style={{ marginTop: 20 }}>
+        <TemplateUpdateCard projectId={projectId} />
+      </div>
 
       <div
         style={{

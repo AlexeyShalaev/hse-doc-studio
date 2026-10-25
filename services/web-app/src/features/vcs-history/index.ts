@@ -17,3 +17,6 @@ export { RestoreConfirmModal } from "./ui/RestoreConfirmModal";
 export type { RestoreConfirmModalProps } from "./ui/RestoreConfirmModal";
 export { VcsSettingsCard } from "./ui/VcsSettingsCard";
 export type { VcsSettingsCardProps } from "./ui/VcsSettingsCard";
+export { VcsFilePatch } from "./ui/VcsFilePatch";
+export type { VcsFilePatchProps } from "./ui/VcsFilePatch";
+export { countChanges } from "./ui/vcsDiff.model";

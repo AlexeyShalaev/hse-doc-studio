@@ -121,13 +121,13 @@ class GitVcsService:
             env["HOME"] = tempfile.gettempdir()
         return env
 
-    def _base(self, project: Project) -> list[str]:
+    def _base(self, project: Project, work_tree: Path | None = None) -> list[str]:
         return [
             "git",
             "--git-dir",
             str(self._git_dir(project)),
             "--work-tree",
-            str(project.folder),
+            str(work_tree or project.folder),
             "-c",
             f"user.name={self._author_name}",
             "-c",
@@ -167,6 +167,44 @@ class GitVcsService:
             raise VcsUnavailableError(str(exc)) from exc
         if check and proc.returncode != 0:
             raise VcsCommandError(_cmd_label(args), proc.stderr or proc.stdout)
+        return proc
+
+    def run_bytes(
+        self,
+        project: Project,
+        args: Sequence[str],
+        *,
+        input_bytes: bytes | None = None,
+        work_tree: Path | None = None,
+        index_file: Path | None = None,
+        check: bool = True,
+    ) -> subprocess.CompletedProcess[bytes]:
+        """Низкоуровневый git над хранилищем проекта с байтовым вводом-выводом.
+
+        Для баз обновления шаблона (infra.vcs.template_base_store): содержимое
+        файлов там бинарное (pptx, картинки), а дерево базы собирается из
+        временного каталога (`work_tree`) во временный индекс (`index_file`),
+        не задевая рабочее дерево и индекс пользователя.
+        """
+        env = self._env()
+        if index_file is not None:
+            env["GIT_INDEX_FILE"] = str(index_file)
+        cmd = [*self._base(project, work_tree), *args]
+        try:
+            proc = subprocess.run(  # noqa: S603
+                cmd,
+                cwd=str(work_tree or project.folder),
+                input=input_bytes,
+                capture_output=True,
+                check=False,
+                env=env,
+            )
+        except FileNotFoundError as exc:
+            raise VcsUnavailableError("git executable not found") from exc
+        except OSError as exc:
+            raise VcsUnavailableError(str(exc)) from exc
+        if check and proc.returncode != 0:
+            raise VcsCommandError(_cmd_label(args), proc.stderr.decode("utf-8", "replace"))
         return proc
 
     # ── lifecycle ────────────────────────────────────────────────────────────

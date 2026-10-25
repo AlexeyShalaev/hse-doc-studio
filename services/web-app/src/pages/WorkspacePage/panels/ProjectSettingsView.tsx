@@ -14,9 +14,11 @@ import {
 import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
+import { TemplateVersionPanel } from "@features/template-update";
 import { i18n, pickLocalized, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { PageHead } from "./PageHead";
+import { SectionCard } from "./SectionCard";
 import { ProjectChecksSection } from "./ProjectChecksSection";
 import { useProjectAutosave } from "./useProjectAutosave";
 import {
@@ -348,6 +350,15 @@ export const ProjectSettingsView = ({
               setMovePickerOpen(true);
             }}
           />
+        );
+      case "template":
+        return (
+          <SectionCard title={t("projectSettings.sectionTemplate")} fullSpan>
+            <TemplateVersionPanel
+              projectId={project.id}
+              isReadOnly={(project.access?.mode ?? "full") !== "full"}
+            />
+          </SectionCard>
         );
       case "confidentiality":
         return (

@@ -729,7 +729,7 @@ def instantiate_nda(  # noqa: C901, PLR0912
     project: Project,
     version: TemplateVersion,
     template_repo: ITemplateRepository,
-) -> None:
+) -> list[str]:
     """Materialise the NDA file group into the project when `meta.nda` is set.
 
     Per-author: the NDA расписка is a personal document — each author signs their
@@ -742,18 +742,22 @@ def instantiate_nda(  # noqa: C901, PLR0912
     files are written, so a student's edits to an already-instantiated NDA file
     are never clobbered. A no-op when the version declares no NDA group or the
     project is not marked NDA.
+
+    Returns the project-relative POSIX paths actually written (empty when
+    nothing was missing).
     """
+    written: list[str] = []
     src_dir = nda_source_dir(template_repo, version)
     if src_dir is None or not project.meta.get("nda"):
-        return
+        return written
     if not src_dir.exists():
         logger.warning("instantiate_nda: source dir missing", path=str(src_dir))
-        return
+        return written
     files_dir = version_files_dir(template_repo, version)
     if files_dir is None:
         # Недостижимо, пока src_dir найден (оба выводятся из _packs_dir), но
         # тип честный: без files_dir не вычислить rel-путь.
-        return
+        return written
     # Расписка NDA — персональный документ: каждый автор подписывает свою. В
     # команде материализуем по экземпляру в папке каждого ведомого автора (с его
     # темой ВКР через author-контекст); в solo — один экземпляр в корне проекта.
@@ -763,7 +767,8 @@ def instantiate_nda(  # noqa: C901, PLR0912
             if not src_file.is_file():
                 continue
             rel = src_file.relative_to(files_dir)  # keep the nda/ prefix in the project
-            dest = project.folder / prefix_path(base_dir, rel.as_posix())
+            dest_rel = prefix_path(base_dir, rel.as_posix())
+            dest = project.folder / dest_rel
             if dest.exists():
                 continue  # never overwrite the student's copy
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -775,6 +780,8 @@ def instantiate_nda(  # noqa: C901, PLR0912
                     dest.write_text(rendered, encoding="utf-8")
                 else:
                     shutil.copy2(src_file, dest)
+                written.append(dest_rel)
                 logger.debug("nda file instantiated", rel=str(rel), base=base_dir)
             except Exception as exc:
                 logger.warning("nda file instantiate error", rel=str(rel), exc=str(exc))
+    return written

@@ -24,7 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
-from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import (
     ChatContextService,
     CheckResolutionService,
@@ -34,6 +34,13 @@ from hse_doc_studio.core.services import (
     SubmissionProfileService,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_update.protocols import (
+    IMergeEngine,
+    ITemplateBaseStore,
+    ITemplateTrackingRepository,
+    ITemplateTreeRenderer,
+    IUpdateJournalRepository,
+)
 from hse_doc_studio.core.vcs.protocols import (
     IVcsEditThrottle,
     IVcsFolderLocks,
@@ -80,9 +87,16 @@ from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
+from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
+from hse_doc_studio.infra.template_update.state import JsonTemplateTrackingRepository, JsonUpdateJournalRepository
+from hse_doc_studio.infra.template_update.tree_renderer import TemplateTreeRenderer
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
+from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
+from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
 
 logger = structlog.get_logger()
 
@@ -563,6 +577,54 @@ class DomainServiceProvider(Provider):
         # App-scoped: the lock map must be shared across requests AND the compile
         # task so the compile-success auto-commit serializes against snapshots.
         return VcsFolderLocks()
+
+    # ── template updates (core.template_update) ──────────────────────────────
+    @provide
+    def get_template_base_store(self, vcs_service: IVcsService) -> ITemplateBaseStore:
+        if not isinstance(vcs_service, GitVcsService):
+            raise TypeError("template base store needs the git VCS service")
+        return GitTemplateBaseStore(vcs_service)
+
+    @provide
+    def get_merge_engine(self) -> IMergeEngine:
+        return GitMergeFileEngine()
+
+    @provide
+    def get_template_tree_renderer(
+        self, template_repo: ITemplateRepository, template_renderer: TemplateRenderer
+    ) -> ITemplateTreeRenderer:
+        return TemplateTreeRenderer(template_repo, template_renderer)
+
+    @provide
+    def get_template_tracking_repo(self) -> ITemplateTrackingRepository:
+        return JsonTemplateTrackingRepository()
+
+    @provide
+    def get_update_journal_repo(self) -> IUpdateJournalRepository:
+        return JsonUpdateJournalRepository()
+
+    @provide
+    def get_template_base_service(
+        self, tree_renderer: ITemplateTreeRenderer, base_store: ITemplateBaseStore, vcs_service: IVcsService
+    ) -> TemplateBaseService:
+        return TemplateBaseService(tree_renderer, base_store, vcs_service)
+
+    @provide
+    def get_template_update_planner(
+        self,
+        template_repo: ITemplateRepository,
+        base_service: TemplateBaseService,
+        merge_engine: IMergeEngine,
+        tracking_repo: ITemplateTrackingRepository,
+        signature_repo: ISignatureRepository,
+    ) -> TemplateUpdatePlanner:
+        return TemplateUpdatePlanner(template_repo, base_service, merge_engine, tracking_repo, signature_repo)
+
+    @provide
+    def get_project_access_service(
+        self, template_repo: ITemplateRepository, journal_repo: IUpdateJournalRepository
+    ) -> ProjectAccessService:
+        return ProjectAccessService(template_repo, journal_repo)
 
     @provide
     def get_vcs_edit_throttle(self) -> IVcsEditThrottle:

@@ -17,6 +17,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.team import nda_bases, prefix_path
 from hse_doc_studio.infra.project_init.template_renderer import instantiate_nda
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService, extend_template_base
 
 logger = structlog.get_logger()
 
@@ -107,10 +108,12 @@ class InstantiateNdaUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        base_service: TemplateBaseService | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._template_repo = template_repo
+        self._base_service = base_service
 
     async def execute(self, inp: NdaInput) -> NdaStatusOutput:
         folder, project = _resolve(inp.project_id, self._project_repo, self._project_index_repo)
@@ -119,8 +122,8 @@ class InstantiateNdaUC:
             project.lock.template_id,
             project.lock.version,
         )
-        if version is not None:
-            instantiate_nda(project, version, self._template_repo)
+        if version is not None and instantiate_nda(project, version, self._template_repo):
+            extend_template_base(self._base_service, project, version)
         return _status(folder, project, self._template_repo)
 
 
