@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from collections.abc import Iterator
@@ -28,7 +29,8 @@ def pdf(tmp_path: Path) -> Path:
 def ring() -> Iterator[GpgKeyring]:
     import tempfile  # noqa: PLC0415
 
-    home = Path(tempfile.mkdtemp(prefix="hds-v-", dir="/tmp"))
+    # Короткий /tmp — ради длины пути сокета gpg-agent на macOS; на Windows его нет.
+    home = Path(tempfile.mkdtemp(prefix="hds-v-", dir="/tmp" if os.name == "posix" else None))
     r = GpgKeyring(home)
     yield r
     r.stop_agent()
