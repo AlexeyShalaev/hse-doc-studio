@@ -32,3 +32,9 @@ def test_verifies_rfc9215_request() -> None:
 def test_rejects_tampered_request() -> None:
     data, pub, sig, curve = _csr_parts()
     assert gost.verify_gost3410(256, curve, pub, gost.streebog(data + b"x", 256), sig) is False
+
+
+def test_cryptopro_exchange_curves_alias_the_signature_curves() -> None:
+    # A real КриптоПро УКЭП names its key curve XchA although it is CryptoPro-A.
+    assert gost._CURVES["1.2.643.2.2.36.0"] == gost._CURVES["1.2.643.2.2.35.1"]
+    assert gost._CURVES["1.2.643.2.2.36.1"] == gost._CURVES["1.2.643.2.2.35.3"]

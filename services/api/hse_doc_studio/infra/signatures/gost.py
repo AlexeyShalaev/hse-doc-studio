@@ -35,15 +35,17 @@ OID_STREEBOG_512 = "1.2.643.7.1.1.2.3"
 GOST_SIGNATURE_OIDS = frozenset({OID_SIGN_2012_256, OID_SIGN_2012_512, OID_GOST3410_2012_256, OID_GOST3410_2012_512})
 GOST_LEGACY_OIDS = frozenset({OID_SIGN_2001, OID_GOST3410_2001, OID_GOSTR3411_94})
 
-# Curve parameter-set OID -> gostcrypto curve name. CryptoPro-A/B/C and
-# XchA/XchB are aliases of the TC26 256-bit sets.
+# Curve parameter-set OID -> gostcrypto curve name. CryptoPro-A/B/C are the
+# TC26 256-bit sets B/C/D.
 _CURVES: dict[str, str] = {
     "1.2.643.7.1.2.1.1.1": "id-tc26-gost-3410-2012-256-paramSetA",
     "1.2.643.2.2.35.1": "id-tc26-gost-3410-2012-256-paramSetB",
     "1.2.643.2.2.35.2": "id-tc26-gost-3410-2012-256-paramSetC",
     "1.2.643.2.2.35.3": "id-tc26-gost-3410-2012-256-paramSetD",
-    "1.2.643.2.2.36.0": "id-tc26-gost-3410-2012-256-paramSetA",
-    "1.2.643.2.2.36.1": "id-tc26-gost-3410-2012-256-paramSetC",
+    # CryptoPro-XchA / XchB are key-exchange aliases of CryptoPro-A / CryptoPro-C
+    # (RFC 4357). КриптоПро puts XchA into real certificates, so this matters.
+    "1.2.643.2.2.36.0": "id-tc26-gost-3410-2012-256-paramSetB",
+    "1.2.643.2.2.36.1": "id-tc26-gost-3410-2012-256-paramSetD",
     "1.2.643.7.1.2.1.2.1": "id-tc26-gost-3410-12-512-paramSetA",
     "1.2.643.7.1.2.1.2.2": "id-tc26-gost-3410-12-512-paramSetB",
     "1.2.643.7.1.2.1.2.3": "id-tc26-gost-3410-2012-512-paramSetC",
