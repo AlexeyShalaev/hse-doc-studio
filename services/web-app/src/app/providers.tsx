@@ -73,7 +73,7 @@ const formatSchemaReport = (err: SchemaParseError): string => {
   const issues = err.zodError.issues
     .map((i) => issueLine(i, err.responseData))
     .join("\n");
-  let body = "<no data>";
+  let body: string;
   try {
     body =
       JSON.stringify(err.responseData, null, 2) ?? String(err.responseData);

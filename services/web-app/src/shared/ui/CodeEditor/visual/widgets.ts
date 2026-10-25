@@ -284,14 +284,7 @@ export class MathWidget extends WidgetType {
 export class PillWidget extends WidgetType {
   constructor(
     readonly kind:
-      | "ref"
-      | "cite"
-      | "label"
-      | "graphic"
-      | "link"
-      | "req"
-      | "todo"
-      | "note",
+      "ref" | "cite" | "label" | "graphic" | "link" | "req" | "todo" | "note",
     readonly text: string,
   ) {
     super();

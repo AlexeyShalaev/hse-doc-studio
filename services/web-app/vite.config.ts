@@ -18,6 +18,47 @@ const emitVersionJson = (): Plugin => ({
   },
 });
 
+// Сторонние пакеты по чанкам: редко меняющийся вендор кэшируется отдельно от кода.
+const VENDOR_CHUNKS: Record<string, string[]> = {
+  vendor: ["react", "react-dom", "react-router"],
+  "query-vendor": ["@tanstack/react-query"],
+  "table-vendor": ["@tanstack/react-table", "@tanstack/react-virtual"],
+  "radix-vendor": [
+    "@radix-ui/react-dialog",
+    "@radix-ui/react-dropdown-menu",
+    "@radix-ui/react-select",
+    "@radix-ui/react-tabs",
+    "@radix-ui/react-tooltip",
+  ],
+  "chart-vendor": ["recharts"],
+  "icons-vendor": ["lucide-react"],
+  "command-palette": ["cmdk"],
+  "editor-vendor": [
+    "@codemirror/state",
+    "@codemirror/view",
+    "@codemirror/commands",
+    "@codemirror/language",
+    "@codemirror/autocomplete",
+    "@codemirror/search",
+    "@codemirror/lint",
+    "@lezer/highlight",
+    "@lezer/common",
+    "codemirror-lang-latex",
+  ],
+};
+
+const chunkFor = (id: string): string | undefined => {
+  const match =
+    /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/]+\/)?[^/]+)/.exec(
+      id.replace(/\\/g, "/"),
+    );
+  const pkg = match?.[1];
+  if (!pkg) return undefined;
+  return Object.entries(VENDOR_CHUNKS).find(([, pkgs]) =>
+    pkgs.includes(pkg),
+  )?.[0];
+};
+
 export default defineConfig(({ mode }) => {
   const env = mode === "development" ? loadEnv(mode, process.cwd(), "") : {};
   const rawProxyTarget = env.VITE_DEV_PROXY_TARGET?.trim() ?? "";
@@ -40,13 +81,13 @@ export default defineConfig(({ mode }) => {
       // cause silent "Unrecognized extension value" failures.
       dedupe: ["@codemirror/state", "@codemirror/view"],
       alias: {
-        "@": path.resolve(__dirname, "./src"),
-        "@app": path.resolve(__dirname, "./src/app"),
-        "@pages": path.resolve(__dirname, "./src/pages"),
-        "@widgets": path.resolve(__dirname, "./src/widgets"),
-        "@features": path.resolve(__dirname, "./src/features"),
-        "@entities": path.resolve(__dirname, "./src/entities"),
-        "@shared": path.resolve(__dirname, "./src/shared"),
+        "@": path.resolve(import.meta.dirname, "./src"),
+        "@app": path.resolve(import.meta.dirname, "./src/app"),
+        "@pages": path.resolve(import.meta.dirname, "./src/pages"),
+        "@widgets": path.resolve(import.meta.dirname, "./src/widgets"),
+        "@features": path.resolve(import.meta.dirname, "./src/features"),
+        "@entities": path.resolve(import.meta.dirname, "./src/entities"),
+        "@shared": path.resolve(import.meta.dirname, "./src/shared"),
       },
     },
 
@@ -78,40 +119,13 @@ export default defineConfig(({ mode }) => {
     },
 
     build: {
-      target: "ES2022",
+      target: "es2022",
       sourcemap: true,
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ["react", "react-dom", "react-router"],
-            "query-vendor": ["@tanstack/react-query"],
-            "table-vendor": [
-              "@tanstack/react-table",
-              "@tanstack/react-virtual",
-            ],
-            "radix-vendor": [
-              "@radix-ui/react-dialog",
-              "@radix-ui/react-dropdown-menu",
-              "@radix-ui/react-select",
-              "@radix-ui/react-tabs",
-              "@radix-ui/react-tooltip",
-            ],
-            "chart-vendor": ["recharts"],
-            "icons-vendor": ["lucide-react"],
-            "command-palette": ["cmdk"],
-            "editor-vendor": [
-              "@codemirror/state",
-              "@codemirror/view",
-              "@codemirror/commands",
-              "@codemirror/language",
-              "@codemirror/autocomplete",
-              "@codemirror/search",
-              "@codemirror/lint",
-              "@lezer/highlight",
-              "@lezer/common",
-              "codemirror-lang-latex",
-            ],
-          },
+          // Vite 8 (Rolldown) принимает manualChunks только функцией: пакет из
+          // node_modules → имя чанка по таблице ниже, остальное — по умолчанию.
+          manualChunks: (id: string) => chunkFor(id),
         },
       },
     },

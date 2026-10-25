@@ -60,8 +60,7 @@ export type VisualCallbacks = {
    * this callback a table card falls back to reveal-the-source editing.
    */
   onEditTable?:
-    | ((source: string, commit: (next: string) => void) => void)
-    | undefined;
+    ((source: string, commit: (next: string) => void) => void) | undefined;
   /**
    * Open a structured manager for a `thebibliography` environment. `source` is
    * its raw LaTeX; `commit(next)` replaces it with the regenerated LaTeX. The
@@ -69,8 +68,7 @@ export type VisualCallbacks = {
    * buttons need it.
    */
   onEditBibliography?:
-    | ((source: string, commit: (next: string) => void) => void)
-    | undefined;
+    ((source: string, commit: (next: string) => void) => void) | undefined;
 };
 
 export const visualConfigFacet = Facet.define<VisualConfig, VisualConfig>({

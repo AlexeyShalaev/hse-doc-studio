@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -12,7 +13,13 @@ from hse_doc_studio.infra.signatures.openpgp import (
     looks_like_openpgp_signature,
 )
 
-pytestmark = pytest.mark.skipif(shutil.which("gpg") is None, reason="gpg is not installed")
+# На Windows gpg из Git for Windows есть, но gpg-agent в CI не стартует, а /tmp
+# (короткий путь для сокета агента) там не существует. OpenPGP в Студии живёт в
+# Linux-контейнере — проверяем его на Linux и macOS.
+pytestmark = pytest.mark.skipif(
+    shutil.which("gpg") is None or sys.platform == "win32",
+    reason="gpg is not installed (or Windows, where gpg-agent does not start in CI)",
+)
 
 
 @pytest.fixture

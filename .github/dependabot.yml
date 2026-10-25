@@ -1,6 +1,8 @@
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  # uv, а не pip: зависимости бэкенда закреплены в uv.lock, и экосистема "pip"
+  # его не обновляла — уязвимые версии копились до скана образа (Trivy).
+  - package-ecosystem: "uv"
     directory: "/services/api"
     schedule:
       interval: "weekly"
@@ -18,6 +20,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    ignore:
+      # Мажор TypeScript ждёт поддержки в typescript-eslint (7.0 он не умеет).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
 
   - package-ecosystem: "github-actions"
@@ -33,4 +39,9 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    ignore:
+      # Node — только LTS (чётные мажоры), вручную и вместе с node-version в ci.yml:
+      # Dependabot предлагал нечётную 25, в которой уже нет corepack.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5

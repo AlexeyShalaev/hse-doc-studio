@@ -5,19 +5,10 @@
 export type LocalizedString = Record<string, string>;
 
 export type DocumentStatus =
-  | "draft"
-  | "building"
-  | "ok"
-  | "warn"
-  | "err"
-  | "locked";
+  "draft" | "building" | "ok" | "warn" | "err" | "locked";
 
 export type CompileStatus =
-  | "pending"
-  | "running"
-  | "success"
-  | "failure"
-  | "cancelled";
+  "pending" | "running" | "success" | "failure" | "cancelled";
 
 export type CheckSeverity = "info" | "warn" | "err";
 
@@ -429,10 +420,7 @@ export type SignMode =
 export type DetachedFormat = "openpgp" | "cms";
 export type DetachedOrigin = "uploaded" | "studio";
 export type DetachedVerdict =
-  | "valid"
-  | "invalid"
-  | "unverified"
-  | "unknown_key";
+  "valid" | "invalid" | "unverified" | "unknown_key";
 
 // Ожидаемый подписант слота: данные плашки в PDF.
 export type SignerInfoResponse = {

@@ -1,11 +1,11 @@
 ############################
 # Stage 1: build frontend
 ############################
-FROM node:22-alpine AS frontend-builder
+FROM node:24-alpine AS frontend-builder
 WORKDIR /app
 
-# Node 22 и pnpm 9.15.4 — ровно то, на чём фронт собирается в ci.yml
-# (setup-node node-version: 22, pnpm из "packageManager" в package.json).
+# Node 24 (LTS) и pnpm 9.15.4 — ровно то, на чём фронт собирается в ci.yml
+# (setup-node node-version: 24, pnpm из "packageManager" в package.json).
 # pnpm@latest здесь означал бы 10.x с другим форматом lockfile'а (наш — 9.0).
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # на Apple Silicon образ должен идти нативным arm64, иначе Docker Desktop крутит
 # его через эмуляцию. Имена каталогов у download.docker.com — x86_64/aarch64.
 ARG TARGETARCH
-ARG DOCKER_CLI_VERSION=29.6.2
+ARG DOCKER_CLI_VERSION=29.9.2
 RUN set -eux; \
     case "${TARGETARCH}" in \
       amd64) dockerArch='x86_64' ;; \
@@ -82,6 +82,9 @@ RUN addgroup --system app && adduser --system --ingroup app \
 
 COPY --from=backend-builder /usr/local /usr/local
 COPY --from=backend-builder /app /app
+# pip в рантайме не нужен (зависимости поставлены ещё в backend-builder), а его
+# вендоренные msgpack и setuptools дают HIGH-уязвимости в скане образа.
+RUN python -m pip uninstall -y pip
 
 # Frontend built assets served as static files by FastAPI
 COPY --from=frontend-builder --chown=app:app /app/dist /app/static
