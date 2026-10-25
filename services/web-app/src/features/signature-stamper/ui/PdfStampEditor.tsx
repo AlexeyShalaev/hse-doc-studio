@@ -138,6 +138,39 @@ export const PdfStampEditor = ({
     if (clamped !== page) onPageChange(clamped);
   };
 
+  // Rows of the signature plate, as the backend prints them into the PDF.
+  const plateRows = (
+    signer: SlotInfoResponse["signer"],
+    signDate: string | null | undefined,
+  ): string[] => {
+    if (!signer) return [];
+    const fmt = (iso: string) =>
+      new Date(iso).toLocaleDateString(i18n.language, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    const rows: string[] = [];
+    if (signer.cert_id) {
+      rows.push(
+        `${t(signer.kind === "openpgp" ? "detached.plate.key" : "detached.plate.certificate")}: ${signer.cert_id}`,
+      );
+    }
+    if (signer.owner)
+      rows.push(`${t("detached.plate.owner")}: ${signer.owner}`);
+    if (signer.valid_to) {
+      rows.push(
+        signer.valid_from
+          ? `${t("detached.plate.valid")}: ${t("detached.plate.fromTo", { from: fmt(signer.valid_from), to: fmt(signer.valid_to) })}`
+          : `${t("detached.plate.valid")}: ${t("detached.plate.until", { to: fmt(signer.valid_to) })}`,
+      );
+    }
+    if (signDate) {
+      rows.push(`${t("detached.plate.signDate")}: ${fmt(signDate)}`);
+    }
+    return rows;
+  };
+
   const overlays = useMemo(() => {
     return slotDefs
       .filter((slot) => slot.applies_to.includes(docId))
@@ -339,6 +372,11 @@ export const PdfStampEditor = ({
                     pxPerMm={pxPerMm}
                     isInvisible={isInvisible}
                     caption={caption}
+                    captionRows={
+                      caption
+                        ? plateRows(slotInfo?.signer, placement.sign_date)
+                        : []
+                    }
                     onCommit={(next) => {
                       onPlacementChange(slot.id, {
                         x_mm: next.xMm,

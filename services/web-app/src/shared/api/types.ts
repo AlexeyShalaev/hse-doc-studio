@@ -432,6 +432,16 @@ export type DetachedVerdict =
   | "unverified"
   | "unknown_key";
 
+// Ожидаемый подписант слота: данные плашки в PDF.
+export type SignerInfoResponse = {
+  kind: "x509" | "openpgp" | "manual";
+  owner: string;
+  cert_id: string;
+  valid_from: string | null;
+  valid_to: string | null;
+  signer_id: string;
+};
+
 export type SlotInfoResponse = {
   png_path: string | null;
   natural_width_px: number | null;
@@ -439,6 +449,7 @@ export type SlotInfoResponse = {
   signing_identity_id: string | null;
   sign_mode: SignMode;
   sign_reason: string;
+  signer?: SignerInfoResponse | null;
 };
 
 export type PlacementResponse = {
@@ -486,6 +497,8 @@ export type FrozenPdfResponse = {
   size: number;
   frozen_at: string;
   stale: boolean;
+  // Подписанты или расположение изменились после фиксации: плашка в PDF устарела.
+  plate_outdated?: boolean;
 };
 
 export type DetachedSignatureResponse = {

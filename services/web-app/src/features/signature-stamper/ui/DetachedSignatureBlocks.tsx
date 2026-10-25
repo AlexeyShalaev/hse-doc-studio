@@ -19,9 +19,11 @@ import {
 import {
   signatureDownloadUrls,
   useAttachDetachedSignature,
+  useClearSlotSigner,
   useDeleteDetachedSignature,
   useFreezePdf,
   useRecheckDetachedSignature,
+  useSetSlotSigner,
   useSignDetachedInStudio,
   useUnfreezePdf,
 } from "@entities/signature";
@@ -34,6 +36,7 @@ import type {
   DetachedSignatureResponse,
   DetachedVerdict,
   FrozenPdfResponse,
+  SignerInfoResponse,
 } from "@shared/api/types";
 import { localeTag, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
@@ -180,6 +183,25 @@ export const FreezeCard = ({
 
       {frozen && (
         <>
+          {!frozen.stale && frozen.plate_outdated && (
+            <div
+              className="flex items-start gap-2"
+              style={{
+                padding: "8px 10px",
+                borderRadius: 6,
+                background: "var(--c-warn-soft)",
+                color: "var(--c-warn)",
+                fontSize: 11,
+                lineHeight: 1.45,
+              }}
+            >
+              <AlertTriangle
+                size={13}
+                style={{ flexShrink: 0, marginTop: 1 }}
+              />
+              <span>{t("detached.freeze.plateOutdated")}</span>
+            </div>
+          )}
           {frozen.stale && (
             <div
               className="flex items-start gap-2"
@@ -915,6 +937,217 @@ export const SlotDetachedSignature = ({
             setSignOpen(false);
           }}
         />
+      )}
+    </div>
+  );
+};
+
+// ── Signer for the plate ──────────────────────────────────────────────────────
+
+export type SignerPlateEditorProps = {
+  projectId: string;
+  slotId: string;
+  signer: SignerInfoResponse | null | undefined;
+  personName: string | null;
+};
+
+const PLATE_KEY_KINDS = new Set(["openpgp", "self_signed", "pkcs12"]);
+
+export const SignerPlateEditor = ({
+  projectId,
+  slotId,
+  signer,
+  personName,
+}: SignerPlateEditorProps) => {
+  const { t } = useTranslation("signatureStamper");
+  const setSigner = useSetSlotSigner();
+  const clearSigner = useClearSlotSigner();
+  const { data: identities } = useSigningIdentities();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [manual, setManual] = useState(false);
+  const [owner, setOwner] = useState(personName ?? "");
+  const [certId, setCertId] = useState("");
+  const [validTo, setValidTo] = useState("");
+  const keys = (identities ?? []).filter((i) => PLATE_KEY_KINDS.has(i.kind));
+  const busy = setSigner.isPending || clearSigner.isPending;
+  const onError = (err: Error) => toast.error(err.message);
+
+  return (
+    <div
+      style={{
+        marginLeft: 42,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        fontSize: 10.5,
+      }}
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".cer,.crt,.pem,.der,.asc,.gpg,.pgp"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) setSigner.mutate({ projectId, slotId, file }, { onError });
+        }}
+      />
+      <div className="flex items-center gap-1" style={{ color: "var(--fg-2)" }}>
+        <span>{t("detached.plate.title")}</span>
+      </div>
+      {signer ? (
+        <div
+          style={{
+            padding: "6px 8px",
+            borderRadius: 6,
+            border: "1px solid var(--border)",
+            background: "var(--bg-0)",
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ color: "var(--fg-0)", fontWeight: 500 }}>
+            {signer.owner || "-"}
+          </div>
+          {signer.cert_id && (
+            <div className="mono dim" style={{ wordBreak: "break-all" }}>
+              {t(
+                signer.kind === "openpgp"
+                  ? "detached.plate.key"
+                  : "detached.plate.certificate",
+              )}
+              : {signer.cert_id}
+            </div>
+          )}
+          {signer.valid_to && (
+            <div className="dim">
+              {t("detached.plate.validUntil")}: {formatDate(signer.valid_to)}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ color: "var(--fg-3)", lineHeight: 1.45 }}>
+          {t("detached.plate.empty")}
+        </div>
+      )}
+      <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className="btn xs"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+          title={t("detached.plate.fromFileTitle")}
+        >
+          {setSigner.isPending ? <Spinner size="sm" /> : <FileKey size={10} />}
+          {t("detached.plate.fromFile")}
+        </button>
+        {keys.length > 0 && (
+          <select
+            className="input"
+            value=""
+            disabled={busy}
+            onChange={(e) => {
+              if (e.target.value) {
+                setSigner.mutate(
+                  { projectId, slotId, identityId: e.target.value },
+                  { onError },
+                );
+              }
+            }}
+            style={{ height: 22, fontSize: 10.5, padding: "0 4px" }}
+          >
+            <option value="">{t("detached.plate.myKey")}</option>
+            {keys.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          className="btn xs ghost"
+          disabled={busy}
+          onClick={() => {
+            setManual((v) => !v);
+          }}
+        >
+          {t("detached.plate.manual")}
+        </button>
+        {signer && (
+          <button
+            type="button"
+            className="btn xs ghost"
+            disabled={busy}
+            style={{ color: "var(--c-err)" }}
+            onClick={() => {
+              clearSigner.mutate({ projectId, slotId }, { onError });
+            }}
+            title={t("detached.plate.clear")}
+          >
+            <Trash2 size={10} />
+          </button>
+        )}
+      </div>
+      {manual && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <input
+            className="input"
+            placeholder={t("detached.plate.ownerPlaceholder")}
+            value={owner}
+            onChange={(e) => {
+              setOwner(e.target.value);
+            }}
+            style={{ height: 24, fontSize: 11 }}
+          />
+          <input
+            className="input"
+            placeholder={t("detached.plate.certPlaceholder")}
+            value={certId}
+            onChange={(e) => {
+              setCertId(e.target.value);
+            }}
+            style={{ height: 24, fontSize: 11 }}
+          />
+          <label className="flex items-center" style={{ gap: 6 }}>
+            <span className="dim">{t("detached.plate.validUntil")}</span>
+            <input
+              type="date"
+              className="input"
+              value={validTo}
+              onChange={(e) => {
+                setValidTo(e.target.value);
+              }}
+              style={{ height: 22, fontSize: 10.5, padding: "0 6px" }}
+            />
+          </label>
+          <div>
+            <button
+              type="button"
+              className="btn xs"
+              disabled={busy || owner.trim() === ""}
+              onClick={() => {
+                setSigner.mutate(
+                  {
+                    projectId,
+                    slotId,
+                    owner,
+                    certId,
+                    validTo: validTo || null,
+                  },
+                  {
+                    onSuccess: () => {
+                      setManual(false);
+                    },
+                    onError,
+                  },
+                );
+              }}
+            >
+              {t("detached.plate.apply")}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

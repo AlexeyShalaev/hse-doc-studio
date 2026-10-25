@@ -1,7 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ExternalLink, ImageOff, MapPin, User } from "lucide-react";
 import { pickLocalized } from "@shared/lib";
-import { FreezeCard, SlotDetachedSignature } from "./DetachedSignatureBlocks";
+import {
+  FreezeCard,
+  SignerPlateEditor,
+  SlotDetachedSignature,
+} from "./DetachedSignatureBlocks";
 import type {
   SignMode,
   SignatureProfileRef,
@@ -341,6 +345,15 @@ export const DocPlacementPanel = ({
                   </>
                 )}
               </div>
+            )}
+
+            {isDetached && (
+              <SignerPlateEditor
+                projectId={projectId}
+                slotId={slot.id}
+                signer={slotInfo?.signer}
+                personName={personName}
+              />
             )}
 
             {isDetached && (

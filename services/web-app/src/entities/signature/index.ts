@@ -2,10 +2,12 @@ export { signatureApi, signatureDownloadUrls } from "./api/signatureApi";
 export {
   signatureKeys,
   useAttachDetachedSignature,
+  useClearSlotSigner,
   useDeleteDetachedSignature,
   useDeleteSignaturePng,
   useFreezePdf,
   useRecheckDetachedSignature,
+  useSetSlotSigner,
   useSignaturesState,
   useSignDetachedInStudio,
   useUnfreezePdf,

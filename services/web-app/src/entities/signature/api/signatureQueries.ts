@@ -176,3 +176,47 @@ export const useDeleteDetachedSignature = () => {
     onSuccess: (_, { projectId }) => void invalidate(projectId),
   });
 };
+
+export const useSetSlotSigner = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+      ...source
+    }: { projectId: string; slotId: string } & (
+      | { file: File }
+      | { identityId: string }
+      | { owner: string; certId?: string; validTo?: string | null }
+    )) => {
+      if ("file" in source) {
+        return signatureApi.setSignerFromFile(projectId, slotId, source.file);
+      }
+      if ("identityId" in source) {
+        return signatureApi.setSigner(projectId, slotId, {
+          identity_id: source.identityId,
+        });
+      }
+      return signatureApi.setSigner(projectId, slotId, {
+        owner: source.owner,
+        cert_id: source.certId ?? "",
+        valid_to: source.validTo ?? null,
+      });
+    },
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
+export const useClearSlotSigner = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      slotId,
+    }: {
+      projectId: string;
+      slotId: string;
+    }) => signatureApi.clearSigner(projectId, slotId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};

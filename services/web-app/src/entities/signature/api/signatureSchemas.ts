@@ -8,6 +8,15 @@ export const SignModeSchema = z.enum([
   "detached_text",
 ]);
 
+export const SignerInfoSchema = z.object({
+  kind: z.enum(["x509", "openpgp", "manual"]),
+  owner: z.string(),
+  cert_id: z.string(),
+  valid_from: z.string().nullable(),
+  valid_to: z.string().nullable(),
+  signer_id: z.string(),
+});
+
 export const SlotInfoSchema = z.object({
   png_path: z.string().nullable(),
   natural_width_px: z.number().nullable(),
@@ -15,6 +24,7 @@ export const SlotInfoSchema = z.object({
   signing_identity_id: z.string().uuid().nullable().optional().default(null),
   sign_mode: SignModeSchema.optional().default("image"),
   sign_reason: z.string().optional().default(""),
+  signer: SignerInfoSchema.nullish().default(null),
 });
 
 export const PlacementSchema = z.object({
@@ -69,6 +79,7 @@ export const FrozenPdfSchema = z.object({
   size: z.number(),
   frozen_at: z.string(),
   stale: z.boolean(),
+  plate_outdated: z.boolean().optional().default(false),
 });
 
 export const DetachedSignatureSchema = z.object({

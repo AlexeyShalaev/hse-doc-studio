@@ -6,6 +6,7 @@ import {
   FreezePdfResponseSchema,
   SignaturesStateSchema,
   PlacementSchema,
+  SlotInfoSchema,
   UploadSignatureResponseSchema,
 } from "./signatureSchemas";
 
@@ -113,6 +114,39 @@ export const signatureApi = {
     apiClient
       .delete(`/projects/${projectId}/docs/${docId}/detached/${slotId}`)
       .then(() => undefined),
+
+  setSignerFromFile: (projectId: string, slotId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post(
+        `/projects/${projectId}/signatures/slots/${slotId}/signer/file`,
+        formData,
+        { headers: { "Content-Type": null } },
+      )
+      .then(parseResp(SlotInfoSchema));
+  },
+
+  setSigner: (
+    projectId: string,
+    slotId: string,
+    data:
+      | { identity_id: string }
+      | {
+          owner: string;
+          cert_id?: string;
+          valid_from?: string | null;
+          valid_to?: string | null;
+        },
+  ) =>
+    apiClient
+      .put(`/projects/${projectId}/signatures/slots/${slotId}/signer`, data)
+      .then(parseResp(SlotInfoSchema)),
+
+  clearSigner: (projectId: string, slotId: string) =>
+    apiClient
+      .delete(`/projects/${projectId}/signatures/slots/${slotId}/signer`)
+      .then(parseResp(SlotInfoSchema)),
 
   deletePng: (projectId: string, slotId: string): Promise<void> =>
     apiClient

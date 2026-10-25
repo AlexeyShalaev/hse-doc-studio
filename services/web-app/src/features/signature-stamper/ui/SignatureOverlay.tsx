@@ -21,6 +21,8 @@ export type SignatureOverlayProps = {
   // Detached e-signature slot: the output prints this caption in a frame
   // instead of a picture (see pdf_stamper.py), so the preview mirrors it.
   caption?: string | null;
+  // Plate rows under the caption («Сертификат: …»); with rows the frame is rounded.
+  captionRows?: readonly string[];
   // Called when the user finishes a drag or resize gesture. We deliberately
   // wait for pointer-up rather than firing on every move — the parent uses
   // this to PATCH the backend, and firing per-frame would melt the network.
@@ -56,6 +58,7 @@ export const SignatureOverlay = ({
   pxPerMm,
   isInvisible = false,
   caption = null,
+  captionRows = [],
   onCommit,
 }: SignatureOverlayProps) => {
   const { t } = useTranslation("signatureStamper");
@@ -169,6 +172,7 @@ export const SignatureOverlay = ({
           : "color-mix(in oklch, var(--accent) 8%, transparent)",
         boxSizing: "border-box",
         touchAction: "none",
+        borderRadius: captionRows.length > 0 ? 7 * 0.3528 * pxPerMm : undefined,
       }}
       title={isInvisible ? t("overlay.invisibleTitle", { label }) : label}
     >
@@ -184,7 +188,12 @@ export const SignatureOverlay = ({
             userSelect: "none",
           }}
         >
-          {caption}
+          <div style={{ fontWeight: captionRows.length > 0 ? 700 : 400 }}>
+            {caption}
+          </div>
+          {captionRows.map((row) => (
+            <div key={row}>{row}</div>
+          ))}
         </div>
       ) : isInvisible ? (
         <div

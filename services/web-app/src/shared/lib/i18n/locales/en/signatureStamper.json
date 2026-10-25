@@ -145,7 +145,8 @@
       "unfreeze": "Unfreeze",
       "unfreezeConfirm": "Unfreeze? The signature files of this document will be deleted.",
       "droppedToast": "Signatures for the previous file version removed: {{count}}",
-      "frozenToast": "PDF frozen"
+      "frozenToast": "PDF frozen",
+      "plateOutdated": "The signers or signature positions changed after freezing: the plate in the PDF is out of date. Freeze the PDF again."
     },
     "slot": {
       "needFreeze": "Freeze the PDF to attach a signature.",
@@ -196,7 +197,8 @@
       "chain_incomplete": "The certificate chain is incomplete: the issuer certificate is missing.",
       "chain_broken": "A certificate signature in the chain does not match.",
       "no_revocation_check": "Revocation lists (CRL, OCSP) are not checked.",
-      "unsupported": "Signature not verified: {{reason}}"
+      "unsupported": "Signature not verified: {{reason}}",
+      "plate_signer_mismatch": "The signature was made by someone other than the signer shown on the plate."
     },
     "sign": {
       "title": "Sign in the Studio",
@@ -217,6 +219,26 @@
         "self_signed": "self-signed",
         "pkcs12": "PKCS#12"
       }
+    },
+    "plate": {
+      "title": "Signer on the plate",
+      "empty": "The plate is printed inside the file being signed, so the signer's data is needed before freezing. Upload their certificate or public key, or type it in.",
+      "fromFile": "Certificate or key",
+      "fromFileTitle": "The signer's public certificate (.cer, .crt, .pem) or their OpenPGP public key (.asc). The private key is not needed.",
+      "myKey": "My key…",
+      "manual": "Type in",
+      "clear": "Remove signer",
+      "ownerPlaceholder": "Owner's full name",
+      "certPlaceholder": "Certificate number (optional)",
+      "apply": "Apply",
+      "key": "Key",
+      "certificate": "Certificate",
+      "owner": "Owner",
+      "valid": "Valid",
+      "fromTo": "from {{from}} to {{to}}",
+      "until": "until {{to}}",
+      "validUntil": "Valid until",
+      "signDate": "Signing date"
     }
   }
 }
