@@ -88,10 +88,7 @@ const toggleInlineFormat = (
   });
 
 export type HeadingLevelCommand =
-  | "chapter"
-  | "section"
-  | "subsection"
-  | "subsubsection";
+  "chapter" | "section" | "subsection" | "subsubsection";
 
 export const sectioningCommandOnLine = (
   state: EditorState,
@@ -267,7 +264,6 @@ const insertTemplate = (
     const changes = state.changeByRange((range) => {
       const selected = state.sliceDoc(range.from, range.to);
       let insert = build(selected);
-      let leading = "";
 
       if (kind === "block") {
         const before =
@@ -276,7 +272,7 @@ const insertTemplate = (
           range.to < state.doc.length
             ? state.sliceDoc(range.to, range.to + 1)
             : "";
-        leading = before && before !== "\n" ? "\n" : "";
+        const leading = before && before !== "\n" ? "\n" : "";
         const trailing = after && after !== "\n" ? "\n" : "";
         insert = `${leading}${insert}${trailing}`;
       }

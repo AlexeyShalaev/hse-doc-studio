@@ -205,15 +205,13 @@ export const ChecksPane = ({ projectId, docId }: ChecksPaneProps) => {
             !failingIds.has(r.rule_id) &&
             !(hasLtFindings && r.category === "language"),
         )
-        .map(
-          (r): CheckItem => ({
-            id: `ok-${r.rule_id}`,
-            sev: "ok",
-            title: pickLocalized(r.title, i18n.language, r.rule_id),
-            body: "",
-            ref: r.rule_id,
-          }),
-        )
+        .map((r): CheckItem => ({
+          id: `ok-${r.rule_id}`,
+          sev: "ok",
+          title: pickLocalized(r.title, i18n.language, r.rule_id),
+          body: "",
+          ref: r.rule_id,
+        }))
     : [];
 
   // Issues first, satisfied rules after them.

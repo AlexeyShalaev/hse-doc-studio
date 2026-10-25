@@ -34,8 +34,7 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
 
-    /* Path Aliases */
-    "baseUrl": ".",
+    /* Path Aliases (относительно tsconfig: baseUrl устарел в TypeScript 6) */
     "paths": {
       "@/*": ["./src/*"],
       "@app": ["./src/app"],

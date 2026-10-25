@@ -3,11 +3,7 @@ import { useTranslation } from "react-i18next";
 import { systemApi } from "@entities/system";
 
 export type SelfUpdateStatus =
-  | "idle"
-  | "starting"
-  | "updating"
-  | "done"
-  | "failed";
+  "idle" | "starting" | "updating" | "done" | "failed";
 
 const POLL_INTERVAL_MS = 3_000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1_000;

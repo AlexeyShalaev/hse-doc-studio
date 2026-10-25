@@ -147,11 +147,7 @@ export const visibleProjectSettingsSections = (
  * прятать его не следует.
  */
 export type ProjectSettingsGroupId =
-  | "project"
-  | "people"
-  | "documents"
-  | "meta"
-  | "checks";
+  "project" | "people" | "documents" | "meta" | "checks";
 
 export type ProjectSettingsGroupDef = {
   id: ProjectSettingsGroupId;

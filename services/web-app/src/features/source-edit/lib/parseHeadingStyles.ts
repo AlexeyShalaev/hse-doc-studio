@@ -237,7 +237,7 @@ export const findLatexInputTargets = (source: string): string[] => {
 
     const argumentStart = skipTrivia(source, command.end);
     const argument = readGroup(source, argumentStart, "{", "}");
-    let path = "";
+    let path: string;
     if (argument) {
       cursor = argument.end - 1;
       path = argument.content.trim();

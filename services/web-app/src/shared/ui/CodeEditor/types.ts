@@ -1,10 +1,5 @@
 export type EditorLanguage =
-  | "latex"
-  | "json"
-  | "yaml"
-  | "html"
-  | "markdown"
-  | "plain";
+  "latex" | "json" | "yaml" | "html" | "markdown" | "plain";
 
 /**
  * A deterministic text substitution carried by a diagnostic — powers a
@@ -129,11 +124,7 @@ export type VisualHeadingAlignment = "left" | "center" | "right";
 
 /** Semantic renderer used for a protected, source-backed LaTeX input. */
 export type VisualEmbeddedInputKind =
-  | "titlePages"
-  | "vkrTitle"
-  | "requirementsTable"
-  | "changeLog"
-  | "generic";
+  "titlePages" | "vkrTitle" | "requirementsTable" | "changeLog" | "generic";
 
 /** Host-provided options for the visual mode (see `visualMode`). */
 export type VisualEditorOptions = {

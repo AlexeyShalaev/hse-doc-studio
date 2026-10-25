@@ -7,11 +7,7 @@ import { i18n } from "@shared/lib";
 // the full agent event taxonomy directly on an EventSource.
 
 export type AgentRunStatus =
-  | "idle"
-  | "running"
-  | "awaiting_approval"
-  | "done"
-  | "error";
+  "idle" | "running" | "awaiting_approval" | "done" | "error";
 
 export type PendingApproval = {
   callId: string;
