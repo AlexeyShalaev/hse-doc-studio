@@ -18,6 +18,9 @@ export type SignatureOverlayProps = {
   // so the user can position/size the field; it shows a lock instead of the
   // image to make clear nothing will be visible in the output.
   isInvisible?: boolean;
+  // Detached e-signature slot: the output prints this caption in a frame
+  // instead of a picture (see pdf_stamper.py), so the preview mirrors it.
+  caption?: string | null;
   // Called when the user finishes a drag or resize gesture. We deliberately
   // wait for pointer-up rather than firing on every move — the parent uses
   // this to PATCH the backend, and firing per-frame would melt the network.
@@ -52,6 +55,7 @@ export const SignatureOverlay = ({
   pageHeightMm,
   pxPerMm,
   isInvisible = false,
+  caption = null,
   onCommit,
 }: SignatureOverlayProps) => {
   const { t } = useTranslation("signatureStamper");
@@ -78,6 +82,9 @@ export const SignatureOverlay = ({
   }, [widthMm]);
 
   const heightMm = localWidth * aspectRatio;
+  // The stamper sets the caption in 8 pt with 3 pt padding (1 pt = 0.3528 mm).
+  const captionFontPx = 8 * 0.3528 * pxPerMm;
+  const captionPadPx = 3 * 0.3528 * pxPerMm;
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current;
@@ -152,7 +159,7 @@ export const SignatureOverlay = ({
         left: localX * pxPerMm,
         top: localY * pxPerMm,
         width: localWidth * pxPerMm,
-        height: heightMm * pxPerMm,
+        height: caption ? undefined : heightMm * pxPerMm,
         cursor: isDragging ? "grabbing" : "grab",
         border: isInvisible
           ? "1.5px dashed var(--fg-3)"
@@ -165,7 +172,21 @@ export const SignatureOverlay = ({
       }}
       title={isInvisible ? t("overlay.invisibleTitle", { label }) : label}
     >
-      {isInvisible ? (
+      {caption ? (
+        <div
+          style={{
+            padding: captionPadPx,
+            fontSize: captionFontPx,
+            lineHeight: 1.25,
+            color: "#000",
+            background: "rgba(255,255,255,0.85)",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {caption}
+        </div>
+      ) : isInvisible ? (
         <div
           className="mono dim"
           style={{

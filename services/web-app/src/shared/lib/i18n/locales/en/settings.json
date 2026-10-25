@@ -291,7 +291,33 @@
     "delete": "Remove",
     "loading": "No saved identities. Create a self-signed one or import a .p12.",
     "selfSigned": "Self-signed",
-    "importP12": "Import .p12"
+    "importP12": "Import .p12",
+    "kindOpenpgp": "OpenPGP",
+    "openpgp": {
+      "create": "Create OpenPGP key",
+      "import": "Import OpenPGP key",
+      "createHint": "An ed25519 key is created and stored on this computer (the data folder). It is fine for signing the application and the statement: the supervisor can check it with gpg or open it in any OpenPGP client.",
+      "nameField": "Owner name",
+      "namePlaceholder": "Ivan Ivanov",
+      "emailField": "E-mail (optional)",
+      "passphraseField": "Key passphrase (optional)",
+      "passphraseHint": "Without a passphrase signing is one click, but the key file in the data folder is not encrypted. With a passphrase it is asked for at every signature.",
+      "createdToast": "Key created",
+      "importHint": "A secret key (gpg --export-secret-keys --armor) becomes a signing key; a public key is just added for checking other people's signatures.",
+      "chooseKey": "Choose a key file (.asc)",
+      "importPassField": "Key passphrase (if protected)",
+      "importedToast": "Imported: {{secret}} signing keys, {{pub}} public keys",
+      "exportPublic": "Download public key",
+      "protected": "passphrase-protected",
+      "noGpg": "gpg not found: OpenPGP keys are unavailable. The Docker image includes it; without Docker install the gnupg package.",
+      "knownKeys": "Signers' public keys"
+    },
+    "roots": {
+      "title": "Trusted CA certificates",
+      "hint": "CryptoARM and CryptoPro signatures are shown as «trusted chain» only when the CA root certificate is added here (for example the Минцифры root from the official site). Without it the signer and file integrity are still checked.",
+      "add": "Add a certificate (.cer, .crt, .pem)",
+      "addedToast": "Certificate added"
+    }
   },
   "disk": {
     "title": "Disk",

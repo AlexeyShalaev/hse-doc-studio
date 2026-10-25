@@ -419,7 +419,18 @@ export type SignMode =
   | "image"
   | "image_crypto"
   | "crypto_invisible"
-  | "detached";
+  | "detached"
+  // Надпись «Подписано с помощью открепленной электронной подписи» вместо
+  // картинки; файл подписи прикладывается к зафиксированному PDF.
+  | "detached_text";
+
+export type DetachedFormat = "openpgp" | "cms";
+export type DetachedOrigin = "uploaded" | "studio";
+export type DetachedVerdict =
+  | "valid"
+  | "invalid"
+  | "unverified"
+  | "unknown_key";
 
 export type SlotInfoResponse = {
   png_path: string | null;
@@ -468,9 +479,41 @@ export type RuntimeSignatureSlotResponse = {
   owner?: string | null;
 };
 
+// PDF, зафиксированный на подпись: открепленные подписи покрывают именно эти
+// байты. stale — скомпилированный PDF изменился после фиксации.
+export type FrozenPdfResponse = {
+  sha256: string;
+  size: number;
+  frozen_at: string;
+  stale: boolean;
+};
+
+export type DetachedSignatureResponse = {
+  format: DetachedFormat;
+  origin: DetachedOrigin;
+  verdict: DetachedVerdict;
+  signer: string;
+  signer_id: string;
+  issuer: string;
+  algorithm: string;
+  signed_at: string | null;
+  not_before: string | null;
+  not_after: string | null;
+  chain: string | null;
+  // Стабильные коды (см. detached_verifier.py), переводятся на клиенте.
+  notes: string[];
+  added_at: string;
+  file_name: string;
+  // false: подпись относится к прежнему зафиксированному PDF либо документ
+  // пересобран после фиксации.
+  current: boolean;
+};
+
 export type SignaturesStateResponse = {
   slots: Record<string, SlotInfoResponse>;
   placements: Record<string, Record<string, PlacementResponse>>;
+  frozen?: Record<string, FrozenPdfResponse>;
+  detached?: Record<string, Record<string, DetachedSignatureResponse>>;
   runtime_slots?: RuntimeSignatureSlotResponse[];
 };
 

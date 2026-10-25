@@ -321,6 +321,10 @@ export const PdfStampEditor = ({
                     ? buildPngUrl(projectId, slotInfo.png_path)
                     : null;
                 const isInvisible = slotInfo?.sign_mode === "crypto_invisible";
+                const caption =
+                  slotInfo?.sign_mode === "detached_text"
+                    ? t("overlay.detachedCaption")
+                    : null;
                 return (
                   <SignatureOverlay
                     key={slot.id}
@@ -334,6 +338,7 @@ export const PdfStampEditor = ({
                     pageHeightMm={pageHeightMm}
                     pxPerMm={pxPerMm}
                     isInvisible={isInvisible}
+                    caption={caption}
                     onCommit={(next) => {
                       onPlacementChange(slot.id, {
                         x_mm: next.xMm,
