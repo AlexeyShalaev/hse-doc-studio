@@ -505,7 +505,7 @@ export const LanguageToolImagesSection = () => {
       );
     }
     const data = status.data;
-    if (!data || !data.docker_available) {
+    if (!data?.docker_available) {
       return (
         <DockerUnavailableNotice
           status={

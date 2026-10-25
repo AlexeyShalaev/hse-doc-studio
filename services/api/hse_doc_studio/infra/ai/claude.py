@@ -3,7 +3,7 @@ from __future__ import annotations
 import ssl
 
 import anthropic
-import httpx
+import httpx2
 
 # Foundation for the AI-agents story: today this client only enumerates models
 # (which also validates the key + endpoint). Streaming/dispatch will be added
@@ -35,12 +35,12 @@ class ClaudeClient:
     ) -> None:
         # Pass the timeout to BOTH the SDK (governs per-request) and the httpx
         # client (governs the connect/TLS handshake). base_url=None → default host.
-        timeout = httpx.Timeout(request_timeout_s, connect=connect_timeout_s)
+        timeout = httpx2.Timeout(request_timeout_s, connect=connect_timeout_s)
         self._client = anthropic.AsyncAnthropic(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
-            http_client=httpx.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout),
+            http_client=httpx2.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout),
         )
 
     async def list_models(self) -> list[str]:
