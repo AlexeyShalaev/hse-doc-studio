@@ -38,6 +38,8 @@ export type ActivityBarProps = {
   onSelectActivity: (activity: WorkbenchActivity) => void;
   onOpenProjectSettings: () => void;
   isProjectSettingsActive: boolean;
+  /** Бейдж «Настроек проекта»: например, вышло обновление шаблона. */
+  projectSettingsBadge?: ActivityItemBadge | undefined;
   /** История изменений — полноэкранная страница, боковой панели у неё нет. */
   onOpenVersions: () => void;
   isVersionsActive: boolean;
@@ -76,6 +78,7 @@ export const ActivityBar = ({
   onSelectActivity,
   onOpenProjectSettings,
   isProjectSettingsActive,
+  projectSettingsBadge,
   onOpenVersions,
   isVersionsActive,
   counts,
@@ -156,6 +159,7 @@ export const ActivityBar = ({
         label={t("activity.projectSettings")}
         tooltip={t("activity.projectSettingsTooltip")}
         isActive={isProjectSettingsActive}
+        badge={projectSettingsBadge}
         onSelect={onOpenProjectSettings}
       />
 
