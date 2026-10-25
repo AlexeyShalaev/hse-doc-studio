@@ -7,6 +7,7 @@ import {
   ListChecks,
   Lock,
   Package,
+  RefreshCw,
   Tag,
   Type,
   Users,
@@ -18,6 +19,7 @@ import {
 // рулится /settings/:section, здесь — будущий /project-settings/:section.
 export type ProjectSettingsSectionId =
   | "general"
+  | "template"
   | "confidentiality"
   | "doc-set"
   | "doc-formats"
@@ -60,6 +62,11 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     id: "general",
     labelKey: "projectSettings.sectionGeneral",
     icon: Info,
+  },
+  {
+    id: "template",
+    labelKey: "projectSettings.sectionTemplate",
+    icon: RefreshCw,
   },
   {
     id: "confidentiality",
@@ -159,7 +166,7 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     id: "project",
     labelKey: "projectSettingsNav.groupProject",
     icon: Info,
-    sections: ["general", "confidentiality", "danger-zone"],
+    sections: ["general", "template", "confidentiality", "danger-zone"],
   },
   {
     id: "people",
@@ -195,7 +202,7 @@ const PROJECT_SETTINGS_PROJECT_GROUP: ProjectSettingsGroupDef = {
   id: "project",
   labelKey: "projectSettingsNav.groupProject",
   icon: Info,
-  sections: ["general", "confidentiality", "danger-zone"],
+  sections: ["general", "template", "confidentiality", "danger-zone"],
 };
 
 /** Группа видна, пока хоть один её раздел доступен в этом проекте. */
