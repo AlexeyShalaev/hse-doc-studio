@@ -1,8 +1,37 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel
 
-from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
+
+
+class SignerInfoResponse(BaseModel):
+    kind: str
+    owner: str
+    cert_id: str
+    valid_from: str | None
+    valid_to: str | None
+    signer_id: str
+    level: str = ""
+
+
+class LevelRequest(BaseModel):
+    """PUT /signatures/slots/{slot_id}/signer/level."""
+
+    level: str = ""
+
+
+class ManualSignerRequest(BaseModel):
+    """PUT /signatures/slots/{slot_id}/signer, JSON body: a signer typed in or taken from a Studio key."""
+
+    identity_id: UUID | None = None
+    owner: str = ""
+    cert_id: str = ""
+    valid_from: str | None = None
+    valid_to: str | None = None
+    level: str = ""
 
 
 class SlotInfoResponse(BaseModel):
@@ -12,6 +41,7 @@ class SlotInfoResponse(BaseModel):
     signing_identity_id: str | None = None
     sign_mode: SignMode = SignMode.image
     sign_reason: str = ""
+    signer: SignerInfoResponse | None = None
 
 
 class UpdateSlotConfigRequest(BaseModel):
@@ -56,9 +86,44 @@ class RuntimeSlotResponse(BaseModel):
     owner: str | None = None
 
 
+class FrozenPdfResponse(BaseModel):
+    sha256: str
+    size: int
+    frozen_at: str
+    # Signers or positions changed after freezing: the printed plate is out of date.
+    plate_outdated: bool = False
+    # The compiled PDF changed after freezing: signatures no longer belong to the document.
+    stale: bool
+
+
+class DetachedSignatureResponse(BaseModel):
+    format: DetachedFormat
+    origin: DetachedOrigin
+    verdict: DetachedVerdict
+    signer: str
+    signer_id: str
+    issuer: str
+    algorithm: str
+    signed_at: str | None
+    not_before: str | None
+    not_after: str | None
+    chain: str | None
+    # A self-signed root the chain ends in that is not trusted yet (to be confirmed by the user).
+    root_subject: str = ""
+    root_fingerprint: str = ""
+    # Stable codes the web app translates (see detached_verifier).
+    notes: list[str]
+    added_at: str
+    file_name: str
+    # False when the signature covers an older frozen PDF, or the document was rebuilt since.
+    current: bool
+
+
 class SignaturesStateResponse(BaseModel):
     slots: dict[str, SlotInfoResponse]
     placements: dict[str, dict[str, PlacementResponse]]
+    frozen: dict[str, FrozenPdfResponse] = {}
+    detached: dict[str, dict[str, DetachedSignatureResponse]] = {}
     # Пустой список у старых клиентов не ломает ничего: фронт падает обратно
     # на слоты каталога, когда рантайм-список отсутствует.
     runtime_slots: list[RuntimeSlotResponse] = []
@@ -78,3 +143,19 @@ class UploadSignatureResponse(BaseModel):
     png_path: str
     natural_width_px: int | None
     natural_height_px: int | None
+
+
+class FreezePdfResponse(BaseModel):
+    frozen: FrozenPdfResponse
+    dropped_slots: list[str]
+
+
+class AttachDetachedSignatureResponse(BaseModel):
+    signature: DetachedSignatureResponse
+    # OpenPGP signature by a key the keyring lacks: the key id to ask the signer's public key for.
+    missing_key_id: str | None = None
+
+
+class SignInStudioRequest(BaseModel):
+    identity_id: UUID
+    passphrase: str = ""

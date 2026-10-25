@@ -14,9 +14,10 @@ import {
   useSignaturesState,
   useUpdateSignaturePlacement,
 } from "@entities/signature";
+import { useUpdateSlotConfig } from "@entities/signing-identity";
 import { useVersionDetail } from "@entities/template-catalog";
 import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
-import type { UpdatePlacementRequest } from "@shared/api/types";
+import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
 import { Spinner } from "@shared/ui/Spinner";
 
 export type DocSignaturesPaneProps = {
@@ -58,6 +59,7 @@ export const DocSignaturesPane = ({
   const { data: state, isLoading: stateLoading } =
     useSignaturesState(projectId);
   const { mutate: updatePlacement } = useUpdateSignaturePlacement();
+  const { mutate: updateSlotConfig } = useUpdateSlotConfig();
   const { start, isRunning, slot } = useStartCompile(projectId, docId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
@@ -172,6 +174,16 @@ export const DocSignaturesPane = ({
     updatePlacement({ projectId, docId, slotId, data: patch });
   };
 
+  // Картинка ↔ открепленная ЭП. Ключ подписи (PAdES) при смене режима
+  // сбрасывается: эти режимы взаимоисключающи.
+  const handleSlotModeChange = (slotId: string, mode: SignMode) => {
+    updateSlotConfig({
+      projectId,
+      slotId,
+      data: { signing_identity_id: null, sign_mode: mode, sign_reason: "" },
+    });
+  };
+
   const goToProjectSignatures = () => {
     void navigate(`/projects/${projectId}/submit/signatures`);
   };
@@ -198,7 +210,9 @@ export const DocSignaturesPane = ({
         }}
       >
         <DocPlacementPanel
+          projectId={projectId}
           docId={docId}
+          pdfAvailable={hasBuild}
           slotDefs={allSlots}
           state={state}
           lang={lang}
@@ -214,6 +228,7 @@ export const DocSignaturesPane = ({
           onPlacementChange={handlePlacementChange}
           onJumpToPage={setPage}
           onOpenProjectSignatures={goToProjectSignatures}
+          onSlotModeChange={handleSlotModeChange}
         />
       </div>
       <div className="flex flex-col" style={{ minHeight: 0, minWidth: 0 }}>

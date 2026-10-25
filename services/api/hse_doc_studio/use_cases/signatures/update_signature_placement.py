@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import structlog
@@ -14,7 +14,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
-from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
+from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -130,10 +130,7 @@ class UpdateSignaturePlacementUC:
         )
         doc_placements[inp.slot_id] = new_placement
 
-        new_state = SignaturesState(
-            slots=dict(state.slots),
-            placements={**state.placements, inp.doc_id: doc_placements},
-        )
+        new_state = replace(state, placements={**state.placements, inp.doc_id: doc_placements})
         self._signature_repo.save_state(project.folder, new_state)
 
         logger.info(

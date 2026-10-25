@@ -50,7 +50,7 @@ FROM python:3.14-slim-bookworm AS production
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl git \
+    ca-certificates curl git gnupg \
   && rm -rf /var/lib/apt/lists/*
 
 # Docker CLI (client only — NOT the daemon). The backend shells out to `docker`

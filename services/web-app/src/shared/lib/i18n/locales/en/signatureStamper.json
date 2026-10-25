@@ -22,7 +22,8 @@
   },
   "overlay": {
     "invisibleTitle": "{{label}} — invisible crypto signature",
-    "invisible": "invisible"
+    "invisible": "invisible",
+    "detachedCaption": "Signed with a detached electronic signature"
   },
   "pdfEditor": {
     "notCompiled": "The document is not compiled yet — the preview for placing the signature is unavailable. Build <0>{{docId}}</0> and come back here.",
@@ -39,7 +40,8 @@
       "image": "Image",
       "imageCrypto": "Image + crypto",
       "cryptoInvisible": "Crypto only",
-      "detached": "Detached (.sig)"
+      "detached": "Detached (.sig)",
+      "detachedText": "Detached e-signature"
     },
     "deleteConfirm": "Delete the PNG signature “{{label}}”? The file will be removed from disk, and the slot will be turned off in all documents. The coordinates are kept — after re-uploading, the signature will be in the same place.",
     "personUnknown": "not specified",
@@ -57,7 +59,12 @@
     "identityNone": "— none —",
     "mode": "Mode:",
     "reason": "Reason:",
-    "reasonPlaceholder": "e.g. “Approved” (shown in Acrobat)"
+    "reasonPlaceholder": "e.g. “Approved” (shown in Acrobat)",
+    "kind": "Signature type:",
+    "kindImage": "Picture",
+    "kindDetached": "Detached e-signature",
+    "kindHint": "A picture is placed on the PDF. A detached e-signature: a caption is printed on the PDF and the signature file (OpenPGP or CMS) is attached separately.",
+    "detachedExplain": "The caption «Signed with a detached electronic signature» is printed on the PDF. The signature file is attached in the document: upload a ready one or sign here."
   },
   "editorModal": {
     "title": "Signature: {{label}}",
@@ -111,5 +118,174 @@
   "errors": {
     "imageReadFailed": "Failed to read the image",
     "pngEncodeFailed": "Failed to produce a PNG"
+  },
+  "detached": {
+    "mode": {
+      "title": "Type:",
+      "image": "Picture",
+      "detached": "Detached e-signature",
+      "hint": "A caption «Signed with a detached electronic signature» is printed; the signature file is attached separately."
+    },
+    "freeze": {
+      "title": "File to sign",
+      "intro": "A copy of the PDF with the e-signature caption is frozen. Signatures belong to that exact file and are checked against it.",
+      "freeze": "Freeze PDF for signing",
+      "refreeze": "Freeze again",
+      "refreezeConfirm": "The existing signatures belong to the old file and will be deleted. Continue?",
+      "needBuild": "Build the document first.",
+      "frozenAt": "Frozen {{date}}, {{size}}",
+      "sha256": "SHA-256",
+      "copy": "Copy",
+      "copied": "SHA-256 copied",
+      "stale": "The document was rebuilt after freezing. The signatures below are no longer valid. Freeze the PDF again and sign again.",
+      "downloadPdf": "Download PDF",
+      "requestZip": "Files for the signer (zip)",
+      "requestZipTitle": "The PDF, its SHA-256 and instructions on how to sign it. Send it to the supervisor.",
+      "signedZip": "Package with signatures (zip)",
+      "unfreeze": "Unfreeze",
+      "unfreezeConfirm": "Unfreeze? The signature files of this document will be deleted.",
+      "droppedToast": "Signatures for the previous file version removed: {{count}}",
+      "frozenToast": "PDF frozen",
+      "plateOutdated": "The signers or signature positions changed after freezing: the plate in the PDF is out of date. Freeze the PDF again."
+    },
+    "slot": {
+      "needFreeze": "Freeze the PDF to attach a signature.",
+      "upload": "Upload signature",
+      "uploadTitle": "Signature file: .asc, .sig (OpenPGP) or .sig, .p7s (CMS, including GOST from CryptoARM and CryptoPro). You can drop the file here.",
+      "signHere": "Sign in the Studio",
+      "drop": "Or drop a signature file here",
+      "replace": "Replace signature",
+      "download": "Download signature file",
+      "delete": "Delete signature",
+      "deleteConfirm": "Delete the signature «{{label}}»?",
+      "recheck": "Check again",
+      "addKey": "Add public key",
+      "unknownKey": "The signature was made with key {{keyId}}, which the Studio does not have. Upload the signer's public key (.asc) and the signature will be checked.",
+      "attachedToast": "Signature attached"
+    },
+    "verdict": {
+      "valid": "Signature is valid",
+      "invalid": "Signature does not match the file",
+      "unverified": "Signer shown, signature not verified",
+      "unknown_key": "Signer key unknown",
+      "stale": "Invalid: the PDF was rebuilt",
+      "outdated": "Invalid: signature is for another file version"
+    },
+    "field": {
+      "signer": "Signer",
+      "issuer": "Issued by",
+      "format": "Format",
+      "signedAt": "Signed",
+      "validUntil": "Valid until",
+      "origin": "Source"
+    },
+    "format": {
+      "openpgp": "OpenPGP",
+      "cms": "CMS / CAdES"
+    },
+    "origin": {
+      "uploaded": "uploaded",
+      "studio": "signed in the Studio"
+    },
+    "note": {
+      "key_expired": "The key has expired; the signature itself is correct.",
+      "key_revoked": "The key is revoked.",
+      "signature_expired": "The signature has expired.",
+      "multiple_signers": "The file has several signers; the first is shown.",
+      "cert_not_valid_at_signing": "The certificate was not valid at signing time.",
+      "chain_untrusted_root": "The chain does not reach a trusted root. Add the CA root certificate in Settings → Signatures.",
+      "chain_incomplete": "The certificate chain is incomplete: the issuer certificate is missing.",
+      "chain_broken": "A certificate signature in the chain does not match.",
+      "no_revocation_check": "Revocation lists (CRL, OCSP) are not checked.",
+      "unsupported": "Signature not verified: {{reason}}",
+      "plate_signer_mismatch": "The signature was made by someone other than the signer shown on the plate."
+    },
+    "sign": {
+      "title": "Sign in the Studio",
+      "key": "Key",
+      "passphrase": "Key passphrase",
+      "submit": "Sign",
+      "cancel": "Cancel",
+      "noKeys": "There is no signing key yet. Create an OpenPGP key: it is stored on this computer, and signing then takes one click.",
+      "name": "Owner name",
+      "email": "E-mail (optional)",
+      "passphraseOptional": "Key passphrase (optional)",
+      "newKey": "New key",
+      "existing": "Use an existing key",
+      "createAndSign": "Create key and sign",
+      "gostNote": "Qualified e-signature keys on a token (CryptoPro) cannot sign here: sign the file in CryptoARM or CryptoPro and upload the signature file.",
+      "kind": {
+        "openpgp": "OpenPGP",
+        "self_signed": "self-signed",
+        "pkcs12": "PKCS#12"
+      }
+    },
+    "plate": {
+      "title": "Signer on the plate",
+      "empty": "The plate is printed inside the file being signed, so the signer's data is needed before freezing. Upload their certificate or public key, or type it in.",
+      "fromFile": "Certificate or key",
+      "fromFileTitle": "The signer's public certificate (.cer, .crt, .pem) or their OpenPGP public key (.asc). The private key is not needed.",
+      "myKey": "My key…",
+      "manual": "Type in",
+      "clear": "Remove signer",
+      "ownerPlaceholder": "Owner's full name",
+      "certPlaceholder": "Certificate number (optional)",
+      "apply": "Apply",
+      "key": "Key",
+      "certificate": "Certificate",
+      "owner": "Owner",
+      "valid": "Valid",
+      "fromTo": "from {{from}} to {{to}}",
+      "until": "until {{to}}",
+      "validUntil": "Valid until",
+      "signDate": "Signing date",
+      "level": "Level",
+      "levelNone": "do not show",
+      "levelUkep": "enhanced qualified",
+      "levelUnep": "enhanced non-qualified",
+      "level_ukep": "Enhanced qualified electronic signature",
+      "level_unep": "Enhanced non-qualified electronic signature"
+    },
+    "cryptopro": {
+      "title": "Sign with a qualified e-signature (CryptoPro)",
+      "button": "Token e-signature",
+      "buttonTitle": "Sign with an enhanced qualified e-signature from a token or the CryptoPro store through the browser plug-in. The Studio freezes the PDF itself.",
+      "loading": "Connecting to the CryptoPro Browser plug-in…",
+      "retry": "Retry",
+      "sign": "Sign",
+      "pick": "Choose a certificate. The private key stays on the token: CryptoPro asks for the PIN and the plug-in signs in your browser.",
+      "note": "The certificate data goes onto the plate, and the PDF is frozen again if the plate changed. The file does not leave your computer: the Studio runs locally.",
+      "step": {
+        "plate": "Reading the certificate for the plate…",
+        "freeze": "Freezing the PDF…",
+        "sign": "Sign on the token (CryptoPro may ask for the PIN)…",
+        "attach": "Checking the signature…"
+      },
+      "error": {
+        "not-loaded": {
+          "title": "Could not load cadesplugin_api.js",
+          "hint": "cryptopro.ru is unreachable. Download cadesplugin_api.js from the CryptoPro Browser plug-in page and put it into the Studio data folder: cadesplugin/cadesplugin_api.js."
+        },
+        "no-plugin": {
+          "title": "The plug-in does not respond",
+          "hint": "You need CryptoPro CSP, the CryptoPro Browser plug-in and the “CryptoPro Extension for CAdES Browser Plug-in” in Chrome or Edge. Restart the browser after installing and allow this site to use the plug-in."
+        },
+        "no-certs": {
+          "title": "No suitable certificates",
+          "hint": "The personal store has no valid certificates with a private key. Insert the token or install a certificate in CryptoPro CSP."
+        },
+        "failed": {
+          "title": "Could not read the certificates",
+          "hint": "The plug-in returned an error:"
+        }
+      }
+    },
+    "chain": {
+      "complete": "Complete the CA chain",
+      "completeTitle": "Downloads the CA certificates linked from the signer's certificate (a network request; the signature file goes nowhere).",
+      "root": "The chain ends in the root “{{subject}}”, which the Studio does not trust yet.",
+      "trust": "Trust this root",
+      "trustConfirm": "Trust the root certificate “{{subject}}”?\n\nSHA-256: {{fingerprint}}\n\nCompare the fingerprint with an official source (e.g. e-trust.gosuslugi.ru) before confirming."
+    }
   }
 }

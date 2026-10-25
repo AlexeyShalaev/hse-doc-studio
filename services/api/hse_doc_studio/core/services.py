@@ -22,11 +22,13 @@ from hse_doc_studio.core.enums import (
     ChatContentKind,
     ChatMessageRole,
     CheckSeverity,
+    DetachedVerdict,
     EngineType,
     FormFieldType,
     Lang,
     ProjectStaffing,
     RequirementFormatKind,
+    SignMode,
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
@@ -43,6 +45,7 @@ from hse_doc_studio.core.value_objects import (
     ChecksOverride,
     FormValidationError,
     RequirementsFormat,
+    SignaturePlacement,
     SignaturesState,
 )
 
@@ -829,6 +832,10 @@ class SubmissionProfileService:
         for slot_id in runtime_ids:
             placement = doc_placements.get(slot_id)
             slot = sig_state.slots.get(slot_id)
+            if slot is not None and slot.sign_mode == SignMode.detached_text:
+                SubmissionProfileService._require_detached_signature(doc, slot_id, placement, sig_state)
+                validated.append(slot_id)
+                continue
             if placement is None or not placement.enabled or slot is None or slot.png_path is None:
                 raise ValueError(
                     localized_error(
@@ -840,6 +847,40 @@ class SubmissionProfileService:
                 )
             validated.append(slot_id)
         return validated
+
+    @staticmethod
+    def _require_detached_signature(
+        doc: Document,
+        slot_id: str,
+        placement: SignaturePlacement | None,
+        sig_state: SignaturesState,
+    ) -> None:
+        """A `detached_text` slot counts as signed only with a signature file for the frozen PDF."""
+        if placement is None or not placement.enabled:
+            raise ValueError(
+                localized_error(
+                    f"Для документа {doc.id!r} требуется слот подписи {slot_id!r}, но он не включён",
+                    f"Signature slot {slot_id!r} required for document {doc.id!r} but not enabled",
+                )
+            )
+        frozen = sig_state.frozen.get(doc.id)
+        sig = sig_state.detached.get(doc.id, {}).get(slot_id)
+        if frozen is None or sig is None:
+            raise ValueError(
+                localized_error(
+                    f"Документ {doc.id!r}: слот {slot_id!r} требует открепленной подписи. "
+                    "Зафиксируйте PDF и приложите файл подписи",
+                    f"Document {doc.id!r}: slot {slot_id!r} needs a detached signature. "
+                    "Freeze the PDF and attach the signature file",
+                )
+            )
+        if sig.pdf_sha256 != frozen.sha256 or sig.verdict == DetachedVerdict.invalid:
+            raise ValueError(
+                localized_error(
+                    f"Документ {doc.id!r}: подпись в слоте {slot_id!r} не подходит к зафиксированному PDF",
+                    f"Document {doc.id!r}: the signature in slot {slot_id!r} does not match the frozen PDF",
+                )
+            )
 
     # Развёртка per-author слотов вынесена в модульную expand_slot_ids_for_doc:
     # ею пользуется и вывод обязательности подписи (SignatureSlotService).

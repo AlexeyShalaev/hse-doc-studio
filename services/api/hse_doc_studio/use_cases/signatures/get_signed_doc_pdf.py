@@ -26,6 +26,7 @@ from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.infra.signatures.cades_signer import sign_detached
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, Stamp, format_sign_date
 from hse_doc_studio.infra.signatures.pyhanko_signer import CryptoSignRequest, PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.stamp_builder import stamps_for_doc
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -171,6 +172,10 @@ class GetSignedDocPdfUC:
             if not placement.enabled:
                 continue
             slot = state.slots.get(slot_id)
+            if slot is not None and slot.sign_mode is SignMode.detached_text:
+                # A printed caption; the signature itself is a separate file (see freeze_pdf).
+                image_stamps.extend(stamps_for_doc(state, inp.doc_id, project.folder, lang, [slot_id]))
+                continue
             if slot is None or slot.png_path is None:
                 continue
             png_path = project.folder / slot.png_path
