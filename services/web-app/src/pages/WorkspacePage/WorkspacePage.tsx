@@ -235,7 +235,7 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
         canvas={canvasNode}
       />
 
-      <AppStatusBar />
+      <AppStatusBar projectId={projectId} />
     </div>
   );
 };

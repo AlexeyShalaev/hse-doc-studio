@@ -6,3 +6,6 @@ export { TemplateVersionPanel } from "./ui/TemplateVersionPanel";
 export type { TemplateVersionPanelProps } from "./ui/TemplateVersionPanel";
 export { ProjectAccessBanner } from "./ui/ProjectAccessBanner";
 export type { ProjectAccessBannerProps } from "./ui/ProjectAccessBanner";
+export { useTemplateUpdateSignal } from "./model/useTemplateUpdateSignal";
+export type { TemplateUpdateSignal } from "./model/useTemplateUpdateSignal";
+export { useTemplateUpdateToast } from "./ui/useTemplateUpdateToast";

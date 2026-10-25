@@ -110,5 +110,21 @@
     "updating": "The project template is being updated.",
     "requiredSuffix": " (needs {{version}} or newer)",
     "hint": "Update the Studio in Settings → About. You can return the project to an earlier snapshot in Versions."
+  },
+  "notify": {
+    "patch": "Template fixes are out for this project: version {{version}}.",
+    "open": "Review",
+    "markersTitle": "Conflicts after the template update",
+    "markers_one": "{{count}} file still has conflict markers — it won't build until they are resolved.",
+    "markers_other": "{{count}} files still have conflict markers — they won't build until they are resolved."
+  },
+  "status": {
+    "update": "template {{from}} → {{to}}",
+    "updateTooltip": "A template update is available — open project settings",
+    "markers": "template conflicts: {{count}}",
+    "markersTooltip": "Files still contain conflict markers after the template update"
+  },
+  "nav": {
+    "badge": "Template update available"
   }
 }

@@ -19,8 +19,8 @@ def _make_template(tmp_path: Path, status: str = "stable") -> Path:
     template_dir = tmp_path / "tmpl"
     version_dir = template_dir / "versions" / "2026.1"
     (version_dir / "files" / "doc").mkdir(parents=True)
-    (version_dir / "version.yaml").write_text(f'id: "2026.1"\nstatus: {status}\n', encoding="utf-8")
-    (version_dir / "files" / "doc" / "doc.tex").write_text("\\section{Введение}\n", encoding="utf-8")
+    (version_dir / "version.yaml").write_text(f'id: "2026.1"\nstatus: {status}\n', encoding="utf-8", newline="\n")
+    (version_dir / "files" / "doc" / "doc.tex").write_text("\\section{Введение}\n", encoding="utf-8", newline="\n")
     return template_dir
 
 
@@ -42,7 +42,7 @@ def test__version_digest__changes_with_content_and_ignores_junk(tmp_path: Path) 
     (version_dir / ".DS_Store").write_bytes(b"\x00junk")
     assert version_digest(version_dir) == before
 
-    (version_dir / "files" / "doc" / "doc.tex").write_text("\\section{Intro}\n", encoding="utf-8")
+    (version_dir / "files" / "doc" / "doc.tex").write_text("\\section{Intro}\n", encoding="utf-8", newline="\n")
     assert version_digest(version_dir) != before
 
 
@@ -54,7 +54,9 @@ def test__freeze__then_check_detects_in_place_edit(tmp_path: Path) -> None:
     assert load_releases(template_dir) == {"2026.1": entry}
     assert check_template(template_dir) == []
 
-    (template_dir / "versions" / "2026.1" / "files" / "doc" / "doc.tex").write_text("правка\n", encoding="utf-8")
+    (template_dir / "versions" / "2026.1" / "files" / "doc" / "doc.tex").write_text(
+        "правка\n", encoding="utf-8", newline="\n"
+    )
     errors = check_template(template_dir)
     assert len(errors) == 1
     assert "изменён" in errors[0]
@@ -87,7 +89,9 @@ def test__cli__check_exit_code(tmp_path: Path) -> None:
     template_dir = _make_template(tmp_path)
     assert main(["freeze", str(template_dir), "2026.1"]) == 0
     assert main(["check", str(template_dir)]) == 0
-    (template_dir / "versions" / "2026.1" / "version.yaml").write_text('id: "2026.1"\n# правка\n', encoding="utf-8")
+    (template_dir / "versions" / "2026.1" / "version.yaml").write_text(
+        'id: "2026.1"\n# правка\n', encoding="utf-8", newline="\n"
+    )
     assert main(["check", str(template_dir)]) == 1
 
 

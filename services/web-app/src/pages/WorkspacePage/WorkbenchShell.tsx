@@ -7,7 +7,11 @@ import { useDocuments } from "@entities/document";
 import { useCompileStreamStore } from "@entities/compile";
 import { useVcsStatus } from "@entities/vcs";
 import { useProject } from "@entities/project";
-import { ProjectAccessBanner } from "@features/template-update";
+import {
+  ProjectAccessBanner,
+  useTemplateUpdateSignal,
+  useTemplateUpdateToast,
+} from "@features/template-update";
 import { ActivityBar } from "@widgets/ActivityBar";
 import { DocumentsPanel } from "@widgets/DocumentsPanel";
 import { ReviewPanel } from "@widgets/ReviewPanel";
@@ -226,6 +230,26 @@ export const WorkbenchShell = ({
     void navigate(`/projects/${projectId}${path}`);
   };
 
+  // Обновление шаблона: бейдж на «Настройках проекта» и уведомление при открытии.
+  // Конфликты после обновления важнее предложения обновиться — они ломают сборку.
+  const templateSignal = useTemplateUpdateSignal(projectId);
+  const openTemplateSettings = (): void => {
+    setPanelState({ isSettings: true, activity, mode: "settings" });
+    setSidebarCollapsed(false);
+    goTo("/project-settings/project");
+  };
+  useTemplateUpdateToast(projectId, openTemplateSettings);
+  const projectSettingsBadge =
+    templateSignal.markers.length > 0
+      ? ({
+          kind: "count",
+          tone: "err",
+          count: templateSignal.markers.length,
+        } as const)
+      : templateSignal.update
+        ? ({ kind: "count", tone: "info", count: 1 } as const)
+        : undefined;
+
   useEffect(() => {
     if (!isMobilePanelOpen) return;
     const closeOnEscape = (event: KeyboardEvent): void => {
@@ -325,6 +349,7 @@ export const WorkbenchShell = ({
           goTo("/project-settings");
         }}
         isProjectSettingsActive={isProjectSettingsActive}
+        projectSettingsBadge={projectSettingsBadge}
         onOpenVersions={() => {
           goTo("/versions");
         }}
