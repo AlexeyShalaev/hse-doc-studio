@@ -107,6 +107,7 @@ class UpdateSlotConfigUC:
             sign_mode=inp.sign_mode if keeps_mode else SignMode.image,
             # Reason only carries meaning for crypto modes; cleared with identity.
             sign_reason=inp.sign_reason if inp.signing_identity_id else "",
+            signer=existing.signer if existing else None,
         )
         new_slots = dict(state.slots)
         new_slots[inp.slot_id] = new_slot

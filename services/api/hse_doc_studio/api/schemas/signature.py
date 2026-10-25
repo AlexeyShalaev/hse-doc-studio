@@ -7,6 +7,25 @@ from pydantic import BaseModel
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
 
 
+class SignerInfoResponse(BaseModel):
+    kind: str
+    owner: str
+    cert_id: str
+    valid_from: str | None
+    valid_to: str | None
+    signer_id: str
+
+
+class ManualSignerRequest(BaseModel):
+    """PUT /signatures/slots/{slot_id}/signer, JSON body: a signer typed in or taken from a Studio key."""
+
+    identity_id: UUID | None = None
+    owner: str = ""
+    cert_id: str = ""
+    valid_from: str | None = None
+    valid_to: str | None = None
+
+
 class SlotInfoResponse(BaseModel):
     png_path: str | None
     natural_width_px: int | None
@@ -14,6 +33,7 @@ class SlotInfoResponse(BaseModel):
     signing_identity_id: str | None = None
     sign_mode: SignMode = SignMode.image
     sign_reason: str = ""
+    signer: SignerInfoResponse | None = None
 
 
 class UpdateSlotConfigRequest(BaseModel):
@@ -62,6 +82,8 @@ class FrozenPdfResponse(BaseModel):
     sha256: str
     size: int
     frozen_at: str
+    # Signers or positions changed after freezing: the printed plate is out of date.
+    plate_outdated: bool = False
     # The compiled PDF changed after freezing: signatures no longer belong to the document.
     stale: bool
 

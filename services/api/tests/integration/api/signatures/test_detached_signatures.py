@@ -287,3 +287,62 @@ async def test__api__refreeze_of_unchanged_document__keeps_signature(test_app: A
     assert again["dropped_slots"] == []
     state = (await test_app.get(f"/api/v1/projects/{project_id}/signatures")).json()
     assert state["detached"][_DOC][_SLOT]["current"] is True
+
+
+async def test__api__signer_from_certificate__prints_plate_and_flags_other_signer(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
+    await _enable_detached_slot(test_app, project_id)
+    expected = make_identity("Кротов Владимир Николаевич")
+
+    resp = await test_app.post(
+        f"/api/v1/projects/{project_id}/signatures/slots/{_SLOT}/signer/file",
+        files={"file": ("cert.cer", expected.cert_der, "application/pkix-cert")},
+    )
+
+    assert resp.status_code == 200, resp.text
+    signer = resp.json()["signer"]
+    assert signer["owner"] == "Кротов Владимир Николаевич"
+    assert signer["kind"] == "x509"
+    await _freeze(test_app, project_id)
+    frozen = await _frozen_bytes(test_app, project_id)
+    text = PdfReader(io.BytesIO(frozen)).pages[0].extract_text().replace("\n", " ")
+    assert "Кротов Владимир Николаевич" in text
+    assert "Сертификат" in text
+
+    # Signed by the expected person: no warning. By somebody else: flagged.
+    ok = await _attach(test_app, project_id, make_detached_cms(expected, frozen))
+    assert "plate_signer_mismatch" not in ok.json()["signature"]["notes"]
+    other = await _attach(test_app, project_id, make_detached_cms(make_identity("Другой Человек"), frozen))
+    assert "plate_signer_mismatch" in other.json()["signature"]["notes"]
+
+
+async def test__api__changing_signer_after_freeze__marks_plate_outdated(test_app: AsyncClient, tmp_path: Path) -> None:
+    project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
+    await _enable_detached_slot(test_app, project_id)
+    await _freeze(test_app, project_id)
+    state = (await test_app.get(f"/api/v1/projects/{project_id}/signatures")).json()
+    assert state["frozen"][_DOC]["plate_outdated"] is False
+
+    resp = await test_app.put(
+        f"/api/v1/projects/{project_id}/signatures/slots/{_SLOT}/signer",
+        json={"owner": "Иванов Иван", "cert_id": "ABCD"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    state = (await test_app.get(f"/api/v1/projects/{project_id}/signatures")).json()
+    assert state["frozen"][_DOC]["plate_outdated"] is True
+    resp = await test_app.delete(f"/api/v1/projects/{project_id}/signatures/slots/{_SLOT}/signer")
+    assert resp.json()["signer"] is None
+    state = (await test_app.get(f"/api/v1/projects/{project_id}/signatures")).json()
+    assert state["frozen"][_DOC]["plate_outdated"] is False
+
+
+async def test__api__signer_from_garbage_file__400(test_app: AsyncClient, tmp_path: Path) -> None:
+    project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
+    resp = await test_app.post(
+        f"/api/v1/projects/{project_id}/signatures/slots/{_SLOT}/signer/file",
+        files={"file": ("x.cer", b"nope", "application/octet-stream")},
+    )
+    assert resp.status_code == 400, resp.text

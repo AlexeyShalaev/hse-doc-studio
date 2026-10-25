@@ -24,14 +24,20 @@ _DATE_BASELINE_NUDGE_PT = 3.0
 # Cyrillic, which the built-in Helvetica lacks — a bundled DejaVu Sans does it.
 _TEXT_FONT = "DejaVuSans"
 _TEXT_FONT_FILE = Path(__file__).with_name("fonts") / "DejaVuSans.ttf"
+_TEXT_FONT_BOLD = "DejaVuSans-Bold"
+_TEXT_FONT_BOLD_FILE = Path(__file__).with_name("fonts") / "DejaVuSans-Bold.ttf"
+_PLATE_RADIUS_PT = 7.0
 _TEXT_SIZE_PT = 8.0
 _TEXT_LEADING = 1.25
 _TEXT_PAD_PT = 3.0
 
 
 def _ensure_text_font() -> str:
-    if _TEXT_FONT not in pdfmetrics.getRegisteredFontNames():
+    registered = pdfmetrics.getRegisteredFontNames()
+    if _TEXT_FONT not in registered:
         pdfmetrics.registerFont(TTFont(_TEXT_FONT, str(_TEXT_FONT_FILE)))
+    if _TEXT_FONT_BOLD not in registered:
+        pdfmetrics.registerFont(TTFont(_TEXT_FONT_BOLD, str(_TEXT_FONT_BOLD_FILE)))
     return _TEXT_FONT
 
 
@@ -65,6 +71,10 @@ class Stamp:
     # Text mark instead of a PNG: a framed, wrapped caption (the date, when
     # set, goes on its own last line inside the frame).
     text: str | None = None
+    # Signature plate rows («Сертификат», «Владелец», ...) under the bold caption.
+    details: tuple[tuple[str, str], ...] = ()
+    # Label of the date row when the plate has details («Дата подписания»).
+    date_label: str = ""
     # Signing date rendered as text to the right of the PNG («12.05.2026»).
     # ASCII-only by design so the built-in Helvetica suffices.
     date_text: str | None = None
@@ -186,30 +196,60 @@ class PdfStamper:
         return buf.getvalue()
 
 
-def text_mark_height_mm(text: str, width_mm: float, date_text: str | None = None) -> float:
+def _mark_lines(s: Stamp, font: str, width_pt: float) -> tuple[list[str], list[str]]:
+    """(caption lines, body lines) of a text mark, wrapped to `width_pt`."""
+    inner = width_pt - 2 * _TEXT_PAD_PT
+    caption = simpleSplit(s.text or "", _TEXT_FONT_BOLD if s.details else font, _TEXT_SIZE_PT, inner)
+    body: list[str] = []
+    for label, value in s.details:
+        body.extend(simpleSplit(f"{label}: {value}", font, _TEXT_SIZE_PT, inner))
+    if s.date_text:
+        row = f"{s.date_label}: {s.date_text}" if s.details and s.date_label else s.date_text
+        body.append(row)
+    return caption, body
+
+
+def text_mark_height_mm(
+    text: str, width_mm: float, date_text: str | None = None, details: tuple[tuple[str, str], ...] = ()
+) -> float:
     """Height of the framed text mark, so the UI can size the placement box."""
     font = _ensure_text_font()
-    inner = width_mm * mm - 2 * _TEXT_PAD_PT
-    lines = simpleSplit(text, font, _TEXT_SIZE_PT, inner) + ([date_text] if date_text else [])
-    return (len(lines) * _TEXT_SIZE_PT * _TEXT_LEADING + 2 * _TEXT_PAD_PT) / mm
+    probe = Stamp(
+        page=1,
+        x_mm=0,
+        y_mm=0,
+        width_mm=width_mm,
+        png_path=None,
+        aspect_ratio=0,
+        text=text,
+        date_text=date_text,
+        details=details,
+    )
+    caption, body = _mark_lines(probe, font, width_mm * mm)
+    return ((len(caption) + len(body)) * _TEXT_SIZE_PT * _TEXT_LEADING + 2 * _TEXT_PAD_PT) / mm
 
 
 def _draw_text_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
     font = _ensure_text_font()
     width_pt = s.width_mm * mm
-    lines = simpleSplit(s.text or "", font, _TEXT_SIZE_PT, width_pt - 2 * _TEXT_PAD_PT)
-    if s.date_text:
-        lines.append(s.date_text)
+    caption, body = _mark_lines(s, font, width_pt)
     line_h = _TEXT_SIZE_PT * _TEXT_LEADING
-    height_pt = len(lines) * line_h + 2 * _TEXT_PAD_PT
+    height_pt = (len(caption) + len(body)) * line_h + 2 * _TEXT_PAD_PT
     x_pt = s.x_mm * mm
     y_bottom = page_height_pt - s.y_mm * mm - height_pt
-    c.setLineWidth(0.5)
+    c.setLineWidth(0.5 if not s.details else 1.0)
     c.setStrokeColorRGB(0.35, 0.35, 0.35)
-    c.rect(x_pt, y_bottom, width_pt, height_pt, stroke=1, fill=0)
+    if s.details:
+        c.roundRect(x_pt, y_bottom, width_pt, height_pt, _PLATE_RADIUS_PT, stroke=1, fill=0)
+    else:
+        c.rect(x_pt, y_bottom, width_pt, height_pt, stroke=1, fill=0)
     c.setFillColorRGB(0, 0, 0)
-    c.setFont(font, _TEXT_SIZE_PT)
     y = y_bottom + height_pt - _TEXT_PAD_PT - _TEXT_SIZE_PT
-    for line in lines:
+    c.setFont(_TEXT_FONT_BOLD if s.details else font, _TEXT_SIZE_PT)
+    for line in caption:
+        c.drawString(x_pt + _TEXT_PAD_PT, y, line)
+        y -= line_h
+    c.setFont(font, _TEXT_SIZE_PT)
+    for line in body:
         c.drawString(x_pt + _TEXT_PAD_PT, y, line)
         y -= line_h

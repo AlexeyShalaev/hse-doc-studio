@@ -51,6 +51,14 @@ async def require_fresh_frozen(ctx: DocContext, state: SignaturesState) -> Froze
     return frozen
 
 
+def note_plate_mismatch(state: SignaturesState, slot_id: str, verified: VerifiedSignature) -> None:
+    """Flag a signature made by somebody else than the signer printed on the plate."""
+    slot = state.slots.get(slot_id)
+    expected = slot.signer if slot else None
+    if expected and expected.signer_id and verified.signer_id and expected.signer_id != verified.signer_id:
+        verified.notes.append("plate_signer_mismatch")
+
+
 def store_signature(
     ctx: DocContext,
     state: SignaturesState,

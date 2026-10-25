@@ -6,6 +6,8 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
@@ -15,6 +17,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
 from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest, stamps_for_doc
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
 
@@ -52,6 +55,8 @@ class GetSignaturesOutput:
     runtime_slots: list[RuntimeSlotItem]
     # Docs whose compiled PDF changed after the PDF was frozen for signing.
     stale_frozen: set[str] = field(default_factory=set)
+    # Docs whose signature plates or positions changed after the PDF was frozen.
+    plate_outdated: set[str] = field(default_factory=set)
 
 
 class GetSignaturesUC:
@@ -104,18 +109,33 @@ class GetSignaturesUC:
                 for slot in self._slot_service.runtime_slots(project, version)
             ]
 
-        stale: set[str] = set()
-        if version is not None and self._template_service is not None:
-            for doc_id, frozen in state.frozen.items():
-                doc = next((d for d in project.documents if d.id == doc_id), None)
-                if doc is None:
-                    continue
-                try:
-                    _, output_file = self._template_service.resolve_instance_source(project, doc, version)
-                except NotFoundError:
-                    continue
-                compiled = project.folder / output_file
-                if compiled.is_file() and await asyncio.to_thread(sha256_file, compiled) != frozen.source_sha256:
-                    stale.add(doc_id)
+        stale, outdated = await self._frozen_flags(project, version, state)
 
-        return GetSignaturesOutput(state=state, runtime_slots=runtime_slots, stale_frozen=stale)
+        return GetSignaturesOutput(
+            state=state, runtime_slots=runtime_slots, stale_frozen=stale, plate_outdated=outdated
+        )
+
+    async def _frozen_flags(  # noqa: C901
+        self, project: Project, version: TemplateVersion | None, state: SignaturesState
+    ) -> tuple[set[str], set[str]]:
+        """(docs rebuilt since freezing, docs whose plates or positions changed since freezing)."""
+        stale: set[str] = set()
+        outdated: set[str] = set()
+        for doc_id, frozen in state.frozen.items():
+            current = stamps_digest(stamps_for_doc(state, doc_id, project.folder, str(project.lang)))
+            if frozen.stamps_digest and current != frozen.stamps_digest:
+                outdated.add(doc_id)
+        if version is None or self._template_service is None:
+            return stale, outdated
+        for doc_id, frozen in state.frozen.items():
+            doc = next((d for d in project.documents if d.id == doc_id), None)
+            if doc is None:
+                continue
+            try:
+                _, output_file = self._template_service.resolve_instance_source(project, doc, version)
+            except NotFoundError:
+                continue
+            compiled = project.folder / output_file
+            if compiled.is_file() and await asyncio.to_thread(sha256_file, compiled) != frozen.source_sha256:
+                stale.add(doc_id)
+        return stale, outdated

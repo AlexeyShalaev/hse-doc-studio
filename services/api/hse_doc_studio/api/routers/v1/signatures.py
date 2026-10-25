@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import PurePosixPath
 from uuid import UUID
 
@@ -13,10 +14,12 @@ from hse_doc_studio.api.schemas.signature import (
     DetachedSignatureResponse,
     FreezePdfResponse,
     FrozenPdfResponse,
+    ManualSignerRequest,
     PlacementResponse,
     ProfileRefResponse,
     RuntimeSlotResponse,
     SignaturesStateResponse,
+    SignerInfoResponse,
     SignInStudioRequest,
     SlotInfoResponse,
     UpdatePlacementRequest,
@@ -30,6 +33,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignerInfo,
 )
 from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureInput,
@@ -79,6 +83,7 @@ from hse_doc_studio.use_cases.signatures.update_slot_config import (
     UpdateSlotConfigInput,
     UpdateSlotConfigUC,
 )
+from hse_doc_studio.use_cases.signatures.update_slot_signer import UpdateSlotSignerInput, UpdateSlotSignerUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import (
     UploadSignaturePngInput,
     UploadSignaturePngUC,
@@ -95,6 +100,7 @@ def _map_slot(slot: SignatureSlot) -> SlotInfoResponse:
         signing_identity_id=slot.signing_identity_id,
         sign_mode=slot.sign_mode,
         sign_reason=slot.sign_reason,
+        signer=SignerInfoResponse(**dataclasses.asdict(slot.signer)) if slot.signer else None,
     )
 
 
@@ -129,8 +135,14 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
     )
 
 
-def _map_frozen(frozen: FrozenPdf, stale: bool) -> FrozenPdfResponse:
-    return FrozenPdfResponse(sha256=frozen.sha256, size=frozen.size, frozen_at=frozen.frozen_at, stale=stale)
+def _map_frozen(frozen: FrozenPdf, stale: bool, plate_outdated: bool = False) -> FrozenPdfResponse:
+    return FrozenPdfResponse(
+        sha256=frozen.sha256,
+        size=frozen.size,
+        frozen_at=frozen.frozen_at,
+        stale=stale,
+        plate_outdated=plate_outdated,
+    )
 
 
 def _map_detached(sig: DetachedSignature, frozen: FrozenPdf | None, stale: bool) -> DetachedSignatureResponse:
@@ -154,11 +166,18 @@ def _map_detached(sig: DetachedSignature, frozen: FrozenPdf | None, stale: bool)
 
 
 def _map_state(
-    state: SignaturesState, runtime_slots: list[RuntimeSlotItem], stale_frozen: set[str] | None = None
+    state: SignaturesState,
+    runtime_slots: list[RuntimeSlotItem],
+    stale_frozen: set[str] | None = None,
+    plate_outdated: set[str] | None = None,
 ) -> SignaturesStateResponse:
     stale_frozen = stale_frozen or set()
+    plate_outdated = plate_outdated or set()
     return SignaturesStateResponse(
-        frozen={doc_id: _map_frozen(f, doc_id in stale_frozen) for doc_id, f in state.frozen.items()},
+        frozen={
+            doc_id: _map_frozen(f, doc_id in stale_frozen, doc_id in plate_outdated)
+            for doc_id, f in state.frozen.items()
+        },
         detached={
             doc_id: {
                 slot_id: _map_detached(sig, state.frozen.get(doc_id), doc_id in stale_frozen)
@@ -189,7 +208,7 @@ async def get_signatures(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_state(result.state, result.runtime_slots, result.stale_frozen)
+    return _map_state(result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated)
 
 
 @router.patch(
@@ -496,3 +515,65 @@ async def delete_detached_signature(
         await uc.execute(DeleteDetachedSignatureInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _signer_result(exc: Exception) -> HTTPException:
+    return HTTPException(status_code=404 if isinstance(exc, NotFoundError) else 400, detail=str(exc))
+
+
+@router.put(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer(
+    project_id: UUID,
+    slot_id: str,
+    body: ManualSignerRequest,
+    uc: FromDishka[UpdateSlotSignerUC],
+) -> SlotInfoResponse:
+    """Signer for the plate: one of the Studio's keys (`identity_id`) or typed-in fields."""
+    manual = None
+    if body.identity_id is None:
+        manual = SignerInfo(
+            kind="manual",
+            owner=body.owner.strip(),
+            cert_id=body.cert_id.strip(),
+            valid_from=body.valid_from,
+            valid_to=body.valid_to,
+        )
+    try:
+        result = await uc.execute(
+            UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, identity_id=body.identity_id, manual=manual)
+        )
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.post(
+    "/projects/{project_id}/signatures/slots/{slot_id}/signer/file",
+    response_model=SlotInfoResponse,
+)
+async def set_slot_signer_from_file(
+    project_id: UUID,
+    slot_id: str,
+    uc: FromDishka[UpdateSlotSignerUC],
+    file: UploadFile = File(...),
+) -> SlotInfoResponse:
+    """Signer for the plate from the signer's public certificate (.cer/.pem) or OpenPGP public key (.asc)."""
+    try:
+        result = await uc.execute(
+            UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, certificate=await file.read())
+        )
+    except (NotFoundError, ValueError) as exc:
+        raise _signer_result(exc) from exc
+    return _map_slot(result.slot)
+
+
+@router.delete("/projects/{project_id}/signatures/slots/{slot_id}/signer", response_model=SlotInfoResponse)
+async def clear_slot_signer(project_id: UUID, slot_id: str, uc: FromDishka[UpdateSlotSignerUC]) -> SlotInfoResponse:
+    try:
+        result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _map_slot(result.slot)

@@ -21,7 +21,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
-from hse_doc_studio.infra.signatures.stamp_builder import stamps_for_doc
+from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest, stamps_for_doc
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import (
     DETACHED_DIR,
@@ -102,6 +102,7 @@ class FreezePdfUC:
             source_sha256=source_sha,
             size=target.stat().st_size,
             frozen_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            stamps_digest=stamps_digest(stamps),
         )
 
         kept: dict[str, DetachedSignature] = {}

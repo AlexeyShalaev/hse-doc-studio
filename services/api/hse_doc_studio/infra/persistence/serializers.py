@@ -57,6 +57,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignerInfo,
 )
 
 
@@ -489,6 +490,7 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
                 "signing_identity_id": slot.signing_identity_id,
                 "sign_mode": slot.sign_mode.value,
                 "sign_reason": slot.sign_reason,
+                "signer": dataclasses.asdict(slot.signer) if slot.signer else None,
             }
             for slot_id, slot in state.slots.items()
         },
@@ -514,6 +516,22 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
     }
 
 
+def _deserialize_signer(raw: Any) -> SignerInfo | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return SignerInfo(
+            kind=str(raw["kind"]),
+            owner=str(raw["owner"]),
+            cert_id=str(raw.get("cert_id", "")),
+            valid_from=raw.get("valid_from"),
+            valid_to=raw.get("valid_to"),
+            signer_id=str(raw.get("signer_id", "")),
+        )
+    except (KeyError, TypeError):
+        return None
+
+
 def _serialize_detached(d: DetachedSignature) -> dict[str, Any]:
     data = dataclasses.asdict(d)
     data["format"] = d.format.value
@@ -533,6 +551,7 @@ def _deserialize_frozen(raw: Any) -> dict[str, FrozenPdf]:
                 source_sha256=str(item["source_sha256"]),
                 size=int(item["size"]),
                 frozen_at=str(item["frozen_at"]),
+                stamps_digest=str(item.get("stamps_digest", "")),
             )
         except (KeyError, TypeError, ValueError):
             continue
@@ -590,6 +609,7 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
             signing_identity_id=slot_data.get("signing_identity_id"),
             sign_mode=sign_mode,
             sign_reason=str(slot_data.get("sign_reason", "")),
+            signer=_deserialize_signer(slot_data.get("signer")),
         )
     placements: dict[str, dict[str, SignaturePlacement]] = {}
     for doc_id, slot_map in placements_raw.items():

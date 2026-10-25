@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable
 from pathlib import Path
 
 import structlog
 
 from hse_doc_studio.core.enums import SignMode
-from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 from hse_doc_studio.infra.signatures.pdf_stamper import Stamp, format_sign_date
 
 logger = structlog.get_logger()
@@ -25,6 +26,60 @@ _DEFAULT_ASPECT = 0.4
 
 def detached_caption(lang: str) -> str:
     return DETACHED_CAPTION.get(lang) or DETACHED_CAPTION["ru"]
+
+
+_LABELS = {
+    "ru": {
+        "x509": "Сертификат",
+        "openpgp": "Ключ",
+        "owner": "Владелец",
+        "valid": "Действителен",
+        "from": "с",
+        "to": "по",
+        "until": "до",
+        "date": "Дата подписания",
+    },
+    "en": {
+        "x509": "Certificate",
+        "openpgp": "Key",
+        "owner": "Owner",
+        "valid": "Valid",
+        "from": "from",
+        "to": "to",
+        "until": "until",
+        "date": "Signing date",
+    },
+}
+
+
+def date_row_label(lang: str) -> str:
+    return (_LABELS.get(lang) or _LABELS["ru"])["date"]
+
+
+def signer_details(signer: SignerInfo | None, lang: str) -> tuple[tuple[str, str], ...]:
+    """Rows of the signature plate for the expected signer, like the HSE e-signature stamp."""
+    if signer is None:
+        return ()
+    labels = _LABELS.get(lang) or _LABELS["ru"]
+    rows: list[tuple[str, str]] = []
+    if signer.cert_id:
+        rows.append((labels["openpgp" if signer.kind == "openpgp" else "x509"], signer.cert_id))
+    if signer.owner:
+        rows.append((labels["owner"], signer.owner))
+    start, end = (
+        format_sign_date(signer.valid_from[:10] if signer.valid_from else None),
+        format_sign_date(signer.valid_to[:10] if signer.valid_to else None),
+    )
+    if start and end:
+        rows.append((labels["valid"], f"{labels['from']} {start} {labels['to']} {end}"))
+    elif end:
+        rows.append((labels["valid"], f"{labels['until']} {end}"))
+    return tuple(rows)
+
+
+def stamps_digest(stamps: list[Stamp]) -> str:
+    """Stable hash of what gets printed: changes when a signer, a position or a date changes."""
+    return hashlib.sha256(repr(stamps).encode()).hexdigest()
 
 
 def stamps_for_doc(
@@ -55,6 +110,8 @@ def stamps_for_doc(
                     png_path=None,
                     aspect_ratio=_DEFAULT_ASPECT,
                     text=detached_caption(lang),
+                    details=signer_details(slot.signer, lang),
+                    date_label=date_row_label(lang),
                     date_text=format_sign_date(placement.sign_date),
                 )
             )

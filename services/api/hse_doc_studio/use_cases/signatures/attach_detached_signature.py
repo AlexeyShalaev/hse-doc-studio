@@ -29,6 +29,7 @@ from hse_doc_studio.infra.signatures.openpgp import (
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
+    note_plate_mismatch,
     require_fresh_frozen,
     require_slot,
     store_signature,
@@ -135,6 +136,7 @@ class _DetachedUCBase:
         except GpgUnavailableError as exc:
             raise ValueError(_no_gpg()) from exc
 
+        note_plate_mismatch(state, slot_id, verified)
         new_state, sig = store_signature(ctx, state, slot_id, verified, content, DetachedOrigin.uploaded, frozen)
         self._signature_repo.save_state(ctx.project.folder, new_state)
         logger.info(

@@ -52,6 +52,24 @@ class Person:
 
 
 @dataclass(frozen=True)
+class SignerInfo:
+    """Who is expected to sign a slot, as printed on the signature plate.
+
+    The plate sits inside the PDF the signature covers, so its data must be known
+    before the file is frozen: it comes from the signer's public certificate or
+    key (or a Studio key, or is typed in). `signer_id` is what the signature is
+    compared with later: certificate SHA-256 / OpenPGP fingerprint, empty when typed in.
+    """
+
+    kind: str  # "x509" | "openpgp" | "manual"
+    owner: str
+    cert_id: str = ""  # certificate serial (x509) or key id (openpgp), as printed
+    valid_from: str | None = None  # ISO 8601
+    valid_to: str | None = None
+    signer_id: str = ""
+
+
+@dataclass(frozen=True)
 class SignatureSlot:
     """Global per-slot state — the uploaded PNG, shared across all docs.
 
@@ -66,6 +84,8 @@ class SignatureSlot:
     signing_identity_id: str | None = None
     sign_mode: SignMode = SignMode.image
     sign_reason: str = ""
+    # Detached e-signature slots: the expected signer printed on the plate.
+    signer: SignerInfo | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +122,9 @@ class FrozenPdf:
     source_sha256: str
     size: int
     frozen_at: str  # ISO 8601, UTC
+    # Hash of what was stamped (placements, plate data). A different current value
+    # means signers or positions changed after freezing: the plate is out of date.
+    stamps_digest: str = ""
 
 
 @dataclass(frozen=True)

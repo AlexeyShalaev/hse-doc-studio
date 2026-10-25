@@ -321,6 +321,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocP
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import UpdateSignaturePlacementUC
 from hse_doc_studio.use_cases.signatures.update_slot_config import UpdateSlotConfigUC
+from hse_doc_studio.use_cases.signatures.update_slot_signer import UpdateSlotSignerUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
 from hse_doc_studio.use_cases.signing_identities.create_self_signed import CreateSelfSignedUC
 from hse_doc_studio.use_cases.signing_identities.delete_signing_identity import DeleteSigningIdentityUC
@@ -1993,6 +1994,20 @@ class UseCaseProvider(Provider):
         )
 
     # ------------------------------------------------------- Detached e-signatures
+
+    @provide
+    def get_update_slot_signer_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        signing_identity_repo: ISigningIdentityRepository,
+        template_repo: ITemplateRepository,
+        keyring: GpgKeyring,
+    ) -> UpdateSlotSignerUC:
+        return UpdateSlotSignerUC(
+            project_repo, project_index_repo, signature_repo, signing_identity_repo, template_repo, keyring
+        )
 
     @provide
     def get_freeze_pdf_uc(

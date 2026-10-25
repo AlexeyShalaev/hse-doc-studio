@@ -131,10 +131,11 @@ class UploadSignaturePngUC:
 
         state = self._signature_repo.get_state(project.folder)
         new_slots = dict(state.slots)
-        new_slots[inp.slot_id] = SignatureSlot(
-            png_path=relative_path,
-            natural_width_px=natural_w,
-            natural_height_px=natural_h,
+        previous = state.slots.get(inp.slot_id)
+        new_slots[inp.slot_id] = (
+            replace(previous, png_path=relative_path, natural_width_px=natural_w, natural_height_px=natural_h)
+            if previous is not None
+            else SignatureSlot(png_path=relative_path, natural_width_px=natural_w, natural_height_px=natural_h)
         )
 
         # Сеем дефолтные размещения по ИНСТАНСАМ документов, к которым слот

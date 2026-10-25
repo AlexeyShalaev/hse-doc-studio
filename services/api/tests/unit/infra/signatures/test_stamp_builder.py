@@ -59,3 +59,54 @@ def test_text_mark_height_grows_with_a_narrower_box() -> None:
     caption = detached_caption("ru")
     assert text_mark_height_mm(caption, 40) > text_mark_height_mm(caption, 120)
     assert text_mark_height_mm(caption, 70, "12.05.2026") > text_mark_height_mm(caption, 70)
+
+
+def test_plate_rows_from_signer_like_the_hse_stamp(tmp_path: Path) -> None:
+    from hse_doc_studio.core.value_objects import SignerInfo  # noqa: PLC0415
+    from hse_doc_studio.infra.signatures.stamp_builder import signer_details  # noqa: PLC0415
+
+    signer = SignerInfo(
+        kind="x509",
+        owner="Кротов Владимир Николаевич",
+        cert_id="20B29A0033B4B8B34035055AE363F2E9",
+        valid_from="2026-04-21T09:13:14+00:00",
+        valid_to="2027-04-21T09:23:14+00:00",
+    )
+    rows = dict(signer_details(signer, "ru"))
+    assert rows["Сертификат"] == "20B29A0033B4B8B34035055AE363F2E9"
+    assert rows["Владелец"] == "Кротов Владимир Николаевич"
+    assert rows["Действителен"] == "с 21.04.2026 по 21.04.2027"
+    assert dict(signer_details(signer, "en"))["Valid"] == "from 21.04.2026 to 21.04.2027"
+    assert signer_details(None, "ru") == ()
+
+    src = tmp_path / "in.pdf"
+    c = canvas.Canvas(str(src))
+    c.drawString(50, 50, "body")
+    c.save()
+    state = _state(SignMode.detached_text, date="2026-09-17")
+    slot = state.slots["sup"]
+    state = SignaturesState(
+        slots={"sup": SignatureSlot(None, None, None, sign_mode=slot.sign_mode, signer=signer)},
+        placements=state.placements,
+    )
+    out = tmp_path / "out.pdf"
+    PdfStamper().stamp(src, out, stamps_for_doc(state, "doc", tmp_path, "ru"))
+    text = PdfReader(io.BytesIO(out.read_bytes())).pages[0].extract_text().replace("\n", " ")
+    assert "Кротов Владимир Николаевич" in text
+    assert "Дата подписания: 17.09.2026" in text
+
+
+def test_stamps_digest_changes_with_signer(tmp_path: Path) -> None:
+    from hse_doc_studio.core.value_objects import SignerInfo  # noqa: PLC0415
+    from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest  # noqa: PLC0415
+
+    base = _state(SignMode.detached_text)
+    a = stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"))
+    with_signer = SignaturesState(
+        slots={
+            "sup": SignatureSlot(None, None, None, sign_mode=SignMode.detached_text, signer=SignerInfo("manual", "X"))
+        },
+        placements=base.placements,
+    )
+    assert a != stamps_digest(stamps_for_doc(with_signer, "doc", tmp_path, "ru"))
+    assert a == stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"))

@@ -103,6 +103,31 @@ def inspect_cms(
     return [_inspect_signer(si, embedded, roots, content) for si in signer_infos]
 
 
+@dataclass(frozen=True)
+class CertificateInfo:
+    owner: str
+    serial: str  # upper-case hex, as КриптоПро prints it
+    not_before: datetime
+    not_after: datetime
+    fingerprint_sha256: str
+
+
+def describe_certificate(blob: bytes) -> CertificateInfo:
+    """Owner, serial and validity of an X.509 certificate (DER or PEM), GOST included."""
+    try:
+        cert = x509.Certificate.load(_to_der(blob))
+        validity = cert["tbs_certificate"]["validity"]
+        return CertificateInfo(
+            owner=subject_display(cert),
+            serial=format(cert.serial_number, "X"),
+            not_before=validity["not_before"].native,
+            not_after=validity["not_after"].native,
+            fingerprint_sha256=hashlib.sha256(cert.dump()).hexdigest(),
+        )
+    except Exception as exc:
+        raise CmsParseError(f"not an X.509 certificate: {exc}") from exc
+
+
 def looks_like_cms(blob: bytes) -> bool:
     """Cheap format sniff: PEM CMS/PKCS7 or a DER SEQUENCE carrying the signedData OID."""
     head = blob[:64].lstrip()
