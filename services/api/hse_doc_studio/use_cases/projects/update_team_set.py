@@ -32,6 +32,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     regenerate_dynamic_includes,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService, extend_template_base
 
 logger = structlog.get_logger()
 
@@ -67,11 +68,13 @@ class UpdateTeamSetUC:
         template_repo: ITemplateRepository,
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
+        base_service: TemplateBaseService | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._template_repo = template_repo
         self._template_renderer = template_renderer
         self._vcs = vcs_service
+        self._base_service = base_service
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: UpdateTeamSetInput) -> UpdateTeamSetOutput:
@@ -112,6 +115,9 @@ class UpdateTeamSetUC:
 
         project.updated_at = datetime.now(tz=timezone.utc)
         self._project_repo.save(project)
+        # Новая база комплекта — тоже часть чистого рендера шаблона: без неё
+        # обновление шаблона сочло бы её файлы восстановленными приблизительно.
+        await asyncio.to_thread(extend_template_base, self._base_service if inp.enabled else None, project, version)
 
         # Страховочный снапшот: и включение, и выключение восстановимы через
         # «Версии». Best-effort — сбой VCS не блокирует операцию.

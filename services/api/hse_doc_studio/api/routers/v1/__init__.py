@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from hse_doc_studio.api.guards import project_write_guard
 from hse_doc_studio.api.routers.v1 import (
     agent_personas,
     ai_providers,
@@ -30,10 +31,13 @@ from hse_doc_studio.api.routers.v1 import (
     submission,
     synctex,
     system,
+    template_update,
     vcs,
 )
 
-api_router = APIRouter(prefix="/api/v1")
+# Гард записи: проект, который эта Студия может только смотреть (данные более
+# новой Студии, нет версии шаблона, идёт обновление), не меняется ни одним запросом.
+api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(project_write_guard)])
 
 api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(projects.router, tags=["projects"])
@@ -48,6 +52,7 @@ api_router.include_router(forms.router, tags=["forms"])
 api_router.include_router(submission.router, tags=["submission"])
 api_router.include_router(changelog.router, tags=["changelog"])
 api_router.include_router(vcs.router, tags=["vcs"])
+api_router.include_router(template_update.router, tags=["template-update"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(fonts.router, tags=["fonts"])
 api_router.include_router(fs.router, tags=["fs"])

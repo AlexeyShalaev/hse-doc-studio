@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from hse_doc_studio.core.catalog import TemplateVersion
+
 # Patterns written verbatim into <git-dir>/info/exclude at init (and refreshed on
 # connect). The version history holds the user's WORK — source documents,
 # project settings, signatures and forms — and nothing else. Everything that is
@@ -44,4 +49,22 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     "# hse-studio caches (sources stay tracked)",
     ".hse-studio/compiles/",
     ".hse-studio/chats/",
+    "# template update journal and pre-migration backups — transaction state, not work",
+    ".hse-studio/update/",
+    ".hse-studio/backup/",
 )
+
+
+def vcs_exclude_for(version: TemplateVersion | None) -> list[str]:
+    """Исключения истории для проекта на версии шаблона `version`.
+
+    Выходы dynamic include перегенерируются перед каждой сборкой — это не работа
+    пользователя. Захардкоженный `common/meta.tex` выше покрывает только корень
+    solo-проекта; здесь каждый выход версии исключается в любой базе раскладки
+    (`shared/`, папки авторов) шаблоном `**/<выход>`.
+    """
+    patterns = list(DEFAULT_VCS_EXCLUDE)
+    if version is not None and version.dynamic_includes:
+        patterns.append("# dynamic includes of the template version (regenerated before every compile)")
+        patterns += sorted({f"**/{inc.output.strip('/')}" for inc in version.dynamic_includes})
+    return patterns

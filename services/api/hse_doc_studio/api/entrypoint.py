@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from hse_doc_studio.api.config import Settings, settings
+from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.i18n import set_interface_language
@@ -30,6 +31,7 @@ from hse_doc_studio.use_cases.compile.recover_stale_compiles import RecoverStale
 from hse_doc_studio.use_cases.fonts.adopt_host_fonts import AdoptHostFontsUC
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 from hse_doc_studio.use_cases.system.auto_update import AutoUpdateResult, AutoUpdateUC
+from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
 
 logger = structlog.get_logger(__name__)
 
@@ -66,6 +68,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         return await call_next(request)
 
     app.include_router(api_router)
+    install_exception_handlers(app)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -219,6 +222,25 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                     )
         except Exception:
             logger.exception("startup recovery failed")
+
+    @app.on_event("startup")
+    async def _recover_template_updates() -> None:
+        # Обновления шаблона, прерванные падением процесса: по журналу проект
+        # возвращается в состояние до обновления (или обновление доводится,
+        # если его коммит уже записан). Иначе проект остался бы «только чтение».
+        try:
+            async with container() as request_container:
+                uc = await request_container.get(RecoverTemplateUpdatesUC)
+                result = await uc.execute()
+                for item in result.recovered:
+                    logger.info(
+                        "startup template update recovery",
+                        folder=str(item.folder),
+                        update_id=item.update_id,
+                        finalized=item.finalized,
+                    )
+        except Exception:
+            logger.exception("startup template update recovery failed")
 
     @app.on_event("startup")
     async def _recover_stale_chat_runs() -> None:

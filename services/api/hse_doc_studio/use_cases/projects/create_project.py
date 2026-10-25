@@ -34,7 +34,7 @@ from hse_doc_studio.core.value_objects import (
     Person,
     ProjectLock,
 )
-from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
+from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.project_init.template_renderer import (
     TemplateRenderer,
@@ -42,6 +42,8 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     instantiate_nda,
     regenerate_dynamic_includes,
 )
+from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+from hse_doc_studio.use_cases.template_update.support import lock_for
 
 logger = structlog.get_logger()
 
@@ -81,6 +83,7 @@ class CreateProjectUC:
         template_service: ProjectTemplateService,
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
+        base_service: TemplateBaseService | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
@@ -88,6 +91,7 @@ class CreateProjectUC:
         self._template_service = template_service
         self._template_renderer = template_renderer
         self._vcs = vcs_service
+        self._base_service = base_service
 
     async def execute(self, inp: CreateProjectInput) -> CreateProjectOutput:
         folder = inp.folder.expanduser().resolve()
@@ -115,6 +119,9 @@ class CreateProjectUC:
         if not folder.exists():
             folder.mkdir(parents=True, exist_ok=True)
             logger.debug("created project folder", folder=str(folder))
+        # Скрытые файлы пользователя, лежавшие в папке до создания (`.vscode/`), —
+        # не часть шаблона: в базу обновлений они не попадают.
+        preexisting = frozenset(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file())
 
         # 3. Build documents from template definitions
         documents = _build_documents(
@@ -137,11 +144,15 @@ class CreateProjectUC:
             id=uuid.uuid4(),
             name=inp.name,
             folder=folder,
-            lock=ProjectLock(
-                pack_id=inp.pack_id,
-                template_id=inp.template_id,
-                version=inp.version,
-                engine=inp.engine,
+            lock=lock_for(
+                ProjectLock(
+                    pack_id=inp.pack_id,
+                    template_id=inp.template_id,
+                    version=inp.version,
+                    engine=inp.engine,
+                ),
+                template_version,
+                self._template_repo,
             ),
             kind=inp.kind,
             staffing=inp.staffing,
@@ -176,9 +187,18 @@ class CreateProjectUC:
         # never block project creation.
         try:
             if self._vcs.is_available(project):
-                await asyncio.to_thread(self._vcs.init, project, list(DEFAULT_VCS_EXCLUDE))
+                await asyncio.to_thread(self._vcs.init, project, vcs_exclude_for(template_version))
         except Exception as exc:  # noqa: BLE001
             logger.warning("vcs init failed on create", project_id=str(project.id), exc=str(exc))
+
+        # 9. База будущих обновлений шаблона: чистый рендер версии, ровно то, что
+        # только что записано. Без неё первое обновление восстанавливало бы базу
+        # из истории. Тоже best-effort: проект создаётся и без неё.
+        if self._base_service is not None:
+            try:
+                await asyncio.to_thread(self._base_service.record_initial, project, template_version, preexisting)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("template base not recorded on create", project_id=str(project.id), exc=str(exc))
 
         logger.info(
             "project created",

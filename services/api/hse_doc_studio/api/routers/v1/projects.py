@@ -15,6 +15,7 @@ from hse_doc_studio.api.schemas.project import (
     FolderRootResponse,
     MoveProjectRequest,
     NdaStatusResponse,
+    ProjectAccessResponse,
     ProjectDetailResponse,
     ProjectListItemResponse,
     ProjectSuggestionsResponse,
@@ -35,6 +36,7 @@ from hse_doc_studio.use_cases.projects.create_project import (
     CreateProjectUC,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
 from hse_doc_studio.use_cases.projects.get_project_suggestions import (
     GetProjectSuggestionsUC,
 )
@@ -255,6 +257,7 @@ async def get_project(
     project_id: UUID,
     uc: FromDishka[GetProjectUC],
     paths: FromDishka[PathMapping],
+    access_service: FromDishka[ProjectAccessService],
 ) -> ProjectDetailResponse:
     try:
         result = await uc.execute(GetProjectInput(project_id=project_id))
@@ -262,7 +265,12 @@ async def get_project(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_project_detail(result.project, paths)
+    response = _map_project_detail(result.project, paths)
+    access = access_service.evaluate(result.project)
+    response.access = ProjectAccessResponse(
+        mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio
+    )
+    return response
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectDetailResponse)
