@@ -35,13 +35,20 @@ import type {
   DetachedVerdict,
   FrozenPdfResponse,
 } from "@shared/api/types";
-import { formatBytes, localeTag, toast } from "@shared/lib";
+import { localeTag, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
 
 const downloadUrl = (url: string) => {
   window.location.assign(url);
 };
+
+// PDF заявки весит десятки КБ, а formatBytes из shared считает в ГБ/МБ (для
+// образов Docker), поэтому здесь свой формат.
+const formatSize = (bytes: number): string =>
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString(localeTag(), {
@@ -195,7 +202,7 @@ export const FreezeCard = ({
           <div style={{ fontSize: 10.5, color: "var(--fg-2)" }}>
             {t("detached.freeze.frozenAt", {
               date: formatDateTime(frozen.frozen_at),
-              size: formatBytes(frozen.size),
+              size: formatSize(frozen.size),
             })}
           </div>
           <button
@@ -755,7 +762,7 @@ export const SlotDetachedSignature = ({
               <Field
                 name={t("detached.field.format")}
                 value={`${t(`detached.format.${signature.format}`)}${
-                  signature.algorithm
+                  signature.format === "cms" && signature.algorithm
                     ? `, ${prettyAlgorithm(signature.algorithm)}`
                     : ""
                 }`}
