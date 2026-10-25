@@ -141,6 +141,7 @@
     "academicSupervisorHint": "Не задан — печатается руководитель ОП «Программная инженерия» по умолчанию",
     "author": "Автор {{number}}",
     "group": "Группа",
+    "groupPlaceholder": "БПИ222",
     "sectionGeneral": "Общая информация",
     "name": "Название",
     "template": "Шаблон",

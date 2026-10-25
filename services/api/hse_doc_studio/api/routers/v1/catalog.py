@@ -154,6 +154,7 @@ def _map_version_detail(tv: TemplateVersion) -> VersionDetailResponse:
             "profiles": [_map_submission_profile(p).model_dump() for p in tv.pack_submission.profiles],
         },
         supported_staffing=list(tv.supported_staffing),
+        author_group_placeholder=tv.author_group_placeholder,
     )
 
 

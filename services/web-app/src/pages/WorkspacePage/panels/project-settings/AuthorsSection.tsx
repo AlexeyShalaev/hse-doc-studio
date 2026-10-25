@@ -18,6 +18,8 @@ type AuthorRowProps = {
   // тоггл недоступен (solo или автор без слага).
   onToggleManaged?: (() => void) | undefined;
   isTogglingManaged?: boolean;
+  // Подсказка в поле «Группа» из пака (формат шифра группы программы).
+  groupPlaceholder: string;
 };
 
 const AuthorRow = ({
@@ -29,6 +31,7 @@ const AuthorRow = ({
   onRemove,
   onToggleManaged,
   isTogglingManaged,
+  groupPlaceholder,
 }: AuthorRowProps) => {
   const { t } = useTranslation("workspace");
   return (
@@ -107,7 +110,7 @@ const AuthorRow = ({
           <input
             className="input"
             value={value.group ?? ""}
-            placeholder="БПИ222"
+            placeholder={groupPlaceholder}
             onChange={(e) => {
               onChange({ group: e.target.value });
             }}
@@ -142,6 +145,8 @@ export type AuthorsSectionProps = {
   onRemoveAuthor: (index: number) => void;
   onAddAuthor: () => void;
   onToggleManaged: (author: AuthorEntry) => void;
+  // Подсказка в поле «Группа» из пака; пусто — общий плейсхолдер.
+  groupPlaceholder?: string | undefined;
 };
 
 export const AuthorsSection = ({
@@ -152,8 +157,10 @@ export const AuthorsSection = ({
   onRemoveAuthor,
   onAddAuthor,
   onToggleManaged,
+  groupPlaceholder,
 }: AuthorsSectionProps) => {
   const { t } = useTranslation("workspace");
+  const groupHint = groupPlaceholder || t("projectSettings.groupPlaceholder");
   return (
     <SectionCard title={t("projectSettings.sectionAuthors")} fullSpan>
       <div className="flex flex-col" style={{ gap: 10 }}>
@@ -185,6 +192,7 @@ export const AuthorsSection = ({
                   : undefined
               }
               isTogglingManaged={isTogglingManaged}
+              groupPlaceholder={groupHint}
             />
           ))
         )}

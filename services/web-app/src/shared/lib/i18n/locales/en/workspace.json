@@ -139,6 +139,7 @@
     "academicSupervisorHint": "If unset, the default SE programme supervisor is printed",
     "author": "Author {{number}}",
     "group": "Group",
+    "groupPlaceholder": "BPI222",
     "sectionGeneral": "General information",
     "name": "Name",
     "template": "Template",

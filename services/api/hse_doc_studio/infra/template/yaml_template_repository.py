@@ -222,6 +222,7 @@ def _parse_version(version_dir: Path, pack_id: str, template_id: str) -> Templat
             nda=nda,
             supported_staffing=supported_staffing,
             langs=langs,
+            author_group_placeholder=str(data.get("author_group_placeholder") or "").strip(),
         )
     except Exception as exc:
         logger.warning("version.yaml parse error", path=str(ver_yaml), exc=str(exc))

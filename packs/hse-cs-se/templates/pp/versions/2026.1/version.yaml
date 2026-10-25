@@ -45,6 +45,10 @@ supported_kinds: [research, project]
 # защищает СВОЙ Project Proposal — командной раскладки у шаблона нет.
 supported_staffing: [solo]
 
+# Подсказка в поле «Группа» у авторов (визард и настройки проекта) —
+# формат шифра группы программы: бакалавриат ПИ: «БПИ» + год поступления + номер группы.
+author_group_placeholder: "БПИ222"
+
 # ── движок компиляции ──
 engine:
   default: xelatex

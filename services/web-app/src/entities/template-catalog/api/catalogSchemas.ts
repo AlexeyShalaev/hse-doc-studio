@@ -138,6 +138,9 @@ export const VersionDetailSchema = z.object({
   // Staffing modes the pack version supports; a pack without "team" cannot be
   // selected for more than one author.
   supported_staffing: z.array(z.string()).default(["solo"]),
+  // Pack-declared hint for the author «Group» field (the programme's group
+  // code format, e.g. «БПИ222», «МСПИН261»); empty — generic placeholder.
+  author_group_placeholder: z.string().default(""),
   engine_config: z.object({
     default: z.enum(["xelatex", "pdflatex", "lualatex"]),
     allowed: z.array(z.enum(["xelatex", "pdflatex", "lualatex"])),

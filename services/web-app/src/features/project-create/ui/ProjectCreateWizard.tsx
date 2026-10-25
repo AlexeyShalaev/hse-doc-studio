@@ -1203,7 +1203,10 @@ const StepAuthors = () => {
                 <input
                   type="text"
                   className="input mono"
-                  placeholder={t("authors.groupPlaceholder")}
+                  placeholder={
+                    versionDetail?.author_group_placeholder ||
+                    t("authors.groupPlaceholder")
+                  }
                   value={author.group}
                   onChange={(e) => {
                     handlePatchAuthor(idx, { group: e.target.value });

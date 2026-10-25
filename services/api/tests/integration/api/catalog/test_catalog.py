@@ -60,6 +60,20 @@ async def test__api__catalog_get_version__returns_detail(test_app: AsyncClient) 
 
 
 @pytest.mark.parametrize(
+    ("pack_id", "template_id", "expected"),
+    [("hse-cs-se", "vkr", "БПИ222"), ("hse-cs-sse", "coursework", "МСПИН261")],
+)
+async def test__api__catalog_get_version__author_group_placeholder_comes_from_pack(
+    test_app: AsyncClient, pack_id: str, template_id: str, expected: str
+) -> None:
+    # У каждой программы свой формат шифра группы — подсказку в поле «Группа» задаёт пак.
+    resp = await test_app.get(f"/api/v1/catalog/packs/{pack_id}/templates/{template_id}/versions/2026.1")
+
+    assert resp.status_code == 200
+    assert resp.json()["author_group_placeholder"] == expected
+
+
+@pytest.mark.parametrize(
     "path",
     [
         "/api/v1/catalog/packs/hse-cs-se/templates/vkr/versions/9999.9",
