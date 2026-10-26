@@ -117,7 +117,8 @@
       "signing": "Signing certificates",
       "disk": "Disk",
       "data": "Import / Export",
-      "about": "About"
+      "about": "About",
+      "gitAccess": "Repository access"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",

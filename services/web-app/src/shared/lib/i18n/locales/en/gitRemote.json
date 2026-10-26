@@ -85,7 +85,13 @@
   "sharedFolder": {
     "title": "The project folder is inside {{provider}}",
     "text": "If the drive syncs both the project files and the .hse-studio/git history, the history can get corrupted. You can still connect the repository, but it is better to exclude this folder from the drive sync.",
-    "acknowledge": "Got it"
+    "acknowledge": "Got it",
+    "root": "Drive: {{path}}",
+    "acknowledged": "Warning acknowledged",
+    "acknowledgeToggle": "I know about this, do not remind me",
+    "acknowledgeHint": "The Studio stops reminding you about this when you connect and sync this project.",
+    "evidence": "Why we think so",
+    "advice": "The safest way is to exclude the .hse-studio/git folder from the drive sync or keep the project outside a cloud folder."
   },
   "contents": {
     "loading": "Counting what goes into the repository…",
@@ -277,5 +283,74 @@
     "accessUpdated": "Access updated: the repository accepted it.",
     "syncFailed": "The repository is connected, but syncing did not start. Start it from the sync panel.",
     "syncFailedTitle": "Sync did not start"
+  },
+  "settings": {
+    "remote": {
+      "emptyTitle": "No repository connected",
+      "emptyText": "Connect GitHub, GitLab or your own server to work on the project together. Versions also stay on this computer.",
+      "connect": "Connect a repository",
+      "loading": "Loading the repository state…",
+      "loadFailed": "Could not get the repository state.",
+      "retry": "Try again",
+      "address": "Address",
+      "addressLabel": "Repository address",
+      "openInBrowser": "Open in browser",
+      "branch": "Branch",
+      "access": "Access",
+      "noCredential": "No access is set: the repository opens without a token or key.",
+      "replaceAccess": "Replace access",
+      "showKey": "Show public key",
+      "hideKey": "Hide public key",
+      "publicKey": "Public key",
+      "fingerprint": "Key fingerprint",
+      "tokenFamily": "Token {{family}}…",
+      "lastSync": "Sync",
+      "neverSynced": "Not synced yet",
+      "lastSyncDetail": "{{outcome}}, {{when}}. Versions received: {{pulled}}, sent: {{pushed}}.",
+      "lastCheck": "Check",
+      "neverChecked": "Not checked yet",
+      "checkedAt": "Checked {{when}}",
+      "syncNow": "Sync now",
+      "syncing": "Syncing…",
+      "check": "Check for updates",
+      "resolve": "Resolve conflicts",
+      "setProfile": "Set the author",
+      "insecure": "The address is not encrypted (http): the token and versions travel over the network in the open."
+    },
+    "danger": {
+      "title": "Disconnect the repository",
+      "text": "Local history stays and syncing stops. The repository on the server is not changed.",
+      "button": "Disconnect"
+    },
+    "disconnect": {
+      "title": "Disconnect the repository?",
+      "description": "The project will stop syncing with {{repo}}. Local history stays and the repository on the server is not changed.",
+      "unsent_one": "{{count}} version is not sent. After disconnecting it stays only on this computer.",
+      "unsent_other": "{{count}} versions are not sent. After disconnecting they stay only on this computer.",
+      "forget": "Delete the saved access “{{label}}”",
+      "forgetHint": "The token or key disappears from the Studio. You can connect again with a new access.",
+      "forgetBlocked": "Other projects use this access too: {{projects}}. You can delete it in Settings, in the Repository access section.",
+      "cancel": "Cancel",
+      "confirm": "Disconnect",
+      "failed": "Could not disconnect the repository.",
+      "done": "Repository disconnected"
+    },
+    "options": {
+      "autoFetch": "Check the repository in the background",
+      "autoFetchHint": "The Studio finds out that colleagues sent something new and shows it on the sync button. Nothing is downloaded into the project until you sync.",
+      "interval": "How often to check",
+      "intervalDefault": "Same as default ({{interval}})",
+      "intervalOff": "off",
+      "nextCheck": "Next check {{when}}.",
+      "lastCheck": "Last check {{when}}.",
+      "neverChecked": "The repository has not been checked yet.",
+      "personalNote": "These are personal Studio settings on this computer. They are not shared with colleagues and do not go into the repository.",
+      "defaultLink": "Default interval",
+      "saveFailed": "Could not save the setting."
+    },
+    "interval": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h"
+    }
   }
 }

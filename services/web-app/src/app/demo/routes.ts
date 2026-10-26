@@ -797,6 +797,47 @@ const tokenFamily = (token: string): string | null =>
 const credentialPublic = (credential: GitCredential): GitCredential =>
   credential;
 
+// Настройки приложения: настоящие, если бэкенд отвечает, иначе заглушка. Подменяем
+// только интервал фоновой проверки, чтобы раздел «Доступ к репозиториям» работал.
+const FALLBACK_APP_SETTINGS = {
+  theme: "system",
+  interface_language: "ru",
+  default_engine: "xelatex",
+  latex_passes: 2,
+  max_concurrent_compiles: 2,
+  latex_flags: null,
+  compile_image: null,
+  default_ai_provider_id: null,
+  default_ai_model: null,
+  agent_auto_approve_writes: false,
+  auto_update: true,
+  disk_usage_warn_gb: 5,
+};
+
+// Последний ответ настоящего бэкенда: по нему отвечаем на сохранение, которое
+// касается только демо-настройки, чтобы не подменить язык и тему заглушкой.
+let lastAppSettings: Record<string, unknown> = FALLBACK_APP_SETTINGS;
+
+const appSettings = async (
+  req: DemoRequest,
+  forward = true,
+): Promise<Record<string, unknown>> => {
+  if (forward) {
+    try {
+      const response = await req.forward();
+      if (response.data !== null && typeof response.data === "object") {
+        lastAppSettings = response.data as Record<string, unknown>;
+      }
+    } catch {
+      // Настоящего бэкенда нет: остаются прежние значения.
+    }
+  }
+  return {
+    ...lastAppSettings,
+    git_fetch_interval_s: world.defaultFetchIntervalS,
+  };
+};
+
 const globalRoutes: DemoRoute[] = [
   {
     method: "GET",
@@ -1162,6 +1203,22 @@ const globalRoutes: DemoRoute[] = [
       }
       cancelOperation(world, op);
       return demoJson(operationView(op));
+    },
+  },
+  // --- настройки приложения: только интервал фоновой проверки ---
+  {
+    method: "GET",
+    pattern: "/settings",
+    handler: async (req) => demoJson(await appSettings(req)),
+  },
+  {
+    method: "PUT",
+    pattern: "/settings",
+    handler: async (req) => {
+      const { git_fetch_interval_s: interval, ...rest } = recordBody(req);
+      if (typeof interval === "number") world.defaultFetchIntervalS = interval;
+      // Остальные настройки принадлежат настоящему бэкенду, если он есть.
+      return demoJson(await appSettings(req, Object.keys(rest).length > 0));
     },
   },
   // --- профиль автора ---

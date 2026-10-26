@@ -12,3 +12,6 @@ export const gitHistoryPath = (projectId: string): string =>
   `/projects/${projectId}/versions`;
 
 export const AUTHOR_PROFILE_PATH = "/settings/profile";
+
+// Раздел настроек приложения с токенами, ключами и доверенными серверами.
+export const GIT_ACCESS_PATH = "/settings/git-access";

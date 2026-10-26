@@ -3,6 +3,15 @@ export type { ConnectRemoteDialogProps } from "./ui/ConnectRemoteDialog";
 export type { CloneTarget } from "./ui/ConnectFlow";
 export { HostKeyDialog } from "./ui/HostKeyDialog";
 export type { HostKeyDialogProps, HostKeyMode } from "./ui/HostKeyDialog";
+export { GitAccessSection } from "./ui/GitAccessSection";
+export {
+  FetchOptionsCard,
+  RemoteConnectionCard,
+  SharedFolderCard,
+} from "./ui/RemoteSettingsCards";
+export type { RemoteSettingsCardProps } from "./ui/RemoteSettingsCards";
+export { DisconnectDialog } from "./ui/DisconnectDialog";
+export type { DisconnectDialogProps } from "./ui/DisconnectDialog";
 export { SharedFolderWarning } from "./ui/SharedFolderWarning";
 export type { SharedFolderWarningProps } from "./ui/SharedFolderWarning";
 export {

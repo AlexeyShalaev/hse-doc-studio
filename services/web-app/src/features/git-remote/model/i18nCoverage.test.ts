@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { GIT_PROVIDERS } from "@entities/git-remote";
+import {
+  GIT_BLOCKED_REASONS,
+  GIT_SYNC_OUTCOMES,
+  GIT_UI_STATES,
+} from "@entities/git-sync";
 import { i18n } from "@shared/lib/i18n";
 import { KEY_STEPS, TOKEN_STEPS } from "../lib/providerHelp";
 import { CHECK_ROWS } from "./probeOutcome";
@@ -56,6 +61,19 @@ const dynamicKeys = (): string[] => {
     "unknown",
   ]) {
     keys.push(`gitAccess:sharedProvider.${provider}`);
+  }
+  // Настройки проекта и раздел доступа берут состояния, причины и итоги из gitSync.
+  for (const state of GIT_UI_STATES) keys.push(`gitSync:state.${state}`);
+  for (const reason of GIT_BLOCKED_REASONS) {
+    if (reason !== "remote_schema_newer")
+      keys.push(`gitSync:blocked.${reason}`);
+  }
+  for (const outcome of GIT_SYNC_OUTCOMES)
+    keys.push(`gitSync:outcome.${outcome}`);
+  for (const kind of ["pat", "ssh_key"])
+    keys.push(`gitRemote:credentialKind.${kind}`);
+  for (const unit of ["minutes", "hours"]) {
+    keys.push(`gitRemote:settings.interval.${unit}`);
   }
   return keys;
 };

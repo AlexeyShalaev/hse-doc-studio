@@ -177,5 +177,84 @@
     "revealFailed": "Could not get the new server key fingerprint. The key cannot be replaced blindly.",
     "retry": "Retry",
     "noFingerprint": "The new fingerprint is not known yet, the key was not replaced."
+  },
+  "access": {
+    "loading": "Loading…",
+    "loadFailed": "Could not load the data.",
+    "retry": "Try again",
+    "credentials": {
+      "tokenFamily": "Token {{family}}…",
+      "created": "Added {{when}}",
+      "fingerprint": "Fingerprint",
+      "publicKey": "Public key",
+      "showKey": "Show public key",
+      "hideKey": "Hide public key",
+      "replace": "Replace token",
+      "delete": "Delete",
+      "deleteLabel": "Delete the access “{{label}}”",
+      "usedByHeading": "Projects with this access",
+      "openProject": "Open the sync settings of the project “{{name}}”",
+      "authFailedHint": "The server did not accept this access. Replace the token or the key.",
+      "replaceDialog": {
+        "title": "Replace token",
+        "description": "The new token replaces the old one for {{host}}. You can revoke the old token in the server settings.",
+        "token": "New token",
+        "save": "Replace",
+        "cancel": "Cancel",
+        "failed": "Could not replace the token.",
+        "done": "Token replaced",
+        "keepHint": "The token is stored encrypted on this computer and is never shown again."
+      },
+      "deleteDialog": {
+        "title": "Delete the access “{{label}}”?",
+        "description": "The token or key is erased from the Studio and cannot be restored.",
+        "usedHeading": "These projects lose access",
+        "usedText": "Syncing in them stops until you set a new access.",
+        "unused": "No project uses it.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "confirmUsed": "Delete and leave the projects without access",
+        "failed": "Could not delete the access.",
+        "done": "Access deleted"
+      }
+    },
+    "hosts": {
+      "intro": "Servers whose keys you confirmed for ssh. If a server key changes, the Studio stops the connection and asks you.",
+      "columnServer": "Server",
+      "columnKeys": "Key fingerprints",
+      "columnAdded": "Added",
+      "forget": "Forget",
+      "forgetLabel": "Forget the server {{host}}",
+      "forgetTitle": "Forget the server {{host}}?",
+      "forgetText": "Next time you connect, the Studio shows the key fingerprint again and you have to confirm it.",
+      "forgetConfirm": "Forget server",
+      "cancel": "Cancel",
+      "forgetFailed": "Could not forget the server.",
+      "forgotten": "Server forgotten"
+    },
+    "encryption": {
+      "title": "Encryption",
+      "enabled": "On",
+      "unavailableChip": "Unavailable",
+      "sourceFile": "The encryption key is in a file in the Studio data folder.",
+      "sourceEnv": "The encryption key comes from an environment variable and is not in the data folder.",
+      "stored": "Saved accesses: {{count}}",
+      "permissionsOk": "The key file is closed to other users of this computer.",
+      "permissionsNotEnforced": "The key file is not closed to other users: the system does not let us restrict permissions. Do not give strangers access to the data folder.",
+      "unreadable_one": "{{count}} access could not be read: the encryption key was lost or replaced. Enter this token again.",
+      "unreadable_other": "{{count}} accesses could not be read: the encryption key was lost or replaced. Enter these tokens again.",
+      "unavailableText": "The secret store is unavailable: tokens and keys cannot be saved. Check the Studio data folder and its permissions.",
+      "sharedFolder": "The data folder is inside a cloud drive ({{provider}}), so the encrypted tokens and the encryption key go to the cloud together and the encryption protects almost nothing. Move the key file outside the drive: the path is set by the HSE_STUDIO__SECRETS__KEY_FILE variable.",
+      "sharedRoot": "Drive folder: {{path}}",
+      "threat": "Encryption protects against accidental leaks: a copy of the data folder, a cloud drive, a screenshot. It does not protect against malware on this computer or against someone who holds the whole data folder together with the key."
+    },
+    "fetchDefault": {
+      "title": "Default background check",
+      "text": "How often the Studio checks project repositories in the background. You can change it for a single project in its sync settings. This setting is personal and is not shared with colleagues.",
+      "label": "Default interval",
+      "off": "Off",
+      "saved": "Interval saved",
+      "failed": "Could not save the interval."
+    }
   }
 }

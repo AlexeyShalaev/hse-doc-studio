@@ -140,6 +140,8 @@ export const gitSyncApi = {
     apiClient
       .delete(`${gitPath(projectId)}/remote`, {
         params: { forget_credential: forgetCredential },
+        // Причину сбоя показывает окно отключения, второй тост не нужен.
+        silentError: true,
       })
       .then(() => undefined),
 

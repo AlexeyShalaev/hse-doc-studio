@@ -444,6 +444,11 @@
     "aboutImage": "Image",
     "aboutSource": "Source",
     "aboutDataDir": "Configuration folder",
-    "aboutUpdates": "Updates"
+    "aboutUpdates": "Updates",
+    "gitAccess": "Repository access",
+    "gitAccessCredentials": "Tokens and keys",
+    "gitAccessHosts": "Trusted servers",
+    "gitAccessEncryption": "Token encryption",
+    "gitAccessFetch": "Default background check"
   }
 }

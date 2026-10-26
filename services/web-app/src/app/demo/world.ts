@@ -83,6 +83,8 @@ export type DemoWorld = {
   hosts: GitHost[];
   profile: { name: string; email: string } | null;
   dataDirShared: { provider: string; root: string } | null;
+  // Личная настройка приложения «как часто проверять репозитории», секунды.
+  defaultFetchIntervalS: number;
   newProject: () => DemoProjectGit;
 };
 

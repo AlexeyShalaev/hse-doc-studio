@@ -48,6 +48,7 @@ export type {
 } from "./model/useSyncUiStore";
 export {
   AUTHOR_PROFILE_PATH,
+  GIT_ACCESS_PATH,
   gitConflictsPath,
   gitHistoryPath,
   gitSettingsPath,

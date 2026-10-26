@@ -215,7 +215,10 @@
     "authorUnmanagedToggleHint": "This author's set is not managed. Click to enable: the author's folder is materialised from the template (existing files are never overwritten).",
     "sharedDocsToggleOffHint": "Click to disable shared documents: files stay on disk, documents are unregistered (reversible).",
     "sharedDocsToggleOnHint": "Click to enable shared documents: the shared/ folder is materialised from the template if missing.",
-    "sectionTemplate": "Template version"
+    "sectionTemplate": "Template version",
+    "sectionSyncRemote": "Repository",
+    "sectionSyncOptions": "Background check",
+    "sectionSyncSharedFolder": "Folder on a cloud drive"
   },
   "files": {
     "editorTitle": "File editor",

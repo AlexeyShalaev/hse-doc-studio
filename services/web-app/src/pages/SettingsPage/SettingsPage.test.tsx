@@ -3,6 +3,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { settingsApi, type SettingsData } from "@entities/app-settings";
+import { gitRemoteApi } from "@entities/git-remote";
 import { profileApi, type Profile } from "@entities/profile";
 import { i18n } from "@shared/lib/i18n";
 
@@ -101,6 +103,62 @@ describe("SettingsPage: author profile section", () => {
     );
     expect(
       await screen.findByRole("button", { name: /Автор версий/ }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage: repository access section", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+    // jsdom has no scrollIntoView, which the "jump to setting" flash calls.
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
+    vi.spyOn(gitRemoteApi, "listHosts").mockResolvedValue([]);
+    vi.spyOn(gitRemoteApi, "getSecretsStatus").mockResolvedValue({
+      ok: true,
+      source: "file",
+      permissions_enforced: true,
+      credentials_total: 0,
+      credentials_unreadable: 0,
+      data_dir_shared_folder: null,
+    });
+    vi.spyOn(settingsApi, "get").mockResolvedValue({
+      git_fetch_interval_s: 300,
+    } as unknown as SettingsData);
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("is listed in the System group and opens its blocks", async () => {
+    mount("/settings/git-access");
+    const link = screen.getByRole("link", { name: "Доступ к репозиториям" });
+    expect(link).toHaveAttribute("href", "/settings/git-access");
+    expect(link).toHaveClass("active");
+    expect(link.previousElementSibling?.closest("nav")).toBeTruthy();
+    const groups = [...document.querySelectorAll(".settings-modal-group")].map(
+      (el) => el.textContent,
+    );
+    expect(groups.at(-1)).toBe("Система");
+    expect(await screen.findByText("Доверенные серверы")).toBeInTheDocument();
+    expect(await screen.findByText("Шифрование")).toBeInTheDocument();
+  });
+
+  it("is found by search in Russian and English and the result opens the section", async () => {
+    const user = userEvent.setup();
+    mount("/settings/appearance");
+    const search = screen.getByPlaceholderText("Поиск по настройкам");
+    await user.type(search, "fingerprint");
+    const result = await screen.findByRole("button", {
+      name: /Доверенные серверы/,
+    });
+    await user.click(result);
+    expect(await screen.findByText("Токены и ключи")).toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, "токен");
+    expect(
+      await screen.findByRole("button", { name: /Токены и ключи/ }),
     ).toBeInTheDocument();
   });
 });

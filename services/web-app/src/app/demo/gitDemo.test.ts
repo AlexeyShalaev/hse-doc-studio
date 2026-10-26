@@ -994,3 +994,54 @@ describe("demo adapter", () => {
     expect(request.query).toEqual({ a: "1", kind: ["edit", "sync"], q: "рис" });
   });
 });
+
+describe("demo app settings", () => {
+  it("answers with defaults and the demo interval when there is no backend", async () => {
+    resetWorld("not_connected");
+    const res = await call("GET", "/settings");
+    expect(res.status).toBe(200);
+    expect(res.data).toMatchObject({
+      theme: "system",
+      latex_passes: 2,
+      git_fetch_interval_s: 300,
+    });
+  });
+
+  it("keeps the real backend settings and only replaces the interval", async () => {
+    resetWorld("not_connected");
+    const forward = vi.fn(() =>
+      Promise.resolve({
+        data: { theme: "dark", interface_language: "en", latex_passes: 3 },
+      } as AxiosResponse),
+    );
+    const res = await call("GET", "/settings", { forward });
+    expect(res.data).toMatchObject({
+      theme: "dark",
+      interface_language: "en",
+      latex_passes: 3,
+      git_fetch_interval_s: 300,
+    });
+  });
+
+  it("saves the interval in memory without bothering the backend", async () => {
+    resetWorld("not_connected");
+    const forward = vi.fn(() =>
+      Promise.reject(new Error("must not be called")),
+    );
+    const saved = await call("PUT", "/settings", {
+      body: { git_fetch_interval_s: 600 },
+      forward,
+    });
+    expect(forward).not.toHaveBeenCalled();
+    expect(saved.data).toMatchObject({ git_fetch_interval_s: 600 });
+    const again = await call("GET", "/settings");
+    expect(again.data).toMatchObject({ git_fetch_interval_s: 600 });
+  });
+
+  it("returns to the default when the scenario is reset", async () => {
+    await call("PUT", "/settings", { body: { git_fetch_interval_s: 900 } });
+    resetWorld("up_to_date");
+    const res = await call("GET", "/settings");
+    expect(res.data).toMatchObject({ git_fetch_interval_s: 300 });
+  });
+});
