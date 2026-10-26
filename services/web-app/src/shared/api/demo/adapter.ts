@@ -69,6 +69,18 @@ const parseBody = (data: unknown): unknown => {
 const resolveFallback = (client: AxiosInstance): AxiosAdapter =>
   axios.getAdapter(client.defaults.adapter);
 
+// Сырой адаптер отдаёт тело строкой: JSON разбирает уже axios после адаптера, а
+// обработчик демо-маршрута, запросивший forward(), ждёт готовый объект.
+const parseForwarded = (response: AxiosResponse): AxiosResponse => {
+  if (typeof response.data !== "string" || response.data === "")
+    return response;
+  try {
+    return { ...response, data: JSON.parse(response.data) as unknown };
+  } catch {
+    return response;
+  }
+};
+
 /**
  * Подменяет транспорт axios: маршруты из таблицы отвечают сами, всё остальное
  * уходит настоящему бэкенду. Так демо-режим оживляет только то, чего ещё нет на
@@ -94,7 +106,7 @@ export const installDemoAdapter = (
       params: found.params,
       query: collectQuery(config, query),
       body: parseBody(config.data),
-      forward: () => fallback(config),
+      forward: () => fallback(config).then(parseForwarded),
     };
     const response = await found.handler(request);
     if (latency > 0) await sleep(latency);
