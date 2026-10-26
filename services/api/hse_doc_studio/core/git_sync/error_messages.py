@@ -58,6 +58,38 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Git не найден или слишком старый. Нужен Git не ниже 2.31",
         "Git was not found or is too old. Git 2.31 or newer is required",
     ),
+    GitErrorCode.profile_required: (
+        "Сначала укажите имя и почту автора: они попадут в историю проекта",
+        "Set your author name and e-mail first: they go into the project history",
+    ),
+    GitErrorCode.sync_busy: (
+        "С этим проектом уже идёт синхронизация. Дождитесь её окончания",
+        "This project is already being synchronized. Wait for it to finish",
+    ),
+    GitErrorCode.remote_exists: (
+        "К проекту уже подключён удалённый репозиторий. Сначала отключите его",
+        "A remote repository is already connected to this project. Disconnect it first",
+    ),
+    GitErrorCode.not_a_studio_project: (
+        "В репозитории нет проекта Студии: подключайте репозиторий, созданный из проекта",
+        "The repository has no Studio project: connect a repository created from a project",
+    ),
+    GitErrorCode.unrelated_histories: (
+        "В репозитории лежит другой проект или у него нет общей истории с этим",
+        "The repository holds another project or has no history in common with this one",
+    ),
+    GitErrorCode.off_branch: (
+        "Проект стоит не на той ветке, которая синхронизируется",
+        "The project is not on the branch that is being synchronized",
+    ),
+    GitErrorCode.operation_not_cancellable: (
+        "Эту операцию уже нельзя отменить",
+        "This operation can no longer be cancelled",
+    ),
+    GitErrorCode.remote_schema_newer: (
+        "Проект в репозитории записан более новой Студией. Обновите Студию",
+        "The project in the repository was saved by a newer Studio. Update the Studio",
+    ),
     GitErrorCode.branch_missing: (
         "В репозитории нет такой ветки",
         "The repository has no such branch",

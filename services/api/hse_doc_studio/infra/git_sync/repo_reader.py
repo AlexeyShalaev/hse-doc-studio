@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from hse_doc_studio.core.git_sync.entities import AuthorCount, LargeBlob, PathStamp, TreeEntry
+from hse_doc_studio.core.enums import VcsCommitKind
+from hse_doc_studio.core.git_sync.entities import AuthorCount, CommitBrief, LargeBlob, PathStamp, TreeEntry
 from hse_doc_studio.core.vcs.errors import VcsCommandError
 from hse_doc_studio.core.vcs.refs import validate_revision
 from hse_doc_studio.infra.git_sync.store_git import StoreGit
@@ -19,6 +21,10 @@ from hse_doc_studio.infra.git_sync.store_git import StoreGit
 # Пути из запросов трактуются буквально, без магии pathspec (`:(...)`, `*`).
 _LITERAL = {"GIT_LITERAL_PATHSPECS": "1"}
 _SEP = "\x1f"
+_END = "\x1e"
+_BRIEF_FORMAT = _SEP.join(["%H", "%an", "%ae", "%aI", "%B"]) + _END
+_KIND_TRAILER = re.compile(r"^Hse-Kind:\s*(\S+)\s*$", re.MULTILINE)
+_SHORT_ID = 7
 
 
 class GitRepoReader:
@@ -157,6 +163,18 @@ class GitRepoReader:
         ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
         return [AuthorCount(name=name, email=email, commits=commits) for (name, email), commits in ranked]
 
+    def commit_briefs(self, project_folder: Path, rev: str, *, limit: int) -> list[CommitBrief]:
+        out = self._git.text(
+            project_folder,
+            ["log", f"--format={_BRIEF_FORMAT}", f"-n{max(limit, 0)}", validate_revision(rev), "--"],
+            check=False,
+        )
+        return [brief for record in out.split(_END) if (brief := _parse_brief(record)) is not None]
+
+    def count_commits(self, project_folder: Path, rev: str) -> int:
+        out = self._git.text(project_folder, ["rev-list", "--count", validate_revision(rev), "--"], check=False)
+        return int(out) if out.strip().isdigit() else 0
+
     def _cat_batch(self, project_folder: Path, rev: str, paths: list[str]) -> dict[str, bytes | None]:
         """`cat-file --batch`: путь с переводом строки в строку запроса не помещается, его читаем отдельно."""
         queue = [p for p in paths if "\n" not in p]
@@ -175,6 +193,35 @@ class GitRepoReader:
         """Код 1 у этих команд значит «нет такого», всё остальное — поломка хранилища."""
         if returncode != 1:
             raise VcsCommandError(command, stderr.decode("utf-8", "replace"))
+
+
+def _parse_brief(record: str) -> CommitBrief | None:
+    fields = record.strip("\n").split(_SEP, 4)
+    if len(fields) != 5:  # noqa: PLR2004
+        return None
+    sha, author, email, moment, body = fields
+    try:
+        created_at = datetime.fromisoformat(moment)
+    except ValueError:
+        return None
+    kind = _KIND_TRAILER.search(body)
+    return CommitBrief(
+        id=sha,
+        short_id=sha[:_SHORT_ID],
+        message=body.strip().splitlines()[0] if body.strip() else "",
+        author=author,
+        author_email=email or None,
+        created_at=created_at,
+        kind=_kind(kind.group(1) if kind else None),
+    )
+
+
+def _kind(raw: str | None) -> str:
+    """Вид коммита по трейлеру; незнакомый (более новой Студии) читается как manual, как в истории версий."""
+    try:
+        return VcsCommitKind(raw).value if raw else VcsCommitKind.manual.value
+    except ValueError:
+        return VcsCommitKind.manual.value
 
 
 def _is_plain_path(path: str) -> bool:

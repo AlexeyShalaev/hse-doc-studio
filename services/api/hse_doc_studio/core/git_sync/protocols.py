@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,24 +13,31 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.git_sync.ci import CiOptions, RenderedCiFile
 from hse_doc_studio.core.git_sync.entities import (
     AuthorCount,
     AuthorProfile,
+    CloneResult,
+    CommitBrief,
     CredentialStatus,
     CredentialUsage,
     GitCredential,
     GitOperation,
+    GitOperationError,
     GitResult,
     LargeBlob,
     OperationKind,
     OperationPhase,
+    OperationStatus,
     PathStamp,
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
     StoreAudit,
     StoreFinding,
+    StoreRemoteConfig,
+    SyncResult,
     SyncState,
     SyncWarning,
     TreeEntry,
@@ -233,8 +241,14 @@ class IGitRepoReader(Protocol):
     ) -> list[LargeBlob]: ...
 
     def author_counts(self, project_folder: Path, rev: str) -> list[AuthorCount]:
-        """Число коммитов по авторам, больше всех первым."""
+        """Число коммитов по авторам, больше всех первым. `rev` может быть диапазоном `a..b`."""
         ...
+
+    def commit_briefs(self, project_folder: Path, rev: str, *, limit: int) -> list[CommitBrief]:
+        """Последние `limit` коммитов диапазона `rev` (`a..b` или один коммит), новые первыми."""
+        ...
+
+    def count_commits(self, project_folder: Path, rev: str) -> int: ...
 
 
 class IGitMergeCommitter(Protocol):
@@ -295,10 +309,32 @@ class IGitOperationRegistry(Protocol):
         phase: OperationPhase | None = None,
         percent: float | None = None,
         message: str | None = None,
+        cancellable: bool | None = None,
     ) -> None: ...
 
-    def finish(self, operation_id: str, operation: GitOperation) -> None: ...
-    def get(self, operation_id: str) -> GitOperation | None: ...
+    def finish(
+        self,
+        operation_id: str,
+        *,
+        status: OperationStatus = OperationStatus.succeeded,
+        result: SyncResult | CloneResult | None = None,
+        error: GitOperationError | None = None,
+    ) -> None:
+        """Закрывает операцию: папка свободна, итог остаётся доступным ещё некоторое время."""
+        ...
+
+    def attach_task(self, operation_id: str, task: asyncio.Task[object]) -> None:
+        """Задача, которую отменит `cancel`: вместе с ней гибнут дочерние процессы git."""
+        ...
+
+    def cancel(self, operation_id: str) -> GitOperation | None:
+        """Отменяет задачу. None, если операции нет. Бросает GitSyncError(operation_not_cancellable)."""
+        ...
+
+    def get(self, operation_id: str) -> GitOperation | None:
+        """Снимок операции: изменения реестра после вызова в него не попадают."""
+        ...
+
     def current_for(self, project_id: UUID) -> GitOperation | None: ...
     def is_busy(self, folder: Path) -> bool: ...
 
@@ -309,6 +345,22 @@ class IGitRemoteRegistry(Protocol):
     def add(self, folder: Path) -> None: ...
     def remove(self, folder: Path) -> None: ...
     def list(self) -> list[Path]: ...
+
+
+class IGitStoreRemotes(Protocol):
+    """Подключение проекта в config его хранилища и отслеживаемые ветки. Секретов здесь нет."""
+
+    def git_dir(self, project: Project) -> Path: ...
+    def read(self, project: Project) -> StoreRemoteConfig | None:
+        """None, если адрес не подключён. Без запуска git, пока в config нет секции remote."""
+        ...
+
+    def write(self, project: Project, config: StoreRemoteConfig) -> None: ...
+    def clear(self, project: Project) -> None:
+        """Убирает адрес, привязку и отслеживаемые ветки. Сам удалённый репозиторий не затрагивается."""
+        ...
+
+    def drop_tracking_refs(self, project: Project) -> None: ...
 
 
 @dataclass(frozen=True)

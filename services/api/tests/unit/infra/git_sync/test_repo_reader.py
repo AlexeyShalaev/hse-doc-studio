@@ -279,6 +279,70 @@ def test__author_counts__unknown_rev__is_empty(repo: Repo) -> None:
     assert _reader().author_counts(repo.folder, "refs/remotes/origin/main") == []
 
 
+def test__commit_briefs__range_newest_first_with_kind_and_author(repo: Repo) -> None:
+    base = repo.head()
+    repo.authors.current = VcsAuthor("Anna", "anna@example.org")
+    first = repo.snap("первая правка\n\nподробности", a="1\n")
+    second = repo.snap("вторая правка", a="2\n")
+
+    briefs = _reader().commit_briefs(repo.folder, f"{base}..HEAD", limit=5)
+
+    assert [b.id for b in briefs] == [second, first]
+    assert [b.message for b in briefs] == ["вторая правка", "первая правка"]
+    assert briefs[0].short_id == second[:7]
+    assert (briefs[0].author, briefs[0].author_email, briefs[0].kind) == ("Anna", "anna@example.org", "manual")
+    assert briefs[0].created_at.tzinfo is not None
+
+
+def test__commit_briefs__limit_and_unknown_revision(repo: Repo) -> None:
+    for index in range(4):
+        repo.snap(f"s{index}", a=f"{index}\n")
+
+    assert len(_reader().commit_briefs(repo.folder, "HEAD", limit=2)) == 2
+    assert _reader().commit_briefs(repo.folder, "HEAD", limit=0) == []
+    assert _reader().commit_briefs(repo.folder, "refs/remotes/origin/main", limit=5) == []
+
+
+def test__commit_briefs__unknown_kind_trailer_reads_as_manual(repo: Repo) -> None:
+    repo.write("a", "1\n")
+    repo.git.run(repo.folder, ["add", "-A"])
+    repo.git.run(repo.folder, ["commit", "-m", "от новой Студии\n\nHse-Kind: from-the-future"])
+
+    [brief] = _reader().commit_briefs(repo.folder, "HEAD", limit=1)
+
+    assert (brief.message, brief.kind) == ("от новой Студии", "manual")
+
+
+def test__commit_briefs__sync_kind_is_kept(repo: Repo) -> None:
+    repo.write("a", "1\n")
+    repo.git.run(repo.folder, ["add", "-A"])
+    repo.git.run(repo.folder, ["commit", "-m", "Синхронизация\n\nHse-Kind: sync"])
+
+    [brief] = _reader().commit_briefs(repo.folder, "HEAD", limit=1)
+
+    assert brief.kind == "sync"
+
+
+def test__count_commits__counts_a_range_and_tolerates_unknown_revisions(repo: Repo) -> None:
+    base = repo.head()
+    repo.snap("a", a="1\n")
+    repo.snap("b", a="2\n")
+
+    assert _reader().count_commits(repo.folder, f"{base}..HEAD") == 2
+    assert _reader().count_commits(repo.folder, "HEAD") == 3
+    assert _reader().count_commits(repo.folder, "refs/remotes/origin/main") == 0
+
+
+def test__author_counts__accepts_a_range(repo: Repo) -> None:
+    base = repo.head()
+    repo.authors.current = VcsAuthor("Anna", "anna@example.org")
+    repo.snap("a", a="1\n")
+
+    counts = _reader().author_counts(repo.folder, f"{base}..HEAD")
+
+    assert [(c.email, c.commits) for c in counts] == [("anna@example.org", 1)]
+
+
 def test__reader__does_not_touch_the_work_tree_or_index(repo: Repo) -> None:
     (repo.folder / "vkr" / "vkr.tex").write_text("dirty\n", encoding="utf-8")
     before = repo.git.text(repo.folder, ["status", "--porcelain"])

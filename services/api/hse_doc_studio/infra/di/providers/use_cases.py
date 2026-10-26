@@ -24,16 +24,25 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitOperationRegistry,
+    IGitRemoteRegistry,
+    IGitRepoReader,
+    IGitStoreGuard,
+    IGitStoreRemotes,
+    IGitSyncStateRepository,
+    IGitTransport,
     IHostKeyScanner,
     IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
     ISshKeyGenerator,
 )
+from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
@@ -260,6 +269,7 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
 from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
+from hse_doc_studio.use_cases.git_sync.connect_remote import ConnectRemoteUC, DisconnectRemoteUC
 
 # --- Git sync ---
 from hse_doc_studio.use_cases.git_sync.credentials import (
@@ -270,6 +280,10 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     UpdateCredentialUC,
 )
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
+from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
+from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
+from hse_doc_studio.use_cases.git_sync.status import GetGitStatusUC, GitStatusBuilder
+from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsUC
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
 from hse_doc_studio.use_cases.hse_persons.search_persons import SearchHsePersonsUC
@@ -567,10 +581,14 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        git_operations: IGitOperationRegistry,
+        git_remotes: IGitRemoteRegistry,
     ) -> UnregisterProjectUC:
         return UnregisterProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
+            git_operations=git_operations,
+            git_remotes=git_remotes,
         )
 
     @provide
@@ -579,11 +597,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         dispatcher: IJobDispatcher,
+        git_operations: IGitOperationRegistry,
+        git_remotes: IGitRemoteRegistry,
     ) -> MoveProjectUC:
         return MoveProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             dispatcher=dispatcher,
+            git_operations=git_operations,
+            git_remotes=git_remotes,
         )
 
     @provide
@@ -1473,6 +1495,133 @@ class UseCaseProvider(Provider):
     @provide
     def get_forget_git_host_uc(self, store: IKnownHostsStore) -> ForgetHostUC:
         return ForgetHostUC(store)
+
+    # ------------------------------------------------------------------ Git-синхронизация: проект и подключение
+
+    @provide
+    def get_git_status_builder(
+        self,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        operations: IGitOperationRegistry,
+        profile: ILocalAuthorProfile,
+        credentials: IGitCredentialRepository,
+        access: ProjectAccessService,
+        guard: IGitStoreGuard,
+        settings_repo: ISettingsRepository,
+        memo: RefStatusMemo,
+        policy: GitSyncPolicy,
+    ) -> GitStatusBuilder:
+        return GitStatusBuilder(
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            reader=reader,
+            operations=operations,
+            profile=profile,
+            credentials=credentials,
+            access=access,
+            guard=guard,
+            settings_repo=settings_repo,
+            memo=memo,
+            policy=policy,
+        )
+
+    @provide
+    def get_git_status_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        builder: GitStatusBuilder,
+    ) -> GetGitStatusUC:
+        return GetGitStatusUC(project_repo, project_index_repo, builder)
+
+    @provide
+    def get_probe_git_remote_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        transport: IGitTransport,
+        credentials: IGitCredentialRepository,
+        template_repo: ITemplateRepository,
+        policy: GitSyncPolicy,
+    ) -> ProbeRemoteUC:
+        return ProbeRemoteUC(project_repo, project_index_repo, transport, credentials, template_repo, policy)
+
+    @provide
+    def get_connect_git_remote_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        ensure_vcs: EnsureVcsUC,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        transport: IGitTransport,
+        guard: IGitStoreGuard,
+        credentials: IGitCredentialRepository,
+        profile: ILocalAuthorProfile,
+        operations: IGitOperationRegistry,
+        registry: IGitRemoteRegistry,
+        status_builder: GitStatusBuilder,
+        policy: GitSyncPolicy,
+    ) -> ConnectRemoteUC:
+        return ConnectRemoteUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            ensure_vcs=ensure_vcs,
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            reader=reader,
+            transport=transport,
+            guard=guard,
+            credentials=credentials,
+            profile=profile,
+            operations=operations,
+            registry=registry,
+            status_builder=status_builder,
+            policy=policy,
+        )
+
+    @provide
+    def get_disconnect_git_remote_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        operations: IGitOperationRegistry,
+        registry: IGitRemoteRegistry,
+        credentials: IGitCredentialRepository,
+        usage: IGitCredentialUsage,
+    ) -> DisconnectRemoteUC:
+        return DisconnectRemoteUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            operations=operations,
+            registry=registry,
+            credentials=credentials,
+            credential_usage=usage,
+        )
+
+    @provide
+    def get_update_git_settings_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        status_builder: GitStatusBuilder,
+    ) -> UpdateGitSettingsUC:
+        return UpdateGitSettingsUC(project_repo, project_index_repo, store_remotes, state_repo, status_builder)
+
+    @provide
+    def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:
+        return GetOperationUC(operations)
+
+    @provide
+    def get_cancel_git_operation_uc(self, operations: IGitOperationRegistry) -> CancelOperationUC:
+        return CancelOperationUC(operations)
 
     # ------------------------------------------------------------------ Export / Import
 

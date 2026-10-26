@@ -24,16 +24,26 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitOperationRegistry,
+    IGitRemoteRegistry,
+    IGitRemoteRunner,
+    IGitRepoReader,
+    IGitStoreGuard,
+    IGitStoreRemotes,
+    IGitSyncStateRepository,
+    IGitTransport,
     IHostKeyScanner,
     IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
     ISshKeyGenerator,
 )
+from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -111,10 +121,19 @@ from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
+from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
+from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
+from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
+from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
 from hse_doc_studio.infra.git_sync.ssh_keys import Ed25519KeyGenerator
+from hse_doc_studio.infra.git_sync.store_git import StoreGit
+from hse_doc_studio.infra.git_sync.store_hardening import GitStoreGuard
+from hse_doc_studio.infra.git_sync.store_remotes import GitStoreRemotes
+from hse_doc_studio.infra.git_sync.sync_state import JsonGitSyncStateRepository
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -745,6 +764,71 @@ class DomainServiceProvider(Provider):
     @provide
     def get_ci_renderer(self) -> ICiRenderer:
         return JinjaCiRenderer()
+
+    @provide
+    def get_git_sync_policy(self) -> GitSyncPolicy:
+        cfg = settings.git
+        return GitSyncPolicy(
+            enabled=cfg.enabled,
+            allow_insecure_http=cfg.allow_insecure_http,
+            # На общем сервере локальные адреса открыли бы чтение его файлов.
+            allow_local_remotes=cfg.allow_local_remotes and settings.mode is StudioMode.local,
+            bot_email=settings.vcs.author_email,
+        )
+
+    @provide
+    def get_store_git(self) -> StoreGit:
+        return StoreGit(settings.vcs.author_name, settings.vcs.author_email)
+
+    @provide
+    def get_git_repo_reader(self, store_git: StoreGit) -> IGitRepoReader:
+        return GitRepoReader(store_git)
+
+    @provide
+    def get_git_sync_state_repo(self) -> IGitSyncStateRepository:
+        return JsonGitSyncStateRepository()
+
+    @provide
+    def get_git_store_guard(self, policy: GitSyncPolicy) -> IGitStoreGuard:
+        return GitStoreGuard(allow_http=policy.allow_insecure_http, allow_local=policy.allow_local_remotes)
+
+    @provide
+    def get_git_remote_runner(
+        self,
+        credentials: IGitCredentialRepository,
+        known_hosts: IKnownHostsStore,
+        scanner: IHostKeyScanner,
+    ) -> IGitRemoteRunner:
+        return GitRemoteRunner(
+            settings.git,
+            credentials,
+            local_mode=settings.mode is StudioMode.local,
+            known_hosts=known_hosts,
+            scanner=scanner,
+        )
+
+    @provide
+    def get_git_transport(self, runner: IGitRemoteRunner) -> IGitTransport:
+        return GitTransport(runner, settings.git)
+
+    @provide
+    def get_git_operation_registry(self) -> IGitOperationRegistry:
+        # Общий на процесс: перенос и удаление проекта смотрят в тот же реестр, что и синхронизация.
+        return InMemoryGitOperationRegistry()
+
+    @provide
+    def get_git_remote_registry(self, project_index: IProjectIndexRepository) -> IGitRemoteRegistry:
+        return ConfigScanRemoteRegistry(project_index)
+
+    @provide
+    def get_ref_status_memo(self) -> RefStatusMemo:
+        return RefStatusMemo()
+
+    @provide
+    def get_git_store_remotes(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitStoreRemotes:
+        if not isinstance(vcs_service, GitVcsService):
+            raise TypeError("git remotes need the git VCS service")
+        return GitStoreRemotes(vcs_service, store_git)
 
     @provide
     def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:

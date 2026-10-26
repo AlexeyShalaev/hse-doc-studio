@@ -120,6 +120,8 @@ def _state_to_json(state: SyncState) -> dict[str, Any]:
         "auto_fetch": state.auto_fetch,
         "fetch_interval_s": state.fetch_interval_s,
         "shared_folder_ack": state.shared_folder_ack,
+        "remote_empty": state.remote_empty,
+        "adopted_unrelated": state.adopted_unrelated,
         "health": state.health.value,
         "last_fetch_at": _iso(state.last_fetch_at),
         "last_fetch_ok_at": _iso(state.last_fetch_ok_at),
@@ -169,6 +171,8 @@ def _state_from_json(raw: dict[str, Any]) -> SyncState:
         auto_fetch=raw.get("auto_fetch") is not False,
         fetch_interval_s=interval if isinstance(interval, int) and not isinstance(interval, bool) else None,
         shared_folder_ack=raw.get("shared_folder_ack") is True,
+        remote_empty=raw.get("remote_empty") is True,
+        adopted_unrelated=raw.get("adopted_unrelated") is True,
     )
 
 

@@ -126,6 +126,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/documents/{doc_id}/checks/run"): RouteRule(Action.BUILD_RUN),
     # Агент. POST /agent/chats несёт project_id в теле; чаты по session_id разбираются позже.
     ("POST", "/agent/chats"): RouteRule(Action.AGENT_USE, project_source="body"),
+    # Проверка адреса до подключения: проект в теле запроса нужен, чтобы сравнить его с тем, что лежит на сервере.
+    ("POST", "/git/remote/probe"): RouteRule(Action.PROJECT_SETTINGS, project_source="body"),
     ("GET", "/projects/{project_id}/chats"): RouteRule(Action.AGENT_USE),
     ("POST", "/projects/{project_id}/chats"): RouteRule(Action.AGENT_USE),
     ("GET", "/projects/{project_id}/chats/{session_id}"): RouteRule(Action.AGENT_USE),
@@ -137,6 +139,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/chats/{session_id}/runs/{run_id}/answer"): RouteRule(Action.AGENT_USE),
     ("POST", "/projects/{project_id}/chats/{session_id}/runs/{run_id}/cancel"): RouteRule(Action.AGENT_USE),
     # История проекта, она же git
+    ("GET", "/projects/{project_id}/git"): RouteRule(Action.SOURCES_READ),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/write"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/init"): RouteRule(Action.HISTORY_WRITE),
@@ -179,6 +182,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/move"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/team/sets"): RouteRule(Action.PROJECT_SETTINGS),
     ("PATCH", "/projects/{project_id}/vcs/settings"): RouteRule(Action.PROJECT_SETTINGS),
+    ("PUT", "/projects/{project_id}/git/remote"): RouteRule(Action.PROJECT_SETTINGS),
+    ("DELETE", "/projects/{project_id}/git/remote"): RouteRule(Action.PROJECT_SETTINGS),
+    ("PATCH", "/projects/{project_id}/git/settings"): RouteRule(Action.PROJECT_SETTINGS),
     ("PUT", "/projects/{project_id}/requirements/format"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/nda/files"): RouteRule(Action.PROJECT_SETTINGS),
     ("DELETE", "/projects/{project_id}/nda/files"): RouteRule(Action.PROJECT_SETTINGS),

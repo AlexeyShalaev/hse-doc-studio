@@ -11,6 +11,9 @@ import structlog
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_sync.error_messages import git_error
+from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
@@ -56,13 +59,17 @@ class MoveProjectUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         dispatcher: IJobDispatcher,
+        git_operations: IGitOperationRegistry,
+        git_remotes: IGitRemoteRegistry,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._dispatcher = dispatcher
+        self._git_operations = git_operations
+        self._git_remotes = git_remotes
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
-    async def execute(self, inp: MoveProjectInput) -> MoveProjectOutput:  # noqa: C901
+    async def execute(self, inp: MoveProjectInput) -> MoveProjectOutput:  # noqa: C901, PLR0912
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
         project = result.project
 
@@ -94,6 +101,11 @@ class MoveProjectUC:
                 if en
                 else "Дождитесь завершения активной сборки перед переносом проекта."
             )
+
+        # Синхронизация пишет в папку и держит процессы git: перенос посреди неё испортил бы и то и другое.
+        if self._git_operations.is_busy(old):
+            current = self._git_operations.current_for(inp.project_id)
+            raise git_error(GitErrorCode.sync_busy, operation_id=current.id if current else None)
 
         if new.exists() and any(new.iterdir()):
             raise ValueError(
@@ -127,6 +139,9 @@ class MoveProjectUC:
         # Repoint the index: drop the old location, register the new one.
         self._project_index_repo.unregister(old)
         self._project_index_repo.register(new)
+        if old in {folder.resolve() for folder in self._git_remotes.list()}:
+            self._git_remotes.remove(old)
+            self._git_remotes.add(new)
 
         # Reload from the new location and refresh updated_at so the move shows
         # up as activity. folder is set from the load path, not the JSON.

@@ -358,6 +358,10 @@ class SyncState:
     auto_fetch: bool = True
     fetch_interval_s: int | None = None
     shared_folder_ack: bool = False
+    # Удалённый репозиторий был пуст при подключении и с тех пор не получал изменений: отправка первая.
+    remote_empty: bool = False
+    # Человек согласился слить с удалённым проектом, у которого нет общей истории с локальным.
+    adopted_unrelated: bool = False
 
 
 @dataclass(frozen=True)
@@ -379,6 +383,19 @@ class TreeEntry:
     kind: str
     sha: str
     size: int | None = None
+
+
+@dataclass(frozen=True)
+class CommitBrief:
+    """Коротко о коммите для списков «пришло» и «уйдёт»: автор как записан в истории."""
+
+    id: str
+    short_id: str
+    message: str
+    author: str
+    author_email: str | None
+    created_at: datetime
+    kind: str
 
 
 @dataclass(frozen=True)

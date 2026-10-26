@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 from hse_doc_studio.core.git_sync.entities import SyncBlockReason, SyncHealth, SyncRelation, SyncUiState
-from hse_doc_studio.core.git_sync.status import StatusInputs, derive_relation, derive_ui_state
+from hse_doc_studio.core.git_sync.status import (
+    RefComparison,
+    RefStatusMemo,
+    StatusInputs,
+    derive_relation,
+    derive_ui_state,
+)
 
 _STATUS_FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "git-sync" / "fixtures" / "GitStatus"
 
@@ -134,3 +140,29 @@ def test__derive_relation__never_fetched__is_unfetched_whatever_the_counts() -> 
 
 def test__derive_relation__empty_remote__is_remote_empty() -> None:
     assert derive_relation(ahead=4, behind=0, tracking_exists=False, remote_empty=True) is SyncRelation.remote_empty
+
+
+def _comparison(ahead: int = 0) -> RefComparison:
+    return RefComparison(ahead, 0, 0, (), (), 0)
+
+
+def test__ref_memo__returns_what_was_put_and_misses_other_tips() -> None:
+    memo = RefStatusMemo()
+    memo.put(("/p", "aaa", "bbb", False), _comparison(2))
+
+    assert memo.get(("/p", "aaa", "bbb", False)) == _comparison(2)
+    assert memo.get(("/p", "aaa", "ccc", False)) is None
+    assert memo.get(("/p", "aaa", "bbb", True)) is None
+    assert memo.get(("/other", "aaa", "bbb", False)) is None
+
+
+def test__ref_memo__evicts_the_least_recently_used_entry() -> None:
+    memo = RefStatusMemo(capacity=2)
+    memo.put(("/p", "1", None, False), _comparison(1))
+    memo.put(("/p", "2", None, False), _comparison(2))
+    memo.get(("/p", "1", None, False))
+    memo.put(("/p", "3", None, False), _comparison(3))
+
+    assert memo.get(("/p", "1", None, False)) is not None
+    assert memo.get(("/p", "2", None, False)) is None
+    assert memo.get(("/p", "3", None, False)) is not None
