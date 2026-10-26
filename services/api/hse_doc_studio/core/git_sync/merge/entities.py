@@ -11,7 +11,9 @@ from enum import StrEnum
 
 from hse_doc_studio.core.git_sync.entities import SyncWarning
 from hse_doc_studio.core.git_sync.merge.choices import FileChoice
+from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
 from hse_doc_studio.core.git_sync.merge.text import TextHunk, TextMerge
+from hse_doc_studio.core.git_sync.protocols import MergeMeta
 
 
 class ContentKind(StrEnum):
@@ -41,6 +43,8 @@ class ConflictType(StrEnum):
     deleted_by_us = "deleted_by_us"  # я удалил файл, а в чужой ветке его правили
     deleted_by_them = "deleted_by_them"  # в чужой ветке файл удалён, а я его правил
     add_add = "add_add"  # оба добавили файл с одним путём и разным текстом
+    signature_group = "signature_group"  # подписанный PDF и подписи к нему правили обе стороны
+    invalid_result = "invalid_result"  # итог слияния состояния не разбирается: решает человек
 
 
 @dataclass(frozen=True)
@@ -62,6 +66,12 @@ class MergeOp:
     winner: MergeSide | None = None
     copy_path: str | None = None
     copy_content: bytes | None = None
+    # Структурированный файл: спорные поля, решённые правилами поля и предупреждения. `meta` нужен, чтобы
+    # повторное слияние с решениями человека выбрало тех же победителей, что и первое.
+    fields: tuple[FieldConflict, ...] = ()
+    auto: tuple[AutoField, ...] = ()
+    warnings: tuple[SyncWarning, ...] = ()
+    meta: MergeMeta = MergeMeta()
 
     @property
     def needs_decision(self) -> bool:

@@ -23,7 +23,10 @@ from hse_doc_studio.core.git_sync.entities import (
     OperationPhase,
     RemoteProbe,
     SyncState,
+    SyncWarning,
 )
+from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
+from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
 from hse_doc_studio.core.git_sync.url import RemoteUrl
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
@@ -233,6 +236,14 @@ class MergeDecision:
     # Путь копии, когда проигравшая версия бинарного файла сохранена рядом.
     copy_path: str | None = None
     copy_content: bytes | None = None
+    # Структурированный файл: вид конфликта (значение ConflictType; без него — fields), спорные поля,
+    # поля, которые правила решили без человека, и предупреждения об итоге.
+    conflict_type: str | None = None
+    fields: tuple[FieldConflict, ...] = ()
+    auto: tuple[AutoField, ...] = ()
+    warnings: tuple[SyncWarning, ...] = ()
+    # Файл не разобрался как структура: планировщик сольёт его как текст.
+    as_text: bool = False
 
 
 class IFileMergeStrategy(Protocol):
@@ -241,3 +252,19 @@ class IFileMergeStrategy(Protocol):
     def merge(
         self, path: str, base: bytes | None, ours: bytes | None, theirs: bytes | None, meta: MergeMeta
     ) -> MergeDecision: ...
+
+
+class IFieldResolver(Protocol):
+    """Повторное слияние структурированного файла с решениями человека по полям."""
+
+    def resolve(
+        self,
+        path: str,
+        base: bytes | None,
+        ours: bytes | None,
+        theirs: bytes | None,
+        meta: MergeMeta,
+        choices: Mapping[str, FieldChoice],
+    ) -> MergeDecision:
+        """Остались спорные поля — conflict=True. Неподходящее решение — InvalidFieldChoiceError."""
+        ...

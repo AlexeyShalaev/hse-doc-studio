@@ -25,6 +25,7 @@ from hse_doc_studio.core.git_sync.entities import SyncWarning, SyncWarningCode
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.merge.binary import blob_sha, conflict_copy_name, merge_binary
 from hse_doc_studio.core.git_sync.merge.choices import (
+    FieldsResolution,
     FileChoice,
     FileChoiceResolution,
     FileResolution,
@@ -40,6 +41,7 @@ from hse_doc_studio.core.git_sync.merge.entities import (
     MergePlan,
     MergeSide,
 )
+from hse_doc_studio.core.git_sync.merge.jsonmerge import InvalidFieldChoiceError
 from hse_doc_studio.core.git_sync.merge.paths import collision_groups, is_safe_path
 from hse_doc_studio.core.git_sync.merge.text import (
     TextMerge,
@@ -48,7 +50,7 @@ from hse_doc_studio.core.git_sync.merge.text import (
     render,
     single_hunk,
 )
-from hse_doc_studio.core.git_sync.protocols import IFileMergeStrategy, MergeMeta
+from hse_doc_studio.core.git_sync.protocols import IFieldResolver, IFileMergeStrategy, MergeMeta
 from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
 from hse_doc_studio.core.template_update.protocols import IMergeEngine
 from hse_doc_studio.core.template_update.text import is_binary, restore_text_style, same_content
@@ -81,6 +83,7 @@ def plan_merge(inp: MergeInput, engine: IMergeEngine, structured: IFileMergeStra
 
     `engine` сливает текст и обязан подписывать маркеры подписями из core.git_sync.merge.text.
     `structured` сливает файлы состояния `.hse-studio/*.json` по полям; без него они сливаются как текст.
+    Файл, который стратегия не смогла разобрать, тоже сливается как текст.
     """
     paths = sorted(set(inp.base) | set(inp.ours) | set(inp.theirs))
     unsafe = [path for path in paths if path in inp.blocked or not is_safe_path(path)]
@@ -93,6 +96,7 @@ def plan_merge(inp: MergeInput, engine: IMergeEngine, structured: IFileMergeStra
         for code, found in ((SyncWarningCode.unsafe_path, unsafe), (SyncWarningCode.case_collision, collided))
         if found
     ]
+    warnings.extend(warning for op in ops for warning in op.warnings)
     fingerprint = plan_fingerprint(ops, base_commit=inp.base_commit, theirs_commit=inp.theirs_commit)
     return MergePlan(inp.base_commit, inp.theirs_commit, tuple(ops), fingerprint, tuple(warnings))
 
@@ -122,7 +126,7 @@ def _plan_path(
     if kind is ContentKind.binary:
         return _merge_binary(path, base, ours, theirs, meta)
     if kind is ContentKind.json and structured is not None:
-        return _merge_structured(path, base, ours, theirs, meta, structured)
+        return _merge_structured(path, base, ours, theirs, meta, structured, engine)
     return _merge_text(path, base, ours, theirs, engine)
 
 
@@ -142,12 +146,32 @@ def _merge_binary(path: str, base: bytes | None, ours: bytes, theirs: bytes, met
 
 
 def _merge_structured(
-    path: str, base: bytes | None, ours: bytes, theirs: bytes, meta: MergeMeta, strategy: IFileMergeStrategy
+    path: str,
+    base: bytes | None,
+    ours: bytes,
+    theirs: bytes,
+    meta: MergeMeta,
+    strategy: IFileMergeStrategy,
+    engine: IMergeEngine,
 ) -> MergeOp | None:
     decision = strategy.merge(path, base, ours, theirs, meta)
-    op = MergeOp(path, ContentKind.json, MergeAction.merged, base=base, ours=ours, theirs=theirs)
+    if decision.as_text:
+        return _merge_text(path, base, ours, theirs, engine)
+    op = MergeOp(
+        path,
+        ContentKind.json,
+        MergeAction.merged,
+        base=base,
+        ours=ours,
+        theirs=theirs,
+        fields=decision.fields,
+        auto=decision.auto,
+        warnings=decision.warnings,
+        meta=meta,
+    )
     if decision.conflict:
-        return replace(op, action=MergeAction.conflict, conflict_type=ConflictType.fields, merged=decision.content)
+        conflict = ConflictType(decision.conflict_type or ConflictType.fields)
+        return replace(op, action=MergeAction.conflict, conflict_type=conflict, merged=decision.content)
     if decision.deleted:
         return replace(op, action=MergeAction.delete)
     return _clean_result(op, decision.content)
@@ -227,17 +251,20 @@ class _UnresolvedError(Exception):
     """Внутренний сигнал «решения по файлу нет»: наружу выходит как unresolved_conflicts со списком путей."""
 
 
-def resolve_plan(plan: MergePlan, resolutions: Mapping[str, FileResolution]) -> list[FileWrite]:
+def resolve_plan(
+    plan: MergePlan, resolutions: Mapping[str, FileResolution], resolver: IFieldResolver | None = None
+) -> list[FileWrite]:
     """Записи на диск по плану и решениям человека; решения по неконфликтным файлам игнорируются.
 
     Пока по конфликтному файлу решены не все участки или поля, это ошибка unresolved_conflicts
-    со списком путей: на диск не пишется ничего.
+    со списком путей: на диск не пишется ничего. Решения по полям структурированного файла
+    применяет `resolver`: он пересчитывает слияние файла с ними.
     """
     writes: list[FileWrite] = []
     unresolved: list[str] = []
     for op in plan.ops:
         try:
-            writes.extend(_resolve_op(op, resolutions.get(op.path)))
+            writes.extend(_resolve_op(op, resolutions.get(op.path), resolver))
         except _UnresolvedError:
             unresolved.append(op.path)
     if unresolved:
@@ -252,7 +279,7 @@ def _write(op: MergeOp, content: bytes | None, path: str | None = None) -> FileW
     return FileWrite(path or op.path, FileWriteKind.write, content)
 
 
-def _resolve_op(op: MergeOp, resolution: FileResolution | None) -> list[FileWrite]:
+def _resolve_op(op: MergeOp, resolution: FileResolution | None, resolver: IFieldResolver | None) -> list[FileWrite]:
     match op.action:
         case MergeAction.take_theirs:
             return [_write(op, op.theirs)]
@@ -263,7 +290,7 @@ def _resolve_op(op: MergeOp, resolution: FileResolution | None) -> list[FileWrit
         case MergeAction.binary_newest:
             return _resolve_newest(op, resolution)
         case MergeAction.conflict:
-            return _resolve_conflict(op, resolution)
+            return _resolve_conflict(op, resolution, resolver)
 
 
 def _invalid(op: MergeOp) -> GitSyncError:
@@ -295,15 +322,34 @@ def _resolve_newest(op: MergeOp, resolution: FileResolution | None) -> list[File
     return writes
 
 
-def _resolve_conflict(op: MergeOp, resolution: FileResolution | None) -> list[FileWrite]:
+def _resolve_conflict(
+    op: MergeOp, resolution: FileResolution | None, resolver: IFieldResolver | None
+) -> list[FileWrite]:
     if resolution is None:
         raise _UnresolvedError
+    if isinstance(resolution, FieldsResolution) and op.fields:
+        return _resolve_fields(op, resolution, resolver)
     text = op.kind is ContentKind.text
     if isinstance(resolution, HunksResolution) and text:
         return _resolve_hunks(op, resolution)
     if isinstance(resolution, TextResolution) and text:
         return _resolved_text(op, resolution.content.encode())
     return _take(op, _file_choice(op, resolution))
+
+
+def _resolve_fields(op: MergeOp, resolution: FieldsResolution, resolver: IFieldResolver | None) -> list[FileWrite]:
+    if resolver is None:
+        raise _invalid(op)
+    choices = {pointer: decision.choice for pointer, decision in resolution.fields.items()}
+    try:
+        decision = resolver.resolve(op.path, op.base, op.ours, op.theirs, op.meta, choices)
+    except InvalidFieldChoiceError as exc:
+        raise _invalid(op) from exc
+    if decision.conflict or decision.content is None:
+        raise _UnresolvedError
+    if same_content(op.path, decision.content, op.ours):
+        return []
+    return [FileWrite(op.path, FileWriteKind.write, decision.content)]
 
 
 def _resolve_hunks(op: MergeOp, resolution: HunksResolution) -> list[FileWrite]:
