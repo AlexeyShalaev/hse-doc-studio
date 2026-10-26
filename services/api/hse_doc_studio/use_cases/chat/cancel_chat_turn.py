@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
+from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.enums import AgentRunStatus, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
@@ -12,7 +13,6 @@ from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._support import find_project_folder
 
@@ -39,7 +39,7 @@ class CancelChatTurnUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
     ) -> None:
         self._project_repo = project_repo

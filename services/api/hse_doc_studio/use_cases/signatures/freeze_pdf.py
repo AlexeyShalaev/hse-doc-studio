@@ -19,9 +19,9 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
-from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest, stamps_for_doc
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import (
     DETACHED_DIR,

@@ -20,11 +20,11 @@ from hse_doc_studio.api.schemas.compile import (
     CompileListItemResponse,
     TriggerCompileResponse,
 )
+from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CheckSeverity
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.value_objects import CheckResult
-from hse_doc_studio.infra.compile.errors import CompileSetupError
 from hse_doc_studio.use_cases.checks.get_check_results import (
     GetCheckResultsInput,
     GetCheckResultsUC,

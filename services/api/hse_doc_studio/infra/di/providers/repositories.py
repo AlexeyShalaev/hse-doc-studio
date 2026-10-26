@@ -3,6 +3,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -34,7 +35,6 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateFeedGateway,
 )
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
 from hse_doc_studio.infra.docker.environment_probe import DockerEnvironmentProbe
 from hse_doc_studio.infra.docker.mount_probe import DockerHealthProbe, MountProbe
 from hse_doc_studio.infra.docker.self_info import DockerSelfInfo
@@ -140,7 +140,7 @@ class RepositoryProvider(Provider):
     @provide
     def get_self_update_gateway(
         self,
-        compile_runner: CompileRunner,
+        dispatcher: IJobDispatcher,
         agent_runs: AgentRunManager,
     ) -> ISelfUpdateGateway:
         # Занятость читается из тех же in-memory реестров, которыми живут отмена
@@ -148,7 +148,7 @@ class RepositoryProvider(Provider):
         # правды о «сейчас что-то выполняется» заводить не нужно.
         return DockerSelfUpdateGateway(
             update_manager=UpdateManager(),
-            compile_runner=compile_runner,
+            dispatcher=dispatcher,
             agent_runs=agent_runs,
             deployment_mode=deployment_mode(settings.static_dir),
             image_base=settings.image_base,

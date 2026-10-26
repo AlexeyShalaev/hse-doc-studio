@@ -10,14 +10,14 @@ import structlog
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
-from hse_doc_studio.infra.compile.log_bus import CompileLogBus
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.use_cases.compile.trigger_compile import _find_project
 
 logger = structlog.get_logger()
@@ -51,19 +51,19 @@ class CancelCompileUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_repo: JsonCompileRepository,
-        compile_runner: CompileRunner,
-        log_bus: CompileLogBus,
+        compile_repo: ICompileRepository,
+        dispatcher: IJobDispatcher,
+        log_stream: IJobLogStream,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._compile_repo = compile_repo
-        self._compile_runner = compile_runner
-        self._log_bus = log_bus
+        self._dispatcher = dispatcher
+        self._log_stream = log_stream
 
     async def execute(self, inp: CancelCompileInput) -> CancelCompileOutput:
-        if self._compile_runner.is_running(inp.compile_id):
-            await self._compile_runner.cancel(inp.compile_id)
+        if self._dispatcher.is_active(inp.compile_id):
+            await self._dispatcher.cancel(inp.compile_id)
             return CancelCompileOutput(cancelled_task=True, record_finalised=False)
 
         # No live task → force-finalise the record so the UI lock unsticks.
@@ -114,8 +114,8 @@ class CancelCompileUC:
         # Best-effort close the log bus in case any SSE subscriber is camped
         # on this id. discard() drops the channel entirely so subscribe()
         # creates a fresh one for any future replay.
-        self._log_bus.close(inp.compile_id)
-        self._log_bus.discard(inp.compile_id)
+        self._log_stream.close(inp.compile_id)
+        self._log_stream.discard(inp.compile_id)
 
         self._maybe_unstick_document(project_folder, record.doc_id, inp.compile_id)
 

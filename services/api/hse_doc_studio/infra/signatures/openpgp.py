@@ -20,20 +20,14 @@ from typing import Literal
 
 import structlog
 
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+
 logger = structlog.get_logger()
 
 VerifyStatus = Literal["good", "bad", "no_pubkey", "expired_key", "expired_signature", "revoked_key", "error"]
 
 _TIMEOUT = 60.0
 _MAX_HOME_BYTES = 80
-
-
-class GpgUnavailableError(RuntimeError):
-    """The gpg binary is not installed."""
-
-
-class GpgError(ValueError):
-    """gpg refused the operation (bad key, wrong passphrase, ...)."""
 
 
 @dataclass(frozen=True)
@@ -183,6 +177,12 @@ class GpgKeyring:
         if not fprs:
             raise GpgError(_clean_stderr(proc.stderr) or "no OpenPGP key found in the file")
         return [k for k in self.list_keys() if k.fingerprint in fprs]
+
+    def looks_like_public_key(self, blob: bytes) -> bool:
+        return looks_like_openpgp_public_key(blob)
+
+    def import_public_key(self, blob: bytes) -> None:
+        self.import_key(blob)
 
     def export_public(self, fingerprint: str) -> bytes:
         return self._run(["--armor", "--export", fingerprint]).stdout

@@ -234,6 +234,8 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     # right before use, and tests run sequentially within one pytest process.
     app_settings.data_dir = data_dir
     app_settings.host_data_dir = None
+    # Every job and its result go through the wire codec, so a live object in a payload fails fast.
+    app_settings.jobs.round_trip_payloads = True
 
     class TestRepositoryProvider(Provider):
         scope = Scope.APP

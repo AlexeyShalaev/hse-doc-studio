@@ -19,7 +19,7 @@ from hse_doc_studio.api.schemas.submission import (
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, SubmissionProfile
 from hse_doc_studio.core.entities import PackSubmissionRecord
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.infra.submission.assembler import is_archive_format_available
+from hse_doc_studio.infra.submission.pack_executor import is_archive_format_available
 from hse_doc_studio.use_cases.submission.create_submission import (
     CreateSubmissionInput,
     CreateSubmissionUC,

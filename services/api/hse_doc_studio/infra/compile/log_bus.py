@@ -18,7 +18,7 @@ class _Channel:
 class CompileLogBus:
     """In-memory pub/sub for live compile log lines.
 
-    Producer (TriggerCompileUC._run_compile_task) calls publish() on each line
+    Producer (LocalJobDispatcher, compile mode) calls publish() on each line
     and close() when the build finishes. Subscribers (GetCompileStreamUC) get
     an AsyncIterator that replays everything already buffered, then waits for
     more, exiting cleanly once close() has been called.

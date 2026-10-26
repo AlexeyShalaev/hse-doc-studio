@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from hse_doc_studio.api.schemas.office_editor import OfficeEditorConfigResponse
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.core.office import IOfficeEditorService
 from hse_doc_studio.use_cases.office_editor.get_editor_config import (
     GetOfficeEditorConfigInput,
     GetOfficeEditorConfigUC,
@@ -93,7 +93,7 @@ async def office_editor_callback(
 async def touch_office_editor(
     project_id: UUID,  # noqa: ARG001 — единый контейнер на все проекты; путь — для симметрии API
     doc_id: str,  # noqa: ARG001
-    manager: FromDishka[OfficeEditorManager],
+    manager: FromDishka[IOfficeEditorService],
 ) -> None:
     """Keepalive открытой вкладки редактора: не даёт idle-reaper'у погасить
     контейнер под живым редактором (фронт шлёт каждые ~120 с)."""

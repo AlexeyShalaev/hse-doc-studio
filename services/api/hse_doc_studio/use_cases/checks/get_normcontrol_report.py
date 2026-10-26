@@ -8,13 +8,13 @@ import structlog
 
 from hse_doc_studio.core.enums import CheckSeverity
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import CheckResult
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -82,7 +82,7 @@ class GetNormcontrolReportUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
     ) -> None:
         self._get_project_uc = GetProjectUC(project_repo, project_index_repo)
         self._template_repo = template_repo
