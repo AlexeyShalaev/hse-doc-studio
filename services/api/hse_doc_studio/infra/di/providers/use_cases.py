@@ -42,6 +42,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
+    ISharedFolderDetector,
     ISshKeyGenerator,
 )
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
@@ -274,9 +275,11 @@ from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
 # --- Git sync ---
 from hse_doc_studio.use_cases.git_sync.abort_conflicts import AbortConflictsUC
 from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
+from hse_doc_studio.use_cases.git_sync.clone_defaults import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.git_sync.conflict_support import ConflictSessions
 from hse_doc_studio.use_cases.git_sync.connect_remote import ConnectRemoteUC, DisconnectRemoteUC
+from hse_doc_studio.use_cases.git_sync.contents import GetGitContentsUC
 from hse_doc_studio.use_cases.git_sync.credentials import (
     CreateCredentialUC,
     DeleteCredentialUC,
@@ -292,6 +295,7 @@ from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetO
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
+from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
 from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusUC, GitStatusBuilder
 from hse_doc_studio.use_cases.git_sync.sync_apply import SyncApplier
@@ -439,7 +443,7 @@ from hse_doc_studio.use_cases.vcs.get_vcs_commit import GetVcsCommitUC
 from hse_doc_studio.use_cases.vcs.get_vcs_diff import GetVcsDiffUC
 from hse_doc_studio.use_cases.vcs.get_vcs_settings import GetVcsSettingsUC
 from hse_doc_studio.use_cases.vcs.get_vcs_status import GetVcsStatusUC
-from hse_doc_studio.use_cases.vcs.list_vcs_history import ListVcsHistoryUC
+from hse_doc_studio.use_cases.vcs.list_vcs_history import ListVcsHistoryFacetsUC, ListVcsHistoryUC
 from hse_doc_studio.use_cases.vcs.restore_vcs import RestoreVcsUC
 from hse_doc_studio.use_cases.vcs.update_vcs_settings import UpdateVcsSettingsUC
 from hse_doc_studio.use_cases.vcs.vcs_branches import (
@@ -988,6 +992,16 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
     ) -> ListVcsHistoryUC:
         return ListVcsHistoryUC(project_repo, project_index_repo, vcs_service, template_repo)
+
+    @provide
+    def get_list_vcs_history_facets_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        vcs_service: IVcsService,
+        template_repo: ITemplateRepository,
+    ) -> ListVcsHistoryFacetsUC:
+        return ListVcsHistoryFacetsUC(project_repo, project_index_repo, vcs_service, template_repo)
 
     @provide
     def get_get_vcs_commit_uc(
@@ -1783,6 +1797,29 @@ class UseCaseProvider(Provider):
     @provide
     def get_cancel_git_operation_uc(self, operations: IGitOperationRegistry) -> CancelOperationUC:
         return CancelOperationUC(operations)
+
+    @provide
+    def get_detect_shared_folder_uc(self, detector: ISharedFolderDetector) -> DetectSharedFolderUC:
+        return DetectSharedFolderUC(detector)
+
+    @provide
+    def get_get_clone_defaults_uc(self) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects")
+
+    @provide
+    def get_get_git_contents_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        reader: IGitRepoReader,
+    ) -> GetGitContentsUC:
+        return GetGitContentsUC(
+            project_repo,
+            project_index_repo,
+            reader,
+            _bot_author(),
+            settings.git.large_file_warn_bytes,
+        )
 
     # ------------------------------------------------------------------ Export / Import
 

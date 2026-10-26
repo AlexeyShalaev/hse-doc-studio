@@ -435,6 +435,52 @@ class PathStamp:
     sha: str
 
 
+class SharedFolderProvider(StrEnum):
+    """Служба синхронизации папок, в которой лежит проект."""
+
+    yandex_disk = "yandex_disk"
+    dropbox = "dropbox"
+    syncthing = "syncthing"
+    onedrive = "onedrive"
+    google_drive = "google_drive"
+    icloud = "icloud"
+    nextcloud = "nextcloud"
+    unknown = "unknown"
+
+
+@dataclass(frozen=True)
+class SharedFolderInfo:
+    """Папка внутри синхронизируемого каталога: путь в терминах хозяина машины, как его знает пользователь."""
+
+    provider: SharedFolderProvider
+    root: str
+    evidence: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ContentsFile:
+    path: str
+    bytes: int
+
+
+@dataclass(frozen=True)
+class RepoContents:
+    """Что уйдёт в удалённый репозиторий: отслеживаемые файлы и история ветки проекта."""
+
+    files: int
+    bytes: int
+    commits: int
+    bot_authored_commits: int
+    signatures: int
+    nda_files: int
+    pdf_tracked: bool
+    largest: tuple[ContentsFile, ...]
+    # Блобы истории от `limit_bytes`: хостинги отклоняют файлы около 100 МБ.
+    over_limit: tuple[ContentsFile, ...]
+    limit_bytes: int
+    lfs_pointers: int
+
+
 class StoreFindingKind(StrEnum):
     config_key = "config_key"
     config_value = "config_value"

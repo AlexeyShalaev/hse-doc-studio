@@ -199,6 +199,22 @@ class VcsCommitKind(StrEnum):
     sync = "sync"
 
 
+class VcsSyncMarker(StrEnum):
+    """Где коммит относительно удалённого репозитория: отправлен, ждёт отправки или пришёл и ещё не влит."""
+
+    pushed = "pushed"
+    unpushed = "unpushed"
+    incoming = "incoming"
+
+
+class VcsHistorySync(StrEnum):
+    """Фильтр истории по синхронизации: все (с входящими), только неотправленные, только входящие."""
+
+    all = "all"
+    unpushed = "unpushed"
+    incoming = "incoming"
+
+
 class VcsChange(StrEnum):
     # git name-status change classes (first letter of the status code).
     added = "A"

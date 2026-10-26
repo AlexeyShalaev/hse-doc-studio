@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import shutil
 import subprocess
 from collections.abc import Sequence
@@ -12,9 +11,17 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsRestoreMode, VcsTagKind
+from hse_doc_studio.core.enums import (
+    VcsChange,
+    VcsCommitKind,
+    VcsHistorySync,
+    VcsRestoreMode,
+    VcsSyncMarker,
+    VcsTagKind,
+)
 from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig
 from hse_doc_studio.core.vcs.entities import (
+    VcsAuthorCount,
     VcsBranch,
     VcsCommit,
     VcsCommitDetail,
@@ -22,6 +29,8 @@ from hse_doc_studio.core.vcs.entities import (
     VcsDiff,
     VcsFileChange,
     VcsFileDiff,
+    VcsHistoryFacets,
+    VcsHistoryQuery,
     VcsRef,
     VcsRestoreResult,
     VcsSettings,
@@ -30,12 +39,14 @@ from hse_doc_studio.core.vcs.entities import (
 )
 from hse_doc_studio.core.vcs.errors import (
     VcsCommandError,
+    VcsInvalidRefError,
     VcsNotInitializedError,
     VcsUnavailableError,
 )
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.core.vcs.refs import validate_ref_name, validate_revision
 from hse_doc_studio.infra.vcs.git_env import base_git_env, hardened_git_config
+from hse_doc_studio.infra.vcs.history_filter import git_args, matches, needs_python, raw_kind
 
 logger = structlog.get_logger()
 
@@ -50,7 +61,8 @@ def store_git_dir(folder: Path) -> Path:
 
 _UNIT = "\x1f"  # field separator inside one log record
 _REC = "\x1e"  # record separator between log entries
-_LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%aI", "%D", "%B"]) + _REC
+_LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%ae", "%aI", "%D", "%B"]) + _REC
+_FACETS_FMT = _UNIT.join(["%an", "%ae", "%B"]) + _REC
 
 _PDF_EXCLUDE = ":(exclude)*.pdf"
 _MAX_DIFF_FILES = 80
@@ -66,8 +78,6 @@ _KEY_CREDENTIAL = "hse.credential"
 _KEY_LOCAL_BRANCH = "hse.localbranch"
 _KEY_REMOTE_BRANCH = "hse.remotebranch"
 _REMOTE_KEYS_RE = r"^(remote\.origin\.url|hse\.(credential|localbranch|remotebranch))$"
-
-_KIND_TRAILER = re.compile(r"^Hse-Kind:\s*(\S+)\s*$", re.MULTILINE)
 
 # git's various "empty commit" phrasings. `git commit` exits non-zero in all of
 # them, but for us they all mean the same thing — there's nothing to snapshot,
@@ -366,16 +376,118 @@ class GitVcsService:
         doc_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        query: VcsHistoryQuery | None = None,
     ) -> list[VcsCommit]:
         if not self.is_initialized(project):
             return []
-        args = ["log", f"--pretty=format:{_LOG_FMT}", f"--skip={offset}", f"-n{limit}"]
+        query = query or VcsHistoryQuery()
+        heads = self._history_heads(project, query.sync)
+        if heads is None:
+            return []
+        in_python = needs_python(query)
+        args = ["log", f"--pretty=format:{_LOG_FMT}", *git_args(query)]
+        if not in_python:
+            args += [f"--skip={offset}", f"-n{limit}"]
+        args += [*heads, "--"]
         if doc_id:
-            args += ["--", doc_id]
+            args.append(doc_id)
         proc = self._run(project, args)
         if proc.returncode != 0:
             return []  # empty repo (no commits yet)
-        return self._parse_log(proc.stdout)
+        parsed = self._parse_log_records(proc.stdout)
+        if in_python:
+            parsed = [(c, body) for c, body in parsed if matches(body, query)][offset : offset + limit]
+        return self._mark_sync(project, [commit for commit, _ in parsed])
+
+    def history_facets(self, project: Project, *, doc_id: str | None = None) -> VcsHistoryFacets:
+        if not self.is_initialized(project):
+            return VcsHistoryFacets(kinds={}, authors=())
+        heads = self._history_heads(project, VcsHistorySync.all) or []
+        args = ["log", f"--pretty=format:{_FACETS_FMT}", *heads, "--"]
+        if doc_id:
+            args.append(doc_id)
+        proc = self._run(project, args)
+        if proc.returncode != 0:
+            return VcsHistoryFacets(kinds={}, authors=())
+        kinds: dict[str, int] = {}
+        authors: dict[str, VcsAuthorCount] = {}
+        for record in proc.stdout.split(_REC):
+            fields = record.strip("\n").split(_UNIT)
+            if len(fields) < 3:  # noqa: PLR2004
+                continue
+            name, email, body = (field.strip() for field in fields[:3])
+            kind = _kind_from_body(body).value
+            kinds[kind] = kinds.get(kind, 0) + 1
+            # Журнал идёт от новых к старым: имя берём из самого свежего коммита автора.
+            key = email.lower() or name
+            seen = authors.get(key)
+            authors[key] = VcsAuthorCount(
+                name=seen.name if seen else name,
+                email=seen.email if seen else (email or None),
+                count=(seen.count if seen else 0) + 1,
+            )
+        ordered = sorted(authors.values(), key=lambda a: (-a.count, a.name.casefold()))
+        return VcsHistoryFacets(kinds=kinds, authors=tuple(ordered))
+
+    def _tracking_sha(self, project: Project) -> str | None:
+        """Вершина отслеживаемой ветки удалённого репозитория; None, если проект не подключён или ничего не получал."""
+        config = self.read_remote_config(project)
+        if config is None or not config.remote_branch:
+            return None
+        try:
+            validate_ref_name(config.remote_branch)
+        except VcsInvalidRefError:
+            return None
+        return self._resolve_commit(project, f"refs/remotes/origin/{config.remote_branch}")
+
+    def _resolve_commit(self, project: Project, ref: str) -> str | None:
+        proc = self._run(project, ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"])
+        sha = proc.stdout.strip()
+        return sha if proc.returncode == 0 and sha else None
+
+    def _history_heads(self, project: Project, sync: VcsHistorySync | None) -> list[str] | None:
+        """Что обходит `git log`: без отбора только HEAD, как раньше. None: отбору по синхронизации нечего показать."""
+        if sync is None:
+            return ["HEAD"]
+        tracking = self._tracking_sha(project)
+        head = self._resolve_commit(project, "HEAD")
+        if tracking is None:
+            return ["HEAD"] if sync is VcsHistorySync.all else None
+        if head is None:
+            return [tracking] if sync in (VcsHistorySync.all, VcsHistorySync.incoming) else None
+        if sync is VcsHistorySync.all:
+            return [head, tracking]
+        if sync is VcsHistorySync.unpushed:
+            return [head, f"^{tracking}"]
+        return [tracking, f"^{head}"]
+
+    def _mark_sync(self, project: Project, commits: list[VcsCommit]) -> list[VcsCommit]:
+        """Метки pushed/unpushed/incoming из двух разностей HEAD и отслеживаемой ветки; без неё None."""
+        if not commits:
+            return commits
+        tracking = self._tracking_sha(project)
+        if tracking is None:
+            return commits
+        head = self._resolve_commit(project, "HEAD")
+        unpushed = self._rev_set(project, [head, f"^{tracking}"]) if head else set()
+        incoming = self._rev_set(project, [tracking, *([f"^{head}"] if head else [])])
+        return [
+            replace(
+                commit,
+                sync=(
+                    VcsSyncMarker.unpushed
+                    if commit.id in unpushed
+                    else VcsSyncMarker.incoming
+                    if commit.id in incoming
+                    else VcsSyncMarker.pushed
+                ),
+            )
+            for commit in commits
+        ]
+
+    def _rev_set(self, project: Project, revs: Sequence[str]) -> set[str]:
+        proc = self._run(project, ["rev-list", *revs, "--"])
+        return set(proc.stdout.split()) if proc.returncode == 0 else set()
 
     def commit_detail(self, project: Project, commit_id: str) -> VcsCommitDetail:
         if not self.is_initialized(project):
@@ -707,25 +819,33 @@ class GitVcsService:
         return commits[0] if commits else None
 
     def _parse_log(self, raw: str) -> list[VcsCommit]:
-        commits: list[VcsCommit] = []
+        return [commit for commit, _ in self._parse_log_records(raw)]
+
+    def _parse_log_records(self, raw: str) -> list[tuple[VcsCommit, str]]:
+        """Коммиты вместе с полным текстом сообщения: по нему Python отбирает вид, когда git не справляется."""
+        commits: list[tuple[VcsCommit, str]] = []
         for record in raw.split(_REC):
             rec = record.strip("\n")
             if not rec.strip():
                 continue
             fields = rec.split(_UNIT)
-            if len(fields) < 7:  # noqa: PLR2004
+            if len(fields) < 8:  # noqa: PLR2004
                 continue
-            full, short, parents_raw, author, date_raw, refs_raw, body = fields[:7]
+            full, short, parents_raw, author, email, date_raw, refs_raw, body = fields[:8]
             commits.append(
-                VcsCommit(
-                    id=full.strip(),
-                    short_id=short.strip(),
-                    kind=_kind_from_body(body),
-                    message=_subject(body),
-                    author=author.strip(),
-                    created_at=_parse_date(date_raw.strip()),
-                    parents=tuple(p for p in parents_raw.split() if p),
-                    refs=_parse_refs(refs_raw),
+                (
+                    VcsCommit(
+                        id=full.strip(),
+                        short_id=short.strip(),
+                        kind=_kind_from_body(body),
+                        message=_subject(body),
+                        author=author.strip(),
+                        created_at=_parse_date(date_raw.strip()),
+                        parents=tuple(p for p in parents_raw.split() if p),
+                        refs=_parse_refs(refs_raw),
+                        author_email=email.strip() or None,
+                    ),
+                    body,
                 )
             )
         return commits
@@ -766,10 +886,10 @@ def _map_change(letter: str) -> VcsChange:
 
 
 def _kind_from_body(body: str) -> VcsCommitKind:
-    match = _KIND_TRAILER.search(body)
-    if match:
+    raw = raw_kind(body)
+    if raw is not None:
         try:
-            return VcsCommitKind(match.group(1))
+            return VcsCommitKind(raw)
         except ValueError:
             pass
     return VcsCommitKind.manual

@@ -47,6 +47,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
+    ISharedFolderDetector,
     ISshKeyGenerator,
 )
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
@@ -137,6 +138,7 @@ from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
 from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
 from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
+from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
 from hse_doc_studio.infra.git_sync.ssh_keys import Ed25519KeyGenerator
 from hse_doc_studio.infra.git_sync.store_git import StoreGit
 from hse_doc_studio.infra.git_sync.store_hardening import GitStoreGuard
@@ -892,6 +894,10 @@ class DomainServiceProvider(Provider):
     ) -> ConflictPlanner:
         # App-scoped: план определяется тройкой коммитов, и экран конфликтов читает его десятки раз подряд.
         return ConflictPlanner(reader=reader, engine=engine, structured=state_merge)
+
+    @provide
+    def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
+        return SharedFolderDetector(paths)
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

@@ -28,6 +28,9 @@ from hse_doc_studio.api.schemas.git_sync import (
     ConflictFileDetail,
     ConflictSessionResponse,
     ConnectRemoteRequest,
+    GitContentsResponse,
+    GitLargestFile,
+    GitOverLimitFile,
     GitStatusResponse,
     OperationStartedResponse,
     ResolveConflictsRequest,
@@ -43,6 +46,7 @@ from hse_doc_studio.use_cases.git_sync.connect_remote import (
     DisconnectRemoteInput,
     DisconnectRemoteUC,
 )
+from hse_doc_studio.use_cases.git_sync.contents import GetGitContentsInput, GetGitContentsUC
 from hse_doc_studio.use_cases.git_sync.get_conflict_diff import (
     ConflictDiffView,
     GetConflictDiffInput,
@@ -270,3 +274,26 @@ async def write_ci(project_id: UUID, body: CiWriteRequest, uc: FromDishka[WriteC
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return CiWriteResponse(written=result.written)
+
+
+@router.get("/projects/{project_id}/git/contents", response_model=GitContentsResponse)
+async def get_git_contents(project_id: UUID, uc: FromDishka[GetGitContentsUC]) -> GitContentsResponse:
+    """Что уйдёт в удалённый репозиторий: по локальной истории, без сети."""
+    try:
+        contents = await uc.execute(GetGitContentsInput(project_id=project_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return GitContentsResponse(
+        files=contents.files,
+        bytes=contents.bytes,
+        commits=contents.commits,
+        bot_authored_commits=contents.bot_authored_commits,
+        signatures=contents.signatures,
+        nda_files=contents.nda_files,
+        pdf_tracked=contents.pdf_tracked,
+        largest=[GitLargestFile(path=f.path, bytes=f.bytes) for f in contents.largest],
+        over_limit=[
+            GitOverLimitFile(path=f.path, bytes=f.bytes, limit=contents.limit_bytes) for f in contents.over_limit
+        ],
+        lfs_pointers=contents.lfs_pointers,
+    )

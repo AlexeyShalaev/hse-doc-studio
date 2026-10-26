@@ -34,6 +34,7 @@ from hse_doc_studio.core.git_sync.entities import (
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
+    SharedFolderInfo,
     StoreAudit,
     StoreFinding,
     StoreRemoteConfig,
@@ -364,15 +365,10 @@ class IGitStoreRemotes(Protocol):
     def drop_tracking_refs(self, project: Project) -> None: ...
 
 
-@dataclass(frozen=True)
-class SharedFolderInfo:
-    provider: str
-    root: Path
-    evidence: tuple[str, ...]
-
-
 class ISharedFolderDetector(Protocol):
-    def detect(self, folder: Path) -> SharedFolderInfo | None: ...
+    def detect(self, folder: Path) -> SharedFolderInfo | None:
+        """Лежит ли папка внутри каталога, который синхронизирует служба; только предупреждение, ничего не блокирует."""
+        ...
 
 
 class IGitBundleService(Protocol):

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsTagKind
+from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsHistorySync, VcsSyncMarker, VcsTagKind
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,40 @@ class VcsCommit:
     refs: tuple[VcsRef, ...]
     doc_id: str | None = None
     stats: VcsCommitStats | None = None
+    author_email: str | None = None
+    # None: у проекта нет удалённого репозитория или с него ещё ничего не получено.
+    sync: VcsSyncMarker | None = None
+
+    @property
+    def is_merge(self) -> bool:
+        return len(self.parents) > 1
+
+
+@dataclass(frozen=True)
+class VcsHistoryQuery:
+    """Отбор записей истории; пустые поля не ограничивают выдачу."""
+
+    # Значения трейлера Hse-Kind; manual заодно покрывает снимки без трейлера и неизвестные Студии виды.
+    kinds: tuple[str, ...] = ()
+    author_email: str | None = None
+    # Подстрока в сообщении коммита без учёта регистра.
+    text: str | None = None
+    since: datetime | None = None
+    until: datetime | None = None
+    sync: VcsHistorySync | None = None
+
+
+@dataclass(frozen=True)
+class VcsAuthorCount:
+    name: str
+    email: str | None
+    count: int
+
+
+@dataclass(frozen=True)
+class VcsHistoryFacets:
+    kinds: dict[str, int]
+    authors: tuple[VcsAuthorCount, ...]
 
 
 @dataclass(frozen=True)
