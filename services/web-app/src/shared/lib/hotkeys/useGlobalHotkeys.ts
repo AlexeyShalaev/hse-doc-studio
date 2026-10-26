@@ -15,6 +15,7 @@ export type GlobalHotkeyHandlers = {
   onSelectFiles: () => void;
   onSelectSubmit: () => void;
   onBuildAll: () => void;
+  onSync: () => void;
   onOpenProjectSwitcher: () => void;
   onNewProject: () => void;
   onOpenSettings: () => void;
@@ -68,6 +69,7 @@ const MOD_SHIFT_KEYS: Record<string, HotkeyName> = {
   f: "onSelectFiles",
   d: "onSelectSubmit",
   b: "onBuildAll",
+  s: "onSync",
 };
 
 const MOD_KEYS: Record<string, HotkeyName> = {

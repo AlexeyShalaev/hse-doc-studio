@@ -41,3 +41,15 @@ export {
   useUpdateGitSettings,
 } from "./api/gitSyncQueries";
 export { useSyncUiStore } from "./model/useSyncUiStore";
+export type {
+  ConnectDialogMode,
+  SyncCommand,
+  SyncCommandKind,
+} from "./model/useSyncUiStore";
+export {
+  AUTHOR_PROFILE_PATH,
+  gitConflictsPath,
+  gitHistoryPath,
+  gitSettingsPath,
+} from "./model/syncPaths";
+export { describeGitError, gitErrorMessage } from "./lib/gitErrorMessage";

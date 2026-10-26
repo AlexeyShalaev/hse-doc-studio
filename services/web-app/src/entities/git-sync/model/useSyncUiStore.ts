@@ -7,9 +7,22 @@ import {
 
 // Клиентское состояние синхронизации: что открыто и о чём уже сообщили.
 // Всё, что приходит с сервера, живёт в запросах, а не здесь.
+// Что просят сделать те, у кого нет доступа к самому элементу синхронизации:
+// палитра команд и сочетание клавиш. Выполняет запрос тот, кто знает состояние
+// проекта (элемент в заголовке окна), поэтому здесь только очередь из одного.
+export type SyncCommandKind = "sync" | "check";
+
+export type SyncCommand = { id: number; kind: SyncCommandKind };
+
+// Окно подключения репозитория открывают из заголовка, палитры, настроек и с
+// панели синхронизации; живёт оно в одном месте, а состояние открытия общее.
+export type ConnectDialogMode = "connect" | "fix_access";
+
 type SyncUiState = {
   // Всплывающая панель синхронизации в заголовке окна.
   popoverOpen: boolean;
+  connectDialog: { mode: ConnectDialogMode } | null;
+  command: SyncCommand | null;
   // Для каждого проекта: идентификатор последней синхронизации, о которой уже
   // сообщили тостом. Состояние сервера помнит итог и после перезагрузки страницы,
   // поэтому без этой отметки тост повторялся бы при каждом открытии проекта.
@@ -19,6 +32,11 @@ type SyncUiState = {
 type SyncUiActions = {
   setPopoverOpen: (open: boolean) => void;
   togglePopover: () => void;
+  openConnectDialog: (mode?: ConnectDialogMode) => void;
+  closeConnectDialog: () => void;
+  requestCommand: (kind: SyncCommandKind) => void;
+  // Снимает команду из очереди; id нужен, чтобы не снять чужую, пришедшую позже.
+  consumeCommand: (id: number) => void;
   // true, если о синхронизации ещё не сообщали (и отмечает её сообщённой).
   claimSyncToast: (projectId: string, syncId: string) => boolean;
   forgetProject: (projectId: string) => void;
@@ -48,6 +66,9 @@ const safeLocalStorage: StateStorage = {
   },
 };
 
+// Номера команд растут всегда: после снятия команды следующая не получит старый id.
+let commandSeq = 0;
+
 // Отметки о тостах хранятся ограниченно: на каждый проект один идентификатор.
 const MAX_TRACKED_PROJECTS = 50;
 
@@ -55,12 +76,27 @@ export const useSyncUiStore = create<SyncUiState & SyncUiActions>()(
   persist(
     (set, get) => ({
       popoverOpen: false,
+      connectDialog: null,
+      command: null,
       toastedSyncIds: {},
       setPopoverOpen: (open) => {
         set({ popoverOpen: open });
       },
       togglePopover: () => {
         set({ popoverOpen: !get().popoverOpen });
+      },
+      openConnectDialog: (mode = "connect") => {
+        set({ connectDialog: { mode }, popoverOpen: false });
+      },
+      closeConnectDialog: () => {
+        set({ connectDialog: null });
+      },
+      requestCommand: (kind) => {
+        commandSeq += 1;
+        set({ command: { id: commandSeq, kind } });
+      },
+      consumeCommand: (id) => {
+        if (get().command?.id === id) set({ command: null });
       },
       claimSyncToast: (projectId, syncId) => {
         const current = get().toastedSyncIds;

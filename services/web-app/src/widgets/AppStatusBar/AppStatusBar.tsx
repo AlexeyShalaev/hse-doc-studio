@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { useAppSettings } from "@entities/app-settings";
 import { useRunnerHealth } from "@entities/system";
+import { SyncStatusSegment } from "@features/git-sync";
 import { useTemplateUpdateSignal } from "@features/template-update";
 import { useUIStore } from "@shared/lib";
 
@@ -36,6 +37,7 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
 
       <span className="flex-1" />
 
+      {projectId && <SyncStatusSegment projectId={projectId} />}
       {projectId && <TemplateUpdateSegment projectId={projectId} />}
 
       <span className="seg-item mono">{engine}</span>

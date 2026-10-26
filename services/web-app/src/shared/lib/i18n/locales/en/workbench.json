@@ -16,7 +16,14 @@
     "agent": "Agent",
     "agentTooltip": "Project AI agent",
     "systemSettings": "System",
-    "systemSettingsTooltip": "System settings"
+    "systemSettingsTooltip": "System settings",
+    "versionsSync": {
+      "conflicts": "History: sync has conflicts",
+      "auth_failed": "History: no access to the repository",
+      "error": "History: sync failed",
+      "behind": "History: the repository has new versions",
+      "diverged": "History: the repository has new versions"
+    }
   },
   "panel": {
     "collapse": "Collapse panel",

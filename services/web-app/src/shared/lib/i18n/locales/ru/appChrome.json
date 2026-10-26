@@ -14,7 +14,11 @@
     "docChecks": "Документ · проверки",
     "docCompile": "Документ · лог сборки",
     "docHistory": "Документ · версии",
-    "openProject": "Открыть · {{name}}"
+    "openProject": "Открыть · {{name}}",
+    "sync": "Синхронизировать проект",
+    "syncCheck": "Проверить обновления репозитория",
+    "syncConflicts": "Открыть конфликты синхронизации",
+    "connectRemote": "Подключить репозиторий"
   },
   "compileStatus": {
     "noBuilds": "Нет сборок",

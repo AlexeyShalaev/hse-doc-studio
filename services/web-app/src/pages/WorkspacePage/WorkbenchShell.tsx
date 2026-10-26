@@ -7,12 +7,14 @@ import { useDocuments } from "@entities/document";
 import { useCompileStreamStore } from "@entities/compile";
 import { useVcsStatus } from "@entities/vcs";
 import { useProject } from "@entities/project";
+import { ConflictBanner, useSyncSignal } from "@features/git-sync";
 import {
   ProjectAccessBanner,
   useTemplateUpdateSignal,
   useTemplateUpdateToast,
 } from "@features/template-update";
 import { ActivityBar } from "@widgets/ActivityBar";
+import type { ActivityItemBadge } from "@widgets/ActivityBar";
 import { DocumentsPanel } from "@widgets/DocumentsPanel";
 import { ReviewPanel } from "@widgets/ReviewPanel";
 import { SubmitPanel } from "@widgets/SubmitPanel";
@@ -250,6 +252,17 @@ export const WorkbenchShell = ({
         ? ({ kind: "count", tone: "info", count: 1 } as const)
         : undefined;
 
+  // Синхронизация: конфликты, нет доступа и новое в репозитории выводятся на
+  // «Историю». Когда сказать нечего, остаётся прежний счётчик файлов.
+  const syncSignal = useSyncSignal(projectId);
+  const versionsBadge: ActivityItemBadge | undefined = syncSignal.badge
+    ? { kind: "count", ...syncSignal.badge }
+    : undefined;
+  const versionsTooltip = syncSignal.state
+    ? t(`activity.versionsSync.${syncSignal.state}`, { defaultValue: "" }) ||
+      undefined
+    : undefined;
+
   useEffect(() => {
     if (!isMobilePanelOpen) return;
     const closeOnEscape = (event: KeyboardEvent): void => {
@@ -354,6 +367,8 @@ export const WorkbenchShell = ({
           goTo("/versions");
         }}
         isVersionsActive={isVersionsActive}
+        versionsBadge={versionsBadge}
+        versionsTooltip={versionsTooltip}
         counts={counts}
         isAgentActive={systemChatOpen}
         onToggleAgent={toggleSystemChat}
@@ -403,6 +418,7 @@ export const WorkbenchShell = ({
           access={project?.access}
           templateVersion={project?.lock.version ?? ""}
         />
+        <ConflictBanner projectId={projectId} />
         <main className="workbench-canvas">{canvas}</main>
       </div>
 

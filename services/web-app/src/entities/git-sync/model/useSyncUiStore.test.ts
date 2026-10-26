@@ -3,7 +3,12 @@ import { useSyncUiStore } from "./useSyncUiStore";
 
 describe("useSyncUiStore", () => {
   beforeEach(() => {
-    useSyncUiStore.setState({ popoverOpen: false, toastedSyncIds: {} });
+    useSyncUiStore.setState({
+      popoverOpen: false,
+      connectDialog: null,
+      command: null,
+      toastedSyncIds: {},
+    });
   });
 
   it("announces each finished sync once per project", () => {
@@ -29,6 +34,45 @@ describe("useSyncUiStore", () => {
     expect(useSyncUiStore.getState().popoverOpen).toBe(true);
     togglePopover();
     expect(useSyncUiStore.getState().popoverOpen).toBe(false);
+  });
+});
+
+describe("useSyncUiStore commands and dialog", () => {
+  beforeEach(() => {
+    useSyncUiStore.setState({
+      popoverOpen: false,
+      connectDialog: null,
+      command: null,
+    });
+  });
+
+  it("queues a command with a growing id and consumes only that one", () => {
+    const { requestCommand, consumeCommand } = useSyncUiStore.getState();
+    requestCommand("sync");
+    const first = useSyncUiStore.getState().command;
+    expect(first?.kind).toBe("sync");
+    consumeCommand(first?.id ?? 0);
+    expect(useSyncUiStore.getState().command).toBeNull();
+    requestCommand("check");
+    const second = useSyncUiStore.getState().command;
+    expect(second?.id).toBeGreaterThan(first?.id ?? 0);
+    consumeCommand(first?.id ?? 0);
+    expect(useSyncUiStore.getState().command).toEqual(second);
+  });
+
+  it("opens the connect dialog in the requested mode and closes the panel", () => {
+    useSyncUiStore.getState().setPopoverOpen(true);
+    useSyncUiStore.getState().openConnectDialog("fix_access");
+    expect(useSyncUiStore.getState().connectDialog).toEqual({
+      mode: "fix_access",
+    });
+    expect(useSyncUiStore.getState().popoverOpen).toBe(false);
+    useSyncUiStore.getState().closeConnectDialog();
+    expect(useSyncUiStore.getState().connectDialog).toBeNull();
+    useSyncUiStore.getState().openConnectDialog();
+    expect(useSyncUiStore.getState().connectDialog).toEqual({
+      mode: "connect",
+    });
   });
 });
 

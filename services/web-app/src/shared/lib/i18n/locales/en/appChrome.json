@@ -14,7 +14,11 @@
     "docChecks": "Document · checks",
     "docCompile": "Document · build log",
     "docHistory": "Document · versions",
-    "openProject": "Open · {{name}}"
+    "openProject": "Open · {{name}}",
+    "sync": "Sync the project",
+    "syncCheck": "Check the repository for updates",
+    "syncConflicts": "Open sync conflicts",
+    "connectRemote": "Connect a repository"
   },
   "compileStatus": {
     "noBuilds": "No builds",

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useDocuments } from "@entities/document";
+import { useSyncUiStore } from "@entities/git-sync";
 import { useProject } from "@entities/project";
 import { useResumeProjectStreams, useStartCompileAll } from "@entities/compile";
 import { DocumentTabs } from "@widgets/DocumentTabs";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { ProjectSwitcher } from "@widgets/ProjectSwitcher";
+import { SyncCluster } from "@widgets/SyncCluster";
 import type { WorkbenchActivity } from "@shared/lib";
 import {
   setLastDoc,
@@ -157,6 +159,11 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
     onBuildAll: () => {
       startAll((documents ?? []).map((doc) => doc.id));
     },
+    // Само действие выбирает элемент синхронизации: он знает состояние проекта
+    // (синхронизировать, подключить репозиторий или показать, что мешает).
+    onSync: () => {
+      useSyncUiStore.getState().requestCommand("sync");
+    },
     onOpenProjectSwitcher: () => {
       setIsSwitcherOpen(true);
     },
@@ -223,6 +230,7 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
             onOpenChange={setIsSwitcherOpen}
           />
         }
+        projectActions={<SyncCluster projectId={projectId} />}
       />
 
       <WorkbenchShell
