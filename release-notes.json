@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.2.0",
+      "date": "2026-10-26",
+      "notes": [
+        {
+          "ru": "Магистратура: шаблон курсового проекта 1 курса программы «Системная и программная инженерия» — тема и заявка, отчёт и презентация",
+          "en": "Master's programme: a 1st-year coursework template for System and Software Engineering — topic and application, report and slides"
+        },
+        {
+          "ru": "Открепленные электронные подписи: зафиксируйте PDF, подпишите его ключом OpenPGP или УКЭП через КриптоПро ЭЦП Browser plug-in прямо в Студии либо загрузите готовую подпись. Студия проверит подпись, поставит плашку как у ВШЭ и соберёт пакет для сдачи",
+          "en": "Detached electronic signatures: freeze a PDF, sign it with an OpenPGP key or a qualified signature via the CryptoPro browser plug-in right in the Studio, or upload an existing signature. The Studio verifies it, adds an HSE-style signature stamp and builds the submission package"
+        },
+        {
+          "ru": "Обновление проекта на новую версию шаблона: в настройках проекта появился раздел «Версия шаблона». Перед обновлением видно, какие файлы изменятся; ваши правки сохраняются, спорные места показываются отдельно, обновление можно отменить",
+          "en": "Update a project to a new template version: project settings now have a Template version section. You see which files change before updating, your own edits are kept, conflicts are shown separately, and the update can be undone"
+        },
+        {
+          "ru": "О доступном обновлении шаблона подскажут значок на «Настройках проекта», отметка в оглавлении, строка состояния и уведомление при открытии проекта",
+          "en": "An available template update is flagged by a badge on Project settings, a dot in the outline, the status bar and a notification when you open the project"
+        },
+        {
+          "ru": "Проект, сохранённый более новой версией Студии, открывается только для чтения, чтобы старая версия случайно не испортила его данные",
+          "en": "A project saved by a newer Studio opens read-only, so an older version cannot accidentally damage its data"
+        },
+        {
+          "ru": "Новая группа документов «Тема и заявка», имя академического руководителя подставляется в слот подписи, подсказка в поле «Группа» зависит от программы",
+          "en": "New Topic and application document group, the academic supervisor's name fills the signature slot, and the Group field hint depends on the programme"
+        },
+        {
+          "ru": "Обновлены зависимости и базовый образ, закрыты найденные в нём уязвимости",
+          "en": "Dependencies and the base image updated, closing the vulnerabilities found in it"
+        }
+      ]
+    },
+    {
       "version": "0.1.3",
       "date": "2026-07-28",
       "notes": [
