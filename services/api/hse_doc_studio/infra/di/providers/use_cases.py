@@ -24,6 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
@@ -81,6 +82,7 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateCheckRepository,
     IUpdateFeedGateway,
 )
+from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.protocols import (
     IVcsEditThrottle,
     IVcsFolderLocks,
@@ -283,6 +285,11 @@ from hse_doc_studio.use_cases.office_services.list_office_service_remote_tags im
 from hse_doc_studio.use_cases.office_services.set_active_office_service_image import (
     SetActiveOfficeServiceImageUC,
 )
+
+# --- Settings ---
+from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
+from hse_doc_studio.use_cases.profile.get_profile import GetProfileUC
+from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
 from hse_doc_studio.use_cases.projects.connect_project import ConnectProjectUC
 
 # --- Projects ---
@@ -308,8 +315,6 @@ from hse_doc_studio.use_cases.requirements.get_requirements import GetRequiremen
 from hse_doc_studio.use_cases.requirements.update_requirements_format import (
     UpdateRequirementsFormatUC,
 )
-
-# --- Settings ---
 from hse_doc_studio.use_cases.settings.get_settings import GetSettingsUC
 from hse_doc_studio.use_cases.settings.update_settings import UpdateSettingsUC
 from hse_doc_studio.use_cases.setup.apply_setup import ApplySetupUC
@@ -401,6 +406,11 @@ from hse_doc_studio.use_cases.vcs.vcs_tags import (
     DeleteVcsTagUC,
     ListVcsTagsUC,
 )
+
+
+def _bot_author() -> VcsAuthor:
+    """Служебная подпись, под которой идут коммиты, пока профиль автора не заполнен."""
+    return VcsAuthor(settings.vcs.author_name, settings.vcs.author_email)
 
 
 def _docker_default_images() -> dict[str, str]:
@@ -1361,6 +1371,20 @@ class UseCaseProvider(Provider):
         capacity_probe: ISystemCapacityProbe,
     ) -> UpdateSettingsUC:
         return UpdateSettingsUC(settings_repo=settings_repo, capacity_probe=capacity_probe)
+
+    # ------------------------------------------------------------------ Профиль автора
+
+    @provide
+    def get_get_profile_uc(self, source: ILocalAuthorProfile) -> GetProfileUC:
+        return GetProfileUC(source, _bot_author())
+
+    @provide
+    def get_update_profile_uc(self, settings_repo: ISettingsRepository) -> UpdateProfileUC:
+        return UpdateProfileUC(settings_repo, _bot_author())
+
+    @provide
+    def get_clear_profile_uc(self, settings_repo: ISettingsRepository) -> ClearProfileUC:
+        return ClearProfileUC(settings_repo, _bot_author())
 
     # ------------------------------------------------------------------ Export / Import
 

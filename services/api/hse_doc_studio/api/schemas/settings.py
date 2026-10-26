@@ -25,6 +25,8 @@ class SettingsResponse(BaseModel):
     auto_update: bool
     # Порог (ГБ) освобождаемого места для стартового предупреждения; 0 = выкл.
     disk_usage_warn_gb: int
+    # Период фоновой проверки git-репозитория, секунды; 0 = выключена.
+    git_fetch_interval_s: int
 
 
 class UpdateSettingsRequest(BaseModel):
@@ -43,3 +45,4 @@ class UpdateSettingsRequest(BaseModel):
     default_agent_persona_instructions: str | None = None
     auto_update: bool | None = None
     disk_usage_warn_gb: int | None = None
+    git_fetch_interval_s: int | None = None

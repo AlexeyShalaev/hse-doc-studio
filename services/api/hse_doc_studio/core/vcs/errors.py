@@ -37,3 +37,29 @@ class VcsInvalidRefError(VcsCommandError):
         self.command = "check-ref-format"
         self.stderr = reason
         self.value = value
+
+
+class ProfileValidationError(ValueError):
+    """Имя или e-mail автора не годятся для подписи коммита.
+
+    `field` — "name" или "email", `reason` — "required", "too_long" или "invalid";
+    вместе они дают код правила `<field>_<reason>`, по которому форма подсвечивает поле.
+    """
+
+    def __init__(self, field: str, reason: str, message: str) -> None:
+        super().__init__(message)
+        self.field = field
+        self.reason = reason
+        self.message = message
+
+    @property
+    def code(self) -> str:
+        return f"{self.field}_{self.reason}"
+
+
+class ProfileInvalidError(ValueError):
+    """Профиль не принят: перечислены все негодные поля, а не только первое."""
+
+    def __init__(self, errors: list[ProfileValidationError]) -> None:
+        super().__init__("; ".join(e.message for e in errors))
+        self.errors = errors

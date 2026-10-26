@@ -24,6 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -31,6 +32,7 @@ from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
@@ -122,6 +124,7 @@ from hse_doc_studio.infra.vcs.commit_author import ActorCommitAuthorProvider
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
+from hse_doc_studio.infra.vcs.profile_source import ConfigAuthorProfile
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
@@ -676,14 +679,22 @@ class DomainServiceProvider(Provider):
         return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
 
     @provide
-    def get_vcs_service(self) -> IVcsService:
+    def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
+        return ConfigAuthorProfile(settings_repo)
+
+    @provide
+    def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:
         cfg = settings.vcs
         return GitVcsService(
             author_name=cfg.author_name,
             author_email=cfg.author_email,
             diff_max_bytes=cfg.diff_max_bytes,
             default_branch=cfg.default_branch,
-            author_provider=ActorCommitAuthorProvider(VcsAuthor(cfg.author_name, cfg.author_email)),
+            author_provider=ActorCommitAuthorProvider(
+                VcsAuthor(cfg.author_name, cfg.author_email),
+                # Профиль живёт в config.json этой машины; общий сервер подписывает людьми, не профилем.
+                local_profile=local_profile if settings.mode is StudioMode.local else None,
+            ),
         )
 
     @provide

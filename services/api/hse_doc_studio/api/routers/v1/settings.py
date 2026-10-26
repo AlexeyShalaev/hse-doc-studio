@@ -32,6 +32,7 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
         default_agent_persona_instructions=settings.get("default_agent_persona_instructions"),
         auto_update=bool(settings.get("auto_update", True)),
         disk_usage_warn_gb=int(settings.get("disk_usage_warn_gb", 10)),
+        git_fetch_interval_s=int(settings.get("git_fetch_interval_s", 300)),
     )
 
 
@@ -106,6 +107,14 @@ async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mappi
                 detail="disk_usage_warn_gb must be between 0 and 500",
             )
         patch["disk_usage_warn_gb"] = body.disk_usage_warn_gb
+    if "git_fetch_interval_s" in fields_set and body.git_fetch_interval_s is not None:
+        if body.git_fetch_interval_s < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="git_fetch_interval_s must be 0 or at least 60",
+            )
+        # 0 выключает проверку; всё, что меньше минуты, поднимаем до минуты.
+        patch["git_fetch_interval_s"] = 0 if body.git_fetch_interval_s == 0 else max(60, body.git_fetch_interval_s)
 
     try:
         result = await uc.execute(UpdateSettingsInput(patch=patch))

@@ -17,13 +17,13 @@ from hse_doc_studio.core.repositories import (
     IAIProviderRepository,
     ISettingsRepository,
 )
-from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS
+from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, MACHINE_LOCAL_SETTING_KEYS
 
 logger = structlog.get_logger()
 
 # Only keys the app knows about are written back, so an old/foreign bundle can't
 # inject arbitrary settings (mirrors UpdateSettingsUC's allow-list).
-_ALLOWED_SETTING_KEYS = frozenset(_DEFAULTS.keys())
+_ALLOWED_SETTING_KEYS = frozenset(_DEFAULTS.keys()) - MACHINE_LOCAL_SETTING_KEYS
 _MERGE_STRATEGIES = frozenset({"skip", "replace"})
 
 
