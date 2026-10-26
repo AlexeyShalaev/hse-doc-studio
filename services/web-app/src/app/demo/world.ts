@@ -47,6 +47,10 @@ export type DemoProjectGit = {
   sharedFolder: { provider: string; root: string } | null;
   sharedAck: boolean;
   botAuthored: number;
+  // Что покажет состав проекта перед подключением (GET /git/contents).
+  ndaFiles: number;
+  lfsPointers: number;
+  overLimit: { path: string; bytes: number; limit: number }[];
   conflict: DemoConflictSession | null;
   // Слияние при следующей синхронизации закончится конфликтом.
   willConflict: boolean;
@@ -102,6 +106,9 @@ export const emptyProjectGit = (): DemoProjectGit => ({
   sharedFolder: null,
   sharedAck: false,
   botAuthored: 0,
+  ndaFiles: 0,
+  lfsPointers: 0,
+  overLimit: [],
   conflict: null,
   willConflict: false,
   failWith: null,

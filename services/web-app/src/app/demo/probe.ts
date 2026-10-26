@@ -132,6 +132,24 @@ const ISSUES: Record<string, DemoUrlError> = {
     code: "rate_limited",
     detail: "Слишком много запросов, попробуй позже.",
   },
+  denied: {
+    code: "auth_failed",
+    detail: "Сервер отклонил токен: он отозван или просрочен.",
+  },
+  sso: {
+    code: "sso_required",
+    detail: "Организация требует SSO: авторизуй токен для неё на сервере.",
+  },
+  readonly: {
+    code: "forbidden_write",
+    detail: "У этого доступа есть только право чтения.",
+  },
+};
+
+// Ключ, который сервер предъявляет вместо прежнего, когда в адресе слово changed.
+export const CHANGED_HOST_KEY = {
+  type: "ssh-ed25519",
+  fingerprint_sha256: "SHA256:Qm9yZWRPbmVUd29UaHJlZUZvdXJGaXZlU2l4U2V2ZW4",
 };
 
 // Ошибка доступа по адресу, если она есть: ok: false в ответе проверки.
@@ -159,19 +177,44 @@ export const accessIssue = (
       detail: "Сервер ещё не в списке доверенных.",
     };
   }
+  if (parsed.kind === "ssh" && has(parsed.display_url, "changed")) {
+    const known = world.hosts.find((host) => host.host === parsed.host);
+    // После замены ключа сервер уже известен с новым отпечатком.
+    if (
+      !known?.fingerprints_sha256.includes(CHANGED_HOST_KEY.fingerprint_sha256)
+    ) {
+      return {
+        code: "host_key_changed",
+        detail: "Ключ сервера отличается от запомненного.",
+      };
+    }
+  }
   return null;
 };
 
-export const hostKeysFor = (): {
-  type: string;
-  fingerprint_sha256: string;
-}[] => [GITHUB_HOST_KEY];
+export const hostKeysFor = (
+  code: string,
+): { type: string; fingerprint_sha256: string }[] =>
+  // Как у настоящего сервера: при смене ключа проверка ключей не приносит.
+  code === "host_key_changed"
+    ? []
+    : [
+        GITHUB_HOST_KEY,
+        {
+          type: "ssh-rsa",
+          fingerprint_sha256:
+            "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s",
+        },
+      ];
 
 export type DemoProbeInput = {
   url: string;
   credentialId: string | null;
   projectId: string | null;
+  branch?: string | null;
 };
+
+const DEMO_BRANCHES = ["main", "develop"];
 
 const PROJECT_INFO = {
   name: "Курсовая работа",
@@ -197,7 +240,7 @@ export const runDemoProbe = (
     auth_ok: true,
     empty: false,
     default_branch: "main",
-    branches: ["main", "develop"],
+    branches: DEMO_BRANCHES,
     relation: "studio_project",
     project: null,
     schema_access: "full",
@@ -217,7 +260,8 @@ export const runDemoProbe = (
         error: {
           code: issue.code,
           detail: issue.detail,
-          host_keys: issue.code === "host_key_unknown" ? hostKeysFor() : null,
+          host_keys:
+            issue.code === "host_key_unknown" ? hostKeysFor(issue.code) : null,
         },
         reachable: !unreachable,
         auth_ok: false,
@@ -246,6 +290,27 @@ export const runDemoProbe = (
     relation = projectId ? "same_project" : "studio_project";
   else if (has(url, "plain")) relation = "not_studio_project";
   else if (has(url, "newer")) relation = "studio_project";
+
+  // Ветка есть только у непустого репозитория: в пустом её создаст первая отправка.
+  const wanted = input.branch?.trim();
+  if (wanted && relation !== "empty" && !DEMO_BRANCHES.includes(wanted)) {
+    return {
+      status: 200,
+      body: {
+        ...base,
+        ok: false,
+        error: {
+          code: "branch_missing",
+          detail: `В репозитории нет ветки ${wanted}.`,
+          host_keys: null,
+        },
+        relation: "unknown",
+        project: null,
+        schema_access: null,
+        template_available: null,
+      },
+    };
+  }
 
   if (relation === "empty") {
     return {

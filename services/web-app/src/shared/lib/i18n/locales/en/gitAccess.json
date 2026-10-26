@@ -30,5 +30,152 @@
     "icloud": "iCloud",
     "nextcloud": "Nextcloud",
     "unknown": "cloud"
+  },
+  "secretsUnavailable": "The secret store is unavailable: tokens and keys cannot be saved. Check the Studio data folder.",
+  "method": {
+    "label": "Sign-in method",
+    "pat": "Token (https)",
+    "ssh": "Key (ssh)"
+  },
+  "mismatch": {
+    "sshOnHttps": "A key works only with an ssh address, but an https address was entered.",
+    "tokenOnSsh": "A token works only with an https address, but an ssh address was entered.",
+    "replace": "Replace the address with {{target}}"
+  },
+  "pat": {
+    "token": "Token",
+    "newToken": "New token",
+    "tokenPlaceholder": "Paste the token",
+    "show": "Show token",
+    "hide": "Hide token",
+    "stored": "The token is stored encrypted on this computer and is never shown again.",
+    "advanced": "Advanced",
+    "label": "Access name",
+    "username": "User name",
+    "usernameHint": "Only needed for servers that ask for a name together with the token. Usually left empty.",
+    "saveFailed": "Could not save the token."
+  },
+  "ssh": {
+    "create": "Create key",
+    "createAnother": "Create another key",
+    "emptyTitle": "There is no key for this server yet",
+    "emptyText": "Studio will create a key on this computer. The private part stays here, and you add the public part to the repository.",
+    "chooseKey": "Key for this server",
+    "publicKey": "Public key",
+    "fingerprint": "Fingerprint",
+    "allowWrite": "Do not forget to allow write access for the key (Allow write access): with read-only access versions cannot be sent.",
+    "defaultLabel": "Key: {{name}}",
+    "createFailed": "Could not create the key."
+  },
+  "picker": {
+    "label": "Saved access for {{host}}",
+    "loading": "Loading saved access…",
+    "lastUsed": "used {{when}}",
+    "neverUsed": "not used yet",
+    "addNew": "Add a new token"
+  },
+  "browser": {
+    "title": "Sign in with the browser",
+    "text": "GitHub and GitLab without tokens or keys",
+    "soon": "Soon",
+    "tooltip": "Sign-in without tokens is coming later"
+  },
+  "step": {
+    "check": "Check",
+    "saveAndCheck": "Save and check",
+    "checkKey": "I added the key, check"
+  },
+  "fix": {
+    "useBound": "Update the access the project is connected with",
+    "useOther": "Use a different access"
+  },
+  "help": {
+    "tokenSummary": "How to get a token",
+    "keySummary": "How to add a key",
+    "openTokenPage": "Open the {{provider}} token page",
+    "openKeyPage": "Open the {{provider}} key page",
+    "tokenNote": "Give the token only the permissions it needs and an expiry date: you can revoke it in the server settings.",
+    "keyNote": "The private part of the key stays on this computer and is never sent anywhere.",
+    "github": {
+      "token": {
+        "open": "On GitHub open Settings, Developer settings, Fine-grained tokens and click Generate new token.",
+        "repo": "Under Repository access choose Only select repositories and tick this repository.",
+        "perm": "Under Permissions, Repository permissions set Contents: Read and write.",
+        "copy": "Click Generate token and copy the value: GitHub shows it only once."
+      },
+      "key": {
+        "open": "Open the repository's Deploy keys page (button below) and click Add deploy key.",
+        "paste": "Paste the public key from the field above, any title.",
+        "write": "Tick Allow write access: without it the repository accepts the key for reading only."
+      }
+    },
+    "gitlab": {
+      "token": {
+        "open": "Open Preferences, Access tokens and click Add new token.",
+        "scope": "Tick the write_repository scope (it includes reading) and role Developer or higher.",
+        "copy": "Create the token and copy the value: GitLab shows it only once."
+      },
+      "key": {
+        "open": "Open the repository's Settings, Repository, Deploy keys and click Add new key.",
+        "paste": "Paste the public key from the field above, any title.",
+        "write": "Turn on Grant write permissions to this key."
+      }
+    },
+    "gitea": {
+      "token": {
+        "open": "Open Settings, Applications and find the access tokens section.",
+        "perm": "Give the token the repository: Read and write permission.",
+        "copy": "Create the token and copy the value: it will not be shown later."
+      },
+      "key": {
+        "open": "Open the repository's Settings, Deploy Keys and click Add Deploy Key.",
+        "paste": "Paste the public key from the field above, any title.",
+        "write": "Turn on Enable Write Access: otherwise versions cannot be sent."
+      }
+    },
+    "bitbucket": {
+      "token": {
+        "open": "Open Personal settings, App passwords and create an app password.",
+        "perm": "Give it the Repositories: Write permission.",
+        "copy": "Copy the password and paste it here as the token: Bitbucket shows it only once."
+      },
+      "key": {
+        "open": "Open the repository's Repository settings, Access keys and click Add key.",
+        "paste": "Paste the public key from the field above, any title.",
+        "write": "Sending versions needs write access: if a Bitbucket repository key is read-only, add the key to your profile under Personal settings, SSH keys."
+      }
+    },
+    "other": {
+      "token": {
+        "create": "Open your profile settings on the server and create a personal access token with write permission for the repository.",
+        "copy": "Copy the value and paste it above: the server usually shows it only once."
+      },
+      "key": {
+        "paste": "Add the public key from the field above to the repository settings or your profile on the server.",
+        "write": "Allow the key to write: a read-only key cannot send versions."
+      }
+    }
+  },
+  "hostKey": {
+    "fingerprintOf": "{{type}} key fingerprint",
+    "unknownTitle": "First connection to {{host}}",
+    "unknownText": "Studio will remember the server key and recognize it later: this way an impostor server does not get your data. Compare the fingerprint with the one the server publishes and confirm.",
+    "changedTitle": "The key of {{host}} has changed",
+    "changedText": "The server used to present a different key. The connection is stopped.",
+    "changedWarning": "This may be a server impersonation. If the administrator changed the key on purpose, compare the new fingerprint with the one they published and only then replace the key.",
+    "before": "Was",
+    "after": "Now",
+    "typeHost": "To replace the key, type the server name: {{host}}",
+    "whereToCheck": "You can compare the fingerprint on the server's page with its ssh keys or with its administrator. If it does not match, decline.",
+    "openDocs": "{{host}} key fingerprints",
+    "cancel": "Cancel",
+    "trust": "Trust the server",
+    "trustWait": "Trust the server ({{seconds}})",
+    "replace": "Replace the key",
+    "failed": "Could not remember the server key.",
+    "revealing": "Fetching the fingerprint of the new key…",
+    "revealFailed": "Could not get the new server key fingerprint. The key cannot be replaced blindly.",
+    "retry": "Retry",
+    "noFingerprint": "The new fingerprint is not known yet, the key was not replaced."
   }
 }

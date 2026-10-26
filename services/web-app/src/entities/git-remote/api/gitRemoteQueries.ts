@@ -5,6 +5,7 @@ import { gitRemoteApi, type CloneFromBundleParams } from "./gitRemoteApi";
 import type {
   CloneRequest,
   CreateCredentialRequest,
+  GitCredential,
   ProbeRequest,
   TrustHostRequest,
   UpdateCredentialRequest,
@@ -23,10 +24,11 @@ export const gitRemoteKeys = {
 
 // --- доступы ----------------------------------------------------------------------
 
-export const useCredentials = () =>
+export const useCredentials = (enabled = true) =>
   useQuery({
     queryKey: gitRemoteKeys.credentials(),
     queryFn: () => gitRemoteApi.listCredentials(),
+    enabled,
   });
 
 export const useCreateCredential = () => {
@@ -34,7 +36,12 @@ export const useCreateCredential = () => {
   return useMutation({
     mutationFn: (params: CreateCredentialRequest) =>
       gitRemoteApi.createCredential(params),
-    onSuccess: () => {
+    onSuccess: (created) => {
+      // Новый доступ виден в списке сразу, не дожидаясь перечитывания.
+      queryClient.setQueryData<GitCredential[]>(
+        gitRemoteKeys.credentials(),
+        (list) => (list ? [...list, created] : list),
+      );
       void queryClient.invalidateQueries({
         queryKey: gitRemoteKeys.credentials(),
       });
@@ -80,10 +87,11 @@ export const useDeleteCredential = () => {
 
 // --- ключи серверов ---------------------------------------------------------------
 
-export const useGitHosts = () =>
+export const useGitHosts = (enabled = true) =>
   useQuery({
     queryKey: gitRemoteKeys.hosts(),
     queryFn: () => gitRemoteApi.listHosts(),
+    enabled,
   });
 
 export const useTrustHost = () => {
@@ -109,10 +117,11 @@ export const useDeleteHost = () => {
   });
 };
 
-export const useSecretsStatus = () =>
+export const useSecretsStatus = (enabled = true) =>
   useQuery({
     queryKey: gitRemoteKeys.secrets(),
     queryFn: () => gitRemoteApi.getSecretsStatus(),
+    enabled,
   });
 
 export const useSharedFolder = (folder: string, enabled = true) =>

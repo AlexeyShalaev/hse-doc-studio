@@ -15,7 +15,7 @@ import type {
   GitStatus,
   OperationWarning,
 } from "@entities/git-sync";
-import type { GitCredential } from "@entities/git-remote";
+import { REVEAL_FINGERPRINT, type GitCredential } from "@entities/git-remote";
 import { validateProfile, type ProfileIssueCode } from "@entities/profile";
 import { fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
 import {
@@ -24,7 +24,12 @@ import {
   conflictDiff,
   openConflictPaths,
 } from "./conflictData";
-import { isUrlError, parseDemoUrl, runDemoProbe } from "./probe";
+import {
+  CHANGED_HOST_KEY,
+  isUrlError,
+  parseDemoUrl,
+  runDemoProbe,
+} from "./probe";
 import { createWorld, projectOf } from "./scenarios";
 import { useDemoScenarioStore } from "./scenarioStore";
 import {
@@ -262,7 +267,12 @@ const projectRoutes: DemoRoute[] = [
       const url = str(body.url) ?? "";
       const credentialId = str(body.credential_id);
       const adopt = str(body.adopt);
-      const probe = runDemoProbe(world, { url, credentialId, projectId });
+      const probe = runDemoProbe(world, {
+        url,
+        credentialId,
+        projectId,
+        branch: str(body.remote_branch),
+      });
       if (probe.status !== 200)
         return { status: probe.status, data: probe.body };
       const result = probe.body as {
@@ -421,7 +431,7 @@ const projectRoutes: DemoRoute[] = [
         commits: 142,
         bot_authored_commits: project.botAuthored,
         signatures: 2,
-        nda_files: 0,
+        nda_files: project.ndaFiles,
         pdf_tracked: true,
         largest: [
           { path: "images/architecture.png", bytes: 3_400_000 },
@@ -430,8 +440,8 @@ const projectRoutes: DemoRoute[] = [
           { path: "assets/fonts/PTSerif.ttf", bytes: 980_000 },
           { path: "references.bib", bytes: 120_000 },
         ],
-        over_limit: [],
-        lfs_pointers: 0,
+        over_limit: project.overLimit,
+        lfs_pointers: project.lfsPointers,
       };
       return demoJson(contents);
     },
@@ -874,6 +884,17 @@ const globalRoutes: DemoRoute[] = [
         status: token && token.trim() !== "" ? "unverified" : current.status,
       };
       world.credentials[index] = updated;
+      // Новый токен снимает отказ входа у проектов, которые им пользуются.
+      if (token && token.trim() !== "") {
+        for (const project of world.projects.values()) {
+          if (project.remote?.credential?.id !== updated.id) continue;
+          if (project.failWith?.code === "auth_failed") project.failWith = null;
+          if (project.health === "unauthenticated") {
+            project.health = "ok";
+            project.lastError = null;
+          }
+        }
+      }
       return demoJson(updated);
     },
   },
@@ -915,7 +936,11 @@ const globalRoutes: DemoRoute[] = [
       if (known && body.replace !== true) {
         return demoError(409, "host_key_changed", "Ключ сервера изменился.", {
           expected: known.fingerprints_sha256[0] ?? "",
-          actual: str(body.fingerprint_sha256) ?? "",
+          // Запрос-заглушка узнаёт ключ, который сервер предъявляет сейчас.
+          actual:
+            body.fingerprint_sha256 === REVEAL_FINGERPRINT
+              ? CHANGED_HOST_KEY.fingerprint_sha256
+              : (str(body.fingerprint_sha256) ?? ""),
         });
       }
       if (known && body.confirm_host !== host) {
@@ -997,6 +1022,7 @@ const globalRoutes: DemoRoute[] = [
         url: str(body.url) ?? "",
         credentialId: str(body.credential_id),
         projectId: str(body.project_id),
+        branch: str(body.branch),
       });
       if (result.status !== 200)
         return { status: result.status, data: result.body };

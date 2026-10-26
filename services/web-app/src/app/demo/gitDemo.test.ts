@@ -96,6 +96,9 @@ const startSync = async (): Promise<string> =>
 
 const EXPECTED_STATE: Record<DemoScenarioId, string> = {
   not_connected: "no_remote",
+  connect_warnings: "no_remote",
+  connect_large_files: "no_remote",
+  connect_no_profile: "no_remote",
   unfetched: "unfetched",
   up_to_date: "up_to_date",
   ahead: "ahead",
