@@ -14,17 +14,21 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.events import IJobLogStream
+from hse_doc_studio.core.jobs.protocols import ICompileJobRunner
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
+from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.checks.runner import CheckRunner
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.siblings import Reachability
+from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 
@@ -101,3 +105,19 @@ async def test__real_container__office_ports__port_and_concrete_are_one_singleto
     assert convert_port is convert_manager
     assert editor_port is editor_manager
     assert reachability_port is reachability
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__compile_runner_and_materializer__resolved_as_ports() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            runner = await request_container.get(ICompileJobRunner)
+            runner_concrete = await request_container.get(EmbeddedCompileRunner)
+            materializer = await request_container.get(ITemplateMaterializer)
+    finally:
+        await container.close()
+
+    assert isinstance(runner, EmbeddedCompileRunner)
+    assert runner is runner_concrete
+    assert isinstance(materializer, TemplateMaterializer)

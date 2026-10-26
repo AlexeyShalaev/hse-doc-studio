@@ -27,6 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
+from hse_doc_studio.core.jobs.protocols import ICompileJobRunner
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
@@ -40,6 +41,7 @@ from hse_doc_studio.core.services import (
     SubmissionProfileService,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
     IMergeEngine,
     ITemplateBaseStore,
@@ -82,10 +84,12 @@ from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
+from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
@@ -104,6 +108,9 @@ from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
+from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
+from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
+from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
@@ -549,6 +556,39 @@ class DomainServiceProvider(Provider):
     def get_compile_limiter(self) -> CompileConcurrencyLimiter:
         # App-scoped: очередь docker-сборок общая для всех проектов и запросов.
         return CompileConcurrencyLimiter()
+
+    @provide
+    def get_template_materializer(self, template_repo: ITemplateRepository) -> ITemplateMaterializer:
+        return TemplateMaterializer(template_repo)
+
+    @provide
+    def get_embedded_compile_runner(  # noqa: PLR0913
+        self,
+        executor: DockerCompileExecutor,
+        image_manager: DockerImageManager,
+        office_convert: IOfficeConvertService,
+        check_runner: ICheckRunner,
+        lt_manager: ILanguageCheckService,
+        settings_repo: ISettingsRepository,
+        capacity_probe: ISystemCapacityProbe,
+        limiter: CompileConcurrencyLimiter,
+        outputs: IJobOutputs,
+    ) -> AnyOf[EmbeddedCompileRunner, ICompileJobRunner]:
+        # Образы читаются из настроек в момент вызова: сборка выбирает образ заново после ожидания слота.
+        return EmbeddedCompileRunner(
+            executor=executor,
+            image_manager=image_manager,
+            office_convert=office_convert,
+            check_runner=check_runner,
+            lt_manager=lt_manager,
+            settings_repo=settings_repo,
+            capacity_probe=capacity_probe,
+            limiter=limiter,
+            outputs=outputs,
+            resolve_image=lambda: resolve_active_image(settings_repo),
+            resolve_lt_image=lambda: resolve_active_languagetool_image(settings_repo),
+            resolve_office_image=lambda: resolve_active_office_image(settings_repo, "convert"),
+        )
 
     @provide
     def get_pdf_stamper(self) -> PdfStamper:

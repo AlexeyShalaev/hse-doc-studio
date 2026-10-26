@@ -96,6 +96,13 @@ class JobResult:
             self.error.raise_for_error()
 
 
+def compile_payload_of(spec: JobSpec) -> CompileJobPayload:
+    """Нагрузка compile-задачи; другой вид или тип нагрузки это ошибка программиста."""
+    if spec.kind is not JobKind.compile or not isinstance(spec.payload, CompileJobPayload):
+        raise TypeError(f"not a compile job: {spec.kind}")
+    return spec.payload
+
+
 def compile_job_tags(needs_compile: bool, source_ext: str) -> frozenset[str]:
     """`tex` для latexmk, `office` для копирования office-файла с превью, иначе без тегов."""
     if needs_compile:
