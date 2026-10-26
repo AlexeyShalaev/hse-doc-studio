@@ -22,11 +22,10 @@ from hse_doc_studio.core.signatures.errors import (
     GpgUnavailableError,
     UnknownSignatureFormatError,
 )
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
 from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import DetachedSignature
-from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
-from hse_doc_studio.infra.signatures.openpgp import GpgKeyring, looks_like_openpgp_public_key
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
     require_fresh_frozen,
@@ -55,8 +54,8 @@ class AttachDetachedSignatureOutput:
     missing_key_id: str | None = None
 
 
-def _import_public_key(keyring: GpgKeyring, blob: bytes) -> None:
-    if not looks_like_openpgp_public_key(blob):
+def _import_public_key(keyring: IOpenPgpKeyImporter, blob: bytes) -> None:
+    if not keyring.looks_like_public_key(blob):
         raise ValueError(
             localized_error(
                 "Файл не похож на открытый ключ OpenPGP (ожидается -----BEGIN PGP PUBLIC KEY BLOCK-----)",
@@ -64,7 +63,7 @@ def _import_public_key(keyring: GpgKeyring, blob: bytes) -> None:
             )
         )
     try:
-        keyring.import_key(blob)
+        keyring.import_public_key(blob)
     except GpgUnavailableError as exc:
         raise ValueError(_no_gpg()) from exc
     except GpgError as exc:
@@ -87,7 +86,7 @@ class _DetachedUCBase:
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        keyring: IOpenPgpKeyImporter,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
@@ -201,8 +200,8 @@ class CompleteDetachedChainUC(_DetachedUCBase):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
-        fetcher: ChainFetcher,
+        keyring: IOpenPgpKeyImporter,
+        fetcher: IChainFetcher,
     ) -> None:
         super().__init__(
             project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring

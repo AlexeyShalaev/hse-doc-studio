@@ -61,6 +61,7 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -92,7 +93,6 @@ from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
-from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
@@ -2208,7 +2208,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        keyring: IOpenPgpKeyImporter,
     ) -> AttachDetachedSignatureUC:
         return AttachDetachedSignatureUC(
             project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
@@ -2223,7 +2223,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        keyring: IOpenPgpKeyImporter,
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
             project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
@@ -2238,8 +2238,8 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
-        fetcher: ChainFetcher,
+        keyring: IOpenPgpKeyImporter,
+        fetcher: IChainFetcher,
     ) -> CompleteDetachedChainUC:
         return CompleteDetachedChainUC(
             project_repo,

@@ -17,6 +17,7 @@ from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
@@ -31,6 +32,8 @@ from hse_doc_studio.infra.languagetool.container_manager import LanguageToolCont
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
+from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 
@@ -140,3 +143,22 @@ async def test__real_container__job_dispatcher_and_handler_registry__resolved_as
     assert isinstance(dispatcher, LocalJobDispatcher)
     assert isinstance(handlers, JobHandlerRegistry)
     assert dispatcher is dispatcher_again
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__signature_ports__port_and_concrete_are_one_singleton() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            importer = await request_container.get(IOpenPgpKeyImporter)
+            keyring = await request_container.get(GpgKeyring)
+            fetcher_port = await request_container.get(IChainFetcher)
+            fetcher = await request_container.get(ChainFetcher)
+        async with container() as another_request:
+            keyring_again = await another_request.get(GpgKeyring)
+    finally:
+        await container.close()
+
+    assert importer is keyring
+    assert fetcher_port is fetcher
+    assert keyring is keyring_again

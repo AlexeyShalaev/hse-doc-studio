@@ -40,6 +40,7 @@ from hse_doc_studio.core.services import (
     RequirementMatchingService,
     SubmissionProfileService,
 )
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -630,7 +631,7 @@ class DomainServiceProvider(Provider):
         return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager, keyring=keyring)
 
     @provide
-    def get_gpg_keyring(self) -> GpgKeyring:
+    def get_gpg_keyring(self) -> AnyOf[GpgKeyring, IOpenPgpKeyImporter]:
         return GpgKeyring(settings.data_dir.expanduser() / "gnupg")
 
     @provide
@@ -638,7 +639,7 @@ class DomainServiceProvider(Provider):
         return TrustedRootStore(settings.data_dir.expanduser() / "trusted_roots")
 
     @provide
-    def get_chain_fetcher(self) -> ChainFetcher:
+    def get_chain_fetcher(self) -> AnyOf[ChainFetcher, IChainFetcher]:
         return ChainFetcher(settings.data_dir.expanduser() / "chain_cache")
 
     @provide

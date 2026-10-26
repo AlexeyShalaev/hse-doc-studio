@@ -178,6 +178,12 @@ class GpgKeyring:
             raise GpgError(_clean_stderr(proc.stderr) or "no OpenPGP key found in the file")
         return [k for k in self.list_keys() if k.fingerprint in fprs]
 
+    def looks_like_public_key(self, blob: bytes) -> bool:
+        return looks_like_openpgp_public_key(blob)
+
+    def import_public_key(self, blob: bytes) -> None:
+        self.import_key(blob)
+
     def export_public(self, fingerprint: str) -> bytes:
         return self._run(["--armor", "--export", fingerprint]).stdout
 
