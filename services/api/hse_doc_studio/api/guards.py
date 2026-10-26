@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.route_actions import rule_for, scope_for_rule
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.context import set_current_actor
@@ -138,3 +139,4 @@ async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:
 def install_exception_handlers(app: FastAPI) -> None:
     """Ошибки домена, общие для всех роутеров (в create_app и в тестовом приложении)."""
     app.add_exception_handler(ProjectReadOnlyError, _read_only_handler)
+    install_git_error_handlers(app)

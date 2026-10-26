@@ -12,7 +12,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
-from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind
+from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind, RemoteUrl
 
 
 class GitCredentialKind(StrEnum):
@@ -167,6 +167,14 @@ class GitCredential:
 
 
 @dataclass(frozen=True)
+class CredentialUsage:
+    """Проект, у которого к удалённому репозиторию привязан этот доступ."""
+
+    project_id: UUID
+    name: str
+
+
+@dataclass(frozen=True)
 class GitRemoteRef:
     """Подключённый к проекту удалённый репозиторий (адрес без секретов)."""
 
@@ -181,9 +189,32 @@ class GitRemoteRef:
 
 
 @dataclass(frozen=True)
+class RemoteTarget:
+    """Куда и с каким доступом ходит сетевой git: адрес без секретов, доступ по идентификатору."""
+
+    url: RemoteUrl
+    credential_id: UUID | None = None
+    # Явное согласие на открытый http: токен пойдёт по сети без шифрования.
+    insecure_http: bool = False
+
+
+@dataclass(frozen=True)
 class GitHostKey:
     type: str
     fingerprint_sha256: str
+
+
+@dataclass(frozen=True)
+class ScannedHostKey:
+    """Ключ, который хост предъявил при сканировании: пока ему никто не доверяет."""
+
+    type: str
+    # Блок ключа в base64, как в known_hosts.
+    key: str
+    fingerprint_sha256: str
+
+    def public(self) -> GitHostKey:
+        return GitHostKey(self.type, self.fingerprint_sha256)
 
 
 @dataclass(frozen=True)

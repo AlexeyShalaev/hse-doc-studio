@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
@@ -856,6 +856,8 @@ class GitConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Master switch for remotes, sync and clone from git.")
     ssh_binary: str = Field(default="ssh", description="ssh client used for ssh:// and scp-like remotes.")
+    ssh_keyscan_binary: str = Field(default="ssh-keyscan", description="Tool that reads host keys of an ssh server.")
+    scan_timeout_s: float = Field(default=10.0, description="Timeout for reading the host keys of a server.")
     git_min_version: str = Field(
         default="2.31", description="Oldest git the sync works with; older reports git_unavailable."
     )
@@ -884,6 +886,19 @@ class GitConfig(BaseModel):
         default=95_000_000,
         description="Blobs from this size are reported before push: hosting services reject files near 100 MB.",
     )
+
+
+class SecretsConfig(BaseModel):
+    """Ключ шифрования токенов и ключей доступа (HSE_STUDIO__SECRETS__*).
+
+    Без настроек ключ создаётся файлом в data_dir. Любой из параметров выключает запись файла:
+    ключ можно хранить вне тома с данными (docker secrets).
+    """
+
+    key: SecretStr | None = Field(
+        default=None, description="Fernet key (urlsafe base64 of 32 bytes) taken from the environment."
+    )
+    key_file: Path | None = Field(default=None, description="File holding the Fernet key (docker secret).")
 
 
 class JobsConfig(BaseModel):
@@ -959,6 +974,7 @@ class Settings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     git: GitConfig = Field(default_factory=GitConfig)
+    secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 
