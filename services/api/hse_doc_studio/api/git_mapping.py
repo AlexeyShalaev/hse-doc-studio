@@ -17,8 +17,15 @@ from hse_doc_studio.core.git_sync.entities import (
     SyncResult,
     SyncWarning,
 )
+from hse_doc_studio.core.git_sync.providers import detect_provider
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeView
 from hse_doc_studio.use_cases.git_sync.status import GitStatusView
+
+
+def _provider_info(host: str | None) -> schema.GitProviderInfo:
+    """Провайдер по имени хоста; выбор человека и ответ API сервера подключаются вместе с их хранением."""
+    info = detect_provider(host)
+    return schema.GitProviderInfo(id=info.id.value, detected_by=info.detected_by.value, version=info.version)
 
 
 def _brief(commit: CommitBrief) -> schema.GitCommitBrief:
@@ -69,6 +76,7 @@ def map_status(view: GitStatusView) -> schema.GitStatusResponse:
             kind=remote.kind.value,
             host=remote.host,
             provider=remote.provider,
+            provider_info=_provider_info(remote.host),
             web_url=remote.web_url,
             branch=remote.branch,
             local_branch=remote.local_branch,
@@ -192,6 +200,8 @@ def map_probe(view: ProbeView) -> schema.ProbeResponse:
             repo=url.repo,
             token_stripped=url.token_stripped,
         ),
+        provider_info=_provider_info(url.host),
+        token_info=None,
         reachable=view.reachable,
         auth_ok=view.auth_ok,
         empty=view.empty,
