@@ -25,6 +25,7 @@ from hse_doc_studio.core.git_sync.entities import (
     OperationPhase,
     PathStamp,
     RemoteProbe,
+    SharedFolderInfo,
     StoreAudit,
     StoreFinding,
     SyncState,
@@ -242,15 +243,10 @@ class IGitRemoteRegistry(Protocol):
     def list(self) -> list[Path]: ...
 
 
-@dataclass(frozen=True)
-class SharedFolderInfo:
-    provider: str
-    root: Path
-    evidence: tuple[str, ...]
-
-
 class ISharedFolderDetector(Protocol):
-    def detect(self, folder: Path) -> SharedFolderInfo | None: ...
+    def detect(self, folder: Path) -> SharedFolderInfo | None:
+        """Лежит ли папка внутри каталога, который синхронизирует служба; только предупреждение, ничего не блокирует."""
+        ...
 
 
 class IGitBundleService(Protocol):

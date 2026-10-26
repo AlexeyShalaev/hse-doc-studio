@@ -24,7 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
-from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
+from hse_doc_studio.core.git_sync.protocols import IGitRepoReader, ILocalAuthorProfile, ISharedFolderDetector
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -92,6 +92,8 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
+from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -696,6 +698,14 @@ class DomainServiceProvider(Provider):
                 local_profile=local_profile if settings.mode is StudioMode.local else None,
             ),
         )
+
+    @provide
+    def get_git_repo_reader(self) -> IGitRepoReader:
+        return GitRepoReader()
+
+    @provide
+    def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
+        return SharedFolderDetector(paths)
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

@@ -24,7 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
-from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
+from hse_doc_studio.core.git_sync.protocols import IGitRepoReader, ILocalAuthorProfile, ISharedFolderDetector
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
@@ -249,6 +249,11 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 # --- Filesystem ---
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
+
+# --- Settings ---
+from hse_doc_studio.use_cases.git_sync.clone_defaults import GetCloneDefaultsUC
+from hse_doc_studio.use_cases.git_sync.contents import GetGitContentsUC
+from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
 from hse_doc_studio.use_cases.hse_persons.search_persons import SearchHsePersonsUC
@@ -285,8 +290,6 @@ from hse_doc_studio.use_cases.office_services.list_office_service_remote_tags im
 from hse_doc_studio.use_cases.office_services.set_active_office_service_image import (
     SetActiveOfficeServiceImageUC,
 )
-
-# --- Settings ---
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.get_profile import GetProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -1385,6 +1388,31 @@ class UseCaseProvider(Provider):
     @provide
     def get_clear_profile_uc(self, settings_repo: ISettingsRepository) -> ClearProfileUC:
         return ClearProfileUC(settings_repo, _bot_author())
+
+    # ------------------------------------------------------------------ Git sync
+
+    @provide
+    def get_detect_shared_folder_uc(self, detector: ISharedFolderDetector) -> DetectSharedFolderUC:
+        return DetectSharedFolderUC(detector)
+
+    @provide
+    def get_get_clone_defaults_uc(self) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects")
+
+    @provide
+    def get_get_git_contents_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        reader: IGitRepoReader,
+    ) -> GetGitContentsUC:
+        return GetGitContentsUC(
+            project_repo,
+            project_index_repo,
+            reader,
+            _bot_author(),
+            settings.git.large_file_warn_bytes,
+        )
 
     # ------------------------------------------------------------------ Export / Import
 

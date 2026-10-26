@@ -17,6 +17,8 @@ from hse_doc_studio.api.routers.v1 import (
     fonts,
     forms,
     fs,
+    git_global,
+    git_project,
     hse_persons,
     images,
     languagetool,
@@ -74,3 +76,5 @@ api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(export_import.router, tags=["data"])
 api_router.include_router(signing_identities.router, tags=["signing-identities"])
 api_router.include_router(profile.router, tags=["profile"])
+api_router.include_router(git_global.router, tags=["git"])
+api_router.include_router(git_project.router, tags=["git"])

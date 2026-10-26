@@ -84,6 +84,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/vcs/branches"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/tags"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/settings"): RouteRule(Action.SOURCES_READ),
+    ("GET", "/projects/{project_id}/git/contents"): RouteRule(Action.SOURCES_READ),
     # Файл по пути: PDF, лог и PNG подписи читает и читатель, исходник нет (access.paths)
     ("GET", "/projects/{project_id}/files/{path:path}"): RouteRule(Action.FILES_READ, path_param="path"),
     ("GET", "/projects/{project_id}/file-version/{path:path}"): RouteRule(Action.FILES_READ, path_param="path"),
