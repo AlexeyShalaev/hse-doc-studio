@@ -36,6 +36,8 @@ from hse_doc_studio.core.git_sync.remote_project import (
 )
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
+from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
+from hse_doc_studio.core.vcs.refs import validate_ref_name
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver, ResolvedProvider
 from hse_doc_studio.use_cases.git_sync.token_check import TokenCheck, TokenChecker
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -81,6 +83,14 @@ def choose_remote_branch(requested: str | None, probe: RemoteProbe) -> str:
     if not probe.branches or DEFAULT_REMOTE_BRANCH in probe.branches:
         return DEFAULT_REMOTE_BRANCH
     return sorted(probe.branches)[0]
+
+
+def valid_branch(name: str) -> str:
+    """Имя ветки без недопустимых для git символов; ошибка идёт как ValueError, API отвечает по ней 422."""
+    try:
+        return validate_ref_name(name)
+    except VcsInvalidRefError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def raise_probe_error(probe: RemoteProbe) -> None:

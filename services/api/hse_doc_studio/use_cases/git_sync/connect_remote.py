@@ -42,9 +42,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 )
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.git_sync.url import RemoteUrl, parse_remote_url
-from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
-from hse_doc_studio.core.vcs.refs import validate_ref_name
-from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error
+from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error, valid_branch
 from hse_doc_studio.use_cases.git_sync.status import (
     HEADS_PREFIX,
     TRACKING_PREFIX,
@@ -68,13 +66,6 @@ class ConnectRemoteInput:
     remote_branch: str | None = None
     adopt: str | None = None
     insecure_http: bool = False
-
-
-def _valid_branch(name: str) -> str:
-    try:
-        return validate_ref_name(name)
-    except VcsInvalidRefError as exc:
-        raise ValueError(str(exc)) from exc
 
 
 class ConnectRemoteUC:
@@ -161,7 +152,7 @@ class ConnectRemoteUC:
 
     def _local_branch(self, project: Project, requested: str | None) -> str:
         if requested:
-            branch = _valid_branch(requested)
+            branch = valid_branch(requested)
         else:
             current = self._reader.current_branch(project.folder)
             if current is None:
@@ -177,7 +168,7 @@ class ConnectRemoteUC:
         target = RemoteTarget(url, inp.credential_id, insecure_http=inp.insecure_http)
         probe = await self._transport.probe(target)
         raise_probe_error(probe)
-        remote_branch = _valid_branch(choose_remote_branch(inp.remote_branch, probe))
+        remote_branch = valid_branch(choose_remote_branch(inp.remote_branch, probe))
         adopted = False
         if not probe.empty:
             if remote_branch not in probe.branches:

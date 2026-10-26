@@ -61,9 +61,7 @@ from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
-from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
-from hse_doc_studio.core.vcs.refs import validate_ref_name
-from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error
+from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error, valid_branch
 from hse_doc_studio.use_cases.git_sync.status import TRACKING_PREFIX
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
@@ -188,7 +186,7 @@ class CloneProjectUC:
         if inp.credential_id is not None and self._credentials.get(inp.credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
         if inp.branch:
-            _valid_branch(inp.branch)
+            valid_branch(inp.branch)
         return url
 
     def _plan_folder(self, raw: str) -> _FolderPlan:
@@ -253,7 +251,7 @@ class CloneProjectUC:
         raise_probe_error(probe)
         if probe.empty:
             raise git_error(GitErrorCode.not_a_studio_project)
-        branch = _valid_branch(choose_remote_branch(inp.branch, probe))
+        branch = valid_branch(choose_remote_branch(inp.branch, probe))
         if branch not in probe.branches:
             raise git_error(GitErrorCode.branch_missing)
 
@@ -412,13 +410,6 @@ class CloneProjectUC:
                     entry.unlink(missing_ok=True)
         except OSError as exc:
             logger.warning("clone cleanup failed", folder=str(plan.folder), exc=str(exc))
-
-
-def _valid_branch(name: str) -> str:
-    try:
-        return validate_ref_name(name)
-    except VcsInvalidRefError as exc:
-        raise ValueError(str(exc)) from exc
 
 
 _UNSAFE_NAME = re.compile(r"[^\w.-]+", re.UNICODE)
