@@ -56,6 +56,8 @@ export type DemoProjectGit = {
   willConflict: boolean;
   // Слияние при следующей синхронизации сломается этой ошибкой (код и текст).
   failWith: { code: string; detail: string } | null;
+  // Файлы автосборки, которые уже записаны в проект: путь и содержимое.
+  ciFiles: Record<string, string>;
 };
 
 export type OperationStep = { phase: string; ms: number };
@@ -114,6 +116,7 @@ export const emptyProjectGit = (): DemoProjectGit => ({
   conflict: null,
   willConflict: false,
   failWith: null,
+  ciFiles: {},
 });
 
 // --- профиль ----------------------------------------------------------------------

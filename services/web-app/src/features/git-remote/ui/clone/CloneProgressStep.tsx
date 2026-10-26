@@ -15,7 +15,8 @@ import { Spinner } from "@shared/ui/Spinner";
 import { Stepper, type StepState, type StepperStep } from "@shared/ui/Stepper";
 import { isCloneAccess, type CloneAccess } from "../../model/cloneVerdict";
 import { cloneFailureTarget } from "../../model/cloneFailure";
-import { Btn, Facts, ResultFrame } from "../ResultFrame";
+import { Facts, ResultFrame } from "@shared/ui/ResultFrame";
+import { Btn } from "../ResultFrame";
 import { CloneStepLayout } from "./CloneStepLayout";
 
 export type CloneProgressStepProps = {

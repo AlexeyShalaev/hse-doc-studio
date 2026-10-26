@@ -1,9 +1,9 @@
-import { localeTag } from "@shared/lib";
+import { localeTag } from "./i18n";
 
 // Размер файла для людей: Б, КБ, МБ, ГБ на языке интерфейса (степени 1024).
 const UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 
-export const formatSize = (bytes: number): string => {
+export const formatFileSize = (bytes: number): string => {
   let unitIndex = 0;
   let scaled = Math.max(0, bytes);
   while (scaled >= 1024 && unitIndex < UNITS.length - 1) {

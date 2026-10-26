@@ -5,7 +5,8 @@ import { Notice } from "@shared/ui/ConflictKit";
 import type { ParsedRemoteUrl } from "../../lib/parseRemoteUrl";
 import type { CloneVerdict } from "../../model/cloneVerdict";
 import { ProbeIssueCard, type IssueHandlers } from "../ProbeResultCard";
-import { Btn, Facts, ResultFrame } from "../ResultFrame";
+import { Facts, ResultFrame } from "@shared/ui/ResultFrame";
+import { Btn } from "../ResultFrame";
 
 export type CloneVerdictCardProps = {
   verdict: CloneVerdict;

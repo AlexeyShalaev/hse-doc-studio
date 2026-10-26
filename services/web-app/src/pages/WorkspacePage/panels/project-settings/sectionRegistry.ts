@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowLeftRight,
   CloudUpload,
   Files,
   FolderSync,
@@ -15,6 +16,7 @@ import {
   Timer,
   Type,
   Users,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +38,8 @@ export type ProjectSettingsSectionId =
   | "sync-remote"
   | "sync-options"
   | "sync-shared-folder"
+  | "sync-exchange"
+  | "sync-ci"
   | "danger-zone";
 
 // Всё, от чего зависит показ условных секций. Вычисляется владельцем черновика
@@ -153,6 +157,20 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     isAvailable: (ctx) =>
       ctx.syncSupported && ctx.syncConnected && ctx.hasSharedFolder,
   },
+  // Обмен файлом и автосборка не требуют подключённого репозитория: файл можно
+  // передать без сервера, а настройки CI подготовить до подключения.
+  {
+    id: "sync-exchange",
+    labelKey: "projectSettings.sectionSyncExchange",
+    icon: ArrowLeftRight,
+    isAvailable: (ctx) => ctx.syncSupported,
+  },
+  {
+    id: "sync-ci",
+    labelKey: "projectSettings.sectionSyncCi",
+    icon: Workflow,
+    isAvailable: (ctx) => ctx.syncSupported,
+  },
   {
     id: "danger-zone",
     labelKey: "projectSettings.sectionDangerZone",
@@ -226,7 +244,13 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     id: "sync",
     labelKey: "projectSettingsNav.groupSync",
     icon: CloudUpload,
-    sections: ["sync-remote", "sync-options", "sync-shared-folder"],
+    sections: [
+      "sync-remote",
+      "sync-options",
+      "sync-shared-folder",
+      "sync-exchange",
+      "sync-ci",
+    ],
   },
 ];
 

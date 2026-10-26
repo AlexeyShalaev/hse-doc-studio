@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import type { GitContents } from "@entities/git-sync";
+import { formatFileSize } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
-import { formatSize } from "../lib/formatSize";
 
 export type ContentsPreviewProps = {
   contents: GitContents | undefined;
@@ -103,9 +103,9 @@ export const ContentsPreview = ({
                         {file.path}
                       </span>
                       <span className="tnum" style={{ flexShrink: 0 }}>
-                        {formatSize(file.bytes)}
+                        {formatFileSize(file.bytes)}
                         {" / "}
-                        {formatSize(file.limit)}
+                        {formatFileSize(file.limit)}
                       </span>
                     </li>
                   ))}
@@ -141,7 +141,7 @@ export const ContentsPreview = ({
             />
             <Fact
               label={t("contents.sizeLabel")}
-              value={formatSize(contents.bytes)}
+              value={formatFileSize(contents.bytes)}
             />
             <Fact
               label={t("contents.versionsLabel")}
@@ -194,7 +194,7 @@ export const ContentsPreview = ({
                       {file.path}
                     </span>
                     <span className="dim tnum" style={{ flexShrink: 0 }}>
-                      {formatSize(file.bytes)}
+                      {formatFileSize(file.bytes)}
                     </span>
                   </li>
                 ))}

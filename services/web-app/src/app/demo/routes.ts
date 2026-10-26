@@ -664,6 +664,9 @@ const projectRoutes: DemoRoute[] = [
     },
   },
   {
+    // Имя файла выбирает исход: "broken" повреждён, "other" от другого проекта,
+    // "old" требует более раннего файла, "late" ломается уже при слиянии,
+    // ".hseenc" просит пароль ("wrong" не подходит).
     method: "POST",
     pattern: "/projects/:projectId/git/bundle/import",
     handler: (req) => {
@@ -688,14 +691,42 @@ const projectRoutes: DemoRoute[] = [
         if (password === "wrong")
           return demoError(400, "bundle_password_wrong", "Пароль не подошёл.");
       }
+      const name = file.name.toLowerCase();
+      if (name.includes("other")) {
+        return demoError(
+          409,
+          "unrelated_histories",
+          "История файла не связана с историей проекта.",
+          { can_adopt: false },
+        );
+      }
+      if (name.includes("old")) {
+        return demoError(
+          400,
+          "bundle_prerequisites_missing",
+          "В файле нет истории, на которой он построен.",
+        );
+      }
+      if (project.operationId) {
+        return demoError(409, "sync_busy", "Синхронизация уже идёт.", {
+          operation_id: project.operationId,
+        });
+      }
+      const late = name.includes("late");
       const op = startOperation(world, {
         kind: "bundle_import",
         projectId,
         steps: [
-          { phase: "verify", ms: 800 },
+          { phase: "snapshot", ms: 600 },
+          { phase: "verify", ms: 900 },
           { phase: "merge", ms: 1200 },
         ],
-        error: null,
+        error: late
+          ? {
+              code: "bundle_prerequisites_missing",
+              detail: "В файле нет истории, на которой он построен.",
+            }
+          : null,
         result: () =>
           mergeResult({
             ...project,
@@ -722,59 +753,134 @@ const projectRoutes: DemoRoute[] = [
   {
     method: "POST",
     pattern: "/projects/:projectId/git/ci/preview",
-    handler: (req) => demoJson(ciPreview(recordBody(req))),
+    handler: (req) => {
+      const project = projectOf(world, req.params.projectId ?? "");
+      return demoJson(ciPreview(project, recordBody(req)));
+    },
   },
   {
     method: "POST",
     pattern: "/projects/:projectId/git/ci/write",
     handler: (req) => {
-      const preview = ciPreview(recordBody(req));
-      return demoJson({ written: preview.files.map((file) => file.path) });
+      const project = projectOf(world, req.params.projectId ?? "");
+      const body = recordBody(req);
+      const preview = ciPreview(project, body);
+      // Без подтверждения отличающийся файл не трогаем.
+      const written = preview.files.filter(
+        (file) => body.overwrite === true || !file.exists || file.same,
+      );
+      for (const file of written) {
+        project.ciFiles[file.path] = file.content;
+      }
+      return demoJson({ written: written.map((file) => file.path) });
     },
   },
 ];
 
-const ciPreview = (body: Record<string, unknown>) => {
+const CI_IMAGE = "ghcr.io/hse-doc-studio/builder:0.2.0";
+
+const stringList = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
+const ciPreview = (project: DemoProjectGit, body: Record<string, unknown>) => {
   const provider = body.provider === "gitlab" ? "gitlab" : "github";
+  const docs = stringList(body.docs);
+  const triggers = stringList(body.triggers);
+  const release = body.publish === "release";
+  const customImage = str(body.image);
+  const image =
+    customImage !== null && customImage !== "" ? customImage : CI_IMAGE;
   const path =
     provider === "gitlab"
       ? ".gitlab-ci.yml"
-      : ".github/workflows/studio-build.yml";
-  const content =
+      : ".github/workflows/hse-studio-build.yml";
+  const command =
+    docs.length > 0
+      ? `hse-doc-studio build ${docs.map((doc) => `--doc ${doc}`).join(" ")}`
+      : "hse-doc-studio build --all";
+  const lines =
     provider === "gitlab"
       ? [
           "build-documents:",
-          "  image: ghcr.io/hse-doc-studio/builder:latest",
+          `  image: ${image}`,
           "  script:",
-          "    - hse-doc-studio build --all",
+          `    - ${command}`,
           "  artifacts:",
           "    paths:",
           "      - build/*.pdf",
+          ...(triggers.length > 0
+            ? [
+                "  rules:",
+                ...(triggers.includes("push")
+                  ? ["    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"]
+                  : []),
+                ...(triggers.includes("tag")
+                  ? ["    - if: $CI_COMMIT_TAG"]
+                  : []),
+                ...(triggers.includes("manual") ? ["    - when: manual"] : []),
+              ]
+            : []),
+          ...(release
+            ? [
+                "release-documents:",
+                "  stage: deploy",
+                "  rules:",
+                "    - if: $CI_COMMIT_TAG",
+                "  script:",
+                "    - echo Публикуем PDF в релиз",
+              ]
+            : []),
           "",
-        ].join("\n")
+        ]
       : [
           "name: Сборка документов",
           "on:",
-          "  push:",
-          "    branches: [main]",
+          ...(triggers.includes("push") || triggers.includes("tag")
+            ? [
+                "  push:",
+                ...(triggers.includes("push") ? ["    branches: [main]"] : []),
+                ...(triggers.includes("tag") ? ["    tags: ['v*']"] : []),
+              ]
+            : []),
+          ...(triggers.includes("manual") ? ["  workflow_dispatch:"] : []),
           "jobs:",
           "  build:",
           "    runs-on: ubuntu-latest",
-          "    container: ghcr.io/hse-doc-studio/builder:latest",
+          `    container: ${image}`,
           "    steps:",
           "      - uses: actions/checkout@v4",
-          "      - run: hse-doc-studio build --all",
-          "      - uses: actions/upload-artifact@v4",
+          `      - run: ${command}`,
+          release
+            ? "      - uses: softprops/action-gh-release@v2"
+            : "      - uses: actions/upload-artifact@v4",
           "        with:",
-          "          name: documents",
-          "          path: build/*.pdf",
+          ...(release ? [] : ["          name: documents"]),
+          release
+            ? "          files: build/*.pdf"
+            : "          path: build/*.pdf",
           "",
-        ].join("\n");
+        ];
+  const content = lines.join("\n");
+  // В демо у GitLab файл уже есть и отличается: так виден запрос на замену.
+  const existing =
+    project.ciFiles[path] ??
+    (provider === "gitlab" ? "# старый файл сборки\n" : null);
   return {
-    files: [{ path, content, exists: provider === "gitlab", same: false }],
-    command: "hse-doc-studio build --all",
+    files: [
+      {
+        path,
+        content,
+        exists: existing !== null,
+        same: existing === content,
+      },
+    ],
+    command,
     notes: [
-      "Сборка на внешнем сервисе отправит содержимое проекта третьим лицам.",
+      release
+        ? "Релиз создаётся для тегов вида v*, нужен токен с правом записи."
+        : "PDF сохраняются как артефакты сборки и хранятся ограниченное время.",
     ],
   };
 };

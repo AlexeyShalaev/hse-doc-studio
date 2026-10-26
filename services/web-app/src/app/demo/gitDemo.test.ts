@@ -458,7 +458,9 @@ describe("demo sync flow", () => {
       );
       expect(preview.files[0]?.content).toContain("hse-doc-studio build");
       const written = await parsed(
-        call("POST", `/projects/${PROJECT}/git/ci/write`, { body }),
+        call("POST", `/projects/${PROJECT}/git/ci/write`, {
+          body: { ...body, overwrite: true },
+        }),
         CiWriteSchema,
       );
       expect(written.written).toEqual(preview.files.map((f) => f.path));
@@ -474,6 +476,49 @@ describe("demo sync flow", () => {
       /filename="coursework-\d{8}-\d{4}\.bundle\.hseenc"/,
     );
     expect(exported.data).toBeInstanceOf(Blob);
+  });
+
+  it("builds the CI file from the options and remembers what was written", async () => {
+    resetWorld("up_to_date");
+    const request = (overrides: Record<string, unknown>) => ({
+      provider: "github",
+      docs: "all",
+      publish: "artifacts",
+      triggers: ["push"],
+      overwrite: false,
+      ...overrides,
+    });
+    const preview = (overrides: Record<string, unknown> = {}) =>
+      parsed(
+        call("POST", `/projects/${PROJECT}/git/ci/preview`, {
+          body: request(overrides),
+        }),
+        CiPreviewSchema,
+      );
+    const fresh = await preview();
+    expect(fresh.files[0]).toMatchObject({ exists: false, same: false });
+    expect(fresh.command).toBe("hse-doc-studio build --all");
+
+    const picked = await preview({ docs: ["thesis"], publish: "release" });
+    expect(picked.command).toBe("hse-doc-studio build --doc thesis");
+    expect(picked.files[0]?.content).toContain("action-gh-release");
+
+    // Отличающийся файл без подтверждения не записывается.
+    const gitlab = request({ provider: "gitlab" });
+    const refused = await parsed(
+      call("POST", `/projects/${PROJECT}/git/ci/write`, { body: gitlab }),
+      CiWriteSchema,
+    );
+    expect(refused.written).toEqual([]);
+    const accepted = await parsed(
+      call("POST", `/projects/${PROJECT}/git/ci/write`, {
+        body: { ...gitlab, overwrite: true },
+      }),
+      CiWriteSchema,
+    );
+    expect(accepted.written).toEqual([".gitlab-ci.yml"]);
+    const after = await preview({ provider: "gitlab" });
+    expect(after.files[0]).toMatchObject({ exists: true, same: true });
   });
 
   it("checks bundle files before importing", async () => {
@@ -496,6 +541,28 @@ describe("demo sync flow", () => {
       (await errorOf(send(form("a.bundle.hseenc", "wrong")))).body.code,
     ).toBe("bundle_password_wrong");
     await parsed(send(form("a.bundle")), OperationStartedSchema, 202);
+  });
+
+  it("answers the file-specific bundle failures", async () => {
+    const form = (name: string) => {
+      const data = new FormData();
+      data.append("file", new File(["x"], name));
+      return data;
+    };
+    const send = (name: string) => {
+      resetWorld("up_to_date");
+      return call("POST", `/projects/${PROJECT}/git/bundle/import`, {
+        body: form(name),
+      });
+    };
+    const other = await errorOf(send("other-project.bundle"));
+    expect(other.status).toBe(409);
+    expect(other.body.code).toBe("unrelated_histories");
+    expect((await errorOf(send("old-part.bundle"))).body.code).toBe(
+      "bundle_prerequisites_missing",
+    );
+    // «late» принимается, а ломается уже при слиянии.
+    await parsed(send("late.bundle"), OperationStartedSchema, 202);
   });
 });
 

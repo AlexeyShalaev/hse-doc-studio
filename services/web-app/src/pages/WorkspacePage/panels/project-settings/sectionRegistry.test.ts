@@ -27,9 +27,13 @@ describe("группа «Синхронизация» в настройках п
     expect(ids(visibleProjectSettingsGroups(ctx()))).toContain("sync");
   });
 
-  it("без репозитория показывает только карточку подключения", () => {
+  it("без репозитория показывает подключение, обмен файлом и автосборку", () => {
     const group = resolveProjectSettingsGroup("sync", ctx());
-    expect(ids(groupSections(group, ctx()))).toEqual(["sync-remote"]);
+    expect(ids(groupSections(group, ctx()))).toEqual([
+      "sync-remote",
+      "sync-exchange",
+      "sync-ci",
+    ]);
   });
 
   it("с репозиторием добавляет фоновую проверку", () => {
@@ -38,6 +42,8 @@ describe("группа «Синхронизация» в настройках п
     expect(ids(groupSections(group, connected))).toEqual([
       "sync-remote",
       "sync-options",
+      "sync-exchange",
+      "sync-ci",
     ]);
   });
 
@@ -48,6 +54,8 @@ describe("группа «Синхронизация» в настройках п
       "sync-remote",
       "sync-options",
       "sync-shared-folder",
+      "sync-exchange",
+      "sync-ci",
     ]);
   });
 
@@ -68,6 +76,10 @@ describe("группа «Синхронизация» в настройках п
     expect(ids(visibleProjectSettingsSections(old))).not.toEqual(
       expect.arrayContaining(["sync-remote"]),
     );
+    expect(ids(visibleProjectSettingsSections(old))).not.toContain(
+      "sync-exchange",
+    );
+    expect(ids(visibleProjectSettingsSections(old))).not.toContain("sync-ci");
   });
 
   it("ссылка на группу и ссылка на раздел ведут на одну страницу", () => {
@@ -82,7 +94,11 @@ describe("группа «Синхронизация» в настройках п
     // Репозитория нет, но группа есть: человек увидит карточку подключения.
     const group = resolveProjectSettingsGroup("sync-options", ctx());
     expect(group.id).toBe("sync");
-    expect(ids(groupSections(group, ctx()))).toEqual(["sync-remote"]);
+    expect(ids(groupSections(group, ctx()))).toEqual([
+      "sync-remote",
+      "sync-exchange",
+      "sync-ci",
+    ]);
     const old = ctx({ syncSupported: false });
     expect(resolveProjectSettingsGroup("sync", old).id).toBe("project");
     expect(resolveProjectSettingsGroup("sync-remote", old).id).toBe("project");

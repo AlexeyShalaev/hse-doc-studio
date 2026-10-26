@@ -4,6 +4,8 @@ export type { SSEEvent } from "./sse";
 export { toPosixPath } from "./path";
 
 export { formatBytes } from "./formatBytes";
+export { formatFileSize } from "./formatFileSize";
+export { downloadBlob } from "./downloadBlob";
 
 export { diffHunks, diffLines } from "./lineDiff";
 export type { DiffLine, DiffLineKind } from "./lineDiff";

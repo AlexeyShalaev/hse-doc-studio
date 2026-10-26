@@ -39,6 +39,8 @@ import {
   SHARED_META_BLOCK_KEY,
   SharedDocsSection,
   SupervisorSection,
+  SyncCiSection,
+  SyncExchangeSection,
   SyncOptionsSection,
   SyncRemoteSection,
   SyncSharedFolderSection,
@@ -541,6 +543,10 @@ export const ProjectSettingsView = ({
         return <SyncOptionsSection projectId={project.id} />;
       case "sync-shared-folder":
         return <SyncSharedFolderSection projectId={project.id} />;
+      case "sync-exchange":
+        return <SyncExchangeSection projectId={project.id} />;
+      case "sync-ci":
+        return <SyncCiSection projectId={project.id} />;
       case "danger-zone":
         return (
           <DangerZoneSection

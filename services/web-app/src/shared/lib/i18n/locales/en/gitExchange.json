@@ -1,0 +1,228 @@
+{
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "failure": {
+    "save_failed": {
+      "text": "Could not save the changes in open files.",
+      "hint": "Wait a second, make sure the editor shows no save error, then try again."
+    },
+    "bundle_invalid": {
+      "text": "This file does not look like a Studio project file.",
+      "hint": "It may have been damaged in transit. Ask for it to be exported again."
+    },
+    "bundle_prerequisites_missing": {
+      "text": "An earlier file or a full export is needed.",
+      "hint": "This file builds on versions that are not in the project. Ask your colleague to export the whole project."
+    },
+    "unrelated_histories": {
+      "text": "This file belongs to a different project.",
+      "hint": "Its version history is unrelated, so it cannot be merged into this project. Check that you picked the right file."
+    },
+    "not_a_studio_project": {
+      "text": "There is no Studio project in this file.",
+      "hint": "Pick a file that was exported with the \"Export bundle\" command."
+    },
+    "network_error": {
+      "text": "The request failed.",
+      "hint": "Check your connection and try again."
+    }
+  },
+  "card": {
+    "lead": "Pass the project to a colleague without a server: export it to a file and send it any way you like, by e-mail, in a messenger or on a USB stick. A file from a colleague is merged into the project the same way as a sync.",
+    "export": {
+      "title": "Export bundle",
+      "text": "The whole project with its version history in one file. You can protect it with a password.",
+      "action": "Export…"
+    },
+    "import": {
+      "title": "Import bundle",
+      "text": "A file from a colleague adds their versions to the project. Your versions stay.",
+      "action": "Choose file…",
+      "readOnly": "The project is open read-only, so a file cannot be imported."
+    },
+    "ci": {
+      "lead": "The Studio prepares a file that lets GitHub or GitLab build your documents into PDF after every change. The file reaches the repository on the next sync, and you can download the PDFs from the service.",
+      "action": "Set up automatic builds…"
+    }
+  },
+  "export": {
+    "title": "Export the project to a file",
+    "description": "One file with the project and its whole version history.",
+    "explain": "You can send the file to a colleague any way you like. They import it in the Studio and get the project with its history, and later exchanges merge your edits. No server connection is needed.",
+    "loading": "Checking what goes into the file…",
+    "commits": "Versions",
+    "files": "Files",
+    "size": "Project size",
+    "protect": "Protect with a password",
+    "protectHint": "Without a password anyone who gets the file can read it.",
+    "password": "Password",
+    "repeat": "Repeat the password",
+    "passwordHint": "The Studio does not store the password and cannot recover it. Give it to your colleague separately from the file.",
+    "mismatch": "The passwords do not match.",
+    "nda": "The project has NDA files. Without a password anyone who gets the file can read them.",
+    "ndaProtect": "Protect with a password",
+    "saveFailed": "Could not save the changes in open files, so the export was stopped. Try again in a second.",
+    "failed": "The project could not be exported. Try again.",
+    "cancel": "Cancel",
+    "submit": "Export",
+    "working": "Preparing the file…",
+    "done": {
+      "title": "File saved",
+      "text": "Your browser downloaded the file. Send it to your colleague: they import it in the \"File exchange\" section of the project settings or when cloning a project.",
+      "again": "Download again",
+      "file": "File",
+      "size": "Size",
+      "protection": "Protection",
+      "protected": "Password",
+      "open": "No password",
+      "passwordNote": "Give the password separately from the file. If it is lost, the file cannot be opened.",
+      "close": "Done"
+    }
+  },
+  "import": {
+    "title": "Import a project file",
+    "description": "Versions from the file are added to the project, and yours stay in place.",
+    "explain": "Choose the .bundle or .hseenc file your colleague sent. The Studio checks it and merges it into the project the same way as a sync. If you both changed the same place, it asks you which version to keep.",
+    "drop": "Drop the file here or",
+    "choose": "choose it on your computer",
+    "dropActive": "Release to choose the file",
+    "accept": ".bundle and .hseenc files are accepted",
+    "wrongKind": "A .bundle or .hseenc file is required.",
+    "encrypted": "password protected",
+    "replace": "Choose another",
+    "remove": "Remove file",
+    "password": "File password",
+    "passwordHint": "The password was set when the file was exported. The Studio does not store it.",
+    "cancelled": "Import cancelled. Choose a file and try again when you are ready.",
+    "openProfile": "Set the author",
+    "lost": "Cannot find out how the import is going. The connection may have dropped.",
+    "lostRetry": "Check",
+    "cancel": "Cancel",
+    "submit": "Import",
+    "later": "Later",
+    "openConflicts": "Open conflicts",
+    "done": "Done",
+    "progress": {
+      "label": "Import steps",
+      "upload": "Sending the file to the Studio",
+      "lead": "The Studio is checking the file and merging it into the project. You can close this window when it finishes.",
+      "cancelUpload": "Cancel upload",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "phase": {
+        "snapshot": "Saving your versions",
+        "verify": "Checking the file",
+        "merge": "Merging into the project"
+      }
+    },
+    "result": {
+      "versions": "New versions",
+      "files": "Files changed",
+      "auto": "Merged automatically",
+      "up_to_date": {
+        "title": "Nothing new in the file",
+        "text": "Every version in the file is already in the project, so nothing changed."
+      },
+      "fast_forwarded": {
+        "title": "Versions from the file added",
+        "text": "The project had no differences from the file, so it was simply updated."
+      },
+      "merged": {
+        "title": "File merged into the project",
+        "text": "Versions from the file are added and yours stay. Whatever did not overlap, the Studio merged on its own."
+      },
+      "conflicts": {
+        "title": "Conflicts need your decision",
+        "text": "Some files were changed both by you and in the file. Choose what to keep in each. Files with conflicts: {{count}}."
+      }
+    }
+  },
+  "ci": {
+    "title": "Automatic builds (CI)",
+    "description": "A file for GitHub or GitLab: the service builds your documents into PDF after every change.",
+    "cancel": "Cancel",
+    "write": "Write to project",
+    "writeFailed": "The file could not be written. Try again.",
+    "provider": {
+      "github": "GitHub Actions",
+      "gitlab": "GitLab CI"
+    },
+    "options": {
+      "provider": "Service",
+      "documents": "Documents",
+      "publish": "Result",
+      "triggers": "When to build"
+    },
+    "docs": {
+      "all": "All",
+      "selected": "Choose",
+      "loading": "Loading documents…",
+      "failed": "Could not load the list of documents.",
+      "empty": "The project has no documents yet."
+    },
+    "publish": {
+      "artifacts": {
+        "label": "Artifacts",
+        "hint": "PDFs are kept in the results of each build and can be downloaded for a while."
+      },
+      "release": {
+        "label": "Release",
+        "hint": "PDFs are attached to a release when you push a tag like v1.0. They are kept there permanently."
+      }
+    },
+    "trigger": {
+      "push": "Changes in the main branch",
+      "tag": "A new tag like v*",
+      "manual": "Manually, with a button"
+    },
+    "problem": {
+      "no_documents": "Choose at least one document.",
+      "no_triggers": "Choose at least one way to start a build."
+    },
+    "advanced": {
+      "title": "Advanced",
+      "image": "Build image",
+      "imagePlaceholder": "default",
+      "imageHint": "If left empty, the image that matches this version of the Studio is used."
+    },
+    "preview": {
+      "invalid": "Fix the settings on the left and the file appears here.",
+      "failed": "Could not prepare the file.",
+      "retry": "Try again",
+      "loading": "Preparing the file…",
+      "copy": "Copy file",
+      "copied": "Copied",
+      "copyFailed": "Could not copy",
+      "editorLabel": "Contents of {{path}}"
+    },
+    "state": {
+      "new": "new file",
+      "same": "already written",
+      "differs": "differs"
+    },
+    "exists": {
+      "same": "This file is already written in the project. Nothing needs to change.",
+      "differs": "The project already has a file with this name and it differs. Writing the new one replaces the old one.",
+      "overwrite": "Replace the existing file"
+    },
+    "nda": {
+      "warning": "The project has NDA files. A build on GitHub or GitLab sends the project contents to third parties.",
+      "ack": "I understand this and still want to set up automatic builds"
+    },
+    "local": {
+      "title": "Run the same build yourself",
+      "hint": "You can run this command on your computer and get the same result as the service."
+    },
+    "done": {
+      "title": "File written to the project",
+      "text": "It reaches the repository on the next sync. After that the service builds the documents on its own.",
+      "nothingTitle": "Nothing was written",
+      "nothingText": "The file in the project differs and the replacement was not confirmed. Go back to the settings and tick the replacement.",
+      "file": "File",
+      "again": "Set up more",
+      "close": "Done"
+    }
+  }
+}

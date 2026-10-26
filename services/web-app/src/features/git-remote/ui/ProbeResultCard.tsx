@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import type { Probe } from "@entities/git-remote";
 import type { GitContents } from "@entities/git-sync";
+import { formatFileSize } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
-import { formatSize } from "../lib/formatSize";
 import { issueCopyOf, type IssueAction } from "../model/issueCopy";
 import type { CheckIssue, CheckOutcome } from "../model/probeOutcome";
 import { ConfirmCheck } from "./ConfirmCheck";
-import { Btn, Facts, ResultFrame } from "./ResultFrame";
+import { Facts, ResultFrame } from "@shared/ui/ResultFrame";
+import { Btn } from "./ResultFrame";
 
 export type ProbeResultHandlers = {
   onConnect: (sync: boolean) => void;
@@ -291,7 +292,7 @@ export const ProbeResultCard = ({
     : outcome.variant === "empty" && contents
       ? t("result.ready.empty.textWithContents", {
           files: t("contents.files", { count: contents.files }),
-          size: formatSize(contents.bytes),
+          size: formatFileSize(contents.bytes),
           versions: t("contents.versions", { count: contents.commits }),
         })
       : t(`result.ready.${outcome.variant}.text`);

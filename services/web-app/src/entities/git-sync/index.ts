@@ -11,6 +11,7 @@ export type {
   ConflictDiffView,
   ConnectRemoteParams,
   ExportBundleResult,
+  ImportBundleOptions,
   ResolveConflictsParams,
   SyncStatusView,
 } from "./api/gitSyncApi";

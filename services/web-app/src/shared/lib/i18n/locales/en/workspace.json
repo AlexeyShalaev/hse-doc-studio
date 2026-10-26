@@ -218,7 +218,9 @@
     "sectionTemplate": "Template version",
     "sectionSyncRemote": "Repository",
     "sectionSyncOptions": "Background check",
-    "sectionSyncSharedFolder": "Folder on a cloud drive"
+    "sectionSyncSharedFolder": "Folder on a cloud drive",
+    "sectionSyncExchange": "File exchange",
+    "sectionSyncCi": "Automatic builds (CI)"
   },
   "files": {
     "editorTitle": "File editor",

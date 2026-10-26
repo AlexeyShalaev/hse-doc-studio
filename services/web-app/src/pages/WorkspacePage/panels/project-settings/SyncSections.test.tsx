@@ -13,6 +13,8 @@ import {
 } from "@entities/git-sync";
 import { i18n } from "@shared/lib/i18n";
 import {
+  SyncCiSection,
+  SyncExchangeSection,
   SyncOptionsSection,
   SyncRemoteSection,
   SyncSharedFolderSection,
@@ -107,5 +109,34 @@ describe("карточки группы «Синхронизация»", () => {
     expect(screen.getByTestId("shared-folder-warning")).toHaveTextContent(
       "Dropbox",
     );
+  });
+
+  it("«Обмен файлом» доступен и без репозитория", () => {
+    mount(
+      toStatusView(NO_REMOTE_STATUS),
+      <SyncExchangeSection projectId={PROJECT_ID} />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Обмен файлом" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Выгрузить…" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Выбрать файл…" }),
+    ).toBeInTheDocument();
+  });
+
+  it("«Автосборка (CI)» предлагает настроить файл", () => {
+    mount(
+      toStatusView(NO_REMOTE_STATUS),
+      <SyncCiSection projectId={PROJECT_ID} />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Автосборка (CI)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Настроить автосборку…" }),
+    ).toBeInTheDocument();
   });
 });

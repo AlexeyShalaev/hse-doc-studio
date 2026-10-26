@@ -1,8 +1,9 @@
-import { useId, useRef, useState, type DragEvent } from "react";
-import { Eye, EyeOff, FileArchive, Lock, UploadCloud, X } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { Eye, EyeOff, FileArchive, Lock, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatFileSize } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
-import { formatSize } from "../../lib/formatSize";
+import { FileDropZone, type FileDropZoneHandle } from "@shared/ui/FileDropZone";
 import { isEncryptedBundleName } from "../../lib/cloneNames";
 
 export type CloneBundleSourceProps = {
@@ -38,27 +39,15 @@ export const CloneBundleSource = ({
 }: CloneBundleSourceProps) => {
   const { t } = useTranslation("gitRemote");
   const uid = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const zoneRef = useRef<FileDropZoneHandle>(null);
   const passwordId = `${uid}-password`;
   const hintId = `${uid}-password-hint`;
-  const [dragging, setDragging] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [wrongKind, setWrongKind] = useState(false);
 
-  const pick = (picked: File | null | undefined): void => {
-    if (!picked) return;
-    if (!isBundleName(picked.name)) {
-      setWrongKind(true);
-      return;
-    }
+  const accept = (picked: File): void => {
     setWrongKind(false);
     onFileChange(picked);
-  };
-
-  const onDrop = (event: DragEvent<HTMLDivElement>): void => {
-    event.preventDefault();
-    setDragging(false);
-    pick(event.dataTransfer.files[0]);
   };
 
   const encrypted = file !== null && isEncryptedBundleName(file.name);
@@ -77,75 +66,25 @@ export const CloneBundleSource = ({
         {t("clone.bundle.hint")}
       </p>
 
-      <input
-        ref={inputRef}
-        type="file"
+      <FileDropZone
+        ref={zoneRef}
+        showZone={file === null}
         accept={ACCEPT}
-        hidden
-        data-testid="bundle-input"
-        aria-label={t("clone.bundle.title")}
-        onChange={(event) => {
-          pick(event.target.files?.[0]);
-          // Тот же файл можно выбрать повторно.
-          event.target.value = "";
+        isAcceptable={(picked) => isBundleName(picked.name)}
+        onFile={accept}
+        onReject={() => {
+          setWrongKind(true);
         }}
+        title={t("clone.bundle.drop")}
+        action={t("clone.bundle.choose")}
+        activeTitle={t("clone.bundle.dropActive")}
+        hint={t("clone.bundle.accept")}
+        inputLabel={t("clone.bundle.title")}
+        testId="bundle-dropzone"
+        inputTestId="bundle-input"
       />
 
-      {file === null ? (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label={`${t("clone.bundle.drop")} ${t("clone.bundle.choose")}`}
-          data-testid="bundle-dropzone"
-          onClick={() => inputRef.current?.click()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              inputRef.current?.click();
-            }
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => {
-            setDragging(false);
-          }}
-          onDrop={onDrop}
-          className="flex flex-col items-center justify-center"
-          style={{
-            gap: 6,
-            padding: "28px 16px",
-            borderRadius: "var(--r-3)",
-            border: `1.5px dashed ${dragging ? "var(--accent)" : "var(--border-strong)"}`,
-            background: dragging ? "var(--accent-soft)" : "var(--bg-1)",
-            cursor: "pointer",
-            textAlign: "center",
-            transition: "background 120ms, border-color 120ms",
-          }}
-        >
-          <UploadCloud
-            size={24}
-            aria-hidden="true"
-            style={{ color: dragging ? "var(--accent)" : "var(--fg-3)" }}
-          />
-          <span style={{ fontSize: 13, color: "var(--fg-0)" }}>
-            {dragging ? (
-              t("clone.bundle.dropActive")
-            ) : (
-              <>
-                {t("clone.bundle.drop")}{" "}
-                <span style={{ color: "var(--accent)", fontWeight: 500 }}>
-                  {t("clone.bundle.choose")}
-                </span>
-              </>
-            )}
-          </span>
-          <span className="dim" style={{ fontSize: 11.5 }}>
-            {t("clone.bundle.accept")}
-          </span>
-        </div>
-      ) : (
+      {file !== null && (
         <div
           className="card flex items-center"
           style={{ gap: 12, padding: "10px 12px" }}
@@ -178,14 +117,16 @@ export const CloneBundleSource = ({
               {file.name}
             </span>
             <span className="dim" style={{ fontSize: 11.5 }}>
-              {formatSize(file.size)}
+              {formatFileSize(file.size)}
               {encrypted && ` · ${t("clone.bundle.encrypted")}`}
             </span>
           </span>
           <button
             type="button"
             className="btn xs"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => {
+              zoneRef.current?.open();
+            }}
           >
             {t("clone.bundle.replace")}
           </button>
