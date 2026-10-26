@@ -48,9 +48,13 @@ export type {
 } from "./model/useSyncUiStore";
 export {
   AUTHOR_PROFILE_PATH,
+  CLONE_PATH,
   GIT_ACCESS_PATH,
+  gitClonePath,
   gitConflictsPath,
   gitHistoryPath,
   gitSettingsPath,
+  readCloneTarget,
 } from "./model/syncPaths";
+export type { CloneTarget } from "./model/syncPaths";
 export { describeGitError, gitErrorMessage } from "./lib/gitErrorMessage";

@@ -35,7 +35,8 @@
   "method": {
     "label": "Sign-in method",
     "pat": "Token (https)",
-    "ssh": "Key (ssh)"
+    "ssh": "Key (ssh)",
+    "none": "No access"
   },
   "mismatch": {
     "sshOnHttps": "A key works only with an ssh address, but an https address was entered.",
@@ -256,5 +257,8 @@
       "saved": "Interval saved",
       "failed": "Could not save the interval."
     }
+  },
+  "none": {
+    "hint": "Public repositories are cloned without a token. For a private repository, choose a token or a key."
   }
 }

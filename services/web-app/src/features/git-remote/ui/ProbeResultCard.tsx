@@ -1,24 +1,12 @@
-import type { ReactNode } from "react";
-import {
-  CircleCheck,
-  Info,
-  OctagonAlert,
-  TriangleAlert,
-  type LucideIcon,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Probe } from "@entities/git-remote";
 import type { GitContents } from "@entities/git-sync";
 import { Notice } from "@shared/ui/ConflictKit";
-import { Spinner } from "@shared/ui/Spinner";
 import { formatSize } from "../lib/formatSize";
-import {
-  issueCopyOf,
-  type IssueAction,
-  type IssueTone,
-} from "../model/issueCopy";
+import { issueCopyOf, type IssueAction } from "../model/issueCopy";
 import type { CheckIssue, CheckOutcome } from "../model/probeOutcome";
 import { ConfirmCheck } from "./ConfirmCheck";
+import { Btn, Facts, ResultFrame } from "./ResultFrame";
 
 export type ProbeResultHandlers = {
   onConnect: (sync: boolean) => void;
@@ -32,6 +20,16 @@ export type ProbeResultHandlers = {
   onCloneInstead?: (() => void) | undefined;
 };
 
+export type IssueHandlers = Pick<
+  ProbeResultHandlers,
+  | "onRetry"
+  | "onBackToRepo"
+  | "onBackToAccess"
+  | "onReviewHostKey"
+  | "onPickBranch"
+  | "onClose"
+>;
+
 export type ProbeResultCardProps = ProbeResultHandlers & {
   outcome: CheckOutcome;
   probe: Probe | null;
@@ -42,146 +40,7 @@ export type ProbeResultCardProps = ProbeResultHandlers & {
   onAdoptConfirmedChange: (value: boolean) => void;
 };
 
-type Tone = "ok" | IssueTone;
-
-const TONE: Record<Tone, { icon: LucideIcon; color: string; soft: string }> = {
-  ok: { icon: CircleCheck, color: "var(--c-ok)", soft: "var(--c-ok-soft)" },
-  info: { icon: Info, color: "var(--c-info)", soft: "var(--c-info-soft)" },
-  warn: {
-    icon: TriangleAlert,
-    color: "var(--c-warn)",
-    soft: "var(--c-warn-soft)",
-  },
-  err: {
-    icon: OctagonAlert,
-    color: "var(--c-err)",
-    soft: "var(--c-err-soft)",
-  },
-};
-
-const Frame = ({
-  tone,
-  title,
-  children,
-  actions,
-  testId,
-  role,
-}: {
-  tone: Tone;
-  title: string;
-  children?: ReactNode;
-  actions?: ReactNode;
-  testId: string;
-  role?: "alert" | "status";
-}) => {
-  const { icon: Icon, color, soft } = TONE[tone];
-  return (
-    <section
-      data-testid={testId}
-      data-tone={tone}
-      aria-label={title}
-      role={role}
-      style={{
-        borderRadius: "var(--r-3)",
-        border: `1px solid ${color}`,
-        background: soft,
-        padding: "12px 14px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-      }}
-    >
-      <div className="flex items-start" style={{ gap: 9 }}>
-        <Icon
-          size={16}
-          aria-hidden="true"
-          style={{ color, flexShrink: 0, marginTop: 1 }}
-        />
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 13.5,
-            fontWeight: 600,
-            color: "var(--fg-0)",
-            lineHeight: 1.35,
-          }}
-        >
-          {title}
-        </h3>
-      </div>
-      {children != null && (
-        <div
-          className="flex flex-col"
-          style={{
-            gap: 8,
-            fontSize: 12.5,
-            lineHeight: 1.5,
-            color: "var(--fg-1)",
-            paddingLeft: 25,
-          }}
-        >
-          {children}
-        </div>
-      )}
-      {actions != null && (
-        <div
-          className="flex items-center"
-          style={{ gap: 8, flexWrap: "wrap", paddingLeft: 25 }}
-        >
-          {actions}
-        </div>
-      )}
-    </section>
-  );
-};
-
-const Facts = ({ items }: { items: [string, string][] }) => (
-  <dl
-    style={{
-      margin: 0,
-      display: "grid",
-      gridTemplateColumns: "max-content 1fr",
-      columnGap: 14,
-      rowGap: 3,
-      fontSize: 12,
-    }}
-  >
-    {items.map(([label, value]) => (
-      <div key={label} style={{ display: "contents" }}>
-        <dt className="dim">{label}</dt>
-        <dd style={{ margin: 0, color: "var(--fg-0)", minWidth: 0 }}>
-          {value}
-        </dd>
-      </div>
-    ))}
-  </dl>
-);
-
-const Btn = ({
-  primary,
-  onClick,
-  children,
-  disabled,
-  busy,
-}: {
-  primary?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-  disabled?: boolean;
-  busy?: boolean;
-}) => (
-  <button
-    type="button"
-    className={primary ? "btn primary" : "btn"}
-    disabled={disabled === true || busy === true}
-    onClick={onClick}
-  >
-    {busy && <Spinner size="sm" />}
-    {children}
-  </button>
-);
-
-const IssueCard = ({
+export const ProbeIssueCard = ({
   issue,
   probe,
   fixing,
@@ -190,7 +49,7 @@ const IssueCard = ({
   issue: CheckIssue;
   probe: Probe | null;
   fixing: boolean;
-  handlers: ProbeResultHandlers;
+  handlers: IssueHandlers;
 }) => {
   const { t, i18n } = useTranslation("gitRemote");
   const base = issueCopyOf(issue.code);
@@ -237,7 +96,7 @@ const IssueCard = ({
   };
 
   return (
-    <Frame
+    <ResultFrame
       tone={copy.tone}
       title={title}
       testId={`probe-result-${issue.code}`}
@@ -294,7 +153,7 @@ const IssueCard = ({
           </pre>
         </details>
       )}
-    </Frame>
+    </ResultFrame>
   );
 };
 
@@ -314,7 +173,7 @@ export const ProbeResultCard = ({
 
   if (outcome.kind === "error") {
     return (
-      <IssueCard
+      <ProbeIssueCard
         issue={outcome.issue}
         probe={probe}
         fixing={fixing}
@@ -325,7 +184,7 @@ export const ProbeResultCard = ({
 
   if (outcome.kind === "not_studio") {
     return (
-      <Frame
+      <ResultFrame
         tone="err"
         role="alert"
         title={t("result.notStudio.title")}
@@ -337,13 +196,13 @@ export const ProbeResultCard = ({
         }
       >
         <p style={{ margin: 0 }}>{t("result.notStudio.text")}</p>
-      </Frame>
+      </ResultFrame>
     );
   }
 
   if (outcome.kind === "other_project") {
     return (
-      <Frame
+      <ResultFrame
         tone="err"
         role="alert"
         title={t("result.otherProject.title")}
@@ -372,13 +231,13 @@ export const ProbeResultCard = ({
         <p className="dim" style={{ margin: 0 }}>
           {t("result.otherProject.hint")}
         </p>
-      </Frame>
+      </ResultFrame>
     );
   }
 
   if (outcome.kind === "unrelated") {
     return (
-      <Frame
+      <ResultFrame
         tone="warn"
         title={t("result.unrelated.title")}
         testId="probe-result-unrelated"
@@ -406,7 +265,7 @@ export const ProbeResultCard = ({
         >
           {t("result.unrelated.confirm")}
         </ConfirmCheck>
-      </Frame>
+      </ResultFrame>
     );
   }
 
@@ -438,7 +297,7 @@ export const ProbeResultCard = ({
       : t(`result.ready.${outcome.variant}.text`);
 
   return (
-    <Frame
+    <ResultFrame
       tone="ok"
       role="status"
       title={title}
@@ -497,6 +356,6 @@ export const ProbeResultCard = ({
           text={t("result.warn.templateMissing")}
         />
       )}
-    </Frame>
+    </ResultFrame>
   );
 };

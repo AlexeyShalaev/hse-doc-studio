@@ -17,13 +17,13 @@ import {
   useSyncStatus,
   useSyncUiStore,
   useUpdateGitSettings,
+  type CloneTarget,
   type ConnectDialogMode,
   type SyncStatusView,
 } from "@entities/git-sync";
-import { ProfileForm, useProfile } from "@entities/profile";
+import { useProfile } from "@entities/profile";
 import { useProject } from "@entities/project";
 import { flushPendingSaves, toast } from "@shared/lib";
-import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
 import { Stepper, type StepperStep } from "@shared/ui/Stepper";
 import { parseRemoteUrl } from "../lib/parseRemoteUrl";
@@ -35,12 +35,12 @@ import {
 import { AccessStep } from "./AccessStep";
 import { CheckStep } from "./CheckStep";
 import { HostKeyDialog, type HostKeyMode } from "./HostKeyDialog";
+import { ProfileStep } from "./ProfileStep";
 import { RepositoryStep } from "./RepositoryStep";
 
 export type ConnectStep = "profile" | "repo" | "access" | "check";
 
-/** Куда уйти, если проект нельзя подключить, а репозиторий принадлежит другому проекту. */
-export type CloneTarget = { url: string; credentialId: string | null };
+export type { CloneTarget };
 
 export type ConnectFlowProps = {
   projectId: string;
@@ -357,44 +357,12 @@ const ConnectFlowBody = ({
       </p>
 
       {currentStep === "profile" && (
-        <div className="flex flex-col" style={{ gap: 12 }}>
-          {profileQuery.isError && !profileQuery.data ? (
-            <Notice
-              tone="err"
-              role="alert"
-              text={describeGitError(
-                profileQuery.error,
-                t("connect.profileFailed"),
-              )}
-              action={
-                <button
-                  type="button"
-                  className="btn xs"
-                  onClick={() => {
-                    void profileQuery.refetch();
-                  }}
-                >
-                  {t("connect.retry")}
-                </button>
-              }
-            />
-          ) : profileQuery.data ? (
-            <ProfileForm
-              profile={profileQuery.data}
-              variant="dialog"
-              autoFocus
-              allowUnchanged
-              submitLabel={t("connect.profileContinue")}
-              cancelLabel={t("connect.cancel")}
-              onCancel={onClose}
-              onSaved={() => {
-                goTo(firstStep);
-              }}
-            />
-          ) : (
-            <Spinner size="sm" />
-          )}
-        </div>
+        <ProfileStep
+          onCancel={onClose}
+          onSaved={() => {
+            goTo(firstStep);
+          }}
+        />
       )}
 
       {currentStep === "repo" && (

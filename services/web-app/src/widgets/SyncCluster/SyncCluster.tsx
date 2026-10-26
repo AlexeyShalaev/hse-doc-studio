@@ -1,5 +1,7 @@
+import { useNavigate } from "react-router";
 import { ConnectRemoteDialog } from "@features/git-remote";
 import { SyncControl } from "@features/git-sync";
+import { gitClonePath } from "@entities/git-sync";
 
 export type SyncClusterProps = {
   projectId: string;
@@ -14,12 +16,21 @@ export type SyncClusterProps = {
  * здесь, в одном экземпляре на проект. Страница проекта передаёт виджет в слот
  * `projectActions` заголовка.
  *
- * Кнопка «Клонировать в новую папку» в окне появится, когда у приложения будет
- * мастер клонирования: он передаст сюда `onCloneInstead`.
+ * Если в репозитории лежит другой проект, окно предлагает клонировать его в
+ * новую папку: виджет ведёт в мастер клонирования с уже готовым адресом и
+ * доступом, фича клонирования сама о подключении ничего не знает.
  */
-export const SyncCluster = ({ projectId }: SyncClusterProps) => (
-  <>
-    <SyncControl projectId={projectId} />
-    <ConnectRemoteDialog projectId={projectId} />
-  </>
-);
+export const SyncCluster = ({ projectId }: SyncClusterProps) => {
+  const navigate = useNavigate();
+  return (
+    <>
+      <SyncControl projectId={projectId} />
+      <ConnectRemoteDialog
+        projectId={projectId}
+        onCloneInstead={(target) => {
+          void navigate(gitClonePath(target));
+        }}
+      />
+    </>
+  );
+};

@@ -838,6 +838,8 @@ const appSettings = async (
   };
 };
 
+const DEMO_HOME = "/Users/demo";
+
 const globalRoutes: DemoRoute[] = [
   {
     method: "GET",
@@ -1203,6 +1205,67 @@ const globalRoutes: DemoRoute[] = [
       }
       cancelOperation(world, op);
       return demoJson(operationView(op));
+    },
+  },
+  // --- выбор папки для клонирования: настоящий ответ, а без бэкенда заглушка ---
+  {
+    method: "GET",
+    pattern: "/fs/inspect",
+    handler: async (req) => {
+      try {
+        const response = await req.forward();
+        return demoJson(response.data);
+      } catch {
+        const path = queryString(req, "path") ?? "";
+        const lower = path.toLowerCase();
+        // Слова в пути выбирают исход: exists (там уже проект), busy (папка с файлами).
+        const hasProject = lower.includes("exists");
+        const exists = hasProject || lower.includes("busy");
+        return demoJson({
+          path,
+          exists,
+          is_dir: !lower.endsWith(".txt"),
+          has_project: hasProject,
+          project: hasProject
+            ? {
+                id: fakeUuid(7000),
+                name: "Курсовая работа",
+                pack_id: "hse-cs-sse",
+                template_id: "coursework",
+                version: "1.2.0",
+                engine: "xelatex",
+              }
+            : null,
+        });
+      }
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/fs/browse",
+    handler: async (req) => {
+      try {
+        const response = await req.forward();
+        return demoJson(response.data);
+      } catch {
+        const path = queryString(req, "path") ?? DEMO_HOME;
+        const entry = (name: string) => ({
+          name,
+          path: `${path.replace(/\/$/, "")}/${name}`,
+          is_dir: true,
+          is_hidden: false,
+        });
+        return demoJson({
+          path,
+          parent: path === DEMO_HOME ? null : DEMO_HOME,
+          is_root: path === DEMO_HOME,
+          entries: [
+            entry("HSE Doc Studio"),
+            entry("Документы"),
+            entry("Учёба"),
+          ],
+        });
+      }
     },
   },
   // --- настройки приложения: только интервал фоновой проверки ---

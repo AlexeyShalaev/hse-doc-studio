@@ -18,7 +18,8 @@
     "sync": "Синхронизировать проект",
     "syncCheck": "Проверить обновления репозитория",
     "syncConflicts": "Открыть конфликты синхронизации",
-    "connectRemote": "Подключить репозиторий"
+    "connectRemote": "Подключить репозиторий",
+    "cloneProject": "Клонировать проект из git"
   },
   "compileStatus": {
     "noBuilds": "Нет сборок",
@@ -147,6 +148,7 @@
   },
   "wizardPage": {
     "createTitle": "Новый проект",
-    "connectTitle": "Подключить папку"
+    "connectTitle": "Подключить папку",
+    "cloneTitle": "Клонирование проекта"
   }
 }

@@ -35,6 +35,26 @@ const dynamicKeys = (): string[] => {
       `gitRemote:result.ready.${variant}.text`,
     );
   }
+  // Мастер клонирования: фазы, итоги доступа и состав собираются из кода.
+  for (const phase of [
+    "connect",
+    "download",
+    "downloadBundle",
+    "verify",
+    "register",
+  ]) {
+    keys.push(`gitRemote:clone.progress.phase.${phase}`);
+  }
+  for (const access of ["full", "read_only", "files_only"]) {
+    keys.push(
+      `gitRemote:clone.progress.access.${access}`,
+      `gitRemote:clone.source.verdict.${access}`,
+    );
+  }
+  for (const staffing of ["solo", "team"])
+    keys.push(`gitRemote:clone.source.found.staffing_${staffing}`);
+  for (const step of ["source", "folder", "progress"])
+    keys.push(`gitRemote:clone.steps.${step}`);
   for (const kind of ["https", "http", "ssh", "file"])
     keys.push(`gitRemote:urlKind.${kind}`);
   for (const provider of GIT_PROVIDERS) {
@@ -46,7 +66,8 @@ const dynamicKeys = (): string[] => {
       keys.push(`gitAccess:help.${provider}.key.${step}`);
     }
   }
-  for (const method of ["pat", "ssh"]) keys.push(`gitAccess:method.${method}`);
+  for (const method of ["pat", "ssh", "none"])
+    keys.push(`gitAccess:method.${method}`);
   for (const status of ["unverified", "ok", "auth_failed", "unreadable"]) {
     keys.push(`gitRemote:credentialStatus.${status}`);
   }

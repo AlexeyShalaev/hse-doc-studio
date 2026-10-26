@@ -18,7 +18,8 @@
     "sync": "Sync the project",
     "syncCheck": "Check the repository for updates",
     "syncConflicts": "Open sync conflicts",
-    "connectRemote": "Connect a repository"
+    "connectRemote": "Connect a repository",
+    "cloneProject": "Clone a project from git"
   },
   "compileStatus": {
     "noBuilds": "No builds",
@@ -147,6 +148,7 @@
   },
   "wizardPage": {
     "createTitle": "New project",
-    "connectTitle": "Connect folder"
+    "connectTitle": "Connect folder",
+    "cloneTitle": "Clone a project"
   }
 }

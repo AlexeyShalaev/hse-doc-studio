@@ -5,7 +5,7 @@ import { Notice } from "@shared/ui/ConflictKit";
 import type { ParseRemoteUrlResult } from "../lib/parseRemoteUrl";
 import { ConfirmCheck } from "./ConfirmCheck";
 import { ContentsPreview } from "./ContentsPreview";
-import { ProviderChip } from "./ProviderChip";
+import { RepoUrlField } from "./RepoUrlField";
 import { SharedFolderWarning } from "./SharedFolderWarning";
 import { StepLayout } from "./StepLayout";
 
@@ -56,23 +56,16 @@ export const RepositoryStep = ({
 }: RepositoryStepProps) => {
   const { t } = useTranslation("gitRemote");
   const uid = useId();
-  const urlId = `${uid}-url`;
-  const urlHintId = `${uid}-url-hint`;
   const branchId = `${uid}-branch`;
-  const [touched, setTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const hasText = url.trim() !== "";
   const overLimit = (contents.data?.over_limit.length ?? 0) > 0;
-  // «Не тот тип адреса» ясно сразу; «не похоже на адрес» не ругаем, пока человек печатает.
-  const showError =
-    !parsed.ok &&
-    hasText &&
-    (touched || parsed.error === "url_scheme_forbidden");
   const canNext =
     parsed.ok && !overLimit && (!ndaRequired || ndaAck) && hasText;
 
   const submit = (): void => {
-    setTouched(true);
+    setSubmitted(true);
     onUrlCommit();
     if (canNext) onNext();
   };
@@ -104,51 +97,14 @@ export const RepositoryStep = ({
         />
       )}
 
-      <div className="field">
-        <label htmlFor={urlId}>{t("repo.url.label")}</label>
-        <input
-          id={urlId}
-          type="text"
-          className="input mono"
-          value={url}
-          autoFocus
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          placeholder={t("repo.url.placeholder")}
-          aria-invalid={showError}
-          aria-describedby={urlHintId}
-          onChange={(event) => {
-            onUrlChange(event.target.value);
-          }}
-          onBlur={() => {
-            if (hasText) setTouched(true);
-            onUrlCommit();
-          }}
-        />
-        <div id={urlHintId} style={{ minHeight: 20 }}>
-          {parsed.ok ? (
-            <ProviderChip url={parsed.url} />
-          ) : showError ? (
-            <p
-              className="text-xs"
-              role="alert"
-              style={{ margin: 0, color: "var(--c-err)" }}
-            >
-              {t(`errors:code.${parsed.error}`)}
-            </p>
-          ) : (
-            <p className="hint" style={{ margin: 0 }}>
-              {t("repo.url.hint")}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {((parsed.ok && parsed.url.token_stripped) || tokenStripped) && (
-        <Notice tone="info" role="status" text={t("repo.url.tokenStripped")} />
-      )}
+      <RepoUrlField
+        url={url}
+        onChange={onUrlChange}
+        onCommit={onUrlCommit}
+        parsed={parsed}
+        tokenStripped={tokenStripped}
+        forceError={submitted}
+      />
 
       <div className="field">
         <label htmlFor={branchId}>

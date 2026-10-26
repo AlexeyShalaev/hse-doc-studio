@@ -1,6 +1,12 @@
 export { ConnectRemoteDialog } from "./ui/ConnectRemoteDialog";
 export type { ConnectRemoteDialogProps } from "./ui/ConnectRemoteDialog";
 export type { CloneTarget } from "./ui/ConnectFlow";
+export { CloneWizard } from "./ui/clone/CloneWizard";
+export type { CloneFolderSlot, CloneWizardProps } from "./ui/clone/CloneWizard";
+export type {
+  CloneFolderPickerProps,
+  FolderInspection,
+} from "./ui/clone/CloneFolderStep";
 export { HostKeyDialog } from "./ui/HostKeyDialog";
 export type { HostKeyDialogProps, HostKeyMode } from "./ui/HostKeyDialog";
 export { GitAccessSection } from "./ui/GitAccessSection";

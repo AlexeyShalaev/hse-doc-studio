@@ -8,6 +8,7 @@ import {
   CloudUpload,
   FileText,
   FolderOpen,
+  GitBranch,
   Grid3x3,
   History,
   ListChecks,
@@ -22,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  CLONE_PATH,
   gitConflictsPath,
   useSyncStatus,
   useSyncUiStore,
@@ -111,6 +113,15 @@ export const CommandPalette = () => {
         run: () => {
           setOpen(false);
           void navigate("/wizard?mode=create");
+        },
+      },
+      {
+        id: "clone",
+        label: t("commandPalette.cloneProject"),
+        icon: GitBranch,
+        run: () => {
+          setOpen(false);
+          void navigate(CLONE_PATH);
         },
       },
       {

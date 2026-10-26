@@ -826,6 +826,50 @@ describe("demo credentials, profile and clone", () => {
   });
 });
 
+describe("demo folder choice for cloning", () => {
+  it("falls back to a stub for folder inspection when there is no backend", async () => {
+    const fresh = await call("GET", "/fs/inspect", {
+      query: { path: "~/HSE Doc Studio/paper" },
+    });
+    expect(fresh.status).toBe(200);
+    expect(fresh.data).toMatchObject({
+      exists: false,
+      is_dir: true,
+      has_project: false,
+    });
+    const busy = await call("GET", "/fs/inspect", {
+      query: { path: "~/busy" },
+    });
+    expect(busy.data).toMatchObject({ exists: true, has_project: false });
+    const taken = await call("GET", "/fs/inspect", {
+      query: { path: "~/exists" },
+    });
+    expect(taken.data).toMatchObject({ exists: true, has_project: true });
+  });
+
+  it("answers folder browsing with a small tree when there is no backend", async () => {
+    const root = await call("GET", "/fs/browse");
+    expect(root.data).toMatchObject({ parent: null, is_root: true });
+    const entries = (root.data as { entries: { name: string }[] }).entries;
+    expect(entries.length).toBeGreaterThan(0);
+  });
+
+  it("prefers the real backend answer when it responds", async () => {
+    const real = {
+      path: "/real",
+      exists: true,
+      is_dir: true,
+      has_project: false,
+      project: null,
+    };
+    const res = await call("GET", "/fs/inspect", {
+      query: { path: "/real" },
+      forward: () => Promise.resolve({ data: real } as AxiosResponse),
+    });
+    expect(res.data).toEqual(real);
+  });
+});
+
 describe("demo history enrichment", () => {
   const real = [
     {

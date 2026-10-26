@@ -352,5 +352,159 @@
       "minutes": "{{count}} min",
       "hours": "{{count}} h"
     }
+  },
+  "clone": {
+    "eyebrow": "Clone from git",
+    "title": "Clone a project from git",
+    "description": "Download a project from a repository to this computer: the files go into a separate folder and the whole version history is kept.",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "steps": {
+      "label": "Clone steps",
+      "source": "Source",
+      "folder": "Folder",
+      "progress": "Download"
+    },
+    "lead": {
+      "profile": "First introduce yourself: your name and e-mail sign the versions you make in this project.",
+      "folder": "Where to put the project on this computer.",
+      "progress": "Downloading the history and checking the project. This can take a few minutes."
+    },
+    "source": {
+      "tabs": {
+        "label": "Project source",
+        "url": "Repository address",
+        "bundle": "Bundle file"
+      },
+      "check": "Check the repository",
+      "access": "Repository access",
+      "checking": {
+        "title": "Checking the repository",
+        "text": "Connecting, checking access and reading the project description."
+      },
+      "found": {
+        "title": "Project found",
+        "repo": "Repository",
+        "project": "Project",
+        "template": "Template",
+        "staffing": "Team",
+        "staffing_solo": "Single author",
+        "staffing_team": "Team",
+        "authorsCount_one": "{{count}} author",
+        "authorsCount_other": "{{count}} authors",
+        "branch": "Branch",
+        "branchPick": "Branches in the repository",
+        "branchDefault": "default",
+        "change": "Change the address or access"
+      },
+      "verdict": {
+        "label": "How the project will open",
+        "full": "The project will open for full work: you can edit, build documents and sync.",
+        "read_only": "The project will open read-only: you can look but not change.",
+        "files_only": "The project will open as a set of files: documents and builds are unavailable.",
+        "schemaNewer": "The project was made by a newer version of the Studio."
+      },
+      "empty": {
+        "title": "The repository is empty",
+        "text": "There is no project in it yet, so there is nothing to clone. To publish a project to this repository, open the project and connect the repository in the sync window."
+      },
+      "notStudio": {
+        "title": "No Studio project in this repository",
+        "text": "Only a repository created by the Studio can be cloned: it holds the project's service data. Check the address and the branch."
+      }
+    },
+    "bundle": {
+      "title": "Bundle file",
+      "hint": "The file is exported from a project with “Export bundle”. It holds the whole version history and needs no network.",
+      "drop": "Drop a file here or",
+      "choose": "choose one on your computer",
+      "accept": "Files .bundle and .hseenc are accepted",
+      "dropActive": "Release the file to select it",
+      "replace": "Choose another",
+      "remove": "Remove the file",
+      "wrongKind": "A .bundle or .hseenc file is needed.",
+      "encrypted": "The file is protected by a password",
+      "password": "File password",
+      "passwordHint": "The password was set at export. The Studio does not store it.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "folder": {
+      "name": {
+        "label": "Project name",
+        "optional": "optional",
+        "placeholder": "As in the project",
+        "hint": "This is how the project is named in the Studio. You can change it later."
+      },
+      "path": {
+        "label": "Folder on this computer",
+        "placeholder": "~/HSE Doc Studio/my-project",
+        "browse": "Browse…",
+        "hint": "Project files go into this folder, the history lives in .hse-studio/git, no .git of its own is created."
+      },
+      "inspect": {
+        "empty": "Choose a folder: the project will be put into it.",
+        "checking": "Checking the folder…",
+        "new": "This folder does not exist yet: the Studio will create it.",
+        "existing": "The folder already exists. It must be empty, otherwise cloning stops.",
+        "notDir": "This is a file, not a folder. Choose another folder.",
+        "hasProject": "This folder already has the project “{{name}}”. Choose another folder.",
+        "hasProjectUnnamed": "This folder already has a Studio project. Choose another folder."
+      },
+      "source": "Source",
+      "sourceBundle": "File {{name}}",
+      "clone": "Clone",
+      "failed": "Could not start cloning."
+    },
+    "progress": {
+      "label": "Clone progress",
+      "starting": "Starting the clone…",
+      "phase": {
+        "connect": "Connecting",
+        "download": "Downloading history",
+        "downloadBundle": "Reading the file",
+        "verify": "Checking the template",
+        "register": "Registering the project"
+      },
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelFailed": "It can no longer be cancelled: the clone is finishing.",
+      "cancelled": {
+        "title": "Cloning cancelled",
+        "text": "The downloaded files were removed, no project was added.",
+        "again": "Try again"
+      },
+      "failed": {
+        "title": "Could not clone the project",
+        "folder": "Choose another folder",
+        "source": "Change the source",
+        "profile": "Set the author",
+        "retry": "Try again"
+      },
+      "lost": {
+        "title": "Cannot tell how the clone is going",
+        "text": "The Studio does not answer about this operation. Look at the project list: if the project is there, cloning has finished.",
+        "retry": "Retry"
+      },
+      "done": {
+        "title": "Project downloaded",
+        "text": "The project was downloaded and added to the Studio.",
+        "folder": "Folder",
+        "access": "Opened as",
+        "open": "Open project",
+        "toList": "To the project list"
+      },
+      "access": {
+        "full": "For full work",
+        "read_only": "Read-only",
+        "files_only": "Files only"
+      },
+      "warn": {
+        "lfs_pointers": "The repository has Git LFS files: they were downloaded as short pointers, without the actual content.",
+        "template_missing": "The project template is missing in this version of the Studio: the project is open read-only."
+      }
+    }
   }
 }
