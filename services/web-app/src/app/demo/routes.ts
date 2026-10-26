@@ -1575,7 +1575,49 @@ const incomingAsHistory = (projectId: string): RawCommit[] => {
   }));
 };
 
+// Что «изменилось» в чужой версии, пришедшей из репозитория: коротко и правдоподобно.
+const incomingPatch = (message: string): string =>
+  [
+    "--- a/chapters/introduction.tex",
+    "+++ b/chapters/introduction.tex",
+    "@@ -3,5 +3,6 @@",
+    " \\section{Введение}",
+    " ",
+    "-Актуальность темы определяется ростом объёмов учебной документации.",
+    `+% ${message}`,
+    "+Актуальность темы определяется ростом объёмов учебной документации и",
+    "+потребностью в единых требованиях к её оформлению.",
+    " ",
+    " Цель работы: описать систему подготовки документов по ГОСТ.",
+  ].join("\n");
+
 const historyRoutes: DemoRoute[] = [
+  {
+    // Различия чужой версии из демо-репозитория; остальное решает настоящий бэкенд.
+    method: "GET",
+    pattern: "/projects/:projectId/vcs/diff",
+    handler: async (req) => {
+      const projectId = req.params.projectId ?? "";
+      const toId = queryString(req, "to_id");
+      const commit = projectOf(world, projectId).incoming.find(
+        (item) => item.id === toId,
+      );
+      if (!commit || !toId) return demoJson((await req.forward()).data);
+      return demoJson({
+        from_id: queryString(req, "from_id") ?? null,
+        to_id: toId,
+        files: [
+          {
+            path: "chapters/introduction.tex",
+            change: "modified",
+            patch: incomingPatch(commit.message),
+            binary: false,
+          },
+        ],
+        truncated: false,
+      });
+    },
+  },
   {
     method: "GET",
     pattern: "/projects/:projectId/vcs/history",

@@ -34,8 +34,8 @@ import {
   SharedFolderSchema,
 } from "@entities/git-remote";
 import { ProfileSchema } from "@entities/profile";
-import { gitDemoRoutes, resetWorld } from "./routes";
-import { SCENARIOS, type DemoScenarioId } from "./scenarios";
+import { getWorld, gitDemoRoutes, resetWorld } from "./routes";
+import { SCENARIOS, projectOf, type DemoScenarioId } from "./scenarios";
 
 const router = createDemoRouter(gitDemoRoutes);
 const PROJECT = "22222222-2222-4222-8222-222222222222";
@@ -1082,6 +1082,35 @@ describe("demo history without a backend", () => {
       query: { until: since },
     });
     expect((old.data as unknown[]).length).toBeGreaterThan(0);
+  });
+});
+
+describe("demo differences of incoming versions", () => {
+  it("answers for a version that came from the repository", async () => {
+    resetWorld("behind");
+    const incoming = projectOf(getWorld(), PROJECT).incoming[0];
+    const res = await call("GET", `/projects/${PROJECT}/vcs/diff`, {
+      query: { to_id: incoming?.id ?? "" },
+      forward: () => Promise.reject(new Error("must not be asked")),
+    });
+    const diff = res.data as {
+      to_id: string;
+      files: { path: string; patch: string; binary: boolean }[];
+    };
+    expect(diff.to_id).toBe(incoming?.id);
+    expect(diff.files).toHaveLength(1);
+    expect(diff.files[0]?.patch).toContain("@@");
+    expect(diff.files[0]?.binary).toBe(false);
+  });
+
+  it("hands every other version to the real backend", async () => {
+    resetWorld("behind");
+    const res = await call("GET", `/projects/${PROJECT}/vcs/diff`, {
+      query: { to_id: "abc123" },
+      forward: () =>
+        Promise.resolve({ data: { files: [] }, status: 200 } as AxiosResponse),
+    });
+    expect(res.data).toEqual({ files: [] });
   });
 });
 
