@@ -42,6 +42,7 @@ from hse_doc_studio.core.services import (
     RequirementMatchingService,
     SubmissionProfileService,
 )
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -92,6 +93,7 @@ from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
 from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
 from hse_doc_studio.infra.jobs.office_convert import OfficeConvertHandler
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
+from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
@@ -103,6 +105,7 @@ from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureV
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
@@ -597,10 +600,13 @@ class DomainServiceProvider(Provider):
         )
 
     @provide
-    def get_job_handler_registry(self, office_convert: IOfficeConvertService) -> JobHandlerRegistry:
+    def get_job_handler_registry(
+        self, office_convert: IOfficeConvertService, verifier: DetachedSignatureVerifier
+    ) -> JobHandlerRegistry:
         # Обработчики не-compile видов регистрируют слайсы своих семейств.
         registry = JobHandlerRegistry()
         registry.register(JobKind.office_convert, OfficeConvertHandler(office_convert))
+        registry.register(JobKind.verify_detached, VerifyDetachedHandler(verifier))
         return registry
 
     @provide
@@ -638,7 +644,7 @@ class DomainServiceProvider(Provider):
         return FsProjectFileProbeFactory()
 
     @provide
-    def get_gpg_keyring(self) -> GpgKeyring:
+    def get_gpg_keyring(self) -> AnyOf[GpgKeyring, IOpenPgpKeyImporter]:
         return GpgKeyring(settings.data_dir.expanduser() / "gnupg")
 
     @provide
@@ -646,7 +652,7 @@ class DomainServiceProvider(Provider):
         return TrustedRootStore(settings.data_dir.expanduser() / "trusted_roots")
 
     @provide
-    def get_chain_fetcher(self) -> ChainFetcher:
+    def get_chain_fetcher(self) -> AnyOf[ChainFetcher, IChainFetcher]:
         return ChainFetcher(settings.data_dir.expanduser() / "chain_cache")
 
     @provide
@@ -654,6 +660,12 @@ class DomainServiceProvider(Provider):
         self, keyring: GpgKeyring, root_store: TrustedRootStore, fetcher: ChainFetcher
     ) -> DetachedSignatureVerifier:
         return DetachedSignatureVerifier(keyring, root_store.directory, fetcher.directory)
+
+    @provide
+    def get_trust_material_provider(
+        self, root_store: TrustedRootStore, fetcher: ChainFetcher
+    ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
+        return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
 
     @provide
     def get_vcs_service(self) -> IVcsService:

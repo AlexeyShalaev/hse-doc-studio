@@ -5,16 +5,24 @@ from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import CheckRule
-from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang
+from hse_doc_studio.core.enums import CheckSeverity, DetachedFormat, DetachedVerdict, EngineType, Lang
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, CompileResult, JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
-from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
+from hse_doc_studio.core.jobs.files import ArtifactRef, InlineBlob, ManifestFile
 from hse_doc_studio.core.jobs.office import (
     OfficeConvertPayload,
     OfficeConvertReason,
     OfficeConvertResult,
     OfficeConvertStatus,
 )
+from hse_doc_studio.core.jobs.verify import (
+    OpenPgpTrust,
+    OpenPgpTrustMode,
+    TrustBundle,
+    VerifyDetachedPayload,
+    VerifyDetachedResult,
+)
+from hse_doc_studio.core.signatures.verification import VerifiedSignature
 from hse_doc_studio.core.value_objects import CheckFix, CheckLocation, CheckResult
 
 from tests.factories import make_check_rule
@@ -120,5 +128,58 @@ def make_office_result() -> JobResult:
             status=OfficeConvertStatus.ok,
             output=ArtifactRef(path="tz/_custom/ТЗ.pdf", sha256="cd" * 32, size=4321),
             pages=12,
+        ),
+    )
+
+
+def make_verify_payload(*, mode: OpenPgpTrustMode = OpenPgpTrustMode.runner_home) -> VerifyDetachedPayload:
+    return VerifyDetachedPayload(
+        pdf=ManifestFile(path="tz/Аннотация.pdf", sha256="ef" * 32, size=2048),
+        signature=InlineBlob.from_bytes(b"\x30\x82signature\x00\xff"),
+        trust=TrustBundle(
+            roots=(InlineBlob.from_bytes(b"root-der"),),
+            intermediates=(InlineBlob.from_bytes(b"inter-1"), InlineBlob.from_bytes(b"inter-2")),
+            openpgp=OpenPgpTrust(
+                mode=mode,
+                keys=(InlineBlob.from_bytes(b"-----BEGIN PGP PUBLIC KEY BLOCK-----"),) if mode == "inline" else (),
+                digest="ab12" if mode == "inline" else "",
+            ),
+        ),
+    )
+
+
+def make_verify_spec(*, local_root: object = None) -> JobSpec:
+    return JobSpec(
+        id=JOB_ID,
+        kind=JobKind.verify_detached,
+        tags=frozenset({"verify"}),
+        project_id=PROJECT_ID,
+        actor=Actor.user("u1", "Иван", "ivan@example.com"),
+        locale=Lang.ru,
+        payload=make_verify_payload(),
+        local_root=local_root,  # type: ignore[arg-type]
+    )
+
+
+def make_verify_result() -> JobResult:
+    return JobResult(
+        status=JobStatus.succeeded,
+        data=VerifyDetachedResult(
+            signature=VerifiedSignature(
+                format=DetachedFormat.cms,
+                verdict=DetachedVerdict.valid,
+                signer="Иванов Иван Иванович",
+                signer_id="cd" * 32,
+                issuer="Тестовый УЦ",
+                algorithm="GOST R 34.10-2012 / Streebog-256",
+                signed_at="2026-10-01T12:00:00+00:00",
+                not_before="2020-01-01T00:00:00+00:00",
+                not_after="2049-01-01T00:00:00+00:00",
+                chain="untrusted_root",
+                root_subject="Тестовый корень",
+                root_fingerprint="12" * 32,
+                extension=".p7s",
+                notes=("chain_untrusted_root", "no_revocation_check"),
+            )
         ),
     )

@@ -8,6 +8,7 @@ from hse_doc_studio.core.jobs.entities import CompileJobPayload, CompileResult
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult
 from hse_doc_studio.core.jobs.policy import JobKindPolicy
+from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload, VerifyDetachedResult
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,12 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
             payload_cls=OfficeConvertPayload,
             result_cls=OfficeConvertResult,
             policy=JobKindPolicy(awaitable=True, detachable=True, idempotent=True),
+        ),
+        JobKindSpec(
+            kind=JobKind.verify_detached,
+            payload_cls=VerifyDetachedPayload,
+            result_cls=VerifyDetachedResult,
+            policy=JobKindPolicy(awaitable=True, idempotent=True),
         ),
     )
 
