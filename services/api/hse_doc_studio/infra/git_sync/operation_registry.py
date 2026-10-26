@@ -83,7 +83,8 @@ class InMemoryGitOperationRegistry:
                 op.phase = phase
                 op.percent = None
             if percent is not None:
-                op.percent = max(0.0, min(100.0, percent))
+                # git печатает несколько этапов подряд (подсчёт, получение, дельты), и у каждого счёт идёт с нуля.
+                op.percent = max(op.percent or 0.0, min(100.0, percent))
             if message is not None:
                 op.message = message
             if cancellable is not None:

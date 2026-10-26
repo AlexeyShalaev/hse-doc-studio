@@ -155,6 +155,24 @@ def test__update__phase_change_resets_percent_and_values_are_clamped(
     assert floor.percent == 0.0
 
 
+def test__update__percent_never_goes_back_within_a_phase(
+    registry: InMemoryGitOperationRegistry, tmp_path: Path
+) -> None:
+    op = registry.begin(OperationKind.clone, project_id=None, folder=tmp_path)
+
+    registry.update(op.id, phase=OperationPhase.download, percent=70.0)
+    registry.update(op.id, percent=20.0)
+    held = registry.get(op.id)
+    registry.update(op.id, phase=OperationPhase.verify)
+    registry.update(op.id, percent=10.0)
+    next_phase = registry.get(op.id)
+
+    assert held is not None
+    assert held.percent == 70.0
+    assert next_phase is not None
+    assert next_phase.percent == 10.0
+
+
 def test__update__finished_or_unknown_operation__is_ignored(
     registry: InMemoryGitOperationRegistry, tmp_path: Path
 ) -> None:
