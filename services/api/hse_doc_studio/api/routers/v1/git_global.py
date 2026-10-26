@@ -28,6 +28,7 @@ from hse_doc_studio.api.schemas.git_sync import (
     ProbeRequest,
     ProbeResponse,
     SecretsStatusResponse,
+    SharedFolderInfo,
     SharedFolderResponse,
     TrustHostRequest,
     UpdateCredentialRequest,
@@ -168,8 +169,11 @@ async def get_git_secrets_status(uc: FromDishka[GetSecretsStatusUC]) -> SecretsS
         permissions_enforced=result.permissions_enforced,
         credentials_total=result.credentials_total,
         credentials_unreadable=result.credentials_unreadable,
-        # Предупреждение об общей папке (Яндекс.Диск, Dropbox) дописывает срез с детектором общих папок.
-        data_dir_shared_folder=None,
+        data_dir_shared_folder=None
+        if result.data_dir_shared_folder is None
+        else SharedFolderInfo(
+            provider=result.data_dir_shared_folder.provider.value, root=result.data_dir_shared_folder.root
+        ),
     )
 
 

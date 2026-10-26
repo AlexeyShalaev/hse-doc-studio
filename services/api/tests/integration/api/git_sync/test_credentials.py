@@ -13,9 +13,10 @@ from hse_doc_studio.api.schemas.git_sync import GitCredentialResponse, GitErrorB
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from pydantic import SecretStr
 
+from tests.fixtures.app import create_test_app, create_test_container
 from tests.integration.api.vcs.conftest import create_project
 
 _CANARY = "ghp_CANARYtokenValue1234567890abcdefXYZ"
@@ -302,6 +303,25 @@ async def test__secrets_status__fresh_install__is_ok_with_file_source(test_app: 
     assert (body.ok, body.source, body.credentials_total, body.credentials_unreadable) == (True, "file", 0, 0)
     assert body.data_dir_shared_folder is None
     assert not _key_file(tmp_path).exists()
+
+
+async def test__secrets_status__data_dir_in_synced_folder__is_reported(tmp_path: Path) -> None:
+    (tmp_path / "Sync" / ".stfolder").mkdir(parents=True)
+    data_dir = tmp_path / "Sync" / "data"
+    data_dir.mkdir()
+    container = create_test_container(data_dir)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=create_test_app(container)), base_url="http://test") as api:
+            resp = await api.get("/api/v1/git/secrets/status")
+    finally:
+        await container.close()
+
+    body = SecretsStatusResponse.model_validate(resp.json())
+    assert body.data_dir_shared_folder is not None
+    assert (body.data_dir_shared_folder.provider, body.data_dir_shared_folder.root) == (
+        "syncthing",
+        str(tmp_path / "Sync"),
+    )
 
 
 async def test__secrets_status__counts_credentials(test_app: AsyncClient) -> None:

@@ -706,6 +706,25 @@ async def test__patch_settings__changes_state_and_returns_status(
     assert (state["auto_fetch"], state["shared_folder_ack"], state["fetch_interval_s"]) == (False, True, None)
 
 
+async def test__get_git_status__project_in_synced_folder__reports_shared_folder_until_acknowledged(
+    client: AsyncClient, tmp_path: Path, remote: BareRemote
+) -> None:
+    (tmp_path / "Sync" / ".stfolder").mkdir(parents=True)
+    synced = await create_project(client, tmp_path / "Sync" / "paper")
+    plain = await create_project(client, tmp_path / "plain")
+    await _connect(client, synced, remote)
+
+    before = await _status(client, synced)
+    await client.patch(f"/api/v1/projects/{synced['id']}/git/settings", json={"shared_folder_ack": True})
+    after = await _status(client, synced)
+
+    assert before.shared_folder is not None
+    assert (before.shared_folder.provider, before.shared_folder.acknowledged) == ("syncthing", False)
+    assert after.shared_folder is not None
+    assert after.shared_folder.acknowledged is True
+    assert (await _status(client, plain)).shared_folder is None
+
+
 async def test__patch_settings__interval_below_minimum__422(
     client: AsyncClient, project: dict[str, Any], remote: BareRemote
 ) -> None:

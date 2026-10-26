@@ -6,8 +6,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import structlog
@@ -27,12 +29,14 @@ from hse_doc_studio.core.git_sync.entities import (
     CredentialUsage,
     GitCredential,
     GitCredentialKind,
+    SharedFolderInfo,
 )
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitCredentialUsage,
     ISecretCipher,
+    ISharedFolderDetector,
     ISshKeyGenerator,
 )
 from hse_doc_studio.core.git_sync.secret import KeySource, Secret
@@ -192,12 +196,21 @@ class SecretsStatus:
     permissions_enforced: bool
     credentials_total: int
     credentials_unreadable: int
+    data_dir_shared_folder: SharedFolderInfo | None = None
 
 
 class GetSecretsStatusUC:
-    def __init__(self, cipher: ISecretCipher, repo: IGitCredentialRepository) -> None:
+    def __init__(
+        self,
+        cipher: ISecretCipher,
+        repo: IGitCredentialRepository,
+        shared_folders: ISharedFolderDetector,
+        data_dir: Path,
+    ) -> None:
         self._cipher = cipher
         self._repo = repo
+        self._shared = shared_folders
+        self._data_dir = data_dir
 
     async def execute(self) -> SecretsStatus:
         status = self._cipher.status()
@@ -209,4 +222,6 @@ class GetSecretsStatusUC:
             permissions_enforced=status.permissions_enforced,
             credentials_total=len(credentials),
             credentials_unreadable=unreadable,
+            # Ключ шифрования лежит в каталоге данных: в облачной папке он уезжает на другие машины вместе с токенами.
+            data_dir_shared_folder=await asyncio.to_thread(self._shared.detect, self._data_dir),
         )

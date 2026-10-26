@@ -388,7 +388,7 @@ class GitStatusBuilder:
         info = self._shared.detect(folder)
         if info is None:
             return None
-        return SharedFolderView(info.provider, str(info.root), state.shared_folder_ack)
+        return SharedFolderView(info.provider.value, info.root, state.shared_folder_ack)
 
 
 def _operation_brief(operation: GitOperation | None) -> OperationBriefView | None:

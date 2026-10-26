@@ -1520,8 +1520,10 @@ class UseCaseProvider(Provider):
         return DeleteCredentialUC(repo, usage)
 
     @provide
-    def get_git_secrets_status_uc(self, cipher: ISecretCipher, repo: IGitCredentialRepository) -> GetSecretsStatusUC:
-        return GetSecretsStatusUC(cipher, repo)
+    def get_git_secrets_status_uc(
+        self, cipher: ISecretCipher, repo: IGitCredentialRepository, shared_folders: ISharedFolderDetector
+    ) -> GetSecretsStatusUC:
+        return GetSecretsStatusUC(cipher, repo, shared_folders, settings.data_dir.expanduser())
 
     @provide
     def get_list_git_hosts_uc(self, store: IKnownHostsStore) -> ListHostsUC:
@@ -1593,6 +1595,7 @@ class UseCaseProvider(Provider):
         memo: RefStatusMemo,
         policy: GitSyncPolicy,
         providers: ProviderResolver,
+        shared_folders: ISharedFolderDetector,
     ) -> GitStatusBuilder:
         return GitStatusBuilder(
             store_remotes=store_remotes,
@@ -1607,6 +1610,7 @@ class UseCaseProvider(Provider):
             memo=memo,
             policy=policy,
             providers=providers,
+            shared_folders=shared_folders,
         )
 
     @provide
