@@ -9,6 +9,7 @@ import structlog
 from hse_doc_studio.core.enums import DetachedOrigin, DetachedVerdict
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -16,25 +17,17 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUnavailableError
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
+from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import DetachedSignature
-from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
-from hse_doc_studio.infra.signatures.cms_inspector import CmsParseError
-from hse_doc_studio.infra.signatures.detached_verifier import (
-    DetachedSignatureVerifier,
-    UnknownSignatureFormatError,
-)
-from hse_doc_studio.infra.signatures.openpgp import (
-    GpgError,
-    GpgKeyring,
-    GpgUnavailableError,
-    looks_like_openpgp_public_key,
-)
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
-    note_plate_mismatch,
+    no_gpg_message,
     require_fresh_frozen,
     require_slot,
     store_signature,
+    verify_frozen,
 )
 from hse_doc_studio.use_cases.signatures._doc_context import load_doc_context
 
@@ -58,8 +51,8 @@ class AttachDetachedSignatureOutput:
     missing_key_id: str | None = None
 
 
-def _import_public_key(keyring: GpgKeyring, blob: bytes) -> None:
-    if not looks_like_openpgp_public_key(blob):
+def _import_public_key(keyring: IOpenPgpKeyImporter, blob: bytes) -> None:
+    if not keyring.looks_like_public_key(blob):
         raise ValueError(
             localized_error(
                 "Файл не похож на открытый ключ OpenPGP (ожидается -----BEGIN PGP PUBLIC KEY BLOCK-----)",
@@ -67,18 +60,11 @@ def _import_public_key(keyring: GpgKeyring, blob: bytes) -> None:
             )
         )
     try:
-        keyring.import_key(blob)
+        keyring.import_public_key(blob)
     except GpgUnavailableError as exc:
-        raise ValueError(_no_gpg()) from exc
+        raise ValueError(no_gpg_message()) from exc
     except GpgError as exc:
         raise ValueError(str(exc)) from exc
-
-
-def _no_gpg() -> str:
-    return localized_error(
-        "В системе нет gpg: подписи OpenPGP проверить нельзя",
-        "gpg is not installed: OpenPGP signatures cannot be checked",
-    )
 
 
 class _DetachedUCBase:
@@ -89,13 +75,15 @@ class _DetachedUCBase:
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: IOpenPgpKeyImporter,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
         self._template_service = template_service
-        self._verifier = verifier
+        self._dispatcher = dispatcher
+        self._trust_provider = trust_provider
         self._keyring = keyring
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -124,21 +112,9 @@ class _DetachedUCBase:
 
         if public_key:
             await asyncio.to_thread(_import_public_key, self._keyring, public_key)
-        pdf_path = ctx.project.folder / frozen.path
-        try:
-            verified = await asyncio.to_thread(self._verifier.verify, pdf_path, content)
-        except UnknownSignatureFormatError as exc:
-            raise ValueError(
-                localized_error(
-                    "Файл не распознан как открепленная подпись (OpenPGP .asc/.sig или CMS .sig/.p7s): " + str(exc),
-                    "The file is not recognised as a detached signature (OpenPGP .asc/.sig or CMS .sig/.p7s): "
-                    + str(exc),
-                )
-            ) from exc
-        except GpgUnavailableError as exc:
-            raise ValueError(_no_gpg()) from exc
+        verified = await verify_frozen(self._dispatcher, self._trust_provider, ctx, frozen, content)
 
-        note_plate_mismatch(state, slot_id, verified)
+        verified = note_plate_mismatch(state, slot_id, verified)
         new_state, sig = store_signature(ctx, state, slot_id, verified, content, DetachedOrigin.uploaded, frozen)
         self._signature_repo.save_state(ctx.project.folder, new_state)
         logger.info(
@@ -203,12 +179,20 @@ class CompleteDetachedChainUC(_DetachedUCBase):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
-        fetcher: ChainFetcher,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: IOpenPgpKeyImporter,
+        fetcher: IChainFetcher,
     ) -> None:
         super().__init__(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            dispatcher,
+            trust_provider,
+            keyring,
         )
         self._fetcher = fetcher
 

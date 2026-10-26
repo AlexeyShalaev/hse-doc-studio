@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from asyncio.subprocess import Process
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
 import structlog
+
+from hse_doc_studio.core.jobs.protocols import ProcessHandle
 
 logger = structlog.get_logger()
 
@@ -19,7 +20,7 @@ class _Slot:
     task: asyncio.Task[None]
     project_folder: Path
     doc_id: str
-    process: Process | None = None
+    process: ProcessHandle | None = None
 
 
 class CompileRunner:
@@ -52,7 +53,7 @@ class CompileRunner:
     def unregister(self, compile_id: UUID) -> None:
         self._slots.pop(compile_id, None)
 
-    def set_process(self, compile_id: UUID, process: Process) -> None:
+    def set_process(self, compile_id: UUID, process: ProcessHandle) -> None:
         slot = self._slots.get(compile_id)
         if slot is None:
             return

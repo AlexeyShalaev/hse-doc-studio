@@ -39,12 +39,12 @@ def _doc_dir(project_folder: Path, source_file: str) -> Path:
     return project_folder if src_parent in ("", ".") else project_folder / src_parent
 
 
-def _final_pdf_path(project_folder: Path, source_file: str) -> Path:
+def final_pdf_path(project_folder: Path, source_file: str) -> Path:
     src = PurePosixPath(source_file.replace("\\", "/"))
     return _doc_dir(project_folder, source_file) / f"{src.stem}.pdf"
 
 
-def _built_pdf_path(project_folder: Path, doc_id: str, source_file: str) -> Path:
+def built_pdf_path(project_folder: Path, doc_id: str, source_file: str) -> Path:
     src = PurePosixPath(source_file.replace("\\", "/"))
     return _doc_dir(project_folder, source_file) / ".build" / doc_id / f"{src.stem}.pdf"
 
@@ -57,8 +57,8 @@ def archive_compiled_pdf(project_folder: Path, doc_id: str, compile_id: UUID, so
     locked (open in a desktop viewer), the FRESH pdf is still in `.build` —
     archive that one, not the stale neighbour.
     """
-    built_pdf = _built_pdf_path(project_folder, doc_id, source_file)
-    source_pdf = built_pdf if built_pdf.exists() else _final_pdf_path(project_folder, source_file)
+    built_pdf = built_pdf_path(project_folder, doc_id, source_file)
+    source_pdf = built_pdf if built_pdf.exists() else final_pdf_path(project_folder, source_file)
     if not source_pdf.exists():
         return
     dest_dir = _archive_dir(project_folder, doc_id)

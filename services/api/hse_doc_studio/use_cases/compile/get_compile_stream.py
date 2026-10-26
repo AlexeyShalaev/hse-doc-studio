@@ -7,12 +7,12 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 
 logger = structlog.get_logger()
 
@@ -38,12 +38,12 @@ class GetCompileStreamUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         compile_repo: ICompileRepository,
-        log_bus: CompileLogBus,
+        log_stream: IJobLogStream,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._compile_repo = compile_repo
-        self._log_bus = log_bus
+        self._log_stream = log_stream
 
     async def execute(self, inp: GetCompileStreamInput) -> AsyncGenerator[str, None]:  # noqa: C901
         project_folder = self._find_folder(inp.project_id)
@@ -55,7 +55,7 @@ class GetCompileStreamUC:
             return _not_found()
 
         compile_id = inp.compile_id
-        bus = self._log_bus
+        bus = self._log_stream
         compile_repo = self._compile_repo
 
         async def _stream() -> AsyncGenerator[str, None]:

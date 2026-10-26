@@ -16,8 +16,8 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
+from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
 from hse_doc_studio.core.value_objects import SignaturesState
-from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest, stamps_for_doc
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
 

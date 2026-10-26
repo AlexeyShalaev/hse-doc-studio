@@ -16,6 +16,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -24,8 +25,11 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
-from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
@@ -58,7 +62,14 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
+from hse_doc_studio.core.signatures.ports import (
+    IChainFetcher,
+    IOpenPgpKeyImporter,
+    IPublicKeyExporter,
+    ITrustMaterialProvider,
+)
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
     IMergeEngine,
     ITemplateBaseStore,
@@ -77,14 +88,9 @@ from hse_doc_studio.core.vcs.protocols import (
 )
 from hse_doc_studio.infra.ai.agent.edit_applier import FuzzySearchReplaceApplier
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
-from hse_doc_studio.infra.checks.runner import CheckRunner
 
 # --- Compile ---
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
-from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
@@ -93,12 +99,9 @@ from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
-from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
-from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
-from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 
 # --- Agent Personas (custom roles) ---
 from hse_doc_studio.use_cases.agent_personas.create_agent_persona import CreateAgentPersonaUC
@@ -349,6 +352,7 @@ from hse_doc_studio.use_cases.submission.get_submission_file import GetSubmissio
 # --- Submission ---
 from hse_doc_studio.use_cases.submission.get_submission_profiles import GetSubmissionProfilesUC
 from hse_doc_studio.use_cases.submission.list_submissions import ListSubmissionsUC
+from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.submission.preview_custom_docs import PreviewSubmissionCustomDocsUC
 from hse_doc_studio.use_cases.synctex.query_synctex import SyncTexUC
 
@@ -540,12 +544,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_runner: CompileRunner,
+        dispatcher: IJobDispatcher,
     ) -> MoveProjectUC:
         return MoveProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_runner=compile_runner,
+            dispatcher=dispatcher,
         )
 
     @provide
@@ -642,7 +646,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: IOfficeConvertService,
+        dispatcher: IJobDispatcher,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
@@ -653,7 +657,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             file_repo=file_repo,
             signature_repo=signature_repo,
-            office_manager=office_manager,
+            dispatcher=dispatcher,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
@@ -1569,19 +1573,12 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
-        check_runner: CheckRunner,
         changelog_repo: IChangeLogRepository,
-        log_bus: CompileLogBus,
-        settings_repo: ISettingsRepository,
-        compile_runner: CompileRunner,
-        compile_limiter: CompileConcurrencyLimiter,
-        executor: DockerCompileExecutor,
-        image_manager: DockerImageManager,
-        lt_manager: LanguageToolContainerManager,
-        office_manager: OfficeConvertManager,
+        dispatcher: IJobDispatcher,
+        materializer: ITemplateMaterializer,
+        artifacts: IArtifactStore,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
-        capacity_probe: ISystemCapacityProbe,
         compile_repo: ICompileRepository,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
@@ -1591,19 +1588,12 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             template_service=template_service,
             check_resolution_service=check_resolution_service,
-            check_runner=check_runner,
             changelog_repo=changelog_repo,
-            log_bus=log_bus,
-            settings_repo=settings_repo,
-            compile_runner=compile_runner,
-            compile_limiter=compile_limiter,
-            executor=executor,
-            image_manager=image_manager,
-            lt_manager=lt_manager,
-            office_manager=office_manager,
+            dispatcher=dispatcher,
+            materializer=materializer,
+            artifacts=artifacts,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
-            capacity_probe=capacity_probe,
         )
 
     @provide
@@ -1836,13 +1826,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         compile_repo: ICompileRepository,
-        log_bus: CompileLogBus,
+        log_stream: IJobLogStream,
     ) -> GetCompileStreamUC:
         return GetCompileStreamUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             compile_repo=compile_repo,
-            log_bus=log_bus,
+            log_stream=log_stream,
         )
 
     @provide
@@ -1863,10 +1853,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        artifacts: IArtifactStore,
     ) -> GetArchivedPdfUC:
         return GetArchivedPdfUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
+            artifacts=artifacts,
         )
 
     @provide
@@ -1903,15 +1895,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         compile_repo: ICompileRepository,
-        compile_runner: CompileRunner,
-        log_bus: CompileLogBus,
+        dispatcher: IJobDispatcher,
+        log_stream: IJobLogStream,
     ) -> CancelCompileUC:
         return CancelCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             compile_repo=compile_repo,
-            compile_runner=compile_runner,
-            log_bus=log_bus,
+            dispatcher=dispatcher,
+            log_stream=log_stream,
         )
 
     @provide
@@ -2015,21 +2007,21 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         office_editor_manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        office_convert_manager: IOfficeConvertService,
+        dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> OfficeEditorCallbackUC:
         # Запись сохранённого документа идёт через put-file: guard путей +
         # edit-коммит в ProjectVCS — как у любой другой правки файла.
-        # convert_manager + settings_repo — фоновая доконвертация pptx→PDF
-        # после сохранения, чтобы «Превью» обновлялось без пересборки.
+        # dispatcher + settings_repo — фоновая доконвертация pptx→PDF задачей
+        # office.convert после сохранения, чтобы «Превью» обновлялось без пересборки.
         return OfficeEditorCallbackUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             manager=office_editor_manager,
             put_file_uc=put_file_uc,
-            convert_manager=office_convert_manager,
+            dispatcher=dispatcher,
             settings_repo=settings_repo,
             client=client,
         )
@@ -2220,11 +2212,19 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: IOpenPgpKeyImporter,
     ) -> AttachDetachedSignatureUC:
         return AttachDetachedSignatureUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            dispatcher,
+            trust_provider,
+            keyring,
         )
 
     @provide
@@ -2235,11 +2235,19 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: IOpenPgpKeyImporter,
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            dispatcher,
+            trust_provider,
+            keyring,
         )
 
     @provide
@@ -2250,9 +2258,10 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
-        keyring: GpgKeyring,
-        fetcher: ChainFetcher,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: IOpenPgpKeyImporter,
+        fetcher: IChainFetcher,
     ) -> CompleteDetachedChainUC:
         return CompleteDetachedChainUC(
             project_repo,
@@ -2260,7 +2269,8 @@ class UseCaseProvider(Provider):
             signature_repo,
             template_repo,
             template_service,
-            verifier,
+            dispatcher,
+            trust_provider,
             keyring,
             fetcher,
         )
@@ -2274,7 +2284,8 @@ class UseCaseProvider(Provider):
         signing_identity_repo: ISigningIdentityRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: GpgKeyring,
     ) -> SignInStudioUC:
         return SignInStudioUC(
@@ -2284,7 +2295,8 @@ class UseCaseProvider(Provider):
             signing_identity_repo=signing_identity_repo,
             template_repo=template_repo,
             template_service=template_service,
-            verifier=verifier,
+            dispatcher=dispatcher,
+            trust_provider=trust_provider,
             keyring=keyring,
         )
 
@@ -2331,10 +2343,10 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        keyring: GpgKeyring,
+        key_exporter: IPublicKeyExporter,
     ) -> BuildDetachedPackageUC:
         return BuildDetachedPackageUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, keyring
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, key_exporter
         )
 
     # ------------------------------------------------------------------ Submission
@@ -2376,9 +2388,13 @@ class UseCaseProvider(Provider):
         submission_repo: IPackSubmissionRepository,
         submission_profile_service: SubmissionProfileService,
         signature_repo: ISignatureRepository,
-        assembler: SubmissionAssembler,
+        materializer: ITemplateMaterializer,
+        planner: PackPlanner,
+        key_exporter: IPublicKeyExporter,
         changelog_repo: IChangeLogRepository,
         render_form_uc: RenderFormUC,
+        dispatcher: IJobDispatcher,
+        file_probes: IProjectFileProbeFactory,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -2387,9 +2403,13 @@ class UseCaseProvider(Provider):
             submission_repo=submission_repo,
             submission_profile_service=submission_profile_service,
             signature_repo=signature_repo,
-            assembler=assembler,
+            materializer=materializer,
+            planner=planner,
+            key_exporter=key_exporter,
             changelog_repo=changelog_repo,
             render_form_uc=render_form_uc,
+            dispatcher=dispatcher,
+            file_probes=file_probes,
         )
 
     @provide
