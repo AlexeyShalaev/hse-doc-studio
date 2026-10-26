@@ -1,0 +1,1 @@
+fatal: unable to access 'https://github.com/hse-team/course-paper.git/': Recv failure: Connection reset by peer

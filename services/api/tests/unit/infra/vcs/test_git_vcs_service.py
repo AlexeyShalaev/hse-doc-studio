@@ -8,7 +8,7 @@ from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsRestoreMode, 
 from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.errors import VcsCommandError, VcsNotInitializedError
-from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
+from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService, _kind_from_body
 
 from tests.factories import make_project
 
@@ -231,3 +231,27 @@ def test__delete_tag__removes_it(tmp_path: Path) -> None:
     svc.create_tag(project, name="v0.1", kind=VcsTagKind.tag)
     svc.delete_tag(project, name="v0.1")
     assert svc.list_tags(project) == []
+
+
+def test__commit__sync_kind__is_read_back_from_the_trailer(tmp_path: Path) -> None:
+    svc, project = _init_with_files(tmp_path)
+    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+
+    commit = svc.commit(project, message="Слияние с удалённым репозиторием", kind=VcsCommitKind.sync)
+
+    assert commit is not None
+    assert commit.kind is VcsCommitKind.sync
+    assert svc.log(project)[0].kind is VcsCommitKind.sync
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("Subject\n\nHse-Kind: sync", VcsCommitKind.sync),
+        ("Subject\n\nHse-Kind: template_update", VcsCommitKind.template_update),
+        ("Subject\n\nHse-Kind: kind-from-a-newer-studio", VcsCommitKind.manual),
+        ("Subject without trailers", VcsCommitKind.manual),
+    ],
+)
+def test__kind_from_body__unknown_trailer__reads_as_manual(body: str, expected: VcsCommitKind) -> None:
+    assert _kind_from_body(body) is expected

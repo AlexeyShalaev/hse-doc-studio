@@ -1,0 +1,2 @@
+fatal: cannot exec '/nonexistent/ssh': No such file or directory
+fatal: unable to fork

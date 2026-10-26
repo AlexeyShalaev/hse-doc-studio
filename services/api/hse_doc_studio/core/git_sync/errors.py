@@ -56,3 +56,21 @@ class GitErrorCode(StrEnum):
     bundle_prerequisites_missing = "bundle_prerequisites_missing"
     operation_not_cancellable = "operation_not_cancellable"
     git_error = "git_error"
+
+
+class GitSyncError(Exception):
+    """Ошибка Git-синхронизации с кодом из закрытого списка.
+
+    `detail` уже локализован и очищен от секретов: он уходит клиенту как есть.
+    `ctx` — дополнительные поля тела ответа (operation_id, required_studio, expected, actual и т. п.).
+    """
+
+    def __init__(self, code: GitErrorCode, detail: str = "", **ctx: object) -> None:
+        super().__init__(detail or code.value)
+        self.code = code
+        self.detail = detail or code.value
+        self.ctx = ctx
+
+
+class GitUrlError(GitSyncError):
+    """Адрес репозитория не принят: url_invalid или url_scheme_forbidden."""

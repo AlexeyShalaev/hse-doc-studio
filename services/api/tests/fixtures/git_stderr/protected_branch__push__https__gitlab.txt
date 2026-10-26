@@ -1,0 +1,3 @@
+remote: GitLab: You are not allowed to push code to protected branches on this project.
+To https://gitlab.com/group/project.git
+ ! [remote rejected] main -> main (pre-receive hook declined)

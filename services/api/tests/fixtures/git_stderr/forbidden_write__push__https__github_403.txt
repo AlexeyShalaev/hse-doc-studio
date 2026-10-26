@@ -1,0 +1,2 @@
+remote: Permission to hse-team/course-paper.git denied to anna.
+fatal: unable to access 'https://github.com/hse-team/course-paper.git/': The requested URL returned error: 403

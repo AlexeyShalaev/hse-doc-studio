@@ -847,6 +847,45 @@ class VCSConfig(BaseModel):
     )
 
 
+class GitConfig(BaseModel):
+    """Синхронизация проекта с удалённым git-репозиторием (HSE_STUDIO__GIT__*).
+
+    Сеть работает только через изолированное хранилище проекта; git пользователя, его ssh-ключи
+    и менеджеры паролей не читаются. Здесь параметры развёртывания, а не выбор пользователя.
+    """
+
+    enabled: bool = Field(default=True, description="Master switch for remotes, sync and clone from git.")
+    ssh_binary: str = Field(default="ssh", description="ssh client used for ssh:// and scp-like remotes.")
+    git_min_version: str = Field(
+        default="2.31", description="Oldest git the sync works with; older reports git_unavailable."
+    )
+    allow_insecure_http: bool = Field(
+        default=False,
+        description="Allow plain http remotes (each remote must opt in too). Off: tokens would travel in clear.",
+    )
+    allow_local_remotes: bool = Field(
+        default=True,
+        description="Allow file:// and absolute-path remotes. Local mode only; a shared server never allows them.",
+    )
+    probe_timeout_s: float = Field(default=20.0, description="Timeout for checking a remote address.")
+    fetch_timeout_s: float = Field(default=120.0, description="Timeout for one fetch.")
+    push_timeout_s: float = Field(default=300.0, description="Timeout for one push.")
+    clone_timeout_s: float = Field(
+        default=900.0, description="Timeout for cloning and the first push of a long history."
+    )
+    fetch_tick_s: float = Field(
+        default=30.0, description="How often the background fetch looks for projects that are due."
+    )
+    fetch_startup_delay_s: float = Field(
+        default=60.0, description="Delay before the first background fetch after the server starts."
+    )
+    fetch_concurrency: int = Field(default=2, ge=1, description="Projects fetched in the background at the same time.")
+    large_file_warn_bytes: int = Field(
+        default=95_000_000,
+        description="Blobs from this size are reported before push: hosting services reject files near 100 MB.",
+    )
+
+
 class JobsConfig(BaseModel):
     """Диспетчер задач (compile, office, пакет сдачи, проверка подписей)."""
 
@@ -919,6 +958,7 @@ class Settings(BaseSettings):
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
+    git: GitConfig = Field(default_factory=GitConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 

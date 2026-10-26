@@ -194,6 +194,9 @@ class VcsCommitKind(StrEnum):
     # Обновление (или отмена обновления) шаблона проекта. Старые Студии не знают
     # этого вида и читают его как manual (`_kind_from_body`).
     template_update = "template_update"
+    # Слияние с удалённым репозиторием (Git-синхронизация, импорт бандла). Старые Студии не знают
+    # этого вида и читают его как manual (`_kind_from_body`).
+    sync = "sync"
 
 
 class VcsChange(StrEnum):

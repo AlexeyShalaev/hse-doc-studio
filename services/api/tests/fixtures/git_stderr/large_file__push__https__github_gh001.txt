@@ -1,0 +1,6 @@
+remote: error: Trace: 9f2a
+remote: error: See https://gh.io/lfs for more information.
+remote: error: File thesis/figures/big.pdf is 120.00 MB; this exceeds GitHub's file size limit of 100.00 MB
+remote: error: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.
+To https://github.com/hse-team/course-paper.git
+ ! [remote rejected] main -> main (pre-receive hook declined)
