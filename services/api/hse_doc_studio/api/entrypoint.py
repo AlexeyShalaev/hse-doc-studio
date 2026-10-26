@@ -16,6 +16,7 @@ from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -39,8 +40,16 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
+def ensure_supported_mode(cfg: Settings) -> None:
+    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы)."""
+    if cfg.mode is StudioMode.server:
+        msg = "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local"
+        raise RuntimeError(msg)
+
+
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
     """Factory function for uvicorn to create the app instance."""
+    ensure_supported_mode(settings)
     app = FastAPI(
         title="hse-doc-studio",
         version=settings.get_app_version(),
@@ -432,6 +441,8 @@ def _mount_spa(app: FastAPI, settings: Settings) -> None:
 
 def main() -> None:
     """Run server."""
+    ensure_supported_mode(settings)
+
     with suppress(ImportError):
         import uvloop  # noqa: PLC0415
 

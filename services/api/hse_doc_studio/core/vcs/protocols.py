@@ -8,6 +8,7 @@ from typing import Protocol
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import VcsCommitKind, VcsRestoreMode, VcsTagKind
 from hse_doc_studio.core.vcs.entities import (
+    VcsAuthor,
     VcsBranch,
     VcsCommit,
     VcsCommitDetail,
@@ -17,6 +18,12 @@ from hse_doc_studio.core.vcs.entities import (
     VcsStatus,
     VcsTag,
 )
+
+
+class ICommitAuthorProvider(Protocol):
+    """Чья подпись встанет на коммите. Вызывается на каждую git-команду, а не при сборке сервиса."""
+
+    def author(self) -> VcsAuthor: ...
 
 
 class IVcsService(Protocol):

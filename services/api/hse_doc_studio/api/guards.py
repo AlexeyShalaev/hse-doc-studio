@@ -14,6 +14,12 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.route_actions import rule_for
+from hse_doc_studio.core.access.actions import RouteExemption
+from hse_doc_studio.core.access.context import set_current_actor
+from hse_doc_studio.core.access.entities import ProjectAcl
+from hse_doc_studio.core.access.policy import Decision, decide
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
@@ -26,6 +32,8 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # из списка.
 _ALLOWED_SUFFIXES = ("/vcs/restore",)
 _LOCKED = 423
+_FORBIDDEN = 403
+_NOT_FOUND = 404
 
 
 def _allowed(request: Request) -> bool:
@@ -60,6 +68,49 @@ def access_detail(access: ProjectAccess) -> dict[str, Any]:
         "reasons": [r.value for r in access.reasons],
         "required_studio": access.required_studio,
     }
+
+
+async def load_project_acl(_request: Request, _project_id: str) -> ProjectAcl | None:
+    """Членство проекта. Хранилище членств появится на втором этапе, до него сюда не дойти."""
+    msg = "project membership storage is not implemented (stage 2 of collaboration)"
+    raise NotImplementedError(msg)
+
+
+async def project_access_guard(request: Request) -> None:
+    """Проверка прав актора на маршрут проекта по таблице `api.route_actions`.
+
+    Кладёт актора в контекст запроса для всего `/api/v1`. Локальный актор уходит
+    сразу, без обращения к контейнеру зависимостей и без чтения проекта: часть
+    тестов собирает свои приложения вокруг `api_router`, а локальный режим не
+    должен менять поведение. Остальным акторам отказ по умолчанию: маршрут проекта
+    без записи в таблице не открывается никому. Гард стоит перед `project_write_guard`,
+    чтобы чужой получил 404, а не 423.
+    """
+    actor = await resolve_actor(request)
+    set_current_actor(actor)
+    if actor.is_local:
+        return
+    rule = rule_for(request)
+    project_id = request.path_params.get("project_id")
+    if rule is None:
+        if project_id is not None:
+            raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+        return
+    if isinstance(rule.action, RouteExemption):
+        return
+    if project_id is None:
+        # project_id в теле или query: право проверит сценарий, когда прочитает запрос.
+        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+    acl = await load_project_acl(request, str(project_id))
+    path = request.path_params.get(rule.path_param) if rule.path_param else None
+    _enforce(decide(actor, rule.action, acl, None if path is None else str(path)))
+
+
+def _enforce(decision: Decision) -> None:
+    if decision is Decision.not_found:
+        raise HTTPException(status_code=_NOT_FOUND, detail="Project not found")
+    if decision is Decision.forbidden:
+        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
 
 
 async def project_write_guard(request: Request) -> None:

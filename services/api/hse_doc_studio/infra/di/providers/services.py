@@ -45,6 +45,7 @@ from hse_doc_studio.core.template_update.protocols import (
     ITemplateTreeRenderer,
     IUpdateJournalRepository,
 )
+from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.protocols import (
     IVcsEditThrottle,
     IVcsFolderLocks,
@@ -94,6 +95,7 @@ from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
 from hse_doc_studio.infra.template_update.state import JsonTemplateTrackingRepository, JsonUpdateJournalRepository
 from hse_doc_studio.infra.template_update.tree_renderer import TemplateTreeRenderer
+from hse_doc_studio.infra.vcs.commit_author import ActorCommitAuthorProvider
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
@@ -574,6 +576,7 @@ class DomainServiceProvider(Provider):
             author_email=cfg.author_email,
             diff_max_bytes=cfg.diff_max_bytes,
             default_branch=cfg.default_branch,
+            author_provider=ActorCommitAuthorProvider(VcsAuthor(cfg.author_name, cfg.author_email)),
         )
 
     @provide
