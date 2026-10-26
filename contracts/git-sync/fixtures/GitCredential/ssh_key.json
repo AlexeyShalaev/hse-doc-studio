@@ -1,0 +1,14 @@
+{
+  "id": "2b3c4d5e-6f70-4812-93a4-b5c6d7e8f901",
+  "kind": "ssh_key",
+  "label": "Ключ для GitLab ВШЭ",
+  "host": "git.hse.ru",
+  "username": "git",
+  "status": "unverified",
+  "token_family": null,
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFd3ZkqXk0m1cQh6u3tPq0r7s8v9w1x2y3z4A5B6C7D8 hse-doc-studio",
+  "fingerprint_sha256": "SHA256:Kx4mZ7q1v0o8Pj2sYb3Nf9tLw5Ud6RcEa1HgTi0XyVs",
+  "created_at": "2026-10-25T18:45:00Z",
+  "last_used_at": null,
+  "used_by": []
+}

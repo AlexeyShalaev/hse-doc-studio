@@ -1,0 +1,27 @@
+{
+  "id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "short_id": "eeeeeee",
+  "kind": "sync",
+  "message": "Синхронизация с репозиторием",
+  "author": "Анна Петрова",
+  "created_at": "2026-10-26T09:30:00+00:00",
+  "parents": [
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "cccccccccccccccccccccccccccccccccccccccc"
+  ],
+  "refs": [
+    {
+      "name": "master",
+      "kind": "branch"
+    }
+  ],
+  "doc_id": null,
+  "stats": {
+    "files": 6,
+    "insertions": 48,
+    "deletions": 11
+  },
+  "author_email": "a.petrova@edu.hse.ru",
+  "is_merge": true,
+  "sync": "unpushed"
+}

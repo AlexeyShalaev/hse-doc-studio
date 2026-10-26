@@ -1,0 +1,14 @@
+{
+  "id": "7e8f9012-a3b4-4c5d-96e7-f8091a2b3c4d",
+  "kind": "pat",
+  "label": "Старый токен",
+  "host": "gitlab.com",
+  "username": "oauth2",
+  "status": "unreadable",
+  "token_family": "glpat",
+  "public_key": null,
+  "fingerprint_sha256": null,
+  "created_at": "2026-10-24T12:10:00Z",
+  "last_used_at": null,
+  "used_by": []
+}

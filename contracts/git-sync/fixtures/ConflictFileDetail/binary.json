@@ -1,0 +1,17 @@
+{
+  "kind": "binary",
+  "ours": {
+    "exists": true,
+    "size": 210450,
+    "author": "Анна Петрова",
+    "at": "2026-10-26T09:29:12Z"
+  },
+  "theirs": {
+    "exists": true,
+    "size": 198003,
+    "author": "Пётр Сидоров",
+    "at": "2026-10-26T09:00:00Z"
+  },
+  "newer": "ours",
+  "copy_path": "figures/scheme.conflict-3f9a1c2.png"
+}

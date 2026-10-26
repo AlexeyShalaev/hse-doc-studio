@@ -1,0 +1,26 @@
+{
+  "kinds": {
+    "edit": 120,
+    "compile": 40,
+    "manual": 9,
+    "sync": 4,
+    "restore": 1
+  },
+  "authors": [
+    {
+      "name": "Анна Петрова",
+      "email": "a.petrova@edu.hse.ru",
+      "count": 130
+    },
+    {
+      "name": "Мария Иванова",
+      "email": "m.ivanova@edu.hse.ru",
+      "count": 30
+    },
+    {
+      "name": "HSE Doc Studio",
+      "email": null,
+      "count": 14
+    }
+  ]
+}

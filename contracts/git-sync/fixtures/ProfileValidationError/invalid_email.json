@@ -1,0 +1,12 @@
+{
+  "detail": [
+    {
+      "loc": [
+        "body",
+        "email"
+      ],
+      "code": "email_invalid",
+      "msg": "Укажи адрес вида name@example.com."
+    }
+  ]
+}

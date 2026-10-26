@@ -1,0 +1,26 @@
+{
+  "id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "short_id": "eeeeeee",
+  "kind": "edit",
+  "message": "Синхронизация с репозиторием",
+  "author": "Анна Петрова",
+  "created_at": "2026-10-26T09:30:00+00:00",
+  "parents": [
+    "dddddddddddddddddddddddddddddddddddddddd"
+  ],
+  "refs": [
+    {
+      "name": "master",
+      "kind": "branch"
+    }
+  ],
+  "doc_id": "main",
+  "stats": {
+    "files": 6,
+    "insertions": 48,
+    "deletions": 11
+  },
+  "author_email": null,
+  "is_merge": false,
+  "sync": null
+}

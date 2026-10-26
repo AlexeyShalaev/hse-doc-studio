@@ -1,0 +1,582 @@
+{
+  "_comment": [
+    "Общие векторы разбора адреса репозитория для parse_remote_url (Python) и parseRemoteUrl (TypeScript).",
+    "policy: allow_http и allow_local по умолчанию false. Поля url повторяют ProbeUrl из контракта.",
+    "Результат ok=true: display_url без userinfo, каноничный вид (схема и хост в нижнем регистре, один хвостовой слэш убран, .git как введён, scp-подобный адрес переписан в ssh://, у ssh всегда есть пользователь, по умолчанию git).",
+    "Для https и http любой userinfo отбрасывается и даёт token_stripped=true. Пароль в ssh-адресе недопустим.",
+    "owner: все сегменты пути кроме последнего через /, repo: последний сегмент без .git, у file owner=null.",
+    "provider: github.com, gitlab.com и хосты gitlab.*, codeberg.org и gitea.*, bitbucket.org, иначе other.",
+    "Ошибки: url_invalid (пусто, длина больше 2048, управляющие и пробельные символы, метасимволы, ведущий дефис, .., query и fragment, плохой хост или порт, относительный путь, нет пути) идут раньше url_scheme_forbidden (любая :: , git://, ftp://, http и локальные пути без разрешения).",
+    "input может быть объектом {prefix, repeat, times, suffix}: строка prefix + repeat*times + suffix."
+  ],
+  "cases": [
+    {
+      "name": "https with .git",
+      "input": "https://github.com/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/course-paper.git",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "https without .git",
+      "input": "https://github.com/hse-team/course-paper",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/course-paper",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "https trailing slash is dropped",
+      "input": "https://github.com/hse-team/course-paper/",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/course-paper",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "surrounding whitespace is trimmed",
+      "input": "  https://github.com/hse-team/course-paper.git \n",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/course-paper.git",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "host and scheme are lowercased, path keeps case",
+      "input": "HTTPS://GitHub.com/hse-team/Course-Paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/Course-Paper.git",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "Course-Paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "lone token in userinfo is stripped",
+      "input": "https://ghp_EXAMPLEtoken123@github.com/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.com/hse-team/course-paper.git",
+        "kind": "https",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": true
+      }
+    },
+    {
+      "name": "user and password in userinfo are stripped",
+      "input": "https://oauth2:glpat-EXAMPLE@gitlab.com/group/sub/project.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://gitlab.com/group/sub/project.git",
+        "kind": "https",
+        "host": "gitlab.com",
+        "provider": "gitlab",
+        "owner": "group/sub",
+        "repo": "project",
+        "token_stripped": true
+      }
+    },
+    {
+      "name": "custom port is kept",
+      "input": "https://git.example.com:8443/team/repo.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://git.example.com:8443/team/repo.git",
+        "kind": "https",
+        "host": "git.example.com",
+        "provider": "other",
+        "owner": "team",
+        "repo": "repo",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "self-hosted gitlab by host name",
+      "input": "https://gitlab.hse.ru/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://gitlab.hse.ru/hse-team/course-paper.git",
+        "kind": "https",
+        "host": "gitlab.hse.ru",
+        "provider": "gitlab",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "codeberg is gitea family",
+      "input": "https://codeberg.org/anna/paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://codeberg.org/anna/paper.git",
+        "kind": "https",
+        "host": "codeberg.org",
+        "provider": "gitea",
+        "owner": "anna",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "gitea by host name",
+      "input": "https://gitea.example.org/anna/paper",
+      "ok": true,
+      "url": {
+        "display_url": "https://gitea.example.org/anna/paper",
+        "kind": "https",
+        "host": "gitea.example.org",
+        "provider": "gitea",
+        "owner": "anna",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "bitbucket",
+      "input": "https://bitbucket.org/anna/paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://bitbucket.org/anna/paper.git",
+        "kind": "https",
+        "host": "bitbucket.org",
+        "provider": "bitbucket",
+        "owner": "anna",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "ipv4 host",
+      "input": "https://192.168.1.10/team/repo.git",
+      "ok": true,
+      "url": {
+        "display_url": "https://192.168.1.10/team/repo.git",
+        "kind": "https",
+        "host": "192.168.1.10",
+        "provider": "other",
+        "owner": "team",
+        "repo": "repo",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "scp-like becomes ssh url",
+      "input": "git@github.com:hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "ssh://git@github.com/hse-team/course-paper.git",
+        "kind": "ssh",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "scp-like with nested group",
+      "input": "git@gitlab.com:group/sub/project.git",
+      "ok": true,
+      "url": {
+        "display_url": "ssh://git@gitlab.com/group/sub/project.git",
+        "kind": "ssh",
+        "host": "gitlab.com",
+        "provider": "gitlab",
+        "owner": "group/sub",
+        "repo": "project",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "ssh url",
+      "input": "ssh://git@github.com/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "ssh://git@github.com/hse-team/course-paper.git",
+        "kind": "ssh",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "ssh url with port",
+      "input": "ssh://git@git.hse.ru:2222/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "ssh://git@git.hse.ru:2222/hse-team/course-paper.git",
+        "kind": "ssh",
+        "host": "git.hse.ru",
+        "provider": "other",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "ssh url without user gets git",
+      "input": "ssh://github.com/hse-team/course-paper.git",
+      "ok": true,
+      "url": {
+        "display_url": "ssh://git@github.com/hse-team/course-paper.git",
+        "kind": "ssh",
+        "host": "github.com",
+        "provider": "github",
+        "owner": "hse-team",
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "plain http when allowed",
+      "input": "http://git.example.com/team/repo.git",
+      "policy": {
+        "allow_http": true
+      },
+      "ok": true,
+      "url": {
+        "display_url": "http://git.example.com/team/repo.git",
+        "kind": "http",
+        "host": "git.example.com",
+        "provider": "other",
+        "owner": "team",
+        "repo": "repo",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "plain http token is stripped",
+      "input": "http://TOKEN@git.example.com/team/repo.git",
+      "policy": {
+        "allow_http": true
+      },
+      "ok": true,
+      "url": {
+        "display_url": "http://git.example.com/team/repo.git",
+        "kind": "http",
+        "host": "git.example.com",
+        "provider": "other",
+        "owner": "team",
+        "repo": "repo",
+        "token_stripped": true
+      }
+    },
+    {
+      "name": "absolute path when local is allowed",
+      "input": "/Users/anna/remotes/course-paper.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": true,
+      "url": {
+        "display_url": "file:///Users/anna/remotes/course-paper.git",
+        "kind": "file",
+        "host": null,
+        "provider": "other",
+        "owner": null,
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "file url when local is allowed",
+      "input": "file:///Users/anna/remotes/course-paper.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": true,
+      "url": {
+        "display_url": "file:///Users/anna/remotes/course-paper.git",
+        "kind": "file",
+        "host": null,
+        "provider": "other",
+        "owner": null,
+        "repo": "course-paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "only whitespace",
+      "input": "   ",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "whitespace inside",
+      "input": "https://github.com/hse-team/course paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "newline inside",
+      "input": "https://github.com/hse-team/course-paper.git\nHost: evil",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "percent-encoded newline",
+      "input": "https://github.com/hse-team/%0Acourse-paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "percent-encoded nul",
+      "input": "https://github.com/hse-team/course%00-paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "shell metacharacters",
+      "input": "https://github.com/hse-team/course-paper.git;rm",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "backslash",
+      "input": "C:\\Users\\anna\\repo.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "leading dash option",
+      "input": "-oProxyCommand=touch/tmp/pwned",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "upload-pack option",
+      "input": "--upload-pack=evil",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "ssh host with option",
+      "input": "ssh://-oProxyCommand=evil/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "scp-like host with option",
+      "input": "git@-oProxyCommand=x:repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "ssh user with leading dash",
+      "input": "ssh://-evil@example.com/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "ssh password in url",
+      "input": "ssh://git:secret@github.com/hse-team/course-paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "ssh port is not a number",
+      "input": "ssh://git@github.com:hse-team/course-paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "scp-like with slash before colon",
+      "input": "foo/bar@example.com:team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "parent directory segment",
+      "input": "https://github.com/hse-team/../etc/passwd",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "no path",
+      "input": "https://github.com",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "empty path",
+      "input": "https://github.com/",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "query string",
+      "input": "https://github.com/hse-team/course-paper.git?x=1",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "fragment",
+      "input": "https://github.com/hse-team/course-paper.git#main",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "host label starts with dash",
+      "input": "https://-bad.example.com/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "host with underscore",
+      "input": "https://bad_host.example.com/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "host with empty label",
+      "input": "https://example..com/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "port out of range",
+      "input": "https://example.com:99999/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "port zero",
+      "input": "https://example.com:0/team/repo.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "no scheme and no host",
+      "input": "course-paper.git",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "relative path when local is allowed",
+      "input": "../remotes/course-paper.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "file url with host",
+      "input": "file://server/share/course-paper.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "longer than 2048 characters",
+      "input": {
+        "prefix": "https://github.com/hse-team/",
+        "repeat": "a",
+        "times": 2100,
+        "suffix": ".git"
+      },
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "transport helper ext",
+      "input": "ext::sh",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "transport helper ext with command",
+      "input": "ext::sh -c touch% /tmp/pwned",
+      "ok": false,
+      "error": "url_invalid"
+    },
+    {
+      "name": "transport helper fd",
+      "input": "fd::3",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "git protocol",
+      "input": "git://github.com/hse-team/course-paper.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "ftp",
+      "input": "ftp://example.com/repo.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "rsync",
+      "input": "rsync://example.com/repo.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "plain http by default",
+      "input": "http://git.example.com/team/repo.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "absolute path by default",
+      "input": "/Users/anna/remotes/course-paper.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "file url by default",
+      "input": "file:///Users/anna/remotes/course-paper.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    }
+  ]
+}

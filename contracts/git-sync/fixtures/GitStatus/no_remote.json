@@ -1,0 +1,28 @@
+{
+  "connected": false,
+  "ui_state": "no_remote",
+  "remote": null,
+  "relation": "none",
+  "ahead": 0,
+  "behind": 0,
+  "behind_files": 0,
+  "health": "ok",
+  "last_error": null,
+  "blocked": null,
+  "profile_ok": false,
+  "incoming": [],
+  "outgoing": [],
+  "operation": null,
+  "pending": null,
+  "last_fetch_at": null,
+  "last_fetch_ok_at": null,
+  "last_sync_at": null,
+  "last_sync": null,
+  "auto_fetch": {
+    "enabled": false,
+    "interval_s": 300,
+    "next_fetch_at": null
+  },
+  "shared_folder": null,
+  "bot_authored_commits": 12
+}

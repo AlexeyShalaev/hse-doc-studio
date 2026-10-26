@@ -1,0 +1,69 @@
+{
+  "kind": "json",
+  "fields": [
+    {
+      "pointer": "/meta/title",
+      "label": "Название работы",
+      "type": "scalar",
+      "base": "Курсовая работа",
+      "ours": "Курсовая работа: синхронизация версий",
+      "theirs": "Курсовая работа: Git в Студии",
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "status": "conflict"
+    },
+    {
+      "pointer": "/meta/authors",
+      "label": "Авторы",
+      "type": "list",
+      "base": [
+        "Анна Петрова"
+      ],
+      "ours": [
+        "Анна Петрова",
+        "Пётр Сидоров"
+      ],
+      "theirs": [
+        "Анна Петрова",
+        "Мария Иванова"
+      ],
+      "allowed": [
+        "mine",
+        "theirs",
+        "union"
+      ],
+      "status": "conflict"
+    },
+    {
+      "pointer": "/documents/main/last_compile_id",
+      "label": null,
+      "type": "scalar",
+      "base": "c-0101",
+      "ours": "c-0107",
+      "theirs": "c-0105",
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "status": "auto"
+    },
+    {
+      "pointer": "/documents/appendix",
+      "label": "Приложение",
+      "type": "presence",
+      "base": null,
+      "ours": null,
+      "theirs": {
+        "title": "Приложение А",
+        "path": "appendix.tex"
+      },
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "status": "conflict"
+    }
+  ]
+}

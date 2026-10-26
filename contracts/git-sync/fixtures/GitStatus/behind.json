@@ -1,0 +1,67 @@
+{
+  "connected": true,
+  "ui_state": "behind",
+  "remote": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "web_url": "https://github.com/hse-team/course-paper",
+    "branch": "main",
+    "local_branch": "master",
+    "credential": {
+      "id": "9a8b7c6d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "label": "GitHub, рабочий токен",
+      "kind": "pat"
+    },
+    "insecure_http": false
+  },
+  "relation": "behind",
+  "ahead": 0,
+  "behind": 2,
+  "behind_files": 5,
+  "health": "ok",
+  "last_error": null,
+  "blocked": null,
+  "profile_ok": true,
+  "incoming": [
+    {
+      "id": "1111111111111111111111111111111111111111",
+      "short_id": "1111111",
+      "message": "Правки введения",
+      "author": "Мария Иванова",
+      "author_email": "m.ivanova@edu.hse.ru",
+      "created_at": "2026-10-26T09:00:00Z",
+      "kind": "edit"
+    },
+    {
+      "id": "2222222222222222222222222222222222222222",
+      "short_id": "2222222",
+      "message": "Добавлены источники",
+      "author": "Пётр Сидоров",
+      "author_email": "p.sidorov@edu.hse.ru",
+      "created_at": "2026-10-25T18:45:00Z",
+      "kind": "edit"
+    }
+  ],
+  "outgoing": [],
+  "operation": null,
+  "pending": null,
+  "last_fetch_at": "2026-10-26T09:30:00Z",
+  "last_fetch_ok_at": "2026-10-26T09:30:00Z",
+  "last_sync_at": "2026-10-26T09:00:00Z",
+  "last_sync": {
+    "id": "sync_20261026_0900",
+    "at": "2026-10-26T09:00:00Z",
+    "outcome": "merged",
+    "pulled_commits": 2,
+    "pushed_commits": 3
+  },
+  "auto_fetch": {
+    "enabled": true,
+    "interval_s": 300,
+    "next_fetch_at": "2026-10-26T09:35:00Z"
+  },
+  "shared_folder": null,
+  "bot_authored_commits": 0
+}

@@ -1,0 +1,8 @@
+{
+  "detail": "Остались нерешённые конфликты.",
+  "code": "unresolved_conflicts",
+  "paths": [
+    "main.tex",
+    ".hse-studio/project.json"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "detail": "История репозитория не связана с историей проекта.",
+  "code": "unrelated_histories",
+  "can_adopt": true
+}

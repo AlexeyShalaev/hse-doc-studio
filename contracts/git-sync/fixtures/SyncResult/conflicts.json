@@ -1,0 +1,26 @@
+{
+  "outcome": "conflicts",
+  "pulled_commits": 2,
+  "pushed_commits": 0,
+  "merge_commit": null,
+  "files_changed": 0,
+  "auto": [
+    {
+      "path": "references.bib",
+      "action": "merged",
+      "copy_path": null
+    }
+  ],
+  "conflicts": {
+    "files_total": 4,
+    "files_open": 4
+  },
+  "warnings": [
+    {
+      "code": "unsafe_path",
+      "paths": [
+        "../outside.tex"
+      ]
+    }
+  ]
+}

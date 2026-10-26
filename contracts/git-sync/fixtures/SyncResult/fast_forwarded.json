@@ -1,0 +1,21 @@
+{
+  "outcome": "fast_forwarded",
+  "pulled_commits": 3,
+  "pushed_commits": 0,
+  "merge_commit": null,
+  "files_changed": 5,
+  "auto": [
+    {
+      "path": "chapters/introduction.tex",
+      "action": "take_theirs",
+      "copy_path": null
+    },
+    {
+      "path": "references.bib",
+      "action": "take_theirs",
+      "copy_path": null
+    }
+  ],
+  "conflicts": null,
+  "warnings": []
+}

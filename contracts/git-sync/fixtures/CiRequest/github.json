@@ -1,0 +1,10 @@
+{
+  "provider": "github",
+  "docs": "all",
+  "publish": "artifacts",
+  "triggers": [
+    "push",
+    "tag"
+  ],
+  "image": "hse-doc-studio/latex:1.4"
+}

@@ -1,0 +1,25 @@
+{
+  "files": 128,
+  "bytes": 48213004,
+  "commits": 214,
+  "bot_authored_commits": 12,
+  "signatures": 2,
+  "nda_files": 1,
+  "pdf_tracked": false,
+  "largest": [
+    {
+      "path": "figures/scan-contract.pdf",
+      "bytes": 18234002
+    },
+    {
+      "path": "figures/photo-1.jpg",
+      "bytes": 6301122
+    },
+    {
+      "path": "figures/scheme.png",
+      "bytes": 2210450
+    }
+  ],
+  "over_limit": [],
+  "lfs_pointers": 0
+}

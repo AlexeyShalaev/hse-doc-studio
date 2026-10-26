@@ -1,0 +1,7 @@
+{
+  "host": "git.hse.ru",
+  "port": 2222,
+  "fingerprint_sha256": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8",
+  "replace": true,
+  "confirm_host": "git.hse.ru"
+}

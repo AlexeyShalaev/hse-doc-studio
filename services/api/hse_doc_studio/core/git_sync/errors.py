@@ -1,0 +1,58 @@
+from enum import StrEnum
+
+
+class GitErrorCode(StrEnum):
+    """Закрытый список кодов ошибок Git-синхронизации: тело ответа {detail, code}.
+
+    Источник правды — contracts/git-sync/error_codes.json; тест контракта сверяет список
+    с этим перечислением, TS-константой и ключами errors:code.* в ru и en.
+    """
+
+    url_invalid = "url_invalid"
+    url_scheme_forbidden = "url_scheme_forbidden"
+    credential_invalid = "credential_invalid"
+    credential_in_use = "credential_in_use"
+    credential_host_mismatch = "credential_host_mismatch"
+    credentials_missing = "credentials_missing"
+    secrets_unavailable = "secrets_unavailable"
+    store_untrusted = "store_untrusted"
+    profile_required = "profile_required"
+    auth_failed = "auth_failed"
+    forbidden_write = "forbidden_write"
+    sso_required = "sso_required"
+    not_found_or_no_access = "not_found_or_no_access"
+    rate_limited = "rate_limited"
+    host_key_unknown = "host_key_unknown"
+    host_key_changed = "host_key_changed"
+    offline = "offline"
+    tls_error = "tls_error"
+    timeout = "timeout"
+    ssh_unavailable = "ssh_unavailable"
+    git_unavailable = "git_unavailable"
+    branch_missing = "branch_missing"
+    remote_exists = "remote_exists"
+    not_a_studio_project = "not_a_studio_project"
+    unrelated_histories = "unrelated_histories"
+    project_exists = "project_exists"
+    folder_not_empty = "folder_not_empty"
+    sync_busy = "sync_busy"
+    sync_busy_build = "sync_busy_build"
+    off_branch = "off_branch"
+    sync_incomplete = "sync_incomplete"
+    plan_outdated = "plan_outdated"
+    no_conflicts = "no_conflicts"
+    unresolved_conflicts = "unresolved_conflicts"
+    invalid_resolution = "invalid_resolution"
+    unresolved_markers = "unresolved_markers"
+    remote_moved = "remote_moved"
+    protected_branch = "protected_branch"
+    large_file = "large_file"
+    workflow_scope_missing = "workflow_scope_missing"
+    email_privacy = "email_privacy"
+    remote_schema_newer = "remote_schema_newer"
+    bundle_invalid = "bundle_invalid"
+    bundle_password_required = "bundle_password_required"  # noqa: S105 — код ошибки, не пароль
+    bundle_password_wrong = "bundle_password_wrong"  # noqa: S105 — код ошибки, не пароль
+    bundle_prerequisites_missing = "bundle_prerequisites_missing"
+    operation_not_cancellable = "operation_not_cancellable"
+    git_error = "git_error"

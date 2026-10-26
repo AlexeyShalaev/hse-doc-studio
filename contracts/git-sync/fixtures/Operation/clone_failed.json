@@ -1,0 +1,17 @@
+{
+  "id": "op_7f3a9c21",
+  "kind": "clone",
+  "project_id": null,
+  "status": "failed",
+  "phase": "download",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2026-10-26T09:29:12Z",
+  "finished_at": "2026-10-26T09:30:00Z",
+  "result": null,
+  "error": {
+    "code": "folder_not_empty",
+    "detail": "Папка не пуста. Выбери пустую или новую."
+  }
+}

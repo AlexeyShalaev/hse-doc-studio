@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": ".github/workflows/build-documents.yml",
+      "content": "name: Build documents\non:\n  push:\n    branches: [main]\njobs:\n  build:\n    runs-on: ubuntu-latest\n",
+      "exists": false,
+      "same": false
+    },
+    {
+      "path": ".gitignore",
+      "content": "build/\n",
+      "exists": true,
+      "same": true
+    }
+  ],
+  "command": "hse-doc-studio build --all",
+  "notes": [
+    "Образ сборки скачивается при первом запуске.",
+    "Токен для публикации релиза не нужен."
+  ]
+}

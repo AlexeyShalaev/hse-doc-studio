@@ -1,0 +1,48 @@
+{
+  "connected": true,
+  "ui_state": "up_to_date",
+  "remote": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "web_url": "https://github.com/hse-team/course-paper",
+    "branch": "main",
+    "local_branch": "master",
+    "credential": {
+      "id": "9a8b7c6d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "label": "GitHub, рабочий токен",
+      "kind": "pat"
+    },
+    "insecure_http": false
+  },
+  "relation": "in_sync",
+  "ahead": 0,
+  "behind": 0,
+  "behind_files": 0,
+  "health": "ok",
+  "last_error": null,
+  "blocked": null,
+  "profile_ok": true,
+  "incoming": [],
+  "outgoing": [],
+  "operation": null,
+  "pending": null,
+  "last_fetch_at": "2026-10-26T09:30:00Z",
+  "last_fetch_ok_at": "2026-10-26T09:30:00Z",
+  "last_sync_at": "2026-10-26T09:00:00Z",
+  "last_sync": {
+    "id": "sync_20261026_0900",
+    "at": "2026-10-26T09:00:00Z",
+    "outcome": "merged",
+    "pulled_commits": 2,
+    "pushed_commits": 3
+  },
+  "auto_fetch": {
+    "enabled": true,
+    "interval_s": 300,
+    "next_fetch_at": "2026-10-26T09:35:00Z"
+  },
+  "shared_folder": null,
+  "bot_authored_commits": 0
+}

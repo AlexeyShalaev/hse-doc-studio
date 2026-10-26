@@ -1,0 +1,23 @@
+{
+  "files": 301,
+  "bytes": 612004311,
+  "commits": 640,
+  "bot_authored_commits": 0,
+  "signatures": 0,
+  "nda_files": 0,
+  "pdf_tracked": true,
+  "largest": [
+    {
+      "path": "media/lecture.mp4",
+      "bytes": 214003211
+    }
+  ],
+  "over_limit": [
+    {
+      "path": "media/lecture.mp4",
+      "bytes": 214003211,
+      "limit": 95000000
+    }
+  ],
+  "lfs_pointers": 2
+}

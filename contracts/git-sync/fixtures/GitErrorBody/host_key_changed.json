@@ -1,0 +1,6 @@
+{
+  "detail": "Ключ сервера изменился. Это может быть подмена, проверь отпечаток.",
+  "code": "host_key_changed",
+  "expected": "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s",
+  "actual": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
+}

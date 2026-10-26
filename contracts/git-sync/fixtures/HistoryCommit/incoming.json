@@ -1,0 +1,17 @@
+{
+  "id": "ffffffffffffffffffffffffffffffffffffffff",
+  "short_id": "fffffff",
+  "kind": "edit",
+  "message": "Правки введения",
+  "author": "Мария Иванова",
+  "created_at": "2026-10-26T09:30:00+00:00",
+  "parents": [
+    "dddddddddddddddddddddddddddddddddddddddd"
+  ],
+  "refs": [],
+  "doc_id": null,
+  "stats": null,
+  "author_email": "m.ivanova@edu.hse.ru",
+  "is_merge": false,
+  "sync": "incoming"
+}

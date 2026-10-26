@@ -1,0 +1,42 @@
+{
+  "outcome": "merged",
+  "pulled_commits": 2,
+  "pushed_commits": 3,
+  "merge_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files_changed": 6,
+  "auto": [
+    {
+      "path": "chapters/introduction.tex",
+      "action": "merged",
+      "copy_path": null
+    },
+    {
+      "path": ".hse-studio/project.json",
+      "action": "merged",
+      "copy_path": null
+    },
+    {
+      "path": "figures/scheme.png",
+      "action": "binary_newest",
+      "copy_path": "figures/scheme.conflict-3f9a1c2.png"
+    },
+    {
+      "path": "notes/draft.tex",
+      "action": "delete",
+      "copy_path": null
+    }
+  ],
+  "conflicts": null,
+  "warnings": [
+    {
+      "code": "signatures_stale",
+      "paths": [
+        "main.tex"
+      ]
+    },
+    {
+      "code": "template_missing_after_merge",
+      "paths": []
+    }
+  ]
+}

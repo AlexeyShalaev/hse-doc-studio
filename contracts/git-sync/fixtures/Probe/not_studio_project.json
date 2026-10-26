@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "error": null,
+  "url": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "owner": "hse-team",
+    "repo": "course-paper",
+    "token_stripped": false
+  },
+  "reachable": true,
+  "auth_ok": true,
+  "empty": false,
+  "default_branch": "main",
+  "branches": [
+    "main",
+    "draft"
+  ],
+  "relation": "not_studio_project",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

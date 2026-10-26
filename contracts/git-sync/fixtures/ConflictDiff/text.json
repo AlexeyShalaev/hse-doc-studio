@@ -1,0 +1,6 @@
+{
+  "path": "chapters/introduction.tex",
+  "binary": false,
+  "patch": "@@ -4,1 +4,1 @@\n-Цель работы: описать метод.\n+Цель работы: описать метод синхронизации версий.\n",
+  "truncated": false
+}

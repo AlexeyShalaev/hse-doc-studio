@@ -1,0 +1,41 @@
+{
+  "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "resolutions": {
+    "chapters/introduction.tex": {
+      "kind": "hunks",
+      "hunks": {
+        "h:3f2a9c01": {
+          "choice": "both"
+        },
+        "h:b71c44de": {
+          "choice": "custom",
+          "text": "\\begin{itemize}\n  \\item обзор подходов;\n\\end{itemize}"
+        }
+      }
+    },
+    ".hse-studio/project.json": {
+      "kind": "fields",
+      "fields": {
+        "/meta/title": {
+          "choice": "mine"
+        },
+        "/meta/authors": {
+          "choice": "union"
+        }
+      }
+    },
+    "figures/scheme.png": {
+      "kind": "file",
+      "choice": "newest"
+    },
+    "notes/draft.tex": {
+      "kind": "file",
+      "choice": "theirs"
+    },
+    "main.tex": {
+      "kind": "text",
+      "content": "\\documentclass{article}\n\\begin{document}\n\\end{document}\n"
+    }
+  },
+  "push": true
+}
