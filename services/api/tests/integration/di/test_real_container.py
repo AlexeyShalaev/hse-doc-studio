@@ -14,7 +14,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.events import IJobLogStream
-from hse_doc_studio.core.jobs.protocols import ICompileJobRunner
+from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
@@ -25,6 +25,8 @@ from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.siblings import Reachability
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
+from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
+from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
@@ -121,3 +123,20 @@ async def test__real_container__compile_runner_and_materializer__resolved_as_por
     assert isinstance(runner, EmbeddedCompileRunner)
     assert runner is runner_concrete
     assert isinstance(materializer, TemplateMaterializer)
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__job_dispatcher_and_handler_registry__resolved_as_singletons() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            dispatcher = await request_container.get(IJobDispatcher)
+            handlers = await request_container.get(JobHandlerRegistry)
+        async with container() as another_request:
+            dispatcher_again = await another_request.get(IJobDispatcher)
+    finally:
+        await container.close()
+
+    assert isinstance(dispatcher, LocalJobDispatcher)
+    assert isinstance(handlers, JobHandlerRegistry)
+    assert dispatcher is dispatcher_again

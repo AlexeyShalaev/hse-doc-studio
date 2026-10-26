@@ -27,7 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
-from hse_doc_studio.core.jobs.protocols import ICompileJobRunner
+from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
@@ -85,6 +85,8 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
+from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
+from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
@@ -588,6 +590,29 @@ class DomainServiceProvider(Provider):
             resolve_image=lambda: resolve_active_image(settings_repo),
             resolve_lt_image=lambda: resolve_active_languagetool_image(settings_repo),
             resolve_office_image=lambda: resolve_active_office_image(settings_repo, "convert"),
+        )
+
+    @provide
+    def get_job_handler_registry(self) -> JobHandlerRegistry:
+        # Обработчики не-compile видов регистрируют слайсы своих семейств.
+        return JobHandlerRegistry()
+
+    @provide
+    def get_job_dispatcher(
+        self,
+        compile_runner: ICompileJobRunner,
+        handlers: JobHandlerRegistry,
+        log_stream: IJobLogStream,
+        compile_registry: CompileRunner,
+        outputs: IJobOutputs,
+    ) -> IJobDispatcher:
+        return LocalJobDispatcher(
+            compile_runner=compile_runner,
+            handlers=handlers,
+            log_stream=log_stream,
+            compile_registry=compile_registry,
+            outputs=outputs,
+            round_trip=settings.jobs.round_trip_payloads,
         )
 
     @provide
