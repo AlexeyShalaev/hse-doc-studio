@@ -18,6 +18,7 @@ from hse_doc_studio.api.routers.v1 import (
     forms,
     fs,
     git_global,
+    git_project,
     hse_persons,
     images,
     languagetool,
@@ -56,6 +57,7 @@ api_router.include_router(forms.router, tags=["forms"])
 api_router.include_router(submission.router, tags=["submission"])
 api_router.include_router(changelog.router, tags=["changelog"])
 api_router.include_router(vcs.router, tags=["vcs"])
+api_router.include_router(git_project.router, tags=["git"])
 api_router.include_router(template_update.router, tags=["template-update"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(fonts.router, tags=["fonts"])

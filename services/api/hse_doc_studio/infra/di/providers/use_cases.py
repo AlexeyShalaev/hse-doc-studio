@@ -25,6 +25,7 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.git_sync.protocols import (
+    ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
     IHostKeyScanner,
@@ -203,6 +204,7 @@ from hse_doc_studio.use_cases.checks.get_normcontrol_report import GetNormcontro
 from hse_doc_studio.use_cases.checks.list_document_check_rules import ListDocumentCheckRulesUC
 from hse_doc_studio.use_cases.checks.list_project_check_rules import ListProjectCheckRulesUC
 from hse_doc_studio.use_cases.checks.run_checks import RunChecksUC
+from hse_doc_studio.use_cases.compile.build_project import BuildProjectUC
 from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileUC
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileUC
@@ -257,8 +259,9 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 # --- Filesystem ---
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
+from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
 
-# --- Settings ---
+# --- Git sync ---
 from hse_doc_studio.use_cases.git_sync.credentials import (
     CreateCredentialUC,
     DeleteCredentialUC,
@@ -438,6 +441,11 @@ def _docker_default_images() -> dict[str, str]:
         "office_convert_image": settings.office_convert.image,
         "office_editor_image": settings.office_editor.image,
     }
+
+
+def _ci_image() -> str:
+    """Образ Студии, который CI запускает по умолчанию: ровно эта версия."""
+    return f"{settings.image_base}:{settings.get_app_version()}"
 
 
 def _docker_always_protected() -> frozenset[str]:
@@ -987,6 +995,28 @@ class UseCaseProvider(Provider):
         vcs_locks: IVcsFolderLocks,
     ) -> RestoreVcsUC:
         return RestoreVcsUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks)
+
+    # ------------------------------------------------------------------ Git sync
+
+    @provide
+    def get_preview_ci_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        file_repo: IFileRepository,
+        ci_renderer: ICiRenderer,
+    ) -> PreviewCiUC:
+        return PreviewCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image())
+
+    @provide
+    def get_write_ci_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        file_repo: IFileRepository,
+        ci_renderer: ICiRenderer,
+    ) -> WriteCiUC:
+        return WriteCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image())
 
     # ------------------------------------------------------------------ Template updates
 
@@ -1677,6 +1707,17 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
         )
+
+    @provide
+    def get_build_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        compile_repo: ICompileRepository,
+        trigger_compile: TriggerCompileUC,
+    ) -> BuildProjectUC:
+        return BuildProjectUC(project_repo, template_repo, template_service, compile_repo, trigger_compile)
 
     @provide
     def get_get_docker_status_uc(

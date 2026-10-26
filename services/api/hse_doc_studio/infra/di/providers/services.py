@@ -25,6 +25,7 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.git_sync.protocols import (
+    ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
     IHostKeyScanner,
@@ -106,6 +107,7 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
@@ -739,6 +741,10 @@ class DomainServiceProvider(Provider):
     @provide
     def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
         return ConfigAuthorProfile(settings_repo)
+
+    @provide
+    def get_ci_renderer(self) -> ICiRenderer:
+        return JinjaCiRenderer()
 
     @provide
     def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:

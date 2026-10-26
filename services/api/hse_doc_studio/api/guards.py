@@ -30,8 +30,8 @@ from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAcces
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Записи, разрешённые и в режиме «только чтение»: вернуть проект к снимку из
 # истории (единственный выход для данных более новой Студии) и убрать проект
-# из списка.
-_ALLOWED_SUFFIXES = ("/vcs/restore",)
+# из списка. Предпросмотр CI тоже ничего не пишет: это POST только ради тела запроса.
+_ALLOWED_SUFFIXES = ("/vcs/restore", "/git/ci/preview")
 _LOCKED = 423
 _FORBIDDEN = 403
 _NOT_FOUND = 404

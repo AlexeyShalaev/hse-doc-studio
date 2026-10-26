@@ -27,6 +27,9 @@ dependencies = [
     "psutil>=6.0",
 ]
 
+[project.scripts]
+hse-doc-studio = "hse_doc_studio.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["hse_doc_studio"]
 
@@ -51,6 +54,7 @@ test = [
     "faker>=33.0",
     "freezegun>=1.5.1",
     "dirty-equals>=0.9.0",
+    "hypothesis>=6.100",
 ]
 
 dev = [
