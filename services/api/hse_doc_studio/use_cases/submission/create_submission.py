@@ -8,11 +8,19 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, TemplateVersion
 from hse_doc_studio.core.entities import ChangeLogEntry, PackSubmissionRecord, Project
 from hse_doc_studio.core.enums import ChangeLogKind
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory, ManifestFile
+from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertReason
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.office import ConvertRequest, custom_docs_to_convert
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     IPackSubmissionRepository,
@@ -109,6 +117,8 @@ class CreateSubmissionUC:
         assembler: SubmissionAssembler,
         changelog_repo: IChangeLogRepository,
         render_form_uc: RenderFormUC,
+        dispatcher: IJobDispatcher,
+        file_probes: IProjectFileProbeFactory,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
@@ -119,6 +129,8 @@ class CreateSubmissionUC:
         self._assembler = assembler
         self._changelog_repo = changelog_repo
         self._render_form_uc = render_form_uc
+        self._dispatcher = dispatcher
+        self._file_probes = file_probes
 
     @staticmethod
     def _reroute_form_extra(
@@ -256,6 +268,7 @@ class CreateSubmissionUC:
         # so they never collide (e.g. final-…/ and final-….zip).
         output_dir = submissions_dir / base_name
 
+        await self._convert_custom_docs(project, project_folder, doc_items, inp.custom_doc_decisions)
         await self._assembler.populate_dir(
             output_dir=output_dir,
             project_folder=project_folder,
@@ -303,6 +316,54 @@ class CreateSubmissionUC:
         )
 
         return CreateSubmissionOutput(submission=record)
+
+    async def _convert_custom_docs(
+        self,
+        project: Project,
+        project_folder: Path,
+        doc_items: list[SubmissionDocItem],
+        decisions: dict[str, bool] | None,
+    ) -> None:
+        """Шаг до сборки папки: готовит sibling-PDF custom-файлов, выбранных к конвертации.
+
+        Сбой или недоступный конвертер не мешают пакету: ассемблер не найдет
+        sibling и положит сырой файл с обычным предупреждением. Документы идут
+        по одному, в порядке пунктов пакета: конвертер один на всех.
+        """
+        probe = self._file_probes.for_root(project_folder)
+        for request in custom_docs_to_convert(project, doc_items, decisions, probe.is_file):
+            await self._convert_custom_doc(project, project_folder, request)
+
+    async def _convert_custom_doc(self, project: Project, project_folder: Path, request: ConvertRequest) -> None:
+        try:
+            # image=None: образ деплоя по умолчанию, как у конвертации при упаковке до диспетчера.
+            payload = OfficeConvertPayload(
+                source=ManifestFile(request.stored_path),
+                output_path=request.output_path,
+                image=None,
+                reason=OfficeConvertReason.package,
+            )
+        except ValueError as exc:
+            logger.warning("create_submission: custom doc conversion skipped", doc_id=request.doc_id, exc=str(exc))
+            return
+        spec = JobSpec(
+            id=uuid.uuid4(),
+            kind=JobKind.office_convert,
+            tags=job_tags(JobKind.office_convert, payload),
+            project_id=project.id,
+            actor=current_actor() or Actor.local(),
+            locale=current_interface_language(),
+            payload=payload,
+            local_root=project_folder,
+        )
+        job = await self._dispatcher.run(spec)
+        if job.status is not JobStatus.succeeded:
+            logger.warning(
+                "create_submission: custom doc conversion failed",
+                doc_id=request.doc_id,
+                status=str(job.status),
+                error=job.error.code if job.error is not None else None,
+            )
 
     def _remember_custom_doc_decisions(self, project_folder: Path, decisions: dict[str, bool]) -> None:
         """Best-effort: persist the accepted convert choices as each document's

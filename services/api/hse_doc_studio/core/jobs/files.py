@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 # Потолок встроенного блоба. Применяет только невстроенный диспетчер; встроенный
@@ -86,3 +87,9 @@ class IProjectFileProbe(Protocol):
     def read_text(self, path: str) -> str: ...
     def read_bytes(self, path: str) -> bytes: ...
     def list_files(self, prefix: str = "") -> tuple[str, ...]: ...
+
+
+class IProjectFileProbeFactory(Protocol):
+    """Привязывает чтение к корню проекта: сам зонд корня не знает, пути у него относительные."""
+
+    def for_root(self, root: Path) -> IProjectFileProbe: ...

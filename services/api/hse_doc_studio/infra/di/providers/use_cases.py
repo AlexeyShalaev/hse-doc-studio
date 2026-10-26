@@ -26,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
@@ -2366,6 +2367,8 @@ class UseCaseProvider(Provider):
         assembler: SubmissionAssembler,
         changelog_repo: IChangeLogRepository,
         render_form_uc: RenderFormUC,
+        dispatcher: IJobDispatcher,
+        file_probes: IProjectFileProbeFactory,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -2377,6 +2380,8 @@ class UseCaseProvider(Provider):
             assembler=assembler,
             changelog_repo=changelog_repo,
             render_form_uc=render_form_uc,
+            dispatcher=dispatcher,
+            file_probes=file_probes,
         )
 
     @provide

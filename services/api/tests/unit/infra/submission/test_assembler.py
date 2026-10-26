@@ -361,8 +361,8 @@ async def test__populate_dir__custom_file_already_pdf__used_as_is_signable(tmp_p
 
 async def test__populate_dir__custom_file_convertible_decision_true__uses_sibling_preview(tmp_path: Path) -> None:
     # Convertible office format, decision=True, sibling preview PDF
-    # already exists on disk (generated at upload time) — used directly, no
-    # OfficeConvertManager call needed.
+    # already exists on disk (generated at upload time or by the pre-step of
+    # CreateSubmissionUC) — used directly.
     doc_def = _make_document_definition("tz", "tz/tz.tex", {"ru": "ТЗ.pdf"})
     template_version = _make_template_version(documents=(doc_def,))
     custom = make_custom_file_override(original_filename="ТЗ.docx", stored_path="tz/_custom/ТЗ.docx", ext=".docx")
@@ -375,7 +375,7 @@ async def test__populate_dir__custom_file_convertible_decision_true__uses_siblin
     (custom_dir / "ТЗ.pdf").write_bytes(b"%PDF-1.4 preview")
 
     output_dir = tmp_path / "submissions" / "final"
-    assembler = SubmissionAssembler()  # no office_manager needed: preview already on disk
+    assembler = SubmissionAssembler()
 
     written = await assembler.populate_dir(
         output_dir=output_dir,
@@ -393,6 +393,38 @@ async def test__populate_dir__custom_file_convertible_decision_true__uses_siblin
     assert len(written) == 1
     assert written[0].lower().endswith(".pdf")
     assert (output_dir / written[0]).read_bytes() == b"%PDF-1.4 preview"
+
+
+async def test__populate_dir__custom_file_decision_true_without_sibling__raw_file_included(tmp_path: Path) -> None:
+    # Конвертацию делает шаг CreateSubmissionUC до ассемблера; если sibling так
+    # и не появился (конвертер недоступен), в пакет уходит сырой файл.
+    doc_def = _make_document_definition("tz", "tz/tz.tex", {"ru": "ТЗ.pdf"})
+    template_version = _make_template_version(documents=(doc_def,))
+    custom = make_custom_file_override(original_filename="ТЗ.docx", stored_path="tz/_custom/ТЗ.docx", ext=".docx")
+    project = make_project(documents=[make_document("tz", custom_file=custom)])
+
+    project_folder = tmp_path / "my-project"
+    custom_dir = project_folder / "tz" / "_custom"
+    custom_dir.mkdir(parents=True)
+    (custom_dir / "ТЗ.docx").write_bytes(b"fake docx bytes")
+
+    output_dir = tmp_path / "submissions" / "final"
+    written = await SubmissionAssembler().populate_dir(
+        output_dir=output_dir,
+        project_folder=project_folder,
+        doc_items=[SubmissionDocItem(doc_id="tz", signatures=())],
+        extra_items=[],
+        template_version=template_version,
+        signatures_state=_empty_sig_state(),
+        lang="ru",
+        project=project,
+        custom_doc_decisions={"tz": True},
+    )
+
+    assert len(written) == 1
+    assert written[0].lower().endswith(".docx")
+    assert (output_dir / written[0]).read_bytes() == b"fake docx bytes"
+    assert not (custom_dir / "ТЗ.pdf").exists()
 
 
 async def test__populate_dir__custom_file_declined_or_unknown__raw_file_included_unstamped(tmp_path: Path) -> None:
