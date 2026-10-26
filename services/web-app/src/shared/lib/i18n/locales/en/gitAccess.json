@@ -1,0 +1,34 @@
+{
+  "title": "Repository access",
+  "subtitle": "Tokens and keys Studio uses to connect to GitHub, GitLab and other servers.",
+  "credentials": {
+    "title": "Tokens and keys",
+    "empty": "No access yet. It appears when you connect a repository.",
+    "usedBy_one": "Used in {{count}} project",
+    "usedBy_other": "Used in {{count}} projects",
+    "unused": "Not in use",
+    "lastUsed": "Last used {{when}}",
+    "neverUsed": "Never used"
+  },
+  "hosts": {
+    "title": "Trusted servers",
+    "empty": "No servers yet. A server key is remembered after you confirm it.",
+    "fingerprint": "Fingerprint"
+  },
+  "secrets": {
+    "title": "Secret storage",
+    "ok": "Secrets are stored encrypted in the Studio data folder.",
+    "unavailable": "The secret store is unavailable: tokens cannot be saved.",
+    "sharedFolder": "The data folder is inside a cloud drive ({{provider}}). Encrypted tokens and the encryption key will end up in the cloud."
+  },
+  "sharedProvider": {
+    "yandex_disk": "Yandex.Disk",
+    "dropbox": "Dropbox",
+    "syncthing": "Syncthing",
+    "onedrive": "OneDrive",
+    "google_drive": "Google Drive",
+    "icloud": "iCloud",
+    "nextcloud": "Nextcloud",
+    "unknown": "cloud"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Version author",
+  "subtitle": "Your name and e-mail go into every project version. Colleagues see them in the history.",
+  "name": "Name",
+  "namePlaceholder": "Ivan Smirnov",
+  "email": "E-mail",
+  "emailPlaceholder": "ivan.smirnov@edu.hse.ru",
+  "preview": "Versions are signed as",
+  "default": "The shared Studio signature is used for now",
+  "validation": {
+    "required": "Fill in this field",
+    "invalid_email": "That does not look like an e-mail"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "provider": {
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "gitea": "Gitea",
+    "bitbucket": "Bitbucket",
+    "other": "Другой сервер"
+  },
+  "urlKind": {
+    "https": "https",
+    "ssh": "ssh",
+    "file": "Папка на компьютере",
+    "http": "http (без шифрования)"
+  },
+  "credentialKind": {
+    "pat": "Токен",
+    "ssh_key": "Ключ ssh"
+  },
+  "credentialStatus": {
+    "unverified": "Ещё не проверялся",
+    "ok": "Работает",
+    "auth_failed": "Отклонён сервером",
+    "unreadable": "Не читается"
+  },
+  "probeRelation": {
+    "empty": "Пустой репозиторий",
+    "studio_project": "Проект Студии",
+    "same_project": "Этот же проект",
+    "same_project_unrelated_history": "Этот же проект, но с отдельной историей",
+    "other_project": "Другой проект",
+    "not_studio_project": "Не проект Студии",
+    "unknown": "Не удалось определить"
+  },
+  "schemaAccess": {
+    "full": "Полный доступ",
+    "read_only": "Только чтение",
+    "files_only": "Только файлы"
+  }
+}

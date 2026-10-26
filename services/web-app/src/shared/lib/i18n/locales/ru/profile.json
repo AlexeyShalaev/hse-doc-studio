@@ -1,0 +1,14 @@
+{
+  "title": "Автор версий",
+  "subtitle": "Имя и e-mail попадают в каждую версию проекта. Коллеги видят их в истории.",
+  "name": "Имя",
+  "namePlaceholder": "Иван Смирнов",
+  "email": "E-mail",
+  "emailPlaceholder": "ivan.smirnov@edu.hse.ru",
+  "preview": "Так подписываются версии",
+  "default": "Пока используется общая подпись Студии",
+  "validation": {
+    "required": "Заполни поле",
+    "invalid_email": "Похоже, это не e-mail"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "provider": {
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "gitea": "Gitea",
+    "bitbucket": "Bitbucket",
+    "other": "Other server"
+  },
+  "urlKind": {
+    "https": "https",
+    "ssh": "ssh",
+    "file": "Folder on this computer",
+    "http": "http (not encrypted)"
+  },
+  "credentialKind": {
+    "pat": "Token",
+    "ssh_key": "SSH key"
+  },
+  "credentialStatus": {
+    "unverified": "Not checked yet",
+    "ok": "Working",
+    "auth_failed": "Rejected by the server",
+    "unreadable": "Cannot be read"
+  },
+  "probeRelation": {
+    "empty": "Empty repository",
+    "studio_project": "Studio project",
+    "same_project": "The same project",
+    "same_project_unrelated_history": "The same project with a separate history",
+    "other_project": "A different project",
+    "not_studio_project": "Not a Studio project",
+    "unknown": "Could not tell"
+  },
+  "schemaAccess": {
+    "full": "Full access",
+    "read_only": "Read only",
+    "files_only": "Files only"
+  }
+}
