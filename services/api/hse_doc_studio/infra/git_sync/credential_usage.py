@@ -16,6 +16,7 @@ import structlog
 
 from hse_doc_studio.core.git_sync.entities import CredentialUsage
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.infra.vcs.git_vcs_service import store_git_dir
 
 logger = structlog.get_logger()
 
@@ -60,7 +61,7 @@ class StoreConfigCredentialUsage:
     def by_credential(self) -> dict[UUID, list[CredentialUsage]]:
         usage: dict[UUID, list[CredentialUsage]] = {}
         for folder in self._index.list_known():
-            credential_id = read_bound_credential(folder / ".hse-studio" / "git" / "config")
+            credential_id = read_bound_credential(store_git_dir(folder) / "config")
             if credential_id is None:
                 continue
             try:

@@ -10,8 +10,11 @@ import structlog
 from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import VcsCommitKind, VcsTagKind
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ITemplateRepository
-from hse_doc_studio.core.template_update.protocols import ITemplateBaseStore
+from hse_doc_studio.core.template_update.entities import UpdateJournalKind
+from hse_doc_studio.core.template_update.errors import TemplateUpdateInProgressError
+from hse_doc_studio.core.template_update.protocols import ITemplateBaseStore, IUpdateJournalRepository
 from hse_doc_studio.core.value_objects import ProjectLock
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.core.vcs.errors import VcsCommandError
@@ -27,6 +30,26 @@ def lock_for(lock: ProjectLock, version: TemplateVersion, template_repo: ITempla
         version=version.version,
         digest=template_repo.content_digest(version.pack_id, version.template_id, version.version),
         min_studio=version.min_studio,
+    )
+
+
+def ensure_no_active_journal(journals: IUpdateJournalRepository, project: Project) -> None:
+    """Обновление и отмена не стартуют поверх чужого журнала: ни обновления, ни синхронизации."""
+    journal = journals.get(project.folder)
+    if journal is None:
+        return
+    if journal.kind == UpdateJournalKind.sync:
+        raise TemplateUpdateInProgressError(
+            localized_error(
+                "Идёт синхронизация проекта с репозиторием или она была прервана. Дождитесь её окончания.",
+                "A sync of this project with its repository is running or was interrupted. Wait for it to finish.",
+            )
+        )
+    raise TemplateUpdateInProgressError(
+        localized_error(
+            "Обновление шаблона этого проекта уже идёт или было прервано.",
+            "A template update of this project is already running or was interrupted.",
+        )
     )
 
 

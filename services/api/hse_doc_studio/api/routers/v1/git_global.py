@@ -11,12 +11,16 @@ from uuid import UUID
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Query, status
 
+from hse_doc_studio.api.git_mapping import map_operation, map_probe
 from hse_doc_studio.api.schemas.git_sync import (
     CreateCredentialRequest,
     CreatePatCredentialRequest,
     GitCredentialResponse,
     GitCredentialUsage,
     GitHostResponse,
+    OperationResponse,
+    ProbeRequest,
+    ProbeResponse,
     SecretsStatusResponse,
     TrustHostRequest,
     UpdateCredentialRequest,
@@ -36,6 +40,8 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     UpdateCredentialUC,
 )
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostInput, TrustHostUC
+from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
+from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeInput, ProbeRemoteUC
 
 router = APIRouter(route_class=DishkaRoute)
 
@@ -151,3 +157,30 @@ async def trust_git_host(body: TrustHostRequest, uc: FromDishka[TrustHostUC]) ->
 @router.delete("/git/hosts", status_code=status.HTTP_204_NO_CONTENT)
 async def forget_git_host(uc: FromDishka[ForgetHostUC], host: str = Query(...), port: int | None = None) -> None:
     await uc.execute(host, port)
+
+
+@router.post("/git/remote/probe", response_model=ProbeResponse)
+async def probe_git_remote(body: ProbeRequest, uc: FromDishka[ProbeRemoteUC]) -> ProbeResponse:
+    try:
+        view = await uc.execute(
+            ProbeInput(url=body.url, credential_id=body.credential_id, project_id=body.project_id, branch=body.branch)
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return map_probe(view)
+
+
+@router.get("/git/operations/{operation_id}", response_model=OperationResponse)
+async def get_git_operation(operation_id: str, uc: FromDishka[GetOperationUC]) -> OperationResponse:
+    try:
+        return map_operation(await uc.execute(operation_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/git/operations/{operation_id}/cancel", response_model=OperationResponse)
+async def cancel_git_operation(operation_id: str, uc: FromDishka[CancelOperationUC]) -> OperationResponse:
+    try:
+        return map_operation(await uc.execute(operation_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

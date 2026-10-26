@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,26 +13,40 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.git_sync.ci import CiOptions, RenderedCiFile
 from hse_doc_studio.core.git_sync.entities import (
+    AuthorCount,
     AuthorProfile,
+    CloneResult,
+    CommitBrief,
     CredentialStatus,
     CredentialUsage,
     GitCredential,
     GitOperation,
+    GitOperationError,
     GitResult,
+    LargeBlob,
     OperationKind,
     OperationPhase,
+    OperationStatus,
+    PathStamp,
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
+    StoreAudit,
+    StoreFinding,
+    StoreRemoteConfig,
+    SyncResult,
     SyncState,
     SyncWarning,
+    TreeEntry,
 )
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
 from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
 from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
 from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
+from hse_doc_studio.core.template_update.protocols import IMergeEngine
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
 ProgressCallback = Callable[[float | None, str], None]
@@ -201,12 +216,40 @@ class IGitRepoReader(Protocol):
     """Чтение объектов хранилища без обращения к рабочему дереву и без сети."""
 
     def rev_parse(self, project_folder: Path, ref: str) -> str | None: ...
+    def current_branch(self, project_folder: Path) -> str | None:
+        """Ветка, на которой стоит HEAD; None при отсоединённом HEAD."""
+        ...
+
     def merge_base(self, project_folder: Path, a: str, b: str) -> str | None: ...
+    def merge_bases(self, project_folder: Path, a: str, b: str) -> list[str]:
+        """Все лучшие общие предки: больше одного у перекрёстных слияний."""
+        ...
+
     def is_ancestor(self, project_folder: Path, ancestor: str, descendant: str) -> bool: ...
     def ahead_behind(self, project_folder: Path, local: str, remote: str) -> tuple[int, int]: ...
     def changed_paths(self, project_folder: Path, a: str, b: str) -> list[tuple[str, str]]: ...
+    def tree_entries(self, project_folder: Path, commit: str) -> list[TreeEntry]: ...
     def read_files(self, project_folder: Path, commit: str, paths: Sequence[str]) -> Mapping[str, bytes | None]: ...
+    def path_stamp(
+        self, project_folder: Path, tip: str, path: str, *, exclude_reachable_from: str | None = None
+    ) -> PathStamp | None:
+        """Последний коммит от `tip`, менявший путь; с `exclude_reachable_from` только среди новых за этой точкой."""
+        ...
+
     def path_last_changed_at(self, project_folder: Path, commit: str, path: str) -> datetime | None: ...
+    def large_blobs(
+        self, project_folder: Path, tip: str, *, min_bytes: int, exclude_reachable_from: str | None = None
+    ) -> list[LargeBlob]: ...
+
+    def author_counts(self, project_folder: Path, rev: str) -> list[AuthorCount]:
+        """Число коммитов по авторам, больше всех первым. `rev` может быть диапазоном `a..b`."""
+        ...
+
+    def commit_briefs(self, project_folder: Path, rev: str, *, limit: int) -> list[CommitBrief]:
+        """Последние `limit` коммитов диапазона `rev` (`a..b` или один коммит), новые первыми."""
+        ...
+
+    def count_commits(self, project_folder: Path, rev: str) -> int: ...
 
 
 class IGitMergeCommitter(Protocol):
@@ -218,13 +261,38 @@ class IGitMergeCommitter(Protocol):
         *,
         ours: str,
         theirs: str,
-        tree_files: Mapping[str, bytes],
+        changes: Mapping[str, bytes | None],
         message: str,
         trailers: Mapping[str, str],
-    ) -> str: ...
+    ) -> str:
+        """Коммит с родителями `ours` и `theirs`; дерево `ours` с поправками `changes` (None удаляет файл).
+
+        Ветку не двигает: это делает `advance_branch`. Трейлер `Hse-Kind: sync` ставится сам.
+        """
+        ...
 
     def advance_branch(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
-        """update-ref с проверкой старого значения: False, если ветка успела сдвинуться."""
+        """update-ref с проверкой старого значения: False, если ветка успела сдвинуться.
+
+        Если это ветка текущего HEAD, индекс приводится к дереву `new`; рабочее дерево не трогается.
+        """
+        ...
+
+    def fast_forward(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
+        """Перемотка ветки на потомка `expected` после того, как файлы записаны в рабочее дерево."""
+        ...
+
+
+class IGitStoreGuard(Protocol):
+    """Проверка хранилища, приехавшего с чужой папкой: его config и хуки могут запускать код."""
+
+    def audit(self, project_folder: Path) -> StoreAudit: ...
+    def harden(self, project_folder: Path) -> tuple[StoreFinding, ...]:
+        """Переписывает config по белому списку и убирает хуки; возвращает, что было убрано."""
+        ...
+
+    def ensure_trusted(self, project_folder: Path) -> None:
+        """Бросает GitSyncError(store_untrusted), если аудит нашёл недоверенное."""
         ...
 
 
@@ -242,10 +310,32 @@ class IGitOperationRegistry(Protocol):
         phase: OperationPhase | None = None,
         percent: float | None = None,
         message: str | None = None,
+        cancellable: bool | None = None,
     ) -> None: ...
 
-    def finish(self, operation_id: str, operation: GitOperation) -> None: ...
-    def get(self, operation_id: str) -> GitOperation | None: ...
+    def finish(
+        self,
+        operation_id: str,
+        *,
+        status: OperationStatus = OperationStatus.succeeded,
+        result: SyncResult | CloneResult | None = None,
+        error: GitOperationError | None = None,
+    ) -> None:
+        """Закрывает операцию: папка свободна, итог остаётся доступным ещё некоторое время."""
+        ...
+
+    def attach_task(self, operation_id: str, task: asyncio.Task[object]) -> None:
+        """Задача, которую отменит `cancel`: вместе с ней гибнут дочерние процессы git."""
+        ...
+
+    def cancel(self, operation_id: str) -> GitOperation | None:
+        """Отменяет задачу. None, если операции нет. Бросает GitSyncError(operation_not_cancellable)."""
+        ...
+
+    def get(self, operation_id: str) -> GitOperation | None:
+        """Снимок операции: изменения реестра после вызова в него не попадают."""
+        ...
+
     def current_for(self, project_id: UUID) -> GitOperation | None: ...
     def is_busy(self, folder: Path) -> bool: ...
 
@@ -256,6 +346,22 @@ class IGitRemoteRegistry(Protocol):
     def add(self, folder: Path) -> None: ...
     def remove(self, folder: Path) -> None: ...
     def list(self) -> list[Path]: ...
+
+
+class IGitStoreRemotes(Protocol):
+    """Подключение проекта в config его хранилища и отслеживаемые ветки. Секретов здесь нет."""
+
+    def git_dir(self, project: Project) -> Path: ...
+    def read(self, project: Project) -> StoreRemoteConfig | None:
+        """None, если адрес не подключён. Без запуска git, пока в config нет секции remote."""
+        ...
+
+    def write(self, project: Project, config: StoreRemoteConfig) -> None: ...
+    def clear(self, project: Project) -> None:
+        """Убирает адрес, привязку и отслеживаемые ветки. Сам удалённый репозиторий не затрагивается."""
+        ...
+
+    def drop_tracking_refs(self, project: Project) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -324,6 +430,10 @@ class IFileMergeStrategy(Protocol):
     def merge(
         self, path: str, base: bytes | None, ours: bytes | None, theirs: bytes | None, meta: MergeMeta
     ) -> MergeDecision: ...
+
+
+class IGitMergeEngine(IMergeEngine, Protocol):
+    """Слияние текста с маркерами `hse:ours`, `hse:base`, `hse:theirs`: по ним разбираются участки конфликтов."""
 
 
 class IFieldResolver(Protocol):

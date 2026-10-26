@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.merge.choices import FileResolution
 from hse_doc_studio.core.git_sync.providers import GitProvider
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
 
@@ -291,6 +293,16 @@ class PendingSession:
     session_id: str
     files_total: int
     files_open: int
+    # Коммиты, между которыми шло слияние: по ним план пересобирается из объектов хранилища.
+    ours: str | None = None
+    theirs: str | None = None
+    base: str | None = None
+    # Отпечаток конфликтных файлов: пока он тот же, повторная синхронизация оставляет ту же сессию.
+    fingerprint: str | None = None
+    # Черновики решений человека по путям: участки и поля в них названы ключами, а не номерами, поэтому
+    # переживают пересчёт плана.
+    drafts: Mapping[str, FileResolution] = field(default_factory=dict)
+    drafts_saved_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -361,3 +373,87 @@ class SyncState:
     auto_fetch: bool = True
     fetch_interval_s: int | None = None
     shared_folder_ack: bool = False
+    # Удалённый репозиторий был пуст при подключении и с тех пор не получал изменений: отправка первая.
+    remote_empty: bool = False
+    # Человек согласился слить с удалённым проектом, у которого нет общей истории с локальным.
+    adopted_unrelated: bool = False
+
+
+@dataclass(frozen=True)
+class StoreRemoteConfig:
+    """Подключение, записанное в config хранилища: то, что нужно самому git и сопровождает папку при переносе."""
+
+    url: str
+    credential_id: UUID | None = None
+    local_branch: str | None = None
+    remote_branch: str | None = None
+
+
+@dataclass(frozen=True)
+class TreeEntry:
+    """Файл или gitlink в дереве коммита. `size` есть только у blob."""
+
+    path: str
+    mode: str
+    kind: str
+    sha: str
+    size: int | None = None
+
+
+@dataclass(frozen=True)
+class CommitBrief:
+    """Коротко о коммите для списков «пришло» и «уйдёт»: автор как записан в истории."""
+
+    id: str
+    short_id: str
+    message: str
+    author: str
+    author_email: str | None
+    created_at: datetime
+    kind: str
+
+
+@dataclass(frozen=True)
+class LargeBlob:
+    path: str
+    sha: str
+    size: int
+
+
+@dataclass(frozen=True)
+class AuthorCount:
+    name: str
+    email: str
+    commits: int
+
+
+@dataclass(frozen=True)
+class PathStamp:
+    """Последнее изменение файла: время коммита и его sha, пара определяет «новее» без ничьих."""
+
+    committed_at: datetime
+    sha: str
+
+
+class StoreFindingKind(StrEnum):
+    config_key = "config_key"
+    config_value = "config_value"
+    config_unreadable = "config_unreadable"
+    hook = "hook"
+
+
+@dataclass(frozen=True)
+class StoreFinding:
+    """Недоверенная настройка хранилища. `subject` называет ключ или хук, но не значение: в нём бывают секреты."""
+
+    kind: StoreFindingKind
+    subject: str
+
+
+@dataclass(frozen=True)
+class StoreAudit:
+    findings: tuple[StoreFinding, ...] = ()
+
+    @property
+    def trusted(self) -> bool:
+        return not self.findings
