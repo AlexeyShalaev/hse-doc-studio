@@ -317,9 +317,12 @@ export const useSaveConflictDraft = () => {
       resolutions: Record<string, FileResolution>;
     }) => gitSyncApi.saveConflictDraft(projectId, resolutions),
     onSuccess: (_, { projectId }) => {
-      // Счётчики открытых мест и итоговый diff зависят от черновика.
+      // Счётчики мест в сеансе зависят от черновика. Подробности файлов и
+      // картинки от него не зависят, а итоговый дифф ключуется отметкой
+      // сохранения: их перечитывать при каждом щелчке незачем.
       void queryClient.invalidateQueries({
         queryKey: gitSyncKeys.conflicts(projectId),
+        exact: true,
       });
     },
   });

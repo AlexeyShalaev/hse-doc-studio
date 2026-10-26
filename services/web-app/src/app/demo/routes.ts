@@ -527,10 +527,12 @@ const projectRoutes: DemoRoute[] = [
     method: "GET",
     pattern: "/projects/:projectId/git/conflicts/diff",
     handler: (req) => {
+      const project = projectOf(world, req.params.projectId ?? "");
       const path = queryString(req, "path") ?? "";
       const view = queryString(req, "view");
       const kind = view === "theirs" || view === "result" ? view : "ours";
-      return demoJson(conflictDiff(path, kind));
+      // Итог зависит от сохранённого выбора, как и на настоящем сервере.
+      return demoJson(conflictDiff(path, kind, project.conflict?.drafts[path]));
     },
   },
   {

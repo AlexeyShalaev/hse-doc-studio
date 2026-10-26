@@ -61,6 +61,7 @@ export const FileRowShell = ({
       type="button"
       className="flex items-center"
       onClick={onSelect}
+      data-file-row=""
       aria-current={isSelected ? "true" : undefined}
       style={{
         gap: 8,
@@ -91,11 +92,19 @@ export const FileRowShell = ({
 /** Scrollable bordered column that holds `FileRowShell`s. */
 export type FileListProps = {
   children: ReactNode;
-  maxHeight?: number;
+  /** Height limit in px; "none" leaves scrolling to the parent. */
+  maxHeight?: number | "none";
 };
 
 export const FileList = ({ children, maxHeight = 420 }: FileListProps) => (
-  <div className="card" style={{ overflow: "auto", maxHeight, padding: 4 }}>
+  <div
+    className="card"
+    style={
+      maxHeight === "none"
+        ? { padding: 4 }
+        : { overflow: "auto", maxHeight, padding: 4 }
+    }
+  >
     {children}
   </div>
 );
