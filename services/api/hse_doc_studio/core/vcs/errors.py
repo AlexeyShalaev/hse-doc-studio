@@ -24,3 +24,16 @@ class VcsCommandError(VcsError):
         super().__init__(f"git {command} failed: {stderr.strip()}")
         self.command = command
         self.stderr = stderr
+
+
+class VcsInvalidRefError(VcsCommandError):
+    """Имя ветки/тега или ревизия не прошли проверку до запуска git.
+
+    Наследует `VcsCommandError`, чтобы роутеры отвечали 400, как на отказ самого git.
+    """
+
+    def __init__(self, value: str, reason: str) -> None:
+        VcsError.__init__(self, reason)
+        self.command = "check-ref-format"
+        self.stderr = reason
+        self.value = value

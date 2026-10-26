@@ -48,6 +48,7 @@ class IVcsService(Protocol):
         paths: Sequence[str] | None = None,
         include_pdf: bool = False,
         allow_empty: bool = False,
+        force_paths: Sequence[str] | None = None,
     ) -> VcsCommit | None: ...
     def log(
         self,

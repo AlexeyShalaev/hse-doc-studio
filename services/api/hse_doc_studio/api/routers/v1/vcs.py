@@ -225,6 +225,8 @@ async def get_vcs_diff(
         result = await uc.execute(GetVcsDiffInput(project_id=project_id, from_id=from_id, to_id=to_id, path=path))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except VcsCommandError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _map_diff(result.diff)
 
 

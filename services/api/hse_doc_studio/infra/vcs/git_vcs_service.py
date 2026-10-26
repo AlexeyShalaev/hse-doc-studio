@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import functools
-import os
 import re
 import shutil
 import subprocess
-import tempfile
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import datetime
@@ -35,6 +32,8 @@ from hse_doc_studio.core.vcs.errors import (
     VcsUnavailableError,
 )
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
+from hse_doc_studio.core.vcs.refs import validate_ref_name, validate_revision
+from hse_doc_studio.infra.vcs.git_env import base_git_env, hardened_git_config
 
 logger = structlog.get_logger()
 
@@ -68,22 +67,6 @@ _NO_CHANGES_MARKERS = (
 )
 
 
-@functools.lru_cache(maxsize=1)
-def _empty_global_config() -> str:
-    """Path to a real, empty gitconfig used as GIT_CONFIG_GLOBAL.
-
-    Neutralises the user's ~/.gitconfig (which may set commit.gpgsign, hooks,
-    aliases, etc.) for our headless commits. Cross-platform, unlike /dev/null.
-    """
-    path = Path(tempfile.gettempdir()) / "hse-studio-empty.gitconfig"
-    try:
-        if not path.exists():
-            path.write_text("", encoding="utf-8")
-    except OSError:
-        return ""
-    return str(path)
-
-
 class GitVcsService:
     """ProjectVCS over the git CLI with an isolated store at
     ``<project>/.hse-studio/git/`` and ``--work-tree`` pointed at the project root.
@@ -114,18 +97,7 @@ class GitVcsService:
 
     # ── low-level git invocation ─────────────────────────────────────────────
     def _env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        env["GIT_CONFIG_NOSYSTEM"] = "1"  # ignore /etc/gitconfig
-        gc = _empty_global_config()
-        if gc:
-            env["GIT_CONFIG_GLOBAL"] = gc  # ignore ~/.gitconfig
-        env["GIT_TERMINAL_PROMPT"] = "0"
-        env["GIT_OPTIONAL_LOCKS"] = "0"
-        if os.name == "posix":
-            # The container runs as a non-root user with no $HOME; give git a
-            # writable one so init/gc don't trip over HOME=/.
-            env["HOME"] = tempfile.gettempdir()
-        return env
+        return base_git_env()
 
     def _base(self, project: Project, work_tree: Path | None = None) -> list[str]:
         return [
@@ -146,6 +118,7 @@ class GitVcsService:
             "core.quotepath=false",
             "-c",
             "safe.directory=*",
+            *hardened_git_config(),
         ]
 
     def _author_override(self, args: Sequence[str]) -> list[str]:
@@ -266,7 +239,10 @@ class GitVcsService:
         paths: Sequence[str] | None = None,
         include_pdf: bool = False,
         allow_empty: bool = False,
+        force_paths: Sequence[str] | None = None,
     ) -> VcsCommit | None:
+        """`force_paths` добавляются в индекс поверх исключений хранилища (`add -f`):
+        замороженные PDF подписей лежат под `.hse-studio/`, но должны ехать с проектом."""
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
         add_args = ["add", "-A", "--"]
@@ -274,6 +250,9 @@ class GitVcsService:
         if not include_pdf:
             add_args.append(_PDF_EXCLUDE)
         self._run(project, add_args, check=True)
+        forced = [p for p in (force_paths or ()) if (project.folder / p).exists()]
+        if forced:
+            self._run(project, ["add", "-f", "-A", "--", *forced], check=True)
 
         commit_args = ["commit", "-m", f"{message}\n\nHse-Kind: {kind.value}"]
         if allow_empty:
@@ -309,19 +288,22 @@ class GitVcsService:
     def commit_detail(self, project: Project, commit_id: str) -> VcsCommitDetail:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        proc = self._run(project, ["log", f"--pretty=format:{_LOG_FMT}", "-n1", commit_id])
+        validate_revision(commit_id)
+        proc = self._run(project, ["log", f"--pretty=format:{_LOG_FMT}", "-n1", commit_id, "--"])
         if proc.returncode != 0:
             raise VcsCommandError("log", proc.stderr or f"unknown commit {commit_id}")
         commits = self._parse_log(proc.stdout)
         if not commits:
             raise VcsCommandError("log", f"commit not found: {commit_id}")
 
-        names = self._run(project, ["show", "--name-status", "--format=", commit_id]).stdout
+        # Против первого родителя, а не `git show`: у слияния show печатает пустой комбинированный diff.
+        range_args = self._diff_range(project, None, commit_id)
+        names = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", "--name-status", *range_args]).stdout
         files = tuple(
             VcsFileChange(path=path, change=change, old_path=old)
             for change, path, old in self._parse_name_status(names)
         )
-        numstat = self._run(project, ["show", "--numstat", "--format=", commit_id]).stdout
+        numstat = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", "--numstat", *range_args]).stdout
         insertions = deletions = 0
         for line in numstat.splitlines():
             cols = line.split("\t")
@@ -391,7 +373,7 @@ class GitVcsService:
         budget = max_bytes or self._diff_max_bytes
         range_args = self._diff_range(project, from_id, to_id)
 
-        name_args = ["diff", "--name-status", *range_args]
+        name_args = ["diff", "--no-ext-diff", "--no-textconv", "--name-status", *range_args]
         if path:
             name_args += ["--", path]
         names = self._run(project, name_args)
@@ -403,7 +385,7 @@ class GitVcsService:
         total = 0
         truncated = len(entries) > _MAX_DIFF_FILES
         for change, file_path, _old in entries[:_MAX_DIFF_FILES]:
-            patch = self._run(project, ["diff", *range_args, "--", file_path]).stdout
+            patch = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", *range_args, "--", file_path]).stdout
             binary = "Binary files" in patch and "differ" in patch
             if binary:
                 patch = ""
@@ -417,6 +399,9 @@ class GitVcsService:
         return VcsDiff(from_id=from_id, to_id=to_id, files=tuple(files), truncated=truncated)
 
     def _diff_range(self, project: Project, from_id: str | None, to_id: str | None) -> list[str]:
+        for rev in (from_id, to_id):
+            if rev:
+                validate_revision(rev)
         if from_id and to_id:
             return [from_id, to_id]
         if to_id:
@@ -437,6 +422,7 @@ class GitVcsService:
     ) -> VcsRestoreResult:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        validate_revision(commit_id)
         verify = self._run(project, ["rev-parse", "--verify", f"{commit_id}^{{commit}}"])
         if verify.returncode != 0:
             raise VcsCommandError("rev-parse", verify.stderr or f"unknown commit {commit_id}")
@@ -517,9 +503,10 @@ class GitVcsService:
     ) -> VcsBranch:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        args = ["branch", name]
+        validate_ref_name(name)
+        args = ["branch", "--", name]
         if from_commit:
-            args.append(from_commit)
+            args.append(validate_revision(from_commit))
         self._run(project, args, check=True)
         if switch:
             self.switch_branch(project, settings, name=name)
@@ -539,6 +526,7 @@ class GitVcsService:
     ) -> VcsStatus:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        validate_ref_name(name)
         if autosnapshot and self.status(project, settings).dirty:
             self.commit(
                 project,
@@ -546,13 +534,14 @@ class GitVcsService:
                 kind=VcsCommitKind.manual,
                 include_pdf=settings.track_pdf,
             )
-        self._run(project, ["checkout", name], check=True)
+        self._run(project, ["checkout", name, "--"], check=True)
         return self.status(project, settings)
 
     def delete_branch(self, project: Project, *, name: str) -> None:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        self._run(project, ["branch", "-D", name], check=True)
+        validate_ref_name(name)
+        self._run(project, ["branch", "-D", "--", name], check=True)
 
     # ── tags ─────────────────────────────────────────────────────────────────
     def list_tags(self, project: Project) -> list[VcsTag]:
@@ -602,9 +591,10 @@ class GitVcsService:
     ) -> VcsTag:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        args = ["tag", "-a", name, "-m", message or name] if kind == VcsTagKind.release else ["tag", name]
+        validate_ref_name(name)
+        args = ["tag", "-a", "-m", message or name, "--", name] if kind == VcsTagKind.release else ["tag", "--", name]
         if commit_id:
-            args.append(commit_id)
+            args.append(validate_revision(commit_id))
         self._run(project, args, check=True)
         for tag in self.list_tags(project):
             if tag.name == name:
@@ -615,7 +605,8 @@ class GitVcsService:
     def delete_tag(self, project: Project, *, name: str) -> None:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        self._run(project, ["tag", "-d", name], check=True)
+        validate_ref_name(name)
+        self._run(project, ["tag", "-d", "--", name], check=True)
 
     # ── parsing helpers ──────────────────────────────────────────────────────
     def _one(self, project: Project, commit_id: str) -> VcsCommit | None:
