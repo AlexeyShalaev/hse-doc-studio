@@ -10,7 +10,7 @@ import structlog
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.agent.edits import select_edit_format
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IChatSummarizer
 from hse_doc_studio.core.entities import (
     AgentRunRecord,
@@ -32,7 +32,6 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.core.services import ChatContextService
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
@@ -118,7 +117,7 @@ class SystemStartChatTurnUC:
         agent_provider: IAgentProvider,
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
         context_service: ChatContextService,
         summarizer: IChatSummarizer,

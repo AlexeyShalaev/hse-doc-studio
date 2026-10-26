@@ -6,14 +6,23 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 import structlog
 
+from hse_doc_studio.core import office_jwt
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.files import ManifestFile
+from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertReason
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, IOfficeEditorService, sibling_pdf_path
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -21,11 +30,9 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
-from hse_doc_studio.infra.office import jwt as office_jwt
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
-from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.use_cases.files.put_file import PutFileInput, PutFileUC
 from hse_doc_studio.use_cases.office_editor.get_editor_config import callback_signature
+from hse_doc_studio.use_cases.office_editor.preview_observer import PreviewRefreshObserver
 from hse_doc_studio.use_cases.office_services.list_office_service_images import (
     resolve_active_office_image,
 )
@@ -62,8 +69,8 @@ class OfficeEditorCallbackUC:
     документ у DS (его self-URL переписывается на наш published-адрес) и пишем
     байты через put-file — путь резолвится заново по шаблону, колбэку путь не
     доверяем; правка попадает в ProjectVCS. После записи фоново пересоздаётся
-    соседний PDF-предпросмотр (Gotenberg) — «Превью» подхватывает правки без
-    полной пересборки.
+    соседний PDF-предпросмотр (Gotenberg) фоновой задачей диспетчера —
+    «Превью» подхватывает правки без полной пересборки.
     """
 
     def __init__(
@@ -71,9 +78,9 @@ class OfficeEditorCallbackUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        manager: OfficeEditorManager,
+        manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        convert_manager: OfficeConvertManager,
+        dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> None:
@@ -81,13 +88,10 @@ class OfficeEditorCallbackUC:
         self._template_service = ProjectTemplateService()
         self._manager = manager
         self._put_file_uc = put_file_uc
-        self._convert_manager = convert_manager
+        self._dispatcher = dispatcher
         self._settings_repo = settings_repo
         self._client = client
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
-        # Фоновые задачи доконвертации: держим ссылки, чтобы event loop их не
-        # собрал до завершения (стандартная ловушка create_task).
-        self._preview_tasks: set[asyncio.Task[None]] = set()
 
     async def execute(self, inp: OfficeEditorCallbackInput) -> dict[str, int]:
         self._verify_auth(inp)
@@ -204,25 +208,26 @@ class OfficeEditorCallbackUC:
         ext = PurePosixPath(output_file).suffix.lower()
         if ext not in CONVERTIBLE_OFFICE_EXTS:
             return
-        task = asyncio.get_running_loop().create_task(self._refresh_preview(project, output_file))
-        self._preview_tasks.add(task)
-        task.add_done_callback(self._preview_tasks.discard)
-
-    async def _refresh_preview(self, project: Project, output_file: str) -> None:
-        src_abs = project.folder / output_file
-        pdf_abs = src_abs.with_suffix(".pdf")
         try:
-            pdf_bytes = await self._convert_manager.convert_to_pdf(
-                src_abs, image=resolve_active_office_image(self._settings_repo, "convert")
+            payload = OfficeConvertPayload(
+                source=ManifestFile(output_file),
+                output_path=sibling_pdf_path(output_file),
+                image=resolve_active_office_image(self._settings_repo, "convert"),
+                reason=OfficeConvertReason.save_refresh,
             )
-            if pdf_bytes is None:
-                logger.info("office-editor: preview refresh skipped", path=str(src_abs))
-                return
-            await asyncio.to_thread(pdf_abs.write_bytes, pdf_bytes)
+            spec = JobSpec(
+                id=uuid4(),
+                kind=JobKind.office_convert,
+                tags=job_tags(JobKind.office_convert, payload),
+                project_id=project.id,
+                actor=current_actor() or Actor.local(),
+                locale=current_interface_language(),
+                payload=payload,
+                local_root=project.folder,
+            )
+            self._dispatcher.submit_detached(spec, PreviewRefreshObserver())
         except Exception as exc:  # noqa: BLE001 — предпросмотр не важнее сохранения
-            logger.warning("office-editor: preview refresh failed", path=str(src_abs), exc=str(exc))
-            return
-        logger.info("office-editor: preview refreshed", path=str(pdf_abs))
+            logger.warning("office-editor: preview refresh failed", path=output_file, exc=str(exc))
 
     def _rewrite_to_published(self, raw_url: str) -> str:
         """DS отдаёт self-ссылку со своим ВНУТРЕННИМ хостом — мы достаём его

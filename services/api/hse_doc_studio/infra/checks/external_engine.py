@@ -9,10 +9,10 @@ import structlog
 
 from hse_doc_studio.core.catalog import CheckRule
 from hse_doc_studio.core.enums import CheckSeverity
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.value_objects import CheckLocation, CheckResult
 from hse_doc_studio.infra.checks.base import BaseCheckEngine
 from hse_doc_studio.infra.checks.utils import read_text_safe
-from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 
 logger = structlog.get_logger()
 
@@ -191,7 +191,7 @@ class ExternalCheckEngine(BaseCheckEngine):
     ``lt:<RULE_ID>`` with the rule's resolved severity and a source location.
     """
 
-    def __init__(self, container_manager: LanguageToolContainerManager, client: httpx.Client) -> None:
+    def __init__(self, container_manager: ILanguageCheckService, client: httpx.Client) -> None:
         self._manager = container_manager
         self._client = client
 

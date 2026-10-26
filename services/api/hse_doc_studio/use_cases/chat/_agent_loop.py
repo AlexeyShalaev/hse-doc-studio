@@ -22,7 +22,7 @@ from hse_doc_studio.core.agent.entities import (
     ToolCall,
     ToolResult,
 )
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate, StreamSink
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate, StreamSink
 from hse_doc_studio.core.ai import IChatSummarizer
 from hse_doc_studio.core.entities import AIProvider, ChatContentBlock, ChatMessage, ChatSummaryBlock
 from hse_doc_studio.core.enums import (
@@ -38,7 +38,6 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.repositories import IChatRepository
 from hse_doc_studio.core.services import ChatContextService
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.trace import install_tracer, open_tracer, trace
 from hse_doc_studio.use_cases.chat._budget import TokenBudget, truncate_tool_result
 from hse_doc_studio.use_cases.chat._prompt import chat_history_to_agent_messages
@@ -101,7 +100,7 @@ def _answer_result(answers: dict[str, str]) -> ToolResult:
 class _BusSink(StreamSink):
     # Streams only assistant text deltas; the authoritative tool_call / tool_result
     # events are published by the loop once arguments are parsed / the tool ran.
-    def __init__(self, bus: AgentRunBus, run_id: UUID) -> None:
+    def __init__(self, bus: IAgentRunBus, run_id: UUID) -> None:
         self._bus = bus
         self._run_id = run_id
 
@@ -133,7 +132,7 @@ class AgentLoop:
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         config: AgentConfig,
         context_service: ChatContextService | None = None,
         summarizer: IChatSummarizer | None = None,

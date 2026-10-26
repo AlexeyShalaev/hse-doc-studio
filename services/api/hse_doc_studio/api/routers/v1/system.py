@@ -14,7 +14,7 @@ from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.update.repositories import IReleaseNotesRepository, ISelfUpdateGateway
 from hse_doc_studio.infra.runtime.environment import in_container
-from hse_doc_studio.infra.submission.assembler import available_archive_formats
+from hse_doc_studio.infra.submission.pack_executor import available_archive_formats
 from hse_doc_studio.infra.update.deployment import DeploymentMode, deployment_mode, docker_alive
 from hse_doc_studio.infra.update.self_update_gateway import is_valid_version
 from hse_doc_studio.use_cases.system.check_updates import CheckUpdatesUC
@@ -244,7 +244,7 @@ async def list_editors() -> EditorsResponse:
 @router.get("/system/archive-formats", response_model=ArchiveFormatsResponse)
 async def list_archive_formats() -> ArchiveFormatsResponse:
     # zip/tar.gz are always available; 7z/rar depend on an external CLI being on
-    # PATH (probed via shutil.which inside the assembler).
+    # PATH (probed via shutil.which inside the pack executor).
     return ArchiveFormatsResponse(
         formats=[ArchiveFormatEntry.model_validate(fmt) for fmt in available_archive_formats()]
     )

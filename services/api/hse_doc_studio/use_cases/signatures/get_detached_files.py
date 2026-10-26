@@ -16,14 +16,14 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
-from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
-from hse_doc_studio.infra.signatures.signing_package import (
+from hse_doc_studio.core.signatures.package_text import (
     PackageSignature,
     build_readme,
     build_sign_instructions,
     public_key_files,
     signature_arcname,
 )
+from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import DocContext, load_doc_context
 
@@ -110,10 +110,10 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        keyring: GpgKeyring,
+        key_exporter: IPublicKeyExporter,
     ) -> None:
         super().__init__(project_repo, project_index_repo, signature_repo, template_repo, template_service)
-        self._keyring = keyring
+        self._key_exporter = key_exporter
 
     async def execute(self, inp: BuildDetachedPackageInput) -> DetachedFileOutput:  # noqa: C901
         ctx = await self._ctx(inp.project_id, inp.doc_id)
@@ -126,6 +126,7 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
 
         slot_service = SignatureSlotService()
         sigs: list[PackageSignature] = []
+        sig_files: list[Path] = []
         if inp.mode == "signed":
             for slot_id, sig in state.detached.get(inp.doc_id, {}).items():
                 path = folder / sig.file
@@ -136,13 +137,13 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
                 sigs.append(
                     PackageSignature(
                         slot_label=label,
-                        file=path,
                         arcname=signature_arcname(pdf_name, label, path.suffix),
                         format=sig.format,
                         signer=sig.signer,
                         signer_id=sig.signer_id,
                     )
                 )
+                sig_files.append(path)
 
         fd, tmp_name = tempfile.mkstemp(suffix=".zip")
         tmp = Path(tmp_name)
@@ -155,9 +156,9 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
                 zf.writestr("SHA256SUMS.txt", f"{frozen.sha256}  {pdf_name}\n")
                 zf.writestr("README.txt", build_sign_instructions(ctx.lang, pdf_name, frozen.sha256))
             else:
-                keys = public_key_files(self._keyring, sigs)
-                for s in sigs:
-                    zf.write(s.file, s.arcname)
+                keys = public_key_files(self._key_exporter.export_public, sigs)
+                for s, sig_file in zip(sigs, sig_files, strict=True):
+                    zf.write(sig_file, s.arcname)
                 for name, blob in keys.items():
                     zf.writestr(name, blob)
                 zf.writestr("README.txt", build_readme(ctx.lang, pdf_name, frozen.sha256, sigs, list(keys)))

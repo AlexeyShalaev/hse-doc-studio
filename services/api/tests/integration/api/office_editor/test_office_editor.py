@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pytest
+from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.infra.office import jwt as office_jwt
+from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.use_cases.office_editor.get_editor_config import callback_signature
+from hse_doc_studio.use_cases.office_editor.handle_callback import OfficeEditorCallbackUC
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
@@ -280,3 +285,128 @@ async def test__touch__unknown_project_and_doc__still_returns_204(test_app: Asyn
     resp = await test_app.post(f"/api/v1/projects/{uuid4()}/documents/no-such-doc/office-editor/touch")
 
     assert resp.status_code == 204, resp.text
+
+
+# ── POST /office-editor/callback: фоновое обновление превью после сохранения ──
+
+_ACTIVE_IMAGE = "gotenberg/gotenberg:9-active"
+_SAVED_PPTX = b"PK saved by document server"
+_PREVIEW = b"%PDF-1.4 refreshed preview"
+
+
+def _select_convert_image(tmp_path: Path, image: str = _ACTIVE_IMAGE) -> None:
+    """Выбор образа в Settings: config.json в data_dir (`test_app` смотрит туда же)."""
+    config = tmp_path / "data" / "config.json"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(json.dumps({"office_convert_image": image}), encoding="utf-8")
+
+
+async def _post_save_callback(client: AsyncClient, project_id: str, doc_id: str, status: int) -> Any:
+    sig = callback_signature(_SECRET, project_id, doc_id)
+    body: dict[str, Any] = {"status": status, "key": "some-key", "url": "http://ds.invalid/doc"}
+    body["token"] = office_jwt.sign(body, _SECRET)
+    return await client.post(
+        "/api/v1/office-editor/callback",
+        params={"project_id": project_id, "doc_id": doc_id, "sig": sig},
+        json=body,
+    )
+
+
+async def _wait_for(predicate: Any, what: str, timeout: float = 5.0) -> None:
+    deadline = asyncio.get_running_loop().time() + timeout
+    while not predicate():
+        assert asyncio.get_running_loop().time() < deadline, f"timed out waiting for {what}"
+        await asyncio.sleep(0.01)
+
+
+@pytest.mark.parametrize("status", [2, 6])
+async def test__office_callback__save__answers_before_conversion_and_uses_active_image(
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture, status: int
+) -> None:
+    _write_office_editor_secret(tmp_path)
+    _select_convert_image(tmp_path)
+    project = await _create_project(test_app, tmp_path / "proj")
+    mocker.patch.object(OfficeEditorCallbackUC, "_download", return_value=_SAVED_PPTX)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    finished: list[bool] = []
+
+    async def _slow_convert(self: OfficeConvertManager, source: Path, image: str | None = None) -> bytes:
+        started.set()
+        await release.wait()
+        finished.append(True)
+        return _PREVIEW
+
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, side_effect=_slow_convert)
+    pptx = Path(project["folder"]) / "presentation" / "pptx" / "presentation.pptx"
+    preview = pptx.with_suffix(".pdf")
+
+    try:
+        resp = await _post_save_callback(test_app, project["id"], _OFFICE_DOC_ID, status)
+
+        # ответ уходит, пока конвертация ещё не закончена: DS ждёт {"error": 0} и затянутый ответ считает сбоем
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"error": 0}
+        assert pptx.read_bytes() == _SAVED_PPTX
+        assert not finished
+        assert not preview.exists()
+        await asyncio.wait_for(started.wait(), timeout=5)
+    finally:
+        release.set()
+
+    await _wait_for(preview.exists, "sibling preview")
+    assert preview.read_bytes() == _PREVIEW
+    convert.assert_awaited_once()
+    assert convert.await_args.args[1] == pptx
+    assert convert.await_args.kwargs == {"image": _ACTIVE_IMAGE}
+
+
+async def test__office_callback__save__without_selected_image__passes_deployment_default(
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    _write_office_editor_secret(tmp_path)
+    project = await _create_project(test_app, tmp_path / "proj")
+    mocker.patch.object(OfficeEditorCallbackUC, "_download", return_value=_SAVED_PPTX)
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=_PREVIEW)
+    preview = Path(project["folder"]) / "presentation" / "pptx" / "presentation.pdf"
+
+    resp = await _post_save_callback(test_app, project["id"], _OFFICE_DOC_ID, 2)
+
+    assert resp.json() == {"error": 0}
+    await _wait_for(preview.exists, "sibling preview")
+    assert convert.await_args.kwargs == {"image": app_settings.office_convert.image}
+
+
+async def test__office_callback__save__converter_unavailable_or_crashing__still_acknowledged_without_preview(
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    _write_office_editor_secret(tmp_path)
+    project = await _create_project(test_app, tmp_path / "proj")
+    mocker.patch.object(OfficeEditorCallbackUC, "_download", return_value=_SAVED_PPTX)
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=None)
+    preview = Path(project["folder"]) / "presentation" / "pptx" / "presentation.pdf"
+
+    resp = await _post_save_callback(test_app, project["id"], _OFFICE_DOC_ID, 2)
+    await _wait_for(lambda: convert.await_count == 1, "conversion attempt")
+    convert.side_effect = RuntimeError("gotenberg down")
+    resp_crash = await _post_save_callback(test_app, project["id"], _OFFICE_DOC_ID, 6)
+    await _wait_for(lambda: convert.await_count == 2, "second conversion attempt")  # noqa: PLR2004
+
+    assert resp.json() == resp_crash.json() == {"error": 0}
+    assert not preview.exists()
+
+
+async def test__office_callback__save__not_convertible_extension__schedules_no_conversion(
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    _write_office_editor_secret(tmp_path)
+    project = await _create_project(test_app, tmp_path / "proj")
+    mocker.patch.object(OfficeEditorCallbackUC, "_download", return_value=b"%PDF-1.4 saved")
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=_PREVIEW)
+
+    resp = await _post_save_callback(test_app, project["id"], _NON_OFFICE_DOC_ID, 2)
+    await asyncio.sleep(0.1)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"error": 0}
+    convert.assert_not_awaited()

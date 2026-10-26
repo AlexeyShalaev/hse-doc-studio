@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+from unittest.mock import call
+
 import pytest
+from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from httpx import AsyncClient
+from pytest_mock import MockerFixture
 
 
 async def _first_doc_id(client: AsyncClient, project_id: str) -> str:
@@ -170,3 +176,95 @@ async def test__api__get_submission_preflight__custom_doc_in_unsigned_profile__s
     assert any(i["doc_id"] == doc_id for i in items)
     listed = next(i for i in items if i["doc_id"] == doc_id)
     assert listed["convertible"] is True
+
+
+# --- конвертация office при загрузке (характеризация перед выносом в диспетчер) ---
+
+
+def _convert_image(convert_call: Any) -> object:
+    """Образ из вызова `convert_to_pdf(self, source, image=None)` с autospec: None, если не передан."""
+    args, kwargs = convert_call.args, convert_call.kwargs
+    return kwargs["image"] if "image" in kwargs else (args[2] if len(args) > 2 else None)  # noqa: PLR2004
+
+
+async def _upload(client: AsyncClient, project: dict, filename: str, content: bytes = b"office bytes") -> dict:
+    doc_id = await _first_doc_id(client, project["id"])
+    resp = await client.post(
+        f"/api/v1/projects/{project['id']}/documents/{doc_id}/custom-file",
+        files={"file": (filename, content, "application/octet-stream")},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def _sibling_pdf(project: dict, data: dict) -> Path:
+    return (Path(project["folder"]) / data["custom_file"]["stored_path"]).with_suffix(".pdf")
+
+
+async def test__upload_custom_file__docx__preview_written_and_flag_true(
+    test_app: AsyncClient, project: dict, mocker: MockerFixture
+) -> None:
+    done: list[str] = []
+
+    async def _convert(self: OfficeConvertManager, source: Path, image: str | None = None) -> bytes:
+        done.append(source.name)
+        return b"%PDF-1.4 preview"
+
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, side_effect=_convert)
+
+    data = await _upload(test_app, project, "report.docx")
+
+    # ответ дождался конвертации: флаг выставлен внутри корутины, а превью уже на диске
+    assert done == ["report.docx"]
+    assert data["custom_file"]["preview_available"] is True
+    assert data["signing_available"] is True
+    assert _sibling_pdf(project, data).read_bytes() == b"%PDF-1.4 preview"
+    convert.assert_awaited_once()
+
+
+@pytest.mark.parametrize("failure", ["none", "raises"])
+async def test__upload_custom_file__converter_none_or_raises__flag_false_upload_ok(
+    test_app: AsyncClient, project: dict, mocker: MockerFixture, failure: str
+) -> None:
+    if failure == "none":
+        convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=None)
+    else:
+        convert = mocker.patch.object(
+            OfficeConvertManager, "convert_to_pdf", autospec=True, side_effect=RuntimeError("gotenberg down")
+        )
+
+    data = await _upload(test_app, project, "report.docx")
+
+    convert.assert_awaited_once()
+    assert data["custom_file"]["original_filename"] == "report.docx"
+    assert data["custom_file"]["preview_available"] is False
+    assert data["signing_available"] is False
+    assert not _sibling_pdf(project, data).exists()
+    assert (Path(project["folder"]) / data["custom_file"]["stored_path"]).read_bytes() == b"office bytes"
+
+
+async def test__upload_custom_file__converter_called_without_image(
+    test_app: AsyncClient, project: dict, mocker: MockerFixture
+) -> None:
+    # Загрузка идёт на образе по умолчанию из деплоя (в отличие от колбэка ONLYOFFICE и сборки,
+    # которые передают активный образ): расхождение зафиксировано как есть.
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=b"%PDF-1.4")
+
+    data = await _upload(test_app, project, "slides.pptx")
+
+    assert convert.await_args_list == [call(mocker.ANY, Path(project["folder"]) / data["custom_file"]["stored_path"])]
+    assert _convert_image(convert.await_args) is None
+
+
+@pytest.mark.parametrize("filename", ["doc.pdf", "notes.xyz", "archive.zip", "page.html"])
+async def test__upload_custom_file__pdf_or_not_convertible__converter_never_called(
+    test_app: AsyncClient, project: dict, mocker: MockerFixture, filename: str
+) -> None:
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=b"%PDF-1.4")
+
+    data = await _upload(test_app, project, filename, b"%PDF-1.4 x")
+
+    convert.assert_not_awaited()
+    if filename != "doc.pdf":
+        assert not _sibling_pdf(project, data).exists()
+        assert data["custom_file"]["preview_available"] is False

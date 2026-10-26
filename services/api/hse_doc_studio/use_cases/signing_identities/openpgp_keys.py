@@ -13,7 +13,8 @@ from hse_doc_studio.core.enums import SigningIdentityKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISigningIdentityRepository
-from hse_doc_studio.infra.signatures.openpgp import GpgError, GpgKey, GpgKeyring, GpgUnavailableError
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+from hse_doc_studio.infra.signatures.openpgp import GpgKey, GpgKeyring
 
 logger = structlog.get_logger()
 

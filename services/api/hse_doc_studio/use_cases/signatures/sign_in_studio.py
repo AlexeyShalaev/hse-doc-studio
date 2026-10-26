@@ -12,6 +12,7 @@ from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import DetachedOrigin, SigningIdentityKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -20,16 +21,18 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+from hse_doc_studio.core.signatures.ports import ITrustMaterialProvider
+from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import DetachedSignature
 from hse_doc_studio.infra.signatures.cades_signer import sign_detached as sign_cades
-from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
-from hse_doc_studio.infra.signatures.openpgp import GpgError, GpgKeyring, GpgUnavailableError
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
-    note_plate_mismatch,
     require_fresh_frozen,
     require_slot,
     store_signature,
+    verify_frozen,
 )
 from hse_doc_studio.use_cases.signatures._doc_context import load_doc_context
 
@@ -66,14 +69,16 @@ class SignInStudioUC:
         signing_identity_repo: ISigningIdentityRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: GpgKeyring,
     ) -> None:
         self._signature_repo = signature_repo
         self._identity_repo = signing_identity_repo
         self._template_repo = template_repo
         self._template_service = template_service
-        self._verifier = verifier
+        self._dispatcher = dispatcher
+        self._trust_provider = trust_provider
         self._keyring = keyring
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -92,8 +97,8 @@ class SignInStudioUC:
         pdf_path = ctx.project.folder / frozen.path
 
         sig_bytes = await asyncio.to_thread(self._sign, identity, pdf_path, inp.passphrase)
-        verified = await asyncio.to_thread(self._verifier.verify, pdf_path, sig_bytes)
-        note_plate_mismatch(state, inp.slot_id, verified)
+        verified = await verify_frozen(self._dispatcher, self._trust_provider, ctx, frozen, sig_bytes)
+        verified = note_plate_mismatch(state, inp.slot_id, verified)
         new_state, sig = store_signature(ctx, state, inp.slot_id, verified, sig_bytes, DetachedOrigin.studio, frozen)
         self._signature_repo.save_state(ctx.project.folder, new_state)
         logger.info(

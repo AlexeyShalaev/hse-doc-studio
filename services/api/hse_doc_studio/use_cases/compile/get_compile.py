@@ -7,8 +7,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import CompileRecord
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
+from hse_doc_studio.core.repositories import ICompileRepository, IProjectIndexRepository, IProjectRepository
 
 logger = structlog.get_logger()
 
@@ -32,7 +31,7 @@ class GetCompileUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo

@@ -15,8 +15,8 @@ import re
 
 import structlog
 
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
 from hse_doc_studio.infra.update.deployment import DeploymentMode, docker_alive
 from hse_doc_studio.infra.update.update_manager import UpdateManager
 
@@ -35,13 +35,13 @@ class DockerSelfUpdateGateway:
     def __init__(
         self,
         update_manager: UpdateManager,
-        compile_runner: CompileRunner,
+        dispatcher: IJobDispatcher,
         agent_runs: AgentRunManager,
         deployment_mode: DeploymentMode,
         image_base: str,
     ) -> None:
         self._update_manager = update_manager
-        self._compile_runner = compile_runner
+        self._dispatcher = dispatcher
         self._agent_runs = agent_runs
         self._deployment_mode = deployment_mode
         self._image_base = image_base
@@ -60,7 +60,7 @@ class DockerSelfUpdateGateway:
         return await docker_alive()
 
     def is_busy(self) -> bool:
-        return self._compile_runner.has_any_active() or self._agent_runs.has_any_active()
+        return self._dispatcher.has_any_active() or self._agent_runs.has_any_active()
 
     async def start(self, target_version: str) -> bool:
         if not is_valid_version(target_version):

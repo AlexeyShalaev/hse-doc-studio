@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import re
 import shlex
-import shutil
 import uuid
 from asyncio import subprocess as asubprocess
 from collections.abc import AsyncGenerator, Callable
@@ -12,17 +11,15 @@ from pathlib import Path, PurePosixPath
 
 import structlog
 
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.docker.cli import docker_binary
+from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 
 logger = structlog.get_logger()
 
 _SENTINEL_DONE = "__DONE__"
 _SENTINEL_FAILED = "__FAILED__"
-# Retries for moving the built PDF into place: on Windows the target can be
-# transiently locked by antivirus/indexing/an open viewer (WinError 32).
-_PDF_MOVE_ATTEMPTS = 5
-_PDF_MOVE_RETRY_DELAY_S = 0.6
 # Carries the page count of a successful build back to the runner so it can be
 # persisted on the CompileRecord (and shown in the UI). Not a log line.
 _SENTINEL_PAGES = "__PAGES__:"
@@ -93,7 +90,9 @@ class DockerCompileExecutor:
         fonts_dir: Path | None = None,
         fonts_host_dir: str | None = None,
         fonts_mount_target: str = "/usr/local/share/fonts/hse",
+        artifacts: IArtifactStore | None = None,
     ) -> None:
+        self._artifacts = artifacts or LocalDiskArtifactStore()
         self._resolver = host_path_resolver
         self._image = image
         self._cache_volume_name = cache_volume_name
@@ -285,36 +284,27 @@ class DockerCompileExecutor:
         # existing /api/v1/projects/<id>/files/<rel>.pdf URL keeps working.
         # On failure the move is skipped and any previous PDF stays in place.
         built_pdf = host_build_dir / f"{stem}.pdf"
-        final_pdf = host_doc_dir / f"{stem}.pdf"
         if not built_pdf.exists():
             yield f"[error] expected PDF not produced: {built_pdf.name}"
             yield _SENTINEL_FAILED
             return
-        # On Windows the target PDF may be briefly locked by an antivirus
-        # scan, the OneDrive indexer or an open viewer (WinError 32) — retry
-        # a few times instead of failing an otherwise green build.
-        move_error: OSError | None = None
-        for attempt in range(_PDF_MOVE_ATTEMPTS):
-            try:
-                shutil.move(str(built_pdf), str(final_pdf))
-                move_error = None
-                break
-            except OSError as exc:
-                move_error = exc
-                if attempt < _PDF_MOVE_ATTEMPTS - 1:
-                    await asyncio.sleep(_PDF_MOVE_RETRY_DELAY_S)
-        if move_error is not None:
+        # The move is retried inside the store (on Windows the target PDF may be
+        # briefly locked by an antivirus scan, an indexer or an open viewer).
+        outcome = await self._artifacts.publish_pdf(
+            PublishPdfRequest(workspace=project_folder, doc_id=doc_id, job_id=compile_id, source_file=source_file)
+        )
+        if not outcome.replaced:
             # A persistent lock (typically the PDF is open in a desktop viewer)
             # must not fail an otherwise green build: the fresh PDF stays in
             # .build, the archive picks it up from there and the app preview
             # serves the archive. Only the copy next to the sources goes stale
             # until the viewer releases it.
             yield (
-                f"[warn] could not replace {final_pdf.name} next to the sources "
+                f"[warn] could not replace {outcome.final_name} next to the sources "
                 f"(file is open in another program); fresh PDF kept in .build"
             )
         else:
-            yield f"[compile:{compile_id}] pdf written to {final_pdf.name}"
+            yield f"[compile:{compile_id}] pdf written to {outcome.final_name}"
 
         pages = _extract_log_page_count(host_build_dir / f"{stem}.log")
         if pages is not None:

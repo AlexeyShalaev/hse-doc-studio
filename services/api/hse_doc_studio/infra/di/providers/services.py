@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import httpx
 import structlog
-from dishka import Provider, Scope, provide
+from dishka import AnyOf, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
 from hse_doc_studio.core.ai_runtime import (
@@ -14,7 +14,9 @@ from hse_doc_studio.core.ai_runtime import (
     IOllamaRuntime,
     IPullModelJobs,
 )
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.entities import CatalogModel
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog, FontCatalogFile, FontCatalogItem
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -23,6 +25,13 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
+from hse_doc_studio.core.jobs.outputs import IJobOutputs
+from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
+from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import (
@@ -33,7 +42,14 @@ from hse_doc_studio.core.services import (
     RequirementMatchingService,
     SubmissionProfileService,
 )
+from hse_doc_studio.core.signatures.ports import (
+    IChainFetcher,
+    IOpenPgpKeyImporter,
+    IPublicKeyExporter,
+    ITrustMaterialProvider,
+)
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
     IMergeEngine,
     ITemplateBaseStore,
@@ -41,6 +57,7 @@ from hse_doc_studio.core.template_update.protocols import (
     ITemplateTreeRenderer,
     IUpdateJournalRepository,
 )
+from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.protocols import (
     IVcsEditThrottle,
     IVcsFolderLocks,
@@ -74,9 +91,19 @@ from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
+from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
+from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
+from hse_doc_studio.infra.jobs.fs_file_probe import FsProjectFileProbeFactory
+from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
+from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
+from hse_doc_studio.infra.jobs.office_convert import OfficeConvertHandler
+from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
+from hse_doc_studio.infra.jobs.pack_handler import PackHandler
+from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
@@ -84,17 +111,23 @@ from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureV
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
-from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
+from hse_doc_studio.infra.submission.pack_executor import PackExecutor
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
 from hse_doc_studio.infra.template_update.state import JsonTemplateTrackingRepository, JsonUpdateJournalRepository
 from hse_doc_studio.infra.template_update.tree_renderer import TemplateTreeRenderer
+from hse_doc_studio.infra.vcs.commit_author import ActorCommitAuthorProvider
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
+from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
+from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
+from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
+from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
 
@@ -136,7 +169,7 @@ class DomainServiceProvider(Provider):
         return SdkAgentProvider()
 
     @provide
-    def get_agent_run_bus(self) -> AgentRunBus:
+    def get_agent_run_bus(self) -> AnyOf[AgentRunBus, IAgentRunBus]:
         # Single long-lived pub/sub for live run events (mirror get_compile_log_bus).
         return AgentRunBus()
 
@@ -269,7 +302,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> LanguageToolContainerManager:
+    ) -> AnyOf[LanguageToolContainerManager, ILanguageCheckService]:
         cfg = settings.languagetool
         return LanguageToolContainerManager(
             container_name=cfg.container_name,
@@ -286,9 +319,9 @@ class DomainServiceProvider(Provider):
     @provide
     def get_check_runner(
         self,
-        lt_manager: LanguageToolContainerManager,
+        lt_manager: ILanguageCheckService,
         lt_client: httpx.Client,
-    ) -> CheckRunner:
+    ) -> AnyOf[CheckRunner, ICheckRunner]:
         return CheckRunner(lt_manager=lt_manager, lt_client=lt_client)
 
     @provide
@@ -296,7 +329,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeConvertManager:
+    ) -> AnyOf[OfficeConvertManager, IOfficeConvertService]:
         # Gotenberg для pptx→PDF-предпросмотра. HTTP-клиент общий с LanguageTool
         # (обычный пул httpx, ничего LT-специфичного); таймаут конвертации
         # передаётся пер-запросно. Маппинг путей проекта не нужен — файл уходит
@@ -324,7 +357,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeEditorManager:
+    ) -> AnyOf[OfficeEditorManager, IOfficeEditorService]:
         # ONLYOFFICE Document Server для in-app редактирования pptx. HTTP-клиент
         # общий (health-пробы + скачивание сохранённого документа); JWT-секрет
         # живёт в data_dir и переживает рестарты (усыновлённый контейнер обязан
@@ -353,7 +386,7 @@ class DomainServiceProvider(Provider):
         return SiblingNetwork()
 
     @provide
-    def get_reachability(self, siblings: SiblingNetwork) -> Reachability:
+    def get_reachability(self, siblings: SiblingNetwork) -> AnyOf[Reachability, IBackendReachability]:
         # Наш адрес глазами соседнего контейнера — тоже процессный факт, поэтому
         # APP-скоуп: выясняется один раз и кэшируется.
         return Reachability(
@@ -403,9 +436,18 @@ class DomainServiceProvider(Provider):
         return HostPathResolver(mapping)
 
     @provide
+    def get_artifact_store(self) -> IArtifactStore:
+        return LocalDiskArtifactStore()
+
+    @provide
+    def get_job_outputs(self) -> IJobOutputs:
+        return LocalJobOutputs()
+
+    @provide
     def get_docker_compile_executor(
         self,
         host_path_resolver: HostPathResolver,
+        artifacts: IArtifactStore,
     ) -> DockerCompileExecutor:
         data_dir = settings.data_dir.expanduser()
         fonts_dir = data_dir / settings.fonts.dir_name
@@ -422,6 +464,7 @@ class DomainServiceProvider(Provider):
             fonts_dir=fonts_dir,
             fonts_host_dir=fonts_host_dir,
             fonts_mount_target=settings.fonts.container_mount,
+            artifacts=artifacts,
         )
 
     @provide
@@ -518,7 +561,7 @@ class DomainServiceProvider(Provider):
         return DockerCleanupJobManager(docker_system_manager)
 
     @provide
-    def get_compile_log_bus(self) -> CompileLogBus:
+    def get_compile_log_bus(self) -> AnyOf[CompileLogBus, IJobLogStream]:
         return CompileLogBus()
 
     @provide
@@ -531,6 +574,68 @@ class DomainServiceProvider(Provider):
         return CompileConcurrencyLimiter()
 
     @provide
+    def get_template_materializer(self, template_repo: ITemplateRepository) -> ITemplateMaterializer:
+        return TemplateMaterializer(template_repo)
+
+    @provide
+    def get_embedded_compile_runner(  # noqa: PLR0913
+        self,
+        executor: DockerCompileExecutor,
+        image_manager: DockerImageManager,
+        office_convert: IOfficeConvertService,
+        check_runner: ICheckRunner,
+        lt_manager: ILanguageCheckService,
+        settings_repo: ISettingsRepository,
+        capacity_probe: ISystemCapacityProbe,
+        limiter: CompileConcurrencyLimiter,
+        outputs: IJobOutputs,
+    ) -> AnyOf[EmbeddedCompileRunner, ICompileJobRunner]:
+        # Образы читаются из настроек в момент вызова: сборка выбирает образ заново после ожидания слота.
+        return EmbeddedCompileRunner(
+            executor=executor,
+            image_manager=image_manager,
+            office_convert=office_convert,
+            check_runner=check_runner,
+            lt_manager=lt_manager,
+            settings_repo=settings_repo,
+            capacity_probe=capacity_probe,
+            limiter=limiter,
+            outputs=outputs,
+            resolve_image=lambda: resolve_active_image(settings_repo),
+            resolve_lt_image=lambda: resolve_active_languagetool_image(settings_repo),
+            resolve_office_image=lambda: resolve_active_office_image(settings_repo, "convert"),
+        )
+
+    @provide
+    def get_job_handler_registry(
+        self, office_convert: IOfficeConvertService, verifier: DetachedSignatureVerifier, pdf_stamper: PdfStamper
+    ) -> JobHandlerRegistry:
+        # Обработчики не-compile видов регистрируют слайсы своих семейств.
+        registry = JobHandlerRegistry()
+        registry.register(JobKind.office_convert, OfficeConvertHandler(office_convert))
+        registry.register(JobKind.verify_detached, VerifyDetachedHandler(verifier))
+        registry.register(JobKind.pack_submission, PackHandler(PackExecutor(pdf_stamper)))
+        return registry
+
+    @provide
+    def get_job_dispatcher(
+        self,
+        compile_runner: ICompileJobRunner,
+        handlers: JobHandlerRegistry,
+        log_stream: IJobLogStream,
+        compile_registry: CompileRunner,
+        outputs: IJobOutputs,
+    ) -> IJobDispatcher:
+        return LocalJobDispatcher(
+            compile_runner=compile_runner,
+            handlers=handlers,
+            log_stream=log_stream,
+            compile_registry=compile_registry,
+            outputs=outputs,
+            round_trip=settings.jobs.round_trip_payloads,
+        )
+
+    @provide
     def get_pdf_stamper(self) -> PdfStamper:
         return PdfStamper()
 
@@ -539,13 +644,15 @@ class DomainServiceProvider(Provider):
         return PyHankoPdfSigner()
 
     @provide
-    def get_submission_assembler(
-        self, pdf_stamper: PdfStamper, office_manager: OfficeConvertManager, keyring: GpgKeyring
-    ) -> SubmissionAssembler:
-        return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager, keyring=keyring)
+    def get_pack_planner(self, template_service: ProjectTemplateService) -> PackPlanner:
+        return PackPlanner(template_service)
 
     @provide
-    def get_gpg_keyring(self) -> GpgKeyring:
+    def get_project_file_probe_factory(self) -> IProjectFileProbeFactory:
+        return FsProjectFileProbeFactory()
+
+    @provide
+    def get_gpg_keyring(self) -> AnyOf[GpgKeyring, IOpenPgpKeyImporter, IPublicKeyExporter]:
         return GpgKeyring(settings.data_dir.expanduser() / "gnupg")
 
     @provide
@@ -553,7 +660,7 @@ class DomainServiceProvider(Provider):
         return TrustedRootStore(settings.data_dir.expanduser() / "trusted_roots")
 
     @provide
-    def get_chain_fetcher(self) -> ChainFetcher:
+    def get_chain_fetcher(self) -> AnyOf[ChainFetcher, IChainFetcher]:
         return ChainFetcher(settings.data_dir.expanduser() / "chain_cache")
 
     @provide
@@ -563,6 +670,12 @@ class DomainServiceProvider(Provider):
         return DetachedSignatureVerifier(keyring, root_store.directory, fetcher.directory)
 
     @provide
+    def get_trust_material_provider(
+        self, root_store: TrustedRootStore, fetcher: ChainFetcher
+    ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
+        return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
+
+    @provide
     def get_vcs_service(self) -> IVcsService:
         cfg = settings.vcs
         return GitVcsService(
@@ -570,6 +683,7 @@ class DomainServiceProvider(Provider):
             author_email=cfg.author_email,
             diff_max_bytes=cfg.diff_max_bytes,
             default_branch=cfg.default_branch,
+            author_provider=ActorCommitAuthorProvider(VcsAuthor(cfg.author_name, cfg.author_email)),
         )
 
     @provide

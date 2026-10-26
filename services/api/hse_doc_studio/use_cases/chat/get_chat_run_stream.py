@@ -8,6 +8,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.agent.entities import AgentEvent
+from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import AgentRunRecord
 from hse_doc_studio.core.enums import AgentEventType, AgentRunStatus
 from hse_doc_studio.core.repositories import (
@@ -15,7 +16,6 @@ from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.use_cases.chat._support import find_project_folder
 
 logger = structlog.get_logger()
@@ -49,7 +49,7 @@ class GetChatRunStreamUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
