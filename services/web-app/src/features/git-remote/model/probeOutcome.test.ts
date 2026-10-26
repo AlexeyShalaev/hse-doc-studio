@@ -99,8 +99,52 @@ describe("outcomeFromProbe", () => {
         hostKeys: keys,
         requiredStudio: null,
         canAdopt: null,
+        certificate: null,
+        missing: [],
       },
     });
+  });
+
+  it("сертификат сервера и недостающие права доходят до карточки отказа", () => {
+    const certificate = {
+      fingerprint_sha256: "SHA256:abc",
+      subject: "CN=gitlab.hse.local",
+      issuer: "CN=HSE Internal CA",
+      not_before: "2026-01-10T00:00:00Z",
+      not_after: "2027-01-10T00:00:00Z",
+      self_signed: false,
+    };
+    const tls = outcomeFromProbe(
+      probe({
+        ok: false,
+        error: { code: "tls_untrusted_ca", detail: "d", certificate },
+      }),
+    );
+    expect(tls).toMatchObject({
+      kind: "error",
+      issue: { code: "tls_untrusted_ca", certificate },
+    });
+    expect(rowOfCode("tls_untrusted_ca")).toBe("reachable");
+
+    const narrow = outcomeFromProbe(
+      probe({
+        ok: false,
+        error: { code: "token_insufficient_scope", detail: "d" },
+        token_info: {
+          login: "anna",
+          scopes: ["read_repository"],
+          expires_at: null,
+          sufficiency: "too_narrow",
+          missing: ["write_repository"],
+        },
+      }),
+    );
+    expect(narrow).toMatchObject({
+      kind: "error",
+      issue: { missing: ["write_repository"] },
+    });
+    expect(rowOfCode("token_insufficient_scope")).toBe("auth");
+    expect(rowOfCode("token_expired")).toBe("auth");
   });
 });
 

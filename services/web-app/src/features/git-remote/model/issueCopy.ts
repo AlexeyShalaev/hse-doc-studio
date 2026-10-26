@@ -5,7 +5,12 @@
 export type IssueTone = "err" | "warn" | "info";
 
 export type IssueAction =
-  "retry" | "back_to_repo" | "back_to_access" | "review_host_key" | "close";
+  | "retry"
+  | "back_to_repo"
+  | "back_to_access"
+  | "review_host_key"
+  | "review_certificate"
+  | "close";
 
 export type IssueCopy = {
   tone: IssueTone;
@@ -28,6 +33,14 @@ const COPY: Record<string, IssueCopy> = {
   timeout: { tone: "info", actions: ["retry", "back_to_repo"] },
   rate_limited: { tone: "info", actions: ["retry"] },
   tls_error: { tone: "err", actions: ["back_to_repo", "retry"] },
+  tls_untrusted_ca: { tone: "warn", actions: ["review_certificate", "retry"] },
+  tls_pin_mismatch: { tone: "err", actions: ["review_certificate"] },
+  token_expired: { tone: "err", actions: ["back_to_access", "retry"] },
+  token_insufficient_scope: {
+    tone: "err",
+    actions: ["back_to_access", "retry"],
+  },
+  provider_unknown: { tone: "warn", actions: ["back_to_repo", "retry"] },
   host_key_unknown: { tone: "warn", actions: ["review_host_key"] },
   host_key_changed: { tone: "err", actions: ["review_host_key"] },
   ssh_unavailable: { tone: "err", actions: ["back_to_repo", "back_to_access"] },

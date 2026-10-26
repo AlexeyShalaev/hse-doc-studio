@@ -1,4 +1,5 @@
-import { MINUTE, isoAgo } from "./clock";
+import { DAY, MINUTE, isoAgo, isoAt, nowMs } from "./clock";
+import { emptyHostSettings } from "./providers";
 import { buildConflictSession } from "./conflictData";
 import {
   CLONE_STEPS,
@@ -40,12 +41,26 @@ export type DemoScenarioId =
   | "off_branch"
   | "read_only"
   | "no_profile"
-  | "shared_folder";
+  | "shared_folder"
+  | "provider_gitlab_com"
+  | "provider_gitlab_self"
+  | "provider_gitlab_old"
+  | "provider_tls_ca"
+  | "provider_tls_selfsigned"
+  | "provider_tls_pin_changed"
+  | "provider_github"
+  | "provider_gitea"
+  | "provider_api_detect"
+  | "token_narrow"
+  | "token_broad"
+  | "token_expired"
+  | "credentials_expiry"
+  | "servers_settings";
 
 export type DemoScenario = {
   id: DemoScenarioId;
-  // Группа в списке выбора: подключение, состояния, проблемы.
-  group: "connect" | "state" | "problem";
+  // Группа в списке выбора: подключение, состояния, проблемы, серверы и токены.
+  group: "connect" | "state" | "problem" | "provider";
   // Настраивает состояние проекта; world нужен тем, кто запускает операцию.
   setup: (project: DemoProjectGit, world: DemoWorld, projectId: string) => void;
   // Настраивает общий мир: профиль, доступы, папка данных.
@@ -319,6 +334,183 @@ export const SCENARIOS: DemoScenario[] = [
       };
     },
   },
+  // --- серверы и токены ---------------------------------------------------------
+  // Проект тот же, что без подключения: всё происходит в окне подключения, в
+  // настройках приложения («Доступ к репозиториям») и по адресу из подсказки.
+  {
+    id: "provider_gitlab_com",
+    group: "provider",
+    setup: () => undefined,
+  },
+  {
+    id: "provider_gitlab_self",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["gitlab.hse.ru"] = "17.3.1";
+      // Сервер уже знаком Студии: версию видно в чипе сразу после ввода адреса.
+      world.hostSettings.push(emptyHostSettings("gitlab.hse.ru", null));
+    },
+  },
+  {
+    // Старый GitLab: ссылка нового вида не откроется, права токена не прочитать.
+    id: "provider_gitlab_old",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["gitlab.old.hse.ru"] = "13.12.2";
+      world.hostSettings.push(emptyHostSettings("gitlab.old.hse.ru", null));
+      world.forcedTokenMode = "opaque";
+    },
+  },
+  {
+    // Внутренний сервер, сертификат выдан центром организации.
+    id: "provider_tls_ca",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["gitlab.hse.local"] = "17.3.1";
+      world.hostSettings.push(emptyHostSettings("gitlab.hse.local", null));
+    },
+  },
+  {
+    id: "provider_tls_selfsigned",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["gitlab.lab.local"] = "16.9.0";
+    },
+  },
+  {
+    // Сертификат закреплён, но сервер предъявляет другой.
+    id: "provider_tls_pin_changed",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.hostSettings.push({
+        ...emptyHostSettings("gitlab.rotated.local", null),
+        pinned_fingerprint:
+          "SHA256:0ldPinnedCertificateFingerprintNoLongerPresented123",
+      });
+    },
+  },
+  {
+    id: "provider_github",
+    group: "provider",
+    setup: () => undefined,
+  },
+  {
+    id: "provider_gitea",
+    group: "provider",
+    setup: () => undefined,
+  },
+  {
+    // Имя хоста ничего не говорит: тип узнаётся по ответу самого сервера.
+    id: "provider_api_detect",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["forge.hse.ru"] = "16.11.2";
+    },
+  },
+  {
+    id: "token_narrow",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.forcedTokenMode = "narrow";
+    },
+  },
+  {
+    id: "token_broad",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.forcedTokenMode = "broad";
+    },
+  },
+  {
+    id: "token_expired",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.forcedTokenMode = "expired";
+    },
+  },
+  {
+    // Список доступов с токенами разного срока.
+    id: "credentials_expiry",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      const [github] = world.credentials;
+      if (!github) return;
+      const at = (days: number): string => isoAt(nowMs() + days * DAY);
+      const base = { ...github, public_key: null, fingerprint_sha256: null };
+      world.credentials = [
+        { ...github, expires_at: at(120) },
+        {
+          ...base,
+          id: "00000000-0000-4000-8000-000000000011",
+          label: "GitLab ВШЭ, токен на 90 дней",
+          host: "gitlab.hse.ru",
+          token_family: "glpat",
+          expires_at: at(5),
+          status: "ok",
+          used_by: [],
+        },
+        {
+          ...base,
+          id: "00000000-0000-4000-8000-000000000012",
+          label: "Gitea, учебный",
+          host: "codeberg.org",
+          token_family: null,
+          expires_at: isoAgo(3 * DAY),
+          status: "auth_failed",
+          used_by: [],
+        },
+        {
+          ...base,
+          id: "00000000-0000-4000-8000-000000000013",
+          label: "Bitbucket, без срока",
+          host: "bitbucket.org",
+          token_family: null,
+          expires_at: null,
+          status: "unverified",
+          used_by: [],
+        },
+      ];
+      world.tokenModes["00000000-0000-4000-8000-000000000012"] = "expired";
+      world.serverVersions["gitlab.hse.ru"] = "17.3.1";
+    },
+  },
+  {
+    // Настройки приложения: серверы с разными типами, сертификатами и закреплением.
+    id: "servers_settings",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.serverVersions["gitlab.hse.ru"] = "17.3.1";
+      world.serverVersions["gitlab.hse.local"] = "17.3.1";
+      world.hostSettings.push(
+        {
+          ...emptyHostSettings("gitlab.hse.ru", null),
+          provider_override: "gitlab",
+        },
+        {
+          ...emptyHostSettings("gitlab.hse.local", 8443),
+          ca_present: true,
+        },
+        {
+          ...emptyHostSettings("gitlab.lab.local", null),
+          pinned_fingerprint:
+            "SHA256:s3lfS1gnedDemoCertificateFingerprint0123456789abcd",
+        },
+        emptyHostSettings("forge.hse.ru", null),
+        emptyHostSettings("git.example.com", null),
+      );
+    },
+  },
 ];
 
 export const DEFAULT_SCENARIO_ID: DemoScenarioId = "not_connected";
@@ -339,6 +531,10 @@ export const createWorld = (scenarioId: string): DemoWorld => {
     operations: new Map(),
     credentials: initialCredentials(false),
     hosts: initialHosts(),
+    hostSettings: [emptyHostSettings("github.com", null)],
+    tokenModes: {},
+    forcedTokenMode: null,
+    serverVersions: {},
     profile: { name: ME.name, email: ME.email },
     dataDirShared: null,
     defaultFetchIntervalS: 300,

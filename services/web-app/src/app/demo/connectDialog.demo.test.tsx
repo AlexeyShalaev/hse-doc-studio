@@ -63,6 +63,16 @@ const paste = async (
   await user.paste(value);
 };
 
+// Токен набран по символам: вставка целиком проверяет его сразу, это отдельные тесты.
+const typeInto = async (
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  value: string,
+) => {
+  await user.click(await screen.findByLabelText(label));
+  await user.keyboard(value);
+};
+
 describe("окно подключения поверх демо-транспорта", () => {
   beforeAll(() => {
     installDemoAdapter(apiClient, createDemoRouter(gitDemoRoutes));
@@ -88,7 +98,7 @@ describe("окно подключения поверх демо-транспор
     await user.click(screen.getByRole("button", { name: "Далее" }));
     // Для github.com в демо уже есть сохранённый токен: заводим новый рядом.
     await user.click(await screen.findByLabelText("Добавить новый токен"));
-    await paste(user, "Токен", TOKEN);
+    await typeInto(user, "Токен", TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -154,7 +164,7 @@ describe("окно подключения поверх демо-транспор
     await user.click(screen.getByRole("button", { name: "Далее" }));
     // Для github.com в демо уже есть сохранённый токен: заводим новый рядом.
     await user.click(await screen.findByLabelText("Добавить новый токен"));
-    await paste(user, "Токен", TOKEN);
+    await typeInto(user, "Токен", TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -233,7 +243,7 @@ describe("окно подключения поверх демо-транспор
     const user = userEvent.setup();
     mount("fix_access");
     await user.click(await screen.findByLabelText("Новый токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -249,5 +259,150 @@ describe("окно подключения поверх демо-транспор
     );
     expect(status.ui_state).not.toBe("auth_failed");
     expect(status.health).toBe("ok");
+  });
+
+  it("GitLab.com: ссылка на токен, вставка проверяется сразу, права названы", async () => {
+    resetWorld("provider_gitlab_com");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.com/hse/empty-paper.git",
+    );
+    expect(screen.getByTestId("provider-chip")).toHaveTextContent("GitLab");
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    const link = await screen.findByTestId("token-create-link");
+    expect(link).toHaveTextContent("Создать токен на GitLab");
+    expect(
+      new URL(link.getAttribute("href") ?? "").searchParams.get("scopes"),
+    ).toBe("read_repository,write_repository");
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste("glpat-demo-token-123456");
+    const card = await screen.findByTestId("token-check-sufficient");
+    expect(card).toHaveTextContent("ivan-smirnov");
+    expect(card).toHaveTextContent("write_repository");
+    expect(document.body.innerHTML).not.toContain("glpat-demo-token-123456");
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    expect(
+      await screen.findByTestId("probe-result-ready-empty"),
+    ).toBeInTheDocument();
+  });
+
+  it("старый GitLab: заметка о версии, права проверить нельзя, но подключиться можно", async () => {
+    resetWorld("provider_gitlab_old");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.old.hse.ru/team/empty-paper.git",
+    );
+    expect(await screen.findByTestId("provider-version")).toHaveTextContent(
+      "v13.12",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    const note = await screen.findByTestId("gitlab-legacy-note");
+    expect(note).toHaveTextContent("GitLab 13.12.2");
+    expect(
+      new URL(
+        screen.getByTestId("token-create-link").getAttribute("href") ?? "",
+      ).pathname,
+    ).toBe("/-/profile/personal_access_tokens");
+    await user.click(await screen.findByLabelText("Токен"));
+    await user.paste("glpat-demo-token-123456");
+    expect(
+      await screen.findByTestId("token-check-unknown"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    const ready = await screen.findByTestId("probe-result-ready-empty");
+    expect(ready).toHaveTextContent("GitLab 13.12");
+  });
+
+  it("внутренний сервер: окно сертификата, затем проверка проходит", async () => {
+    resetWorld("provider_tls_ca");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.hse.local/team/empty-paper.git",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await typeInto(user, "Токен", "glpat-demo-token-123456");
+    await user.click(
+      screen.getByRole("button", { name: "Сохранить и проверить" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /Сертификат gitlab.hse.local не из известного центра/,
+    });
+    await user.click(within(dialog).getByTestId("tls-ca-text"));
+    await user.paste(
+      "-----BEGIN CERTIFICATE-----\nMIIBdemo\n-----END CERTIFICATE-----",
+    );
+    await user.click(within(dialog).getByTestId("tls-submit"));
+    expect(
+      await screen.findByTestId("probe-result-ready-empty"),
+    ).toBeInTheDocument();
+  });
+
+  it("токену не хватает прав: проверка называет право, подключиться всё равно можно", async () => {
+    resetWorld("token_narrow");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.com/hse/empty-paper.git",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(await screen.findByLabelText("Токен"));
+    await user.paste("glpat-demo-token-123456");
+    expect(
+      await screen.findByTestId("token-check-too_narrow"),
+    ).toHaveTextContent("write_repository");
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    const ready = await screen.findByTestId("probe-result-ready-empty");
+    expect(ready).toHaveTextContent("добавь write_repository");
+  });
+
+  it("срок токена истёк: проверка говорит об этом, а проверка адреса останавливает", async () => {
+    resetWorld("token_expired");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.com/hse/empty-paper.git",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(await screen.findByLabelText("Токен"));
+    await user.paste("glpat-demo-token-123456");
+    expect(
+      await screen.findByTestId("token-check-expired"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    expect(
+      await screen.findByTestId("probe-result-token_expired"),
+    ).toBeInTheDocument();
+  });
+
+  it("тип сервера по ответу сервера и подсказка у незнакомого хоста", async () => {
+    resetWorld("provider_api_detect");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://forge.hse.ru/team/empty-paper.git",
+    );
+    expect(screen.getByTestId("provider-unknown-hint")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(await screen.findByLabelText("Токен"));
+    await user.paste("glpat-demo-token-123456");
+    await screen.findByTestId("token-check-sufficient");
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    const ready = await screen.findByTestId("probe-result-ready-empty");
+    expect(ready).toHaveTextContent("GitLab 16.11");
   });
 });

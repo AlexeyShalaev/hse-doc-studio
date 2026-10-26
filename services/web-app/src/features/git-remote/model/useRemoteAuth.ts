@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  gitRemoteApi,
+  useCheckCredential,
   useCreateCredential,
   useUpdateCredential,
   type GitCredential,
@@ -14,6 +16,11 @@ import {
 import { defaultCredentialLabel } from "../lib/providerHelp";
 import { NEW_CREDENTIAL } from "../ui/CredentialPicker";
 import type { PatDraft } from "../ui/PatPanel";
+import {
+  verdictOfCheck,
+  verdictOfError,
+  type TokenCheckState,
+} from "./tokenVerdict";
 
 /** `none`: открытый репозиторий, доступ не нужен (только при клонировании). */
 export type AccessMethod = "pat" | "ssh" | "none";
@@ -74,6 +81,24 @@ export const useRemoteAuth = ({
   const [useOther, setUseOther] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Проверка токена: сохранённый доступ и что о нём сказал сервер.
+  const [tokenCheck, setTokenCheck] = useState<TokenCheckState>({
+    status: "idle",
+  });
+  // Токен заменён у привязанного доступа в этом окне: вставлять его снова не нужно.
+  const [replacedId, setReplacedId] = useState<string | null>(null);
+  const checkCredential = useCheckCredential();
+  // Доступы, заведённые вставкой токена, но ещё не взятые в работу: если окно
+  // закрыли, не оставляем их в списке.
+  const [freshId, setFreshId] = useState<string | null>(null);
+  const freshRef = useRef<string | null>(null);
+  useEffect(
+    () => () => {
+      const id = freshRef.current;
+      if (id) void gitRemoteApi.deleteCredential(id).catch(() => undefined);
+    },
+    [],
+  );
 
   const host = url?.host ?? null;
   const providerName = tRemote(`provider.${url?.provider ?? "other"}`);
@@ -111,7 +136,9 @@ export const useRemoteAuth = ({
     NEW_CREDENTIAL;
   const patChoice =
     choice !== null &&
-    (choice === NEW_CREDENTIAL || pats.some((p) => p.id === choice))
+    (choice === NEW_CREDENTIAL ||
+      choice === freshId ||
+      pats.some((p) => p.id === choice))
       ? choice
       : defaultPat;
   const keyChoice =
@@ -122,6 +149,7 @@ export const useRemoteAuth = ({
 
   const creatingPat = !boundPat && patChoice === NEW_CREDENTIAL;
   const tokenFilled = draft.token.trim() !== "";
+  const boundReplaced = boundPat !== null && replacedId === boundPat.id;
 
   const clearSecret = (): void => {
     setDraft((current) => ({ ...current, token: "" }));
@@ -160,6 +188,80 @@ export const useRemoteAuth = ({
     }
   };
 
+  // Проверка токена без репозитория: токен сохраняется как доступ (иначе сервер
+  // его не увидит), затем спрашиваем, чей он, какие у него права и до какого
+  // срока. Поле токена очищается сразу после сохранения. Токен не попадает ни в
+  // состояние проверки, ни в ключи запросов.
+  const checkToken = async (value?: string): Promise<void> => {
+    if (!url || !secretsOk || isSaving) return;
+    const token = (value ?? draft.token).trim();
+    if (token === "") return;
+    setError(null);
+    setIsSaving(true);
+    setTokenCheck({ status: "checking" });
+    let savedId: string | null = null;
+    try {
+      let saved: GitCredential;
+      if (boundPat) {
+        saved = await updateCredential.mutateAsync({
+          id: boundPat.id,
+          params: { token },
+        });
+        setReplacedId(saved.id);
+      } else {
+        saved = await createCredential.mutateAsync({
+          kind: "pat",
+          label:
+            draft.label.trim() ||
+            defaultCredentialLabel(providerName, host ?? ""),
+          host: host ?? "",
+          ...(draft.username.trim() ? { username: draft.username.trim() } : {}),
+          token,
+        });
+        // Предыдущая вставка не пригодилась: заменяем её новой.
+        const old = freshRef.current;
+        if (old) void gitRemoteApi.deleteCredential(old).catch(() => undefined);
+        freshRef.current = saved.id;
+        setFreshId(saved.id);
+        setChoice(saved.id);
+      }
+      savedId = saved.id;
+    } catch (caught) {
+      setError(describeGitError(caught, t("pat.saveFailed")));
+      setTokenCheck({ status: "idle" });
+    } finally {
+      // Токен нужен только на время запроса: после него поле всегда пустое.
+      clearSecret();
+    }
+    if (savedId !== null) {
+      await runCredentialCheck(savedId);
+    }
+    setIsSaving(false);
+  };
+
+  const runCredentialCheck = async (id: string): Promise<void> => {
+    setTokenCheck({ status: "checking" });
+    try {
+      const result = await checkCredential.mutateAsync(id);
+      setTokenCheck({
+        status: "done",
+        credentialId: id,
+        verdict: verdictOfCheck(result),
+        provider: result.provider_info,
+      });
+    } catch (caught) {
+      setTokenCheck({
+        status: "done",
+        credentialId: id,
+        verdict: verdictOfError(
+          caught,
+          credentials.find((item) => item.id === id)?.expires_at,
+        ),
+        provider: null,
+      });
+    }
+  };
+
   const createKey = async (): Promise<void> => {
     if (!url) return;
     setError(null);
@@ -191,10 +293,16 @@ export const useRemoteAuth = ({
       if (keyChoice) onResolved(keyChoice);
       return;
     }
+    if (boundPat && boundReplaced && !tokenFilled) {
+      onResolved(boundPat.id);
+      return;
+    }
     if (creatingPat || boundPat) {
       if (tokenFilled && secretsOk) void savePat();
       return;
     }
+    // Доступ взят в работу: убирать его при закрытии окна уже нельзя.
+    if (freshRef.current === patChoice) freshRef.current = null;
     onResolved(patChoice);
   };
 
@@ -205,13 +313,15 @@ export const useRemoteAuth = ({
       : method === "ssh"
         ? keyChoice !== null
         : creatingPat || boundPat
-          ? tokenFilled && secretsOk
+          ? (tokenFilled && secretsOk) || (boundReplaced && !tokenFilled)
           : true);
 
   const submitLabel =
     method === "ssh"
       ? t("step.checkKey")
-      : method === "pat" && (creatingPat || boundPat)
+      : method === "pat" &&
+          (creatingPat || boundPat) &&
+          !(boundReplaced && !tokenFilled)
         ? t("step.saveAndCheck")
         : t("step.check");
 
@@ -256,6 +366,19 @@ export const useRemoteAuth = ({
       setError(null);
     },
     createKey,
+    tokenCheck,
+    /** Доступ заведён вставкой токена и ещё не взят в работу. */
+    freshId,
+    checkToken,
+    /** Проверить токен выбранного сохранённого доступа (или привязанного к проекту). */
+    checkSaved: (): void => {
+      const id = boundPat?.id ?? (creatingPat ? null : patChoice);
+      if (id) void runCredentialCheck(id);
+    },
+    recheck: (): void => {
+      if (tokenCheck.status === "done")
+        void runCredentialCheck(tokenCheck.credentialId);
+    },
     submit,
     canSubmit,
     submitLabel,

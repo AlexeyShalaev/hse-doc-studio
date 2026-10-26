@@ -49,6 +49,7 @@ describe("settings search index: repository access", () => {
     expect(accessEntries.map((e) => e.anchorId)).toEqual([
       "git-access",
       "git-access-credentials",
+      "git-access-servers",
       "git-access-hosts",
       "git-access-encryption",
       "git-access-fetch",

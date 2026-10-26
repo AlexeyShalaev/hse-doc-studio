@@ -1,13 +1,14 @@
+import { useState } from "react";
 import { Fingerprint, KeyRound, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { GitCredential } from "@entities/git-remote";
-import { localeTag } from "@shared/lib";
+import { providerSpec, type GitCredential } from "@entities/git-remote";
 import { Notice } from "@shared/ui/ConflictKit";
 import { CopyField } from "@shared/ui/CopyField";
 import { Spinner } from "@shared/ui/Spinner";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
 import { CredentialStatusChip } from "./CredentialStatusChip";
-import { ProviderHelp } from "./ProviderHelp";
+import { formatDate } from "../lib/formatDate";
+import { ProviderHelp, type KeyScope } from "./ProviderHelp";
 
 export type SshKeyPanelProps = {
   url: ParsedRemoteUrl;
@@ -19,17 +20,6 @@ export type SshKeyPanelProps = {
   isCreating: boolean;
   disabled?: boolean;
   error?: string | null;
-};
-
-const formatDate = (iso: string): string => {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ""
-    : date.toLocaleDateString(localeTag(), {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
 };
 
 // Ключ ssh: создаётся одной кнопкой, закрытая часть остаётся на компьютере, а
@@ -46,6 +36,17 @@ export const SshKeyPanel = ({
 }: SshKeyPanelProps) => {
   const { t } = useTranslation("gitAccess");
   const selected = keys.find((key) => key.id === selectedId) ?? null;
+  const spec = providerSpec(url.provider);
+  // Deploy-ключ даёт доступ к одному репозиторию и безопаснее; ключ пользователя
+  // удобнее, когда проектов несколько. Выбор есть только там, где сервер умеет оба.
+  const scopes: KeyScope[] = spec.auth_variants.includes("deploy_key")
+    ? ["deploy", "user"]
+    : ["user"];
+  const [chosenScope, setChosenScope] = useState<KeyScope | null>(null);
+  const scope: KeyScope =
+    chosenScope && scopes.includes(chosenScope)
+      ? chosenScope
+      : (scopes[0] ?? "user");
 
   const createButton = (primary: boolean) => (
     <button
@@ -186,9 +187,39 @@ export const SshKeyPanel = ({
         </div>
       )}
 
-      <Notice tone="warn" role="status" text={t("ssh.allowWrite")} />
+      {scopes.length > 1 && (
+        <div className="flex flex-col" style={{ gap: 6 }}>
+          <div
+            className="seg"
+            role="group"
+            aria-label={t("ssh.scope.label")}
+            style={{ alignSelf: "flex-start", flexWrap: "wrap" }}
+          >
+            {scopes.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={scope === value}
+                className={scope === value ? "active" : undefined}
+                onClick={() => {
+                  setChosenScope(value);
+                }}
+              >
+                {t(`ssh.scope.${value}`)}
+              </button>
+            ))}
+          </div>
+          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+            {t(`ssh.scope.${scope}Hint`)}
+          </p>
+        </div>
+      )}
 
-      <ProviderHelp url={url} kind="key" defaultOpen />
+      {scope === "deploy" && (
+        <Notice tone="warn" role="status" text={t("ssh.allowWrite")} />
+      )}
+
+      <ProviderHelp url={url} scope={scope} defaultOpen />
 
       {error && <Notice tone="err" role="alert" text={error} />}
 

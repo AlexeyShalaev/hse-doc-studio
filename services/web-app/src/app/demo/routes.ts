@@ -15,7 +15,11 @@ import type {
   GitStatus,
   OperationWarning,
 } from "@entities/git-sync";
-import { REVEAL_FINGERPRINT, type GitCredential } from "@entities/git-remote";
+import {
+  REVEAL_FINGERPRINT,
+  findHostSettings,
+  type GitCredential,
+} from "@entities/git-remote";
 import { validateProfile, type ProfileIssueCode } from "@entities/profile";
 import { DAY, HOUR, MINUTE, fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
 import { ME, TEAMMATES } from "./people";
@@ -31,6 +35,14 @@ import {
   parseDemoUrl,
   runDemoProbe,
 } from "./probe";
+import {
+  checkCredentialBody,
+  checkCredentialOutcome,
+  emptyHostSettings,
+  expiryFor,
+  hostSettingsView,
+  tokenModeOf,
+} from "./providers";
 import { createWorld, projectOf } from "./scenarios";
 import { useDemoScenarioStore } from "./scenarioStore";
 import {
@@ -995,8 +1007,13 @@ const globalRoutes: DemoRoute[] = [
           fingerprint_sha256: null,
           created_at: isoAgo(0),
           last_used_at: null,
+          expires_at: null,
           used_by: [],
         };
+        // Что скажет проверка токена, определяют слово в токене и сценарий.
+        const mode = tokenModeOf(token, world);
+        world.tokenModes[id] = mode;
+        credential.expires_at = expiryFor(mode);
       } else {
         credential = {
           id,
@@ -1010,6 +1027,7 @@ const globalRoutes: DemoRoute[] = [
           fingerprint_sha256: sshFingerprint(id),
           created_at: isoAgo(0),
           last_used_at: null,
+          expires_at: null,
           used_by: [],
         };
       }
@@ -1035,6 +1053,11 @@ const globalRoutes: DemoRoute[] = [
         // Новый токен сбрасывает прежний итог проверки.
         status: token && token.trim() !== "" ? "unverified" : current.status,
       };
+      if (token && token.trim() !== "") {
+        const mode = tokenModeOf(token, world);
+        world.tokenModes[current.id] = mode;
+        updated.expires_at = expiryFor(mode);
+      }
       world.credentials[index] = updated;
       // Новый токен снимает отказ входа у проектов, которые им пользуются.
       if (token && token.trim() !== "") {
@@ -1071,6 +1094,91 @@ const globalRoutes: DemoRoute[] = [
         (c) => c.id !== credential.id,
       );
       return demoNoContent();
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/git/credentials/:id/check",
+    handler: (req) => {
+      const index = world.credentials.findIndex((c) => c.id === req.params.id);
+      const current = world.credentials[index];
+      if (!current)
+        return demoError(404, "credential_invalid", "Доступ не найден.");
+      if (current.kind !== "pat") {
+        return demoError(
+          422,
+          "credential_invalid",
+          "Проверять можно только токен.",
+        );
+      }
+      const outcome = checkCredentialOutcome(world, current);
+      // Итог проверки виден и в списке доступов.
+      const updated: GitCredential = {
+        ...current,
+        status: outcome.ok
+          ? "ok"
+          : outcome.code === "auth_failed" || outcome.code === "token_expired"
+            ? "auth_failed"
+            : current.status,
+      };
+      world.credentials[index] = updated;
+      if (!outcome.ok) {
+        return demoError(
+          outcome.status,
+          outcome.code,
+          outcome.detail,
+          outcome.extra,
+        );
+      }
+      return demoJson(checkCredentialBody(updated, outcome));
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/git/host-settings",
+    handler: () =>
+      demoJson(
+        world.hostSettings.map((entry) => hostSettingsView(world, entry)),
+      ),
+  },
+  {
+    method: "PUT",
+    pattern: "/git/host-settings",
+    handler: (req) => {
+      const body = recordBody(req);
+      const host = (str(body.host) ?? "").trim().toLowerCase();
+      const port = typeof body.port === "number" ? body.port : null;
+      if (host === "") {
+        return demoError(422, "url_invalid", "Не указан сервер.");
+      }
+      const pem = body.ca_pem;
+      if (
+        typeof pem === "string" &&
+        (!pem.includes("-----BEGIN CERTIFICATE-----") ||
+          pem.includes("PRIVATE KEY"))
+      ) {
+        return demoError(
+          422,
+          "git_error",
+          "Это не сертификат: нужен текст между BEGIN CERTIFICATE и END CERTIFICATE.",
+        );
+      }
+      const current =
+        findHostSettings(world.hostSettings, host, port) ??
+        emptyHostSettings(host, port);
+      const next = { ...current, host, port };
+      if ("provider_override" in body) {
+        next.provider_override = str(body.provider_override);
+      }
+      if ("ca_pem" in body) next.ca_present = typeof pem === "string";
+      if ("pinned_fingerprint" in body) {
+        next.pinned_fingerprint = str(body.pinned_fingerprint);
+      }
+      world.hostSettings = [
+        ...world.hostSettings.filter((entry) => entry !== current),
+        next,
+      ];
+      return demoJson(hostSettingsView(world, next));
     },
   },
   {

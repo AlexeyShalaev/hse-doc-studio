@@ -1,4 +1,8 @@
-import type { GitCredential, Probe } from "@entities/git-remote";
+import type {
+  GitCredential,
+  GitCredentialCheck,
+  Probe,
+} from "@entities/git-remote";
 import {
   NO_REMOTE_STATUS,
   toStatusView,
@@ -87,6 +91,7 @@ export const PAT: GitCredential = {
   fingerprint_sha256: null,
   created_at: "2026-09-01T10:00:00Z",
   last_used_at: "2026-10-25T10:00:00Z",
+  expires_at: null,
   used_by: [],
 };
 
@@ -103,7 +108,27 @@ export const SSH_KEY: GitCredential = {
   fingerprint_sha256: "SHA256:Zk3p0V7m1sJrQxM2n9LdTqEoUy5aBc8HwXf4GiRvN6A",
   created_at: "2026-10-26T10:00:00Z",
   last_used_at: null,
+  expires_at: null,
   used_by: [],
+};
+
+export const GITHUB_INFO = {
+  id: "github",
+  detected_by: "host",
+  version: null,
+} as const;
+
+/** Проверка токена: всё в порядке, права достаточны. */
+export const CHECK_OK: GitCredentialCheck = {
+  credential: PAT,
+  provider_info: GITHUB_INFO,
+  token_info: {
+    login: "ivan-smirnov",
+    scopes: ["repo"],
+    expires_at: null,
+    sufficiency: "sufficient",
+    missing: [],
+  },
 };
 
 export const PROBE_PROJECT = {
@@ -129,6 +154,8 @@ export const makeProbe = (overrides: Partial<Probe> = {}): Probe => ({
     repo: "paper",
     token_stripped: false,
   },
+  provider_info: GITHUB_INFO,
+  token_info: null,
   reachable: true,
   auth_ok: true,
   empty: false,

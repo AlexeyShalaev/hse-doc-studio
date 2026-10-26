@@ -6,7 +6,11 @@ import type {
   GitStatus,
   SyncResult,
 } from "@entities/git-sync";
-import type { GitCredential, GitHost } from "@entities/git-remote";
+import type {
+  GitCredential,
+  GitHost,
+  GitHostSettings,
+} from "@entities/git-remote";
 import type { Profile } from "@entities/profile";
 import {
   MINUTE,
@@ -23,6 +27,7 @@ import {
   type DemoConflictSession,
 } from "./conflictData";
 import { incomingCommits, outgoingCommits } from "./people";
+import type { DemoTokenMode } from "./providers";
 
 // --- мир демо ---------------------------------------------------------------------
 // Всё состояние живёт в памяти вкладки и сбрасывается при смене сценария.
@@ -83,6 +88,13 @@ export type DemoWorld = {
   operations: Map<string, DemoOperation>;
   credentials: GitCredential[];
   hosts: GitHost[];
+  // Настройки серверов: подмена типа, свой CA, закреплённый сертификат.
+  hostSettings: GitHostSettings[];
+  // Что ответит проверка токена, по доступам; сценарий может задать один режим для всех.
+  tokenModes: Record<string, DemoTokenMode>;
+  forcedTokenMode: DemoTokenMode | null;
+  // Версии серверов по хостам (то, что назвал бы сам сервер).
+  serverVersions: Record<string, string>;
   profile: { name: string; email: string } | null;
   dataDirShared: { provider: string; root: string } | null;
   // Личная настройка приложения «как часто проверять репозитории», секунды.
@@ -158,6 +170,7 @@ export const initialCredentials = (authFailed: boolean): GitCredential[] => [
     fingerprint_sha256: null,
     created_at: isoAgo(40 * 24 * 60 * MINUTE),
     last_used_at: isoAgo(2 * 60 * MINUTE),
+    expires_at: isoAt(nowMs() + 50 * 24 * 60 * MINUTE),
     used_by: [{ project_id: fakeUuid(101), name: "Курсовая работа" }],
   },
   {
@@ -173,6 +186,7 @@ export const initialCredentials = (authFailed: boolean): GitCredential[] => [
     fingerprint_sha256: "SHA256:Zk3p0V7m1sJrQxM2n9LdTqEoUy5aBc8HwXf4GiRvN6A",
     created_at: isoAgo(12 * 24 * 60 * MINUTE),
     last_used_at: null,
+    expires_at: null,
     used_by: [],
   },
 ];

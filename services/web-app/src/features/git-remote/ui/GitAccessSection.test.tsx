@@ -10,7 +10,7 @@ import {
   type GitHost,
   type SecretsStatus,
 } from "@entities/git-remote";
-import { PAT, SSH_KEY } from "../testing/connectFixtures";
+import { CHECK_OK, PAT, SSH_KEY } from "../testing/connectFixtures";
 import {
   installPointerPolyfills,
   renderSettings,
@@ -65,6 +65,8 @@ const setup = ({
 }: Setup = {}) => {
   vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue(credentials);
   vi.spyOn(gitRemoteApi, "listHosts").mockResolvedValue(hosts);
+  vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(CHECK_OK);
   vi.spyOn(gitRemoteApi, "getSecretsStatus").mockResolvedValue(secrets);
   vi.spyOn(settingsApi, "get").mockResolvedValue({
     git_fetch_interval_s: 300,
@@ -100,7 +102,10 @@ describe("раздел «Доступ к репозиториям»", () => {
     expect(
       screen.getByText("Фоновая проверка по умолчанию"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("browser-login-card")).toHaveTextContent("Скоро");
+    expect(await screen.findByText("Серверы git")).toBeInTheDocument();
+    // Входа через браузер нет ни в виде карточки, ни в виде обещания.
+    expect(screen.queryByTestId("browser-login-card")).toBeNull();
+    expect(screen.queryByText("Скоро")).toBeNull();
   });
 
   it("пока данные грузятся, показывает индикаторы", () => {
@@ -599,7 +604,9 @@ describe("раздел «Доступ к репозиториям»", () => {
     expect(
       await screen.findByRole("region", { name: "Encryption" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("browser-login-card")).toHaveTextContent("Soon");
+    expect(await screen.findByText("Git servers")).toBeInTheDocument();
+    expect(screen.queryByTestId("browser-login-card")).toBeNull();
+    expect(screen.queryByText("Soon")).toBeNull();
     await i18n.changeLanguage("ru");
   });
 });

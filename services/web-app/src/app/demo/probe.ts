@@ -1,5 +1,6 @@
-import type { ProbeUrl } from "@entities/git-remote";
+import { providerForHost, type ProbeUrl } from "@entities/git-remote";
 import { fakeUuid } from "./clock";
+import { detectDemoProvider, tlsIssueFor, tokenInfoFor } from "./providers";
 import { GITHUB_HOST_KEY, type DemoWorld } from "./world";
 
 // Правила демо-проверки адреса. Настоящий разбор живёт на сервере; здесь ровно
@@ -8,13 +9,7 @@ import { GITHUB_HOST_KEY, type DemoWorld } from "./world";
 
 export type DemoUrlError = { code: string; detail: string };
 
-const providerOf = (host: string): string => {
-  if (host === "github.com") return "github";
-  if (host === "gitlab.com" || host.startsWith("gitlab.")) return "gitlab";
-  if (host === "codeberg.org" || host.startsWith("gitea.")) return "gitea";
-  if (host === "bitbucket.org") return "bitbucket";
-  return "other";
-};
+const providerOf = (host: string): string => providerForHost(host);
 
 const splitPath = (
   path: string,
@@ -110,6 +105,12 @@ export const parseDemoUrl = (raw: string): ProbeUrl | DemoUrlError => {
 export const isUrlError = (
   value: ProbeUrl | DemoUrlError,
 ): value is DemoUrlError => "code" in value;
+
+// Порт сайта из адреса: нужен, чтобы найти настройки сервера.
+const sitePortOf = (displayUrl: string): number | null => {
+  const match = /^[a-z]+:\/\/(?:[^@/]*@)?[^/:]+:(\d+)/i.exec(displayUrl);
+  return match?.[1] ? Number(match[1]) : null;
+};
 
 const has = (url: string, word: string): boolean =>
   url.toLowerCase().includes(word);
@@ -230,12 +231,35 @@ export const runDemoProbe = (
   world: DemoWorld,
   input: DemoProbeInput,
 ): { status: number; body: unknown } => {
-  const parsed = parseDemoUrl(input.url);
-  if (isUrlError(parsed)) {
-    return { status: 400, body: parsed };
+  const rawParsed = parseDemoUrl(input.url);
+  if (isUrlError(rawParsed)) {
+    return { status: 400, body: rawParsed };
   }
+  // Тип сервера решён с учётом выбора человека и ответа самого сервера.
+  const sitePort =
+    rawParsed.kind === "https" || rawParsed.kind === "http"
+      ? sitePortOf(rawParsed.display_url)
+      : null;
+  const providerInfo = detectDemoProvider(
+    world,
+    rawParsed.host ?? null,
+    sitePort,
+  );
+  const parsed: ProbeUrl = { ...rawParsed, provider: providerInfo.id };
+  const credential = input.credentialId
+    ? world.credentials.find((item) => item.id === input.credentialId)
+    : undefined;
+  const mode = credential
+    ? (world.tokenModes[credential.id] ?? "sufficient")
+    : null;
+  const tokenInfo =
+    credential?.kind === "pat" && mode
+      ? tokenInfoFor(credential, providerInfo.id, mode)
+      : null;
   const base = {
     url: parsed,
+    provider_info: providerInfo,
+    token_info: null as unknown,
     reachable: true,
     auth_ok: true,
     empty: false,
@@ -247,6 +271,61 @@ export const runDemoProbe = (
     required_studio: null,
     template_available: true,
   };
+  // Сертификат внутреннего сервера: пока ему не доверили, дальше не идём.
+  const tls =
+    parsed.kind === "https" || parsed.kind === "http"
+      ? tlsIssueFor(world, parsed.host ?? null, sitePort)
+      : null;
+  if (tls) {
+    return {
+      status: 200,
+      body: {
+        ...base,
+        ok: false,
+        error: {
+          code: tls.code,
+          detail: tls.detail,
+          host_keys: null,
+          certificate: tls.certificate,
+        },
+        reachable: false,
+        auth_ok: false,
+        default_branch: null,
+        branches: [],
+        relation: "unknown",
+        schema_access: null,
+        template_available: null,
+      },
+    };
+  }
+  // Токен просрочен или отозван: сервер ответит отказом, а не данными о проекте.
+  if (
+    credential?.kind === "pat" &&
+    (mode === "expired" || mode === "revoked")
+  ) {
+    const expired = mode === "expired";
+    return {
+      status: 200,
+      body: {
+        ...base,
+        token_info: tokenInfo,
+        ok: false,
+        error: {
+          code: expired ? "token_expired" : "auth_failed",
+          detail: expired
+            ? "Срок действия токена истёк. Выпусти новый."
+            : "Сервер отклонил токен: он отозван или просрочен.",
+          host_keys: null,
+        },
+        auth_ok: false,
+        default_branch: null,
+        branches: [],
+        relation: "unknown",
+        schema_access: null,
+        template_available: null,
+      },
+    };
+  }
   const issue = accessIssue(world, parsed, input.credentialId);
   if (issue) {
     const unreachable = ["offline", "tls_error", "timeout"].includes(
@@ -274,6 +353,7 @@ export const runDemoProbe = (
     };
   }
 
+  base.token_info = tokenInfo;
   const url = parsed.display_url;
   const projectId = input.projectId;
   const project = {

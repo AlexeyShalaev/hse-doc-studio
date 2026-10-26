@@ -85,7 +85,8 @@
     "group": {
       "connect": "Подключение",
       "state": "Состояния",
-      "problem": "Проблемы"
+      "problem": "Проблемы",
+      "provider": "Серверы и токены"
     },
     "scenario": {
       "not_connected": {
@@ -167,6 +168,62 @@
       "shared_folder": {
         "title": "Папка в облачном диске",
         "hint": "Предупреждение про Яндекс.Диск"
+      },
+      "provider_gitlab_com": {
+        "title": "GitLab.com: токен по ссылке",
+        "hint": "Адрес https://gitlab.com/hse/paper.git. Кнопка «Создать токен» открывает страницу с подставленными правами. Вставь любой токен, например glpat-demo"
+      },
+      "provider_gitlab_self": {
+        "title": "Свой GitLab 17",
+        "hint": "Адрес https://gitlab.hse.ru/team/paper.git. В чипе видна версия сервера. Токен любой"
+      },
+      "provider_gitlab_old": {
+        "title": "Старый GitLab 13",
+        "hint": "Адрес https://gitlab.old.hse.ru/team/paper.git. Основная ссылка может не открыться: есть запасная. Права токена прочитать нельзя"
+      },
+      "provider_tls_ca": {
+        "title": "Внутренний сервер с сертификатом организации",
+        "hint": "Адрес https://gitlab.hse.local/team/paper.git. Откроется окно сертификата: добавь CA (вставь любой текст BEGIN CERTIFICATE) или закрепи отпечаток"
+      },
+      "provider_tls_selfsigned": {
+        "title": "Внутренний сервер с самоподписанным сертификатом",
+        "hint": "Адрес https://gitlab.lab.local/team/paper.git. Окно сертификата предложит закрепить отпечаток"
+      },
+      "provider_tls_pin_changed": {
+        "title": "Сертификат изменился после закрепления",
+        "hint": "Адрес https://gitlab.rotated.local/team/paper.git. Нужно ввести имя сервера, чтобы закрепить новый сертификат"
+      },
+      "provider_github": {
+        "title": "GitHub: точный токен",
+        "hint": "Адрес https://github.com/hse/paper.git. Под кнопкой токена напоминание выбрать репозиторий. Токен github_pat_demo: права проверить нельзя"
+      },
+      "provider_gitea": {
+        "title": "Gitea и Codeberg",
+        "hint": "Адрес https://codeberg.org/anna/paper.git. Ссылка без подстановки и шаги по номерам"
+      },
+      "provider_api_detect": {
+        "title": "Тип сервера по ответу сервера",
+        "hint": "Адрес https://forge.hse.ru/team/paper.git. По имени хоста тип не понять, сервер называет себя GitLab 16"
+      },
+      "token_narrow": {
+        "title": "Токену не хватает прав",
+        "hint": "Любой адрес GitLab и любой токен. Проверка скажет, что нужно добавить write_repository"
+      },
+      "token_broad": {
+        "title": "У токена слишком много прав",
+        "hint": "Любой адрес GitLab и любой токен. Проверка предупредит про право api"
+      },
+      "token_expired": {
+        "title": "Срок токена истёк",
+        "hint": "Любой адрес и любой токен. Проверка скажет, что токен просрочен"
+      },
+      "credentials_expiry": {
+        "title": "Доступы с разным сроком",
+        "hint": "Настройки приложения, Доступ к репозиториям: скоро истекает, истёк, без срока. Кнопка «Проверить» у каждого токена"
+      },
+      "servers_settings": {
+        "title": "Серверы в настройках",
+        "hint": "Настройки приложения, Доступ к репозиториям, Серверы git: выбранный тип, свой CA, закреплённый сертификат"
       }
     },
     "urlTitle": "Что вводить в адрес",

@@ -1,12 +1,17 @@
+import { useState } from "react";
+import { ScanSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
 import type { AccessMethod, RemoteAuth } from "../model/useRemoteAuth";
-import { BrowserLoginCard } from "./BrowserLoginCard";
+import { tokenCreateUrl } from "../lib/providerHelp";
+import { useHostProvider } from "../model/useHostProvider";
 import { CredentialPicker } from "./CredentialPicker";
 import { PatPanel } from "./PatPanel";
 import { SshKeyPanel } from "./SshKeyPanel";
+import { TlsTrustDialog } from "./TlsTrustDialog";
+import { TokenCheckCard } from "./TokenCheckCard";
 
 export type RemoteAuthFieldsProps = {
   auth: RemoteAuth;
@@ -17,8 +22,8 @@ export type RemoteAuthFieldsProps = {
   isLoadingCredentials: boolean;
   secretsOk: boolean;
   onSwitchUrl: (value: string) => void;
-  /** Показать карточку «Вход через браузер: скоро». */
-  showBrowserLogin?: boolean;
+  /** Название проекта: попадает в имя токена на странице сервера. */
+  projectName?: string | null;
 };
 
 // Поля доступа к репозиторию: способ (токен, ключ), сохранённые доступы и формы
@@ -32,9 +37,11 @@ export const RemoteAuthFields = ({
   isLoadingCredentials,
   secretsOk,
   onSwitchUrl,
-  showBrowserLogin = true,
+  projectName = null,
 }: RemoteAuthFieldsProps) => {
   const { t } = useTranslation("gitAccess");
+  const provider = useHostProvider(url);
+  const [tlsOpen, setTlsOpen] = useState(false);
   const {
     method,
     mismatch,
@@ -46,6 +53,21 @@ export const RemoteAuthFields = ({
     isSaving,
   } = auth;
   const host = auth.host ?? "";
+
+  // Результат проверки показываем для того токена, который сейчас выбран.
+  const check = auth.tokenCheck;
+  const currentId = boundPat?.id ?? (creatingPat ? null : auth.patChoice);
+  const showCheck =
+    method === "pat" &&
+    check.status !== "idle" &&
+    (check.status === "checking" || check.credentialId === currentId);
+  const verdict = check.status === "done" ? check.verdict : null;
+  const certificate = verdict?.kind === "error" ? verdict.certificate : null;
+  const createUrl = tokenCreateUrl(url, {
+    provider: url.provider,
+    subpath: provider.subpath,
+    projectName,
+  });
 
   const methods: AccessMethod[] = auth.allowAnonymous
     ? ["pat", "ssh", "none"]
@@ -135,6 +157,43 @@ export const RemoteAuthFields = ({
               helpOpen={pats.length === 0 && !boundPat}
               disabled={!secretsOk || isSaving}
               error={error}
+              projectName={projectName}
+              serverVersion={provider.detection.version}
+              onPasteToken={(token) => {
+                void auth.checkToken(token);
+              }}
+              onCheckToken={() => {
+                void auth.checkToken();
+              }}
+            />
+          )}
+          {!creatingPat && !boundPat && currentId && !showCheck && (
+            <div>
+              <button
+                type="button"
+                className="btn sm"
+                data-testid="check-saved-token"
+                disabled={isSaving || !secretsOk}
+                onClick={auth.checkSaved}
+              >
+                <ScanSearch size={13} aria-hidden="true" />
+                {t("pat.checkSaved")}
+              </button>
+            </div>
+          )}
+          {showCheck && (
+            <TokenCheckCard
+              verdict={verdict}
+              provider={url.provider}
+              version={
+                (check.status === "done" ? check.provider?.version : null) ??
+                provider.detection.version
+              }
+              createUrl={createUrl}
+              onRetry={auth.recheck}
+              onReviewCertificate={() => {
+                setTlsOpen(true);
+              }}
             />
           )}
           {!creatingPat && !boundPat && error && (
@@ -168,7 +227,26 @@ export const RemoteAuthFields = ({
         </button>
       )}
 
-      {showBrowserLogin && <BrowserLoginCard />}
+      {url.host && (
+        <TlsTrustDialog
+          isOpen={tlsOpen}
+          mode={
+            verdict?.kind === "error" && verdict.code === "tls_pin_mismatch"
+              ? "pin_mismatch"
+              : "untrusted"
+          }
+          host={url.host}
+          port={provider.port}
+          certificate={certificate}
+          onTrusted={() => {
+            setTlsOpen(false);
+            auth.recheck();
+          }}
+          onClose={() => {
+            setTlsOpen(false);
+          }}
+        />
+      )}
     </>
   );
 };

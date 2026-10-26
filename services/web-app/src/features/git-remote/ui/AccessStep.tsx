@@ -19,6 +19,8 @@ export type AccessStepProps = {
   isLoadingCredentials: boolean;
   /** false: хранилище секретов недоступно, сохранить токен или ключ нельзя. */
   secretsOk: boolean;
+  /** Название проекта: попадает в имя токена на странице сервера. */
+  projectName?: string | null;
   /** Доступ выбран (или сохранён): можно проверять подключение. */
   onContinue: (credentialId: string) => void;
   onBack: () => void;
@@ -33,6 +35,7 @@ export const AccessStep = ({
   credentials,
   isLoadingCredentials,
   secretsOk,
+  projectName = null,
   onContinue,
   onBack,
   onSwitchUrl,
@@ -95,6 +98,7 @@ export const AccessStep = ({
         isLoadingCredentials={isLoadingCredentials}
         secretsOk={secretsOk}
         onSwitchUrl={onSwitchUrl}
+        projectName={projectName}
       />
     </StepLayout>
   );

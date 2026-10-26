@@ -8,7 +8,12 @@ import { resetWorld } from "./routes";
 import { useDemoScenarioStore } from "./scenarioStore";
 import { SCENARIOS, type DemoScenario } from "./scenarios";
 
-const GROUPS: DemoScenario["group"][] = ["connect", "state", "problem"];
+const GROUPS: DemoScenario["group"][] = [
+  "connect",
+  "state",
+  "problem",
+  "provider",
+];
 
 // Переключатель демо-сценариев синхронизации. Виден только в сборке с
 // VITE_GIT_DEMO=1: в обычном приложении его нет вовсе.

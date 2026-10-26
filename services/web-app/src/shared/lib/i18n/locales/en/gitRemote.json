@@ -137,7 +137,9 @@
       "project": "Project",
       "template": "Template",
       "authors": "Authors",
-      "branch": "Branch"
+      "branch": "Branch",
+      "server": "Server",
+      "tokenOwner": "Token issued for"
     },
     "ready": {
       "empty": {
@@ -178,7 +180,11 @@
     "warn": {
       "schemaNewer": "The project in the repository was created by a newer Studio version. You can connect it, but syncing stays paused until you update Studio.",
       "schemaNewerVersion": "Version {{version}} is required.",
-      "templateMissing": "This Studio version does not have the project template: the project will open read-only."
+      "templateMissing": "This Studio version does not have the project template: the project will open read-only.",
+      "tokenNarrow": "The token lacks rights: add {{missing}}, otherwise versions cannot be pushed.",
+      "tokenBroad": "The token has more rights than needed. It will work, but it is safer to issue a token for repository read and write only.",
+      "tokenExpiring_one": "The token stops working in {{count}} day. Issue a new one in advance.",
+      "tokenExpiring_other": "The token stops working in {{count}} days. Issue a new one in advance."
     }
   },
   "issue": {
@@ -192,7 +198,8 @@
       "back_to_access": "Change access",
       "updateAccess": "Update access",
       "review_host_key": "Review fingerprint",
-      "close": "Close"
+      "close": "Close",
+      "review_certificate": "Review the certificate"
     },
     "auth_failed": {
       "title": "The repository did not accept the access",
@@ -274,6 +281,32 @@
     "url_scheme_forbidden": {
       "title": "This kind of address is not supported",
       "hint": "Use https or ssh. Studio does not accept plain http or arbitrary transports."
+    },
+    "certificate": {
+      "subject": "Certificate for",
+      "issuer": "Issued by",
+      "fingerprint": "Fingerprint"
+    },
+    "token_expired": {
+      "title": "The token has expired",
+      "hint": "The server no longer accepts this token. Issue a new one on the token page and paste it at the Access step."
+    },
+    "token_insufficient_scope": {
+      "title": "The token lacks rights",
+      "hint": "The repository can be read, but versions cannot be pushed. Issue a token with the needed rights and replace the old one.",
+      "missing": "To add"
+    },
+    "tls_untrusted_ca": {
+      "title": "The server certificate was issued by an unknown authority",
+      "hint": "This is common for servers inside an organization. Add the issuing authority's certificate for this server or pin the certificate fingerprint. Studio never turns the check off."
+    },
+    "tls_pin_mismatch": {
+      "title": "The server certificate has changed",
+      "hint": "You pinned a different certificate for this server. It may be a normal renewal or it may be a substitution, so the connection is stopped."
+    },
+    "provider_unknown": {
+      "title": "Could not detect the server type",
+      "hint": "Go back to the address and click \"change\" next to the server name: choose GitLab, GitHub, Gitea or other."
     }
   },
   "done": {
@@ -506,5 +539,31 @@
         "template_missing": "The project template is missing in this version of the Studio: the project is open read-only."
       }
     }
+  },
+  "providerChip": {
+    "change": "change",
+    "changeLabel": "Change the server type of {{host}}",
+    "detectedBy": {
+      "override": "Server type chosen by you",
+      "host": "Server type detected from the address",
+      "api": "Server type detected from the server's own answer",
+      "unknown": "Server type could not be detected"
+    },
+    "unknownHint": "Could not tell what kind of server this is. Is it GitLab, GitHub, Gitea or something else? Click \"change\": the token link and the token check depend on it."
+  },
+  "providerPicker": {
+    "title": "What kind of server is this?",
+    "text": "The token link and the token rights check depend on it. Your choice is remembered for {{host}}.",
+    "option": {
+      "github": "GitHub (including Enterprise)",
+      "gitlab": "GitLab (gitlab.com or your own server)",
+      "gitea": "Gitea, Forgejo, Codeberg",
+      "bitbucket": "Bitbucket",
+      "other": "Other"
+    },
+    "auto": "Detect automatically",
+    "path": "Install path",
+    "pathHint": "If the server lives in a subfolder, for example https://host/gitlab, enter /gitlab. Usually left empty.",
+    "failed": "Could not remember the choice."
   }
 }

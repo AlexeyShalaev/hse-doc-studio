@@ -7,9 +7,12 @@ import {
 import type { CiRequest, CiWriteRequest } from "@entities/git-sync";
 import {
   CloneDefaultsSchema,
+  GitCredentialCheckSchema,
   GitCredentialListSchema,
   GitCredentialSchema,
   GitHostListSchema,
+  GitHostSettingsListSchema,
+  GitHostSettingsSchema,
   ProbeSchema,
   SecretsStatusSchema,
   SharedFolderSchema,
@@ -18,6 +21,7 @@ import {
   type ProbeRequest,
   type TrustHostRequest,
   type UpdateCredentialRequest,
+  type UpdateGitHostSettingsRequest,
 } from "./gitRemoteSchemas";
 
 export type CloneFromBundleParams = {
@@ -53,6 +57,30 @@ export const gitRemoteApi = {
         silentError: true,
       })
       .then(() => undefined),
+
+  // Проверка сохранённого токена: чей он, какие права, до какого срока. Отказ
+  // сервера (токен не принят, истёк, сертификат) приходит ошибкой с кодом: её
+  // разбирает вызывающий. Сам токен в ответ не попадает.
+  checkCredential: (id: string) =>
+    apiClient
+      .post(`/git/credentials/${id}/check`, undefined, {
+        silentError: true,
+        timeout: 60_000,
+      })
+      .then(parseResp(GitCredentialCheckSchema)),
+
+  // --- настройки серверов: подмена провайдера, свой CA, закреплённый сертификат --
+
+  listHostSettings: () =>
+    apiClient
+      .get("/git/host-settings", { silentError: true })
+      .then(parseResp(GitHostSettingsListSchema)),
+
+  // Отсутствующее поле оставляет значение, null сбрасывает его.
+  updateHostSettings: (params: UpdateGitHostSettingsRequest) =>
+    apiClient
+      .put("/git/host-settings", params, { silentError: true })
+      .then(parseResp(GitHostSettingsSchema)),
 
   // --- ключи серверов ----------------------------------------------------------
 

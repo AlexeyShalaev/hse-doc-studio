@@ -61,6 +61,8 @@ export const cloneVerdictFromProbe = (probe: Probe): CloneVerdict => {
         hostKeys: [],
         requiredStudio: null,
         canAdopt: null,
+        certificate: null,
+        missing: [],
       },
     };
   }
@@ -89,6 +91,8 @@ export const cloneVerdictFromError = (error: unknown): CloneVerdict => {
       hostKeys: [],
       requiredStudio: null,
       canAdopt: null,
+      certificate: null,
+      missing: [],
     },
   };
 };

@@ -54,7 +54,9 @@
     "label": "Access name",
     "username": "User name",
     "usernameHint": "Only needed for servers that ask for a name together with the token. Usually left empty.",
-    "saveFailed": "Could not save the token."
+    "saveFailed": "Could not save the token.",
+    "check": "Check token",
+    "checkSaved": "Check this token"
   },
   "ssh": {
     "create": "Create key",
@@ -66,7 +68,14 @@
     "fingerprint": "Fingerprint",
     "allowWrite": "Do not forget to allow write access for the key (Allow write access): with read-only access versions cannot be sent.",
     "defaultLabel": "Key: {{name}}",
-    "createFailed": "Could not create the key."
+    "createFailed": "Could not create the key.",
+    "scope": {
+      "label": "Where to add the key",
+      "deploy": "Repository deploy key",
+      "user": "User key",
+      "deployHint": "Access to this repository only. Safer: the key can be revoked without touching anything else.",
+      "userHint": "One key for all your repositories on this server. Handy when you have several projects."
+    }
   },
   "picker": {
     "label": "Saved access for {{host}}",
@@ -74,12 +83,6 @@
     "lastUsed": "used {{when}}",
     "neverUsed": "not used yet",
     "addNew": "Add a new token"
-  },
-  "browser": {
-    "title": "Sign in with the browser",
-    "text": "GitHub and GitLab without tokens or keys",
-    "soon": "Soon",
-    "tooltip": "Sign-in without tokens is coming later"
   },
   "step": {
     "check": "Check",
@@ -91,35 +94,41 @@
     "useOther": "Use a different access"
   },
   "help": {
-    "tokenSummary": "How to get a token",
     "keySummary": "How to add a key",
-    "openTokenPage": "Open the {{provider}} token page",
     "openKeyPage": "Open the {{provider}} key page",
     "tokenNote": "Give the token only the permissions it needs and an expiry date: you can revoke it in the server settings.",
     "keyNote": "The private part of the key stays on this computer and is never sent anywhere.",
     "github": {
       "token": {
-        "open": "On GitHub open Settings, Developer settings, Fine-grained tokens and click Generate new token.",
-        "repo": "Under Repository access choose Only select repositories and tick this repository.",
-        "perm": "Under Permissions, Repository permissions set Contents: Read and write.",
-        "copy": "Click Generate token and copy the value: GitHub shows it only once."
+        "open": "Open Settings, Developer settings, Fine-grained tokens and click Generate new token. The link above has already filled in the name and the Contents right.",
+        "repo": "Under Repository access choose Only select repositories and tick this repository: it cannot be filled in through the link.",
+        "perm": "Under Permissions, Repository permissions Contents must be Read and write.",
+        "copy": "Click Generate token and copy the value: GitHub shows it once."
       },
       "key": {
         "open": "Open the repository's Deploy keys page (button below) and click Add deploy key.",
         "paste": "Paste the public key from the field above, any title.",
         "write": "Tick Allow write access: without it the repository accepts the key for reading only."
+      },
+      "userKey": {
+        "open": "Open Settings, SSH and GPG keys (button below) and click New SSH key.",
+        "paste": "Paste the public key from the field above. The key works for all your repositories on GitHub."
       }
     },
     "gitlab": {
       "token": {
         "open": "Open Preferences, Access tokens and click Add new token.",
-        "scope": "Tick the write_repository scope (it includes reading) and role Developer or higher.",
-        "copy": "Create the token and copy the value: GitLab shows it only once."
+        "scope": "Check the rights: read_repository and write_repository are needed, without api. The link above has ticked them already.",
+        "copy": "Create the token and copy the value: GitLab shows it once."
       },
       "key": {
         "open": "Open the repository's Settings, Repository, Deploy keys and click Add new key.",
         "paste": "Paste the public key from the field above, any title.",
         "write": "Turn on Grant write permissions to this key."
+      },
+      "userKey": {
+        "open": "Open Preferences, SSH Keys (button below) and click Add new key.",
+        "paste": "Paste the public key from the field above. The key works for all your projects on this server."
       }
     },
     "gitea": {
@@ -132,6 +141,10 @@
         "open": "Open the repository's Settings, Deploy Keys and click Add Deploy Key.",
         "paste": "Paste the public key from the field above, any title.",
         "write": "Turn on Enable Write Access: otherwise versions cannot be sent."
+      },
+      "userKey": {
+        "open": "Open Settings, SSH / GPG Keys (button below) and click Add Key.",
+        "paste": "Paste the public key from the field above. The key works for all your repositories on this server."
       }
     },
     "bitbucket": {
@@ -144,6 +157,10 @@
         "open": "Open the repository's Repository settings, Access keys and click Add key.",
         "paste": "Paste the public key from the field above, any title.",
         "write": "Sending versions needs write access: if a Bitbucket repository key is read-only, add the key to your profile under Personal settings, SSH keys."
+      },
+      "userKey": {
+        "open": "Open Personal settings, SSH keys (button below) and click Add key.",
+        "paste": "Paste the public key from the field above. The key works for all your repositories on Bitbucket."
       }
     },
     "other": {
@@ -154,8 +171,12 @@
       "key": {
         "paste": "Add the public key from the field above to the repository settings or your profile on the server.",
         "write": "Allow the key to write: a read-only key cannot send versions."
+      },
+      "userKey": {
+        "paste": "Add the public key from the field above to your profile settings on the server (usually the SSH keys section)."
       }
-    }
+    },
+    "openDeployKeyPage": "Open the {{provider}} deploy keys page"
   },
   "hostKey": {
     "fingerprintOf": "{{type}} key fingerprint",
@@ -217,7 +238,8 @@
         "confirmUsed": "Delete and leave the projects without access",
         "failed": "Could not delete the access.",
         "done": "Access deleted"
-      }
+      },
+      "check": "Check"
     },
     "hosts": {
       "intro": "Servers whose keys you confirmed for ssh. If a server key changes, the Studio stops the connection and asks you.",
@@ -260,5 +282,226 @@
   },
   "none": {
     "hint": "Public repositories are cloned without a token. For a private repository, choose a token or a key."
+  },
+  "tokenLink": {
+    "title": "Get a token",
+    "create": "Create a token on {{provider}}",
+    "open": "Open the {{provider}} token page",
+    "prefilled": "The name, the description and the needed rights are already filled in through the link.",
+    "plain": "This page does not accept prefilling: set the rights following the steps below.",
+    "rights": "Token rights",
+    "helper": {
+      "label": "How to get a token",
+      "create": {
+        "title": "Create",
+        "text": "Open the page and click create token."
+      },
+      "copy": {
+        "title": "Copy",
+        "text": "The server shows the value only once."
+      },
+      "paste": {
+        "title": "Paste",
+        "text": "Paste it in the field below: Studio checks it for you."
+      }
+    },
+    "githubRepo": "On the page choose \"Only select repositories\" and tick this repository: it cannot be filled in through the link.",
+    "gitlabNote": "The default lifetime is 365 days, the server administrator may limit it. The api right is not needed and is not requested.",
+    "fallback": {
+      "github": {
+        "lead": "Do not need a fine-grained token, or the page did not open?",
+        "link": "Classic token (broad access)"
+      },
+      "gitlab": {
+        "lead": "The page did not open? This happens on older GitLab versions.",
+        "link": "Open the page for older versions"
+      },
+      "gitlabNew": {
+        "lead": "The page did not open? The server may be newer than it looks.",
+        "link": "Open the page for newer versions"
+      }
+    },
+    "broad": "A classic token gives access to all your repositories. Choose a fine-grained one if you can.",
+    "steps": "Detailed steps",
+    "docs": "{{provider}} documentation",
+    "legacyGitlab": "This is GitLab {{version}}, an old version: its token page is different. We open the address for older versions."
+  },
+  "tokenCheck": {
+    "running": {
+      "title": "Checking the token",
+      "text": "Asking the server whose token this is and what rights it has."
+    },
+    "sufficient": {
+      "title": "The token fits",
+      "text": "The rights are enough to read the repository and push versions."
+    },
+    "too_narrow": {
+      "title": "The token lacks rights",
+      "text": "Versions cannot be pushed. Add the rights: {{missing}}. The easiest way is to issue a new token with the link."
+    },
+    "too_broad": {
+      "title": "The token has more rights than needed",
+      "text": "Extra rights: {{extra}}. It will work, but it is safer to issue a token for repository read and write only."
+    },
+    "unknown": {
+      "title": "Could not check the rights",
+      "text": "The server does not show the rights of this token (an older server or a fine-grained token). Writing will be checked when the repository is connected."
+    },
+    "expired": {
+      "title": "The token has expired",
+      "text": "The server will not accept this token any more. Issue a new one and paste it here."
+    },
+    "error": {
+      "generic": {
+        "title": "Could not check the token"
+      },
+      "auth_failed": {
+        "title": "The server did not accept the token",
+        "text": "The token is wrong or revoked. Issue a new one and paste it here."
+      },
+      "tls_untrusted_ca": {
+        "title": "The server certificate was issued by an unknown authority",
+        "text": "Add the issuing authority's certificate for this server or pin the certificate fingerprint, then check the token again."
+      },
+      "tls_pin_mismatch": {
+        "title": "The server certificate has changed",
+        "text": "It does not match the pinned one. Review it and pin it again if you are sure."
+      },
+      "tls_error": {
+        "title": "The server certificate was not accepted",
+        "text": "The certificate could not be verified. For an internal server add the issuing authority's certificate in the server settings."
+      },
+      "offline": {
+        "title": "No connection to the server",
+        "text": "Check your internet and the server address, then retry."
+      },
+      "timeout": {
+        "title": "The server did not answer in time",
+        "text": "Try again a little later."
+      },
+      "rate_limited": {
+        "title": "Too many requests",
+        "text": "The server asks you to wait. Check again in a minute."
+      },
+      "sso_required": {
+        "title": "The token must be authorized for the organization",
+        "text": "The organization requires SSO. Open the token on the server and authorize it for the organization."
+      }
+    },
+    "owner": "Owner",
+    "scopes": "Rights",
+    "expires": "Expires",
+    "expiresOn_one": "until {{date}}, {{count}} day left",
+    "expiresOn_other": "until {{date}}, {{count}} days left",
+    "expiredOn": "expired {{date}}",
+    "noExpiry": "no expiry",
+    "server": "Server",
+    "needs": "Needed: {{needs}}.",
+    "createNew": "Create a new token",
+    "retry": "Check again",
+    "reviewCertificate": "Review the certificate"
+  },
+  "expiry": {
+    "soon_one": "Expires in {{count}} day",
+    "soon_other": "Expires in {{count}} days",
+    "expired_one": "Expired {{count}} day ago",
+    "expired_other": "Expired {{count}} days ago",
+    "expiredToday": "Expired today",
+    "until": "Valid until {{date}}",
+    "expiredOn": "Expired {{date}}"
+  },
+  "tls": {
+    "untrustedTitle": "The certificate of {{host}} is not from a known authority",
+    "untrustedText": "A server inside an organization is often signed by its own authority. Studio never turns the check off: you either add the authority's certificate or pin this server's certificate.",
+    "mismatchTitle": "The certificate of {{host}} has changed",
+    "mismatchText": "You pinned a different certificate for this server earlier.",
+    "mismatchWarning": "If the administrator did not renew or replace the certificate, this may be a substitution. Do not pin the new fingerprint before you find out.",
+    "choice": {
+      "label": "How to trust the server",
+      "ca": "Add the authority certificate (CA)",
+      "pin": "Pin the server certificate"
+    },
+    "ca": {
+      "text": "You need the certificate of your organization's issuing authority (root or intermediate). The server administrator provides it. A private key is not needed and not accepted.",
+      "drop": {
+        "title": "Drop the certificate file here or",
+        "action": "choose on your computer",
+        "active": "Drop the file here",
+        "input": "Certificate file"
+      },
+      "paste": "Or paste the certificate text",
+      "fromFile": "From the file {{name}}",
+      "count_one": "The text holds {{count}} certificate.",
+      "count_other": "The text holds {{count}} certificates.",
+      "stored": "The certificate is stored on this computer next to the tokens and works only for {{host}}.",
+      "readFailed": "Could not read the file.",
+      "submit": "Add the certificate",
+      "problem": {
+        "private_key": "This is a private key. It must not be sent anywhere. Only the certificate is needed: the BEGIN CERTIFICATE block.",
+        "not_pem": "This does not look like a certificate. The text between BEGIN CERTIFICATE and END CERTIFICATE is needed.",
+        "too_large": "The file is too large for a certificate."
+      }
+    },
+    "pin": {
+      "text": "Studio will remember the fingerprint of this server's certificate and recognize it later, like a server key in ssh. Compare the fingerprint with the server administrator.",
+      "fingerprint": "SHA-256 fingerprint",
+      "confirm": "I compared the fingerprint with the server administrator or another reliable source",
+      "typeHost": "To pin the new certificate, type the server name: {{host}}",
+      "noCertificate": "The server did not send a certificate. Check again to see it.",
+      "submit": "Pin the certificate",
+      "replace": "Pin the new certificate"
+    },
+    "facts": {
+      "subject": "Certificate for",
+      "issuer": "Issued by",
+      "valid": "Valid",
+      "validRange": "from {{from}} to {{to}}",
+      "kind": "Type",
+      "selfSigned": "self-signed"
+    },
+    "noDisable": "The certificate check cannot be turned off: Studio does not send tokens to a server it does not trust.",
+    "failed": "Could not save the server settings.",
+    "cancel": "Cancel"
+  },
+  "servers": {
+    "title": "Git servers",
+    "intro": "Server type, your own issuing authority certificate and a pinned certificate. Needed for GitLab and other servers inside an organization.",
+    "empty": "No servers yet. They appear when you connect a repository, or add a server in advance.",
+    "add": "Add a server",
+    "configure": "Configure",
+    "configureLabel": "Configure the server {{host}}",
+    "caPresent": "Own CA certificate",
+    "pinned": "Certificate pinned",
+    "detectedBy": {
+      "override": "Type chosen by you",
+      "host": "Type detected from the address",
+      "api": "Type detected from the server's answer",
+      "unknown": "Type not detected"
+    },
+    "credentials_one": "{{count}} access",
+    "credentials_other": "{{count}} accesses",
+    "saved": "Settings of {{host}} saved",
+    "saveFailed": "Could not save the server settings.",
+    "removed": "Settings of {{host}} removed",
+    "removeFailed": "Could not remove the server settings.",
+    "dialog": {
+      "addTitle": "Add a server",
+      "editTitle": "Server {{host}}",
+      "description": "The settings apply to all projects and accesses of this server.",
+      "host": "Server address",
+      "hostHint": "For example gitlab.hse.local or gitlab.hse.local:8443.",
+      "hostInvalid": "A server name is needed, for example gitlab.hse.local.",
+      "provider": "Server type",
+      "auto": "Detect automatically",
+      "ca": "Issuing authority certificate (CA)",
+      "removeCa": "Remove the certificate",
+      "caWillGo": "The certificate is removed on save. You can paste a new one below.",
+      "pin": "Pinned certificate",
+      "removePin": "Unpin",
+      "pinWillGo": "The pin is removed on save.",
+      "remove": "Remove settings",
+      "save": "Save",
+      "cancel": "Cancel"
+    }
   }
 }

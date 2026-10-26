@@ -3,17 +3,18 @@ import { useTranslation } from "react-i18next";
 import {
   useCredentials,
   useGitHosts,
+  useHostSettings,
   useSecretsStatus,
 } from "@entities/git-remote";
 import { describeGitError } from "@entities/git-sync";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
 import { AccessCard } from "./AccessCard";
-import { BrowserLoginCard } from "./BrowserLoginCard";
 import { CredentialCard } from "./CredentialCard";
 import { EncryptionCard } from "./EncryptionCard";
 import { FetchDefaultCard } from "./FetchDefaultCard";
 import { KnownHostsTable } from "./KnownHostsTable";
+import { ServersCard } from "./ServersCard";
 
 type QueryBodyProps = {
   isPending: boolean;
@@ -65,6 +66,7 @@ export const GitAccessSection = () => {
   const { t } = useTranslation("gitAccess");
   const credentials = useCredentials();
   const hosts = useGitHosts();
+  const hostSettings = useHostSettings();
   const secrets = useSecretsStatus();
 
   return (
@@ -118,6 +120,26 @@ export const GitAccessSection = () => {
         </AccessCard>
 
         <AccessCard
+          id="git-access-servers"
+          title={t("servers.title")}
+          description={t("servers.intro")}
+        >
+          <QueryBody
+            isPending={hostSettings.isPending}
+            error={hostSettings.error}
+            hasData={hostSettings.data !== undefined}
+            onRetry={() => {
+              void hostSettings.refetch();
+            }}
+          >
+            <ServersCard
+              settings={hostSettings.data ?? []}
+              credentials={credentials.data ?? []}
+            />
+          </QueryBody>
+        </AccessCard>
+
+        <AccessCard
           id="git-access-hosts"
           title={t("hosts.title")}
           description={t("access.hosts.intro")}
@@ -152,8 +174,6 @@ export const GitAccessSection = () => {
         </QueryBody>
 
         <FetchDefaultCard />
-
-        <BrowserLoginCard />
       </div>
     </>
   );

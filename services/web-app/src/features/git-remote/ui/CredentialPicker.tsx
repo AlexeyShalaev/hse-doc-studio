@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { GitCredential } from "@entities/git-remote";
 import { formatRelativeTime } from "@shared/lib";
 import { CredentialStatusChip } from "./CredentialStatusChip";
+import { ExpiryBadge } from "./ExpiryBadge";
 
 export const NEW_CREDENTIAL = "new";
 
@@ -75,6 +76,7 @@ export const CredentialPicker = ({
                 : t("picker.neverUsed")}
             </span>
           </span>
+          <ExpiryBadge expiresAt={credential.expires_at} />
           <CredentialStatusChip status={credential.status} />
         </label>
       ))}
