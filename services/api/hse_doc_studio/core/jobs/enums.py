@@ -8,6 +8,7 @@ class JobKind(StrEnum):
     compile = "compile"
     office_convert = "office.convert"
     verify_detached = "signature.verify_detached"
+    pack_submission = "pack.submission"
 
 
 class JobStatus(StrEnum):

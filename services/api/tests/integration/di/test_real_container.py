@@ -26,7 +26,12 @@ from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload, VerifyDetachedResult
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
+from hse_doc_studio.core.signatures.ports import (
+    IChainFetcher,
+    IOpenPgpKeyImporter,
+    IPublicKeyExporter,
+    ITrustMaterialProvider,
+)
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
@@ -122,6 +127,19 @@ async def test__real_container__office_ports__port_and_concrete_are_one_singleto
     assert convert_port is convert_manager
     assert editor_port is editor_manager
     assert reachability_port is reachability
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__public_key_exporter__port_and_keyring_are_one_singleton() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            exporter = await request_container.get(IPublicKeyExporter)
+            keyring = await request_container.get(GpgKeyring)
+    finally:
+        await container.close()
+
+    assert exporter is keyring
 
 
 @pytest.mark.usefixtures("isolated_settings")

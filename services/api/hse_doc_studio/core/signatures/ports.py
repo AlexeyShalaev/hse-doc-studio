@@ -1,4 +1,4 @@
-"""Порты проверки открепленных подписей: use cases видят их, а не gpg и сеть."""
+"""Порты подписей: то, что use cases получают от инфраструктуры (gpg, сеть, связка ключей)."""
 
 from __future__ import annotations
 
@@ -29,3 +29,9 @@ class ITrustMaterialProvider(Protocol):
     """Доверенный материал проверки подписи: корни, кеш цепочек и режим связки OpenPGP."""
 
     def snapshot(self) -> TrustBundle: ...
+
+
+class IPublicKeyExporter(Protocol):
+    """Выгрузка открытого OpenPGP-ключа подписанта из связки ключей студии."""
+
+    def export_public(self, fingerprint: str) -> bytes: ...

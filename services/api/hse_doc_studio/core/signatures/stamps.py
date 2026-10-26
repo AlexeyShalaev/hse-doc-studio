@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -146,12 +146,15 @@ def stamps_for_doc(
     project_folder: Path,
     lang: str,
     slot_ids: Iterable[str] | None = None,
+    png_exists: Callable[[Path], bool] | None = None,
 ) -> list[Stamp]:
     """Stamps for every enabled placement of `doc_id` (optionally limited to `slot_ids`).
 
     A `detached_text` slot prints the caption; any other slot with an uploaded PNG
-    prints the picture. Slots with neither are skipped.
+    prints the picture. Slots with neither are skipped. `png_exists` replaces the
+    disk check (the planner looks at the project through its own probe).
     """
+    exists = png_exists or Path.exists
     wanted = set(slot_ids) if slot_ids is not None else None
     result: list[Stamp] = []
     for slot_id, placement in state.placements.get(doc_id, {}).items():
@@ -178,7 +181,7 @@ def stamps_for_doc(
         if slot is None or slot.png_path is None:
             continue
         png_path = project_folder / slot.png_path
-        if not png_path.exists():
+        if not exists(png_path):
             logger.warning("stamps: PNG missing for slot", doc_id=doc_id, slot_id=slot_id, path=str(png_path))
             continue
         aspect = _DEFAULT_ASPECT

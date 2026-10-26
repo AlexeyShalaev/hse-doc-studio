@@ -20,6 +20,9 @@ from tests.unit.core.jobs.samples import (
     make_verify_payload,
     make_verify_result,
     make_verify_spec,
+    make_pack_payload,
+    make_pack_result,
+    make_pack_spec,
 )
 
 # Образцы для каждого вида: новый вид нельзя добавить, не дописав образец сюда.
@@ -27,16 +30,19 @@ _SAMPLE_SPECS = {
     JobKind.compile: make_compile_spec,
     JobKind.office_convert: make_office_spec,
     JobKind.verify_detached: make_verify_spec,
+    JobKind.pack_submission: make_pack_spec,
 }
 _SAMPLE_RESULTS = {
     JobKind.compile: make_compile_result,
     JobKind.office_convert: make_office_result,
     JobKind.verify_detached: make_verify_result,
+    JobKind.pack_submission: make_pack_result,
 }
 _SAMPLE_PAYLOADS = {
     JobKind.compile: make_compile_payload,
     JobKind.office_convert: make_office_payload,
     JobKind.verify_detached: make_verify_payload,
+    JobKind.pack_submission: make_pack_payload,
 }
 
 
@@ -85,6 +91,14 @@ def test__registry__office_convert_policy__awaitable_detachable_idempotent_not_c
     assert (policy.awaitable, policy.detachable, policy.idempotent) == (True, True, True)
     assert (policy.streams_log, policy.counts_as_active, policy.blocks_folder_ops) == (False, False, False)
     assert policy.embedded_concurrency is None
+
+
+def test__registry__pack_submission_policy__awaitable_one_at_a_time_not_idempotent() -> None:
+    policy = job_kind_spec(JobKind.pack_submission).policy
+
+    assert (policy.awaitable, policy.detachable, policy.idempotent) == (True, False, False)
+    assert (policy.streams_log, policy.counts_as_active, policy.blocks_folder_ops) == (False, False, False)
+    assert policy.embedded_concurrency == 1
 
 
 def test__registry__unregistered_kind__rejected() -> None:
