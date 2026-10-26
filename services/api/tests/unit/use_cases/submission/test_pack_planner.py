@@ -212,6 +212,23 @@ def _arcnames(plan: PackPlan) -> list[str]:
     return [e.arcname for e in plan.payload.entries]
 
 
+def test__pack_planner__doc_item_present__copy_entry_named_by_output_name() -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF})
+
+    plan = _plan(project, version, probe, docs=_items("tz"))
+
+    [entry] = plan.payload.entries
+    assert (entry.kind, entry.arcname, entry.source, entry.stamps) == (
+        PackEntryKind.copy,
+        "ТЗ.pdf",
+        ManifestFile("tz/tz.pdf"),
+        (),
+    )
+    assert plan.warnings == ()
+
+
 def test__pack_planner__solo_variant_doc__arcname_from_chosen_variant() -> None:
     pptx = DocumentVariant(
         id="pptx",
@@ -352,6 +369,29 @@ def test__pack_planner__custom_docx_without_sibling__raw_entry(decision: bool | 
     [entry] = plan.payload.entries
     assert (entry.kind, entry.arcname) == (PackEntryKind.copy, "ТЗ.docx")
     assert entry.source == ManifestFile("tz/_custom/ТЗ.docx")
+
+
+def test__pack_planner__custom_docx_with_placements__never_stamped() -> None:
+    # Для слота есть размещение и PNG, но custom-файл остается docx: штамп на не-PDF не ставится.
+    state, slot_def = _stamped_state()
+    custom = make_custom_file_override("ТЗ.docx", "tz/_custom/ТЗ.docx", ".docx")
+    version = _version((_def("tz", "ТЗ.pdf"),), slots=(slot_def,))
+    project = make_project(documents=[make_document("tz", custom_file=custom)])
+    probe = MemoryProbe({"tz/_custom/ТЗ.docx": b"docx", ".hse-studio/signatures/author.png": b"png"})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("author",)), state=state)
+
+    [entry] = plan.payload.entries
+    assert (entry.kind, entry.arcname, entry.stamps) == (PackEntryKind.copy, "ТЗ.docx", ())
+
+
+def test__pack_planner__raw_extra__copy_entry_under_output_name() -> None:
+    extra = ExtraSubmissionItem(source="readme.txt", output_name="README.txt", format=None)
+
+    plan = _plan(make_project(), _version(()), MemoryProbe({"readme.txt": b"extra content"}), extras=[extra])
+
+    [entry] = plan.payload.entries
+    assert (entry.kind, entry.arcname, entry.source) == (PackEntryKind.copy, "README.txt", ManifestFile("readme.txt"))
 
 
 def test__pack_planner__missing_source__dropped_with_warning() -> None:

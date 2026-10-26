@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.catalog import SubmissionDocItem
+from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.i18n import set_interface_language
@@ -21,10 +21,20 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
-from hse_doc_studio.use_cases.submission.create_submission import CreateSubmissionInput, CreateSubmissionUC
+from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
+from hse_doc_studio.use_cases.submission.create_submission import (
+    CreateSubmissionInput,
+    CreateSubmissionUC,
+    _form_id_for_extra,
+)
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 
 from tests.factories import make_custom_file_override, make_document, make_project, make_template_version
+
+# parents[0]=submission, [1]=use_cases, [2]=unit, [3]=tests, [4]=service-root, [5]=services, [6]=monorepo
+_PACKS_DIR = Path(__file__).resolve().parents[6] / "packs"
+
+_AI_SOURCE = ".hse-studio/forms/ai_declaration.json"
 
 
 class FakeProbe:
@@ -325,3 +335,19 @@ async def test__create_submission__request_actor__passed_to_job(tmp_path) -> Non
         set_current_actor(None)
 
     assert h.dispatcher.specs[-1].actor == actor
+
+
+def test__form_id_for_extra__maps_form_answers_source_to_form_id() -> None:
+    ai_extra = ExtraSubmissionItem(source=_AI_SOURCE, output_name="Декларация ИИ.md", format="markdown")
+    repo = YamlTemplateRepository(_PACKS_DIR)
+    repo.load()
+    version = repo.get_version("hse-cs-se", "vkr", "2026.1")
+    assert version is not None
+
+    assert _form_id_for_extra(ai_extra, version) == "ai_declaration"
+    # Non-form source → not rendered through a template.
+    raw = ExtraSubmissionItem(source="some/other/file.json", output_name="x.md", format="markdown")
+    assert _form_id_for_extra(raw, version) is None
+    # Wrong format → ignored.
+    not_md = ExtraSubmissionItem(source=_AI_SOURCE, output_name="x.txt", format="raw")
+    assert _form_id_for_extra(not_md, version) is None

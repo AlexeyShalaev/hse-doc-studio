@@ -38,8 +38,6 @@ projects/manage_nda.py hse_doc_studio.infra.project_init.template_renderer
 projects/update_team_set.py hse_doc_studio.infra.project_init.template_renderer
 setup/inspect_setup.py hse_doc_studio.infra.compile.docker_image_manager
 signatures/freeze_pdf.py hse_doc_studio.infra.signatures.pdf_stamper
-signatures/get_detached_files.py hse_doc_studio.infra.signatures.openpgp
-signatures/get_detached_files.py hse_doc_studio.infra.signatures.signing_package
 signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.cades_signer
 signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.pdf_stamper
 signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.pyhanko_signer

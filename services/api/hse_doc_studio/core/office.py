@@ -9,7 +9,7 @@ from hse_doc_studio.core.catalog import SubmissionDocItem
 from hse_doc_studio.core.entities import Project
 
 # Office formats Gotenberg/LibreOffice can convert to PDF — shared by the
-# compile pipeline (pptx/office preview) and the packaging preflight/assembler
+# compile pipeline (pptx/office preview) and the packaging preflight/planner
 # so the allowlist lives in exactly one place.
 CONVERTIBLE_OFFICE_EXTS: frozenset[str] = frozenset(
     {".doc", ".docx", ".odt", ".rtf", ".ppt", ".pptx", ".odp", ".xls", ".xlsx", ".ods"}

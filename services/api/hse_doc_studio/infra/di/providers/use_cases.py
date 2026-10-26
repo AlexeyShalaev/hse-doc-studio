@@ -2343,10 +2343,10 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        keyring: GpgKeyring,
+        key_exporter: IPublicKeyExporter,
     ) -> BuildDetachedPackageUC:
         return BuildDetachedPackageUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, keyring
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, key_exporter
         )
 
     # ------------------------------------------------------------------ Submission

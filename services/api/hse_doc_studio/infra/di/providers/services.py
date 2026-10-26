@@ -113,7 +113,6 @@ from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
-from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 from hse_doc_studio.infra.submission.pack_executor import PackExecutor
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
@@ -643,10 +642,6 @@ class DomainServiceProvider(Provider):
     @provide
     def get_pyhanko_signer(self) -> PyHankoPdfSigner:
         return PyHankoPdfSigner()
-
-    @provide
-    def get_submission_assembler(self, pdf_stamper: PdfStamper, keyring: GpgKeyring) -> SubmissionAssembler:
-        return SubmissionAssembler(pdf_stamper=pdf_stamper, keyring=keyring)
 
     @provide
     def get_pack_planner(self, template_service: ProjectTemplateService) -> PackPlanner:
