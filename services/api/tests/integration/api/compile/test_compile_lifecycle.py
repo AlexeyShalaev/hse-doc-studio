@@ -606,6 +606,26 @@ async def test__compile__pptx_variant_without_converter__still_succeeds_without_
     assert not _file(project, "presentation/pptx/presentation.pdf").exists()
 
 
+async def test__compile__pptx_preview__uses_active_image(
+    test_app: AsyncClient, project: dict[str, Any], tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Сборка конвертирует на АКТИВНОМ образе из настроек (в отличие от загрузки и упаковки, где образ не передаётся).
+    active_image = "gotenberg/gotenberg:9-active"
+    (tmp_path / "data").mkdir(exist_ok=True)
+    (tmp_path / "data" / "config.json").write_text(json.dumps({"office_convert_image": active_image}), encoding="utf-8")
+    convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=_pdf_bytes(2))
+
+    record = await _compile(test_app, project, "presentation")
+
+    assert record["status"] == "success"
+    assert record["pages"] == 2
+    assert f"[compile:{record['id']}] конвертация в PDF для предпросмотра (Gotenberg/LibreOffice)…" in record["log"]
+    assert f"[compile:{record['id']}] PDF-предпросмотр готов: presentation.pdf (2 слайдов)" in record["log"]
+    convert.assert_awaited_once()
+    assert convert.await_args.args[1] == _file(project, "presentation/pptx/presentation.pptx")
+    assert convert.await_args.kwargs == {"image": active_image}
+
+
 # --- 8. падение задачи -------------------------------------------------------
 
 
