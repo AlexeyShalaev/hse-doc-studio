@@ -24,6 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
@@ -287,6 +288,8 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     ListCredentialsUC,
     UpdateCredentialUC,
 )
+from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC
+from hse_doc_studio.use_cases.git_sync.fetch_remote import FetchGitRemoteUC
 from hse_doc_studio.use_cases.git_sync.get_conflict_diff import GetConflictDiffUC
 from hse_doc_studio.use_cases.git_sync.get_conflict_file import GetConflictBlobUC, GetConflictFileUC
 from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsUC
@@ -1788,6 +1791,61 @@ class UseCaseProvider(Provider):
     ) -> AbortConflictsUC:
         return AbortConflictsUC(
             sessions=sessions, state_repo=state_repo, operations=operations, locks=vcs_locks, status=status
+        )
+
+    @provide
+    def get_fetch_git_remote_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        transport: IGitTransport,
+        guard: IGitStoreGuard,
+        operations: IGitOperationRegistry,
+        status_builder: GitStatusBuilder,
+        policy: GitSyncPolicy,
+        book: FetchBook,
+    ) -> FetchGitRemoteUC:
+        return FetchGitRemoteUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            reader=reader,
+            transport=transport,
+            guard=guard,
+            operations=operations,
+            status_builder=status_builder,
+            policy=policy,
+            book=book,
+        )
+
+    @provide
+    def get_fetch_all_git_remotes_uc(
+        self,
+        registry: IGitRemoteRegistry,
+        project_repo: IProjectRepository,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        operations: IGitOperationRegistry,
+        credentials: IGitCredentialRepository,
+        settings_repo: ISettingsRepository,
+        fetch: FetchGitRemoteUC,
+        book: FetchBook,
+    ) -> FetchAllGitRemotesUC:
+        return FetchAllGitRemotesUC(
+            registry=registry,
+            project_repo=project_repo,
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            operations=operations,
+            credentials=credentials,
+            settings_repo=settings_repo,
+            fetch=fetch,
+            book=book,
+            concurrency=settings.git.fetch_concurrency,
         )
 
     @provide

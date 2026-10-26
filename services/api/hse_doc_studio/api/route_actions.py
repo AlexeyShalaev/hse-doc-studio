@@ -150,6 +150,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("PUT", "/projects/{project_id}/git/conflicts/draft"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/conflicts/resolve"): RouteRule(Action.HISTORY_WRITE),
     ("DELETE", "/projects/{project_id}/git/conflicts"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/fetch"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/write"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/init"): RouteRule(Action.HISTORY_WRITE),

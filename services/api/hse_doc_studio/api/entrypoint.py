@@ -15,12 +15,14 @@ from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
+from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
+from hse_doc_studio.infra.git_sync.fetch_scheduler import GitFetchScheduler
 from hse_doc_studio.infra.git_sync.ssh_command import sweep_stale_key_dirs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
@@ -32,6 +34,7 @@ from hse_doc_studio.use_cases.chat.recover_stale_chat_runs import RecoverStaleCh
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.compile.recover_stale_compiles import RecoverStaleCompilesUC
 from hse_doc_studio.use_cases.fonts.adopt_host_fonts import AdoptHostFontsUC
+from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC, FetchTickResult
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 from hse_doc_studio.use_cases.system.auto_update import AutoUpdateResult, AutoUpdateUC
 from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
@@ -297,6 +300,37 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     @app.on_event("shutdown")
     async def _auto_update_shutdown() -> None:
         task = getattr(app.state, "auto_update_task", None)
+        if task is not None:
+            task.cancel()
+
+    @app.on_event("startup")
+    async def _git_fetch_startup() -> None:
+        # Фоновая выборка из удалённых репозиториев. Без подключённых проектов цикл спит и ничего не запускает;
+        # подключение или клонирование будит его через реестр.
+        if not settings.git.enabled:
+            return
+
+        async def _tick() -> FetchTickResult:
+            # Свой request-скоуп на каждый тик, как у автообновления.
+            async with container() as request_container:
+                uc = await request_container.get(FetchAllGitRemotesUC)
+                return await uc.run_once()
+
+        try:
+            scheduler = GitFetchScheduler(
+                _tick,
+                tick_s=settings.git.fetch_tick_s,
+                startup_delay_s=settings.git.fetch_startup_delay_s,
+            )
+            registry = await container.get(IGitRemoteRegistry)
+            registry.subscribe(scheduler.wake)
+            app.state.git_fetch_task = asyncio.create_task(scheduler.loop())
+        except Exception:
+            logger.exception("git fetch startup failed")
+
+    @app.on_event("shutdown")
+    async def _git_fetch_shutdown() -> None:
+        task = getattr(app.state, "git_fetch_task", None)
         if task is not None:
             task.cancel()
 

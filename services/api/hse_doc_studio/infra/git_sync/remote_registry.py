@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 import structlog
@@ -40,11 +41,22 @@ class ConfigScanRemoteRegistry:
         self._folders: dict[Path, Path] = {}
         self._scanned = False
         self._lock = threading.RLock()
+        self._listeners: list[Callable[[], None]] = []
+
+    def subscribe(self, listener: Callable[[], None]) -> None:
+        with self._lock:
+            self._listeners.append(listener)
 
     def add(self, folder: Path) -> None:
         with self._lock:
             self._scan()
             self._folders[folder.resolve()] = folder
+            listeners = list(self._listeners)
+        for listener in listeners:
+            try:
+                listener()
+            except Exception:  # noqa: BLE001 — чужой обработчик не должен срывать подключение проекта
+                logger.warning("git remotes: a listener failed", exc_info=True)
 
     def remove(self, folder: Path) -> None:
         with self._lock:

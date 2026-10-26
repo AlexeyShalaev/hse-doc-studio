@@ -77,6 +77,8 @@ def _full_state() -> SyncState:
         shared_folder_ack=True,
         remote_empty=True,
         adopted_unrelated=True,
+        remote_schema_newer=True,
+        remote_required_studio="9.9.0",
     )
 
 
@@ -101,13 +103,14 @@ def test__get__file_without_the_new_flags__reads_them_as_off(folder: Path) -> No
     repo = JsonGitSyncStateRepository()
     repo.save(folder, SyncState(local_branch="master", remote_branch="main"))
     data = json.loads(_file(folder).read_text(encoding="utf-8"))
-    del data["remote_empty"], data["adopted_unrelated"]
+    del data["remote_empty"], data["adopted_unrelated"], data["remote_schema_newer"], data["remote_required_studio"]
     _file(folder).write_text(json.dumps(data), encoding="utf-8")
 
     state = repo.get(folder)
 
     assert state is not None
     assert (state.remote_empty, state.adopted_unrelated) == (False, False)
+    assert (state.remote_schema_newer, state.remote_required_studio) == (False, None)
 
 
 def test__save__writes_a_versioned_file_with_utc_timestamps(folder: Path) -> None:

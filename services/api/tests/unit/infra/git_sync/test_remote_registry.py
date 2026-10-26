@@ -97,3 +97,31 @@ def test__same_folder_through_a_symlink_is_one_entry(tmp_path: Path) -> None:
     registry.remove(link)
 
     assert registry.list() == []
+
+
+def test__subscribe__listeners_hear_every_add_but_not_remove(tmp_path: Path) -> None:
+    registry = ConfigScanRemoteRegistry(_Index([]))
+    heard: list[int] = []
+    registry.subscribe(lambda: heard.append(1))
+
+    registry.add(tmp_path / "a")
+    registry.add(tmp_path / "b")
+    registry.remove(tmp_path / "a")
+
+    assert heard == [1, 1]
+
+
+def test__subscribe__a_failing_listener_does_not_break_adding_a_project(tmp_path: Path) -> None:
+    registry = ConfigScanRemoteRegistry(_Index([]))
+    heard: list[int] = []
+
+    def broken() -> None:
+        raise RuntimeError("слушатель упал")
+
+    registry.subscribe(broken)
+    registry.subscribe(lambda: heard.append(1))
+
+    registry.add(tmp_path / "a")
+
+    assert registry.list() == [tmp_path / "a"]
+    assert heard == [1]

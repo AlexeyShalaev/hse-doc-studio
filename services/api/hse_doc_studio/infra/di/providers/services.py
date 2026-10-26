@@ -26,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
@@ -841,6 +842,11 @@ class DomainServiceProvider(Provider):
     @provide
     def get_ref_status_memo(self) -> RefStatusMemo:
         return RefStatusMemo()
+
+    @provide
+    def get_git_fetch_book(self) -> FetchBook:
+        # Общий на процесс: кнопка «обновить» и фоновый цикл должны видеть одни замки и один счёт сбоев.
+        return FetchBook()
 
     @provide
     def get_git_store_remotes(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitStoreRemotes:
