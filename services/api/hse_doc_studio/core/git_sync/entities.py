@@ -12,7 +12,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
-from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind
+from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind, RemoteUrl
 
 
 class GitCredentialKind(StrEnum):
@@ -185,6 +185,16 @@ class GitRemoteRef:
     branch: str
     local_branch: str
     credential_id: UUID | None = None
+    insecure_http: bool = False
+
+
+@dataclass(frozen=True)
+class RemoteTarget:
+    """Куда и с каким доступом ходит сетевой git: адрес без секретов, доступ по идентификатору."""
+
+    url: RemoteUrl
+    credential_id: UUID | None = None
+    # Явное согласие на открытый http: токен пойдёт по сети без шифрования.
     insecure_http: bool = False
 
 

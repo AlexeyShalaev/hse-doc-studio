@@ -23,10 +23,11 @@ from hse_doc_studio.core.git_sync.entities import (
     OperationKind,
     OperationPhase,
     RemoteProbe,
+    RemoteTarget,
     SyncState,
 )
+from hse_doc_studio.core.git_sync.error_classifier import GitOp
 from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
-from hse_doc_studio.core.git_sync.url import RemoteUrl
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
 ProgressCallback = Callable[[float | None, str], None]
@@ -116,38 +117,66 @@ class IHostKeyScanner(Protocol):
 
 
 class IGitRemoteRunner(Protocol):
-    """Запуск git с сетью: чистое окружение, секрет только через окружение процесса, таймаут, отмена."""
+    """Единственный запускатель сетевого git: чистое окружение, секрет только через окружение процесса, таймаут, отмена.
+
+    Любой сбой приходит как GitSyncError с кодом из закрытого списка; stderr в тексте ошибки очищен от секретов.
+    """
 
     async def run(
         self,
         args: Sequence[str],
         *,
+        op: GitOp,
         git_dir: Path,
-        work_tree: Path | None = None,
-        remote: RemoteUrl | None = None,
-        credential_id: UUID | None = None,
+        target: RemoteTarget,
         timeout_s: float,
         on_progress: ProgressCallback | None = None,
-    ) -> GitResult: ...
+    ) -> GitResult:
+        """Команда с сетью. `args` начинаются с подкоманды, `--git-dir` и защитные `-c` добавляет раннер."""
+        ...
+
+    async def run_local(
+        self, args: Sequence[str], *, git_dir: Path | None, timeout_s: float, check: bool = True
+    ) -> GitResult:
+        """Команда без сети (init, cat-file) в том же защитном окружении. `check`: ненулевой код это ошибка."""
+        ...
 
 
 class IGitTransport(Protocol):
-    """Сетевые операции над хранилищем проекта. Ошибки приходят как GitSyncError с кодом."""
+    """Сетевые операции над хранилищем проекта. Ошибки приходят как GitSyncError с кодом, кроме probe."""
 
-    async def probe(
+    async def probe(self, target: RemoteTarget) -> RemoteProbe:
+        """Что лежит по адресу, без записи в проект. Отказ сети или доступа приходит как `ok=False`, не исключением."""
+        ...
+
+    async def read_tip_file(self, target: RemoteTarget, *, branch: str, path: str) -> bytes | None:
+        """Файл из вершины ветки через поверхностную выборку во временное хранилище; None, если файла нет."""
+        ...
+
+    async def fetch(
         self,
-        url: RemoteUrl,
+        git_dir: Path,
+        target: RemoteTarget,
         *,
-        credential_id: UUID | None = None,
-        project_id: UUID | None = None,
-        branch: str | None = None,
-    ) -> RemoteProbe: ...
-
-    async def fetch(self, git_dir: Path, *, branch: str, on_progress: ProgressCallback | None = None) -> None: ...
+        branch: str,
+        timeout_s: float | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> None:
+        """Загрузить ветку в `refs/remotes/origin/<branch>`. Нет ветки: branch_missing."""
+        ...
 
     async def push(
-        self, git_dir: Path, *, local_sha: str, remote_branch: str, on_progress: ProgressCallback | None = None
-    ) -> None: ...
+        self,
+        git_dir: Path,
+        target: RemoteTarget,
+        *,
+        local_sha: str,
+        remote_branch: str,
+        timeout_s: float | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> None:
+        """Отправить коммит `local_sha` в `refs/heads/<remote_branch>` без force. Ветка ушла вперёд: remote_moved."""
+        ...
 
 
 class IGitSyncStateRepository(Protocol):

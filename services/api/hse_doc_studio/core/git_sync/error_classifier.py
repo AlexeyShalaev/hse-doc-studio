@@ -107,6 +107,12 @@ _RULES: tuple[_Rule, ...] = (
         r"protected branch|GH006|GH013|Repository rule violations|Changes must be made through a pull request",
         ops=_PUSH,
     ),
+    _rule(
+        GitErrorCode.remote_moved,
+        r"\[rejected\][^\n]*\((?:fetch first|non-fast-forward|stale info)\)"
+        r"|Updates were rejected because (?:the remote contains work|the tip of your current branch is behind)",
+        ops=_PUSH,
+    ),
     _rule(GitErrorCode.rate_limited, r"returned error: 429|rate limit|Too Many Requests"),
     _rule(
         GitErrorCode.branch_missing,
