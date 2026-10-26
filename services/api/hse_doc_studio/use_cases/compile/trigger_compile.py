@@ -9,6 +9,7 @@ from pathlib import Path
 import structlog
 
 from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.compile.errors import DockerUnavailableError, ImageMissingError
 from hse_doc_studio.core.entities import ChangeLogEntry, CompileRecord, Project
 from hse_doc_studio.core.enums import (
     ChangeLogKind,
@@ -53,7 +54,6 @@ from hse_doc_studio.infra.compile.docker_compile_executor import (
     DockerCompileExecutor,
 )
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.compile.errors import DockerUnavailableError, ImageMissingError
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.compile.pdf_archive import archive_compiled_pdf
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager

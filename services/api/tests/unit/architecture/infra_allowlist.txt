@@ -25,7 +25,6 @@ compile/trigger_compile.py hse_doc_studio.infra.compile.compile_runner
 compile/trigger_compile.py hse_doc_studio.infra.compile.concurrency
 compile/trigger_compile.py hse_doc_studio.infra.compile.docker_compile_executor
 compile/trigger_compile.py hse_doc_studio.infra.compile.docker_image_manager
-compile/trigger_compile.py hse_doc_studio.infra.compile.errors
 compile/trigger_compile.py hse_doc_studio.infra.compile.log_bus
 compile/trigger_compile.py hse_doc_studio.infra.compile.pdf_archive
 compile/trigger_compile.py hse_doc_studio.infra.languagetool.container_manager
