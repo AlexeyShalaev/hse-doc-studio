@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.2.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.3...v0.2.0) - 2026-10-26
+
+- Master's programme: a 1st-year coursework template for System and Software Engineering — topic and application, report and slides
+- Detached electronic signatures: freeze a PDF, sign it with an OpenPGP key or a qualified signature via the CryptoPro browser plug-in right in the Studio, or upload an existing signature. The Studio verifies it, adds an HSE-style signature stamp and builds the submission package
+- Update a project to a new template version: project settings now have a Template version section. You see which files change before updating, your own edits are kept, conflicts are shown separately, and the update can be undone
+- An available template update is flagged by a badge on Project settings, a dot in the outline, the status bar and a notification when you open the project
+- A project saved by a newer Studio opens read-only, so an older version cannot accidentally damage its data
+- New Topic and application document group, the academic supervisor's name fills the signature slot, and the Group field hint depends on the programme
+- Dependencies and the base image updated, closing the vulnerabilities found in it
+
 ## [0.1.3](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.1.2...v0.1.3) - 2026-07-28
 
 - The AI agent now works with any local model: if a model lacks tool support (e.g. phi3.5), it switches to a text protocol and keeps answering
