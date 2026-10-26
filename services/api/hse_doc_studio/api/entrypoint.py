@@ -298,7 +298,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         # and start the idle reaper that stops the auto-started container once
         # it's been unused for `idle_timeout_s`. The container is never
         # auto-started here — it comes up lazily on the first check that needs
-        # it (see TriggerCompileUC).
+        # it (see EmbeddedCompileRunner).
         if not app.state.docker_available:
             return
         try:
@@ -326,7 +326,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         # Same lifecycle as LanguageTool: adopt a running Gotenberg container
         # after a backend restart and start the idle reaper. Never auto-started
         # here — it comes up lazily on the first pptx build that needs a
-        # PDF preview (see TriggerCompileUC).
+        # PDF preview (see EmbeddedCompileRunner).
         if not app.state.docker_available:
             return
         try:

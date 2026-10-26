@@ -16,6 +16,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -25,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
@@ -60,6 +62,7 @@ from hse_doc_studio.core.setup import (
     ISetupApplier,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
     IMergeEngine,
     ITemplateBaseStore,
@@ -78,14 +81,9 @@ from hse_doc_studio.core.vcs.protocols import (
 )
 from hse_doc_studio.infra.ai.agent.edit_applier import FuzzySearchReplaceApplier
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
-from hse_doc_studio.infra.checks.runner import CheckRunner
 
 # --- Compile ---
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
-from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
@@ -541,12 +539,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_runner: CompileRunner,
+        dispatcher: IJobDispatcher,
     ) -> MoveProjectUC:
         return MoveProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_runner=compile_runner,
+            dispatcher=dispatcher,
         )
 
     @provide
@@ -1570,19 +1568,12 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
-        check_runner: CheckRunner,
         changelog_repo: IChangeLogRepository,
-        log_bus: CompileLogBus,
-        settings_repo: ISettingsRepository,
-        compile_runner: CompileRunner,
-        compile_limiter: CompileConcurrencyLimiter,
-        executor: DockerCompileExecutor,
-        image_manager: DockerImageManager,
-        lt_manager: LanguageToolContainerManager,
-        office_manager: OfficeConvertManager,
+        dispatcher: IJobDispatcher,
+        materializer: ITemplateMaterializer,
+        artifacts: IArtifactStore,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
-        capacity_probe: ISystemCapacityProbe,
         compile_repo: ICompileRepository,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
@@ -1592,19 +1583,12 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             template_service=template_service,
             check_resolution_service=check_resolution_service,
-            check_runner=check_runner,
             changelog_repo=changelog_repo,
-            log_bus=log_bus,
-            settings_repo=settings_repo,
-            compile_runner=compile_runner,
-            compile_limiter=compile_limiter,
-            executor=executor,
-            image_manager=image_manager,
-            lt_manager=lt_manager,
-            office_manager=office_manager,
+            dispatcher=dispatcher,
+            materializer=materializer,
+            artifacts=artifacts,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
-            capacity_probe=capacity_probe,
         )
 
     @provide
@@ -1837,13 +1821,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         compile_repo: ICompileRepository,
-        log_bus: CompileLogBus,
+        log_stream: IJobLogStream,
     ) -> GetCompileStreamUC:
         return GetCompileStreamUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             compile_repo=compile_repo,
-            log_bus=log_bus,
+            log_stream=log_stream,
         )
 
     @provide
@@ -1906,15 +1890,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         compile_repo: ICompileRepository,
-        compile_runner: CompileRunner,
-        log_bus: CompileLogBus,
+        dispatcher: IJobDispatcher,
+        log_stream: IJobLogStream,
     ) -> CancelCompileUC:
         return CancelCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             compile_repo=compile_repo,
-            compile_runner=compile_runner,
-            log_bus=log_bus,
+            dispatcher=dispatcher,
+            log_stream=log_stream,
         )
 
     @provide

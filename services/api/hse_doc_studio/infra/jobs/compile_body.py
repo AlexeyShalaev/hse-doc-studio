@@ -121,7 +121,7 @@ class CapacityGate:
         self,
         limiter: CompileConcurrencyLimiter,
         capacity_probe: ISystemCapacityProbe | None,
-        heartbeat_interval_s: float = QUEUE_HEARTBEAT_INTERVAL_S,
+        heartbeat_interval_s: float | None = None,
     ) -> None:
         self._limiter = limiter
         self._capacity_probe = capacity_probe
@@ -162,7 +162,9 @@ class CapacityGate:
         после получения слота (или вместе со сборкой).
         """
         while True:
-            await asyncio.sleep(self._heartbeat_interval_s)
+            # Модульная константа читается в момент ожидания: тесты подменяют её без пересборки раннера.
+            interval = QUEUE_HEARTBEAT_INTERVAL_S if self._heartbeat_interval_s is None else self._heartbeat_interval_s
+            await asyncio.sleep(interval)
             log.emit(
                 f"[queue] still queued — {self._limiter.active} build(s) running…"
                 if current_interface_language() is Lang.en

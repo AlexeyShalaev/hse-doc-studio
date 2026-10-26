@@ -485,7 +485,7 @@ async def test__compile__limit_reached_with_english_header__queue_lines_are_engl
 async def test__compile__waiting_in_queue__heartbeat_lines_keep_the_log_alive(
     test_app: AsyncClient, project: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr("hse_doc_studio.use_cases.compile.trigger_compile._QUEUE_HEARTBEAT_INTERVAL_S", 0.1)
+    monkeypatch.setattr("hse_doc_studio.infra.jobs.compile_body.QUEUE_HEARTBEAT_INTERVAL_S", 0.1)
 
     record = await _two_queued_compiles(test_app, project, monkeypatch, tmp_path)
 

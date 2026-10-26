@@ -18,7 +18,6 @@ from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
 from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
 from hse_doc_studio.infra.jobs.compile_body import (
-    QUEUE_HEARTBEAT_INTERVAL_S,
     BuildState,
     CapacityGate,
     consume_build_stream,
@@ -48,7 +47,7 @@ class EmbeddedCompileRunner:
         resolve_image: Callable[[], str],
         resolve_lt_image: Callable[[], str],
         resolve_office_image: Callable[[], str],
-        heartbeat_interval_s: float = QUEUE_HEARTBEAT_INTERVAL_S,
+        heartbeat_interval_s: float | None = None,
     ) -> None:
         self._executor = executor
         self._image_manager = image_manager
