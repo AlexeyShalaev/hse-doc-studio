@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.entities import SchemaAccess
+from hse_doc_studio.core.git_sync.error_messages import git_error
+from hse_doc_studio.core.git_sync.errors import GitErrorCode
 from hse_doc_studio.core.project_schema import PROJECT_SCHEMA_VERSION
 from hse_doc_studio.core.value_objects import ProjectSchema
 
@@ -95,3 +97,19 @@ def remote_required_studio(project: RemoteProject, *, template_available: bool) 
 def schema_blocks_merge(schema: ProjectSchema) -> bool:
     """Данные удалённого проекта эта Студия не вправе ни читать, ни писать: слияние с ними невозможно."""
     return remote_schema_access(schema) is not SchemaAccess.full
+
+
+def require_mergeable_project(raw: bytes | None, project_id: UUID) -> RemoteProject:
+    """Файл проекта из удалённой ветки, с которым можно сливаться; иначе ошибка с кодом из закрытого списка.
+
+    Нет файла или он не проект Студии: not_a_studio_project. Чужой проект: unrelated_histories (усыновить нельзя).
+    Данные более новой Студии: remote_schema_newer.
+    """
+    remote = parse_remote_project(raw) if raw is not None else None
+    if remote is None:
+        raise git_error(GitErrorCode.not_a_studio_project)
+    if remote.id != project_id:
+        raise git_error(GitErrorCode.unrelated_histories, can_adopt=False)
+    if schema_blocks_merge(remote.schema):
+        raise git_error(GitErrorCode.remote_schema_newer, required_studio=remote.schema.written_by or None)
+    return remote

@@ -140,6 +140,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/chats/{session_id}/runs/{run_id}/cancel"): RouteRule(Action.AGENT_USE),
     # История проекта, она же git
     ("GET", "/projects/{project_id}/git"): RouteRule(Action.SOURCES_READ),
+    ("POST", "/projects/{project_id}/git/sync"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/write"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/init"): RouteRule(Action.HISTORY_WRITE),

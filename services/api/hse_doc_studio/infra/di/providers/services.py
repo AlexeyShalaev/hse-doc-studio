@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import structlog
 from dishka import AnyOf, Provider, Scope, provide
@@ -24,11 +26,15 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
+from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitMergeCommitter,
+    IGitMergeEngine,
     IGitOperationRegistry,
     IGitRemoteRegistry,
     IGitRemoteRunner,
@@ -86,6 +92,7 @@ from hse_doc_studio.core.template_update.protocols import (
 )
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.protocols import (
+    ICommitAuthorProvider,
     IVcsEditThrottle,
     IVcsFolderLocks,
     IVcsService,
@@ -126,6 +133,7 @@ from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
+from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
 from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
 from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
@@ -147,6 +155,11 @@ from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.persistence.serializers import (
+    deserialize_form_state,
+    deserialize_project,
+    deserialize_signatures_state,
+)
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
@@ -774,6 +787,8 @@ class DomainServiceProvider(Provider):
             # На общем сервере локальные адреса открыли бы чтение его файлов.
             allow_local_remotes=cfg.allow_local_remotes and settings.mode is StudioMode.local,
             bot_email=settings.vcs.author_email,
+            large_file_bytes=cfg.large_file_warn_bytes,
+            first_push_timeout_s=cfg.clone_timeout_s,
         )
 
     @provide
@@ -831,18 +846,43 @@ class DomainServiceProvider(Provider):
         return GitStoreRemotes(vcs_service, store_git)
 
     @provide
-    def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:
+    def get_commit_author_provider(self, local_profile: ILocalAuthorProfile) -> ICommitAuthorProvider:
+        cfg = settings.vcs
+        return ActorCommitAuthorProvider(
+            VcsAuthor(cfg.author_name, cfg.author_email),
+            # Профиль живёт в config.json этой машины; общий сервер подписывает людьми, не профилем.
+            local_profile=local_profile if settings.mode is StudioMode.local else None,
+        )
+
+    @provide
+    def get_vcs_service(self, author_provider: ICommitAuthorProvider) -> IVcsService:
         cfg = settings.vcs
         return GitVcsService(
             author_name=cfg.author_name,
             author_email=cfg.author_email,
             diff_max_bytes=cfg.diff_max_bytes,
             default_branch=cfg.default_branch,
-            author_provider=ActorCommitAuthorProvider(
-                VcsAuthor(cfg.author_name, cfg.author_email),
-                # Профиль живёт в config.json этой машины; общий сервер подписывает людьми, не профилем.
-                local_profile=local_profile if settings.mode is StudioMode.local else None,
-            ),
+            author_provider=author_provider,
+        )
+
+    @provide
+    def get_git_merge_committer(
+        self, author_provider: ICommitAuthorProvider, store_git: StoreGit
+    ) -> IGitMergeCommitter:
+        return GitMergeCommitter(author_provider, store_git)
+
+    @provide
+    def get_git_merge_engine(self) -> IGitMergeEngine:
+        return GitMergeFileEngine(OURS_LABEL, BASE_LABEL, THEIRS_LABEL)
+
+    @provide
+    def get_state_file_merge(self) -> StateFileMerge:
+        return StateFileMerge(
+            {
+                "project": lambda value: deserialize_project(value, Path(".")),
+                "signatures": deserialize_signatures_state,
+                "form": deserialize_form_state,
+            }
         )
 
     @provide

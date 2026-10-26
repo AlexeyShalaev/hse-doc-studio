@@ -78,6 +78,14 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "В репозитории лежит другой проект или у него нет общей истории с этим",
         "The repository holds another project or has no history in common with this one",
     ),
+    GitErrorCode.sync_busy_build: (
+        "Идёт сборка документа. Дождитесь её окончания и повторите синхронизацию",
+        "A document is being built. Wait for it to finish and sync again",
+    ),
+    GitErrorCode.sync_incomplete: (
+        "Предыдущая синхронизация не закончена. Дождитесь её окончания или перезапустите Студию",
+        "The previous sync is not finished. Wait for it to end or restart the Studio",
+    ),
     GitErrorCode.off_branch: (
         "Проект стоит не на той ветке, которая синхронизируется",
         "The project is not on the branch that is being synchronized",

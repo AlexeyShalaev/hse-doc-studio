@@ -19,6 +19,7 @@ from hse_doc_studio.api.schemas.git_sync import (
     CiWriteResponse,
     ConnectRemoteRequest,
     GitStatusResponse,
+    OperationStartedResponse,
     UpdateGitSettingsRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
@@ -29,6 +30,7 @@ from hse_doc_studio.use_cases.git_sync.connect_remote import (
     DisconnectRemoteInput,
     DisconnectRemoteUC,
 )
+from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncInput, StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsInput, UpdateGitSettingsUC
 
@@ -95,6 +97,15 @@ async def update_git_settings(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return map_status(view)
+
+
+@router.post("/projects/{project_id}/git/sync", response_model=OperationStartedResponse, status_code=202)
+async def start_git_sync(project_id: UUID, uc: FromDishka[StartSyncUC]) -> OperationStartedResponse:
+    try:
+        started = await uc.execute(StartSyncInput(project_id=project_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return OperationStartedResponse(operation_id=started.operation_id)
 
 
 @router.post("/projects/{project_id}/git/ci/preview", response_model=CiPreviewResponse)

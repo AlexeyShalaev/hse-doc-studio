@@ -40,7 +40,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitTransport,
     ILocalAuthorProfile,
 )
-from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, parse_remote_project, schema_blocks_merge
+from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.git_sync.url import RemoteUrl, parse_remote_url
 from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.refs import validate_ref_name
@@ -223,13 +223,7 @@ class ConnectRemoteUC:
         folder = project.folder
         tracking = f"{TRACKING_PREFIX}{remote_branch}"
         raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
-        remote = parse_remote_project(raw) if raw is not None else None
-        if remote is None:
-            raise git_error(GitErrorCode.not_a_studio_project)
-        if remote.id != project.id:
-            raise git_error(GitErrorCode.unrelated_histories, can_adopt=False)
-        if schema_blocks_merge(remote.schema):
-            raise git_error(GitErrorCode.remote_schema_newer, required_studio=remote.schema.written_by or None)
+        require_mergeable_project(raw, project.id)
         if self._reader.merge_base(folder, f"{HEADS_PREFIX}{local_branch}", tracking) is not None:
             return False
         if inp.adopt != ADOPT_MERGE_REMOTE:

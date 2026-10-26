@@ -288,6 +288,12 @@ class PendingSession:
     session_id: str
     files_total: int
     files_open: int
+    # Коммиты, между которыми шло слияние: по ним план пересобирается из объектов хранилища.
+    ours: str | None = None
+    theirs: str | None = None
+    base: str | None = None
+    # Отпечаток конфликтных файлов: пока он тот же, повторная синхронизация оставляет ту же сессию.
+    fingerprint: str | None = None
 
 
 @dataclass(frozen=True)

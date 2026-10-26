@@ -92,6 +92,10 @@ def _session_id(pending: Any) -> str | None:
     return pending.get("session_id") if isinstance(pending, dict) else None
 
 
+def _sha(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
 def _int(value: Any, default: int) -> int:
     return value if isinstance(value, int) and not isinstance(value, bool) else default
 
@@ -152,7 +156,15 @@ def _sync_to_json(sync: LastSync | None) -> dict[str, Any] | None:
 def _pending_to_json(pending: PendingSession | None) -> dict[str, Any] | None:
     if pending is None:
         return None
-    return {"session_id": pending.session_id, "files_total": pending.files_total, "files_open": pending.files_open}
+    return {
+        "session_id": pending.session_id,
+        "files_total": pending.files_total,
+        "files_open": pending.files_open,
+        "ours": pending.ours,
+        "theirs": pending.theirs,
+        "base": pending.base,
+        "fingerprint": pending.fingerprint,
+    }
 
 
 def _state_from_json(raw: dict[str, Any]) -> SyncState:
@@ -225,4 +237,8 @@ def _pending_from_json(raw: Any) -> PendingSession | None:
         session_id=str(raw["session_id"]),
         files_total=_int(raw.get("files_total"), 0),
         files_open=_int(raw.get("files_open"), 0),
+        ours=_sha(raw.get("ours")),
+        theirs=_sha(raw.get("theirs")),
+        base=_sha(raw.get("base")),
+        fingerprint=_sha(raw.get("fingerprint")),
     )

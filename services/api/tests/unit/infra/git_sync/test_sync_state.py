@@ -45,7 +45,15 @@ def _full_state() -> SyncState:
         last_fetch_ok_at=_AT,
         last_error=LastError(code=GitErrorCode.offline, detail="no route", at=_AT),
         last_sync=LastSync(id="s1", at=_AT, outcome=SyncOutcome.merged, pulled_commits=3, pushed_commits=2),
-        pending=PendingSession(session_id="p1", files_total=4, files_open=3),
+        pending=PendingSession(
+            session_id="p1",
+            files_total=4,
+            files_open=3,
+            ours="a" * 40,
+            theirs="b" * 40,
+            base="c" * 40,
+            fingerprint="f1",
+        ),
         auto_fetch=False,
         fetch_interval_s=600,
         shared_folder_ack=True,
@@ -90,7 +98,15 @@ def test__save__writes_a_versioned_file_with_utc_timestamps(folder: Path) -> Non
     assert raw["version"] == 1
     assert raw["last_fetch_at"] == "2026-10-26T12:30:05Z"
     assert raw["credential_id"] == str(_CRED)
-    assert raw["pending"] == {"session_id": "p1", "files_total": 4, "files_open": 3}
+    assert raw["pending"] == {
+        "session_id": "p1",
+        "files_total": 4,
+        "files_open": 3,
+        "ours": "a" * 40,
+        "theirs": "b" * 40,
+        "base": "c" * 40,
+        "fingerprint": "f1",
+    }
     assert not list(_file(folder).parent.glob("*.tmp"))
 
 
@@ -200,3 +216,15 @@ def test__save__leaves_no_temp_files(folder: Path) -> None:
     repo.save(folder, _full_state())
     repo.save(folder, _full_state())
     assert [p.name for p in _file(folder).parent.iterdir()] == [SYNC_STATE_FILE]
+
+
+def test__get__pending_written_by_older_studio_without_commits__reads_with_empty_commits(folder: Path) -> None:
+    repo = JsonGitSyncStateRepository()
+    repo.save(folder, _full_state())
+    raw = json.loads(_file(folder).read_text(encoding="utf-8"))
+    raw["pending"] = {"session_id": "old", "files_total": 2, "files_open": 1}
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+
+    pending = repo.get(folder).pending  # type: ignore[union-attr]
+
+    assert pending == PendingSession("old", 2, 1)

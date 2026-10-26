@@ -24,11 +24,14 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitMergeCommitter,
+    IGitMergeEngine,
     IGitOperationRegistry,
     IGitRemoteRegistry,
     IGitRepoReader,
@@ -282,7 +285,10 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
+from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusUC, GitStatusBuilder
+from hse_doc_studio.use_cases.git_sync.sync_apply import SyncApplier
+from hse_doc_studio.use_cases.git_sync.sync_project import SyncProjectUC
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsUC
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
@@ -417,6 +423,7 @@ from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlan
 from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
 from hse_doc_studio.use_cases.template_update.revert_template_update import RevertTemplateUpdateUC
 from hse_doc_studio.use_cases.template_update.set_template_tracking import SetTemplateTrackingUC
+from hse_doc_studio.use_cases.template_update.transaction import sync_transaction
 
 # --- VCS (ProjectVCS / "Версии") ---
 from hse_doc_studio.use_cases.vcs.create_vcs_snapshot import CreateVcsSnapshotUC
@@ -1614,6 +1621,87 @@ class UseCaseProvider(Provider):
         status_builder: GitStatusBuilder,
     ) -> UpdateGitSettingsUC:
         return UpdateGitSettingsUC(project_repo, project_index_repo, store_remotes, state_repo, status_builder)
+
+    @provide
+    def get_git_sync_applier(
+        self,
+        vcs_service: IVcsService,
+        reader: IGitRepoReader,
+        committer: IGitMergeCommitter,
+        journal_repo: IUpdateJournalRepository,
+        base_store: ITemplateBaseStore,
+        state_repo: IGitSyncStateRepository,
+        engine: IGitMergeEngine,
+        state_merge: StateFileMerge,
+    ) -> SyncApplier:
+        return SyncApplier(
+            vcs=vcs_service,
+            reader=reader,
+            committer=committer,
+            transaction=sync_transaction(journal_repo, base_store, vcs_service),
+            states=state_repo,
+            engine=engine,
+            structured=state_merge,
+            resolver=state_merge,
+        )
+
+    @provide
+    def get_sync_git_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        applier: SyncApplier,
+        reader: IGitRepoReader,
+        transport: IGitTransport,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        operations: IGitOperationRegistry,
+        vcs_locks: IVcsFolderLocks,
+        dispatcher: IJobDispatcher,
+        policy: GitSyncPolicy,
+    ) -> SyncProjectUC:
+        return SyncProjectUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            applier=applier,
+            reader=reader,
+            transport=transport,
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            operations=operations,
+            locks=vcs_locks,
+            dispatcher=dispatcher,
+            policy=policy,
+        )
+
+    @provide
+    def get_start_git_sync_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        sync: SyncProjectUC,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        guard: IGitStoreGuard,
+        credentials: IGitCredentialRepository,
+        profile: ILocalAuthorProfile,
+        operations: IGitOperationRegistry,
+        journal_repo: IUpdateJournalRepository,
+        policy: GitSyncPolicy,
+    ) -> StartSyncUC:
+        return StartSyncUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            sync=sync,
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            reader=reader,
+            guard=guard,
+            credentials=credentials,
+            profile=profile,
+            operations=operations,
+            journals=journal_repo,
+            policy=policy,
+        )
 
     @provide
     def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:

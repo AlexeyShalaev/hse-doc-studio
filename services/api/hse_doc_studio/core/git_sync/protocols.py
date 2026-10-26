@@ -46,6 +46,7 @@ from hse_doc_studio.core.git_sync.error_classifier import GitOp
 from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
 from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
 from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
+from hse_doc_studio.core.template_update.protocols import IMergeEngine
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
 ProgressCallback = Callable[[float | None, str], None]
@@ -429,6 +430,10 @@ class IFileMergeStrategy(Protocol):
     def merge(
         self, path: str, base: bytes | None, ours: bytes | None, theirs: bytes | None, meta: MergeMeta
     ) -> MergeDecision: ...
+
+
+class IGitMergeEngine(IMergeEngine, Protocol):
+    """Слияние текста с маркерами `hse:ours`, `hse:base`, `hse:theirs`: по ним разбираются участки конфликтов."""
 
 
 class IFieldResolver(Protocol):
