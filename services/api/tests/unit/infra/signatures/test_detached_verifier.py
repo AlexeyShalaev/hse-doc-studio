@@ -66,6 +66,20 @@ def test_trusted_root_dir_is_used(pdf: Path, tmp_path: Path, ring: GpgKeyring) -
     assert "chain_untrusted_root" not in out.notes
 
 
+def test_verify_with_uses_the_given_roots_not_the_directories(pdf: Path, tmp_path: Path, ring: GpgKeyring) -> None:
+    ident = make_identity()
+    sig = make_detached_cms(ident, pdf.read_bytes())
+    v = DetachedSignatureVerifier(ring, tmp_path / "roots")  # каталог пуст: корней у проверяющего нет
+
+    trusted = v.verify_with(pdf, sig, [ident.cert_der], [])
+    untrusted = v.verify_with(pdf, sig, [], [])
+
+    assert trusted.chain == "trusted"
+    assert "chain_untrusted_root" not in trusted.notes
+    assert "chain_untrusted_root" in untrusted.notes
+    assert v.verify(pdf, sig) == untrusted
+
+
 @pytest.mark.skipif(
     shutil.which("gpg") is None or sys.platform == "win32",
     reason="gpg is not installed (or Windows, where gpg-agent does not start in CI)",

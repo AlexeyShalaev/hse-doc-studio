@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Sequence
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 from typing import Protocol
 
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import VcsCommitKind, VcsRestoreMode, VcsTagKind
 from hse_doc_studio.core.vcs.entities import (
+    VcsAuthor,
     VcsBranch,
     VcsCommit,
     VcsCommitDetail,
@@ -17,6 +18,12 @@ from hse_doc_studio.core.vcs.entities import (
     VcsStatus,
     VcsTag,
 )
+
+
+class ICommitAuthorProvider(Protocol):
+    """Чья подпись встанет на коммите. Вызывается на каждую git-команду, а не при сборке сервиса."""
+
+    def author(self) -> VcsAuthor: ...
 
 
 class IVcsService(Protocol):
@@ -105,9 +112,12 @@ class IVcsService(Protocol):
 class IVcsFolderLocks(Protocol):
     """Hands out a per-project-folder lock that serializes VCS write operations
     (and the compile-success auto-commit) so concurrent git writes can't corrupt
-    the index. Read-only operations never lock."""
+    the index. Read-only operations never lock.
 
-    def for_folder(self, folder: Path) -> asyncio.Lock: ...
+    The key is the resolved folder path; the result is only used with
+    ``async with``, so any async context manager fits (not just asyncio.Lock)."""
+
+    def for_folder(self, folder: Path) -> AbstractAsyncContextManager[None]: ...
 
 
 class IVcsEditThrottle(Protocol):

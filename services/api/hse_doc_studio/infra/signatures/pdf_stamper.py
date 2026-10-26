@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import io
 from collections import defaultdict
-from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 
 import structlog
@@ -13,6 +11,8 @@ from reportlab.lib.utils import simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+
+from hse_doc_studio.core.signatures.stamps import Stamp, format_sign_date
 
 logger = structlog.get_logger()
 
@@ -39,47 +39,6 @@ def _ensure_text_font() -> str:
     if _TEXT_FONT_BOLD not in registered:
         pdfmetrics.registerFont(TTFont(_TEXT_FONT_BOLD, str(_TEXT_FONT_BOLD_FILE)))
     return _TEXT_FONT
-
-
-def format_sign_date(iso_date: str | None) -> str | None:
-    """ISO «2026-05-12» → печатное «12.05.2026»; None/пусто → None."""
-    if not iso_date:
-        return None
-    try:
-        return date.fromisoformat(iso_date).strftime("%d.%m.%Y")
-    except ValueError:
-        # Свободный формат из старых данных — печатаем как есть.
-        return iso_date
-
-
-@dataclass(frozen=True)
-class Stamp:
-    """A single PNG or text mark to place on a PDF page.
-
-    Coordinates are in millimetres from the **top-left** corner of the page —
-    the natural convention for the UI overlay layer. The stamper handles the
-    flip to PDF native coords (bottom-left origin, points) internally so
-    callers don't have to think about it.
-    """
-
-    page: int  # 1-indexed
-    x_mm: float
-    y_mm: float
-    width_mm: float
-    png_path: Path | None
-    aspect_ratio: float  # height / width — preserves uploaded PNG proportions
-    # Text mark instead of a PNG: a framed, wrapped caption (the date, when
-    # set, goes on its own last line inside the frame).
-    text: str | None = None
-    # Signature plate rows («Сертификат», «Владелец», ...) under the bold caption.
-    details: tuple[tuple[str, str], ...] = ()
-    # Second bold line under the caption (the signature level), empty = none.
-    subtitle: str = ""
-    # Label of the date row when the plate has details («Дата подписания»).
-    date_label: str = ""
-    # Signing date rendered as text to the right of the PNG («12.05.2026»).
-    # ASCII-only by design so the built-in Helvetica suffices.
-    date_text: str | None = None
 
 
 class PdfStamper:
@@ -259,3 +218,6 @@ def _draw_text_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
     for line in body:
         c.drawString(x_pt + _TEXT_PAD_PT, y, line)
         y -= line_h
+
+
+__all__ = ["PdfStamper", "Stamp", "format_sign_date", "text_mark_height_mm"]

@@ -8,11 +8,11 @@ import structlog
 
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.compile.pdf_archive import archived_pdf_path
 
 logger = structlog.get_logger()
 
@@ -36,9 +36,11 @@ class GetArchivedPdfUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        artifacts: IArtifactStore,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
+        self._artifacts = artifacts
 
     def execute(self, inp: GetArchivedPdfInput) -> GetArchivedPdfOutput:
         folder = self._find_folder(inp.project_id)
@@ -46,10 +48,13 @@ class GetArchivedPdfUC:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id} не найден", f"Project not found: {inp.project_id}")
             )
-        path = archived_pdf_path(folder, inp.doc_id, inp.compile_id)
-        if not path.exists():
-            raise NotFoundError(localized_error("Для этой сборки нет архивного PDF", "No archived PDF for this build"))
-        return GetArchivedPdfOutput(content=path.read_bytes())
+        try:
+            content = self._artifacts.read_archived_pdf(folder, inp.doc_id, inp.compile_id)
+        except FileNotFoundError:
+            raise NotFoundError(
+                localized_error("Для этой сборки нет архивного PDF", "No archived PDF for this build")
+            ) from None
+        return GetArchivedPdfOutput(content=content)
 
     def _find_folder(self, project_id: UUID) -> Path | None:
         for folder in self._project_index_repo.list_known():

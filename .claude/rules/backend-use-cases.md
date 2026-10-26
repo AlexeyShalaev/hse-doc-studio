@@ -211,6 +211,19 @@ class UseCaseProvider(Provider):
         return CreateUserUseCase(uow)
 ```
 
+## Heavy Work Is a Job Kind
+
+Compilation, office conversion, detached-signature verification and submission packing run through the job dispatcher (`IJobDispatcher` from `core/jobs/protocols.py`). A use case MUST NOT import `infra/` to do such work or call a converter, keyring or archiver directly.
+
+To add new heavy work:
+
+1. Add a `JobKind` and a frozen `payload` and `result` (plain data that survives the JSON codec: no paths from the host that the runner cannot see, no secrets) in `core/jobs/`.
+2. Register one `JobKindSpec` in `core/jobs/registry.py` with its `JobKindPolicy` (awaitable, detachable, idempotent, embedded concurrency).
+3. Write a handler (`IJobHandler`) in `infra/jobs/` and register it in the handler registry. The handler may use infra and ports; the registry tests fail if a kind has no spec.
+4. In the use case build the payload and call the dispatcher in the mode the policy allows: `run` (await the result) or `submit_detached` (the HTTP answer does not wait); `submit` is for compile only. Map a failed result to the user-facing error inside the use case, from codes, so texts stay localised there.
+
+Stay in-api behind ports (not jobs yet): signing, PAdES export, freeze stamping, AIA chain download, ONLYOFFICE session and callback configuration. Do not add `infra` imports to the allowlist for new work: `tests/unit/architecture/infra_allowlist.txt` only shrinks.
+
 ## Summary Checklist
 
 When creating use cases:
@@ -218,6 +231,7 @@ When creating use cases:
 - [ ] Access repositories via `async with self._uow.transaction() as tx:`
 - [ ] Return domain entities or DTOs, NOT ORM models
 - [ ] Do NOT import from `infra/` (repositories, ORM, clients)
+- [ ] Heavy work goes through a job kind and `IJobDispatcher`, not a direct infra call
 - [ ] Do NOT call `session.commit()` manually
 - [ ] Register in `infra/di/providers/use_cases.py`
 - [ ] All database operations within `async with uow.transaction()` block

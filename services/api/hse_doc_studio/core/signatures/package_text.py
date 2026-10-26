@@ -1,20 +1,18 @@
-"""Files that travel with a frozen PDF: signature files, public keys and a README."""
+"""Тексты и имена файлов, которые едут вместе с зафиксированным PDF: подписи, ключи, README."""
 
 from __future__ import annotations
 
 import contextlib
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 
 from hse_doc_studio.core.enums import DetachedFormat
-from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 
 
 @dataclass(frozen=True)
 class PackageSignature:
     slot_label: str
-    file: Path  # on disk
     arcname: str  # name inside the package
     format: DetachedFormat
     signer: str
@@ -32,8 +30,8 @@ def signature_arcname(pdf_name: str, slot_label: str, ext: str) -> str:
     return f"{stem}.{slug(slot_label)}{ext}"
 
 
-def public_key_files(keyring: GpgKeyring, sigs: list[PackageSignature]) -> dict[str, bytes]:
-    """`<name>.pub.asc` per distinct OpenPGP signer whose public key the keyring holds."""
+def public_key_files(export_public: Callable[[str], bytes], sigs: Sequence[PackageSignature]) -> dict[str, bytes]:
+    """`<name>.pub.asc` per distinct OpenPGP signer whose public key the exporter returns."""
     files: dict[str, bytes] = {}
     seen: set[str] = set()
     for s in sigs:
@@ -42,7 +40,7 @@ def public_key_files(keyring: GpgKeyring, sigs: list[PackageSignature]) -> dict[
         seen.add(s.signer_id)
         blob = b""
         with contextlib.suppress(Exception):
-            blob = keyring.export_public(s.signer_id)
+            blob = export_public(s.signer_id)
         if blob:
             files[f"public-key.{slug(s.signer or s.signer_id[-16:])}.asc"] = blob
     return files
@@ -84,7 +82,9 @@ _EN = {
 }
 
 
-def build_readme(lang: str, pdf_name: str, pdf_sha256: str, sigs: list[PackageSignature], keys: list[str]) -> str:
+def build_readme(
+    lang: str, pdf_name: str, pdf_sha256: str, sigs: Sequence[PackageSignature], keys: Sequence[str]
+) -> str:
     t = _EN if lang == "en" else _RU
     lines = [t["title"], "=" * len(t["title"]), "", t["intro"], "", t["sha"], f"  {pdf_sha256}", "", t["files"]]
     lines.append(f"  {pdf_name}")

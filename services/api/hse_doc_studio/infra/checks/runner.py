@@ -8,6 +8,7 @@ import structlog
 from hse_doc_studio.core.catalog import CheckRule
 from hse_doc_studio.core.enums import CheckEngine, CheckSeverity, Lang
 from hse_doc_studio.core.i18n import current_interface_language
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.infra.checks.base import BaseCheckEngine
 from hse_doc_studio.infra.checks.external_engine import ExternalCheckEngine
@@ -19,7 +20,6 @@ from hse_doc_studio.infra.checks.regex_engine import RegexCheckEngine
 from hse_doc_studio.infra.checks.structural_engine import StructuralCheckEngine
 from hse_doc_studio.infra.checks.tex_command_count_engine import TexCommandCountEngine
 from hse_doc_studio.infra.checks.typography_engine import TypographyCheckEngine
-from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 
 logger = structlog.get_logger()
 
@@ -44,7 +44,7 @@ _CUSTOM_MODE_SUPPRESSED: frozenset[CheckEngine] = frozenset(
 class CheckRunner:
     """Dispatches check rules to the appropriate engine and collects results."""
 
-    def __init__(self, lt_manager: LanguageToolContainerManager, lt_client: httpx.Client) -> None:
+    def __init__(self, lt_manager: ILanguageCheckService, lt_client: httpx.Client) -> None:
         # The external (LanguageTool) engine reads its live endpoint from the
         # container manager (auto-started on demand). No enable flag / URL —
         # installing the image is the opt-in; when the container isn't up the

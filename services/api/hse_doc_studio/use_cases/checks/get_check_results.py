@@ -12,6 +12,7 @@ from hse_doc_studio.core.enums import CompileStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IFileRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -20,7 +21,6 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
 from hse_doc_studio.infra.checks.utils import expand_inputs
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -64,7 +64,7 @@ class GetCheckResultsUC:
         template_repo: ITemplateRepository,
         check_resolution_service: CheckResolutionService,
         file_repo: IFileRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
     ) -> None:
         self._get_project_uc = GetProjectUC(project_repo, project_index_repo)
         self._template_repo = template_repo

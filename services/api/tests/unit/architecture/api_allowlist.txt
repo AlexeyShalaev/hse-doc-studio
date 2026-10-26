@@ -1,0 +1,12 @@
+chat/_agent_loop.py hse_doc_studio.api.config
+chat/start_chat_turn.py hse_doc_studio.api.config
+chat/system_start_chat_turn.py hse_doc_studio.api.config
+compile/install_image.py hse_doc_studio.api.config
+compile/list_images.py hse_doc_studio.api.config
+compile/list_remote_tags.py hse_doc_studio.api.config
+compile/set_active_image.py hse_doc_studio.api.config
+languagetool/install_languagetool_image.py hse_doc_studio.api.config
+languagetool/list_languagetool_images.py hse_doc_studio.api.config
+languagetool/list_languagetool_remote_tags.py hse_doc_studio.api.config
+languagetool/set_active_languagetool_image.py hse_doc_studio.api.config
+office_services/list_office_service_images.py hse_doc_studio.api.config

@@ -3,14 +3,27 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.enums import DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.files import ManifestFile
+from hse_doc_studio.core.jobs.office import (
+    OfficeConvertPayload,
+    OfficeConvertReason,
+    OfficeConvertResult,
+    OfficeConvertStatus,
+)
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, sibling_pdf_path
 from hse_doc_studio.core.repositories import (
     IFileRepository,
     IProjectIndexRepository,
@@ -21,7 +34,6 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.value_objects import CustomFileOverride
 from hse_doc_studio.core.vcs.protocols import IVcsEditThrottle, IVcsFolderLocks, IVcsService
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
 from hse_doc_studio.use_cases.files._vcs_edit import maybe_edit_commit
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -60,7 +72,7 @@ class UploadCustomFileUC:
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: OfficeConvertManager,
+        dispatcher: IJobDispatcher,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
@@ -68,7 +80,7 @@ class UploadCustomFileUC:
         self._template_repo = template_repo
         self._file_repo = file_repo
         self._signature_repo = signature_repo
-        self._office_manager = office_manager
+        self._dispatcher = dispatcher
         self._vcs = vcs_service
         self._vcs_locks = vcs_locks
         self._vcs_throttle = vcs_throttle
@@ -140,7 +152,7 @@ class UploadCustomFileUC:
 
         preview_generated = False
         if ext != ".pdf" and ext in CONVERTIBLE_OFFICE_EXTS:
-            preview_generated = await self._generate_preview(project.folder, stored_path)
+            preview_generated = await self._generate_preview(project.id, project.folder, stored_path)
 
         logger.info(
             "custom file uploaded",
@@ -176,19 +188,48 @@ class UploadCustomFileUC:
         new_placements = {**state.placements, doc_id: updated}
         self._signature_repo.save_state(project_folder, replace(state, placements=new_placements))
 
-    async def _generate_preview(self, project_folder: Path, stored_path: str) -> bool:
-        src_abs = project_folder / stored_path
-        pdf_abs = src_abs.with_suffix(".pdf")
+    async def _generate_preview(self, project_id: UUID, project_folder: Path, stored_path: str) -> bool:
         try:
-            pdf_bytes = await self._office_manager.convert_to_pdf(src_abs)
-        except Exception as exc:  # noqa: BLE001 — preview is best-effort
+            # image=None: конвертер берёт образ деплоя по умолчанию, как и до диспетчера.
+            payload = OfficeConvertPayload(
+                source=ManifestFile(stored_path),
+                output_path=sibling_pdf_path(stored_path),
+                image=None,
+                reason=OfficeConvertReason.upload,
+            )
+        except ValueError as exc:
+            # Имя с обратным слэшем не проходит валидацию манифеста: файл уже сохранён, превью пропускаем.
             logger.warning("upload_custom_file: preview conversion failed", path=stored_path, exc=str(exc))
             return False
-        if pdf_bytes is None:
+        spec = JobSpec(
+            id=uuid4(),
+            kind=JobKind.office_convert,
+            tags=job_tags(JobKind.office_convert, payload),
+            project_id=project_id,
+            actor=current_actor() or Actor.local(),
+            locale=current_interface_language(),
+            payload=payload,
+            local_root=project_folder,
+        )
+        job = await self._dispatcher.run(spec)
+        if job.status is not JobStatus.succeeded:
+            # Превью best-effort: сбой конвертации не роняет загрузку.
+            logger.warning(
+                "upload_custom_file: preview conversion failed",
+                path=stored_path,
+                exc=job.error.detail if job.error is not None else str(job.status),
+                status=str(job.status),
+                error=job.error.code if job.error is not None else None,
+            )
             return False
-        try:
-            pdf_abs.write_bytes(pdf_bytes)
-        except OSError as exc:
-            logger.warning("upload_custom_file: preview write failed", path=str(pdf_abs), exc=str(exc))
+        result = job.data_as(OfficeConvertResult)
+        if result.status is not OfficeConvertStatus.ok:
+            if result.detail:
+                # Поля как до диспетчера: путь записываемого PDF, а не исходника.
+                logger.warning(
+                    "upload_custom_file: preview write failed",
+                    path=str(project_folder / sibling_pdf_path(stored_path)),
+                    exc=result.detail,
+                )
             return False
         return True

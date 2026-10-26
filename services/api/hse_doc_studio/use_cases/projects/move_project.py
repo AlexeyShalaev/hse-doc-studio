@@ -12,11 +12,11 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.infra.compile.compile_runner import CompileRunner
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -55,11 +55,11 @@ class MoveProjectUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_runner: CompileRunner,
+        dispatcher: IJobDispatcher,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
-        self._compile_runner = compile_runner
+        self._dispatcher = dispatcher
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: MoveProjectInput) -> MoveProjectOutput:  # noqa: C901
@@ -88,7 +88,7 @@ class MoveProjectUC:
                 else "Целевая папка содержит текущую папку проекта."
             )
 
-        if self._compile_runner.has_active_for_folder(old):
+        if self._dispatcher.has_active_for_folder(old):
             raise ValueError(
                 "Wait for the active build to finish before moving the project."
                 if en

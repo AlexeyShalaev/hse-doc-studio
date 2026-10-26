@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from hse_doc_studio.core.agent.entities import (
+    AgentEvent,
     AgentMessage,
     AgentToolContext,
     NormalizedTurn,
@@ -13,6 +14,7 @@ from hse_doc_studio.core.agent.entities import (
 )
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import ToolKind
+from hse_doc_studio.core.events import IEventBus
 
 
 class StreamSink(Protocol):
@@ -54,3 +56,8 @@ class IApprovalGate(Protocol):
     # Decides whether a tool of the given kind needs explicit user approval
     # before running. read → auto; write/exec → gated unless config opts in.
     def requires_approval(self, kind: ToolKind) -> bool: ...
+
+
+class IAgentRunBus(IEventBus[AgentEvent], Protocol):
+    # Live events of one agent run, topic = run id.
+    ...

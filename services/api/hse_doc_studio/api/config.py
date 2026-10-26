@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.update.services import feed_disabled, official_feed_url
 
 # parents: [0]=api/, [1]=hse_doc_studio/, [2]=service-root, [3]=services/, [4]=monorepo.
@@ -846,6 +847,18 @@ class VCSConfig(BaseModel):
     )
 
 
+class JobsConfig(BaseModel):
+    """Диспетчер задач (compile, office, пакет сдачи, проверка подписей)."""
+
+    round_trip_payloads: bool = Field(
+        default=False,
+        description=(
+            "Пропускать каждую задачу и её результат через проводной кодек (как при удалённом раннере). "
+            "Для тестов: ловит живые объекты в нагрузке; в обычной работе выключено."
+        ),
+    )
+
+
 class HsePersonsConfig(BaseModel):
     """Lookup of HSE staff from the public directory (hse.ru/org/persons).
 
@@ -906,8 +919,15 @@ class Settings(BaseSettings):
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
+    jobs: JobsConfig = Field(default_factory=JobsConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 
+    # Режим инстанса (HSE_STUDIO__MODE). Не путать с DeploymentMode (all-in-one/standard/native):
+    # тот описывает, где запущен бэкенд, этот — одна локальная установка или общий сервер.
+    mode: StudioMode = Field(
+        default=StudioMode.local,
+        description="Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet).",
+    )
     data_dir: Path = Field(
         default=Path.home() / ".config" / "hse-studio",
         description="Local data storage directory",

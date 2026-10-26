@@ -11,7 +11,7 @@ from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, Lang, ToolKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
+from hse_doc_studio.core.repositories import ICompileRepository
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -40,7 +40,7 @@ class CompileDocumentTool:
         self,
         trigger_compile_uc: TriggerCompileUC,
         get_project_uc: GetProjectUC,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
     ) -> None:
         self._trigger = trigger_compile_uc
         self._get_project = get_project_uc

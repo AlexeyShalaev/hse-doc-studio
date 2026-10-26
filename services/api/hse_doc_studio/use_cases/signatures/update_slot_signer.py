@@ -18,15 +18,10 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUnavailableError
 from hse_doc_studio.core.value_objects import SignatureSlot, SignerInfo
-from hse_doc_studio.infra.signatures.cms_inspector import CmsParseError, describe_certificate
-from hse_doc_studio.infra.signatures.openpgp import (
-    GpgError,
-    GpgKey,
-    GpgKeyring,
-    GpgUnavailableError,
-    looks_like_openpgp_public_key,
-)
+from hse_doc_studio.infra.signatures.cms_inspector import describe_certificate
+from hse_doc_studio.infra.signatures.openpgp import GpgKey, GpgKeyring, looks_like_openpgp_public_key
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
