@@ -103,6 +103,14 @@ def _clean_host(raw_host: str) -> str:
     return host
 
 
+def normalize_host(raw: str) -> str:
+    """Имя хоста для учётных данных и known_hosts: те же правила, что для хоста в адресе."""
+    text = raw.strip()
+    if not text or text.startswith("-") or _has_bad_char(text):
+        raise _invalid()
+    return _clean_host(text)
+
+
 def _split_port(hostport: str) -> tuple[str, int | None]:
     host, sep, port_text = hostport.rpartition(":")
     if not sep:

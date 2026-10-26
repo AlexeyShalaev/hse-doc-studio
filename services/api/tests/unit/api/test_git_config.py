@@ -38,3 +38,25 @@ def test__git_config__env_overrides__are_read_with_the_studio_prefix(monkeypatch
 def test__git_config__fetch_concurrency__must_be_positive() -> None:
     with pytest.raises(ValueError, match="fetch_concurrency"):
         GitConfig(fetch_concurrency=0)
+
+
+def test__secrets_config__defaults_to_a_file_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("HSE_STUDIO__SECRETS__KEY", "HSE_STUDIO__SECRETS__KEY_FILE"):
+        monkeypatch.delenv(name, raising=False)
+
+    secrets = Settings().secrets
+
+    assert secrets.key is None
+    assert secrets.key_file is None
+
+
+def test__secrets_config__env_overrides__are_read_and_the_key_is_masked(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HSE_STUDIO__SECRETS__KEY", "a-very-secret-key-value")
+    monkeypatch.setenv("HSE_STUDIO__SECRETS__KEY_FILE", "/run/secrets/hse-key")
+
+    secrets = Settings().secrets
+
+    assert secrets.key is not None
+    assert secrets.key.get_secret_value() == "a-very-secret-key-value"
+    assert "a-very-secret-key-value" not in repr(secrets)
+    assert str(secrets.key_file) == "/run/secrets/hse-key"

@@ -167,6 +167,14 @@ class GitCredential:
 
 
 @dataclass(frozen=True)
+class CredentialUsage:
+    """Проект, у которого к удалённому репозиторию привязан этот доступ."""
+
+    project_id: UUID
+    name: str
+
+
+@dataclass(frozen=True)
 class GitRemoteRef:
     """Подключённый к проекту удалённый репозиторий (адрес без секретов)."""
 

@@ -24,7 +24,13 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
-from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
+from hse_doc_studio.core.git_sync.protocols import (
+    IGitCredentialRepository,
+    IGitCredentialUsage,
+    ILocalAuthorProfile,
+    ISecretCipher,
+    ISshKeyGenerator,
+)
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -35,7 +41,13 @@ from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
-from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
+from hse_doc_studio.core.repositories import (
+    IProjectIndexRepository,
+    IProjectRepository,
+    ISettingsRepository,
+    ISignatureRepository,
+    ITemplateRepository,
+)
 from hse_doc_studio.core.services import (
     ChatContextService,
     CheckResolutionService,
@@ -92,6 +104,11 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
+from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
+from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
+from hse_doc_studio.infra.git_sync.ssh_keys import Ed25519KeyGenerator
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -677,6 +694,35 @@ class DomainServiceProvider(Provider):
         self, root_store: TrustedRootStore, fetcher: ChainFetcher
     ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
         return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
+
+    # --- Git-синхронизация: секреты и доступы (каталог данных читается при создании, как у хранилища шрифтов) ---
+
+    @provide
+    def get_git_key_store(self) -> KeyFileStore:
+        cfg = settings.secrets
+        return KeyFileStore(
+            settings.data_dir.expanduser() / "secrets" / "master.keys.json",
+            env_key=None if cfg.key is None else cfg.key.get_secret_value(),
+            env_key_file=cfg.key_file,
+        )
+
+    @provide
+    def get_secret_cipher(self, key_store: KeyFileStore) -> ISecretCipher:
+        return FernetSecretCipher(key_store)
+
+    @provide
+    def get_git_credential_repo(self, cipher: ISecretCipher) -> IGitCredentialRepository:
+        return JsonGitCredentialRepository(settings.data_dir.expanduser(), cipher)
+
+    @provide
+    def get_ssh_key_generator(self) -> ISshKeyGenerator:
+        return Ed25519KeyGenerator()
+
+    @provide
+    def get_git_credential_usage(
+        self, project_index: IProjectIndexRepository, projects: IProjectRepository
+    ) -> IGitCredentialUsage:
+        return StoreConfigCredentialUsage(project_index, projects)
 
     @provide
     def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:

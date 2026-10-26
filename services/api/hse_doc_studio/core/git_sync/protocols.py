@@ -15,6 +15,7 @@ from uuid import UUID
 from hse_doc_studio.core.git_sync.entities import (
     AuthorProfile,
     CredentialStatus,
+    CredentialUsage,
     GitCredential,
     GitHostKey,
     GitOperation,
@@ -24,6 +25,7 @@ from hse_doc_studio.core.git_sync.entities import (
     RemoteProbe,
     SyncState,
 )
+from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
 from hse_doc_studio.core.git_sync.url import RemoteUrl
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
@@ -31,30 +33,58 @@ ProgressCallback = Callable[[float | None, str], None]
 
 
 class ISecretCipher(Protocol):
-    """Шифрование секретов в покое: токены и закрытые ключи на диск попадают только так."""
+    """Шифрование секретов в покое: токены и закрытые ключи на диск попадают только так.
 
-    def encrypt(self, plaintext: str) -> str: ...
-    def decrypt(self, token: str) -> str:
-        """Бросает GitSyncError(secrets_unavailable), если ключ недоступен или токен повреждён."""
+    `aad` привязывает шифртекст к записи, которой он принадлежит.
+    """
+
+    def encrypt(self, plaintext: Secret, *, aad: str) -> str:
+        """Бросает GitSyncError(secrets_unavailable), если ключ нельзя ни прочитать, ни создать."""
         ...
+
+    def decrypt(self, token: str, *, aad: str) -> Secret:
+        """Бросает GitSyncError(secrets_unavailable), если ключа нет, он не тот или шифртекст повреждён."""
+        ...
+
+    def can_read(self, token: str) -> bool:
+        """Дёшево, без расшифровки: известен ли ключ, которым записан шифртекст."""
+        ...
+
+    def status(self) -> CipherStatus: ...
 
 
 class IGitCredentialRepository(Protocol):
-    def list(self) -> list[GitCredential]: ...
+    """Хранилище учётных данных: метаданные открыты, секрет только шифртекстом."""
+
+    def list(self) -> list[GitCredential]:
+        """Без расшифровки. Запись с недоступным ключом приходит со статусом unreadable."""
+        ...
+
     def get(self, credential_id: UUID) -> GitCredential | None: ...
-    def add(self, credential: GitCredential, secret: str) -> None: ...
-    def update(self, credential: GitCredential, secret: str | None = None) -> None:
+    def add(self, credential: GitCredential, secret: Secret) -> None: ...
+    def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
         """`secret=None` оставляет сохранённый секрет."""
         ...
 
-    def delete(self, credential_id: UUID) -> None: ...
-    def get_secret(self, credential_id: UUID) -> str: ...
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None: ...
+    def delete(self, credential_id: UUID) -> bool: ...
+    def get_secret(self, credential_id: UUID) -> Secret:
+        """Бросает NotFoundError, если записи нет, и GitSyncError(secrets_unavailable), если ключ не подходит."""
+        ...
+
+    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+        """Статус и время последнего использования без перезаписи секрета; неизвестная запись игнорируется."""
+        ...
+
+
+class IGitCredentialUsage(Protocol):
+    """Какие проекты подключили удалённый репозиторий с этим доступом (из настроек хранилищ проектов)."""
+
+    def by_credential(self) -> dict[UUID, list[CredentialUsage]]: ...
 
 
 @dataclass(frozen=True)
 class GeneratedSshKey:
-    private_key: str
+    private_key: Secret
     public_key: str
     fingerprint_sha256: str
 

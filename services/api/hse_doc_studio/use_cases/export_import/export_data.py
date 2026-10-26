@@ -45,6 +45,9 @@ class ExportDataUC:
     encryption password is supplied — encrypted per-field. The auto-managed
     ``ollama`` provider is never exported: it is rebuilt from the local runtime
     on the target machine and its base_url is host-specific.
+
+    Git access (tokens, deploy keys, the encryption key) is not part of a bundle by design:
+    a file shared with a colleague must never carry the owner's access to repositories.
     """
 
     def __init__(

@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
@@ -886,6 +886,19 @@ class GitConfig(BaseModel):
     )
 
 
+class SecretsConfig(BaseModel):
+    """Ключ шифрования токенов и ключей доступа (HSE_STUDIO__SECRETS__*).
+
+    Без настроек ключ создаётся файлом в data_dir. Любой из параметров выключает запись файла:
+    ключ можно хранить вне тома с данными (docker secrets).
+    """
+
+    key: SecretStr | None = Field(
+        default=None, description="Fernet key (urlsafe base64 of 32 bytes) taken from the environment."
+    )
+    key_file: Path | None = Field(default=None, description="File holding the Fernet key (docker secret).")
+
+
 class JobsConfig(BaseModel):
     """Диспетчер задач (compile, office, пакет сдачи, проверка подписей)."""
 
@@ -959,6 +972,7 @@ class Settings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     git: GitConfig = Field(default_factory=GitConfig)
+    secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 

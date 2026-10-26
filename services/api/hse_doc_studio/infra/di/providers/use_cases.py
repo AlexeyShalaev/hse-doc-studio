@@ -24,7 +24,13 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
-from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
+from hse_doc_studio.core.git_sync.protocols import (
+    IGitCredentialRepository,
+    IGitCredentialUsage,
+    ILocalAuthorProfile,
+    ISecretCipher,
+    ISshKeyGenerator,
+)
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
@@ -249,6 +255,15 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 # --- Filesystem ---
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
+
+# --- Settings ---
+from hse_doc_studio.use_cases.git_sync.credentials import (
+    CreateCredentialUC,
+    DeleteCredentialUC,
+    GetSecretsStatusUC,
+    ListCredentialsUC,
+    UpdateCredentialUC,
+)
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
 from hse_doc_studio.use_cases.hse_persons.search_persons import SearchHsePersonsUC
@@ -285,8 +300,6 @@ from hse_doc_studio.use_cases.office_services.list_office_service_remote_tags im
 from hse_doc_studio.use_cases.office_services.set_active_office_service_image import (
     SetActiveOfficeServiceImageUC,
 )
-
-# --- Settings ---
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.get_profile import GetProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -1385,6 +1398,36 @@ class UseCaseProvider(Provider):
     @provide
     def get_clear_profile_uc(self, settings_repo: ISettingsRepository) -> ClearProfileUC:
         return ClearProfileUC(settings_repo, _bot_author())
+
+    # ------------------------------------------------------------------ Git-синхронизация: доступы
+
+    @provide
+    def get_list_git_credentials_uc(
+        self, repo: IGitCredentialRepository, usage: IGitCredentialUsage
+    ) -> ListCredentialsUC:
+        return ListCredentialsUC(repo, usage)
+
+    @provide
+    def get_create_git_credential_uc(
+        self, repo: IGitCredentialRepository, key_generator: ISshKeyGenerator
+    ) -> CreateCredentialUC:
+        return CreateCredentialUC(repo, key_generator)
+
+    @provide
+    def get_update_git_credential_uc(
+        self, repo: IGitCredentialRepository, usage: IGitCredentialUsage
+    ) -> UpdateCredentialUC:
+        return UpdateCredentialUC(repo, usage)
+
+    @provide
+    def get_delete_git_credential_uc(
+        self, repo: IGitCredentialRepository, usage: IGitCredentialUsage
+    ) -> DeleteCredentialUC:
+        return DeleteCredentialUC(repo, usage)
+
+    @provide
+    def get_git_secrets_status_uc(self, cipher: ISecretCipher, repo: IGitCredentialRepository) -> GetSecretsStatusUC:
+        return GetSecretsStatusUC(cipher, repo)
 
     # ------------------------------------------------------------------ Export / Import
 
