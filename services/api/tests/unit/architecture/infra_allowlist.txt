@@ -32,7 +32,6 @@ compile/trigger_compile.py hse_doc_studio.infra.languagetool.container_manager
 compile/trigger_compile.py hse_doc_studio.infra.office.convert_manager
 compile/trigger_compile.py hse_doc_studio.infra.project_init.template_renderer
 documents/update_document.py hse_doc_studio.infra.project_init.template_renderer
-documents/upload_custom_file.py hse_doc_studio.infra.office.convert_manager
 files/_template_guard.py hse_doc_studio.infra.project_init.template_renderer
 forms/render_form.py hse_doc_studio.infra.forms.form_renderer
 languagetool/get_languagetool_status.py hse_doc_studio.infra.compile.docker_image_manager
@@ -42,13 +41,6 @@ languagetool/list_languagetool_images.py hse_doc_studio.infra.compile.docker_ima
 languagetool/list_languagetool_remote_tags.py hse_doc_studio.infra.compile.docker_image_manager
 languagetool/remove_languagetool_image.py hse_doc_studio.infra.compile.docker_image_manager
 languagetool/set_active_languagetool_image.py hse_doc_studio.infra.compile.docker_image_manager
-office_editor/get_editor_config.py hse_doc_studio.infra.docker.siblings
-office_editor/get_editor_config.py hse_doc_studio.infra.office
-office_editor/get_editor_config.py hse_doc_studio.infra.office.convert_manager
-office_editor/get_editor_config.py hse_doc_studio.infra.office.editor_manager
-office_editor/handle_callback.py hse_doc_studio.infra.office
-office_editor/handle_callback.py hse_doc_studio.infra.office.convert_manager
-office_editor/handle_callback.py hse_doc_studio.infra.office.editor_manager
 office_services/get_office_services_status.py hse_doc_studio.infra.compile.docker_image_manager
 office_services/get_office_services_status.py hse_doc_studio.infra.office.convert_manager
 office_services/get_office_services_status.py hse_doc_studio.infra.office.editor_manager
@@ -85,7 +77,6 @@ signing_identities/delete_signing_identity.py hse_doc_studio.infra.signatures.op
 signing_identities/openpgp_keys.py hse_doc_studio.infra.signatures.openpgp
 submission/create_submission.py hse_doc_studio.infra.project_init.template_renderer
 submission/create_submission.py hse_doc_studio.infra.submission.assembler
-submission/preview_custom_docs.py hse_doc_studio.infra.office.convert_manager
 synctex/query_synctex.py hse_doc_studio.infra.synctex.parser
 system/cleanup_docker.py hse_doc_studio.infra.docker.cleanup_jobs
 system/cleanup_docker.py hse_doc_studio.infra.docker.system_manager

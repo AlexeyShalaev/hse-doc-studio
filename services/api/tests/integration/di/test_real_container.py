@@ -15,12 +15,16 @@ from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.checks.runner import CheckRunner
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.di.containers.api import create_container
+from hse_doc_studio.infra.docker.siblings import Reachability
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
+from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
+from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 
@@ -78,3 +82,22 @@ async def test__real_container__checks_ports__port_and_concrete_are_one_singleto
 
     assert lt_service is lt_manager
     assert runner_port is runner
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__office_ports__port_and_concrete_are_one_singleton() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            convert_port = await request_container.get(IOfficeConvertService)
+            convert_manager = await request_container.get(OfficeConvertManager)
+            editor_port = await request_container.get(IOfficeEditorService)
+            editor_manager = await request_container.get(OfficeEditorManager)
+            reachability_port = await request_container.get(IBackendReachability)
+            reachability = await request_container.get(Reachability)
+    finally:
+        await container.close()
+
+    assert convert_port is convert_manager
+    assert editor_port is editor_manager
+    assert reachability_port is reachability

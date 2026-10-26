@@ -26,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import (
@@ -299,7 +300,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeConvertManager:
+    ) -> AnyOf[OfficeConvertManager, IOfficeConvertService]:
         # Gotenberg для pptx→PDF-предпросмотра. HTTP-клиент общий с LanguageTool
         # (обычный пул httpx, ничего LT-специфичного); таймаут конвертации
         # передаётся пер-запросно. Маппинг путей проекта не нужен — файл уходит
@@ -327,7 +328,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeEditorManager:
+    ) -> AnyOf[OfficeEditorManager, IOfficeEditorService]:
         # ONLYOFFICE Document Server для in-app редактирования pptx. HTTP-клиент
         # общий (health-пробы + скачивание сохранённого документа); JWT-секрет
         # живёт в data_dir и переживает рестарты (усыновлённый контейнер обязан
@@ -356,7 +357,7 @@ class DomainServiceProvider(Provider):
         return SiblingNetwork()
 
     @provide
-    def get_reachability(self, siblings: SiblingNetwork) -> Reachability:
+    def get_reachability(self, siblings: SiblingNetwork) -> AnyOf[Reachability, IBackendReachability]:
         # Наш адрес глазами соседнего контейнера — тоже процессный факт, поэтому
         # APP-скоуп: выясняется один раз и кэшируется.
         return Reachability(

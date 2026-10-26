@@ -11,9 +11,11 @@ from uuid import UUID
 import httpx
 import structlog
 
+from hse_doc_studio.core import office_jwt
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -21,9 +23,6 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
-from hse_doc_studio.infra.office import jwt as office_jwt
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
-from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.use_cases.files.put_file import PutFileInput, PutFileUC
 from hse_doc_studio.use_cases.office_editor.get_editor_config import callback_signature
 from hse_doc_studio.use_cases.office_services.list_office_service_images import (
@@ -71,9 +70,9 @@ class OfficeEditorCallbackUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        manager: OfficeEditorManager,
+        manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        convert_manager: OfficeConvertManager,
+        convert_manager: IOfficeConvertService,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> None:

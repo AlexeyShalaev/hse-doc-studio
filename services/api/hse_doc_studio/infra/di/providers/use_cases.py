@@ -25,6 +25,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
@@ -85,7 +86,6 @@ from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileEx
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
-from hse_doc_studio.infra.docker.siblings import Reachability
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
@@ -642,7 +642,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: OfficeConvertManager,
+        office_manager: IOfficeConvertService,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
@@ -1988,8 +1988,8 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        office_editor_manager: OfficeEditorManager,
-        reachability: Reachability,
+        office_editor_manager: IOfficeEditorService,
+        reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository,
     ) -> GetOfficeEditorConfigUC:
@@ -2013,9 +2013,9 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        office_editor_manager: OfficeEditorManager,
+        office_editor_manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        office_convert_manager: OfficeConvertManager,
+        office_convert_manager: IOfficeConvertService,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> OfficeEditorCallbackUC:
