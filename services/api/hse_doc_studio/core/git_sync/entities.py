@@ -362,6 +362,9 @@ class SyncState:
     remote_empty: bool = False
     # Человек согласился слить с удалённым проектом, у которого нет общей истории с локальным.
     adopted_unrelated: bool = False
+    # На конце удалённой ветки проект записан более новой Студией: данные нельзя ни читать, ни писать.
+    remote_schema_newer: bool = False
+    remote_required_studio: str | None = None
 
 
 @dataclass(frozen=True)

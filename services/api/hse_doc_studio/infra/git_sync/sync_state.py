@@ -96,6 +96,10 @@ def _int(value: Any, default: int) -> int:
     return value if isinstance(value, int) and not isinstance(value, bool) else default
 
 
+def _text(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
 def _iso(moment: datetime | None) -> str | None:
     return None if moment is None else moment.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
@@ -122,6 +126,8 @@ def _state_to_json(state: SyncState) -> dict[str, Any]:
         "shared_folder_ack": state.shared_folder_ack,
         "remote_empty": state.remote_empty,
         "adopted_unrelated": state.adopted_unrelated,
+        "remote_schema_newer": state.remote_schema_newer,
+        "remote_required_studio": state.remote_required_studio,
         "health": state.health.value,
         "last_fetch_at": _iso(state.last_fetch_at),
         "last_fetch_ok_at": _iso(state.last_fetch_ok_at),
@@ -173,6 +179,8 @@ def _state_from_json(raw: dict[str, Any]) -> SyncState:
         shared_folder_ack=raw.get("shared_folder_ack") is True,
         remote_empty=raw.get("remote_empty") is True,
         adopted_unrelated=raw.get("adopted_unrelated") is True,
+        remote_schema_newer=raw.get("remote_schema_newer") is True,
+        remote_required_studio=_text(raw.get("remote_required_studio")),
     )
 
 

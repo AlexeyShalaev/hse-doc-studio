@@ -7,6 +7,8 @@ from dataclasses import dataclass
 DEFAULT_REMOTE_BRANCH = "main"
 DEFAULT_FETCH_INTERVAL_S = 300
 MIN_FETCH_INTERVAL_S = 60
+# Повторная выборка по просьбе интерфейса (открытие проекта, возврат в окно) раньше этого срока git не запускает.
+FETCH_DEBOUNCE_S = 15
 
 
 @dataclass(frozen=True)

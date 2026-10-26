@@ -276,6 +276,8 @@ class GitStatusBuilder:
         access = self._access.evaluate(project)
         if not access.writable:
             return BlockedView(SyncBlockReason.read_only, access.required_studio)
+        if state.remote_schema_newer:
+            return BlockedView(SyncBlockReason.remote_schema_newer, state.remote_required_studio)
         if current != state.local_branch:
             return BlockedView(SyncBlockReason.off_branch)
         if not profile_ok:

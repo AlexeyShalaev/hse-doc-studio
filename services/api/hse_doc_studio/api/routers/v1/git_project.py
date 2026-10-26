@@ -29,6 +29,7 @@ from hse_doc_studio.use_cases.git_sync.connect_remote import (
     DisconnectRemoteInput,
     DisconnectRemoteUC,
 )
+from hse_doc_studio.use_cases.git_sync.fetch_remote import FetchGitRemoteInput, FetchGitRemoteUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsInput, UpdateGitSettingsUC
 
@@ -39,6 +40,14 @@ router = APIRouter(route_class=DishkaRoute)
 async def get_git_status(project_id: UUID, uc: FromDishka[GetGitStatusUC]) -> GitStatusResponse:
     try:
         return map_status(await uc.execute(GetGitStatusInput(project_id=project_id)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/projects/{project_id}/git/fetch", response_model=GitStatusResponse)
+async def fetch_git_remote(project_id: UUID, uc: FromDishka[FetchGitRemoteUC]) -> GitStatusResponse:
+    try:
+        return map_status(await uc.execute(FetchGitRemoteInput(project_id=project_id)))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
