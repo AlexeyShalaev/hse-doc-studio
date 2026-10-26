@@ -2,10 +2,9 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileDiff } from "lucide-react";
 import { Spinner } from "@shared/ui/Spinner";
+import { DiffPatch, type DiffStat, countChanges } from "@shared/ui/DiffPatch";
 import type { VcsDiff } from "@entities/vcs";
-import { type DiffStat, countChanges } from "./vcsDiff.model";
 import { VcsChangedFiles } from "./VcsChangedFiles";
-import { VcsFilePatch } from "./VcsFilePatch";
 
 // Git-style diff browser: a summary bar, a searchable file tree/list, and the
 // selected file's diff (master-detail) — instead of stacking every file's patch
@@ -108,7 +107,7 @@ export const VcsDiffBrowser = ({
           />
         )}
         {activeFile && (
-          <VcsFilePatch
+          <DiffPatch
             key={activeFile.path}
             file={activeFile}
             stat={stats.get(activeFile.path) ?? { add: 0, del: 0 }}

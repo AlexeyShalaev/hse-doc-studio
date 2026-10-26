@@ -1,11 +1,4 @@
 {
-  "change": {
-    "added": "добавлен",
-    "modified": "изменён",
-    "deleted": "удалён",
-    "renamed": "переименован",
-    "copied": "скопирован"
-  },
   "timeline": {
     "today": "Сегодня",
     "yesterday": "Вчера",
@@ -40,10 +33,6 @@
     "viewTree": "Деревом",
     "viewList": "Списком",
     "empty": "Файлы не найдены."
-  },
-  "filePatch": {
-    "binary": "Бинарный файл — содержимое не показывается.",
-    "noTextChanges": "Нет текстовых изменений для показа."
   },
   "diffBrowser": {
     "filesChanged_one": "{{count}} файл изменён",

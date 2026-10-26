@@ -10,12 +10,11 @@ import {
   X,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { type DiffStat, changeMeta } from "@shared/ui/DiffPatch";
 import type { VcsFileDiff } from "@entities/vcs";
 import {
   type DiffFileNode,
-  type DiffStat,
   buildFileTree,
-  changeMeta,
   collectDirPaths,
   sortedChildren,
 } from "./vcsDiff.model";

@@ -99,3 +99,51 @@ export type {
 } from "./PdfViewer";
 
 export { Toaster } from "./Toaster";
+
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "./Popover";
+export type { PopoverContentProps } from "./Popover";
+
+export { CopyField } from "./CopyField";
+export type { CopyFieldProps } from "./CopyField";
+
+export { Stepper } from "./Stepper";
+export type { StepperProps, StepperStep, StepState } from "./Stepper";
+
+export { DiffPatch, changeMeta, countChanges, parsePatch } from "./DiffPatch";
+export type {
+  DiffChangeMeta,
+  PatchLineKind,
+  DiffPatchFile,
+  DiffPatchProps,
+  DiffStat,
+  ParsedDiffLine,
+  ParsedHunk,
+} from "./DiffPatch";
+
+export {
+  ActionTag,
+  CountBadges,
+  FileList,
+  FileRowShell,
+  Notice,
+  ViewTabs,
+  toneColor,
+  toneSoft,
+} from "./ConflictKit";
+export type {
+  ActionTagProps,
+  ConflictTone,
+  CountBadge,
+  FileListProps,
+  FileRowShellProps,
+  NoticeProps,
+  NoticeTone,
+  ViewTab,
+  ViewTabsProps,
+} from "./ConflictKit";

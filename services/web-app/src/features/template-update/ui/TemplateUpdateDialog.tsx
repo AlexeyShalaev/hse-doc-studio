@@ -3,6 +3,14 @@ import { useTranslation } from "react-i18next";
 import { AlertTriangle, ArrowUpCircle, ShieldCheck } from "lucide-react";
 import { Modal, Select } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
+import {
+  ActionTag,
+  CountBadges,
+  FileList,
+  FileRowShell,
+  Notice,
+  ViewTabs,
+} from "@shared/ui/ConflictKit";
 import { ApiError } from "@shared/api";
 import { toast } from "@shared/lib";
 import {
@@ -200,17 +208,14 @@ export const TemplateUpdateDialog = ({
             </p>
           ) : (
             <>
-              <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
-                {countOrder(plan.data.counts).map(([action, count]) => (
-                  <span
-                    key={action}
-                    className="badge"
-                    style={{ color: actionTone(action), fontSize: 11 }}
-                  >
-                    {count} · {t(`count.${action}`)}
-                  </span>
-                ))}
-              </div>
+              <CountBadges
+                items={countOrder(plan.data.counts).map(([action, count]) => ({
+                  key: action,
+                  count,
+                  label: t(`count.${action}`),
+                  tone: actionTone(action),
+                }))}
+              />
               <div
                 style={{
                   display: "grid",
@@ -219,10 +224,7 @@ export const TemplateUpdateDialog = ({
                   minHeight: 320,
                 }}
               >
-                <div
-                  className="card"
-                  style={{ overflow: "auto", maxHeight: 420, padding: 4 }}
-                >
+                <FileList>
                   {ops.map((op) => (
                     <FileRow
                       key={op.path}
@@ -244,24 +246,18 @@ export const TemplateUpdateDialog = ({
                       }}
                     />
                   ))}
-                </div>
+                </FileList>
                 <div className="flex flex-col" style={{ gap: 8, minWidth: 0 }}>
                   {selectedOp ? (
                     <>
-                      <div className="flex" style={{ gap: 4 }}>
-                        {viewsFor(selectedOp).map((v) => (
-                          <button
-                            key={v}
-                            type="button"
-                            className={v === view ? "btn xs primary" : "btn xs"}
-                            onClick={() => {
-                              setView(v);
-                            }}
-                          >
-                            {t(`view.${v}`)}
-                          </button>
-                        ))}
-                      </div>
+                      <ViewTabs
+                        views={viewsFor(selectedOp).map((v) => ({
+                          value: v,
+                          label: t(`view.${v}`),
+                        }))}
+                        value={view}
+                        onChange={setView}
+                      />
                       <TemplateFileDiff
                         projectId={projectId}
                         path={selectedOp.path}
@@ -307,85 +303,37 @@ const FileRow = ({
 }: FileRowProps) => {
   const { t } = useTranslation("templateUpdate");
   return (
-    <div
-      style={{
-        padding: "6px 8px",
-        borderRadius: "var(--r-2)",
-        background: isSelected ? "var(--accent-soft)" : undefined,
-      }}
-    >
-      <button
-        type="button"
-        className="flex items-center"
-        onClick={onSelect}
-        style={{
-          gap: 8,
-          width: "100%",
-          background: "none",
-          border: 0,
-          padding: 0,
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 10.5,
-            fontWeight: 600,
-            color: actionTone(op.action),
-            minWidth: 74,
-          }}
-        >
-          {t(`action.${op.action}`)}
-        </span>
-        <span
-          className="mono truncate"
-          style={{ fontSize: 11.5, flex: 1, color: "var(--fg-0)" }}
-          title={op.path}
-        >
-          {op.path}
-        </span>
-        {op.approximate_base && (
+    <FileRowShell
+      path={op.path}
+      isSelected={isSelected}
+      onSelect={onSelect}
+      tag={
+        <ActionTag
+          label={t(`action.${op.action}`)}
+          tone={actionTone(op.action)}
+        />
+      }
+      trailing={
+        op.approximate_base ? (
           <AlertTriangle
             size={11}
             style={{ color: "var(--c-warn)", flexShrink: 0 }}
           />
-        )}
-      </button>
-      {op.action === "conflict" && (
-        <div style={{ marginTop: 6, marginLeft: 82 }}>
-          <Select
-            value={resolution}
-            onValueChange={(value) => {
-              onResolve(value as ConflictResolution);
-            }}
-            options={op.resolutions.map((r) => ({
-              value: r,
-              label: t(`resolution.${r}`),
-            }))}
-          />
-        </div>
-      )}
-    </div>
+        ) : undefined
+      }
+    >
+      {op.action === "conflict" ? (
+        <Select
+          value={resolution}
+          onValueChange={(value) => {
+            onResolve(value as ConflictResolution);
+          }}
+          options={op.resolutions.map((r) => ({
+            value: r,
+            label: t(`resolution.${r}`),
+          }))}
+        />
+      ) : undefined}
+    </FileRowShell>
   );
 };
-
-const Notice = ({ text }: { text: string }) => (
-  <div
-    className="flex items-start"
-    style={{
-      gap: 8,
-      padding: "8px 10px",
-      borderRadius: "var(--r-2)",
-      background: "var(--c-warn-soft)",
-      fontSize: 11.5,
-      lineHeight: 1.5,
-    }}
-  >
-    <AlertTriangle
-      size={13}
-      style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 2 }}
-    />
-    <span>{text}</span>
-  </div>
-);

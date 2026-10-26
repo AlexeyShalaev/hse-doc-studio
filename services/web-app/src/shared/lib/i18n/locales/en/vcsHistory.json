@@ -1,11 +1,4 @@
 {
-  "change": {
-    "added": "added",
-    "modified": "modified",
-    "deleted": "deleted",
-    "renamed": "renamed",
-    "copied": "copied"
-  },
   "timeline": {
     "today": "Today",
     "yesterday": "Yesterday",
@@ -36,10 +29,6 @@
     "viewTree": "Tree",
     "viewList": "List",
     "empty": "No files found."
-  },
-  "filePatch": {
-    "binary": "Binary file — contents are not shown.",
-    "noTextChanges": "No text changes to show."
   },
   "diffBrowser": {
     "filesChanged_one": "{{count}} file changed",

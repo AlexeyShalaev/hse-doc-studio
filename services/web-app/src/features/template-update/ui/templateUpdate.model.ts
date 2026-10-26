@@ -1,3 +1,4 @@
+import type { ConflictTone } from "@shared/ui/ConflictKit";
 import type {
   AvailableUpdate,
   ConflictResolution,
@@ -35,12 +36,12 @@ export const countOrder = (
 
 // Цвет метки действия: красный — решение за пользователем, жёлтый — правки
 // пользователя участвуют, приглушённый — обновление молча.
-export const actionTone = (action: string): string => {
-  if (action === "conflict") return "var(--c-err)";
+export const actionTone = (action: string): ConflictTone => {
+  if (action === "conflict") return "err";
   if (action === "merge" || action === "orphan" || action === "user_deleted")
-    return "var(--c-warn)";
-  if (action === "add") return "var(--c-ok)";
-  return "var(--fg-2)";
+    return "warn";
+  if (action === "add") return "ok";
+  return "muted";
 };
 
 export const classTone = (updateClass: string | null | undefined): string =>
