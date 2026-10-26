@@ -8,12 +8,20 @@ dishka валидирует граф при сборке: пропавшая ф�
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.events import IJobLogStream
+from hse_doc_studio.core.jobs.entities import JobSpec
+from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.files import ManifestFile
+from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult, OfficeConvertStatus
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
@@ -140,3 +148,35 @@ async def test__real_container__job_dispatcher_and_handler_registry__resolved_as
     assert isinstance(dispatcher, LocalJobDispatcher)
     assert isinstance(handlers, JobHandlerRegistry)
     assert dispatcher is dispatcher_again
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__office_convert_job__runs_through_the_registered_handler(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "tz").mkdir(parents=True)
+    (project / "tz" / "ТЗ.docx").write_bytes(b"docx")
+    spec = JobSpec(
+        id=uuid4(),
+        kind=JobKind.office_convert,
+        tags=frozenset({"office"}),
+        project_id=uuid4(),
+        actor=Actor.local(),
+        locale=Lang.ru,
+        payload=OfficeConvertPayload(source=ManifestFile("tz/ТЗ.docx"), output_path="tz/ТЗ.pdf"),
+        local_root=project,
+    )
+    container = create_container()
+    try:
+        async with container() as request_container:
+            dispatcher = await request_container.get(IJobDispatcher)
+            manager = await request_container.get(OfficeConvertManager)
+            with patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=b"%PDF") as convert:
+                result = await dispatcher.run(spec)
+    finally:
+        await container.close()
+
+    assert result.status is JobStatus.succeeded
+    assert result.data_as(OfficeConvertResult).status is OfficeConvertStatus.ok
+    assert (project / "tz" / "ТЗ.pdf").read_bytes() == b"%PDF"
+    # Порт и конкретный менеджер в обработчике одно и то же: конвертер вызван на этом экземпляре.
+    assert convert.await_args.args[0] is manager
