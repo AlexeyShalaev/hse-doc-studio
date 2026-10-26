@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { GitOperation } from "@entities/git-sync";
 import { Stepper, type StepperStep } from "@shared/ui/Stepper";
-import { ProgressBar } from "./ProgressBar";
+import { ProgressBar } from "@shared/ui/ProgressBar";
 
 const STEP_IDS = ["snapshot", "verify", "merge"] as const;
 type StepId = (typeof STEP_IDS)[number];

@@ -15,6 +15,7 @@ import { Spinner } from "@shared/ui/Spinner";
 import { Stepper, type StepState, type StepperStep } from "@shared/ui/Stepper";
 import { isCloneAccess, type CloneAccess } from "../../model/cloneVerdict";
 import { cloneFailureTarget } from "../../model/cloneFailure";
+import { ProgressBar } from "@shared/ui/ProgressBar";
 import { Facts, ResultFrame } from "@shared/ui/ResultFrame";
 import { Btn } from "../ResultFrame";
 import { CloneStepLayout } from "./CloneStepLayout";
@@ -43,38 +44,6 @@ const stepOfPhase = (phase: string): StepId => {
 
 const isCloneResult = (result: GitOperation["result"]): result is CloneResult =>
   result !== null && result !== undefined && "project_id" in result;
-
-const ProgressBar = ({
-  percent,
-  label,
-}: {
-  percent: number;
-  label: string;
-}) => (
-  <div
-    role="progressbar"
-    aria-label={label}
-    aria-valuemin={0}
-    aria-valuemax={100}
-    aria-valuenow={Math.round(percent)}
-    style={{
-      height: 6,
-      borderRadius: 999,
-      background: "var(--bg-3)",
-      overflow: "hidden",
-    }}
-  >
-    <div
-      style={{
-        width: `${String(Math.min(100, Math.max(0, percent)))}%`,
-        height: "100%",
-        borderRadius: 999,
-        background: "var(--accent)",
-        transition: "width 300ms ease",
-      }}
-    />
-  </div>
-);
 
 // Шаг 3. Клонирование идёт на стороне Студии: окно показывает фазы и процент,
 // даёт отменить и в конце либо открывает проект, либо объясняет, что не вышло и
