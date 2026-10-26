@@ -25,6 +25,8 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
@@ -79,6 +81,8 @@ from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
+from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
+from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
@@ -409,9 +413,18 @@ class DomainServiceProvider(Provider):
         return HostPathResolver(mapping)
 
     @provide
+    def get_artifact_store(self) -> IArtifactStore:
+        return LocalDiskArtifactStore()
+
+    @provide
+    def get_job_outputs(self) -> IJobOutputs:
+        return LocalJobOutputs()
+
+    @provide
     def get_docker_compile_executor(
         self,
         host_path_resolver: HostPathResolver,
+        artifacts: IArtifactStore,
     ) -> DockerCompileExecutor:
         data_dir = settings.data_dir.expanduser()
         fonts_dir = data_dir / settings.fonts.dir_name
@@ -428,6 +441,7 @@ class DomainServiceProvider(Provider):
             fonts_dir=fonts_dir,
             fonts_host_dir=fonts_host_dir,
             fonts_mount_target=settings.fonts.container_mount,
+            artifacts=artifacts,
         )
 
     @provide

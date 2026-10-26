@@ -24,6 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
@@ -1863,10 +1864,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        artifacts: IArtifactStore,
     ) -> GetArchivedPdfUC:
         return GetArchivedPdfUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
+            artifacts=artifacts,
         )
 
     @provide

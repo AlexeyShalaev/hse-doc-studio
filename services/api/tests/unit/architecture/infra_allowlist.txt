@@ -12,7 +12,6 @@ chat/tools/read_pdf.py hse_doc_studio.infra.pdf.extract
 checks/get_check_results.py hse_doc_studio.infra.checks.utils
 compile/cancel_compile.py hse_doc_studio.infra.compile.compile_runner
 compile/cancel_compile.py hse_doc_studio.infra.compile.log_bus
-compile/get_archived_pdf.py hse_doc_studio.infra.compile.pdf_archive
 compile/get_compile_stream.py hse_doc_studio.infra.compile.log_bus
 compile/get_docker_status.py hse_doc_studio.infra.compile.docker_image_manager
 compile/install_image.py hse_doc_studio.infra.compile.docker_image_manager
