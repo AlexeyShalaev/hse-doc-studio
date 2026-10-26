@@ -15,12 +15,14 @@ from fastapi import APIRouter, HTTPException, Query, status
 from hse_doc_studio.api.git_mapping import map_operation, map_probe
 from hse_doc_studio.api.schemas.git_sync import (
     CloneDefaultsResponse,
+    CloneRequest,
     CreateCredentialRequest,
     CreatePatCredentialRequest,
     GitCredentialResponse,
     GitCredentialUsage,
     GitHostResponse,
     OperationResponse,
+    OperationStartedResponse,
     ProbeRequest,
     ProbeResponse,
     SecretsStatusResponse,
@@ -32,7 +34,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.paths import PathMapping
-from hse_doc_studio.use_cases.git_sync.clone_defaults import CloneDefaultsInput, GetCloneDefaultsUC
+from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectInput, CloneProjectUC, GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.credentials import (
     CreateCredentialInput,
     CreateCredentialUC,
@@ -176,6 +178,29 @@ async def probe_git_remote(body: ProbeRequest, uc: FromDishka[ProbeRemoteUC]) ->
     return map_probe(view)
 
 
+@router.post("/git/clone", response_model=OperationStartedResponse, status_code=status.HTTP_202_ACCEPTED)
+async def clone_git_project(body: CloneRequest, uc: FromDishka[CloneProjectUC]) -> OperationStartedResponse:
+    try:
+        operation = await uc.execute(
+            CloneProjectInput(
+                url=body.url, folder=body.folder, credential_id=body.credential_id, branch=body.branch, name=body.name
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return OperationStartedResponse(operation_id=operation.id)
+
+
+@router.get("/git/clone/defaults", response_model=CloneDefaultsResponse)
+async def get_git_clone_defaults(
+    uc: FromDishka[GetCloneDefaultsUC],
+    paths: FromDishka[PathMapping],
+    name: str | None = Query(default=None, max_length=256),
+) -> CloneDefaultsResponse:
+    """Свободная папка под клон, в терминах хозяина машины: как её видит пользователь."""
+    return CloneDefaultsResponse(folder=paths.display(str(await uc.execute(name))))
+
+
 @router.get("/git/operations/{operation_id}", response_model=OperationResponse)
 async def get_git_operation(operation_id: str, uc: FromDishka[GetOperationUC]) -> OperationResponse:
     try:
@@ -207,13 +232,3 @@ async def get_shared_folder(
     return SharedFolderResponse(
         detected=True, provider=info.provider.value, root=info.root, evidence=list(info.evidence)
     )
-
-
-@router.get("/git/clone/defaults", response_model=CloneDefaultsResponse)
-async def get_clone_defaults(
-    uc: FromDishka[GetCloneDefaultsUC],
-    paths: FromDishka[PathMapping],
-    name: str | None = Query(default=None, max_length=256),
-) -> CloneDefaultsResponse:
-    folder = await uc.execute(CloneDefaultsInput(name=name))
-    return CloneDefaultsResponse(folder=paths.display(str(folder)))

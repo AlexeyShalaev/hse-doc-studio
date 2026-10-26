@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
-from hse_doc_studio.use_cases.git_sync.clone_defaults import CloneDefaultsInput, GetCloneDefaultsUC, folder_name
+from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 
 pytestmark = pytest.mark.unit
+
+
+def _uc(root: Path, known: list[Path] | None = None) -> GetCloneDefaultsUC:
+    index = MagicMock()
+    index.list_known.return_value = known or []
+    return GetCloneDefaultsUC(root, index)
 
 
 @pytest.mark.parametrize(
@@ -18,29 +25,21 @@ pytestmark = pytest.mark.unit
         ("---", "project"),
         ("", "project"),
         (None, "project"),
-        ("x" * 200, "x" * 64),
+        ("x" * 200, "x" * 60),
     ],
 )
-def test__folder_name__unsafe_symbols_removed(name: str | None, expected: str) -> None:
-    assert folder_name(name) == expected
-
-
-async def test__execute__free_name__is_under_projects_dir(tmp_path: Path) -> None:
-    folder = await GetCloneDefaultsUC(tmp_path).execute(CloneDefaultsInput(name="course-paper"))
-
-    assert folder == tmp_path / "course-paper"
+async def test__execute__unsafe_symbols_removed(tmp_path: Path, name: str | None, expected: str) -> None:
+    assert await _uc(tmp_path).execute(name) == tmp_path / expected
 
 
 async def test__execute__name_taken__gets_numeric_suffix(tmp_path: Path) -> None:
     (tmp_path / "course-paper").mkdir()
     (tmp_path / "course-paper-2").mkdir()
 
-    folder = await GetCloneDefaultsUC(tmp_path).execute(CloneDefaultsInput(name="course-paper"))
-
-    assert folder == tmp_path / "course-paper-3"
+    assert await _uc(tmp_path).execute("course-paper") == tmp_path / "course-paper-3"
 
 
-async def test__execute__no_name__uses_fallback(tmp_path: Path) -> None:
-    folder = await GetCloneDefaultsUC(tmp_path).execute(CloneDefaultsInput())
+async def test__execute__folder_known_to_index__is_skipped(tmp_path: Path) -> None:
+    known = tmp_path / "course-paper"
 
-    assert folder == tmp_path / "project"
+    assert await _uc(tmp_path, [known]).execute("course-paper") == tmp_path / "course-paper-2"
