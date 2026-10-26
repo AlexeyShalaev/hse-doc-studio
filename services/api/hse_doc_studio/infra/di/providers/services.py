@@ -26,6 +26,8 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
@@ -85,8 +87,10 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
+from hse_doc_studio.infra.jobs.fs_file_probe import FsProjectFileProbeFactory
 from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
 from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
+from hse_doc_studio.infra.jobs.office_convert import OfficeConvertHandler
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
@@ -593,9 +597,11 @@ class DomainServiceProvider(Provider):
         )
 
     @provide
-    def get_job_handler_registry(self) -> JobHandlerRegistry:
+    def get_job_handler_registry(self, office_convert: IOfficeConvertService) -> JobHandlerRegistry:
         # Обработчики не-compile видов регистрируют слайсы своих семейств.
-        return JobHandlerRegistry()
+        registry = JobHandlerRegistry()
+        registry.register(JobKind.office_convert, OfficeConvertHandler(office_convert))
+        return registry
 
     @provide
     def get_job_dispatcher(
@@ -624,10 +630,12 @@ class DomainServiceProvider(Provider):
         return PyHankoPdfSigner()
 
     @provide
-    def get_submission_assembler(
-        self, pdf_stamper: PdfStamper, office_manager: OfficeConvertManager, keyring: GpgKeyring
-    ) -> SubmissionAssembler:
-        return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager, keyring=keyring)
+    def get_submission_assembler(self, pdf_stamper: PdfStamper, keyring: GpgKeyring) -> SubmissionAssembler:
+        return SubmissionAssembler(pdf_stamper=pdf_stamper, keyring=keyring)
+
+    @provide
+    def get_project_file_probe_factory(self) -> IProjectFileProbeFactory:
+        return FsProjectFileProbeFactory()
 
     @provide
     def get_gpg_keyring(self) -> GpgKeyring:

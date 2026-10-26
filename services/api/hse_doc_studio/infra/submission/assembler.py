@@ -21,7 +21,6 @@ from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_d
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
-from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, Stamp
 from hse_doc_studio.infra.signatures.signing_package import (
@@ -159,11 +158,9 @@ class SubmissionAssembler:
     def __init__(
         self,
         pdf_stamper: PdfStamper | None = None,
-        office_manager: OfficeConvertManager | None = None,
         keyring: GpgKeyring | None = None,
     ) -> None:
         self._pdf_stamper = pdf_stamper or PdfStamper()
-        self._office_manager = office_manager
         self._keyring = keyring
 
     async def populate_dir(  # noqa: C901, PLR0912
@@ -339,29 +336,15 @@ class SubmissionAssembler:
             return str(Path(arcname).with_suffix(doc.custom_file.ext))
         return arcname
 
-    async def _get_or_convert_preview(self, project_folder: Path, stored_path: str) -> str | None:
-        """Sibling PDF-превью конвертируемого custom_file; None — недоступно.
+    @staticmethod
+    def _existing_preview(project_folder: Path, stored_path: str) -> str | None:
+        """Sibling PDF-превью конвертируемого custom_file; None — его нет.
 
-        Использует уже сгенерированный на аплоаде sibling, иначе пробует
-        синхронный fallback через OfficeConvertManager (напр., превью не
-        удалось сгенерировать при загрузке).
+        Превью строит загрузка файла либо шаг конвертации перед упаковкой
+        (CreateSubmissionUC); ассемблер сам ничего не конвертирует.
         """
-        stored_abs = project_folder / stored_path
         preview_rel = sibling_pdf_path(stored_path)
-        preview_abs = project_folder / preview_rel
-        if preview_abs.is_file():
-            return preview_rel
-        if self._office_manager is None or not stored_abs.is_file():
-            return None
-        pdf_bytes = await self._office_manager.convert_to_pdf(stored_abs)
-        if pdf_bytes is None:
-            return None
-        try:
-            preview_abs.write_bytes(pdf_bytes)
-        except OSError as exc:
-            logger.warning("assembler: custom doc preview write failed", path=str(preview_abs), exc=str(exc))
-            return None
-        return preview_rel
+        return preview_rel if (project_folder / preview_rel).is_file() else None
 
     async def _resolve_custom_doc_target(
         self,
@@ -374,7 +357,7 @@ class SubmissionAssembler:
         already-PDF -> используем как есть. Конвертируемый формат И решение
         "конвертировать" (явное из `custom_doc_decisions`, иначе запомненное
         `convert_to_pdf_at_package`) -> sibling-превью-PDF (см.
-        `_get_or_convert_preview`). Иначе — сырой файл под настоящим
+        `_existing_preview`). Иначе — сырой файл под настоящим
         расширением, is_pdf=False.
         """
         custom_file = doc.custom_file
@@ -385,7 +368,7 @@ class SubmissionAssembler:
 
         decision = resolve_custom_doc_decision(doc.id, custom_file.convert_to_pdf_at_package, custom_doc_decisions)
         if decision and custom_file.ext in CONVERTIBLE_OFFICE_EXTS:
-            preview_rel = await self._get_or_convert_preview(project_folder, custom_file.stored_path)
+            preview_rel = self._existing_preview(project_folder, custom_file.stored_path)
             if preview_rel is not None:
                 return preview_rel, True
             logger.warning("assembler: custom doc conversion unavailable, including raw file", doc_id=doc.id)

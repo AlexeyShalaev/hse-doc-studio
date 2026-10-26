@@ -26,9 +26,10 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
-from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
@@ -641,7 +642,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: IOfficeConvertService,
+        dispatcher: IJobDispatcher,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
@@ -652,7 +653,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             file_repo=file_repo,
             signature_repo=signature_repo,
-            office_manager=office_manager,
+            dispatcher=dispatcher,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
@@ -2002,21 +2003,21 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         office_editor_manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        office_convert_manager: IOfficeConvertService,
+        dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> OfficeEditorCallbackUC:
         # Запись сохранённого документа идёт через put-file: guard путей +
         # edit-коммит в ProjectVCS — как у любой другой правки файла.
-        # convert_manager + settings_repo — фоновая доконвертация pptx→PDF
-        # после сохранения, чтобы «Превью» обновлялось без пересборки.
+        # dispatcher + settings_repo — фоновая доконвертация pptx→PDF задачей
+        # office.convert после сохранения, чтобы «Превью» обновлялось без пересборки.
         return OfficeEditorCallbackUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             manager=office_editor_manager,
             put_file_uc=put_file_uc,
-            convert_manager=office_convert_manager,
+            dispatcher=dispatcher,
             settings_repo=settings_repo,
             client=client,
         )
@@ -2366,6 +2367,8 @@ class UseCaseProvider(Provider):
         assembler: SubmissionAssembler,
         changelog_repo: IChangeLogRepository,
         render_form_uc: RenderFormUC,
+        dispatcher: IJobDispatcher,
+        file_probes: IProjectFileProbeFactory,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -2377,6 +2380,8 @@ class UseCaseProvider(Provider):
             assembler=assembler,
             changelog_repo=changelog_repo,
             render_form_uc=render_form_uc,
+            dispatcher=dispatcher,
+            file_probes=file_probes,
         )
 
     @provide
