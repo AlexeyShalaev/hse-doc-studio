@@ -31,10 +31,12 @@ from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
+    ICertificateService,
     ICiRenderer,
     IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitHostSettingsRepository,
     IGitMergeCommitter,
     IGitMergeEngine,
     IGitOperationRegistry,
@@ -48,9 +50,11 @@ from hse_doc_studio.core.git_sync.protocols import (
     IHostKeyScanner,
     IKnownHostsStore,
     ILocalAuthorProfile,
+    IProviderDetector,
     ISecretCipher,
     ISharedFolderDetector,
     ISshKeyGenerator,
+    ITokenIntrospector,
 )
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
@@ -135,10 +139,12 @@ from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
+from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSettingsRepository
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
 from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
+from hse_doc_studio.infra.git_sync.provider_api import HttpProviderDetector, HttpTokenIntrospector
 from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
 from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
 from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
@@ -147,6 +153,7 @@ from hse_doc_studio.infra.git_sync.store_git import StoreGit
 from hse_doc_studio.infra.git_sync.store_hardening import GitStoreGuard
 from hse_doc_studio.infra.git_sync.store_remotes import GitStoreRemotes
 from hse_doc_studio.infra.git_sync.sync_state import JsonGitSyncStateRepository
+from hse_doc_studio.infra.git_sync.tls_certificates import TlsCertificateService
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -771,6 +778,22 @@ class DomainServiceProvider(Provider):
         return SshKeyscanScanner(settings.git)
 
     @provide
+    def get_git_host_settings_repo(self) -> IGitHostSettingsRepository:
+        return JsonGitHostSettingsRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_git_certificate_service(self) -> ICertificateService:
+        return TlsCertificateService(settings.git.scan_timeout_s)
+
+    @provide
+    def get_git_provider_detector(self) -> IProviderDetector:
+        return HttpProviderDetector(settings.git.provider_detect_timeout_s)
+
+    @provide
+    def get_git_token_introspector(self, certificates: ICertificateService) -> ITokenIntrospector:
+        return HttpTokenIntrospector(settings.git.token_check_timeout_s, certificates)
+
+    @provide
     def get_git_credential_usage(
         self, project_index: IProjectIndexRepository, projects: IProjectRepository
     ) -> IGitCredentialUsage:
@@ -819,6 +842,8 @@ class DomainServiceProvider(Provider):
         credentials: IGitCredentialRepository,
         known_hosts: IKnownHostsStore,
         scanner: IHostKeyScanner,
+        host_settings: IGitHostSettingsRepository,
+        certificates: ICertificateService,
     ) -> IGitRemoteRunner:
         return GitRemoteRunner(
             settings.git,
@@ -826,6 +851,8 @@ class DomainServiceProvider(Provider):
             local_mode=settings.mode is StudioMode.local,
             known_hosts=known_hosts,
             scanner=scanner,
+            host_settings=host_settings,
+            certificates=certificates,
         )
 
     @provide

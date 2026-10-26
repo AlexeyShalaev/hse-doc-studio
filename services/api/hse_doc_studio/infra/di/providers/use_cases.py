@@ -28,10 +28,12 @@ from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
+    ICertificateService,
     ICiRenderer,
     IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitHostSettingsRepository,
     IGitMergeCommitter,
     IGitOperationRegistry,
     IGitRemoteRegistry,
@@ -43,9 +45,11 @@ from hse_doc_studio.core.git_sync.protocols import (
     IHostKeyScanner,
     IKnownHostsStore,
     ILocalAuthorProfile,
+    IProviderDetector,
     ISecretCipher,
     ISharedFolderDetector,
     ISshKeyGenerator,
+    ITokenIntrospector,
 )
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
@@ -294,9 +298,11 @@ from hse_doc_studio.use_cases.git_sync.fetch_remote import FetchGitRemoteUC
 from hse_doc_studio.use_cases.git_sync.get_conflict_diff import GetConflictDiffUC
 from hse_doc_studio.use_cases.git_sync.get_conflict_file import GetConflictBlobUC, GetConflictFileUC
 from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsUC
+from hse_doc_studio.use_cases.git_sync.host_settings import CheckCredentialUC, ListHostSettingsUC, UpdateHostSettingsUC
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
@@ -304,6 +310,7 @@ from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusUC, GitStatusBuilder
 from hse_doc_studio.use_cases.git_sync.sync_apply import SyncApplier
 from hse_doc_studio.use_cases.git_sync.sync_project import SyncProjectUC
+from hse_doc_studio.use_cases.git_sync.token_check import TokenChecker
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsUC
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
@@ -1528,6 +1535,47 @@ class UseCaseProvider(Provider):
     def get_forget_git_host_uc(self, store: IKnownHostsStore) -> ForgetHostUC:
         return ForgetHostUC(store)
 
+    @provide
+    def get_git_provider_resolver(
+        self, host_settings: IGitHostSettingsRepository, detector: IProviderDetector
+    ) -> ProviderResolver:
+        return ProviderResolver(host_settings, detector)
+
+    @provide
+    def get_git_token_checker(
+        self, introspector: ITokenIntrospector, credentials: IGitCredentialRepository
+    ) -> TokenChecker:
+        return TokenChecker(introspector, credentials)
+
+    @provide
+    def get_list_git_host_settings_uc(
+        self,
+        host_settings: IGitHostSettingsRepository,
+        credentials: IGitCredentialRepository,
+        resolver: ProviderResolver,
+    ) -> ListHostSettingsUC:
+        return ListHostSettingsUC(host_settings, credentials, resolver)
+
+    @provide
+    def get_update_git_host_settings_uc(
+        self,
+        host_settings: IGitHostSettingsRepository,
+        certificates: ICertificateService,
+        resolver: ProviderResolver,
+    ) -> UpdateHostSettingsUC:
+        return UpdateHostSettingsUC(host_settings, certificates, resolver)
+
+    @provide
+    def get_check_git_credential_uc(
+        self,
+        credentials: IGitCredentialRepository,
+        host_settings: IGitHostSettingsRepository,
+        resolver: ProviderResolver,
+        token_checker: TokenChecker,
+        usage: IGitCredentialUsage,
+    ) -> CheckCredentialUC:
+        return CheckCredentialUC(credentials, host_settings, resolver, token_checker, usage)
+
     # ------------------------------------------------------------------ Git-синхронизация: проект и подключение
 
     @provide
@@ -1544,6 +1592,7 @@ class UseCaseProvider(Provider):
         settings_repo: ISettingsRepository,
         memo: RefStatusMemo,
         policy: GitSyncPolicy,
+        providers: ProviderResolver,
     ) -> GitStatusBuilder:
         return GitStatusBuilder(
             store_remotes=store_remotes,
@@ -1557,6 +1606,7 @@ class UseCaseProvider(Provider):
             settings_repo=settings_repo,
             memo=memo,
             policy=policy,
+            providers=providers,
         )
 
     @provide
@@ -1577,8 +1627,12 @@ class UseCaseProvider(Provider):
         credentials: IGitCredentialRepository,
         template_repo: ITemplateRepository,
         policy: GitSyncPolicy,
+        resolver: ProviderResolver,
+        token_checker: TokenChecker,
     ) -> ProbeRemoteUC:
-        return ProbeRemoteUC(project_repo, project_index_repo, transport, credentials, template_repo, policy)
+        return ProbeRemoteUC(
+            project_repo, project_index_repo, transport, credentials, template_repo, policy, resolver, token_checker
+        )
 
     @provide
     def get_connect_git_remote_uc(

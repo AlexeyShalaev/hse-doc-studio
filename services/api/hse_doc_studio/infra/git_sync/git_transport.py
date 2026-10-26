@@ -15,7 +15,13 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from hse_doc_studio.api.config import GitConfig
-from hse_doc_studio.core.git_sync.entities import GitHostKey, GitOperationError, RemoteProbe, RemoteTarget
+from hse_doc_studio.core.git_sync.entities import (
+    GitHostKey,
+    GitOperationError,
+    RemoteProbe,
+    RemoteTarget,
+    TlsCertificate,
+)
 from hse_doc_studio.core.git_sync.error_classifier import DETAIL_TAIL_CHARS, GitOp, scrub
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -40,6 +46,10 @@ _REACHABLE_CODES = frozenset(
         GitErrorCode.rate_limited,
     }
 )
+
+
+def _text(value: object) -> str | None:
+    return value if isinstance(value, str) else None
 
 
 def _branch(name: str) -> str:
@@ -212,9 +222,13 @@ class GitTransport:
     def _failed_probe(exc: GitSyncError) -> RemoteProbe:
         raw_keys = exc.ctx.get("host_keys")
         host_keys = tuple(key for key in raw_keys if isinstance(key, GitHostKey)) if isinstance(raw_keys, tuple) else ()
+        certificate = exc.ctx.get("certificate")
         return RemoteProbe(
             ok=False,
             reachable=exc.code in _REACHABLE_CODES,
             error=GitOperationError(exc.code, exc.detail),
             host_keys=host_keys,
+            certificate=certificate if isinstance(certificate, TlsCertificate) else None,
+            expected_fingerprint=_text(exc.ctx.get("expected")),
+            actual_fingerprint=_text(exc.ctx.get("actual")),
         )

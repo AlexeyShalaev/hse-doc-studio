@@ -34,6 +34,7 @@ from hse_doc_studio.core.git_sync.entities import (
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
+    ServerCertificate,
     SharedFolderInfo,
     StoreAudit,
     StoreFinding,
@@ -41,11 +42,14 @@ from hse_doc_studio.core.git_sync.entities import (
     SyncResult,
     SyncState,
     SyncWarning,
+    TokenIntrospection,
     TreeEntry,
 )
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
+from hse_doc_studio.core.git_sync.host_settings import GitHostSettings
 from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
 from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
+from hse_doc_studio.core.git_sync.providers import ApiDetection, GitProvider
 from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
 from hse_doc_studio.core.template_update.protocols import IMergeEngine
 
@@ -139,6 +143,64 @@ class IKnownHostsStore(Protocol):
 class IHostKeyScanner(Protocol):
     async def scan(self, host: str, port: int | None) -> list[ScannedHostKey]:
         """Ключи, которые хост предъявляет сейчас. Нет связи: offline, нет ssh-keyscan: ssh_unavailable."""
+        ...
+
+
+class IGitHostSettingsRepository(Protocol):
+    """Настройки серверов: подмена провайдера, свой CA, закреплённый сертификат. Ключ записи: хост и порт."""
+
+    def get(self, host: str, port: int | None) -> GitHostSettings | None: ...
+    def list(self) -> list[GitHostSettings]: ...
+    def save(self, settings: GitHostSettings) -> None:
+        """Пустая запись (ничего не подменено, ничего не доверено, нет кэша) удаляется."""
+        ...
+
+    def trust_file(self, host: str, port: int | None) -> Path | None:
+        """Файл PEM для `http.<адрес>.sslCAInfo`: CA и закреплённый сертификат сервера; None, если доверия нет."""
+        ...
+
+
+class ICertificateService(Protocol):
+    """Сертификаты серверов: что сервер предъявляет и что человек вставил как CA."""
+
+    def normalize_ca_pem(self, pem: str) -> str:
+        """Только сертификаты, без закрытых ключей; иначе GitSyncError(host_settings_invalid)."""
+        ...
+
+    async def fetch(self, host: str, port: int | None) -> ServerCertificate:
+        """Сертификат, который сервер предъявляет сейчас, без проверки цепочки. Нет связи: offline или timeout."""
+        ...
+
+
+@dataclass(frozen=True)
+class DetectionRequest:
+    """Где искать API сервера: схема, хост, порт, путь адреса репозитория и провайдеры в порядке проверки."""
+
+    secure: bool
+    host: str
+    port: int | None
+    segments: tuple[str, ...]
+    providers: tuple[GitProvider, ...]
+    ca_file: Path | None = None
+
+
+class IProviderDetector(Protocol):
+    async def detect(self, request: DetectionRequest) -> ApiDetection | None:
+        """Спрашивает публичные адреса версии без доступа. Любой сбой это None: определение необязательно."""
+        ...
+
+
+@dataclass(frozen=True)
+class IntrospectionRequest:
+    provider: GitProvider
+    api_base: str
+    token: Secret
+    ca_file: Path | None = None
+
+
+class ITokenIntrospector(Protocol):
+    async def introspect(self, request: IntrospectionRequest) -> TokenIntrospection:
+        """Что сервер говорит о токене. Нет связи или сертификат не принят: GitSyncError с кодом."""
         ...
 
 

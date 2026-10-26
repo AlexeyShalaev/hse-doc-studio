@@ -61,6 +61,15 @@ export const isGitProbeRelation = isOneOf(GIT_PROBE_RELATIONS);
 
 // --- доступы --------------------------------------------------------------------
 
+// Что известно о токене после проверки: чей он, какие права, до какого срока.
+export const GitTokenInfoSchema = z.object({
+  login: z.string().nullish(),
+  scopes: z.array(z.string()),
+  expires_at: z.string().nullish(),
+  sufficiency: z.string(), // sufficient | too_narrow | too_broad | unknown
+  missing: z.array(z.string()), // каких прав не хватает для чтения и записи
+});
+
 export const GitCredentialSchema = z.object({
   id: z.string(),
   kind: z.string(),
@@ -78,6 +87,13 @@ export const GitCredentialSchema = z.object({
 });
 
 export const GitCredentialListSchema = z.array(GitCredentialSchema);
+
+// Итог «Проверить» у сохранённого токена; отказ сервера приходит ошибкой с кодом, а не этим ответом.
+export const GitCredentialCheckSchema = z.object({
+  credential: GitCredentialSchema, // с обновлёнными сроком и статусом
+  provider_info: GitProviderInfoSchema,
+  token_info: GitTokenInfoSchema.nullish(), // null: у этого провайдера токен проверить нельзя
+});
 
 export const CreateCredentialRequestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -187,15 +203,6 @@ export const ProbeUrlSchema = z.object({
   token_stripped: z.boolean(),
 });
 
-// Что известно о токене после проверки: чей он, какие права, до какого срока.
-export const GitTokenInfoSchema = z.object({
-  login: z.string().nullish(),
-  scopes: z.array(z.string()),
-  expires_at: z.string().nullish(),
-  sufficiency: z.string(), // sufficient | too_narrow | too_broad | unknown
-  missing: z.array(z.string()), // каких прав не хватает для чтения и записи
-});
-
 export const ProbeProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -214,7 +221,9 @@ export const ProbeSchema = z.object({
       code: z.string(),
       detail: z.string(),
       host_keys: z.array(GitHostKeySchema).nullish(),
-      certificate: GitTlsCertificateSchema.nullish(),
+      certificate: GitTlsCertificateSchema.nullish(), // tls_untrusted_ca
+      expected: z.string().nullish(), // tls_pin_mismatch: закреплённый отпечаток
+      actual: z.string().nullish(), // tls_pin_mismatch: отпечаток, который сервер предъявил сейчас
     })
     .nullish(),
   url: ProbeUrlSchema,
@@ -247,6 +256,7 @@ export const CloneDefaultsSchema = z.object({
 });
 
 export type GitCredential = z.infer<typeof GitCredentialSchema>;
+export type GitCredentialCheck = z.infer<typeof GitCredentialCheckSchema>;
 export type CreateCredentialRequest = z.infer<
   typeof CreateCredentialRequestSchema
 >;

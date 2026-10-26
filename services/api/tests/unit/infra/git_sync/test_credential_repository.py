@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -72,6 +73,34 @@ def test__add__stores_metadata_in_clear_and_the_secret_only_encrypted(
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX file modes")
+def test__add__expiry__survives_a_reload_and_an_old_record_without_it_reads_as_none(
+    repo: JsonGitCredentialRepository, tmp_path: Path
+) -> None:
+    expiry = datetime(2027, 1, 24, tzinfo=timezone.utc)
+    with_expiry = _credential(expires_at=expiry)
+    legacy = _credential()
+    repo.add(with_expiry, Secret(_CANARY))
+    repo.add(legacy, Secret(_CANARY))
+    path = _file(tmp_path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["credentials"][1]["expires_at"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    assert repo.get(with_expiry.id).expires_at == expiry  # type: ignore[union-attr]
+    assert repo.get(legacy.id).expires_at is None  # type: ignore[union-attr]
+
+
+def test__update__sets_the_expiry_without_touching_the_secret(repo: JsonGitCredentialRepository) -> None:
+    credential = _credential()
+    repo.add(credential, Secret(_CANARY))
+    expiry = datetime(2027, 1, 24, tzinfo=timezone.utc)
+
+    repo.update(replace(credential, expires_at=expiry))
+
+    assert repo.get(credential.id).expires_at == expiry  # type: ignore[union-attr]
+    assert repo.get_secret(credential.id).reveal() == _CANARY
+
+
 def test__add__file_is_private(repo: JsonGitCredentialRepository, tmp_path: Path) -> None:
     repo.add(_credential(), Secret(_CANARY))
 

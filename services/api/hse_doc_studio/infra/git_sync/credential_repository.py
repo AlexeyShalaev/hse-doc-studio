@@ -57,12 +57,14 @@ def _to_record(credential: GitCredential, sealed: str) -> dict[str, Any]:
         "fingerprint_sha256": credential.fingerprint_sha256,
         "created_at": credential.created_at.isoformat(),
         "last_used_at": None if credential.last_used_at is None else credential.last_used_at.isoformat(),
+        "expires_at": None if credential.expires_at is None else credential.expires_at.isoformat(),
         "secret": sealed,
     }
 
 
 def _from_record(raw: dict[str, Any]) -> GitCredential:
     last_used = raw.get("last_used_at")
+    expires = raw.get("expires_at")
     return GitCredential(
         id=UUID(raw["id"]),
         kind=GitCredentialKind(raw["kind"]),
@@ -76,6 +78,7 @@ def _from_record(raw: dict[str, Any]) -> GitCredential:
         fingerprint_sha256=raw.get("fingerprint_sha256"),
         port=raw.get("port"),
         last_used_at=None if last_used is None else _parse_dt(last_used),
+        expires_at=None if expires is None else _parse_dt(expires),
     )
 
 

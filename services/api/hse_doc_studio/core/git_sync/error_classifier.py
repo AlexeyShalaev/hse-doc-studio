@@ -119,9 +119,16 @@ _RULES: tuple[_Rule, ...] = (
         r"couldn't find remote ref|Remote branch .* not found|src refspec .* does not match any",
     ),
     _rule(
+        GitErrorCode.tls_untrusted_ca,
+        r"unable to get (?:local )?issuer certificate|unable to verify the first certificate"
+        r"|self[- ]signed certificate|certificate is not trusted|unknown certificate authority",
+        transports=_HTTP,
+    ),
+    _rule(
         GitErrorCode.tls_error,
         r"SSL certificate problem|certificate verify failed|server certificate verification failed"
-        r"|unable to get local issuer|self[- ]signed certificate|gnutls_handshake\(\) failed",
+        r"|gnutls_handshake\(\) failed|no alternative certificate subject name"
+        r"|certificate subject name .* does not match",
         transports=_HTTP,
     ),
     _rule(

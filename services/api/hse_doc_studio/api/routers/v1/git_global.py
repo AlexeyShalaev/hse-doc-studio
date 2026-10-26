@@ -12,15 +12,17 @@ from uuid import UUID
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Query, status
 
-from hse_doc_studio.api.git_mapping import map_operation, map_probe
+from hse_doc_studio.api.git_mapping import map_operation, map_probe, map_provider_info, map_token_info
 from hse_doc_studio.api.schemas.git_sync import (
     CloneDefaultsResponse,
     CloneRequest,
     CreateCredentialRequest,
     CreatePatCredentialRequest,
+    GitCredentialCheckResponse,
     GitCredentialResponse,
     GitCredentialUsage,
     GitHostResponse,
+    GitHostSettingsResponse,
     OperationResponse,
     OperationStartedResponse,
     ProbeRequest,
@@ -29,6 +31,7 @@ from hse_doc_studio.api.schemas.git_sync import (
     SharedFolderResponse,
     TrustHostRequest,
     UpdateCredentialRequest,
+    UpdateGitHostSettingsRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
@@ -45,6 +48,16 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     ListCredentialsUC,
     UpdateCredentialInput,
     UpdateCredentialUC,
+)
+from hse_doc_studio.use_cases.git_sync.host_settings import (
+    FIELD_CA_PEM,
+    FIELD_PINNED_FINGERPRINT,
+    FIELD_PROVIDER_OVERRIDE,
+    CheckCredentialUC,
+    HostSettingsView,
+    ListHostSettingsUC,
+    UpdateHostSettingsInput,
+    UpdateHostSettingsUC,
 )
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostInput, TrustHostUC
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
@@ -70,6 +83,18 @@ def _map_credential(view: CredentialView) -> GitCredentialResponse:
         last_used_at=credential.last_used_at,
         expires_at=credential.expires_at,
         used_by=[GitCredentialUsage(project_id=u.project_id, name=u.name) for u in view.used_by],
+    )
+
+
+def _map_host_settings(view: HostSettingsView) -> GitHostSettingsResponse:
+    settings = view.settings
+    return GitHostSettingsResponse(
+        host=settings.host,
+        port=settings.port,
+        provider_override=None if settings.provider_override is None else settings.provider_override.value,
+        provider_info=map_provider_info(view.provider),
+        ca_present=settings.ca_pem is not None,
+        pinned_fingerprint=settings.pinned_fingerprint,
     )
 
 
@@ -111,6 +136,19 @@ async def update_git_credential(
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _map_credential(view)
+
+
+@router.post("/git/credentials/{credential_id}/check", response_model=GitCredentialCheckResponse)
+async def check_git_credential(credential_id: UUID, uc: FromDishka[CheckCredentialUC]) -> GitCredentialCheckResponse:
+    try:
+        view = await uc.execute(credential_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return GitCredentialCheckResponse(
+        credential=_map_credential(view.credential),
+        provider_info=map_provider_info(view.provider),
+        token_info=map_token_info(view.token.info if view.token else None),
+    )
 
 
 @router.delete("/git/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -165,6 +203,29 @@ async def trust_git_host(body: TrustHostRequest, uc: FromDishka[TrustHostUC]) ->
 @router.delete("/git/hosts", status_code=status.HTTP_204_NO_CONTENT)
 async def forget_git_host(uc: FromDishka[ForgetHostUC], host: str = Query(...), port: int | None = None) -> None:
     await uc.execute(host, port)
+
+
+@router.get("/git/host-settings", response_model=list[GitHostSettingsResponse])
+async def list_git_host_settings(uc: FromDishka[ListHostSettingsUC]) -> list[GitHostSettingsResponse]:
+    return [_map_host_settings(view) for view in await uc.execute()]
+
+
+@router.put("/git/host-settings", response_model=GitHostSettingsResponse)
+async def update_git_host_settings(
+    body: UpdateGitHostSettingsRequest, uc: FromDishka[UpdateHostSettingsUC]
+) -> GitHostSettingsResponse:
+    given = body.model_fields_set & {FIELD_PROVIDER_OVERRIDE, FIELD_CA_PEM, FIELD_PINNED_FINGERPRINT}
+    view = await uc.execute(
+        UpdateHostSettingsInput(
+            host=body.host,
+            port=body.port,
+            provider_override=body.provider_override,
+            ca_pem=body.ca_pem,
+            pinned_fingerprint=body.pinned_fingerprint,
+            given=frozenset(given),
+        )
+    )
+    return _map_host_settings(view)
 
 
 @router.post("/git/remote/probe", response_model=ProbeResponse)

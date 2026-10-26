@@ -66,6 +66,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Неизвестный тип сервера. Выберите GitHub, GitLab, Gitea, Bitbucket или другое",
         "Unknown server type. Choose GitHub, GitLab, Gitea, Bitbucket or other",
     ),
+    GitErrorCode.host_settings_invalid: (
+        "Настройки сервера заполнены неверно: проверьте сертификат и отпечаток",
+        "The server settings are not valid: check the certificate and the fingerprint",
+    ),
     GitErrorCode.timeout: (
         "Сервер не ответил вовремя. Попробуйте ещё раз",
         "The server did not answer in time. Try again",

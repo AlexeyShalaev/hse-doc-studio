@@ -134,6 +134,14 @@ class GitCredentialResponse(_Contract):
     used_by: list[GitCredentialUsage]
 
 
+class GitCredentialCheckResponse(_Contract):
+    """Итог кнопки «Проверить» у сохранённого токена; отказ сервера приходит ошибкой с кодом, а не этим ответом."""
+
+    credential: GitCredentialResponse  # с обновлёнными сроком и статусом
+    provider_info: GitProviderInfo
+    token_info: GitTokenInfo | None  # None: у этого провайдера токен проверить нельзя
+
+
 class CreatePatCredentialRequest(_Contract):
     kind: Literal["pat"]
     label: str
@@ -236,7 +244,9 @@ class ProbeError(_Contract):
     code: str
     detail: str
     host_keys: list[GitHostKey] | None = None
-    certificate: GitTlsCertificate | None = None
+    certificate: GitTlsCertificate | None = None  # tls_untrusted_ca
+    expected: str | None = None  # tls_pin_mismatch: закреплённый отпечаток
+    actual: str | None = None  # tls_pin_mismatch: отпечаток, который сервер предъявил сейчас
 
 
 class ProbeUrl(_Contract):

@@ -47,6 +47,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     ILocalAuthorProfile,
     ISharedFolderDetector,
 )
+from hse_doc_studio.core.git_sync.providers import ProviderInfo, detect_provider
 from hse_doc_studio.core.git_sync.status import (
     RefComparison,
     RefStatusMemo,
@@ -57,6 +58,7 @@ from hse_doc_studio.core.git_sync.status import (
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ISettingsRepository
 from hse_doc_studio.core.vcs.errors import VcsCommandError, VcsUnavailableError
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
 
@@ -80,6 +82,7 @@ class RemoteInfoView:
     kind: RemoteKind
     host: str | None
     provider: str
+    provider_info: ProviderInfo
     web_url: str | None
     branch: str
     local_branch: str
@@ -197,6 +200,7 @@ class GitStatusBuilder:
         memo: RefStatusMemo,
         policy: GitSyncPolicy,
         shared_folders: ISharedFolderDetector | None = None,
+        providers: ProviderResolver | None = None,
     ) -> None:
         self._remotes = store_remotes
         self._states = state_repo
@@ -210,6 +214,7 @@ class GitStatusBuilder:
         self._memo = memo
         self._policy = policy
         self._shared = shared_folders
+        self._providers = providers
 
     def build(self, project: Project) -> GitStatusView:
         """Блокирует на запусках git: вызывающий уводит вызов в поток."""
@@ -357,11 +362,13 @@ class GitStatusBuilder:
             return None
         credential_id = state.credential_id or config.credential_id
         credential = self._credentials.get(credential_id) if credential_id else None
+        provider = self._providers.known(url.host, url.port) if self._providers else detect_provider(url.host)
         return RemoteInfoView(
             display_url=url.display_url,
             kind=url.kind,
             host=url.host,
-            provider=url.provider.value,
+            provider=provider.id.value,
+            provider_info=provider,
             web_url=web_url_of(url),
             branch=state.remote_branch,
             local_branch=state.local_branch,

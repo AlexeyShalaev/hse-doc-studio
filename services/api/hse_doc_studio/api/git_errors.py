@@ -28,6 +28,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.url_invalid: _INPUT,
     GitErrorCode.url_scheme_forbidden: _INPUT,
     GitErrorCode.provider_unknown: _INPUT,
+    GitErrorCode.host_settings_invalid: _INPUT,
     GitErrorCode.credential_invalid: _INPUT,
     GitErrorCode.invalid_resolution: _INPUT,
     GitErrorCode.unresolved_conflicts: _INPUT,

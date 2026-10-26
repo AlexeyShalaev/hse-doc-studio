@@ -67,10 +67,11 @@ class ProviderInfo:
 
 @dataclass(frozen=True)
 class ApiDetection:
-    """Что ответил API сервера на проверку: провайдер и версия, если сервер её назвал."""
+    """Что ответил API сервера на проверку: провайдер, версия, если сервер её назвал, и корень API, где он нашёлся."""
 
     provider: GitProvider
     version: str | None = None
+    api_base: str | None = None
 
 
 @dataclass(frozen=True)

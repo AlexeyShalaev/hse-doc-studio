@@ -36,6 +36,7 @@ _SCHEMAS: dict[str, Any] = {
     "ProfileRequest": s.ProfileRequest,
     "GitCredential": s.GitCredentialResponse,
     "GitCredentialList": list[s.GitCredentialResponse],
+    "GitCredentialCheck": s.GitCredentialCheckResponse,
     "CreateCredentialRequest": s.CreateCredentialRequest,
     "UpdateCredentialRequest": s.UpdateCredentialRequest,
     "GitHostList": list[s.GitHostResponse],
@@ -286,7 +287,22 @@ def test_tls_and_token_error_fixtures_carry_their_details() -> None:
     assert errors["tls_untrusted_ca"]["certificate"]["fingerprint_sha256"].startswith("SHA256:")
     assert {"expected", "actual"} <= set(errors["tls_pin_mismatch"])
     probe_codes = {body["error"]["code"] for body in _fixtures_of("Probe") if body["error"]}
-    assert {"token_expired", "tls_untrusted_ca"} <= probe_codes
+    assert {"token_expired", "tls_untrusted_ca", "tls_pin_mismatch"} <= probe_codes
+    pin = next(
+        body["error"] for body in _fixtures_of("Probe") if body["error"] and body["error"]["code"] == "tls_pin_mismatch"
+    )
+    assert {"expected", "actual"} <= set(pin)
+
+
+def test_credential_check_fixtures_cover_checkable_and_unchecked_providers() -> None:
+    checks = _fixtures_of("GitCredentialCheck")
+    assert any(body["token_info"] for body in checks)
+    assert any(body["token_info"] is None for body in checks)
+    for body in checks:
+        assert body["credential"]["kind"] == "pat"
+        if body["token_info"] and body["token_info"]["sufficiency"] != "unknown":
+            verdict = assess_scopes(body["provider_info"]["id"], body["token_info"]["scopes"])
+            assert verdict.sufficiency.value == body["token_info"]["sufficiency"]
 
 
 # --- векторы разбора адреса ---------------------------------------------------
