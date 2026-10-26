@@ -6,7 +6,7 @@ import httpx
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
 from hse_doc_studio.core.ai_runtime import (
@@ -73,7 +73,6 @@ from hse_doc_studio.core.vcs.protocols import (
     IVcsService,
 )
 from hse_doc_studio.infra.ai.agent.edit_applier import FuzzySearchReplaceApplier
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.infra.checks.runner import CheckRunner
 
@@ -2570,7 +2569,7 @@ class UseCaseProvider(Provider):
         agent_provider: IAgentProvider,
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
@@ -2598,7 +2597,7 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
     ) -> GetChatRunStreamUC:
         return GetChatRunStreamUC(
             project_repo=project_repo,
@@ -2613,7 +2612,7 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
     ) -> CancelChatTurnUC:
         return CancelChatTurnUC(
@@ -2674,13 +2673,13 @@ class UseCaseProvider(Provider):
 
     @provide
     def get_system_cancel_chat_turn_uc(
-        self, chat_repo: IChatRepository, bus: AgentRunBus, run_manager: AgentRunManager
+        self, chat_repo: IChatRepository, bus: IAgentRunBus, run_manager: AgentRunManager
     ) -> SystemCancelChatTurnUC:
         return SystemCancelChatTurnUC(self._system_folder(), chat_repo, bus, run_manager)
 
     @provide
     def get_system_get_chat_run_stream_uc(
-        self, chat_repo: IChatRepository, bus: AgentRunBus
+        self, chat_repo: IChatRepository, bus: IAgentRunBus
     ) -> SystemGetChatRunStreamUC:
         return SystemGetChatRunStreamUC(self._system_folder(), chat_repo, bus)
 
@@ -2693,7 +2692,7 @@ class UseCaseProvider(Provider):
         agent_provider: IAgentProvider,
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
         context_service: ChatContextService,
         summarizer: IChatSummarizer,

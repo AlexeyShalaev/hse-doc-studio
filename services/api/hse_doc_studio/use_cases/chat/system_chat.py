@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import ChatSession
 from hse_doc_studio.core.enums import AgentRunStatus, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.repositories import IChatRepository
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat.cancel_chat_turn import CancelChatTurnOutput
 from hse_doc_studio.use_cases.chat.create_chat_session import CreateChatSessionOutput
@@ -141,7 +141,7 @@ class SystemCancelChatTurnUC:
         self,
         folder: Path,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
     ) -> None:
         self._folder = folder
