@@ -44,6 +44,8 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     ".hse-studio/submissions/",
     "# our own store + a foreign user git",
     ".hse-studio/git/",
+    # без слеша: ловит и файл вместо каталога (указатель на вынесенное хранилище)
+    ".hse-studio/git",
     ".git/",
     ".gitmodules",
     "# hse-studio caches (sources stay tracked)",

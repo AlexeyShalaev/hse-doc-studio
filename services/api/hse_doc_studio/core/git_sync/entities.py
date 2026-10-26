@@ -327,3 +327,70 @@ class SyncState:
     auto_fetch: bool = True
     fetch_interval_s: int | None = None
     shared_folder_ack: bool = False
+
+
+@dataclass(frozen=True)
+class StoreRemoteConfig:
+    """Подключение, записанное в config хранилища: то, что нужно самому git и сопровождает папку при переносе."""
+
+    url: str
+    credential_id: UUID | None = None
+    local_branch: str | None = None
+    remote_branch: str | None = None
+
+
+@dataclass(frozen=True)
+class TreeEntry:
+    """Файл или gitlink в дереве коммита. `size` есть только у blob."""
+
+    path: str
+    mode: str
+    kind: str
+    sha: str
+    size: int | None = None
+
+
+@dataclass(frozen=True)
+class LargeBlob:
+    path: str
+    sha: str
+    size: int
+
+
+@dataclass(frozen=True)
+class AuthorCount:
+    name: str
+    email: str
+    commits: int
+
+
+@dataclass(frozen=True)
+class PathStamp:
+    """Последнее изменение файла: время коммита и его sha, пара определяет «новее» без ничьих."""
+
+    committed_at: datetime
+    sha: str
+
+
+class StoreFindingKind(StrEnum):
+    config_key = "config_key"
+    config_value = "config_value"
+    config_unreadable = "config_unreadable"
+    hook = "hook"
+
+
+@dataclass(frozen=True)
+class StoreFinding:
+    """Недоверенная настройка хранилища. `subject` называет ключ или хук, но не значение: в нём бывают секреты."""
+
+    kind: StoreFindingKind
+    subject: str
+
+
+@dataclass(frozen=True)
+class StoreAudit:
+    findings: tuple[StoreFinding, ...] = ()
+
+    @property
+    def trusted(self) -> bool:
+        return not self.findings

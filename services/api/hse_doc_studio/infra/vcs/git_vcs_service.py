@@ -7,11 +7,13 @@ from collections.abc import Sequence
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsRestoreMode, VcsTagKind
+from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig
 from hse_doc_studio.core.vcs.entities import (
     VcsBranch,
     VcsCommit,
@@ -40,6 +42,12 @@ logger = structlog.get_logger()
 _HSE_STUDIO = ".hse-studio"
 _GIT_SUBDIR = "git"
 
+
+def store_git_dir(folder: Path) -> Path:
+    """Изолированное хранилище git проекта: лежит внутри папки и переезжает вместе с ней."""
+    return folder / _HSE_STUDIO / _GIT_SUBDIR
+
+
 _UNIT = "\x1f"  # field separator inside one log record
 _REC = "\x1e"  # record separator between log entries
 _LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%aI", "%D", "%B"]) + _REC
@@ -52,6 +60,12 @@ _DEFAULT_DIFF_MAX_BYTES = 256_000
 
 # Подкоманды, которым git нужна личность автора; остальным остаётся служебная подпись.
 _IDENTITY_SUBCOMMANDS = frozenset({"commit", "commit-tree", "tag"})
+
+_KEY_URL = "remote.origin.url"
+_KEY_CREDENTIAL = "hse.credential"
+_KEY_LOCAL_BRANCH = "hse.localbranch"
+_KEY_REMOTE_BRANCH = "hse.remotebranch"
+_REMOTE_KEYS_RE = r"^(remote\.origin\.url|hse\.(credential|localbranch|remotebranch))$"
 
 _KIND_TRAILER = re.compile(r"^Hse-Kind:\s*(\S+)\s*$", re.MULTILINE)
 
@@ -92,20 +106,23 @@ class GitVcsService:
         self._author_provider = author_provider
 
     # ── paths ────────────────────────────────────────────────────────────────
-    def _git_dir(self, project: Project) -> Path:
-        return project.folder / _HSE_STUDIO / _GIT_SUBDIR
+    def git_dir(self, project: Project) -> Path:
+        return store_git_dir(project.folder)
 
     # ── low-level git invocation ─────────────────────────────────────────────
     def _env(self) -> dict[str, str]:
         return base_git_env()
 
     def _base(self, project: Project, work_tree: Path | None = None) -> list[str]:
+        return self._base_for(project.folder, work_tree)
+
+    def _base_for(self, folder: Path, work_tree: Path | None = None) -> list[str]:
         return [
             "git",
             "--git-dir",
-            str(self._git_dir(project)),
+            str(store_git_dir(folder)),
             "--work-tree",
-            str(work_tree or project.folder),
+            str(work_tree or folder),
             "-c",
             f"user.name={self._author_name}",
             "-c",
@@ -140,11 +157,14 @@ class GitVcsService:
         *,
         check: bool = False,
     ) -> subprocess.CompletedProcess[str]:
-        cmd = [*self._base(project), *self._author_override(args), *args]
+        return self._exec(project.folder, args, check=check)
+
+    def _exec(self, folder: Path, args: Sequence[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+        cmd = [*self._base_for(folder), *self._author_override(args), *args]
         try:
             proc = subprocess.run(  # noqa: S603
                 cmd,
-                cwd=str(project.folder),
+                cwd=str(folder),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -206,12 +226,12 @@ class GitVcsService:
             return False
 
     def is_initialized(self, project: Project) -> bool:
-        return (self._git_dir(project) / "HEAD").exists()
+        return (self.git_dir(project) / "HEAD").exists()
 
     def init(self, project: Project, ignore: Sequence[str]) -> None:
         if not self.is_available(project):
             raise VcsUnavailableError(f"project folder not accessible: {project.folder}")
-        git_dir = self._git_dir(project)
+        git_dir = self.git_dir(project)
         git_dir.parent.mkdir(parents=True, exist_ok=True)
         if not self.is_initialized(project):
             self._run(project, ["init", f"--initial-branch={self._default_branch}"], check=True)
@@ -219,15 +239,87 @@ class GitVcsService:
         # Root snapshot — capture whatever already exists (empty folders allowed).
         self.commit(project, message="Создание проекта", kind=VcsCommitKind.init, allow_empty=True)
 
+    def init_bare_store(self, folder: Path, branch: str) -> None:
+        """Хранилище без корневого коммита: ветку `branch` наполнит fetch при клонировании проекта."""
+        validate_ref_name(branch)
+        git_dir = store_git_dir(folder)
+        git_dir.parent.mkdir(parents=True, exist_ok=True)
+        if not (git_dir / "HEAD").exists():
+            self._exec(folder, ["init", f"--initial-branch={branch}"], check=True)
+
     def write_ignore(self, project: Project, ignore: Sequence[str]) -> None:
         """(Re)write the store's ignore file. Idempotent — called at init and
         refreshed on connect so the versioning scope tracks the current policy."""
-        info_dir = self._git_dir(project) / "info"
+        info_dir = self.git_dir(project) / "info"
         info_dir.mkdir(parents=True, exist_ok=True)
         (info_dir / "exclude").write_text("\n".join(ignore) + "\n", encoding="utf-8")
 
     def destroy(self, project: Project) -> None:
-        shutil.rmtree(self._git_dir(project), ignore_errors=True)
+        shutil.rmtree(self.git_dir(project), ignore_errors=True)
+
+    # ── подключение к удалённому репозиторию ─────────────────────────────────
+    def read_remote_config(self, project: Project) -> StoreRemoteConfig | None:
+        """Подключение из config хранилища; None, если адреса там нет."""
+        proc = self._config(project, ["--get-regexp", "-z", _REMOTE_KEYS_RE])
+        if proc.returncode != 0:
+            return None
+        values: dict[str, str] = {}
+        for record in proc.stdout.split("\0"):
+            key, _, value = record.partition("\n")
+            if key:
+                values[key] = value
+        url = values.get(_KEY_URL)
+        if not url:
+            return None
+        return StoreRemoteConfig(
+            url=url,
+            credential_id=_parse_uuid(values.get(_KEY_CREDENTIAL)),
+            local_branch=values.get(_KEY_LOCAL_BRANCH) or None,
+            remote_branch=values.get(_KEY_REMOTE_BRANCH) or None,
+        )
+
+    def write_remote_config(self, project: Project, config: StoreRemoteConfig) -> None:
+        """Записывает адрес и привязку в config хранилища; секретов здесь нет и быть не должно."""
+        if not self.is_initialized(project):
+            raise VcsNotInitializedError(str(project.folder))
+        values = {
+            _KEY_URL: config.url,
+            _KEY_CREDENTIAL: str(config.credential_id) if config.credential_id else None,
+            _KEY_LOCAL_BRANCH: config.local_branch,
+            _KEY_REMOTE_BRANCH: config.remote_branch,
+        }
+        for key, value in values.items():
+            if value is None:
+                self._config(project, ["--unset-all", key])
+            else:
+                self._config(project, ["--replace-all", key, value], check=True)
+
+    def clear_remote_config(self, project: Project) -> None:
+        for section in ("remote.origin", "hse"):
+            proc = self._config(project, ["--remove-section", section])
+            if proc.returncode != 0 and "no such section" not in proc.stderr.lower():
+                raise VcsCommandError("config", proc.stderr)
+
+    def _config(
+        self, project: Project, args: Sequence[str], *, check: bool = False
+    ) -> subprocess.CompletedProcess[str]:
+        cmd = ["git", "config", "--file", str(self.git_dir(project) / "config"), *args]
+        try:
+            proc = subprocess.run(  # noqa: S603
+                cmd,
+                cwd=str(project.folder),
+                capture_output=True,
+                text=True,
+                check=False,
+                env=self._env(),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except OSError as exc:
+            raise VcsUnavailableError(str(exc)) from exc
+        if check and proc.returncode != 0:
+            raise VcsCommandError("config", proc.stderr or proc.stdout)
+        return proc
 
     # ── commits ──────────────────────────────────────────────────────────────
     def commit(
@@ -318,7 +410,7 @@ class GitVcsService:
 
     # ── status / diff ────────────────────────────────────────────────────────
     def status(self, project: Project, settings: VcsSettings) -> VcsStatus:  # noqa: C901
-        git_dir = self._git_dir(project)
+        git_dir = self.git_dir(project)
         if not self.is_available(project):
             return _empty_status(available=False, store_path=str(git_dir), settings=settings)
         if not self.is_initialized(project):
@@ -650,6 +742,13 @@ class GitVcsService:
             elif len(parts) >= 2:  # noqa: PLR2004
                 out.append((change, parts[1], None))
         return out
+
+
+def _parse_uuid(raw: str | None) -> UUID | None:
+    try:
+        return UUID(raw) if raw else None
+    except ValueError:
+        return None
 
 
 def _cmd_label(args: Sequence[str]) -> str:
