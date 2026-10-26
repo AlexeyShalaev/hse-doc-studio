@@ -14,19 +14,25 @@ from uuid import UUID
 
 from hse_doc_studio.core.git_sync.ci import CiOptions, RenderedCiFile
 from hse_doc_studio.core.git_sync.entities import (
+    AuthorCount,
     AuthorProfile,
     CredentialStatus,
     CredentialUsage,
     GitCredential,
     GitOperation,
     GitResult,
+    LargeBlob,
     OperationKind,
     OperationPhase,
+    PathStamp,
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
+    StoreAudit,
+    StoreFinding,
     SyncState,
     SyncWarning,
+    TreeEntry,
 )
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
 from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
@@ -201,12 +207,34 @@ class IGitRepoReader(Protocol):
     """Чтение объектов хранилища без обращения к рабочему дереву и без сети."""
 
     def rev_parse(self, project_folder: Path, ref: str) -> str | None: ...
+    def current_branch(self, project_folder: Path) -> str | None:
+        """Ветка, на которой стоит HEAD; None при отсоединённом HEAD."""
+        ...
+
     def merge_base(self, project_folder: Path, a: str, b: str) -> str | None: ...
+    def merge_bases(self, project_folder: Path, a: str, b: str) -> list[str]:
+        """Все лучшие общие предки: больше одного у перекрёстных слияний."""
+        ...
+
     def is_ancestor(self, project_folder: Path, ancestor: str, descendant: str) -> bool: ...
     def ahead_behind(self, project_folder: Path, local: str, remote: str) -> tuple[int, int]: ...
     def changed_paths(self, project_folder: Path, a: str, b: str) -> list[tuple[str, str]]: ...
+    def tree_entries(self, project_folder: Path, commit: str) -> list[TreeEntry]: ...
     def read_files(self, project_folder: Path, commit: str, paths: Sequence[str]) -> Mapping[str, bytes | None]: ...
+    def path_stamp(
+        self, project_folder: Path, tip: str, path: str, *, exclude_reachable_from: str | None = None
+    ) -> PathStamp | None:
+        """Последний коммит от `tip`, менявший путь; с `exclude_reachable_from` только среди новых за этой точкой."""
+        ...
+
     def path_last_changed_at(self, project_folder: Path, commit: str, path: str) -> datetime | None: ...
+    def large_blobs(
+        self, project_folder: Path, tip: str, *, min_bytes: int, exclude_reachable_from: str | None = None
+    ) -> list[LargeBlob]: ...
+
+    def author_counts(self, project_folder: Path, rev: str) -> list[AuthorCount]:
+        """Число коммитов по авторам, больше всех первым."""
+        ...
 
 
 class IGitMergeCommitter(Protocol):
@@ -218,13 +246,38 @@ class IGitMergeCommitter(Protocol):
         *,
         ours: str,
         theirs: str,
-        tree_files: Mapping[str, bytes],
+        changes: Mapping[str, bytes | None],
         message: str,
         trailers: Mapping[str, str],
-    ) -> str: ...
+    ) -> str:
+        """Коммит с родителями `ours` и `theirs`; дерево `ours` с поправками `changes` (None удаляет файл).
+
+        Ветку не двигает: это делает `advance_branch`. Трейлер `Hse-Kind: sync` ставится сам.
+        """
+        ...
 
     def advance_branch(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
-        """update-ref с проверкой старого значения: False, если ветка успела сдвинуться."""
+        """update-ref с проверкой старого значения: False, если ветка успела сдвинуться.
+
+        Если это ветка текущего HEAD, индекс приводится к дереву `new`; рабочее дерево не трогается.
+        """
+        ...
+
+    def fast_forward(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
+        """Перемотка ветки на потомка `expected` после того, как файлы записаны в рабочее дерево."""
+        ...
+
+
+class IGitStoreGuard(Protocol):
+    """Проверка хранилища, приехавшего с чужой папкой: его config и хуки могут запускать код."""
+
+    def audit(self, project_folder: Path) -> StoreAudit: ...
+    def harden(self, project_folder: Path) -> tuple[StoreFinding, ...]:
+        """Переписывает config по белому списку и убирает хуки; возвращает, что было убрано."""
+        ...
+
+    def ensure_trusted(self, project_folder: Path) -> None:
+        """Бросает GitSyncError(store_untrusted), если аудит нашёл недоверенное."""
         ...
 
 

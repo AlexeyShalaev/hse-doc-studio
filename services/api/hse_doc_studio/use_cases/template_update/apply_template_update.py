@@ -19,7 +19,6 @@ from hse_doc_studio.core.template_update.entities import (
     resolve_op,
 )
 from hse_doc_studio.core.template_update.errors import (
-    TemplateUpdateInProgressError,
     TemplateUpdatePlanOutdatedError,
 )
 from hse_doc_studio.core.template_update.protocols import (
@@ -31,7 +30,12 @@ from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
-from hse_doc_studio.use_cases.template_update.support import ensure_history, lock_for, pre_update_snapshot
+from hse_doc_studio.use_cases.template_update.support import (
+    ensure_history,
+    ensure_no_active_journal,
+    lock_for,
+    pre_update_snapshot,
+)
 from hse_doc_studio.use_cases.template_update.transaction import TemplateUpdateTransaction, now_iso
 
 logger = structlog.get_logger()
@@ -92,13 +96,7 @@ class ApplyTemplateUpdateUC:
             return await asyncio.to_thread(self._apply, project, inp)
 
     def _apply(self, project: Project, inp: ApplyTemplateUpdateInput) -> ApplyTemplateUpdateOutput:
-        if self._journals.get(project.folder) is not None:
-            raise TemplateUpdateInProgressError(
-                localized_error(
-                    "Обновление шаблона этого проекта уже идёт или было прервано.",
-                    "A template update of this project is already running or was interrupted.",
-                )
-            )
+        ensure_no_active_journal(self._journals, project)
         planned = self._planner.plan(project, inp.to_version)
         if planned.plan.fingerprint != inp.fingerprint:
             raise TemplateUpdatePlanOutdatedError(

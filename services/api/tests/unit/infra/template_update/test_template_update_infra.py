@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from dataclasses import replace
 from pathlib import Path
@@ -9,7 +10,12 @@ from pathlib import Path
 import pytest
 from hse_doc_studio.core.catalog import DynamicInclude
 from hse_doc_studio.core.enums import TemplateBaseProvenance, VcsCommitKind
-from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind, TemplateBase
+from hse_doc_studio.core.template_update.entities import (
+    FileWrite,
+    FileWriteKind,
+    TemplateBase,
+    UpdateJournalKind,
+)
 from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE, vcs_exclude_for
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
 from hse_doc_studio.infra.template_update.state import JsonUpdateJournalRepository
@@ -157,6 +163,61 @@ def test__transaction__crash_after_commit_is_finalized(tmp_path: Path) -> None:
     assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "b\n"
     assert store.load(project, "2") is not None
     assert journals.get(tmp_path) is None
+
+
+def test__journal__old_format_without_kind_is_a_template_journal_and_recovers(tmp_path: Path) -> None:
+    project, vcs = _project(tmp_path)
+    transaction, journals = _transaction(vcs)
+    head = GitTemplateBaseStore(vcs).head(project)
+    assert head is not None
+    journal_dir = tmp_path / ".hse-studio" / "update"
+    journal_dir.mkdir(parents=True)
+    # Журнал, записанный Студией до появления kind, merge_parent и sync_id.
+    (journal_dir / "journal.json").write_text(
+        json.dumps(
+            {
+                "id": "old123",
+                "state": "applying",
+                "from_version": "1",
+                "to_version": "2",
+                "pre_commit": head,
+                "base_commit": None,
+                "touched_paths": ["doc/a.tex"],
+                "added_paths": ["doc/c.tex"],
+                "started_at": "2026-10-01T10:00:00+00:00",
+                "reverts": None,
+            }
+        ),
+        encoding="utf-8",
+    )
+    journals.backup(tmp_path, ["doc/a.tex"])
+    (tmp_path / "doc" / "a.tex").write_text("half\n", encoding="utf-8", newline="\n")
+    (tmp_path / "doc" / "c.tex").write_text("added\n", encoding="utf-8", newline="\n")
+
+    journal = journals.get(tmp_path)
+
+    assert journal is not None
+    assert journal.kind == UpdateJournalKind.template
+    assert journal.merge_parent is None
+    assert journal.sync_id is None
+    assert transaction.recover(project, journal) is False
+    assert (tmp_path / "doc" / "a.tex").read_text(encoding="utf-8") == "a\n"
+    assert not (tmp_path / "doc" / "c.tex").exists()
+    assert journals.get(tmp_path) is None
+
+
+def test__journal__template_journal_is_written_with_its_kind(tmp_path: Path) -> None:
+    project, vcs = _project(tmp_path)
+    transaction, journals = _transaction(vcs)
+    head = GitTemplateBaseStore(vcs).head(project)
+    assert head is not None
+    journal = transaction.start_journal(from_version="1", to_version="2", pre_commit=head, base_commit=None)
+
+    journals.save(tmp_path, journal)
+
+    raw = json.loads((tmp_path / ".hse-studio" / "update" / "journal.json").read_text(encoding="utf-8"))
+    assert raw["kind"] == "template"
+    assert journals.get(tmp_path) == journal
 
 
 def test__vcs_exclude_for__covers_dynamic_outputs_in_every_base() -> None:
