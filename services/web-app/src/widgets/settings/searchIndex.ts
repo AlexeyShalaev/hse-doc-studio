@@ -15,6 +15,7 @@
 
 export type SettingsSectionId =
   | "appearance"
+  | "profile"
   | "compiler"
   | "fonts"
   | "checks"
@@ -91,6 +92,48 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "language",
       "локализация",
       "перевод",
+    ],
+  },
+
+  // ── Автор версий ─────────────────────────────────────────────
+  {
+    sectionId: "profile",
+    anchorId: "profile",
+    labelKey: "search.profile",
+    keywords: [
+      "автор",
+      "автор версий",
+      "автор коммитов",
+      "подпись",
+      "профиль",
+      "author",
+      "commit",
+      "profile",
+      "signature",
+      "git",
+      "версии",
+    ],
+  },
+  {
+    sectionId: "profile",
+    anchorId: "profile-name",
+    labelKey: "search.profileName",
+    keywords: ["имя", "фио", "name", "author", "автор", "коммиты"],
+  },
+  {
+    sectionId: "profile",
+    anchorId: "profile-email",
+    labelKey: "search.profileEmail",
+    keywords: [
+      "почта",
+      "e-mail",
+      "email",
+      "mail",
+      "адрес",
+      "noreply",
+      "no-reply",
+      "github",
+      "автор",
     ],
   },
 

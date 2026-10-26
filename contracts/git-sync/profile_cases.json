@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "Общие векторы проверки профиля автора для core/vcs/author (Python) и validateProfile (TypeScript).",
+    "Имя: NFC, подряд идущие пробельные символы сводятся к одному пробелу, края обрезаются. Длина 1..128 символов (кодовых точек). Нельзя < и >, управляющие символы (код меньше 0x20 и 0x7F) и имя, где нет ни одного символа вне набора ' \\t.,:;<>\"\\'\\\\'.",
+    "E-mail: края обрезаются, домен приводится к нижнему регистру, локальная часть как введена. Длина до 254, шаблон ^[^@\\s<>]+@[^@\\s<>]+\\.[^@\\s<>]+$, управляющих символов нет. В домене обязательна точка.",
+    "Порядок проверок: пусто после нормализации (required), длина (too_long), остальное (invalid). Код в ответе 422 собирается как <поле>_<код>: name_required, name_too_long, name_invalid, email_required, email_too_long, email_invalid.",
+    "input может быть объектом {prefix, repeat, times, suffix}: строка prefix + repeat*times + suffix.",
+    "Вектор ok=true несёт normalized, ok=false несёт code."
+  ],
+  "name": [
+    { "name": "кириллица", "input": "Иван Смирнов", "ok": true, "normalized": "Иван Смирнов" },
+    { "name": "края и повторные пробелы", "input": "  Иван   Петров\t", "ok": true, "normalized": "Иван Петров" },
+    { "name": "составная буква сводится к NFC", "input": "Е\u0308лка", "ok": true, "normalized": "Ёлка" },
+    { "name": "одна буква", "input": "Я", "ok": true, "normalized": "Я" },
+    { "name": "точки внутри", "input": "J. R. R. Tolkien", "ok": true, "normalized": "J. R. R. Tolkien" },
+    { "name": "эмодзи считается одним символом", "input": "Иван 🚀", "ok": true, "normalized": "Иван 🚀" },
+    { "name": "ровно 128 символов", "input": { "prefix": "", "repeat": "Я", "times": 128, "suffix": "" }, "ok": true, "normalized": { "prefix": "", "repeat": "Я", "times": 128, "suffix": "" } },
+    { "name": "129 символов", "input": { "prefix": "", "repeat": "Я", "times": 129, "suffix": "" }, "ok": false, "code": "name_too_long" },
+    { "name": "эмодзи подряд считаются по символам", "input": { "prefix": "", "repeat": "🚀", "times": 129, "suffix": "" }, "ok": false, "code": "name_too_long" },
+    { "name": "пусто", "input": "", "ok": false, "code": "name_required" },
+    { "name": "одни пробелы", "input": "   \t ", "ok": false, "code": "name_required" },
+    { "name": "угловые скобки", "input": "Иван <ivan>", "ok": false, "code": "name_invalid" },
+    { "name": "управляющий символ", "input": "Иван\u0007", "ok": false, "code": "name_invalid" },
+    { "name": "нулевой символ", "input": "Иван\u0000Петров", "ok": false, "code": "name_invalid" },
+    { "name": "одни точки", "input": "...", "ok": false, "code": "name_invalid" },
+    { "name": "одна пунктуация и пробелы", "input": " . , ; ", "ok": false, "code": "name_invalid" },
+    { "name": "длина проверяется раньше символов", "input": { "prefix": "<", "repeat": "Я", "times": 128, "suffix": "" }, "ok": false, "code": "name_too_long" }
+  ],
+  "email": [
+    { "name": "обычный адрес", "input": "ivan.smirnov@edu.hse.ru", "ok": true, "normalized": "ivan.smirnov@edu.hse.ru" },
+    { "name": "домен в нижний регистр, локальная часть как есть", "input": "Ivan.Smirnov@EDU.HSE.RU", "ok": true, "normalized": "Ivan.Smirnov@edu.hse.ru" },
+    { "name": "пробелы по краям", "input": "  a@b.ru ", "ok": true, "normalized": "a@b.ru" },
+    { "name": "no-reply GitHub", "input": "123456+ivan@users.noreply.github.com", "ok": true, "normalized": "123456+ivan@users.noreply.github.com" },
+    { "name": "плюс-адрес", "input": "ivan+hse@gmail.com", "ok": true, "normalized": "ivan+hse@gmail.com" },
+    { "name": "кириллический домен", "input": "иван@ПОЧТА.рф", "ok": true, "normalized": "иван@почта.рф" },
+    { "name": "ровно 254 символа", "input": { "prefix": "", "repeat": "a", "times": 249, "suffix": "@b.ru" }, "ok": true, "normalized": { "prefix": "", "repeat": "a", "times": 249, "suffix": "@b.ru" } },
+    { "name": "255 символов", "input": { "prefix": "", "repeat": "a", "times": 250, "suffix": "@b.ru" }, "ok": false, "code": "email_too_long" },
+    { "name": "пусто", "input": "", "ok": false, "code": "email_required" },
+    { "name": "одни пробелы", "input": "  ", "ok": false, "code": "email_required" },
+    { "name": "нет собаки", "input": "ivan.hse.ru", "ok": false, "code": "email_invalid" },
+    { "name": "две собаки", "input": "a@b@c.ru", "ok": false, "code": "email_invalid" },
+    { "name": "домен без точки", "input": "ivan@localhost", "ok": false, "code": "email_invalid" },
+    { "name": "пробел внутри", "input": "iv an@b.ru", "ok": false, "code": "email_invalid" },
+    { "name": "угловые скобки", "input": "<a@b.ru>", "ok": false, "code": "email_invalid" },
+    { "name": "пустая локальная часть", "input": "@b.ru", "ok": false, "code": "email_invalid" },
+    { "name": "пустой домен", "input": "a@", "ok": false, "code": "email_invalid" },
+    { "name": "домен начинается с точки", "input": "a@.ru", "ok": false, "code": "email_invalid" },
+    { "name": "домен кончается точкой", "input": "a@b.", "ok": false, "code": "email_invalid" },
+    { "name": "управляющий символ", "input": "a\u0007@b.ru", "ok": false, "code": "email_invalid" }
+  ]
+}

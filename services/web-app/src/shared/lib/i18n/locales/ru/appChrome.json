@@ -106,6 +106,7 @@
   "settingsPage": {
     "sections": {
       "appearance": "Внешний вид",
+      "profile": "Автор версий",
       "compiler": "Компилятор",
       "fonts": "Шрифты",
       "checks": "Проверки",

@@ -16,6 +16,7 @@ import {
   Sliders,
   Terminal,
   Type,
+  UserRound,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import {
   type SettingSearchEntry,
   type SettingsSectionId,
 } from "@widgets/settings";
+import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
@@ -68,6 +70,12 @@ const SECTIONS: readonly SectionDef[] = [
     group: "general",
     labelKey: "settingsPage.sections.appearance",
     icon: Sliders,
+  },
+  {
+    id: "profile",
+    group: "general",
+    labelKey: "settingsPage.sections.profile",
+    icon: UserRound,
   },
   {
     id: "compiler",
@@ -150,6 +158,8 @@ const renderSection = (id: SettingsSectionId) => {
   switch (id) {
     case "appearance":
       return <AppearanceSection />;
+    case "profile":
+      return <AuthorProfileSection />;
     case "compiler":
       return (
         <>

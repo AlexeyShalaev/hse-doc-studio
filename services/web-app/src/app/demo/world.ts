@@ -116,9 +116,9 @@ export const profileView = (world: DemoWorld): Profile => {
       name: null,
       email: null,
       effective_name: "HSE Doc Studio",
-      effective_email: "studio@localhost",
+      effective_email: "studio@hse-doc-studio.local",
       is_default: true,
-      commit_preview: "HSE Doc Studio <studio@localhost>",
+      commit_preview: "HSE Doc Studio <studio@hse-doc-studio.local>",
     };
   }
   return {

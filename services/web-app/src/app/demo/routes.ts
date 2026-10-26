@@ -16,6 +16,7 @@ import type {
   OperationWarning,
 } from "@entities/git-sync";
 import type { GitCredential } from "@entities/git-remote";
+import { validateProfile, type ProfileIssueCode } from "@entities/profile";
 import { fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
 import {
   applyDrafts,
@@ -1148,23 +1149,20 @@ const globalRoutes: DemoRoute[] = [
     pattern: "/profile",
     handler: (req) => {
       const body = recordBody(req);
-      const name = (str(body.name) ?? "").trim();
-      const email = (str(body.email) ?? "").trim();
-      const issues: { loc: string[]; code: string; msg: string }[] = [];
-      if (name === "")
-        issues.push({
-          loc: ["body", "name"],
-          code: "required",
-          msg: "Имя не заполнено.",
+      const check = validateProfile({
+        name: str(body.name) ?? "",
+        email: str(body.email) ?? "",
+      });
+      if (!check.isValid) {
+        const issues = (["name", "email"] as const).flatMap((field) => {
+          const code = check.issues[field];
+          return code
+            ? [{ loc: ["body", field], code, msg: PROFILE_ISSUE_TEXT[code] }]
+            : [];
         });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        issues.push({
-          loc: ["body", "email"],
-          code: "invalid_email",
-          msg: "Похоже, это не e-mail.",
-        });
+        return { status: 422, data: { detail: issues } };
       }
-      if (issues.length > 0) return { status: 422, data: { detail: issues } };
+      const { name, email } = check;
       world.profile = { name, email };
       clearProfileBlock();
       return demoJson(profileView(world));
@@ -1179,6 +1177,15 @@ const globalRoutes: DemoRoute[] = [
     },
   },
 ];
+
+const PROFILE_ISSUE_TEXT: Record<ProfileIssueCode, string> = {
+  name_required: "Укажи имя: так тебя увидят коллеги.",
+  name_too_long: "Слишком длинное имя: не больше 128 символов.",
+  name_invalid: "В имени нельзя использовать < и >.",
+  email_required: "Укажи e-mail.",
+  email_too_long: "Слишком длинный адрес: не больше 254 символов.",
+  email_invalid: "Укажи адрес вида name@example.com.",
+};
 
 const clearProfileBlock = (): void => {
   for (const project of world.projects.values()) {

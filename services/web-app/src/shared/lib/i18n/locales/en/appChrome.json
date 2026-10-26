@@ -106,6 +106,7 @@
   "settingsPage": {
     "sections": {
       "appearance": "Appearance",
+      "profile": "Version author",
       "compiler": "Compiler",
       "fonts": "Fonts",
       "checks": "Checks",
