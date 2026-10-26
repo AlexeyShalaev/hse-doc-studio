@@ -27,6 +27,9 @@ dependencies = [
     "psutil>=6.0",
 ]
 
+[project.scripts]
+hse-doc-studio = "hse_doc_studio.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["hse_doc_studio"]
 

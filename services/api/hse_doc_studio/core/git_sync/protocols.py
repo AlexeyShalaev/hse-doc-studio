@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.git_sync.ci import CiOptions, RenderedCiFile
 from hse_doc_studio.core.git_sync.entities import (
     AuthorProfile,
     CredentialStatus,
@@ -208,6 +209,12 @@ class IGitBundleService(Protocol):
     def import_bundle(self, project_folder: Path, bundle: Path, *, password: str | None = None) -> str:
         """Кладёт содержимое бандла в `refs/hse/bundle/<ветка>` и возвращает его вершину."""
         ...
+
+
+class ICiRenderer(Protocol):
+    """Файл CI под выбранного провайдера; одинаковые параметры дают одинаковый текст."""
+
+    def render(self, options: CiOptions) -> RenderedCiFile: ...
 
 
 class ILocalAuthorProfile(Protocol):

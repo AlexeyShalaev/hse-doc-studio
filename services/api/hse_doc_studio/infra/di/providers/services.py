@@ -24,7 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
-from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
+from hse_doc_studio.core.git_sync.protocols import ICiRenderer, ILocalAuthorProfile
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -92,6 +92,7 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -681,6 +682,10 @@ class DomainServiceProvider(Provider):
     @provide
     def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
         return ConfigAuthorProfile(settings_repo)
+
+    @provide
+    def get_ci_renderer(self) -> ICiRenderer:
+        return JinjaCiRenderer()
 
     @provide
     def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:

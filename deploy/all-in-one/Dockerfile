@@ -86,6 +86,11 @@ COPY --from=backend-builder /app /app
 # вендоренные msgpack и setuptools дают HIGH-уязвимости в скане образа.
 RUN python -m pip uninstall -y pip
 
+# Команда `hse-doc-studio build` для CI (файлы из Git-настроек проекта). Пакет не установлен,
+# а лежит в /app (PYTHONPATH ниже), поэтому консольный скрипт заменяет обёртка.
+RUN printf '#!/bin/sh\nexec python -m hse_doc_studio.cli "$@"\n' > /usr/local/bin/hse-doc-studio \
+  && chmod 0755 /usr/local/bin/hse-doc-studio
+
 # Frontend built assets served as static files by FastAPI
 COPY --from=frontend-builder --chown=app:app /app/dist /app/static
 
