@@ -7,10 +7,12 @@ from uuid import uuid4
 
 import pytest
 from hse_doc_studio.core.git_sync.entities import (
+    CloneResult,
     GitOperationError,
     OperationKind,
     OperationPhase,
     OperationStatus,
+    SchemaAccess,
     SyncOutcome,
     SyncResult,
 )
@@ -230,3 +232,17 @@ def test__cancel__without_task_or_when_not_cancellable_or_finished__raises(
 
 def test__cancel__unknown_operation__returns_none(registry: InMemoryGitOperationRegistry) -> None:
     assert registry.cancel("op_missing") is None
+
+
+def test__finish__clone_result__operation_learns_the_project_id(
+    registry: InMemoryGitOperationRegistry, tmp_path: Path
+) -> None:
+    op = registry.begin(OperationKind.clone, project_id=None, folder=tmp_path)
+    project_id = uuid4()
+
+    registry.finish(op.id, result=CloneResult(project_id, str(tmp_path), SchemaAccess.full))
+
+    finished = registry.get(op.id)
+    assert finished is not None
+    assert finished.project_id == project_id
+    assert registry.is_busy(tmp_path) is False

@@ -280,8 +280,12 @@ class GitVcsService:
 
     def write_remote_config(self, project: Project, config: StoreRemoteConfig) -> None:
         """Записывает адрес и привязку в config хранилища; секретов здесь нет и быть не должно."""
-        if not self.is_initialized(project):
-            raise VcsNotInitializedError(str(project.folder))
+        self.write_remote_config_at(project.folder, config)
+
+    def write_remote_config_at(self, folder: Path, config: StoreRemoteConfig) -> None:
+        """То же по папке: при клонировании проект ещё нельзя собрать (его схема может быть новее нашей)."""
+        if not (store_git_dir(folder) / "HEAD").exists():
+            raise VcsNotInitializedError(str(folder))
         values = {
             _KEY_URL: config.url,
             _KEY_CREDENTIAL: str(config.credential_id) if config.credential_id else None,
@@ -290,9 +294,9 @@ class GitVcsService:
         }
         for key, value in values.items():
             if value is None:
-                self._config(project, ["--unset-all", key])
+                self._config_at(folder, ["--unset-all", key])
             else:
-                self._config(project, ["--replace-all", key, value], check=True)
+                self._config_at(folder, ["--replace-all", key, value], check=True)
 
     def clear_remote_config(self, project: Project) -> None:
         for section in ("remote.origin", "hse"):
@@ -303,11 +307,14 @@ class GitVcsService:
     def _config(
         self, project: Project, args: Sequence[str], *, check: bool = False
     ) -> subprocess.CompletedProcess[str]:
-        cmd = ["git", "config", "--file", str(self.git_dir(project) / "config"), *args]
+        return self._config_at(project.folder, args, check=check)
+
+    def _config_at(self, folder: Path, args: Sequence[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+        cmd = ["git", "config", "--file", str(store_git_dir(folder) / "config"), *args]
         try:
             proc = subprocess.run(  # noqa: S603
                 cmd,
-                cwd=str(project.folder),
+                cwd=str(folder),
                 capture_output=True,
                 text=True,
                 check=False,

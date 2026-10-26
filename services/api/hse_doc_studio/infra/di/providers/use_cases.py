@@ -27,6 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
+    IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
     IGitOperationRegistry,
@@ -269,6 +270,7 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
 from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
+from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectUC, GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.connect_remote import ConnectRemoteUC, DisconnectRemoteUC
 
 # --- Git sync ---
@@ -1614,6 +1616,44 @@ class UseCaseProvider(Provider):
         status_builder: GitStatusBuilder,
     ) -> UpdateGitSettingsUC:
         return UpdateGitSettingsUC(project_repo, project_index_repo, store_remotes, state_repo, status_builder)
+
+    @provide
+    def get_clone_git_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        base_service: TemplateBaseService,
+        clone_store: IGitCloneStore,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        transport: IGitTransport,
+        credentials: IGitCredentialRepository,
+        profile: ILocalAuthorProfile,
+        operations: IGitOperationRegistry,
+        registry: IGitRemoteRegistry,
+        policy: GitSyncPolicy,
+    ) -> CloneProjectUC:
+        return CloneProjectUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            template_repo=template_repo,
+            base_service=base_service,
+            clone_store=clone_store,
+            state_repo=state_repo,
+            reader=reader,
+            transport=transport,
+            credentials=credentials,
+            profile=profile,
+            operations=operations,
+            registry=registry,
+            policy=policy,
+            clone_timeout_s=settings.git.clone_timeout_s,
+        )
+
+    @provide
+    def get_git_clone_defaults_uc(self, project_index_repo: IProjectIndexRepository) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", project_index_repo)
 
     @provide
     def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:

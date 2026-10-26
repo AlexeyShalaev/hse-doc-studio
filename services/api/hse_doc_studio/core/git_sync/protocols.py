@@ -363,6 +363,24 @@ class IGitStoreRemotes(Protocol):
     def drop_tracking_refs(self, project: Project) -> None: ...
 
 
+class IGitCloneStore(Protocol):
+    """Хранилище нового проекта, которое клонирование собирает в пустой папке; проект ещё не зарегистрирован."""
+
+    def init(self, folder: Path, branch: str) -> None:
+        """Пустое хранилище на ветке `branch` без корневого коммита."""
+        ...
+
+    def write_exclude(self, folder: Path, patterns: Sequence[str]) -> None:
+        """Исключения хранилища: пишутся до checkout, иначе служебные файлы попадут в рабочее дерево как новые."""
+        ...
+
+    def checkout(self, folder: Path, branch: str) -> None:
+        """Рабочее дерево и индекс по `refs/remotes/origin/<branch>`; локальная ветка получает то же имя."""
+        ...
+
+    def write_remote(self, folder: Path, config: StoreRemoteConfig) -> None: ...
+
+
 @dataclass(frozen=True)
 class SharedFolderInfo:
     provider: str

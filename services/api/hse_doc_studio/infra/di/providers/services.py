@@ -27,6 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICiRenderer,
+    IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
     IGitOperationRegistry,
@@ -118,6 +119,7 @@ from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
+from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
@@ -829,6 +831,12 @@ class DomainServiceProvider(Provider):
         if not isinstance(vcs_service, GitVcsService):
             raise TypeError("git remotes need the git VCS service")
         return GitStoreRemotes(vcs_service, store_git)
+
+    @provide
+    def get_git_clone_store(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitCloneStore:
+        if not isinstance(vcs_service, GitVcsService):
+            raise TypeError("git clone needs the git VCS service")
+        return GitCloneStore(vcs_service, store_git)
 
     @provide
     def get_vcs_service(self, local_profile: ILocalAuthorProfile) -> IVcsService:

@@ -104,6 +104,9 @@ class InMemoryGitOperationRegistry:
             op = entry.operation
             op.status = status
             op.result = result
+            if isinstance(result, CloneResult):
+                # Клонирование знает идентификатор проекта только в конце: до этого проекта у Студии не было.
+                op.project_id = result.project_id
             op.error = error
             op.cancellable = False
             op.percent = None

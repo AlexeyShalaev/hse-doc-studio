@@ -78,6 +78,14 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "В репозитории лежит другой проект или у него нет общей истории с этим",
         "The repository holds another project or has no history in common with this one",
     ),
+    GitErrorCode.project_exists: (
+        "Такой проект уже есть в Студии",
+        "This project is already in the Studio",
+    ),
+    GitErrorCode.folder_not_empty: (
+        "Папка не подходит для нового проекта: она не пуста, лежит внутри другого проекта или уже занята",
+        "The folder cannot hold a new project: it is not empty, is inside another project or is already in use",
+    ),
     GitErrorCode.off_branch: (
         "Проект стоит не на той ветке, которая синхронизируется",
         "The project is not on the branch that is being synchronized",
