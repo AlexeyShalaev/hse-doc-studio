@@ -26,6 +26,8 @@ type SyncUiState = {
   connectDialog: { mode: ConnectDialogMode } | null;
   // Окно обмена файлом (bundle): открывают со страницы истории и из настроек.
   bundleDialogOpen: boolean;
+  // Окно «Представься»: имя и e-mail автора нужны до первой синхронизации.
+  profileDialogOpen: boolean;
   command: SyncCommand | null;
   // Для каждого проекта: идентификатор последней синхронизации, о которой уже
   // сообщили тостом. Состояние сервера помнит итог и после перезагрузки страницы,
@@ -40,6 +42,8 @@ type SyncUiActions = {
   closeConnectDialog: () => void;
   openBundleDialog: () => void;
   closeBundleDialog: () => void;
+  openProfileDialog: () => void;
+  closeProfileDialog: () => void;
   requestCommand: (kind: SyncCommandKind) => void;
   // Снимает команду из очереди; id нужен, чтобы не снять чужую, пришедшую позже.
   consumeCommand: (id: number) => void;
@@ -84,6 +88,7 @@ export const useSyncUiStore = create<SyncUiState & SyncUiActions>()(
       popoverOpen: false,
       connectDialog: null,
       bundleDialogOpen: false,
+      profileDialogOpen: false,
       command: null,
       toastedSyncIds: {},
       setPopoverOpen: (open) => {
@@ -103,6 +108,12 @@ export const useSyncUiStore = create<SyncUiState & SyncUiActions>()(
       },
       closeBundleDialog: () => {
         set({ bundleDialogOpen: false });
+      },
+      openProfileDialog: () => {
+        set({ profileDialogOpen: true, popoverOpen: false });
+      },
+      closeProfileDialog: () => {
+        set({ profileDialogOpen: false });
       },
       requestCommand: (kind) => {
         commandSeq += 1;

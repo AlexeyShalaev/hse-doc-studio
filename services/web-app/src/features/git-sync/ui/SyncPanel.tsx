@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import { useIsMutating } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  AUTHOR_PROFILE_PATH,
   describeGitError,
   gitConflictsPath,
   gitSyncMutationKeys,
@@ -105,7 +104,7 @@ export const SyncPanel = ({
         void navigate(gitSettingsPath(projectId));
       }}
       onOpenProfile={() => {
-        void navigate(AUTHOR_PROFILE_PATH);
+        useSyncUiStore.getState().openProfileDialog();
       }}
       onAcknowledgeSharedFolder={() => {
         updateSettings.mutate(

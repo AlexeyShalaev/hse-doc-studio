@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import { useAppSettings } from "@entities/app-settings";
 import { useCredentials, type GitCredential } from "@entities/git-remote";
 import {
-  AUTHOR_PROFILE_PATH,
   GIT_ACCESS_PATH,
   gitConflictsPath,
   gitErrorMessage,
@@ -239,7 +238,6 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
 const BlockedNotice = ({ status }: { status: SyncStatusView }) => {
   const { t } = useTranslation("gitRemote");
   const { t: tSync } = useTranslation("gitSync");
-  const navigate = useNavigate();
   const blocked = status.blocked;
   if (!blocked) return null;
   const text =
@@ -259,7 +257,7 @@ const BlockedNotice = ({ status }: { status: SyncStatusView }) => {
             type="button"
             className="btn xs"
             onClick={() => {
-              void navigate(AUTHOR_PROFILE_PATH);
+              useSyncUiStore.getState().openProfileDialog();
             }}
           >
             {t("settings.remote.setProfile")}

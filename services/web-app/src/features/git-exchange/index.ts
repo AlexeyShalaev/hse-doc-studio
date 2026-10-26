@@ -2,6 +2,8 @@ export { BundleExportDialog } from "./ui/BundleExportDialog";
 export type { BundleExportDialogProps } from "./ui/BundleExportDialog";
 export { BundleImportDialog } from "./ui/BundleImportDialog";
 export type { BundleImportDialogProps } from "./ui/BundleImportDialog";
+export { BundleExchangeDialog } from "./ui/BundleExchangeDialog";
+export type { BundleExchangeDialogProps } from "./ui/BundleExchangeDialog";
 export { CiGeneratorDialog } from "./ui/CiGeneratorDialog";
 export type { CiGeneratorDialogProps } from "./ui/CiGeneratorDialog";
 export { CiCard } from "./ui/CiCard";

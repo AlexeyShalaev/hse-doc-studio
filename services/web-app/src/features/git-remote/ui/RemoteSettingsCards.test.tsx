@@ -273,7 +273,7 @@ describe("карточка репозитория в настройках про
     ).toBeDisabled();
   });
 
-  it("при отсутствии автора ведёт в настройки профиля", async () => {
+  it("при отсутствии автора просит открыть окно «Представься»", async () => {
     const user = userEvent.setup();
     renderSettings(<RemoteConnectionCard projectId={PROJECT_ID} />, {
       status: connected({
@@ -282,9 +282,7 @@ describe("карточка репозитория в настройках про
       }),
     });
     await user.click(screen.getByRole("button", { name: "Указать автора" }));
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      "/settings/profile",
-    );
+    expect(useSyncUiStore.getState().profileDialogOpen).toBe(true);
   });
 
   it("отказ входа показывает причину и ведёт к замене доступа", async () => {

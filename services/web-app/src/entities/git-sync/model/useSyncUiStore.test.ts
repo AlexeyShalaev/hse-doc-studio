@@ -114,3 +114,23 @@ describe("useSyncUiStore bundle dialog", () => {
     expect(stored).not.toContain("bundleDialogOpen");
   });
 });
+
+describe("useSyncUiStore profile dialog", () => {
+  beforeEach(() => {
+    useSyncUiStore.setState({ popoverOpen: true, profileDialogOpen: false });
+  });
+
+  it("opens the profile dialog, closing the popover, and closes it again", () => {
+    useSyncUiStore.getState().openProfileDialog();
+    expect(useSyncUiStore.getState().profileDialogOpen).toBe(true);
+    expect(useSyncUiStore.getState().popoverOpen).toBe(false);
+    useSyncUiStore.getState().closeProfileDialog();
+    expect(useSyncUiStore.getState().profileDialogOpen).toBe(false);
+  });
+
+  it("does not persist the dialog state", () => {
+    useSyncUiStore.getState().openProfileDialog();
+    const stored = localStorage.getItem("hse-studio.gitSyncUi") ?? "";
+    expect(stored).not.toContain("profileDialogOpen");
+  });
+});

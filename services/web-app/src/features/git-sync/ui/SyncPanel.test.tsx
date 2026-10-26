@@ -88,6 +88,20 @@ describe("SyncPanel", () => {
     expect(useSyncUiStore.getState().command?.kind).toBe("check");
   });
 
+  it("asks to open the author dialog when the profile is missing", async () => {
+    const user = userEvent.setup();
+    mount(
+      connected({
+        ui_state: "blocked",
+        blocked: { reason: "profile_required", required_studio: null },
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Указать автора" }),
+    );
+    expect(useSyncUiStore.getState().profileDialogOpen).toBe(true);
+  });
+
   it("opens the access dialog and navigates to settings and conflicts", async () => {
     const user = userEvent.setup();
     const view = mount(

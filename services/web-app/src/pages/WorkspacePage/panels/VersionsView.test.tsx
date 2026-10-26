@@ -190,6 +190,7 @@ describe("VersionsView", () => {
     useSyncUiStore.setState({
       connectDialog: null,
       bundleDialogOpen: false,
+      profileDialogOpen: false,
       command: null,
     });
     Element.prototype.scrollIntoView = vi.fn();

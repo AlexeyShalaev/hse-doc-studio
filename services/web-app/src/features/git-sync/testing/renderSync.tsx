@@ -56,6 +56,7 @@ export const resetSyncEnvironment = async (): Promise<void> => {
     popoverOpen: false,
     connectDialog: null,
     bundleDialogOpen: false,
+    profileDialogOpen: false,
     command: null,
     toastedSyncIds: {},
   });

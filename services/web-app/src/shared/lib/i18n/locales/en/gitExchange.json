@@ -47,6 +47,9 @@
       "action": "Set up automatic builds…"
     }
   },
+  "dialog": {
+    "title": "File exchange"
+  },
   "export": {
     "title": "Export the project to a file",
     "description": "One file with the project and its whole version history.",

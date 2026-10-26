@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
-  AUTHOR_PROFILE_PATH,
   gitHistoryPath,
   gitSettingsPath,
   useSyncUiStore,
@@ -125,9 +124,9 @@ export const SyncControl = ({ projectId }: SyncControlProps) => {
             onOpenHistory={closeThen(() => {
               void navigate(gitHistoryPath(projectId));
             })}
-            onOpenProfile={closeThen(() => {
-              void navigate(AUTHOR_PROFILE_PATH);
-            })}
+            onOpenProfile={() => {
+              useSyncUiStore.getState().openProfileDialog();
+            }}
           />
         </PopoverContent>
       </Popover>
