@@ -5,6 +5,7 @@ import type {
   ConflictSession,
   FileResolution,
 } from "@entities/git-sync";
+import { diffHunks, diffLines } from "@shared/lib";
 import { DAY, HOUR, fakeSha, isoAgo } from "./clock";
 import { ME, TEAMMATES } from "./people";
 
@@ -193,6 +194,26 @@ const appendixDetail: ConflictFileDetail = {
   deleted_by: "theirs",
 };
 
+const frozenDetail: ConflictFileDetail = {
+  kind: "binary",
+  ours: { exists: true, size: 96_400, author: ME.name, at: isoAgo(3 * HOUR) },
+  theirs: { exists: true, size: 97_120, author: ANNA, at: isoAgo(4 * HOUR) },
+  newer: "ours",
+  copy_path: null,
+};
+
+const caseDetail: ConflictFileDetail = {
+  kind: "text",
+  eol: "lf",
+  truncated: false,
+  segments: [
+    {
+      type: "clean",
+      lines: ["\\section*{Приложение Б}", "Таблицы с результатами замеров."],
+    },
+  ],
+};
+
 const side = (
   exists: boolean,
   size: number | null,
@@ -281,6 +302,31 @@ const FILES: ConflictFile[] = [
     },
   }),
   file({
+    path: ".hse-studio/frozen/coursework.pdf",
+    kind: "binary",
+    conflict_type: "signature_group",
+    allowed: ["mine", "theirs"],
+    owner: ME.name,
+    doc_id: "coursework",
+    sides: {
+      ours: side(true, 96_400, ME.name, 3 * HOUR),
+      theirs: side(true, 97_120, ANNA, 4 * HOUR),
+      base: side(true, 90_000, ME.name, 4 * DAY),
+    },
+  }),
+  file({
+    path: "chapters/Appendix-B.tex",
+    kind: "text",
+    conflict_type: "case_collision",
+    allowed: ["mine", "theirs"],
+    owner: ANNA,
+    sides: {
+      ours: side(true, 1_480, ME.name, 7 * HOUR),
+      theirs: side(true, 1_520, ANNA, 6 * HOUR),
+      base: side(false, null, null, null),
+    },
+  }),
+  file({
     path: "references.bib",
     kind: "text",
     action: "merged",
@@ -355,7 +401,17 @@ export const buildConflictSession = (): DemoConflictSession => {
       },
       unresolved: conflicts,
       drafts_saved_at: null,
-      warnings: [{ code: "signatures_stale", paths: ["signatures.json"] }],
+      warnings: [
+        {
+          code: "template_missing_after_merge",
+          paths: [".hse-studio/project.json"],
+        },
+        { code: "signatures_stale", paths: ["signatures.json"] },
+        {
+          code: "unsafe_path",
+          paths: ["../outside.tex", ".git/hooks/post-merge"],
+        },
+      ],
       files,
     },
     details: {
@@ -363,6 +419,8 @@ export const buildConflictSession = (): DemoConflictSession => {
       ".hse-studio/forms/title-page.json": formDetail,
       "images/architecture.png": imageDetail,
       "chapters/appendix.tex": appendixDetail,
+      ".hse-studio/frozen/coursework.pdf": frozenDetail,
+      "chapters/Appendix-B.tex": caseDetail,
     },
     drafts: {},
   };
@@ -404,7 +462,70 @@ export const openConflictPaths = (state: DemoConflictSession): string[] =>
 
 // --- diff -------------------------------------------------------------------------
 
-const patchFor = (path: string, view: "ours" | "theirs" | "result"): string => {
+// --- итог слияния для diff ---------------------------------------------------------
+
+// main.tex, как он получится при выборе пользователя: нерешённое остаётся моим.
+const composeMainTex = (draft?: FileResolution): string => {
+  if (draft?.kind === "text") return draft.content;
+  const chosen = draft?.kind === "hunks" ? draft.hunks : {};
+  const lines: string[] = [];
+  for (const segment of mainTexDetail.segments) {
+    if (segment.type === "clean") {
+      lines.push(...segment.lines);
+      continue;
+    }
+    const choice = chosen[segment.key];
+    switch (choice?.choice) {
+      case "theirs":
+        lines.push(...segment.theirs);
+        break;
+      case "both":
+        lines.push(...segment.ours, ...segment.theirs);
+        break;
+      case "both_reverse":
+        lines.push(...segment.theirs, ...segment.ours);
+        break;
+      case "base":
+        lines.push(...segment.base);
+        break;
+      case "custom":
+        lines.push(...(choice.text ?? "").split("\n"));
+        break;
+      default:
+        lines.push(...segment.ours);
+    }
+  }
+  return lines.join("\n");
+};
+
+const unifiedPatch = (path: string, before: string, after: string): string => {
+  const hunks = diffHunks(diffLines(before, after), 3);
+  if (hunks.length === 0) return "";
+  const out = [`--- a/${path}`, `+++ b/${path}`];
+  for (const hunk of hunks) {
+    const oldLines = hunk.filter((l) => l.kind !== "add");
+    const newLines = hunk.filter((l) => l.kind !== "del");
+    const oldStart = oldLines[0]?.leftNo ?? 1;
+    const newStart = newLines[0]?.rightNo ?? 1;
+    out.push(
+      `@@ -${String(oldStart)},${String(oldLines.length)} +${String(newStart)},${String(newLines.length)} @@`,
+    );
+    for (const line of hunk) {
+      const sign = line.kind === "add" ? "+" : line.kind === "del" ? "-" : " ";
+      out.push(`${sign}${line.text}`);
+    }
+  }
+  return out.join("\n");
+};
+
+const resultPatch = (draft?: FileResolution): string =>
+  unifiedPatch("main.tex", composeMainTex(), composeMainTex(draft));
+
+const patchFor = (
+  path: string,
+  view: "ours" | "theirs" | "result",
+  draft?: FileResolution,
+): string => {
   if (path === "main.tex") {
     if (view === "ours") {
       return [
@@ -438,14 +559,7 @@ const patchFor = (path: string, view: "ours" | "theirs" | "result"): string => {
         "+  \\item провести пользовательское тестирование.",
       ].join("\n");
     }
-    return [
-      "--- a/main.tex",
-      "+++ b/main.tex",
-      "@@ -9,2 +9,2 @@",
-      " Целью работы является разработка клиент-серверного приложения для",
-      "-синхронизации учебных документов между участниками команды.",
-      "+совместной работы над документами по ГОСТ.",
-    ].join("\n");
+    return resultPatch(draft);
   }
   if (path.endsWith(".json")) {
     return [
@@ -475,15 +589,13 @@ const patchFor = (path: string, view: "ours" | "theirs" | "result"): string => {
 export const conflictDiff = (
   path: string,
   view: "ours" | "theirs" | "result",
-): ConflictDiff => {
-  const patch = patchFor(path, view);
-  return {
-    path,
-    binary: patch === "",
-    patch,
-    truncated: false,
-  };
-};
+  draft?: FileResolution,
+): ConflictDiff => ({
+  path,
+  binary: /\.(png|jpe?g|gif|pdf)$/i.test(path),
+  patch: patchFor(path, view, draft),
+  truncated: false,
+});
 
 // Содержимое файла для просмотра. Картинки — маленький SVG под нужным именем:
 // браузер показывает его так же, как настоящий файл.

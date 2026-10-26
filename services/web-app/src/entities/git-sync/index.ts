@@ -20,6 +20,7 @@ export {
   SYNC_STATUS_IDLE_POLL_MS,
   SYNC_STATUS_STALE_MS,
   gitSyncKeys,
+  gitSyncMutationKeys,
   invalidateAfterSync,
   syncStatusRefetchInterval,
   useAbortConflicts,

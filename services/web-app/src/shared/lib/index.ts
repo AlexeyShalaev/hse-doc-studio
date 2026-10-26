@@ -7,6 +7,8 @@ export { formatBytes } from "./formatBytes";
 export { formatFileSize } from "./formatFileSize";
 export { downloadBlob } from "./downloadBlob";
 
+export { useDebouncedValue } from "./useDebouncedValue";
+
 export { diffHunks, diffLines } from "./lineDiff";
 export type { DiffLine, DiffLineKind } from "./lineDiff";
 

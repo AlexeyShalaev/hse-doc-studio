@@ -94,3 +94,23 @@ describe("useSyncUiStore with blocked storage", () => {
     }
   });
 });
+
+describe("useSyncUiStore bundle dialog", () => {
+  beforeEach(() => {
+    useSyncUiStore.setState({ popoverOpen: true, bundleDialogOpen: false });
+  });
+
+  it("opens the bundle dialog, closing the popover, and closes it again", () => {
+    useSyncUiStore.getState().openBundleDialog();
+    expect(useSyncUiStore.getState().bundleDialogOpen).toBe(true);
+    expect(useSyncUiStore.getState().popoverOpen).toBe(false);
+    useSyncUiStore.getState().closeBundleDialog();
+    expect(useSyncUiStore.getState().bundleDialogOpen).toBe(false);
+  });
+
+  it("does not persist the dialog state", () => {
+    useSyncUiStore.getState().openBundleDialog();
+    const stored = localStorage.getItem("hse-studio.gitSyncUi") ?? "";
+    expect(stored).not.toContain("bundleDialogOpen");
+  });
+});

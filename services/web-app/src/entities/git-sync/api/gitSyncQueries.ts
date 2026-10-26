@@ -33,6 +33,13 @@ export const SYNC_STATUS_IDLE_POLL_MS = 30_000;
 export const SYNC_STATUS_ACTIVE_POLL_MS = 1_000;
 export const SYNC_STATUS_STALE_MS = 5_000;
 
+// Ключи мутаций: по ним любой экран видит, что проверка или запуск уже идут,
+// даже если их начал другой компонент (заголовок окна, панель на странице).
+export const gitSyncMutationKeys = {
+  fetch: ["git-sync", "mutation", "fetch"] as const,
+  start: ["git-sync", "mutation", "start"] as const,
+};
+
 export const gitSyncKeys = {
   all: ["git-sync"] as const,
   project: (projectId: string) => [...gitSyncKeys.all, projectId] as const,
@@ -118,6 +125,7 @@ const setStatus = (
 export const useFetchRemote = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: gitSyncMutationKeys.fetch,
     mutationFn: (projectId: string) => gitSyncApi.fetchRemote(projectId),
     onSuccess: (status, projectId) => {
       setStatus(queryClient, projectId, status);
@@ -134,6 +142,7 @@ export const useFetchRemote = () => {
 export const useStartSync = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: gitSyncMutationKeys.start,
     mutationFn: (projectId: string) => gitSyncApi.startSync(projectId),
     onSettled: (_data, _error, projectId) => {
       // В состоянии теперь есть операция: опрос ускорится сам.
@@ -318,9 +327,12 @@ export const useSaveConflictDraft = () => {
       resolutions: Record<string, FileResolution>;
     }) => gitSyncApi.saveConflictDraft(projectId, resolutions),
     onSuccess: (_, { projectId }) => {
-      // Счётчики открытых мест и итоговый diff зависят от черновика.
+      // Счётчики мест в сеансе зависят от черновика. Подробности файлов и
+      // картинки от него не зависят, а итоговый дифф ключуется отметкой
+      // сохранения: их перечитывать при каждом щелчке незачем.
       void queryClient.invalidateQueries({
         queryKey: gitSyncKeys.conflicts(projectId),
+        exact: true,
       });
     },
   });

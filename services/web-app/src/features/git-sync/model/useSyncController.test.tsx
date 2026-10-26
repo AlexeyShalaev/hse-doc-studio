@@ -524,6 +524,57 @@ describe("useSyncController", () => {
     expect(useSyncUiStore.getState().command).toBeNull();
   });
 
+  it("a run request starts the sync even where the primary action would only open details", async () => {
+    const start = vi
+      .spyOn(gitSyncApi, "startSync")
+      .mockResolvedValue({ operation_id: "op-run" });
+    vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+      operation({ id: "op-run", status: "running", result: null }),
+    );
+    const { result } = setup(
+      connected({
+        ui_state: "error",
+        health: "error",
+        last_error: {
+          code: "git_error",
+          detail: "boom",
+          at: "2026-10-26T10:00:00Z",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(result.current.controller.ui.visible).toBe(true);
+    });
+    expect(result.current.controller.ui.primary).toBe("details");
+    act(() => {
+      useSyncUiStore.getState().requestCommand("run");
+    });
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+    expect(useSyncUiStore.getState().popoverOpen).toBe(false);
+  });
+
+  it("a run request opens the popover when syncing is not possible", async () => {
+    const start = vi.spyOn(gitSyncApi, "startSync");
+    const { result } = setup(
+      connected({
+        ui_state: "blocked",
+        blocked: { reason: "off_branch", required_studio: null },
+      }),
+    );
+    await waitFor(() => {
+      expect(result.current.controller.ui.visible).toBe(true);
+    });
+    act(() => {
+      useSyncUiStore.getState().requestCommand("run");
+    });
+    await waitFor(() => {
+      expect(useSyncUiStore.getState().popoverOpen).toBe(true);
+    });
+    expect(start).not.toHaveBeenCalled();
+  });
+
   it("a request for a sync in a project without a remote opens the connect dialog", async () => {
     const { result } = setup({
       ...connected(),

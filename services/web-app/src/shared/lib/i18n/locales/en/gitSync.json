@@ -297,5 +297,32 @@
   "statusBar": {
     "name": "Sync. {{status}}",
     "notConnected": "not connected"
+  },
+  "panel": {
+    "empty": {
+      "title": "This project lives only on this computer",
+      "text": "Connect a GitHub or GitLab repository or your own server to work on the project together: your versions go there, your colleague's changes come to you.",
+      "bundle": "Exchange a file",
+      "bundleHint": "No repository needed: hand the project over as a single file and get one back."
+    },
+    "profileRequired": "To connect a repository, first set your author name and e-mail: they sign your versions.",
+    "sharedFolder": "The project folder is inside a cloud drive ({{provider}}). If the drive syncs both the project files and the hidden history folder, the history can get corrupted.",
+    "sharedFolderAck": "Got it",
+    "stats": {
+      "incoming": "Received from the repository",
+      "outgoing": "Not sent",
+      "checked": "Last check",
+      "synced": "Last sync",
+      "incomingFiles_one": "{{count}} file changed",
+      "incomingFiles_other": "{{count}} files changed",
+      "outgoingHint": "not in the repository yet",
+      "nothing": "nothing new",
+      "never": "not yet",
+      "autoOn": "auto-check is on",
+      "autoOff": "auto-check is off"
+    },
+    "showIncoming": "Show in the feed below",
+    "showOutgoing": "Show in the feed below",
+    "bundleLink": "Hand the project over as a file"
   }
 }

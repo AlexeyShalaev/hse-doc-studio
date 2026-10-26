@@ -577,13 +577,13 @@ describe("demo conflicts", () => {
     expect(SyncResultSchema.parse(done.result).outcome).toBe("conflicts");
     const after = await status();
     expect(after.ui_state).toBe("conflicts");
-    expect(after.pending?.files_open).toBe(4);
+    expect(after.pending?.files_open).toBe(6);
     const session = await parsed(
       call("GET", conflictsPath),
       ConflictSessionSchema,
     );
-    expect(session.counts).toEqual({ conflict: 4, auto: 4, total: 8 });
-    expect(session.unresolved).toBe(4);
+    expect(session.counts).toEqual({ conflict: 6, auto: 4, total: 10 });
+    expect(session.unresolved).toBe(6);
   });
 
   it("serves a detail for every conflict kind and a diff for each view", async () => {
@@ -637,7 +637,7 @@ describe("demo conflicts", () => {
     );
     expect(unresolved.status).toBe(422);
     expect(unresolved.body.code).toBe("unresolved_conflicts");
-    expect(unresolved.body.paths).toHaveLength(4);
+    expect(unresolved.body.paths).toHaveLength(6);
 
     const outdated = await errorOf(
       call("POST", `${conflictsPath}/resolve`, {
@@ -670,6 +670,8 @@ describe("demo conflicts", () => {
       ".hse-studio/forms/title-page.json": { kind: "file", choice: "mine" },
       "images/architecture.png": { kind: "file", choice: "newest" },
       "chapters/appendix.tex": { kind: "file", choice: "mine" },
+      ".hse-studio/frozen/coursework.pdf": { kind: "file", choice: "theirs" },
+      "chapters/Appendix-B.tex": { kind: "file", choice: "mine" },
     };
     const started = await parsed(
       call("POST", `${conflictsPath}/resolve`, {
@@ -1027,6 +1029,59 @@ describe("demo history enrichment", () => {
       "compile",
       "edit",
     ]);
+  });
+});
+
+describe("demo history without a backend", () => {
+  const down = () => Promise.reject(new Error("no backend"));
+
+  it("makes up a history with sync, merge and template-update rows", async () => {
+    resetWorld("ahead");
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+    });
+    const commits = res.data as {
+      kind: string;
+      sync: string | null;
+      is_merge: boolean;
+    }[];
+    const kinds = new Set(commits.map((c) => c.kind));
+    expect(kinds).toContain("sync");
+    expect(kinds).toContain("template_update");
+    expect(kinds).toContain("manual");
+    expect(commits.some((c) => c.is_merge)).toBe(true);
+    expect(commits.some((c) => c.sync === "unpushed")).toBe(true);
+    expect(commits.some((c) => c.sync === "pushed")).toBe(true);
+  });
+
+  it("gives known people their profile e-mail so that Only mine matches", async () => {
+    resetWorld("ahead");
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { author_email: "ivan.smirnov@edu.hse.ru" },
+    });
+    const commits = res.data as { author: string }[];
+    expect(commits.length).toBeGreaterThan(0);
+    expect(commits.every((c) => c.author === "Иван Смирнов")).toBe(true);
+  });
+
+  it("filters by the date window", async () => {
+    resetWorld("ahead");
+    const since = new Date(Date.now() - 36 * 3_600_000).toISOString();
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { since },
+    });
+    const commits = res.data as { created_at: string }[];
+    expect(commits.length).toBeGreaterThan(0);
+    expect(
+      commits.every((c) => Date.parse(c.created_at) >= Date.parse(since)),
+    ).toBe(true);
+    const old = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { until: since },
+    });
+    expect((old.data as unknown[]).length).toBeGreaterThan(0);
   });
 });
 

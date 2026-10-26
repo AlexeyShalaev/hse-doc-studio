@@ -7,7 +7,19 @@
     "files_one": "{{count}} файл",
     "files_few": "{{count}} файла",
     "files_many": "{{count}} файлов",
-    "files_other": "{{count}} файлов"
+    "files_other": "{{count}} файлов",
+    "restoreIncoming": "Эта версия пришла из репозитория и ещё не у тебя. Сначала синхронизируй проект.",
+    "showMore": "Показать ещё",
+    "merge_one": "Слияние: {{count}} файл",
+    "merge_few": "Слияние: {{count}} файла",
+    "merge_many": "Слияние: {{count}} файлов",
+    "merge_other": "Слияние: {{count}} файлов",
+    "mergePlain": "Слияние",
+    "sync": {
+      "pushed": "Уже в репозитории",
+      "unpushed": "Ждёт отправки",
+      "incoming": "Получено от {{author}}"
+    }
   },
   "filters": {
     "searchPlaceholder": "Поиск по изменениям…",
@@ -25,7 +37,28 @@
     "changes_one": "{{count}} изменение",
     "changes_few": "{{count}} изменения",
     "changes_many": "{{count}} изменений",
-    "changes_other": "{{count}} изменений"
+    "changes_other": "{{count}} изменений",
+    "searchLabel": "Поиск по изменениям",
+    "authorLabel": "Автор",
+    "dateLabel": "Период",
+    "rangeFromLabel": "Начало периода",
+    "rangeToLabel": "Конец периода",
+    "kindLabel": "Вид изменения",
+    "kindHint": "Вид записи, который Студия ставит на каждую версию",
+    "syncLabel": "Отправка",
+    "sync": {
+      "all": "Все",
+      "unpushed": "Не отправлены",
+      "incoming": "Пришли от коллег"
+    },
+    "found_one": "Найдена {{count}} запись",
+    "found_few": "Найдено {{count}} записи",
+    "found_many": "Найдено {{count}} записей",
+    "found_other": "Найдено {{count}} записей",
+    "foundMore_one": "Показана {{count}} запись, есть ещё",
+    "foundMore_few": "Показано {{count}} записи, есть ещё",
+    "foundMore_many": "Показано {{count}} записей, есть ещё",
+    "foundMore_other": "Показано {{count}} записей, есть ещё"
   },
   "changedFiles": {
     "searchPlaceholder": "Поиск по файлам…",

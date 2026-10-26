@@ -261,7 +261,14 @@
     "noChanges": "No changes yet.",
     "noMatch": "Nothing matched the selected filters.",
     "whatChanged": "What changed",
-    "historySettings": "History settings"
+    "historySettings": "History settings",
+    "kindTemplateUpdate": "Template updates",
+    "kindSync": "Merges",
+    "kindOther": "Other",
+    "authorAll": "All authors",
+    "authorMine": "Only mine",
+    "syncTitle": "Sync",
+    "incomingChanges": "What changed in the incoming version"
   },
   "form": {
     "subtitle": "The form fields are defined by the template pack. The document is generated automatically from your answers.",

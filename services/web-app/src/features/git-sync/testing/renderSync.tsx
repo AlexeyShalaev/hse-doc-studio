@@ -55,6 +55,7 @@ export const resetSyncEnvironment = async (): Promise<void> => {
   useSyncUiStore.setState({
     popoverOpen: false,
     connectDialog: null,
+    bundleDialogOpen: false,
     command: null,
     toastedSyncIds: {},
   });

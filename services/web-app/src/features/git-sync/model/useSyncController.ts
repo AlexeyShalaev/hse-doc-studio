@@ -318,6 +318,11 @@ export const useSyncController = (projectId: string): SyncController => {
     // Команда пришла снаружи (палитра, клавиши), а выполнение меняет состояние
     // экрана: откладываем его из тела эффекта.
     queueMicrotask(() => {
+      if (command.kind === "run") {
+        if (ui.canSync) void run();
+        else openPopover();
+        return;
+      }
       if (command.kind === "check") {
         if (ui.canCheck) void check();
         else openPopover();
@@ -325,7 +330,7 @@ export const useSyncController = (projectId: string): SyncController => {
       }
       runPrimary(ui.primary);
     });
-  }, [check, command, openPopover, runPrimary, ui]);
+  }, [check, command, openPopover, run, runPrimary, ui]);
 
   return {
     ...view,
