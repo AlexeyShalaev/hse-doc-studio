@@ -17,12 +17,12 @@ from tests.unit.core.jobs.samples import (
     make_office_payload,
     make_office_result,
     make_office_spec,
-    make_verify_payload,
-    make_verify_result,
-    make_verify_spec,
     make_pack_payload,
     make_pack_result,
     make_pack_spec,
+    make_verify_payload,
+    make_verify_result,
+    make_verify_spec,
 )
 
 # Образцы для каждого вида: новый вид нельзя добавить, не дописав образец сюда.
