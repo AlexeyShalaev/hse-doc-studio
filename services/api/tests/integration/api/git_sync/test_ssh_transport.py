@@ -231,7 +231,7 @@ async def test__probe__cancelled_while_ssh_hangs__key_file_removed_and_ssh_kille
 async def test__probe__hanging_ssh_hits_the_timeout__key_file_removed(ssh_stack: SshStack, tmp_path: Path) -> None:
     ssh_stack.trust()
     ssh_stack.ssh.mode("hang")
-    ssh_stack.config.probe_timeout_s = 1
+    ssh_stack.config.probe_timeout_s = 3
     probe = await ssh_stack.transport.probe(_target(ssh_stack.add_key()))
 
     assert probe.error is not None
