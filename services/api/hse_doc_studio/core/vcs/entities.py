@@ -8,6 +8,14 @@ from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsTagKind
 
 
 @dataclass(frozen=True)
+class VcsAuthor:
+    """Имя и e-mail, под которыми git подписывает коммит и аннотированный тег."""
+
+    name: str
+    email: str
+
+
+@dataclass(frozen=True)
 class VcsCommitStats:
     files: int
     insertions: int
