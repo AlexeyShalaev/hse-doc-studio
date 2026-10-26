@@ -19,6 +19,7 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.use_cases.documents.upload_custom_file import UploadCustomFileInput, UploadCustomFileUC
+from structlog.testing import capture_logs
 
 from tests.factories import make_document, make_document_definition, make_project, make_template_version
 
@@ -162,3 +163,34 @@ async def test__upload_custom_file__backslash_in_name__upload_ok_without_preview
     assert h.dispatcher.run_specs == []
     h.file_repo.write.assert_called_once()
     h.project_repo.save.assert_called_once()
+
+
+async def test__upload_custom_file__preview_write_failed__logs_pdf_path_and_detail_like_before(tmp_path) -> None:
+    h = Harness(tmp_path)
+    h.dispatcher.result = JobResult(
+        status=JobStatus.succeeded,
+        data=OfficeConvertResult(
+            status=OfficeConvertStatus.unavailable, reason_code="write_failed", detail="disk full"
+        ),
+    )
+
+    with capture_logs() as logs:
+        await h.upload("ТЗ.docx")
+
+    event = next(e for e in logs if e["event"] == "upload_custom_file: preview write failed")
+    assert event["path"] == str(tmp_path / "tz/_custom/ТЗ.pdf")
+    assert event["exc"] == "disk full"
+
+
+async def test__upload_custom_file__conversion_job_failed__logs_error_detail_as_exc(tmp_path) -> None:
+    h = Harness(tmp_path)
+    h.dispatcher.result = JobResult(
+        status=JobStatus.failed, error=JobError(JobErrorCategory.internal, "handler_crashed", "converter exploded")
+    )
+
+    with capture_logs() as logs:
+        await h.upload("ТЗ.docx")
+
+    event = next(e for e in logs if e["event"] == "upload_custom_file: preview conversion failed")
+    assert event["path"] == "tz/_custom/ТЗ.docx"
+    assert event["exc"] == "converter exploded"

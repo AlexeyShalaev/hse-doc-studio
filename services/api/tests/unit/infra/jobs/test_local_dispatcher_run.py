@@ -19,7 +19,7 @@ from hse_doc_studio.core.jobs.protocols import JobContext
 from hse_doc_studio.core.jobs.registry import JobKindSpec, job_kind_spec
 from hse_doc_studio.infra.jobs import local_dispatcher
 
-from tests.unit.core.jobs.samples import JOB_ID, make_compile_spec, make_office_spec
+from tests.unit.core.jobs.samples import JOB_ID, make_compile_spec, make_office_spec, make_pack_spec
 from tests.unit.infra.jobs.dispatcher_helpers import FakeOfficeHandler, Rig, make_rig, wait_until
 
 _REQUEST_ID: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="none")
@@ -215,6 +215,29 @@ async def test__dispatcher_run__does_not_touch_compile_registry_or_has_any_activ
     await rig.dispatcher.run(_spec(tmp_path))
 
     assert flags == [False, False, False, False]
+
+
+async def test__dispatcher_run__pack_in_flight__counts_as_active_and_blocks_folder_ops(tmp_path: Path) -> None:
+    flags: list[bool] = []
+    rig = make_rig()
+
+    async def body(payload: JobPayload, ctx: JobContext) -> JobResultData:
+        flags.extend(
+            [
+                rig.dispatcher.has_any_active(),
+                rig.dispatcher.has_active_for_folder(tmp_path),
+                rig.dispatcher.has_active_for_folder(tmp_path / "other"),
+            ]
+        )
+        return _OK
+
+    rig.handlers.register(JobKind.pack_submission, FakeOfficeHandler(body))
+
+    await rig.dispatcher.run(make_pack_spec(local_root=tmp_path))
+
+    assert flags == [True, True, False]
+    assert not rig.dispatcher.has_any_active()
+    assert not rig.dispatcher.has_active_for_folder(tmp_path)
 
 
 async def test__dispatcher_run__unknown_handler__clear_error(tmp_path: Path) -> None:

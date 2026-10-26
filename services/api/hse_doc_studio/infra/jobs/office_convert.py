@@ -55,7 +55,9 @@ async def convert_office_to_sibling(  # noqa: PLR0913
         return OfficeConvertResult(status=OfficeConvertStatus.unavailable, reason_code=REASON_CONVERTER_UNAVAILABLE)
     try:
         output = await asyncio.to_thread(outputs.write_output, workspace, output_path, pdf_bytes)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
+        # ValueError: путь не прошел проверку выходов (обратный слэш в имени, символьная
+        # ссылка наружу). Превью best-effort: сборка и загрузка от этого не падают.
         return OfficeConvertResult(
             status=OfficeConvertStatus.unavailable, reason_code=REASON_WRITE_FAILED, detail=str(exc)
         )

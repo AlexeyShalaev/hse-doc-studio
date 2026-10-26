@@ -93,11 +93,11 @@ def test__registry__office_convert_policy__awaitable_detachable_idempotent_not_c
     assert policy.embedded_concurrency is None
 
 
-def test__registry__pack_submission_policy__awaitable_one_at_a_time_not_idempotent() -> None:
+def test__registry__pack_submission_policy__awaitable_one_at_a_time_not_idempotent_active_and_blocks_folder() -> None:
     policy = job_kind_spec(JobKind.pack_submission).policy
 
     assert (policy.awaitable, policy.detachable, policy.idempotent) == (True, False, False)
-    assert (policy.streams_log, policy.counts_as_active, policy.blocks_folder_ops) == (False, False, False)
+    assert (policy.streams_log, policy.counts_as_active, policy.blocks_folder_ops) == (False, True, True)
     assert policy.embedded_concurrency == 1
 
 

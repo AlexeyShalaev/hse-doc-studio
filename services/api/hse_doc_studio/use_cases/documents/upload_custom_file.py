@@ -217,6 +217,7 @@ class UploadCustomFileUC:
             logger.warning(
                 "upload_custom_file: preview conversion failed",
                 path=stored_path,
+                exc=job.error.detail if job.error is not None else str(job.status),
                 status=str(job.status),
                 error=job.error.code if job.error is not None else None,
             )
@@ -224,6 +225,11 @@ class UploadCustomFileUC:
         result = job.data_as(OfficeConvertResult)
         if result.status is not OfficeConvertStatus.ok:
             if result.detail:
-                logger.warning("upload_custom_file: preview write failed", path=stored_path, exc=result.detail)
+                # Поля как до диспетчера: путь записываемого PDF, а не исходника.
+                logger.warning(
+                    "upload_custom_file: preview write failed",
+                    path=str(project_folder / sibling_pdf_path(stored_path)),
+                    exc=result.detail,
+                )
             return False
         return True

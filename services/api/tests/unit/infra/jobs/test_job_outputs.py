@@ -90,3 +90,37 @@ def test__describe__existing_file__sha_and_size(tmp_path: Path) -> None:
 def test__describe__missing_file__file_not_found(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         LocalJobOutputs().describe(tmp_path, "none.bin")
+
+
+@pytest.mark.unit
+def test__write_output__long_target_name__temp_name_does_not_grow_with_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    name = "я" * 113 + ".pdf"  # 230 байт: допустимое имя, но имя вида ".<имя>.<uuid>.tmp" не влезло бы в 255
+    seen: list[int] = []
+    real_replace = outputs_module.os.replace
+
+    def spy(src: str, dst: str) -> None:
+        seen.append(len(Path(src).name.encode()))
+        real_replace(src, dst)
+
+    monkeypatch.setattr(outputs_module.os, "replace", spy)
+
+    LocalJobOutputs().write_output(tmp_path, name, b"x")
+
+    assert (tmp_path / name).read_bytes() == b"x"
+    assert seen
+    assert seen[0] < 64
+
+
+@pytest.mark.unit
+def test__write_output__os_error__names_the_target_not_the_temp_file(tmp_path: Path) -> None:
+    (tmp_path / "out").mkdir()
+    (tmp_path / "out").chmod(0o500)
+    try:
+        with pytest.raises(PermissionError) as raised:
+            LocalJobOutputs().write_output(tmp_path, "out/a.pdf", b"x")
+    finally:
+        (tmp_path / "out").chmod(0o700)
+
+    assert raised.value.filename == str(tmp_path.resolve() / "out" / "a.pdf")

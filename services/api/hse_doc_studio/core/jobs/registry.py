@@ -46,7 +46,9 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
             payload_cls=PackSubmissionPayload,
             result_cls=PackResult,
             # Один пакет за раз: так было неявно, и глобальный реестр шрифтов reportlab не гоняется.
-            policy=JobKindPolicy(awaitable=True, embedded_concurrency=1),
+            # Работа идет в потоке, цикл свободен, поэтому перенос проекта и самообновление
+            # должны видеть идущую сборку: раньше их не пускала синхронность populate_dir.
+            policy=JobKindPolicy(awaitable=True, embedded_concurrency=1, counts_as_active=True, blocks_folder_ops=True),
         ),
     )
 

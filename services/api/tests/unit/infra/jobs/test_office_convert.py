@@ -122,6 +122,33 @@ async def test__convert_office_to_sibling__write_oserror__unavailable_with_detai
 
 
 @pytest.mark.unit
+async def test__convert_office_to_sibling__symlink_dir_outside_workspace__write_failed_not_raised(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (workspace / "slides").symlink_to(outside, target_is_directory=True)
+
+    result = await _convert(_converter(b"%PDF"), workspace, source="slides/a.pptx", output="slides/a.pdf")
+
+    assert result.status is OfficeConvertStatus.unavailable
+    assert result.reason_code == REASON_WRITE_FAILED
+    assert "escapes" in result.detail
+    assert list(outside.iterdir()) == []
+
+
+@pytest.mark.unit
+async def test__convert_office_to_sibling__backslash_in_name__write_failed_not_raised(tmp_path: Path) -> None:
+    result = await _convert(_converter(b"%PDF"), tmp_path, source="custom/my\\deck.pptx", output="custom/my\\deck.pdf")
+
+    assert result.status is OfficeConvertStatus.unavailable
+    assert result.reason_code == REASON_WRITE_FAILED
+    assert "backslash" in result.detail
+
+
+@pytest.mark.unit
 async def test__convert_office_to_sibling__converter_raises__propagates(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="boom"):
         await _convert(_converter(RuntimeError("boom")), tmp_path)
