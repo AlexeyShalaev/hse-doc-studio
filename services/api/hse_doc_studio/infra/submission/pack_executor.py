@@ -28,6 +28,7 @@ SUBMISSIONS_DIR = "submissions"
 # Причины в PackSkip, которые ставит исполнитель.
 REASON_ARCNAME_ESCAPES = "arcname_escapes"
 REASON_WRITE_FAILED = "write_failed"
+REASON_SOURCE_ESCAPES = "source_escapes"
 
 _EXTERNAL_TIMEOUT_SEC = 120.0
 
@@ -102,13 +103,25 @@ def _contained(base: Path, rel: str) -> Path | None:
     return candidate
 
 
+class SourceEscapesError(OSError):
+    """Исходник записи лежит вне рабочей папки (например, символьная ссылка наружу)."""
+
+
+def resolve_source(workspace: Path, rel: str) -> Path:
+    """Путь исходника под ``workspace``; символьная ссылка наружу не пускается."""
+    path = _contained(workspace, rel)
+    if path is None:
+        raise SourceEscapesError(f"source escapes the workspace: {rel!r}")
+    return path
+
+
 def stamp_from_spec(spec: StampSpec, workspace: Path) -> Stamp:
     return Stamp(
         page=spec.page,
         x_mm=spec.x_mm,
         y_mm=spec.y_mm,
         width_mm=spec.width_mm,
-        png_path=workspace / spec.png.path if spec.png is not None else None,
+        png_path=resolve_source(workspace, spec.png.path) if spec.png is not None else None,
         aspect_ratio=spec.aspect_ratio,
         text=spec.text,
         details=spec.details,
@@ -138,7 +151,8 @@ class PackExecutor:
         """Создает папку пакета и применяет записи по порядку.
 
         Запись, выходящая за папку, и запись с ошибкой записи пропускаются: в лог и в
-        `skipped`, остальные продолжают. Ошибки штампера, не связанные с диском, идут наверх.
+        `skipped`, остальные продолжают, кроме критичных записей (`critical`): их сбой
+        записи идет наверх. Ошибки штампера, не связанные с диском, тоже идут наверх.
         """
         folder = workspace / SUBMISSIONS_DIR / payload.base_name
         folder.mkdir(parents=True, exist_ok=True)
@@ -147,29 +161,44 @@ class PackExecutor:
         for entry in payload.entries:
             target = _contained(folder, entry.arcname)
             if target is None:
-                logger.warning("pack_executor: entry escapes folder", arcname=entry.arcname)
+                logger.warning("assembler: doc output_name escapes folder", arcname=entry.arcname)
                 skipped.append(PackSkip(arcname=entry.arcname, reason=REASON_ARCNAME_ESCAPES))
                 continue
             try:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 self._apply(entry, target, workspace)
             except OSError as exc:
-                logger.warning("pack_executor: error adding entry", arcname=entry.arcname, exc=str(exc))
-                skipped.append(PackSkip(arcname=entry.arcname, reason=REASON_WRITE_FAILED, detail=str(exc)))
+                logger.warning(
+                    "assembler: error adding doc", source=self._source_for_log(entry, workspace), exc=str(exc)
+                )
+                if entry.critical:
+                    # Замороженный PDF и подписи нельзя терять молча: запрос падает, как и раньше.
+                    raise
+                reason = REASON_SOURCE_ESCAPES if isinstance(exc, SourceEscapesError) else REASON_WRITE_FAILED
+                skipped.append(PackSkip(arcname=entry.arcname, reason=reason, detail=str(exc)))
                 continue
             written.append(entry.arcname)
-            logger.debug("pack_executor: added entry", kind=entry.kind, arcname=entry.arcname)
+            logger.debug(
+                "assembler: added doc",
+                source=self._source_for_log(entry, workspace),
+                arcname=entry.arcname,
+                stamps=len(entry.stamps),
+            )
         return ExecutedPack(folder=folder, written=tuple(written), skipped=tuple(skipped))
+
+    @staticmethod
+    def _source_for_log(entry: PackEntry, workspace: Path) -> str:
+        return str(workspace / entry.source.path) if entry.source is not None else entry.arcname
 
     def _apply(self, entry: PackEntry, target: Path, workspace: Path) -> None:
         match entry.kind:
             case PackEntryKind.copy:
                 assert entry.source is not None  # noqa: S101 — инвариант PackEntry
-                shutil.copyfile(workspace / entry.source.path, target)
+                shutil.copyfile(resolve_source(workspace, entry.source.path), target)
             case PackEntryKind.stamp_pdf:
                 assert entry.source is not None  # noqa: S101 — инвариант PackEntry
                 stamps = [stamp_from_spec(spec, workspace) for spec in entry.stamps]
-                self._pdf_stamper.stamp(workspace / entry.source.path, target, stamps)
+                self._pdf_stamper.stamp(resolve_source(workspace, entry.source.path), target, stamps)
             case PackEntryKind.text:
                 assert entry.text is not None  # noqa: S101 — инвариант PackEntry
                 target.write_text(entry.text, encoding="utf-8")

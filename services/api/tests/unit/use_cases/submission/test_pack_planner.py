@@ -565,6 +565,7 @@ def test__pack_planner__detached__frozen_sigs_keys_readme_entries() -> None:
         (PackEntryKind.text, "ТЗ.README.txt"),
     ]
     frozen_entry, sig_entry, key_entry, readme_entry = entries
+    assert all(e.critical for e in entries)
     assert frozen_entry.source == ManifestFile(".hse-studio/frozen/tz.pdf", sha256=_sha(_FROZEN), size=len(_FROZEN))
     assert sig_entry.source == ManifestFile(".hse-studio/signatures/tz.advisor.asc")
     assert key_entry.blob is not None

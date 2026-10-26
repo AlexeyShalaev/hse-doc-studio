@@ -18,6 +18,7 @@ from hse_doc_studio.core.jobs.pack import (
 )
 from hse_doc_studio.infra.submission.pack_executor import (
     REASON_ARCNAME_ESCAPES,
+    REASON_SOURCE_ESCAPES,
     REASON_WRITE_FAILED,
     PackExecutor,
     archive_ext,
@@ -219,3 +220,60 @@ def test__pack_executor__archive_catalog__ids_exts_and_native_available() -> Non
     assert catalog["zip"]["available"] is True
     with pytest.raises(ValueError, match="Unknown archive format"):
         archive_ext("bogus")
+
+
+@pytest.mark.unit
+def test__pack_executor__symlink_source_outside_workspace__skipped_not_copied(tmp_path: Path) -> None:
+    outside = tmp_path / "outside.txt"
+    outside.write_text("SECRET", encoding="utf-8")
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "e.txt").symlink_to(outside)
+    payload = _payload(PackEntry(PackEntryKind.copy, "e.txt", source=ManifestFile("e.txt")))
+
+    executed = PackExecutor().execute(workspace, payload)
+
+    assert executed.written == ()
+    assert [(s.arcname, s.reason) for s in executed.skipped] == [("e.txt", REASON_SOURCE_ESCAPES)]
+    assert not (executed.folder / "e.txt").exists()
+
+
+@pytest.mark.unit
+def test__pack_executor__symlink_stamp_png_outside_workspace__skipped(tmp_path: Path) -> None:
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"png")
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "doc.pdf").write_bytes(_pdf())
+    (workspace / "sig.png").symlink_to(outside)
+    stamp = StampSpec(page=1, x_mm=20, y_mm=30, width_mm=60, png=ManifestFile("sig.png"), aspect_ratio=0.4)
+    payload = _payload(PackEntry(PackEntryKind.stamp_pdf, "doc.pdf", source=ManifestFile("doc.pdf"), stamps=(stamp,)))
+
+    executed = PackExecutor().execute(workspace, payload)
+
+    assert [(s.arcname, s.reason) for s in executed.skipped] == [("doc.pdf", REASON_SOURCE_ESCAPES)]
+
+
+@pytest.mark.unit
+def test__pack_executor__critical_entry_unreadable__raises_instead_of_skipping(tmp_path: Path) -> None:
+    (tmp_path / "doc.pdf.sig").write_bytes(b"sig")
+    (tmp_path / "doc.pdf.sig").chmod(0)
+    payload = _payload(PackEntry(PackEntryKind.copy, "doc.pdf.sig", source=ManifestFile("doc.pdf.sig"), critical=True))
+    try:
+        with pytest.raises(PermissionError):
+            PackExecutor().execute(tmp_path, payload)
+    finally:
+        (tmp_path / "doc.pdf.sig").chmod(0o600)
+
+
+@pytest.mark.unit
+def test__pack_executor__noncritical_entry_unreadable__skipped_as_before(tmp_path: Path) -> None:
+    (tmp_path / "a.txt").write_bytes(b"a")
+    (tmp_path / "a.txt").chmod(0)
+    payload = _payload(PackEntry(PackEntryKind.copy, "a.txt", source=ManifestFile("a.txt")))
+    try:
+        executed = PackExecutor().execute(tmp_path, payload)
+    finally:
+        (tmp_path / "a.txt").chmod(0o600)
+
+    assert [(s.arcname, s.reason) for s in executed.skipped] == [("a.txt", REASON_WRITE_FAILED)]

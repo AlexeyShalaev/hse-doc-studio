@@ -109,7 +109,7 @@ def _contained(rel: str) -> str | None:
     """Путь внутри корня (архива или проекта) в нормальной форме; None, если он выходит наружу.
 
     Лексическая проверка: `a/../b` сворачивается в `b`, `../x`, абсолютные пути
-    и обратные слеши отвергаются. Символьные ссылки проверяет сам probe.
+    и обратные слеши отвергаются. Символьные ссылки проверяет сам probe (цель за пределами проекта для него не файл).
     """
     norm = posixpath.normpath(rel)
     if norm == ".":
@@ -168,7 +168,7 @@ class _Run:
     warnings: list[PackSkip] = field(default_factory=list)
 
     def warn(self, event: str, name: str, reason: str, detail: str = "", **log: str) -> None:
-        logger.warning(f"pack_planner: {event}", **log)
+        logger.warning(f"assembler: {event}", **log)
         self.warnings.append(PackSkip(arcname=name, reason=reason, detail=detail))
 
     def add_doc(self, item: SubmissionDocItem) -> None:  # noqa: C901
@@ -279,7 +279,7 @@ class _Run:
             preview_rel = sibling_pdf_path(custom_file.stored_path)
             if self.probe.is_file(preview_rel):
                 return preview_rel, True
-            logger.warning("pack_planner: custom doc conversion unavailable, including raw file", doc_id=doc.id)
+            logger.warning("assembler: custom doc conversion unavailable, including raw file", doc_id=doc.id)
         return custom_file.stored_path, False
 
     def _add_frozen_doc(
@@ -299,7 +299,10 @@ class _Run:
                 "Freeze it again and re-attach the signatures"
             )
         frozen_entry = PackEntry(
-            PackEntryKind.copy, arcname, source=ManifestFile(frozen_rel, sha256=frozen.sha256, size=frozen.size)
+            PackEntryKind.copy,
+            arcname,
+            source=ManifestFile(frozen_rel, sha256=frozen.sha256, size=frozen.size),
+            critical=True,
         )
         entries = [frozen_entry]
         pdf_name = PurePosixPath(arcname).name
@@ -313,7 +316,9 @@ class _Run:
             rslot = self.slot_service.find_runtime_slot(self.project, self.version, slot_id)
             label = (rslot.label.get(self.lang) or rslot.label.get("ru") or slot_id) if rslot else slot_id
             sig_name = signature_arcname(pdf_name, label, PurePosixPath(sig_rel).suffix)
-            entries.append(PackEntry(PackEntryKind.copy, str(parent / sig_name), source=ManifestFile(sig_rel)))
+            entries.append(
+                PackEntry(PackEntryKind.copy, str(parent / sig_name), source=ManifestFile(sig_rel), critical=True)
+            )
             sigs.append(
                 PackageSignature(
                     slot_label=label,
@@ -326,10 +331,12 @@ class _Run:
 
         keys = public_key_files(self.key_exporter.export_public, sigs) if self.key_exporter is not None else {}
         for name, blob in keys.items():
-            entries.append(PackEntry(PackEntryKind.blob, str(parent / name), blob=InlineBlob.from_bytes(blob)))
+            entries.append(
+                PackEntry(PackEntryKind.blob, str(parent / name), blob=InlineBlob.from_bytes(blob), critical=True)
+            )
         readme_name = f"{PurePosixPath(pdf_name).stem}.README.txt"
         readme = build_readme(self.lang, pdf_name, frozen.sha256, sigs, list(keys))
-        entries.append(PackEntry(PackEntryKind.text, str(parent / readme_name), text=readme))
+        entries.append(PackEntry(PackEntryKind.text, str(parent / readme_name), text=readme, critical=True))
         self.entries.extend(entries)
 
     def add_extra(self, extra: ExtraSubmissionItem) -> None:

@@ -38,14 +38,26 @@ class FsProjectFileProbe:
         base = self._root if not prefix else self._contained(prefix)
         if base is None or not base.is_dir():
             return ()
-        return tuple(sorted(p.relative_to(self._root).as_posix() for p in base.rglob("*") if p.is_file()))
+        return tuple(
+            sorted(
+                p.relative_to(self._root).as_posix() for p in base.rglob("*") if p.is_file() and self._inside_root(p)
+            )
+        )
+
+    def _inside_root(self, target: Path) -> bool:
+        """Цель внутри корня после раскрытия символьных ссылок: ссылка наружу файлом проекта не считается."""
+        try:
+            return target.resolve().is_relative_to(self._root.resolve())
+        except (OSError, ValueError):
+            return False
 
     def _contained(self, path: str) -> Path | None:
         try:
             validate_relative_posix(path)
         except ValueError:
             return None
-        return self._root / path
+        target = self._root / path
+        return target if self._inside_root(target) else None
 
     def _existing(self, path: str) -> Path:
         target = self._contained(path)

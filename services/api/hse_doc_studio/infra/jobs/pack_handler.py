@@ -14,13 +14,20 @@ from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.pack import PackResult, PackSkip, PackSubmissionPayload
 from hse_doc_studio.core.jobs.protocols import JobContext
-from hse_doc_studio.infra.submission.pack_executor import SUBMISSIONS_DIR, PackExecutor, archive_ext
+from hse_doc_studio.infra.submission.pack_executor import (
+    SUBMISSIONS_DIR,
+    PackExecutor,
+    SourceEscapesError,
+    archive_ext,
+    resolve_source,
+)
 
 logger = structlog.get_logger()
 
 CODE_ARCHIVE_FAILED = "archive_failed"
 CODE_MANIFEST_MISMATCH = "manifest_mismatch"
 CODE_MANIFEST_FILE_MISSING = "manifest_file_missing"
+CODE_INVALID_ENTRY = "invalid_entry"
 
 
 def _file_sha256(path: Path) -> str:
@@ -65,7 +72,13 @@ class PackHandler:
         workspace = ctx.workspace
         if payload.verify_manifest:
             self._verify_manifest(payload, workspace)
-        executed = self._executor.execute(workspace, payload)
+        try:
+            executed = self._executor.execute(workspace, payload)
+        except ValueError as exc:
+            # Недопустимое имя записи (NUL, лишний символ) это ошибка входа, а не падение обработчика:
+            # так же, как раньше, запрос получает 400, а не 500. Недоделанную папку убираем.
+            shutil.rmtree(self._archive_base(payload, workspace), ignore_errors=True)
+            raise JobFailure.of(JobErrorCategory.invalid_input, CODE_INVALID_ENTRY, str(exc)) from exc
         try:
             self._executor.create_archive(
                 executed.folder, self._archive_base(payload, workspace), payload.archive_format.value
@@ -85,7 +98,10 @@ class PackHandler:
         for file in payload.manifest_files():
             if file.sha256 is None:
                 continue
-            path = workspace / file.path
+            try:
+                path = resolve_source(workspace, file.path)
+            except SourceEscapesError:
+                raise JobFailure.of(JobErrorCategory.invalid_input, CODE_MANIFEST_FILE_MISSING, file.path) from None
             if not path.is_file():
                 raise JobFailure.of(JobErrorCategory.invalid_input, CODE_MANIFEST_FILE_MISSING, file.path)
             if _file_sha256(path) != file.sha256:

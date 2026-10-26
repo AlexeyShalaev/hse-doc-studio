@@ -54,3 +54,43 @@ def test__fs_file_probe_factory__binds_probe_to_root(tmp_path) -> None:
     probe = FsProjectFileProbeFactory().for_root(_project(tmp_path))
 
     assert probe.is_file("top.txt") is True
+
+
+def _with_outside_links(tmp_path) -> tuple[Path, Path]:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("SECRET", encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "link.txt").symlink_to(outside / "secret.txt")
+    (project / "dirlink").symlink_to(outside, target_is_directory=True)
+    (project / "inner.txt").write_text("ok", encoding="utf-8")
+    (project / "inner-link.txt").symlink_to(project / "inner.txt")
+    return project, outside
+
+
+def test__fs_file_probe__symlink_to_file_outside_project__not_a_file_and_reads_refused(tmp_path) -> None:
+    project, _ = _with_outside_links(tmp_path)
+    probe = FsProjectFileProbe(project)
+
+    assert probe.is_file("link.txt") is False
+    assert probe.is_file("dirlink/secret.txt") is False
+    for read in (probe.read_text, probe.read_bytes, probe.sha256, probe.size):
+        with pytest.raises(ValueError, match="project-relative"):
+            read("link.txt")
+
+
+def test__fs_file_probe__symlink_staying_inside_project__still_a_file(tmp_path) -> None:
+    project, _ = _with_outside_links(tmp_path)
+    probe = FsProjectFileProbe(project)
+
+    assert probe.is_file("inner-link.txt") is True
+    assert probe.read_text("inner-link.txt") == "ok"
+
+
+def test__fs_file_probe__list_files__skips_links_leading_outside(tmp_path) -> None:
+    project, _ = _with_outside_links(tmp_path)
+    probe = FsProjectFileProbe(project)
+
+    assert probe.list_files() == ("inner-link.txt", "inner.txt")
+    assert probe.list_files("dirlink") == ()

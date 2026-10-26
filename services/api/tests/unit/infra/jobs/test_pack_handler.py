@@ -271,3 +271,35 @@ async def test__pack_handler__caller_cancelled__artifacts_removed_after_thread_s
     assert executor.settled.is_set()
     assert not (tmp_path / "submissions" / _BASE).exists()
     assert not (tmp_path / "submissions" / f"{_BASE}.zip").exists()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name", ["a\x00b.txt", "a\ud800b.txt"])
+def test__pack_handler__unwritable_entry_name__invalid_input_failure_and_no_leftover_folder(
+    tmp_path: Path, name: str
+) -> None:
+    payload = _payload(PackEntry(PackEntryKind.text, name, text="x"))
+
+    with pytest.raises(JobFailure) as raised:
+        PackHandler()._build(payload, _ctx(tmp_path))
+
+    assert raised.value.error.category is JobErrorCategory.invalid_input
+    assert not (tmp_path / "submissions" / _BASE).exists()
+
+
+@pytest.mark.unit
+def test__pack_handler__manifest_symlink_outside_workspace__file_missing_failure(tmp_path: Path) -> None:
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"secret")
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / "e.txt").symlink_to(outside)
+    payload = _payload(
+        PackEntry(PackEntryKind.copy, "e.txt", source=ManifestFile("e.txt", sha256=_sha(b"secret"))),
+        verify_manifest=True,
+    )
+
+    with pytest.raises(JobFailure) as raised:
+        PackHandler()._build(payload, _ctx(workspace))
+
+    assert raised.value.error.code == CODE_MANIFEST_FILE_MISSING

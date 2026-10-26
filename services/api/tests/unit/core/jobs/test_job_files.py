@@ -12,7 +12,9 @@ def test__manifest_file__project_relative_posix__accepted(path: str) -> None:
     assert ManifestFile(path).path == path
 
 
-@pytest.mark.parametrize("path", ["", "/etc/passwd", "../x", "a/../../x", "a/..", "a\\b.pdf", "..\\x"])
+@pytest.mark.parametrize(
+    "path", ["", "/etc/passwd", "../x", "a/../../x", "a/..", "a\\b.pdf", "..\\x", "C:/x", "c:x", "D:\\x"]
+)
 def test__manifest_file__absolute_dotdot_backslash_or_empty__rejected(path: str) -> None:
     with pytest.raises(ValueError, match="path"):
         ManifestFile(path)

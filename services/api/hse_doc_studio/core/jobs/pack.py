@@ -50,6 +50,9 @@ class PackEntry:
     stamps: tuple[StampSpec, ...] = ()
     text: str | None = None
     blob: InlineBlob | None = None
+    # Запись, без которой пакет теряет смысл (замороженный PDF и его подписи): сбой записи
+    # такой записи роняет сборку, а не пропускает её.
+    critical: bool = False
 
     def __post_init__(self) -> None:
         validate_relative_posix(self.arcname)

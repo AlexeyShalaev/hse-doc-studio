@@ -18,7 +18,12 @@ from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory, ManifestFile
-from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertReason
+from hse_doc_studio.core.jobs.office import (
+    OfficeConvertPayload,
+    OfficeConvertReason,
+    OfficeConvertResult,
+    OfficeConvertStatus,
+)
 from hse_doc_studio.core.jobs.pack import PackResult
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.office import ConvertRequest, custom_docs_to_convert
@@ -384,7 +389,16 @@ class CreateSubmissionUC:
                 "create_submission: custom doc conversion failed",
                 doc_id=request.doc_id,
                 status=str(job.status),
+                exc=job.error.detail if job.error is not None else str(job.status),
                 error=job.error.code if job.error is not None else None,
+            )
+            return
+        result = job.data_as(OfficeConvertResult)
+        if result.status is not OfficeConvertStatus.ok and result.detail:
+            logger.warning(
+                "assembler: custom doc preview write failed",
+                path=str(project_folder / request.output_path),
+                exc=result.detail,
             )
 
     def _remember_custom_doc_decisions(self, project_folder: Path, decisions: dict[str, bool]) -> None:

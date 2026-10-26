@@ -28,6 +28,7 @@ from hse_doc_studio.use_cases.submission.create_submission import (
     _form_id_for_extra,
 )
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
+from structlog.testing import capture_logs
 
 from tests.factories import make_custom_file_override, make_document, make_project, make_template_version
 
@@ -173,6 +174,24 @@ async def test__create_submission__custom_docx_decision_true__office_job_runs_be
         reason=OfficeConvertReason.package,
     )
     assert set(h.probes.roots) == {tmp_path}
+
+
+async def test__create_submission__preview_write_failed__logs_pdf_path_and_detail_as_before(tmp_path) -> None:
+    h = Harness(tmp_path, [_doc("tz", ".docx")], {"tz/_custom/tz.docx"})
+    h.dispatcher.result = JobResult(
+        status=JobStatus.succeeded,
+        data=OfficeConvertResult(
+            status=OfficeConvertStatus.unavailable, reason_code="write_failed", detail="disk full"
+        ),
+    )
+
+    with capture_logs() as logs:
+        await h.create({"tz": True})
+
+    event = next(e for e in logs if e["event"] == "assembler: custom doc preview write failed")
+    assert event["path"] == str(tmp_path / "tz/_custom/tz.pdf")
+    assert event["exc"] == "disk full"
+    assert h.job_events == ["convert:tz/_custom/tz.docx", "pack"]
 
 
 async def test__create_submission__remembered_decision__office_job_runs(tmp_path) -> None:

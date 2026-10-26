@@ -21,6 +21,9 @@ def validate_relative_posix(path: str) -> None:
         raise ValueError(f"path is absolute: {path!r}")
     if ".." in path.split("/"):
         raise ValueError(f"path escapes the root: {path!r}")
+    # На Windows `C:/x` и `C:x` с корнем склеиваются в путь вне корня даже без ссылок.
+    if len(path) >= 2 and path[1] == ":" and path[0].isalpha():
+        raise ValueError(f"path has a drive letter: {path!r}")
 
 
 @dataclass(frozen=True)
