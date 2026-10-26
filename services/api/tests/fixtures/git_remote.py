@@ -6,6 +6,9 @@
 - `http_git_server`: настоящий `git http-backend` за Basic-авторизацией на 127.0.0.1. Умеет
   отвечать 403 на отправку, зависать, рвать соединение и перенаправлять на другой сервер, а все
   запросы записывает, чтобы тест видел, какие заголовки реально дошли.
+- `fake_ssh`: скрипт под именем ssh. Записывает аргументы и состояние файла ключа в момент запуска
+  и отвечает заданным сбоем, как настоящий ssh (отказ ключа, неизвестный или сменившийся ключ хоста,
+  обрыв сети) либо зависает, чтобы проверить отмену.
 
 Фикстуры не пропускают тест молча там, где git обязан быть (CI): без git или без http-backend
 под переменной окружения CI тест падает, а не пропускается.
@@ -15,14 +18,18 @@ from __future__ import annotations
 
 import base64
 import hmac
+import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
+import time
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 import pytest
@@ -408,3 +415,70 @@ def http_git_server_factory(tmp_path: Path) -> Iterator[Callable[..., GitHttpSer
 @pytest.fixture
 def http_git_server(http_git_server_factory: Callable[..., GitHttpServer]) -> GitHttpServer:
     return http_git_server_factory()
+
+
+_FAKE_SSH_SCRIPT = """#!{python}
+import json, os, stat, sys, time
+here = os.path.dirname(os.path.abspath(__file__))
+argv = sys.argv[1:]
+key = argv[argv.index("-i") + 1] if "-i" in argv else None
+state = None
+if key is not None and os.path.exists(key):
+    directory = os.path.dirname(key)
+    state = {{
+        "mode": oct(stat.S_IMODE(os.stat(key).st_mode)),
+        "dir_mode": oct(stat.S_IMODE(os.stat(directory).st_mode)),
+        "dir": directory,
+        "key": key,
+    }}
+with open(os.path.join(here, "calls.jsonl"), "a") as log:
+    log.write(json.dumps({{"argv": argv, "key": state, "env": sorted(os.environ), "pid": os.getpid()}}) + "\\n")
+mode = open(os.path.join(here, "mode")).read().strip()
+targets = [a for a in argv if "@" in a]
+host = targets[-1].split("@")[-1] if targets else "host"
+if mode == "hang":
+    time.sleep(120)
+tail = "fatal: Could not read from remote repository.\\n"
+strict = " and you have requested strict checking.\\n"
+messages = {{
+    "auth_failed": "git@" + host + ": Permission denied (publickey).\\n" + tail,
+    "host_unknown": "No ED25519 host key is known for " + host + strict + "Host key verification failed.\\n" + tail,
+    "host_changed": "WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!\\nOffending ED25519 key in k:1\\n" + tail,
+    "network": "ssh: Could not resolve hostname " + host + ": Name or service not known\\n" + tail,
+}}
+sys.stderr.write(messages[mode])
+sys.exit(255)
+"""
+
+
+@dataclass(frozen=True)
+class FakeSsh:
+    path: Path
+
+    def mode(self, name: str) -> None:
+        (self.path.parent / "mode").write_text(name)
+
+    def calls(self) -> list[dict[str, Any]]:
+        log = self.path.parent / "calls.jsonl"
+        return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+
+    def wait_for_call(self, timeout_s: float = 10.0) -> dict[str, Any]:
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if calls := self.calls():
+                return calls[-1]
+            time.sleep(0.02)
+        raise AssertionError("fake ssh was not started")
+
+
+@pytest.fixture
+def fake_ssh(tmp_path: Path) -> FakeSsh:
+    require_git()
+    directory = tmp_path / "fake-ssh"
+    directory.mkdir()
+    script = directory / "ssh"
+    script.write_text(_FAKE_SSH_SCRIPT.format(python=sys.executable))
+    script.chmod(0o755)
+    fake = FakeSsh(script)
+    fake.mode("auth_failed")
+    return fake

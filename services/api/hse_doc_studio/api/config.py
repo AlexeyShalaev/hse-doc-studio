@@ -856,6 +856,8 @@ class GitConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Master switch for remotes, sync and clone from git.")
     ssh_binary: str = Field(default="ssh", description="ssh client used for ssh:// and scp-like remotes.")
+    ssh_keyscan_binary: str = Field(default="ssh-keyscan", description="Tool that reads host keys of an ssh server.")
+    scan_timeout_s: float = Field(default=10.0, description="Timeout for reading the host keys of a server.")
     git_min_version: str = Field(
         default="2.31", description="Oldest git the sync works with; older reports git_unavailable."
     )

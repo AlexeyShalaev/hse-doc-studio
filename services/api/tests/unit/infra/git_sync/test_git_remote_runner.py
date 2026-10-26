@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,11 +31,15 @@ _NOW = datetime(2026, 10, 26, tzinfo=timezone.utc)
 class _Process(GitProcessRunner):
     result: GitResult | Exception = field(default_factory=lambda: GitResult(0))
     calls: list[tuple[list[str], dict[str, str], Path]] = field(default_factory=list)
+    # Вызывается в момент запуска процесса: тест видит то, что есть на диске, пока команда идёт.
+    during: Callable[[dict[str, str]], None] | None = None
 
     async def run(  # type: ignore[override]
         self, argv: Sequence[str], *, env: Mapping[str, str], cwd: Path, timeout_s: float, on_progress: object = None
     ) -> GitResult:
         self.calls.append((list(argv), dict(env), cwd))
+        if self.during is not None:
+            self.during(dict(env))
         if isinstance(self.result, Exception):
             raise self.result
         return self.result
@@ -43,6 +47,9 @@ class _Process(GitProcessRunner):
 
 class _Caps:
     git_binary = "git"
+
+    def ssh_path(self) -> str | None:
+        return "/usr/bin/ssh"
 
     async def ensure_git(self, *, cwd: Path, env: dict[str, str]) -> tuple[int, int, int]:
         return (2, 54, 0)

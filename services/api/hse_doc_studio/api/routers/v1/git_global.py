@@ -9,14 +9,16 @@ from __future__ import annotations
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from hse_doc_studio.api.schemas.git_sync import (
     CreateCredentialRequest,
     CreatePatCredentialRequest,
     GitCredentialResponse,
     GitCredentialUsage,
+    GitHostResponse,
     SecretsStatusResponse,
+    TrustHostRequest,
     UpdateCredentialRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
@@ -33,6 +35,7 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     UpdateCredentialInput,
     UpdateCredentialUC,
 )
+from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostInput, TrustHostUC
 
 router = APIRouter(route_class=DishkaRoute)
 
@@ -115,3 +118,35 @@ async def get_git_secrets_status(uc: FromDishka[GetSecretsStatusUC]) -> SecretsS
         # Предупреждение об общей папке (Яндекс.Диск, Dropbox) дописывает срез с детектором общих папок.
         data_dir_shared_folder=None,
     )
+
+
+@router.get("/git/hosts", response_model=list[GitHostResponse])
+async def list_git_hosts(uc: FromDishka[ListHostsUC]) -> list[GitHostResponse]:
+    return [
+        GitHostResponse(
+            host=host.host,
+            port=host.port,
+            key_types=list(host.key_types),
+            fingerprints_sha256=list(host.fingerprints_sha256),
+            added_at=host.added_at,
+        )
+        for host in await uc.execute()
+    ]
+
+
+@router.post("/git/hosts/trust", status_code=status.HTTP_204_NO_CONTENT)
+async def trust_git_host(body: TrustHostRequest, uc: FromDishka[TrustHostUC]) -> None:
+    await uc.execute(
+        TrustHostInput(
+            host=body.host,
+            port=body.port,
+            fingerprint_sha256=body.fingerprint_sha256,
+            replace=bool(body.replace),
+            confirm_host=body.confirm_host,
+        )
+    )
+
+
+@router.delete("/git/hosts", status_code=status.HTTP_204_NO_CONTENT)
+async def forget_git_host(uc: FromDishka[ForgetHostUC], host: str = Query(...), port: int | None = None) -> None:
+    await uc.execute(host, port)

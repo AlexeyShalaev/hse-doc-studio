@@ -27,6 +27,8 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IHostKeyScanner,
+    IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
     ISshKeyGenerator,
@@ -264,6 +266,7 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     ListCredentialsUC,
     UpdateCredentialUC,
 )
+from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
 from hse_doc_studio.use_cases.hse_persons.get_facets import GetHseFacetsUC
 from hse_doc_studio.use_cases.hse_persons.get_person_detail import GetHsePersonDetailUC
 from hse_doc_studio.use_cases.hse_persons.search_persons import SearchHsePersonsUC
@@ -1428,6 +1431,18 @@ class UseCaseProvider(Provider):
     @provide
     def get_git_secrets_status_uc(self, cipher: ISecretCipher, repo: IGitCredentialRepository) -> GetSecretsStatusUC:
         return GetSecretsStatusUC(cipher, repo)
+
+    @provide
+    def get_list_git_hosts_uc(self, store: IKnownHostsStore) -> ListHostsUC:
+        return ListHostsUC(store)
+
+    @provide
+    def get_trust_git_host_uc(self, store: IKnownHostsStore, scanner: IHostKeyScanner) -> TrustHostUC:
+        return TrustHostUC(store, scanner)
+
+    @provide
+    def get_forget_git_host_uc(self, store: IKnownHostsStore) -> ForgetHostUC:
+        return ForgetHostUC(store)
 
     # ------------------------------------------------------------------ Export / Import
 

@@ -205,6 +205,19 @@ class GitHostKey:
 
 
 @dataclass(frozen=True)
+class ScannedHostKey:
+    """Ключ, который хост предъявил при сканировании: пока ему никто не доверяет."""
+
+    type: str
+    # Блок ключа в base64, как в known_hosts.
+    key: str
+    fingerprint_sha256: str
+
+    def public(self) -> GitHostKey:
+        return GitHostKey(self.type, self.fingerprint_sha256)
+
+
+@dataclass(frozen=True)
 class GitOperationError:
     code: GitErrorCode
     detail: str

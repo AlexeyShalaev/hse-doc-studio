@@ -388,7 +388,7 @@ async def test__run__plain_http_when_server_forbids__url_scheme_forbidden(
     assert probe.error.code is GitErrorCode.url_scheme_forbidden
 
 
-async def test__run__ssh_remote__ssh_unavailable_until_ssh_support_lands(stack: Stack) -> None:
+async def test__run__ssh_remote_without_known_hosts_store__ssh_unavailable(stack: Stack) -> None:
     probe = await stack.transport.probe(RemoteTarget(parse_remote_url("git@github.com:hse/course.git")))
 
     assert probe.error is not None

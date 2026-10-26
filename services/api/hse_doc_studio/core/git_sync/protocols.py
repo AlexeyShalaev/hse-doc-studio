@@ -17,13 +17,13 @@ from hse_doc_studio.core.git_sync.entities import (
     CredentialStatus,
     CredentialUsage,
     GitCredential,
-    GitHostKey,
     GitOperation,
     GitResult,
     OperationKind,
     OperationPhase,
     RemoteProbe,
     RemoteTarget,
+    ScannedHostKey,
     SyncState,
 )
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
@@ -107,13 +107,19 @@ class IKnownHostsStore(Protocol):
     """Собственный known_hosts Студии: пользовательский ~/.ssh не читается и не меняется."""
 
     def list(self) -> list[KnownHost]: ...
-    def trust(self, host: str, port: int | None, keys: Sequence[str], *, replace: bool = False) -> None: ...
+    def find(self, host: str, port: int | None) -> KnownHost | None: ...
+    def trust(self, host: str, port: int | None, keys: Sequence[ScannedHostKey], *, replace: bool = False) -> None:
+        """Записать ключи. `replace`: сначала убрать все прежние ключи этого хоста."""
+        ...
+
     def forget(self, host: str, port: int | None) -> None: ...
     def file_path(self) -> Path: ...
 
 
 class IHostKeyScanner(Protocol):
-    async def scan(self, host: str, port: int | None) -> list[GitHostKey]: ...
+    async def scan(self, host: str, port: int | None) -> list[ScannedHostKey]:
+        """Ключи, которые хост предъявляет сейчас. Нет связи: offline, нет ssh-keyscan: ssh_unavailable."""
+        ...
 
 
 class IGitRemoteRunner(Protocol):

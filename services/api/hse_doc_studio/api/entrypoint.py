@@ -21,6 +21,7 @@ from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
+from hse_doc_studio.infra.git_sync.ssh_command import sweep_stale_key_dirs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
@@ -264,6 +265,11 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                     logger.info("startup chat recovery", recovered_runs=result.recovered_runs)
         except Exception:
             logger.exception("startup chat recovery failed")
+
+    @app.on_event("startup")
+    async def _sweep_ssh_key_dirs() -> None:
+        # Каталог временного ключа ssh удаляется в finally; остаться он может только после kill -9.
+        sweep_stale_key_dirs()
 
     @app.on_event("startup")
     async def _auto_update_startup() -> None:

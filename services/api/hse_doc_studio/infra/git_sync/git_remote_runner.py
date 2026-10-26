@@ -19,7 +19,14 @@ import structlog
 
 from hse_doc_studio.api.config import GitConfig
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, GitResult, RemoteTarget
+from hse_doc_studio.core.git_sync.entities import (
+    CredentialStatus,
+    GitCredential,
+    GitCredentialKind,
+    GitResult,
+    RemoteTarget,
+    ScannedHostKey,
+)
 from hse_doc_studio.core.git_sync.error_classifier import (
     DETAIL_TAIL_CHARS,
     GitOp,
@@ -29,12 +36,22 @@ from hse_doc_studio.core.git_sync.error_classifier import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
-from hse_doc_studio.core.git_sync.protocols import IGitCredentialRepository, ProgressCallback
+from hse_doc_studio.core.git_sync.protocols import (
+    IGitCredentialRepository,
+    IHostKeyScanner,
+    IKnownHostsStore,
+    ProgressCallback,
+)
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.git_sync.url import RemoteKind
-from hse_doc_studio.infra.git_sync.auth_env import HttpAuth, allowed_protocols, build_http_auth
+from hse_doc_studio.infra.git_sync.auth_env import (
+    allowed_protocols,
+    build_http_auth,
+    check_credential_matches,
+)
 from hse_doc_studio.infra.git_sync.git_capabilities import GitCapabilities
 from hse_doc_studio.infra.git_sync.process_runner import GitProcessRunner, ProcessTimeoutError
+from hse_doc_studio.infra.git_sync.ssh_command import build_ssh_command, temporary_key_file
 from hse_doc_studio.infra.vcs.git_env import base_git_env, hardened_git_config
 
 logger = structlog.get_logger()
@@ -70,9 +87,13 @@ class GitRemoteRunner:
         local_mode: bool,
         process: GitProcessRunner | None = None,
         capabilities: GitCapabilities | None = None,
+        known_hosts: IKnownHostsStore | None = None,
+        scanner: IHostKeyScanner | None = None,
     ) -> None:
         self._config = config
         self._credentials = credentials
+        self._known_hosts = known_hosts
+        self._scanner = scanner
         self._allow_local = config.allow_local_remotes and local_mode
         self._process = process or GitProcessRunner()
         self._capabilities = capabilities or GitCapabilities(
@@ -90,6 +111,10 @@ class GitRemoteRunner:
         on_progress: ProgressCallback | None = None,
     ) -> GitResult:
         self._check_policy(target)
+        if target.url.kind is RemoteKind.ssh:
+            return await self._run_ssh(
+                args, op=op, git_dir=git_dir, target=target, timeout_s=timeout_s, on_progress=on_progress
+            )
         credential, secret = self._load_credential(target)
         auth = build_http_auth(target.url, credential, secret) if credential and secret else None
         env = {
@@ -98,6 +123,70 @@ class GitRemoteRunner:
             "GIT_PROTOCOL_FROM_USER": "0",
             **(auth.env if auth else {}),
         }
+        return await self._execute(
+            args,
+            op=op,
+            git_dir=git_dir,
+            target=target,
+            env=env,
+            credential=credential,
+            secrets=auth.secrets if auth else (),
+            timeout_s=timeout_s,
+            on_progress=on_progress,
+        )
+
+    async def _run_ssh(
+        self,
+        args: Sequence[str],
+        *,
+        op: GitOp,
+        git_dir: Path,
+        target: RemoteTarget,
+        timeout_s: float,
+        on_progress: ProgressCallback | None,
+    ) -> GitResult:
+        # Сервер без подтверждённого ключа не пускаем дальше: человек сначала сверяет отпечаток, потом выбирает ключ.
+        if self._known_hosts is not None and self._known_hosts.find(*self._host_port(target)) is None:
+            keys = await self._scan(target, swallow=False)
+            raise git_error(GitErrorCode.host_key_unknown, host_keys=tuple(key.public() for key in keys))
+        credential, secret = self._load_credential(target)
+        if credential is None or secret is None:
+            raise git_error(GitErrorCode.credentials_missing)
+        ssh = self._capabilities.ssh_path()
+        if ssh is None or self._known_hosts is None:
+            raise git_error(GitErrorCode.ssh_unavailable)
+        with temporary_key_file(secret) as key_file:
+            env = {
+                **base_git_env(),
+                "GIT_ALLOW_PROTOCOL": allowed_protocols(target.url),
+                "GIT_PROTOCOL_FROM_USER": "0",
+                "GIT_SSH_COMMAND": build_ssh_command(ssh, key_file=key_file, known_hosts=self._known_hosts.file_path()),
+            }
+            return await self._execute(
+                args,
+                op=op,
+                git_dir=git_dir,
+                target=target,
+                env=env,
+                credential=credential,
+                secrets=(secret.reveal(),),
+                timeout_s=timeout_s,
+                on_progress=on_progress,
+            )
+
+    async def _execute(
+        self,
+        args: Sequence[str],
+        *,
+        op: GitOp,
+        git_dir: Path,
+        target: RemoteTarget,
+        env: dict[str, str],
+        credential: GitCredential | None,
+        secrets: tuple[str, ...],
+        timeout_s: float,
+        on_progress: ProgressCallback | None,
+    ) -> GitResult:
         await self._capabilities.ensure_git(cwd=git_dir.parent, env=env)
         started = time.monotonic()
         try:
@@ -109,7 +198,7 @@ class GitRemoteRunner:
             self._log(args, target, started, 0, None)
             self._remember_success(credential)
             return result
-        error = self._failure(result, op=op, target=target, credential=credential, auth=auth)
+        error = await self._failure(result, op=op, target=target, credential=credential, secrets=secrets)
         self._log(args, target, started, result.returncode, error.code)
         if error.code is GitErrorCode.auth_failed and credential is not None:
             self._credentials.mark(credential.id, CredentialStatus.auth_failed)
@@ -154,40 +243,79 @@ class GitRemoteRunner:
             raise git_error(GitErrorCode.url_scheme_forbidden)
         if kind is RemoteKind.file and not self._allow_local:
             raise git_error(GitErrorCode.url_scheme_forbidden)
-        if kind is RemoteKind.ssh:
+        if kind is RemoteKind.ssh and (self._capabilities.ssh_path() is None or self._known_hosts is None):
             raise git_error(GitErrorCode.ssh_unavailable)
 
     def _load_credential(self, target: RemoteTarget) -> tuple[GitCredential | None, Secret | None]:
-        if target.credential_id is None or target.url.kind is RemoteKind.file:
+        if target.url.kind is RemoteKind.file:
+            return None, None
+        if target.credential_id is None:
+            if target.url.kind is RemoteKind.ssh:
+                raise git_error(GitErrorCode.credentials_missing)
             return None, None
         credential = self._credentials.get(target.credential_id)
         if credential is None:
             raise git_error(GitErrorCode.credentials_missing)
+        if target.url.kind is RemoteKind.ssh:
+            self._check_ssh_credential(target, credential)
         try:
             return credential, self._credentials.get_secret(credential.id)
         except NotFoundError:
             raise git_error(GitErrorCode.credentials_missing) from None
 
-    def _failure(
+    @staticmethod
+    def _check_ssh_credential(target: RemoteTarget, credential: GitCredential) -> None:
+        if credential.kind is not GitCredentialKind.ssh_key:
+            raise git_error(GitErrorCode.credential_invalid)
+        check_credential_matches(target.url, credential)
+
+    async def _failure(
         self,
         result: GitResult,
         *,
         op: GitOp,
         target: RemoteTarget,
         credential: GitCredential | None,
-        auth: HttpAuth | None,
+        secrets: tuple[str, ...],
     ) -> GitSyncError:
         text = result.stderr
         if op is GitOp.push and result.stdout:
             # Построчный отчёт `--porcelain` приходит в stdout: отказ ветки виден только там.
             text += "\n" + result.stdout.decode("utf-8", errors="replace")
-        classified = classify_git_stderr(
-            text, op=op, transport=Transport(target.url.kind.value), secrets=auth.secrets if auth else ()
-        )
+        classified = classify_git_stderr(text, op=op, transport=Transport(target.url.kind.value), secrets=secrets)
         code = classified.code
         if code is GitErrorCode.auth_failed and credential is None:
             code = GitErrorCode.credentials_missing
+        if code in {GitErrorCode.host_key_unknown, GitErrorCode.host_key_changed}:
+            return await self._host_key_error(code, target)
         return git_error(code, tail=classified.detail)
+
+    async def _host_key_error(self, code: GitErrorCode, target: RemoteTarget) -> GitSyncError:
+        """Ключ хоста не подошёл: отпечатки идут в ошибке, чтобы человек решил на месте, без второго запроса."""
+        scanned = await self._scan(target, swallow=True)
+        if code is GitErrorCode.host_key_unknown:
+            return git_error(code, host_keys=tuple(key.public() for key in scanned))
+        known = self._known_hosts.find(*self._host_port(target)) if self._known_hosts is not None else None
+        if known is None or not known.fingerprints_sha256 or not scanned:
+            return git_error(code)
+        same_type = [key for key in scanned if key.type in known.key_types]
+        actual = (same_type or scanned)[0]
+        return git_error(code, expected=known.fingerprints_sha256[0], actual=actual.fingerprint_sha256)
+
+    async def _scan(self, target: RemoteTarget, *, swallow: bool) -> list[ScannedHostKey]:
+        if self._scanner is None:
+            return []
+        host, port = self._host_port(target)
+        try:
+            return await self._scanner.scan(host, port)
+        except GitSyncError:
+            if swallow:
+                return []
+            raise
+
+    @staticmethod
+    def _host_port(target: RemoteTarget) -> tuple[str, int | None]:
+        return str(target.url.host), target.url.port
 
     def _remember_success(self, credential: GitCredential | None) -> None:
         if credential is not None:

@@ -27,6 +27,8 @@ from hse_doc_studio.core.fonts.repositories import (
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IHostKeyScanner,
+    IKnownHostsStore,
     ILocalAuthorProfile,
     ISecretCipher,
     ISshKeyGenerator,
@@ -107,7 +109,9 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
+from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
 from hse_doc_studio.infra.git_sync.ssh_keys import Ed25519KeyGenerator
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
@@ -717,6 +721,14 @@ class DomainServiceProvider(Provider):
     @provide
     def get_ssh_key_generator(self) -> ISshKeyGenerator:
         return Ed25519KeyGenerator()
+
+    @provide
+    def get_known_hosts_store(self) -> IKnownHostsStore:
+        return FileKnownHostsStore(settings.data_dir.expanduser())
+
+    @provide
+    def get_host_key_scanner(self) -> IHostKeyScanner:
+        return SshKeyscanScanner(settings.git)
 
     @provide
     def get_git_credential_usage(
