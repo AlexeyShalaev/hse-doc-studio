@@ -34,6 +34,7 @@ from hse_doc_studio.core.vcs.errors import (
     VcsNotInitializedError,
     VcsUnavailableError,
 )
+from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 
 logger = structlog.get_logger()
 
@@ -49,6 +50,9 @@ _MAX_DIFF_FILES = 80
 # git's well-known empty-tree object — used to diff a root commit (no parent).
 _EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 _DEFAULT_DIFF_MAX_BYTES = 256_000
+
+# Подкоманды, которым git нужна личность автора; остальным остаётся служебная подпись.
+_IDENTITY_SUBCOMMANDS = frozenset({"commit", "commit-tree", "tag"})
 
 _KIND_TRAILER = re.compile(r"^Hse-Kind:\s*(\S+)\s*$", re.MULTILINE)
 
@@ -96,11 +100,13 @@ class GitVcsService:
         author_email: str = "bot@hse-studio.local",
         diff_max_bytes: int = _DEFAULT_DIFF_MAX_BYTES,
         default_branch: str = "master",
+        author_provider: ICommitAuthorProvider | None = None,
     ) -> None:
         self._author_name = author_name
         self._author_email = author_email
         self._diff_max_bytes = diff_max_bytes
         self._default_branch = default_branch
+        self._author_provider = author_provider
 
     # ── paths ────────────────────────────────────────────────────────────────
     def _git_dir(self, project: Project) -> Path:
@@ -142,6 +148,18 @@ class GitVcsService:
             "safe.directory=*",
         ]
 
+    def _author_override(self, args: Sequence[str]) -> list[str]:
+        """Подпись коммита от провайдера; `-c` из `_base()` перекрывается более поздним.
+
+        `_base()` всегда держит служебную подпись (reflog, контейнер без HOME), поэтому
+        автор подменяется только у команд, которые его записывают, и читается в момент
+        вызова: сервис живёт на всё приложение, а актор у каждого запроса свой.
+        """
+        if self._author_provider is None or not args or args[0] not in _IDENTITY_SUBCOMMANDS:
+            return []
+        author = self._author_provider.author()
+        return ["-c", f"user.name={author.name}", "-c", f"user.email={author.email}"]
+
     def _run(
         self,
         project: Project,
@@ -149,7 +167,7 @@ class GitVcsService:
         *,
         check: bool = False,
     ) -> subprocess.CompletedProcess[str]:
-        cmd = [*self._base(project), *args]
+        cmd = [*self._base(project), *self._author_override(args), *args]
         try:
             proc = subprocess.run(  # noqa: S603
                 cmd,
@@ -189,7 +207,7 @@ class GitVcsService:
         env = self._env()
         if index_file is not None:
             env["GIT_INDEX_FILE"] = str(index_file)
-        cmd = [*self._base(project, work_tree), *args]
+        cmd = [*self._base(project, work_tree), *self._author_override(args), *args]
         try:
             proc = subprocess.run(  # noqa: S603
                 cmd,
