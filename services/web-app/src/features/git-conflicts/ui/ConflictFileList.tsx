@@ -1,15 +1,11 @@
-import { useId, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 import type { ConflictFile } from "@entities/git-sync";
-import {
-  ActionTag,
-  FileList,
-  FileRowShell,
-  type ConflictTone,
-} from "@shared/ui/ConflictKit";
+import { FileList, FileRowShell } from "@shared/ui/ConflictKit";
 import type { DraftMap, FileProgress } from "../model/conflictModel";
+import { AutoMergedList } from "./AutoMergedList";
 
 export type ConflictFileListProps = {
   needs: ConflictFile[];
@@ -18,13 +14,6 @@ export type ConflictFileListProps = {
   drafts: DraftMap;
   progressOf: (file: ConflictFile) => FileProgress;
   onSelect: (path: string) => void;
-};
-
-const AUTO_TONE: Record<string, ConflictTone> = {
-  merged: "ok",
-  take_theirs: "info",
-  delete: "muted",
-  binary_newest: "warn",
 };
 
 const sectionLabelStyle: React.CSSProperties = {
@@ -110,12 +99,7 @@ export const ConflictFileList = ({
   onSelect,
 }: ConflictFileListProps) => {
   const { t } = useTranslation("gitConflicts");
-  const [autoOpen, setAutoOpen] = useState(false);
-  const autoId = useId();
   const rootRef = useRef<HTMLElement>(null);
-
-  // Выбранный автоматический файл должен быть виден, даже если группу свернули.
-  const showAuto = autoOpen || auto.some((f) => f.path === selectedPath);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
     const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
@@ -182,60 +166,11 @@ export const ConflictFileList = ({
         )}
       </section>
 
-      {auto.length > 0 && (
-        <section className="flex flex-col" style={{ gap: 6 }}>
-          <button
-            type="button"
-            className="flex items-center mono dim"
-            aria-expanded={showAuto}
-            aria-controls={autoId}
-            onClick={() => {
-              setAutoOpen((open) => !open);
-            }}
-            style={{
-              ...sectionLabelStyle,
-              gap: 4,
-              background: "none",
-              border: 0,
-              padding: 0,
-              cursor: "pointer",
-              textAlign: "left",
-            }}
-          >
-            {showAuto ? (
-              <ChevronDown size={12} aria-hidden="true" />
-            ) : (
-              <ChevronRight size={12} aria-hidden="true" />
-            )}
-            {t("list.auto")} · {auto.length}
-          </button>
-          {showAuto && (
-            <div id={autoId}>
-              <FileList maxHeight="none">
-                {auto.map((file) => (
-                  <FileRowShell
-                    key={file.path}
-                    path={file.path}
-                    isSelected={file.path === selectedPath}
-                    onSelect={() => {
-                      onSelect(file.path);
-                    }}
-                    tag={
-                      <ActionTag
-                        label={t(`auto.action.${file.action}`, {
-                          defaultValue: file.action,
-                        })}
-                        tone={AUTO_TONE[file.action] ?? "muted"}
-                        minWidth={92}
-                      />
-                    }
-                  />
-                ))}
-              </FileList>
-            </div>
-          )}
-        </section>
-      )}
+      <AutoMergedList
+        items={auto}
+        selectedPath={selectedPath}
+        onSelect={onSelect}
+      />
     </nav>
   );
 };

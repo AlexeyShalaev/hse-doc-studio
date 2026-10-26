@@ -3,24 +3,38 @@ import type {
   ConflictFile,
   ConflictSession,
   FileResolution,
+  JsonFieldConflict,
 } from "@entities/git-sync";
 import {
+  autoFieldWinner,
+  autoFieldsOf,
   carryOverDrafts,
+  chooseAllFields,
   chooseAllHunks,
+  chosenFields,
+  clearFieldChoice,
   clearHunkChoice,
+  conflictFieldsOf,
   composeText,
   draftsFromSession,
+  fieldChoicesFor,
+  fieldsProgress,
   fileProgress,
   hasConflictMarkers,
   hunkResultLines,
   nextOpenHunkKey,
   nextOpenPath,
+  openFieldPointers,
   openHunkKeys,
   pruneResolution,
+  sameValue,
   sessionProgress,
+  setFieldChoice,
   setFileChoice,
   setHunkChoice,
   setManualText,
+  unionValue,
+  type JsonDetail,
   type TextDetail,
 } from "./conflictModel";
 
@@ -354,5 +368,214 @@ describe("a rebuilt session", () => {
       file({ path: "b", hunks: 1 }),
     ]);
     expect(draftsFromSession(session)).toEqual({ a: saved });
+  });
+});
+
+// --- поля -------------------------------------------------------------------------
+
+const field = (
+  pointer: string,
+  overrides: Partial<JsonFieldConflict> = {},
+): JsonFieldConflict => ({
+  pointer,
+  label: null,
+  type: "scalar",
+  base: "a",
+  ours: "b",
+  theirs: "c",
+  allowed: ["mine", "theirs"],
+  status: "conflict",
+  ...overrides,
+});
+
+const json = (...fields: JsonFieldConflict[]): JsonDetail => ({
+  kind: "json",
+  fields,
+});
+
+const FORM = json(
+  field("/title"),
+  field("/tags", {
+    type: "list",
+    base: ["x"],
+    ours: ["x", "y"],
+    theirs: ["x", "z"],
+    allowed: ["mine", "theirs", "union"],
+  }),
+  field("/year", { base: 1, ours: 1, theirs: 2, status: "auto" }),
+);
+
+describe("field choices", () => {
+  it("splits the fields into those that need a decision and merged ones", () => {
+    expect(conflictFieldsOf(FORM).map((f) => f.pointer)).toEqual([
+      "/title",
+      "/tags",
+    ]);
+    expect(autoFieldsOf(FORM).map((f) => f.pointer)).toEqual(["/year"]);
+  });
+
+  it("starts from nothing chosen and counts each choice", () => {
+    expect(fieldsProgress(FORM, null)).toEqual({
+      total: 2,
+      resolved: 0,
+      open: 2,
+    });
+    const one = setFieldChoice(FORM, null, "/title", "theirs");
+    expect(one).toEqual({
+      kind: "fields",
+      fields: { "/title": { choice: "theirs" } },
+    });
+    expect(fieldsProgress(FORM, one)).toEqual({
+      total: 2,
+      resolved: 1,
+      open: 1,
+    });
+    expect(openFieldPointers(FORM, one)).toEqual(["/tags"]);
+    const both = setFieldChoice(FORM, one, "/tags", "union");
+    expect(fieldsProgress(FORM, both).open).toBe(0);
+    expect(openFieldPointers(FORM, both)).toEqual([]);
+  });
+
+  it("changes a choice without touching the others and undoes one", () => {
+    const first = setFieldChoice(FORM, null, "/title", "mine");
+    const second = setFieldChoice(FORM, first, "/tags", "mine");
+    const changed = setFieldChoice(FORM, second, "/title", "theirs");
+    expect(chosenFields(changed)).toEqual({
+      "/title": { choice: "theirs" },
+      "/tags": { choice: "mine" },
+    });
+    const undone = clearFieldChoice(FORM, changed, "/title");
+    expect(chosenFields(undone)).toEqual({ "/tags": { choice: "mine" } });
+    // Пустое решение остаётся: сервер хранит черновик по пути.
+    expect(clearFieldChoice(FORM, first, "/title")).toEqual({
+      kind: "fields",
+      fields: {},
+    });
+  });
+
+  it("ignores a choice the field does not allow", () => {
+    const resolution: FileResolution = {
+      kind: "fields",
+      fields: {
+        "/title": { choice: "union" },
+        "/tags": { choice: "union" },
+        "/unknown": { choice: "mine" },
+      },
+    };
+    expect(fieldChoicesFor(FORM, resolution)).toEqual({ "/tags": "union" });
+    expect(fieldsProgress(FORM, resolution).open).toBe(1);
+  });
+
+  it("takes every field for mine or theirs, skipping what the choice does not allow", () => {
+    expect(chooseAllFields(FORM, "mine")).toEqual({
+      kind: "fields",
+      fields: { "/title": { choice: "mine" }, "/tags": { choice: "mine" } },
+    });
+    const narrow = json(
+      field("/a", { allowed: ["mine"] }),
+      field("/b", { allowed: ["mine", "theirs"] }),
+    );
+    expect(chooseAllFields(narrow, "theirs")).toEqual({
+      kind: "fields",
+      fields: { "/b": { choice: "theirs" } },
+    });
+  });
+
+  it("reads a whole-file choice as the same choice for every field", () => {
+    const whole: FileResolution = { kind: "file", choice: "mine" };
+    expect(fieldChoicesFor(FORM, whole)).toEqual({
+      "/title": "mine",
+      "/tags": "mine",
+    });
+    // Правка одного поля разворачивает выбор файла в выбор по полям.
+    expect(setFieldChoice(FORM, whole, "/title", "theirs")).toEqual({
+      kind: "fields",
+      fields: { "/title": { choice: "theirs" }, "/tags": { choice: "mine" } },
+    });
+    // Выбор «файл: новее» полям ничего не говорит.
+    expect(fieldChoicesFor(FORM, { kind: "file", choice: "newest" })).toEqual(
+      {},
+    );
+  });
+
+  it("counts the fields of a file in the session progress", () => {
+    const f = file({
+      path: "form.json",
+      kind: "json",
+      conflict_type: "fields",
+      fields: 2,
+      open_fields: 2,
+    });
+    expect(fileProgress(f, null)).toMatchObject({ resolved: false, open: 2 });
+    const one = setFieldChoice(FORM, null, "/title", "mine");
+    expect(fileProgress(f, one)).toMatchObject({
+      resolved: false,
+      open: 1,
+      total: 2,
+    });
+    const all = chooseAllFields(FORM, "theirs");
+    expect(fileProgress(f, all)).toMatchObject({ resolved: true, open: 0 });
+    // Когда известны подробности, чужие указатели не считаются.
+    const stale: FileResolution = {
+      kind: "fields",
+      fields: { "/title": { choice: "mine" }, "/gone": { choice: "mine" } },
+    };
+    expect(fileProgress(f, stale).open).toBe(0);
+    expect(fileProgress(f, stale, undefined, ["/title", "/tags"]).open).toBe(1);
+  });
+
+  it("drops the choices of fields that disappeared from a rebuilt file", () => {
+    const resolution: FileResolution = {
+      kind: "fields",
+      fields: {
+        "/title": { choice: "mine" },
+        "/gone": { choice: "theirs" },
+        "/tags": { choice: "union" },
+      },
+    };
+    expect(pruneResolution(resolution, FORM)).toEqual({
+      kind: "fields",
+      fields: { "/title": { choice: "mine" }, "/tags": { choice: "union" } },
+    });
+    // Поле осталось, но «объединить» ему уже не подходит.
+    const narrowed = json(field("/title"), field("/tags"));
+    expect(pruneResolution(resolution, narrowed)).toEqual({
+      kind: "fields",
+      fields: { "/title": { choice: "mine" } },
+    });
+    // Ничего лишнего: тот же объект.
+    const clean: FileResolution = {
+      kind: "fields",
+      fields: { "/title": { choice: "mine" } },
+    };
+    expect(pruneResolution(clean, FORM)).toBe(clean);
+  });
+});
+
+describe("field values", () => {
+  it("compares values by content", () => {
+    expect(sameValue(["a", { b: 1 }], ["a", { b: 1 }])).toBe(true);
+    expect(sameValue({ a: 1, b: 2 }, { b: 2, a: 1 })).toBe(true);
+    expect(sameValue(["a"], ["a", "b"])).toBe(false);
+    expect(sameValue(1, "1")).toBe(false);
+    expect(sameValue(null, undefined)).toBe(false);
+  });
+
+  it("joins two lists, mine first and without repeats", () => {
+    const tags = FORM.fields[1];
+    expect(tags && unionValue(tags)).toEqual(["x", "y", "z"]);
+    expect(unionValue(field("/title"))).toBeNull();
+  });
+
+  it("says whose value the server took in a merged field", () => {
+    expect(autoFieldWinner(field("/a", { base: 1, ours: 1, theirs: 2 }))).toBe(
+      "theirs",
+    );
+    expect(autoFieldWinner(field("/a", { base: 1, ours: 2, theirs: 1 }))).toBe(
+      "mine",
+    );
+    expect(autoFieldWinner(field("/a", { base: 1, ours: 3, theirs: 3 }))).toBe(
+      "same",
+    );
   });
 });

@@ -14,6 +14,8 @@ import {
   HUNK_KEYS,
   MAIN_TEX,
   PROJECT_ID,
+  buildFiles,
+  conflictFile,
   installFakeConflicts,
   type FakeConflicts,
 } from "../testing/fakeConflicts";
@@ -86,9 +88,7 @@ const resolveEverything = async (): Promise<void> => {
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Всё моё" }));
   await openFile(".hse-studio/forms/title.json");
-  await user.click(
-    await screen.findByRole("radio", { name: /Оставить мою версию/ }),
-  );
+  await user.click(await screen.findByRole("button", { name: "Всё моё" }));
   await openFile("images/a.png");
   await user.click(
     await screen.findByRole("radio", { name: /Оставить более новую/ }),
@@ -362,12 +362,10 @@ describe("ConflictScreen", () => {
     const radios = await screen.findAllByRole("radio");
     expect(radios).toHaveLength(3);
     expect(screen.getByText("рекомендуем")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("radio", { name: /Взять версию из репозитория/ }),
-    );
+    await user.click(screen.getByRole("radio", { name: "Их (Анна Петрова)" }));
     expect(screen.getByText("Решено файлов: 1 из 4")).toBeInTheDocument();
     expect(
-      screen.getByRole("radio", { name: /Взять версию из репозитория/ }),
+      screen.getByRole("radio", { name: "Их (Анна Петрова)" }),
     ).toBeChecked();
   });
 
@@ -741,6 +739,260 @@ describe("ConflictScreen", () => {
         screen.getByRole("button", { name: "Finish and send" }),
       ).toBeDisabled();
       await i18n.changeLanguage("ru");
+    });
+  });
+
+  describe("the other kinds of conflict", () => {
+    const FORM_PATH = ".hse-studio/forms/form.json";
+
+    const install = (): void => {
+      fake.restore();
+      fake = installFakeConflicts({
+        files: [
+          conflictFile({
+            path: FORM_PATH,
+            kind: "json",
+            conflict_type: "fields",
+            fields: 2,
+            open_fields: 2,
+            allowed: ["mine", "theirs"],
+          }),
+          conflictFile({
+            path: ".hse-studio/frozen/doc.pdf",
+            kind: "binary",
+            conflict_type: "signature_group",
+            allowed: ["mine", "theirs"],
+            doc_id: "doc",
+          }),
+          conflictFile({
+            path: "chapters/Intro.tex",
+            kind: "text",
+            conflict_type: "case_collision",
+            allowed: ["mine", "theirs"],
+          }),
+          conflictFile({
+            path: "images/auto.png",
+            kind: "binary",
+            action: "binary_newest",
+            resolved: true,
+            copy_path: "images/auto.conflict-1.png",
+          }),
+          ...buildFiles().filter((f) => f.path === "appendix.tex"),
+        ],
+      });
+      fake.details[FORM_PATH] = {
+        kind: "json",
+        fields: [
+          {
+            pointer: "/title",
+            label: "Тема работы",
+            type: "scalar",
+            base: "A",
+            ours: "B",
+            theirs: "C",
+            allowed: ["mine", "theirs"],
+            status: "conflict",
+          },
+          {
+            pointer: "/keywords",
+            label: null,
+            type: "list",
+            base: ["git"],
+            ours: ["git", "tex"],
+            theirs: ["git", "ci"],
+            allowed: ["mine", "theirs", "union"],
+            status: "conflict",
+          },
+          {
+            pointer: "/year",
+            label: "Год",
+            type: "scalar",
+            base: 1,
+            ours: 1,
+            theirs: 2,
+            allowed: ["mine", "theirs"],
+            status: "auto",
+          },
+        ],
+      };
+    };
+
+    it("shows the warnings of the merge above the files", async () => {
+      install();
+      fake.session.warnings = [
+        { code: "template_missing_after_merge", paths: [] },
+        { code: "signatures_stale", paths: ["signatures.json"] },
+      ];
+      renderScreen();
+      const region = await screen.findByRole("region", {
+        name: "Предупреждения синхронизации",
+      });
+      expect(
+        within(region).getByText("Шаблона нет в этой версии Студии"),
+      ).toBeInTheDocument();
+      expect(within(region).getByText("Подписи устарели")).toBeInTheDocument();
+    });
+
+    it("hides the warnings while the merge is being applied", async () => {
+      install();
+      fake.session.warnings = [{ code: "signatures_stale", paths: [] }];
+      const user = userEvent.setup();
+      renderScreen();
+      await screen.findByRole("region", {
+        name: "Предупреждения синхронизации",
+      });
+      await user.click(
+        within(screen.getByRole("navigation")).getByTitle(FORM_PATH),
+      );
+      await user.click(await screen.findByRole("button", { name: "Всё их" }));
+      await openFile(".hse-studio/frozen/doc.pdf");
+      await user.click(
+        await screen.findByRole("radio", { name: /Оставить мои подписи/ }),
+      );
+      await openFile("chapters/Intro.tex");
+      await user.click(
+        await screen.findByRole("radio", { name: /Оставить мой файл/ }),
+      );
+      await openFile("appendix.tex");
+      await user.click(
+        await screen.findByRole("radio", { name: /Оставить файл с моими/ }),
+      );
+      await user.click(completeButton());
+      await screen.findByText("Применяем решения");
+      expect(
+        screen.queryByRole("region", { name: "Предупреждения синхронизации" }),
+      ).toBeNull();
+    });
+
+    it("resolves a form field by field and counts the fields", async () => {
+      install();
+      const user = userEvent.setup();
+      renderScreen();
+      // Форма первая в списке, поэтому она открыта сразу.
+      await screen.findByText("Требуют решения · 4");
+      expect(
+        await screen.findByText("Открыто полей: 2 из 2"),
+      ).toBeInTheDocument();
+      const title = screen.getByRole("radiogroup", { name: /Тема работы/ });
+      await user.click(within(title).getByRole("radio", { name: /: Моё$/ }));
+      expect(screen.getByText("Открыто полей: 1 из 2")).toBeInTheDocument();
+      expect(screen.getByText("Решено полей: 1 из 2")).toBeInTheDocument();
+      expect(screen.getByText("Решено файлов: 0 из 4")).toBeInTheDocument();
+
+      // Поле без названия подписано указателем, у списка есть «объединить».
+      const keywords = screen.getByRole("radiogroup", { name: /\/keywords/ });
+      await user.click(
+        within(keywords).getByRole("radio", { name: /: Объединить$/ }),
+      );
+      expect(
+        screen.getByText("Все поля в этом файле решены"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Решено файлов: 1 из 4")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(fake.drafts[FORM_PATH]).toEqual({
+          kind: "fields",
+          fields: {
+            "/title": { choice: "mine" },
+            "/keywords": { choice: "union" },
+          },
+        });
+      });
+
+      // Выбор можно отменить.
+      await user.click(
+        within(title).getByRole("button", { name: "Отменить выбор" }),
+      );
+      expect(screen.getByText("Решено файлов: 0 из 4")).toBeInTheDocument();
+    });
+
+    it("keeps the merged fields collapsed", async () => {
+      install();
+      const user = userEvent.setup();
+      renderScreen();
+      expect(
+        await screen.findByText("Открыто полей: 2 из 2"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Год")).toBeNull();
+      await user.click(
+        await screen.findByRole("button", {
+          name: "Слито автоматически: 1 поле",
+        }),
+      );
+      expect(screen.getByText("Год")).toBeInTheDocument();
+    });
+
+    it("decides a signature group and a case collision by choosing a side", async () => {
+      install();
+      const user = userEvent.setup();
+      renderScreen();
+      await user.click(await screen.findByTitle(".hse-studio/frozen/doc.pdf"));
+      expect(
+        await screen.findByText("Подписи нельзя смешивать"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Документ: doc")).toBeInTheDocument();
+      // Вкладок просмотра у такого файла нет.
+      expect(screen.queryByRole("button", { name: "Итог" })).toBeNull();
+      await user.click(
+        screen.getByRole("radio", { name: /Взять подписи из репозитория/ }),
+      );
+      expect(screen.getByText("Решено файлов: 1 из 4")).toBeInTheDocument();
+
+      await openFile("chapters/Intro.tex");
+      expect(
+        await screen.findByText("Имена различаются только регистром"),
+      ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("radio", { name: /Оставить мой файл/ }),
+      );
+      expect(screen.getByText("Решено файлов: 2 из 4")).toBeInTheDocument();
+    });
+
+    it("shows what was changed in a deleted file on the side tabs", async () => {
+      install();
+      const user = userEvent.setup();
+      renderScreen();
+      await user.click(await screen.findByTitle("appendix.tex"));
+      expect(
+        await screen.findByText(/Изменил: Иван Смирнов/),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Моё" }));
+      expect(
+        await screen.findByText("новая строка (ours)"),
+      ).toBeInTheDocument();
+    });
+
+    it("lists the automatically merged picture with the name of its copy", async () => {
+      install();
+      const user = userEvent.setup();
+      renderScreen();
+      await user.click(
+        await screen.findByRole("button", { name: /Решено автоматически · 1/ }),
+      );
+      expect(
+        screen.getByText("images/auto.conflict-1.png"),
+      ).toBeInTheDocument();
+      await user.click(screen.getByTitle("images/auto.png"));
+      expect(
+        await screen.findByText(/Файл изменили оба\. Оставлена более новая/),
+      ).toBeInTheDocument();
+    });
+
+    it("shows a picture with a preview and the newest-wins explanation", async () => {
+      const user = userEvent.setup();
+      renderScreen();
+      await screen.findByRole("group", { name: "Конфликт 1 из 3" });
+      await openFile("images/a.png");
+      expect(
+        await screen.findByAltText("Предпросмотр моей версии"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Останется более новая версия/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue("images/a.conflict-1.png"),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("radio", { name: "Моя версия" }));
+      expect(screen.getByText("Решено файлов: 1 из 4")).toBeInTheDocument();
     });
   });
 });

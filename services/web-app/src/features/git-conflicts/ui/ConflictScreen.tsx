@@ -20,6 +20,7 @@ import { ApplyProgress } from "./ApplyProgress";
 import { ConflictFileList } from "./ConflictFileList";
 import { ConflictFilePane } from "./ConflictFilePane";
 import { ConflictHeader } from "./ConflictHeader";
+import { SyncWarnings } from "./SyncWarnings";
 
 export type ConflictScreenProps = {
   projectId: string;
@@ -152,6 +153,10 @@ const ConflictWorkspaceView = ({ projectId, session }: WorkspaceViewProps) => {
           notice={workspace.notice}
           onDismiss={workspace.dismissNotice}
         />
+      )}
+
+      {completion.kind === "idle" && (
+        <SyncWarnings warnings={session.warnings} />
       )}
 
       {completion.kind !== "idle" ? (

@@ -16,7 +16,9 @@ const ORDER = ["mine", "theirs", "newest"] as const;
 const labelKey = (file: ConflictFile, choice: string): string => {
   if (
     file.conflict_type === "deleted_by_them" ||
-    file.conflict_type === "deleted_by_us"
+    file.conflict_type === "deleted_by_us" ||
+    file.conflict_type === "signature_group" ||
+    file.conflict_type === "case_collision"
   ) {
     return `file.${file.conflict_type}.${choice}`;
   }

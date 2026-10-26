@@ -25,19 +25,24 @@ import {
 import { toast } from "@shared/lib";
 import {
   carryOverDrafts,
+  chooseAllFields,
   chooseAllHunks,
+  clearFieldChoice,
   clearHunkChoice,
   fileProgress,
+  isJsonDetail,
   isTextDetail,
   needsDecision,
   nextOpenHunkKey,
   nextOpenPath,
   pruneResolution,
   sessionProgress,
+  setFieldChoice,
   setFileChoice,
   setHunkChoice,
   setManualText,
   type DraftMap,
+  type FieldChoiceValue,
   type FileProgress,
   type SessionProgress,
 } from "./conflictModel";
@@ -88,6 +93,9 @@ export type ConflictWorkspace = {
   chooseHunk: (key: string, choice: HunkChoice) => void;
   clearHunk: (key: string) => void;
   chooseAll: (choice: "mine" | "theirs") => void;
+  chooseField: (pointer: string, choice: FieldChoiceValue) => void;
+  clearField: (pointer: string) => void;
+  chooseAllFields: (choice: "mine" | "theirs") => void;
   chooseFile: (choice: string) => void;
   applyManual: (content: string) => void;
   revertManual: () => void;
@@ -265,6 +273,36 @@ export const useConflictWorkspace = (
     [detail, selected, updateDraft],
   );
 
+  const chooseField = useCallback(
+    (pointer: string, choice: FieldChoiceValue): void => {
+      if (!selected || !isJsonDetail(detail)) return;
+      updateDraft(selected.path, (previous) =>
+        setFieldChoice(detail, previous, pointer, choice),
+      );
+      setNotice(null);
+    },
+    [detail, selected, updateDraft],
+  );
+
+  const clearField = useCallback(
+    (pointer: string): void => {
+      if (!selected || !isJsonDetail(detail)) return;
+      updateDraft(selected.path, (previous) =>
+        clearFieldChoice(detail, previous, pointer),
+      );
+    },
+    [detail, selected, updateDraft],
+  );
+
+  const chooseEveryField = useCallback(
+    (choice: "mine" | "theirs"): void => {
+      if (!selected || !isJsonDetail(detail)) return;
+      updateDraft(selected.path, chooseAllFields(detail, choice));
+      setNotice(null);
+    },
+    [detail, selected, updateDraft],
+  );
+
   const chooseFile = useCallback(
     (choice: string): void => {
       if (!selected) return;
@@ -400,7 +438,7 @@ export const useConflictWorkspace = (
     const carried = carryOverDrafts(draftMap, fresh);
     const next: DraftMap = {};
     for (const [path, resolution] of Object.entries(carried)) {
-      if (resolution.kind !== "hunks") {
+      if (resolution.kind !== "hunks" && resolution.kind !== "fields") {
         next[path] = resolution;
         continue;
       }
@@ -559,6 +597,9 @@ export const useConflictWorkspace = (
     chooseHunk,
     clearHunk,
     chooseAll,
+    chooseField,
+    clearField,
+    chooseAllFields: chooseEveryField,
     chooseFile,
     applyManual,
     revertManual,

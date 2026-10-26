@@ -2016,6 +2016,204 @@
   .whole-choice:focus-within {
     box-shadow: 0 0 0 2px var(--accent);
   }
+  .whole-choice[data-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  /* картинки и другие файлы: две версии рядом, каждая выбирается целиком */
+  .file-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 8px;
+  }
+  .file-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+    cursor: pointer;
+  }
+  .file-tile[data-checked="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .file-tile:focus-within {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .file-tile[data-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .file-tile-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .file-tile input,
+  .field-side input {
+    accent-color: var(--accent);
+  }
+  .file-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    max-height: 240px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--r-2);
+    /* шахматка под прозрачными картинками */
+    background-color: var(--bg-0);
+    background-image: conic-gradient(
+      var(--bg-2) 25%,
+      transparent 0 50%,
+      var(--bg-2) 0 75%,
+      transparent 0
+    );
+    background-size: 16px 16px;
+  }
+  .file-preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+  }
+  .file-preview-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 16px;
+    border-radius: var(--r-2);
+    background: var(--bg-1);
+    font-size: 11.5px;
+    line-height: 1.45;
+    text-align: center;
+    color: var(--fg-2);
+  }
+  /* поля формы: «было», «моё» и «их» рядом, как места в тексте */
+  .field-sides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+  }
+  .field-side {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--r-2);
+    background: var(--bg-0);
+  }
+  label.field-side {
+    cursor: pointer;
+  }
+  .field-side[data-wide="true"] {
+    grid-column: 1 / -1;
+  }
+  .field-side[data-base="true"] {
+    background: var(--bg-1);
+  }
+  .field-side[data-included="true"] {
+    border-color: var(--c-ok);
+  }
+  .field-side:focus-within {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .field-side-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg-1);
+  }
+  .field-side[data-side="mine"] .field-side-head {
+    color: var(--accent);
+  }
+  .field-side[data-side="theirs"] .field-side-head {
+    color: var(--c-info);
+  }
+  .field-side[data-included="true"] .field-side-head {
+    color: var(--c-ok);
+  }
+  .field-side-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .field-text {
+    white-space: pre-wrap;
+  }
+  .field-json {
+    margin: 0;
+    max-height: 160px;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .field-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .field-list li {
+    padding: 1px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    background: var(--bg-1);
+    font-size: 11.5px;
+  }
+  .field-list li[data-new="true"] {
+    border-color: color-mix(in oklch, var(--c-ok) 50%, var(--border));
+    background: var(--c-ok-soft);
+  }
+  .field-auto-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+  }
+  .field-auto-row:first-child {
+    border-top: 0;
+  }
+  .conflict-warnings {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 32px 0;
+  }
+  .warning-paths summary {
+    cursor: pointer;
+    color: var(--fg-2);
+  }
+  .warning-paths ul {
+    max-height: 120px;
+    margin: 4px 0 0;
+    padding-left: 16px;
+    overflow-y: auto;
+  }
   /* место конфликта */
   .hunk-toolbar {
     position: sticky;
@@ -2201,7 +2399,8 @@
     .conflict-header {
       padding: 16px;
     }
-    .conflict-notice {
+    .conflict-notice,
+    .conflict-warnings {
       padding: 12px 16px 0;
     }
     .conflict-body {

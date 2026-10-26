@@ -194,6 +194,26 @@ const appendixDetail: ConflictFileDetail = {
   deleted_by: "theirs",
 };
 
+const frozenDetail: ConflictFileDetail = {
+  kind: "binary",
+  ours: { exists: true, size: 96_400, author: ME.name, at: isoAgo(3 * HOUR) },
+  theirs: { exists: true, size: 97_120, author: ANNA, at: isoAgo(4 * HOUR) },
+  newer: "ours",
+  copy_path: null,
+};
+
+const caseDetail: ConflictFileDetail = {
+  kind: "text",
+  eol: "lf",
+  truncated: false,
+  segments: [
+    {
+      type: "clean",
+      lines: ["\\section*{Приложение Б}", "Таблицы с результатами замеров."],
+    },
+  ],
+};
+
 const side = (
   exists: boolean,
   size: number | null,
@@ -282,6 +302,31 @@ const FILES: ConflictFile[] = [
     },
   }),
   file({
+    path: ".hse-studio/frozen/coursework.pdf",
+    kind: "binary",
+    conflict_type: "signature_group",
+    allowed: ["mine", "theirs"],
+    owner: ME.name,
+    doc_id: "coursework",
+    sides: {
+      ours: side(true, 96_400, ME.name, 3 * HOUR),
+      theirs: side(true, 97_120, ANNA, 4 * HOUR),
+      base: side(true, 90_000, ME.name, 4 * DAY),
+    },
+  }),
+  file({
+    path: "chapters/Appendix-B.tex",
+    kind: "text",
+    conflict_type: "case_collision",
+    allowed: ["mine", "theirs"],
+    owner: ANNA,
+    sides: {
+      ours: side(true, 1_480, ME.name, 7 * HOUR),
+      theirs: side(true, 1_520, ANNA, 6 * HOUR),
+      base: side(false, null, null, null),
+    },
+  }),
+  file({
     path: "references.bib",
     kind: "text",
     action: "merged",
@@ -356,7 +401,17 @@ export const buildConflictSession = (): DemoConflictSession => {
       },
       unresolved: conflicts,
       drafts_saved_at: null,
-      warnings: [{ code: "signatures_stale", paths: ["signatures.json"] }],
+      warnings: [
+        {
+          code: "template_missing_after_merge",
+          paths: [".hse-studio/project.json"],
+        },
+        { code: "signatures_stale", paths: ["signatures.json"] },
+        {
+          code: "unsafe_path",
+          paths: ["../outside.tex", ".git/hooks/post-merge"],
+        },
+      ],
       files,
     },
     details: {
@@ -364,6 +419,8 @@ export const buildConflictSession = (): DemoConflictSession => {
       ".hse-studio/forms/title-page.json": formDetail,
       "images/architecture.png": imageDetail,
       "chapters/appendix.tex": appendixDetail,
+      ".hse-studio/frozen/coursework.pdf": frozenDetail,
+      "chapters/Appendix-B.tex": caseDetail,
     },
     drafts: {},
   };

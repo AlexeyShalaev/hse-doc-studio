@@ -2,8 +2,10 @@ import type {
   ConflictFile,
   ConflictFileDetail,
   ConflictSession,
+  FieldChoice,
   FileResolution,
   HunkChoice,
+  JsonFieldConflict,
 } from "@entities/git-sync";
 
 // Чистая модель экрана конфликтов: что выбрано, что ещё открыто, как из выборов
@@ -13,6 +15,8 @@ import type {
 export type TextDetail = Extract<ConflictFileDetail, { kind: "text" }>;
 export type TextSegment = TextDetail["segments"][number];
 export type HunkSegment = Extract<TextSegment, { type: "hunk" }>;
+export type JsonDetail = Extract<ConflictFileDetail, { kind: "json" }>;
+export type BinaryDetail = Extract<ConflictFileDetail, { kind: "binary" }>;
 
 /** Выборы по файлам: путь -> решение. Совпадает с телом PUT /conflicts/draft. */
 export type DraftMap = Record<string, FileResolution>;
@@ -36,9 +40,27 @@ export const isTextDetail = (
 export const hunksOf = (detail: TextDetail): HunkSegment[] =>
   detail.segments.filter((s): s is HunkSegment => s.type === "hunk");
 
+export const isJsonDetail = (
+  detail: ConflictFileDetail | undefined,
+): detail is JsonDetail => detail?.kind === "json";
+
+export const isBinaryDetail = (
+  detail: ConflictFileDetail | undefined,
+): detail is BinaryDetail => detail?.kind === "binary";
+
 /** Нужно ли решение пользователя (остальные файлы сервер решил сам). */
 export const needsDecision = (file: ConflictFile): boolean =>
   file.action === "conflict";
+
+/** Один удалил файл, другой изменил. */
+export const isDeleteConflict = (file: ConflictFile): boolean =>
+  file.conflict_type === "deleted_by_us" ||
+  file.conflict_type === "deleted_by_them";
+
+/** Конфликты, которые решаются целым набором: подписи и имена по регистру. */
+export const isGroupConflict = (file: ConflictFile): boolean =>
+  file.conflict_type === "signature_group" ||
+  file.conflict_type === "case_collision";
 
 // --- выбор по местам --------------------------------------------------------------
 
@@ -80,6 +102,167 @@ export const chooseAllHunks = (
   ),
 });
 
+// --- выбор по полям ---------------------------------------------------------------
+
+/** Как решено одно поле. */
+export type FieldChoiceValue = "mine" | "theirs" | "union";
+
+/** Поля, где стороны разошлись и нужен выбор. */
+export const conflictFieldsOf = (detail: JsonDetail): JsonFieldConflict[] =>
+  detail.fields.filter((f) => f.status === "conflict");
+
+/** Поля, которые сервер слил сам: решать в них нечего. */
+export const autoFieldsOf = (detail: JsonDetail): JsonFieldConflict[] =>
+  detail.fields.filter((f) => f.status !== "conflict");
+
+export const isFieldChoice = (value: string): value is FieldChoiceValue =>
+  value === "mine" || value === "theirs" || value === "union";
+
+/** Сохранённый выбор по полям; решение другого вида полей не выбирает. */
+export const chosenFields = (
+  resolution: FileResolution | null | undefined,
+): Record<string, FieldChoice> =>
+  resolution?.kind === "fields" ? resolution.fields : {};
+
+/**
+ * Что выбрано по каждому полю. Выбор «файл целиком: моё или их» (черновик
+ * старого вида или быстрый выбор) значит то же самое для каждого поля, если оно
+ * такой вариант допускает.
+ */
+export const fieldChoicesFor = (
+  detail: JsonDetail,
+  resolution: FileResolution | null | undefined,
+): Record<string, FieldChoiceValue> => {
+  const result: Record<string, FieldChoiceValue> = {};
+  const fields = conflictFieldsOf(detail);
+  if (resolution?.kind === "file" && isFieldChoice(resolution.choice)) {
+    const whole = resolution.choice;
+    for (const field of fields) {
+      if (field.allowed.includes(whole)) result[field.pointer] = whole;
+    }
+    return result;
+  }
+  const chosen = chosenFields(resolution);
+  for (const field of fields) {
+    const choice = chosen[field.pointer]?.choice;
+    if (choice && isFieldChoice(choice) && field.allowed.includes(choice)) {
+      result[field.pointer] = choice;
+    }
+  }
+  return result;
+};
+
+export const setFieldChoice = (
+  detail: JsonDetail,
+  resolution: FileResolution | null | undefined,
+  pointer: string,
+  choice: FieldChoiceValue,
+): FileResolution => ({
+  kind: "fields",
+  fields: Object.fromEntries(
+    Object.entries({
+      ...fieldChoicesFor(detail, resolution),
+      [pointer]: choice,
+    }).map(([key, value]) => [key, { choice: value }] as const),
+  ),
+});
+
+/** Снимает выбор по полю; пустое решение остаётся, как и для мест. */
+export const clearFieldChoice = (
+  detail: JsonDetail,
+  resolution: FileResolution | null | undefined,
+  pointer: string,
+): FileResolution => {
+  const { [pointer]: _removed, ...rest } = fieldChoicesFor(detail, resolution);
+  return {
+    kind: "fields",
+    fields: Object.fromEntries(
+      Object.entries(rest).map(
+        ([key, value]) => [key, { choice: value }] as const,
+      ),
+    ),
+  };
+};
+
+/** «Всё моё» и «Всё их»: каждому полю, которое такой выбор допускает. */
+export const chooseAllFields = (
+  detail: JsonDetail,
+  choice: "mine" | "theirs",
+): FileResolution => ({
+  kind: "fields",
+  fields: Object.fromEntries(
+    conflictFieldsOf(detail)
+      .filter((f) => f.allowed.length === 0 || f.allowed.includes(choice))
+      .map((f) => [f.pointer, { choice }] as const),
+  ),
+});
+
+export type FieldsProgress = { open: number; total: number; resolved: number };
+
+/** Сколько полей решено и сколько осталось: по подробностям файла. */
+export const fieldsProgress = (
+  detail: JsonDetail,
+  resolution: FileResolution | null | undefined,
+): FieldsProgress => {
+  const total = conflictFieldsOf(detail).length;
+  const resolved = Object.keys(fieldChoicesFor(detail, resolution)).length;
+  return { total, resolved, open: total - resolved };
+};
+
+export const openFieldPointers = (
+  detail: JsonDetail,
+  resolution: FileResolution | null | undefined,
+): string[] => {
+  const chosen = fieldChoicesFor(detail, resolution);
+  return conflictFieldsOf(detail)
+    .map((f) => f.pointer)
+    .filter((pointer) => !(pointer in chosen));
+};
+
+/** Значения полей равны по содержимому (порядок ключей объекта не важен). */
+export const sameValue = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => sameValue(item, b[i]))
+    );
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const left = a as Record<string, unknown>;
+    const right = b as Record<string, unknown>;
+    const keys = Object.keys(left);
+    return (
+      keys.length === Object.keys(right).length &&
+      keys.every((key) => key in right && sameValue(left[key], right[key]))
+    );
+  }
+  return false;
+};
+
+/** Объединение двух списков: сначала мои значения, затем только чужие. */
+export const unionValue = (field: JsonFieldConflict): unknown[] | null => {
+  if (!Array.isArray(field.ours) || !Array.isArray(field.theirs)) return null;
+  const merged: unknown[] = [...(field.ours as unknown[])];
+  for (const item of field.theirs as unknown[]) {
+    if (!merged.some((existing) => sameValue(existing, item))) {
+      merged.push(item);
+    }
+  }
+  return merged;
+};
+
+/** Чьё значение сервер взял в поле, которое слил сам. */
+export const autoFieldWinner = (
+  field: JsonFieldConflict,
+): "same" | "mine" | "theirs" => {
+  if (sameValue(field.ours, field.theirs)) return "same";
+  if (sameValue(field.ours, field.base)) return "theirs";
+  return "mine";
+};
+
 export const setFileChoice = (choice: string): FileResolution => ({
   kind: "file",
   choice,
@@ -111,6 +294,8 @@ export const fileProgress = (
   resolution: FileResolution | null | undefined,
   /** Ключи мест файла, если подробности уже загружены: точнее, чем счётчик. */
   knownHunkKeys?: string[],
+  /** То же для полей: указатели полей, где нужен выбор. */
+  knownFieldPointers?: string[],
 ): FileProgress => {
   if (!needsDecision(file)) return { resolved: true, open: 0, total: 0 };
   const total = file.hunks + file.fields;
@@ -143,7 +328,9 @@ export const fileProgress = (
       };
     }
     case "fields": {
-      const done = Object.keys(resolution.fields).length;
+      const done = knownFieldPointers
+        ? countChosen(knownFieldPointers, resolution.fields)
+        : Object.keys(resolution.fields).length;
       const open = Math.max(file.fields - done, 0);
       return {
         resolved: file.fields > 0 && open === 0,
@@ -330,19 +517,37 @@ export const carryOverDrafts = (
   return next;
 };
 
-/** Выкидывает выборы по местам, которых в файле больше нет. */
+/** Выкидывает выборы по местам и полям, которых в файле больше нет. */
 export const pruneResolution = (
   resolution: FileResolution,
   detail: ConflictFileDetail,
 ): FileResolution => {
-  if (resolution.kind !== "hunks" || detail.kind !== "text") return resolution;
-  const keys = new Set(hunksOf(detail).map((h) => h.key));
-  const kept = Object.fromEntries(
-    Object.entries(resolution.hunks).filter(([key]) => keys.has(key)),
-  );
-  return Object.keys(kept).length === Object.keys(resolution.hunks).length
-    ? resolution
-    : { kind: "hunks", hunks: kept };
+  if (resolution.kind === "hunks" && detail.kind === "text") {
+    const keys = new Set(hunksOf(detail).map((h) => h.key));
+    const kept = Object.fromEntries(
+      Object.entries(resolution.hunks).filter(([key]) => keys.has(key)),
+    );
+    return Object.keys(kept).length === Object.keys(resolution.hunks).length
+      ? resolution
+      : { kind: "hunks", hunks: kept };
+  }
+  if (resolution.kind === "fields" && detail.kind === "json") {
+    // Поле осталось, но варианта, который выбрал пользователь, в нём уже нет:
+    // такой выбор тоже сбрасываем, иначе сервер отклонит весь файл.
+    const fields = new Map(
+      conflictFieldsOf(detail).map((f) => [f.pointer, f] as const),
+    );
+    const kept = Object.fromEntries(
+      Object.entries(resolution.fields).filter(([pointer, value]) => {
+        const field = fields.get(pointer);
+        return !!field && field.allowed.includes(value.choice);
+      }),
+    );
+    return Object.keys(kept).length === Object.keys(resolution.fields).length
+      ? resolution
+      : { kind: "fields", fields: kept };
+  }
+  return resolution;
 };
 
 /** Решения, которые сохранил сервер (после перезагрузки страницы). */

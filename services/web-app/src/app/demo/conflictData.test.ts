@@ -41,4 +41,33 @@ describe("демо-дифф итога слияния", () => {
   it("картинка остаётся двоичной", () => {
     expect(conflictDiff("images/architecture.png", "ours").binary).toBe(true);
   });
+
+  it("carries every kind of conflict and warning for the review", () => {
+    const { session, details } = buildConflictSession();
+    const types = new Set(session.files.map((f) => f.conflict_type));
+    for (const type of [
+      "content",
+      "fields",
+      "binary",
+      "deleted_by_them",
+      "signature_group",
+      "case_collision",
+    ]) {
+      expect(types.has(type)).toBe(true);
+    }
+    expect(session.warnings.map((w) => w.code)).toEqual([
+      "template_missing_after_merge",
+      "signatures_stale",
+      "unsafe_path",
+    ]);
+    // Список-поле допускает «объединить», поле-скаляр нет.
+    const form = details[".hse-studio/forms/title-page.json"];
+    expect(
+      form?.kind === "json" &&
+        form.fields.some((f) => f.allowed.includes("union")),
+    ).toBe(true);
+    expect(session.counts.conflict + session.counts.auto).toBe(
+      session.counts.total,
+    );
+  });
 });

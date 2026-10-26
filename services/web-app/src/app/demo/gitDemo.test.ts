@@ -507,13 +507,13 @@ describe("demo conflicts", () => {
     expect(SyncResultSchema.parse(done.result).outcome).toBe("conflicts");
     const after = await status();
     expect(after.ui_state).toBe("conflicts");
-    expect(after.pending?.files_open).toBe(4);
+    expect(after.pending?.files_open).toBe(6);
     const session = await parsed(
       call("GET", conflictsPath),
       ConflictSessionSchema,
     );
-    expect(session.counts).toEqual({ conflict: 4, auto: 4, total: 8 });
-    expect(session.unresolved).toBe(4);
+    expect(session.counts).toEqual({ conflict: 6, auto: 4, total: 10 });
+    expect(session.unresolved).toBe(6);
   });
 
   it("serves a detail for every conflict kind and a diff for each view", async () => {
@@ -567,7 +567,7 @@ describe("demo conflicts", () => {
     );
     expect(unresolved.status).toBe(422);
     expect(unresolved.body.code).toBe("unresolved_conflicts");
-    expect(unresolved.body.paths).toHaveLength(4);
+    expect(unresolved.body.paths).toHaveLength(6);
 
     const outdated = await errorOf(
       call("POST", `${conflictsPath}/resolve`, {
@@ -600,6 +600,8 @@ describe("demo conflicts", () => {
       ".hse-studio/forms/title-page.json": { kind: "file", choice: "mine" },
       "images/architecture.png": { kind: "file", choice: "newest" },
       "chapters/appendix.tex": { kind: "file", choice: "mine" },
+      ".hse-studio/frozen/coursework.pdf": { kind: "file", choice: "theirs" },
+      "chapters/Appendix-B.tex": { kind: "file", choice: "mine" },
     };
     const started = await parsed(
       call("POST", `${conflictsPath}/resolve`, {

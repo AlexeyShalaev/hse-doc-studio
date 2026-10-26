@@ -4,6 +4,10 @@ import { Spinner } from "@shared/ui/Spinner";
 import { Notice, ViewTabs, type ViewTab } from "@shared/ui/ConflictKit";
 import {
   composeText,
+  isBinaryDetail,
+  isDeleteConflict,
+  isGroupConflict,
+  isJsonDetail,
   isTextDetail,
   needsDecision,
 } from "../model/conflictModel";
@@ -12,7 +16,11 @@ import type {
   ConflictWorkspace,
 } from "../model/useConflictWorkspace";
 import { AutoFileInfo } from "./AutoFileInfo";
+import { BinaryResolver } from "./BinaryResolver";
 import { ConflictFileDiff } from "./ConflictFileDiff";
+import { DeleteModifyResolver } from "./DeleteModifyResolver";
+import { GroupChoiceResolver } from "./GroupChoiceResolver";
+import { JsonFieldResolver } from "./JsonFieldResolver";
 import { ManualEditor } from "./ManualEditor";
 import { SideFacts } from "./SideFacts";
 import { TextHunkResolver } from "./TextHunkResolver";
@@ -24,11 +32,18 @@ export type ConflictFilePaneProps = {
 };
 
 const viewsFor = (file: ConflictFile): ConflictView[] => {
+  // Подписи и имена, различающиеся регистром, решаются только выбором стороны.
+  if (isGroupConflict(file)) return ["parts"];
+  // При удалении против правки полезно увидеть, что именно изменили.
+  if (isDeleteConflict(file)) return ["parts", "mine", "theirs"];
   if (file.kind === "binary" || file.kind === "delete") return ["parts"];
   if (file.hunks > 0) return ["parts", "mine", "theirs", "result", "manual"];
   if (file.kind === "json") return ["parts", "mine", "theirs", "result"];
   return ["parts", "mine", "theirs"];
 };
+
+const isDeletedBy = (value: string): value is "ours" | "theirs" =>
+  value === "ours" || value === "theirs";
 
 const PaneHeader = ({
   file,
@@ -157,6 +172,33 @@ export const ConflictFilePane = ({
       );
     }
 
+    // Эти конфликты понятны по типу, подробности файла им не нужны.
+    if (isGroupConflict(file)) {
+      return (
+        <GroupChoiceResolver
+          file={file}
+          resolution={resolution}
+          theirsAuthor={theirsAuthor}
+          onChoose={workspace.chooseFile}
+        />
+      );
+    }
+    if (isDeleteConflict(file)) {
+      return (
+        <DeleteModifyResolver
+          file={file}
+          resolution={resolution}
+          theirsAuthor={theirsAuthor}
+          deletedBy={
+            detail?.kind === "delete" && isDeletedBy(detail.deleted_by)
+              ? detail.deleted_by
+              : null
+          }
+          onChoose={workspace.chooseFile}
+        />
+      );
+    }
+
     if (workspace.detailLoading) {
       return (
         <div
@@ -205,6 +247,34 @@ export const ConflictFilePane = ({
           appliedText={resolution?.kind === "text" ? resolution.content : null}
           disabled={false}
           onApply={workspace.applyManual}
+        />
+      );
+    }
+
+    if (isJsonDetail(detail) && detail.fields.length > 0) {
+      return (
+        <JsonFieldResolver
+          detail={detail}
+          resolution={resolution}
+          theirsLabel={theirsLabel}
+          onChoose={workspace.chooseField}
+          onClear={workspace.clearField}
+          onChooseAll={workspace.chooseAllFields}
+          onNextFile={workspace.goNextOpenFile}
+          hasNextFile={workspace.progress.open > 0}
+        />
+      );
+    }
+
+    if (isBinaryDetail(detail) || file.kind === "binary") {
+      return (
+        <BinaryResolver
+          projectId={projectId}
+          file={file}
+          detail={isBinaryDetail(detail) ? detail : undefined}
+          resolution={resolution}
+          theirsAuthor={theirsAuthor}
+          onChoose={workspace.chooseFile}
         />
       );
     }

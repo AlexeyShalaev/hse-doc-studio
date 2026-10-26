@@ -70,7 +70,9 @@
       "binary_newest": "Both sides changed the file. The newer version is kept and the other one is saved next to it.",
       "fallback": "The file was handled automatically, there is nothing to decide here."
     },
-    "copy": "The other version is saved as"
+    "copy": "The other version is saved as",
+    "hint": "Nothing to decide here: Studio merged these files by itself. Open a file to see what was done to it.",
+    "summary": "{{label}}: {{count}}"
   },
   "view": {
     "parts": "By part",
@@ -179,6 +181,16 @@
       "mine": "Keep the file deleted",
       "theirs": "Bring the file back with the repository changes",
       "newest": "Keep the newer one"
+    },
+    "signature_group": {
+      "mine": "Keep my signatures",
+      "theirs": "Take the signatures from the repository",
+      "newest": "Keep the newer ones"
+    },
+    "case_collision": {
+      "mine": "Keep my file",
+      "theirs": "Take the file from the repository",
+      "newest": "Keep the newer one"
     }
   },
   "apply": {
@@ -230,5 +242,120 @@
     "saveFailed": "Your choices were not saved on the server, so finishing is not possible yet. Try again.",
     "failed": "Could not finish the sync.",
     "dismiss": "Dismiss the message"
+  },
+  "fields": {
+    "open": "Fields left: {{open}} of {{total}}",
+    "allDone": "Every field in this file is resolved",
+    "allMine": "All mine",
+    "allTheirs": "All theirs",
+    "base": "Was",
+    "mine": "Mine",
+    "theirs": "Theirs ({{author}})",
+    "theirsPlain": "Theirs",
+    "union": "Combine",
+    "unionHint": "The list will hold the values from both sides, without repeats.",
+    "unionResult": "Result",
+    "chosen": {
+      "mine": "Chosen: mine",
+      "theirs": "Chosen: theirs",
+      "union": "Chosen: combine"
+    },
+    "empty": "(empty)",
+    "absent": "(none)",
+    "emptyList": "(empty list)",
+    "yes": "yes",
+    "no": "no",
+    "added": "new",
+    "auto": {
+      "title_one": "Merged automatically: {{count}} field",
+      "title_other": "Merged automatically: {{count}} fields",
+      "hint": "The sides did not disagree here: only one of them changed the field, or both wrote the same value.",
+      "from": {
+        "mine": "mine was taken",
+        "theirs": "theirs was taken",
+        "same": "both sides have the same value"
+      }
+    },
+    "group": "Field “{{field}}”, {{n}} of {{total}}"
+  },
+  "binary": {
+    "explain": "This kind of file cannot be merged by parts, so one version is kept as a whole.",
+    "mine": "My version",
+    "theirs": "Version from the repository",
+    "newer": "newer",
+    "previewMine": "Preview of my version",
+    "previewTheirs": "Preview of the version from the repository",
+    "loading": "Loading the preview…",
+    "error": "Could not show the preview",
+    "missing": "No file",
+    "noPreview": "There is no preview for this kind of file",
+    "tooBig": "The file is large, so the preview is not loaded",
+    "newestKeeps": "The newer version stays: {{author}}, {{when}}.",
+    "newestKeepsPlain": "The version that was changed later stays.",
+    "copySaved": "If you keep the newer one, Studio saves the other version next to it under this name:",
+    "copyLabel": "Name of the copy"
+  },
+  "deleteModify": {
+    "deletedBy": "Deleted by: {{author}}",
+    "changedBy": "Changed by: {{author}}",
+    "them": {
+      "mine": "The file stays in the project with your changes, and the deletion from the repository is not applied.",
+      "theirs": "The file disappears from the project and your changes in it are not kept. Earlier versions stay in the history."
+    },
+    "us": {
+      "mine": "The file stays deleted. The changes from the repository do not reach the project, but they stay in the history.",
+      "theirs": "The file comes back to the project together with the changes from the repository."
+    }
+  },
+  "group": {
+    "signature_group": {
+      "title": "Signatures cannot be mixed",
+      "text": "A signature covers the document byte for byte, so one side's whole set is taken: the frozen PDF together with its signatures. The other side's set is removed from the project.",
+      "doc": "Document: {{doc}}"
+    },
+    "case_collision": {
+      "title": "The names differ only by letter case",
+      "text": "On macOS and Windows such names mean the same file, so both cannot stay in the project. Pick the one to keep."
+    }
+  },
+  "warnings": {
+    "aria": "Sync warnings",
+    "files": "Files: {{count}}",
+    "template_missing_after_merge": {
+      "title": "This Studio version does not have the template",
+      "text": "The merge will go through, but the project will open read-only afterwards: the template it needs is not here. The version from before the sync is saved, so you can go back to it."
+    },
+    "signatures_stale": {
+      "title": "Signatures are out of date",
+      "text": "After the merge the document PDF will change while the signatures stay from the earlier version. They will have to be collected again."
+    },
+    "unsafe_path": {
+      "title": "Some files were skipped",
+      "text": "The repository sent files with unsafe paths. We do not write them to disk, and the rest is merged as usual."
+    },
+    "case_collision": {
+      "title": "File names match except for letter case",
+      "text": "On macOS and Windows such files cannot sit side by side. They need a decision."
+    },
+    "frozen_documents": {
+      "title": "Frozen documents were changed",
+      "text": "Documents that have signatures were edited in the repository. Check that the signed versions are intact."
+    },
+    "team_foreign_edit": {
+      "title": "Edits in someone else's part",
+      "text": "A teammate changed files assigned to another author."
+    },
+    "template_missing": {
+      "title": "This Studio version does not have the template",
+      "text": "The project opens read-only until the template becomes available."
+    },
+    "lfs_pointers": {
+      "title": "Large files are not downloaded",
+      "text": "Some files live in Git LFS and are not downloaded yet. Studio treats them as placeholders."
+    },
+    "unknown": {
+      "title": "Warning",
+      "text": "Code: {{code}}"
+    }
   }
 }

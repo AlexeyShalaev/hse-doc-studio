@@ -26,7 +26,7 @@ const side = (
   exists = true,
 ) => ({ exists, size, author, at });
 
-const base = (
+export const conflictFile = (
   overrides: Partial<ConflictFile> & Pick<ConflictFile, "path" | "kind">,
 ): ConflictFile => ({
   owner: null,
@@ -133,7 +133,7 @@ const DELETE_DETAIL: ConflictFileDetail = {
 };
 
 export const buildFiles = (): ConflictFile[] => [
-  base({
+  conflictFile({
     path: "main.tex",
     kind: "text",
     conflict_type: "content",
@@ -141,7 +141,7 @@ export const buildFiles = (): ConflictFile[] => [
     open_hunks: 3,
     allowed: ["mine", "theirs"],
   }),
-  base({
+  conflictFile({
     path: ".hse-studio/forms/title.json",
     kind: "json",
     conflict_type: "fields",
@@ -149,7 +149,7 @@ export const buildFiles = (): ConflictFile[] => [
     open_fields: 1,
     allowed: ["mine", "theirs"],
   }),
-  base({
+  conflictFile({
     path: "images/a.png",
     kind: "binary",
     conflict_type: "binary",
@@ -157,7 +157,7 @@ export const buildFiles = (): ConflictFile[] => [
     default_resolution: "newest",
     copy_path: "images/a.conflict-1.png",
   }),
-  base({
+  conflictFile({
     path: "appendix.tex",
     kind: "text",
     conflict_type: "deleted_by_them",
@@ -168,13 +168,13 @@ export const buildFiles = (): ConflictFile[] => [
       base: side("Иван Смирнов", "2026-10-20T10:00:00Z"),
     },
   }),
-  base({
+  conflictFile({
     path: "references.bib",
     kind: "text",
     action: "merged",
     resolved: true,
   }),
-  base({
+  conflictFile({
     path: "chapters/one.tex",
     kind: "text",
     action: "take_theirs",
@@ -322,6 +322,12 @@ export const installFakeConflicts = (
           0,
         );
         file.resolved = file.hunks > 0 && file.open_hunks === 0;
+      } else if (draft.kind === "fields") {
+        file.open_fields = Math.max(
+          file.fields - Object.keys(draft.fields).length,
+          0,
+        );
+        file.resolved = file.fields > 0 && file.open_fields === 0;
       } else {
         file.open_hunks = 0;
         file.resolved = true;
