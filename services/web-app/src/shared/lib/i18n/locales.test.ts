@@ -25,7 +25,14 @@ const keysOf = (lang: string, file: string): string[] =>
     ),
   ].sort();
 
-const NEW_NAMESPACES = ["gitSync", "gitRemote", "gitAccess", "profile"];
+const NEW_NAMESPACES = [
+  "gitSync",
+  "gitRemote",
+  "gitAccess",
+  "gitExchange",
+  "gitConflicts",
+  "profile",
+];
 
 describe("locale parity", () => {
   const namespaces = readdirSync(join(LOCALES, "ru")).sort();
