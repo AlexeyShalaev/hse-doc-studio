@@ -7,18 +7,7 @@ from datetime import datetime
 
 from hse_doc_studio.core.git_sync.entities import LastError, SyncHealth, SyncState
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
-
-_HEALTH: dict[GitErrorCode, SyncHealth] = {
-    GitErrorCode.auth_failed: SyncHealth.unauthenticated,
-    GitErrorCode.forbidden_write: SyncHealth.unauthenticated,
-    GitErrorCode.sso_required: SyncHealth.unauthenticated,
-    GitErrorCode.credentials_missing: SyncHealth.unauthenticated,
-    GitErrorCode.offline: SyncHealth.offline,
-    GitErrorCode.timeout: SyncHealth.offline,
-    GitErrorCode.host_key_changed: SyncHealth.host_key_changed,
-    GitErrorCode.not_found_or_no_access: SyncHealth.remote_missing,
-    GitErrorCode.branch_missing: SyncHealth.branch_missing,
-}
+from hse_doc_studio.core.git_sync.fetch_schedule import health_for
 
 # Коды, которые говорят о состоянии проекта или этой Студии, а не об удалённом репозитории.
 _LOCAL_CODES = frozenset(
@@ -37,10 +26,6 @@ _LOCAL_CODES = frozenset(
         GitErrorCode.remote_moved,
     }
 )
-
-
-def health_for(code: GitErrorCode) -> SyncHealth:
-    return _HEALTH.get(code, SyncHealth.error)
 
 
 def with_failure(state: SyncState, exc: GitSyncError, *, at: datetime, fetch: bool = False) -> SyncState:

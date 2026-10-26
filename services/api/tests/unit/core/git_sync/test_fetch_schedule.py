@@ -95,6 +95,7 @@ def test__next_attempt_at__adds_the_delay_to_the_last_attempt() -> None:
         (GitErrorCode.auth_failed, SyncHealth.unauthenticated),
         (GitErrorCode.sso_required, SyncHealth.unauthenticated),
         (GitErrorCode.credentials_missing, SyncHealth.unauthenticated),
+        (GitErrorCode.forbidden_write, SyncHealth.unauthenticated),
         (GitErrorCode.host_key_changed, SyncHealth.host_key_changed),
         (GitErrorCode.offline, SyncHealth.offline),
         (GitErrorCode.timeout, SyncHealth.offline),

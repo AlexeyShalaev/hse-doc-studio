@@ -5,30 +5,12 @@ from datetime import UTC, datetime
 import pytest
 from hse_doc_studio.core.git_sync.entities import SyncHealth, SyncState
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
-from hse_doc_studio.use_cases.git_sync.health import health_for, with_failure, with_success
+from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
 
 pytestmark = pytest.mark.unit
 
 _AT = datetime(2026, 10, 27, 9, 0, tzinfo=UTC)
 _STATE = SyncState(local_branch="master", remote_branch="main")
-
-
-@pytest.mark.parametrize(
-    ("code", "health"),
-    [
-        (GitErrorCode.auth_failed, SyncHealth.unauthenticated),
-        (GitErrorCode.forbidden_write, SyncHealth.unauthenticated),
-        (GitErrorCode.offline, SyncHealth.offline),
-        (GitErrorCode.timeout, SyncHealth.offline),
-        (GitErrorCode.host_key_changed, SyncHealth.host_key_changed),
-        (GitErrorCode.not_found_or_no_access, SyncHealth.remote_missing),
-        (GitErrorCode.branch_missing, SyncHealth.branch_missing),
-        (GitErrorCode.tls_error, SyncHealth.error),
-        (GitErrorCode.git_error, SyncHealth.error),
-    ],
-)
-def test__health_for__maps_remote_failures(code: GitErrorCode, health: SyncHealth) -> None:
-    assert health_for(code) is health
 
 
 def test__with_failure__network_error__records_health_and_error() -> None:

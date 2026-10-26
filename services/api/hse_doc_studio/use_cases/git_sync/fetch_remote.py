@@ -21,7 +21,6 @@ import structlog
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.git_sync.entities import (
     GitOperationError,
-    LastError,
     RemoteTarget,
     StoreRemoteConfig,
     SyncHealth,
@@ -29,7 +28,7 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
-from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook, health_for
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.policy import FETCH_DEBOUNCE_S, GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitOperationRegistry,
@@ -42,6 +41,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, parse_remote_project, schema_blocks_merge
 from hse_doc_studio.core.git_sync.url import parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
 from hse_doc_studio.use_cases.git_sync.status import (
     TRACKING_PREFIX,
     GitStatusBuilder,
@@ -192,12 +192,7 @@ class FetchGitRemoteUC:
         self._save(
             project,
             config,
-            lambda state: replace(
-                state,
-                health=health_for(error.code),
-                last_fetch_at=now,
-                last_error=LastError(error.code, error.detail, now),
-            ),
+            lambda state: with_failure(state, error, at=now, fetch=True),
         )
 
     def _record_success(self, project: Project, config: StoreRemoteConfig, before: str | None) -> None:
@@ -209,11 +204,7 @@ class FetchGitRemoteUC:
             after = self._reader.rev_parse(folder, tracking)
             newer, required = self._remote_schema(folder, tracking, after, before, state)
             return replace(
-                state,
-                health=SyncHealth.ok,
-                last_fetch_at=now,
-                last_fetch_ok_at=now,
-                last_error=None,
+                with_success(state, at=now),
                 # Ветка на сервере появилась: первая отправка уже не первая, сравнение идёт с ней.
                 remote_empty=state.remote_empty and after is None,
                 remote_schema_newer=newer,
