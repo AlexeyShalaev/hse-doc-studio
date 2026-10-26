@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 
 
@@ -16,7 +17,7 @@ class VcsFolderLocks:
     def __init__(self) -> None:
         self._locks: dict[str, asyncio.Lock] = {}
 
-    def for_folder(self, folder: Path) -> asyncio.Lock:
+    def for_folder(self, folder: Path) -> AbstractAsyncContextManager[None]:
         try:
             key = str(folder.resolve())
         except OSError:
