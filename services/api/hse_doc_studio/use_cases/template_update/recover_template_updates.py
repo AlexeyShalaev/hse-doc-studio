@@ -7,9 +7,10 @@ from pathlib import Path
 import structlog
 
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.template_update.entities import UpdateJournalKind
 from hse_doc_studio.core.template_update.protocols import ITemplateBaseStore, IUpdateJournalRepository
 from hse_doc_studio.core.vcs.protocols import IVcsService
-from hse_doc_studio.use_cases.template_update.transaction import TemplateUpdateTransaction
+from hse_doc_studio.use_cases.template_update.transaction import TemplateUpdateTransaction, sync_transaction
 
 logger = structlog.get_logger()
 
@@ -20,6 +21,7 @@ class RecoveredUpdate:
     update_id: str
     # True — коммит обновления успел записаться, обновление доведено; False — откат.
     finalized: bool
+    kind: UpdateJournalKind = UpdateJournalKind.template
 
 
 @dataclass
@@ -28,11 +30,12 @@ class RecoverTemplateUpdatesOutput:
 
 
 class RecoverTemplateUpdatesUC:
-    """При старте: разобраться с обновлениями шаблона, прерванными падением процесса.
+    """При старте: разобраться с обновлениями шаблона и слияниями синхронизации, прерванными падением процесса.
 
-    Журнал остаётся только у прерванного обновления (успешное и упавшее с
+    Журнал остаётся только у прерванной операции (успешная и упавшая с
     исключением его убирают сами). По журналу проект либо возвращается ровно в
-    состояние до обновления, либо — если коммит уже сделан — обновление доводится.
+    состояние до неё, либо — если коммит уже сделан — операция доводится.
+    Вид журнала (`kind`) выбирает, как узнать, что коммит сделан.
     """
 
     def __init__(
@@ -46,7 +49,10 @@ class RecoverTemplateUpdatesUC:
         self._project_repo = project_repo
         self._index = project_index_repo
         self._journals = journal_repo
-        self._transaction = TemplateUpdateTransaction(journal_repo, base_store, vcs_service)
+        self._transactions = {
+            UpdateJournalKind.template: TemplateUpdateTransaction(journal_repo, base_store, vcs_service),
+            UpdateJournalKind.sync: sync_transaction(journal_repo, base_store, vcs_service),
+        }
 
     async def execute(self) -> RecoverTemplateUpdatesOutput:
         return await asyncio.to_thread(self._recover_all)
@@ -57,12 +63,14 @@ class RecoverTemplateUpdatesUC:
             project = self._project_repo.get(folder)
             journal = self._journals.get(folder)
             if project is None or journal is None:
-                logger.warning("interrupted template update left as is", folder=str(folder))
+                logger.warning("interrupted update journal left as is", folder=str(folder))
                 continue
             try:
-                finalized = self._transaction.recover(project, journal)
+                finalized = self._transactions[journal.kind].recover(project, journal)
             except Exception as exc:  # noqa: BLE001 — один проект не должен мешать остальным
-                logger.warning("interrupted template update recovery failed", folder=str(folder), exc=str(exc))
+                logger.warning("interrupted update recovery failed", folder=str(folder), exc=str(exc))
                 continue
-            recovered.append(RecoveredUpdate(folder=folder, update_id=journal.id, finalized=finalized))
+            recovered.append(
+                RecoveredUpdate(folder=folder, update_id=journal.id, finalized=finalized, kind=journal.kind)
+            )
         return RecoverTemplateUpdatesOutput(recovered=recovered)

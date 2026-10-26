@@ -235,7 +235,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
 
     @app.on_event("startup")
     async def _recover_template_updates() -> None:
-        # Обновления шаблона, прерванные падением процесса: по журналу проект
+        # Обновления шаблона и слияния синхронизации, прерванные падением процесса: по журналу проект
         # возвращается в состояние до обновления (или обновление доводится,
         # если его коммит уже записан). Иначе проект остался бы «только чтение».
         try:
@@ -247,6 +247,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                         "startup template update recovery",
                         folder=str(item.folder),
                         update_id=item.update_id,
+                        kind=item.kind.value,
                         finalized=item.finalized,
                     )
         except Exception:
