@@ -20,13 +20,14 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import DetachedSignature
 from hse_doc_studio.infra.signatures.cades_signer import sign_detached as sign_cades
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
-from hse_doc_studio.infra.signatures.openpgp import GpgError, GpgKeyring, GpgUnavailableError
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._detached_store import (
-    note_plate_mismatch,
     require_fresh_frozen,
     require_slot,
     store_signature,
@@ -93,7 +94,7 @@ class SignInStudioUC:
 
         sig_bytes = await asyncio.to_thread(self._sign, identity, pdf_path, inp.passphrase)
         verified = await asyncio.to_thread(self._verifier.verify, pdf_path, sig_bytes)
-        note_plate_mismatch(state, inp.slot_id, verified)
+        verified = note_plate_mismatch(state, inp.slot_id, verified)
         new_state, sig = store_signature(ctx, state, inp.slot_id, verified, sig_bytes, DetachedOrigin.studio, frozen)
         self._signature_repo.save_state(ctx.project.folder, new_state)
         logger.info(

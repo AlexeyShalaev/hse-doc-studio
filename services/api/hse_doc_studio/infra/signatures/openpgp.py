@@ -20,20 +20,14 @@ from typing import Literal
 
 import structlog
 
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+
 logger = structlog.get_logger()
 
 VerifyStatus = Literal["good", "bad", "no_pubkey", "expired_key", "expired_signature", "revoked_key", "error"]
 
 _TIMEOUT = 60.0
 _MAX_HOME_BYTES = 80
-
-
-class GpgUnavailableError(RuntimeError):
-    """The gpg binary is not installed."""
-
-
-class GpgError(ValueError):
-    """gpg refused the operation (bad key, wrong passphrase, ...)."""
 
 
 @dataclass(frozen=True)

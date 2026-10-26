@@ -26,6 +26,7 @@ from typing import Any, Literal
 import structlog
 from asn1crypto import cms, core, pem, x509
 
+from hse_doc_studio.core.signatures.errors import CmsParseError
 from hse_doc_studio.infra.signatures import gost
 
 logger = structlog.get_logger()
@@ -51,10 +52,6 @@ _NAME_FIELDS = {
 
 _MAX_CHAIN = 8
 _QUALIFIED_POLICY_PREFIX = "1.2.643.100.113."
-
-
-class CmsParseError(ValueError):
-    """The blob is not a CMS SignedData structure."""
 
 
 @dataclass(frozen=True)

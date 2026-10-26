@@ -12,8 +12,8 @@ from hse_doc_studio.core.enums import DetachedOrigin
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.verification import VerifiedSignature
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
-from hse_doc_studio.infra.signatures.detached_verifier import VerifiedSignature
 from hse_doc_studio.use_cases.signatures._doc_context import DETACHED_DIR, DocContext, safe_name, sha256_file
 
 
@@ -51,14 +51,6 @@ async def require_fresh_frozen(ctx: DocContext, state: SignaturesState) -> Froze
     return frozen
 
 
-def note_plate_mismatch(state: SignaturesState, slot_id: str, verified: VerifiedSignature) -> None:
-    """Flag a signature made by somebody else than the signer printed on the plate."""
-    slot = state.slots.get(slot_id)
-    expected = slot.signer if slot else None
-    if expected and expected.signer_id and verified.signer_id and expected.signer_id != verified.signer_id:
-        verified.notes.append("plate_signer_mismatch")
-
-
 def store_signature(
     ctx: DocContext,
     state: SignaturesState,
@@ -94,7 +86,7 @@ def store_signature(
         chain=verified.chain,
         root_subject=verified.root_subject,
         root_fingerprint=verified.root_fingerprint,
-        notes=tuple(verified.notes),
+        notes=verified.notes,
     )
     doc_sigs = {**state.detached.get(ctx.doc.id, {}), slot_id: sig}
     return replace(state, detached={**state.detached, ctx.doc.id: doc_sigs}), sig

@@ -16,21 +16,20 @@ Note codes:
 from __future__ import annotations
 
 import tempfile
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import structlog
 
 from hse_doc_studio.core.enums import DetachedFormat, DetachedVerdict
+from hse_doc_studio.core.signatures.errors import CmsParseError, GpgUnavailableError, UnknownSignatureFormatError
+from hse_doc_studio.core.signatures.verification import VerifiedSignature
 from hse_doc_studio.infra.signatures.cms_inspector import (
-    CmsParseError,
     SignerReport,
     inspect_cms,
     looks_like_cms,
 )
 from hse_doc_studio.infra.signatures.openpgp import (
     GpgKeyring,
-    GpgUnavailableError,
     GpgVerification,
     looks_like_openpgp_signature,
 )
@@ -38,31 +37,6 @@ from hse_doc_studio.infra.signatures.openpgp import (
 logger = structlog.get_logger()
 
 _ROOT_SUFFIXES = {".cer", ".crt", ".pem", ".der"}
-
-
-class UnknownSignatureFormatError(ValueError):
-    """The file is neither an OpenPGP nor a CMS signature."""
-
-
-@dataclass(frozen=True)
-class VerifiedSignature:
-    format: DetachedFormat
-    verdict: DetachedVerdict
-    signer: str
-    signer_id: str
-    issuer: str = ""
-    algorithm: str = ""
-    signed_at: str | None = None
-    not_before: str | None = None
-    not_after: str | None = None
-    chain: str | None = None
-    root_subject: str = ""
-    root_fingerprint: str = ""
-    # Extension of the stored signature file: ".asc", ".sig" or ".p7s".
-    extension: str = ".sig"
-    # OpenPGP, unknown signer: key id the user has to supply a public key for.
-    missing_key_id: str | None = None
-    notes: list[str] = field(default_factory=list)
 
 
 _PGP_STATUS: dict[str, tuple[DetachedVerdict, str | None]] = {
@@ -132,7 +106,7 @@ class DetachedSignatureVerifier:
         if r.status == "error":
             raise UnknownSignatureFormatError(r.note or "gpg could not read the signature")
         verdict, note = _PGP_STATUS[r.status]
-        notes = [note] if note else []
+        notes = (note,) if note else ()
         fpr = r.primary_fingerprint or r.fingerprint or ""
         not_after = None
         if fpr:
@@ -197,7 +171,7 @@ def _map_cms(reports: list[SignerReport]) -> VerifiedSignature:
         root_subject=first.chain_root_subject,
         root_fingerprint=first.chain_root_fingerprint,
         extension=".p7s",
-        notes=notes,
+        notes=tuple(notes),
     )
 
 
