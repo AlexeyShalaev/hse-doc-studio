@@ -686,7 +686,7 @@ def _hse_files_with_bytes(folder: Path, data: bytes) -> list[Path]:
         ("frozen_pdf_missing", "Frozen PDF is missing for Аннотация.pdf: freeze the document again"),
     ],
 )
-async def test__api__create_submission__frozen_rebuilt_400_and_pinned_litter(
+async def test__api__create_submission__frozen_source_errors_400_and_no_litter(
     test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture, breakage: str, detail: str
 ) -> None:
     project, _, frozen = await _frozen_signed_project(test_app, tmp_path, mocker, lang="ru", signature_format="cms")
@@ -709,14 +709,7 @@ async def test__api__create_submission__frozen_rebuilt_400_and_pinned_litter(
     assert not list((folder / ".hse-studio" / "submissions").glob("*.json"))
     changelog = (await test_app.get(f"/api/v1/projects/{project['id']}/changelog")).json()
     assert not [entry for entry in changelog if entry["kind"] == "pack_submission"]
-    # Сегодняшний мусор: ошибка летит уже после создания папки пакета, и в ней остаются документы, успевшие
-    # скопироваться до сбоя (презентация идёт в профиле раньше аннотации, замороженная аннотация копируется
-    # раньше проверки файла подписи). Сборка с предварительным планированием должна поднять ту же ошибку до
-    # записи на диск; тогда этот тест сознательно меняется на "папки нет".
-    leftovers = _folder_content(folder / "submissions")
-    expected = ["Презентация защиты темы.pdf"]
-    if breakage == "signature_file_missing":
-        expected = ["Аннотация.pdf", *expected]
-    assert len(leftovers) == len(expected)
-    for name, leftover in zip(expected, leftovers, strict=True):
-        assert re.fullmatch(rf"{_CHECKPOINT_1}-{_STAMP_RE}/{re.escape(name)}", leftover)
+    # Единственное намеренное отличие от сборки до планировщика: все три ошибки замороженного источника
+    # поднимает планировщик, до любой записи на диск. Раньше папка пакета оставалась с документами,
+    # успевшими скопироваться до сбоя; теперь папки submissions/<base_name>/ нет вовсе.
+    assert not list((folder / "submissions").glob("*"))

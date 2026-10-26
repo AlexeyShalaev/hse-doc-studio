@@ -50,8 +50,6 @@ signatures/update_slot_signer.py hse_doc_studio.infra.signatures.openpgp
 signatures/upload_signature_png.py hse_doc_studio.infra.signatures.png_metadata
 signing_identities/delete_signing_identity.py hse_doc_studio.infra.signatures.openpgp
 signing_identities/openpgp_keys.py hse_doc_studio.infra.signatures.openpgp
-submission/create_submission.py hse_doc_studio.infra.project_init.template_renderer
-submission/create_submission.py hse_doc_studio.infra.submission.assembler
 synctex/query_synctex.py hse_doc_studio.infra.synctex.parser
 system/cleanup_docker.py hse_doc_studio.infra.docker.cleanup_jobs
 system/cleanup_docker.py hse_doc_studio.infra.docker.system_manager

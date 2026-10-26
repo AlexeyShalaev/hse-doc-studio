@@ -98,6 +98,7 @@ from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
 from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
 from hse_doc_studio.infra.jobs.office_convert import OfficeConvertHandler
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
+from hse_doc_studio.infra.jobs.pack_handler import PackHandler
 from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
@@ -113,6 +114,7 @@ from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
+from hse_doc_studio.infra.submission.pack_executor import PackExecutor
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
 from hse_doc_studio.infra.template_update.state import JsonTemplateTrackingRepository, JsonUpdateJournalRepository
@@ -126,6 +128,7 @@ from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
+from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
 
@@ -606,12 +609,13 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_job_handler_registry(
-        self, office_convert: IOfficeConvertService, verifier: DetachedSignatureVerifier
+        self, office_convert: IOfficeConvertService, verifier: DetachedSignatureVerifier, pdf_stamper: PdfStamper
     ) -> JobHandlerRegistry:
         # Обработчики не-compile видов регистрируют слайсы своих семейств.
         registry = JobHandlerRegistry()
         registry.register(JobKind.office_convert, OfficeConvertHandler(office_convert))
         registry.register(JobKind.verify_detached, VerifyDetachedHandler(verifier))
+        registry.register(JobKind.pack_submission, PackHandler(PackExecutor(pdf_stamper)))
         return registry
 
     @provide
@@ -643,6 +647,10 @@ class DomainServiceProvider(Provider):
     @provide
     def get_submission_assembler(self, pdf_stamper: PdfStamper, keyring: GpgKeyring) -> SubmissionAssembler:
         return SubmissionAssembler(pdf_stamper=pdf_stamper, keyring=keyring)
+
+    @provide
+    def get_pack_planner(self, template_service: ProjectTemplateService) -> PackPlanner:
+        return PackPlanner(template_service)
 
     @provide
     def get_project_file_probe_factory(self) -> IProjectFileProbeFactory:

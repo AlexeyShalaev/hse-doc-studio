@@ -22,6 +22,7 @@ from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.files import InlineBlob, ManifestFile
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult, OfficeConvertStatus
+from hse_doc_studio.core.jobs.pack import ArchiveFormat, PackEntry, PackEntryKind, PackResult, PackSubmissionPayload
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload, VerifyDetachedResult
 from hse_doc_studio.core.language_check import ILanguageCheckService
@@ -51,6 +52,7 @@ from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
+from hse_doc_studio.use_cases.submission.create_submission import CreateSubmissionUC
 
 from tests.unit.infra.signatures.gost_fixture import make_detached_cms, make_identity
 
@@ -205,6 +207,49 @@ async def test__real_container__office_convert_job__runs_through_the_registered_
     assert (project / "tz" / "ТЗ.pdf").read_bytes() == b"%PDF"
     # Порт и конкретный менеджер в обработчике одно и то же: конвертер вызван на этом экземпляре.
     assert convert.await_args.args[0] is manager
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__pack_job__runs_through_the_registered_handler(tmp_path: Path) -> None:
+    workspace = tmp_path / "project"
+    workspace.mkdir()
+    (workspace / "a.txt").write_text("hello", encoding="utf-8")
+    payload = PackSubmissionPayload(
+        base_name="final-x",
+        profile_id="final",
+        lang=Lang.ru,
+        archive_format=ArchiveFormat.zip,
+        keep_folder=True,
+        entries=(
+            PackEntry(PackEntryKind.copy, "a.txt", source=ManifestFile("a.txt")),
+            PackEntry(PackEntryKind.text, "b.md", text="# b"),
+        ),
+    )
+    spec = JobSpec(
+        id=uuid4(),
+        kind=JobKind.pack_submission,
+        tags=job_tags(JobKind.pack_submission, payload),
+        project_id=uuid4(),
+        actor=Actor.local(),
+        locale=Lang.ru,
+        payload=payload,
+        local_root=workspace,
+    )
+    container = create_container()
+    try:
+        async with container() as request_container:
+            dispatcher = await request_container.get(IJobDispatcher)
+            use_case = await request_container.get(CreateSubmissionUC)
+            result = await dispatcher.run(spec)
+    finally:
+        await container.close()
+
+    assert use_case is not None
+    assert result.status is JobStatus.succeeded
+    packed = result.data_as(PackResult)
+    assert packed.archive.path == "submissions/final-x.zip"
+    assert packed.written == ("a.txt", "b.md")
+    assert (workspace / "submissions" / "final-x" / "a.txt").read_text(encoding="utf-8") == "hello"
 
 
 @pytest.mark.usefixtures("isolated_settings")

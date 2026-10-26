@@ -62,7 +62,12 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
+from hse_doc_studio.core.signatures.ports import (
+    IChainFetcher,
+    IOpenPgpKeyImporter,
+    IPublicKeyExporter,
+    ITrustMaterialProvider,
+)
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -97,7 +102,6 @@ from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
-from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 
 # --- Agent Personas (custom roles) ---
 from hse_doc_studio.use_cases.agent_personas.create_agent_persona import CreateAgentPersonaUC
@@ -348,6 +352,7 @@ from hse_doc_studio.use_cases.submission.get_submission_file import GetSubmissio
 # --- Submission ---
 from hse_doc_studio.use_cases.submission.get_submission_profiles import GetSubmissionProfilesUC
 from hse_doc_studio.use_cases.submission.list_submissions import ListSubmissionsUC
+from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.submission.preview_custom_docs import PreviewSubmissionCustomDocsUC
 from hse_doc_studio.use_cases.synctex.query_synctex import SyncTexUC
 
@@ -2383,7 +2388,9 @@ class UseCaseProvider(Provider):
         submission_repo: IPackSubmissionRepository,
         submission_profile_service: SubmissionProfileService,
         signature_repo: ISignatureRepository,
-        assembler: SubmissionAssembler,
+        materializer: ITemplateMaterializer,
+        planner: PackPlanner,
+        key_exporter: IPublicKeyExporter,
         changelog_repo: IChangeLogRepository,
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
@@ -2396,7 +2403,9 @@ class UseCaseProvider(Provider):
             submission_repo=submission_repo,
             submission_profile_service=submission_profile_service,
             signature_repo=signature_repo,
-            assembler=assembler,
+            materializer=materializer,
+            planner=planner,
+            key_exporter=key_exporter,
             changelog_repo=changelog_repo,
             render_form_uc=render_form_uc,
             dispatcher=dispatcher,
