@@ -40,6 +40,7 @@ from hse_doc_studio.core.services import (
     RequirementMatchingService,
     SubmissionProfileService,
 )
+from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -630,7 +631,7 @@ class DomainServiceProvider(Provider):
         return SubmissionAssembler(pdf_stamper=pdf_stamper, office_manager=office_manager, keyring=keyring)
 
     @provide
-    def get_gpg_keyring(self) -> GpgKeyring:
+    def get_gpg_keyring(self) -> AnyOf[GpgKeyring, IPublicKeyExporter]:
         return GpgKeyring(settings.data_dir.expanduser() / "gnupg")
 
     @provide
