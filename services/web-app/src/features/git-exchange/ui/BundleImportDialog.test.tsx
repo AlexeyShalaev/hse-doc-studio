@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@shared/api";
 import * as sharedLib from "@shared/lib";
-import { gitSyncApi } from "@entities/git-sync";
+import { gitSyncApi, useSyncUiStore } from "@entities/git-sync";
 import {
   MERGED,
   PROJECT_ID,
@@ -50,6 +50,7 @@ describe("окно загрузки файла проекта", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    useSyncUiStore.setState({ profileDialogOpen: false });
   });
 
   describe("выбор файла", () => {
@@ -285,7 +286,8 @@ describe("окно загрузки файла проекта", () => {
         outcome: "conflicts",
         conflicts: { files_total: 2, files_open: 2 },
       });
-      const { onClose } = mount();
+      const onNavigate = vi.fn();
+      const { onClose } = mount({ onNavigate });
       const user = await choose(bundle());
       await user.click(submit());
       const result = await screen.findByTestId("import-result-conflicts");
@@ -294,6 +296,7 @@ describe("окно загрузки файла проекта", () => {
         screen.getByRole("button", { name: "Открыть конфликты" }),
       );
       expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onNavigate).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId("location")).toHaveTextContent(
         `/projects/${PROJECT_ID}/sync/conflicts`,
       );
@@ -421,9 +424,10 @@ describe("окно загрузки файла проекта", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
 
-    it("profile_required даёт перейти к профилю автора", async () => {
+    it("profile_required открывает окно «Представься» и закрывает внешнее окно", async () => {
       reject("profile_required", 409, "Нужен профиль");
-      const { onClose } = mount();
+      const onNavigate = vi.fn();
+      const { onClose } = mount({ onNavigate });
       const user = await choose(bundle());
       await user.click(submit());
       expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -431,7 +435,9 @@ describe("окно загрузки файла проекта", () => {
       );
       await user.click(screen.getByRole("button", { name: "Указать автора" }));
       expect(onClose).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId("location")).toHaveTextContent(
+      expect(onNavigate).toHaveBeenCalledTimes(1);
+      expect(useSyncUiStore.getState().profileDialogOpen).toBe(true);
+      expect(screen.getByTestId("location")).not.toHaveTextContent(
         "/settings/profile",
       );
     });

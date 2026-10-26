@@ -24,7 +24,7 @@ export const BundleExchangeDialog = ({
       width={560}
       title={t("dialog.title")}
     >
-      <ExchangeCard projectId={projectId} />
+      <ExchangeCard projectId={projectId} onNavigate={onClose} />
     </Modal>
   );
 };

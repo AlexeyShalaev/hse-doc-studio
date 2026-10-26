@@ -16,14 +16,10 @@ import {
   Undo2,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { i18n, localeTag } from "@shared/lib";
+import { i18n, initialsOf, localeTag } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import type { VcsCommit } from "@entities/vcs";
-import {
-  initialsOf,
-  isIncomingOnly,
-  isOwnCommit,
-} from "./vcsHistoryFilters.model";
+import { isIncomingOnly, isOwnCommit } from "./vcsHistoryFilters.model";
 
 // BCP-47 locale for date formatting, derived from the interface language.
 const dateLocale = (): string => localeTag();

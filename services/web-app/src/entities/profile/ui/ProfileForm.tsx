@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { Check, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { describeGitError } from "@entities/git-sync";
+import { initialsOf } from "@shared/lib";
 import { Button } from "@shared/ui/Button";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
@@ -40,14 +41,6 @@ export type ProfileFormProps = {
 };
 
 type FieldIssues = Partial<Record<ProfileField, string>>;
-
-const initialsOf = (name: string): string => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0] ? Array.from(parts[0])[0] : undefined;
-  const lastPart = parts.length > 1 ? parts[parts.length - 1] : undefined;
-  const second = lastPart ? Array.from(lastPart)[0] : undefined;
-  return `${first ?? ""}${second ?? ""}`.toUpperCase();
-};
 
 const isField = (value: unknown): value is ProfileField =>
   value === "name" || value === "email";

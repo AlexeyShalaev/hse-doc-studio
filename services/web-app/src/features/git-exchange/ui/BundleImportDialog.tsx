@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { Upload } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { AUTHOR_PROFILE_PATH, gitConflictsPath } from "@entities/git-sync";
+import { gitConflictsPath, useSyncUiStore } from "@entities/git-sync";
 import { Modal } from "@shared/ui/Modal";
 import { Notice } from "@shared/ui/ConflictKit";
 import { FileDropZone, type FileDropZoneHandle } from "@shared/ui/FileDropZone";
@@ -28,6 +28,12 @@ export type BundleImportDialogProps = {
   onClose: () => void;
   /** Почему импорт сейчас невозможен (проект только для чтения); null, если можно. */
   disabledReason?: string | null;
+  /**
+   * Окно само уводит человека дальше (на экран конфликтов или к окну «Представься»).
+   * Внешнее окно, внутри которого оно открыто, по этому сигналу закрывается:
+   * иначе оно осталось бы поверх нового экрана.
+   */
+  onNavigate?: () => void;
 };
 
 // Импорт файла от коллеги: выбрать или перетащить файл, при необходимости ввести
@@ -39,6 +45,7 @@ export const BundleImportDialog = ({
   projectId,
   onClose,
   disabledReason = null,
+  onNavigate,
 }: BundleImportDialogProps) => {
   const { t } = useTranslation("gitExchange");
   const navigate = useNavigate();
@@ -94,6 +101,7 @@ export const BundleImportDialog = ({
 
   const openConflicts = (): void => {
     close();
+    onNavigate?.();
     void navigate(gitConflictsPath(projectId));
   };
 
@@ -119,7 +127,8 @@ export const BundleImportDialog = ({
                   className="btn xs"
                   onClick={() => {
                     close();
-                    void navigate(AUTHOR_PROFILE_PATH);
+                    onNavigate?.();
+                    useSyncUiStore.getState().openProfileDialog();
                   }}
                 >
                   {t("import.openProfile")}

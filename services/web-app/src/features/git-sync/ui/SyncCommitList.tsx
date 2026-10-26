@@ -1,6 +1,6 @@
 import type { GitCommitBrief } from "@entities/git-sync";
-import { formatRelativeTime } from "@shared/lib";
-import { initialsOf, sectionTitleStyle } from "../model/commitUi";
+import { formatRelativeTime, initialsOf } from "@shared/lib";
+import { sectionTitleStyle } from "../model/commitUi";
 
 // Короткий список версий для панели и страницы истории: кто, что и когда.
 // Версии коллег можно выбирать, чтобы посмотреть, что в них изменилось.

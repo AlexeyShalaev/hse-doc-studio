@@ -1,3 +1,4 @@
+// Only for Docker image/disk sizes (GB/MB, no localization). For file sizes in the UI use formatFileSize.
 // GB/MB formatter for Docker image/disk sizes. GiB-based (1024^n) to match
 // what `docker` itself reports in its human-readable size strings.
 export const formatBytes = (bytes: number): string => {

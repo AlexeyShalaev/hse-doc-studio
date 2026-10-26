@@ -1,5 +1,6 @@
 import { localeTag } from "./i18n";
 
+// Для размеров файлов (bundle, вложения); размеры Docker считает formatBytes.
 // Размер файла для людей: Б, КБ, МБ, ГБ на языке интерфейса (степени 1024).
 const UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 

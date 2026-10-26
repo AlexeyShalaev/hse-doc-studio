@@ -5,7 +5,6 @@ import {
   EMPTY_VCS_FILTERS,
   buildHistoryParams,
   dateWindow,
-  initialsOf,
   isIncomingOnly,
   isOwnCommit,
   isVcsFiltersActive,
@@ -207,12 +206,5 @@ describe("commit helpers", () => {
     expect(isOwnCommit({}, "ivan@x.ru")).toBe(true);
     expect(isOwnCommit({ author_email: "IVAN@x.ru" }, "ivan@x.ru")).toBe(true);
     expect(isOwnCommit({ author_email: "anna@x.ru" }, "ivan@x.ru")).toBe(false);
-  });
-
-  it("builds initials from the first and last word", () => {
-    expect(initialsOf("Анна Петрова")).toBe("АП");
-    expect(initialsOf("Мария Ивановна Сидорова")).toBe("МС");
-    expect(initialsOf("  ")).toBe("?");
-    expect(initialsOf("studio")).toBe("S");
   });
 });

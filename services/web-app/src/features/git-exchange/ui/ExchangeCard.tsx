@@ -7,6 +7,8 @@ import { BundleImportDialog } from "./BundleImportDialog";
 
 export type ExchangeCardProps = {
   projectId: string;
+  /** Карточка лежит в окне: из импорта человека уводят дальше, окно надо закрыть. */
+  onNavigate?: () => void;
 };
 
 const ActionRow = ({
@@ -60,7 +62,7 @@ const ActionRow = ({
 
 // Раздел «Обмен файлом» в настройках проекта: передать проект без сервера,
 // выгрузив его в файл, и принять файл от коллеги. Заголовок рисует страница.
-export const ExchangeCard = ({ projectId }: ExchangeCardProps) => {
+export const ExchangeCard = ({ projectId, onNavigate }: ExchangeCardProps) => {
   const { t } = useTranslation("gitExchange");
   const { data: status } = useSyncStatus(projectId);
   const [exportOpen, setExportOpen] = useState(false);
@@ -124,6 +126,7 @@ export const ExchangeCard = ({ projectId }: ExchangeCardProps) => {
         isOpen={importOpen}
         projectId={projectId}
         disabledReason={readOnly ? t("card.import.readOnly") : null}
+        {...(onNavigate ? { onNavigate } : {})}
         onClose={() => {
           setImportOpen(false);
         }}
