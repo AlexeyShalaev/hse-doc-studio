@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@shared/api";
+import { useDebouncedValue } from "@shared/lib";
 import {
   useCloneDefaults,
   useStartClone,
@@ -53,19 +54,6 @@ const STEP_IDS = ["source", "folder", "progress"] as const;
 
 const IDLE_INSPECTION: FolderInspection = { state: "idle" };
 const noInspect = (): FolderInspection => IDLE_INSPECTION;
-
-const useDebounced = <T,>(value: T, delayMs: number): T => {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(value);
-    }, delayMs);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delayMs]);
-  return debounced;
-};
 
 // Мастер «Клонировать проект из git»: три шага (источник, папка, загрузка) и,
 // если не указан автор версий, перед ними короткое «Представься». Состояние
@@ -123,7 +111,7 @@ const CloneWizardBody = ({
     fileName: fromBundle ? (source.bundleFile?.name ?? null) : null,
   });
   const name = nameDraft ?? suggestion;
-  const debouncedName = useDebounced(name.trim(), 300);
+  const debouncedName = useDebouncedValue(name.trim(), 300);
   const defaults = useCloneDefaults(
     debouncedName,
     currentStep === "folder" || currentStep === "progress",
