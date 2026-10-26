@@ -29,6 +29,7 @@ from hse_doc_studio.core.repositories import (
     IAIProviderRepository,
     IChangeLogRepository,
     IChatRepository,
+    ICompileRepository,
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
@@ -89,7 +90,6 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
@@ -716,6 +716,7 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         check_resolution_service: CheckResolutionService,
+        compile_repo: ICompileRepository,
         file_repo: IFileRepository,
     ) -> GetCheckResultsUC:
         return GetCheckResultsUC(
@@ -724,7 +725,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             check_resolution_service=check_resolution_service,
             file_repo=file_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -775,12 +776,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        compile_repo: ICompileRepository,
     ) -> GetNormcontrolReportUC:
         return GetNormcontrolReportUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     # ------------------------------------------------------------------ Forms engine
@@ -1579,11 +1581,12 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         capacity_probe: ISystemCapacityProbe,
+        compile_repo: ICompileRepository,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             template_repo=template_repo,
             template_service=template_service,
             check_resolution_service=check_resolution_service,
@@ -1831,13 +1834,13 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
         log_bus: CompileLogBus,
     ) -> GetCompileStreamUC:
-        # GetCompileStreamUC needs the concrete JsonCompileRepository for get_for_project.
         return GetCompileStreamUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             log_bus=log_bus,
         )
 
@@ -1846,11 +1849,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> GetCompileUC:
         return GetCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -1884,11 +1888,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> ListCompilesUC:
         return ListCompilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -1896,13 +1901,14 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
         compile_runner: CompileRunner,
         log_bus: CompileLogBus,
     ) -> CancelCompileUC:
         return CancelCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             compile_runner=compile_runner,
             log_bus=log_bus,
         )
@@ -1912,11 +1918,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> RecoverStaleCompilesUC:
         return RecoverStaleCompilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     # ------------------------------------------------------------------ LanguageTool
@@ -2513,6 +2520,7 @@ class UseCaseProvider(Provider):
         get_vcs_diff_uc: GetVcsDiffUC,
         create_vcs_snapshot_uc: CreateVcsSnapshotUC,
         restore_vcs_uc: RestoreVcsUC,
+        compile_repo: ICompileRepository,
     ) -> ToolRegistry:
         # ONE unified catalog: project tools (requires_project=True) + app/system
         # tools (requires_project=False). The loop filters by whether the chat has
@@ -2533,7 +2541,7 @@ class UseCaseProvider(Provider):
             EditTexTool(get_file_uc, put_file_uc, edit_applier).definition(),
             SetLanguageTool(update_project_uc).definition(),
             SetProjectMetaTool(update_project_uc).definition(),
-            CompileDocumentTool(trigger_compile_uc, get_project_uc, JsonCompileRepository()).definition(),
+            CompileDocumentTool(trigger_compile_uc, get_project_uc, compile_repo).definition(),
             PackageProjectTool(create_submission_uc, get_submission_profiles_uc).definition(),
             # --- VCS / «Версии» (project-scoped) ---
             VcsStatusTool(get_vcs_status_uc).definition(),

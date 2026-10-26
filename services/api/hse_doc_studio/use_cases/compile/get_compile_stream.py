@@ -8,11 +8,11 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
 )
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 
 logger = structlog.get_logger()
 
@@ -37,7 +37,7 @@ class GetCompileStreamUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
         log_bus: CompileLogBus,
     ) -> None:
         self._project_repo = project_repo

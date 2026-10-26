@@ -12,12 +12,12 @@ from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
 )
 from hse_doc_studio.infra.compile.compile_runner import CompileRunner
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.use_cases.compile.trigger_compile import _find_project
 
 logger = structlog.get_logger()
@@ -51,7 +51,7 @@ class CancelCompileUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
         compile_runner: CompileRunner,
         log_bus: CompileLogBus,
     ) -> None:
