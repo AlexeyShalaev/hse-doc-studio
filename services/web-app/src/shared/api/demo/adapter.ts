@@ -11,6 +11,9 @@ import type { DemoRouter } from "./router";
 export type DemoAdapterOptions = {
   // Задержка ответа, мс: чтобы спиннеры и состояния загрузки успевали показаться.
   latencyMs?: number;
+  // Сколько длится каждый из четырёх шагов «загрузки» файла, мс. Без этого
+  // индикатор отправки файла не успел бы показаться; по умолчанию равна задержке.
+  uploadStepMs?: number;
 };
 
 const sleep = (ms: number): Promise<void> =>
@@ -66,6 +69,21 @@ const parseBody = (data: unknown): unknown => {
   }
 };
 
+const UPLOAD_STEPS = [0.15, 0.45, 0.75, 1] as const;
+
+// Размер тела запроса, если там файл: по нему рисуем ход загрузки.
+const uploadSize = (data: unknown): number => {
+  if (data instanceof Blob) return data.size;
+  if (data instanceof FormData) {
+    let total = 0;
+    data.forEach((value) => {
+      if (value instanceof Blob) total += value.size;
+    });
+    return total;
+  }
+  return 0;
+};
+
 const resolveFallback = (client: AxiosInstance): AxiosAdapter =>
   axios.getAdapter(client.defaults.adapter);
 
@@ -93,6 +111,31 @@ export const installDemoAdapter = (
 ): void => {
   const fallback = resolveFallback(client);
   const latency = options.latencyMs ?? 0;
+  const uploadStep = options.uploadStepMs ?? latency;
+
+  // Имитация отправки файла: вызывает onUploadProgress и уважает отмену.
+  const simulateUpload = async (
+    config: InternalAxiosRequestConfig,
+  ): Promise<void> => {
+    const report = config.onUploadProgress;
+    if (!report || uploadStep <= 0) return;
+    const total = uploadSize(config.data);
+    if (total === 0) return;
+    for (const part of UPLOAD_STEPS) {
+      await sleep(uploadStep);
+      if (config.signal?.aborted)
+        throw new axios.CanceledError(undefined, config);
+      const loaded = Math.round(total * part);
+      report({
+        loaded,
+        total,
+        bytes: loaded,
+        progress: part,
+        lengthComputable: true,
+        upload: true,
+      });
+    }
+  };
 
   const adapter: AxiosAdapter = async (config) => {
     const { path, query } = splitUrl(config.url ?? "");
@@ -108,6 +151,10 @@ export const installDemoAdapter = (
       body: parseBody(config.data),
       forward: () => fallback(config).then(parseForwarded),
     };
+    if (config.signal?.aborted) {
+      throw new axios.CanceledError(undefined, config);
+    }
+    await simulateUpload(config);
     const response = await found.handler(request);
     if (latency > 0) await sleep(latency);
 

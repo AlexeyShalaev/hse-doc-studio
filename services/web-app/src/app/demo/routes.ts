@@ -15,7 +15,8 @@ import type {
   GitStatus,
   OperationWarning,
 } from "@entities/git-sync";
-import type { GitCredential } from "@entities/git-remote";
+import { REVEAL_FINGERPRINT, type GitCredential } from "@entities/git-remote";
+import { validateProfile, type ProfileIssueCode } from "@entities/profile";
 import { fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
 import {
   applyDrafts,
@@ -23,7 +24,12 @@ import {
   conflictDiff,
   openConflictPaths,
 } from "./conflictData";
-import { isUrlError, parseDemoUrl, runDemoProbe } from "./probe";
+import {
+  CHANGED_HOST_KEY,
+  isUrlError,
+  parseDemoUrl,
+  runDemoProbe,
+} from "./probe";
 import { createWorld, projectOf } from "./scenarios";
 import { useDemoScenarioStore } from "./scenarioStore";
 import {
@@ -261,7 +267,12 @@ const projectRoutes: DemoRoute[] = [
       const url = str(body.url) ?? "";
       const credentialId = str(body.credential_id);
       const adopt = str(body.adopt);
-      const probe = runDemoProbe(world, { url, credentialId, projectId });
+      const probe = runDemoProbe(world, {
+        url,
+        credentialId,
+        projectId,
+        branch: str(body.remote_branch),
+      });
       if (probe.status !== 200)
         return { status: probe.status, data: probe.body };
       const result = probe.body as {
@@ -420,7 +431,7 @@ const projectRoutes: DemoRoute[] = [
         commits: 142,
         bot_authored_commits: project.botAuthored,
         signatures: 2,
-        nda_files: 0,
+        nda_files: project.ndaFiles,
         pdf_tracked: true,
         largest: [
           { path: "images/architecture.png", bytes: 3_400_000 },
@@ -429,8 +440,8 @@ const projectRoutes: DemoRoute[] = [
           { path: "assets/fonts/PTSerif.ttf", bytes: 980_000 },
           { path: "references.bib", bytes: 120_000 },
         ],
-        over_limit: [],
-        lfs_pointers: 0,
+        over_limit: project.overLimit,
+        lfs_pointers: project.lfsPointers,
       };
       return demoJson(contents);
     },
@@ -653,6 +664,9 @@ const projectRoutes: DemoRoute[] = [
     },
   },
   {
+    // Имя файла выбирает исход: "broken" повреждён, "other" от другого проекта,
+    // "old" требует более раннего файла, "late" ломается уже при слиянии,
+    // ".hseenc" просит пароль ("wrong" не подходит).
     method: "POST",
     pattern: "/projects/:projectId/git/bundle/import",
     handler: (req) => {
@@ -677,14 +691,42 @@ const projectRoutes: DemoRoute[] = [
         if (password === "wrong")
           return demoError(400, "bundle_password_wrong", "Пароль не подошёл.");
       }
+      const name = file.name.toLowerCase();
+      if (name.includes("other")) {
+        return demoError(
+          409,
+          "unrelated_histories",
+          "История файла не связана с историей проекта.",
+          { can_adopt: false },
+        );
+      }
+      if (name.includes("old")) {
+        return demoError(
+          400,
+          "bundle_prerequisites_missing",
+          "В файле нет истории, на которой он построен.",
+        );
+      }
+      if (project.operationId) {
+        return demoError(409, "sync_busy", "Синхронизация уже идёт.", {
+          operation_id: project.operationId,
+        });
+      }
+      const late = name.includes("late");
       const op = startOperation(world, {
         kind: "bundle_import",
         projectId,
         steps: [
-          { phase: "verify", ms: 800 },
+          { phase: "snapshot", ms: 600 },
+          { phase: "verify", ms: 900 },
           { phase: "merge", ms: 1200 },
         ],
-        error: null,
+        error: late
+          ? {
+              code: "bundle_prerequisites_missing",
+              detail: "В файле нет истории, на которой он построен.",
+            }
+          : null,
         result: () =>
           mergeResult({
             ...project,
@@ -711,59 +753,134 @@ const projectRoutes: DemoRoute[] = [
   {
     method: "POST",
     pattern: "/projects/:projectId/git/ci/preview",
-    handler: (req) => demoJson(ciPreview(recordBody(req))),
+    handler: (req) => {
+      const project = projectOf(world, req.params.projectId ?? "");
+      return demoJson(ciPreview(project, recordBody(req)));
+    },
   },
   {
     method: "POST",
     pattern: "/projects/:projectId/git/ci/write",
     handler: (req) => {
-      const preview = ciPreview(recordBody(req));
-      return demoJson({ written: preview.files.map((file) => file.path) });
+      const project = projectOf(world, req.params.projectId ?? "");
+      const body = recordBody(req);
+      const preview = ciPreview(project, body);
+      // Без подтверждения отличающийся файл не трогаем.
+      const written = preview.files.filter(
+        (file) => body.overwrite === true || !file.exists || file.same,
+      );
+      for (const file of written) {
+        project.ciFiles[file.path] = file.content;
+      }
+      return demoJson({ written: written.map((file) => file.path) });
     },
   },
 ];
 
-const ciPreview = (body: Record<string, unknown>) => {
+const CI_IMAGE = "ghcr.io/hse-doc-studio/builder:0.2.0";
+
+const stringList = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
+const ciPreview = (project: DemoProjectGit, body: Record<string, unknown>) => {
   const provider = body.provider === "gitlab" ? "gitlab" : "github";
+  const docs = stringList(body.docs);
+  const triggers = stringList(body.triggers);
+  const release = body.publish === "release";
+  const customImage = str(body.image);
+  const image =
+    customImage !== null && customImage !== "" ? customImage : CI_IMAGE;
   const path =
     provider === "gitlab"
       ? ".gitlab-ci.yml"
-      : ".github/workflows/studio-build.yml";
-  const content =
+      : ".github/workflows/hse-studio-build.yml";
+  const command =
+    docs.length > 0
+      ? `hse-doc-studio build ${docs.map((doc) => `--doc ${doc}`).join(" ")}`
+      : "hse-doc-studio build --all";
+  const lines =
     provider === "gitlab"
       ? [
           "build-documents:",
-          "  image: ghcr.io/hse-doc-studio/builder:latest",
+          `  image: ${image}`,
           "  script:",
-          "    - hse-doc-studio build --all",
+          `    - ${command}`,
           "  artifacts:",
           "    paths:",
           "      - build/*.pdf",
+          ...(triggers.length > 0
+            ? [
+                "  rules:",
+                ...(triggers.includes("push")
+                  ? ["    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"]
+                  : []),
+                ...(triggers.includes("tag")
+                  ? ["    - if: $CI_COMMIT_TAG"]
+                  : []),
+                ...(triggers.includes("manual") ? ["    - when: manual"] : []),
+              ]
+            : []),
+          ...(release
+            ? [
+                "release-documents:",
+                "  stage: deploy",
+                "  rules:",
+                "    - if: $CI_COMMIT_TAG",
+                "  script:",
+                "    - echo Публикуем PDF в релиз",
+              ]
+            : []),
           "",
-        ].join("\n")
+        ]
       : [
           "name: Сборка документов",
           "on:",
-          "  push:",
-          "    branches: [main]",
+          ...(triggers.includes("push") || triggers.includes("tag")
+            ? [
+                "  push:",
+                ...(triggers.includes("push") ? ["    branches: [main]"] : []),
+                ...(triggers.includes("tag") ? ["    tags: ['v*']"] : []),
+              ]
+            : []),
+          ...(triggers.includes("manual") ? ["  workflow_dispatch:"] : []),
           "jobs:",
           "  build:",
           "    runs-on: ubuntu-latest",
-          "    container: ghcr.io/hse-doc-studio/builder:latest",
+          `    container: ${image}`,
           "    steps:",
           "      - uses: actions/checkout@v4",
-          "      - run: hse-doc-studio build --all",
-          "      - uses: actions/upload-artifact@v4",
+          `      - run: ${command}`,
+          release
+            ? "      - uses: softprops/action-gh-release@v2"
+            : "      - uses: actions/upload-artifact@v4",
           "        with:",
-          "          name: documents",
-          "          path: build/*.pdf",
+          ...(release ? [] : ["          name: documents"]),
+          release
+            ? "          files: build/*.pdf"
+            : "          path: build/*.pdf",
           "",
-        ].join("\n");
+        ];
+  const content = lines.join("\n");
+  // В демо у GitLab файл уже есть и отличается: так виден запрос на замену.
+  const existing =
+    project.ciFiles[path] ??
+    (provider === "gitlab" ? "# старый файл сборки\n" : null);
   return {
-    files: [{ path, content, exists: provider === "gitlab", same: false }],
-    command: "hse-doc-studio build --all",
+    files: [
+      {
+        path,
+        content,
+        exists: existing !== null,
+        same: existing === content,
+      },
+    ],
+    command,
     notes: [
-      "Сборка на внешнем сервисе отправит содержимое проекта третьим лицам.",
+      release
+        ? "Релиз создаётся для тегов вида v*, нужен токен с правом записи."
+        : "PDF сохраняются как артефакты сборки и хранятся ограниченное время.",
     ],
   };
 };
@@ -785,6 +902,49 @@ const tokenFamily = (token: string): string | null =>
 
 const credentialPublic = (credential: GitCredential): GitCredential =>
   credential;
+
+// Настройки приложения: настоящие, если бэкенд отвечает, иначе заглушка. Подменяем
+// только интервал фоновой проверки, чтобы раздел «Доступ к репозиториям» работал.
+const FALLBACK_APP_SETTINGS = {
+  theme: "system",
+  interface_language: "ru",
+  default_engine: "xelatex",
+  latex_passes: 2,
+  max_concurrent_compiles: 2,
+  latex_flags: null,
+  compile_image: null,
+  default_ai_provider_id: null,
+  default_ai_model: null,
+  agent_auto_approve_writes: false,
+  auto_update: true,
+  disk_usage_warn_gb: 5,
+};
+
+// Последний ответ настоящего бэкенда: по нему отвечаем на сохранение, которое
+// касается только демо-настройки, чтобы не подменить язык и тему заглушкой.
+let lastAppSettings: Record<string, unknown> = FALLBACK_APP_SETTINGS;
+
+const appSettings = async (
+  req: DemoRequest,
+  forward = true,
+): Promise<Record<string, unknown>> => {
+  if (forward) {
+    try {
+      const response = await req.forward();
+      if (response.data !== null && typeof response.data === "object") {
+        lastAppSettings = response.data as Record<string, unknown>;
+      }
+    } catch {
+      // Настоящего бэкенда нет: остаются прежние значения.
+    }
+  }
+  return {
+    ...lastAppSettings,
+    git_fetch_interval_s: world.defaultFetchIntervalS,
+  };
+};
+
+const DEMO_HOME = "/Users/demo";
 
 const globalRoutes: DemoRoute[] = [
   {
@@ -873,6 +1033,17 @@ const globalRoutes: DemoRoute[] = [
         status: token && token.trim() !== "" ? "unverified" : current.status,
       };
       world.credentials[index] = updated;
+      // Новый токен снимает отказ входа у проектов, которые им пользуются.
+      if (token && token.trim() !== "") {
+        for (const project of world.projects.values()) {
+          if (project.remote?.credential?.id !== updated.id) continue;
+          if (project.failWith?.code === "auth_failed") project.failWith = null;
+          if (project.health === "unauthenticated") {
+            project.health = "ok";
+            project.lastError = null;
+          }
+        }
+      }
       return demoJson(updated);
     },
   },
@@ -914,7 +1085,11 @@ const globalRoutes: DemoRoute[] = [
       if (known && body.replace !== true) {
         return demoError(409, "host_key_changed", "Ключ сервера изменился.", {
           expected: known.fingerprints_sha256[0] ?? "",
-          actual: str(body.fingerprint_sha256) ?? "",
+          // Запрос-заглушка узнаёт ключ, который сервер предъявляет сейчас.
+          actual:
+            body.fingerprint_sha256 === REVEAL_FINGERPRINT
+              ? CHANGED_HOST_KEY.fingerprint_sha256
+              : (str(body.fingerprint_sha256) ?? ""),
         });
       }
       if (known && body.confirm_host !== host) {
@@ -996,6 +1171,7 @@ const globalRoutes: DemoRoute[] = [
         url: str(body.url) ?? "",
         credentialId: str(body.credential_id),
         projectId: str(body.project_id),
+        branch: str(body.branch),
       });
       if (result.status !== 200)
         return { status: result.status, data: result.body };
@@ -1137,6 +1313,83 @@ const globalRoutes: DemoRoute[] = [
       return demoJson(operationView(op));
     },
   },
+  // --- выбор папки для клонирования: настоящий ответ, а без бэкенда заглушка ---
+  {
+    method: "GET",
+    pattern: "/fs/inspect",
+    handler: async (req) => {
+      try {
+        const response = await req.forward();
+        return demoJson(response.data);
+      } catch {
+        const path = queryString(req, "path") ?? "";
+        const lower = path.toLowerCase();
+        // Слова в пути выбирают исход: exists (там уже проект), busy (папка с файлами).
+        const hasProject = lower.includes("exists");
+        const exists = hasProject || lower.includes("busy");
+        return demoJson({
+          path,
+          exists,
+          is_dir: !lower.endsWith(".txt"),
+          has_project: hasProject,
+          project: hasProject
+            ? {
+                id: fakeUuid(7000),
+                name: "Курсовая работа",
+                pack_id: "hse-cs-sse",
+                template_id: "coursework",
+                version: "1.2.0",
+                engine: "xelatex",
+              }
+            : null,
+        });
+      }
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/fs/browse",
+    handler: async (req) => {
+      try {
+        const response = await req.forward();
+        return demoJson(response.data);
+      } catch {
+        const path = queryString(req, "path") ?? DEMO_HOME;
+        const entry = (name: string) => ({
+          name,
+          path: `${path.replace(/\/$/, "")}/${name}`,
+          is_dir: true,
+          is_hidden: false,
+        });
+        return demoJson({
+          path,
+          parent: path === DEMO_HOME ? null : DEMO_HOME,
+          is_root: path === DEMO_HOME,
+          entries: [
+            entry("HSE Doc Studio"),
+            entry("Документы"),
+            entry("Учёба"),
+          ],
+        });
+      }
+    },
+  },
+  // --- настройки приложения: только интервал фоновой проверки ---
+  {
+    method: "GET",
+    pattern: "/settings",
+    handler: async (req) => demoJson(await appSettings(req)),
+  },
+  {
+    method: "PUT",
+    pattern: "/settings",
+    handler: async (req) => {
+      const { git_fetch_interval_s: interval, ...rest } = recordBody(req);
+      if (typeof interval === "number") world.defaultFetchIntervalS = interval;
+      // Остальные настройки принадлежат настоящему бэкенду, если он есть.
+      return demoJson(await appSettings(req, Object.keys(rest).length > 0));
+    },
+  },
   // --- профиль автора ---
   {
     method: "GET",
@@ -1148,23 +1401,20 @@ const globalRoutes: DemoRoute[] = [
     pattern: "/profile",
     handler: (req) => {
       const body = recordBody(req);
-      const name = (str(body.name) ?? "").trim();
-      const email = (str(body.email) ?? "").trim();
-      const issues: { loc: string[]; code: string; msg: string }[] = [];
-      if (name === "")
-        issues.push({
-          loc: ["body", "name"],
-          code: "required",
-          msg: "Имя не заполнено.",
+      const check = validateProfile({
+        name: str(body.name) ?? "",
+        email: str(body.email) ?? "",
+      });
+      if (!check.isValid) {
+        const issues = (["name", "email"] as const).flatMap((field) => {
+          const code = check.issues[field];
+          return code
+            ? [{ loc: ["body", field], code, msg: PROFILE_ISSUE_TEXT[code] }]
+            : [];
         });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        issues.push({
-          loc: ["body", "email"],
-          code: "invalid_email",
-          msg: "Похоже, это не e-mail.",
-        });
+        return { status: 422, data: { detail: issues } };
       }
-      if (issues.length > 0) return { status: 422, data: { detail: issues } };
+      const { name, email } = check;
       world.profile = { name, email };
       clearProfileBlock();
       return demoJson(profileView(world));
@@ -1179,6 +1429,15 @@ const globalRoutes: DemoRoute[] = [
     },
   },
 ];
+
+const PROFILE_ISSUE_TEXT: Record<ProfileIssueCode, string> = {
+  name_required: "Укажи имя: так тебя увидят коллеги.",
+  name_too_long: "Слишком длинное имя: не больше 128 символов.",
+  name_invalid: "В имени нельзя использовать < и >.",
+  email_required: "Укажи e-mail.",
+  email_too_long: "Слишком длинный адрес: не больше 254 символов.",
+  email_invalid: "Укажи адрес вида name@example.com.",
+};
 
 const clearProfileBlock = (): void => {
   for (const project of world.projects.values()) {

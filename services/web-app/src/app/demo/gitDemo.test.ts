@@ -96,6 +96,9 @@ const startSync = async (): Promise<string> =>
 
 const EXPECTED_STATE: Record<DemoScenarioId, string> = {
   not_connected: "no_remote",
+  connect_warnings: "no_remote",
+  connect_large_files: "no_remote",
+  connect_no_profile: "no_remote",
   unfetched: "unfetched",
   up_to_date: "up_to_date",
   ahead: "ahead",
@@ -455,7 +458,9 @@ describe("demo sync flow", () => {
       );
       expect(preview.files[0]?.content).toContain("hse-doc-studio build");
       const written = await parsed(
-        call("POST", `/projects/${PROJECT}/git/ci/write`, { body }),
+        call("POST", `/projects/${PROJECT}/git/ci/write`, {
+          body: { ...body, overwrite: true },
+        }),
         CiWriteSchema,
       );
       expect(written.written).toEqual(preview.files.map((f) => f.path));
@@ -471,6 +476,49 @@ describe("demo sync flow", () => {
       /filename="coursework-\d{8}-\d{4}\.bundle\.hseenc"/,
     );
     expect(exported.data).toBeInstanceOf(Blob);
+  });
+
+  it("builds the CI file from the options and remembers what was written", async () => {
+    resetWorld("up_to_date");
+    const request = (overrides: Record<string, unknown>) => ({
+      provider: "github",
+      docs: "all",
+      publish: "artifacts",
+      triggers: ["push"],
+      overwrite: false,
+      ...overrides,
+    });
+    const preview = (overrides: Record<string, unknown> = {}) =>
+      parsed(
+        call("POST", `/projects/${PROJECT}/git/ci/preview`, {
+          body: request(overrides),
+        }),
+        CiPreviewSchema,
+      );
+    const fresh = await preview();
+    expect(fresh.files[0]).toMatchObject({ exists: false, same: false });
+    expect(fresh.command).toBe("hse-doc-studio build --all");
+
+    const picked = await preview({ docs: ["thesis"], publish: "release" });
+    expect(picked.command).toBe("hse-doc-studio build --doc thesis");
+    expect(picked.files[0]?.content).toContain("action-gh-release");
+
+    // Отличающийся файл без подтверждения не записывается.
+    const gitlab = request({ provider: "gitlab" });
+    const refused = await parsed(
+      call("POST", `/projects/${PROJECT}/git/ci/write`, { body: gitlab }),
+      CiWriteSchema,
+    );
+    expect(refused.written).toEqual([]);
+    const accepted = await parsed(
+      call("POST", `/projects/${PROJECT}/git/ci/write`, {
+        body: { ...gitlab, overwrite: true },
+      }),
+      CiWriteSchema,
+    );
+    expect(accepted.written).toEqual([".gitlab-ci.yml"]);
+    const after = await preview({ provider: "gitlab" });
+    expect(after.files[0]).toMatchObject({ exists: true, same: true });
   });
 
   it("checks bundle files before importing", async () => {
@@ -493,6 +541,28 @@ describe("demo sync flow", () => {
       (await errorOf(send(form("a.bundle.hseenc", "wrong")))).body.code,
     ).toBe("bundle_password_wrong");
     await parsed(send(form("a.bundle")), OperationStartedSchema, 202);
+  });
+
+  it("answers the file-specific bundle failures", async () => {
+    const form = (name: string) => {
+      const data = new FormData();
+      data.append("file", new File(["x"], name));
+      return data;
+    };
+    const send = (name: string) => {
+      resetWorld("up_to_date");
+      return call("POST", `/projects/${PROJECT}/git/bundle/import`, {
+        body: form(name),
+      });
+    };
+    const other = await errorOf(send("other-project.bundle"));
+    expect(other.status).toBe(409);
+    expect(other.body.code).toBe("unrelated_histories");
+    expect((await errorOf(send("old-part.bundle"))).body.code).toBe(
+      "bundle_prerequisites_missing",
+    );
+    // «late» принимается, а ломается уже при слиянии.
+    await parsed(send("late.bundle"), OperationStartedSchema, 202);
   });
 });
 
@@ -823,6 +893,50 @@ describe("demo credentials, profile and clone", () => {
   });
 });
 
+describe("demo folder choice for cloning", () => {
+  it("falls back to a stub for folder inspection when there is no backend", async () => {
+    const fresh = await call("GET", "/fs/inspect", {
+      query: { path: "~/HSE Doc Studio/paper" },
+    });
+    expect(fresh.status).toBe(200);
+    expect(fresh.data).toMatchObject({
+      exists: false,
+      is_dir: true,
+      has_project: false,
+    });
+    const busy = await call("GET", "/fs/inspect", {
+      query: { path: "~/busy" },
+    });
+    expect(busy.data).toMatchObject({ exists: true, has_project: false });
+    const taken = await call("GET", "/fs/inspect", {
+      query: { path: "~/exists" },
+    });
+    expect(taken.data).toMatchObject({ exists: true, has_project: true });
+  });
+
+  it("answers folder browsing with a small tree when there is no backend", async () => {
+    const root = await call("GET", "/fs/browse");
+    expect(root.data).toMatchObject({ parent: null, is_root: true });
+    const entries = (root.data as { entries: { name: string }[] }).entries;
+    expect(entries.length).toBeGreaterThan(0);
+  });
+
+  it("prefers the real backend answer when it responds", async () => {
+    const real = {
+      path: "/real",
+      exists: true,
+      is_dir: true,
+      has_project: false,
+      project: null,
+    };
+    const res = await call("GET", "/fs/inspect", {
+      query: { path: "/real" },
+      forward: () => Promise.resolve({ data: real } as AxiosResponse),
+    });
+    expect(res.data).toEqual(real);
+  });
+});
+
 describe("demo history enrichment", () => {
   const real = [
     {
@@ -989,5 +1103,56 @@ describe("demo adapter", () => {
     };
     expect(request.params).toEqual({ id: "7" });
     expect(request.query).toEqual({ a: "1", kind: ["edit", "sync"], q: "рис" });
+  });
+});
+
+describe("demo app settings", () => {
+  it("answers with defaults and the demo interval when there is no backend", async () => {
+    resetWorld("not_connected");
+    const res = await call("GET", "/settings");
+    expect(res.status).toBe(200);
+    expect(res.data).toMatchObject({
+      theme: "system",
+      latex_passes: 2,
+      git_fetch_interval_s: 300,
+    });
+  });
+
+  it("keeps the real backend settings and only replaces the interval", async () => {
+    resetWorld("not_connected");
+    const forward = vi.fn(() =>
+      Promise.resolve({
+        data: { theme: "dark", interface_language: "en", latex_passes: 3 },
+      } as AxiosResponse),
+    );
+    const res = await call("GET", "/settings", { forward });
+    expect(res.data).toMatchObject({
+      theme: "dark",
+      interface_language: "en",
+      latex_passes: 3,
+      git_fetch_interval_s: 300,
+    });
+  });
+
+  it("saves the interval in memory without bothering the backend", async () => {
+    resetWorld("not_connected");
+    const forward = vi.fn(() =>
+      Promise.reject(new Error("must not be called")),
+    );
+    const saved = await call("PUT", "/settings", {
+      body: { git_fetch_interval_s: 600 },
+      forward,
+    });
+    expect(forward).not.toHaveBeenCalled();
+    expect(saved.data).toMatchObject({ git_fetch_interval_s: 600 });
+    const again = await call("GET", "/settings");
+    expect(again.data).toMatchObject({ git_fetch_interval_s: 600 });
+  });
+
+  it("returns to the default when the scenario is reset", async () => {
+    await call("PUT", "/settings", { body: { git_fetch_interval_s: 900 } });
+    resetWorld("up_to_date");
+    const res = await call("GET", "/settings");
+    expect(res.data).toMatchObject({ git_fetch_interval_s: 300 });
   });
 });

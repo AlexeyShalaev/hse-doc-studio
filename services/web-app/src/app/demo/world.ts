@@ -47,11 +47,17 @@ export type DemoProjectGit = {
   sharedFolder: { provider: string; root: string } | null;
   sharedAck: boolean;
   botAuthored: number;
+  // Что покажет состав проекта перед подключением (GET /git/contents).
+  ndaFiles: number;
+  lfsPointers: number;
+  overLimit: { path: string; bytes: number; limit: number }[];
   conflict: DemoConflictSession | null;
   // Слияние при следующей синхронизации закончится конфликтом.
   willConflict: boolean;
   // Слияние при следующей синхронизации сломается этой ошибкой (код и текст).
   failWith: { code: string; detail: string } | null;
+  // Файлы автосборки, которые уже записаны в проект: путь и содержимое.
+  ciFiles: Record<string, string>;
 };
 
 export type OperationStep = { phase: string; ms: number };
@@ -79,6 +85,8 @@ export type DemoWorld = {
   hosts: GitHost[];
   profile: { name: string; email: string } | null;
   dataDirShared: { provider: string; root: string } | null;
+  // Личная настройка приложения «как часто проверять репозитории», секунды.
+  defaultFetchIntervalS: number;
   newProject: () => DemoProjectGit;
 };
 
@@ -102,9 +110,13 @@ export const emptyProjectGit = (): DemoProjectGit => ({
   sharedFolder: null,
   sharedAck: false,
   botAuthored: 0,
+  ndaFiles: 0,
+  lfsPointers: 0,
+  overLimit: [],
   conflict: null,
   willConflict: false,
   failWith: null,
+  ciFiles: {},
 });
 
 // --- профиль ----------------------------------------------------------------------
@@ -116,9 +128,9 @@ export const profileView = (world: DemoWorld): Profile => {
       name: null,
       email: null,
       effective_name: "HSE Doc Studio",
-      effective_email: "studio@localhost",
+      effective_email: "studio@hse-doc-studio.local",
       is_default: true,
-      commit_preview: "HSE Doc Studio <studio@localhost>",
+      commit_preview: "HSE Doc Studio <studio@hse-doc-studio.local>",
     };
   }
   return {

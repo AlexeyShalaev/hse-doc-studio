@@ -22,6 +22,9 @@ import { ME } from "./people";
 
 export type DemoScenarioId =
   | "not_connected"
+  | "connect_warnings"
+  | "connect_large_files"
+  | "connect_no_profile"
   | "unfetched"
   | "up_to_date"
   | "ahead"
@@ -69,6 +72,45 @@ export const SCENARIOS: DemoScenario[] = [
     group: "connect",
     setup: (project) => {
       project.botAuthored = 14;
+    },
+  },
+  {
+    // Всё, о чём окно подключения предупреждает, но что не мешает подключить.
+    id: "connect_warnings",
+    group: "connect",
+    setup: (project) => {
+      project.botAuthored = 14;
+      project.ndaFiles = 2;
+      project.lfsPointers = 3;
+      project.sharedFolder = {
+        provider: "yandex_disk",
+        root: "/Users/ivan/Yandex.Disk",
+      };
+    },
+  },
+  {
+    // Слишком крупные файлы в истории: окно не даёт перейти дальше.
+    id: "connect_large_files",
+    group: "connect",
+    setup: (project) => {
+      const MB = 1024 * 1024;
+      project.overLimit = [
+        {
+          path: "video/defense-rehearsal.mov",
+          bytes: 187 * MB,
+          limit: 95 * MB,
+        },
+        { path: "data/survey-raw.csv", bytes: 112 * MB, limit: 95 * MB },
+      ];
+    },
+  },
+  {
+    // Автор версий ещё не указан: окно начинается с «Представься».
+    id: "connect_no_profile",
+    group: "connect",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.profile = null;
     },
   },
   {
@@ -299,6 +341,7 @@ export const createWorld = (scenarioId: string): DemoWorld => {
     hosts: initialHosts(),
     profile: { name: ME.name, email: ME.email },
     dataDirShared: null,
+    defaultFetchIntervalS: 300,
     newProject: () => emptyProjectGit(),
   };
   scenario.configureWorld?.(world);

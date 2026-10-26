@@ -92,6 +92,18 @@
         "title": "No repository connected",
         "hint": "Start here: connect a repository"
       },
+      "connect_warnings": {
+        "title": "Connecting with warnings",
+        "hint": "NDA, Git LFS, cloud drive, earlier versions without an author"
+      },
+      "connect_large_files": {
+        "title": "Connecting: files too large",
+        "hint": "The dialog stops at the address step"
+      },
+      "connect_no_profile": {
+        "title": "Connecting: no version author",
+        "hint": "The dialog starts with the author prompt"
+      },
       "unfetched": {
         "title": "Connected, not checked yet",
         "hint": "Press Check to see new versions"
@@ -158,7 +170,7 @@
       }
     },
     "urlTitle": "What to type as the address",
-    "urlHelp": "With no hint words the address leads to an empty repository, or to a ready project when downloading one. Words in the address change the outcome: same, unrelated, other, plain, newer, empty. Failures: auth (needs a token), offline, missing, tls, slow, limit. An unknown ssh server asks you to confirm its key."
+    "urlHelp": "With no hint words the address leads to an empty repository, or to a ready project when downloading one. Words in the address change the outcome: same, unrelated, other, plain, newer, empty. Failures: auth (needs a token), denied (token rejected), sso, readonly, offline, missing, tls, slow, limit. An unknown ssh server asks you to confirm its key, and the word changed gives \"server key changed\" (github.com). A branch that does not exist (other than main and develop) gives \"no such branch\"."
   },
   "control": {
     "name": "Sync. {{status}}. {{action}}",

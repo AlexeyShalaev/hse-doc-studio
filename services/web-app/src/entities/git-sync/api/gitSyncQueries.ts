@@ -16,6 +16,7 @@ import {
   type ConflictBlobSide,
   type ConflictDiffView,
   type ConnectRemoteParams,
+  type ImportBundleOptions,
   type ResolveConflictsParams,
   type SyncStatusView,
 } from "./gitSyncApi";
@@ -374,11 +375,13 @@ export const useImportBundle = () => {
       projectId,
       file,
       password,
+      options,
     }: {
       projectId: string;
       file: File;
       password?: string;
-    }) => gitSyncApi.importBundle(projectId, file, password),
+      options?: ImportBundleOptions;
+    }) => gitSyncApi.importBundle(projectId, file, password, options),
     onSettled: (_data, _error, { projectId }) => {
       void queryClient.invalidateQueries({
         queryKey: gitSyncKeys.status(projectId),

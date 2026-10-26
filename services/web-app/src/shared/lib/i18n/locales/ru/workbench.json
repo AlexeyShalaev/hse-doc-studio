@@ -103,7 +103,8 @@
     "groupPeople": "Участники",
     "groupDocuments": "Документы",
     "groupMeta": "Метаданные",
-    "groupChecks": "Проверки"
+    "groupChecks": "Проверки",
+    "groupSync": "Синхронизация"
   },
   "overview": {
     "title": "Обзор проекта",

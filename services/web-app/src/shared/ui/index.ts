@@ -112,6 +112,12 @@ export type { PopoverContentProps } from "./Popover";
 export { CopyField } from "./CopyField";
 export type { CopyFieldProps } from "./CopyField";
 
+export { FileDropZone } from "./FileDropZone";
+export type { FileDropZoneHandle, FileDropZoneProps } from "./FileDropZone";
+
+export { Facts, ResultFrame } from "./ResultFrame";
+export type { FrameTone } from "./ResultFrame";
+
 export { Stepper } from "./Stepper";
 export type { StepperProps, StepperStep, StepState } from "./Stepper";
 

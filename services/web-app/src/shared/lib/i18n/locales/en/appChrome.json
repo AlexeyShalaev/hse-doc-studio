@@ -18,7 +18,8 @@
     "sync": "Sync the project",
     "syncCheck": "Check the repository for updates",
     "syncConflicts": "Open sync conflicts",
-    "connectRemote": "Connect a repository"
+    "connectRemote": "Connect a repository",
+    "cloneProject": "Clone a project from git"
   },
   "compileStatus": {
     "noBuilds": "No builds",
@@ -106,6 +107,7 @@
   "settingsPage": {
     "sections": {
       "appearance": "Appearance",
+      "profile": "Version author",
       "compiler": "Compiler",
       "fonts": "Fonts",
       "checks": "Checks",
@@ -116,7 +118,8 @@
       "signing": "Signing certificates",
       "disk": "Disk",
       "data": "Import / Export",
-      "about": "About"
+      "about": "About",
+      "gitAccess": "Repository access"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",
@@ -145,6 +148,7 @@
   },
   "wizardPage": {
     "createTitle": "New project",
-    "connectTitle": "Connect folder"
+    "connectTitle": "Connect folder",
+    "cloneTitle": "Clone a project"
   }
 }

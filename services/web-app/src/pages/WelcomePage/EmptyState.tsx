@@ -1,8 +1,10 @@
-import { GraduationCap, Plus, SearchX } from "lucide-react";
+import { GitBranch, GraduationCap, Plus, SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export type EmptyStateProps = {
   onCreate: () => void;
+  /** Клонировать проект из git: второе действие рядом с созданием. */
+  onClone?: (() => void) | undefined;
   /** Непустой запрос → «ничего не нашлось», а не «проектов ещё нет». */
   query?: string | undefined;
   onResetQuery?: (() => void) | undefined;
@@ -10,6 +12,7 @@ export type EmptyStateProps = {
 
 export const EmptyState = ({
   onCreate,
+  onClone,
   query,
   onResetQuery,
 }: EmptyStateProps) => {
@@ -47,10 +50,21 @@ export const EmptyState = ({
           {t("empty.resetQuery")}
         </button>
       ) : (
-        <button type="button" className="btn primary" onClick={onCreate}>
-          <Plus size={13} />
-          {t("empty.create")}
-        </button>
+        <div
+          className="flex items-center justify-center"
+          style={{ gap: 8, flexWrap: "wrap" }}
+        >
+          <button type="button" className="btn primary" onClick={onCreate}>
+            <Plus size={13} />
+            {t("empty.create")}
+          </button>
+          {onClone && (
+            <button type="button" className="btn" onClick={onClone}>
+              <GitBranch size={13} />
+              {t("empty.clone")}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

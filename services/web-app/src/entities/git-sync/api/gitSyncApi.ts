@@ -70,6 +70,13 @@ export const readGitError = (error: unknown): GitErrorBody | null => {
   return parsed.success ? parsed.data : null;
 };
 
+export type ImportBundleOptions = {
+  /** Процент загруженного файла (0..100), пока он уходит на сервер. */
+  onProgress?: (percent: number) => void;
+  /** Прервать загрузку. */
+  signal?: AbortSignal;
+};
+
 export type ExportBundleResult = {
   blob: Blob;
   filename: string;
@@ -140,6 +147,8 @@ export const gitSyncApi = {
     apiClient
       .delete(`${gitPath(projectId)}/remote`, {
         params: { forget_credential: forgetCredential },
+        // Причину сбоя показывает окно отключения, второй тост не нужен.
+        silentError: true,
       })
       .then(() => undefined),
 
@@ -251,7 +260,12 @@ export const gitSyncApi = {
     };
   },
 
-  importBundle: (projectId: string, file: File, password?: string) => {
+  importBundle: (
+    projectId: string,
+    file: File,
+    password?: string,
+    options: ImportBundleOptions = {},
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     if (password) formData.append("password", password);
@@ -261,6 +275,22 @@ export const gitSyncApi = {
         headers: { "Content-Type": null },
         silentError: true,
         timeout: 300_000,
+        ...(options.signal ? { signal: options.signal } : {}),
+        ...(options.onProgress
+          ? {
+              onUploadProgress: (event: {
+                loaded: number;
+                total?: number | undefined;
+              }) => {
+                // Без длины тела процента нет: окно покажет «идёт загрузка».
+                if (event.total && event.total > 0) {
+                  options.onProgress?.(
+                    Math.min(100, (event.loaded / event.total) * 100),
+                  );
+                }
+              },
+            }
+          : {}),
       })
       .then(parseResp(OperationStartedSchema));
   },

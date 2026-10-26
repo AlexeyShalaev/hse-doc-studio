@@ -101,7 +101,8 @@
     "groupPeople": "People",
     "groupDocuments": "Documents",
     "groupMeta": "Metadata",
-    "groupChecks": "Checks"
+    "groupChecks": "Checks",
+    "groupSync": "Sync"
   },
   "overview": {
     "title": "Project overview",

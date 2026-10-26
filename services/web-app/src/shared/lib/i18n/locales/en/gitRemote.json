@@ -35,5 +35,476 @@
     "full": "Full access",
     "read_only": "Read only",
     "files_only": "Files only"
+  },
+  "connect": {
+    "title": "Connect a repository",
+    "titleFix": "Update access",
+    "description": "Connect the project to a repository on GitHub, GitLab or your own server: versions will be kept there and shared with your team.",
+    "descriptionFix": "The repository did not accept the access. Update the token or key and we will check the connection.",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "retry": "Retry",
+    "profileContinue": "Save and continue",
+    "profileFailed": "Could not load the version author.",
+    "steps": {
+      "label": "Connection steps",
+      "repo": "Repository",
+      "access": "Access",
+      "check": "Check"
+    },
+    "lead": {
+      "profile": "First, introduce yourself: your name and e-mail sign the versions that go to the repository.",
+      "repo": "Where to send the project versions.",
+      "access": "How the repository knows it is you. The token or key is stored encrypted on this computer.",
+      "accessFix": "Enter a new token or add the key to the repository. The address stays the same.",
+      "check": "Checking that the repository responds and fits this project.",
+      "checked": "Here is the result."
+    }
+  },
+  "repo": {
+    "url": {
+      "label": "Repository address",
+      "placeholder": "https://github.com/user/repo.git or git@github.com:user/repo.git",
+      "hint": "Copy the address from the repository page: the Code button on GitHub, Clone on GitLab.",
+      "tokenStripped": "No token is needed in the address: we removed it and did not save it anywhere. Enter the token on the next step."
+    },
+    "branch": {
+      "label": "Branch in the repository",
+      "optional": "optional",
+      "placeholder": "main",
+      "hint": "Empty: we use the repository's main branch, and create main in an empty repository."
+    },
+    "nda": {
+      "title": "The project is marked NDA",
+      "text": "The repository must be private, and your agreement must allow storing the project files there.",
+      "confirm": "I have checked the terms: the repository is private and the agreement allows it"
+    }
+  },
+  "sharedFolder": {
+    "title": "The project folder is inside {{provider}}",
+    "text": "If the drive syncs both the project files and the .hse-studio/git history, the history can get corrupted. You can still connect the repository, but it is better to exclude this folder from the drive sync.",
+    "acknowledge": "Got it",
+    "root": "Drive: {{path}}",
+    "acknowledged": "Warning acknowledged",
+    "acknowledgeToggle": "I know about this, do not remind me",
+    "acknowledgeHint": "The Studio stops reminding you about this when you connect and sync this project.",
+    "evidence": "Why we think so",
+    "advice": "The safest way is to exclude the .hse-studio/git folder from the drive sync or keep the project outside a cloud folder."
+  },
+  "contents": {
+    "loading": "Counting what goes into the repository…",
+    "failed": "Could not count the project contents. This does not block the connection.",
+    "retry": "Retry",
+    "title": "What goes into the repository",
+    "filesLabel": "Files",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "sizeLabel": "Size",
+    "versionsLabel": "Versions in history",
+    "versions_one": "{{count}} version",
+    "versions_other": "{{count}} versions",
+    "signaturesLabel": "Signatures",
+    "ndaLabel": "NDA files",
+    "pdfLabel": "Built PDFs",
+    "pdfTracked": "Sent together with the project",
+    "pdfNotTracked": "Not sent, they can be built again",
+    "largest": "Largest files",
+    "lfs_one": "Found {{count}} Git LFS file. Studio will send only a pointer to it, not the content.",
+    "lfs_other": "Found {{count}} Git LFS files. Studio will send only pointers to them, not the content.",
+    "botAuthored_one": "{{count}} earlier version is signed with the shared Studio signature. It goes to the repository as it is, with that signature.",
+    "botAuthored_other": "{{count}} earlier versions are signed with the shared Studio signature. They go to the repository as they are, with that signature.",
+    "overLimit": {
+      "title_one": "{{count}} file is larger than the server limit",
+      "title_other": "{{count}} files are larger than the server limit",
+      "text": "The server will not accept such files, and they are already in the project history. This project cannot be connected to a repository yet: choose a server without such a limit or start a new project without large files."
+    }
+  },
+  "check": {
+    "label": "Connection check",
+    "reachable": "Address is reachable",
+    "auth": "Access confirmed",
+    "found": "Repository found",
+    "compatible": "History is compatible"
+  },
+  "result": {
+    "chooseAnother": "Choose another repository",
+    "cloneInstead": "Clone into a new folder",
+    "connectAndSync": "Connect and sync",
+    "connectOnly": "Connect only",
+    "facts": {
+      "project": "Project",
+      "template": "Template",
+      "authors": "Authors",
+      "branch": "Branch"
+    },
+    "ready": {
+      "empty": {
+        "title": "The repository is empty",
+        "text": "The first sync will upload the project to it.",
+        "textWithContents": "The first sync will upload the project to it: {{files}}, {{size}}, {{versions}}."
+      },
+      "same": {
+        "title": "This project is already in the repository",
+        "text": "Versions from the repository and yours will be merged, nothing gets lost."
+      },
+      "new": {
+        "title": "Repository found",
+        "text": "You can connect it. What is inside becomes visible after the first sync."
+      }
+    },
+    "fix": {
+      "title": "Access works",
+      "text": "The repository accepted the access. Save it and syncing continues.",
+      "save": "Save access"
+    },
+    "notStudio": {
+      "title": "This is not a Studio project",
+      "text": "The repository has no HSE Doc Studio data. Connect an empty repository or one created by Studio."
+    },
+    "otherProject": {
+      "title": "The repository holds a different project",
+      "text": "This repository belongs to another Studio project, it cannot be merged with the current one.",
+      "textNamed": "The repository holds a different project: \"{{name}}\". It cannot be merged with the current one.",
+      "hint": "To work with it, clone the repository into a new folder. Or choose another repository for this project."
+    },
+    "unrelated": {
+      "title": "The project and the repository share no history",
+      "text": "It looks like the same project, but the versions there started separately. You can merge both histories: files are combined, and places that differ have to be resolved as conflicts.",
+      "confirm": "I understand, merge the histories",
+      "adopt": "Merge and connect"
+    },
+    "warn": {
+      "schemaNewer": "The project in the repository was created by a newer Studio version. You can connect it, but syncing stays paused until you update Studio.",
+      "schemaNewerVersion": "Version {{version}} is required.",
+      "templateMissing": "This Studio version does not have the project template: the project will open read-only."
+    }
+  },
+  "issue": {
+    "generic": {
+      "title": "Could not check the repository"
+    },
+    "details": "Technical details",
+    "actions": {
+      "retry": "Check again",
+      "back_to_repo": "Change address",
+      "back_to_access": "Change access",
+      "updateAccess": "Update access",
+      "review_host_key": "Review fingerprint",
+      "close": "Close"
+    },
+    "auth_failed": {
+      "title": "The repository did not accept the access",
+      "hint": "The token is wrong, revoked or expired (or the key has no access to the repository). Check the access and try again."
+    },
+    "forbidden_write": {
+      "title": "The access has no write permission",
+      "hint": "The repository can be read but versions cannot be sent. Give the token write permission (Contents: Read and write, write_repository) or enable write access for the key."
+    },
+    "sso_required": {
+      "title": "The token must be authorized for the organization",
+      "hint": "The organization requires SSO. Open the token settings on the server, authorize it for the organization and check again."
+    },
+    "credentials_missing": {
+      "title": "Access is needed",
+      "hint": "There is no saved token or key for this repository. Add access on the previous step."
+    },
+    "credential_host_mismatch": {
+      "title": "The access was created for another server",
+      "hint": "This token or key belongs to a different server. Choose a suitable one or add a new one."
+    },
+    "not_found_or_no_access": {
+      "title": "Repository not found or no access",
+      "hint": "Check the address. For a private repository the token or key needs access to this very repository."
+    },
+    "branch_missing": {
+      "title": "No such branch in the repository",
+      "hint": "Choose an existing branch or leave the field empty to use the main one.",
+      "available": "Available branches"
+    },
+    "offline": {
+      "title": "No connection to the server",
+      "hint": "Check your internet and the address. Versions on this computer are safe, try again later."
+    },
+    "timeout": {
+      "title": "The server did not answer in time",
+      "hint": "It may be overloaded or the connection is slow. Try again."
+    },
+    "rate_limited": {
+      "title": "Too many requests",
+      "hint": "The server asks you to wait. Check again in a minute."
+    },
+    "tls_error": {
+      "title": "The server certificate was rejected",
+      "hint": "The certificate could not be verified. For a corporate server, add the company root certificate to the system and try again."
+    },
+    "host_key_unknown": {
+      "title": "Confirm the server",
+      "hint": "This is the first connection to the server. Check its key fingerprint and confirm: ssh will not continue without it."
+    },
+    "host_key_changed": {
+      "title": "The server key has changed",
+      "hint": "The server used to present a different key. It may be an impersonation, so the connection is stopped."
+    },
+    "ssh_unavailable": {
+      "title": "ssh is not installed",
+      "hint": "Install the OpenSSH client or connect the repository over https with a token."
+    },
+    "git_unavailable": {
+      "title": "Git not found",
+      "hint": "Install Git or run Studio from an image that includes it."
+    },
+    "secrets_unavailable": {
+      "title": "The secret store is unavailable",
+      "hint": "Tokens and keys cannot be read right now. Check the Studio data folder and its permissions."
+    },
+    "store_untrusted": {
+      "title": "The history settings look foreign",
+      "hint": "The project history store contains settings that Studio did not create. The connection is stopped for safety."
+    },
+    "remote_exists": {
+      "title": "A repository is already connected",
+      "hint": "Disconnect the current repository in the project settings to connect another one."
+    },
+    "url_invalid": {
+      "title": "The address does not fit",
+      "hint": "The address must look like https://host/owner/repository.git or git@host:owner/repository.git."
+    },
+    "url_scheme_forbidden": {
+      "title": "This kind of address is not supported",
+      "hint": "Use https or ssh. Studio does not accept plain http or arbitrary transports."
+    }
+  },
+  "done": {
+    "title": "Repository connected",
+    "connected": "The project is connected to {{repo}}.",
+    "connectedSyncing": "The project is connected to {{repo}}. Starting the first sync.",
+    "accessUpdated": "Access updated: the repository accepted it.",
+    "syncFailed": "The repository is connected, but syncing did not start. Start it from the sync panel.",
+    "syncFailedTitle": "Sync did not start"
+  },
+  "settings": {
+    "remote": {
+      "emptyTitle": "No repository connected",
+      "emptyText": "Connect GitHub, GitLab or your own server to work on the project together. Versions also stay on this computer.",
+      "connect": "Connect a repository",
+      "loading": "Loading the repository state…",
+      "loadFailed": "Could not get the repository state.",
+      "retry": "Try again",
+      "address": "Address",
+      "addressLabel": "Repository address",
+      "openInBrowser": "Open in browser",
+      "branch": "Branch",
+      "access": "Access",
+      "noCredential": "No access is set: the repository opens without a token or key.",
+      "replaceAccess": "Replace access",
+      "showKey": "Show public key",
+      "hideKey": "Hide public key",
+      "publicKey": "Public key",
+      "fingerprint": "Key fingerprint",
+      "tokenFamily": "Token {{family}}…",
+      "lastSync": "Sync",
+      "neverSynced": "Not synced yet",
+      "lastSyncDetail": "{{outcome}}, {{when}}. Versions received: {{pulled}}, sent: {{pushed}}.",
+      "lastCheck": "Check",
+      "neverChecked": "Not checked yet",
+      "checkedAt": "Checked {{when}}",
+      "syncNow": "Sync now",
+      "syncing": "Syncing…",
+      "check": "Check for updates",
+      "resolve": "Resolve conflicts",
+      "setProfile": "Set the author",
+      "insecure": "The address is not encrypted (http): the token and versions travel over the network in the open."
+    },
+    "danger": {
+      "title": "Disconnect the repository",
+      "text": "Local history stays and syncing stops. The repository on the server is not changed.",
+      "button": "Disconnect"
+    },
+    "disconnect": {
+      "title": "Disconnect the repository?",
+      "description": "The project will stop syncing with {{repo}}. Local history stays and the repository on the server is not changed.",
+      "unsent_one": "{{count}} version is not sent. After disconnecting it stays only on this computer.",
+      "unsent_other": "{{count}} versions are not sent. After disconnecting they stay only on this computer.",
+      "forget": "Delete the saved access “{{label}}”",
+      "forgetHint": "The token or key disappears from the Studio. You can connect again with a new access.",
+      "forgetBlocked": "Other projects use this access too: {{projects}}. You can delete it in Settings, in the Repository access section.",
+      "cancel": "Cancel",
+      "confirm": "Disconnect",
+      "failed": "Could not disconnect the repository.",
+      "done": "Repository disconnected"
+    },
+    "options": {
+      "autoFetch": "Check the repository in the background",
+      "autoFetchHint": "The Studio finds out that colleagues sent something new and shows it on the sync button. Nothing is downloaded into the project until you sync.",
+      "interval": "How often to check",
+      "intervalDefault": "Same as default ({{interval}})",
+      "intervalOff": "off",
+      "nextCheck": "Next check {{when}}.",
+      "lastCheck": "Last check {{when}}.",
+      "neverChecked": "The repository has not been checked yet.",
+      "personalNote": "These are personal Studio settings on this computer. They are not shared with colleagues and do not go into the repository.",
+      "defaultLink": "Default interval",
+      "saveFailed": "Could not save the setting."
+    },
+    "interval": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h"
+    }
+  },
+  "clone": {
+    "eyebrow": "Clone from git",
+    "title": "Clone a project from git",
+    "description": "Download a project from a repository to this computer: the files go into a separate folder and the whole version history is kept.",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "steps": {
+      "label": "Clone steps",
+      "source": "Source",
+      "folder": "Folder",
+      "progress": "Download"
+    },
+    "lead": {
+      "profile": "First introduce yourself: your name and e-mail sign the versions you make in this project.",
+      "folder": "Where to put the project on this computer.",
+      "progress": "Downloading the history and checking the project. This can take a few minutes."
+    },
+    "source": {
+      "tabs": {
+        "label": "Project source",
+        "url": "Repository address",
+        "bundle": "Bundle file"
+      },
+      "check": "Check the repository",
+      "access": "Repository access",
+      "checking": {
+        "title": "Checking the repository",
+        "text": "Connecting, checking access and reading the project description."
+      },
+      "found": {
+        "title": "Project found",
+        "repo": "Repository",
+        "project": "Project",
+        "template": "Template",
+        "staffing": "Team",
+        "staffing_solo": "Single author",
+        "staffing_team": "Team",
+        "authorsCount_one": "{{count}} author",
+        "authorsCount_other": "{{count}} authors",
+        "branch": "Branch",
+        "branchPick": "Branches in the repository",
+        "branchDefault": "default",
+        "change": "Change the address or access"
+      },
+      "verdict": {
+        "label": "How the project will open",
+        "full": "The project will open for full work: you can edit, build documents and sync.",
+        "read_only": "The project will open read-only: you can look but not change.",
+        "files_only": "The project will open as a set of files: documents and builds are unavailable.",
+        "schemaNewer": "The project was made by a newer version of the Studio."
+      },
+      "empty": {
+        "title": "The repository is empty",
+        "text": "There is no project in it yet, so there is nothing to clone. To publish a project to this repository, open the project and connect the repository in the sync window."
+      },
+      "notStudio": {
+        "title": "No Studio project in this repository",
+        "text": "Only a repository created by the Studio can be cloned: it holds the project's service data. Check the address and the branch."
+      }
+    },
+    "bundle": {
+      "title": "Bundle file",
+      "hint": "The file is exported from a project with “Export bundle”. It holds the whole version history and needs no network.",
+      "drop": "Drop a file here or",
+      "choose": "choose one on your computer",
+      "accept": "Files .bundle and .hseenc are accepted",
+      "dropActive": "Release the file to select it",
+      "replace": "Choose another",
+      "remove": "Remove the file",
+      "wrongKind": "A .bundle or .hseenc file is needed.",
+      "encrypted": "The file is protected by a password",
+      "password": "File password",
+      "passwordHint": "The password was set at export. The Studio does not store it.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "folder": {
+      "name": {
+        "label": "Project name",
+        "optional": "optional",
+        "placeholder": "As in the project",
+        "hint": "This is how the project is named in the Studio. You can change it later."
+      },
+      "path": {
+        "label": "Folder on this computer",
+        "placeholder": "~/HSE Doc Studio/my-project",
+        "browse": "Browse…",
+        "hint": "Project files go into this folder, the history lives in .hse-studio/git, no .git of its own is created."
+      },
+      "inspect": {
+        "empty": "Choose a folder: the project will be put into it.",
+        "checking": "Checking the folder…",
+        "new": "This folder does not exist yet: the Studio will create it.",
+        "existing": "The folder already exists. It must be empty, otherwise cloning stops.",
+        "notDir": "This is a file, not a folder. Choose another folder.",
+        "hasProject": "This folder already has the project “{{name}}”. Choose another folder.",
+        "hasProjectUnnamed": "This folder already has a Studio project. Choose another folder."
+      },
+      "source": "Source",
+      "sourceBundle": "File {{name}}",
+      "clone": "Clone",
+      "failed": "Could not start cloning."
+    },
+    "progress": {
+      "label": "Clone progress",
+      "starting": "Starting the clone…",
+      "phase": {
+        "connect": "Connecting",
+        "download": "Downloading history",
+        "downloadBundle": "Reading the file",
+        "verify": "Checking the template",
+        "register": "Registering the project"
+      },
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelFailed": "It can no longer be cancelled: the clone is finishing.",
+      "cancelled": {
+        "title": "Cloning cancelled",
+        "text": "The downloaded files were removed, no project was added.",
+        "again": "Try again"
+      },
+      "failed": {
+        "title": "Could not clone the project",
+        "folder": "Choose another folder",
+        "source": "Change the source",
+        "profile": "Set the author",
+        "retry": "Try again"
+      },
+      "lost": {
+        "title": "Cannot tell how the clone is going",
+        "text": "The Studio does not answer about this operation. Look at the project list: if the project is there, cloning has finished.",
+        "retry": "Retry"
+      },
+      "done": {
+        "title": "Project downloaded",
+        "text": "The project was downloaded and added to the Studio.",
+        "folder": "Folder",
+        "access": "Opened as",
+        "open": "Open project",
+        "toList": "To the project list"
+      },
+      "access": {
+        "full": "For full work",
+        "read_only": "Read-only",
+        "files_only": "Files only"
+      },
+      "warn": {
+        "lfs_pointers": "The repository has Git LFS files: they were downloaded as short pointers, without the actual content.",
+        "template_missing": "The project template is missing in this version of the Studio: the project is open read-only."
+      }
+    }
   }
 }

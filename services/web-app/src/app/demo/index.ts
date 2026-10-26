@@ -8,6 +8,7 @@ import { gitDemoRoutes } from "./routes";
 export const installGitDemo = (): void => {
   installDemoAdapter(apiClient, createDemoRouter(gitDemoRoutes), {
     latencyMs: 180,
+    uploadStepMs: 300,
   });
 };
 

@@ -68,6 +68,8 @@ export const gitRemoteApi = {
     apiClient
       .delete("/git/hosts", {
         params: { host, port: port ?? undefined },
+        // Отказ показывает окно подтверждения, второй тост не нужен.
+        silentError: true,
       })
       .then(() => undefined),
 
