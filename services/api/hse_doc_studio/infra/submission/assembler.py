@@ -3,8 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-import subprocess
-from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 import structlog
@@ -31,40 +29,17 @@ from hse_doc_studio.infra.signatures.signing_package import (
     signature_arcname,
 )
 from hse_doc_studio.infra.signatures.stamp_builder import stamps_for_doc
+from hse_doc_studio.infra.submission.pack_executor import (
+    PackExecutor,
+    archive_ext,
+    available_archive_formats,
+    is_archive_format_available,
+)
 
 logger = structlog.get_logger()
 
-_EXTERNAL_TIMEOUT_SEC = 120.0
-
-
-@dataclass(frozen=True)
-class ArchiveFormatSpec:
-    id: str
-    label: str
-    ext: str
-    # External CLIs that can produce this format (first found wins). Empty tuple
-    # means the format is produced natively by shutil and is always available.
-    tools: tuple[str, ...]
-
-
-# zip/tar.gz are native (shutil); 7z/rar shell out to an external tool that may
-# or may not be installed — availability is probed with shutil.which, the same
-# way the system router detects external editors.
-_ARCHIVE_FORMATS: tuple[ArchiveFormatSpec, ...] = (
-    ArchiveFormatSpec(id="zip", label="ZIP", ext=".zip", tools=()),
-    ArchiveFormatSpec(id="targz", label="TAR.GZ", ext=".tar.gz", tools=()),
-    ArchiveFormatSpec(id="7z", label="7z", ext=".7z", tools=("7z", "7za")),
-    ArchiveFormatSpec(id="rar", label="RAR", ext=".rar", tools=("rar",)),
-)
-_FORMAT_BY_ID: dict[str, ArchiveFormatSpec] = {spec.id: spec for spec in _ARCHIVE_FORMATS}
-
-
-def _resolve_tool(spec: ArchiveFormatSpec) -> str | None:
-    for tool in spec.tools:
-        path = shutil.which(tool)
-        if path is not None:
-            return path
-    return None
+# Каталог форматов архива переехал в pack_executor; имена доступны отсюда до удаления ассемблера.
+__all__ = ["SubmissionAssembler", "archive_ext", "available_archive_formats", "is_archive_format_available"]
 
 
 def _resolve_output_name(doc_def: DocumentDefinition, chosen_variant: str | None) -> dict[str, str]:
@@ -87,30 +62,6 @@ def _with_owner_suffix(arcname: str, owner_name: str | None) -> str:
         return arcname
     stem, ext = arcname.rsplit(".", 1) if "." in arcname else (arcname, "")
     return f"{stem} — {owner_name}.{ext}" if ext else f"{stem} — {owner_name}"
-
-
-def is_archive_format_available(fmt: str) -> bool:
-    spec = _FORMAT_BY_ID.get(fmt)
-    if spec is None:
-        return False
-    if not spec.tools:
-        return True  # native (shutil)
-    return _resolve_tool(spec) is not None
-
-
-def archive_ext(fmt: str) -> str:
-    spec = _FORMAT_BY_ID.get(fmt)
-    if spec is None:
-        raise ValueError(f"Unknown archive format: {fmt!r}")
-    return spec.ext
-
-
-def available_archive_formats() -> list[dict[str, object]]:
-    """Catalog for the API: id, label, ext, available. Drives the UI selector."""
-    return [
-        {"id": spec.id, "label": spec.label, "ext": spec.ext, "available": is_archive_format_available(spec.id)}
-        for spec in _ARCHIVE_FORMATS
-    ]
 
 
 def _contained(base: Path, rel: str) -> Path | None:
@@ -397,37 +348,7 @@ class SubmissionAssembler:
         Raises ValueError for an unknown format or when the external tool for a
         7z/rar archive is not installed.
         """
-        spec = _FORMAT_BY_ID.get(fmt)
-        if spec is None:
-            raise ValueError(f"Unknown archive format: {fmt!r}")
-
-        dest_base.parent.mkdir(parents=True, exist_ok=True)
-
-        if fmt == "zip":
-            return Path(shutil.make_archive(str(dest_base), "zip", root_dir=str(src_dir)))
-        if fmt == "targz":
-            return Path(shutil.make_archive(str(dest_base), "gztar", root_dir=str(src_dir)))
-
-        tool = _resolve_tool(spec)
-        if tool is None:
-            raise ValueError(
-                f"Archive format {fmt!r} requires an external tool ({'/'.join(spec.tools)}) which is not installed"
-            )
-        dest = dest_base.with_name(dest_base.name + spec.ext)
-        names = [p.name for p in sorted(src_dir.iterdir())]
-        cmd = [tool, "a", str(dest), *names]
-        result = subprocess.run(  # noqa: S603 — tool path comes from shutil.which, args are local filenames
-            cmd,
-            cwd=str(src_dir),
-            capture_output=True,
-            text=True,
-            timeout=_EXTERNAL_TIMEOUT_SEC,
-            check=False,
-        )
-        if result.returncode != 0 or not dest.exists():
-            detail = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
-            raise ValueError(f"{fmt} archiving failed: {detail}")
-        return dest
+        return PackExecutor(self._pdf_stamper).create_archive(src_dir, dest_base, fmt)
 
     def _stamps_for_doc(
         self,
