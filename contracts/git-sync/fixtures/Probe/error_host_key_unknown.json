@@ -19,6 +19,12 @@
     "repo": "course-paper",
     "token_stripped": false
   },
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "override",
+    "version": null
+  },
+  "token_info": null,
   "reachable": true,
   "auth_ok": false,
   "empty": false,

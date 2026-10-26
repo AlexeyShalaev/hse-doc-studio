@@ -1,0 +1,5 @@
+{
+  "host": "gitlab.hse.local",
+  "port": 8443,
+  "ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBszCCAVmgAwIBAgIUEXAMPLEEXAMPLEEXAMPLEEXAMPLEwCgYIKoZIzj0EAwIw\n-----END CERTIFICATE-----\n"
+}

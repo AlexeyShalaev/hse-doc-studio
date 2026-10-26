@@ -1,0 +1,12 @@
+{
+  "host": "github.com",
+  "port": null,
+  "provider_override": null,
+  "provider_info": {
+    "id": "github",
+    "detected_by": "host",
+    "version": null
+  },
+  "ca_present": false,
+  "pinned_fingerprint": null
+}

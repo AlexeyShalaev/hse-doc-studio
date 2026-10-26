@@ -40,6 +40,35 @@ class GitHostKey(_Contract):
     fingerprint_sha256: str
 
 
+class GitTlsCertificate(_Contract):
+    """Сертификат, который предъявил сервер: по нему человек решает, добавить CA или закрепить отпечаток."""
+
+    fingerprint_sha256: str
+    subject: str
+    issuer: str
+    not_before: datetime
+    not_after: datetime
+    self_signed: bool
+
+
+class GitProviderInfo(_Contract):
+    """Что за сервер и как это узнали."""
+
+    id: str  # github | gitlab | gitea | bitbucket | other
+    detected_by: str  # override | host | api | unknown
+    version: str | None  # версия сервера, если он её назвал
+
+
+class GitTokenInfo(_Contract):
+    """Что известно о токене после проверки: чей он, какие права, до какого срока."""
+
+    login: str | None
+    scopes: list[str]
+    expires_at: datetime | None
+    sufficiency: str  # sufficient | too_narrow | too_broad | unknown
+    missing: list[str]  # каких прав не хватает для чтения и записи
+
+
 class GitErrorBody(_Contract):
     """Тело ошибки: {detail, code} и дополнительные поля конкретного кода."""
 
@@ -53,6 +82,8 @@ class GitErrorBody(_Contract):
     can_adopt: bool | None = None  # unrelated_histories
     paths: list[str] | None = None  # unresolved_conflicts
     host_keys: list[GitHostKey] | None = None  # host_key_unknown
+    missing: list[str] | None = None  # token_insufficient_scope
+    certificate: GitTlsCertificate | None = None  # tls_untrusted_ca
 
 
 class ProfileFieldError(_Contract):
@@ -99,6 +130,7 @@ class GitCredentialResponse(_Contract):
     fingerprint_sha256: str | None
     created_at: datetime
     last_used_at: datetime | None
+    expires_at: datetime | None  # срок токена, если известен
     used_by: list[GitCredentialUsage]
 
 
@@ -147,6 +179,27 @@ class TrustHostRequest(_Contract):
     confirm_host: str | None = None
 
 
+class GitHostSettingsResponse(_Contract):
+    """Настройки сервера, общие для всех проектов: подмена провайдера, свой CA, закреплённый сертификат."""
+
+    host: str
+    port: int | None
+    provider_override: str | None
+    provider_info: GitProviderInfo
+    ca_present: bool  # свой сертификат центра выдачи лежит в data_dir
+    pinned_fingerprint: str | None  # SHA256:... закреплённого сертификата сервера
+
+
+class UpdateGitHostSettingsRequest(_Contract):
+    """Отсутствующее поле оставляет значение, null сбрасывает его; ca_pem принимает только PEM сертификата."""
+
+    host: str
+    port: int | None = None
+    provider_override: str | None = None
+    ca_pem: str | None = None
+    pinned_fingerprint: str | None = None
+
+
 class SharedFolderInfo(_Contract):
     provider: str
     root: str
@@ -183,6 +236,7 @@ class ProbeError(_Contract):
     code: str
     detail: str
     host_keys: list[GitHostKey] | None = None
+    certificate: GitTlsCertificate | None = None
 
 
 class ProbeUrl(_Contract):
@@ -210,6 +264,8 @@ class ProbeResponse(_Contract):
     ok: bool
     error: ProbeError | None
     url: ProbeUrl
+    provider_info: GitProviderInfo  # url.provider совпадает с provider_info.id
+    token_info: GitTokenInfo | None  # только для проверки с токеном
     reachable: bool
     auth_ok: bool
     empty: bool
@@ -325,6 +381,7 @@ class GitRemoteInfo(_Contract):
     kind: str
     host: str | None
     provider: str
+    provider_info: GitProviderInfo
     web_url: str | None
     branch: str  # ветка на сервере
     local_branch: str

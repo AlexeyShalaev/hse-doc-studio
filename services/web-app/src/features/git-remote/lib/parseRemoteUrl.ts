@@ -1,4 +1,4 @@
-import type { GitProvider } from "@entities/git-remote";
+import { providerForHost, type GitProvider } from "@entities/git-remote";
 
 // Разбор адреса репозитория на клиенте. Правила те же, что у сервера: общие
 // векторы лежат в contracts/git-sync/url_cases.json, и оба разбора проходят их
@@ -58,15 +58,6 @@ const TRANSPORT_HELPER = /^[a-z][a-z0-9+.-]*::/i;
 const SCP_LIKE = /^(?:([^@/:]+)@)?([^:/@]+):(?!\/\/)(.*)$/;
 const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SSH_USER = /^[A-Za-z0-9_][A-Za-z0-9._-]*$/;
-
-const providerOf = (host: string | null): GitProvider => {
-  if (!host) return "other";
-  if (host === "github.com") return "github";
-  if (host === "gitlab.com" || host.startsWith("gitlab.")) return "gitlab";
-  if (host === "codeberg.org" || host.startsWith("gitea.")) return "gitea";
-  if (host === "bitbucket.org") return "bitbucket";
-  return "other";
-};
 
 const validHost = (host: string): boolean => {
   if (host === "") return false;
@@ -131,7 +122,7 @@ const finish = (
       host: draft.host,
       port: draft.port,
       user: draft.kind === "ssh" ? (draft.user ?? "git") : null,
-      provider: draft.kind === "file" ? "other" : providerOf(draft.host),
+      provider: draft.kind === "file" ? "other" : providerForHost(draft.host),
       owner: draft.kind === "file" ? null : owner,
       repo,
       path: draft.path.clean.replace(/^\/+/, ""),

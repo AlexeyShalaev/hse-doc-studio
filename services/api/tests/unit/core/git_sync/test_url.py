@@ -6,7 +6,8 @@ from typing import Any
 
 import pytest
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitUrlError
-from hse_doc_studio.core.git_sync.url import MAX_URL_LENGTH, GitProvider, RemoteKind, RemoteUrl, parse_remote_url
+from hse_doc_studio.core.git_sync.providers import GitProvider
+from hse_doc_studio.core.git_sync.url import MAX_URL_LENGTH, RemoteKind, RemoteUrl, parse_remote_url
 
 _CASES_FILE = Path(__file__).resolve().parents[6] / "contracts" / "git-sync" / "url_cases.json"
 _CASES: list[dict[str, Any]] = json.loads(_CASES_FILE.read_text(encoding="utf-8"))["cases"]

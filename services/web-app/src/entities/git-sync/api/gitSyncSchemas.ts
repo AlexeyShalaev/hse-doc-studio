@@ -168,6 +168,29 @@ export const GitHostKeySchema = z.object({
   fingerprint_sha256: z.string(),
 });
 
+// Сертификат, который предъявил сервер: по нему решают, добавить CA или закрепить отпечаток.
+export const GitTlsCertificateSchema = z.object({
+  fingerprint_sha256: z.string(),
+  subject: z.string(),
+  issuer: z.string(),
+  not_before: z.string(),
+  not_after: z.string(),
+  self_signed: z.boolean(),
+});
+
+export const GIT_DETECTED_BY = ["override", "host", "api", "unknown"] as const;
+export type GitDetectedBy = (typeof GIT_DETECTED_BY)[number];
+export const isGitDetectedBy = (value: unknown): value is GitDetectedBy =>
+  typeof value === "string" &&
+  (GIT_DETECTED_BY as readonly string[]).includes(value);
+
+// Что за сервер и как это узнали: выбор человека, имя хоста, ответ API или никак.
+export const GitProviderInfoSchema = z.object({
+  id: z.string(), // github | gitlab | gitea | bitbucket | other
+  detected_by: z.string(), // override | host | api | unknown
+  version: z.string().nullish(),
+});
+
 export const GitCredentialUsageSchema = z.object({
   project_id: z.string(),
   name: z.string(),
@@ -185,6 +208,8 @@ export const GitErrorBodySchema = z.object({
   can_adopt: z.boolean().nullish(),
   paths: z.array(z.string()).nullish(),
   host_keys: z.array(GitHostKeySchema).nullish(),
+  missing: z.array(z.string()).nullish(), // token_insufficient_scope
+  certificate: GitTlsCertificateSchema.nullish(), // tls_untrusted_ca
 });
 
 // --- операции -------------------------------------------------------------------
@@ -266,6 +291,7 @@ export const GitRemoteInfoSchema = z.object({
   kind: z.string(),
   host: z.string().nullish(),
   provider: z.string(),
+  provider_info: GitProviderInfoSchema.nullish(),
   web_url: z.string().nullish(),
   branch: z.string(),
   local_branch: z.string(),
@@ -552,6 +578,8 @@ export const HistoryCommitExtrasSchema = z.object({
 export const HistoryFacetsSchema = VcsHistoryFacetsSchema;
 
 export type GitHostKey = z.infer<typeof GitHostKeySchema>;
+export type GitTlsCertificate = z.infer<typeof GitTlsCertificateSchema>;
+export type GitProviderInfo = z.infer<typeof GitProviderInfoSchema>;
 export type GitErrorBody = z.infer<typeof GitErrorBodySchema>;
 export type OperationWarning = z.infer<typeof OperationWarningSchema>;
 export type AutoMergedFile = z.infer<typeof AutoMergedFileSchema>;

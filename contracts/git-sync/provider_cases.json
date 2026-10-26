@@ -1,0 +1,1023 @@
+{
+  "_comment": "Векторы каталога провайдеров для core/git_sync/providers.py (Python) и entities/git-remote/model/providers.ts (TypeScript). Ожидаемые значения проверены вручную. Секции: host_cases, web_base_cases, api_base_cases, prefix_cases, text_cases, token_link_cases, ssh_link_cases, scope_cases.",
+  "host_cases": [
+    {
+      "host": "github.com",
+      "expect": {
+        "id": "github",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "GitHub.com",
+      "expect": {
+        "id": "github",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "github.example.org",
+      "expect": {
+        "id": "github",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "gitlab.com",
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "gitlab.hse.local",
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "code.gitlab.example.org",
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "codeberg.org",
+      "expect": {
+        "id": "gitea",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "gitea.lab.example.org",
+      "expect": {
+        "id": "gitea",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "forgejo.example.org",
+      "expect": {
+        "id": "gitea",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "bitbucket.org",
+      "expect": {
+        "id": "bitbucket",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "git.hse.ru",
+      "expect": {
+        "id": "other",
+        "detected_by": "unknown",
+        "version": null
+      }
+    },
+    {
+      "host": "192.168.1.10",
+      "expect": {
+        "id": "other",
+        "detected_by": "unknown",
+        "version": null
+      }
+    },
+    {
+      "host": "git.example.com",
+      "api": {
+        "provider": "gitlab",
+        "version": "17.3.1"
+      },
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "api",
+        "version": "17.3.1"
+      }
+    },
+    {
+      "host": "git.example.com",
+      "api": {
+        "provider": "gitea",
+        "version": null
+      },
+      "expect": {
+        "id": "gitea",
+        "detected_by": "api",
+        "version": null
+      }
+    },
+    {
+      "host": "gitlab.hse.local",
+      "api": {
+        "provider": "gitlab",
+        "version": "16.11.0"
+      },
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "host",
+        "version": "16.11.0"
+      }
+    },
+    {
+      "host": "gitlab.hse.local",
+      "api": {
+        "provider": "gitea",
+        "version": "1.22.0"
+      },
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": "git.hse.ru",
+      "overrides": {
+        "git.hse.ru": "gitlab"
+      },
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "override",
+        "version": null
+      }
+    },
+    {
+      "host": "git.hse.ru",
+      "overrides": {
+        "git.hse.ru": "gitlab"
+      },
+      "api": {
+        "provider": "gitlab",
+        "version": "17.0.0"
+      },
+      "expect": {
+        "id": "gitlab",
+        "detected_by": "override",
+        "version": "17.0.0"
+      }
+    },
+    {
+      "host": "gitlab.hse.local",
+      "overrides": {
+        "gitlab.hse.local": "other"
+      },
+      "expect": {
+        "id": "other",
+        "detected_by": "override",
+        "version": null
+      }
+    },
+    {
+      "host": "github.com",
+      "overrides": {
+        "gitlab.com": "github"
+      },
+      "expect": {
+        "id": "github",
+        "detected_by": "host",
+        "version": null
+      }
+    },
+    {
+      "host": null,
+      "expect": {
+        "id": "other",
+        "detected_by": "unknown",
+        "version": null
+      }
+    }
+  ],
+  "web_base_cases": [
+    {
+      "host": "gitlab.com",
+      "port": null,
+      "secure": true,
+      "subpath": "",
+      "expect": "https://gitlab.com"
+    },
+    {
+      "host": "gitlab.hse.local",
+      "port": 8443,
+      "secure": true,
+      "subpath": "",
+      "expect": "https://gitlab.hse.local:8443"
+    },
+    {
+      "host": "gitlab.hse.local",
+      "port": null,
+      "secure": true,
+      "subpath": "/gitlab/",
+      "expect": "https://gitlab.hse.local/gitlab"
+    },
+    {
+      "host": "git.corp.example",
+      "port": 8080,
+      "secure": false,
+      "subpath": "scm",
+      "expect": "http://git.corp.example:8080/scm"
+    },
+    {
+      "host": "git.corp.example",
+      "port": null,
+      "secure": true,
+      "subpath": "a/../b",
+      "expect": null
+    },
+    {
+      "host": "git.corp.example",
+      "port": null,
+      "secure": true,
+      "subpath": "a b",
+      "expect": null
+    },
+    {
+      "host": null,
+      "port": null,
+      "secure": true,
+      "subpath": "",
+      "expect": null
+    }
+  ],
+  "api_base_cases": [
+    {
+      "provider": "github",
+      "host": "github.com",
+      "web_base": "https://github.com",
+      "expect": "https://api.github.com"
+    },
+    {
+      "provider": "github",
+      "host": "ghe.example.org",
+      "web_base": "https://ghe.example.org",
+      "expect": "https://ghe.example.org/api/v3"
+    },
+    {
+      "provider": "github",
+      "host": "ghe.example.org",
+      "web_base": "https://ghe.example.org/ghe",
+      "expect": "https://ghe.example.org/ghe/api/v3"
+    },
+    {
+      "provider": "gitlab",
+      "host": "gitlab.com",
+      "web_base": "https://gitlab.com",
+      "expect": "https://gitlab.com/api/v4"
+    },
+    {
+      "provider": "gitlab",
+      "host": "gitlab.hse.local",
+      "web_base": "https://gitlab.hse.local:8443/gitlab",
+      "expect": "https://gitlab.hse.local:8443/gitlab/api/v4"
+    },
+    {
+      "provider": "gitea",
+      "host": "codeberg.org",
+      "web_base": "https://codeberg.org",
+      "expect": "https://codeberg.org/api/v1"
+    },
+    {
+      "provider": "bitbucket",
+      "host": "bitbucket.org",
+      "web_base": "https://bitbucket.org",
+      "expect": "https://api.bitbucket.org/2.0"
+    },
+    {
+      "provider": "bitbucket",
+      "host": "bb.example.org",
+      "web_base": "https://bb.example.org",
+      "expect": null
+    },
+    {
+      "provider": "other",
+      "host": "git.example.com",
+      "web_base": "https://git.example.com",
+      "expect": null
+    },
+    {
+      "provider": "gitlab",
+      "host": "gitlab.hse.local",
+      "web_base": null,
+      "expect": null
+    }
+  ],
+  "prefix_cases": [
+    {
+      "segments": [
+        "group",
+        "repo"
+      ],
+      "expect": [
+        ""
+      ]
+    },
+    {
+      "segments": [
+        "gitlab",
+        "group",
+        "repo"
+      ],
+      "expect": [
+        "",
+        "/gitlab"
+      ]
+    },
+    {
+      "segments": [
+        "a",
+        "b",
+        "c",
+        "repo"
+      ],
+      "expect": [
+        "",
+        "/a",
+        "/a/b"
+      ]
+    },
+    {
+      "segments": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "repo"
+      ],
+      "expect": [
+        "",
+        "/a",
+        "/a/b"
+      ]
+    },
+    {
+      "segments": [
+        "repo"
+      ],
+      "expect": []
+    }
+  ],
+  "text_cases": [
+    {
+      "kind": "token_name",
+      "project": "Курсовая работа",
+      "expect": "HSE Studio · Курсовая работа"
+    },
+    {
+      "kind": "token_name",
+      "project": null,
+      "expect": "HSE Studio"
+    },
+    {
+      "kind": "token_name",
+      "project": "  ",
+      "expect": "HSE Studio"
+    },
+    {
+      "kind": "token_name",
+      "project": "Line\none\ttab  x",
+      "expect": "HSE Studio · Line one tab x"
+    },
+    {
+      "kind": "token_description",
+      "date": "2026-10-27",
+      "lang": "ru",
+      "expect": "Доступ для HSE Doc Studio, 2026-10-27"
+    },
+    {
+      "kind": "token_description",
+      "date": "2026-10-27",
+      "lang": "en",
+      "expect": "Access for HSE Doc Studio, 2026-10-27"
+    },
+    {
+      "kind": "token_description",
+      "date": "2026-10-27",
+      "lang": "de",
+      "expect": "Access for HSE Doc Studio, 2026-10-27"
+    },
+    {
+      "kind": "clean_text",
+      "text": "a  b\n c",
+      "limit": 40,
+      "expect": "a b c"
+    },
+    {
+      "kind": "clean_text",
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "limit": 40,
+      "expect": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "kind": "clean_text",
+      "text": "Привет мир Привет мир Привет мир Привет мир Привет мир Привет мир Привет мир Привет мир Привет мир Привет мир ",
+      "limit": 40,
+      "expect": "Привет мир Привет мир Привет мир Привет"
+    },
+    {
+      "kind": "clean_text",
+      "text": "emoji 😀😀😀",
+      "limit": 8,
+      "expect": "emoji 😀😀"
+    },
+    {
+      "kind": "clean_text",
+      "text": "  ",
+      "limit": 5,
+      "expect": ""
+    },
+    {
+      "kind": "encode",
+      "text": "Курсовая (черновик) !*'",
+      "expect": "%D0%9A%D1%83%D1%80%D1%81%D0%BE%D0%B2%D0%B0%D1%8F%20%28%D1%87%D0%B5%D1%80%D0%BD%D0%BE%D0%B2%D0%B8%D0%BA%29%20%21%2A%27"
+    },
+    {
+      "kind": "encode",
+      "text": "a b&c=d?e#f/g",
+      "expect": "a%20b%26c%3Dd%3Fe%23f%2Fg"
+    },
+    {
+      "kind": "encode",
+      "text": "ok-._~",
+      "expect": "ok-._~"
+    }
+  ],
+  "token_link_cases": [
+    {
+      "name": "github.com, личный репозиторий",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio · Курсовая",
+      "description": "Access for HSE Doc Studio, 2026-10-27",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio%20%C2%B7%20%D0%9A%D1%83%D1%80%D1%81%D0%BE%D0%B2%D0%B0%D1%8F&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-10-27&target_name=anna&expires_in=90&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-10-27",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github, организация с подгруппой не даёт target_name",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "org/sub",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio&description=d&expires_in=90&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=d",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github, без срока",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": null,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio&description=d&target_name=anna&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=d",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github, срок выше предела",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": 999,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio&description=d&target_name=anna&expires_in=366&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=d",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github, длинное имя режется по лимиту",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio · Очень длинное название проекта Очень длинное название проекта Очень длинное название проекта ",
+      "description": "Описание",
+      "owner": null,
+      "repo": null,
+      "expires_in_days": 30,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio%20%C2%B7%20%D0%9E%D1%87%D0%B5%D0%BD%D1%8C%20%D0%B4%D0%BB%D0%B8%D0%BD%D0%BD%D0%BE%D0%B5%20%D0%BD%D0%B0%D0%B7%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20%D0%BF%D1%80%D0%BE%D0%B5&description=%D0%9E%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5&expires_in=30&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=%D0%9E%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github enterprise",
+      "provider": "github",
+      "web_base": "https://ghe.example.org",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "team",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://ghe.example.org/settings/personal-access-tokens/new?name=HSE%20Studio&description=d&target_name=team&expires_in=90&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://ghe.example.org/settings/tokens/new?scopes=repo&description=d",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "github, спецсимволы кодируются строго",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "A&B=C (1)!",
+      "description": "x*y'z\n#?",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": 7,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=A%26B%3DC%20%281%29%21&description=x%2Ay%27z%20%23%3F&target_name=anna&expires_in=7&contents=write",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=x%2Ay%27z%20%23%3F",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "gitlab.com",
+      "provider": "gitlab",
+      "web_base": "https://gitlab.com",
+      "token_name": "HSE Studio · Курсовая",
+      "description": "Access for HSE Doc Studio, 2026-10-27",
+      "owner": "group/sub",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://gitlab.com/-/user_settings/personal_access_tokens?name=HSE%20Studio%20%C2%B7%20%D0%9A%D1%83%D1%80%D1%81%D0%BE%D0%B2%D0%B0%D1%8F&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-10-27&scopes=read_repository,write_repository",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://gitlab.com/-/profile/personal_access_tokens?name=HSE%20Studio%20%C2%B7%20%D0%9A%D1%83%D1%80%D1%81%D0%BE%D0%B2%D0%B0%D1%8F&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-10-27&scopes=read_repository,write_repository",
+          "broad": false
+        }
+      }
+    },
+    {
+      "name": "gitlab self-hosted с портом и подпутём",
+      "provider": "gitlab",
+      "web_base": "https://gitlab.hse.local:8443/gitlab",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "team",
+      "repo": "paper",
+      "expires_in_days": null,
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://gitlab.hse.local:8443/gitlab/-/user_settings/personal_access_tokens?name=HSE%20Studio&description=d&scopes=read_repository,write_repository",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://gitlab.hse.local:8443/gitlab/-/profile/personal_access_tokens?name=HSE%20Studio&description=d&scopes=read_repository,write_repository",
+          "broad": false
+        }
+      }
+    },
+    {
+      "name": "gitea: только страница и шаги",
+      "provider": "gitea",
+      "web_base": "https://codeberg.org",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "plain",
+          "url": "https://codeberg.org/user/settings/applications",
+          "broad": false
+        },
+        "fallback": null
+      }
+    },
+    {
+      "name": "bitbucket: страница токена репозитория",
+      "provider": "bitbucket",
+      "web_base": "https://bitbucket.org",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "anna",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": {
+          "kind": "plain",
+          "url": "https://bitbucket.org/anna/paper/admin/access-tokens",
+          "broad": false
+        },
+        "fallback": null
+      }
+    },
+    {
+      "name": "bitbucket без репозитория ссылки нет",
+      "provider": "bitbucket",
+      "web_base": "https://bitbucket.org",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": null,
+      "repo": null,
+      "expires_in_days": 90,
+      "expect": {
+        "primary": null,
+        "fallback": null
+      }
+    },
+    {
+      "name": "other: ссылок нет",
+      "provider": "other",
+      "web_base": "https://git.example.com",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "team",
+      "repo": "paper",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": null,
+        "fallback": null
+      }
+    }
+  ],
+  "ssh_link_cases": [
+    {
+      "provider": "github",
+      "web_base": "https://github.com",
+      "owner": "hse-team",
+      "repo": "paper",
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://github.com/settings/keys",
+          "broad": false
+        },
+        "deploy_key": {
+          "kind": "plain",
+          "url": "https://github.com/hse-team/paper/settings/keys/new",
+          "broad": false
+        }
+      }
+    },
+    {
+      "provider": "github",
+      "web_base": "https://github.com",
+      "owner": null,
+      "repo": null,
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://github.com/settings/keys",
+          "broad": false
+        },
+        "deploy_key": null
+      }
+    },
+    {
+      "provider": "gitlab",
+      "web_base": "https://gitlab.com",
+      "owner": "group/sub",
+      "repo": "paper",
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://gitlab.com/-/user_settings/ssh_keys",
+          "broad": false
+        },
+        "deploy_key": {
+          "kind": "plain",
+          "url": "https://gitlab.com/group/sub/paper/-/settings/repository",
+          "broad": false
+        }
+      }
+    },
+    {
+      "provider": "gitlab",
+      "web_base": "https://gitlab.hse.local/gitlab",
+      "owner": "team",
+      "repo": "paper",
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://gitlab.hse.local/gitlab/-/user_settings/ssh_keys",
+          "broad": false
+        },
+        "deploy_key": {
+          "kind": "plain",
+          "url": "https://gitlab.hse.local/gitlab/team/paper/-/settings/repository",
+          "broad": false
+        }
+      }
+    },
+    {
+      "provider": "gitea",
+      "web_base": "https://codeberg.org",
+      "owner": "anna",
+      "repo": "paper",
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://codeberg.org/user/settings/keys",
+          "broad": false
+        },
+        "deploy_key": {
+          "kind": "plain",
+          "url": "https://codeberg.org/anna/paper/settings/keys",
+          "broad": false
+        }
+      }
+    },
+    {
+      "provider": "bitbucket",
+      "web_base": "https://bitbucket.org",
+      "owner": "anna",
+      "repo": "paper",
+      "expect": {
+        "user_keys": {
+          "kind": "plain",
+          "url": "https://bitbucket.org/account/settings/ssh-keys/",
+          "broad": false
+        },
+        "deploy_key": {
+          "kind": "plain",
+          "url": "https://bitbucket.org/anna/paper/admin/access-keys/",
+          "broad": false
+        }
+      }
+    },
+    {
+      "provider": "other",
+      "web_base": "https://git.example.com",
+      "owner": "team",
+      "repo": "paper",
+      "expect": {
+        "user_keys": null,
+        "deploy_key": null
+      }
+    }
+  ],
+  "scope_cases": [
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "read_repository",
+        "write_repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "write_repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "read_repository"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "write_repository"
+        ]
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "api"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "api",
+        "read_repository"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "read_api"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "read_repository",
+          "write_repository"
+        ]
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [
+        "write_repository",
+        "sudo"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": [],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "read_repository",
+          "write_repository"
+        ]
+      }
+    },
+    {
+      "provider": "gitlab",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "scopes": [
+        "repo"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "scopes": [
+        "repo",
+        "workflow"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "scopes": [
+        "public_repo"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "repo"
+        ]
+      }
+    },
+    {
+      "provider": "github",
+      "scopes": [
+        "repo",
+        "delete_repo"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitea",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitea",
+      "scopes": [
+        "write:repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "bitbucket",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "other",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    }
+  ]
+}

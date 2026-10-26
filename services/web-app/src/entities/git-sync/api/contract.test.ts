@@ -11,6 +11,8 @@ import {
   GitCredentialListSchema,
   GitCredentialSchema,
   GitHostListSchema,
+  GitHostSettingsListSchema,
+  GitHostSettingsSchema,
   ProbeRequestSchema,
   ProbeSchema,
   ProbeUrlSchema,
@@ -18,6 +20,7 @@ import {
   SharedFolderSchema,
   TrustHostRequestSchema,
   UpdateCredentialRequestSchema,
+  UpdateGitHostSettingsRequestSchema,
 } from "@entities/git-remote";
 import {
   ProfileRequestSchema,
@@ -91,6 +94,9 @@ const SCHEMAS: Record<string, ZodType> = {
   CreateCredentialRequest: CreateCredentialRequestSchema,
   UpdateCredentialRequest: UpdateCredentialRequestSchema,
   GitHostList: GitHostListSchema,
+  GitHostSettings: GitHostSettingsSchema,
+  GitHostSettingsList: GitHostSettingsListSchema,
+  UpdateGitHostSettingsRequest: UpdateGitHostSettingsRequestSchema,
   TrustHostRequest: TrustHostRequestSchema,
   SecretsStatus: SecretsStatusSchema,
   SharedFolder: SharedFolderSchema,

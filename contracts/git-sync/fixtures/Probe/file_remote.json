@@ -10,6 +10,12 @@
     "repo": "course-paper",
     "token_stripped": false
   },
+  "provider_info": {
+    "id": "other",
+    "detected_by": "unknown",
+    "version": null
+  },
+  "token_info": null,
   "reachable": true,
   "auth_ok": true,
   "empty": false,

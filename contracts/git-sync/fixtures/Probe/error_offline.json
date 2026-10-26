@@ -13,6 +13,12 @@
     "repo": "course-paper",
     "token_stripped": false
   },
+  "provider_info": {
+    "id": "github",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
   "reachable": false,
   "auth_ok": false,
   "empty": false,

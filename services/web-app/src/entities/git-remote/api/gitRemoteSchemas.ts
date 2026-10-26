@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { GitHostKeySchema } from "@entities/git-sync";
+import {
+  GitHostKeySchema,
+  GitProviderInfoSchema,
+  GitTlsCertificateSchema,
+} from "@entities/git-sync";
 
 // Доступы к репозиториям, ключи серверов, проверка адреса, клонирование.
 // Секреты (токены) только входят в запросы и никогда не возвращаются.
@@ -25,6 +29,14 @@ export const GIT_PROVIDERS = [
 ] as const;
 export type GitProvider = (typeof GIT_PROVIDERS)[number];
 
+export const GIT_TOKEN_SUFFICIENCY = [
+  "sufficient",
+  "too_narrow",
+  "too_broad",
+  "unknown",
+] as const;
+export type GitTokenSufficiency = (typeof GIT_TOKEN_SUFFICIENCY)[number];
+
 export const GIT_PROBE_RELATIONS = [
   "empty",
   "studio_project",
@@ -44,6 +56,7 @@ const isOneOf =
 export const isGitCredentialKind = isOneOf(GIT_CREDENTIAL_KINDS);
 export const isGitCredentialStatus = isOneOf(GIT_CREDENTIAL_STATUSES);
 export const isGitProvider = isOneOf(GIT_PROVIDERS);
+export const isGitTokenSufficiency = isOneOf(GIT_TOKEN_SUFFICIENCY);
 export const isGitProbeRelation = isOneOf(GIT_PROBE_RELATIONS);
 
 // --- доступы --------------------------------------------------------------------
@@ -60,6 +73,7 @@ export const GitCredentialSchema = z.object({
   fingerprint_sha256: z.string().nullish(),
   created_at: z.string(),
   last_used_at: z.string().nullish(),
+  expires_at: z.string().nullish(), // срок токена, если известен
   used_by: z.array(z.object({ project_id: z.string(), name: z.string() })),
 });
 
@@ -113,6 +127,27 @@ export const TrustHostRequestSchema = z.object({
   confirm_host: z.string().nullish(),
 });
 
+// Настройки сервера, общие для всех проектов: подмена провайдера, свой CA, закреплённый сертификат.
+export const GitHostSettingsSchema = z.object({
+  host: z.string(),
+  port: z.number().nullish(),
+  provider_override: z.string().nullish(),
+  provider_info: GitProviderInfoSchema,
+  ca_present: z.boolean(),
+  pinned_fingerprint: z.string().nullish(),
+});
+
+export const GitHostSettingsListSchema = z.array(GitHostSettingsSchema);
+
+// Отсутствующее поле оставляет значение, null сбрасывает его; ca_pem принимает только PEM сертификата.
+export const UpdateGitHostSettingsRequestSchema = z.object({
+  host: z.string(),
+  port: z.number().nullish(),
+  provider_override: z.string().nullish(),
+  ca_pem: z.string().nullish(),
+  pinned_fingerprint: z.string().nullish(),
+});
+
 // --- секреты и общие папки ------------------------------------------------------
 
 export const SecretsStatusSchema = z.object({
@@ -152,6 +187,15 @@ export const ProbeUrlSchema = z.object({
   token_stripped: z.boolean(),
 });
 
+// Что известно о токене после проверки: чей он, какие права, до какого срока.
+export const GitTokenInfoSchema = z.object({
+  login: z.string().nullish(),
+  scopes: z.array(z.string()),
+  expires_at: z.string().nullish(),
+  sufficiency: z.string(), // sufficient | too_narrow | too_broad | unknown
+  missing: z.array(z.string()), // каких прав не хватает для чтения и записи
+});
+
 export const ProbeProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -170,9 +214,12 @@ export const ProbeSchema = z.object({
       code: z.string(),
       detail: z.string(),
       host_keys: z.array(GitHostKeySchema).nullish(),
+      certificate: GitTlsCertificateSchema.nullish(),
     })
     .nullish(),
   url: ProbeUrlSchema,
+  provider_info: GitProviderInfoSchema.nullish(), // url.provider совпадает с provider_info.id
+  token_info: GitTokenInfoSchema.nullish(), // только для проверки с токеном
   reachable: z.boolean(),
   auth_ok: z.boolean(),
   empty: z.boolean(),
@@ -207,6 +254,11 @@ export type UpdateCredentialRequest = z.infer<
   typeof UpdateCredentialRequestSchema
 >;
 export type GitHost = z.infer<typeof GitHostSchema>;
+export type GitHostSettings = z.infer<typeof GitHostSettingsSchema>;
+export type UpdateGitHostSettingsRequest = z.infer<
+  typeof UpdateGitHostSettingsRequestSchema
+>;
+export type GitTokenInfo = z.infer<typeof GitTokenInfoSchema>;
 export type TrustHostRequest = z.infer<typeof TrustHostRequestSchema>;
 export type SecretsStatus = z.infer<typeof SecretsStatusSchema>;
 export type SharedFolder = z.infer<typeof SharedFolderSchema>;
