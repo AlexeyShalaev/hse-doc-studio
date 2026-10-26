@@ -26,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
@@ -40,7 +41,7 @@ from hse_doc_studio.core.services import (
     RequirementMatchingService,
     SubmissionProfileService,
 )
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -89,6 +90,7 @@ from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
 from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
+from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
@@ -100,6 +102,7 @@ from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureV
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.assembler import SubmissionAssembler
 from hse_doc_studio.infra.system.capacity_probe import SystemCapacityProbe
@@ -594,9 +597,11 @@ class DomainServiceProvider(Provider):
         )
 
     @provide
-    def get_job_handler_registry(self) -> JobHandlerRegistry:
+    def get_job_handler_registry(self, verifier: DetachedSignatureVerifier) -> JobHandlerRegistry:
         # Обработчики не-compile видов регистрируют слайсы своих семейств.
-        return JobHandlerRegistry()
+        registry = JobHandlerRegistry()
+        registry.register(JobKind.verify_detached, VerifyDetachedHandler(verifier))
+        return registry
 
     @provide
     def get_job_dispatcher(
@@ -647,6 +652,12 @@ class DomainServiceProvider(Provider):
         self, keyring: GpgKeyring, root_store: TrustedRootStore, fetcher: ChainFetcher
     ) -> DetachedSignatureVerifier:
         return DetachedSignatureVerifier(keyring, root_store.directory, fetcher.directory)
+
+    @provide
+    def get_trust_material_provider(
+        self, root_store: TrustedRootStore, fetcher: ChainFetcher
+    ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
+        return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
 
     @provide
     def get_vcs_service(self) -> IVcsService:

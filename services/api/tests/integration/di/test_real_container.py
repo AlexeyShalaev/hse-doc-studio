@@ -8,16 +8,23 @@ dishka валидирует граф при сборке: пропавшая ф�
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.enums import DetachedFormat, DetachedVerdict, Lang
 from hse_doc_studio.core.events import IJobLogStream
+from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.files import InlineBlob, ManifestFile
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
+from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload, VerifyDetachedResult
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
@@ -34,8 +41,11 @@ from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
+
+from tests.unit.infra.signatures.gost_fixture import make_detached_cms, make_identity
 
 
 @pytest.fixture
@@ -162,3 +172,57 @@ async def test__real_container__signature_ports__port_and_concrete_are_one_singl
     assert importer is keyring
     assert fetcher_port is fetcher
     assert keyring is keyring_again
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__trust_material_provider__port_and_concrete_are_one_singleton() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            port = await request_container.get(ITrustMaterialProvider)
+            concrete = await request_container.get(LocalTrustMaterialProvider)
+        async with container() as another_request:
+            concrete_again = await another_request.get(LocalTrustMaterialProvider)
+    finally:
+        await container.close()
+
+    assert port is concrete
+    assert concrete is concrete_again
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__verify_job_for_a_gost_signature__runs_through_the_dispatcher(tmp_path: Path) -> None:
+    workspace = tmp_path / "project"
+    workspace.mkdir()
+    pdf = b"%PDF-1.7 body"
+    (workspace / "frozen.pdf").write_bytes(pdf)
+    identity = make_identity()
+    container = create_container()
+    try:
+        async with container() as request_container:
+            dispatcher = await request_container.get(IJobDispatcher)
+            trust = await request_container.get(ITrustMaterialProvider)
+            payload = VerifyDetachedPayload(
+                pdf=ManifestFile("frozen.pdf"),
+                signature=InlineBlob.from_bytes(make_detached_cms(identity, pdf)),
+                trust=trust.snapshot(),
+            )
+            spec = JobSpec(
+                id=uuid4(),
+                kind=JobKind.verify_detached,
+                tags=job_tags(JobKind.verify_detached, payload),
+                project_id=uuid4(),
+                actor=Actor.local(),
+                locale=Lang.ru,
+                payload=payload,
+                local_root=workspace,
+            )
+
+            result = await dispatcher.run(spec)
+    finally:
+        await container.close()
+
+    assert result.status is JobStatus.succeeded, result.error
+    verified = result.data_as(VerifyDetachedResult).signature
+    assert verified.format is DetachedFormat.cms
+    assert verified.verdict is DetachedVerdict.valid

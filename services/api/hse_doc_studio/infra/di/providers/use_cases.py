@@ -61,7 +61,7 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter
+from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -93,7 +93,6 @@ from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
-from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
@@ -2207,11 +2206,19 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
     ) -> AttachDetachedSignatureUC:
         return AttachDetachedSignatureUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            dispatcher,
+            trust_provider,
+            keyring,
         )
 
     @provide
@@ -2222,11 +2229,19 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
-            project_repo, project_index_repo, signature_repo, template_repo, template_service, verifier, keyring
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            dispatcher,
+            trust_provider,
+            keyring,
         )
 
     @provide
@@ -2237,7 +2252,8 @@ class UseCaseProvider(Provider):
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
         fetcher: IChainFetcher,
     ) -> CompleteDetachedChainUC:
@@ -2247,7 +2263,8 @@ class UseCaseProvider(Provider):
             signature_repo,
             template_repo,
             template_service,
-            verifier,
+            dispatcher,
+            trust_provider,
             keyring,
             fetcher,
         )
@@ -2261,7 +2278,8 @@ class UseCaseProvider(Provider):
         signing_identity_repo: ISigningIdentityRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
-        verifier: DetachedSignatureVerifier,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
         keyring: GpgKeyring,
     ) -> SignInStudioUC:
         return SignInStudioUC(
@@ -2271,7 +2289,8 @@ class UseCaseProvider(Provider):
             signing_identity_repo=signing_identity_repo,
             template_repo=template_repo,
             template_service=template_service,
-            verifier=verifier,
+            dispatcher=dispatcher,
+            trust_provider=trust_provider,
             keyring=keyring,
         )
 

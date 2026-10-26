@@ -7,11 +7,25 @@ import contextlib
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import PurePosixPath
+from uuid import uuid4
 
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.enums import DetachedOrigin
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.files import InlineBlob, ManifestFile
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.jobs.verify import (
+    CODE_GPG_UNAVAILABLE,
+    CODE_UNKNOWN_SIGNATURE_FORMAT,
+    VerifyDetachedPayload,
+    VerifyDetachedResult,
+)
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.ports import ITrustMaterialProvider
 from hse_doc_studio.core.signatures.verification import VerifiedSignature
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
 from hse_doc_studio.use_cases.signatures._doc_context import DETACHED_DIR, DocContext, safe_name, sha256_file
@@ -49,6 +63,56 @@ async def require_fresh_frozen(ctx: DocContext, state: SignaturesState) -> Froze
                 )
             )
     return frozen
+
+
+def no_gpg_message() -> str:
+    return localized_error(
+        "В системе нет gpg: подписи OpenPGP проверить нельзя",
+        "gpg is not installed: OpenPGP signatures cannot be checked",
+    )
+
+
+async def verify_frozen(
+    dispatcher: IJobDispatcher,
+    trust_provider: ITrustMaterialProvider,
+    ctx: DocContext,
+    frozen: FrozenPdf,
+    content: bytes,
+) -> VerifiedSignature:
+    """Проверяет подпись замороженного PDF задачей signature.verify_detached.
+
+    Обработчик отвечает кодами, тексты для пользователя собирает этот помощник. Вердикт
+    invalid и unknown_key штатный результат, а не ошибка.
+    """
+    payload = VerifyDetachedPayload(
+        pdf=ManifestFile(frozen.path, sha256=frozen.sha256),
+        signature=InlineBlob.from_bytes(content),
+        trust=await asyncio.to_thread(trust_provider.snapshot),
+    )
+    spec = JobSpec(
+        id=uuid4(),
+        kind=JobKind.verify_detached,
+        tags=job_tags(JobKind.verify_detached, payload),
+        project_id=ctx.project.id,
+        actor=current_actor() or Actor.local(),
+        locale=current_interface_language(),
+        payload=payload,
+        local_root=ctx.project.folder,
+    )
+    result = await dispatcher.run(spec)
+    error = result.error
+    if error is not None and error.code == CODE_UNKNOWN_SIGNATURE_FORMAT:
+        raise ValueError(
+            localized_error(
+                "Файл не распознан как открепленная подпись (OpenPGP .asc/.sig или CMS .sig/.p7s): " + error.detail,
+                "The file is not recognised as a detached signature (OpenPGP .asc/.sig or CMS .sig/.p7s): "
+                + error.detail,
+            )
+        )
+    if error is not None and error.code == CODE_GPG_UNAVAILABLE:
+        raise ValueError(no_gpg_message())
+    result.raise_for_error()
+    return result.data_as(VerifyDetachedResult).signature
 
 
 def store_signature(
