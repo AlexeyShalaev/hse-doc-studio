@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { ExternalLink, GitBranch, RefreshCw, Settings, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  gitErrorMessage,
-  type GitCommitBrief,
-  type SyncStatusView,
-} from "@entities/git-sync";
+import { gitErrorMessage, type SyncStatusView } from "@entities/git-sync";
 import { formatRelativeTime } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
 import { CopyField } from "@shared/ui/CopyField";
@@ -14,6 +10,8 @@ import type { SyncUi } from "../model/syncUi.model";
 import type { SyncText } from "../model/useSyncText";
 import { repoLabel } from "../model/repoLabel";
 import { SYNC_TONE_COLOR, SYNC_TONE_SOFT } from "../model/syncTone";
+import { sectionTitleStyle } from "../model/commitUi";
+import { CommitSection } from "./SyncCommitList";
 import { SyncStateIcon } from "./SyncStateIcon";
 
 export type SyncPopoverProps = {
@@ -37,113 +35,6 @@ export type SyncPopoverProps = {
 
 const PHASE_STEPS = ["snapshot", "fetch", "merge", "push"] as const;
 const PERCENT_PHASES = new Set(["fetch", "push"]);
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 10.5,
-  fontWeight: 600,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  color: "var(--fg-2)",
-};
-
-const initialsOf = (name: string): string => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "?";
-  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return `${first}${second}`.toUpperCase();
-};
-
-const CommitRow = ({
-  commit,
-  now,
-}: {
-  commit: GitCommitBrief;
-  now: number;
-}) => (
-  <li
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 9,
-      padding: "5px 0",
-      minWidth: 0,
-    }}
-  >
-    <span
-      aria-hidden="true"
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        flexShrink: 0,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 9.5,
-        fontWeight: 700,
-        background: "var(--accent-soft)",
-        color: "var(--accent)",
-        border: "1px solid var(--accent-line)",
-      }}
-    >
-      {initialsOf(commit.author)}
-    </span>
-    <span style={{ minWidth: 0, flex: 1 }}>
-      <span
-        className="truncate"
-        style={{ display: "block", fontSize: 12, color: "var(--fg-0)" }}
-        title={commit.message}
-      >
-        {commit.message}
-      </span>
-      <span
-        className="truncate"
-        style={{ display: "block", fontSize: 11, color: "var(--fg-2)" }}
-      >
-        {commit.author}
-        {" · "}
-        {formatRelativeTime(commit.created_at, now)}
-      </span>
-    </span>
-  </li>
-);
-
-const CommitSection = ({
-  title,
-  total,
-  commits,
-  now,
-  moreLabel,
-}: {
-  title: string;
-  total: number;
-  commits: GitCommitBrief[];
-  now: number;
-  moreLabel: (count: number) => string;
-}) => {
-  if (commits.length === 0) return null;
-  return (
-    <section aria-label={title} style={{ minWidth: 0 }}>
-      <div
-        className="flex items-center"
-        style={{ gap: 6, marginBottom: 2, justifyContent: "space-between" }}
-      >
-        <span style={sectionTitleStyle}>{title}</span>
-        <span className="chip subtle tnum">{total}</span>
-      </div>
-      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {commits.map((commit) => (
-          <CommitRow key={commit.id} commit={commit} now={now} />
-        ))}
-      </ul>
-      {total > commits.length && (
-        <div className="dim" style={{ fontSize: 11, paddingTop: 2 }}>
-          {moreLabel(total - commits.length)}
-        </div>
-      )}
-    </section>
-  );
-};
 
 /**
  * Панель подробностей синхронизации: репозиторий, что пришло и что не

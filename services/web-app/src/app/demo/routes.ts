@@ -16,7 +16,8 @@ import type {
   OperationWarning,
 } from "@entities/git-sync";
 import type { GitCredential } from "@entities/git-remote";
-import { fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
+import { DAY, HOUR, MINUTE, fakeSha, fakeUuid, isoAgo, nowMs } from "./clock";
+import { ME, TEAMMATES } from "./people";
 import {
   applyDrafts,
   conflictBlobText,
@@ -1201,6 +1202,84 @@ type RawCommit = {
   [key: string]: unknown;
 };
 
+// Почта автора: известных людей берём из демо-данных, чтобы «Только мои» и
+// аватары совпадали с профилем, остальным придумываем адрес.
+const emailOf = (name: string): string =>
+  [ME, ...TEAMMATES].find((person) => person.name === name)?.email ??
+  `${name.toLowerCase().replace(/\s+/g, ".")}@edu.hse.ru`;
+
+type SyntheticSeed = [string, string, string, number, number];
+
+// Своя история без настоящего бэкенда: чтобы страницу истории можно было
+// пролистать и с фильтрами, и с метками отправки, и со слиянием.
+const syntheticHistory = (projectId: string): RawCommit[] => {
+  const project = projectOf(world, projectId);
+  const own = project.outgoing.map((commit) => ({
+    id: commit.id,
+    short_id: commit.short_id,
+    kind: commit.kind,
+    message: commit.message,
+    author: commit.author,
+    created_at: commit.created_at,
+    parents: [fakeSha(`parent-${commit.id}`)],
+    refs: [],
+    doc_id: null,
+    stats: { files: 1, insertions: 6, deletions: 2 },
+  }));
+  const older: SyntheticSeed[] = [
+    ["Слияние с репозиторием", "sync", "Иван Смирнов", 2 * DAY + HOUR, 3],
+    [
+      "Добавлена глава про требования",
+      "manual",
+      "Анна Петрова",
+      2 * DAY + 3 * HOUR,
+      4,
+    ],
+    ["Сборка документа", "compile", "Иван Смирнов", 3 * DAY, 1],
+    ["Правки введения", "edit", "Иван Смирнов", 3 * DAY + 2 * HOUR, 2],
+    [
+      "Обновлён шаблон до версии 1.2",
+      "template_update",
+      "Иван Смирнов",
+      4 * DAY,
+      5,
+    ],
+    ["Список литературы", "edit", "Дмитрий Орлов", 5 * DAY, 1],
+    ["Версия для руководителя", "manual", "Иван Смирнов", 6 * DAY, 7],
+    ["Проект создан", "init", "Иван Смирнов", 9 * DAY, 12],
+  ];
+  const rest = older.map(([message, kind, author, ago, files], index) => {
+    const id = fakeSha(`history-${String(index)}`);
+    return {
+      id,
+      short_id: id.slice(0, 7),
+      kind,
+      message,
+      author,
+      created_at: isoAgo(ago + 30 * MINUTE),
+      parents:
+        kind === "sync"
+          ? [fakeSha("merge-a"), fakeSha("merge-b")]
+          : [fakeSha(`parent-${id}`)],
+      refs: [],
+      doc_id: null,
+      stats: { files, insertions: files * 5, deletions: files },
+    };
+  });
+  return [...own, ...rest];
+};
+
+const inWindow = (
+  createdAt: string,
+  since: string | null,
+  until: string | null,
+): boolean => {
+  const time = Date.parse(createdAt);
+  if (since && time < Date.parse(since)) return false;
+  if (until && time > Date.parse(until)) return false;
+  return true;
+};
+
 const enrichCommits = (
   commits: RawCommit[],
   projectId: string,
@@ -1211,7 +1290,7 @@ const enrichCommits = (
   const ahead = Math.min(project.ahead, total);
   return commits.map((commit, index) => ({
     ...commit,
-    author_email: `${commit.author.toLowerCase().replace(/\s+/g, ".")}@edu.hse.ru`,
+    author_email: emailOf(commit.author),
     is_merge: Array.isArray(commit.parents) && commit.parents.length > 1,
     // Верхние ahead версий ещё не ушли в репозиторий, остальные уже там.
     sync: connected ? (index < ahead ? "unpushed" : "pushed") : null,
@@ -1244,15 +1323,19 @@ const historyRoutes: DemoRoute[] = [
     handler: async (req) => {
       const projectId = req.params.projectId ?? "";
       let response: AxiosResponse;
+      let backendDown = false;
       try {
         response = await req.forward();
       } catch {
         // Настоящего бэкенда нет: история целиком из демо.
+        backendDown = true;
         response = { data: [] } as AxiosResponse;
       }
-      const real = Array.isArray(response.data)
-        ? (response.data as RawCommit[])
-        : [];
+      const real = backendDown
+        ? syntheticHistory(projectId)
+        : Array.isArray(response.data)
+          ? (response.data as RawCommit[])
+          : [];
       const project = projectOf(world, projectId);
       const all = project.remote
         ? [...incomingAsHistory(projectId), ...enrichCommits(real, projectId)]
@@ -1261,7 +1344,14 @@ const historyRoutes: DemoRoute[] = [
       const email = queryString(req, "author_email");
       const text = (queryString(req, "q") ?? "").toLowerCase();
       const sync = queryString(req, "sync");
+      const since = queryString(req, "since");
+      const until = queryString(req, "until");
       const filtered = all.filter((commit) => {
+        if (
+          typeof commit.created_at === "string" &&
+          !inWindow(commit.created_at, since, until)
+        )
+          return false;
         if (kinds.length > 0 && !kinds.includes(commit.kind)) return false;
         if (email && commit.author_email !== email) return false;
         if (text && !(commit.message ?? "").toLowerCase().includes(text))

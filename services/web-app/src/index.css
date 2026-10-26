@@ -1852,6 +1852,41 @@
   .sync-history-link:hover {
     text-decoration: underline;
   }
+  .sync-commit-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 5px 6px;
+    margin: 0 -6px;
+    width: calc(100% + 12px);
+    border: 0;
+    border-radius: var(--r-1);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sync-commit-btn:hover {
+    background: var(--bg-hover);
+  }
+  .sync-commit-btn[aria-pressed="true"] {
+    background: var(--accent-soft);
+  }
+  .sync-commit-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  .sync-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-2);
+    background: var(--bg-1);
+  }
   .sync-banner {
     flex-shrink: 0;
     display: flex;

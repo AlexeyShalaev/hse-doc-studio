@@ -5,6 +5,8 @@ export { toPosixPath } from "./path";
 
 export { formatBytes } from "./formatBytes";
 
+export { useDebouncedValue } from "./useDebouncedValue";
+
 export { diffHunks, diffLines } from "./lineDiff";
 export type { DiffLine, DiffLineKind } from "./lineDiff";
 

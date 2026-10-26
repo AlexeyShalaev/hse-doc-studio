@@ -10,7 +10,9 @@ import {
 // Что просят сделать те, у кого нет доступа к самому элементу синхронизации:
 // палитра команд и сочетание клавиш. Выполняет запрос тот, кто знает состояние
 // проекта (элемент в заголовке окна), поэтому здесь только очередь из одного.
-export type SyncCommandKind = "sync" | "check";
+// "sync" делает главное действие по состоянию, "run" только запускает синхронизацию
+// (или открывает панель, если запустить нельзя), "check" проверяет репозиторий.
+export type SyncCommandKind = "sync" | "check" | "run";
 
 export type SyncCommand = { id: number; kind: SyncCommandKind };
 
@@ -22,6 +24,8 @@ type SyncUiState = {
   // Всплывающая панель синхронизации в заголовке окна.
   popoverOpen: boolean;
   connectDialog: { mode: ConnectDialogMode } | null;
+  // Окно обмена файлом (bundle): открывают со страницы истории и из настроек.
+  bundleDialogOpen: boolean;
   command: SyncCommand | null;
   // Для каждого проекта: идентификатор последней синхронизации, о которой уже
   // сообщили тостом. Состояние сервера помнит итог и после перезагрузки страницы,
@@ -34,6 +38,8 @@ type SyncUiActions = {
   togglePopover: () => void;
   openConnectDialog: (mode?: ConnectDialogMode) => void;
   closeConnectDialog: () => void;
+  openBundleDialog: () => void;
+  closeBundleDialog: () => void;
   requestCommand: (kind: SyncCommandKind) => void;
   // Снимает команду из очереди; id нужен, чтобы не снять чужую, пришедшую позже.
   consumeCommand: (id: number) => void;
@@ -77,6 +83,7 @@ export const useSyncUiStore = create<SyncUiState & SyncUiActions>()(
     (set, get) => ({
       popoverOpen: false,
       connectDialog: null,
+      bundleDialogOpen: false,
       command: null,
       toastedSyncIds: {},
       setPopoverOpen: (open) => {
@@ -90,6 +97,12 @@ export const useSyncUiStore = create<SyncUiState & SyncUiActions>()(
       },
       closeConnectDialog: () => {
         set({ connectDialog: null });
+      },
+      openBundleDialog: () => {
+        set({ bundleDialogOpen: true, popoverOpen: false });
+      },
+      closeBundleDialog: () => {
+        set({ bundleDialogOpen: false });
       },
       requestCommand: (kind) => {
         commandSeq += 1;

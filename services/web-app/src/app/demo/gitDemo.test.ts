@@ -918,6 +918,59 @@ describe("demo history enrichment", () => {
   });
 });
 
+describe("demo history without a backend", () => {
+  const down = () => Promise.reject(new Error("no backend"));
+
+  it("makes up a history with sync, merge and template-update rows", async () => {
+    resetWorld("ahead");
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+    });
+    const commits = res.data as {
+      kind: string;
+      sync: string | null;
+      is_merge: boolean;
+    }[];
+    const kinds = new Set(commits.map((c) => c.kind));
+    expect(kinds).toContain("sync");
+    expect(kinds).toContain("template_update");
+    expect(kinds).toContain("manual");
+    expect(commits.some((c) => c.is_merge)).toBe(true);
+    expect(commits.some((c) => c.sync === "unpushed")).toBe(true);
+    expect(commits.some((c) => c.sync === "pushed")).toBe(true);
+  });
+
+  it("gives known people their profile e-mail so that Only mine matches", async () => {
+    resetWorld("ahead");
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { author_email: "ivan.smirnov@edu.hse.ru" },
+    });
+    const commits = res.data as { author: string }[];
+    expect(commits.length).toBeGreaterThan(0);
+    expect(commits.every((c) => c.author === "Иван Смирнов")).toBe(true);
+  });
+
+  it("filters by the date window", async () => {
+    resetWorld("ahead");
+    const since = new Date(Date.now() - 36 * 3_600_000).toISOString();
+    const res = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { since },
+    });
+    const commits = res.data as { created_at: string }[];
+    expect(commits.length).toBeGreaterThan(0);
+    expect(
+      commits.every((c) => Date.parse(c.created_at) >= Date.parse(since)),
+    ).toBe(true);
+    const old = await call("GET", `/projects/${PROJECT}/vcs/history`, {
+      forward: down,
+      query: { until: since },
+    });
+    expect((old.data as unknown[]).length).toBeGreaterThan(0);
+  });
+});
+
 describe("history facets", () => {
   it("satisfies the shared facets schema", () => {
     expect(
