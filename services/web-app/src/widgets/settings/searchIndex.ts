@@ -15,6 +15,7 @@
 
 export type SettingsSectionId =
   | "appearance"
+  | "profile"
   | "compiler"
   | "fonts"
   | "checks"
@@ -25,6 +26,7 @@ export type SettingsSectionId =
   | "signing"
   | "disk"
   | "data"
+  | "git-access"
   | "about";
 
 export type SettingSearchEntry = {
@@ -91,6 +93,48 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "language",
       "локализация",
       "перевод",
+    ],
+  },
+
+  // ── Автор версий ─────────────────────────────────────────────
+  {
+    sectionId: "profile",
+    anchorId: "profile",
+    labelKey: "search.profile",
+    keywords: [
+      "автор",
+      "автор версий",
+      "автор коммитов",
+      "подпись",
+      "профиль",
+      "author",
+      "commit",
+      "profile",
+      "signature",
+      "git",
+      "версии",
+    ],
+  },
+  {
+    sectionId: "profile",
+    anchorId: "profile-name",
+    labelKey: "search.profileName",
+    keywords: ["имя", "фио", "name", "author", "автор", "коммиты"],
+  },
+  {
+    sectionId: "profile",
+    anchorId: "profile-email",
+    labelKey: "search.profileEmail",
+    keywords: [
+      "почта",
+      "e-mail",
+      "email",
+      "mail",
+      "адрес",
+      "noreply",
+      "no-reply",
+      "github",
+      "автор",
     ],
   },
 
@@ -405,6 +449,88 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "слияние",
       "merge",
       "перенос",
+    ],
+  },
+
+  // ── Доступ к репозиториям ────────────────────────────────────
+  {
+    sectionId: "git-access",
+    anchorId: "git-access",
+    labelKey: "search.gitAccess",
+    keywords: [
+      "доступ к репозиториям",
+      "репозиторий",
+      "синхронизация",
+      "git",
+      "github",
+      "gitlab",
+      "access",
+      "repository",
+      "sync",
+    ],
+  },
+  {
+    sectionId: "git-access",
+    anchorId: "git-access-credentials",
+    labelKey: "search.gitAccessCredentials",
+    keywords: [
+      "токен",
+      "token",
+      "pat",
+      "ключ",
+      "ssh",
+      "key",
+      "пароль",
+      "password",
+      "deploy key",
+      "заменить токен",
+      "удалить доступ",
+    ],
+  },
+  {
+    sectionId: "git-access",
+    anchorId: "git-access-hosts",
+    labelKey: "search.gitAccessHosts",
+    keywords: [
+      "сервер",
+      "server",
+      "отпечаток",
+      "fingerprint",
+      "known hosts",
+      "known_hosts",
+      "ключ сервера",
+      "host key",
+      "забыть сервер",
+    ],
+  },
+  {
+    sectionId: "git-access",
+    anchorId: "git-access-encryption",
+    labelKey: "search.gitAccessEncryption",
+    keywords: [
+      "шифрование",
+      "encryption",
+      "секреты",
+      "secrets",
+      "ключ шифрования",
+      "master key",
+      "облачный диск",
+      "yandex",
+      "dropbox",
+    ],
+  },
+  {
+    sectionId: "git-access",
+    anchorId: "git-access-fetch",
+    labelKey: "search.gitAccessFetch",
+    keywords: [
+      "фоновая проверка",
+      "background",
+      "fetch",
+      "интервал",
+      "interval",
+      "автопроверка",
+      "обновления репозитория",
     ],
   },
 

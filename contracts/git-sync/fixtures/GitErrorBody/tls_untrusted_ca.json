@@ -1,0 +1,12 @@
+{
+  "detail": "Сертификат сервера выдан неизвестным центром. Добавь его сертификат или подтверди отпечаток.",
+  "code": "tls_untrusted_ca",
+  "certificate": {
+    "fingerprint_sha256": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+    "subject": "CN=gitlab.hse.local",
+    "issuer": "CN=HSE Internal CA",
+    "not_before": "2026-01-10T00:00:00Z",
+    "not_after": "2027-01-10T00:00:00Z",
+    "self_signed": false
+  }
+}

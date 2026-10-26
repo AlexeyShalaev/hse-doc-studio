@@ -1,0 +1,38 @@
+[
+  {
+    "host": "github.com",
+    "port": null,
+    "provider_override": null,
+    "provider_info": {
+      "id": "github",
+      "detected_by": "host",
+      "version": null
+    },
+    "ca_present": false,
+    "pinned_fingerprint": null
+  },
+  {
+    "host": "gitlab.hse.local",
+    "port": 8443,
+    "provider_override": "gitlab",
+    "provider_info": {
+      "id": "gitlab",
+      "detected_by": "override",
+      "version": "17.3.1"
+    },
+    "ca_present": true,
+    "pinned_fingerprint": null
+  },
+  {
+    "host": "git.corp.example",
+    "port": null,
+    "provider_override": null,
+    "provider_info": {
+      "id": "other",
+      "detected_by": "unknown",
+      "version": null
+    },
+    "ca_present": false,
+    "pinned_fingerprint": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w"
+  }
+]

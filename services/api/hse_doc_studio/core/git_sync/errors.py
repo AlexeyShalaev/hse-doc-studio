@@ -10,6 +10,7 @@ class GitErrorCode(StrEnum):
 
     url_invalid = "url_invalid"
     url_scheme_forbidden = "url_scheme_forbidden"
+    provider_unknown = "provider_unknown"
     credential_invalid = "credential_invalid"
     credential_in_use = "credential_in_use"
     credential_host_mismatch = "credential_host_mismatch"
@@ -20,12 +21,16 @@ class GitErrorCode(StrEnum):
     auth_failed = "auth_failed"
     forbidden_write = "forbidden_write"
     sso_required = "sso_required"
+    token_expired = "token_expired"  # noqa: S105 — код ошибки, не пароль
+    token_insufficient_scope = "token_insufficient_scope"  # noqa: S105 — код ошибки, не пароль
     not_found_or_no_access = "not_found_or_no_access"
     rate_limited = "rate_limited"
     host_key_unknown = "host_key_unknown"
     host_key_changed = "host_key_changed"
     offline = "offline"
     tls_error = "tls_error"
+    tls_untrusted_ca = "tls_untrusted_ca"
+    tls_pin_mismatch = "tls_pin_mismatch"
     timeout = "timeout"
     ssh_unavailable = "ssh_unavailable"
     git_unavailable = "git_unavailable"

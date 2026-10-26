@@ -46,6 +46,26 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Не удалось проверить сертификат сервера",
         "The server certificate could not be verified",
     ),
+    GitErrorCode.tls_untrusted_ca: (
+        "Сертификат сервера выдан неизвестным центром. Добавьте его сертификат или подтвердите отпечаток",
+        "The server certificate was issued by an unknown authority. Add its certificate or confirm the fingerprint",
+    ),
+    GitErrorCode.tls_pin_mismatch: (
+        "Сертификат сервера отличается от подтверждённого раньше",
+        "The server certificate differs from the one confirmed earlier",
+    ),
+    GitErrorCode.token_expired: (
+        "Срок действия токена истёк. Выпустите новый",
+        "The token has expired. Issue a new one",
+    ),
+    GitErrorCode.token_insufficient_scope: (
+        "Токену не хватает прав для чтения и записи репозитория",
+        "The token lacks the permissions to read and write the repository",
+    ),
+    GitErrorCode.provider_unknown: (
+        "Неизвестный тип сервера. Выберите GitHub, GitLab, Gitea, Bitbucket или другое",
+        "Unknown server type. Choose GitHub, GitLab, Gitea, Bitbucket or other",
+    ),
     GitErrorCode.timeout: (
         "Сервер не ответил вовремя. Попробуйте ещё раз",
         "The server did not answer in time. Try again",

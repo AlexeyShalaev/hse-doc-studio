@@ -16,6 +16,17 @@ export { SharedDocsSection } from "./SharedDocsSection";
 export type { SharedDocsSectionProps } from "./SharedDocsSection";
 export { SupervisorSection } from "./SupervisorSection";
 export type { SupervisorSectionProps } from "./SupervisorSection";
+export { SyncCiSection } from "./SyncCiSection";
+export type { SyncCiSectionProps } from "./SyncCiSection";
+export { SyncExchangeSection } from "./SyncExchangeSection";
+export type { SyncExchangeSectionProps } from "./SyncExchangeSection";
+export { SyncRemoteSection } from "./SyncRemoteSection";
+export type { SyncRemoteSectionProps } from "./SyncRemoteSection";
+export {
+  SyncOptionsSection,
+  SyncSharedFolderSection,
+} from "./SyncOptionsSection";
+export type { SyncOptionsSectionProps } from "./SyncOptionsSection";
 
 export {
   buildMetaBlocks,
@@ -71,3 +82,6 @@ export type {
   ProjectSettingsGroupId,
   ProjectSettingsGroupDef,
 } from "./sectionRegistry";
+
+export { useSyncSectionContext } from "./useSyncSectionContext";
+export type { SyncSectionContext } from "./useSyncSectionContext";

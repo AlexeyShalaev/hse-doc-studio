@@ -14,6 +14,13 @@ from typing import Any
 import pytest
 from hse_doc_studio.api.schemas import git_sync as s
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.providers import (
+    DetectedBy,
+    GitProvider,
+    Sufficiency,
+    assess_scopes,
+    provider_for_host,
+)
 from pydantic import TypeAdapter
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -32,6 +39,9 @@ _SCHEMAS: dict[str, Any] = {
     "CreateCredentialRequest": s.CreateCredentialRequest,
     "UpdateCredentialRequest": s.UpdateCredentialRequest,
     "GitHostList": list[s.GitHostResponse],
+    "GitHostSettings": s.GitHostSettingsResponse,
+    "GitHostSettingsList": list[s.GitHostSettingsResponse],
+    "UpdateGitHostSettingsRequest": s.UpdateGitHostSettingsRequest,
     "TrustHostRequest": s.TrustHostRequest,
     "SecretsStatus": s.SecretsStatusResponse,
     "SharedFolder": s.SharedFolderResponse,
@@ -220,6 +230,63 @@ def test_secrets_never_appear_in_response_fixtures() -> None:
         for body in _fixtures_of(schema):
             keys = {key for node in _walk(body) if isinstance(node, dict) for key in node}
             assert not keys & forbidden, schema
+
+
+def _provider_infos() -> list[tuple[str, dict[str, Any], str | None]]:
+    """(схема, provider_info, хост) из всех эталонов, где он есть."""
+    found: list[tuple[str, dict[str, Any], str | None]] = []
+    for path in _fixture_files():
+        for node in _walk(_load(path)):
+            if isinstance(node, dict) and "provider_info" in node and node["provider_info"] is not None:
+                found.append(
+                    (path.parent.name, node["provider_info"], node.get("host") or (node.get("url") or {}).get("host"))
+                )
+    return found
+
+
+def test_provider_info_fixtures_use_the_provider_catalog() -> None:
+    infos = _provider_infos()
+    assert {info["id"] for _, info, _ in infos} <= {provider.value for provider in GitProvider}
+    assert {info["detected_by"] for _, info, _ in infos} == {mode.value for mode in DetectedBy}
+    for schema, info, host in infos:
+        if info["detected_by"] == "host":
+            assert provider_for_host(host).value == info["id"], f"{schema}: {host}"
+        if info["detected_by"] == "unknown":
+            assert info["id"] == "other"
+            assert info["version"] is None
+
+
+def test_probe_provider_matches_provider_info() -> None:
+    for body in _fixtures_of("Probe"):
+        assert body["url"]["provider"] == body["provider_info"]["id"]
+    for body in _fixtures_of("GitStatus"):
+        if body["remote"]:
+            assert body["remote"]["provider"] == body["remote"]["provider_info"]["id"]
+
+
+def test_token_info_fixtures_agree_with_the_scope_rules() -> None:
+    infos = [(body["url"]["provider"], body["token_info"]) for body in _fixtures_of("Probe") if body["token_info"]]
+    assert {info["sufficiency"] for _, info in infos} == {mode.value for mode in Sufficiency}
+    for provider, info in infos:
+        assert bool(info["missing"]) == (info["sufficiency"] == "too_narrow")
+        if info["sufficiency"] != "unknown":
+            verdict = assess_scopes(provider, info["scopes"])
+            assert (verdict.sufficiency.value, list(verdict.missing)) == (info["sufficiency"], info["missing"])
+
+
+def test_credential_fixtures_carry_expiry_for_tokens_only() -> None:
+    credentials = _fixtures_of("GitCredential")
+    assert any(body["expires_at"] for body in credentials)
+    assert all(body["expires_at"] is None for body in credentials if body["kind"] == "ssh_key")
+
+
+def test_tls_and_token_error_fixtures_carry_their_details() -> None:
+    errors = {body["code"]: body for body in _fixtures_of("GitErrorBody")}
+    assert errors["token_insufficient_scope"]["missing"]
+    assert errors["tls_untrusted_ca"]["certificate"]["fingerprint_sha256"].startswith("SHA256:")
+    assert {"expected", "actual"} <= set(errors["tls_pin_mismatch"])
+    probe_codes = {body["error"]["code"] for body in _fixtures_of("Probe") if body["error"]}
+    assert {"token_expired", "tls_untrusted_ca"} <= probe_codes
 
 
 # --- векторы разбора адреса ---------------------------------------------------

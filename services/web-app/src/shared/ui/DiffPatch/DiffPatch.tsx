@@ -1,13 +1,21 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { VcsFileDiff } from "@entities/vcs";
-import { type DiffStat, changeMeta, parsePatch } from "./vcsDiff.model";
+import { type DiffStat, changeMeta, parsePatch } from "./diffPatch.model";
 
 // Renders one file's unified diff as numbered, colour-coded lines with a sticky
-// header (status + path + ±counts). Lives inside the diff browser's detail pane.
+// header (status + path + ±counts). Presentational: the caller supplies the
+// patch text and the pre-computed ±counts.
 
-export type VcsFilePatchProps = {
-  file: VcsFileDiff;
+export type DiffPatchFile = {
+  path: string;
+  /** Git status letter: A, M, D, R, C. Anything else renders neutral. */
+  change: string;
+  patch: string;
+  binary: boolean;
+};
+
+export type DiffPatchProps = {
+  file: DiffPatchFile;
   stat: DiffStat;
   maxHeight?: number;
 };
@@ -15,12 +23,8 @@ export type VcsFilePatchProps = {
 const sign = (kind: string): string =>
   kind === "add" ? "+" : kind === "del" ? "−" : " ";
 
-export const VcsFilePatch = ({
-  file,
-  stat,
-  maxHeight = 460,
-}: VcsFilePatchProps) => {
-  const { t } = useTranslation("vcsHistory");
+export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
+  const { t } = useTranslation("uiPrimitives");
   const meta = changeMeta(file.change);
   const hunks = useMemo(
     () => (file.binary ? [] : parsePatch(file.patch)),
@@ -73,11 +77,11 @@ export const VcsFilePatch = ({
 
       {file.binary ? (
         <div className="dim" style={{ padding: "12px", fontSize: 11.5 }}>
-          {t("filePatch.binary")}
+          {t("diffPatch.binary")}
         </div>
       ) : hunks.length === 0 ? (
         <div className="dim" style={{ padding: "12px", fontSize: 11.5 }}>
-          {t("filePatch.noTextChanges")}
+          {t("diffPatch.noTextChanges")}
         </div>
       ) : (
         <div className="vcs-diff" style={{ maxHeight, overflow: "auto" }}>
@@ -99,3 +103,5 @@ export const VcsFilePatch = ({
     </div>
   );
 };
+
+DiffPatch.displayName = "DiffPatch";

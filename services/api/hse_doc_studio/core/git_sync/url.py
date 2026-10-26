@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitUrlError
+from hse_doc_studio.core.git_sync.providers import GitProvider, provider_for_host
 from hse_doc_studio.core.i18n import localized_error
 
 MAX_URL_LENGTH = 2048
@@ -33,14 +34,6 @@ class RemoteKind(StrEnum):
     ssh = "ssh"
     file = "file"
     http = "http"
-
-
-class GitProvider(StrEnum):
-    github = "github"
-    gitlab = "gitlab"
-    gitea = "gitea"
-    bitbucket = "bitbucket"
-    other = "other"
 
 
 @dataclass(frozen=True)
@@ -135,20 +128,6 @@ def _clean_path(path: str) -> list[str]:
     return segments
 
 
-def _provider(host: str | None) -> GitProvider:
-    if host is None:
-        return GitProvider.other
-    if host == "github.com":
-        return GitProvider.github
-    if host == "gitlab.com" or host.startswith("gitlab."):
-        return GitProvider.gitlab
-    if host == "codeberg.org" or host.startswith("gitea."):
-        return GitProvider.gitea
-    if host == "bitbucket.org":
-        return GitProvider.bitbucket
-    return GitProvider.other
-
-
 def _owner_repo(segments: list[str], *, with_owner: bool) -> tuple[str | None, str]:
     last = segments[-1]
     repo = last.removesuffix(".git") or last
@@ -176,7 +155,7 @@ def _build(
         host=host,
         port=port,
         user=user,
-        provider=_provider(host),
+        provider=provider_for_host(host),
         owner=owner,
         repo=repo,
         token_stripped=token_stripped,

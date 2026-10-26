@@ -14,7 +14,12 @@
     "docChecks": "Документ · проверки",
     "docCompile": "Документ · лог сборки",
     "docHistory": "Документ · версии",
-    "openProject": "Открыть · {{name}}"
+    "openProject": "Открыть · {{name}}",
+    "sync": "Синхронизировать проект",
+    "syncCheck": "Проверить обновления репозитория",
+    "syncConflicts": "Открыть конфликты синхронизации",
+    "connectRemote": "Подключить репозиторий",
+    "cloneProject": "Клонировать проект из git"
   },
   "compileStatus": {
     "noBuilds": "Нет сборок",
@@ -102,6 +107,7 @@
   "settingsPage": {
     "sections": {
       "appearance": "Внешний вид",
+      "profile": "Автор версий",
       "compiler": "Компилятор",
       "fonts": "Шрифты",
       "checks": "Проверки",
@@ -112,7 +118,8 @@
       "signing": "Сертификаты подписи",
       "disk": "Диск",
       "data": "Импорт / Экспорт",
-      "about": "О программе"
+      "about": "О программе",
+      "gitAccess": "Доступ к репозиториям"
     },
     "title": "Настройки",
     "searchPlaceholder": "Поиск по настройкам",
@@ -141,6 +148,7 @@
   },
   "wizardPage": {
     "createTitle": "Новый проект",
-    "connectTitle": "Подключить папку"
+    "connectTitle": "Подключить папку",
+    "cloneTitle": "Клонирование проекта"
   }
 }

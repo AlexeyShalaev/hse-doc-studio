@@ -12,7 +12,8 @@ from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
-from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind, RemoteUrl
+from hse_doc_studio.core.git_sync.providers import GitProvider
+from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
 
 
 class GitCredentialKind(StrEnum):
@@ -164,6 +165,8 @@ class GitCredential:
     fingerprint_sha256: str | None = None
     port: int | None = None
     last_used_at: datetime | None = None
+    # Срок токена, если сервер его назвал при проверке; для ключей None.
+    expires_at: datetime | None = None
 
 
 @dataclass(frozen=True)

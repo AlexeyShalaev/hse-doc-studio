@@ -9,7 +9,8 @@ from typing import Any
 
 import pytest
 from hse_doc_studio.core.git_sync import entities as e
-from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind
+from hse_doc_studio.core.git_sync.providers import GitProvider
+from hse_doc_studio.core.git_sync.url import RemoteKind
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "git-sync" / "fixtures"
 

@@ -658,6 +658,8 @@ export type SettingsResponse = {
   auto_update: boolean;
   // Порог (ГБ) освобождаемого места для стартового предупреждения; 0 = выкл.
   disk_usage_warn_gb: number;
+  // Период фоновой проверки удалённого репозитория, секунды; 0 = выключена.
+  git_fetch_interval_s?: number;
 };
 
 export type UpdateSettingsRequest = Partial<SettingsResponse>;

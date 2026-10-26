@@ -1,0 +1,12 @@
+{
+  "host": "gitlab.hse.local",
+  "port": 8443,
+  "provider_override": "gitlab",
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "override",
+    "version": "17.3.1"
+  },
+  "ca_present": true,
+  "pinned_fingerprint": null
+}

@@ -165,6 +165,48 @@
       }
     },
     {
+      "name": "github enterprise by first label",
+      "input": "https://github.example.org/team/paper",
+      "ok": true,
+      "url": {
+        "display_url": "https://github.example.org/team/paper",
+        "kind": "https",
+        "host": "github.example.org",
+        "provider": "github",
+        "owner": "team",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "gitlab by any label of the host",
+      "input": "https://code.gitlab.example.org/team/paper",
+      "ok": true,
+      "url": {
+        "display_url": "https://code.gitlab.example.org/team/paper",
+        "kind": "https",
+        "host": "code.gitlab.example.org",
+        "provider": "gitlab",
+        "owner": "team",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "forgejo by first label",
+      "input": "https://forgejo.example.org/anna/paper",
+      "ok": true,
+      "url": {
+        "display_url": "https://forgejo.example.org/anna/paper",
+        "kind": "https",
+        "host": "forgejo.example.org",
+        "provider": "gitea",
+        "owner": "anna",
+        "repo": "paper",
+        "token_stripped": false
+      }
+    },
+    {
       "name": "bitbucket",
       "input": "https://bitbucket.org/anna/paper.git",
       "ok": true,

@@ -1,0 +1,40 @@
+{
+  "ok": false,
+  "error": {
+    "code": "tls_untrusted_ca",
+    "detail": "Сертификат сервера выдан неизвестным центром. Добавь его сертификат или подтверди отпечаток.",
+    "certificate": {
+      "fingerprint_sha256": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+      "subject": "CN=gitlab.hse.local",
+      "issuer": "CN=HSE Internal CA",
+      "not_before": "2026-01-10T00:00:00Z",
+      "not_after": "2027-01-10T00:00:00Z",
+      "self_signed": false
+    }
+  },
+  "url": {
+    "display_url": "https://gitlab.hse.local/team/paper.git",
+    "kind": "https",
+    "host": "gitlab.hse.local",
+    "provider": "gitlab",
+    "owner": "team",
+    "repo": "paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": false,
+  "auth_ok": false,
+  "empty": false,
+  "default_branch": null,
+  "branches": [],
+  "relation": "unknown",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

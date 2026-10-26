@@ -1,0 +1,6 @@
+{
+  "detail": "Сертификат сервера отличается от подтверждённого раньше. Это может быть подмена.",
+  "code": "tls_pin_mismatch",
+  "expected": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+  "actual": "SHA256:Zr3Vn8Hq1Lw6Ys0Ud4Cx9TkPb2Ea7MgFj5RiOtNo1Ae"
+}

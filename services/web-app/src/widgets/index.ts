@@ -7,6 +7,7 @@ export * from "./DocumentTabs";
 export * from "./FileTree";
 export * from "./AppTitlebar";
 export * from "./AppStatusBar";
+export * from "./SyncCluster";
 export * from "./CommandPalette";
 export * from "./ChatDock";
 export * from "./settings";
