@@ -120,19 +120,18 @@ const dynamicKeys = (): string[] => {
     if (code !== "generic")
       keys.push(`gitAccess:tokenCheck.error.${code}.text`);
   }
-  for (const scope of ["deploy", "user"]) {
-    keys.push(
-      `gitAccess:ssh.scope.${scope}`,
-      `gitAccess:ssh.scope.${scope}Hint`,
-    );
-  }
+  for (const scope of ["deploy", "user"])
+    keys.push(`gitAccess:ssh.scope.${scope}Hint`);
   for (const choice of ["ca", "pin"])
     keys.push(`gitAccess:tls.choice.${choice}`);
   for (const problem of ["private_key", "not_pem", "too_large"]) {
     keys.push(`gitAccess:tls.ca.problem.${problem}`);
   }
-  for (const method of ["pat", "ssh", "none"])
-    keys.push(`gitAccess:method.${method}`);
+  for (const method of ["pat", "ssh", "deploy", "none"])
+    keys.push(
+      `gitAccess:method.${method}`,
+      `gitAccess:method.caption.${method}`,
+    );
   for (const code of [
     "token_expired",
     "token_insufficient_scope",

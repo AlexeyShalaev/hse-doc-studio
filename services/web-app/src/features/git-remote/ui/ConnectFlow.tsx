@@ -185,7 +185,11 @@ const ConnectFlowBody = ({
       overrides: { credentialId?: string | null; branch?: string } = {},
     ) => {
       if (!repoUrl) return;
-      const id = overrides.credentialId ?? credentialId;
+      // null в overrides значит «без доступа», а не «возьми прежний».
+      const id =
+        overrides.credentialId !== undefined
+          ? overrides.credentialId
+          : credentialId;
       const branchValue = (overrides.branch ?? branch).trim();
       runId.current += 1;
       const run = runId.current;
@@ -451,6 +455,7 @@ const ConnectFlowBody = ({
           fixing={fixing}
           isConnecting={isConnecting}
           adoptConfirmed={adoptConfirmed}
+          publicAccess={credentialId === null && repoUrl?.kind !== "file"}
           onAdoptConfirmedChange={setAdoptConfirmed}
           onBack={() => {
             goTo(fixing || repoUrl?.kind !== "file" ? "access" : "repo");

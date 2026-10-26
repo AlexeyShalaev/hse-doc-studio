@@ -166,7 +166,9 @@ const typeUrl = async (user: User, url = URL_TEXT) => {
 
 const checkPublic = async (user: User, url = URL_TEXT) => {
   await typeUrl(user, url);
-  await user.click(await screen.findByRole("button", { name: "Без доступа" }));
+  await user.click(
+    await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
+  );
   await user.click(
     screen.getByRole("button", { name: "Проверить репозиторий" }),
   );
@@ -227,13 +229,13 @@ describe("мастер клонирования: источник и прове�
     const access = await screen.findByTestId("clone-access");
     expect(within(access).getByLabelText("Токен")).toBeInTheDocument();
     expect(
-      within(access).getByRole("button", { name: "Без доступа" }),
+      within(access).getByRole("tab", { name: /Публичный репозиторий/ }),
     ).toBeInTheDocument();
     await user.click(
-      within(access).getByRole("button", { name: "Без доступа" }),
+      within(access).getByRole("tab", { name: /Публичный репозиторий/ }),
     );
     expect(
-      within(access).getByText(/Открытые репозитории клонируются без токена/),
+      within(access).getByText(/Токен и ключ не нужны/),
     ).toBeInTheDocument();
   });
 
@@ -445,7 +447,7 @@ describe("мастер клонирования: источник и прове�
     mount();
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(
-      await screen.findByRole("button", { name: "Без доступа" }),
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
     );
     await user.click(
       screen.getByRole("button", { name: "Проверить репозиторий" }),
@@ -486,7 +488,7 @@ describe("мастер клонирования: источник и прове�
     mount();
     await typeUrl(user, "https://gitlab.hse.local/team/paper.git");
     await user.click(
-      await screen.findByRole("button", { name: "Без доступа" }),
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
     );
     await user.click(
       screen.getByRole("button", { name: "Проверить репозиторий" }),
@@ -554,7 +556,7 @@ describe("мастер клонирования: источник и прове�
     ).toHaveValue("https://github.com/hse-team/paper.git");
     expect(screen.getByText(/Токен в адресе не нужен/)).toBeInTheDocument();
     await user.click(
-      await screen.findByRole("button", { name: "Без доступа" }),
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
     );
     await user.click(
       screen.getByRole("button", { name: "Проверить репозиторий" }),

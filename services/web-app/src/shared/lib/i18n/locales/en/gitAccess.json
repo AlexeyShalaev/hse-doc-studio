@@ -8,7 +8,9 @@
     "usedBy_other": "Used in {{count}} projects",
     "unused": "Not in use",
     "lastUsed": "Last used {{when}}",
-    "neverUsed": "Never used"
+    "neverUsed": "Never used",
+    "attention_one": "{{count}} token needs attention: the server rejected it or its expiry date has passed or is near.",
+    "attention_other": "{{count}} tokens need attention: the server rejected them or their expiry date has passed or is near."
   },
   "hosts": {
     "title": "Trusted servers",
@@ -34,9 +36,16 @@
   "secretsUnavailable": "The secret store is unavailable: tokens and keys cannot be saved. Check the Studio data folder.",
   "method": {
     "label": "Sign-in method",
-    "pat": "Token (https)",
-    "ssh": "Key (ssh)",
-    "none": "No access"
+    "pat": "Token (HTTPS)",
+    "ssh": "Studio key (SSH)",
+    "none": "Public repository",
+    "deploy": "Deploy key",
+    "caption": {
+      "pat": "Easiest: Studio shows where to get the token",
+      "ssh": "One key for all your repositories on the server",
+      "deploy": "A key for this repository only",
+      "none": "No token, read only"
+    }
   },
   "mismatch": {
     "sshOnHttps": "A key works only with an ssh address, but an https address was entered.",
@@ -69,10 +78,12 @@
     "allowWrite": "Do not forget to allow write access for the key (Allow write access): with read-only access versions cannot be sent.",
     "defaultLabel": "Key: {{name}}",
     "createFailed": "Could not create the key.",
+    "createDeploy": "Create deploy key",
+    "deployEmptyTitle": "There is no deploy key for {{repo}} yet",
+    "deployEmptyText": "Studio will create a key on this computer. You add it to this repository only: it gives no access to the others.",
+    "deployFor": "Repository:",
+    "deployLabel": "Deploy key: {{name}}",
     "scope": {
-      "label": "Where to add the key",
-      "deploy": "Repository deploy key",
-      "user": "User key",
       "deployHint": "Access to this repository only. Safer: the key can be revoked without touching anything else.",
       "userHint": "One key for all your repositories on this server. Handy when you have several projects."
     }
@@ -281,7 +292,10 @@
     }
   },
   "none": {
-    "hint": "Public repositories are cloned without a token. For a private repository, choose a token or a key."
+    "title": "Public repository without a token",
+    "hint": "No token or key is needed. If the repository turns out to be private, the check will say so and you can choose a token or a key.",
+    "can": "Receive versions from the repository",
+    "cannot": "You cannot send your own versions: the project only receives"
   },
   "tokenLink": {
     "title": "Get a token",

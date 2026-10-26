@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  credentialExpiry,
   useCredentials,
   useGitHosts,
   useHostSettings,
   useSecretsStatus,
+  type GitCredential,
 } from "@entities/git-remote";
 import { describeGitError } from "@entities/git-sync";
 import { Notice } from "@shared/ui/ConflictKit";
@@ -60,6 +62,18 @@ const QueryBody = ({
   );
 };
 
+// Токены, которым нужна замена: сервер их не принял, срок вышел или выходит.
+const attentionCount = (credentials: GitCredential[]): number =>
+  credentials.filter((credential) => {
+    if (credential.kind !== "pat") return false;
+    const state = credentialExpiry(credential.expires_at).state;
+    return (
+      credential.status === "auth_failed" ||
+      state === "expired" ||
+      state === "soon"
+    );
+  }).length;
+
 // Раздел настроек приложения «Доступ к репозиториям»: токены и ключи, доверенные
 // серверы, где и как всё это хранится. Якоря нужны поиску по настройкам.
 export const GitAccessSection = () => {
@@ -68,6 +82,7 @@ export const GitAccessSection = () => {
   const hosts = useGitHosts();
   const hostSettings = useHostSettings();
   const secrets = useSecretsStatus();
+  const attention = attentionCount(credentials.data ?? []);
 
   return (
     <>
@@ -102,19 +117,31 @@ export const GitAccessSection = () => {
                 {t("credentials.empty")}
               </p>
             ) : (
-              <ul
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                {credentials.data?.map((credential) => (
-                  <CredentialCard key={credential.id} credential={credential} />
-                ))}
-              </ul>
+              <>
+                {attention > 0 && (
+                  <Notice
+                    tone="warn"
+                    role="status"
+                    text={t("credentials.attention", { count: attention })}
+                  />
+                )}
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  {credentials.data?.map((credential) => (
+                    <CredentialCard
+                      key={credential.id}
+                      credential={credential}
+                    />
+                  ))}
+                </ul>
+              </>
             )}
           </QueryBody>
         </AccessCard>

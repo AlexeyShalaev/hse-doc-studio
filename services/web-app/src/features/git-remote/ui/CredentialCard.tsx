@@ -3,6 +3,7 @@ import { KeyRound, Lock, ScanSearch, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
+  credentialExpiry,
   providerOfHost,
   useCheckCredential,
   useHostSettings,
@@ -68,6 +69,13 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
     }
   };
   const verdict = typeof check === "object" && check ? check.verdict : null;
+  // Токен не принят или срок вышел (или вот-вот выйдет): первым делом нужен новый.
+  const expiryState = credentialExpiry(credential.expires_at).state;
+  const needsNewToken =
+    !isKey &&
+    (credential.status === "auth_failed" ||
+      expiryState === "expired" ||
+      expiryState === "soon");
 
   return (
     <li
@@ -245,7 +253,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
         {!isKey && (
           <button
             type="button"
-            className="btn xs"
+            className={needsNewToken ? "btn xs primary" : "btn xs"}
             onClick={() => {
               setDialog("replace");
             }}

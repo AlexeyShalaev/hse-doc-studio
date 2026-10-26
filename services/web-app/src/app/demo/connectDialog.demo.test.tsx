@@ -405,4 +405,70 @@ describe("окно подключения поверх демо-транспор
     const ready = await screen.findByTestId("probe-result-ready-empty");
     expect(ready).toHaveTextContent("GitLab 16.11");
   });
+  it("deploy-ключ: создаётся для репозитория, ссылка на его страницу, подключение проходит", async () => {
+    resetWorld("not_connected");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://github.com/hse/empty-paper",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(await screen.findByRole("tab", { name: /Deploy-ключ/ }));
+    expect(await screen.findByTestId("deploy-repo")).toHaveTextContent(
+      "hse/empty-paper",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Создать deploy-ключ" }),
+    );
+    const keyField = await screen.findByLabelText("Публичный ключ", {
+      selector: "textarea",
+    });
+    expect((keyField as HTMLTextAreaElement).value).toContain("ssh-ed25519");
+    expect(
+      screen.getByRole("link", { name: /Открыть страницу deploy-ключей/ }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/hse/empty-paper/settings/keys/new",
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Я добавил\(а\) ключ/ }),
+    );
+    const card = await screen.findByTestId("probe-result-ready-empty");
+    await user.click(
+      within(card).getByRole("button", { name: "Только подключить" }),
+    );
+    await waitFor(() => {
+      expect(useSyncUiStore.getState().connectDialog).toBeNull();
+    });
+    const remote = await remoteOf();
+    expect(remote?.credential?.kind).toBe("ssh_key");
+    expect(remote?.credential?.label).toBe("Deploy-ключ: hse/empty-paper");
+  });
+
+  it("публичный репозиторий: подключается без доступа, версии только приходят", async () => {
+    resetWorld("not_connected");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://github.com/hse/empty-paper",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    const card = await screen.findByTestId("probe-result-ready-empty");
+    expect(card).toHaveTextContent(/версии будут только приходить/);
+    await user.click(
+      within(card).getByRole("button", { name: "Только подключить" }),
+    );
+    await waitFor(() => {
+      expect(useSyncUiStore.getState().connectDialog).toBeNull();
+    });
+    expect((await remoteOf())?.credential ?? null).toBeNull();
+  });
 });

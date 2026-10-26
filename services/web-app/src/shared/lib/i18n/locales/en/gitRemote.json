@@ -184,7 +184,8 @@
       "tokenNarrow": "The token lacks rights: add {{missing}}, otherwise versions cannot be pushed.",
       "tokenBroad": "The token has more rights than needed. It will work, but it is safer to issue a token for repository read and write only.",
       "tokenExpiring_one": "The token stops working in {{count}} day. Issue a new one in advance.",
-      "tokenExpiring_other": "The token stops working in {{count}} days. Issue a new one in advance."
+      "tokenExpiring_other": "The token stops working in {{count}} days. Issue a new one in advance.",
+      "publicReadOnly": "There is no access: versions will only come from the repository, you will not be able to send your own. If you need to write later, replace the access in the project settings."
     }
   },
   "issue": {

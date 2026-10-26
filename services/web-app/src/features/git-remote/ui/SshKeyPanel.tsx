@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { Fingerprint, KeyRound, Plus } from "lucide-react";
+import { Fingerprint, FolderGit2, KeyRound, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { providerSpec, type GitCredential } from "@entities/git-remote";
+import type { GitCredential } from "@entities/git-remote";
 import { Notice } from "@shared/ui/ConflictKit";
 import { CopyField } from "@shared/ui/CopyField";
 import { Spinner } from "@shared/ui/Spinner";
@@ -12,6 +11,10 @@ import { ProviderHelp, type KeyScope } from "./ProviderHelp";
 
 export type SshKeyPanelProps = {
   url: ParsedRemoteUrl;
+  /** Какой это ключ: пользователя (на все репозитории сервера) или deploy (на один). */
+  scope: KeyScope;
+  /** «владелец/репозиторий»: для deploy-ключа это то, к чему он привязан. */
+  repoPath?: string;
   /** Ключи ssh, созданные для этого сервера. */
   keys: GitCredential[];
   selectedId: string | null;
@@ -26,6 +29,8 @@ export type SshKeyPanelProps = {
 // публичную человек добавляет в репозиторий по подсказке с прямой ссылкой.
 export const SshKeyPanel = ({
   url,
+  scope,
+  repoPath = "",
   keys,
   selectedId,
   onSelect,
@@ -36,17 +41,29 @@ export const SshKeyPanel = ({
 }: SshKeyPanelProps) => {
   const { t } = useTranslation("gitAccess");
   const selected = keys.find((key) => key.id === selectedId) ?? null;
-  const spec = providerSpec(url.provider);
-  // Deploy-ключ даёт доступ к одному репозиторию и безопаснее; ключ пользователя
-  // удобнее, когда проектов несколько. Выбор есть только там, где сервер умеет оба.
-  const scopes: KeyScope[] = spec.auth_variants.includes("deploy_key")
-    ? ["deploy", "user"]
-    : ["user"];
-  const [chosenScope, setChosenScope] = useState<KeyScope | null>(null);
-  const scope: KeyScope =
-    chosenScope && scopes.includes(chosenScope)
-      ? chosenScope
-      : (scopes[0] ?? "user");
+  const repoPill =
+    scope === "deploy" && repoPath !== "" ? (
+      <div
+        className="flex items-center"
+        data-testid="deploy-repo"
+        style={{
+          gap: 6,
+          alignSelf: "flex-start",
+          maxWidth: "100%",
+          padding: "3px 8px",
+          borderRadius: "var(--r-2)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-2)",
+          fontSize: 11.5,
+        }}
+      >
+        <FolderGit2 size={12} aria-hidden="true" style={{ flexShrink: 0 }} />
+        <span className="dim">{t("ssh.deployFor")}</span>
+        <span className="mono truncate" style={{ minWidth: 0 }}>
+          {repoPath}
+        </span>
+      </div>
+    ) : null;
 
   const createButton = (primary: boolean) => (
     <button
@@ -60,7 +77,9 @@ export const SshKeyPanel = ({
       ) : (
         <Plus size={13} aria-hidden="true" />
       )}
-      {primary ? t("ssh.create") : t("ssh.createAnother")}
+      {primary
+        ? t(scope === "deploy" ? "ssh.createDeploy" : "ssh.create")
+        : t("ssh.createAnother")}
     </button>
   );
 
@@ -70,7 +89,9 @@ export const SshKeyPanel = ({
         className="flex flex-col"
         style={{ gap: 12 }}
         data-testid="ssh-panel"
+        data-scope={scope}
       >
+        {repoPill}
         <div
           className="flex flex-col items-start"
           style={{
@@ -98,9 +119,13 @@ export const SshKeyPanel = ({
           </span>
           <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
             <strong style={{ display: "block", fontWeight: 600 }}>
-              {t("ssh.emptyTitle")}
+              {scope === "deploy"
+                ? t("ssh.deployEmptyTitle", { repo: repoPath })
+                : t("ssh.emptyTitle")}
             </strong>
-            <span className="dim">{t("ssh.emptyText")}</span>
+            <span className="dim">
+              {t(scope === "deploy" ? "ssh.deployEmptyText" : "ssh.emptyText")}
+            </span>
           </div>
           {createButton(true)}
         </div>
@@ -110,7 +135,13 @@ export const SshKeyPanel = ({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 12 }} data-testid="ssh-panel">
+    <div
+      className="flex flex-col"
+      style={{ gap: 12 }}
+      data-testid="ssh-panel"
+      data-scope={scope}
+    >
+      {repoPill}
       {keys.length > 1 && (
         <div
           role="radiogroup"
@@ -187,33 +218,9 @@ export const SshKeyPanel = ({
         </div>
       )}
 
-      {scopes.length > 1 && (
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <div
-            className="seg"
-            role="group"
-            aria-label={t("ssh.scope.label")}
-            style={{ alignSelf: "flex-start", flexWrap: "wrap" }}
-          >
-            {scopes.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={scope === value}
-                className={scope === value ? "active" : undefined}
-                onClick={() => {
-                  setChosenScope(value);
-                }}
-              >
-                {t(`ssh.scope.${value}`)}
-              </button>
-            ))}
-          </div>
-          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
-            {t(`ssh.scope.${scope}Hint`)}
-          </p>
-        </div>
-      )}
+      <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        {t(`ssh.scope.${scope}Hint`)}
+      </p>
 
       {scope === "deploy" && (
         <Notice tone="warn" role="status" text={t("ssh.allowWrite")} />

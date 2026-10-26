@@ -13,6 +13,13 @@ import {
   toScpLikeUrl,
   type ParsedRemoteUrl,
 } from "../lib/parseRemoteUrl";
+import {
+  deployKeyLabel,
+  deployKeysOf,
+  isDeployKey,
+  repoPathOf,
+  userKeysOf,
+} from "../lib/keyScope";
 import { defaultCredentialLabel } from "../lib/providerHelp";
 import { NEW_CREDENTIAL } from "../ui/CredentialPicker";
 import type { PatDraft } from "../ui/PatPanel";
@@ -22,8 +29,11 @@ import {
   type TokenCheckState,
 } from "./tokenVerdict";
 
-/** `none`: открытый репозиторий, доступ не нужен (только при клонировании). */
-export type AccessMethod = "pat" | "ssh" | "none";
+/**
+ * Способ доступа: токен по https, ключ пользователя (ssh), deploy-ключ одного
+ * репозитория (ssh) или `none`: открытый репозиторий без токена, только чтение.
+ */
+export type AccessMethod = "pat" | "ssh" | "deploy" | "none";
 
 export type UseRemoteAuthOptions = {
   /** null: адрес ещё не введён или не разобран, выбирать пока нечего. */
@@ -35,7 +45,7 @@ export type UseRemoteAuthOptions = {
   credentials: GitCredential[];
   /** false: хранилище секретов недоступно, сохранить токен или ключ нельзя. */
   secretsOk: boolean;
-  /** Добавляет способ «Без доступа». */
+  /** Добавляет способ «Публичный репозиторий» (без токена, только чтение). */
   allowAnonymous?: boolean;
   /** Доступ, выбранный заранее (например, в окне подключения). */
   initialCredentialId?: string | null;
@@ -71,7 +81,14 @@ export const useRemoteAuth = ({
 
   // Способ, который выбрал человек; пока не выбирал, он следует за видом адреса.
   const [chosenMethod, setMethodState] = useState<AccessMethod | null>(null);
-  const method = chosenMethod ?? methodOf(url);
+  // Привязанный ключ сам говорит, каким он был: ключ пользователя или deploy.
+  const defaultMethod: AccessMethod =
+    fixing && bound?.kind === "ssh_key" && url?.kind === "ssh"
+      ? credentials.some((item) => item.id === bound.id && isDeployKey(item))
+        ? "deploy"
+        : "ssh"
+      : methodOf(url);
+  const method = chosenMethod ?? defaultMethod;
   const [draft, setDraft] = useState<PatDraft>(EMPTY_DRAFT);
   const [showToken, setShowToken] = useState(false);
   const [choice, setChoice] = useState<string | null>(initialCredentialId);
@@ -110,7 +127,7 @@ export const useRemoteAuth = ({
       ),
     [credentials, host],
   );
-  const keys = useMemo(
+  const allKeys = useMemo(
     () =>
       credentials.filter(
         (credential) =>
@@ -118,6 +135,15 @@ export const useRemoteAuth = ({
       ),
     [credentials, host],
   );
+  const repoPath = url ? repoPathOf(url) : "";
+  // Ключ пользователя и deploy-ключ репозитория лежат на сервере одинаково, но в
+  // выборе не смешиваются: deploy-ключ чужого репозитория тут не подойдёт.
+  const userKeys = useMemo(() => userKeysOf(allKeys), [allKeys]);
+  const deployKeys = useMemo(
+    () => deployKeysOf(allKeys, repoPath),
+    [allKeys, repoPath],
+  );
+  const keys = method === "deploy" ? deployKeys : userKeys;
 
   // Обновляем токен у доступа, с которым проект уже связан, пока человек не
   // решил выбрать другой.
@@ -146,6 +172,7 @@ export const useRemoteAuth = ({
     (sshChoice !== null && keys.some((key) => key.id === sshChoice)
       ? sshChoice
       : (keys[0]?.id ?? null));
+  const isKeyMethod = method === "ssh" || method === "deploy";
 
   const creatingPat = !boundPat && patChoice === NEW_CREDENTIAL;
   const tokenFilled = draft.token.trim() !== "";
@@ -269,9 +296,12 @@ export const useRemoteAuth = ({
     try {
       const created = await createCredential.mutateAsync({
         kind: "ssh_key",
-        label: t("ssh.defaultLabel", {
-          name: defaultCredentialLabel(providerName, host ?? ""),
-        }),
+        label:
+          method === "deploy" && repoPath !== ""
+            ? deployKeyLabel(repoPath)
+            : t("ssh.defaultLabel", {
+                name: defaultCredentialLabel(providerName, host ?? ""),
+              }),
         host: host ?? "",
         ...(url.port !== null ? { port: url.port } : {}),
       });
@@ -289,7 +319,7 @@ export const useRemoteAuth = ({
       onResolved(null);
       return;
     }
-    if (method === "ssh") {
+    if (isKeyMethod) {
       if (keyChoice) onResolved(keyChoice);
       return;
     }
@@ -310,23 +340,22 @@ export const useRemoteAuth = ({
     !isSaving &&
     (method === "none"
       ? true
-      : method === "ssh"
+      : isKeyMethod
         ? keyChoice !== null
         : creatingPat || boundPat
           ? (tokenFilled && secretsOk) || (boundReplaced && !tokenFilled)
           : true);
 
-  const submitLabel =
-    method === "ssh"
-      ? t("step.checkKey")
-      : method === "pat" &&
-          (creatingPat || boundPat) &&
-          !(boundReplaced && !tokenFilled)
-        ? t("step.saveAndCheck")
-        : t("step.check");
+  const submitLabel = isKeyMethod
+    ? t("step.checkKey")
+    : method === "pat" &&
+        (creatingPat || boundPat) &&
+        !(boundReplaced && !tokenFilled)
+      ? t("step.saveAndCheck")
+      : t("step.check");
 
   const mismatch: { text: string; target: string | null } | null =
-    url && method === "ssh" && url.kind === "https"
+    url && isKeyMethod && url.kind === "https"
       ? { text: t("mismatch.sshOnHttps"), target: toScpLikeUrl(url) }
       : url && method === "pat" && url.kind === "ssh"
         ? { text: t("mismatch.tokenOnSsh"), target: toHttpsUrl(url) }
@@ -350,6 +379,7 @@ export const useRemoteAuth = ({
     isSaving,
     pats,
     keys,
+    allKeys,
     boundPat,
     boundKey,
     patChoice,

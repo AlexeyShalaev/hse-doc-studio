@@ -21,8 +21,8 @@ export type AccessStepProps = {
   secretsOk: boolean;
   /** Название проекта: попадает в имя токена на странице сервера. */
   projectName?: string | null;
-  /** Доступ выбран (или сохранён): можно проверять подключение. */
-  onContinue: (credentialId: string) => void;
+  /** Доступ выбран или сохранён (null: открытый репозиторий без токена): можно проверять подключение. */
+  onContinue: (credentialId: string | null) => void;
   onBack: () => void;
   onSwitchUrl: (value: string) => void;
 };
@@ -47,10 +47,10 @@ export const AccessStep = ({
     bound,
     credentials,
     secretsOk,
-    onResolved: (id) => {
-      // Без «Без доступа» id здесь всегда есть.
-      if (id !== null) onContinue(id);
-    },
+    // Открытый репозиторий подключается без токена; доступ уже подключённого
+    // проекта (`fix_access`) обновляется только токеном или ключом.
+    allowAnonymous: !fixing,
+    onResolved: onContinue,
   });
 
   return (

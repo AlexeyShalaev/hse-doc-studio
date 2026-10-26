@@ -465,9 +465,9 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     mount();
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(next());
-    // Для ssh-адреса сразу открыт способ «ключ».
+    // Для ssh-адреса сразу открыт способ «ключ Студии».
     expect(
-      await screen.findByRole("button", { name: "Ключ (ssh)", pressed: true }),
+      await screen.findByRole("tab", { name: /Ключ Студии/, selected: true }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Создать ключ" }));
     await waitFor(() => {
@@ -484,25 +484,11 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     expect(screen.getByTestId("ssh-fingerprint")).toHaveTextContent(
       SSH_KEY.fingerprint_sha256 ?? "",
     );
-    expect(screen.getAllByText(/Allow write access/).length).toBeGreaterThan(0);
-    // Прямая ссылка на страницу deploy-ключей репозитория.
-    expect(
-      screen.getByRole("link", {
-        name: /Открыть страницу deploy-ключей GitHub/,
-      }),
-    ).toHaveAttribute(
-      "href",
-      "https://github.com/hse-team/paper/settings/keys/new",
-    );
-    // Ключ пользователя добавляется на другой странице.
-    await user.click(screen.getByRole("button", { name: "Ключ пользователя" }));
+    // Ключ пользователя добавляется на странице ключей профиля.
     expect(
       screen.getByRole("link", { name: /Открыть страницу ключей GitHub/ }),
     ).toHaveAttribute("href", "https://github.com/settings/keys");
     expect(screen.queryByText(/Allow write access/)).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: "Deploy-ключ репозитория" }),
-    );
 
     await user.click(screen.getByRole("button", { name: /Копировать/ }));
     expect(await navigator.clipboard.readText()).toBe(SSH_KEY.public_key);
@@ -518,7 +504,7 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(next());
     await user.click(
-      await screen.findByRole("button", { name: "Токен (https)" }),
+      await screen.findByRole("tab", { name: /Токен \(HTTPS\)/ }),
     );
     expect(
       screen.getByText(/Токен работает только с https-адресом/),
@@ -1765,3 +1751,248 @@ describe("ConnectRemoteDialog: тип сервера и ответы прове�
 
 const PEM_TEXT =
   "-----BEGIN CERTIFICATE-----\nMIIBdemo\n-----END CERTIFICATE-----";
+
+const DEPLOY_KEY = {
+  ...SSH_KEY,
+  id: "cred-deploy",
+  label: "Deploy-ключ: hse-team/paper",
+};
+
+describe("ConnectRemoteDialog: способы доступа вкладками", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const openAccess = async (
+    user: ReturnType<typeof userEvent.setup>,
+    url = "https://github.com/hse-team/paper",
+  ) => {
+    await typeUrl(user, url);
+    await user.click(next());
+    return screen.findByTestId("access-tabs");
+  };
+
+  it("предлагает токен, ключ, deploy-ключ и публичный репозиторий; по умолчанию токен", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    const names = within(tabs)
+      .getAllByRole("tab")
+      .map((tab) => tab.id.split("-tab-")[1]);
+    expect(names).toEqual(["pat", "ssh", "deploy", "none"]);
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toBeInTheDocument();
+    // Панель связана с выбранной вкладкой.
+    const panel = screen.getByRole("tabpanel");
+    expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      within(tabs).getByRole("tab", { selected: true }).id,
+    );
+    expect(within(panel).getByTestId("pat-panel")).toBeInTheDocument();
+  });
+
+  it("стрелки переключают вкладки по кругу", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    within(tabs).getByRole("tab", { selected: true }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(
+      within(tabs).getByRole("tab", { name: /Ключ Студии/, selected: true }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Публичный репозиторий/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+  });
+
+  it("deploy-ключ: создаётся для репозитория, ссылка ведёт на его страницу, ключ в поле копирования", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, DEPLOY_KEY);
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(within(tabs).getByRole("tab", { name: /Deploy-ключ/ }));
+    expect(await screen.findByTestId("deploy-repo")).toHaveTextContent(
+      "hse-team/paper",
+    );
+    expect(
+      screen.getByText("Deploy-ключа для hse-team/paper ещё нет"),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Создать deploy-ключ" }),
+    );
+    await waitFor(() => {
+      expect(createCredential).toHaveBeenCalledWith({
+        kind: "ssh_key",
+        label: "Deploy-ключ: hse-team/paper",
+        host: "github.com",
+      });
+    });
+    expect(
+      await screen.findByLabelText("Публичный ключ", { selector: "textarea" }),
+    ).toHaveValue(DEPLOY_KEY.public_key);
+    expect(
+      screen.getByRole("link", {
+        name: /Открыть страницу deploy-ключей GitHub/,
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/hse-team/paper/settings/keys/new",
+    );
+    // Запись разрешают отдельно: без неё отправить версии не получится.
+    expect(screen.getAllByText(/Allow write access/).length).toBeGreaterThan(0);
+    await user.click(
+      screen.getByRole("button", { name: "Я добавил(а) ключ, проверить" }),
+    );
+    await waitFor(() => {
+      expect(vi.mocked(gitRemoteApi.probe)).toHaveBeenCalledWith({
+        url: "https://github.com/hse-team/paper",
+        credential_id: DEPLOY_KEY.id,
+        project_id: PROJECT_ID,
+      });
+    });
+  });
+
+  it("ключи пользователя и deploy-ключи не смешиваются, чужой репозиторий не подходит", async () => {
+    setup({
+      credentials: [
+        SSH_KEY,
+        DEPLOY_KEY,
+        {
+          ...DEPLOY_KEY,
+          id: "cred-other",
+          label: "Deploy-ключ: hse-team/other",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(within(tabs).getByRole("tab", { name: /Ключ Студии/ }));
+    const userPanel = await screen.findByTestId("ssh-panel");
+    expect(userPanel).toHaveAttribute("data-scope", "user");
+    expect(within(userPanel).queryByText(/Deploy-ключ/)).toBeNull();
+    expect(
+      within(userPanel).getByLabelText("Публичный ключ", {
+        selector: "textarea",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(within(tabs).getByRole("tab", { name: /Deploy-ключ/ }));
+    const deployPanel = await screen.findByTestId("ssh-panel");
+    expect(deployPanel).toHaveAttribute("data-scope", "deploy");
+    // Нашёлся ровно один ключ этого репозитория, выбор не нужен.
+    expect(within(deployPanel).queryByRole("radiogroup")).toBeNull();
+    expect(
+      within(deployPanel).getByLabelText("Публичный ключ", {
+        selector: "textarea",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("у провайдера без deploy-ключей такой вкладки нет", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(
+      user,
+      "https://git.example.org/team/paper.git",
+    );
+    expect(within(tabs).queryByRole("tab", { name: /Deploy-ключ/ })).toBeNull();
+    expect(within(tabs).getAllByRole("tab")).toHaveLength(3);
+  });
+
+  it("публичный репозиторий: без токена, проверка идёт без доступа и говорит про чтение", async () => {
+    const { probe, connect } = setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(
+      within(tabs).getByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    const panel = await screen.findByTestId("public-panel");
+    expect(panel).toHaveTextContent("Получать версии из репозитория");
+    expect(panel).toHaveTextContent("Отправлять свои версии нельзя");
+    expect(screen.queryByTestId("pat-panel")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalledWith({
+        url: "https://github.com/hse-team/paper",
+        credential_id: null,
+        project_id: PROJECT_ID,
+      });
+    });
+    expect(
+      await screen.findByText(/версии будут только приходить/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Только подключить" }));
+    await waitFor(() => {
+      expect(connect).toHaveBeenCalledWith(PROJECT_ID, {
+        url: "https://github.com/hse-team/paper",
+        credential_id: null,
+      });
+    });
+  });
+
+  it("вернулся с публичного на токен, проверка берёт токен, а не «без доступа»", async () => {
+    const { probe } = setup({ credentials: [{ ...PAT, status: "ok" }] });
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(
+      within(tabs).getByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await screen.findByText(/версии будут только приходить/);
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await user.click(
+      await screen.findByRole("tab", { name: /Токен \(HTTPS\)/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenLastCalledWith(
+        expect.objectContaining({ credential_id: PAT.id }),
+      );
+    });
+  });
+
+  it("при обновлении доступа вкладок нет: меняется только токен или ключ", async () => {
+    setup({
+      status: connectedStatus(),
+      credentials: [{ ...PAT, status: "auth_failed" }],
+    });
+    const user = userEvent.setup();
+    mount("fix_access");
+    await screen.findByTestId("pat-panel");
+    expect(user).toBeDefined();
+    expect(screen.queryByTestId("access-tabs")).toBeNull();
+  });
+});

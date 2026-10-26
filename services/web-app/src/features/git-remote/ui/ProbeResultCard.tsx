@@ -44,6 +44,8 @@ export type ProbeResultCardProps = ProbeResultHandlers & {
   isConnecting: boolean;
   adoptConfirmed: boolean;
   onAdoptConfirmedChange: (value: boolean) => void;
+  /** Проект подключается без токена и ключа: версии только приходят. */
+  publicAccess?: boolean;
 };
 
 export const ProbeIssueCard = ({
@@ -207,6 +209,7 @@ export const ProbeResultCard = ({
   isConnecting,
   adoptConfirmed,
   onAdoptConfirmedChange,
+  publicAccess = false,
   ...handlers
 }: ProbeResultCardProps) => {
   const { t } = useTranslation("gitRemote");
@@ -398,6 +401,13 @@ export const ProbeResultCard = ({
               ? `${t("result.warn.schemaNewer")} ${t("result.warn.schemaNewerVersion", { version: probe.required_studio })}`
               : t("result.warn.schemaNewer")
           }
+        />
+      )}
+      {publicAccess && (
+        <Notice
+          tone="info"
+          role="status"
+          text={t("result.warn.publicReadOnly")}
         />
       )}
       {tokenInfo?.sufficiency === "too_narrow" && (
