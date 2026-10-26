@@ -14,6 +14,7 @@ from hse_doc_studio.core.ai_runtime import (
     IOllamaRuntime,
     IPullModelJobs,
 )
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.entities import CatalogModel
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog, FontCatalogFile, FontCatalogItem
@@ -24,6 +25,7 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import (
@@ -270,7 +272,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> LanguageToolContainerManager:
+    ) -> AnyOf[LanguageToolContainerManager, ILanguageCheckService]:
         cfg = settings.languagetool
         return LanguageToolContainerManager(
             container_name=cfg.container_name,
@@ -287,9 +289,9 @@ class DomainServiceProvider(Provider):
     @provide
     def get_check_runner(
         self,
-        lt_manager: LanguageToolContainerManager,
+        lt_manager: ILanguageCheckService,
         lt_client: httpx.Client,
-    ) -> CheckRunner:
+    ) -> AnyOf[CheckRunner, ICheckRunner]:
         return CheckRunner(lt_manager=lt_manager, lt_client=lt_client)
 
     @provide

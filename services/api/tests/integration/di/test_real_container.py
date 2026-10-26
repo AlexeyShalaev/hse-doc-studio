@@ -12,11 +12,15 @@ from pathlib import Path
 import pytest
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.events import IJobLogStream
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.update.repositories import ISelfUpdateGateway
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
+from hse_doc_studio.infra.checks.runner import CheckRunner
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.di.containers.api import create_container
+from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 
@@ -58,3 +62,19 @@ async def test__real_container__event_buses__port_and_concrete_are_one_singleton
 
     assert agent_bus is agent_bus_concrete
     assert log_stream is log_bus_concrete
+
+
+@pytest.mark.usefixtures("isolated_settings")
+async def test__real_container__checks_ports__port_and_concrete_are_one_singleton() -> None:
+    container = create_container()
+    try:
+        async with container() as request_container:
+            lt_service = await request_container.get(ILanguageCheckService)
+            lt_manager = await request_container.get(LanguageToolContainerManager)
+            runner_port = await request_container.get(ICheckRunner)
+            runner = await request_container.get(CheckRunner)
+    finally:
+        await container.close()
+
+    assert lt_service is lt_manager
+    assert runner_port is runner

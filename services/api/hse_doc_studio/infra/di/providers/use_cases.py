@@ -15,6 +15,7 @@ from hse_doc_studio.core.ai_runtime import (
     IOllamaRuntime,
     IPullModelJobs,
 )
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -23,6 +24,7 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
@@ -735,8 +737,8 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
-        check_runner: CheckRunner,
-        lt_manager: LanguageToolContainerManager,
+        check_runner: ICheckRunner,
+        lt_manager: ILanguageCheckService,
         settings_repo: ISettingsRepository,
     ) -> RunChecksUC:
         return RunChecksUC(
