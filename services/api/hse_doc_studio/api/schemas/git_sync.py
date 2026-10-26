@@ -51,7 +51,7 @@ class GitErrorBody(_Contract):
     actual: str | None = None  # host_key_changed
     projects: list[GitCredentialUsage] | None = None  # credential_in_use
     can_adopt: bool | None = None  # unrelated_histories
-    paths: list[str] | None = None  # unresolved_conflicts
+    paths: list[str] | None = None  # unresolved_conflicts, invalid_resolution, unresolved_markers
     host_keys: list[GitHostKey] | None = None  # host_key_unknown
 
 
@@ -515,6 +515,9 @@ FileResolution = Annotated[
 ]
 
 
+FileResolutionBody = FileChoiceResolution | HunksResolution | FieldsResolution | TextResolution
+
+
 class ConflictFile(_Contract):
     path: str
     owner: str | None
@@ -601,10 +604,8 @@ class DeleteFileDetail(_Contract):
     deleted_by: str  # ours | theirs
 
 
-ConflictFileDetail = Annotated[
-    TextFileDetail | JsonFileDetail | BinaryFileDetail | DeleteFileDetail,
-    Field(discriminator="kind"),
-]
+ConflictFileDetailBody = TextFileDetail | JsonFileDetail | BinaryFileDetail | DeleteFileDetail
+ConflictFileDetail = Annotated[ConflictFileDetailBody, Field(discriminator="kind")]
 
 
 class ConflictDiffResponse(_Contract):

@@ -34,25 +34,25 @@ from hse_doc_studio.core.git_sync.entities import (
     SyncWarning,
     TreeEntry,
 )
-from hse_doc_studio.core.git_sync.error_messages import git_error
-from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.error_messages import git_error, localized_resolution_error
+from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.merge.choices import FileChoice, FileResolution
+from hse_doc_studio.core.git_sync.merge.drafts import progress, prune_all
 from hse_doc_studio.core.git_sync.merge.entities import MergeAction, MergePlan
-from hse_doc_studio.core.git_sync.merge.paths import collision_groups, comparison_key, is_safe_entry, is_safe_path
-from hse_doc_studio.core.git_sync.merge.planner import MergeInput, plan_merge, resolve_plan
+from hse_doc_studio.core.git_sync.merge.paths import collision_groups, is_safe_entry, is_safe_path
+from hse_doc_studio.core.git_sync.merge.planner import resolve_plan
+from hse_doc_studio.core.git_sync.merge.signature_groups import conflicting_groups, group_paths, sides_of
 from hse_doc_studio.core.git_sync.protocols import (
     IFieldResolver,
-    IFileMergeStrategy,
     IGitMergeCommitter,
-    IGitMergeEngine,
     IGitRepoReader,
     IGitSyncStateRepository,
-    MergeMeta,
 )
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
-from hse_doc_studio.core.template_update.text import is_binary
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsService
+from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.template_update.transaction import SYNC_TRAILER, TemplateUpdateTransaction
 
 logger = structlog.get_logger()
@@ -64,7 +64,6 @@ SNAPSHOT_MESSAGE: Final = "Автосохранение перед синхро�
 FROZEN_DIR: Final = ".hse-studio/frozen"
 # Сколько автоматических изменений перечисляется в итоге: остальные видны только числом.
 MAX_LISTED_AUTO: Final = 200
-_STUDIO_PREFIX: Final = ".hse-studio/"
 
 
 class ApplyKind(StrEnum):
@@ -86,6 +85,15 @@ class ApplyOutcome:
     conflicts: ConflictCounts | None = None
 
 
+@dataclass(frozen=True)
+class ResolveRequest:
+    """Решения человека по конфликтам и отпечаток плана, на котором он их принимал."""
+
+    fingerprint: str
+    resolutions: Mapping[str, FileResolution]
+    push: bool = True
+
+
 class HeadMovedError(Exception):
     """Ветка успела сдвинуться между чтением и записью: вызывающий начинает локальную фазу заново."""
 
@@ -103,8 +111,7 @@ class SyncApplier:
         committer: IGitMergeCommitter,
         transaction: TemplateUpdateTransaction,
         states: IGitSyncStateRepository,
-        engine: IGitMergeEngine,
-        structured: IFileMergeStrategy,
+        planner: ConflictPlanner,
         resolver: IFieldResolver,
     ) -> None:
         self._vcs = vcs
@@ -112,8 +119,7 @@ class SyncApplier:
         self._committer = committer
         self._transaction = transaction
         self._states = states
-        self._engine = engine
-        self._structured = structured
+        self._planner = planner
         self._resolver = resolver
 
     def snapshot(self, project: Project) -> None:
@@ -194,21 +200,29 @@ class SyncApplier:
     def _merge(
         self, project: Project, state: SyncState, ours: str, theirs: str, pulled: int, sync_id: str
     ) -> ApplyOutcome:
-        folder = project.folder
-        base = self._reader.merge_base(folder, ours, theirs)
-        if base is None and not state.adopted_unrelated:
-            raise git_error(GitErrorCode.unrelated_histories, can_adopt=True)
-        theirs_entries = {entry.path: entry for entry in self._reader.tree_entries(folder, theirs)}
-        paths = self._merge_paths(folder, base, ours, theirs, theirs_entries)
-        merge_input = self._merge_input(folder, base, ours, theirs, paths, theirs_entries)
-        plan = plan_merge(merge_input, self._engine, self._structured)
+        plan = self._planner.plan(project.folder, ours, theirs, adopted_unrelated=state.adopted_unrelated)
         if plan.conflicts:
-            return self._keep_conflicts(project, state, ours, theirs, base, plan)
+            return self._keep_conflicts(project, state, ours, theirs, plan)
         writes = resolve_plan(plan, {}, self._resolver)
+        message = f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]})"
+        return self._commit_merge(project, state, ours, theirs, pulled, sync_id, plan, writes, message)
+
+    def _commit_merge(
+        self,
+        project: Project,
+        state: SyncState,
+        ours: str,
+        theirs: str,
+        pulled: int,
+        sync_id: str,
+        plan: MergePlan,
+        writes: Sequence[FileWrite],
+        message: str,
+    ) -> ApplyOutcome:
+        folder = project.folder
         changes: dict[str, bytes | None] = {
             w.path: w.content if w.kind is FileWriteKind.write else None for w in writes
         }
-        message = f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]})"
 
         def commit() -> str:
             merged = self._committer.commit_merge(
@@ -228,92 +242,113 @@ class SyncApplier:
             warnings=plan.warnings,
         )
 
-    def _merge_paths(
-        self, folder: Path, base: str | None, ours: str, theirs: str, theirs_entries: Mapping[str, TreeEntry]
-    ) -> list[str]:
-        """Пути, которые изменила чужая сторона: для остальных слияние ничего не меняет, читать их незачем.
+    # --- применение решений человека ---------------------------------------------------------------------------
 
-        К ним добавляются мои пути, совпадающие с ними по имени без учёта регистра и NFC: иначе столкновение
-        имён на регистронезависимых файловых системах планировщик не увидел бы.
-        """
-        if base is None:
-            paths = set(theirs_entries)
-        else:
-            paths = {path for _, path in self._reader.changed_paths(folder, base, theirs)}
-        mine: dict[str, list[str]] = {}
-        for entry in self._reader.tree_entries(folder, ours):
-            mine.setdefault(comparison_key(entry.path), []).append(entry.path)
-        for path in tuple(paths):
-            paths.update(mine.get(comparison_key(path), ()))
-        return sorted(paths)
+    def check_resolution(self, project: Project, state: SyncState, request: ResolveRequest) -> None:
+        """Всё, что может отказать до запуска операции: устаревший план, неполные или недопустимые решения."""
+        self.snapshot(project)
+        heads = self._heads(project, state)
+        if heads is None or self._is_moot(project, heads):
+            return
+        self._resolved_writes(project, state, heads[0], heads[1], request)
 
-    def _merge_input(
+    def apply_resolved(self, project: Project, state: SyncState, sync_id: str, request: ResolveRequest) -> ApplyOutcome:
+        """Слияние с решениями человека. Сессия, потерявшая смысл (чужая ветка уже вошла в нашу), идёт обычным путём."""
+        self.snapshot(project)
+        heads = self._heads(project, state)
+        if heads is None or self._is_moot(project, heads):
+            return self.apply(project, state, sync_id)
+        ours, theirs = heads
+        self.ensure_remote_mergeable(project, theirs)
+        plan, writes = self._resolved_writes(project, state, ours, theirs, request)
+        pulled = self._reader.count_commits(project.folder, f"{ours}..{theirs}")
+        message = f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]}), конфликты решены"
+        return self._commit_merge(project, state, ours, theirs, pulled, sync_id, plan, writes, message)
+
+    def _heads(self, project: Project, state: SyncState) -> tuple[str, str] | None:
+        folder = project.folder
+        if self._reader.current_branch(folder) != state.local_branch:
+            raise git_error(GitErrorCode.off_branch)
+        ours = self._reader.rev_parse(folder, f"{HEADS_PREFIX}{state.local_branch}")
+        if ours is None:
+            raise git_error(GitErrorCode.branch_missing)
+        theirs = self._reader.rev_parse(folder, _tracking_ref(state))
+        return None if theirs is None else (ours, theirs)
+
+    def _is_moot(self, project: Project, heads: tuple[str, str]) -> bool:
+        """Расхождения уже нет: чужая ветка вошла в нашу или наша целиком лежит в чужой."""
+        ours, theirs = heads
+        folder = project.folder
+        return (
+            theirs == ours
+            or self._reader.is_ancestor(folder, theirs, ours)
+            or self._reader.is_ancestor(folder, ours, theirs)
+        )
+
+    def _resolved_writes(
+        self, project: Project, state: SyncState, ours: str, theirs: str, request: ResolveRequest
+    ) -> tuple[MergePlan, list[FileWrite]]:
+        plan = self._planner.plan(project.folder, ours, theirs, adopted_unrelated=state.adopted_unrelated)
+        if plan.fingerprint != request.fingerprint:
+            raise git_error(GitErrorCode.plan_outdated)
+        try:
+            writes = resolve_plan(plan, request.resolutions, self._resolver)
+        except GitSyncError as exc:
+            raise localized_resolution_error(exc) from exc
+        return plan, self._follow_signature_groups(project.folder, plan, request.resolutions, writes, ours, theirs)
+
+    def _follow_signature_groups(
         self,
         folder: Path,
-        base: str | None,
+        plan: MergePlan,
+        resolutions: Mapping[str, FileResolution],
+        writes: list[FileWrite],
         ours: str,
         theirs: str,
-        paths: Sequence[str],
-        theirs_entries: Mapping[str, TreeEntry],
-    ) -> MergeInput:
-        base_files = _present(self._reader.read_files(folder, base, paths)) if base else {}
-        ours_files = _present(self._reader.read_files(folder, ours, paths))
-        theirs_files = _present(self._reader.read_files(folder, theirs, paths))
-        blocked = frozenset(
-            path for path in paths if path in theirs_entries and not is_safe_entry(path, theirs_entries[path].mode)
-        )
-        return MergeInput(
-            base=base_files,
-            ours=ours_files,
-            theirs=theirs_files,
-            base_commit=base,
-            theirs_commit=theirs,
-            meta=self._meta(folder, base, ours, theirs, base_files, ours_files, theirs_files),
-            blocked=blocked,
-        )
-
-    def _meta(
-        self,
-        folder: Path,
-        base: str | None,
-        ours: str,
-        theirs: str,
-        base_files: Mapping[str, bytes],
-        ours_files: Mapping[str, bytes],
-        theirs_files: Mapping[str, bytes],
-    ) -> dict[str, MergeMeta]:
-        """Кто правил файл позже: нужно бинарникам и файлам состояния, где побеждает более новая правка."""
-        both = {path for path in theirs_files.keys() & ours_files.keys() if base_files.get(path) != ours_files[path]}
-        meta: dict[str, MergeMeta] = {}
-        for path in sorted(both):
-            if not _needs_stamps(path, base_files.get(path), ours_files[path], theirs_files[path]):
+    ) -> list[FileWrite]:
+        """Замороженный PDF и подписи к нему идут за решением по группе, а не за новизной каждого файла."""
+        groups = conflicting_groups(plan)
+        if not groups:
+            return writes
+        chosen = sides_of(groups, resolutions)
+        affected = group_paths(plan)
+        kept = [w for w in writes if w.path not in affected]
+        for group in groups:
+            if chosen.get(group.doc_id) is not FileChoice.theirs:
                 continue
-            mine = self._reader.path_stamp(folder, ours, path, exclude_reachable_from=base)
-            other = self._reader.path_stamp(folder, theirs, path, exclude_reachable_from=base)
-            meta[path] = MergeMeta(
-                ours_changed_at=mine.committed_at if mine else None,
-                theirs_changed_at=other.committed_at if other else None,
-                ours_commit=mine.sha if mine else None,
-                theirs_commit=other.sha if other else None,
+            incoming = self._reader.read_files(folder, theirs, sorted(group.theirs))
+            kept.extend(
+                FileWrite(path, FileWriteKind.write, data) for path, data in incoming.items() if data is not None
             )
-        return meta
+            stale = sorted(group.ours - group.theirs)
+            present = self._reader.read_files(folder, ours, stale) if stale else {}
+            kept.extend(FileWrite(path, FileWriteKind.delete) for path, data in present.items() if data is not None)
+        return kept
 
     def _keep_conflicts(
-        self, project: Project, state: SyncState, ours: str, theirs: str, base: str | None, plan: MergePlan
+        self, project: Project, state: SyncState, ours: str, theirs: str, plan: MergePlan
     ) -> ApplyOutcome:
-        """Конфликты решает человек: на диск ничего не пишется, сессия остаётся рядом с хранилищем."""
+        """Конфликты решает человек: на диск ничего не пишется, сессия остаётся рядом с хранилищем.
+
+        Черновики прежней сессии переходят в новую по ключам участков и полей, поэтому новая выборка не стирает
+        то, что человек уже решил.
+        """
         previous = state.pending
         same = previous is not None and previous.fingerprint == plan.fingerprint
         session_id = previous.session_id if previous is not None and same else uuid.uuid4().hex[:12]
+        drafts = prune_all({op.path: op for op in plan.conflicts}, previous.drafts) if previous is not None else {}
         total = len(plan.conflicts)
+        left = sum(not progress(op, drafts.get(op.path)).resolved for op in plan.conflicts)
         pending = PendingSession(
             session_id=session_id,
             files_total=total,
-            files_open=previous.files_open if previous is not None and same else total,
+            files_open=left,
             ours=ours,
             theirs=theirs,
-            base=base,
+            base=plan.base_commit,
             fingerprint=plan.fingerprint,
+            drafts=drafts,
+            drafts_saved_at=previous.drafts_saved_at if previous is not None and drafts else None,
         )
         self._states.save(project.folder, replace(state, pending=pending))
         logger.info("git sync stopped on conflicts", project_id=str(project.id), files=total, session=session_id)
@@ -321,7 +356,7 @@ class SyncApplier:
             ApplyKind.conflicts,
             auto=_auto_changes(plan),
             warnings=plan.warnings,
-            conflicts=ConflictCounts(files_total=total, files_open=pending.files_open),
+            conflicts=ConflictCounts(files_total=total, files_open=left),
         )
 
     # --- запись на диск ----------------------------------------------------------------------------------------
@@ -369,16 +404,6 @@ class SyncApplier:
             taken.add(copy)
             moved.append(FileWrite(copy, FileWriteKind.write, local))
         return moved
-
-
-def _present(files: Mapping[str, bytes | None]) -> dict[str, bytes]:
-    return {path: data for path, data in files.items() if data is not None}
-
-
-def _needs_stamps(path: str, *contents: bytes | None) -> bool:
-    if path.lower().endswith(".pdf") or is_binary(path, *contents):
-        return True
-    return path.startswith(_STUDIO_PREFIX) and path.endswith(".json")
 
 
 def _auto_changes(plan: MergePlan) -> tuple[SyncAutoChange, ...]:

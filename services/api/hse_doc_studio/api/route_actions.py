@@ -141,6 +141,13 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # История проекта, она же git
     ("GET", "/projects/{project_id}/git"): RouteRule(Action.SOURCES_READ),
     ("POST", "/projects/{project_id}/git/sync"): RouteRule(Action.HISTORY_WRITE),
+    ("GET", "/projects/{project_id}/git/conflicts"): RouteRule(Action.SOURCES_READ),
+    ("GET", "/projects/{project_id}/git/conflicts/file"): RouteRule(Action.SOURCES_READ),
+    ("GET", "/projects/{project_id}/git/conflicts/diff"): RouteRule(Action.SOURCES_READ),
+    ("GET", "/projects/{project_id}/git/conflicts/blob"): RouteRule(Action.SOURCES_READ),
+    ("PUT", "/projects/{project_id}/git/conflicts/draft"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/conflicts/resolve"): RouteRule(Action.HISTORY_WRITE),
+    ("DELETE", "/projects/{project_id}/git/conflicts"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/write"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/init"): RouteRule(Action.HISTORY_WRITE),

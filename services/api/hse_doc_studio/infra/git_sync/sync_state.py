@@ -27,6 +27,8 @@ from hse_doc_studio.core.git_sync.entities import (
     SyncState,
 )
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.merge.choices import FileResolution
+from hse_doc_studio.core.git_sync.merge.drafts import resolution_from_json, resolution_to_json
 from hse_doc_studio.infra.persistence.unknown_fields import Struct, preserve_unknown
 from hse_doc_studio.infra.vcs.git_vcs_service import store_git_dir
 
@@ -164,6 +166,8 @@ def _pending_to_json(pending: PendingSession | None) -> dict[str, Any] | None:
         "theirs": pending.theirs,
         "base": pending.base,
         "fingerprint": pending.fingerprint,
+        "drafts": {path: resolution_to_json(item) for path, item in sorted(pending.drafts.items())},
+        "drafts_saved_at": _iso(pending.drafts_saved_at),
     }
 
 
@@ -241,4 +245,13 @@ def _pending_from_json(raw: Any) -> PendingSession | None:
         theirs=_sha(raw.get("theirs")),
         base=_sha(raw.get("base")),
         fingerprint=_sha(raw.get("fingerprint")),
+        drafts=_drafts_from_json(raw.get("drafts")),
+        drafts_saved_at=_moment(raw.get("drafts_saved_at")),
     )
+
+
+def _drafts_from_json(raw: Any) -> dict[str, FileResolution]:
+    if not isinstance(raw, dict):
+        return {}
+    drafts = {str(path): resolution_from_json(item) for path, item in raw.items()}
+    return {path: item for path, item in drafts.items() if item is not None}

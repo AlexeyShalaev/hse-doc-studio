@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.merge.choices import FileResolution
 from hse_doc_studio.core.git_sync.url import GitProvider, RemoteKind, RemoteUrl
 
 
@@ -294,6 +296,10 @@ class PendingSession:
     base: str | None = None
     # Отпечаток конфликтных файлов: пока он тот же, повторная синхронизация оставляет ту же сессию.
     fingerprint: str | None = None
+    # Черновики решений человека по путям: участки и поля в них названы ключами, а не номерами, поэтому
+    # переживают пересчёт плана.
+    drafts: Mapping[str, FileResolution] = field(default_factory=dict)
+    drafts_saved_at: datetime | None = None
 
 
 @dataclass(frozen=True)

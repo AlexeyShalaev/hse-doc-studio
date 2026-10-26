@@ -16,6 +16,17 @@ from hse_doc_studio.core.git_sync.entities import (
     SyncState,
 )
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.merge.choices import (
+    FieldChoice,
+    FieldDecision,
+    FieldsResolution,
+    FileChoice,
+    FileChoiceResolution,
+    HunkChoice,
+    HunkDecision,
+    HunksResolution,
+    TextResolution,
+)
 from hse_doc_studio.infra.git_sync.sync_state import SYNC_STATE_FILE, JsonGitSyncStateRepository
 
 pytestmark = pytest.mark.unit
@@ -53,6 +64,13 @@ def _full_state() -> SyncState:
             theirs="b" * 40,
             base="c" * 40,
             fingerprint="f1",
+            drafts={
+                "main.tex": HunksResolution({"h:3f2a9c01": HunkDecision(HunkChoice.custom, "text\nof the hunk")}),
+                ".hse-studio/project.json": FieldsResolution({"/meta/title": FieldDecision(FieldChoice.theirs)}),
+                "figures/a.png": FileChoiceResolution(FileChoice.newest),
+                "notes.tex": TextResolution("whole file\n"),
+            },
+            drafts_saved_at=_AT,
         ),
         auto_fetch=False,
         fetch_interval_s=600,
@@ -106,6 +124,13 @@ def test__save__writes_a_versioned_file_with_utc_timestamps(folder: Path) -> Non
         "theirs": "b" * 40,
         "base": "c" * 40,
         "fingerprint": "f1",
+        "drafts": {
+            ".hse-studio/project.json": {"kind": "fields", "fields": {"/meta/title": {"choice": "theirs"}}},
+            "figures/a.png": {"kind": "file", "choice": "newest"},
+            "main.tex": {"kind": "hunks", "hunks": {"h:3f2a9c01": {"choice": "custom", "text": "text\nof the hunk"}}},
+            "notes.tex": {"kind": "text", "content": "whole file\n"},
+        },
+        "drafts_saved_at": "2026-10-26T12:30:05Z",
     }
     assert not list(_file(folder).parent.glob("*.tmp"))
 
@@ -115,7 +140,7 @@ def test__save__keeps_unknown_keys_at_top_level_and_nested(folder: Path) -> None
     repo.save(folder, _full_state())
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
     raw["future_flag"] = {"a": 1}
-    raw["pending"]["drafts"] = {"vkr.tex": "mine"}
+    raw["pending"]["future_note"] = {"vkr.tex": "mine"}
     raw["last_sync"]["note"] = "x"
     _file(folder).write_text(json.dumps(raw), encoding="utf-8")
 
@@ -123,7 +148,7 @@ def test__save__keeps_unknown_keys_at_top_level_and_nested(folder: Path) -> None
 
     after = json.loads(_file(folder).read_text(encoding="utf-8"))
     assert after["future_flag"] == {"a": 1}
-    assert after["pending"]["drafts"] == {"vkr.tex": "mine"}
+    assert after["pending"]["future_note"] == {"vkr.tex": "mine"}
     assert after["last_sync"]["note"] == "x"
 
 
@@ -131,12 +156,12 @@ def test__save__new_pending_session__drops_the_drafts_of_the_old_one(folder: Pat
     repo = JsonGitSyncStateRepository()
     repo.save(folder, _full_state())
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
-    raw["pending"]["drafts"] = {"a": 1}
+    raw["pending"]["future_note"] = {"a": 1}
     _file(folder).write_text(json.dumps(raw), encoding="utf-8")
 
     repo.save(folder, replace(_full_state(), pending=PendingSession("p2", 1, 1)))
 
-    assert "drafts" not in json.loads(_file(folder).read_text(encoding="utf-8"))["pending"]
+    assert "future_note" not in json.loads(_file(folder).read_text(encoding="utf-8"))["pending"]
 
 
 def test__save__pending_cleared__removes_the_key_content(folder: Path) -> None:
@@ -228,3 +253,17 @@ def test__get__pending_written_by_older_studio_without_commits__reads_with_empty
     pending = repo.get(folder).pending  # type: ignore[union-attr]
 
     assert pending == PendingSession("old", 2, 1)
+
+
+def test__get__damaged_draft__is_dropped_and_the_rest_is_kept(folder: Path) -> None:
+    repo = JsonGitSyncStateRepository()
+    repo.save(folder, _full_state())
+    raw = json.loads(_file(folder).read_text(encoding="utf-8"))
+    raw["pending"]["drafts"]["figures/a.png"] = {"kind": "file", "choice": "sideways"}
+    raw["pending"]["drafts"]["strange"] = "mine"
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+
+    pending = repo.get(folder).pending  # type: ignore[union-attr]
+
+    assert pending is not None
+    assert set(pending.drafts) == {"main.tex", ".hse-studio/project.json", "notes.tex"}

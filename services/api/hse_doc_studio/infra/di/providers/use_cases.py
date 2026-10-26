@@ -31,7 +31,6 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitCredentialUsage,
     IGitMergeCommitter,
-    IGitMergeEngine,
     IGitOperationRegistry,
     IGitRemoteRegistry,
     IGitRepoReader,
@@ -271,10 +270,13 @@ from hse_doc_studio.use_cases.forms.update_form import UpdateFormUC
 # --- Filesystem ---
 from hse_doc_studio.use_cases.fs.browse_filesystem import BrowseFilesystemUC
 from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
-from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
-from hse_doc_studio.use_cases.git_sync.connect_remote import ConnectRemoteUC, DisconnectRemoteUC
 
 # --- Git sync ---
+from hse_doc_studio.use_cases.git_sync.abort_conflicts import AbortConflictsUC
+from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
+from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
+from hse_doc_studio.use_cases.git_sync.conflict_support import ConflictSessions
+from hse_doc_studio.use_cases.git_sync.connect_remote import ConnectRemoteUC, DisconnectRemoteUC
 from hse_doc_studio.use_cases.git_sync.credentials import (
     CreateCredentialUC,
     DeleteCredentialUC,
@@ -282,9 +284,14 @@ from hse_doc_studio.use_cases.git_sync.credentials import (
     ListCredentialsUC,
     UpdateCredentialUC,
 )
+from hse_doc_studio.use_cases.git_sync.get_conflict_diff import GetConflictDiffUC
+from hse_doc_studio.use_cases.git_sync.get_conflict_file import GetConflictBlobUC, GetConflictFileUC
+from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsUC
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
+from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
+from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusUC, GitStatusBuilder
 from hse_doc_studio.use_cases.git_sync.sync_apply import SyncApplier
@@ -1631,7 +1638,7 @@ class UseCaseProvider(Provider):
         journal_repo: IUpdateJournalRepository,
         base_store: ITemplateBaseStore,
         state_repo: IGitSyncStateRepository,
-        engine: IGitMergeEngine,
+        planner: ConflictPlanner,
         state_merge: StateFileMerge,
     ) -> SyncApplier:
         return SyncApplier(
@@ -1640,8 +1647,7 @@ class UseCaseProvider(Provider):
             committer=committer,
             transaction=sync_transaction(journal_repo, base_store, vcs_service),
             states=state_repo,
-            engine=engine,
-            structured=state_merge,
+            planner=planner,
             resolver=state_merge,
         )
 
@@ -1701,6 +1707,73 @@ class UseCaseProvider(Provider):
             operations=operations,
             journals=journal_repo,
             policy=policy,
+        )
+
+    @provide
+    def get_conflict_sessions(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        planner: ConflictPlanner,
+    ) -> ConflictSessions:
+        return ConflictSessions(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            state_repo=state_repo,
+            reader=reader,
+            planner=planner,
+        )
+
+    @provide
+    def get_get_conflicts_uc(
+        self, sessions: ConflictSessions, reader: IGitRepoReader, template_repo: ITemplateRepository
+    ) -> GetConflictsUC:
+        return GetConflictsUC(sessions=sessions, reader=reader, template_repo=template_repo)
+
+    @provide
+    def get_get_conflict_file_uc(self, sessions: ConflictSessions, reader: IGitRepoReader) -> GetConflictFileUC:
+        return GetConflictFileUC(sessions=sessions, reader=reader)
+
+    @provide
+    def get_get_conflict_blob_uc(self, sessions: ConflictSessions) -> GetConflictBlobUC:
+        return GetConflictBlobUC(sessions=sessions)
+
+    @provide
+    def get_get_conflict_diff_uc(self, sessions: ConflictSessions, state_merge: StateFileMerge) -> GetConflictDiffUC:
+        return GetConflictDiffUC(sessions=sessions, resolver=state_merge)
+
+    @provide
+    def get_save_conflict_draft_uc(
+        self, sessions: ConflictSessions, state_repo: IGitSyncStateRepository, vcs_locks: IVcsFolderLocks
+    ) -> SaveDraftUC:
+        return SaveDraftUC(sessions=sessions, state_repo=state_repo, locks=vcs_locks)
+
+    @provide
+    def get_resolve_conflicts_uc(
+        self,
+        sessions: ConflictSessions,
+        start: StartSyncUC,
+        applier: SyncApplier,
+        sync: SyncProjectUC,
+        operations: IGitOperationRegistry,
+        vcs_locks: IVcsFolderLocks,
+    ) -> ResolveConflictsUC:
+        return ResolveConflictsUC(
+            sessions=sessions, start=start, applier=applier, sync=sync, operations=operations, locks=vcs_locks
+        )
+
+    @provide
+    def get_abort_conflicts_uc(
+        self,
+        sessions: ConflictSessions,
+        state_repo: IGitSyncStateRepository,
+        operations: IGitOperationRegistry,
+        vcs_locks: IVcsFolderLocks,
+        status: GetGitStatusUC,
+    ) -> AbortConflictsUC:
+        return AbortConflictsUC(
+            sessions=sessions, state_repo=state_repo, operations=operations, locks=vcs_locks, status=status
         )
 
     @provide

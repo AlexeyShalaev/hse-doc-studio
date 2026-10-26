@@ -58,6 +58,7 @@ from hse_doc_studio.use_cases.git_sync.sync_apply import (
     ApplyKind,
     ApplyOutcome,
     HeadMovedError,
+    ResolveRequest,
     SyncApplier,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -139,10 +140,14 @@ class SyncProjectUC:
         self._dispatcher = dispatcher
         self._policy = policy
 
-    async def run(self, project: Project, operation_id: str) -> None:
-        """Итог (успех, сбой, отмена) записывается в операцию. Наружу выходит только CancelledError."""
+    async def run(self, project: Project, operation_id: str, resolve: ResolveRequest | None = None) -> None:
+        """Итог (успех, сбой, отмена) записывается в операцию. Наружу выходит только CancelledError.
+
+        С `resolve` первый круг применяет решения человека по конфликтам вместо выборки: чужая вершина остаётся
+        той, на которой он решал. Дальше (отправка, повтор после `remote_moved`) всё как при обычной синхронизации.
+        """
         try:
-            result = await self._execute(project, operation_id, uuid.uuid4().hex[:12])
+            result = await self._execute(project, operation_id, uuid.uuid4().hex[:12], resolve)
         except asyncio.CancelledError:
             self._operations.finish(operation_id, status=OperationStatus.cancelled)
             raise
@@ -162,18 +167,21 @@ class SyncProjectUC:
 
     # --- цикл -------------------------------------------------------------------------------------------------
 
-    async def _execute(self, project: Project, operation_id: str, sync_id: str) -> SyncResult:
+    async def _execute(
+        self, project: Project, operation_id: str, sync_id: str, resolve: ResolveRequest | None = None
+    ) -> SyncResult:
         target = await asyncio.to_thread(self._target, project)
         totals = _Totals()
         for attempt in range(MAX_PUSH_ATTEMPTS):
             project = (await self._get_project.execute(GetProjectInput(project_id=project.id))).project
-            if attempt == 0:
-                await self._snapshot(project, operation_id)
-            await self._fetch(project, target, operation_id)
-            applied = await self._apply(project, operation_id, sync_id)
+            resolving = resolve if attempt == 0 else None
+            await self._refresh(project, target, operation_id, first=attempt == 0, resolving=resolving is not None)
+            applied = await self._apply(project, operation_id, sync_id, resolving)
             totals.add(applied)
             if applied.kind is ApplyKind.conflicts:
                 return await self._finish(project, sync_id, totals, SyncOutcome.conflicts, applied)
+            if resolving is not None and not resolving.push:
+                return await self._finish(project, sync_id, totals, totals.outcome(), applied)
             try:
                 totals.pushed += await self._push(project, target, operation_id)
             except GitSyncError as exc:
@@ -183,6 +191,16 @@ class SyncProjectUC:
                 continue
             return await self._finish(project, sync_id, totals, totals.outcome(), applied)
         raise git_error(GitErrorCode.remote_moved)
+
+    async def _refresh(
+        self, project: Project, target: RemoteTarget, operation_id: str, *, first: bool, resolving: bool
+    ) -> None:
+        """Снимок и выборка перед применением. Решения по конфликтам применяются к уже известной чужой вершине."""
+        if resolving:
+            return
+        if first:
+            await self._snapshot(project, operation_id)
+        await self._fetch(project, target, operation_id)
 
     def _target(self, project: Project) -> RemoteTarget:
         config = self._remotes.read(project)
@@ -244,7 +262,9 @@ class SyncProjectUC:
             raise
         await self._update_state(project, lambda s: replace(with_success(s, at=_now()), remote_empty=False))
 
-    async def _apply(self, project: Project, operation_id: str, sync_id: str) -> ApplyOutcome:
+    async def _apply(
+        self, project: Project, operation_id: str, sync_id: str, resolve: ResolveRequest | None
+    ) -> ApplyOutcome:
         for _ in range(MAX_APPLY_ATTEMPTS):
             await self._wait_for_builds(project, operation_id)
             self._phase(operation_id, OperationPhase.merge, cancellable=False)
@@ -252,13 +272,16 @@ class SyncProjectUC:
                 if self._dispatcher.has_active_for_folder(project.folder):
                     continue
                 try:
-                    return await asyncio.to_thread(self._apply_locked, project, sync_id)
+                    return await asyncio.to_thread(self._apply_locked, project, sync_id, resolve)
                 except HeadMovedError:
                     continue
         raise git_error(GitErrorCode.sync_busy)
 
-    def _apply_locked(self, project: Project, sync_id: str) -> ApplyOutcome:
-        return self._applier.apply(project, self._load_state(project), sync_id)
+    def _apply_locked(self, project: Project, sync_id: str, resolve: ResolveRequest | None) -> ApplyOutcome:
+        state = self._load_state(project)
+        if resolve is None:
+            return self._applier.apply(project, state, sync_id)
+        return self._applier.apply_resolved(project, state, sync_id, resolve)
 
     async def _wait_for_builds(self, project: Project, operation_id: str) -> None:
         """Сборка читает файлы проекта, а применение их переписывает: ждём, пока она закончится."""

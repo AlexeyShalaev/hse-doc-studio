@@ -118,6 +118,26 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Токену не хватает права на изменение рабочих процессов (workflow)",
         "The token lacks the permission to change workflows",
     ),
+    GitErrorCode.no_conflicts: (
+        "Нерешённых конфликтов нет",
+        "There are no unresolved conflicts",
+    ),
+    GitErrorCode.plan_outdated: (
+        "Конфликты изменились с тех пор, как вы их открыли. Обновите список и проверьте выбор",
+        "The conflicts changed since you opened them. Reload the list and check your choices",
+    ),
+    GitErrorCode.unresolved_conflicts: (
+        "Не по всем конфликтам принято решение",
+        "Some conflicts are not decided yet",
+    ),
+    GitErrorCode.invalid_resolution: (
+        "Такое решение для этого файла недопустимо",
+        "This choice is not allowed for this file",
+    ),
+    GitErrorCode.unresolved_markers: (
+        "В тексте остались маркеры конфликта. Уберите строки с <<<<<<<, ||||||| и >>>>>>>",
+        "The text still contains conflict markers. Remove the lines with <<<<<<<, ||||||| and >>>>>>>",
+    ),
     GitErrorCode.email_privacy: (
         "Сервер не принял адрес почты автора: он скрыт настройками приватности",
         "The server rejected the author e-mail: it is hidden by privacy settings",
@@ -133,3 +153,17 @@ def git_error(code: GitErrorCode, *, tail: str | None = None, **ctx: object) -> 
         ru, en = _MESSAGES.get(code, (code.value, code.value))
         text = localized_error(ru, en)
     return GitSyncError(code, text, **ctx)
+
+
+def resolution_error(code: GitErrorCode, *paths: str) -> GitSyncError:
+    """Ошибка решения по конфликтам: клиент получает локализованный текст и список затронутых путей."""
+    return git_error(code, paths=list(paths)) if paths else git_error(code)
+
+
+def localized_resolution_error(exc: GitSyncError) -> GitSyncError:
+    """Та же ошибка планировщика с понятным текстом; контекст приводится к `paths` контракта."""
+    paths = exc.ctx.get("paths")
+    if isinstance(paths, list | tuple):
+        return resolution_error(exc.code, *map(str, paths))
+    single = exc.ctx.get("path")
+    return resolution_error(exc.code, str(single)) if single is not None else resolution_error(exc.code)

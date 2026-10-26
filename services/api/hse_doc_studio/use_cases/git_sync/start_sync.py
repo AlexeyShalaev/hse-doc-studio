@@ -75,13 +75,14 @@ class StartSyncUC:
 
     async def execute(self, inp: StartSyncInput) -> StartSyncOutput:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
-        await asyncio.to_thread(self._preflight, project)
+        await asyncio.to_thread(self.preflight, project)
         operation = self._operations.begin(OperationKind.sync, project_id=project.id, folder=project.folder)
         task = asyncio.create_task(self._sync.run(project, operation.id), name=f"git-sync-{operation.id}")
         self._operations.attach_task(operation.id, task)
         return StartSyncOutput(operation_id=operation.id)
 
-    def _preflight(self, project: Project) -> None:
+    def preflight(self, project: Project) -> None:
+        """Быстрые проверки перед любой операцией синхронизации; общие с применением решений по конфликтам."""
         if not self._policy.enabled:
             raise git_error(GitErrorCode.git_unavailable)
         config = self._remotes.read(project)

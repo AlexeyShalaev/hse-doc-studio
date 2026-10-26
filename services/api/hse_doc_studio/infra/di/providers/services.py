@@ -182,6 +182,7 @@ from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 from hse_doc_studio.infra.vcs.profile_source import ConfigAuthorProfile
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
+from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
@@ -884,6 +885,13 @@ class DomainServiceProvider(Provider):
                 "form": deserialize_form_state,
             }
         )
+
+    @provide
+    def get_conflict_planner(
+        self, reader: IGitRepoReader, engine: IGitMergeEngine, state_merge: StateFileMerge
+    ) -> ConflictPlanner:
+        # App-scoped: план определяется тройкой коммитов, и экран конфликтов читает его десятки раз подряд.
+        return ConflictPlanner(reader=reader, engine=engine, structured=state_merge)
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

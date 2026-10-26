@@ -5,11 +5,18 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
+from hse_doc_studio.api.conflict_mapping import (
+    map_diff,
+    map_file_detail,
+    map_session,
+    resolutions_from_body,
+)
 from hse_doc_studio.api.git_mapping import map_status
 from hse_doc_studio.api.schemas.git_sync import (
     CiFile,
@@ -17,12 +24,18 @@ from hse_doc_studio.api.schemas.git_sync import (
     CiRequest,
     CiWriteRequest,
     CiWriteResponse,
+    ConflictDiffResponse,
+    ConflictFileDetail,
+    ConflictSessionResponse,
     ConnectRemoteRequest,
     GitStatusResponse,
     OperationStartedResponse,
+    ResolveConflictsRequest,
+    SaveConflictDraftRequest,
     UpdateGitSettingsRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.use_cases.git_sync.abort_conflicts import AbortConflictsInput, AbortConflictsUC
 from hse_doc_studio.use_cases.git_sync.ci import CiInput, CiWriteInput, PreviewCiUC, WriteCiUC
 from hse_doc_studio.use_cases.git_sync.connect_remote import (
     ConnectRemoteInput,
@@ -30,6 +43,21 @@ from hse_doc_studio.use_cases.git_sync.connect_remote import (
     DisconnectRemoteInput,
     DisconnectRemoteUC,
 )
+from hse_doc_studio.use_cases.git_sync.get_conflict_diff import (
+    ConflictDiffView,
+    GetConflictDiffInput,
+    GetConflictDiffUC,
+)
+from hse_doc_studio.use_cases.git_sync.get_conflict_file import (
+    BlobSide,
+    GetConflictBlobInput,
+    GetConflictBlobUC,
+    GetConflictFileInput,
+    GetConflictFileUC,
+)
+from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsInput, GetConflictsUC
+from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsInput, ResolveConflictsUC
+from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftInput, SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncInput, StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsInput, UpdateGitSettingsUC
@@ -106,6 +134,97 @@ async def start_git_sync(project_id: UUID, uc: FromDishka[StartSyncUC]) -> Opera
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return OperationStartedResponse(operation_id=started.operation_id)
+
+
+@router.get("/projects/{project_id}/git/conflicts", response_model=ConflictSessionResponse)
+async def get_git_conflicts(project_id: UUID, uc: FromDishka[GetConflictsUC]) -> ConflictSessionResponse:
+    try:
+        return map_session(await uc.execute(GetConflictsInput(project_id=project_id)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/projects/{project_id}/git/conflicts/file", response_model=ConflictFileDetail)
+async def get_git_conflict_file(
+    project_id: UUID, uc: FromDishka[GetConflictFileUC], path: str = Query(min_length=1)
+) -> ConflictFileDetail:
+    try:
+        return map_file_detail(await uc.execute(GetConflictFileInput(project_id=project_id, path=path)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/projects/{project_id}/git/conflicts/diff", response_model=ConflictDiffResponse)
+async def get_git_conflict_diff(
+    project_id: UUID,
+    uc: FromDishka[GetConflictDiffUC],
+    view: ConflictDiffView,
+    path: str = Query(min_length=1),
+) -> ConflictDiffResponse:
+    try:
+        return map_diff(await uc.execute(GetConflictDiffInput(project_id=project_id, path=path, view=view)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/projects/{project_id}/git/conflicts/blob")
+async def get_git_conflict_blob(
+    project_id: UUID,
+    uc: FromDishka[GetConflictBlobUC],
+    side: BlobSide,
+    path: str = Query(min_length=1),
+) -> Response:
+    try:
+        blob = await uc.execute(GetConflictBlobInput(project_id=project_id, path=path, side=side))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # Содержимое чужое: показывать его на странице Студии нельзя, поэтому только безопасные типы и без угадывания.
+    return Response(
+        content=blob.content,
+        media_type=blob.media_type,
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox",
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(blob.filename)}",
+        },
+    )
+
+
+@router.put("/projects/{project_id}/git/conflicts/draft", status_code=status.HTTP_204_NO_CONTENT)
+async def save_git_conflict_draft(
+    project_id: UUID, body: SaveConflictDraftRequest, uc: FromDishka[SaveDraftUC]
+) -> None:
+    try:
+        await uc.execute(SaveDraftInput(project_id=project_id, resolutions=resolutions_from_body(body.resolutions)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/projects/{project_id}/git/conflicts/resolve", response_model=OperationStartedResponse, status_code=202)
+async def resolve_git_conflicts(
+    project_id: UUID, body: ResolveConflictsRequest, uc: FromDishka[ResolveConflictsUC]
+) -> OperationStartedResponse:
+    try:
+        started = await uc.execute(
+            ResolveConflictsInput(
+                project_id=project_id,
+                fingerprint=body.fingerprint,
+                resolutions=None if body.resolutions is None else resolutions_from_body(body.resolutions),
+                push=body.push,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return OperationStartedResponse(operation_id=started.operation_id)
+
+
+@router.delete("/projects/{project_id}/git/conflicts", response_model=GitStatusResponse)
+async def abort_git_conflicts(project_id: UUID, uc: FromDishka[AbortConflictsUC]) -> GitStatusResponse:
+    try:
+        return map_status(await uc.execute(AbortConflictsInput(project_id=project_id)))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/projects/{project_id}/git/ci/preview", response_model=CiPreviewResponse)
