@@ -16,6 +16,7 @@ from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
@@ -335,6 +336,16 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             app.state.office_reaper_task = asyncio.create_task(manager.idle_reaper_loop())
         except Exception:
             logger.exception("office-convert startup failed")
+
+    @app.on_event("shutdown")
+    async def _detached_jobs_shutdown() -> None:
+        # Фоновые задачи (обновление предпросмотра после сохранения из редактора)
+        # доводим до остановки контейнеров конвертера, иначе они упадут на ровном месте.
+        try:
+            dispatcher = await container.get(IJobDispatcher)
+            await dispatcher.drain_detached(timeout_s=5)
+        except Exception:
+            logger.exception("detached jobs drain failed")
 
     @app.on_event("shutdown")
     async def _office_convert_shutdown() -> None:
