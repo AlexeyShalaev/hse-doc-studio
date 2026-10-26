@@ -395,7 +395,7 @@ from hse_doc_studio.use_cases.vcs.get_vcs_commit import GetVcsCommitUC
 from hse_doc_studio.use_cases.vcs.get_vcs_diff import GetVcsDiffUC
 from hse_doc_studio.use_cases.vcs.get_vcs_settings import GetVcsSettingsUC
 from hse_doc_studio.use_cases.vcs.get_vcs_status import GetVcsStatusUC
-from hse_doc_studio.use_cases.vcs.list_vcs_history import ListVcsHistoryUC
+from hse_doc_studio.use_cases.vcs.list_vcs_history import ListVcsHistoryFacetsUC, ListVcsHistoryUC
 from hse_doc_studio.use_cases.vcs.restore_vcs import RestoreVcsUC
 from hse_doc_studio.use_cases.vcs.update_vcs_settings import UpdateVcsSettingsUC
 from hse_doc_studio.use_cases.vcs.vcs_branches import (
@@ -931,6 +931,16 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
     ) -> ListVcsHistoryUC:
         return ListVcsHistoryUC(project_repo, project_index_repo, vcs_service, template_repo)
+
+    @provide
+    def get_list_vcs_history_facets_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        vcs_service: IVcsService,
+        template_repo: ITemplateRepository,
+    ) -> ListVcsHistoryFacetsUC:
+        return ListVcsHistoryFacetsUC(project_repo, project_index_repo, vcs_service, template_repo)
 
     @provide
     def get_get_vcs_commit_uc(

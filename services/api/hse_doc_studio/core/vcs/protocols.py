@@ -13,6 +13,8 @@ from hse_doc_studio.core.vcs.entities import (
     VcsCommit,
     VcsCommitDetail,
     VcsDiff,
+    VcsHistoryFacets,
+    VcsHistoryQuery,
     VcsRestoreResult,
     VcsSettings,
     VcsStatus,
@@ -57,7 +59,9 @@ class IVcsService(Protocol):
         doc_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        query: VcsHistoryQuery | None = None,
     ) -> list[VcsCommit]: ...
+    def history_facets(self, project: Project, *, doc_id: str | None = None) -> VcsHistoryFacets: ...
     def commit_detail(self, project: Project, commit_id: str) -> VcsCommitDetail: ...
     def diff(
         self,

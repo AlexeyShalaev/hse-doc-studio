@@ -79,6 +79,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/template/compare"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/status"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/history"): RouteRule(Action.SOURCES_READ),
+    ("GET", "/projects/{project_id}/vcs/history/facets"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/commits/{commit_id}"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/diff"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/vcs/branches"): RouteRule(Action.SOURCES_READ),
