@@ -17,12 +17,27 @@ from tests.unit.core.jobs.samples import (
     make_office_payload,
     make_office_result,
     make_office_spec,
+    make_verify_payload,
+    make_verify_result,
+    make_verify_spec,
 )
 
 # Образцы для каждого вида: новый вид нельзя добавить, не дописав образец сюда.
-_SAMPLE_SPECS = {JobKind.compile: make_compile_spec, JobKind.office_convert: make_office_spec}
-_SAMPLE_RESULTS = {JobKind.compile: make_compile_result, JobKind.office_convert: make_office_result}
-_SAMPLE_PAYLOADS = {JobKind.compile: make_compile_payload, JobKind.office_convert: make_office_payload}
+_SAMPLE_SPECS = {
+    JobKind.compile: make_compile_spec,
+    JobKind.office_convert: make_office_spec,
+    JobKind.verify_detached: make_verify_spec,
+}
+_SAMPLE_RESULTS = {
+    JobKind.compile: make_compile_result,
+    JobKind.office_convert: make_office_result,
+    JobKind.verify_detached: make_verify_result,
+}
+_SAMPLE_PAYLOADS = {
+    JobKind.compile: make_compile_payload,
+    JobKind.office_convert: make_office_payload,
+    JobKind.verify_detached: make_verify_payload,
+}
 
 
 def test__registry__every_job_kind_has_exactly_one_spec() -> None:

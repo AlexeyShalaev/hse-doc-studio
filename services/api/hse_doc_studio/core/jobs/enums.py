@@ -7,6 +7,7 @@ class JobKind(StrEnum):
     # Остальные виды добавляют слайсы своих семейств, по одному на вид.
     compile = "compile"
     office_convert = "office.convert"
+    verify_detached = "signature.verify_detached"
 
 
 class JobStatus(StrEnum):

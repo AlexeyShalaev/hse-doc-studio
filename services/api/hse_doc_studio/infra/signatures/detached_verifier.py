@@ -16,6 +16,7 @@ Note codes:
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 
 import structlog
@@ -33,10 +34,9 @@ from hse_doc_studio.infra.signatures.openpgp import (
     GpgVerification,
     looks_like_openpgp_signature,
 )
+from hse_doc_studio.infra.signatures.trust_material import read_chain_cache, read_trusted_roots
 
 logger = structlog.get_logger()
-
-_ROOT_SUFFIXES = {".cer", ".crt", ".pem", ".der"}
 
 
 _PGP_STATUS: dict[str, tuple[DetachedVerdict, str | None]] = {
@@ -63,22 +63,24 @@ class DetachedSignatureVerifier:
         self._cache_dir = chain_cache_dir
 
     def trusted_roots(self) -> list[bytes]:
-        if not self._roots_dir.is_dir():
-            return []
-        return [p.read_bytes() for p in sorted(self._roots_dir.iterdir()) if p.suffix.lower() in _ROOT_SUFFIXES]
+        return read_trusted_roots(self._roots_dir)
 
     def intermediates(self) -> list[bytes]:
         """Issuer certificates fetched earlier (chain_cache): they build the chain, never grant trust."""
-        if self._cache_dir is None or not self._cache_dir.is_dir():
-            return []
-        return [p.read_bytes() for p in sorted(self._cache_dir.glob("*.cer"))]
+        return read_chain_cache(self._cache_dir)
 
     def verify(self, pdf_path: Path, sig_bytes: bytes) -> VerifiedSignature:
+        return self.verify_with(pdf_path, sig_bytes, self.trusted_roots(), self.intermediates())
+
+    def verify_with(
+        self, pdf_path: Path, sig_bytes: bytes, roots: Sequence[bytes], intermediates: Sequence[bytes]
+    ) -> VerifiedSignature:
+        """Verification against the given trust material; OpenPGP uses the keyring, not `roots`."""
         fmt = detect_format(sig_bytes)
         if fmt is DetachedFormat.openpgp:
             return self._verify_openpgp(pdf_path, sig_bytes)
         if fmt is DetachedFormat.cms:
-            return self._verify_cms(pdf_path, sig_bytes)
+            return self._verify_cms(pdf_path, sig_bytes, roots, intermediates)
         raise UnknownSignatureFormatError("not an OpenPGP or CMS signature")
 
     # ── OpenPGP ──────────────────────────────────────────────────────────────
@@ -127,9 +129,11 @@ class DetachedSignatureVerifier:
 
     # ── CMS / CAdES ──────────────────────────────────────────────────────────
 
-    def _verify_cms(self, pdf_path: Path, sig_bytes: bytes) -> VerifiedSignature:
+    def _verify_cms(
+        self, pdf_path: Path, sig_bytes: bytes, roots: Sequence[bytes], intermediates: Sequence[bytes]
+    ) -> VerifiedSignature:
         try:
-            reports = inspect_cms(sig_bytes, pdf_path.read_bytes(), self.trusted_roots(), self.intermediates())
+            reports = inspect_cms(sig_bytes, pdf_path.read_bytes(), roots, intermediates)
         except CmsParseError as exc:
             raise UnknownSignatureFormatError(str(exc)) from exc
         return _map_cms(reports)

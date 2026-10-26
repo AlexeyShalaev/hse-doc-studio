@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from hse_doc_studio.core.jobs.verify import TrustBundle
+
 
 class IOpenPgpKeyImporter(Protocol):
     """Связка ключей OpenPGP в той части, что нужна при прикреплении подписи."""
@@ -21,3 +23,9 @@ class IChainFetcher(Protocol):
     def complete(self, sig_bytes: bytes) -> list[str]:
         """Скачивает недостающие сертификаты издателей; бросает CmsParseError, если подпись не CMS."""
         ...
+
+
+class ITrustMaterialProvider(Protocol):
+    """Доверенный материал проверки подписи: корни, кеш цепочек и режим связки OpenPGP."""
+
+    def snapshot(self) -> TrustBundle: ...

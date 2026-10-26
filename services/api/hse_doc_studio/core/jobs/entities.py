@@ -117,4 +117,6 @@ def job_tags(kind: JobKind, payload: JobPayload) -> frozenset[str]:
         return compile_job_tags(payload.needs_compile, Path(payload.source_file).suffix)
     if kind is JobKind.office_convert:
         return frozenset({"office"})
+    if kind is JobKind.verify_detached:
+        return frozenset({"verify"})
     raise ValueError(f"no tags for job kind {kind}")
