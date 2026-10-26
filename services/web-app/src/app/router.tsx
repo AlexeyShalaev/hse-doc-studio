@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n } from "@shared/lib";
 import { ErrorPage } from "@pages/ErrorPage";
 import { SettingsPage } from "@pages/SettingsPage";
@@ -7,6 +7,28 @@ import { WizardPage } from "@pages/WizardPage";
 import { WorkspacePage } from "@pages/WorkspacePage";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
 import { RootLayout } from "./RootLayout";
+
+// Галерея состояний синхронизации: страница разработчика. Условие вычисляется
+// при сборке, поэтому в рабочем бандле нет ни страницы, ни ссылки на неё.
+const devRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      {
+        path: "/dev/sync-states",
+        lazy: async () => {
+          const [{ DevSyncStatesPage }, demo] = await Promise.all([
+            import("@pages/DevSyncStates"),
+            import("./demo"),
+          ]);
+          // Живым записям нужен демо-транспорт, даже если приложение запущено без него.
+          demo.installGitDemo();
+          const gallery = { activate: demo.activateDemoScenario };
+          return {
+            Component: () => <DevSyncStatesPage demo={gallery} />,
+          };
+        },
+      },
+    ]
+  : [];
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +111,7 @@ export const router = createBrowserRouter([
         path: "/projects/:projectId/submit/form/:formId",
         element: <WorkspacePage canvas="submit-form" />,
       },
+      ...devRoutes,
       {
         path: "*",
         element: (

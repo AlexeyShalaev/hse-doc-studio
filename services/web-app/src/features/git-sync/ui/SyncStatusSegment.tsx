@@ -1,9 +1,9 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSyncUiStore } from "@entities/git-sync";
-import type { SyncTone } from "../model/syncUi.model";
+import { useSyncUiStore, type SyncStatusView } from "@entities/git-sync";
+import type { SyncTone, SyncUi } from "../model/syncUi.model";
 import { useNowTick } from "../model/useNowTick";
-import { useSyncText } from "../model/useSyncText";
+import { useSyncText, type SyncText } from "../model/useSyncText";
 import { useSyncView } from "../model/useSyncView";
 
 export type SyncStatusSegmentProps = {
@@ -30,20 +30,27 @@ const WORDED = new Set([
   "unknown",
 ]);
 
+export type SyncStatusSegmentViewProps = {
+  ui: SyncUi;
+  status: SyncStatusView;
+  text: SyncText;
+  isOpen: boolean;
+  onToggle: () => void;
+};
+
 /**
- * Сегмент строки состояния: «git · ветка, числа». Щелчок открывает панель
- * подробностей в заголовке окна. Доступен с клавиатуры, как соседние сегменты.
+ * Сегмент строки состояния: «git · ветка, числа». Только вид: данные и
+ * действие приходят снаружи, поэтому каждое состояние можно показать в тесте и
+ * в галерее состояний.
  */
-export const SyncStatusSegment = ({ projectId }: SyncStatusSegmentProps) => {
+export const SyncStatusSegmentView = ({
+  ui,
+  status,
+  text,
+  isOpen,
+  onToggle,
+}: SyncStatusSegmentViewProps) => {
   const { t } = useTranslation("gitSync");
-  const { status, ui } = useSyncView(projectId);
-  const now = useNowTick();
-  const text = useSyncText(ui, now);
-  const toggle = useSyncUiStore((state) => state.togglePopover);
-  const isOpen = useSyncUiStore((state) => state.popoverOpen);
-
-  if (!status || !ui.visible) return null;
-
   const branch = status.remote?.branch ?? "";
   const isConnected = status.connected;
   const dotClass = ui.state === "syncing" ? "dot building" : DOT[ui.tone];
@@ -58,11 +65,11 @@ export const SyncStatusSegment = ({ projectId }: SyncStatusSegmentProps) => {
       aria-expanded={isOpen}
       aria-label={t("statusBar.name", { status: text.status })}
       title={`${text.status}. ${text.action}`}
-      onClick={toggle}
+      onClick={onToggle}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          toggle();
+          onToggle();
         }
       }}
     >
@@ -100,5 +107,29 @@ export const SyncStatusSegment = ({ projectId }: SyncStatusSegmentProps) => {
         </span>
       )}
     </span>
+  );
+};
+
+/**
+ * Сегмент строки состояния проекта: данные берёт из общего запроса состояния,
+ * щелчок открывает панель подробностей в заголовке окна. Доступен с клавиатуры,
+ * как соседние сегменты.
+ */
+export const SyncStatusSegment = ({ projectId }: SyncStatusSegmentProps) => {
+  const { status, ui } = useSyncView(projectId);
+  const now = useNowTick();
+  const text = useSyncText(ui, now);
+  const toggle = useSyncUiStore((state) => state.togglePopover);
+  const isOpen = useSyncUiStore((state) => state.popoverOpen);
+
+  if (!status || !ui.visible) return null;
+  return (
+    <SyncStatusSegmentView
+      ui={ui}
+      status={status}
+      text={text}
+      isOpen={isOpen}
+      onToggle={toggle}
+    />
   );
 };
