@@ -9,6 +9,7 @@ import {
   Drama,
   HardDrive,
   Info,
+  KeyRound,
   ListChecks,
   Presentation,
   Search,
@@ -16,6 +17,7 @@ import {
   Sliders,
   Terminal,
   Type,
+  UserRound,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -37,7 +39,9 @@ import {
   type SettingSearchEntry,
   type SettingsSectionId,
 } from "@widgets/settings";
+import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
+import { GitAccessSection } from "@features/git-remote";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 
@@ -68,6 +72,12 @@ const SECTIONS: readonly SectionDef[] = [
     group: "general",
     labelKey: "settingsPage.sections.appearance",
     icon: Sliders,
+  },
+  {
+    id: "profile",
+    group: "general",
+    labelKey: "settingsPage.sections.profile",
+    icon: UserRound,
   },
   {
     id: "compiler",
@@ -130,6 +140,12 @@ const SECTIONS: readonly SectionDef[] = [
     icon: DatabaseBackup,
   },
   {
+    id: "git-access",
+    group: "system",
+    labelKey: "settingsPage.sections.gitAccess",
+    icon: KeyRound,
+  },
+  {
     id: "about",
     group: "system",
     labelKey: "settingsPage.sections.about",
@@ -150,6 +166,8 @@ const renderSection = (id: SettingsSectionId) => {
   switch (id) {
     case "appearance":
       return <AppearanceSection />;
+    case "profile":
+      return <AuthorProfileSection />;
     case "compiler":
       return (
         <>
@@ -175,6 +193,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <DiskUsageSection />;
     case "data":
       return <ExportImportSection />;
+    case "git-access":
+      return <GitAccessSection />;
     case "about":
       return <AboutSection />;
   }

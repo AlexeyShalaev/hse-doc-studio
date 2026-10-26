@@ -416,6 +416,9 @@
     "appearanceTheme": "Тема",
     "appearanceDensity": "Плотность интерфейса",
     "appearanceLanguage": "Язык интерфейса",
+    "profile": "Автор версий",
+    "profileName": "Имя автора",
+    "profileEmail": "E-mail автора",
     "compiler": "LaTeX компилятор",
     "compilerEngine": "Движок по умолчанию",
     "compilerPasses": "Макс. итераций",
@@ -443,6 +446,11 @@
     "aboutImage": "Образ",
     "aboutSource": "Источник",
     "aboutDataDir": "Папка конфигурации",
-    "aboutUpdates": "Обновления"
+    "aboutUpdates": "Обновления",
+    "gitAccess": "Доступ к репозиториям",
+    "gitAccessCredentials": "Токены и ключи",
+    "gitAccessHosts": "Доверенные серверы",
+    "gitAccessEncryption": "Шифрование токенов",
+    "gitAccessFetch": "Фоновая проверка по умолчанию"
   }
 }

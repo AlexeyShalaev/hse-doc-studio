@@ -64,6 +64,11 @@ export const router = createBrowserRouter([
         path: "/projects/:projectId/project-settings/:section",
         element: <WorkspacePage canvas="project-settings" />,
       },
+      // Разбор конфликтов синхронизации: полноэкранная страница, как «Версии».
+      {
+        path: "/projects/:projectId/sync/conflicts",
+        element: <WorkspacePage canvas="sync-conflicts" />,
+      },
       {
         path: "/projects/:projectId/submit",
         element: <WorkspacePage canvas="submit-pack" />,

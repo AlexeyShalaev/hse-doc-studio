@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { VcsHistoryFacetsSchema } from "@entities/vcs";
+
 // Контракт Git-синхронизации (contracts/git-sync). Перечислимые значения держим
 // строками: незнакомое значение от более новой Студии не должно ронять разбор.
 // Допустимые значения перечислены типами ниже, проверяются хелперами is*.
@@ -546,16 +548,8 @@ export const HistoryCommitExtrasSchema = z.object({
   sync: z.string().nullish(), // pushed | unpushed | incoming, без репозитория null
 });
 
-export const HistoryFacetsSchema = z.object({
-  kinds: z.record(z.string(), z.number()),
-  authors: z.array(
-    z.object({
-      name: z.string(),
-      email: z.string().nullish(),
-      count: z.number(),
-    }),
-  ),
-});
+// Описание схемы живёт в entities/vcs: фильтры истории читают его оттуда.
+export const HistoryFacetsSchema = VcsHistoryFacetsSchema;
 
 export type GitHostKey = z.infer<typeof GitHostKeySchema>;
 export type GitErrorBody = z.infer<typeof GitErrorBodySchema>;

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { apiClient, parseResp } from "@shared/api";
 import {
+  type VcsSyncFilter,
   VcsBranchSchema,
   VcsCommitDetailSchema,
   VcsCommitSchema,
   VcsDiffSchema,
+  VcsHistoryFacetsSchema,
   VcsRestoreSchema,
   VcsSettingsSchema,
   VcsStatusSchema,
@@ -16,6 +18,19 @@ export type RestoreParams = {
   mode?: "snapshot" | "hard";
   paths?: string[];
   confirm?: boolean;
+};
+
+// Фильтры истории. Пустое поле не уходит в запрос; kind повторяется в адресе.
+export type VcsHistoryParams = {
+  docId?: string;
+  kind?: string[];
+  authorEmail?: string;
+  q?: string;
+  since?: string;
+  until?: string;
+  sync?: VcsSyncFilter;
+  limit?: number;
+  offset?: number;
 };
 
 export type DiffParams = {
@@ -43,6 +58,10 @@ export type CreateTagParams = {
   kind?: "tag" | "release";
 };
 
+// Пустая строка в фильтре означает «не задано»: в запрос она не попадает.
+const blankToUndefined = (value: string | undefined): string | undefined =>
+  value === undefined || value === "" ? undefined : value;
+
 export const vcsApi = {
   getStatus: (projectId: string) =>
     apiClient
@@ -55,6 +74,30 @@ export const vcsApi = {
         params: { doc_id: docId, limit, offset },
       })
       .then(parseResp(VcsCommitSchema.array())),
+
+  getHistoryPage: (projectId: string, params: VcsHistoryParams) =>
+    apiClient
+      .get(`/projects/${projectId}/vcs/history`, {
+        params: {
+          doc_id: params.docId,
+          kind: params.kind?.length ? params.kind : undefined,
+          author_email: blankToUndefined(params.authorEmail),
+          q: blankToUndefined(params.q),
+          since: blankToUndefined(params.since),
+          until: blankToUndefined(params.until),
+          sync: params.sync && params.sync !== "all" ? params.sync : undefined,
+          limit: params.limit ?? 100,
+          offset: params.offset ?? 0,
+        },
+        // kind=a&kind=b вместо kind[]=a, как ждёт бэкенд.
+        paramsSerializer: { indexes: null },
+      })
+      .then(parseResp(VcsCommitSchema.array())),
+
+  getHistoryFacets: (projectId: string) =>
+    apiClient
+      .get(`/projects/${projectId}/vcs/history/facets`)
+      .then(parseResp(VcsHistoryFacetsSchema)),
 
   getCommit: (projectId: string, commitId: string) =>
     apiClient

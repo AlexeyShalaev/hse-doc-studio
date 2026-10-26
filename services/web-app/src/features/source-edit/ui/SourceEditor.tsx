@@ -27,7 +27,12 @@ import {
 } from "@entities/document";
 import { apiClient } from "@shared/api/client";
 import { synctexApi } from "@entities/synctex";
-import { toast, useEditorPrefsStore, useSyncTexStore } from "@shared/lib";
+import {
+  toast,
+  useEditorPrefsStore,
+  usePendingSave,
+  useSyncTexStore,
+} from "@shared/lib";
 import {
   CodeEditor,
   Spinner,
@@ -905,6 +910,15 @@ const SourceEditorBody = ({
       debouncedSave,
     ],
   );
+
+  // Let operations that read the project from disk (git sync, snapshots) write
+  // the unsaved buffer first. A conflict with an outside edit is not ours to
+  // resolve silently, so that case is left alone.
+  usePendingSave(async () => {
+    if (readOnly || conflict || valueRef.current === savedRef.current) return;
+    debouncedSave.cancel();
+    await save(valueRef.current);
+  });
 
   // Flush a pending autosave on unmount (e.g. switching files) so edits made
   // within the debounce window aren't silently dropped.

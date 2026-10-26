@@ -43,6 +43,13 @@ export type ActivityBarProps = {
   /** История изменений — полноэкранная страница, боковой панели у неё нет. */
   onOpenVersions: () => void;
   isVersionsActive: boolean;
+  /**
+   * Бейдж «Истории» от синхронизации (конфликты, нет доступа, новое в
+   * репозитории). Важнее счётчика несохранённых файлов и подменяет его.
+   */
+  versionsBadge?: ActivityItemBadge | undefined;
+  /** Подсказка «Истории» вместо обычной, когда есть бейдж синхронизации. */
+  versionsTooltip?: string | undefined;
   counts: ActivityBarCounts;
   /** ИИ-агент — тумблер правого дока, как было в нижней части старого борта. */
   isAgentActive: boolean;
@@ -81,6 +88,8 @@ export const ActivityBar = ({
   projectSettingsBadge,
   onOpenVersions,
   isVersionsActive,
+  versionsBadge,
+  versionsTooltip,
   counts,
   isAgentActive,
   onToggleAgent,
@@ -168,12 +177,13 @@ export const ActivityBar = ({
       <ActivityItem
         icon={History}
         label={t("activity.versions")}
-        tooltip={t("activity.versionsTooltip")}
+        tooltip={versionsTooltip ?? t("activity.versionsTooltip")}
         isActive={isVersionsActive}
         badge={
-          counts.changedFiles > 0
+          versionsBadge ??
+          (counts.changedFiles > 0
             ? { kind: "count", tone: "info", count: counts.changedFiles }
-            : undefined
+            : undefined)
         }
         onSelect={onOpenVersions}
       />

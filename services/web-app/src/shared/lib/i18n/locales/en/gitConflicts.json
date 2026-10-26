@@ -1,0 +1,361 @@
+{
+  "title": "Sync is not finished",
+  "subtitle": "Sending to the repository is blocked until the conflicts are resolved. The project keeps working as usual.",
+  "action": {
+    "abort": "Cancel the merge",
+    "complete": "Finish and send",
+    "completing": "Applying…"
+  },
+  "side": {
+    "mine": "Your changes",
+    "theirs": "Changes from {{author}}",
+    "unknown": "a colleague",
+    "missing": "No file",
+    "exists": "File exists"
+  },
+  "progress": {
+    "label": "Files resolved: {{done}} of {{total}}",
+    "ready": "Everything is resolved. You can finish: the changes will be merged and sent to the repository.",
+    "left": "Left to decide: {{count}}. The \"Finish and send\" button turns on once everything is resolved."
+  },
+  "save": {
+    "saving": "Saving your choices…",
+    "saved": "Choices saved",
+    "error": "Choices not saved",
+    "retry": "Retry"
+  },
+  "list": {
+    "aria": "Files with conflicts",
+    "needs": "Need a decision",
+    "noneNeeded": "All conflicts are already resolved",
+    "auto": "Resolved automatically"
+  },
+  "row": {
+    "resolved": "Resolved",
+    "open": "Not resolved",
+    "hunks": "Parts resolved: {{done}} of {{total}}",
+    "fields": "Fields resolved: {{done}} of {{total}}",
+    "manual": "Edited manually",
+    "versionChosen": "Version chosen",
+    "versionNeeded": "Pick a version"
+  },
+  "kind": {
+    "text": "Text",
+    "json": "Fields",
+    "binary": "File",
+    "delete": "Deletion"
+  },
+  "conflictType": {
+    "content": "The same lines were changed both on your side and in the repository.",
+    "fields": "The same fields were changed both on your side and in the repository.",
+    "deleted_by_us": "You deleted this file, but it was changed in the repository.",
+    "deleted_by_them": "This file was deleted in the repository, but you changed it.",
+    "add_add": "A file with this name appeared both on your side and in the repository.",
+    "binary": "The file changed on both sides. It cannot be merged by parts.",
+    "signature_group": "The document signatures changed on both sides.",
+    "case_collision": "The file names differ only by letter case.",
+    "invalid_result": "The automatic merge produced an invalid file. Pick a version."
+  },
+  "auto": {
+    "action": {
+      "merged": "Merged",
+      "take_theirs": "From repository",
+      "delete": "Deleted",
+      "binary_newest": "Newer kept"
+    },
+    "info": {
+      "merged": "The edits of both sides did not overlap, so the files were merged automatically.",
+      "take_theirs": "Only {{author}} changed this file, so their version was taken.",
+      "delete": "The file is deleted: both sides agreed, or nobody changed it.",
+      "binary_newest": "Both sides changed the file. The newer version is kept and the other one is saved next to it.",
+      "fallback": "The file was handled automatically, there is nothing to decide here."
+    },
+    "copy": "The other version is saved as",
+    "hint": "Nothing to decide here: Studio merged these files by itself. Open a file to see what was done to it.",
+    "summary": "{{label}}: {{count}}"
+  },
+  "view": {
+    "parts": "By part",
+    "choose": "Choice",
+    "mine": "Mine",
+    "theirs": "Theirs",
+    "result": "Result",
+    "manual": "Edit manually"
+  },
+  "pane": {
+    "select": "Pick a file on the left.",
+    "loading": "Loading the file…",
+    "error": "Could not load the file contents.",
+    "retry": "Retry"
+  },
+  "parts": {
+    "truncated": "The file is large, only a part is shown. The rest goes into the result unchanged.",
+    "open": "Parts left: {{open}} of {{total}}",
+    "allDone": "All parts of this file are resolved",
+    "allMine": "All mine",
+    "allTheirs": "All theirs",
+    "prev": "Previous",
+    "next": "Next",
+    "prevHint": "Go to the previous unresolved part (Shift+N)",
+    "nextHint": "Go to the next unresolved part (N)",
+    "fileDone": "This file is fully resolved. Other files are left.",
+    "nextFile": "Go to the next file",
+    "fold": "Collapse unchanged lines",
+    "unfold": "Show unchanged lines: {{count}}"
+  },
+  "hunk": {
+    "aria": "Conflict {{n}} of {{total}}",
+    "title": "Conflict {{n}} of {{total}}",
+    "line": "line {{line}}",
+    "mine": "Mine",
+    "theirs": "Theirs ({{author}})",
+    "theirsPlain": "Theirs",
+    "lineMine": "Line number in your file",
+    "lineTheirs": "Line number in the result if you take this version",
+    "empty": "(empty)",
+    "result": "What stays in the file",
+    "base": "As it was before the changes",
+    "open": "Not resolved",
+    "undo": "Undo choice",
+    "chosen": {
+      "mine": "Chosen: mine",
+      "theirs": "Chosen: theirs",
+      "both": "Chosen: both, mine first",
+      "both_reverse": "Chosen: both, theirs first",
+      "base": "Chosen: as it was",
+      "custom": "Chosen: your own text"
+    },
+    "choose": {
+      "mine": "Take mine",
+      "theirs": "Take theirs",
+      "both": "Both: mine first",
+      "both_reverse": "Both: theirs first",
+      "custom": "Edit",
+      "base": "As it was"
+    },
+    "customHint": "Write what should stay in place of this conflict.",
+    "customMarkers": "Conflict markers (<<<<<<<, >>>>>>>) are left in the text. Remove them.",
+    "customApply": "Apply",
+    "customCancel": "Cancel"
+  },
+  "manual": {
+    "hint": "Build the final text yourself. Conflict markers (<<<<<<<, >>>>>>>) must not stay in it.",
+    "aria": "Final text of {{path}}",
+    "markers": "Conflict markers are left in the text. Remove them to use this text.",
+    "apply": "Use this text",
+    "applied": "Text accepted",
+    "reset": "Start over",
+    "truncated": "The file is too large to edit by hand here. Resolve it by parts instead.",
+    "active": "The file was edited manually: choosing by part is off until you go back.",
+    "revert": "Back to choosing by part"
+  },
+  "diff": {
+    "loading": "Loading the changes…",
+    "saving": "Saving your choices to show the result…",
+    "error": "Could not load the changes.",
+    "retry": "Retry",
+    "binary": "This is a binary file, there is no line-by-line comparison.",
+    "empty": "There are no changes here.",
+    "truncated": "Only a part of the changes is shown.",
+    "hint": {
+      "ours": "What changed in your version compared with the original.",
+      "theirs": "What changed in the repository version compared with the original.",
+      "result": "How your file changes after the merge. Parts without a choice stay as yours."
+    }
+  },
+  "file": {
+    "groupLabel": "Which version to keep",
+    "recommended": "recommended",
+    "newestHint": "The newer version is by {{author}}",
+    "choice": {
+      "mine": "Keep my version",
+      "theirs": "Take the repository version",
+      "newest": "Keep the newer one"
+    },
+    "deleted_by_them": {
+      "mine": "Keep the file with my changes",
+      "theirs": "Delete the file, as in the repository",
+      "newest": "Keep the newer one"
+    },
+    "deleted_by_us": {
+      "mine": "Keep the file deleted",
+      "theirs": "Bring the file back with the repository changes",
+      "newest": "Keep the newer one"
+    },
+    "signature_group": {
+      "mine": "Keep my signatures",
+      "theirs": "Take the signatures from the repository",
+      "newest": "Keep the newer ones"
+    },
+    "case_collision": {
+      "mine": "Keep my file",
+      "theirs": "Take the file from the repository",
+      "newest": "Keep the newer one"
+    }
+  },
+  "apply": {
+    "title": "Applying your choices",
+    "text": "Merging the files and sending the result to the repository. This runs on the server, you do not need to keep the window open.",
+    "phases": "Steps",
+    "phase": {
+      "merge": "Merging the files",
+      "push": "Sending to the repository"
+    },
+    "cancel": "Cancel",
+    "doneTitle": "Done",
+    "doneText": "Conflicts are resolved and the changes are sent. Opening the history…",
+    "failedTitle": "Could not finish",
+    "failedText": "Something went wrong. Your choices are saved, you can try again.",
+    "cancelledTitle": "Operation cancelled",
+    "cancelledText": "Nothing was sent. Your choices are saved, you can go back to the conflicts.",
+    "retry": "Retry",
+    "back": "Back to the conflicts",
+    "pushFailedHint": "The merge is already saved in the project, only sending it to the repository failed. There are no conflicts left: open the history and sync again.",
+    "openHistory": "Open history"
+  },
+  "abort": {
+    "title": "Cancel the merge?",
+    "text": "The project goes back to its state before syncing. Your edits are not lost: they are saved in the version \"{{name}}\".",
+    "textPlain": "The project goes back to its state before syncing. Your edits are not lost: they are already saved in the history.",
+    "keep": "Keep resolving",
+    "confirm": "Cancel the merge",
+    "done": "The merge is cancelled, the project stays as it was",
+    "failed": "Could not cancel the merge"
+  },
+  "state": {
+    "loading": "Loading the conflicts…",
+    "none": {
+      "title": "No conflicts",
+      "text": "The sync is already finished or the merge was cancelled. There is nothing to resolve.",
+      "back": "Open the history"
+    },
+    "error": {
+      "title": "Could not load the conflicts",
+      "text": "Could not reach the server."
+    },
+    "retry": "Retry"
+  },
+  "notice": {
+    "outdated": "The project or the repository changed while you were resolving. The list is refreshed and your choices are kept where files did not change.",
+    "restarted": "New changes appeared in the repository while sending. The list is refreshed: check your choices and finish again.",
+    "unresolved": "Unresolved files left: {{count}}. They are marked in the list.",
+    "saveFailed": "Your choices were not saved on the server, so finishing is not possible yet. Try again.",
+    "failed": "Could not finish the sync.",
+    "dismiss": "Dismiss the message"
+  },
+  "fields": {
+    "open": "Fields left: {{open}} of {{total}}",
+    "allDone": "Every field in this file is resolved",
+    "allMine": "All mine",
+    "allTheirs": "All theirs",
+    "base": "Was",
+    "mine": "Mine",
+    "theirs": "Theirs ({{author}})",
+    "theirsPlain": "Theirs",
+    "union": "Combine",
+    "unionHint": "The list will hold the values from both sides, without repeats.",
+    "unionResult": "Result",
+    "chosen": {
+      "mine": "Chosen: mine",
+      "theirs": "Chosen: theirs",
+      "union": "Chosen: combine"
+    },
+    "empty": "(empty)",
+    "absent": "(none)",
+    "emptyList": "(empty list)",
+    "yes": "yes",
+    "no": "no",
+    "added": "new",
+    "auto": {
+      "title_one": "Merged automatically: {{count}} field",
+      "title_other": "Merged automatically: {{count}} fields",
+      "hint": "The sides did not disagree here: only one of them changed the field, or both wrote the same value.",
+      "from": {
+        "mine": "mine was taken",
+        "theirs": "theirs was taken",
+        "same": "both sides have the same value"
+      }
+    },
+    "group": "Field “{{field}}”, {{n}} of {{total}}"
+  },
+  "binary": {
+    "explain": "This kind of file cannot be merged by parts, so one version is kept as a whole.",
+    "mine": "My version",
+    "theirs": "Version from the repository",
+    "newer": "newer",
+    "previewMine": "Preview of my version",
+    "previewTheirs": "Preview of the version from the repository",
+    "loading": "Loading the preview…",
+    "error": "Could not show the preview",
+    "missing": "No file",
+    "noPreview": "There is no preview for this kind of file",
+    "tooBig": "The file is large, so the preview is not loaded",
+    "newestKeeps": "The newer version stays: {{author}}, {{when}}.",
+    "newestKeepsPlain": "The version that was changed later stays.",
+    "copySaved": "If you keep the newer one, Studio saves the other version next to it under this name:",
+    "copyLabel": "Name of the copy"
+  },
+  "deleteModify": {
+    "deletedBy": "Deleted by: {{author}}",
+    "changedBy": "Changed by: {{author}}",
+    "them": {
+      "mine": "The file stays in the project with your changes, and the deletion from the repository is not applied.",
+      "theirs": "The file disappears from the project and your changes in it are not kept. Earlier versions stay in the history."
+    },
+    "us": {
+      "mine": "The file stays deleted. The changes from the repository do not reach the project, but they stay in the history.",
+      "theirs": "The file comes back to the project together with the changes from the repository."
+    }
+  },
+  "group": {
+    "signature_group": {
+      "title": "Signatures cannot be mixed",
+      "text": "A signature covers the document byte for byte, so one side's whole set is taken: the frozen PDF together with its signatures. The other side's set is removed from the project.",
+      "doc": "Document: {{doc}}"
+    },
+    "case_collision": {
+      "title": "The names differ only by letter case",
+      "text": "On macOS and Windows such names mean the same file, so both cannot stay in the project. Pick the one to keep."
+    }
+  },
+  "warnings": {
+    "aria": "Sync warnings",
+    "files": "Files: {{count}}",
+    "template_missing_after_merge": {
+      "title": "This Studio version does not have the template",
+      "text": "The merge will go through, but the project will open read-only afterwards: the template it needs is not here. The version from before the sync is saved, so you can go back to it."
+    },
+    "signatures_stale": {
+      "title": "Signatures are out of date",
+      "text": "After the merge the document PDF will change while the signatures stay from the earlier version. They will have to be collected again."
+    },
+    "unsafe_path": {
+      "title": "Some files were skipped",
+      "text": "The repository sent files with unsafe paths. We do not write them to disk, and the rest is merged as usual."
+    },
+    "case_collision": {
+      "title": "File names match except for letter case",
+      "text": "On macOS and Windows such files cannot sit side by side. They need a decision."
+    },
+    "frozen_documents": {
+      "title": "Frozen documents were changed",
+      "text": "Documents that have signatures were edited in the repository. Check that the signed versions are intact."
+    },
+    "team_foreign_edit": {
+      "title": "Edits in someone else's part",
+      "text": "A teammate changed files assigned to another author."
+    },
+    "template_missing": {
+      "title": "This Studio version does not have the template",
+      "text": "The project opens read-only until the template becomes available."
+    },
+    "lfs_pointers": {
+      "title": "Large files are not downloaded",
+      "text": "Some files live in Git LFS and are not downloaded yet. Studio treats them as placeholders."
+    },
+    "unknown": {
+      "title": "Warning",
+      "text": "Code: {{code}}"
+    }
+  }
+}

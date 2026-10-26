@@ -9,6 +9,7 @@
 
 - `error_codes.json` закрытый список кодов ошибок (тело ответа `{detail, code}`);
 - `fixtures/<Схема>/<вариант>.json` эталонные тела запросов и ответов, по каталогу на схему; каталог без схемы в обоих тестах считается ошибкой;
-- `url_cases.json` векторы разбора адреса репозитория для `parse_remote_url` (Python) и `parseRemoteUrl` (TypeScript).
+- `url_cases.json` векторы разбора адреса репозитория для `parse_remote_url` (Python) и `parseRemoteUrl` (TypeScript);
+- `profile_cases.json` векторы проверки имени и e-mail автора для `core/vcs/author` (Python) и `validateProfile` (TypeScript); коды ошибок поля в ответе 422: `name_required`, `name_too_long`, `name_invalid`, `email_required`, `email_too_long`, `email_invalid`.
 
 Форму меняют так: сначала эталоны, затем обе стороны и оба набора тестов в одном коммите. Эталон содержит все поля ответа явно, в том числе `null`.

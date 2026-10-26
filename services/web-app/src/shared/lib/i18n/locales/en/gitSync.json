@@ -1,0 +1,328 @@
+{
+  "state": {
+    "no_remote": "Not connected",
+    "unfetched": "Not checked yet",
+    "up_to_date": "In sync",
+    "ahead": "Not sent",
+    "behind": "New changes",
+    "diverged": "Needs merging",
+    "syncing": "Syncing…",
+    "conflicts": "Conflicts",
+    "auth_failed": "No access",
+    "offline": "Offline",
+    "error": "Sync error",
+    "blocked": "Unavailable",
+    "unknown": "Unknown state"
+  },
+  "stateHint": {
+    "no_remote": "Connect a repository to share the project and work together.",
+    "unfetched": "The repository is connected, but we have not looked inside yet.",
+    "up_to_date": "You and the repository have the same versions.",
+    "ahead": "Some versions are not in the repository yet.",
+    "behind": "The repository has new versions.",
+    "diverged": "Both you and the repository have new work: the changes will be merged.",
+    "syncing": "Exchanging versions with the repository.",
+    "conflicts": "The same places were changed on both sides. Choose what to keep.",
+    "auth_failed": "The repository did not accept your access. Check the token or key.",
+    "offline": "Cannot reach the repository.",
+    "error": "Exchanging versions with the repository failed.",
+    "blocked": "Syncing is not possible right now."
+  },
+  "phase": {
+    "queued": "Queued",
+    "snapshot": "Saving a version",
+    "fetch": "Getting changes",
+    "merge": "Merging",
+    "push": "Sending",
+    "download": "Downloading the project",
+    "verify": "Checking",
+    "register": "Adding to Studio"
+  },
+  "operationKind": {
+    "sync": "Sync",
+    "resolve": "Applying decisions",
+    "connect": "Connecting",
+    "clone": "Downloading a project",
+    "bundle_import": "Importing a file"
+  },
+  "outcome": {
+    "up_to_date": "Everything is already in sync",
+    "pushed": "Changes sent",
+    "fast_forwarded": "New changes received",
+    "merged": "Changes merged",
+    "conflicts": "Conflicts need a decision"
+  },
+  "blocked": {
+    "off_branch": "The project is not on the branch that is synced.",
+    "read_only": "The project is open read-only.",
+    "remote_schema_newer": "The repository holds a project from a newer Studio.",
+    "store_untrusted": "The project history came from an untrusted source.",
+    "profile_required": "Set your author name and e-mail first."
+  },
+  "health": {
+    "ok": "All good",
+    "unauthenticated": "Access not accepted",
+    "offline": "Offline",
+    "error": "Error",
+    "host_key_changed": "Server key changed",
+    "remote_missing": "Repository not found",
+    "branch_missing": "The repository has no such branch"
+  },
+  "warning": {
+    "template_missing_after_merge": "After merging, the project template is missing in Studio",
+    "unsafe_path": "Unsafe paths were skipped",
+    "case_collision": "Files differ only by letter case",
+    "signatures_stale": "Signatures may be out of date",
+    "frozen_documents": "There are frozen documents",
+    "team_foreign_edit": "Edits in another author's files",
+    "template_missing": "Project template not found",
+    "lfs_pointers": "Git LFS files are present and not downloaded"
+  },
+  "demo": {
+    "open": "Sync demo scenarios",
+    "title": "Sync demo",
+    "subtitle": "The data is made up, no real repository is needed.",
+    "group": {
+      "connect": "Connecting",
+      "state": "States",
+      "problem": "Problems"
+    },
+    "scenario": {
+      "not_connected": {
+        "title": "No repository connected",
+        "hint": "Start here: connect a repository"
+      },
+      "connect_warnings": {
+        "title": "Connecting with warnings",
+        "hint": "NDA, Git LFS, cloud drive, earlier versions without an author"
+      },
+      "connect_large_files": {
+        "title": "Connecting: files too large",
+        "hint": "The dialog stops at the address step"
+      },
+      "connect_no_profile": {
+        "title": "Connecting: no version author",
+        "hint": "The dialog starts with the author prompt"
+      },
+      "unfetched": {
+        "title": "Connected, not checked yet",
+        "hint": "Press Check to see new versions"
+      },
+      "up_to_date": {
+        "title": "Everything in sync",
+        "hint": "No new or unsent versions"
+      },
+      "ahead": {
+        "title": "Something is not sent",
+        "hint": "4 versions are waiting to be sent"
+      },
+      "behind": {
+        "title": "New in the repository",
+        "hint": "3 new versions from colleagues"
+      },
+      "diverged": {
+        "title": "Needs merging",
+        "hint": "The merge goes through without conflicts"
+      },
+      "diverged_conflicts": {
+        "title": "Merging with conflicts",
+        "hint": "Syncing ends in conflicts"
+      },
+      "syncing": {
+        "title": "Sync in progress",
+        "hint": "A long operation you can cancel"
+      },
+      "conflicts": {
+        "title": "Conflicts waiting",
+        "hint": "Every kind: text, form, image, deletion"
+      },
+      "auth_failed": {
+        "title": "Access rejected",
+        "hint": "The token is revoked or expired"
+      },
+      "offline": {
+        "title": "Offline",
+        "hint": "The repository is unreachable"
+      },
+      "error": {
+        "title": "Exchange error",
+        "hint": "An unknown git failure"
+      },
+      "schema_newer": {
+        "title": "Project from a newer Studio",
+        "hint": "Syncing is blocked"
+      },
+      "off_branch": {
+        "title": "Project is off its branch",
+        "hint": "Syncing is blocked"
+      },
+      "read_only": {
+        "title": "Project is read-only",
+        "hint": "Syncing is blocked"
+      },
+      "no_profile": {
+        "title": "No author name and e-mail",
+        "hint": "A profile is needed first"
+      },
+      "shared_folder": {
+        "title": "Folder in a cloud drive",
+        "hint": "Yandex.Disk style warning"
+      }
+    },
+    "urlTitle": "What to type as the address",
+    "urlHelp": "With no hint words the address leads to an empty repository, or to a ready project when downloading one. Words in the address change the outcome: same, unrelated, other, plain, newer, empty. Failures: auth (needs a token), denied (token rejected), sso, readonly, offline, missing, tls, slow, limit. An unknown ssh server asks you to confirm its key, and the word changed gives \"server key changed\" (github.com). A branch that does not exist (other than main and develop) gives \"no such branch\"."
+  },
+  "control": {
+    "name": "Sync. {{status}}. {{action}}",
+    "details": "Sync details",
+    "label": {
+      "no_remote": "Sync",
+      "blocked_read_only": "Read only",
+      "blocked_off_branch": "Wrong branch",
+      "blocked_remote_schema_newer": "Newer Studio",
+      "blocked_store_untrusted": "Not trusted",
+      "blocked_profile_required": "Author needed",
+      "blocked_unknown": "Unavailable"
+    },
+    "status": {
+      "no_remote": "No repository connected",
+      "unfetched": "The repository has not been checked yet",
+      "up_to_date": "In sync, {{when}}",
+      "up_to_date_plain": "Everything is in sync",
+      "ahead": "Not sent: {{count}}",
+      "behind": "Changes available: {{count}}",
+      "diverged": "Changes available: {{incoming}}, not sent: {{outgoing}}",
+      "syncing": "Sync in progress. {{phase}}",
+      "syncingPlain": "Syncing…",
+      "conflicts": "Conflicts: {{count}}",
+      "auth_failed": "No access to the repository",
+      "offline": "Cannot reach the repository",
+      "offline_browser": "No network, syncing will wait",
+      "error": "Sync failed",
+      "unknown": "Unknown sync state",
+      "blocked_off_branch": "The project is not on its own branch",
+      "blocked_read_only": "The project is read only",
+      "blocked_remote_schema_newer": "The project is from a newer Studio",
+      "blocked_store_untrusted": "History comes from an untrusted source",
+      "blocked_profile_required": "An author is required",
+      "blocked_unknown": "Syncing is unavailable"
+    },
+    "action": {
+      "connect": "Press to connect a repository",
+      "sync": "Press to sync",
+      "resolve": "Press to resolve the conflicts",
+      "fix_access": "Press to update the access",
+      "retry": "Press to check again",
+      "details": "Press to see the details",
+      "none": "Press to see the details"
+    }
+  },
+  "popover": {
+    "title": "Sync with the repository",
+    "checked": "Checked {{when}}",
+    "neverChecked": "Not checked yet",
+    "synced": "synced {{when}}",
+    "incoming": "Arrived from the repository",
+    "outgoing": "Not sent",
+    "more": "and {{count}} more",
+    "allInHistory": "All versions in history",
+    "branch": "Repository branch",
+    "branchMapped": "The local branch {{local}} is sent to {{remote}}",
+    "openInBrowser": "Open in browser",
+    "settings": "Sync settings",
+    "sync": "Sync now",
+    "starting": "Starting…",
+    "check": "Check for updates",
+    "checking": "Checking…",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "notCancellable": "Finishing up, it can no longer be cancelled",
+    "resolve": "Resolve conflicts",
+    "fixAccess": "Update access",
+    "setProfile": "Set the author",
+    "technical": "Technical details",
+    "phases": "Sync steps",
+    "conflicts": "Files left to resolve: {{open}} of {{total}}",
+    "schemaNewer": "The project was written by a newer Studio. Version {{studio}} or later is needed, for now it is read only.",
+    "offlineBrowser": "The browser has no network. You can send versions once the connection is back.",
+    "hint": "Every version of the project goes to the repository when you sync.",
+    "noRemote": {
+      "text": "Connect a GitHub or GitLab repository or your own server to work on the project together: your versions go there, your colleagues' changes come to you.",
+      "subtitle": "Versions are kept only on this computer for now",
+      "connect": "Connect a repository"
+    }
+  },
+  "phaseHint": {
+    "queued": "Waiting for the build to finish"
+  },
+  "toast": {
+    "failedTitle": "Sync failed",
+    "failedUnknown": "Something went wrong, see the sync panel for details.",
+    "details": "Details",
+    "cancelled": "Sync cancelled",
+    "conflictsTitle": "Conflicts need your decision",
+    "conflicts": "Files in conflict: {{count}}. Sending is blocked until they are resolved.",
+    "resolve": "Resolve",
+    "syncedTitle": "Synced",
+    "up_to_date": "Everything is already in sync",
+    "pushed": "Versions sent: {{count}}",
+    "fast_forwarded": "Versions received: {{count}}",
+    "merged": "Versions received: {{pulled}}, sent: {{pushed}}",
+    "auto": "Files merged automatically: {{count}}",
+    "openHistory": "Open history",
+    "warnings": "Please note: {{list}}",
+    "saveFailedTitle": "Edits not saved",
+    "saveFailed": "Some edits could not be saved, so syncing did not start. Try again once saving works.",
+    "startFailedTitle": "Could not start syncing",
+    "checkFound": "New versions in the repository: {{count}}",
+    "checkNone": "No new versions in the repository",
+    "checkFailedTitle": "Could not check the repository",
+    "incomingTitle": "Colleagues made changes",
+    "incomingMessage": "New versions: {{count}}, the latest by {{author}}",
+    "sync": "Sync now"
+  },
+  "live": {
+    "syncDone": "Sync finished",
+    "incoming": "New versions in the repository: {{count}}",
+    "conflicts": "Sync stopped: conflicts need your decision, files: {{count}}",
+    "authFailed": "No access to the repository",
+    "syncFailed": "Sync failed",
+    "offline": "Cannot reach the repository"
+  },
+  "banner": {
+    "title": "Sync is not finished",
+    "text": "Files left to resolve: {{open}} of {{total}}. Sending is blocked, the project works as usual.",
+    "open": "Resolve"
+  },
+  "statusBar": {
+    "name": "Sync. {{status}}",
+    "notConnected": "not connected"
+  },
+  "panel": {
+    "empty": {
+      "title": "This project lives only on this computer",
+      "text": "Connect a GitHub or GitLab repository or your own server to work on the project together: your versions go there, your colleague's changes come to you.",
+      "bundle": "Exchange a file",
+      "bundleHint": "No repository needed: hand the project over as a single file and get one back."
+    },
+    "profileRequired": "To connect a repository, first set your author name and e-mail: they sign your versions.",
+    "sharedFolder": "The project folder is inside a cloud drive ({{provider}}). If the drive syncs both the project files and the hidden history folder, the history can get corrupted.",
+    "sharedFolderAck": "Got it",
+    "stats": {
+      "incoming": "Received from the repository",
+      "outgoing": "Not sent",
+      "checked": "Last check",
+      "synced": "Last sync",
+      "incomingFiles_one": "{{count}} file changed",
+      "incomingFiles_other": "{{count}} files changed",
+      "outgoingHint": "not in the repository yet",
+      "nothing": "nothing new",
+      "never": "not yet",
+      "autoOn": "auto-check is on",
+      "autoOff": "auto-check is off"
+    },
+    "showIncoming": "Show in the feed below",
+    "showOutgoing": "Show in the feed below",
+    "bundleLink": "Hand the project over as a file"
+  }
+}

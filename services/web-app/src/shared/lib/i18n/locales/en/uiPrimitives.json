@@ -22,5 +22,28 @@
   },
   "router": {
     "notFoundMessage": "Check the address or return to the home screen."
+  },
+  "diffPatch": {
+    "change": {
+      "added": "added",
+      "modified": "modified",
+      "deleted": "deleted",
+      "renamed": "renamed",
+      "copied": "copied"
+    },
+    "binary": "Binary file — contents are not shown.",
+    "noTextChanges": "No text changes to show."
+  },
+  "copyField": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copiedAnnounce": "Copied: {{label}}",
+    "failed": "Could not copy: select the text and copy it by hand"
+  },
+  "stepper": {
+    "done": "done",
+    "current": "current step",
+    "upcoming": "upcoming",
+    "error": "failed"
   }
 }

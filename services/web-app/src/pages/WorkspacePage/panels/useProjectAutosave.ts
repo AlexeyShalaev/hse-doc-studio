@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { usePendingSave } from "@shared/lib";
 import type { z } from "zod";
 import {
   type ProjectResponseSchema,
@@ -34,7 +35,8 @@ export type UseProjectAutosave = {
 };
 
 export const useProjectAutosave = (project: Project): UseProjectAutosave => {
-  const { mutate: updateProject } = useUpdateProject();
+  const { mutate: updateProject, mutateAsync: updateProjectAsync } =
+    useUpdateProject();
 
   // Unsaved edits overlaid on the server project. Mirrored into a ref so the
   // debounced flush + saveNow read the latest value without stale closures.
@@ -72,6 +74,15 @@ export const useProjectAutosave = (project: Project): UseProjectAutosave => {
     debouncedSave.cancel();
     send(pendingRef.current);
   };
+
+  // Let operations that read the project from disk (git sync, snapshots) write
+  // the debounced edits first, and wait for the answer.
+  usePendingSave(async () => {
+    if (!debouncedSave.isPending()) return;
+    debouncedSave.cancel();
+    if (Object.keys(pendingRef.current).length === 0) return;
+    await updateProjectAsync({ id: project.id, data: pendingRef.current });
+  });
 
   // Flush a pending autosave on unmount (navigating away, closing the panel) so
   // edits made within the debounce window aren't silently dropped.

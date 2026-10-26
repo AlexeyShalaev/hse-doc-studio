@@ -15,6 +15,11 @@ export type AppTitlebarProps = {
    * запрещено импортировать другой виджет — композицию делает страница.
    */
   projectSwitcher?: React.ReactNode;
+  /**
+   * Слот справа, перед кнопкой агента: действия открытого проекта (синхронизация).
+   * Так же, слотом, а не импортом: виджет не может подтянуть другой виджет.
+   */
+  projectActions?: React.ReactNode;
 };
 
 const Logomark = () => (
@@ -41,6 +46,7 @@ export const AppTitlebar = ({
   projectName,
   projectIsNda,
   projectSwitcher,
+  projectActions,
 }: AppTitlebarProps) => {
   const { t } = useTranslation("appChrome");
   const navigate = useNavigate();
@@ -175,6 +181,14 @@ export const AppTitlebar = ({
         className="flex items-center shrink-0"
         style={{ gap: 4, alignItems: "center" }}
       >
+        {projectActions && (
+          <div
+            className="flex items-center shrink-0"
+            style={{ marginRight: 4 }}
+          >
+            {projectActions}
+          </div>
+        )}
         <button
           type="button"
           className={clsx("icon-btn tt", systemChatOpen && "active")}

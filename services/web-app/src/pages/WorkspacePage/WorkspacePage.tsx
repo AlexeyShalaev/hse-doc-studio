@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useDocuments } from "@entities/document";
+import { useSyncUiStore } from "@entities/git-sync";
 import { useProject } from "@entities/project";
+import { ConflictScreen } from "@features/git-conflicts";
 import { useResumeProjectStreams, useStartCompileAll } from "@entities/compile";
 import { DocumentTabs } from "@widgets/DocumentTabs";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { ProjectSwitcher } from "@widgets/ProjectSwitcher";
+import { SyncCluster } from "@widgets/SyncCluster";
 import type { WorkbenchActivity } from "@shared/lib";
 import {
   setLastDoc,
@@ -53,6 +56,7 @@ export type WorkspaceCanvas =
   | "document"
   | "files"
   | "versions"
+  | "sync-conflicts"
   | "project-settings"
   | "submit-pack"
   | "submit-signatures"
@@ -157,6 +161,11 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
     onBuildAll: () => {
       startAll((documents ?? []).map((doc) => doc.id));
     },
+    // Само действие выбирает элемент синхронизации: он знает состояние проекта
+    // (синхронизировать, подключить репозиторий или показать, что мешает).
+    onSync: () => {
+      useSyncUiStore.getState().requestCommand("sync");
+    },
     onOpenProjectSwitcher: () => {
       setIsSwitcherOpen(true);
     },
@@ -173,6 +182,9 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
         return <FileEditorView projectId={projectId} />;
       case "versions":
         return <VersionsView project={project} />;
+      case "sync-conflicts":
+        // key — по проекту: выборы по конфликтам не должны переживать смену проекта.
+        return <ConflictScreen key={project.id} projectId={projectId} />;
       case "project-settings":
         // key — по проекту и только по нему: пересборка на смене секции убила
         // бы отложенное сохранение вместе с недописанной правкой.
@@ -223,13 +235,16 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
             onOpenChange={setIsSwitcherOpen}
           />
         }
+        projectActions={<SyncCluster projectId={projectId} />}
       />
 
       <WorkbenchShell
         projectId={projectId}
         selectedDocId={docId}
         isProjectSettingsActive={canvas === "project-settings"}
-        isVersionsActive={canvas === "versions"}
+        // Разбор конфликтов живёт на «Истории»: рейка подсвечивает её и
+        // не показывает боковую панель.
+        isVersionsActive={canvas === "versions" || canvas === "sync-conflicts"}
         onSelectDoc={handleSelectDoc}
         projectSettingsSection={projectSettingsSection}
         canvas={canvasNode}

@@ -100,6 +100,11 @@ export const GitHostSchema = z.object({
 
 export const GitHostListSchema = z.array(GitHostSchema);
 
+// Отпечаток-заглушка: запрос на доверие без `replace` с ней не меняет ключ, а
+// заставляет сервер ответить 409 host_key_changed с тем ключом, который он
+// предъявляет сейчас. Так узнаём новый отпечаток, когда проверка его не принесла.
+export const REVEAL_FINGERPRINT = "SHA256:reveal";
+
 export const TrustHostRequestSchema = z.object({
   host: z.string(),
   port: z.number().nullish(),

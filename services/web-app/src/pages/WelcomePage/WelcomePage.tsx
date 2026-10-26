@@ -7,9 +7,10 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { History, Plus, Search, Upload } from "lucide-react";
+import { GitBranch, History, Plus, Search, Upload } from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
+import { CLONE_PATH } from "@entities/git-sync";
 import type { ProjectResponseSchema } from "@entities/project";
 import {
   useProjects,
@@ -235,6 +236,10 @@ export const WelcomePage = () => {
     void navigate("/wizard?mode=connect");
   };
 
+  const handleCloneFromGit = () => {
+    void navigate(CLONE_PATH);
+  };
+
   const handleChangeSort = (next: SortMode) => {
     setSort(next);
     try {
@@ -332,6 +337,14 @@ export const WelcomePage = () => {
                 >
                   <Upload size={13} />
                   {t("header.openFolder")}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleCloneFromGit}
+                >
+                  <GitBranch size={13} />
+                  {t("header.cloneFromGit")}
                 </button>
                 <button
                   type="button"
@@ -474,6 +487,7 @@ export const WelcomePage = () => {
             ) : filtered.length === 0 ? (
               <EmptyState
                 onCreate={handleCreateProject}
+                onClone={handleCloneFromGit}
                 query={query}
                 onResetQuery={handleResetQuery}
               />
