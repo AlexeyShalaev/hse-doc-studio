@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { ConflictFileSide } from "@entities/git-sync";
-import { formatSize, formatWhen } from "../lib/format";
+import { formatFileSize } from "@shared/lib";
+import { formatWhen } from "../lib/format";
 
 /** Одна строка о стороне файла: автор, когда, размер; или «файла нет». */
 export const SideFacts = ({ side }: { side: ConflictFileSide }) => {
@@ -11,7 +12,7 @@ export const SideFacts = ({ side }: { side: ConflictFileSide }) => {
   const parts = [
     side.author,
     formatWhen(side.at),
-    side.size != null ? formatSize(side.size) : null,
+    side.size != null ? formatFileSize(side.size) : null,
   ].filter((part): part is string => !!part);
   return <span className="dim">{parts.join(" · ") || t("side.exists")}</span>;
 };

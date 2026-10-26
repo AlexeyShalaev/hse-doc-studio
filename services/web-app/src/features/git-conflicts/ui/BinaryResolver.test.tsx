@@ -119,8 +119,8 @@ describe("BinaryResolver", () => {
     );
     // Кто и когда менял, и сколько весит.
     expect(screen.getByText(/Иван Смирнов/)).toBeInTheDocument();
-    expect(screen.getByText(/180 КБ/)).toBeInTheDocument();
-    expect(screen.getByText(/2\.0 КБ/)).toBeInTheDocument();
+    expect(screen.getByText(/180 кБ/)).toBeInTheDocument();
+    expect(screen.getByText(/2 кБ/)).toBeInTheDocument();
   });
 
   it("says which version is newer", () => {

@@ -97,7 +97,7 @@ describe("DeleteModifyResolver", () => {
     renderResolver(deletedByThem);
     expect(screen.getByText(/Изменил: Иван Смирнов/)).toBeInTheDocument();
     expect(screen.getByText("Удалил: Анна Петрова")).toBeInTheDocument();
-    expect(screen.getByText(/2\.0 КБ/)).toBeInTheDocument();
+    expect(screen.getByText(/2 кБ/)).toBeInTheDocument();
   });
 
   it("flips the options when the file was deleted here and changed there", async () => {
