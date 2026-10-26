@@ -6,7 +6,7 @@ import httpx
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
 from hse_doc_studio.core.ai_runtime import (
@@ -15,6 +15,7 @@ from hse_doc_studio.core.ai_runtime import (
     IOllamaRuntime,
     IPullModelJobs,
 )
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -23,12 +24,15 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
     IChangeLogRepository,
     IChatRepository,
+    ICompileRepository,
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
@@ -72,7 +76,6 @@ from hse_doc_studio.core.vcs.protocols import (
     IVcsService,
 )
 from hse_doc_studio.infra.ai.agent.edit_applier import FuzzySearchReplaceApplier
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.infra.checks.runner import CheckRunner
 
@@ -83,13 +86,11 @@ from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileEx
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
 from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
-from hse_doc_studio.infra.docker.siblings import Reachability
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
@@ -641,7 +642,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: OfficeConvertManager,
+        office_manager: IOfficeConvertService,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
@@ -716,6 +717,7 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         check_resolution_service: CheckResolutionService,
+        compile_repo: ICompileRepository,
         file_repo: IFileRepository,
     ) -> GetCheckResultsUC:
         return GetCheckResultsUC(
@@ -724,7 +726,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             check_resolution_service=check_resolution_service,
             file_repo=file_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -735,8 +737,8 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
-        check_runner: CheckRunner,
-        lt_manager: LanguageToolContainerManager,
+        check_runner: ICheckRunner,
+        lt_manager: ILanguageCheckService,
         settings_repo: ISettingsRepository,
     ) -> RunChecksUC:
         return RunChecksUC(
@@ -775,12 +777,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        compile_repo: ICompileRepository,
     ) -> GetNormcontrolReportUC:
         return GetNormcontrolReportUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     # ------------------------------------------------------------------ Forms engine
@@ -1579,11 +1582,12 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         capacity_probe: ISystemCapacityProbe,
+        compile_repo: ICompileRepository,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             template_repo=template_repo,
             template_service=template_service,
             check_resolution_service=check_resolution_service,
@@ -1831,13 +1835,13 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
         log_bus: CompileLogBus,
     ) -> GetCompileStreamUC:
-        # GetCompileStreamUC needs the concrete JsonCompileRepository for get_for_project.
         return GetCompileStreamUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             log_bus=log_bus,
         )
 
@@ -1846,11 +1850,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> GetCompileUC:
         return GetCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -1884,11 +1889,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> ListCompilesUC:
         return ListCompilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     @provide
@@ -1896,13 +1902,14 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
         compile_runner: CompileRunner,
         log_bus: CompileLogBus,
     ) -> CancelCompileUC:
         return CancelCompileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
             compile_runner=compile_runner,
             log_bus=log_bus,
         )
@@ -1912,11 +1919,12 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        compile_repo: ICompileRepository,
     ) -> RecoverStaleCompilesUC:
         return RecoverStaleCompilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
-            compile_repo=JsonCompileRepository(),
+            compile_repo=compile_repo,
         )
 
     # ------------------------------------------------------------------ LanguageTool
@@ -1980,8 +1988,8 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        office_editor_manager: OfficeEditorManager,
-        reachability: Reachability,
+        office_editor_manager: IOfficeEditorService,
+        reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository,
     ) -> GetOfficeEditorConfigUC:
@@ -2005,9 +2013,9 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
-        office_editor_manager: OfficeEditorManager,
+        office_editor_manager: IOfficeEditorService,
         put_file_uc: PutFileUC,
-        office_convert_manager: OfficeConvertManager,
+        office_convert_manager: IOfficeConvertService,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
     ) -> OfficeEditorCallbackUC:
@@ -2513,6 +2521,7 @@ class UseCaseProvider(Provider):
         get_vcs_diff_uc: GetVcsDiffUC,
         create_vcs_snapshot_uc: CreateVcsSnapshotUC,
         restore_vcs_uc: RestoreVcsUC,
+        compile_repo: ICompileRepository,
     ) -> ToolRegistry:
         # ONE unified catalog: project tools (requires_project=True) + app/system
         # tools (requires_project=False). The loop filters by whether the chat has
@@ -2533,7 +2542,7 @@ class UseCaseProvider(Provider):
             EditTexTool(get_file_uc, put_file_uc, edit_applier).definition(),
             SetLanguageTool(update_project_uc).definition(),
             SetProjectMetaTool(update_project_uc).definition(),
-            CompileDocumentTool(trigger_compile_uc, get_project_uc, JsonCompileRepository()).definition(),
+            CompileDocumentTool(trigger_compile_uc, get_project_uc, compile_repo).definition(),
             PackageProjectTool(create_submission_uc, get_submission_profiles_uc).definition(),
             # --- VCS / «Версии» (project-scoped) ---
             VcsStatusTool(get_vcs_status_uc).definition(),
@@ -2562,7 +2571,7 @@ class UseCaseProvider(Provider):
         agent_provider: IAgentProvider,
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
@@ -2590,7 +2599,7 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
     ) -> GetChatRunStreamUC:
         return GetChatRunStreamUC(
             project_repo=project_repo,
@@ -2605,7 +2614,7 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         chat_repo: IChatRepository,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
     ) -> CancelChatTurnUC:
         return CancelChatTurnUC(
@@ -2666,13 +2675,13 @@ class UseCaseProvider(Provider):
 
     @provide
     def get_system_cancel_chat_turn_uc(
-        self, chat_repo: IChatRepository, bus: AgentRunBus, run_manager: AgentRunManager
+        self, chat_repo: IChatRepository, bus: IAgentRunBus, run_manager: AgentRunManager
     ) -> SystemCancelChatTurnUC:
         return SystemCancelChatTurnUC(self._system_folder(), chat_repo, bus, run_manager)
 
     @provide
     def get_system_get_chat_run_stream_uc(
-        self, chat_repo: IChatRepository, bus: AgentRunBus
+        self, chat_repo: IChatRepository, bus: IAgentRunBus
     ) -> SystemGetChatRunStreamUC:
         return SystemGetChatRunStreamUC(self._system_folder(), chat_repo, bus)
 
@@ -2685,7 +2694,7 @@ class UseCaseProvider(Provider):
         agent_provider: IAgentProvider,
         registry: ToolRegistry,
         approval_gate: IApprovalGate,
-        bus: AgentRunBus,
+        bus: IAgentRunBus,
         run_manager: AgentRunManager,
         context_service: ChatContextService,
         summarizer: IChatSummarizer,

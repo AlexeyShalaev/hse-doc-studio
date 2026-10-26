@@ -7,10 +7,12 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import CheckEngine
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -20,8 +22,6 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.team import doc_base_dir
 from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
-from hse_doc_studio.infra.checks.runner import CheckRunner
-from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import (
     resolve_active_languagetool_image,
 )
@@ -68,8 +68,8 @@ class RunChecksUC:
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
-        check_runner: CheckRunner,
-        lt_manager: LanguageToolContainerManager,
+        check_runner: ICheckRunner,
+        lt_manager: ILanguageCheckService,
         settings_repo: ISettingsRepository,
     ) -> None:
         self._get_project_uc = GetProjectUC(project_repo, project_index_repo)

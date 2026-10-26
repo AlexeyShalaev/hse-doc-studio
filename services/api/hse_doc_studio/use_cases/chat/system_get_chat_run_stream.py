@@ -5,10 +5,10 @@ from pathlib import Path
 from uuid import UUID
 
 from hse_doc_studio.core.agent.entities import AgentEvent
+from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import AgentRunRecord
 from hse_doc_studio.core.enums import AgentEventType, AgentRunStatus
 from hse_doc_studio.core.repositories import IChatRepository
-from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 
 _TERMINAL = (
     AgentRunStatus.succeeded,
@@ -23,7 +23,7 @@ class SystemGetChatRunStreamUC:
     """System-scope twin of GetChatRunStreamUC: live bus events, then backfill +
     terminal event, against a fixed app-level folder (no project resolution)."""
 
-    def __init__(self, folder: Path, chat_repo: IChatRepository, bus: AgentRunBus) -> None:
+    def __init__(self, folder: Path, chat_repo: IChatRepository, bus: IAgentRunBus) -> None:
         self._folder = folder
         self._chat_repo = chat_repo
         self._bus = bus

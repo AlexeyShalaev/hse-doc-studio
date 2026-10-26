@@ -23,16 +23,6 @@ class JsonCompileRepository:
     def _compiles_dir(self, project_folder: Path) -> Path:
         return project_folder / _HSE_STUDIO / "compiles"
 
-    def get(self, compile_id: UUID) -> CompileRecord | None:
-        # compile_id alone is not enough to find the file without a folder;
-        # we do a best-effort scan based on infra convention (not used in protocol directly).
-        # The primary lookup is by folder+doc_id. This method is here for protocol compliance.
-        logger.warning(
-            "JsonCompileRepository.get called without folder context; returning None",
-            compile_id=str(compile_id),
-        )
-        return None
-
     def get_for_project(self, project_folder: Path, compile_id: UUID) -> CompileRecord | None:
         path = self._compiles_dir(project_folder) / f"{compile_id}.json"
         if not path.exists():

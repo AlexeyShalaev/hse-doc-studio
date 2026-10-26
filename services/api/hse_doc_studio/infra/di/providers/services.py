@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import httpx
 import structlog
-from dishka import Provider, Scope, provide
+from dishka import AnyOf, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.agent.protocols import IAgentProvider, IApprovalGate
+from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
 from hse_doc_studio.core.ai_runtime import (
@@ -14,7 +14,9 @@ from hse_doc_studio.core.ai_runtime import (
     IOllamaRuntime,
     IPullModelJobs,
 )
+from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.entities import CatalogModel
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog, FontCatalogFile, FontCatalogItem
 from hse_doc_studio.core.fonts.repositories import (
     IFontDownloader,
@@ -23,6 +25,8 @@ from hse_doc_studio.core.fonts.repositories import (
     ISystemFontProvider,
 )
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
+from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import (
@@ -138,7 +142,7 @@ class DomainServiceProvider(Provider):
         return SdkAgentProvider()
 
     @provide
-    def get_agent_run_bus(self) -> AgentRunBus:
+    def get_agent_run_bus(self) -> AnyOf[AgentRunBus, IAgentRunBus]:
         # Single long-lived pub/sub for live run events (mirror get_compile_log_bus).
         return AgentRunBus()
 
@@ -271,7 +275,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> LanguageToolContainerManager:
+    ) -> AnyOf[LanguageToolContainerManager, ILanguageCheckService]:
         cfg = settings.languagetool
         return LanguageToolContainerManager(
             container_name=cfg.container_name,
@@ -288,9 +292,9 @@ class DomainServiceProvider(Provider):
     @provide
     def get_check_runner(
         self,
-        lt_manager: LanguageToolContainerManager,
+        lt_manager: ILanguageCheckService,
         lt_client: httpx.Client,
-    ) -> CheckRunner:
+    ) -> AnyOf[CheckRunner, ICheckRunner]:
         return CheckRunner(lt_manager=lt_manager, lt_client=lt_client)
 
     @provide
@@ -298,7 +302,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeConvertManager:
+    ) -> AnyOf[OfficeConvertManager, IOfficeConvertService]:
         # Gotenberg для pptx→PDF-предпросмотра. HTTP-клиент общий с LanguageTool
         # (обычный пул httpx, ничего LT-специфичного); таймаут конвертации
         # передаётся пер-запросно. Маппинг путей проекта не нужен — файл уходит
@@ -326,7 +330,7 @@ class DomainServiceProvider(Provider):
         self,
         lt_client: httpx.Client,
         siblings: SiblingNetwork,
-    ) -> OfficeEditorManager:
+    ) -> AnyOf[OfficeEditorManager, IOfficeEditorService]:
         # ONLYOFFICE Document Server для in-app редактирования pptx. HTTP-клиент
         # общий (health-пробы + скачивание сохранённого документа); JWT-секрет
         # живёт в data_dir и переживает рестарты (усыновлённый контейнер обязан
@@ -355,7 +359,7 @@ class DomainServiceProvider(Provider):
         return SiblingNetwork()
 
     @provide
-    def get_reachability(self, siblings: SiblingNetwork) -> Reachability:
+    def get_reachability(self, siblings: SiblingNetwork) -> AnyOf[Reachability, IBackendReachability]:
         # Наш адрес глазами соседнего контейнера — тоже процессный факт, поэтому
         # APP-скоуп: выясняется один раз и кэшируется.
         return Reachability(
@@ -520,7 +524,7 @@ class DomainServiceProvider(Provider):
         return DockerCleanupJobManager(docker_system_manager)
 
     @provide
-    def get_compile_log_bus(self) -> CompileLogBus:
+    def get_compile_log_bus(self) -> AnyOf[CompileLogBus, IJobLogStream]:
         return CompileLogBus()
 
     @provide

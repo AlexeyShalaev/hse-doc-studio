@@ -10,10 +10,13 @@ from pathlib import Path
 import httpx
 import structlog
 
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, OFFICE_DOCUMENT_TYPES
 from hse_doc_studio.infra.docker.cli import docker_binary, managed_label_args
 from hse_doc_studio.infra.docker.siblings import SiblingNetwork
 
 logger = structlog.get_logger()
+
+__all__ = ["CONVERTIBLE_OFFICE_EXTS", "OFFICE_DOCUMENT_TYPES", "OfficeConvertManager"]
 
 _PS_TIMEOUT_S = 10.0
 _INSPECT_TIMEOUT_S = 5.0
@@ -26,29 +29,6 @@ _HEALTH_POLL_INTERVAL_S = 1.0
 _REAPER_INTERVAL_S = 30.0
 
 _CONVERT_ROUTE = "/forms/libreoffice/convert"
-
-# Office formats Gotenberg/LibreOffice can convert to PDF — shared by the
-# compile pipeline (pptx/office preview) and the packaging preflight/assembler
-# so the allowlist lives in exactly one place.
-CONVERTIBLE_OFFICE_EXTS: frozenset[str] = frozenset(
-    {".doc", ".docx", ".odt", ".rtf", ".ppt", ".pptx", ".odp", ".xls", ".xlsx", ".ods"}
-)
-
-# ext -> (DocsAPI document.fileType, documentType) for formats ONLYOFFICE
-# Document Server can actually EDIT (not just view/convert) — shared between
-# the office-editor config/callback and the frontend tab gating.
-OFFICE_DOCUMENT_TYPES: dict[str, tuple[str, str]] = {
-    ".doc": ("doc", "word"),
-    ".docx": ("docx", "word"),
-    ".odt": ("odt", "word"),
-    ".rtf": ("rtf", "word"),
-    ".xls": ("xls", "cell"),
-    ".xlsx": ("xlsx", "cell"),
-    ".ods": ("ods", "cell"),
-    ".ppt": ("ppt", "slide"),
-    ".pptx": ("pptx", "slide"),
-    ".odp": ("odp", "slide"),
-}
 
 
 class OfficeConvertManager:

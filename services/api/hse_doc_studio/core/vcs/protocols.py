@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Sequence
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 from typing import Protocol
 
@@ -112,9 +112,12 @@ class IVcsService(Protocol):
 class IVcsFolderLocks(Protocol):
     """Hands out a per-project-folder lock that serializes VCS write operations
     (and the compile-success auto-commit) so concurrent git writes can't corrupt
-    the index. Read-only operations never lock."""
+    the index. Read-only operations never lock.
 
-    def for_folder(self, folder: Path) -> asyncio.Lock: ...
+    The key is the resolved folder path; the result is only used with
+    ``async with``, so any async context manager fits (not just asyncio.Lock)."""
+
+    def for_folder(self, folder: Path) -> AbstractAsyncContextManager[None]: ...
 
 
 class IVcsEditThrottle(Protocol):

@@ -11,6 +11,7 @@ from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.enums import DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, IOfficeConvertService
 from hse_doc_studio.core.repositories import (
     IFileRepository,
     IProjectIndexRepository,
@@ -21,7 +22,6 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.value_objects import CustomFileOverride
 from hse_doc_studio.core.vcs.protocols import IVcsEditThrottle, IVcsFolderLocks, IVcsService
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
 from hse_doc_studio.use_cases.files._vcs_edit import maybe_edit_commit
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -60,7 +60,7 @@ class UploadCustomFileUC:
         template_repo: ITemplateRepository,
         file_repo: IFileRepository,
         signature_repo: ISignatureRepository,
-        office_manager: OfficeConvertManager,
+        office_manager: IOfficeConvertService,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,

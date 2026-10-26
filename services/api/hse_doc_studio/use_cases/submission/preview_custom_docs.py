@@ -7,6 +7,7 @@ import structlog
 
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -14,7 +15,6 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import SubmissionProfileService
 from hse_doc_studio.core.team import author_by_slug
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()

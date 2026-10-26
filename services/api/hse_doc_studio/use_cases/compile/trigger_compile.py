@@ -24,6 +24,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ISettingsRepository,
@@ -57,7 +58,6 @@ from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.compile.pdf_archive import archive_compiled_pdf
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
-from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.project_init.template_renderer import (
     instantiate_nda,
     regenerate_dynamic_includes,
@@ -136,7 +136,7 @@ class TriggerCompileUC:
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
-        compile_repo: JsonCompileRepository,
+        compile_repo: ICompileRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
