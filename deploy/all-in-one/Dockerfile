@@ -49,7 +49,9 @@ COPY services/api/hse_doc_studio /app/hse_doc_studio
 FROM python:3.14-slim-bookworm AS production
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# upgrade подтягивает security-обновления Debian, которых ещё нет в базовом образе
+# (иначе Trivy падает на свежих CVE библиотек, например openssl, до выхода нового python:slim)
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     ca-certificates curl git gnupg openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
