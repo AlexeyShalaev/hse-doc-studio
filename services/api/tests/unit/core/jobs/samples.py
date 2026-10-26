@@ -8,6 +8,13 @@ from hse_doc_studio.core.catalog import CheckRule
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, CompileResult, JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
+from hse_doc_studio.core.jobs.office import (
+    OfficeConvertPayload,
+    OfficeConvertReason,
+    OfficeConvertResult,
+    OfficeConvertStatus,
+)
 from hse_doc_studio.core.value_objects import CheckFix, CheckLocation, CheckResult
 
 from tests.factories import make_check_rule
@@ -78,5 +85,40 @@ def make_compile_result() -> JobResult:
             words=1200,
             chars=9000,
             finished_at=datetime(2026, 10, 26, 9, 30, 15, 123456, tzinfo=timezone.utc),
+        ),
+    )
+
+
+def make_office_payload(*, image: str | None = "gotenberg/gotenberg:8") -> OfficeConvertPayload:
+    return OfficeConvertPayload(
+        source=ManifestFile(path="tz/_custom/ТЗ.docx", sha256="ab" * 32, size=1234),
+        output_path="tz/_custom/ТЗ.pdf",
+        image=image,
+        convert_timeout_s=45.5,
+        want_pages=True,
+        reason=OfficeConvertReason.save_refresh,
+    )
+
+
+def make_office_spec(*, local_root: object = None) -> JobSpec:
+    return JobSpec(
+        id=JOB_ID,
+        kind=JobKind.office_convert,
+        tags=frozenset({"office"}),
+        project_id=PROJECT_ID,
+        actor=Actor.user("u1", "Иван", "ivan@example.com"),
+        locale=Lang.ru,
+        payload=make_office_payload(),
+        local_root=local_root,  # type: ignore[arg-type]
+    )
+
+
+def make_office_result() -> JobResult:
+    return JobResult(
+        status=JobStatus.succeeded,
+        data=OfficeConvertResult(
+            status=OfficeConvertStatus.ok,
+            output=ArtifactRef(path="tz/_custom/ТЗ.pdf", sha256="cd" * 32, size=4321),
+            pages=12,
         ),
     )

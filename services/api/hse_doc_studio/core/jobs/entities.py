@@ -108,4 +108,6 @@ def compile_job_tags(needs_compile: bool, source_ext: str) -> frozenset[str]:
 def job_tags(kind: JobKind, payload: JobPayload) -> frozenset[str]:
     if kind is JobKind.compile and isinstance(payload, CompileJobPayload):
         return compile_job_tags(payload.needs_compile, Path(payload.source_file).suffix)
+    if kind is JobKind.office_convert:
+        return frozenset({"office"})
     raise ValueError(f"no tags for job kind {kind}")

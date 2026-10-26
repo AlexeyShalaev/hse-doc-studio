@@ -6,6 +6,7 @@ from enum import StrEnum
 class JobKind(StrEnum):
     # Остальные виды добавляют слайсы своих семейств, по одному на вид.
     compile = "compile"
+    office_convert = "office.convert"
 
 
 class JobStatus(StrEnum):

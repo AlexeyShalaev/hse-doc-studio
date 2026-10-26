@@ -17,10 +17,11 @@ from hse_doc_studio.core.catalog import (
 )
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_doc_decision, sibling_pdf_path
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
-from hse_doc_studio.infra.office.convert_manager import CONVERTIBLE_OFFICE_EXTS, OfficeConvertManager
+from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, Stamp
 from hse_doc_studio.infra.signatures.signing_package import (
@@ -338,14 +339,6 @@ class SubmissionAssembler:
             return str(Path(arcname).with_suffix(doc.custom_file.ext))
         return arcname
 
-    @staticmethod
-    def _custom_doc_decision(
-        doc_id: str, convert_to_pdf_at_package: bool | None, decisions: dict[str, bool] | None
-    ) -> bool | None:
-        if decisions is not None and doc_id in decisions:
-            return decisions[doc_id]
-        return convert_to_pdf_at_package
-
     async def _get_or_convert_preview(self, project_folder: Path, stored_path: str) -> str | None:
         """Sibling PDF-превью конвертируемого custom_file; None — недоступно.
 
@@ -354,7 +347,7 @@ class SubmissionAssembler:
         удалось сгенерировать при загрузке).
         """
         stored_abs = project_folder / stored_path
-        preview_rel = str(Path(stored_path).with_suffix(".pdf"))
+        preview_rel = sibling_pdf_path(stored_path)
         preview_abs = project_folder / preview_rel
         if preview_abs.is_file():
             return preview_rel
@@ -390,7 +383,7 @@ class SubmissionAssembler:
         if custom_file.ext == ".pdf":
             return custom_file.stored_path, True
 
-        decision = self._custom_doc_decision(doc.id, custom_file.convert_to_pdf_at_package, custom_doc_decisions)
+        decision = resolve_custom_doc_decision(doc.id, custom_file.convert_to_pdf_at_package, custom_doc_decisions)
         if decision and custom_file.ext in CONVERTIBLE_OFFICE_EXTS:
             preview_rel = await self._get_or_convert_preview(project_folder, custom_file.stored_path)
             if preview_rel is not None:

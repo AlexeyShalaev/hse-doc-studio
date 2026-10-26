@@ -6,6 +6,7 @@ from functools import cache
 from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.entities import CompileJobPayload, CompileResult
 from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult
 from hse_doc_studio.core.jobs.policy import JobKindPolicy
 
 
@@ -25,6 +26,12 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
             payload_cls=CompileJobPayload,
             result_cls=CompileResult,
             policy=JobKindPolicy(streams_log=True, counts_as_active=True, blocks_folder_ops=True),
+        ),
+        JobKindSpec(
+            kind=JobKind.office_convert,
+            payload_cls=OfficeConvertPayload,
+            result_cls=OfficeConvertResult,
+            policy=JobKindPolicy(awaitable=True, detachable=True, idempotent=True),
         ),
     )
 
