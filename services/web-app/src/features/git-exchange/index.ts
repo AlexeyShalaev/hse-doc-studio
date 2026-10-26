@@ -10,3 +10,6 @@ export { CiCard } from "./ui/CiCard";
 export type { CiCardProps } from "./ui/CiCard";
 export { ExchangeCard } from "./ui/ExchangeCard";
 export type { ExchangeCardProps } from "./ui/ExchangeCard";
+
+// Галерея состояний для страницы разработчика (только DEV).
+export { getExchangeGallery } from "./fixtures/exchangeGallery";
