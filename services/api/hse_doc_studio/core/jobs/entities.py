@@ -11,6 +11,7 @@ from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang
 from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import JobError, JobFailedError
+from hse_doc_studio.core.jobs.pack import ArchiveFormat, PackSubmissionPayload
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS
 from hse_doc_studio.core.value_objects import CheckResult
 
@@ -112,9 +113,18 @@ def compile_job_tags(needs_compile: bool, source_ext: str) -> frozenset[str]:
     return frozenset()
 
 
+def pack_job_tags(archive_format: ArchiveFormat) -> frozenset[str]:
+    """`pack` и, для 7z и rar, тег внешней утилиты: раннер без неё такую задачу не возьмёт."""
+    if archive_format in (ArchiveFormat.sevenz, ArchiveFormat.rar):
+        return frozenset({"pack", f"archive:{archive_format.value}"})
+    return frozenset({"pack"})
+
+
 def job_tags(kind: JobKind, payload: JobPayload) -> frozenset[str]:
     if kind is JobKind.compile and isinstance(payload, CompileJobPayload):
         return compile_job_tags(payload.needs_compile, Path(payload.source_file).suffix)
     if kind is JobKind.office_convert:
         return frozenset({"office"})
+    if kind is JobKind.pack_submission and isinstance(payload, PackSubmissionPayload):
+        return pack_job_tags(payload.archive_format)
     raise ValueError(f"no tags for job kind {kind}")

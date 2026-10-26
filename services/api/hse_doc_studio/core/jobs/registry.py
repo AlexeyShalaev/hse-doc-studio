@@ -7,6 +7,7 @@ from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.entities import CompileJobPayload, CompileResult
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult
+from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
 from hse_doc_studio.core.jobs.policy import JobKindPolicy
 
 
@@ -32,6 +33,13 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
             payload_cls=OfficeConvertPayload,
             result_cls=OfficeConvertResult,
             policy=JobKindPolicy(awaitable=True, detachable=True, idempotent=True),
+        ),
+        JobKindSpec(
+            kind=JobKind.pack_submission,
+            payload_cls=PackSubmissionPayload,
+            result_cls=PackResult,
+            # Один пакет за раз: так было неявно, и глобальный реестр шрифтов reportlab не гоняется.
+            policy=JobKindPolicy(awaitable=True, embedded_concurrency=1),
         ),
     )
 
