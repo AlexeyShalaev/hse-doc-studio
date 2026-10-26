@@ -37,7 +37,9 @@ from hse_doc_studio.core.git_sync.error_classifier import (
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import (
+    ICertificateService,
     IGitCredentialRepository,
+    IGitHostSettingsRepository,
     IHostKeyScanner,
     IKnownHostsStore,
     ProgressCallback,
@@ -89,9 +91,13 @@ class GitRemoteRunner:
         capabilities: GitCapabilities | None = None,
         known_hosts: IKnownHostsStore | None = None,
         scanner: IHostKeyScanner | None = None,
+        host_settings: IGitHostSettingsRepository | None = None,
+        certificates: ICertificateService | None = None,
     ) -> None:
         self._config = config
         self._credentials = credentials
+        self._host_settings = host_settings
+        self._certificates = certificates
         self._known_hosts = known_hosts
         self._scanner = scanner
         self._allow_local = config.allow_local_remotes and local_mode
@@ -117,6 +123,7 @@ class GitRemoteRunner:
             )
         credential, secret = self._load_credential(target)
         auth = build_http_auth(target.url, credential, secret) if credential and secret else None
+        trust_config = await self._trust_config(target)
         env = {
             **base_git_env(),
             "GIT_ALLOW_PROTOCOL": allowed_protocols(target.url),
@@ -133,6 +140,7 @@ class GitRemoteRunner:
             secrets=auth.secrets if auth else (),
             timeout_s=timeout_s,
             on_progress=on_progress,
+            extra_config=trust_config,
         )
 
     async def _run_ssh(
@@ -186,11 +194,14 @@ class GitRemoteRunner:
         secrets: tuple[str, ...],
         timeout_s: float,
         on_progress: ProgressCallback | None,
+        extra_config: Sequence[str] = (),
     ) -> GitResult:
         await self._capabilities.ensure_git(cwd=git_dir.parent, env=env)
         started = time.monotonic()
         try:
-            result = await self._spawn(args, git_dir=git_dir, env=env, timeout_s=timeout_s, on_progress=on_progress)
+            result = await self._spawn(
+                args, git_dir=git_dir, env=env, timeout_s=timeout_s, on_progress=on_progress, extra_config=extra_config
+            )
         except GitSyncError as exc:
             self._log(args, target, started, None, exc.code)
             raise
@@ -224,11 +235,12 @@ class GitRemoteRunner:
         env: dict[str, str],
         timeout_s: float,
         on_progress: ProgressCallback | None,
+        extra_config: Sequence[str] = (),
     ) -> GitResult:
         argv = [self._capabilities.git_binary]
         if git_dir is not None:
             argv += ["--git-dir", str(git_dir)]
-        argv += [*hardened_git_config(), *_network_config(), *args]
+        argv += [*hardened_git_config(), *_network_config(), *extra_config, *args]
         cwd = git_dir.parent if git_dir is not None else Path(tempfile.gettempdir())
         try:
             return await self._process.run(argv, env=env, cwd=cwd, timeout_s=timeout_s, on_progress=on_progress)
@@ -236,6 +248,36 @@ class GitRemoteRunner:
             raise git_error(GitErrorCode.timeout) from None
         except OSError:
             raise git_error(GitErrorCode.git_unavailable) from None
+
+    async def _trust_config(self, target: RemoteTarget) -> list[str]:
+        """Доверие к серверу с самоподписанным или внутренним сертификатом: `-c` только для адреса этого сервера.
+
+        Закреплённый сертификат сверяется до запуска git: другой сертификат это подмена или смена, а не сбой сети.
+        Проверка цепочки при этом не отключается: git доверяет ровно файлу PEM этого сервера.
+        """
+        if self._host_settings is None or target.url.kind is not RemoteKind.https or target.url.host is None:
+            return []
+        host, port = target.url.host, target.url.port
+        settings = self._host_settings.get(host, port)
+        if settings is None or not settings.has_trust:
+            return []
+        if settings.pinned_fingerprint is not None and self._certificates is not None:
+            await self._check_pin(host, port, settings.pinned_fingerprint)
+        trust_file = self._host_settings.trust_file(host, port)
+        if trust_file is None:
+            return []
+        authority = f"{host}:{port}" if port else host
+        return ["-c", f"http.https://{authority}/.sslCAInfo={trust_file}"]
+
+    async def _check_pin(self, host: str, port: int | None, pinned: str) -> None:
+        assert self._certificates is not None  # noqa: S101 — проверено вызывающим
+        try:
+            presented = await self._certificates.fetch(host, port)
+        except GitSyncError:
+            # Сервер недоступен: пусть git сообщит причину сам, подмены здесь нет.
+            return
+        if presented.fingerprint_sha256 != pinned:
+            raise git_error(GitErrorCode.tls_pin_mismatch, expected=pinned, actual=presented.fingerprint_sha256)
 
     def _check_policy(self, target: RemoteTarget) -> None:
         kind = target.url.kind
@@ -288,7 +330,19 @@ class GitRemoteRunner:
             code = GitErrorCode.credentials_missing
         if code in {GitErrorCode.host_key_unknown, GitErrorCode.host_key_changed}:
             return await self._host_key_error(code, target)
+        if code is GitErrorCode.tls_untrusted_ca:
+            return await self._untrusted_ca_error(target)
         return git_error(code, tail=classified.detail)
+
+    async def _untrusted_ca_error(self, target: RemoteTarget) -> GitSyncError:
+        """Сертификат не принят: он идёт в ошибке, чтобы человек сверил отпечаток и решил, добавить CA или закрепить."""
+        if self._certificates is None or target.url.host is None:
+            return git_error(GitErrorCode.tls_untrusted_ca)
+        try:
+            presented = await self._certificates.fetch(target.url.host, target.url.port)
+        except GitSyncError:
+            return git_error(GitErrorCode.tls_untrusted_ca)
+        return git_error(GitErrorCode.tls_untrusted_ca, certificate=presented.public())
 
     async def _host_key_error(self, code: GitErrorCode, target: RemoteTarget) -> GitSyncError:
         """Ключ хоста не подошёл: отпечатки идут в ошибке, чтобы человек решил на месте, без второго запроса."""

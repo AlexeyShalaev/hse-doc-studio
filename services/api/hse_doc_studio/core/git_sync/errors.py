@@ -11,6 +11,7 @@ class GitErrorCode(StrEnum):
     url_invalid = "url_invalid"
     url_scheme_forbidden = "url_scheme_forbidden"
     provider_unknown = "provider_unknown"
+    host_settings_invalid = "host_settings_invalid"
     credential_invalid = "credential_invalid"
     credential_in_use = "credential_in_use"
     credential_host_mismatch = "credential_host_mismatch"

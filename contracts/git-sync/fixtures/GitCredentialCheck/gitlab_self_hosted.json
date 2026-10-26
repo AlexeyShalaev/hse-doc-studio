@@ -1,0 +1,32 @@
+{
+  "credential": {
+    "id": "4c5d6e7f-8091-4a2b-b3c4-d5e6f7a8b9c0",
+    "kind": "pat",
+    "label": "GitLab ВШЭ, токен на 90 дней",
+    "host": "gitlab.hse.local",
+    "username": "oauth2",
+    "status": "ok",
+    "token_family": "glpat",
+    "public_key": null,
+    "fingerprint_sha256": null,
+    "created_at": "2026-10-24T12:10:00Z",
+    "last_used_at": "2026-10-26T09:30:00Z",
+    "expires_at": "2027-01-22T00:00:00Z",
+    "used_by": []
+  },
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "api",
+    "version": "17.3.1"
+  },
+  "token_info": {
+    "login": "anna.petrova",
+    "scopes": [
+      "read_repository",
+      "write_repository"
+    ],
+    "expires_at": "2027-01-22T00:00:00Z",
+    "sufficiency": "sufficient",
+    "missing": []
+  }
+}

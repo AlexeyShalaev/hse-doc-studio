@@ -150,6 +150,8 @@ class UpdateCredentialUC:
             new_secret = normalize_token(inp.token.reveal())
             changes["token_family"] = token_family(new_secret.reveal())
             changes["status"] = CredentialStatus.unverified
+            # Срок прежнего токена к новому не относится: его назовёт следующая проверка.
+            changes["expires_at"] = None
         updated = replace(current, **changes)  # type: ignore[arg-type]
         self._repo.update(updated, new_secret)
         used = self._usage.by_credential().get(updated.id, ())

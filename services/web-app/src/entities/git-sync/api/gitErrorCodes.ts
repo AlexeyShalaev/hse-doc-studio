@@ -5,6 +5,7 @@ export const GIT_ERROR_CODES = [
   "url_invalid",
   "url_scheme_forbidden",
   "provider_unknown",
+  "host_settings_invalid",
   "credential_invalid",
   "credential_in_use",
   "credential_host_mismatch",

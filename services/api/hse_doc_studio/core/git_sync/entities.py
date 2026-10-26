@@ -12,7 +12,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
-from hse_doc_studio.core.git_sync.providers import GitProvider
+from hse_doc_studio.core.git_sync.providers import GitProvider, Sufficiency
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
 
 
@@ -310,6 +310,60 @@ class LastError:
 
 
 @dataclass(frozen=True)
+class TlsCertificate:
+    """Сертификат сервера для показа человеку: по нему решают, добавить CA или закрепить отпечаток."""
+
+    fingerprint_sha256: str
+    subject: str
+    issuer: str
+    not_before: datetime
+    not_after: datetime
+    self_signed: bool
+
+
+@dataclass(frozen=True)
+class ServerCertificate(TlsCertificate):
+    """Сертификат, который сервер предъявил на самом деле; PEM нужен для закрепления и наружу не отдаётся."""
+
+    pem: str
+
+    def public(self) -> TlsCertificate:
+        return TlsCertificate(
+            self.fingerprint_sha256, self.subject, self.issuer, self.not_before, self.not_after, self.self_signed
+        )
+
+
+class TokenState(StrEnum):
+    """Что сервер сказал о токене: годен, не принят, истёк или проверить нельзя (старый сервер, узкий токен)."""
+
+    valid = "valid"
+    rejected = "rejected"
+    expired = "expired"
+    unknown = "unknown"
+
+
+@dataclass(frozen=True)
+class TokenIntrospection:
+    """Ответ сервера о токене: владелец, права (None: сервер их не назвал) и срок."""
+
+    state: TokenState
+    login: str | None = None
+    scopes: tuple[str, ...] | None = None
+    expires_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class TokenInfo:
+    """Что известно о токене после проверки и хватает ли его для чтения и записи."""
+
+    login: str | None
+    scopes: tuple[str, ...]
+    expires_at: datetime | None
+    sufficiency: Sufficiency
+    missing: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class RemoteProbe:
     """Итог проверки адреса (probe): без записи в проект."""
 
@@ -322,6 +376,10 @@ class RemoteProbe:
     relation: ProbeRelation = ProbeRelation.unknown
     error: GitOperationError | None = None
     host_keys: tuple[GitHostKey, ...] = ()
+    certificate: TlsCertificate | None = None
+    # tls_pin_mismatch: закреплённый отпечаток и тот, что сервер предъявил сейчас.
+    expected_fingerprint: str | None = None
+    actual_fingerprint: str | None = None
     schema_access: SchemaAccess | None = None
     required_studio: str | None = None
     template_available: bool | None = None

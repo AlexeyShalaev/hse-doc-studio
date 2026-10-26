@@ -870,6 +870,13 @@ class GitConfig(BaseModel):
         description="Allow file:// and absolute-path remotes. Local mode only; a shared server never allows them.",
     )
     probe_timeout_s: float = Field(default=20.0, description="Timeout for checking a remote address.")
+    provider_detect_timeout_s: float = Field(
+        default=3.0,
+        description="Timeout of each request that recognizes a git server (GitLab, Gitea, GitHub Enterprise).",
+    )
+    token_check_timeout_s: float = Field(
+        default=10.0, description="Timeout of a request to the hosting API that tells whose token it is and its scopes."
+    )
     fetch_timeout_s: float = Field(default=120.0, description="Timeout for one fetch.")
     push_timeout_s: float = Field(default=300.0, description="Timeout for one push.")
     clone_timeout_s: float = Field(

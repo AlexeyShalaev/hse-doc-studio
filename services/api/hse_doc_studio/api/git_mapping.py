@@ -16,16 +16,41 @@ from hse_doc_studio.core.git_sync.entities import (
     PendingSession,
     SyncResult,
     SyncWarning,
+    TlsCertificate,
+    TokenInfo,
 )
-from hse_doc_studio.core.git_sync.providers import detect_provider
+from hse_doc_studio.core.git_sync.providers import ProviderInfo
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeView
 from hse_doc_studio.use_cases.git_sync.status import GitStatusView
 
 
-def _provider_info(host: str | None) -> schema.GitProviderInfo:
-    """Провайдер по имени хоста; выбор человека и ответ API сервера подключаются вместе с их хранением."""
-    info = detect_provider(host)
+def map_provider_info(info: ProviderInfo) -> schema.GitProviderInfo:
     return schema.GitProviderInfo(id=info.id.value, detected_by=info.detected_by.value, version=info.version)
+
+
+def map_token_info(info: TokenInfo | None) -> schema.GitTokenInfo | None:
+    if info is None:
+        return None
+    return schema.GitTokenInfo(
+        login=info.login,
+        scopes=list(info.scopes),
+        expires_at=info.expires_at,
+        sufficiency=info.sufficiency.value,
+        missing=list(info.missing),
+    )
+
+
+def map_certificate(certificate: TlsCertificate | None) -> schema.GitTlsCertificate | None:
+    if certificate is None:
+        return None
+    return schema.GitTlsCertificate(
+        fingerprint_sha256=certificate.fingerprint_sha256,
+        subject=certificate.subject,
+        issuer=certificate.issuer,
+        not_before=certificate.not_before,
+        not_after=certificate.not_after,
+        self_signed=certificate.self_signed,
+    )
 
 
 def _brief(commit: CommitBrief) -> schema.GitCommitBrief:
@@ -76,7 +101,7 @@ def map_status(view: GitStatusView) -> schema.GitStatusResponse:
             kind=remote.kind.value,
             host=remote.host,
             provider=remote.provider,
-            provider_info=_provider_info(remote.host),
+            provider_info=map_provider_info(remote.provider_info),
             web_url=remote.web_url,
             branch=remote.branch,
             local_branch=remote.local_branch,
@@ -190,18 +215,21 @@ def map_probe(view: ProbeView) -> schema.ProbeResponse:
             detail=view.error.detail,
             host_keys=[schema.GitHostKey(type=k.type, fingerprint_sha256=k.fingerprint_sha256) for k in view.host_keys]
             or None,
+            certificate=map_certificate(view.certificate),
+            expected=view.expected_fingerprint,
+            actual=view.actual_fingerprint,
         ),
         url=schema.ProbeUrl(
             display_url=url.display_url,
             kind=url.kind.value,
             host=url.host,
-            provider=url.provider.value,
+            provider=view.provider.id.value,
             owner=url.owner,
             repo=url.repo,
             token_stripped=url.token_stripped,
         ),
-        provider_info=_provider_info(url.host),
-        token_info=None,
+        provider_info=map_provider_info(view.provider),
+        token_info=map_token_info(view.token_info),
         reachable=view.reachable,
         auth_ok=view.auth_ok,
         empty=view.empty,

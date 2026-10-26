@@ -39,6 +39,7 @@ from hse_doc_studio.infra.vcs.git_env import base_git_env
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 
 from tests.factories import make_project
+from tests.fixtures.tls import TlsMaterial
 
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "Test Author",
@@ -236,23 +237,38 @@ class RecordedRequest:
         return self.headers.get("authorization")
 
 
+# Ответ тестового API хостинга: статус, заголовки, тело JSON.
+ApiReply = tuple[int, Mapping[str, str], object]
+ApiHandler = Callable[[Mapping[str, str]], ApiReply]
+
+
 @dataclass
 class GitHttpServer:
-    """git http-backend на 127.0.0.1:0. Режимы переключаются на ходу полем `mode`."""
+    """git http-backend на 127.0.0.1:0. Режимы переключаются на ходу полем `mode`.
+
+    `tls` включает https. `api` отвечает JSON на пути вида `/api/v4/version` до проверки доступа к git: так один
+    сервер изображает и git, и API хостинга (GitLab, GitHub Enterprise, Gitea) для проверки определения провайдера.
+    """
 
     root: Path
     token: str | None
     mode: str = "ok"
     redirect_to: str | None = None
+    tls: TlsMaterial | None = None
+    api: dict[str, ApiHandler] = field(default_factory=dict)
     requests: list[RecordedRequest] = field(default_factory=list)
     _server: ThreadingHTTPServer | None = None
     _thread: threading.Thread | None = None
     _release: threading.Event = field(default_factory=threading.Event)
 
     @property
-    def base_url(self) -> str:
+    def port(self) -> int:
         assert self._server is not None
-        return f"http://127.0.0.1:{self._server.server_address[1]}"
+        return int(self._server.server_address[1])
+
+    @property
+    def base_url(self) -> str:
+        return f"{'https' if self.tls else 'http'}://127.0.0.1:{self.port}"
 
     def url(self, repo: str) -> str:
         return f"{self.base_url}/{repo}"
@@ -274,6 +290,8 @@ class GitHttpServer:
             server_state = owner
 
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        if self.tls is not None:
+            self._server.socket = self.tls.server_context().wrap_socket(self._server.socket, server_side=True)
         self._server.daemon_threads = True
         self._thread = threading.Thread(target=self._server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
         self._thread.start()
@@ -313,6 +331,11 @@ class _GitHandler(BaseHTTPRequestHandler):
         if state.mode == "hang":
             state._release.wait(_HANG_LIMIT_S)
             self.close_connection = True
+            return
+        api = state.api.get(urlsplit(self.path).path)
+        if api is not None:
+            status, headers, payload = api(state.requests[-1].headers)
+            self._reply(status, {"Content-Type": "application/json", **headers}, json.dumps(payload).encode())
             return
         if state.redirect_to is not None:
             self._reply(302, {"Location": state.redirect_to.rstrip("/") + self.path}, b"")
@@ -400,8 +423,8 @@ def http_git_server_factory(tmp_path: Path) -> Iterator[Callable[..., GitHttpSer
     require_http_backend()
     servers: list[GitHttpServer] = []
 
-    def make(*, token: str | None = "pat-token-0123456789") -> GitHttpServer:
-        server = GitHttpServer(root=tmp_path / f"http-root-{len(servers)}", token=token)
+    def make(*, token: str | None = "pat-token-0123456789", tls: TlsMaterial | None = None) -> GitHttpServer:
+        server = GitHttpServer(root=tmp_path / f"http-root-{len(servers)}", token=token, tls=tls)
         server.root.mkdir(parents=True)
         server.start()
         servers.append(server)

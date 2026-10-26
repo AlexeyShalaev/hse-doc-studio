@@ -26,6 +26,7 @@
     "url_invalid": "The repository address is not valid.",
     "url_scheme_forbidden": "This kind of address is not supported. Use https or ssh.",
     "provider_unknown": "Unknown server type. Choose GitHub, GitLab, Gitea, Bitbucket or other.",
+    "host_settings_invalid": "The server settings are not valid: check the certificate and the fingerprint.",
     "credential_invalid": "The access details are not valid.",
     "credential_in_use": "This access is used by projects, detach it first.",
     "credential_host_mismatch": "This access was created for a different server.",
