@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
-from hse_doc_studio.api.route_actions import rule_for
+from hse_doc_studio.api.route_actions import rule_for, scope_for_rule
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import ProjectAcl
@@ -102,8 +102,7 @@ async def project_access_guard(request: Request) -> None:
         # project_id в теле или query: право проверит сценарий, когда прочитает запрос.
         raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
     acl = await load_project_acl(request, str(project_id))
-    path = request.path_params.get(rule.path_param) if rule.path_param else None
-    _enforce(decide(actor, rule.action, acl, None if path is None else str(path)))
+    _enforce(decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params)))
 
 
 def _enforce(decision: Decision) -> None:

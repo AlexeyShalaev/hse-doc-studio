@@ -6,6 +6,7 @@ from pathlib import Path
 
 from hse_doc_studio.core.jobs.files import InlineBlob
 from hse_doc_studio.core.jobs.verify import OpenPgpTrust, OpenPgpTrustMode, TrustBundle
+from hse_doc_studio.infra.signatures.openpgp import looks_like_openpgp_signature
 
 _ROOT_SUFFIXES = {".cer", ".crt", ".pem", ".der"}
 
@@ -33,9 +34,13 @@ class LocalTrustMaterialProvider:
         self._roots_dir = roots_dir
         self._cache_dir = cache_dir
 
-    def snapshot(self) -> TrustBundle:
+    def snapshot(self, signature: bytes | None = None) -> TrustBundle:
+        """Для OpenPGP-подписи корни и кеш цепочек не читаются: проверка идет по связке gpg, как и раньше."""
+        openpgp = OpenPgpTrust(mode=OpenPgpTrustMode.runner_home)
+        if signature is not None and looks_like_openpgp_signature(signature):
+            return TrustBundle(openpgp=openpgp)
         return TrustBundle(
             roots=tuple(InlineBlob.from_bytes(b) for b in read_trusted_roots(self._roots_dir)),
             intermediates=tuple(InlineBlob.from_bytes(b) for b in read_chain_cache(self._cache_dir)),
-            openpgp=OpenPgpTrust(mode=OpenPgpTrustMode.runner_home),
+            openpgp=openpgp,
         )

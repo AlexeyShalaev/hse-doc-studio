@@ -28,7 +28,9 @@ class IChainFetcher(Protocol):
 class ITrustMaterialProvider(Protocol):
     """Доверенный материал проверки подписи: корни, кеш цепочек и режим связки OpenPGP."""
 
-    def snapshot(self) -> TrustBundle: ...
+    def snapshot(self, signature: bytes | None = None) -> TrustBundle:
+        """Материал для проверки; `signature` подсказка: сертификаты OpenPGP-подписи не нужны, их можно не читать."""
+        ...
 
 
 class IPublicKeyExporter(Protocol):

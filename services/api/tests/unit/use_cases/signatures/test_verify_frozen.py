@@ -51,9 +51,11 @@ class FakeTrust:
     def __init__(self, bundle: TrustBundle) -> None:
         self.bundle = bundle
         self.calls = 0
+        self.hints: list[bytes | None] = []
 
-    def snapshot(self) -> TrustBundle:
+    def snapshot(self, signature: bytes | None = None) -> TrustBundle:
         self.calls += 1
+        self.hints.append(signature)
         return self.bundle
 
 
@@ -89,6 +91,7 @@ async def test__verify_frozen__builds_spec_from_frozen_pdf_and_trust_snapshot(tm
 
     assert verified == _VERIFIED
     assert trust.calls == 1
+    assert trust.hints == [b"sig-bytes"]
     (spec,) = dispatcher.specs
     assert spec.kind is JobKind.verify_detached
     assert spec.tags == frozenset({"verify"})

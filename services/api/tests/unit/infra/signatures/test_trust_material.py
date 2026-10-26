@@ -55,3 +55,29 @@ def test__trust_material__snapshot_is_taken_at_call_time(tmp_path: Path) -> None
     _fill(roots, cache)
 
     assert len(provider.snapshot().roots) == 4
+
+
+def test__trust_material__openpgp_signature__does_not_touch_roots_or_cache(tmp_path: Path) -> None:
+    roots = tmp_path / "r"
+    roots.mkdir()
+    (roots / "broken.pem").mkdir()  # папка с именем сертификата: чтение упало бы
+    cache = tmp_path / "c"
+    cache.mkdir()
+    (cache / "x.cer").mkdir()
+    provider = LocalTrustMaterialProvider(roots, cache)
+
+    bundle = provider.snapshot(b"-----BEGIN PGP SIGNATURE-----\n\nabc")
+
+    assert bundle.roots == ()
+    assert bundle.intermediates == ()
+    assert bundle.openpgp.mode is OpenPgpTrustMode.runner_home
+
+
+def test__trust_material__cms_or_unknown_signature__still_reads_roots(tmp_path: Path) -> None:
+    roots = tmp_path / "r"
+    roots.mkdir()
+    (roots / "a.pem").write_bytes(b"root")
+    provider = LocalTrustMaterialProvider(roots, None)
+
+    assert len(provider.snapshot(b"\x30\x82cms").roots) == 1
+    assert len(provider.snapshot().roots) == 1

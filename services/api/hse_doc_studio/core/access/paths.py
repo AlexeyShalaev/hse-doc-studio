@@ -5,11 +5,14 @@ from __future__ import annotations
 from typing import Literal
 
 from hse_doc_studio.core.access.entities import Grant, ProjectAcl, Role
-from hse_doc_studio.core.team import RESERVED_SLUGS, SHARED_DIR
+from hse_doc_studio.core.team import RESERVED_SLUGS, SHARED_DIR, split_instance_id
 
 PathClass = Literal["output", "source"]
 
 _BUILD_DIR = ".build"
+# Под `.build/` выводом считаются только PDF и лог сборки. Остальное (synctex, aux, fls, bbl)
+# хранит имена исходников, номера строк и тексты разделов, то есть это исходник.
+_BUILD_OUTPUT_SUFFIXES = (".pdf", ".log")
 
 
 def normalize_path(path: str) -> str | None:
@@ -26,7 +29,7 @@ def normalize_path(path: str) -> str | None:
 
 
 def classify_path(path: str | None) -> PathClass:
-    """`output` для PDF и всего под `.build/` (лог сборки), иначе `source`.
+    """`output` для PDF и лога сборки под `.build/`, иначе `source`.
 
     Нет пути или путь недопустим: `source`, то есть строже.
     """
@@ -34,9 +37,19 @@ def classify_path(path: str | None) -> PathClass:
     if normalized is None:
         return "source"
     parts = normalized.split("/")
-    if _BUILD_DIR in parts[:-1] or parts[-1].lower().endswith(".pdf"):
+    name = parts[-1].lower()
+    if name.endswith(".pdf") or (_BUILD_DIR in parts[:-1] and name.endswith(_BUILD_OUTPUT_SUFFIXES)):
         return "output"
     return "source"
+
+
+def scope_path_of_instance_id(instance_id: str) -> str | None:
+    """Область записи для id экземпляра `<база>--<автор>` (документ, форма, слот): слаг автора.
+
+    Слаг стоит первым сегментом, как у файлов автора, так что дальше работает обычная проверка
+    области. Id без автора в область автора не входит: None, пишет только владелец и `can_edit_all`.
+    """
+    return split_instance_id(instance_id)[1]
 
 
 def path_in_author_scope(acl: ProjectAcl, grant: Grant, path: str | None) -> bool:

@@ -87,7 +87,7 @@ async def verify_frozen(
     payload = VerifyDetachedPayload(
         pdf=ManifestFile(frozen.path, sha256=frozen.sha256),
         signature=InlineBlob.from_bytes(content),
-        trust=await asyncio.to_thread(trust_provider.snapshot),
+        trust=await asyncio.to_thread(trust_provider.snapshot, content),
     )
     spec = JobSpec(
         id=uuid4(),

@@ -152,3 +152,16 @@ def test__route_key__strips_api_prefix_and_leaves_relative_path_unchanged() -> N
         "/projects/{project_id}/files/{path:path}",
     )
     assert route_key("GET", "/projects/{project_id}") == ("GET", "/projects/{project_id}")
+
+
+def test__scope_for_rule__file_path_as_is_instance_id_by_author() -> None:
+    from hse_doc_studio.api.route_actions import RouteRule, scope_for_rule  # noqa: PLC0415
+    from hse_doc_studio.core.access.actions import Action  # noqa: PLC0415
+
+    assert (
+        scope_for_rule(RouteRule(Action.FILES_WRITE, path_param="path"), {"path": "alex/main.tex"}) == "alex/main.tex"
+    )
+    assert scope_for_rule(RouteRule(Action.FILES_WRITE, path_param="doc_id"), {"doc_id": "vkr--alex"}) == "alex"
+    assert scope_for_rule(RouteRule(Action.FILES_WRITE, path_param="slot_id"), {"slot_id": "sig"}) is None
+    assert scope_for_rule(RouteRule(Action.SIGN, path_param="slot_id"), {"slot_id": "sig--alex"}) == "sig--alex"
+    assert scope_for_rule(RouteRule(Action.FILES_WRITE), {"path": "x"}) is None

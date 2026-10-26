@@ -19,6 +19,7 @@ from typing import Literal
 from fastapi import Request
 
 from hse_doc_studio.core.access.actions import Action, RouteExemption
+from hse_doc_studio.core.access.paths import scope_path_of_instance_id
 
 API_PREFIX = "/api/v1"
 
@@ -34,6 +35,9 @@ class RouteRule:
 
 
 RouteKey = tuple[str, str]
+
+# Параметры пути, в которых лежит id экземпляра `<база>--<автор>`, а не путь файла.
+INSTANCE_ID_PARAMS = frozenset({"doc_id", "form_id", "slot_id"})
 
 
 def route_key(method: str, path: str) -> RouteKey:
@@ -185,6 +189,18 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # Звонит контейнер Document Server: подлинность проверяют подпись и JWT внутри сценария.
     ("POST", "/office-editor/callback"): RouteRule(RouteExemption.system_callback, project_source="query"),
 }
+
+
+def scope_for_rule(rule: RouteRule, path_params: Mapping[str, object]) -> str | None:
+    """Область проверки для решения: путь файла как есть, для id экземпляра слаг его автора."""
+    if rule.path_param is None:
+        return None
+    value = path_params.get(rule.path_param)
+    if value is None:
+        return None
+    if rule.action is Action.FILES_WRITE and rule.path_param in INSTANCE_ID_PARAMS:
+        return scope_path_of_instance_id(str(value))
+    return str(value)
 
 
 def rule_for(request: Request) -> RouteRule | None:

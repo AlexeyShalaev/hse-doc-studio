@@ -1,7 +1,12 @@
 import pytest
 from hse_doc_studio.core.access.actions import GUEST_DENIED, ROLE_ACTIONS, Action
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
-from hse_doc_studio.core.access.paths import classify_path, normalize_path, path_in_author_scope
+from hse_doc_studio.core.access.paths import (
+    classify_path,
+    normalize_path,
+    path_in_author_scope,
+    scope_path_of_instance_id,
+)
 from hse_doc_studio.core.access.policy import Decision, can, decide
 
 USER = Actor.user("u1", "Иван", "ivan@example.com")
@@ -215,7 +220,13 @@ def test__normalize_path__cases(path: str, expected: str | None) -> None:
         ("main.pdf", "output"),
         ("report/Main.PDF", "output"),
         ("report/.build/main/main.log", "output"),
-        (".build/x.png", "output"),
+        (".build/main/main.pdf", "output"),
+        (".build/x.png", "source"),
+        (".build/main/main.synctex.gz", "source"),
+        ("a/.build/main/main.aux", "source"),
+        (".build/main/main.fls", "source"),
+        ("docs/.build/m/main.bbl", "source"),
+        ("report/main.log", "source"),
         ("report/main.tex", "source"),
         ("report/.build", "source"),
         (".hse-studio/signatures/a.png", "source"),
@@ -232,3 +243,26 @@ def test__path_in_author_scope__solo_project_ignores_scope() -> None:
 
     assert path_in_author_scope(acl, Grant(Role.editor), "any/file.tex")
     assert path_in_author_scope(acl, Grant(Role.editor), None)
+
+
+def test__reader_without_sources__cannot_read_build_intermediates_but_reads_pdf_and_log() -> None:
+    acl = _acl(Grant(Role.reader, show_sources=False))
+
+    assert can(USER, Action.FILES_READ, acl, ".build/main/main.pdf")
+    assert can(USER, Action.FILES_READ, acl, ".build/main/main.log")
+    for hidden in (".build/main/main.synctex.gz", "a/.build/main/main.aux", ".build/main/main.fls"):
+        assert not can(USER, Action.FILES_READ, acl, hidden)
+
+
+def test__scope_path_of_instance_id__author_slug_or_none() -> None:
+    assert scope_path_of_instance_id("vkr--alex") == "alex"
+    assert scope_path_of_instance_id("sig--alex") == "alex"
+    assert scope_path_of_instance_id("vkr") is None
+
+
+def test__files_write_by_instance_id__editor_writes_own_doc_not_others_nor_ownerless() -> None:
+    acl = _acl(Grant(Role.editor, persona_slug="alex"), team=True)
+
+    assert can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--alex"))
+    assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--boris"))
+    assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr"))
