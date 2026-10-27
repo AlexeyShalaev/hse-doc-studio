@@ -1,10 +1,19 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n } from "@shared/lib";
+import { AuthErrorPage } from "@pages/AuthErrorPage";
 import { ErrorPage } from "@pages/ErrorPage";
+import { FirstRunPage } from "@pages/FirstRunPage";
+import { ForgotPage } from "@pages/ForgotPage";
+import { InvitePage } from "@pages/InvitePage";
+import { LoginPage } from "@pages/LoginPage";
+import { RegisterPage } from "@pages/RegisterPage";
+import { ResetPage } from "@pages/ResetPage";
 import { SettingsPage } from "@pages/SettingsPage";
+import { VerifyPage } from "@pages/VerifyPage";
 import { WelcomePage } from "@pages/WelcomePage";
 import { WizardPage } from "@pages/WizardPage";
 import { WorkspacePage } from "@pages/WorkspacePage";
+import { AuthLayout } from "@widgets/AuthLayout";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
 import { RootLayout } from "./RootLayout";
 
@@ -50,6 +59,21 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
+      // Экраны без сессии. В локальном режиме шлюз их не пропускает дальше
+      // обычного приложения: они нужны серверному режиму.
+      {
+        element: <AuthLayout />,
+        children: [
+          { path: "/login", element: <LoginPage /> },
+          { path: "/register", element: <RegisterPage /> },
+          { path: "/invite/:token", element: <InvitePage /> },
+          { path: "/verify/:token", element: <VerifyPage /> },
+          { path: "/forgot", element: <ForgotPage /> },
+          { path: "/reset/:token", element: <ResetPage /> },
+          { path: "/first-run", element: <FirstRunPage /> },
+          { path: "/auth/error", element: <AuthErrorPage /> },
+        ],
+      },
       {
         path: "/",
         element: <WelcomePage />,
