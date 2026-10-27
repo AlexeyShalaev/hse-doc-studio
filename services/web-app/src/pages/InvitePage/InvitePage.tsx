@@ -1,12 +1,3 @@
-import { useTranslation } from "react-i18next";
-import { AuthStubCard } from "@widgets/AuthLayout";
+import { InviteForm } from "@features/sign-up";
 
-export const InvitePage = () => {
-  const { t } = useTranslation("auth");
-  return (
-    <AuthStubCard
-      screen="invite"
-      links={[{ to: "/login", label: t("links.login") }]}
-    />
-  );
-};
+export const InvitePage = () => <InviteForm />;

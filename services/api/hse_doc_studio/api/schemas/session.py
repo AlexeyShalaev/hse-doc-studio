@@ -111,6 +111,18 @@ class RegisterResponse(StrictModel):
     link: str | None
 
 
+# Что известно о приглашении по ссылке: форма регистрации подставляет почту и блокирует её.
+class InvitationInfo(StrictModel):
+    email: str
+    invited_by: str
+    org_name: str | None
+
+
+# Повторная отправка письма подтверждения. Ответ нейтральный: ForgotResponse.
+class ResendVerificationRequest(StrictModel):
+    email: str
+
+
 class ForgotRequest(StrictModel):
     email: str
 

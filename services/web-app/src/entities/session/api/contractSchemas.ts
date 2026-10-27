@@ -12,6 +12,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   RegisterRequest: s.RegisterRequestSchema,
   RegisterResponse: s.RegisterResponseSchema,
   VerifyEmailRequest: s.VerifyEmailRequestSchema,
+  InvitationInfo: s.InvitationInfoSchema,
+  ResendVerificationRequest: s.ResendVerificationRequestSchema,
   ForgotRequest: s.ForgotRequestSchema,
   ForgotResponse: s.ForgotResponseSchema,
   ResetRequest: s.ResetRequestSchema,

@@ -1,12 +1,3 @@
-import { useTranslation } from "react-i18next";
-import { AuthStubCard } from "@widgets/AuthLayout";
+import { VerifyEmail } from "@features/account-recovery";
 
-export const VerifyPage = () => {
-  const { t } = useTranslation("auth");
-  return (
-    <AuthStubCard
-      screen="verify"
-      links={[{ to: "/login", label: t("links.login") }]}
-    />
-  );
-};
+export const VerifyPage = () => <VerifyEmail />;

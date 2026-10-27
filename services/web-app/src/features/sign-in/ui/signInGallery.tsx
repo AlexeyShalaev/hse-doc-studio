@@ -1,4 +1,3 @@
-import { MemoryRouter } from "react-router";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
 import type { AuthOptions } from "@entities/session";
 import { AUTH_ERROR_CODES } from "../lib/authErrorCodes";
@@ -33,16 +32,14 @@ const card = (
   pending = false,
   initialEmail = "",
 ) => (
-  <MemoryRouter>
-    <LoginCard
-      auth={auth}
-      failure={failure}
-      pending={pending}
-      initialEmail={initialEmail}
-      ssoHref={(id) => `#sso-${id}`}
-      onSubmit={() => undefined}
-    />
-  </MemoryRouter>
+  <LoginCard
+    auth={auth}
+    failure={failure}
+    pending={pending}
+    initialEmail={initialEmail}
+    ssoHref={(id) => `#sso-${id}`}
+    onSubmit={() => undefined}
+  />
 );
 
 const failureEntry = (code: string, title: string, note: string) => ({
@@ -54,6 +51,8 @@ const failureEntry = (code: string, title: string, note: string) => ({
   render: () => card(PASSWORD, { code }, false, "anna.petrova@example.org"),
 });
 
+// Маршрутизатор приложения уже даёт контекст для Link: свой MemoryRouter здесь
+// вложился бы в него и упал.
 /** Состояния входа и экрана /auth/error для галереи серверных экранов. */
 export const getSignInGallery = (): GalleryGroup[] => [
   {
@@ -175,11 +174,7 @@ export const getSignInGallery = (): GalleryGroup[] => [
       title: code,
       frame: "window" as const,
       width: 460,
-      render: () => (
-        <MemoryRouter>
-          <AuthErrorCard code={code} />
-        </MemoryRouter>
-      ),
+      render: () => <AuthErrorCard code={code} />,
     })),
   },
 ];

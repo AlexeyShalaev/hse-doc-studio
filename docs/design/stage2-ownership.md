@@ -25,7 +25,7 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 |---|---|
 | состояние входа | `GET /api/v1/session/bootstrap` |
 | вход, выход, сессия | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` |
-| регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset` |
+| регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) |
 | OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` |
 | мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `POST .../settings`, `POST .../complete` |
 | аккаунт | `/account` (профиль, пароль), `/account/sessions`, `/account/tokens`, `/account/identities` |

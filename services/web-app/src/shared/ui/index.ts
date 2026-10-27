@@ -112,6 +112,9 @@ export type { PopoverContentProps } from "./Popover";
 export { CopyField } from "./CopyField";
 export type { CopyFieldProps } from "./CopyField";
 
+export { LinkDelivery } from "./LinkDelivery";
+export type { LinkDeliveryProps } from "./LinkDelivery";
+
 export { ProgressBar } from "./ProgressBar";
 export type { ProgressBarProps } from "./ProgressBar";
 export { FileDropZone } from "./FileDropZone";

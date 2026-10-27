@@ -28,6 +28,18 @@
       "sso_only": {
         "title": "SSO only",
         "hint": "Passwords are off, sign-in goes through external providers."
+      },
+      "registration_open": {
+        "title": "Registration open",
+        "hint": "Any address, emails are sent."
+      },
+      "registration_domains": {
+        "title": "Registration by domain",
+        "hint": "Allowed domains only, emails are sent."
+      },
+      "registration_open_nosmtp": {
+        "title": "Open, no email",
+        "hint": "Emails are not sent: links are shown on screen."
       }
     }
   }

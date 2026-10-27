@@ -9,7 +9,10 @@ export type ServerDemoScenarioId =
   | "admin_ready"
   | "student_ready"
   | "registration_closed"
-  | "sso_only";
+  | "sso_only"
+  | "registration_open"
+  | "registration_domains"
+  | "registration_open_nosmtp";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -151,6 +154,48 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
             { id: "google", label: "Google" },
           ],
           smtp_enabled: true,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "registration_open",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "open",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "registration_domains",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "registration_open_nosmtp",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "open",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
           password_min_length: 10,
         },
       }),

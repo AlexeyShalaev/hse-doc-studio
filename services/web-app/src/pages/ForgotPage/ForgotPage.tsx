@@ -1,12 +1,3 @@
-import { useTranslation } from "react-i18next";
-import { AuthStubCard } from "@widgets/AuthLayout";
+import { ForgotForm } from "@features/account-recovery";
 
-export const ForgotPage = () => {
-  const { t } = useTranslation("auth");
-  return (
-    <AuthStubCard
-      screen="forgot"
-      links={[{ to: "/login", label: t("links.login") }]}
-    />
-  );
-};
+export const ForgotPage = () => <ForgotForm />;

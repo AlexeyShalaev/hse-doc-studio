@@ -1,12 +1,3 @@
-import { useTranslation } from "react-i18next";
-import { AuthStubCard } from "@widgets/AuthLayout";
+import { ResetForm } from "@features/account-recovery";
 
-export const ResetPage = () => {
-  const { t } = useTranslation("auth");
-  return (
-    <AuthStubCard
-      screen="reset"
-      links={[{ to: "/login", label: t("links.login") }]}
-    />
-  );
-};
+export const ResetPage = () => <ResetForm />;
