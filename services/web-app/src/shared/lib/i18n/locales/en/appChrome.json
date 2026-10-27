@@ -150,5 +150,20 @@
     "createTitle": "New project",
     "connectTitle": "Connect folder",
     "cloneTitle": "Clone a project"
+  },
+  "accountMenu": {
+    "title": "Account",
+    "open": "Account menu: {{name}}",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "logoutFailed": "Could not sign out: the server did not respond. Try again.",
+    "admin": "Administrator",
+    "unverified": "Email not verified",
+    "orgs": "Organizations",
+    "orgRole": {
+      "owner": "owner",
+      "admin": "admin",
+      "member": "member"
+    }
   }
 }

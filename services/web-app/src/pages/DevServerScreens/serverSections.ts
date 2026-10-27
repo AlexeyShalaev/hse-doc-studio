@@ -1,3 +1,4 @@
+import { getAccountMenuGallery } from "@features/account-menu";
 import { getRecoveryGallery } from "@features/account-recovery";
 import { getSignInGallery } from "@features/sign-in";
 import { getSignUpGallery } from "@features/sign-up";
@@ -14,4 +15,5 @@ export const buildServerSections = (): GallerySection[] => [
     title: "Пароль и подтверждение почты",
     groups: getRecoveryGallery(),
   },
+  { id: "shell", title: "Оболочка", groups: getAccountMenuGallery() },
 ];

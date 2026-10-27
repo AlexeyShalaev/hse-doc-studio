@@ -53,4 +53,17 @@ export const sessionApi = {
       throw error;
     }
   },
+
+  /**
+   * Выход. 401 значит, что сессии и так нет: для человека результат тот же,
+   * поэтому это успех. Путь /auth/* не будит обработчик 401 и не даёт тост.
+   */
+  logout: async (): Promise<void> => {
+    try {
+      await apiClient.post("/auth/logout", undefined, { silentError: true });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return;
+      throw error;
+    }
+  },
 };
