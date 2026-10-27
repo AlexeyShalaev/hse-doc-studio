@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "@shared/ui/Spinner";
+import { DiffPatch, countChanges } from "@shared/ui/DiffPatch";
 import {
   type ConflictResolution,
   type TemplateDiffView,
   useTemplateFileDiff,
 } from "@entities/template-update";
-import { VcsFilePatch, countChanges } from "@features/vcs-history";
 
 export type TemplateFileDiffProps = {
   projectId: string;
@@ -55,7 +55,7 @@ export const TemplateFileDiff = ({
     );
   }
   return (
-    <VcsFilePatch
+    <DiffPatch
       file={{ path: data.path, change: "M", patch: data.patch, binary: false }}
       stat={stat}
       maxHeight={maxHeight}

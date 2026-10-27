@@ -10,6 +10,7 @@ from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import VcsCommitKind, VcsRestoreMode, VcsTagKind
+from hse_doc_studio.core.git_sync.entities import AuthorProfile
 from hse_doc_studio.core.vcs.constants import DEFAULT_VCS_EXCLUDE
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.infra.vcs.commit_author import ActorCommitAuthorProvider
@@ -200,5 +201,88 @@ def test__commit__without_provider__author_is_bot_even_with_actor(tmp_path: Path
     set_current_actor(_ALICE)
 
     _snapshot(svc, project, tmp_path, "v2\n")
+
+    assert _head_identity(project) == "Test Bot,bot@test.local,Test Bot,bot@test.local"
+
+
+class _Profile:
+    def __init__(self, profile: AuthorProfile | None) -> None:
+        self.profile = profile
+
+    def get(self) -> AuthorProfile | None:
+        return self.profile
+
+
+_PROFILE = AuthorProfile("Профиль Автора", "profile@example.org")
+_PROFILE_IDENTITY = "Профиль Автора,profile@example.org,Профиль Автора,profile@example.org"
+
+
+def _service_with_profile(profile: AuthorProfile | None) -> GitVcsService:
+    return GitVcsService(
+        author_name=_BOT.name,
+        author_email=_BOT.email,
+        author_provider=ActorCommitAuthorProvider(_BOT, local_profile=_Profile(profile)),
+    )
+
+
+def _setup_with_profile(tmp_path: Path, profile: AuthorProfile | None) -> tuple[GitVcsService, Project]:
+    project = make_project(folder=tmp_path)
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    svc = _service_with_profile(profile)
+    svc.init(project, list(DEFAULT_VCS_EXCLUDE))
+    return svc, project
+
+
+@pytest.mark.parametrize("actor", [None, Actor.local()])
+def test__commit__no_actor_or_local_actor__author_is_profile(tmp_path: Path, actor: Actor | None) -> None:
+    svc, project = _setup_with_profile(tmp_path, _PROFILE)
+    set_current_actor(actor)
+
+    _snapshot(svc, project, tmp_path, "v2\n")
+
+    assert _head_identity(project) == _PROFILE_IDENTITY
+
+
+def test__commit__no_profile__author_is_bot(tmp_path: Path) -> None:
+    svc, project = _setup_with_profile(tmp_path, None)
+
+    _snapshot(svc, project, tmp_path, "v2\n")
+
+    assert _head_identity(project) == "Test Bot,bot@test.local,Test Bot,bot@test.local"
+
+
+def test__commit__user_actor_with_profile__actor_wins(tmp_path: Path) -> None:
+    svc, project = _setup_with_profile(tmp_path, _PROFILE)
+    set_current_actor(_ALICE)
+
+    _snapshot(svc, project, tmp_path, "v2\n")
+
+    assert _head_identity(project) == "Alice Ivanova,alice@example.org,Alice Ivanova,alice@example.org"
+
+
+def test__commit__invalid_user_actor_with_profile__falls_back_to_bot_not_profile(tmp_path: Path) -> None:
+    svc, project = _setup_with_profile(tmp_path, _PROFILE)
+    set_current_actor(Actor.user("u3", name="Eve <x>", email="eve@example.org"))
+
+    _snapshot(svc, project, tmp_path, "v2\n")
+
+    assert _head_identity(project) == "Test Bot,bot@test.local,Test Bot,bot@test.local"
+
+
+def test__commit__profile_changes_between_calls__author_follows_profile(tmp_path: Path) -> None:
+    source = _Profile(_PROFILE)
+    project = make_project(folder=tmp_path)
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    svc = GitVcsService(
+        author_name=_BOT.name,
+        author_email=_BOT.email,
+        author_provider=ActorCommitAuthorProvider(_BOT, local_profile=source),
+    )
+    svc.init(project, list(DEFAULT_VCS_EXCLUDE))
+    _snapshot(svc, project, tmp_path, "v2\n")
+    assert _head_identity(project) == _PROFILE_IDENTITY
+
+    source.profile = None
+    _snapshot(svc, project, tmp_path, "v3\n")
 
     assert _head_identity(project) == "Test Bot,bot@test.local,Test Bot,bot@test.local"

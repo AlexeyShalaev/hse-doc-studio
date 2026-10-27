@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import unicodedata
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -91,11 +93,23 @@ def update_class(
 
 
 def read_project_files(folder: Path, paths: Iterable[str]) -> dict[str, bytes]:
-    """Содержимое файлов проекта на диске; отсутствующих (и каталогов) нет в ответе."""
+    """Содержимое файлов проекта на диске; отсутствующих (и каталогов) нет в ответе.
+
+    Файл считается лежащим на диске, только если имя в каталоге записано ровно так: на файловой системе без учёта
+    регистра `newfile.txt` иначе нашёл бы `NewFile.txt`, и переименование одной лишь буквы стирало бы файл.
+    """
     files: dict[str, bytes] = {}
+    listings: dict[Path, frozenset[str]] = {}
     for rel in paths:
         path = folder / rel
-        if path.is_file():
+        if not path.is_file():
+            continue
+        names = listings.get(path.parent)
+        if names is None:
+            names = listings[path.parent] = frozenset(
+                unicodedata.normalize("NFC", name) for name in os.listdir(path.parent)
+            )
+        if unicodedata.normalize("NFC", path.name) in names:
             files[rel] = path.read_bytes()
     return files
 

@@ -4,7 +4,8 @@
     "title": "Projects",
     "subtitle": "Thesis, coursework and Project Proposal documentation — locally, through the file system.",
     "openFolder": "Open folder…",
-    "newProject": "New project"
+    "newProject": "New project",
+    "cloneFromGit": "Clone from git"
   },
   "filters": {
     "search": "Find a project…",
@@ -43,7 +44,8 @@
     "create": "New project",
     "noMatchTitle": "Nothing found",
     "noMatchDescription": "No projects match \"{{query}}\" — try part of the folder name or check your keyboard layout.",
-    "resetQuery": "Clear search"
+    "resetQuery": "Clear search",
+    "clone": "Clone from git"
   },
   "activity": {
     "title": "Recent activity",

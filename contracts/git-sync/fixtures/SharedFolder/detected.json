@@ -1,0 +1,9 @@
+{
+  "detected": true,
+  "provider": "yandex_disk",
+  "root": "/Users/anna/Yandex.Disk",
+  "evidence": [
+    "/Users/anna/Yandex.Disk/.sync",
+    "/Users/anna/Yandex.Disk/.yandex.disk.cfg"
+  ]
+}

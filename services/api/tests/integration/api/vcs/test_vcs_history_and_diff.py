@@ -140,6 +140,16 @@ async def test__api__get_vcs_diff__between_two_commits__shows_the_real_change(
     assert "+% first change" not in patch
 
 
+@pytest.mark.parametrize("param", ["from_id", "to_id"])
+async def test__api__get_vcs_diff__option_like_revision__returns_400(
+    test_app: AsyncClient, project: dict[str, Any], param: str
+) -> None:
+    resp = await test_app.get(f"/api/v1/projects/{project['id']}/vcs/diff", params={param: "--output=x"})
+
+    assert resp.status_code == 400, resp.text
+    assert "check-ref-format" not in resp.json()["detail"]
+
+
 async def test__api__get_vcs_diff__nonexistent_project__returns_404(test_app: AsyncClient) -> None:
     resp = await test_app.get(f"/api/v1/projects/{FAKE_PROJECT_ID}/vcs/diff")
 

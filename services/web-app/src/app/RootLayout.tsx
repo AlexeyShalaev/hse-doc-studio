@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Outlet, useLocation } from "react-router";
 import { SystemChatPanel } from "@features/agent-chat";
 import { useSetupStatus } from "@entities/setup";
@@ -7,6 +8,15 @@ import { DockerStatusBanner } from "@widgets/DockerStatusBanner";
 import { StartupChecks } from "@widgets/StartupChecks";
 import { useWorkspaceStore } from "@shared/lib";
 import { Toaster } from "@shared/ui/Toaster";
+
+// Переключатель демо-сценариев: только в сборке с VITE_GIT_DEMO=1. Условие
+// вычисляется при сборке, и в обычном бандле этого кода и его чанка нет.
+const DemoScenarioPicker =
+  import.meta.env.VITE_GIT_DEMO === "1"
+    ? lazy(() =>
+        import("./demo").then((m) => ({ default: m.DemoScenarioPicker })),
+      )
+    : null;
 
 // Routes that dock the one agent inside their own layout (between the title and
 // status bars): Welcome, the project wizard, and any project workspace. On the
@@ -49,6 +59,11 @@ export const RootLayout = () => {
       <Outlet />
       <CommandPalette />
       <Toaster />
+      {DemoScenarioPicker && (
+        <Suspense fallback={null}>
+          <DemoScenarioPicker />
+        </Suspense>
+      )}
 
       {/* The one unified agent. On routes that dock it into their own layout
           (Welcome, wizard, project workspace) the panel pushes content between

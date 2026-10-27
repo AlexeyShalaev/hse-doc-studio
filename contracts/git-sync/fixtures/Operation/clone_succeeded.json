@@ -1,0 +1,20 @@
+{
+  "id": "op_7f3a9c21",
+  "kind": "clone",
+  "project_id": "5f0c2b7e-3b1a-4d6e-9a54-0a1b2c3d4e5f",
+  "status": "succeeded",
+  "phase": "register",
+  "percent": 100.0,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2026-10-26T09:29:12Z",
+  "finished_at": "2026-10-26T09:30:00Z",
+  "result": {
+    "project_id": "5f0c2b7e-3b1a-4d6e-9a54-0a1b2c3d4e5f",
+    "folder": "/Users/anna/HSE Doc Studio/course-paper",
+    "access": "full",
+    "required_studio": null,
+    "warnings": []
+  },
+  "error": null
+}

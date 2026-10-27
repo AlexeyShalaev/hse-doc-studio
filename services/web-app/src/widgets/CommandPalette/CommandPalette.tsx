@@ -4,8 +4,11 @@ import { useTranslation } from "react-i18next";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Bot,
+  CloudDownload,
+  CloudUpload,
   FileText,
   FolderOpen,
+  GitBranch,
   Grid3x3,
   History,
   ListChecks,
@@ -14,10 +17,17 @@ import {
   Plus,
   Search,
   Settings,
+  TriangleAlert,
   Sun,
   Terminal,
   type LucideIcon,
 } from "lucide-react";
+import {
+  CLONE_PATH,
+  gitConflictsPath,
+  useSyncStatus,
+  useSyncUiStore,
+} from "@entities/git-sync";
 import { useProjects } from "@entities/project";
 import { useThemeStore, useUIStore, useWorkspaceStore } from "@shared/lib";
 
@@ -39,6 +49,7 @@ export const CommandPalette = () => {
   const setTheme = useThemeStore((s) => s.setTheme);
   const setSystemChatOpen = useWorkspaceStore((s) => s.setSystemChatOpen);
   const { data: projects } = useProjects();
+  const { data: syncStatus } = useSyncStatus(params.projectId ?? "");
 
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +113,15 @@ export const CommandPalette = () => {
         run: () => {
           setOpen(false);
           void navigate("/wizard?mode=create");
+        },
+      },
+      {
+        id: "clone",
+        label: t("commandPalette.cloneProject"),
+        icon: GitBranch,
+        run: () => {
+          setOpen(false);
+          void navigate(CLONE_PATH);
         },
       },
       {
@@ -206,6 +226,56 @@ export const CommandPalette = () => {
           }))
         : [];
 
+    // Синхронизация: только внутри проекта и только если бэкенд её умеет.
+    const syncCmds: Command[] = [];
+    if (projectId && syncStatus?.supported) {
+      const sync = useSyncUiStore.getState();
+      if (!syncStatus.connected) {
+        syncCmds.push({
+          id: "sync-connect",
+          label: t("commandPalette.connectRemote"),
+          icon: CloudUpload,
+          run: () => {
+            setOpen(false);
+            sync.openConnectDialog("connect");
+          },
+        });
+      } else {
+        syncCmds.push(
+          {
+            id: "sync-run",
+            label: t("commandPalette.sync"),
+            icon: CloudUpload,
+            shortcut: "⌘⇧S",
+            run: () => {
+              setOpen(false);
+              sync.requestCommand("sync");
+            },
+          },
+          {
+            id: "sync-check",
+            label: t("commandPalette.syncCheck"),
+            icon: CloudDownload,
+            run: () => {
+              setOpen(false);
+              sync.requestCommand("check");
+            },
+          },
+        );
+        if (syncStatus.pending) {
+          syncCmds.push({
+            id: "sync-conflicts",
+            label: t("commandPalette.syncConflicts"),
+            icon: TriangleAlert,
+            run: () => {
+              setOpen(false);
+              void navigate(gitConflictsPath(projectId));
+            },
+          });
+        }
+      }
+    }
+
     const projectCmds: Command[] = (projects ?? [])
       .filter((p) => !p.archived)
       .map((p) => ({
@@ -218,8 +288,17 @@ export const CommandPalette = () => {
         },
       }));
 
-    return [...base, ...docCmds, ...projectCmds];
-  }, [navigate, params, projects, setOpen, setTheme, setSystemChatOpen, t]);
+    return [...base, ...syncCmds, ...docCmds, ...projectCmds];
+  }, [
+    navigate,
+    params,
+    projects,
+    setOpen,
+    setTheme,
+    setSystemChatOpen,
+    syncStatus,
+    t,
+  ]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();

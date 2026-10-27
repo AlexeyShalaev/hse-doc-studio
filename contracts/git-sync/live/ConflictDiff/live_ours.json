@@ -1,0 +1,6 @@
+{
+  "path": "notes/plan.md",
+  "binary": false,
+  "patch": "--- base/notes/plan.md\n+++ mine/notes/plan.md\n@@ -1,6 +1,6 @@\n # План\n \n 1. Обзор\n-2. Постановка задачи\n+2. Постановка задачи: версия Анны\n 3. Эксперименты\n 4. Выводы\n",
+  "truncated": false
+}

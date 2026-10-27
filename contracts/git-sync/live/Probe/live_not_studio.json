@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "error": null,
+  "url": {
+    "display_url": "file:///studio/remotes/plain.git",
+    "kind": "file",
+    "host": null,
+    "provider": "other",
+    "owner": null,
+    "repo": "plain",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "other",
+    "detected_by": "unknown",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": true,
+  "empty": false,
+  "default_branch": "main",
+  "branches": [
+    "main"
+  ],
+  "relation": "not_studio_project",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

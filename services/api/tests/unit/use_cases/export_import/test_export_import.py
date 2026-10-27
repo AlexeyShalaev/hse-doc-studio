@@ -248,6 +248,52 @@ async def test__import_settings__merges_known_keys_only() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("imported", "expected"),
+    [
+        (0, 0),
+        (60, 60),
+        (900, 900),
+        (5, 60),
+    ],
+)
+async def test__import_settings__git_fetch_interval__goes_through_the_put_rule(imported: int, expected: int) -> None:
+    settings = _FakeSettingsRepo()
+
+    await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(encrypted=False, settings={"git_fetch_interval_s": imported})
+    )
+
+    assert settings.get()["git_fetch_interval_s"] == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("key", "bad"),
+    [
+        ("git_fetch_interval_s", "abc"),
+        ("git_fetch_interval_s", -3),
+        ("git_fetch_interval_s", True),
+        ("git_fetch_interval_s", 12.5),
+        ("disk_usage_warn_gb", "много"),
+        ("disk_usage_warn_gb", 501),
+        ("disk_usage_warn_gb", -1),
+    ],
+)
+async def test__import_settings__invalid_numeric_value__is_skipped_and_the_rest_applies(key: str, bad: object) -> None:
+    settings = _FakeSettingsRepo({key: 7 if key == "disk_usage_warn_gb" else 300})
+
+    result = await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(encrypted=False, settings={key: bad, "theme": "light"})
+    )
+
+    assert result.settings_imported is True
+    saved = settings.get()
+    assert saved[key] == (7 if key == "disk_usage_warn_gb" else 300)
+    assert saved["theme"] == "light"
+
+
+@pytest.mark.unit
 async def test__export__includes_agent_personas() -> None:
     personas = _FakePersonaRepo([_persona(label="Мой ревьюер")])
     out = await _export_uc(_FakeSettingsRepo(), _FakeProviderRepo(), personas).execute(ExportDataInput())
@@ -294,3 +340,45 @@ async def test__import_persona_skip__keeps_existing_by_id() -> None:
     kept = dst.get(pid)
     assert kept is not None
     assert kept.label == "Old"
+
+
+@pytest.mark.unit
+async def test__export__profile_keys_are_not_in_bundle_settings() -> None:
+    settings = _FakeSettingsRepo({"theme": "dark", "profile_name": "Алиса", "profile_email": "alice@example.org"})
+
+    out = await _export_uc(settings, _FakeProviderRepo()).execute(ExportDataInput())
+
+    assert out.settings is not None
+    assert out.settings["theme"] == "dark"
+    assert "profile_name" not in out.settings
+    assert "profile_email" not in out.settings
+
+
+@pytest.mark.unit
+async def test__import__profile_keys_in_bundle_are_ignored_and_local_profile_kept() -> None:
+    settings = _FakeSettingsRepo({"profile_name": "Алиса", "profile_email": "alice@example.org"})
+
+    result = await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(
+            encrypted=False,
+            settings={"theme": "light", "profile_name": "Чужой", "profile_email": "other@example.org"},
+        )
+    )
+
+    assert result.settings_imported is True
+    saved = settings.get()
+    assert saved["theme"] == "light"
+    assert saved["profile_name"] == "Алиса"
+    assert saved["profile_email"] == "alice@example.org"
+
+
+@pytest.mark.unit
+async def test__import__bundle_without_local_profile__does_not_create_one() -> None:
+    settings = _FakeSettingsRepo()
+
+    await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(encrypted=False, settings={"profile_name": "Чужой", "profile_email": "other@example.org"})
+    )
+
+    assert "profile_name" not in settings.get()
+    assert "profile_email" not in settings.get()

@@ -4,6 +4,7 @@ import pytest
 
 pytest_plugins = [
     "tests.fixtures.app",
+    "tests.fixtures.git_remote",
     "tests.fixtures.paths",
 ]
 

@@ -1,0 +1,11 @@
+{
+  "ok": false,
+  "source": "env",
+  "permissions_enforced": false,
+  "credentials_total": 3,
+  "credentials_unreadable": 1,
+  "data_dir_shared_folder": {
+    "provider": "yandex_disk",
+    "root": "/Users/anna/Yandex.Disk"
+  }
+}

@@ -90,7 +90,8 @@ class RevertCustomFileUC:
         self._project_repo.save(project)
 
         if inp.delete_uploaded_file:
-            self._delete_stored_file(project.folder, stored_path)
+            async with self._vcs_locks.for_folder(project.folder):
+                self._delete_stored_file(project.folder, stored_path)
 
         logger.info(
             "custom file reverted",

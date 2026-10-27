@@ -1,0 +1,1 @@
+fatal: unable to access 'https://nonexistent-host-hse.invalid/a/b.git/': Could not resolve host: nonexistent-host-hse.invalid

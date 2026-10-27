@@ -10,6 +10,7 @@ from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
+from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -30,13 +31,16 @@ class CreateDirUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         file_repo: IFileRepository,
+        vcs_locks: IVcsFolderLocks,
     ) -> None:
         self._file_repo = file_repo
+        self._vcs_locks = vcs_locks
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: CreateDirInput) -> None:
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
         project = result.project
 
-        self._file_repo.mkdir(project.folder, inp.path)
+        async with self._vcs_locks.for_folder(project.folder):
+            self._file_repo.mkdir(project.folder, inp.path)
         logger.debug("dir created via use case", project_id=str(inp.project_id), path=inp.path)

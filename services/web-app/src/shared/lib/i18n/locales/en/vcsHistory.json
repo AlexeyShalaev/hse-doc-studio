@@ -1,18 +1,21 @@
 {
-  "change": {
-    "added": "added",
-    "modified": "modified",
-    "deleted": "deleted",
-    "renamed": "renamed",
-    "copied": "copied"
-  },
   "timeline": {
     "today": "Today",
     "yesterday": "Yesterday",
     "current": "current",
     "restore": "Restore",
     "files_one": "{{count}} file",
-    "files_other": "{{count}} files"
+    "files_other": "{{count}} files",
+    "restoreIncoming": "This version came from the repository and is not on your computer yet. Sync the project first.",
+    "showMore": "Show more",
+    "merge_one": "Merge: {{count}} file",
+    "merge_other": "Merge: {{count}} files",
+    "mergePlain": "Merge",
+    "sync": {
+      "pushed": "Already in the repository",
+      "unpushed": "Waiting to be sent",
+      "incoming": "Received from {{author}}"
+    }
   },
   "filters": {
     "searchPlaceholder": "Search changes…",
@@ -28,7 +31,24 @@
     "kindAll": "All",
     "shown": "Showing {{shown}} of {{total}}",
     "changes_one": "{{count}} change",
-    "changes_other": "{{count}} changes"
+    "changes_other": "{{count}} changes",
+    "searchLabel": "Search changes",
+    "authorLabel": "Author",
+    "dateLabel": "Period",
+    "rangeFromLabel": "Period start",
+    "rangeToLabel": "Period end",
+    "kindLabel": "Type of change",
+    "kindHint": "The record type Studio puts on every version",
+    "syncLabel": "Sending",
+    "sync": {
+      "all": "All",
+      "unpushed": "Not sent",
+      "incoming": "From colleagues"
+    },
+    "found_one": "{{count}} record found",
+    "found_other": "{{count}} records found",
+    "foundMore_one": "Showing {{count}} record, more available",
+    "foundMore_other": "Showing {{count}} records, more available"
   },
   "changedFiles": {
     "searchPlaceholder": "Search files…",
@@ -36,10 +56,6 @@
     "viewTree": "Tree",
     "viewList": "List",
     "empty": "No files found."
-  },
-  "filePatch": {
-    "binary": "Binary file — contents are not shown.",
-    "noTextChanges": "No text changes to show."
   },
   "diffBrowser": {
     "filesChanged_one": "{{count}} file changed",

@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import { useDocuments } from "@entities/document";
 import { useProject } from "@entities/project";
 import { useVersionDetail } from "@entities/template-catalog";
+import { useSyncSignal } from "@features/git-sync";
 import { useTemplateUpdateSignal } from "@features/template-update";
 import {
   buildMetaGroupCards,
@@ -11,11 +12,14 @@ import {
   filterMetaFieldsBySection,
   visibleProjectSettingsGroups,
   resolveProjectSettingsGroup,
+  useSyncSectionContext,
 } from "./project-settings";
 import type {
   ProjectSettingsGroupId,
   ProjectSettingsSectionId,
 } from "./project-settings";
+
+const SYNC_DOT_TONE = { err: "err", warn: "warn", info: "info" } as const;
 
 export type ProjectSettingsPanelProps = {
   projectId: string;
@@ -55,6 +59,10 @@ export const ProjectSettingsPanel = ({
   const { data: projectDocuments } = useDocuments(projectId);
   // Раздел «Версия шаблона» живёт в группе «Проект»: точка ведёт к нему.
   const templateSignal = useTemplateUpdateSignal(projectId);
+  // Группа «Синхронизация»: точка появляется, когда репозиторию нужно внимание
+  // (конфликты, нет доступа, новое от коллег), и ведёт к ней же.
+  const syncSignal = useSyncSignal(projectId);
+  const syncContext = useSyncSectionContext(projectId);
 
   const isTeam = project?.staffing === "team";
   const allMetaFields = collectMetaFields(versionDetail, project?.kind);
@@ -75,6 +83,7 @@ export const ProjectSettingsPanel = ({
       buildMetaGroupCards(allMetaFields, metaGroups, "documents").length > 0,
     hasMetaFields:
       filterMetaFieldsBySection(allMetaFields, metaGroups, "meta").length > 0,
+    ...syncContext,
   };
   const groups = visibleProjectSettingsGroups(sectionCtx);
   const activeGroup = resolveProjectSettingsGroup(activeSection, sectionCtx);
@@ -108,6 +117,25 @@ export const ProjectSettingsPanel = ({
                 <span className="truncate" style={{ minWidth: 0 }}>
                   {t(group.labelKey)}
                 </span>
+                {group.id === "sync" &&
+                  syncSignal.hasSignal &&
+                  syncSignal.badge && (
+                    <span
+                      className={clsx(
+                        "dot",
+                        SYNC_DOT_TONE[syncSignal.badge.tone],
+                      )}
+                      role="img"
+                      aria-label={t(
+                        `gitSync:state.${syncSignal.state ?? "unknown"}`,
+                      )}
+                      title={t(
+                        `gitSync:state.${syncSignal.state ?? "unknown"}`,
+                      )}
+                      data-testid="sync-group-dot"
+                      style={{ marginLeft: "auto", flexShrink: 0 }}
+                    />
+                  )}
                 {group.id === "project" && templateSignal.hasSignal && (
                   <span
                     className={clsx(

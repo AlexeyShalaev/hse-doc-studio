@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "error": null,
+  "url": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "owner": "hse-team",
+    "repo": "course-paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "github",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": true,
+  "empty": false,
+  "default_branch": "main",
+  "branches": [
+    "main",
+    "draft"
+  ],
+  "relation": "studio_project",
+  "project": {
+    "id": "5f0c2b7e-3b1a-4d6e-9a54-0a1b2c3d4e5f",
+    "name": "Курсовая работа",
+    "pack_id": "hse-cs-sse",
+    "template_id": "course-paper",
+    "template_version": "1.2.0",
+    "kind": "course_paper",
+    "staffing": "team",
+    "authors_count": 3
+  },
+  "schema_access": "files_only",
+  "required_studio": "0.4.0",
+  "template_available": false
+}

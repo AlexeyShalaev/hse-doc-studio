@@ -3,8 +3,9 @@
 * `.hse-studio/template.json` — история обновлений и снятые с отслеживания файлы.
   Лежит в истории версий вместе с остальным состоянием: откат проекта к снимку
   откатывает и её, так что история обновлений всегда согласована с файлами.
-* `.hse-studio/update/journal.json` — журнал идущего обновления. Вне истории
-  версий (core.vcs.constants): он описывает саму транзакцию и после неё удаляется.
+* `.hse-studio/update/journal.json` — журнал идущей операции: обновления шаблона
+  или применения слияния синхронизации (`kind`). Вне истории версий
+  (core.vcs.constants): он описывает саму транзакцию и после неё удаляется.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from hse_doc_studio.core.template_update.entities import (
     TemplateTrackingState,
     TemplateUpdateRecord,
     UpdateJournal,
+    UpdateJournalKind,
     UpdateJournalState,
 )
 from hse_doc_studio.infra.persistence.project import assert_project_writable, read_json_or_none
@@ -116,6 +118,9 @@ class JsonUpdateJournalRepository:
                 added_paths=tuple(str(p) for p in raw.get("added_paths", ())),
                 started_at=str(raw.get("started_at", "")),
                 reverts=raw.get("reverts"),
+                kind=UpdateJournalKind(raw.get("kind", UpdateJournalKind.template.value)),
+                merge_parent=raw.get("merge_parent"),
+                sync_id=raw.get("sync_id"),
             )
         except (KeyError, ValueError, TypeError):
             logger.warning("template update journal unreadable", folder=str(folder))
@@ -124,6 +129,7 @@ class JsonUpdateJournalRepository:
     def save(self, folder: Path, journal: UpdateJournal) -> None:
         data = asdict(journal)
         data["state"] = journal.state.value
+        data["kind"] = journal.kind.value
         data["touched_paths"] = list(journal.touched_paths)
         data["added_paths"] = list(journal.added_paths)
         _atomic_write(self._path(folder), data)

@@ -1,0 +1,3 @@
+remote: fatal: pack exceeds maximum allowed size
+To https://gitlab.com/group/project.git
+ ! [remote rejected] main -> main (unpacker error)

@@ -29,6 +29,21 @@ class VcsCommitResponse(BaseModel):
     refs: list[VcsRefResponse]
     doc_id: str | None = None
     stats: VcsCommitStatsResponse | None = None
+    author_email: str | None = None
+    is_merge: bool = False
+    # pushed | unpushed | incoming; null, пока у проекта нет удалённого репозитория или с него ничего не получено
+    sync: str | None = None
+
+
+class VcsAuthorFacetResponse(BaseModel):
+    name: str
+    email: str | None
+    count: int
+
+
+class VcsHistoryFacetsResponse(BaseModel):
+    kinds: dict[str, int]
+    authors: list[VcsAuthorFacetResponse]
 
 
 class VcsFileChangeResponse(BaseModel):

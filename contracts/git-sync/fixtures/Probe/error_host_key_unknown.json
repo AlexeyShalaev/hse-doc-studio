@@ -1,0 +1,38 @@
+{
+  "ok": false,
+  "error": {
+    "code": "host_key_unknown",
+    "detail": "Ключ сервера ещё не подтверждён. Сверь отпечаток и подтверди.",
+    "host_keys": [
+      {
+        "type": "ssh-ed25519",
+        "fingerprint_sha256": "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s"
+      }
+    ]
+  },
+  "url": {
+    "display_url": "ssh://git@git.hse.ru/hse-team/course-paper.git",
+    "kind": "ssh",
+    "host": "git.hse.ru",
+    "provider": "gitlab",
+    "owner": "hse-team",
+    "repo": "course-paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "override",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": false,
+  "empty": false,
+  "default_branch": null,
+  "branches": [],
+  "relation": "unknown",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

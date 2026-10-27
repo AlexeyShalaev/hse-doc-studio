@@ -222,7 +222,7 @@ To add new heavy work:
 3. Write a handler (`IJobHandler`) in `infra/jobs/` and register it in the handler registry. The handler may use infra and ports; the registry tests fail if a kind has no spec.
 4. In the use case build the payload and call the dispatcher in the mode the policy allows: `run` (await the result) or `submit_detached` (the HTTP answer does not wait); `submit` is for compile only. Map a failed result to the user-facing error inside the use case, from codes, so texts stay localised there.
 
-Stay in-api behind ports (not jobs yet): signing, PAdES export, freeze stamping, AIA chain download, ONLYOFFICE session and callback configuration. Do not add `infra` imports to the allowlist for new work: `tests/unit/architecture/infra_allowlist.txt` only shrinks.
+Stay in-api behind ports (not jobs yet): signing, PAdES export, freeze stamping, AIA chain download, ONLYOFFICE session and callback configuration, and the Git sync family: probe, connect, fetch, sync, clone, bundle import and export. The sync family carries credentials and runs network git as asyncio subprocesses, which the job payload codec (plain data, no secrets, no host paths) cannot express. It is tracked by `IGitOperationRegistry` instead: one operation per project folder, `is_busy(folder)` is consulted by move and delete of a project, and the long steps are cancellable tasks. Do not add `infra` imports to the allowlist for new work: `tests/unit/architecture/infra_allowlist.txt` only shrinks.
 
 ## Summary Checklist
 

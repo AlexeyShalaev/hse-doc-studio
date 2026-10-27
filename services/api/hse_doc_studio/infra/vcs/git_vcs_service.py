@@ -1,21 +1,28 @@
 from __future__ import annotations
 
-import functools
-import os
-import re
 import shutil
 import subprocess
-import tempfile
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.enums import VcsChange, VcsCommitKind, VcsRestoreMode, VcsTagKind
+from hse_doc_studio.core.enums import (
+    VcsChange,
+    VcsCommitKind,
+    VcsHistorySync,
+    VcsRestoreMode,
+    VcsSyncMarker,
+    VcsTagKind,
+)
+from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig
+from hse_doc_studio.core.vcs.constants import VCS_ATTRIBUTES
 from hse_doc_studio.core.vcs.entities import (
+    VcsAuthorCount,
     VcsBranch,
     VcsCommit,
     VcsCommitDetail,
@@ -23,6 +30,8 @@ from hse_doc_studio.core.vcs.entities import (
     VcsDiff,
     VcsFileChange,
     VcsFileDiff,
+    VcsHistoryFacets,
+    VcsHistoryQuery,
     VcsRef,
     VcsRestoreResult,
     VcsSettings,
@@ -31,19 +40,30 @@ from hse_doc_studio.core.vcs.entities import (
 )
 from hse_doc_studio.core.vcs.errors import (
     VcsCommandError,
+    VcsInvalidRefError,
     VcsNotInitializedError,
     VcsUnavailableError,
 )
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
+from hse_doc_studio.core.vcs.refs import validate_ref_name, validate_revision
+from hse_doc_studio.infra.vcs.git_env import base_git_env, hardened_git_config
+from hse_doc_studio.infra.vcs.history_filter import git_args, matches, needs_python, raw_kind
 
 logger = structlog.get_logger()
 
 _HSE_STUDIO = ".hse-studio"
 _GIT_SUBDIR = "git"
 
+
+def store_git_dir(folder: Path) -> Path:
+    """Изолированное хранилище git проекта: лежит внутри папки и переезжает вместе с ней."""
+    return folder / _HSE_STUDIO / _GIT_SUBDIR
+
+
 _UNIT = "\x1f"  # field separator inside one log record
 _REC = "\x1e"  # record separator between log entries
-_LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%aI", "%D", "%B"]) + _REC
+_LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%ae", "%aI", "%D", "%B"]) + _REC
+_FACETS_FMT = _UNIT.join(["%an", "%ae", "%B"]) + _REC
 
 _PDF_EXCLUDE = ":(exclude)*.pdf"
 _MAX_DIFF_FILES = 80
@@ -54,7 +74,11 @@ _DEFAULT_DIFF_MAX_BYTES = 256_000
 # Подкоманды, которым git нужна личность автора; остальным остаётся служебная подпись.
 _IDENTITY_SUBCOMMANDS = frozenset({"commit", "commit-tree", "tag"})
 
-_KIND_TRAILER = re.compile(r"^Hse-Kind:\s*(\S+)\s*$", re.MULTILINE)
+_KEY_URL = "remote.origin.url"
+_KEY_CREDENTIAL = "hse.credential"
+_KEY_LOCAL_BRANCH = "hse.localbranch"
+_KEY_REMOTE_BRANCH = "hse.remotebranch"
+_REMOTE_KEYS_RE = r"^(remote\.origin\.url|hse\.(credential|localbranch|remotebranch))$"
 
 # git's various "empty commit" phrasings. `git commit` exits non-zero in all of
 # them, but for us they all mean the same thing — there's nothing to snapshot,
@@ -66,22 +90,6 @@ _NO_CHANGES_MARKERS = (
     "nothing added to commit",
     "no changes added to commit",
 )
-
-
-@functools.lru_cache(maxsize=1)
-def _empty_global_config() -> str:
-    """Path to a real, empty gitconfig used as GIT_CONFIG_GLOBAL.
-
-    Neutralises the user's ~/.gitconfig (which may set commit.gpgsign, hooks,
-    aliases, etc.) for our headless commits. Cross-platform, unlike /dev/null.
-    """
-    path = Path(tempfile.gettempdir()) / "hse-studio-empty.gitconfig"
-    try:
-        if not path.exists():
-            path.write_text("", encoding="utf-8")
-    except OSError:
-        return ""
-    return str(path)
 
 
 class GitVcsService:
@@ -109,31 +117,23 @@ class GitVcsService:
         self._author_provider = author_provider
 
     # ── paths ────────────────────────────────────────────────────────────────
-    def _git_dir(self, project: Project) -> Path:
-        return project.folder / _HSE_STUDIO / _GIT_SUBDIR
+    def git_dir(self, project: Project) -> Path:
+        return store_git_dir(project.folder)
 
     # ── low-level git invocation ─────────────────────────────────────────────
     def _env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        env["GIT_CONFIG_NOSYSTEM"] = "1"  # ignore /etc/gitconfig
-        gc = _empty_global_config()
-        if gc:
-            env["GIT_CONFIG_GLOBAL"] = gc  # ignore ~/.gitconfig
-        env["GIT_TERMINAL_PROMPT"] = "0"
-        env["GIT_OPTIONAL_LOCKS"] = "0"
-        if os.name == "posix":
-            # The container runs as a non-root user with no $HOME; give git a
-            # writable one so init/gc don't trip over HOME=/.
-            env["HOME"] = tempfile.gettempdir()
-        return env
+        return base_git_env()
 
     def _base(self, project: Project, work_tree: Path | None = None) -> list[str]:
+        return self._base_for(project.folder, work_tree)
+
+    def _base_for(self, folder: Path, work_tree: Path | None = None) -> list[str]:
         return [
             "git",
             "--git-dir",
-            str(self._git_dir(project)),
+            str(store_git_dir(folder)),
             "--work-tree",
-            str(work_tree or project.folder),
+            str(work_tree or folder),
             "-c",
             f"user.name={self._author_name}",
             "-c",
@@ -146,6 +146,7 @@ class GitVcsService:
             "core.quotepath=false",
             "-c",
             "safe.directory=*",
+            *hardened_git_config(),
         ]
 
     def _author_override(self, args: Sequence[str]) -> list[str]:
@@ -167,11 +168,14 @@ class GitVcsService:
         *,
         check: bool = False,
     ) -> subprocess.CompletedProcess[str]:
-        cmd = [*self._base(project), *self._author_override(args), *args]
+        return self._exec(project.folder, args, check=check)
+
+    def _exec(self, folder: Path, args: Sequence[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+        cmd = [*self._base_for(folder), *self._author_override(args), *args]
         try:
             proc = subprocess.run(  # noqa: S603
                 cmd,
-                cwd=str(project.folder),
+                cwd=str(folder),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -233,12 +237,12 @@ class GitVcsService:
             return False
 
     def is_initialized(self, project: Project) -> bool:
-        return (self._git_dir(project) / "HEAD").exists()
+        return (self.git_dir(project) / "HEAD").exists()
 
     def init(self, project: Project, ignore: Sequence[str]) -> None:
         if not self.is_available(project):
             raise VcsUnavailableError(f"project folder not accessible: {project.folder}")
-        git_dir = self._git_dir(project)
+        git_dir = self.git_dir(project)
         git_dir.parent.mkdir(parents=True, exist_ok=True)
         if not self.is_initialized(project):
             self._run(project, ["init", f"--initial-branch={self._default_branch}"], check=True)
@@ -246,15 +250,110 @@ class GitVcsService:
         # Root snapshot — capture whatever already exists (empty folders allowed).
         self.commit(project, message="Создание проекта", kind=VcsCommitKind.init, allow_empty=True)
 
+    def init_bare_store(self, folder: Path, branch: str) -> None:
+        """Хранилище без корневого коммита: ветку `branch` наполнит fetch при клонировании проекта."""
+        validate_ref_name(branch)
+        git_dir = store_git_dir(folder)
+        git_dir.parent.mkdir(parents=True, exist_ok=True)
+        if not (git_dir / "HEAD").exists():
+            self._exec(folder, ["init", f"--initial-branch={branch}"], check=True)
+
     def write_ignore(self, project: Project, ignore: Sequence[str]) -> None:
         """(Re)write the store's ignore file. Idempotent — called at init and
         refreshed on connect so the versioning scope tracks the current policy."""
-        info_dir = self._git_dir(project) / "info"
+        info_dir = self.git_dir(project) / "info"
         info_dir.mkdir(parents=True, exist_ok=True)
         (info_dir / "exclude").write_text("\n".join(ignore) + "\n", encoding="utf-8")
+        self.write_attributes_at(project.folder)
+
+    def write_attributes_at(self, folder: Path) -> None:
+        """Атрибуты хранилища, перекрывающие `.gitattributes` из рабочей папки (см. VCS_ATTRIBUTES).
+
+        Идемпотентно и дёшево: файл переписывается, только если он отличается. Нужно и хранилищам, созданным
+        до появления файла, поэтому его же проверяет каждый коммит.
+        """
+        target = store_git_dir(folder) / "info" / "attributes"
+        try:
+            if target.read_text(encoding="utf-8") == VCS_ATTRIBUTES:
+                return
+        except OSError:
+            pass
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(VCS_ATTRIBUTES, encoding="utf-8")
 
     def destroy(self, project: Project) -> None:
-        shutil.rmtree(self._git_dir(project), ignore_errors=True)
+        shutil.rmtree(self.git_dir(project), ignore_errors=True)
+
+    # ── подключение к удалённому репозиторию ─────────────────────────────────
+    def read_remote_config(self, project: Project) -> StoreRemoteConfig | None:
+        """Подключение из config хранилища; None, если адреса там нет."""
+        proc = self._config(project, ["--get-regexp", "-z", _REMOTE_KEYS_RE])
+        if proc.returncode != 0:
+            return None
+        values: dict[str, str] = {}
+        for record in proc.stdout.split("\0"):
+            key, _, value = record.partition("\n")
+            if key:
+                values[key] = value
+        url = values.get(_KEY_URL)
+        if not url:
+            return None
+        return StoreRemoteConfig(
+            url=url,
+            credential_id=_parse_uuid(values.get(_KEY_CREDENTIAL)),
+            local_branch=values.get(_KEY_LOCAL_BRANCH) or None,
+            remote_branch=values.get(_KEY_REMOTE_BRANCH) or None,
+        )
+
+    def write_remote_config(self, project: Project, config: StoreRemoteConfig) -> None:
+        """Записывает адрес и привязку в config хранилища; секретов здесь нет и быть не должно."""
+        self.write_remote_config_at(project.folder, config)
+
+    def write_remote_config_at(self, folder: Path, config: StoreRemoteConfig) -> None:
+        """То же по папке: при клонировании проект ещё нельзя собрать (его схема может быть новее нашей)."""
+        if not (store_git_dir(folder) / "HEAD").exists():
+            raise VcsNotInitializedError(str(folder))
+        values = {
+            _KEY_URL: config.url,
+            _KEY_CREDENTIAL: str(config.credential_id) if config.credential_id else None,
+            _KEY_LOCAL_BRANCH: config.local_branch,
+            _KEY_REMOTE_BRANCH: config.remote_branch,
+        }
+        for key, value in values.items():
+            if value is None:
+                self._config_at(folder, ["--unset-all", key])
+            else:
+                self._config_at(folder, ["--replace-all", key, value], check=True)
+
+    def clear_remote_config(self, project: Project) -> None:
+        for section in ("remote.origin", "hse"):
+            proc = self._config(project, ["--remove-section", section])
+            if proc.returncode != 0 and "no such section" not in proc.stderr.lower():
+                raise VcsCommandError("config", proc.stderr)
+
+    def _config(
+        self, project: Project, args: Sequence[str], *, check: bool = False
+    ) -> subprocess.CompletedProcess[str]:
+        return self._config_at(project.folder, args, check=check)
+
+    def _config_at(self, folder: Path, args: Sequence[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+        cmd = ["git", "config", "--file", str(store_git_dir(folder) / "config"), *args]
+        try:
+            proc = subprocess.run(  # noqa: S603
+                cmd,
+                cwd=str(folder),
+                capture_output=True,
+                text=True,
+                check=False,
+                env=self._env(),
+                encoding="utf-8",
+                errors="replace",
+            )
+        except OSError as exc:
+            raise VcsUnavailableError(str(exc)) from exc
+        if check and proc.returncode != 0:
+            raise VcsCommandError("config", proc.stderr or proc.stdout)
+        return proc
 
     # ── commits ──────────────────────────────────────────────────────────────
     def commit(
@@ -266,14 +365,21 @@ class GitVcsService:
         paths: Sequence[str] | None = None,
         include_pdf: bool = False,
         allow_empty: bool = False,
+        force_paths: Sequence[str] | None = None,
     ) -> VcsCommit | None:
+        """`force_paths` добавляются в индекс поверх исключений хранилища (`add -f`):
+        замороженные PDF подписей лежат под `.hse-studio/`, но должны ехать с проектом."""
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        self.write_attributes_at(project.folder)
         add_args = ["add", "-A", "--"]
         add_args += list(paths) if paths else ["."]
         if not include_pdf:
             add_args.append(_PDF_EXCLUDE)
         self._run(project, add_args, check=True)
+        forced = [p for p in (force_paths or ()) if (project.folder / p).exists()]
+        if forced:
+            self._run(project, ["add", "-f", "-A", "--", *forced], check=True)
 
         commit_args = ["commit", "-m", f"{message}\n\nHse-Kind: {kind.value}"]
         if allow_empty:
@@ -295,33 +401,138 @@ class GitVcsService:
         doc_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        query: VcsHistoryQuery | None = None,
     ) -> list[VcsCommit]:
         if not self.is_initialized(project):
             return []
-        args = ["log", f"--pretty=format:{_LOG_FMT}", f"--skip={offset}", f"-n{limit}"]
+        query = query or VcsHistoryQuery()
+        heads = self._history_heads(project, query.sync)
+        if heads is None:
+            return []
+        in_python = needs_python(query)
+        args = ["log", f"--pretty=format:{_LOG_FMT}", *git_args(query)]
+        if not in_python:
+            args += [f"--skip={offset}", f"-n{limit}"]
+        args += [*heads, "--"]
         if doc_id:
-            args += ["--", doc_id]
+            args.append(doc_id)
         proc = self._run(project, args)
         if proc.returncode != 0:
             return []  # empty repo (no commits yet)
-        return self._parse_log(proc.stdout)
+        parsed = self._parse_log_records(proc.stdout)
+        if in_python:
+            parsed = [(c, body) for c, body in parsed if matches(body, query)][offset : offset + limit]
+        return self._mark_sync(project, [commit for commit, _ in parsed])
+
+    def history_facets(self, project: Project, *, doc_id: str | None = None) -> VcsHistoryFacets:
+        if not self.is_initialized(project):
+            return VcsHistoryFacets(kinds={}, authors=())
+        heads = self._history_heads(project, VcsHistorySync.all) or []
+        args = ["log", f"--pretty=format:{_FACETS_FMT}", *heads, "--"]
+        if doc_id:
+            args.append(doc_id)
+        proc = self._run(project, args)
+        if proc.returncode != 0:
+            return VcsHistoryFacets(kinds={}, authors=())
+        kinds: dict[str, int] = {}
+        authors: dict[str, VcsAuthorCount] = {}
+        for record in proc.stdout.split(_REC):
+            fields = record.strip("\n").split(_UNIT)
+            if len(fields) < 3:  # noqa: PLR2004
+                continue
+            name, email, body = (field.strip() for field in fields[:3])
+            kind = _kind_from_body(body).value
+            kinds[kind] = kinds.get(kind, 0) + 1
+            # Журнал идёт от новых к старым: имя берём из самого свежего коммита автора.
+            key = email.lower() or name
+            seen = authors.get(key)
+            authors[key] = VcsAuthorCount(
+                name=seen.name if seen else name,
+                email=seen.email if seen else (email or None),
+                count=(seen.count if seen else 0) + 1,
+            )
+        ordered = sorted(authors.values(), key=lambda a: (-a.count, a.name.casefold()))
+        return VcsHistoryFacets(kinds=kinds, authors=tuple(ordered))
+
+    def _tracking_sha(self, project: Project) -> str | None:
+        """Вершина отслеживаемой ветки удалённого репозитория; None, если проект не подключён или ничего не получал."""
+        config = self.read_remote_config(project)
+        if config is None or not config.remote_branch:
+            return None
+        try:
+            validate_ref_name(config.remote_branch)
+        except VcsInvalidRefError:
+            return None
+        return self._resolve_commit(project, f"refs/remotes/origin/{config.remote_branch}")
+
+    def _resolve_commit(self, project: Project, ref: str) -> str | None:
+        proc = self._run(project, ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"])
+        sha = proc.stdout.strip()
+        return sha if proc.returncode == 0 and sha else None
+
+    def _history_heads(self, project: Project, sync: VcsHistorySync | None) -> list[str] | None:
+        """Что обходит `git log`: без отбора только HEAD, как раньше. None: отбору по синхронизации нечего показать."""
+        if sync is None:
+            return ["HEAD"]
+        tracking = self._tracking_sha(project)
+        head = self._resolve_commit(project, "HEAD")
+        if tracking is None:
+            return ["HEAD"] if sync is VcsHistorySync.all else None
+        if head is None:
+            return [tracking] if sync in (VcsHistorySync.all, VcsHistorySync.incoming) else None
+        if sync is VcsHistorySync.all:
+            return [head, tracking]
+        if sync is VcsHistorySync.unpushed:
+            return [head, f"^{tracking}"]
+        return [tracking, f"^{head}"]
+
+    def _mark_sync(self, project: Project, commits: list[VcsCommit]) -> list[VcsCommit]:
+        """Метки pushed/unpushed/incoming из двух разностей HEAD и отслеживаемой ветки; без неё None."""
+        if not commits:
+            return commits
+        tracking = self._tracking_sha(project)
+        if tracking is None:
+            return commits
+        head = self._resolve_commit(project, "HEAD")
+        unpushed = self._rev_set(project, [head, f"^{tracking}"]) if head else set()
+        incoming = self._rev_set(project, [tracking, *([f"^{head}"] if head else [])])
+        return [
+            replace(
+                commit,
+                sync=(
+                    VcsSyncMarker.unpushed
+                    if commit.id in unpushed
+                    else VcsSyncMarker.incoming
+                    if commit.id in incoming
+                    else VcsSyncMarker.pushed
+                ),
+            )
+            for commit in commits
+        ]
+
+    def _rev_set(self, project: Project, revs: Sequence[str]) -> set[str]:
+        proc = self._run(project, ["rev-list", *revs, "--"])
+        return set(proc.stdout.split()) if proc.returncode == 0 else set()
 
     def commit_detail(self, project: Project, commit_id: str) -> VcsCommitDetail:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        proc = self._run(project, ["log", f"--pretty=format:{_LOG_FMT}", "-n1", commit_id])
+        validate_revision(commit_id)
+        proc = self._run(project, ["log", f"--pretty=format:{_LOG_FMT}", "-n1", commit_id, "--"])
         if proc.returncode != 0:
             raise VcsCommandError("log", proc.stderr or f"unknown commit {commit_id}")
         commits = self._parse_log(proc.stdout)
         if not commits:
             raise VcsCommandError("log", f"commit not found: {commit_id}")
 
-        names = self._run(project, ["show", "--name-status", "--format=", commit_id]).stdout
+        # Против первого родителя, а не `git show`: у слияния show печатает пустой комбинированный diff.
+        range_args = self._diff_range(project, None, commit_id)
+        names = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", "--name-status", *range_args]).stdout
         files = tuple(
             VcsFileChange(path=path, change=change, old_path=old)
             for change, path, old in self._parse_name_status(names)
         )
-        numstat = self._run(project, ["show", "--numstat", "--format=", commit_id]).stdout
+        numstat = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", "--numstat", *range_args]).stdout
         insertions = deletions = 0
         for line in numstat.splitlines():
             cols = line.split("\t")
@@ -336,7 +547,7 @@ class GitVcsService:
 
     # ── status / diff ────────────────────────────────────────────────────────
     def status(self, project: Project, settings: VcsSettings) -> VcsStatus:  # noqa: C901
-        git_dir = self._git_dir(project)
+        git_dir = self.git_dir(project)
         if not self.is_available(project):
             return _empty_status(available=False, store_path=str(git_dir), settings=settings)
         if not self.is_initialized(project):
@@ -391,7 +602,7 @@ class GitVcsService:
         budget = max_bytes or self._diff_max_bytes
         range_args = self._diff_range(project, from_id, to_id)
 
-        name_args = ["diff", "--name-status", *range_args]
+        name_args = ["diff", "--no-ext-diff", "--no-textconv", "--name-status", *range_args]
         if path:
             name_args += ["--", path]
         names = self._run(project, name_args)
@@ -403,7 +614,7 @@ class GitVcsService:
         total = 0
         truncated = len(entries) > _MAX_DIFF_FILES
         for change, file_path, _old in entries[:_MAX_DIFF_FILES]:
-            patch = self._run(project, ["diff", *range_args, "--", file_path]).stdout
+            patch = self._run(project, ["diff", "--no-ext-diff", "--no-textconv", *range_args, "--", file_path]).stdout
             binary = "Binary files" in patch and "differ" in patch
             if binary:
                 patch = ""
@@ -417,6 +628,9 @@ class GitVcsService:
         return VcsDiff(from_id=from_id, to_id=to_id, files=tuple(files), truncated=truncated)
 
     def _diff_range(self, project: Project, from_id: str | None, to_id: str | None) -> list[str]:
+        for rev in (from_id, to_id):
+            if rev:
+                validate_revision(rev)
         if from_id and to_id:
             return [from_id, to_id]
         if to_id:
@@ -437,6 +651,7 @@ class GitVcsService:
     ) -> VcsRestoreResult:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        validate_revision(commit_id)
         verify = self._run(project, ["rev-parse", "--verify", f"{commit_id}^{{commit}}"])
         if verify.returncode != 0:
             raise VcsCommandError("rev-parse", verify.stderr or f"unknown commit {commit_id}")
@@ -517,9 +732,10 @@ class GitVcsService:
     ) -> VcsBranch:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        args = ["branch", name]
+        validate_ref_name(name)
+        args = ["branch", "--", name]
         if from_commit:
-            args.append(from_commit)
+            args.append(validate_revision(from_commit))
         self._run(project, args, check=True)
         if switch:
             self.switch_branch(project, settings, name=name)
@@ -539,6 +755,7 @@ class GitVcsService:
     ) -> VcsStatus:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        validate_ref_name(name)
         if autosnapshot and self.status(project, settings).dirty:
             self.commit(
                 project,
@@ -546,13 +763,14 @@ class GitVcsService:
                 kind=VcsCommitKind.manual,
                 include_pdf=settings.track_pdf,
             )
-        self._run(project, ["checkout", name], check=True)
+        self._run(project, ["checkout", name, "--"], check=True)
         return self.status(project, settings)
 
     def delete_branch(self, project: Project, *, name: str) -> None:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        self._run(project, ["branch", "-D", name], check=True)
+        validate_ref_name(name)
+        self._run(project, ["branch", "-D", "--", name], check=True)
 
     # ── tags ─────────────────────────────────────────────────────────────────
     def list_tags(self, project: Project) -> list[VcsTag]:
@@ -602,9 +820,10 @@ class GitVcsService:
     ) -> VcsTag:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        args = ["tag", "-a", name, "-m", message or name] if kind == VcsTagKind.release else ["tag", name]
+        validate_ref_name(name)
+        args = ["tag", "-a", "-m", message or name, "--", name] if kind == VcsTagKind.release else ["tag", "--", name]
         if commit_id:
-            args.append(commit_id)
+            args.append(validate_revision(commit_id))
         self._run(project, args, check=True)
         for tag in self.list_tags(project):
             if tag.name == name:
@@ -615,7 +834,8 @@ class GitVcsService:
     def delete_tag(self, project: Project, *, name: str) -> None:
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
-        self._run(project, ["tag", "-d", name], check=True)
+        validate_ref_name(name)
+        self._run(project, ["tag", "-d", "--", name], check=True)
 
     # ── parsing helpers ──────────────────────────────────────────────────────
     def _one(self, project: Project, commit_id: str) -> VcsCommit | None:
@@ -624,25 +844,33 @@ class GitVcsService:
         return commits[0] if commits else None
 
     def _parse_log(self, raw: str) -> list[VcsCommit]:
-        commits: list[VcsCommit] = []
+        return [commit for commit, _ in self._parse_log_records(raw)]
+
+    def _parse_log_records(self, raw: str) -> list[tuple[VcsCommit, str]]:
+        """Коммиты вместе с полным текстом сообщения: по нему Python отбирает вид, когда git не справляется."""
+        commits: list[tuple[VcsCommit, str]] = []
         for record in raw.split(_REC):
             rec = record.strip("\n")
             if not rec.strip():
                 continue
             fields = rec.split(_UNIT)
-            if len(fields) < 7:  # noqa: PLR2004
+            if len(fields) < 8:  # noqa: PLR2004
                 continue
-            full, short, parents_raw, author, date_raw, refs_raw, body = fields[:7]
+            full, short, parents_raw, author, email, date_raw, refs_raw, body = fields[:8]
             commits.append(
-                VcsCommit(
-                    id=full.strip(),
-                    short_id=short.strip(),
-                    kind=_kind_from_body(body),
-                    message=_subject(body),
-                    author=author.strip(),
-                    created_at=_parse_date(date_raw.strip()),
-                    parents=tuple(p for p in parents_raw.split() if p),
-                    refs=_parse_refs(refs_raw),
+                (
+                    VcsCommit(
+                        id=full.strip(),
+                        short_id=short.strip(),
+                        kind=_kind_from_body(body),
+                        message=_subject(body),
+                        author=author.strip(),
+                        created_at=_parse_date(date_raw.strip()),
+                        parents=tuple(p for p in parents_raw.split() if p),
+                        refs=_parse_refs(refs_raw),
+                        author_email=email.strip() or None,
+                    ),
+                    body,
                 )
             )
         return commits
@@ -661,8 +889,16 @@ class GitVcsService:
         return out
 
 
+def _parse_uuid(raw: str | None) -> UUID | None:
+    try:
+        return UUID(raw) if raw else None
+    except ValueError:
+        return None
+
+
 def _cmd_label(args: Sequence[str]) -> str:
-    return " ".join(args[:2])
+    """Подкоманда и первый аргумент; разделитель `--` в подпись не попадает."""
+    return " ".join([arg for arg in args if arg != "--"][:2])
 
 
 def _map_change(letter: str) -> VcsChange:
@@ -676,10 +912,10 @@ def _map_change(letter: str) -> VcsChange:
 
 
 def _kind_from_body(body: str) -> VcsCommitKind:
-    match = _KIND_TRAILER.search(body)
-    if match:
+    raw = raw_kind(body)
+    if raw is not None:
         try:
-            return VcsCommitKind(match.group(1))
+            return VcsCommitKind(raw)
         except ValueError:
             pass
     return VcsCommitKind.manual

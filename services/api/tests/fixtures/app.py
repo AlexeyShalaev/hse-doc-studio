@@ -12,6 +12,7 @@ from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.agent.protocols import IAgentProvider
 from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOllamaRuntime
 from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
+from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
@@ -224,6 +225,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     mount_probe: IMountProbe | None = None,
     setup_applier: ISetupApplier | None = None,
     packs_dir: Path | None = None,
+    host_key_scanner: IHostKeyScanner | None = None,
 ) -> AsyncContainer:
     # A handful of providers (font store, office-editor JWT secret, compile host
     # mounts, the agent loop's rules file) read the module-level `settings.data_dir`
@@ -408,6 +410,17 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
                 return ollama_runtime
 
         providers.append(_OllamaRuntimeOverride())
+
+    if host_key_scanner is not None:
+        # Настоящее сканирование запускает ssh-keyscan и ходит в сеть: тесты API хостов подставляют своё.
+        class _HostKeyScannerOverride(Provider):
+            scope = Scope.APP
+
+            @provide(override=True)
+            def get_host_key_scanner(self) -> IHostKeyScanner:
+                return host_key_scanner
+
+        providers.append(_HostKeyScannerOverride())
 
     return make_async_container(*providers)
 

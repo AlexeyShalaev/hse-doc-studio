@@ -1,0 +1,26 @@
+[
+  {
+    "host": "github.com",
+    "port": null,
+    "key_types": [
+      "ssh-ed25519",
+      "ecdsa-sha2-nistp256"
+    ],
+    "fingerprints_sha256": [
+      "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
+      "SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM"
+    ],
+    "added_at": "2026-10-24T12:10:00Z"
+  },
+  {
+    "host": "git.hse.ru",
+    "port": 2222,
+    "key_types": [
+      "ssh-ed25519"
+    ],
+    "fingerprints_sha256": [
+      "SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s"
+    ],
+    "added_at": "2026-10-25T18:45:00Z"
+  }
+]

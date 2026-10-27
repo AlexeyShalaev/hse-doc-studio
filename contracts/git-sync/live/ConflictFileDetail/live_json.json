@@ -1,0 +1,31 @@
+{
+  "kind": "json",
+  "fields": [
+    {
+      "pointer": "/name",
+      "label": null,
+      "type": "scalar",
+      "base": "Test VKR",
+      "ours": "Диплом: версия Анны",
+      "theirs": "Диплом: версия Бориса",
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "status": "conflict"
+    },
+    {
+      "pointer": "/updated_at",
+      "label": null,
+      "type": "scalar",
+      "base": "2030-01-01T00:00:00Z",
+      "ours": "2030-01-01T00:00:00Z",
+      "theirs": "2030-01-01T00:00:00Z",
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "status": "auto"
+    }
+  ]
+}

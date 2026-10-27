@@ -1,0 +1,12 @@
+{
+  "host": "git.corp.example",
+  "port": null,
+  "provider_override": null,
+  "provider_info": {
+    "id": "other",
+    "detected_by": "unknown",
+    "version": null
+  },
+  "ca_present": false,
+  "pinned_fingerprint": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w"
+}

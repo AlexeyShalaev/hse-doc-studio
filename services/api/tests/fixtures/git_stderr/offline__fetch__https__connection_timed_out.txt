@@ -1,0 +1,1 @@
+fatal: unable to access 'https://git.example.com/team/repo.git/': Failed to connect to git.example.com port 443 after 21034 ms: Connection timed out

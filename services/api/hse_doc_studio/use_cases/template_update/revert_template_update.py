@@ -19,7 +19,6 @@ from hse_doc_studio.core.template_update.entities import (
     resolve_op,
 )
 from hse_doc_studio.core.template_update.errors import (
-    TemplateUpdateInProgressError,
     TemplateUpdateNotRevertibleError,
 )
 from hse_doc_studio.core.template_update.layout import doc_resolver
@@ -33,7 +32,12 @@ from hse_doc_studio.core.template_update.protocols import (
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.template_update.planning import read_project_files
-from hse_doc_studio.use_cases.template_update.support import ensure_history, lock_for, pre_update_snapshot
+from hse_doc_studio.use_cases.template_update.support import (
+    ensure_history,
+    ensure_no_active_journal,
+    lock_for,
+    pre_update_snapshot,
+)
 from hse_doc_studio.use_cases.template_update.transaction import (
     UPDATE_TRAILER,
     TemplateUpdateTransaction,
@@ -119,13 +123,7 @@ class RevertTemplateUpdateUC:
         return record
 
     def _revert(self, project: Project, inp: RevertTemplateUpdateInput) -> RevertTemplateUpdateOutput:
-        if self._journals.get(project.folder) is not None:
-            raise TemplateUpdateInProgressError(
-                localized_error(
-                    "Обновление шаблона этого проекта уже идёт или было прервано.",
-                    "A template update of this project is already running or was interrupted.",
-                )
-            )
+        ensure_no_active_journal(self._journals, project)
         tracking = self._tracking.get(project.folder)
         record = self._find(tracking, inp.update_id)
         update_commit = self._store.find_commit(project, UPDATE_TRAILER, record.id)

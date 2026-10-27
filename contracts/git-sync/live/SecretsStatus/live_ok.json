@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "source": "file",
+  "permissions_enforced": true,
+  "credentials_total": 0,
+  "credentials_unreadable": 0,
+  "data_dir_shared_folder": null
+}

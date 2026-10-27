@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "error": null,
+  "url": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "owner": "hse-team",
+    "repo": "course-paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "github",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": true,
+  "empty": false,
+  "default_branch": "main",
+  "branches": [
+    "main",
+    "draft"
+  ],
+  "relation": "other_project",
+  "project": {
+    "id": "c1d2e3f4-0a1b-4c2d-8e3f-a4b5c6d7e8f9",
+    "name": "Чужая курсовая",
+    "pack_id": "hse-cs-sse",
+    "template_id": "course-paper",
+    "template_version": "1.2.0",
+    "kind": "course_paper",
+    "staffing": "team",
+    "authors_count": 3
+  },
+  "schema_access": "full",
+  "required_studio": null,
+  "template_available": true
+}

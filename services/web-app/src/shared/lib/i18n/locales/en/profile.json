@@ -1,0 +1,52 @@
+{
+  "section": {
+    "title": "Version author",
+    "subtitle": "Your name and e-mail sign every project version. Colleagues will see them in the history once you connect a repository.",
+    "loading": "Loading the author…",
+    "loadFailed": "Could not load the version author.",
+    "retry": "Retry",
+    "reset": "Use the shared signature",
+    "resetConfirm": "New versions will be signed with the shared Studio signature again. Earlier versions keep their author. Continue?",
+    "resetFailed": "Could not go back to the shared signature."
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Ivan Smirnov",
+    "email": "E-mail",
+    "emailPlaceholder": "ivan.smirnov@edu.hse.ru",
+    "noreplyHint": "If GitHub hides your e-mail, take the address like 123456+name@users.noreply.github.com from its settings.",
+    "preview": "This is how a version will be signed",
+    "previewEmpty": "Name <e-mail>",
+    "privacy": "Your name and e-mail go into the version history and are visible to everyone with access to the repository. Earlier versions keep their previous author.",
+    "defaultNotice": "Versions are currently signed with the shared Studio signature: {{author}}. Enter your name and e-mail so colleagues can recognise your edits.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "dismiss": "Dismiss",
+    "saveFailed": "Could not save the author. Please try again."
+  },
+  "validation": {
+    "name_required": "Enter your name so colleagues can recognise you.",
+    "name_too_long": "The name is too long: 128 characters at most.",
+    "name_invalid": "The name cannot contain < or >, and punctuation alone is not enough.",
+    "email_required": "Enter your e-mail.",
+    "email_too_long": "The address is too long: 254 characters at most.",
+    "email_invalid": "Enter an address like name@example.com."
+  },
+  "dialog": {
+    "title": "Introduce yourself",
+    "description": "The Studio needs your name and e-mail: they sign the versions that go to the repository.",
+    "reason": {
+      "connect": "To connect a repository the Studio needs your name and e-mail: they sign the versions that go to the server.",
+      "sync": "To sync the project the Studio needs your name and e-mail: they sign the versions that go to the repository.",
+      "clone": "To download a project from a repository the Studio needs your name and e-mail: they sign your future versions."
+    },
+    "continue": "Save and continue",
+    "later": "Not now"
+  },
+  "toast": {
+    "saved": "Author saved",
+    "cleared": "Shared signature restored"
+  }
+}

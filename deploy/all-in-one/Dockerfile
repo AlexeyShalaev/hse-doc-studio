@@ -52,7 +52,7 @@ WORKDIR /app
 # upgrade подтягивает security-обновления Debian, которых ещё нет в базовом образе
 # (иначе Trivy падает на свежих CVE библиотек, например openssl, до выхода нового python:slim)
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-    ca-certificates curl git gnupg \
+    ca-certificates curl git gnupg openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
 # Docker CLI (client only — NOT the daemon). The backend shells out to `docker`
@@ -87,6 +87,11 @@ COPY --from=backend-builder /app /app
 # pip в рантайме не нужен (зависимости поставлены ещё в backend-builder), а его
 # вендоренные msgpack и setuptools дают HIGH-уязвимости в скане образа.
 RUN python -m pip uninstall -y pip
+
+# Команда `hse-doc-studio build` для CI (файлы из Git-настроек проекта). Пакет не установлен,
+# а лежит в /app (PYTHONPATH ниже), поэтому консольный скрипт заменяет обёртка.
+RUN printf '#!/bin/sh\nexec python -m hse_doc_studio.cli "$@"\n' > /usr/local/bin/hse-doc-studio \
+  && chmod 0755 /usr/local/bin/hse-doc-studio
 
 # Frontend built assets served as static files by FastAPI
 COPY --from=frontend-builder --chown=app:app /app/dist /app/static

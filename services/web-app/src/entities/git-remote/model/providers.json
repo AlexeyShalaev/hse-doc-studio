@@ -1,0 +1,266 @@
+{
+  "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой.",
+  "version": 1,
+  "detected_by": ["override", "host", "api", "unknown"],
+  "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+  "defaults": {
+    "token_name": {
+      "with_project": "HSE Studio · {project}",
+      "without_project": "HSE Studio"
+    },
+    "token_description": {
+      "ru": "Доступ для HSE Doc Studio, {date}",
+      "en": "Access for HSE Doc Studio, {date}"
+    },
+    "expires_in_days": 90,
+    "instance_prefix_max_depth": 3
+  },
+  "providers": [
+    {
+      "id": "github",
+      "label": "GitHub",
+      "host_rules": [
+        { "match": "exact", "value": "github.com" },
+        { "match": "first_label", "value": "github" }
+      ],
+      "api": {
+        "base": "{web_base}/api/v3",
+        "base_by_host": { "github.com": "https://api.github.com" },
+        "detect": {
+          "path": "/api/v3",
+          "version_header": "X-GitHub-Enterprise-Version",
+          "version_key": null
+        }
+      },
+      "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+      "limits": { "name": 40, "description": 1024 },
+      "token_links": {
+        "primary": {
+          "kind": "prefilled",
+          "broad": false,
+          "path": "/settings/personal-access-tokens/new",
+          "query": [
+            { "key": "name", "value": "{name}" },
+            { "key": "description", "value": "{description}" },
+            { "key": "target_name", "value": "{target_name}" },
+            { "key": "expires_in", "value": "{expires_in}" },
+            { "key": "contents", "value": "write" }
+          ]
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "broad": true,
+          "path": "/settings/tokens/new",
+          "query": [
+            { "key": "scopes", "value": "repo" },
+            { "key": "description", "value": "{description}" }
+          ]
+        }
+      },
+      "permissions": {
+        "required": ["repo"],
+        "optional": ["workflow"],
+        "too_broad": [
+          "admin:org",
+          "admin:repo_hook",
+          "admin:public_key",
+          "admin:gpg_key",
+          "delete_repo"
+        ],
+        "implies": {},
+        "human": {
+          "ru": "Contents: Read and write (точный токен) или repo (классический)",
+          "en": "Contents: Read and write (fine-grained) or repo (classic)"
+        }
+      },
+      "introspection": {
+        "method": "github_user",
+        "path": "/user",
+        "auth": "bearer",
+        "scopes": "header:X-OAuth-Scopes"
+      },
+      "ssh_links": {
+        "user_keys": { "kind": "plain", "path": "/settings/keys" },
+        "deploy_key": { "kind": "plain", "path": "/{path}/settings/keys/new" }
+      },
+      "docs_url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"
+    },
+    {
+      "id": "gitlab",
+      "label": "GitLab",
+      "host_rules": [
+        { "match": "exact", "value": "gitlab.com" },
+        { "match": "label", "value": "gitlab" }
+      ],
+      "api": {
+        "base": "{web_base}/api/v4",
+        "base_by_host": {},
+        "detect": {
+          "path": "/api/v4/version",
+          "version_header": null,
+          "version_key": "version"
+        }
+      },
+      "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+      "limits": { "name": 100, "description": 1024 },
+      "token_links": {
+        "primary": {
+          "kind": "prefilled",
+          "broad": false,
+          "path": "/-/user_settings/personal_access_tokens",
+          "query": [
+            { "key": "name", "value": "{name}" },
+            { "key": "description", "value": "{description}" },
+            { "key": "scopes", "value": "{scopes}" }
+          ]
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "broad": false,
+          "path": "/-/profile/personal_access_tokens",
+          "query": [
+            { "key": "name", "value": "{name}" },
+            { "key": "description", "value": "{description}" },
+            { "key": "scopes", "value": "{scopes}" }
+          ]
+        }
+      },
+      "permissions": {
+        "required": ["read_repository", "write_repository"],
+        "optional": [],
+        "too_broad": ["api", "sudo", "admin_mode"],
+        "implies": {
+          "api": ["read_repository", "write_repository"],
+          "write_repository": ["read_repository"]
+        },
+        "human": {
+          "ru": "read_repository и write_repository, без api",
+          "en": "read_repository and write_repository, without api"
+        }
+      },
+      "introspection": {
+        "method": "gitlab_self",
+        "path": "/personal_access_tokens/self",
+        "auth": "private_token",
+        "scopes": "body:scopes"
+      },
+      "ssh_links": {
+        "user_keys": { "kind": "plain", "path": "/-/user_settings/ssh_keys" },
+        "deploy_key": {
+          "kind": "plain",
+          "path": "/{path}/-/settings/repository"
+        }
+      },
+      "docs_url": "https://docs.gitlab.com/user/profile/personal_access_tokens/"
+    },
+    {
+      "id": "gitea",
+      "label": "Gitea",
+      "host_rules": [
+        { "match": "exact", "value": "codeberg.org" },
+        { "match": "first_label", "value": "gitea" },
+        { "match": "first_label", "value": "forgejo" }
+      ],
+      "api": {
+        "base": "{web_base}/api/v1",
+        "base_by_host": {},
+        "detect": {
+          "path": "/api/v1/version",
+          "version_header": null,
+          "version_key": "version"
+        }
+      },
+      "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+      "limits": { "name": 100, "description": 1024 },
+      "token_links": {
+        "primary": {
+          "kind": "plain",
+          "broad": false,
+          "path": "/user/settings/applications",
+          "query": []
+        },
+        "fallback": null
+      },
+      "permissions": {
+        "required": ["write:repository"],
+        "optional": [],
+        "too_broad": [],
+        "implies": {},
+        "human": {
+          "ru": "Репозиторий: чтение и запись (write:repository)",
+          "en": "Repository: read and write (write:repository)"
+        }
+      },
+      "introspection": {
+        "method": "gitea_user",
+        "path": "/user",
+        "auth": "token",
+        "scopes": "none"
+      },
+      "ssh_links": {
+        "user_keys": { "kind": "plain", "path": "/user/settings/keys" },
+        "deploy_key": { "kind": "plain", "path": "/{path}/settings/keys" }
+      },
+      "docs_url": "https://docs.gitea.com/development/api-usage"
+    },
+    {
+      "id": "bitbucket",
+      "label": "Bitbucket",
+      "host_rules": [{ "match": "exact", "value": "bitbucket.org" }],
+      "api": {
+        "base": null,
+        "base_by_host": { "bitbucket.org": "https://api.bitbucket.org/2.0" },
+        "detect": null
+      },
+      "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+      "limits": { "name": 100, "description": 1024 },
+      "token_links": {
+        "primary": {
+          "kind": "plain",
+          "broad": false,
+          "path": "/{path}/admin/access-tokens",
+          "query": []
+        },
+        "fallback": null
+      },
+      "permissions": {
+        "required": ["repository:write"],
+        "optional": [],
+        "too_broad": [],
+        "implies": {},
+        "human": {
+          "ru": "Repositories: Write",
+          "en": "Repositories: Write"
+        }
+      },
+      "introspection": null,
+      "ssh_links": {
+        "user_keys": { "kind": "plain", "path": "/account/settings/ssh-keys/" },
+        "deploy_key": { "kind": "plain", "path": "/{path}/admin/access-keys/" }
+      },
+      "docs_url": "https://support.atlassian.com/bitbucket-cloud/docs/repository-access-tokens/"
+    },
+    {
+      "id": "other",
+      "label": "Git",
+      "host_rules": [],
+      "api": { "base": null, "base_by_host": {}, "detect": null },
+      "auth_variants": ["token", "ssh_user_key"],
+      "limits": { "name": 100, "description": 1024 },
+      "token_links": null,
+      "permissions": {
+        "required": [],
+        "optional": [],
+        "too_broad": [],
+        "implies": {},
+        "human": {
+          "ru": "Чтение и запись в репозиторий",
+          "en": "Read and write access to the repository"
+        }
+      },
+      "introspection": null,
+      "ssh_links": null,
+      "docs_url": null
+    }
+  ]
+}

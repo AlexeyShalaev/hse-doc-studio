@@ -39,8 +39,14 @@ import {
   SHARED_META_BLOCK_KEY,
   SharedDocsSection,
   SupervisorSection,
+  SyncCiSection,
+  SyncExchangeSection,
+  SyncOptionsSection,
+  SyncRemoteSection,
+  SyncSharedFolderSection,
   resolveProjectSettingsGroup,
   groupSections,
+  useSyncSectionContext,
 } from "./project-settings";
 import type {
   AuthorEntry,
@@ -322,11 +328,13 @@ export const ProjectSettingsView = ({
   // Навигация идёт по ГРУППАМ: страница показывает один-три родственных
   // раздела. Параметр маршрута принимает и id группы, и id раздела — ссылки на
   // конкретный раздел продолжают работать и открывают его группу.
+  const syncContext = useSyncSectionContext(project.id);
   const sectionCtx = {
     isTeam,
     hasDocFormats: variantRows.length > 0,
     hasDocSetMeta: docSetCards.length > 0,
     hasMetaFields: metaFields.length > 0,
+    ...syncContext,
   };
   const activeGroup = resolveProjectSettingsGroup(section, sectionCtx);
   const activeSections = groupSections(activeGroup, sectionCtx);
@@ -529,6 +537,16 @@ export const ProjectSettingsView = ({
         );
       case "checks":
         return <ProjectChecksSection project={project} />;
+      case "sync-remote":
+        return <SyncRemoteSection projectId={project.id} />;
+      case "sync-options":
+        return <SyncOptionsSection projectId={project.id} />;
+      case "sync-shared-folder":
+        return <SyncSharedFolderSection projectId={project.id} />;
+      case "sync-exchange":
+        return <SyncExchangeSection projectId={project.id} />;
+      case "sync-ci":
+        return <SyncCiSection projectId={project.id} />;
       case "danger-zone":
         return (
           <DangerZoneSection

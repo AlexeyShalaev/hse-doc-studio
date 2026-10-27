@@ -1,0 +1,49 @@
+{
+  "connected": true,
+  "ui_state": "unfetched",
+  "remote": {
+    "display_url": "file:///studio/remotes/origin.git",
+    "kind": "file",
+    "host": null,
+    "provider": "other",
+    "provider_info": {
+      "id": "other",
+      "detected_by": "unknown",
+      "version": null
+    },
+    "web_url": null,
+    "branch": "main",
+    "local_branch": "master",
+    "credential": null,
+    "insecure_http": false
+  },
+  "relation": "unfetched",
+  "ahead": 0,
+  "behind": 0,
+  "behind_files": 0,
+  "health": "ok",
+  "last_error": null,
+  "blocked": null,
+  "profile_ok": true,
+  "incoming": [],
+  "outgoing": [],
+  "operation": null,
+  "pending": null,
+  "last_fetch_at": "2030-01-01T00:00:00Z",
+  "last_fetch_ok_at": "2030-01-01T00:00:00Z",
+  "last_sync_at": "2030-01-01T00:00:00Z",
+  "last_sync": {
+    "id": "000000000005",
+    "at": "2030-01-01T00:00:00Z",
+    "outcome": "merged",
+    "pulled_commits": 4,
+    "pushed_commits": 5
+  },
+  "auto_fetch": {
+    "enabled": true,
+    "interval_s": 600,
+    "next_fetch_at": "2030-01-01T00:00:00Z"
+  },
+  "shared_folder": null,
+  "bot_authored_commits": 0
+}

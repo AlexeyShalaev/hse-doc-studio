@@ -1,0 +1,9 @@
+{
+  "provider": "github",
+  "docs": "all",
+  "publish": "artifacts",
+  "triggers": [
+    "push"
+  ],
+  "overwrite": true
+}

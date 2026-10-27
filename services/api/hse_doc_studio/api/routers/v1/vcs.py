@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import StringConstraints
 
 from hse_doc_studio.api.schemas.vcs import (
     CreateBranchRequest,
@@ -12,6 +15,7 @@ from hse_doc_studio.api.schemas.vcs import (
     RestoreRequest,
     SwitchBranchRequest,
     UpdateVcsSettingsRequest,
+    VcsAuthorFacetResponse,
     VcsBranchResponse,
     VcsCommitDetailResponse,
     VcsCommitResponse,
@@ -20,19 +24,21 @@ from hse_doc_studio.api.schemas.vcs import (
     VcsDiffResponse,
     VcsFileChangeResponse,
     VcsFileDiffResponse,
+    VcsHistoryFacetsResponse,
     VcsRefResponse,
     VcsRestoreResponse,
     VcsSettingsResponse,
     VcsStatusResponse,
     VcsTagResponse,
 )
-from hse_doc_studio.core.enums import VcsRestoreMode, VcsTagKind
+from hse_doc_studio.core.enums import VcsHistorySync, VcsRestoreMode, VcsTagKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.vcs.entities import (
     VcsBranch,
     VcsCommit,
     VcsCommitDetail,
     VcsDiff,
+    VcsHistoryFacets,
     VcsRestoreResult,
     VcsSettings,
     VcsStatus,
@@ -52,7 +58,12 @@ from hse_doc_studio.use_cases.vcs.get_vcs_commit import GetVcsCommitInput, GetVc
 from hse_doc_studio.use_cases.vcs.get_vcs_diff import GetVcsDiffInput, GetVcsDiffUC
 from hse_doc_studio.use_cases.vcs.get_vcs_settings import GetVcsSettingsInput, GetVcsSettingsUC
 from hse_doc_studio.use_cases.vcs.get_vcs_status import GetVcsStatusInput, GetVcsStatusUC
-from hse_doc_studio.use_cases.vcs.list_vcs_history import ListVcsHistoryInput, ListVcsHistoryUC
+from hse_doc_studio.use_cases.vcs.list_vcs_history import (
+    ListVcsHistoryFacetsInput,
+    ListVcsHistoryFacetsUC,
+    ListVcsHistoryInput,
+    ListVcsHistoryUC,
+)
 from hse_doc_studio.use_cases.vcs.restore_vcs import RestoreVcsInput, RestoreVcsUC
 from hse_doc_studio.use_cases.vcs.update_vcs_settings import (
     UpdateVcsSettingsInput,
@@ -79,6 +90,10 @@ from hse_doc_studio.use_cases.vcs.vcs_tags import (
 
 router = APIRouter(route_class=DishkaRoute)
 
+# Вид коммита из трейлера Hse-Kind: строчные буквы, цифры, подчёркивание и дефис.
+_KIND_PATTERN = r"^[a-z][a-z0-9_-]{0,31}$"
+_MAX_FILTER_LENGTH = 200
+
 
 # ── mappers ──────────────────────────────────────────────────────────────────
 def _map_commit(commit: VcsCommit) -> VcsCommitResponse:
@@ -92,6 +107,9 @@ def _map_commit(commit: VcsCommit) -> VcsCommitResponse:
         parents=list(commit.parents),
         refs=[VcsRefResponse(name=r.name, kind=r.kind) for r in commit.refs],
         doc_id=commit.doc_id,
+        author_email=commit.author_email,
+        is_merge=commit.is_merge,
+        sync=commit.sync.value if commit.sync else None,
         stats=(
             VcsCommitStatsResponse(
                 files=commit.stats.files,
@@ -101,6 +119,13 @@ def _map_commit(commit: VcsCommit) -> VcsCommitResponse:
             if commit.stats is not None
             else None
         ),
+    )
+
+
+def _map_facets(facets: VcsHistoryFacets) -> VcsHistoryFacetsResponse:
+    return VcsHistoryFacetsResponse(
+        kinds=dict(facets.kinds),
+        authors=[VcsAuthorFacetResponse(name=a.name, email=a.email, count=a.count) for a in facets.authors],
     )
 
 
@@ -186,18 +211,50 @@ async def get_vcs_status(project_id: UUID, uc: FromDishka[GetVcsStatusUC]) -> Vc
 
 
 @router.get("/projects/{project_id}/vcs/history", response_model=list[VcsCommitResponse])
-async def list_vcs_history(
+async def list_vcs_history(  # noqa: PLR0913
     project_id: UUID,
     uc: FromDishka[ListVcsHistoryUC],
     doc_id: str | None = Query(default=None),
+    kind: list[Annotated[str, StringConstraints(pattern=_KIND_PATTERN)]] | None = Query(default=None),
+    author_email: str | None = Query(default=None, max_length=_MAX_FILTER_LENGTH),
+    q: str | None = Query(default=None, max_length=_MAX_FILTER_LENGTH),
+    since: datetime | None = Query(default=None),
+    until: datetime | None = Query(default=None),
+    sync: VcsHistorySync | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> list[VcsCommitResponse]:
     try:
-        result = await uc.execute(ListVcsHistoryInput(project_id=project_id, doc_id=doc_id, limit=limit, offset=offset))
+        result = await uc.execute(
+            ListVcsHistoryInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                limit=limit,
+                offset=offset,
+                kinds=tuple(dict.fromkeys(kind or ())),
+                author_email=author_email,
+                text=q,
+                since=since,
+                until=until,
+                sync=sync,
+            )
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [_map_commit(c) for c in result.commits]
+
+
+@router.get("/projects/{project_id}/vcs/history/facets", response_model=VcsHistoryFacetsResponse)
+async def get_vcs_history_facets(
+    project_id: UUID,
+    uc: FromDishka[ListVcsHistoryFacetsUC],
+    doc_id: str | None = Query(default=None),
+) -> VcsHistoryFacetsResponse:
+    try:
+        result = await uc.execute(ListVcsHistoryFacetsInput(project_id=project_id, doc_id=doc_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _map_facets(result.facets)
 
 
 @router.get("/projects/{project_id}/vcs/commits/{commit_id}", response_model=VcsCommitDetailResponse)
@@ -225,6 +282,8 @@ async def get_vcs_diff(
         result = await uc.execute(GetVcsDiffInput(project_id=project_id, from_id=from_id, to_id=to_id, path=path))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except VcsCommandError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _map_diff(result.diff)
 
 

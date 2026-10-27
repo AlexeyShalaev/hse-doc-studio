@@ -1,0 +1,14 @@
+{
+  "detail": "Ключ сервера ещё не подтверждён. Сверь отпечаток и подтверди.",
+  "code": "host_key_unknown",
+  "host_keys": [
+    {
+      "type": "ssh-ed25519",
+      "fingerprint_sha256": "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU"
+    },
+    {
+      "type": "ecdsa-sha2-nistp256",
+      "fingerprint_sha256": "SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM"
+    }
+  ]
+}

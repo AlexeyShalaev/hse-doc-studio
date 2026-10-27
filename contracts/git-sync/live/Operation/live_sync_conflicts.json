@@ -1,0 +1,37 @@
+{
+  "id": "op_000000000008",
+  "kind": "sync",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "status": "succeeded",
+  "phase": "merge",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": "2030-01-01T00:00:00Z",
+  "result": {
+    "outcome": "conflicts",
+    "pulled_commits": 0,
+    "pushed_commits": 0,
+    "merge_commit": null,
+    "files_changed": 0,
+    "auto": [
+      {
+        "path": "figures/diagram.png",
+        "action": "binary_newest",
+        "copy_path": "figures/diagram.conflict-0000000.png"
+      },
+      {
+        "path": "thesis/thesis.tex",
+        "action": "merged",
+        "copy_path": null
+      }
+    ],
+    "conflicts": {
+      "files_total": 3,
+      "files_open": 3
+    },
+    "warnings": []
+  },
+  "error": null
+}

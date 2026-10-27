@@ -414,6 +414,9 @@
     "appearanceTheme": "Theme",
     "appearanceDensity": "Interface density",
     "appearanceLanguage": "Interface language",
+    "profile": "Version author",
+    "profileName": "Author name",
+    "profileEmail": "Author e-mail",
     "compiler": "LaTeX compiler",
     "compilerEngine": "Default engine",
     "compilerPasses": "Max iterations",
@@ -441,6 +444,12 @@
     "aboutImage": "Image",
     "aboutSource": "Source",
     "aboutDataDir": "Configuration folder",
-    "aboutUpdates": "Updates"
+    "aboutUpdates": "Updates",
+    "gitAccess": "Repository access",
+    "gitAccessCredentials": "Tokens and keys",
+    "gitAccessServers": "Git servers",
+    "gitAccessHosts": "Trusted servers",
+    "gitAccessEncryption": "Token encryption",
+    "gitAccessFetch": "Default background check"
   }
 }

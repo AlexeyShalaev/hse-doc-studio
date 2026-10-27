@@ -1,10 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   type CreateBranchParams,
   type CreateTagParams,
   type DiffParams,
   type RestoreParams,
   type UpdateVcsSettingsParams,
+  type VcsHistoryParams,
   vcsApi,
 } from "./vcsApi";
 
@@ -13,6 +19,10 @@ export const vcsKeys = {
   status: (projectId: string) => [...vcsKeys.all, "status", projectId] as const,
   history: (projectId: string, docId?: string) =>
     [...vcsKeys.all, "history", projectId, docId ?? "*"] as const,
+  historyPage: (projectId: string, params: VcsHistoryParams) =>
+    [...vcsKeys.all, "history", projectId, "page", params] as const,
+  historyFacets: (projectId: string) =>
+    [...vcsKeys.all, "history", projectId, "facets"] as const,
   commit: (projectId: string, commitId: string) =>
     [...vcsKeys.all, "commit", projectId, commitId] as const,
   diff: (projectId: string, params: DiffParams) =>
@@ -42,6 +52,53 @@ export const useVcsHistory = (projectId: string, docId?: string) =>
   useQuery({
     queryKey: vcsKeys.history(projectId, docId),
     queryFn: () => vcsApi.getHistory(projectId, docId),
+    enabled: !!projectId,
+  });
+
+// Страница истории с фильтрами: ключ зависит от всего набора условий.
+export const useVcsHistoryPage = (
+  projectId: string,
+  params: VcsHistoryParams,
+) =>
+  useQuery({
+    queryKey: vcsKeys.historyPage(projectId, params),
+    queryFn: () => vcsApi.getHistoryPage(projectId, params),
+    enabled: !!projectId,
+    placeholderData: (previous) => previous,
+  });
+
+export const VCS_HISTORY_PAGE_SIZE = 100;
+
+// Бесконечный список «Показать ещё»: страницы идут по limit/offset.
+export const useInfiniteVcsHistory = (
+  projectId: string,
+  params: Omit<VcsHistoryParams, "limit" | "offset">,
+  pageSize = VCS_HISTORY_PAGE_SIZE,
+) =>
+  useInfiniteQuery({
+    queryKey: [
+      ...vcsKeys.historyPage(projectId, { ...params, limit: pageSize }),
+      "infinite",
+    ],
+    queryFn: ({ pageParam }) =>
+      vcsApi.getHistoryPage(projectId, {
+        ...params,
+        limit: pageSize,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < pageSize
+        ? undefined
+        : allPages.reduce((total, page) => total + page.length, 0),
+    enabled: !!projectId,
+    placeholderData: (previous) => previous,
+  });
+
+export const useVcsHistoryFacets = (projectId: string) =>
+  useQuery({
+    queryKey: vcsKeys.historyFacets(projectId),
+    queryFn: () => vcsApi.getHistoryFacets(projectId),
     enabled: !!projectId,
   });
 

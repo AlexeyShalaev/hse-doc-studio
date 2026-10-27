@@ -53,6 +53,7 @@ help:
 	@echo ==========================================
 	@echo.
 	@echo   make demo-up               - Isolated demo backend on :17777 (synthetic data)
+	@echo   make demo-git              - Two real Studios + local git remotes with every sync state (:17800)
 	@echo   make shots                 - Screenshot matrix ru/en x light/dark to docs/ru/assets/shots
 	@echo   make reel                  - Promo reel x4 variants to docs/ru/assets/reel
 	@echo.
@@ -125,10 +126,15 @@ docs-build: docs-gen
 	uv run --group docs zensical build -f docs/zensical.en.toml
 
 # Демо-материалы сайта: изолированный стенд + скриншоты/ролик (tools/demo/README.md).
-.PHONY: demo-up shots reel
+.PHONY: demo-up demo-git shots reel
 
 demo-up:
 	bash tools/demo/run-demo.sh
+
+# Git-синхронизация без GitHub: две настоящие Студии, локальные репозитории и проекты во всех состояниях.
+# Фронт: VITE_API_BASE_URL=http://localhost:17800 pnpm dev (из services/web-app), без VITE_GIT_DEMO.
+demo-git:
+	cd services/api && env -u PYTHONPATH uv run --all-extras python scripts/git_sync_demo.py $(DEMO_GIT_ARGS)
 
 shots:
 	cd tools/demo && node screenshots/capture.mjs

@@ -24,6 +24,11 @@ declare module "axios" {
 // `image_missing` with the offending image tag attached). The interceptor
 // flattens both into a single ApiError shape so callers can branch on
 // `code` and access extra fields via `data`.
+//
+// The git-sync endpoints use a third, FLAT shape: `{ detail: "string", code,
+// ...extra }` (`operation_id`, `projects`, `paths`, `host_keys`, ...). For it
+// `data` carries everything except `detail` and `code`, so callers can read the
+// extras and `errors:code.*` strings get their interpolation values.
 type ApiErrorData = {
   detail: string | Record<string, unknown>;
   code?: string;
@@ -50,6 +55,31 @@ export class ApiError extends Error {
   }
 }
 
+// Тело ошибки запроса с responseType "blob" приходит Blob-ом: читаем его как
+// JSON, чтобы код и подробности не терялись. Не JSON и не Blob — как есть.
+const readBlobText = (blob: Blob): Promise<string> => {
+  if (typeof blob.text === "function") return blob.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(typeof reader.result === "string" ? reader.result : "");
+    };
+    reader.onerror = () => {
+      reject(new Error("blob read failed"));
+    };
+    reader.readAsText(blob);
+  });
+};
+
+const decodeBlobBody = async (data: unknown): Promise<unknown> => {
+  if (typeof Blob === "undefined" || !(data instanceof Blob)) return data;
+  try {
+    return JSON.parse(await readBlobText(data)) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
 // In dev: env.VITE_API_BASE_URL = "http://localhost:17240" → cross-origin to backend (CORS).
 // In all-in-one prod: backend serves /config.js with API_BASE_URL = "" → same-origin.
 export const apiClient = axios.create({
@@ -68,10 +98,11 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (res) => res,
-  (error) => {
+  async (error: unknown) => {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status ?? 0;
-      const data = error.response?.data as ApiErrorData | undefined;
+      const data = (await decodeBlobBody(error.response?.data)) as
+        ApiErrorData | undefined;
 
       let detail: string;
       let code: string;
@@ -94,6 +125,10 @@ apiClient.interceptors.response.use(
             ? data.detail
             : (error.message ?? i18n.t("errors:message.network"));
         code = data?.code ?? "unknown_error";
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          const { detail: _detail, code: _code, ...flat } = data;
+          if (Object.keys(flat).length > 0) extra = flat;
+        }
       }
 
       // Auto-toast for mutations and server errors. Skip GET 4xx — callers

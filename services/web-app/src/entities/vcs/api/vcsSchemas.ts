@@ -11,8 +11,11 @@ export const VcsRefSchema = z.object({
   kind: z.string(),
 });
 
-// kind ∈ init | edit | compile | manual | restore (kept as string so an
+// kind ∈ init | edit | compile | manual | restore | sync (kept as string so an
 // unknown future kind never breaks parsing).
+// author_email, is_merge и sync приходят с синхронизацией по git; старый бэкенд
+// их не присылает, поэтому все три необязательны. sync ∈ pushed | unpushed |
+// incoming, без подключённого репозитория null.
 export const VcsCommitSchema = z.object({
   id: z.string(),
   short_id: z.string(),
@@ -24,6 +27,25 @@ export const VcsCommitSchema = z.object({
   refs: z.array(VcsRefSchema),
   doc_id: z.string().nullish(),
   stats: VcsCommitStatsSchema.nullish(),
+  author_email: z.string().nullish(),
+  is_merge: z.boolean().nullish(),
+  sync: z.string().nullish(),
+});
+
+// Значения для фильтров по метке отправки; незнакомое значение не ломает разбор.
+export const VCS_SYNC_FILTERS = ["all", "unpushed", "incoming"] as const;
+export type VcsSyncFilter = (typeof VCS_SYNC_FILTERS)[number];
+
+// Для фильтров истории: сколько версий каждого вида и от каких авторов.
+export const VcsHistoryFacetsSchema = z.object({
+  kinds: z.record(z.string(), z.number()),
+  authors: z.array(
+    z.object({
+      name: z.string(),
+      email: z.string().nullish(),
+      count: z.number(),
+    }),
+  ),
 });
 
 export const VcsFileChangeSchema = z.object({
@@ -97,6 +119,7 @@ export const VcsTagSchema = z.object({
 
 export type VcsCommit = z.infer<typeof VcsCommitSchema>;
 export type VcsCommitDetail = z.infer<typeof VcsCommitDetailSchema>;
+export type VcsHistoryFacets = z.infer<typeof VcsHistoryFacetsSchema>;
 export type VcsStatus = z.infer<typeof VcsStatusSchema>;
 export type VcsDiff = z.infer<typeof VcsDiffSchema>;
 export type VcsFileDiff = z.infer<typeof VcsFileDiffSchema>;

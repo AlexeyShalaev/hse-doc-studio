@@ -1,0 +1,66 @@
+{
+  "connected": true,
+  "ui_state": "ahead",
+  "remote": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "provider_info": {
+      "id": "github",
+      "detected_by": "host",
+      "version": null
+    },
+    "web_url": "https://github.com/hse-team/course-paper",
+    "branch": "main",
+    "local_branch": "master",
+    "credential": {
+      "id": "9a8b7c6d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "label": "GitHub, рабочий токен",
+      "kind": "pat"
+    },
+    "insecure_http": false
+  },
+  "relation": "remote_empty",
+  "ahead": 14,
+  "behind": 0,
+  "behind_files": 0,
+  "health": "ok",
+  "last_error": null,
+  "blocked": null,
+  "profile_ok": true,
+  "incoming": [],
+  "outgoing": [
+    {
+      "id": "3333333333333333333333333333333333333333",
+      "short_id": "3333333",
+      "message": "Новая глава про метод",
+      "author": "Анна Петрова",
+      "author_email": "a.petrova@edu.hse.ru",
+      "created_at": "2026-10-26T09:29:12Z",
+      "kind": "manual"
+    },
+    {
+      "id": "4444444444444444444444444444444444444444",
+      "short_id": "4444444",
+      "message": "Автосохранение",
+      "author": "HSE Doc Studio",
+      "author_email": null,
+      "created_at": "2026-10-26T09:29:12Z",
+      "kind": "edit"
+    }
+  ],
+  "operation": null,
+  "pending": null,
+  "last_fetch_at": "2026-10-26T09:30:00Z",
+  "last_fetch_ok_at": "2026-10-26T09:30:00Z",
+  "last_sync_at": null,
+  "last_sync": null,
+  "auto_fetch": {
+    "enabled": true,
+    "interval_s": 300,
+    "next_fetch_at": "2026-10-26T09:35:00Z"
+  },
+  "shared_folder": null,
+  "bot_authored_commits": 0
+}

@@ -5,11 +5,16 @@ export type {
   DiffParams,
   RestoreParams,
   UpdateVcsSettingsParams,
+  VcsHistoryParams,
 } from "./api/vcsApi";
 export {
   vcsKeys,
   useVcsStatus,
   useVcsHistory,
+  useVcsHistoryPage,
+  useInfiniteVcsHistory,
+  useVcsHistoryFacets,
+  VCS_HISTORY_PAGE_SIZE,
   useVcsCommit,
   useVcsDiff,
   useVcsSettings,
@@ -28,6 +33,8 @@ export {
 export {
   VcsCommitSchema,
   VcsCommitDetailSchema,
+  VcsHistoryFacetsSchema,
+  VCS_SYNC_FILTERS,
   VcsStatusSchema,
   VcsFileDiffSchema,
   VcsDiffSchema,
@@ -39,6 +46,8 @@ export {
 export type {
   VcsCommit,
   VcsCommitDetail,
+  VcsHistoryFacets,
+  VcsSyncFilter,
   VcsStatus,
   VcsFileDiff,
   VcsDiff,

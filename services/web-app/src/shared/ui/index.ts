@@ -99,3 +99,59 @@ export type {
 } from "./PdfViewer";
 
 export { Toaster } from "./Toaster";
+
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "./Popover";
+export type { PopoverContentProps } from "./Popover";
+
+export { CopyField } from "./CopyField";
+export type { CopyFieldProps } from "./CopyField";
+
+export { ProgressBar } from "./ProgressBar";
+export type { ProgressBarProps } from "./ProgressBar";
+export { FileDropZone } from "./FileDropZone";
+export type { FileDropZoneHandle, FileDropZoneProps } from "./FileDropZone";
+
+export { Facts, ResultFrame } from "./ResultFrame";
+export type { FrameTone } from "./ResultFrame";
+
+export { Stepper } from "./Stepper";
+export type { StepperProps, StepperStep, StepState } from "./Stepper";
+
+export { DiffPatch, changeMeta, countChanges, parsePatch } from "./DiffPatch";
+export type {
+  DiffChangeMeta,
+  PatchLineKind,
+  DiffPatchFile,
+  DiffPatchProps,
+  DiffStat,
+  ParsedDiffLine,
+  ParsedHunk,
+} from "./DiffPatch";
+
+export {
+  ActionTag,
+  CountBadges,
+  FileList,
+  FileRowShell,
+  Notice,
+  ViewTabs,
+  toneColor,
+  toneSoft,
+} from "./ConflictKit";
+export type {
+  ActionTagProps,
+  ConflictTone,
+  CountBadge,
+  FileListProps,
+  FileRowShellProps,
+  NoticeProps,
+  NoticeTone,
+  ViewTab,
+  ViewTabsProps,
+} from "./ConflictKit";

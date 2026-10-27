@@ -1,0 +1,23 @@
+{
+  "id": "op_000000000007",
+  "kind": "sync",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "status": "succeeded",
+  "phase": "push",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": "2030-01-01T00:00:00Z",
+  "result": {
+    "outcome": "pushed",
+    "pulled_commits": 0,
+    "pushed_commits": 4,
+    "merge_commit": null,
+    "files_changed": 0,
+    "auto": [],
+    "conflicts": null,
+    "warnings": []
+  },
+  "error": null
+}

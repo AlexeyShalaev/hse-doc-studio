@@ -1,30 +1,44 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bookmark, Camera, History, Undo2 } from "lucide-react";
 import type { z } from "zod";
+import { useSyncStatus, useSyncUiStore } from "@entities/git-sync";
 import type { ProjectResponseSchema } from "@entities/project";
+import { useProfile } from "@entities/profile";
 import {
   type VcsCommit,
+  type VcsHistoryParams,
   type VcsRestore,
   useCreateVcsSnapshot,
+  useInfiniteVcsHistory,
   useInitVcs,
   useRestoreVcs,
   useVcsDiff,
-  useVcsHistory,
+  useVcsHistoryFacets,
+  useVcsHistoryPage,
   useVcsStatus,
 } from "@entities/vcs";
+import { SyncPanel, type SyncHistoryMode } from "@features/git-sync";
 import {
+  AUTHOR_ALL,
+  AUTHOR_MINE,
   EMPTY_VCS_FILTERS,
+  NAMED_KIND,
   RestoreConfirmModal,
+  type VcsAuthorOption,
   type VcsHistoryFilterState,
   VcsDiffBrowser,
   VcsHistoryFilters,
   type VcsKindOption,
   VcsSettingsCard,
   VcsTimeline,
+  buildHistoryParams,
+  isVcsFiltersActive,
+  kindChipIds,
+  recentTotal,
 } from "@features/vcs-history";
 import { Spinner } from "@shared/ui/Spinner";
-import { localeTag, toast } from "@shared/lib";
+import { localeTag, toast, useDebouncedValue } from "@shared/lib";
 import { PageHead } from "./PageHead";
 import { SectionCard } from "./SectionCard";
 
@@ -36,30 +50,10 @@ export type VersionsViewProps = {
 
 type LastRestore = { result: VcsRestore; headBefore: string | null };
 
-// Inclusive time window (ms) implied by the active date filter.
-const dateWindow = (s: VcsHistoryFilterState): { from: number; to: number } => {
-  const now = new Date();
-  const startToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-  ).getTime();
-  switch (s.preset) {
-    case "today":
-      return { from: startToday, to: Infinity };
-    case "7d":
-      return { from: now.getTime() - 7 * 86_400_000, to: Infinity };
-    case "30d":
-      return { from: now.getTime() - 30 * 86_400_000, to: Infinity };
-    case "custom":
-      return {
-        from: s.from ? new Date(`${s.from}T00:00:00`).getTime() : -Infinity,
-        to: s.to ? new Date(`${s.to}T23:59:59.999`).getTime() : Infinity,
-      };
-    default:
-      return { from: -Infinity, to: Infinity };
-  }
-};
+// Именные версии: их немного, поэтому одной страницы хватает.
+const NAMED_PARAMS: VcsHistoryParams = { kind: [NAMED_KIND], limit: 100 };
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const formatWhen = (iso: string | null): string =>
   iso
@@ -71,11 +65,34 @@ const formatWhen = (iso: string | null): string =>
       })
     : "—";
 
+// Что изменилось в версии, пришедшей из репозитория: объекты уже в хранилище
+// после проверки, так что обычный запрос различий её видит.
+const IncomingCommitDiff = ({
+  projectId,
+  commitId,
+}: {
+  projectId: string;
+  commitId: string;
+}) => {
+  const { t } = useTranslation("workspace");
+  const { data: diff, isLoading } = useVcsDiff(projectId, { toId: commitId });
+  return (
+    <div className="flex flex-col" style={{ gap: 8 }}>
+      <h3 className="mono dim" style={SECTION_LABEL}>
+        {t("versions.incomingChanges")}
+      </h3>
+      <VcsDiffBrowser diff={diff} isLoading={isLoading} />
+    </div>
+  );
+};
+
 export const VersionsView = ({ project }: VersionsViewProps) => {
   const { t } = useTranslation("workspace");
   const projectId = project.id;
   const { data: status, isLoading: statusLoading } = useVcsStatus(projectId);
-  const { data: commits, isLoading: historyLoading } = useVcsHistory(projectId);
+  const { data: facets } = useVcsHistoryFacets(projectId);
+  const { data: profile } = useProfile();
+  const { data: gitStatus } = useSyncStatus(projectId);
   const { mutate: initVcs, isPending: initing } = useInitVcs();
   const { mutate: createSnapshot, isPending: snapshotting } =
     useCreateVcsSnapshot();
@@ -87,6 +104,45 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
   const [lastRestore, setLastRestore] = useState<LastRestore | null>(null);
   const [filters, setFilters] =
     useState<VcsHistoryFilterState>(EMPTY_VCS_FILTERS);
+  const recentRef = useRef<HTMLDivElement>(null);
+
+  const syncSupported = gitStatus?.supported === true;
+  const connected = syncSupported && gitStatus.connected;
+  // «Мои» считаем по e-mail из профиля; пока профиль не заполнен, такого фильтра нет.
+  const mineEmail =
+    profile && !profile.is_default ? profile.effective_email : null;
+
+  // Поле поиска обновляется сразу, а запрос уходит после паузы в наборе.
+  const debouncedQuery = useDebouncedValue(filters.query, SEARCH_DEBOUNCE_MS);
+  const effectiveFilters = useMemo<VcsHistoryFilterState>(
+    () => ({
+      ...filters,
+      query: debouncedQuery,
+      // Репозиторий отключили, пока был выбран «Не отправлены»: условие снимаем.
+      sync: connected ? filters.sync : "all",
+    }),
+    [connected, debouncedQuery, filters],
+  );
+  const params = useMemo(
+    () =>
+      buildHistoryParams(effectiveFilters, {
+        mineEmail,
+        facetKinds: facets?.kinds,
+      }),
+    [effectiveFilters, facets?.kinds, mineEmail],
+  );
+
+  const { data: namedPage, isLoading: namedLoading } = useVcsHistoryPage(
+    projectId,
+    NAMED_PARAMS,
+  );
+  const {
+    data: recentPages,
+    isLoading: recentLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteVcsHistory(projectId, params);
 
   const { data: diff, isLoading: diffLoading } = useVcsDiff(
     projectId,
@@ -149,6 +205,11 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
     );
   };
 
+  const handleShowInHistory = (mode: SyncHistoryMode) => {
+    setFilters({ ...EMPTY_VCS_FILTERS, sync: mode });
+    recentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const wrap = (children: React.ReactNode) => (
     <div
       style={{ padding: "24px 32px", overflowY: "auto", flex: 1, minHeight: 0 }}
@@ -208,41 +269,70 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
     );
   }
 
-  const all = commits ?? [];
-  const named = all.filter((c) => c.kind === "manual");
-  const auto = all.filter((c) => c.kind !== "manual");
+  const named = (namedPage ?? []).filter((c) => c.kind === NAMED_KIND);
+  // Именные версии показаны слева, поэтому из ленты их убираем.
+  const recent = (recentPages?.pages.flat() ?? []).filter(
+    (c) => c.kind !== NAMED_KIND,
+  );
+  const filtersActive = isVcsFiltersActive(filters);
+  const total = facets ? recentTotal(facets.kinds) : recent.length;
+  const historyLoading = namedLoading || recentLoading;
 
-  // Change-type chips, in a stable order, only for kinds that actually occur.
-  const kindCounts = new Map<string, number>();
-  auto.forEach((c) => {
-    kindCounts.set(c.kind, (kindCounts.get(c.kind) ?? 0) + 1);
-  });
   const kindLabels: Record<string, string> = {
     edit: t("versions.kindEdit"),
     compile: t("versions.kindCompile"),
     restore: t("versions.kindRestore"),
     init: t("versions.kindInit"),
+    template_update: t("versions.kindTemplateUpdate"),
+    sync: t("versions.kindSync"),
+    other: t("versions.kindOther"),
   };
-  const kindOptions: VcsKindOption[] = ["edit", "compile", "restore", "init"]
-    .filter((k) => kindCounts.has(k))
-    .map((k) => ({
-      kind: k,
-      label: kindLabels[k] ?? k,
-      count: kindCounts.get(k) ?? 0,
-    }));
+  const kindOptions: VcsKindOption[] = kindChipIds(
+    facets?.kinds ?? {},
+    filters.kinds,
+  ).map(({ kind, count }) => ({
+    kind,
+    label: kindLabels[kind] ?? kind,
+    count,
+  }));
 
-  const win = dateWindow(filters);
-  const query = filters.query.trim().toLowerCase();
-  const filteredAuto = auto.filter((c) => {
-    if (filters.kind !== "all" && c.kind !== filters.kind) return false;
-    const t = new Date(c.created_at).getTime();
-    if (t < win.from || t > win.to) return false;
-    if (query && !c.message.toLowerCase().includes(query)) return false;
-    return true;
-  });
+  const authorOptions: VcsAuthorOption[] = [
+    { value: AUTHOR_ALL, label: t("versions.authorAll") },
+  ];
+  if (mineEmail) {
+    authorOptions.push({ value: AUTHOR_MINE, label: t("versions.authorMine") });
+  }
+  const seenEmails = new Set<string>(
+    mineEmail ? [mineEmail.toLowerCase()] : [],
+  );
+  for (const author of facets?.authors ?? []) {
+    const email = author.email?.trim();
+    if (!email || seenEmails.has(email.toLowerCase())) continue;
+    seenEmails.add(email.toLowerCase());
+    authorOptions.push({ value: email, label: author.name });
+  }
 
   return wrap(
     <div className="flex flex-col" style={{ gap: 20 }}>
+      {/* sync with a repository */}
+      {syncSupported && (
+        <SectionCard title={t("versions.syncTitle")}>
+          <SyncPanel
+            projectId={projectId}
+            onConnect={() => {
+              useSyncUiStore.getState().openConnectDialog("connect");
+            }}
+            onBundle={() => {
+              useSyncUiStore.getState().openBundleDialog();
+            }}
+            onShowInHistory={handleShowInHistory}
+            renderIncomingDetails={(commitId) => (
+              <IncomingCommitDiff projectId={projectId} commitId={commitId} />
+            )}
+          />
+        </SectionCard>
+      )}
+
       {/* status + save-version composer */}
       <SectionCard title={t("versions.saveVersionTitle")}>
         <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
@@ -349,17 +439,22 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
                 variant="named"
                 selectedId={selectedId}
                 headId={status?.head ?? null}
+                meEmail={mineEmail}
                 onSelect={setSelectedId}
                 onRestore={setRestoreTarget}
               />
             )}
           </div>
 
-          <div className="flex flex-col" style={{ gap: 10 }}>
+          <div
+            ref={recentRef}
+            className="flex flex-col"
+            style={{ gap: 10, scrollMarginTop: 8 }}
+          >
             <h3 className="mono dim" style={SECTION_LABEL}>
               {t("versions.recentChanges")}
             </h3>
-            {auto.length === 0 ? (
+            {total === 0 && recent.length === 0 && !filtersActive ? (
               <div
                 className="card dim"
                 style={{ padding: 22, fontSize: 12, textAlign: "center" }}
@@ -372,10 +467,13 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
                   state={filters}
                   onChange={setFilters}
                   kinds={kindOptions}
-                  total={auto.length}
-                  shown={filteredAuto.length}
+                  authors={authorOptions}
+                  showSync={connected}
+                  total={total}
+                  shown={recent.length}
+                  hasMore={hasNextPage}
                 />
-                {filteredAuto.length === 0 ? (
+                {recent.length === 0 ? (
                   <div
                     className="card dim"
                     style={{
@@ -388,12 +486,18 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
                   </div>
                 ) : (
                   <VcsTimeline
-                    commits={filteredAuto}
+                    commits={recent}
                     variant="auto"
                     groupByDate
                     maxHeight={460}
                     selectedId={selectedId}
                     headId={status?.head ?? null}
+                    meEmail={mineEmail}
+                    hasMore={hasNextPage}
+                    isLoadingMore={isFetchingNextPage}
+                    onLoadMore={() => {
+                      void fetchNextPage();
+                    }}
                     onSelect={setSelectedId}
                     onRestore={setRestoreTarget}
                   />

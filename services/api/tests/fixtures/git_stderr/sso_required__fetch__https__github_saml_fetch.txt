@@ -1,0 +1,2 @@
+remote: Resource protected by organization SAML enforcement. You must grant your Personal Access token access to this organization.
+fatal: unable to access 'https://github.com/hse-org/paper.git/': The requested URL returned error: 403

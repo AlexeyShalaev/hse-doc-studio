@@ -1,0 +1,4 @@
+{
+  "detail": "Неизвестный тип сервера. Выбери GitHub, GitLab, Gitea, Bitbucket или другое.",
+  "code": "provider_unknown"
+}

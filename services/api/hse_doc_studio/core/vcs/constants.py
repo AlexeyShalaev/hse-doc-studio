@@ -44,6 +44,8 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     ".hse-studio/submissions/",
     "# our own store + a foreign user git",
     ".hse-studio/git/",
+    # без слеша: ловит и файл вместо каталога (указатель на вынесенное хранилище)
+    ".hse-studio/git",
     ".git/",
     ".gitmodules",
     "# hse-studio caches (sources stay tracked)",
@@ -52,7 +54,16 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     "# template update journal and pre-migration backups — transaction state, not work",
     ".hse-studio/update/",
     ".hse-studio/backup/",
+    "# временный файл записи применения: остаётся только после сбоя и в историю не идёт",
+    "*.hse-update.tmp",
 )
+
+
+# Содержимое <git-dir>/info/attributes. Это самый сильный источник атрибутов: он перекрывает `.gitattributes` из
+# рабочей папки, который приезжает с чужой веткой. Без него `working-tree-encoding`, `eol`, `ident` и `filter`
+# из чужого файла меняют то, что попадает в коммит, или обрывают `git add` (BOM is required), и снимки перестают
+# создаваться. Студия хранит файлы проекта байт в байт, поэтому все преобразования выключены.
+VCS_ATTRIBUTES: str = "* -text -eol -ident -filter -working-tree-encoding\n"
 
 
 def vcs_exclude_for(version: TemplateVersion | None) -> list[str]:

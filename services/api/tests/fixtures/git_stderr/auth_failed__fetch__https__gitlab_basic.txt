@@ -1,0 +1,3 @@
+remote: HTTP Basic: Access denied
+remote: You must use a personal access token with 'read_repository' or 'write_repository' scope for Git over HTTP.
+fatal: Authentication failed for 'https://gitlab.com/group/project.git/'

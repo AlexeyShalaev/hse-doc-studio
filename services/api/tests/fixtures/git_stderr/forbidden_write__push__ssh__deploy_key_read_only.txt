@@ -1,0 +1,5 @@
+ERROR: The key you've authenticated with is read-only.
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.

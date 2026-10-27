@@ -1,0 +1,33 @@
+{
+  "files": 1000,
+  "bytes": 1000,
+  "commits": 1000,
+  "bot_authored_commits": 0,
+  "signatures": 0,
+  "nda_files": 1,
+  "pdf_tracked": false,
+  "largest": [
+    {
+      "path": "presentation/pptx/presentation.pptx",
+      "bytes": 1000
+    },
+    {
+      "path": "presentation/assets/hse-frame-content.jpg",
+      "bytes": 1000
+    },
+    {
+      "path": "topic_presentation/assets/hse-frame-content.jpg",
+      "bytes": 1000
+    },
+    {
+      "path": "presentation/assets/hse-frame-title.jpg",
+      "bytes": 1000
+    },
+    {
+      "path": "topic_presentation/assets/hse-frame-title.jpg",
+      "bytes": 1000
+    }
+  ],
+  "over_limit": [],
+  "lfs_pointers": 0
+}

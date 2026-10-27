@@ -1,0 +1,1 @@
+fatal: unable to access 'https://git.hse.local/team/paper.git/': SSL certificate problem: certificate has expired

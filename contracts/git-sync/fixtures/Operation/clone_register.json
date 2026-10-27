@@ -1,0 +1,14 @@
+{
+  "id": "op_7f3a9c21",
+  "kind": "clone",
+  "project_id": null,
+  "status": "running",
+  "phase": "register",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2026-10-26T09:29:12Z",
+  "finished_at": null,
+  "result": null,
+  "error": null
+}

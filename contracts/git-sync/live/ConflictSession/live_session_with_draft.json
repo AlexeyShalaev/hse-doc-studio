@@ -1,0 +1,248 @@
+{
+  "id": "000000000003",
+  "fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "ours": {
+    "commit": "0000000000000000000000000000000000000006",
+    "author": "Анна Петрова",
+    "at": "2030-01-01T00:00:00Z",
+    "message": "Анна: схема и удаление черновика"
+  },
+  "theirs": {
+    "commit": "000000000000000000000000000000000000000a",
+    "author": "Борис Сидоров",
+    "at": "2030-01-01T00:00:00Z",
+    "message": "Борис: схема и правки"
+  },
+  "base": {
+    "commit": "0000000000000000000000000000000000000005",
+    "author": "Борис Сидоров",
+    "at": "2030-01-01T00:00:00Z",
+    "message": "Правка: notes/boris-1.md"
+  },
+  "counts": {
+    "conflict": 3,
+    "auto": 2,
+    "total": 5
+  },
+  "unresolved": 0,
+  "drafts_saved_at": "2030-01-01T00:00:00Z",
+  "warnings": [],
+  "files": [
+    {
+      "path": ".hse-studio/project.json",
+      "owner": null,
+      "kind": "json",
+      "action": "conflict",
+      "conflict_type": "fields",
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 1,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": {
+        "kind": "fields",
+        "fields": {
+          "/name": {
+            "choice": "theirs"
+          }
+        }
+      },
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 1000,
+          "author": "Анна Петрова",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 1000,
+          "author": "Борис Сидоров",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "notes/old.txt",
+      "owner": null,
+      "kind": "text",
+      "action": "conflict",
+      "conflict_type": "deleted_by_us",
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": {
+        "kind": "file",
+        "choice": "theirs"
+      },
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": false,
+          "size": null,
+          "author": null,
+          "at": null
+        },
+        "theirs": {
+          "exists": true,
+          "size": 1000,
+          "author": "Борис Сидоров",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "notes/plan.md",
+      "owner": null,
+      "kind": "text",
+      "action": "conflict",
+      "conflict_type": "content",
+      "hunks": 1,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": {
+        "kind": "hunks",
+        "hunks": {
+          "h:f39a9b2c": {
+            "choice": "mine",
+            "text": null
+          }
+        }
+      },
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 1000,
+          "author": "Анна Петрова",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 1000,
+          "author": "Борис Сидоров",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "figures/diagram.png",
+      "owner": null,
+      "kind": "binary",
+      "action": "binary_newest",
+      "conflict_type": null,
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": null,
+      "allowed": [
+        "mine",
+        "theirs",
+        "newest"
+      ],
+      "default_resolution": "newest",
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 1000,
+          "author": "Анна Петрова",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 1000,
+          "author": "Борис Сидоров",
+          "at": "2030-01-01T00:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        }
+      },
+      "copy_path": "figures/diagram.conflict-0000000.png",
+      "doc_id": null
+    },
+    {
+      "path": "thesis/thesis.tex",
+      "owner": null,
+      "kind": "text",
+      "action": "merged",
+      "conflict_type": null,
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": null,
+      "allowed": [],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        },
+        "theirs": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        },
+        "base": {
+          "exists": true,
+          "size": 1000,
+          "author": null,
+          "at": null
+        }
+      },
+      "copy_path": null,
+      "doc_id": "thesis"
+    }
+  ]
+}

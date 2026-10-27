@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.route_actions import rule_for, scope_for_rule
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.context import set_current_actor
@@ -29,18 +30,21 @@ from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAcces
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Записи, разрешённые и в режиме «только чтение»: вернуть проект к снимку из
 # истории (единственный выход для данных более новой Студии) и убрать проект
-# из списка.
-_ALLOWED_SUFFIXES = ("/vcs/restore",)
+# из списка. Предпросмотр CI тоже ничего не пишет: это POST только ради тела запроса.
+# Выборка из удалённого репозитория не трогает файлы проекта, поэтому «только чтение» ей не помеха.
+_ALLOWED_SUFFIXES = ("/vcs/restore", "/git/ci/preview", "/git/fetch")
 _LOCKED = 423
 _FORBIDDEN = 403
 _NOT_FOUND = 404
 
 
 def _allowed(request: Request) -> bool:
-    path = request.url.path.rstrip("/")
-    if request.method == "DELETE" and path.endswith(f"/projects/{request.path_params.get('project_id')}"):
+    # Сверяется шаблон найденного маршрута, а не адрес запроса: в адресе `files/{path:path}` лежит произвольный
+    # путь файла, и `a/git/fetch` или `projects/<id>` в его конце не должны снимать запрет записи.
+    route_path = str(getattr(request.scope.get("route"), "path", ""))
+    if request.method == "DELETE" and route_path.endswith("/projects/{project_id}"):
         return True
-    return path.endswith(_ALLOWED_SUFFIXES)
+    return route_path.endswith(_ALLOWED_SUFFIXES)
 
 
 def access_detail(access: ProjectAccess) -> dict[str, Any]:
@@ -138,3 +142,4 @@ async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:
 def install_exception_handlers(app: FastAPI) -> None:
     """Ошибки домена, общие для всех роутеров (в create_app и в тестовом приложении)."""
     app.add_exception_handler(ProjectReadOnlyError, _read_only_handler)
+    install_git_error_handlers(app)

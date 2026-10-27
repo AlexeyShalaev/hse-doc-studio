@@ -1,0 +1,38 @@
+"""Параметры развёртывания, от которых зависят сценарии синхронизации: чистые значения, без чтения настроек."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from hse_doc_studio.core.git_sync.error_messages import git_error
+from hse_doc_studio.core.git_sync.errors import GitErrorCode
+
+DEFAULT_REMOTE_BRANCH = "main"
+DEFAULT_FETCH_INTERVAL_S = 300
+MIN_FETCH_INTERVAL_S = 60
+# Повторная выборка по просьбе интерфейса (открытие проекта, возврат в окно) раньше этого срока git не запускает.
+FETCH_DEBOUNCE_S = 15
+
+
+@dataclass(frozen=True)
+class GitSyncPolicy:
+    """`allow_local_remotes` уже учитывает режим: на общем сервере локальные адреса не допускаются."""
+
+    enabled: bool = True
+    allow_insecure_http: bool = False
+    allow_local_remotes: bool = False
+    # Почта служебной подписи: коммиты с ней не приписываются человеку.
+    bot_email: str = "bot@hse-studio.local"
+    # Блоб такого размера (и больше) останавливает отправку до загрузки: хостинги отказывают около 100 МБ.
+    large_file_bytes: int = 95_000_000
+    # Предел для файлов чужой ветки: маленький пакет разворачивается в огромный блоб, а Студия читает блобы в память
+    # и пишет на диск. Один файл не больше `max_incoming_blob_bytes`, все файлы одного применения не больше суммы.
+    max_incoming_blob_bytes: int = 512_000_000
+    max_incoming_total_bytes: int = 2_000_000_000
+    # Первая отправка длинной истории идёт дольше обычной; None: обычный срок отправки.
+    first_push_timeout_s: float | None = None
+
+    def require_enabled(self) -> None:
+        """Выключенная настройкой развёртывания синхронизация отвечает своим кодом, а не «Git не найден»."""
+        if not self.enabled:
+            raise git_error(GitErrorCode.git_disabled)

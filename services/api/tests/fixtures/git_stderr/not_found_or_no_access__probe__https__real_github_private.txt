@@ -1,0 +1,2 @@
+remote: Repository not found.
+fatal: repository 'https://github.com/definitely-not-a-user-hse/private-repo-xyz.git/' not found

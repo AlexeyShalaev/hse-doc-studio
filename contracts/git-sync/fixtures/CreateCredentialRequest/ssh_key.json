@@ -1,0 +1,6 @@
+{
+  "kind": "ssh_key",
+  "label": "Ключ для GitLab ВШЭ",
+  "host": "git.hse.ru",
+  "port": 22
+}

@@ -1,6 +1,10 @@
 import {
   AlertTriangle,
+  ArrowLeftRight,
+  CloudUpload,
   Files,
+  FolderSync,
+  GitBranch,
   FileType,
   GraduationCap,
   Info,
@@ -9,8 +13,10 @@ import {
   Package,
   RefreshCw,
   Tag,
+  Timer,
   Type,
   Users,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +35,11 @@ export type ProjectSettingsSectionId =
   | "fonts"
   | "supervisor"
   | "checks"
+  | "sync-remote"
+  | "sync-options"
+  | "sync-shared-folder"
+  | "sync-exchange"
+  | "sync-ci"
   | "danger-zone";
 
 // Всё, от чего зависит показ условных секций. Вычисляется владельцем черновика
@@ -46,6 +57,14 @@ export type ProjectSettingsSectionContext = {
   // Пак объявил хотя бы одно редактируемое meta-поле для этого вида работы,
   // оставшееся за «Метаданными» (уведённые в другие секции не считаются).
   hasMetaFields: boolean;
+  // Бэкенд умеет синхронизацию с репозиторием. Пока состояние не загружено,
+  // считается, что умеет: иначе ссылка на «Синхронизацию» сначала открывала бы
+  // другую группу и только потом переключалась.
+  syncSupported: boolean;
+  // К проекту подключён репозиторий: без него настраивать нечего.
+  syncConnected: boolean;
+  // Папка проекта лежит в облачном диске (бэкенд определил это сам).
+  hasSharedFolder: boolean;
 };
 
 export type ProjectSettingsSectionDef = {
@@ -120,6 +139,39 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     icon: ListChecks,
   },
   {
+    id: "sync-remote",
+    labelKey: "projectSettings.sectionSyncRemote",
+    icon: GitBranch,
+    isAvailable: (ctx) => ctx.syncSupported,
+  },
+  {
+    id: "sync-options",
+    labelKey: "projectSettings.sectionSyncOptions",
+    icon: Timer,
+    isAvailable: (ctx) => ctx.syncSupported && ctx.syncConnected,
+  },
+  {
+    id: "sync-shared-folder",
+    labelKey: "projectSettings.sectionSyncSharedFolder",
+    icon: FolderSync,
+    isAvailable: (ctx) =>
+      ctx.syncSupported && ctx.syncConnected && ctx.hasSharedFolder,
+  },
+  // Обмен файлом и автосборка не требуют подключённого репозитория: файл можно
+  // передать без сервера, а настройки CI подготовить до подключения.
+  {
+    id: "sync-exchange",
+    labelKey: "projectSettings.sectionSyncExchange",
+    icon: ArrowLeftRight,
+    isAvailable: (ctx) => ctx.syncSupported,
+  },
+  {
+    id: "sync-ci",
+    labelKey: "projectSettings.sectionSyncCi",
+    icon: Workflow,
+    isAvailable: (ctx) => ctx.syncSupported,
+  },
+  {
     id: "danger-zone",
     labelKey: "projectSettings.sectionDangerZone",
     icon: AlertTriangle,
@@ -147,7 +199,7 @@ export const visibleProjectSettingsSections = (
  * прятать его не следует.
  */
 export type ProjectSettingsGroupId =
-  "project" | "people" | "documents" | "meta" | "checks";
+  "project" | "people" | "documents" | "meta" | "checks" | "sync";
 
 export type ProjectSettingsGroupDef = {
   id: ProjectSettingsGroupId;
@@ -187,6 +239,18 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     labelKey: "projectSettingsNav.groupChecks",
     icon: ListChecks,
     sections: ["checks"],
+  },
+  {
+    id: "sync",
+    labelKey: "projectSettingsNav.groupSync",
+    icon: CloudUpload,
+    sections: [
+      "sync-remote",
+      "sync-options",
+      "sync-shared-folder",
+      "sync-exchange",
+      "sync-ci",
+    ],
   },
 ];
 
@@ -237,6 +301,11 @@ export const resolveProjectSettingsGroup = (
   const visible = visibleProjectSettingsGroups(ctx);
   const byGroup = visible.find((group) => group.id === param);
   if (byGroup) return byGroup;
+  // Ссылка на конкретный раздел открывает группу, в которой он живёт.
+  const bySection = visible.find((group) =>
+    (group.sections as readonly string[]).includes(param),
+  );
+  if (bySection) return bySection;
   // Ни одна группа не доступна — вырожденный проект без единой настройки.
   // «Проект» существует всегда: он содержит «Общую информацию» без условий.
   return (

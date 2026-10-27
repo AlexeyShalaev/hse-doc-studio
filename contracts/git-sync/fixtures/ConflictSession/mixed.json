@@ -1,0 +1,319 @@
+{
+  "id": "cs_4d1b8e02",
+  "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "ours": {
+    "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "author": "Анна Петрова",
+    "at": "2026-10-26T09:29:12Z",
+    "message": "Новая глава про метод"
+  },
+  "theirs": {
+    "commit": "cccccccccccccccccccccccccccccccccccccccc",
+    "author": "Мария Иванова",
+    "at": "2026-10-26T09:00:00Z",
+    "message": "Правки введения"
+  },
+  "base": {
+    "commit": "dddddddddddddddddddddddddddddddddddddddd",
+    "author": "Анна Петрова",
+    "at": "2026-10-24T12:10:00Z",
+    "message": "Первая версия введения"
+  },
+  "counts": {
+    "conflict": 4,
+    "auto": 3,
+    "total": 7
+  },
+  "unresolved": 3,
+  "drafts_saved_at": "2026-10-26T09:30:00Z",
+  "warnings": [
+    {
+      "code": "frozen_documents",
+      "paths": [
+        "main.tex"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "chapters/introduction.tex",
+      "owner": "Мария Иванова",
+      "kind": "text",
+      "action": "conflict",
+      "conflict_type": "content",
+      "hunks": 2,
+      "open_hunks": 1,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": false,
+      "resolution": {
+        "kind": "hunks",
+        "hunks": {
+          "h:3f2a9c01": {
+            "choice": "both",
+            "text": null
+          }
+        }
+      },
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 2048,
+          "author": "Мария Иванова",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": "main"
+    },
+    {
+      "path": ".hse-studio/project.json",
+      "owner": null,
+      "kind": "json",
+      "action": "conflict",
+      "conflict_type": "fields",
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 3,
+      "open_fields": 2,
+      "resolved": false,
+      "resolution": null,
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 2048,
+          "author": "Мария Иванова",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "figures/scheme.png",
+      "owner": null,
+      "kind": "binary",
+      "action": "conflict",
+      "conflict_type": "binary",
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": false,
+      "resolution": null,
+      "allowed": [
+        "mine",
+        "theirs",
+        "newest"
+      ],
+      "default_resolution": "newest",
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 210450,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 198003,
+          "author": "Пётр Сидоров",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 150210,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "notes/draft.tex",
+      "owner": null,
+      "kind": "text",
+      "action": "conflict",
+      "conflict_type": "deleted_by_them",
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": false,
+      "resolution": null,
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 1204,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": false,
+          "size": null,
+          "author": null,
+          "at": null
+        },
+        "base": {
+          "exists": true,
+          "size": 900,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "references.bib",
+      "owner": null,
+      "kind": "text",
+      "action": "merged",
+      "conflict_type": null,
+      "hunks": 1,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": null,
+      "allowed": [],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 2048,
+          "author": "Мария Иванова",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "chapters/results.tex",
+      "owner": null,
+      "kind": "text",
+      "action": "take_theirs",
+      "conflict_type": null,
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": null,
+      "allowed": [],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 500,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 980,
+          "author": "Пётр Сидоров",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 500,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": null
+    },
+    {
+      "path": "figures/chart.png",
+      "owner": null,
+      "kind": "binary",
+      "action": "binary_newest",
+      "conflict_type": null,
+      "hunks": 0,
+      "open_hunks": 0,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": true,
+      "resolution": null,
+      "allowed": [],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 2048,
+          "author": "Мария Иванова",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": "figures/chart.conflict-3f9a1c2.png",
+      "doc_id": null
+    }
+  ]
+}

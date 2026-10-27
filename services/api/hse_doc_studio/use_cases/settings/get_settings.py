@@ -12,6 +12,7 @@ from hse_doc_studio.core.system_capacity import (
     ISystemCapacityProbe,
     capacity_scaled_defaults,
 )
+from hse_doc_studio.core.vcs.author import PROFILE_EMAIL_KEY, PROFILE_NAME_KEY
 
 logger = structlog.get_logger()
 
@@ -60,7 +61,18 @@ _DEFAULTS: dict[str, Any] = {
     # превышает порог. 0 = предупреждение выключено. Как и лимит сборок, реальный
     # дефолт — доля от объёма диска машины; здесь запасное значение.
     "disk_usage_warn_gb": FALLBACK_DISK_WARN_GB,
+    # Как часто (секунды) Студия сама проверяет, что нового в подключённом git-репозитории.
+    # 0 = фоновая проверка выключена; значения меньше 60 поднимаются до 60.
+    "git_fetch_interval_s": 300,
+    # Подпись автора коммитов на этой машине. Живёт в config.json, но не входит в обычные
+    # настройки: меняется через /profile, не выгружается и не загружается из файла переноса.
+    PROFILE_NAME_KEY: None,
+    PROFILE_EMAIL_KEY: None,
 }
+
+# Ключи config.json, которые принадлежат этой машине и не ходят ни через PUT /settings,
+# ни через выгрузку и загрузку настроек: чужой файл не должен переподписывать наши коммиты.
+MACHINE_LOCAL_SETTING_KEYS = frozenset({PROFILE_NAME_KEY, PROFILE_EMAIL_KEY})
 
 
 @dataclass

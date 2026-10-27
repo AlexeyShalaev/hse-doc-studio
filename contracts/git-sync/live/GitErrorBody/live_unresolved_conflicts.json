@@ -1,0 +1,9 @@
+{
+  "detail": "Не по всем конфликтам принято решение",
+  "code": "unresolved_conflicts",
+  "paths": [
+    ".hse-studio/project.json",
+    "notes/old.txt",
+    "notes/plan.md"
+  ]
+}

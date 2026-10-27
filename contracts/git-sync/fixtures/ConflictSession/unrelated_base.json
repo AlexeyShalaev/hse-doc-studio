@@ -1,0 +1,67 @@
+{
+  "id": "cs_4d1b8e02",
+  "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "ours": {
+    "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "author": "Анна Петрова",
+    "at": "2026-10-26T09:29:12Z",
+    "message": "Новая глава про метод"
+  },
+  "theirs": {
+    "commit": "cccccccccccccccccccccccccccccccccccccccc",
+    "author": "Мария Иванова",
+    "at": "2026-10-26T09:00:00Z",
+    "message": "Правки введения"
+  },
+  "base": null,
+  "counts": {
+    "conflict": 1,
+    "auto": 0,
+    "total": 1
+  },
+  "unresolved": 1,
+  "drafts_saved_at": null,
+  "warnings": [],
+  "files": [
+    {
+      "path": "chapters/introduction.tex",
+      "owner": "Мария Иванова",
+      "kind": "text",
+      "action": "conflict",
+      "conflict_type": "content",
+      "hunks": 2,
+      "open_hunks": 2,
+      "fields": 0,
+      "open_fields": 0,
+      "resolved": false,
+      "resolution": null,
+      "allowed": [
+        "mine",
+        "theirs"
+      ],
+      "default_resolution": null,
+      "sides": {
+        "ours": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-26T09:29:12Z"
+        },
+        "theirs": {
+          "exists": true,
+          "size": 2048,
+          "author": "Мария Иванова",
+          "at": "2026-10-26T09:00:00Z"
+        },
+        "base": {
+          "exists": true,
+          "size": 2048,
+          "author": "Анна Петрова",
+          "at": "2026-10-24T12:10:00Z"
+        }
+      },
+      "copy_path": null,
+      "doc_id": "main"
+    }
+  ]
+}

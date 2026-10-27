@@ -1,0 +1,7 @@
+{
+  "kind": "pat",
+  "label": "GitHub, рабочий токен",
+  "host": "github.com",
+  "username": null,
+  "token": "github_pat_EXAMPLE"
+}

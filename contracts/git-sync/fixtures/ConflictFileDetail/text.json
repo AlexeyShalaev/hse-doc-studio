@@ -1,0 +1,57 @@
+{
+  "kind": "text",
+  "eol": "lf",
+  "truncated": false,
+  "segments": [
+    {
+      "type": "clean",
+      "lines": [
+        "\\section{Введение}",
+        "",
+        "Актуальность темы обусловлена ростом числа проектов."
+      ]
+    },
+    {
+      "type": "hunk",
+      "key": "h:3f2a9c01",
+      "ours": [
+        "Цель работы: описать метод синхронизации версий."
+      ],
+      "base": [
+        "Цель работы: описать метод."
+      ],
+      "theirs": [
+        "Цель работы: предложить метод синхронизации."
+      ],
+      "ours_start": 4,
+      "result_start": 4
+    },
+    {
+      "type": "clean",
+      "lines": [
+        "",
+        "Задачи исследования перечислены ниже."
+      ]
+    },
+    {
+      "type": "hunk",
+      "key": "h:b71c44de",
+      "ours": [
+        "\\begin{itemize}",
+        "  \\item обзор подходов;",
+        "\\end{itemize}"
+      ],
+      "base": [
+        "\\begin{itemize}",
+        "\\end{itemize}"
+      ],
+      "theirs": [
+        "\\begin{itemize}",
+        "  \\item сравнение систем контроля версий;",
+        "\\end{itemize}"
+      ],
+      "ours_start": 8,
+      "result_start": 8
+    }
+  ]
+}

@@ -71,10 +71,12 @@ class PutFileUC:
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
         project = result.project
 
-        if inp.if_match is not None:
-            self._ensure_not_stale(project.folder, inp.path, inp.if_match)
-
-        self._file_repo.write(project.folder, inp.path, inp.content)
+        # Запись под блокировкой папки: применение синхронизации держит её весь срок, и без неё сохранение,
+        # пришедшее между снимком и записью слияния, затиралось бы слиянием и нигде не оставалось.
+        async with self._vcs_locks.for_folder(project.folder):
+            if inp.if_match is not None:
+                self._ensure_not_stale(project.folder, inp.path, inp.if_match)
+            self._file_repo.write(project.folder, inp.path, inp.content)
 
         logger.debug(
             "file written via use case",

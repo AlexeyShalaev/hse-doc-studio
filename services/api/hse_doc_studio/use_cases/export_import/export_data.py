@@ -13,7 +13,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
-from hse_doc_studio.use_cases.settings.get_settings import GetSettingsUC
+from hse_doc_studio.use_cases.settings.get_settings import MACHINE_LOCAL_SETTING_KEYS, GetSettingsUC
 
 # Bumped only on a breaking change to the bundle shape; import tolerates any value.
 EXPORT_FORMAT_VERSION = "1.0"
@@ -45,6 +45,9 @@ class ExportDataUC:
     encryption password is supplied — encrypted per-field. The auto-managed
     ``ollama`` provider is never exported: it is rebuilt from the local runtime
     on the target machine and its base_url is host-specific.
+
+    Git access (tokens, deploy keys, the encryption key) is not part of a bundle by design:
+    a file shared with a colleague must never carry the owner's access to repositories.
     """
 
     def __init__(
@@ -66,7 +69,11 @@ class ExportDataUC:
 
         settings: dict[str, Any] | None = None
         if inp.include_settings:
-            settings = (await self._get_settings.execute()).settings
+            settings = {
+                key: value
+                for key, value in (await self._get_settings.execute()).settings.items()
+                if key not in MACHINE_LOCAL_SETTING_KEYS
+            }
 
         providers: list[dict[str, Any]] = []
         encrypted_any = False

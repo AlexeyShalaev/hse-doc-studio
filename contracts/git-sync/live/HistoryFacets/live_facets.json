@@ -1,0 +1,14 @@
+{
+  "kinds": {
+    "manual": 1,
+    "edit": 2,
+    "init": 1
+  },
+  "authors": [
+    {
+      "name": "Анна Петрова",
+      "email": "a.petrova@edu.hse.ru",
+      "count": 4
+    }
+  ]
+}

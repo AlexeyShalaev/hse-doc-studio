@@ -59,10 +59,10 @@ class ApplyCheckFixUC:
             raise ValueError(localized_error("Фикс содержит пустую строку поиска", "Fix has an empty search string"))
 
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        content = self._file_repo.read(project.folder, inp.path).decode("utf-8", errors="replace")
-
-        new_content = self._apply(content, inp.search, inp.replace, inp.line)
-        self._file_repo.write(project.folder, inp.path, new_content.encode("utf-8"))
+        async with self._vcs_locks.for_folder(project.folder):
+            content = self._file_repo.read(project.folder, inp.path).decode("utf-8", errors="replace")
+            new_content = self._apply(content, inp.search, inp.replace, inp.line)
+            self._file_repo.write(project.folder, inp.path, new_content.encode("utf-8"))
         logger.debug("check fix applied", project_id=str(inp.project_id), path=inp.path, line=inp.line)
         await maybe_edit_commit(self._vcs, self._vcs_locks, self._vcs_throttle, project, f"Автофикс: {inp.path}")
 

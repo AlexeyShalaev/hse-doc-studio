@@ -1,0 +1,32 @@
+{
+  "ok": false,
+  "error": {
+    "code": "auth_failed",
+    "detail": "Сервер не принял доступ. Проверь токен или ключ."
+  },
+  "url": {
+    "display_url": "https://github.com/hse-team/course-paper.git",
+    "kind": "https",
+    "host": "github.com",
+    "provider": "github",
+    "owner": "hse-team",
+    "repo": "course-paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "github",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": false,
+  "empty": false,
+  "default_branch": null,
+  "branches": [],
+  "relation": "unknown",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

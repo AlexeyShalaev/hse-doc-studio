@@ -1,0 +1,102 @@
+"""Порядок записей транзакции: удаления раньше записей, иначе при регистронезависимой ФС они съедают новое."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
+from hse_doc_studio.infra.template_update.state import JsonUpdateJournalRepository
+from hse_doc_studio.use_cases.template_update import transaction as transaction_module
+from hse_doc_studio.use_cases.template_update.transaction import sync_transaction
+from tests.factories import make_project
+
+pytestmark = pytest.mark.unit
+
+
+class _Store:
+    def head(self, project: object) -> str | None:
+        return None
+
+    def commit_message(self, project: object, commit: str) -> str:
+        return ""
+
+
+def test__run__deletes_go_before_writes__case_only_rename_keeps_the_new_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = make_project(folder=tmp_path)
+    journals = JsonUpdateJournalRepository()
+    tx = sync_transaction(journals, _Store(), None)  # type: ignore[arg-type]
+    applied: list[tuple[str, FileWriteKind]] = []
+    monkeypatch.setattr(transaction_module, "apply_write", lambda _f, w: applied.append((w.path, w.kind)))
+    # Как в переименовании notes/a.txt в Notes/a.txt: по алфавиту запись `Notes` идёт раньше удаления `notes`.
+    writes = [
+        FileWrite("Notes/a.txt", FileWriteKind.write, b"x"),
+        FileWrite("notes/a.txt", FileWriteKind.delete),
+        FileWrite("z.txt", FileWriteKind.write, b"y"),
+        FileWrite("a.txt", FileWriteKind.delete),
+    ]
+
+    tx.run(
+        project,
+        tx.start_sync_journal(pre_commit="a", merge_parent="b", sync_id="s"),
+        writes,
+        save_state=lambda: None,
+        commit=lambda: "c",
+    )
+
+    assert applied == [
+        ("notes/a.txt", FileWriteKind.delete),
+        ("a.txt", FileWriteKind.delete),
+        ("Notes/a.txt", FileWriteKind.write),
+        ("z.txt", FileWriteKind.write),
+    ]
+
+
+def test__apply_write__failure__leaves_no_temporary_file(tmp_path: Path) -> None:
+    (tmp_path / "notes").mkdir()
+
+    # Запись файла `notes` поверх папки с тем же именем падает на os.replace.
+    with pytest.raises(OSError):  # noqa: PT011
+        transaction_module.apply_write(tmp_path, FileWrite("notes", FileWriteKind.write, b"x"))
+
+    assert [entry.name for entry in tmp_path.iterdir()] == ["notes"]
+
+
+def _run(tmp_path: Path, calls: list[str], commit: object) -> None:
+    project = make_project(folder=tmp_path)
+    tx = sync_transaction(JsonUpdateJournalRepository(), _Store(), None)  # type: ignore[arg-type]
+    journal = tx.start_sync_journal(pre_commit="a", merge_parent="b", sync_id="s")
+    tx.run(
+        project,
+        journal,
+        [FileWrite("a.txt", FileWriteKind.write, b"x")],
+        save_state=lambda: calls.append("save_state"),
+        commit=commit,  # type: ignore[arg-type]
+    )
+
+
+def test__run__sync_state_is_saved_after_the_commit(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def commit() -> str:
+        calls.append("commit")
+        return "c"
+
+    _run(tmp_path, calls, commit)
+
+    assert calls == ["commit", "save_state"]
+
+
+def test__run__sync_commit_fails__state_is_left_as_it_was(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def commit() -> str:
+        raise RuntimeError("head moved")
+
+    with pytest.raises(RuntimeError):
+        _run(tmp_path, calls, commit)
+
+    assert calls == []
+    assert not (tmp_path / "a.txt").exists()

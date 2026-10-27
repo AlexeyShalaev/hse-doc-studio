@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import structlog
 from dishka import AnyOf, Provider, Scope, provide
@@ -24,6 +26,39 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
+from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
+from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
+from hse_doc_studio.core.git_sync.protocols import (
+    ICertificateService,
+    ICiRenderer,
+    IGitBundleService,
+    IGitCloneStore,
+    IGitCredentialRepository,
+    IGitCredentialUsage,
+    IGitHostSettingsRepository,
+    IGitMergeCommitter,
+    IGitMergeEngine,
+    IGitOperationRegistry,
+    IGitRemoteRegistry,
+    IGitRemoteRunner,
+    IGitRepoReader,
+    IGitStoreGuard,
+    IGitStoreRemotes,
+    IGitSyncStateRepository,
+    IGitTransport,
+    IHostKeyScanner,
+    IKnownHostsStore,
+    ILocalAuthorProfile,
+    IProviderDetector,
+    IRemoteProjectCheck,
+    ISecretCipher,
+    ISharedFolderDetector,
+    ISshKeyGenerator,
+    ITokenIntrospector,
+)
+from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.enums import JobKind
@@ -31,9 +66,16 @@ from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import ICompileJobRunner, IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
-from hse_doc_studio.core.repositories import ISettingsRepository, ISignatureRepository, ITemplateRepository
+from hse_doc_studio.core.repositories import (
+    IProjectIndexRepository,
+    IProjectRepository,
+    ISettingsRepository,
+    ISignatureRepository,
+    ITemplateRepository,
+)
 from hse_doc_studio.core.services import (
     ChatContextService,
     CheckResolutionService,
@@ -59,6 +101,7 @@ from hse_doc_studio.core.template_update.protocols import (
 )
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.protocols import (
+    ICommitAuthorProvider,
     IVcsEditThrottle,
     IVcsFolderLocks,
     IVcsService,
@@ -90,6 +133,31 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.bundle import GitBundleService
+from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
+from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
+from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
+from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
+from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
+from hse_doc_studio.infra.git_sync.git_transport import GitTransport
+from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
+from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSettingsRepository
+from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
+from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
+from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
+from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
+from hse_doc_studio.infra.git_sync.provider_api import HttpProviderDetector, HttpTokenIntrospector
+from hse_doc_studio.infra.git_sync.remote_project_check import ProjectDocumentCheck
+from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
+from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
+from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
+from hse_doc_studio.infra.git_sync.ssh_keys import Ed25519KeyGenerator
+from hse_doc_studio.infra.git_sync.store_git import StoreGit
+from hse_doc_studio.infra.git_sync.store_hardening import GitStoreGuard
+from hse_doc_studio.infra.git_sync.store_remotes import GitStoreRemotes
+from hse_doc_studio.infra.git_sync.sync_state import JsonGitSyncStateRepository
+from hse_doc_studio.infra.git_sync.tls_certificates import TlsCertificateService
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -103,6 +171,11 @@ from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.persistence.serializers import (
+    deserialize_form_state,
+    deserialize_project,
+    deserialize_signatures_state,
+)
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
@@ -122,8 +195,10 @@ from hse_doc_studio.infra.vcs.commit_author import ActorCommitAuthorProvider
 from hse_doc_studio.infra.vcs.edit_throttle import VcsEditThrottle
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
+from hse_doc_studio.infra.vcs.profile_source import ConfigAuthorProfile
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
+from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
@@ -675,16 +750,211 @@ class DomainServiceProvider(Provider):
     ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
         return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
 
+    # --- Git-синхронизация: секреты и доступы (каталог данных читается при создании, как у хранилища шрифтов) ---
+
     @provide
-    def get_vcs_service(self) -> IVcsService:
+    def get_git_key_store(self) -> KeyFileStore:
+        cfg = settings.secrets
+        return KeyFileStore(
+            settings.data_dir.expanduser() / "secrets" / "master.keys.json",
+            env_key=None if cfg.key is None else cfg.key.get_secret_value(),
+            env_key_file=cfg.key_file,
+        )
+
+    @provide
+    def get_secret_cipher(self, key_store: KeyFileStore) -> ISecretCipher:
+        return FernetSecretCipher(key_store)
+
+    @provide
+    def get_git_credential_repo(self, cipher: ISecretCipher) -> IGitCredentialRepository:
+        return JsonGitCredentialRepository(settings.data_dir.expanduser(), cipher)
+
+    @provide
+    def get_ssh_key_generator(self) -> ISshKeyGenerator:
+        return Ed25519KeyGenerator()
+
+    @provide
+    def get_known_hosts_store(self) -> IKnownHostsStore:
+        return FileKnownHostsStore(settings.data_dir.expanduser())
+
+    @provide
+    def get_host_key_scanner(self) -> IHostKeyScanner:
+        return SshKeyscanScanner(settings.git)
+
+    @provide
+    def get_git_host_settings_repo(self) -> IGitHostSettingsRepository:
+        return JsonGitHostSettingsRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_git_certificate_service(self) -> ICertificateService:
+        return TlsCertificateService(settings.git.scan_timeout_s)
+
+    @provide
+    def get_git_provider_detector(self) -> IProviderDetector:
+        return HttpProviderDetector(settings.git.provider_detect_timeout_s)
+
+    @provide
+    def get_git_token_introspector(self, certificates: ICertificateService) -> ITokenIntrospector:
+        return HttpTokenIntrospector(
+            settings.git.token_check_timeout_s, certificates, allow_insecure_http=settings.git.allow_insecure_http
+        )
+
+    @provide
+    def get_git_credential_usage(
+        self, project_index: IProjectIndexRepository, projects: IProjectRepository
+    ) -> IGitCredentialUsage:
+        return StoreConfigCredentialUsage(project_index, projects)
+
+    @provide
+    def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
+        return ConfigAuthorProfile(settings_repo)
+
+    @provide
+    def get_ci_renderer(self) -> ICiRenderer:
+        return JinjaCiRenderer()
+
+    @provide
+    def get_git_sync_policy(self) -> GitSyncPolicy:
+        cfg = settings.git
+        return GitSyncPolicy(
+            enabled=cfg.enabled,
+            allow_insecure_http=cfg.allow_insecure_http,
+            # На общем сервере локальные адреса открыли бы чтение его файлов.
+            allow_local_remotes=cfg.allow_local_remotes and settings.mode is StudioMode.local,
+            bot_email=settings.vcs.author_email,
+            large_file_bytes=cfg.large_file_warn_bytes,
+            max_incoming_blob_bytes=cfg.max_incoming_blob_bytes,
+            max_incoming_total_bytes=cfg.max_incoming_total_bytes,
+            first_push_timeout_s=cfg.clone_timeout_s,
+        )
+
+    @provide
+    def get_store_git(self) -> StoreGit:
+        return StoreGit(settings.vcs.author_name, settings.vcs.author_email)
+
+    @provide
+    def get_git_repo_reader(self, store_git: StoreGit) -> IGitRepoReader:
+        return GitRepoReader(store_git)
+
+    @provide
+    def get_git_sync_state_repo(self) -> IGitSyncStateRepository:
+        return JsonGitSyncStateRepository()
+
+    @provide
+    def get_git_store_guard(self, policy: GitSyncPolicy) -> IGitStoreGuard:
+        return GitStoreGuard(allow_http=policy.allow_insecure_http, allow_local=policy.allow_local_remotes)
+
+    @provide
+    def get_git_remote_runner(
+        self,
+        credentials: IGitCredentialRepository,
+        known_hosts: IKnownHostsStore,
+        scanner: IHostKeyScanner,
+        host_settings: IGitHostSettingsRepository,
+        certificates: ICertificateService,
+    ) -> IGitRemoteRunner:
+        return GitRemoteRunner(
+            settings.git,
+            credentials,
+            local_mode=settings.mode is StudioMode.local,
+            known_hosts=known_hosts,
+            scanner=scanner,
+            host_settings=host_settings,
+            certificates=certificates,
+        )
+
+    @provide
+    def get_git_transport(self, runner: IGitRemoteRunner) -> IGitTransport:
+        return GitTransport(runner, settings.git)
+
+    @provide
+    def get_git_operation_registry(self) -> IGitOperationRegistry:
+        # Общий на процесс: перенос и удаление проекта смотрят в тот же реестр, что и синхронизация.
+        return InMemoryGitOperationRegistry()
+
+    @provide
+    def get_git_remote_registry(self, project_index: IProjectIndexRepository) -> IGitRemoteRegistry:
+        return ConfigScanRemoteRegistry(project_index)
+
+    @provide
+    def get_ref_status_memo(self) -> RefStatusMemo:
+        return RefStatusMemo()
+
+    @provide
+    def get_git_fetch_book(self) -> FetchBook:
+        # Общий на процесс: кнопка «обновить» и фоновый цикл должны видеть одни замки и один счёт сбоев.
+        return FetchBook()
+
+    @provide
+    def get_git_store_remotes(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitStoreRemotes:
+        if not isinstance(vcs_service, GitVcsService):
+            raise TypeError("git remotes need the git VCS service")
+        return GitStoreRemotes(vcs_service, store_git)
+
+    @provide
+    def get_git_clone_store(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitCloneStore:
+        if not isinstance(vcs_service, GitVcsService):
+            raise TypeError("git clone needs the git VCS service")
+        return GitCloneStore(vcs_service, store_git)
+
+    @provide
+    def get_commit_author_provider(self, local_profile: ILocalAuthorProfile) -> ICommitAuthorProvider:
+        cfg = settings.vcs
+        return ActorCommitAuthorProvider(
+            VcsAuthor(cfg.author_name, cfg.author_email),
+            # Профиль живёт в config.json этой машины; общий сервер подписывает людьми, не профилем.
+            local_profile=local_profile if settings.mode is StudioMode.local else None,
+        )
+
+    @provide
+    def get_vcs_service(self, author_provider: ICommitAuthorProvider) -> IVcsService:
         cfg = settings.vcs
         return GitVcsService(
             author_name=cfg.author_name,
             author_email=cfg.author_email,
             diff_max_bytes=cfg.diff_max_bytes,
             default_branch=cfg.default_branch,
-            author_provider=ActorCommitAuthorProvider(VcsAuthor(cfg.author_name, cfg.author_email)),
+            author_provider=author_provider,
         )
+
+    @provide
+    def get_git_merge_committer(
+        self, author_provider: ICommitAuthorProvider, store_git: StoreGit
+    ) -> IGitMergeCommitter:
+        return GitMergeCommitter(author_provider, store_git)
+
+    @provide
+    def get_git_bundle_service(self, runner: IGitRemoteRunner) -> IGitBundleService:
+        return GitBundleService(runner, settings.git)
+
+    @provide
+    def get_git_merge_engine(self) -> IGitMergeEngine:
+        return GitMergeFileEngine(OURS_LABEL, BASE_LABEL, THEIRS_LABEL)
+
+    @provide
+    def get_state_file_merge(self) -> StateFileMerge:
+        return StateFileMerge(
+            {
+                "project": lambda value: deserialize_project(value, Path(".")),
+                "signatures": deserialize_signatures_state,
+                "form": deserialize_form_state,
+            }
+        )
+
+    @provide
+    def get_remote_project_check(self) -> IRemoteProjectCheck:
+        return ProjectDocumentCheck()
+
+    @provide
+    def get_conflict_planner(
+        self, reader: IGitRepoReader, engine: IGitMergeEngine, state_merge: StateFileMerge, policy: GitSyncPolicy
+    ) -> ConflictPlanner:
+        # App-scoped: план определяется тройкой коммитов, и экран конфликтов читает его десятки раз подряд.
+        return ConflictPlanner(reader=reader, engine=engine, structured=state_merge, policy=policy)
+
+    @provide
+    def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
+        return SharedFolderDetector(paths)
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

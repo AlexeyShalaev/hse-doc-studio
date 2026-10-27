@@ -4,6 +4,11 @@ export type { SSEEvent } from "./sse";
 export { toPosixPath } from "./path";
 
 export { formatBytes } from "./formatBytes";
+export { formatFileSize } from "./formatFileSize";
+export { initialsOf } from "./initialsOf";
+export { downloadBlob } from "./downloadBlob";
+
+export { useDebouncedValue } from "./useDebouncedValue";
 
 export { diffHunks, diffLines } from "./lineDiff";
 export type { DiffLine, DiffLineKind } from "./lineDiff";
@@ -67,3 +72,20 @@ export {
   seedMetaDefaults,
   metaFieldVisibleForKind,
 } from "./metaFields";
+
+export { formatPastTime, formatRelativeTime } from "./formatRelativeTime";
+
+export {
+  flushPendingSaves,
+  registerPendingSave,
+  usePendingSave,
+} from "./pendingSaves";
+export type { FlushResult, PendingSaveFlush } from "./pendingSaves";
+
+export { GALLERY_PROJECT_ID } from "./stateGallery";
+export type {
+  GalleryEntry,
+  GalleryFrame,
+  GalleryGroup,
+  GallerySection,
+} from "./stateGallery";

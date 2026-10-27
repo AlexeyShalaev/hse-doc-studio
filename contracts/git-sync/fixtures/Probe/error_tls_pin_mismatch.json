@@ -1,0 +1,34 @@
+{
+  "ok": false,
+  "error": {
+    "code": "tls_pin_mismatch",
+    "detail": "Сертификат сервера отличается от подтверждённого раньше. Это может быть подмена.",
+    "expected": "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+    "actual": "SHA256:Zr3Vn8Hq1Lw6Ys0Ud4Cx9TkPb2Ea7MgFj5RiOtNo1Ae"
+  },
+  "url": {
+    "display_url": "https://gitlab.hse.local/team/paper.git",
+    "kind": "https",
+    "host": "gitlab.hse.local",
+    "provider": "gitlab",
+    "owner": "team",
+    "repo": "paper",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "gitlab",
+    "detected_by": "host",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": false,
+  "auth_ok": false,
+  "empty": false,
+  "default_branch": null,
+  "branches": [],
+  "relation": "unknown",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

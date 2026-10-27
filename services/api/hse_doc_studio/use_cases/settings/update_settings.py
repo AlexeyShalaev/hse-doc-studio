@@ -7,11 +7,11 @@ import structlog
 
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
-from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, GetSettingsUC
+from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, MACHINE_LOCAL_SETTING_KEYS, GetSettingsUC
 
 logger = structlog.get_logger()
 
-_ALLOWED_KEYS = frozenset(_DEFAULTS.keys())
+_ALLOWED_KEYS = frozenset(_DEFAULTS.keys()) - MACHINE_LOCAL_SETTING_KEYS
 
 
 @dataclass

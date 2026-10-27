@@ -194,6 +194,25 @@ class VcsCommitKind(StrEnum):
     # Обновление (или отмена обновления) шаблона проекта. Старые Студии не знают
     # этого вида и читают его как manual (`_kind_from_body`).
     template_update = "template_update"
+    # Слияние с удалённым репозиторием (Git-синхронизация, импорт бандла). Старые Студии не знают
+    # этого вида и читают его как manual (`_kind_from_body`).
+    sync = "sync"
+
+
+class VcsSyncMarker(StrEnum):
+    """Где коммит относительно удалённого репозитория: отправлен, ждёт отправки или пришёл и ещё не влит."""
+
+    pushed = "pushed"
+    unpushed = "unpushed"
+    incoming = "incoming"
+
+
+class VcsHistorySync(StrEnum):
+    """Фильтр истории по синхронизации: все (с входящими), только неотправленные, только входящие."""
+
+    all = "all"
+    unpushed = "unpushed"
+    incoming = "incoming"
 
 
 class VcsChange(StrEnum):

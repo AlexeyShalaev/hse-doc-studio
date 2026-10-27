@@ -1,0 +1,11 @@
+{
+  "provider": "gitlab",
+  "docs": [
+    "main",
+    "appendix"
+  ],
+  "publish": "release",
+  "triggers": [
+    "manual"
+  ]
+}
