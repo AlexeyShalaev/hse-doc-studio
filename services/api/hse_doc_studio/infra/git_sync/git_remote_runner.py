@@ -62,6 +62,8 @@ _MS = 1000
 # Защита от зависшего соединения: ниже 1 КБ/с в течение 30 с git обрывает передачу.
 _LOW_SPEED_LIMIT = "1000"
 _LOW_SPEED_TIME = "30"
+# Переменные, которыми git берёт файл или каталог доверенных CA раньше, чем `http.<адрес>.sslCAInfo` из конфига.
+_CA_ENV_OVERRIDES = ("GIT_SSL_CAINFO", "GIT_SSL_CAPATH")
 
 
 def _network_config() -> list[str]:
@@ -124,16 +126,21 @@ class GitRemoteRunner:
         credential, secret = self._load_credential(target)
         auth = build_http_auth(target.url, credential, secret) if credential and secret else None
         trust_config = await self._trust_config(target)
-        if auth is not None:
-            # Заголовок доступа git добавляет ко всем запросам сессии, в том числе после перехода на другой хост:
-            # с токеном редиректы не идут вовсе. Без доступа публичный адрес по-прежнему может перенаправлять.
-            trust_config = [*trust_config, "-c", "http.followRedirects=false"]
         env = {
             **base_git_env(),
             "GIT_ALLOW_PROTOCOL": allowed_protocols(target.url),
             "GIT_PROTOCOL_FROM_USER": "0",
             **(auth.env if auth else {}),
         }
+        if trust_config:
+            # Переменные окружения git ставит выше конфига: общий CA администратора перекрыл бы файл этого сервера.
+            for name in _CA_ENV_OVERRIDES:
+                env.pop(name, None)
+        extra_config = trust_config
+        if auth is not None:
+            # Заголовок доступа git добавляет ко всем запросам сессии, в том числе после перехода на другой хост:
+            # с токеном редиректы не идут вовсе. Без доступа публичный адрес по-прежнему может перенаправлять.
+            extra_config = [*trust_config, "-c", "http.followRedirects=false"]
         return await self._execute(
             args,
             op=op,
@@ -144,7 +151,7 @@ class GitRemoteRunner:
             secrets=auth.secrets if auth else (),
             timeout_s=timeout_s,
             on_progress=on_progress,
-            extra_config=trust_config,
+            extra_config=extra_config,
         )
 
     async def _run_ssh(

@@ -27,11 +27,13 @@ _NOW = datetime(2026, 10, 27, tzinfo=timezone.utc)
 class _Process(GitProcessRunner):
     result: GitResult = field(default_factory=lambda: GitResult(0))
     argvs: list[list[str]] = field(default_factory=list)
+    envs: list[dict[str, str]] = field(default_factory=list)
 
     async def run(  # type: ignore[override]
         self, argv: Sequence[str], *, env: Mapping[str, str], cwd: Path, timeout_s: float, on_progress: object = None
     ) -> GitResult:
         self.argvs.append(list(argv))
+        self.envs.append(dict(env))
         return self.result
 
 
@@ -116,6 +118,36 @@ async def test__run__server_with_trust_file__passes_ssl_ca_info_scoped_to_its_ad
     argv = process.argvs[0]
     assert _ssl_settings(argv) == [f"http.https://git.hse.local:8443/.sslCAInfo={trust}"]
     assert argv.index("-c") < argv.index("ls-remote")
+
+
+async def test__run__server_with_trust_file__global_ca_variables_do_not_override_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # GIT_SSL_CAINFO git ставит выше `http.<адрес>.sslCAInfo`: без сброса файл сервера молча игнорировался бы.
+    monkeypatch.setenv("GIT_SSL_CAINFO", "/etc/ssl/corp.pem")
+    monkeypatch.setenv("GIT_SSL_CAPATH", "/etc/ssl/corp")
+    monkeypatch.setenv("SSL_CERT_FILE", "/etc/ssl/other.pem")
+    process = _Process()
+    runner = _runner(
+        process, _Settings(GitHostSettings("git.hse.local", 8443, ca_pem="PEM"), trust=Path("/data/git/trust/abc.pem"))
+    )
+
+    await _run(runner)
+
+    env = process.envs[0]
+    assert "GIT_SSL_CAINFO" not in env
+    assert "GIT_SSL_CAPATH" not in env
+    assert env["SSL_CERT_FILE"] == "/etc/ssl/other.pem"
+
+
+async def test__run__server_without_trust__keeps_the_admin_ca_variables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GIT_SSL_CAINFO", "/etc/ssl/corp.pem")
+    process = _Process()
+    runner = _runner(process, _Settings())
+
+    await _run(runner)
+
+    assert process.envs[0]["GIT_SSL_CAINFO"] == "/etc/ssl/corp.pem"
 
 
 async def test__run__server_without_trust__adds_nothing() -> None:
