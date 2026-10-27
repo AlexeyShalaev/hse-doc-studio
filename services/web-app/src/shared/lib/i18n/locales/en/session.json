@@ -1,0 +1,7 @@
+{
+  "unavailable": {
+    "title": "Server unavailable",
+    "body": "Could not get the session state. Check your connection and try again: until the server answers, it is unknown who you are and what you can access.",
+    "retry": "Try again"
+  }
+}

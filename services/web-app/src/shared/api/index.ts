@@ -1,4 +1,11 @@
-export { apiClient, ApiError } from "./client";
+export { apiClient, adminClient, createApiClient, ApiError } from "./client";
+export type { ApiClientOptions } from "./client";
+export {
+  getCsrfToken,
+  notifyUnauthorized,
+  setCsrfToken,
+  setUnauthorizedHandler,
+} from "./session";
 export { parseResp, SchemaParseError } from "./parse";
 export type {
   LocalizedString,
