@@ -100,6 +100,7 @@ export const LoginResponseSchema = z.strictObject({
   user: SessionUserSchema,
   csrf_token: z.string(),
 });
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export const RegisterRequestSchema = z.strictObject({
   email: z.string(),
   name: z.string(),

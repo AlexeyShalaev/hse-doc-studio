@@ -157,6 +157,16 @@ export const createApiClient = (options: ApiClientOptions): AxiosInstance => {
           }
         }
 
+        // Retry-After (429) в секундах: форма входа показывает обратный отсчёт.
+        const retryHeader: unknown = error.response?.headers?.["retry-after"];
+        const retryAfter =
+          typeof retryHeader === "string"
+            ? Number.parseInt(retryHeader, 10)
+            : NaN;
+        if (Number.isFinite(retryAfter) && retryAfter > 0) {
+          extra = { ...extra, retry_after: retryAfter };
+        }
+
         // Auto-toast for mutations and server errors. Skip GET 4xx — callers
         // (e.g. /fs/inspect, /fs/browse) usually render those inline. Also
         // skip 409 (Conflict): we use it for structured "needs user action"

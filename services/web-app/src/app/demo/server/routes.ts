@@ -29,6 +29,45 @@ const guarded =
 const str = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
+// Особые адреса демо: каждый возвращает свой отказ входа, чтобы все состояния экрана
+// можно было вызвать руками.
+const DEMO_LOGIN_REFUSALS: Record<
+  string,
+  {
+    status: number;
+    code: string;
+    detail: string;
+    extra?: Record<string, unknown>;
+  }
+> = {
+  "locked@example.org": {
+    status: 429,
+    code: "rate_limited",
+    detail: "Too many attempts",
+    extra: { retry_after: 20 },
+  },
+  "unverified@example.org": {
+    status: 403,
+    code: "email_not_verified",
+    detail: "Email is not verified",
+  },
+  "pending@example.org": {
+    status: 403,
+    code: "pending_approval",
+    detail: "Account is pending approval",
+  },
+  "disabled@example.org": {
+    status: 403,
+    code: "account_disabled",
+    detail: "Account is disabled",
+  },
+  "sso@example.org": {
+    status: 403,
+    code: "sso_login_required",
+    detail: "Single sign-on required",
+  },
+};
+
 const routes: DemoRoute[] = [
   {
     method: "GET",
@@ -46,6 +85,15 @@ const routes: DemoRoute[] = [
           403,
           "sso_login_required",
           "This email can only sign in through single sign-on",
+        );
+      }
+      const refusal = DEMO_LOGIN_REFUSALS[str(body.email).trim().toLowerCase()];
+      if (refusal) {
+        return demoError(
+          refusal.status,
+          refusal.code,
+          refusal.detail,
+          refusal.extra,
         );
       }
       if (str(body.password).length < auth.password_min_length) {

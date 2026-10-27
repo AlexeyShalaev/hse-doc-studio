@@ -157,3 +157,24 @@ describe("серверное демо", () => {
     await expect(call("GET", "/session/bootstrap")).rejects.toThrow("forward");
   });
 });
+
+describe("демо входа: особые адреса", () => {
+  beforeEach(() => {
+    setServerDemoActive(true);
+    activateServerScenario("registration_closed");
+  });
+  it.each([
+    ["locked@example.org", 429, "rate_limited"],
+    ["unverified@example.org", 403, "email_not_verified"],
+    ["pending@example.org", 403, "pending_approval"],
+    ["disabled@example.org", 403, "account_disabled"],
+    ["sso@example.org", 403, "sso_login_required"],
+  ])("%s отказывает кодом %s", async (email, status, code) => {
+    const res = await call("POST", "/auth/login", {
+      email,
+      password: "long-enough-pass",
+    });
+    expect(res.status).toBe(status);
+    expect((res.data as { code: string }).code).toBe(code);
+  });
+});
