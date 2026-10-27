@@ -222,16 +222,7 @@ class GitStatusBuilder:
         config = self._remotes.read(project)
         stored = self._settings.get()
         if config is None:
-            enabled, interval = fetch_interval(None, stored)
-            return GitStatusView(
-                connected=False,
-                ui_state=SyncUiState.no_remote,
-                remote=None,
-                relation=SyncRelation.none,
-                health=SyncHealth.ok,
-                profile_ok=profile_ok,
-                auto_fetch=AutoFetchView(enabled, interval, None),
-            )
+            return self._without_remote(project, stored, profile_ok)
         folder = project.folder
         current = self._current_branch(folder)
         state = self._states.get(folder) or default_state(config, current)
@@ -273,6 +264,34 @@ class GitStatusBuilder:
             last_sync=state.last_sync,
             shared_folder=self._shared_folder(folder, state),
             bot_authored_commits=data.unpublished_bot_commits,
+        )
+
+    def _without_remote(self, project: Project, stored: dict[str, object], profile_ok: bool) -> GitStatusView:
+        """Проект без сервера: статус пуст, кроме открытой сессии конфликтов от файла bundle."""
+        enabled, interval = fetch_interval(None, stored)
+        auto_fetch = AutoFetchView(enabled, interval, None)
+        pending = state.pending if (state := self._states.get(project.folder)) else None
+        if pending is None:
+            return GitStatusView(
+                connected=False,
+                ui_state=SyncUiState.no_remote,
+                remote=None,
+                relation=SyncRelation.none,
+                health=SyncHealth.ok,
+                profile_ok=profile_ok,
+                auto_fetch=auto_fetch,
+            )
+        operation = self._operations.current_for(project.id)
+        return GitStatusView(
+            connected=False,
+            ui_state=SyncUiState.syncing if operation else SyncUiState.conflicts,
+            remote=None,
+            relation=SyncRelation.none,
+            health=SyncHealth.ok,
+            profile_ok=profile_ok,
+            auto_fetch=auto_fetch,
+            operation=_operation_brief(operation),
+            pending=pending,
         )
 
     def _blocked(self, project: Project, state: SyncState, current: str | None, profile_ok: bool) -> BlockedView | None:

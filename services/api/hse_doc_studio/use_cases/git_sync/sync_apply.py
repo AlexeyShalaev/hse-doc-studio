@@ -8,6 +8,9 @@
 * Истории разошлись: план трёх деревьев. Без конфликтов он применяется и закрепляется коммитом слияния с двумя
   родителями. С конфликтами на диск не пишется ничего: сессия (коммиты и отпечаток) остаётся в hse-sync.json.
 
+Те же шаги выполняются для ветки из переносного файла (`theirs_ref=refs/hse/bundle/<ветка>`): она занимает место
+отслеживаемой ветки, всё остальное, включая конфликты и решения по ним, общее.
+
 Запись на диск идёт транзакцией с журналом `kind=sync`: сбой на любом шаге откатывается по копиям файлов
 или, если коммит уже сделан, доводится при следующем запуске Студии.
 """
@@ -48,6 +51,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitRepoReader,
     IGitSyncStateRepository,
 )
+from hse_doc_studio.core.git_sync.refs import BUNDLE_PREFIX
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
 from hse_doc_studio.core.vcs.entities import VcsSettings
@@ -102,6 +106,11 @@ def _tracking_ref(state: SyncState) -> str:
     return f"{TRACKING_PREFIX}{state.remote_branch}"
 
 
+def _session_ref(state: SyncState) -> str:
+    """Чужая сторона открытой сессии конфликтов: ветка из файла или отслеживаемая ветка сервера."""
+    return state.pending.theirs_ref if state.pending is not None and state.pending.theirs_ref else _tracking_ref(state)
+
+
 class SyncApplier:
     def __init__(
         self,
@@ -133,8 +142,18 @@ class SyncApplier:
             force_paths=[FROZEN_DIR],
         )
 
-    def apply(self, project: Project, state: SyncState, sync_id: str) -> ApplyOutcome:
-        """Снимок и применение чужой ветки. Бросает HeadMovedError, если ветка сдвинулась под ногами."""
+    def apply(self, project: Project, state: SyncState, sync_id: str, theirs_ref: str | None = None) -> ApplyOutcome:
+        """Снимок и применение чужой ветки. Бросает HeadMovedError, если ветка сдвинулась под ногами.
+
+        `theirs_ref`: ссылка на ветку из переносного файла; без неё применяется отслеживаемая ветка сервера.
+        Ссылка файла после применения без конфликтов убирается: она нужна только пока идёт слияние.
+        """
+        outcome = self._apply(project, state, sync_id, theirs_ref)
+        if theirs_ref is not None and outcome.kind is not ApplyKind.conflicts:
+            self._committer.delete_ref(project.folder, theirs_ref)
+        return outcome
+
+    def _apply(self, project: Project, state: SyncState, sync_id: str, theirs_ref: str | None) -> ApplyOutcome:
         folder = project.folder
         self.snapshot(project)
         branch = state.local_branch
@@ -143,9 +162,9 @@ class SyncApplier:
         ours = self._reader.rev_parse(folder, f"{HEADS_PREFIX}{branch}")
         if ours is None:
             raise git_error(GitErrorCode.branch_missing)
-        theirs = self._reader.rev_parse(folder, _tracking_ref(state))
+        theirs = self._reader.rev_parse(folder, theirs_ref or _tracking_ref(state))
         if theirs is None or theirs == ours or self._reader.is_ancestor(folder, theirs, ours):
-            if state.pending is not None:
+            if state.pending is not None and state.pending.theirs_ref == theirs_ref:
                 # Чужая ветка уже вошла в нашу другим путём: сессия конфликтов потеряла смысл.
                 self._states.save(folder, replace(state, pending=None))
             return ApplyOutcome(ApplyKind.nothing)
@@ -155,7 +174,7 @@ class SyncApplier:
             outcome = self._fast_forward(project, state, ours, theirs, pulled, sync_id)
             if outcome is not None:
                 return outcome
-        return self._merge(project, state, ours, theirs, pulled, sync_id)
+        return self._merge(project, state, ours, theirs, pulled, sync_id, theirs_ref)
 
     def ensure_remote_mergeable(self, project: Project, theirs: str) -> None:
         raw = self._reader.read_files(project.folder, theirs, [PROJECT_FILE]).get(PROJECT_FILE)
@@ -198,13 +217,20 @@ class SyncApplier:
     # --- слияние -----------------------------------------------------------------------------------------------
 
     def _merge(
-        self, project: Project, state: SyncState, ours: str, theirs: str, pulled: int, sync_id: str
+        self,
+        project: Project,
+        state: SyncState,
+        ours: str,
+        theirs: str,
+        pulled: int,
+        sync_id: str,
+        theirs_ref: str | None,
     ) -> ApplyOutcome:
         plan = self._planner.plan(project.folder, ours, theirs, adopted_unrelated=state.adopted_unrelated)
         if plan.conflicts:
-            return self._keep_conflicts(project, state, ours, theirs, plan)
+            return self._keep_conflicts(project, state, ours, theirs, plan, theirs_ref)
         writes = resolve_plan(plan, {}, self._resolver)
-        message = f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]})"
+        message = _merge_title(state, theirs, theirs_ref)
         return self._commit_merge(project, state, ours, theirs, pulled, sync_id, plan, writes, message)
 
     def _commit_merge(
@@ -256,14 +282,18 @@ class SyncApplier:
         """Слияние с решениями человека. Сессия, потерявшая смысл (чужая ветка уже вошла в нашу), идёт обычным путём."""
         self.snapshot(project)
         heads = self._heads(project, state)
+        theirs_ref = state.pending.theirs_ref if state.pending is not None else None
         if heads is None or self._is_moot(project, heads):
-            return self.apply(project, state, sync_id)
+            return self.apply(project, state, sync_id, theirs_ref)
         ours, theirs = heads
         self.ensure_remote_mergeable(project, theirs)
         plan, writes = self._resolved_writes(project, state, ours, theirs, request)
         pulled = self._reader.count_commits(project.folder, f"{ours}..{theirs}")
-        message = f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]}), конфликты решены"
-        return self._commit_merge(project, state, ours, theirs, pulled, sync_id, plan, writes, message)
+        message = f"{_merge_title(state, theirs, theirs_ref)}, конфликты решены"
+        outcome = self._commit_merge(project, state, ours, theirs, pulled, sync_id, plan, writes, message)
+        if theirs_ref is not None:
+            self._committer.delete_ref(project.folder, theirs_ref)
+        return outcome
 
     def _heads(self, project: Project, state: SyncState) -> tuple[str, str] | None:
         folder = project.folder
@@ -272,7 +302,7 @@ class SyncApplier:
         ours = self._reader.rev_parse(folder, f"{HEADS_PREFIX}{state.local_branch}")
         if ours is None:
             raise git_error(GitErrorCode.branch_missing)
-        theirs = self._reader.rev_parse(folder, _tracking_ref(state))
+        theirs = self._reader.rev_parse(folder, _session_ref(state))
         return None if theirs is None else (ours, theirs)
 
     def _is_moot(self, project: Project, heads: tuple[str, str]) -> bool:
@@ -326,7 +356,7 @@ class SyncApplier:
         return kept
 
     def _keep_conflicts(
-        self, project: Project, state: SyncState, ours: str, theirs: str, plan: MergePlan
+        self, project: Project, state: SyncState, ours: str, theirs: str, plan: MergePlan, theirs_ref: str | None
     ) -> ApplyOutcome:
         """Конфликты решает человек: на диск ничего не пишется, сессия остаётся рядом с хранилищем.
 
@@ -349,6 +379,7 @@ class SyncApplier:
             fingerprint=plan.fingerprint,
             drafts=drafts,
             drafts_saved_at=previous.drafts_saved_at if previous is not None and drafts else None,
+            theirs_ref=theirs_ref,
         )
         self._states.save(project.folder, replace(state, pending=pending))
         logger.info("git sync stopped on conflicts", project_id=str(project.id), files=total, session=session_id)
@@ -404,6 +435,12 @@ class SyncApplier:
             taken.add(copy)
             moved.append(FileWrite(copy, FileWriteKind.write, local))
         return moved
+
+
+def _merge_title(state: SyncState, theirs: str, theirs_ref: str | None) -> str:
+    if theirs_ref is not None and theirs_ref.startswith(BUNDLE_PREFIX):
+        return f"Импорт из файла: слияние с {theirs_ref.removeprefix(BUNDLE_PREFIX)} ({theirs[:7]})"
+    return f"Синхронизация: слияние с {state.remote_branch} ({theirs[:7]})"
 
 
 def _auto_changes(plan: MergePlan) -> tuple[SyncAutoChange, ...]:

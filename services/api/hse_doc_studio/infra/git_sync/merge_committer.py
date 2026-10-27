@@ -13,6 +13,7 @@ import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
+from hse_doc_studio.core.git_sync.refs import BUNDLE_PREFIX
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.errors import VcsCommandError
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
@@ -79,6 +80,12 @@ class GitMergeCommitter:
         if self._reader.current_branch(project_folder) == branch:
             self._git.run(project_folder, ["read-tree", "--reset", f"{new_sha}^{{tree}}"])
         return True
+
+    def delete_ref(self, project_folder: Path, ref: str) -> None:
+        if not ref.startswith(BUNDLE_PREFIX):
+            raise ValueError(f"only bundle staging refs may be deleted: {ref!r}")
+        validate_ref_name(ref.removeprefix(BUNDLE_PREFIX))
+        self._git.run(project_folder, ["update-ref", "-d", ref], check=False)
 
     def fast_forward(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
         if not self._reader.is_ancestor(project_folder, expected, new):

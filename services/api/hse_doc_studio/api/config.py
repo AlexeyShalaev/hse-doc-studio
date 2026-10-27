@@ -882,6 +882,14 @@ class GitConfig(BaseModel):
     clone_timeout_s: float = Field(
         default=900.0, description="Timeout for cloning and the first push of a long history."
     )
+    bundle_timeout_s: float = Field(
+        default=600.0, description="Timeout for one git command over a bundle file (create, verify, unpack)."
+    )
+    bundle_max_bytes: int = Field(
+        default=2_000_000_000,
+        ge=1,
+        description="Largest bundle file the Studio accepts for import or for cloning a project.",
+    )
     fetch_tick_s: float = Field(
         default=30.0, description="How often the background fetch looks for projects that are due."
     )

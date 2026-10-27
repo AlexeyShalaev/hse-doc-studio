@@ -303,6 +303,9 @@ class PendingSession:
     # переживают пересчёт плана.
     drafts: Mapping[str, FileResolution] = field(default_factory=dict)
     drafts_saved_at: datetime | None = None
+    # Откуда пришла чужая сторона, если не с сервера: ветка из переносного файла (`refs/hse/bundle/<ветка>`).
+    # Без неё слияние идёт с отслеживаемой веткой удалённого репозитория.
+    theirs_ref: str | None = None
 
 
 @dataclass(frozen=True)

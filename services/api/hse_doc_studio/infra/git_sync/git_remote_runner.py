@@ -216,10 +216,16 @@ class GitRemoteRunner:
         raise error
 
     async def run_local(
-        self, args: Sequence[str], *, git_dir: Path | None, timeout_s: float, check: bool = True
+        self,
+        args: Sequence[str],
+        *,
+        git_dir: Path | None,
+        timeout_s: float,
+        check: bool = True,
+        allow_protocol: str = "none",
     ) -> GitResult:
         # Сети здесь нет: в недоверенном хранилище ленивая подгрузка объектов не должна ходить наружу без доступа.
-        env = {**base_git_env(), "GIT_ALLOW_PROTOCOL": "none"}
+        env = {**base_git_env(), "GIT_ALLOW_PROTOCOL": allow_protocol}
         cwd = git_dir.parent if git_dir is not None else Path(tempfile.gettempdir())
         await self._capabilities.ensure_git(cwd=cwd, env=env)
         result = await self._spawn(args, git_dir=git_dir, env=env, timeout_s=timeout_s, on_progress=None)

@@ -62,6 +62,11 @@ class ConflictSessions:
     async def load(self, project_id: UUID) -> LoadedSession:
         return await asyncio.to_thread(self.load_for, await self.project(project_id))
 
+    def pending_of(self, project: Project) -> PendingSession | None:
+        """Открытая сессия из hse-sync.json без пересчёта плана: по ней выбирают проверки до запуска операции."""
+        state = self._states.get(project.folder)
+        return None if state is None else state.pending
+
     def load_for(self, project: Project) -> LoadedSession:
         """Бросает no_conflicts, если слияние не стоит или конфликтов уже нет."""
         folder = project.folder
@@ -69,7 +74,8 @@ class ConflictSessions:
         if state is None or state.pending is None:
             raise git_error(GitErrorCode.no_conflicts)
         ours = self._reader.rev_parse(folder, f"{HEADS_PREFIX}{state.local_branch}")
-        theirs = self._reader.rev_parse(folder, f"{TRACKING_PREFIX}{state.remote_branch}")
+        # Чужая сторона: ветка из переносного файла, если сессию открыл импорт файла, иначе ветка сервера.
+        theirs = self._reader.rev_parse(folder, state.pending.theirs_ref or f"{TRACKING_PREFIX}{state.remote_branch}")
         if ours is None or theirs is None or ours == theirs or self._reader.is_ancestor(folder, theirs, ours):
             raise git_error(GitErrorCode.no_conflicts)
         plan = self._planner.plan(folder, ours, theirs, adopted_unrelated=state.adopted_unrelated)

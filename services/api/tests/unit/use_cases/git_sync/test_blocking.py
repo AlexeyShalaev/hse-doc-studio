@@ -4,12 +4,12 @@ import asyncio
 import threading
 
 import pytest
-from hse_doc_studio.use_cases.git_sync.clone_project import _finish_before_cancel
+from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
 
 pytestmark = pytest.mark.unit
 
 
-async def test__finish_before_cancel__cancel_waits_for_the_thread_to_end() -> None:
+async def test_finish_before_cancel__cancel_waits_for_the_thread_to_end() -> None:
     started = threading.Event()
     finished = threading.Event()
 
@@ -18,7 +18,7 @@ async def test__finish_before_cancel__cancel_waits_for_the_thread_to_end() -> No
         finished.wait(timeout=0.3)
         finished.set()
 
-    task = asyncio.create_task(_finish_before_cancel(work))
+    task = asyncio.create_task(finish_before_cancel(work))
     while not started.is_set():
         await asyncio.sleep(0.005)
     task.cancel()
@@ -28,7 +28,7 @@ async def test__finish_before_cancel__cancel_waits_for_the_thread_to_end() -> No
     assert finished.is_set()
 
 
-async def test__finish_before_cancel__passes_arguments_and_errors_through() -> None:
+async def test_finish_before_cancel__passes_arguments_and_errors_through() -> None:
     seen: list[int] = []
 
     def work(value: int, *, fail: bool) -> None:
@@ -36,7 +36,11 @@ async def test__finish_before_cancel__passes_arguments_and_errors_through() -> N
         if fail:
             raise ValueError("boom")
 
-    await _finish_before_cancel(work, 1, fail=False)
+    await finish_before_cancel(work, 1, fail=False)
     with pytest.raises(ValueError, match="boom"):
-        await _finish_before_cancel(work, 2, fail=True)
+        await finish_before_cancel(work, 2, fail=True)
     assert seen == [1, 2]
+
+
+async def test__finish_before_cancel__returns_the_result_of_the_thread() -> None:
+    assert await finish_before_cancel(lambda a, b: a + b, 2, 3) == 5

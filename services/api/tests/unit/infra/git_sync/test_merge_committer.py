@@ -218,3 +218,23 @@ def test__fast_forward__not_a_descendant__raises(repo: Repo) -> None:
     with pytest.raises(VcsCommandError):
         _committer(repo).fast_forward(repo.folder, "master", expected=ours, new=theirs)
     assert repo.head() == ours
+
+
+def test__delete_ref__removes_a_bundle_staging_ref(repo: Repo) -> None:
+    ref = "refs/hse/bundle/master"
+    repo.git.run(repo.folder, ["update-ref", ref, repo.head()])
+
+    _committer(repo).delete_ref(repo.folder, ref)
+
+    assert repo.git.text(repo.folder, ["for-each-ref", ref]).strip() == ""
+
+
+def test__delete_ref__missing_ref__is_not_an_error(repo: Repo) -> None:
+    _committer(repo).delete_ref(repo.folder, "refs/hse/bundle/gone")
+
+
+@pytest.mark.parametrize("ref", ["refs/heads/master", "refs/remotes/origin/main", "refs/hse/template/1", "HEAD"])
+def test__delete_ref__anything_but_a_bundle_ref__is_refused(repo: Repo, ref: str) -> None:
+    with pytest.raises(ValueError, match="staging"):
+        _committer(repo).delete_ref(repo.folder, ref)
+    assert repo.git.text(repo.folder, ["rev-parse", "master"]).strip() == repo.head()

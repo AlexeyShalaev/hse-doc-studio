@@ -15,7 +15,7 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import OperationKind, SyncState
 from hse_doc_studio.core.git_sync.error_messages import git_error
-from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
@@ -33,6 +33,11 @@ from hse_doc_studio.use_cases.git_sync.status import default_state
 from hse_doc_studio.use_cases.git_sync.sync_apply import HEADS_PREFIX, TRACKING_PREFIX
 from hse_doc_studio.use_cases.git_sync.sync_project import SyncProjectUC
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+
+_OPEN_FILE_MERGE = (
+    "Идёт слияние с файлом проекта и в нём остались конфликты. Решите их или откажитесь от слияния",
+    "A merge with a project file is open and has conflicts. Resolve them or discard the merge",
+)
 
 
 @dataclass
@@ -95,6 +100,9 @@ class StartSyncUC:
         credential_id = state.credential_id or config.credential_id
         if credential_id is not None and self._credentials.get(credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
+        if state.pending is not None and state.pending.theirs_ref is not None:
+            # Открытое слияние с файлом: синхронизация с сервером затёрла бы сессию, а с ней решения человека.
+            raise GitSyncError(GitErrorCode.sync_incomplete, localized_error(*_OPEN_FILE_MERGE))
         self._check_branches(project, state)
         if self._journals.get(project.folder) is not None:
             raise git_error(GitErrorCode.sync_incomplete)

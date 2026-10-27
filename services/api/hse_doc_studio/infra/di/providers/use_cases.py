@@ -30,6 +30,7 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
     ICiRenderer,
+    IGitBundleService,
     IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
@@ -280,6 +281,7 @@ from hse_doc_studio.use_cases.fs.inspect_folder import InspectFolderUC
 
 # --- Git sync ---
 from hse_doc_studio.use_cases.git_sync.abort_conflicts import AbortConflictsUC
+from hse_doc_studio.use_cases.git_sync.bundles import BundleScratch, CloneFromBundleUC, ExportBundleUC, ImportBundleUC
 from hse_doc_studio.use_cases.git_sync.ci import PreviewCiUC, WriteCiUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectUC, GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
@@ -300,6 +302,7 @@ from hse_doc_studio.use_cases.git_sync.get_conflict_file import GetConflictBlobU
 from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsUC
 from hse_doc_studio.use_cases.git_sync.host_settings import CheckCredentialUC, ListHostSettingsUC, UpdateHostSettingsUC
 from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, TrustHostUC
+from hse_doc_studio.use_cases.git_sync.local_gate import LocalSyncGate
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
@@ -1832,13 +1835,20 @@ class UseCaseProvider(Provider):
         self,
         sessions: ConflictSessions,
         start: StartSyncUC,
+        gate: LocalSyncGate,
         applier: SyncApplier,
         sync: SyncProjectUC,
         operations: IGitOperationRegistry,
         vcs_locks: IVcsFolderLocks,
     ) -> ResolveConflictsUC:
         return ResolveConflictsUC(
-            sessions=sessions, start=start, applier=applier, sync=sync, operations=operations, locks=vcs_locks
+            sessions=sessions,
+            start=start,
+            gate=gate,
+            applier=applier,
+            sync=sync,
+            operations=operations,
+            locks=vcs_locks,
         )
 
     @provide
@@ -1846,12 +1856,110 @@ class UseCaseProvider(Provider):
         self,
         sessions: ConflictSessions,
         state_repo: IGitSyncStateRepository,
+        committer: IGitMergeCommitter,
         operations: IGitOperationRegistry,
         vcs_locks: IVcsFolderLocks,
         status: GetGitStatusUC,
     ) -> AbortConflictsUC:
         return AbortConflictsUC(
-            sessions=sessions, state_repo=state_repo, operations=operations, locks=vcs_locks, status=status
+            sessions=sessions,
+            state_repo=state_repo,
+            committer=committer,
+            operations=operations,
+            locks=vcs_locks,
+            status=status,
+        )
+
+    # ------------------------------------------------------------------ Git-синхронизация: переносной файл
+
+    @provide
+    def get_local_sync_gate(
+        self,
+        store_remotes: IGitStoreRemotes,
+        state_repo: IGitSyncStateRepository,
+        reader: IGitRepoReader,
+        guard: IGitStoreGuard,
+        profile: ILocalAuthorProfile,
+        journal_repo: IUpdateJournalRepository,
+        policy: GitSyncPolicy,
+    ) -> LocalSyncGate:
+        return LocalSyncGate(
+            store_remotes=store_remotes,
+            state_repo=state_repo,
+            reader=reader,
+            guard=guard,
+            profile=profile,
+            journals=journal_repo,
+            policy=policy,
+        )
+
+    @provide
+    def get_bundle_scratch(self) -> BundleScratch:
+        return BundleScratch(settings.data_dir.expanduser() / "tmp" / "git-bundles", settings.git.bundle_max_bytes)
+
+    @provide
+    def get_export_git_bundle_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        gate: LocalSyncGate,
+        applier: SyncApplier,
+        bundles: IGitBundleService,
+        vcs_locks: IVcsFolderLocks,
+        scratch: BundleScratch,
+    ) -> ExportBundleUC:
+        return ExportBundleUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            gate=gate,
+            applier=applier,
+            bundles=bundles,
+            locks=vcs_locks,
+            scratch=scratch,
+        )
+
+    @provide
+    def get_import_git_bundle_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        gate: LocalSyncGate,
+        sync: SyncProjectUC,
+        applier: SyncApplier,
+        bundles: IGitBundleService,
+        committer: IGitMergeCommitter,
+        operations: IGitOperationRegistry,
+        scratch: BundleScratch,
+    ) -> ImportBundleUC:
+        return ImportBundleUC(
+            get_project=GetProjectUC(project_repo, project_index_repo),
+            gate=gate,
+            sync=sync,
+            applier=applier,
+            bundles=bundles,
+            committer=committer,
+            operations=operations,
+            scratch=scratch,
+        )
+
+    @provide
+    def get_clone_git_bundle_uc(
+        self,
+        clone: CloneProjectUC,
+        bundles: IGitBundleService,
+        committer: IGitMergeCommitter,
+        operations: IGitOperationRegistry,
+        profile: ILocalAuthorProfile,
+        policy: GitSyncPolicy,
+        scratch: BundleScratch,
+    ) -> CloneFromBundleUC:
+        return CloneFromBundleUC(
+            clone=clone,
+            bundles=bundles,
+            committer=committer,
+            operations=operations,
+            profile=profile,
+            policy=policy,
+            scratch=scratch,
         )
 
     # ------------------------------------------------------------------ Git-синхронизация: выборка

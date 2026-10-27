@@ -174,6 +174,7 @@ def _pending_to_json(pending: PendingSession | None) -> dict[str, Any] | None:
         "fingerprint": pending.fingerprint,
         "drafts": {path: resolution_to_json(item) for path, item in sorted(pending.drafts.items())},
         "drafts_saved_at": _iso(pending.drafts_saved_at),
+        "theirs_ref": pending.theirs_ref,
     }
 
 
@@ -255,6 +256,7 @@ def _pending_from_json(raw: Any) -> PendingSession | None:
         fingerprint=_sha(raw.get("fingerprint")),
         drafts=_drafts_from_json(raw.get("drafts")),
         drafts_saved_at=_moment(raw.get("drafts_saved_at")),
+        theirs_ref=_text(raw.get("theirs_ref")),
     )
 
 

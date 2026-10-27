@@ -12,8 +12,7 @@ from __future__ import annotations
 import asyncio
 import re
 import shutil
-from collections.abc import Callable
-from contextlib import suppress
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,6 +62,7 @@ from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
+from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
 from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error, valid_branch
 from hse_doc_studio.use_cases.git_sync.status import TRACKING_PREFIX
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
@@ -89,7 +89,16 @@ class CloneProjectInput:
 
 
 @dataclass(frozen=True)
-class _FolderPlan:
+class CloneRemote:
+    """Куда проект смотрит после клонирования; у проекта из переносного файла удалённого репозитория нет."""
+
+    url: RemoteUrl
+    credential_id: UUID | None
+    insecure_http: bool
+
+
+@dataclass(frozen=True)
+class FolderPlan:
     """Что было на диске до клонирования: по этому и решается, что убирать при отказе."""
 
     folder: Path
@@ -118,17 +127,6 @@ _FOLDER_PROBLEMS: dict[str, tuple[str, str]] = {
         "the repository files would collide with what is already there",
     ),
 }
-
-
-async def _finish_before_cancel[**P](work: Callable[P, object], *args: P.args, **kwargs: P.kwargs) -> None:
-    """Поток нельзя прервать: отмена дожидается его конца, иначе уборка папки разойдётся с ним и оставит хвост."""
-    task = asyncio.ensure_future(asyncio.to_thread(work, *args, **kwargs))
-    try:
-        await asyncio.shield(task)
-    except asyncio.CancelledError:
-        with suppress(Exception):
-            await task
-        raise
 
 
 def _folder_not_empty(reason: str, folder: Path) -> GitSyncError:
@@ -182,11 +180,15 @@ class CloneProjectUC:
     async def execute(self, inp: CloneProjectInput) -> GitOperation:
         """Проверяет всё, что можно проверить без сети, и запускает клонирование в фоне."""
         url = self._checked_input(inp)
-        plan = await asyncio.to_thread(self._plan_folder, inp.folder)
+        plan = await asyncio.to_thread(self.plan_folder, inp.folder)
         operation = self._operations.begin(OperationKind.clone, project_id=None, folder=plan.folder)
-        task = asyncio.create_task(self._run(operation.id, url, plan, inp))
-        self._operations.attach_task(operation.id, task)
+        self.start(operation.id, plan, lambda: self._clone(operation.id, url, plan, inp))
         return operation
+
+    def start(self, operation_id: str, plan: FolderPlan, work: Callable[[], Awaitable[CloneResult]]) -> None:
+        """Запускает клонирование в фоне. Итог и уборка папки при отказе или отмене остаются за ним."""
+        task = asyncio.create_task(self._run(operation_id, plan, work))
+        self._operations.attach_task(operation_id, task)
 
     def _checked_input(self, inp: CloneProjectInput) -> RemoteUrl:
         if not self._policy.enabled:
@@ -202,7 +204,7 @@ class CloneProjectUC:
             valid_branch(inp.branch)
         return url
 
-    def _plan_folder(self, raw: str) -> _FolderPlan:
+    def plan_folder(self, raw: str) -> FolderPlan:
         """Папка годится под новый проект: пуста (с точностью до скрытых файлов), не внутри проекта и не занята."""
         path = Path(raw).expanduser()
         if not path.is_absolute():
@@ -210,13 +212,13 @@ class CloneProjectUC:
         folder = path.resolve()
         self._check_folder_free(folder)
         if folder.exists():
-            return _FolderPlan(folder, None, frozenset(entry.name for entry in folder.iterdir()))
+            return FolderPlan(folder, None, frozenset(entry.name for entry in folder.iterdir()))
         created_root = folder
         for parent in folder.parents:
             if parent.exists():
                 break
             created_root = parent
-        return _FolderPlan(folder, created_root, frozenset())
+        return FolderPlan(folder, created_root, frozenset())
 
     def _check_folder_free(self, folder: Path) -> None:
         if folder.exists():
@@ -232,9 +234,9 @@ class CloneProjectUC:
         if folder in {known.resolve() for known in self._index.list_known()}:
             raise _folder_not_empty("registered", folder)
 
-    async def _run(self, operation_id: str, url: RemoteUrl, plan: _FolderPlan, inp: CloneProjectInput) -> None:
+    async def _run(self, operation_id: str, plan: FolderPlan, work: Callable[[], Awaitable[CloneResult]]) -> None:
         try:
-            result = await self._clone(operation_id, url, plan, inp)
+            result = await work()
         except asyncio.CancelledError:
             self._cleanup(plan)
             self._operations.finish(operation_id, status=OperationStatus.cancelled)
@@ -255,7 +257,7 @@ class CloneProjectUC:
             return
         self._operations.finish(operation_id, result=result)
 
-    async def _clone(self, operation_id: str, url: RemoteUrl, plan: _FolderPlan, inp: CloneProjectInput) -> CloneResult:
+    async def _clone(self, operation_id: str, url: RemoteUrl, plan: FolderPlan, inp: CloneProjectInput) -> CloneResult:
         folder = plan.folder
         # Открытый http проверяется как разрешённый политикой: отдельного согласия у клонирования нет.
         target = RemoteTarget(url, inp.credential_id, insecure_http=url.kind is RemoteKind.http)
@@ -268,7 +270,7 @@ class CloneProjectUC:
         if branch not in probe.branches:
             raise git_error(GitErrorCode.branch_missing)
 
-        await _finish_before_cancel(self._init_store, folder, branch)
+        await finish_before_cancel(self.init_store, folder, branch)
         git_dir = folder / _STUDIO_DIR / "git"
         await self._transport.fetch(
             git_dir,
@@ -277,19 +279,38 @@ class CloneProjectUC:
             timeout_s=self._timeout_s,
             on_progress=lambda percent, _line: self._operations.update(operation_id, percent=percent),
         )
+        remote = CloneRemote(url, inp.credential_id, target.insecure_http)
+        return await self.adopt(operation_id, plan, branch=branch, ref=f"{TRACKING_PREFIX}{branch}", remote=remote)
 
+    async def adopt(
+        self, operation_id: str, plan: FolderPlan, *, branch: str, ref: str, remote: CloneRemote | None
+    ) -> CloneResult:
+        """Скачанная ветка лежит в `ref` пустого хранилища: проверить её и развернуть проект в папке.
+
+        Общее для клонирования с сервера и из переносного файла (`remote=None`: удалённого репозитория нет).
+        """
+        folder = plan.folder
         self._operations.update(operation_id, phase=OperationPhase.verify)
-        verified = await asyncio.to_thread(self._verify, plan, branch)
+        verified = await asyncio.to_thread(self._verify, plan, ref)
 
         # Дальше дерево разворачивается в папку: прерывать это на полпути нельзя.
         self._operations.update(operation_id, phase=OperationPhase.register, cancellable=False)
         await asyncio.to_thread(self._store.write_exclude, folder, vcs_exclude_for(verified.version))
-        await asyncio.to_thread(self._store.checkout, folder, branch)
-        await asyncio.to_thread(self._persist, folder, url, branch, inp.credential_id, target.insecure_http)
+        await asyncio.to_thread(self._store.checkout, folder, branch, ref)
+        if remote is not None:
+            await asyncio.to_thread(
+                self._persist, folder, remote.url, branch, remote.credential_id, remote.insecure_http
+            )
         self._index.register(folder)
         await asyncio.to_thread(self._ensure_template_base, folder, verified)
-        self._registry.add(folder)
-        logger.info("project cloned", project_id=str(verified.project.id), host=url.host, branch=branch)
+        if remote is not None:
+            self._registry.add(folder)
+        logger.info(
+            "project cloned",
+            project_id=str(verified.project.id),
+            host=remote.url.host if remote else None,
+            branch=branch,
+        )
         return CloneResult(
             project_id=verified.project.id,
             folder=str(folder),
@@ -298,14 +319,13 @@ class CloneProjectUC:
             warnings=verified.warnings,
         )
 
-    def _init_store(self, folder: Path, branch: str) -> None:
+    def init_store(self, folder: Path, branch: str) -> None:
         folder.mkdir(parents=True, exist_ok=True)
         self._store.init(folder, branch)
 
-    def _verify(self, plan: _FolderPlan, branch: str) -> _Verified:
+    def _verify(self, plan: FolderPlan, tracking: str) -> _Verified:
         """Проверка вершины скачанной ветки до того, как её дерево тронет папку."""
         folder = plan.folder
-        tracking = f"{TRACKING_PREFIX}{branch}"
         if self._reader.rev_parse(folder, tracking) is None:
             raise git_error(GitErrorCode.branch_missing)
         raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
@@ -350,7 +370,7 @@ class CloneProjectUC:
         return None
 
     @staticmethod
-    def _check_paths(entries: list[TreeEntry], plan: _FolderPlan) -> None:
+    def _check_paths(entries: list[TreeEntry], plan: FolderPlan) -> None:
         """Чужое дерево не должно записать ничего за пределы проекта, в служебные каталоги и поверх чужих файлов."""
         unsafe = [entry.path for entry in entries if not is_safe_entry(entry.path, entry.mode)]
         if unsafe:
@@ -408,7 +428,7 @@ class CloneProjectUC:
         except Exception as exc:  # noqa: BLE001
             logger.warning("template base not recorded on clone", folder=str(folder), exc=str(exc))
 
-    def _cleanup(self, plan: _FolderPlan) -> None:
+    def _cleanup(self, plan: FolderPlan) -> None:
         """Убирает созданное клонированием; всё, что было в папке до него, остаётся на месте."""
         try:
             self._index.unregister(plan.folder)

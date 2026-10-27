@@ -14,6 +14,8 @@ from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.git_sync.bundle_crypto import BundleFormat
+from hse_doc_studio.core.git_sync.bundle_header import BundleHeader
 from hse_doc_studio.core.git_sync.ci import CiOptions, RenderedCiFile
 from hse_doc_studio.core.git_sync.entities import (
     AuthorCount,
@@ -224,9 +226,18 @@ class IGitRemoteRunner(Protocol):
         ...
 
     async def run_local(
-        self, args: Sequence[str], *, git_dir: Path | None, timeout_s: float, check: bool = True
+        self,
+        args: Sequence[str],
+        *,
+        git_dir: Path | None,
+        timeout_s: float,
+        check: bool = True,
+        allow_protocol: str = "none",
     ) -> GitResult:
-        """Команда без сети (init, cat-file) в том же защитном окружении. `check`: ненулевой код это ошибка."""
+        """Команда без сети (init, cat-file) в том же защитном окружении. `check`: ненулевой код это ошибка.
+
+        `allow_protocol` открывает один транспорт git: `file` нужен, чтобы забрать ветки из файла bundle.
+        """
         ...
 
 
@@ -341,6 +352,10 @@ class IGitMergeCommitter(Protocol):
         """
         ...
 
+    def delete_ref(self, project_folder: Path, ref: str) -> None:
+        """Убирает ссылку чужой стороны, которую занесла синхронизация (`refs/hse/bundle/*`); нет ссылки: ничего."""
+        ...
+
     def fast_forward(self, project_folder: Path, branch: str, *, expected: str, new: str) -> bool:
         """Перемотка ветки на потомка `expected` после того, как файлы записаны в рабочее дерево."""
         ...
@@ -441,8 +456,8 @@ class IGitCloneStore(Protocol):
         """Исключения хранилища: пишутся до checkout, иначе служебные файлы попадут в рабочее дерево как новые."""
         ...
 
-    def checkout(self, folder: Path, branch: str) -> None:
-        """Рабочее дерево и индекс по `refs/remotes/origin/<branch>`; локальная ветка получает то же имя."""
+    def checkout(self, folder: Path, branch: str, ref: str | None = None) -> None:
+        """Рабочее дерево и индекс по `ref` (по умолчанию `refs/remotes/origin/<branch>`); локальная ветка `branch`."""
         ...
 
     def write_remote(self, folder: Path, config: StoreRemoteConfig) -> None: ...
@@ -455,9 +470,37 @@ class ISharedFolderDetector(Protocol):
 
 
 class IGitBundleService(Protocol):
-    def export_bundle(self, project_folder: Path, *, password: str | None = None) -> Path: ...
-    def import_bundle(self, project_folder: Path, bundle: Path, *, password: str | None = None) -> str:
-        """Кладёт содержимое бандла в `refs/hse/bundle/<ветка>` и возвращает его вершину."""
+    """Переносной файл проекта (git bundle): выгрузка ветки и разбор чужого файла.
+
+    Файл может быть обёрнут контейнером HSEB1 с паролем. Ошибки приходят как GitSyncError с кодами bundle_*.
+    """
+
+    def check_upload(self, source: Path, password: Secret | None) -> BundleFormat:
+        """Дёшево, без git: что это за файл и подходит ли пароль. Незашифрованный файл пароль игнорирует."""
+        ...
+
+    def unpack(self, source: Path, workdir: Path, password: Secret | None) -> Path:
+        """Путь к обычному bundle: сам `source` или его расшифрованная копия в `workdir`. Блокирует."""
+        ...
+
+    def read_header(self, plain: Path) -> BundleHeader:
+        """Ветки и предпосылки из заголовка. Бросает bundle_invalid. Предпосылки проверяет `verify`."""
+        ...
+
+    async def verify(self, folder: Path, plain: Path) -> None:
+        """`git bundle verify` в хранилище проекта: предпосылки на месте (иначе bundle_prerequisites_missing)."""
+        ...
+
+    async def stage_branch(self, folder: Path, plain: Path, *, branch: str, ref: str) -> str:
+        """Кладёт ветку из файла в `ref` хранилища и возвращает её вершину. Больше ничего в хранилище не меняется."""
+        ...
+
+    async def create_bundle(self, folder: Path, *, branch: str, dest: Path) -> None:
+        """Пишет в `dest` bundle одной ветки; других ссылок хранилища (`refs/hse/*`, теги) в нём нет."""
+        ...
+
+    def encrypt_bundle(self, plain: Path, dest: Path, password: Secret) -> None:
+        """Заворачивает готовый bundle в контейнер HSEB1 под паролем. Блокирует."""
         ...
 
 

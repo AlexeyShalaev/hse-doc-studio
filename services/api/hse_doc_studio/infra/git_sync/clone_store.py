@@ -29,7 +29,7 @@ class GitCloneStore:
         info.mkdir(parents=True, exist_ok=True)
         (info / "exclude").write_text("\n".join(patterns) + "\n", encoding="utf-8")
 
-    def checkout(self, folder: Path, branch: str) -> None:
+    def checkout(self, folder: Path, branch: str, ref: str | None = None) -> None:
         branch = validate_ref_name(branch)
         self._git.run(
             folder,
@@ -40,7 +40,7 @@ class GitCloneStore:
                 "--no-recurse-submodules",
                 "-B",
                 branch,
-                f"refs/remotes/origin/{branch}",
+                ref or f"refs/remotes/origin/{branch}",
             ],
         )
 

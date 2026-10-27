@@ -9,7 +9,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
-from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitSyncStateRepository
+from hse_doc_studio.core.git_sync.protocols import IGitMergeCommitter, IGitOperationRegistry, IGitSyncStateRepository
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.use_cases.git_sync.conflict_support import ConflictSessions
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC, GitStatusView
@@ -28,12 +28,14 @@ class AbortConflictsUC:
         *,
         sessions: ConflictSessions,
         state_repo: IGitSyncStateRepository,
+        committer: IGitMergeCommitter,
         operations: IGitOperationRegistry,
         locks: IVcsFolderLocks,
         status: GetGitStatusUC,
     ) -> None:
         self._sessions = sessions
         self._states = state_repo
+        self._committer = committer
         self._operations = operations
         self._locks = locks
         self._status = status
@@ -50,3 +52,6 @@ class AbortConflictsUC:
         state = self._states.get(folder)
         if state is not None and state.pending is not None:
             self._states.save(folder, replace(state, pending=None))
+            if state.pending.theirs_ref is not None:
+                # Ветка из файла нужна была только этому слиянию.
+                self._committer.delete_ref(folder, state.pending.theirs_ref)

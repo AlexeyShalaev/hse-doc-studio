@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 from fastapi import FastAPI, Request
@@ -81,8 +82,8 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.git_unavailable: _UNAVAILABLE,
 }
 
-# Запросы, в теле которых лежит секрет: эхо входных данных в ответе проверки (`input`) вернуло бы токен.
-_SECRET_BODY_PREFIXES = ("/api/v1/git/credentials",)
+# Запросы, в теле которых лежит секрет: эхо входных данных в ответе проверки (`input`) вернуло бы токен или пароль.
+_SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/credentials|git/clone/bundle|projects/[^/]+/git/bundle/)")
 
 
 def git_error_body(exc: GitSyncError) -> dict[str, object]:
@@ -97,7 +98,7 @@ async def _git_error_handler(_request: Request, exc: Exception) -> JSONResponse:
 async def _validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)  # noqa: S101
     errors = exc.errors()
-    if request.url.path.startswith(_SECRET_BODY_PREFIXES):
+    if _SECRET_BODY_PATHS.match(request.url.path):
         errors = [{key: value for key, value in error.items() if key not in {"input", "ctx"}} for error in errors]
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 

@@ -38,7 +38,7 @@ from hse_doc_studio.core.git_sync.entities import (
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.merge.text import has_hse_markers
-from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
+from hse_doc_studio.core.git_sync.policy import DEFAULT_REMOTE_BRANCH, GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitOperationRegistry,
     IGitRepoReader,
@@ -167,10 +167,20 @@ class SyncProjectUC:
 
     # --- цикл -------------------------------------------------------------------------------------------------
 
+    async def import_ref(self, project: Project, operation_id: str, sync_id: str, theirs_ref: str) -> ApplyOutcome:
+        """Локальная фаза синхронизации для ветки, которая уже лежит в `theirs_ref` (переносной файл).
+
+        Те же ожидание сборок, блокировка папки, снимок, план и применение, что у обычной синхронизации,
+        но без выборки и отправки: файл не требует ни сети, ни подключённого репозитория.
+        """
+        return await self._apply(project, operation_id, sync_id, None, theirs_ref)
+
     async def _execute(
         self, project: Project, operation_id: str, sync_id: str, resolve: ResolveRequest | None = None
     ) -> SyncResult:
-        target = await asyncio.to_thread(self._target, project)
+        # Решения без отправки (слияние с файлом) обходятся без сервера: адрес подключения может и не быть.
+        local = resolve is not None and not resolve.push
+        target = None if local else await asyncio.to_thread(self._target, project)
         totals = _Totals()
         for attempt in range(MAX_PUSH_ATTEMPTS):
             project = (await self._get_project.execute(GetProjectInput(project_id=project.id))).project
@@ -182,6 +192,7 @@ class SyncProjectUC:
                 return await self._finish(project, sync_id, totals, SyncOutcome.conflicts, applied)
             if resolving is not None and not resolving.push:
                 return await self._finish(project, sync_id, totals, totals.outcome(), applied)
+            assert target is not None  # noqa: S101 — без цели сюда приходят только решения без отправки, они вышли выше
             try:
                 totals.pushed += await self._push(project, target, operation_id)
             except GitSyncError as exc:
@@ -193,10 +204,10 @@ class SyncProjectUC:
         raise git_error(GitErrorCode.remote_moved)
 
     async def _refresh(
-        self, project: Project, target: RemoteTarget, operation_id: str, *, first: bool, resolving: bool
+        self, project: Project, target: RemoteTarget | None, operation_id: str, *, first: bool, resolving: bool
     ) -> None:
         """Снимок и выборка перед применением. Решения по конфликтам применяются к уже известной чужой вершине."""
-        if resolving:
+        if resolving or target is None:
             return
         if first:
             await self._snapshot(project, operation_id)
@@ -220,6 +231,18 @@ class SyncProjectUC:
         if config is None:
             raise git_error(GitErrorCode.not_a_studio_project)
         return default_state(config, None)
+
+    def _local_state(self, project: Project) -> SyncState:
+        """Состояние проекта, у которого может не быть ни подключения, ни hse-sync.json: ветка берётся с HEAD."""
+        state = self._states.get(project.folder)
+        if state is not None:
+            return state
+        current = self._reader.current_branch(project.folder)
+        config = self._remotes.read(project)
+        if config is not None:
+            return default_state(config, current)
+        branch = current or DEFAULT_REMOTE_BRANCH
+        return SyncState(local_branch=branch, remote_branch=branch)
 
     async def _update_state(self, project: Project, change: Callable[[SyncState], SyncState]) -> None:
         """Состояние меняется под блокировкой папки: так оно не расходится с записями применения."""
@@ -263,7 +286,12 @@ class SyncProjectUC:
         await self._update_state(project, lambda s: replace(with_success(s, at=_now()), remote_empty=False))
 
     async def _apply(
-        self, project: Project, operation_id: str, sync_id: str, resolve: ResolveRequest | None
+        self,
+        project: Project,
+        operation_id: str,
+        sync_id: str,
+        resolve: ResolveRequest | None,
+        theirs_ref: str | None = None,
     ) -> ApplyOutcome:
         for _ in range(MAX_APPLY_ATTEMPTS):
             await self._wait_for_builds(project, operation_id)
@@ -272,12 +300,16 @@ class SyncProjectUC:
                 if self._dispatcher.has_active_for_folder(project.folder):
                     continue
                 try:
-                    return await asyncio.to_thread(self._apply_locked, project, sync_id, resolve)
+                    return await asyncio.to_thread(self._apply_locked, project, sync_id, resolve, theirs_ref)
                 except HeadMovedError:
                     continue
         raise git_error(GitErrorCode.sync_busy)
 
-    def _apply_locked(self, project: Project, sync_id: str, resolve: ResolveRequest | None) -> ApplyOutcome:
+    def _apply_locked(
+        self, project: Project, sync_id: str, resolve: ResolveRequest | None, theirs_ref: str | None
+    ) -> ApplyOutcome:
+        if theirs_ref is not None:
+            return self._applier.apply(project, self._local_state(project), sync_id, theirs_ref)
         state = self._load_state(project)
         if resolve is None:
             return self._applier.apply(project, state, sync_id)

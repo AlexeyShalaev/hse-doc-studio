@@ -71,6 +71,7 @@ def _full_state() -> SyncState:
                 "notes.tex": TextResolution("whole file\n"),
             },
             drafts_saved_at=_AT,
+            theirs_ref="refs/hse/bundle/master",
         ),
         auto_fetch=False,
         fetch_interval_s=600,
@@ -134,6 +135,7 @@ def test__save__writes_a_versioned_file_with_utc_timestamps(folder: Path) -> Non
             "notes.tex": {"kind": "text", "content": "whole file\n"},
         },
         "drafts_saved_at": "2026-10-26T12:30:05Z",
+        "theirs_ref": "refs/hse/bundle/master",
     }
     assert not list(_file(folder).parent.glob("*.tmp"))
 

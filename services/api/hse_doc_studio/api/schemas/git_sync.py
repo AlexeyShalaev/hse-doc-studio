@@ -692,6 +692,13 @@ class ResolveConflictsRequest(_Contract):
     push: bool
 
 
+# --- переносной файл ---------------------------------------------------------
+
+
+class BundleExportRequest(_Contract):
+    password: str | None = None  # пусто: файл без шифрования
+
+
 # --- CI ----------------------------------------------------------------------
 
 

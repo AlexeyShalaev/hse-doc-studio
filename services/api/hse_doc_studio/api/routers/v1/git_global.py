@@ -10,7 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
 from hse_doc_studio.api.git_mapping import map_operation, map_probe, map_provider_info, map_token_info
 from hse_doc_studio.api.schemas.git_sync import (
@@ -38,6 +38,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.use_cases.git_sync.bundles import BundleScratch, CloneFromBundleInput, CloneFromBundleUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectInput, CloneProjectUC, GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.credentials import (
     CreateCredentialInput,
@@ -250,6 +251,28 @@ async def clone_git_project(body: CloneRequest, uc: FromDishka[CloneProjectUC]) 
             CloneProjectInput(
                 url=body.url, folder=body.folder, credential_id=body.credential_id, branch=body.branch, name=body.name
             )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return OperationStartedResponse(operation_id=operation.id)
+
+
+@router.post("/git/clone/bundle", response_model=OperationStartedResponse, status_code=status.HTTP_202_ACCEPTED)
+async def clone_git_project_from_bundle(
+    uc: FromDishka[CloneFromBundleUC],
+    scratch: FromDishka[BundleScratch],
+    file: UploadFile = File(...),
+    folder: str = Form(...),
+    password: str | None = Form(default=None),
+) -> OperationStartedResponse:
+    """Новый проект из файла bundle: те же шаги, что у клонирования, но объекты берутся из файла.
+
+    Проект зовётся так, как записан в файле: поле `name` клиента нужно только для предложения папки.
+    """
+    stored = await scratch.receive(file.read)
+    try:
+        operation = await uc.execute(
+            CloneFromBundleInput(upload=stored, folder=folder, password=Secret(password) if password else None)
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

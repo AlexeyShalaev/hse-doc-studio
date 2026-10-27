@@ -33,6 +33,7 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
     ICiRenderer,
+    IGitBundleService,
     IGitCloneStore,
     IGitCredentialRepository,
     IGitCredentialUsage,
@@ -131,6 +132,7 @@ from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
 from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
 from hse_doc_studio.infra.fonts.system_fonts import OsSystemFontProvider
 from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
+from hse_doc_studio.infra.git_sync.bundle import GitBundleService
 from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
@@ -914,6 +916,10 @@ class DomainServiceProvider(Provider):
         self, author_provider: ICommitAuthorProvider, store_git: StoreGit
     ) -> IGitMergeCommitter:
         return GitMergeCommitter(author_provider, store_git)
+
+    @provide
+    def get_git_bundle_service(self, runner: IGitRemoteRunner) -> IGitBundleService:
+        return GitBundleService(runner, settings.git)
 
     @provide
     def get_git_merge_engine(self) -> IGitMergeEngine:

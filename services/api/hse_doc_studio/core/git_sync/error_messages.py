@@ -150,6 +150,22 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Токену не хватает права на изменение рабочих процессов (workflow)",
         "The token lacks the permission to change workflows",
     ),
+    GitErrorCode.bundle_invalid: (
+        "Файл повреждён или не является переносным файлом проекта",
+        "The file is damaged or is not a portable project file",
+    ),
+    GitErrorCode.bundle_password_required: (
+        "Файл зашифрован: нужен пароль",
+        "The file is encrypted: a password is required",
+    ),
+    GitErrorCode.bundle_password_wrong: (
+        "Пароль не подошёл к этому файлу",
+        "The password does not fit this file",
+    ),
+    GitErrorCode.bundle_prerequisites_missing: (
+        "Файл продолжает более раннюю историю, которой в этом проекте нет. Нужен полный файл",
+        "The file continues an earlier history that this project does not have. A full file is required",
+    ),
     GitErrorCode.no_conflicts: (
         "Нерешённых конфликтов нет",
         "There are no unresolved conflicts",

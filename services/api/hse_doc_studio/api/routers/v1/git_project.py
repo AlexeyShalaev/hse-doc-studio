@@ -9,7 +9,9 @@ from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from hse_doc_studio.api.conflict_mapping import (
     map_diff,
@@ -19,6 +21,7 @@ from hse_doc_studio.api.conflict_mapping import (
 )
 from hse_doc_studio.api.git_mapping import map_status
 from hse_doc_studio.api.schemas.git_sync import (
+    BundleExportRequest,
     CiFile,
     CiPreviewResponse,
     CiRequest,
@@ -38,7 +41,15 @@ from hse_doc_studio.api.schemas.git_sync import (
     UpdateGitSettingsRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.use_cases.git_sync.abort_conflicts import AbortConflictsInput, AbortConflictsUC
+from hse_doc_studio.use_cases.git_sync.bundles import (
+    BundleScratch,
+    ExportBundleInput,
+    ExportBundleUC,
+    ImportBundleInput,
+    ImportBundleUC,
+)
 from hse_doc_studio.use_cases.git_sync.ci import CiInput, CiWriteInput, PreviewCiUC, WriteCiUC
 from hse_doc_studio.use_cases.git_sync.connect_remote import (
     ConnectRemoteInput,
@@ -238,6 +249,49 @@ async def abort_git_conflicts(project_id: UUID, uc: FromDishka[AbortConflictsUC]
         return map_status(await uc.execute(AbortConflictsInput(project_id=project_id)))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/projects/{project_id}/git/bundle/export", response_class=FileResponse)
+async def export_git_bundle(
+    project_id: UUID,
+    uc: FromDishka[ExportBundleUC],
+    scratch: FromDishka[BundleScratch],
+    body: BundleExportRequest | None = None,
+) -> FileResponse:
+    """Файл с веткой проекта для обмена без сервера; рабочая копия убирается после отправки."""
+    password = body.password if body is not None else None
+    try:
+        exported = await uc.execute(
+            ExportBundleInput(project_id=project_id, password=Secret(password) if password else None)
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(
+        exported.path,
+        media_type="application/octet-stream",
+        filename=exported.filename,
+        headers={"Cache-Control": "no-store"},
+        background=BackgroundTask(scratch.discard, exported.workdir),
+    )
+
+
+@router.post("/projects/{project_id}/git/bundle/import", response_model=OperationStartedResponse, status_code=202)
+async def import_git_bundle(
+    project_id: UUID,
+    uc: FromDishka[ImportBundleUC],
+    scratch: FromDishka[BundleScratch],
+    file: UploadFile = File(...),
+    password: str | None = Form(default=None),
+) -> OperationStartedResponse:
+    """Слияние файла с проектом тем же путём, что и ветки с сервера, но без отправки."""
+    stored = await scratch.receive(file.read)
+    try:
+        started = await uc.execute(
+            ImportBundleInput(project_id=project_id, upload=stored, password=Secret(password) if password else None)
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return OperationStartedResponse(operation_id=started.operation_id)
 
 
 @router.post("/projects/{project_id}/git/ci/preview", response_model=CiPreviewResponse)
