@@ -46,7 +46,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     ProgressCallback,
 )
 from hse_doc_studio.core.git_sync.secret import Secret
-from hse_doc_studio.core.git_sync.url import RemoteKind
+from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
 from hse_doc_studio.infra.git_sync.auth_env import (
     allowed_protocols,
     build_http_auth,
@@ -81,6 +81,16 @@ def _network_config() -> list[str]:
         "maintenance.auto": "false",
     }
     return [part for key, value in settings.items() for part in ("-c", f"{key}={value}")]
+
+
+def _with_dot_git(args: Sequence[str], url: RemoteUrl) -> list[str]:
+    """Адрес без `.git` получает суффикс: GitLab перенаправляет `<repo>/info/refs` на `<repo>.git/info/refs`.
+
+    С токеном редиректы выключены, поэтому без суффикса самый частый ввод (адрес из строки браузера) падал бы.
+    """
+    if url.kind not in (RemoteKind.https, RemoteKind.http) or url.display_url.endswith(".git"):
+        return list(args)
+    return [f"{arg}.git" if arg == url.display_url else arg for arg in args]
 
 
 class GitRemoteRunner:
@@ -142,6 +152,7 @@ class GitRemoteRunner:
             # Заголовок доступа git добавляет ко всем запросам сессии, в том числе после перехода на другой хост:
             # с токеном редиректы не идут вовсе. Без доступа публичный адрес по-прежнему может перенаправлять.
             extra_config = [*trust_config, "-c", "http.followRedirects=false"]
+            args = _with_dot_git(args, target.url)
         return await self._execute(
             args,
             op=op,

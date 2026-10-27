@@ -172,6 +172,39 @@ async def test__run__pat__goes_to_env_only_and_credential_is_marked_ok() -> None
     assert creds.marks == [(credential.id, CredentialStatus.ok)]
 
 
+async def test__run__pat_with_url_without_dot_git__git_gets_dot_git_so_gitlab_has_no_redirect_to_follow() -> None:
+    # GitLab отвечает на `<repo>/info/refs` редиректом на `<repo>.git/info/refs`, а с токеном редиректы выключены.
+    credential = _credential("gitlab.com")
+    creds = _Credentials()
+    creds.add(credential, Secret(_TOKEN))
+    process = _Process()
+    runner, _ = _runner(process, creds)
+    target = _target("https://gitlab.com/group/project", credential.id)
+
+    await runner.run(
+        ["ls-remote", "--", target.url.display_url, "HEAD"],
+        op=GitOp.probe,
+        git_dir=_STORE,
+        target=target,
+        timeout_s=5,
+    )
+
+    argv = process.calls[0][0]
+    assert argv[-4:] == ["ls-remote", "--", "https://gitlab.com/group/project.git", "HEAD"]
+
+
+async def test__run__no_credential_with_url_without_dot_git__url_stays_as_typed() -> None:
+    process = _Process()
+    runner, _ = _runner(process)
+    target = _target("https://gitlab.com/group/project")
+
+    await runner.run(
+        ["ls-remote", "--", target.url.display_url], op=GitOp.probe, git_dir=_STORE, target=target, timeout_s=5
+    )
+
+    assert process.calls[0][0][-1] == "https://gitlab.com/group/project"
+
+
 async def test__run__credential_for_a_file_remote__is_ignored() -> None:
     credential = _credential()
     creds = _Credentials()
