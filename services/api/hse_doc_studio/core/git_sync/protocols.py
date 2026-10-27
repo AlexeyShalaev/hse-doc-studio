@@ -10,7 +10,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.entities import Project
@@ -284,6 +284,14 @@ class IGitSyncStateRepository(Protocol):
     def get(self, project_folder: Path) -> SyncState | None: ...
     def save(self, project_folder: Path, state: SyncState) -> None: ...
     def clear(self, project_folder: Path) -> None: ...
+
+
+class IRemoteProjectCheck(Protocol):
+    """Проверка, что Студия откроет `project.json` из чужой ветки так же, как открывает свой."""
+
+    def is_loadable(self, document: Mapping[str, Any]) -> bool:
+        """True, если документ разбирается тем же разборщиком, что и загрузчик проекта."""
+        ...
 
 
 class IGitRepoReader(Protocol):

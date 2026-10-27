@@ -13,6 +13,7 @@ from uuid import UUID
 from hse_doc_studio.core.git_sync.entities import SchemaAccess
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.protocols import IRemoteProjectCheck
 from hse_doc_studio.core.project_schema import PROJECT_SCHEMA_VERSION
 from hse_doc_studio.core.value_objects import ProjectSchema
 
@@ -75,6 +76,19 @@ def parse_remote_project(raw: bytes) -> RemoteProject | None:
     )
 
 
+def is_loadable_project(raw: bytes, check: IRemoteProjectCheck) -> bool:
+    """Откроет ли эта Студия файл проекта: те же разбор и проверка полей, что у загрузчика.
+
+    Файл с верным `id` и `lock`, но с мусором в остальных полях (`documents` строкой, `meta` списком) разбор
+    `parse_remote_project` пропускает, а загрузчик проекта нет: проект пропал бы из списка после перемотки.
+    """
+    try:
+        document = json.loads(raw.decode("utf-8-sig"))
+    except (ValueError, RecursionError):
+        return False
+    return isinstance(document, dict) and check.is_loadable(document)
+
+
 def remote_schema_access(schema: ProjectSchema) -> SchemaAccess:
     """Что эта Студия делает с данными такой схемы; повторяет core.project_schema.schema_access."""
     if schema.read_compat > PROJECT_SCHEMA_VERSION:
@@ -99,17 +113,20 @@ def schema_blocks_merge(schema: ProjectSchema) -> bool:
     return remote_schema_access(schema) is not SchemaAccess.full
 
 
-def require_mergeable_project(raw: bytes | None, project_id: UUID) -> RemoteProject:
+def require_mergeable_project(raw: bytes | None, project_id: UUID, check: IRemoteProjectCheck) -> RemoteProject:
     """Файл проекта из удалённой ветки, с которым можно сливаться; иначе ошибка с кодом из закрытого списка.
 
     Нет файла или он не проект Студии: not_a_studio_project. Чужой проект: unrelated_histories (усыновить нельзя).
-    Данные более новой Студии: remote_schema_newer.
+    Данные более новой Студии: remote_schema_newer. Файл, который этот загрузчик не разберёт: not_a_studio_project,
+    иначе перемотка записала бы его на диск, и проект пропал бы из списка.
     """
     remote = parse_remote_project(raw) if raw is not None else None
-    if remote is None:
+    if raw is None or remote is None:
         raise git_error(GitErrorCode.not_a_studio_project)
     if remote.id != project_id:
         raise git_error(GitErrorCode.unrelated_histories, can_adopt=False)
     if schema_blocks_merge(remote.schema):
         raise git_error(GitErrorCode.remote_schema_newer, required_studio=remote.schema.written_by or None)
+    if not is_loadable_project(raw, check):
+        raise git_error(GitErrorCode.not_a_studio_project)
     return remote

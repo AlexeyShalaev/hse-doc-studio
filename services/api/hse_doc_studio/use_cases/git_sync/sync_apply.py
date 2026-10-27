@@ -50,6 +50,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitMergeCommitter,
     IGitRepoReader,
     IGitSyncStateRepository,
+    IRemoteProjectCheck,
 )
 from hse_doc_studio.core.git_sync.refs import BUNDLE_PREFIX
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
@@ -122,6 +123,7 @@ class SyncApplier:
         states: IGitSyncStateRepository,
         planner: ConflictPlanner,
         resolver: IFieldResolver,
+        project_check: IRemoteProjectCheck,
     ) -> None:
         self._vcs = vcs
         self._reader = reader
@@ -130,6 +132,7 @@ class SyncApplier:
         self._states = states
         self._planner = planner
         self._resolver = resolver
+        self._project_check = project_check
 
     def snapshot(self, project: Project) -> None:
         """Всё, что человек успел изменить, попадает в историю: уйти на сервер может только закоммитенное."""
@@ -178,7 +181,7 @@ class SyncApplier:
 
     def ensure_remote_mergeable(self, project: Project, theirs: str) -> None:
         raw = self._reader.read_files(project.folder, theirs, [PROJECT_FILE]).get(PROJECT_FILE)
-        require_mergeable_project(raw, project.id)
+        require_mergeable_project(raw, project.id, self._project_check)
 
     # --- перемотка ---------------------------------------------------------------------------------------------
 

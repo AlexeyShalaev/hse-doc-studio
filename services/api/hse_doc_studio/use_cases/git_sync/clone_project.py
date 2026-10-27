@@ -50,10 +50,12 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitSyncStateRepository,
     IGitTransport,
     ILocalAuthorProfile,
+    IRemoteProjectCheck,
 )
 from hse_doc_studio.core.git_sync.remote_project import (
     PROJECT_FILE,
     RemoteProject,
+    is_loadable_project,
     parse_remote_project,
     remote_required_studio,
     remote_schema_access,
@@ -160,6 +162,7 @@ class CloneProjectUC:
         operations: IGitOperationRegistry,
         registry: IGitRemoteRegistry,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
         clone_timeout_s: float,
     ) -> None:
         self._projects = project_repo
@@ -175,6 +178,7 @@ class CloneProjectUC:
         self._operations = operations
         self._registry = registry
         self._policy = policy
+        self._project_check = project_check
         self._timeout_s = clone_timeout_s
 
     async def execute(self, inp: CloneProjectInput) -> GitOperation:
@@ -329,9 +333,7 @@ class CloneProjectUC:
         if self._reader.rev_parse(folder, tracking) is None:
             raise git_error(GitErrorCode.branch_missing)
         raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
-        project = parse_remote_project(raw) if raw is not None else None
-        if project is None:
-            raise git_error(GitErrorCode.not_a_studio_project)
+        project = self._remote_project(raw)
         existing = self._registered_folder(project.id)
         if existing is not None:
             raise GitSyncError(
@@ -361,6 +363,17 @@ class CloneProjectUC:
             required_studio=remote_required_studio(project, template_available=version is not None),
             warnings=tuple(warnings),
         )
+
+    def _remote_project(self, raw: bytes | None) -> RemoteProject:
+        project = parse_remote_project(raw) if raw is not None else None
+        if raw is None or project is None:
+            raise git_error(GitErrorCode.not_a_studio_project)
+        if remote_schema_access(project.schema) is SchemaAccess.full and not is_loadable_project(
+            raw, self._project_check
+        ):
+            # Данные схемы этой Студии, которые загрузчик не разберёт: после клонирования проект не открылся бы.
+            raise git_error(GitErrorCode.not_a_studio_project)
+        return project
 
     def _registered_folder(self, project_id: UUID) -> Path | None:
         for known in self._index.list_known():

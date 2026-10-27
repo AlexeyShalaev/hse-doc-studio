@@ -52,6 +52,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IKnownHostsStore,
     ILocalAuthorProfile,
     IProviderDetector,
+    IRemoteProjectCheck,
     ISecretCipher,
     ISharedFolderDetector,
     ISshKeyGenerator,
@@ -147,6 +148,7 @@ from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
 from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
 from hse_doc_studio.infra.git_sync.provider_api import HttpProviderDetector, HttpTokenIntrospector
+from hse_doc_studio.infra.git_sync.remote_project_check import ProjectDocumentCheck
 from hse_doc_studio.infra.git_sync.remote_registry import ConfigScanRemoteRegistry
 from hse_doc_studio.infra.git_sync.repo_reader import GitRepoReader
 from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
@@ -936,6 +938,10 @@ class DomainServiceProvider(Provider):
                 "form": deserialize_form_state,
             }
         )
+
+    @provide
+    def get_remote_project_check(self) -> IRemoteProjectCheck:
+        return ProjectDocumentCheck()
 
     @provide
     def get_conflict_planner(

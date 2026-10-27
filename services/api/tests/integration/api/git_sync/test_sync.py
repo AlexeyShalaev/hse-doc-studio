@@ -665,6 +665,28 @@ async def test__sync__remote_project_is_newer_studio__refused_before_anything_st
     assert (body.code, body.required_studio) == ("remote_schema_newer", "9.0.0")
 
 
+@pytest.mark.parametrize(
+    "garbage",
+    [{"documents": "x"}, {"authors": 5}, {"meta": [1, 2]}],
+    ids=["documents", "authors", "meta"],
+)
+async def test__sync__remote_project_json_the_studio_cannot_load__refused_and_project_stays_open(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, garbage: dict[str, Any]
+) -> None:
+    peer = await _connect_in_sync(stack, project, remote)
+    before = _file(project, ".hse-studio/project.json").read_bytes()
+    peer.write(".hse-studio/project.json", json.dumps({**json.loads(peer.read(".hse-studio/project.json")), **garbage}))
+    peer.commit_push("broken project file")
+
+    operation = await _sync(stack, project)
+
+    assert operation.status == "failed"
+    assert operation.error is not None
+    assert operation.error.code == "not_a_studio_project"
+    assert _file(project, ".hse-studio/project.json").read_bytes() == before
+    assert (await stack.client.get(f"/api/v1/projects/{project['id']}")).status_code == 200
+
+
 # --- отказы до начала --------------------------------------------------------------------------------------------
 
 

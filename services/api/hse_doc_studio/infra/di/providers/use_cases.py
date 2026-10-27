@@ -47,6 +47,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IKnownHostsStore,
     ILocalAuthorProfile,
     IProviderDetector,
+    IRemoteProjectCheck,
     ISecretCipher,
     ISharedFolderDetector,
     ISshKeyGenerator,
@@ -1658,6 +1659,7 @@ class UseCaseProvider(Provider):
         registry: IGitRemoteRegistry,
         status_builder: GitStatusBuilder,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
     ) -> ConnectRemoteUC:
         return ConnectRemoteUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1673,6 +1675,7 @@ class UseCaseProvider(Provider):
             registry=registry,
             status_builder=status_builder,
             policy=policy,
+            project_check=project_check,
         )
 
     @provide
@@ -1721,6 +1724,7 @@ class UseCaseProvider(Provider):
         state_repo: IGitSyncStateRepository,
         planner: ConflictPlanner,
         state_merge: StateFileMerge,
+        project_check: IRemoteProjectCheck,
     ) -> SyncApplier:
         return SyncApplier(
             vcs=vcs_service,
@@ -1730,6 +1734,7 @@ class UseCaseProvider(Provider):
             states=state_repo,
             planner=planner,
             resolver=state_merge,
+            project_check=project_check,
         )
 
     @provide
@@ -1775,6 +1780,7 @@ class UseCaseProvider(Provider):
         operations: IGitOperationRegistry,
         journal_repo: IUpdateJournalRepository,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
     ) -> StartSyncUC:
         return StartSyncUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1788,6 +1794,7 @@ class UseCaseProvider(Provider):
             operations=operations,
             journals=journal_repo,
             policy=policy,
+            project_check=project_check,
         )
 
     @provide
@@ -2037,6 +2044,7 @@ class UseCaseProvider(Provider):
         operations: IGitOperationRegistry,
         registry: IGitRemoteRegistry,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
     ) -> CloneProjectUC:
         return CloneProjectUC(
             project_repo=project_repo,
@@ -2052,6 +2060,7 @@ class UseCaseProvider(Provider):
             operations=operations,
             registry=registry,
             policy=policy,
+            project_check=project_check,
             clone_timeout_s=settings.git.clone_timeout_s,
         )
 

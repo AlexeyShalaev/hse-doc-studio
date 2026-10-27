@@ -284,6 +284,21 @@ async def test__clone__not_a_studio_project__keeps_what_was_in_the_folder(
     assert (folder / ".keep").read_text(encoding="utf-8") == "mine"
 
 
+async def test__clone__project_json_the_studio_cannot_load__not_a_studio_project_and_no_leftovers(
+    target: Studio, remote: BareRemote, published: dict[str, Any], tmp_path: Path
+) -> None:
+    _edit_project_json(published, lambda data: data.update(documents="x"))
+    _commit(published, remote, "broken project file")
+    folder = tmp_path / "clones" / "thesis"
+
+    operation = await _clone(target, remote, folder)
+
+    assert operation.status == "failed"
+    assert operation.error is not None
+    assert operation.error.code == "not_a_studio_project"
+    assert not folder.exists()
+
+
 async def test__clone__empty_remote__fails_without_leftovers(
     target: Studio, remote: BareRemote, tmp_path: Path
 ) -> None:

@@ -39,6 +39,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitSyncStateRepository,
     IGitTransport,
     ILocalAuthorProfile,
+    IRemoteProjectCheck,
 )
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.git_sync.url import RemoteUrl, parse_remote_url
@@ -85,6 +86,7 @@ class ConnectRemoteUC:
         registry: IGitRemoteRegistry,
         status_builder: GitStatusBuilder,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
     ) -> None:
         self._get_project = get_project
         self._ensure_vcs = ensure_vcs
@@ -99,6 +101,7 @@ class ConnectRemoteUC:
         self._registry = registry
         self._status = status_builder
         self._policy = policy
+        self._project_check = project_check
 
     async def execute(self, inp: ConnectRemoteInput) -> GitStatusView:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
@@ -214,7 +217,7 @@ class ConnectRemoteUC:
         folder = project.folder
         tracking = f"{TRACKING_PREFIX}{remote_branch}"
         raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
-        require_mergeable_project(raw, project.id)
+        require_mergeable_project(raw, project.id, self._project_check)
         if self._reader.merge_base(folder, f"{HEADS_PREFIX}{local_branch}", tracking) is not None:
             return False
         if inp.adopt != ADOPT_MERGE_REMOTE:

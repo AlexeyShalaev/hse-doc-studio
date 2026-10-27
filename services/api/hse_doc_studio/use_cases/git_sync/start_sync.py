@@ -25,6 +25,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitStoreRemotes,
     IGitSyncStateRepository,
     ILocalAuthorProfile,
+    IRemoteProjectCheck,
 )
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.i18n import localized_error
@@ -65,6 +66,7 @@ class StartSyncUC:
         operations: IGitOperationRegistry,
         journals: IUpdateJournalRepository,
         policy: GitSyncPolicy,
+        project_check: IRemoteProjectCheck,
     ) -> None:
         self._get_project = get_project
         self._sync = sync
@@ -77,6 +79,7 @@ class StartSyncUC:
         self._operations = operations
         self._journals = journals
         self._policy = policy
+        self._project_check = project_check
 
     async def execute(self, inp: StartSyncInput) -> StartSyncOutput:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
@@ -117,4 +120,4 @@ class StartSyncUC:
         if tracking is not None:
             # Известная вершина чужой ветки уже говорит, откроет ли эта Студия такой проект.
             raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
-            require_mergeable_project(raw, project.id)
+            require_mergeable_project(raw, project.id, self._project_check)
