@@ -57,11 +57,20 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
+_secrets_cfg_by_registry: dict[int, Settings] = {}
+
+
 def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -> None:
     from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
 
-    check = ServerReadinessCheck(ReadinessZone.persistence, "secrets_key", lambda: secrets_key_problem(cfg))
-    with suppress(ValueError):  # create_app зовут не один раз за процесс (тесты, перезапуск воркера)
+    # create_app зовут не один раз за процесс (тесты, перезапуск воркера): проверка одна, настройки берутся свежие
+    _secrets_cfg_by_registry[id(readiness)] = cfg
+    check = ServerReadinessCheck(
+        ReadinessZone.persistence,
+        "secrets_key",
+        lambda: secrets_key_problem(_secrets_cfg_by_registry[id(readiness)]),
+    )
+    with suppress(ValueError):
         readiness.register(check)
 
 

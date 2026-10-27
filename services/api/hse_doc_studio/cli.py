@@ -150,7 +150,12 @@ async def _reencrypt(*, dry_run: bool) -> int:
     finally:
         await engine.dispose()
     verb = "будет перешифровано" if dry_run else "перешифровано"
-    _write(f"{verb}: {report.updated}; уже на первичном ключе: {report.current}; нечитаемых: {len(report.unreadable)}")
+    _write(
+        f"{verb}: {report.updated}; уже на первичном ключе: {report.current}; нечитаемых: {len(report.unreadable)}; "
+        f"изменились за время работы: {len(report.skipped)}"
+    )
+    for item in report.skipped:
+        _write(f"  изменилась во время работы, запустите команду ещё раз: {item}")
     for item in report.unreadable:
         _write(f"unreadable: {item}", stream=sys.stderr)
     return _EXIT_OK if report.ok else _EXIT_BUILD_FAILED

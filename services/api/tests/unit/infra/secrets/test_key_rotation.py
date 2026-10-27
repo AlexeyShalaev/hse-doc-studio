@@ -106,6 +106,16 @@ def test__server_key_store__without_key__refuses_with_instructions(tmp_path: Pat
     assert not (tmp_path / "secrets").exists()
 
 
+@pytest.mark.parametrize("raw", ["", "   "])
+def test__server_key_store__blank_key__refuses_without_creating_key_file(tmp_path: Path, raw: str) -> None:
+    cfg = Settings(_env_file=None, mode=StudioMode.server, data_dir=tmp_path, secrets={"key": raw})
+
+    with pytest.raises(SecretsKeyMissingError, match="HSE_STUDIO__SECRETS__KEY"):
+        server_key_store(cfg)
+    assert secrets_key_problem(cfg) is not None
+    assert not (tmp_path / "secrets").exists()
+
+
 def test__server_key_store__invalid_key__refuses(tmp_path: Path) -> None:
     cfg = Settings(_env_file=None, mode=StudioMode.server, data_dir=tmp_path, secrets={"key": "nope"})
 

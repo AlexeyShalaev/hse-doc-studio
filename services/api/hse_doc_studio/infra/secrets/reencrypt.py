@@ -1,4 +1,8 @@
-"""Перешифровка секретов в базе под первичный ключ: шаг смены ключа после добавления прежнего в RETIRED_KEYS."""
+"""Перешифровка секретов в базе под первичный ключ: шаг смены ключа после добавления прежнего в RETIRED_KEYS.
+
+Запись идёт только если значение не изменилось с чтения; параллельная запись нового секрета не затирается, но
+команду всё равно запускают при остановленном приложении.
+"""
 
 from __future__ import annotations
 
@@ -21,10 +25,12 @@ class ReencryptReport:
     current: int = 0
     # Строки, которые не открылись ни одним ключом: их перешифровать нечем, значения не тронуты.
     unreadable: list[str] = field(default_factory=list)
+    # Строки, изменённые за время работы команды: их не трогали, запустите команду ещё раз.
+    skipped: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
-        return not self.unreadable
+        return not self.unreadable and not self.skipped
 
 
 async def reencrypt_all(
@@ -50,7 +56,10 @@ async def _reencrypt_column(
 ) -> None:
     # Идентификаторы берутся только из реестра в коде, не из ввода.
     select = text(f'SELECT "{column.pk}", "{column.column}" FROM "{column.table}" WHERE "{column.column}" IS NOT NULL')  # noqa: S608
-    update = text(f'UPDATE "{column.table}" SET "{column.column}" = :value WHERE "{column.pk}" = :pk')  # noqa: S608
+    update = text(
+        f'UPDATE "{column.table}" SET "{column.column}" = :value '  # noqa: S608
+        f'WHERE "{column.pk}" = :pk AND "{column.column}" = :old'
+    )
     async with engine.begin() as conn:
         rows = (await conn.execute(select)).all()
         for pk, token in rows:
@@ -66,7 +75,12 @@ async def _reencrypt_column(
                 continue
             report.updated += 1
             if not dry_run:
-                await conn.execute(update, {"value": cipher.encrypt(secret, aad=column.aad(pk)), "pk": pk})
+                result = await conn.execute(
+                    update, {"value": cipher.encrypt(secret, aad=column.aad(pk)), "pk": pk, "old": token}
+                )
+                if result.rowcount == 0:
+                    report.updated -= 1
+                    report.skipped.append(f"{column.label}#{pk}")
 
 
 def _bound_to(cipher: FernetSecretCipher, token: str, column: EncryptedColumn, pk: object) -> bool:

@@ -16,19 +16,20 @@ class SecretsKeyMissingError(RuntimeError):
 
 def server_key_store(cfg: Settings) -> KeyFileStore:
     secrets_cfg = cfg.secrets
-    store = KeyFileStore(
-        cfg.data_dir.expanduser() / "secrets" / "master.keys.json",
-        env_key=None if secrets_cfg.key is None else secrets_cfg.key.get_secret_value(),
-        env_key_file=secrets_cfg.key_file,
-        retired_keys=None if secrets_cfg.retired_keys is None else secrets_cfg.retired_keys.get_secret_value(),
-    )
-    if secrets_cfg.key is None and secrets_cfg.key_file is None:
+    key = secrets_cfg.key.get_secret_value().strip() if secrets_cfg.key else ""
+    if not key and secrets_cfg.key_file is None:
         msg = (
             "В режиме server нужен ключ шифрования секретов: задайте HSE_STUDIO__SECRETS__KEY или "
             "HSE_STUDIO__SECRETS__KEY_FILE (Fernet-ключ, `python -c 'from cryptography.fernet import Fernet; "
             "print(Fernet.generate_key().decode())'`). Сохраните его: без ключа секреты не прочитать."
         )
         raise SecretsKeyMissingError(msg)
+    store = KeyFileStore(
+        cfg.data_dir.expanduser() / "secrets" / "master.keys.json",
+        env_key=key or None,
+        env_key_file=secrets_cfg.key_file,
+        retired_keys=None if secrets_cfg.retired_keys is None else secrets_cfg.retired_keys.get_secret_value(),
+    )
     if not store.status().available:
         msg = (
             "Ключ шифрования секретов (HSE_STUDIO__SECRETS__KEY, KEY_FILE или RETIRED_KEYS) негоден: "
