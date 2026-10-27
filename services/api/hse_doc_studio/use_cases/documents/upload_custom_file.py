@@ -123,10 +123,10 @@ class UploadCustomFileUC:
         upload_dir = self._template_service.custom_upload_dir(project, doc, version)
         stored_path = f"{upload_dir}/{safe_name}"
 
-        if doc.custom_file is not None and doc.custom_file.stored_path != stored_path:
-            self._delete_stored_file(project.folder, doc.custom_file.stored_path)
-
-        self._file_repo.write(project.folder, stored_path, inp.content)
+        async with self._vcs_locks.for_folder(project.folder):
+            if doc.custom_file is not None and doc.custom_file.stored_path != stored_path:
+                self._delete_stored_file(project.folder, doc.custom_file.stored_path)
+            self._file_repo.write(project.folder, stored_path, inp.content)
 
         ext = Path(safe_name).suffix.lower()
         custom_file = CustomFileOverride(

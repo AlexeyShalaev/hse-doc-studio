@@ -1413,11 +1413,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         file_repo: IFileRepository,
+        vcs_locks: IVcsFolderLocks,
     ) -> CreateDirUC:
         return CreateDirUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             file_repo=file_repo,
+            vcs_locks=vcs_locks,
         )
 
     # ------------------------------------------------------------------ Requirements

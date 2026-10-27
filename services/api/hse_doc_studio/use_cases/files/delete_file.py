@@ -64,6 +64,7 @@ class DeleteFileUC:
                 else f"Файл «{inp.path}» входит в шаблон и защищён от удаления."
             )
 
-        self._file_repo.delete(project.folder, inp.path)
+        async with self._vcs_locks.for_folder(project.folder):
+            self._file_repo.delete(project.folder, inp.path)
         logger.debug("file deleted via use case", project_id=str(inp.project_id), path=inp.path)
         await maybe_edit_commit(self._vcs, self._vcs_locks, self._vcs_throttle, project, f"Удаление: {inp.path}")

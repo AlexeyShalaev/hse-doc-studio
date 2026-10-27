@@ -67,7 +67,8 @@ class MoveFileUC:
                 else f"«{inp.src}» входит в шаблон и защищён от переименования/перемещения."
             )
 
-        self._file_repo.move(project.folder, inp.src, inp.dst)
+        async with self._vcs_locks.for_folder(project.folder):
+            self._file_repo.move(project.folder, inp.src, inp.dst)
         logger.debug(
             "file moved via use case",
             project_id=str(inp.project_id),

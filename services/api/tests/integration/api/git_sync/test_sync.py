@@ -22,6 +22,7 @@ from hse_doc_studio.core.git_sync.entities import OperationKind, OperationPhase
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitTransport
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.use_cases.git_sync import sync_project
+from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
 from hse_doc_studio.use_cases.template_update.transaction import TemplateUpdateTransaction
 from httpx import ASGITransport, AsyncClient
@@ -775,6 +776,42 @@ async def test__sync__after_the_push_succeeded__the_operation_can_no_longer_be_c
 
     assert result.outcome == "pushed"
     assert seen == [False]
+
+
+async def test__sync__editor_save_while_the_merge_is_being_applied__is_not_overwritten_by_it(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    peer = await _connect_in_sync(stack, project, remote)
+    base = "".join(f"строка {number}\n" for number in range(1, 11))
+    peer.write("notes.txt", base)
+    peer.commit_push("notes")
+    await _sync_ok(stack, project)
+    peer.write("notes.txt", base.replace("строка 1\n", "строка 1 (коллега)\n"))
+    peer.commit_push("colleague edit")
+    _file(project, "notes.txt").write_text(base.replace("строка 10\n", "строка 10 (моя)\n"), encoding="utf-8")
+    typed = "строка, которую человек допечатал во время синхронизации\n"
+    loop = asyncio.get_running_loop()
+    saves: list[Any] = []
+    original = ConflictPlanner.plan
+
+    def planning(self: ConflictPlanner, *args: Any, **kwargs: Any) -> Any:
+        # Сохранение редактора приходит после снимка, пока слияние планируется и ещё не записано на диск.
+        if not saves:
+            saves.append(
+                asyncio.run_coroutine_threadsafe(
+                    stack.client.put(f"/api/v1/projects/{project['id']}/files/notes.txt", content=typed.encode()), loop
+                )
+            )
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(ConflictPlanner, "plan", planning)
+
+    result = await _sync_ok(stack, project)
+    saved = await asyncio.wrap_future(saves[0])
+
+    assert result.outcome == "merged"
+    assert saved.status_code in (200, 204), saved.text
+    assert _file(project, "notes.txt").read_text(encoding="utf-8") == typed
 
 
 # --- отказы до начала --------------------------------------------------------------------------------------------
