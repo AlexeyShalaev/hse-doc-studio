@@ -27,6 +27,21 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
           };
         },
       },
+      {
+        path: "/dev/server-screens",
+        lazy: async () => {
+          const [{ DevServerScreensPage }, demo] = await Promise.all([
+            import("@pages/DevServerScreens"),
+            import("./demo"),
+          ]);
+          // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
+          demo.installServerDemo();
+          const gallery = { activate: demo.activateServerScenario };
+          return {
+            Component: () => <DevServerScreensPage demo={gallery} />,
+          };
+        },
+      },
     ]
   : [];
 

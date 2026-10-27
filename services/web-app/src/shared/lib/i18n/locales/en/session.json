@@ -3,5 +3,32 @@
     "title": "Server unavailable",
     "body": "Could not get the session state. Check your connection and try again: until the server answers, it is unknown who you are and what you can access.",
     "retry": "Try again"
+  },
+  "demo": {
+    "open": "Server demo scenarios",
+    "title": "Server demo",
+    "subtitle": "Data lives in the tab memory, no backend needed.",
+    "scenario": {
+      "fresh_install": {
+        "title": "Fresh install",
+        "hint": "No administrator yet: the first-run wizard is waiting."
+      },
+      "admin_ready": {
+        "title": "Administrator",
+        "hint": "The instance administrator is signed in, admin area is available."
+      },
+      "student_ready": {
+        "title": "Student",
+        "hint": "A regular organisation member is signed in."
+      },
+      "registration_closed": {
+        "title": "Registration closed",
+        "hint": "Only existing accounts can sign in."
+      },
+      "sso_only": {
+        "title": "SSO only",
+        "hint": "Passwords are off, sign-in goes through external providers."
+      }
+    }
   }
 }

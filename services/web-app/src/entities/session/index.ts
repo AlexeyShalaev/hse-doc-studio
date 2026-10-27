@@ -12,3 +12,4 @@ export { RequireCapability } from "./ui/RequireCapability";
 export type { RequireCapabilityProps } from "./ui/RequireCapability";
 export { ServerUnavailable } from "./ui/ServerUnavailable";
 export type { ServerUnavailableProps } from "./ui/ServerUnavailable";
+export { getSessionGallery } from "./ui/sessionGallery";

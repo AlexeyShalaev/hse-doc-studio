@@ -18,6 +18,14 @@ const DemoScenarioPicker =
       )
     : null;
 
+// Переключатель сценариев серверного демо: так же, только при VITE_SERVER_DEMO=1.
+const ServerDemoPicker =
+  import.meta.env.VITE_SERVER_DEMO === "1"
+    ? lazy(() =>
+        import("./demo").then((m) => ({ default: m.ServerDemoPicker })),
+      )
+    : null;
+
 // Routes that dock the one agent inside their own layout (between the title and
 // status bars): Welcome, the project wizard, and any project workspace. On the
 // remaining routes (settings, errors) it has no docked slot, so RootLayout
@@ -62,6 +70,12 @@ export const RootLayout = () => {
       {DemoScenarioPicker && (
         <Suspense fallback={null}>
           <DemoScenarioPicker />
+        </Suspense>
+      )}
+
+      {ServerDemoPicker && (
+        <Suspense fallback={null}>
+          <ServerDemoPicker />
         </Suspense>
       )}
 
