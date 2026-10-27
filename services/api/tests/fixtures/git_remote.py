@@ -412,10 +412,14 @@ class _GitHandler(BaseHTTPRequestHandler):
     def _reply(self, status: int, headers: Mapping[str, str], payload: bytes) -> None:
         self.send_response(status)
         for name, value in headers.items():
-            self.send_header(name, value)
+            self.send_header(_one_line(name), _one_line(value))
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
+
+
+def _one_line(text: str) -> str:
+    return text.replace("\r", "").replace("\n", "")
 
 
 @pytest.fixture
