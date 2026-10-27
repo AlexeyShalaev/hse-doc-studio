@@ -14,6 +14,11 @@ from fastapi.staticfiles import StaticFiles
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.logging_setup import configure_logging
+from hse_doc_studio.api.observability.install import (
+    install_background,
+    install_health,
+    install_server_observability,
+)
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
@@ -102,10 +107,22 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    health_checks = install_health(app, settings)
+
     configure_docker_binary(settings.docker_binary)
 
     container = create_container(settings.mode)
     setup_dishka(container, app)
+
+    if settings.mode is StudioMode.server:
+        server_metrics = install_server_observability(app, settings, health_checks)
+        install_background(
+            app,
+            container,
+            health_checks,
+            server_metrics,
+            shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
+        )
 
     @app.on_event("startup")
     async def _probe_docker() -> None:

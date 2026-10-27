@@ -16,6 +16,7 @@ from hse_doc_studio.api.config.build import (
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.server import ServerCapabilities, ServerConfig
 from hse_doc_studio.api.config.services import (
@@ -46,6 +47,7 @@ __all__ = [
     "JobsConfig",
     "LanguageToolConfig",
     "LoggingConfig",
+    "ObservabilityConfig",
     "OfficeConvertConfig",
     "OfficeEditorConfig",
     "OllamaCatalogEntry",

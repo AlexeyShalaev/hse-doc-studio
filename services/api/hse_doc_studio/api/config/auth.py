@@ -20,3 +20,8 @@ class SecretsConfig(BaseModel):
 
 class AuthConfig(BaseModel):
     """Вход, сессии и мастер первого запуска сервера (HSE_STUDIO__AUTH__*). Поля добавляет срез identity."""
+
+    trusted_proxies: list[str] = Field(
+        default_factory=list,
+        description="IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента.",
+    )

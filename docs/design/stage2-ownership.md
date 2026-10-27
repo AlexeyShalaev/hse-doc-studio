@@ -32,7 +32,7 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`), `/projects/{id}/members` |
 | админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` |
 | раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` |
-| здоровье | `GET /health` (только ok/fail), детали админу |
+| здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404) |
 
 CSRF: токен привязан к строке сессии, приходит в bootstrap и ответе входа, шлётся в `X-CSRF-Token`; кроме того проверяется `Origin`. Bearer PAT освобождён от CSRF и не управляет токенами.
 
@@ -63,6 +63,7 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__SECRETS__KEY`, `__KEY_FILE`, `__RETIRED_KEYS` | `KeyRing` для `ISecretCipher` |
 | `HSE_STUDIO__AUTH__*`, `__AUTH__ADMIN_EMAIL`, `__AUTH__SETUP_TOKEN_REQUIRED`, `__AUTH__TRUSTED_PROXIES`, `__AUTH__OIDC__*` | вход, мастер, прокси, OIDC |
 | `HSE_STUDIO__AUTH__EXPERIMENTAL` | пускает server до финального среза; запрещён при публичном bind |
+| `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN`, `__METRICS_TOKEN` | Bearer-токены деталей `/health/ready` и `/metrics` |
 | `HSE_STUDIO__ADMIN__ALLOWED_HOSTS`, `__ADMIN__ALLOWED_CIDRS` | ограничение `/admin` по host/IP |
 | `HSE_STUDIO__RUNNER__BOOTSTRAP_TOKEN` | токен регистрации раннеров |
 | `HSE_STUDIO__QUOTAS__*` | значения квот по умолчанию (раздел 6) |
