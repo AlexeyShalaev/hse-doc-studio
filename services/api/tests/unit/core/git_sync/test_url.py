@@ -129,6 +129,25 @@ def test__parse_remote_url__idn_host__is_punycoded() -> None:
     assert parsed.display_url == "https://xn--e1afmkfd.xn--p1ai/team/repo.git"
 
 
+@pytest.mark.parametrize(
+    "host",
+    ["ß.de", "straße.de", "ＧＩＴＨＵＢ.com", "ὀδυσσεύς.gr", "a\u00adb.de", "fi\ufb01.de"],
+)
+def test__parse_remote_url__host_that_nameprep_would_rewrite__is_invalid(host: str) -> None:
+    # IDNA 2003 превратил бы ß в ss и т. п.: адрес назвал бы другой домен, чем тот, что ввёл человек.
+    with pytest.raises(GitUrlError) as caught:
+        parse_remote_url(f"https://{host}/a/b")
+
+    assert caught.value.code is GitErrorCode.url_invalid
+
+
+def test__parse_remote_url__idn_host_in_decomposed_or_upper_case__is_the_same_host() -> None:
+    composed = parse_remote_url("https://пример.рф/a/b")
+
+    assert parse_remote_url("https://ПРИМЕР.РФ/a/b").host == composed.host
+    assert parse_remote_url("https://müller.de/a/b").host == parse_remote_url("https://mu\u0308ller.de/a/b").host
+
+
 def test__parse_remote_url__error_detail__is_a_message_not_the_input() -> None:
     with pytest.raises(GitUrlError) as caught:
         parse_remote_url("ghp_SECRETSECRETSECRET1234 x")

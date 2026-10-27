@@ -83,13 +83,23 @@ def _has_bad_char(raw: str) -> bool:
     return bool(_ENCODED_CONTROL.search(raw))
 
 
+def _punycode(host: str) -> str:
+    """Punycode хоста. Кодек `idna` из stdlib это IDNA 2003 с nameprep: он молча подменяет символы (ß на ss, полную
+    ширину на латиницу, конечную сигму), и токен, выданный для одного домена, ушёл бы на другой. Поэтому хост,
+    который nameprep изменил бы, отвергается: браузеры и curl читают такой адрес иначе, чем кодек."""
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+        if ascii_host.encode("ascii").decode("idna") != host:
+            raise _invalid()
+    except UnicodeError:
+        raise _invalid() from None
+    return ascii_host
+
+
 def _clean_host(raw_host: str) -> str:
     host = raw_host.lower()
     if not host.isascii():
-        try:
-            host = host.encode("idna").decode("ascii")
-        except UnicodeError:
-            raise _invalid() from None
+        host = _punycode(unicodedata.normalize("NFC", host))
     labels = host.split(".")
     if len(host) > _MAX_HOST_LENGTH or not all(_HOST_LABEL.match(label) for label in labels):
         raise _invalid()

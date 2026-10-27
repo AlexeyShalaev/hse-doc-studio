@@ -40,6 +40,13 @@ def test__normalize_credential_host__lowercases_and_punycodes() -> None:
     assert normalize_credential_host("гит.рф") == "xn--c1ak4a.xn--p1ai"
 
 
+def test__normalize_credential_host__nameprep_rewrite__is_credential_invalid() -> None:
+    with pytest.raises(GitSyncError) as exc:
+        normalize_credential_host("straße.de")
+
+    assert _code(exc) is GitErrorCode.credential_invalid
+
+
 @pytest.mark.parametrize("raw", ["", "-oProxyCommand=x", "a b", "host/path", "host:22", "a\nb", "ext::sh"])
 def test__normalize_credential_host__bad_value__is_credential_invalid(raw: str) -> None:
     with pytest.raises(GitSyncError) as exc:
