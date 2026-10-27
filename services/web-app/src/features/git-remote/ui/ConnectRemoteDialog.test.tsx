@@ -1191,6 +1191,10 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
     const card = await screen.findByTestId("probe-result-ready-same");
+    // Проверка адреса тоже несёт согласие: без него сервер откажет в открытом http.
+    expect(probe).toHaveBeenCalledWith(
+      expect.objectContaining({ insecure_http: true }),
+    );
     await user.click(
       within(card).getByRole("button", { name: "Сохранить доступ" }),
     );

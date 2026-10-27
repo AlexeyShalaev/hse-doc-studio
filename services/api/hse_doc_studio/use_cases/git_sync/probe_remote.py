@@ -49,6 +49,8 @@ class ProbeInput:
     credential_id: UUID | None = None
     project_id: UUID | None = None
     branch: str | None = None
+    # Согласие человека на открытый http для этого адреса; политика сервера его не заменяет.
+    insecure_http: bool = False
 
 
 @dataclass(frozen=True)
@@ -93,6 +95,16 @@ def valid_branch(name: str) -> str:
         raise ValueError(str(exc)) from exc
 
 
+def require_http_consent(url: RemoteUrl, *, insecure_http: bool) -> None:
+    """Открытый http без согласия человека отвергается до любого обращения к серверу: токен по нему ушёл бы открыто.
+
+    Политика сервера лишь разрешает такие адреса, а согласие даёт человек для каждого адреса отдельно (как у
+    подключения); без него и проверка адреса, и запрос к API хостинга с токеном не выполняются.
+    """
+    if url.kind is RemoteKind.http and not insecure_http:
+        raise git_error(GitErrorCode.url_scheme_forbidden)
+
+
 def raise_probe_error(probe: RemoteProbe) -> None:
     """Превращает неудачную проверку в ошибку с кодом; ключи сервера едут в теле для окна подтверждения."""
     if probe.ok:
@@ -135,13 +147,14 @@ class ProbeRemoteUC:
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
+        require_http_consent(url, insecure_http=inp.insecure_http)
         credential = self._credentials.get(inp.credential_id) if inp.credential_id is not None else None
         if inp.credential_id is not None and credential is None:
             raise git_error(GitErrorCode.credentials_missing)
         local_id = None
         if inp.project_id is not None:
             local_id = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project.id
-        # Открытый http проверяется как разрешённый: согласие на него человек даёт при подключении.
+        # Открытый http сюда доходит только с согласием человека (`require_http_consent`).
         target = RemoteTarget(url, inp.credential_id, insecure_http=url.kind is RemoteKind.http)
         resolved = await self._resolver.resolve(url)
         token = await self._check_token(url, credential, resolved)

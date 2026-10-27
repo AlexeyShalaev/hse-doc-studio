@@ -238,6 +238,7 @@ class ProbeRequest(_Contract):
     credential_id: UUID | None = None
     project_id: UUID | None = None
     branch: str | None = None
+    insecure_http: bool | None = None
 
 
 class ProbeError(_Contract):
@@ -361,6 +362,7 @@ class CloneRequest(_Contract):
     branch: str | None = None
     folder: str
     name: str | None = None
+    insecure_http: bool | None = None
 
 
 class CloneDefaultsResponse(_Contract):

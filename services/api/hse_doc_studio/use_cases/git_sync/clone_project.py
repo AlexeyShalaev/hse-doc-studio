@@ -67,7 +67,12 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
-from hse_doc_studio.use_cases.git_sync.probe_remote import choose_remote_branch, raise_probe_error, valid_branch
+from hse_doc_studio.use_cases.git_sync.probe_remote import (
+    choose_remote_branch,
+    raise_probe_error,
+    require_http_consent,
+    valid_branch,
+)
 from hse_doc_studio.use_cases.git_sync.status import TRACKING_PREFIX
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
@@ -93,6 +98,8 @@ class CloneProjectInput:
     branch: str | None = None
     # Имя нужно клиенту, чтобы предложить папку; проект называется так, как записан в репозитории.
     name: str | None = None
+    # Согласие человека на открытый http для этого адреса; политика сервера его не заменяет.
+    insecure_http: bool = False
 
 
 @dataclass(frozen=True)
@@ -207,6 +214,7 @@ class CloneProjectUC:
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
+        require_http_consent(url, insecure_http=inp.insecure_http)
         if inp.credential_id is not None and self._credentials.get(inp.credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
         if inp.branch:
@@ -268,7 +276,7 @@ class CloneProjectUC:
 
     async def _clone(self, operation_id: str, url: RemoteUrl, plan: FolderPlan, inp: CloneProjectInput) -> CloneResult:
         folder = plan.folder
-        # Открытый http проверяется как разрешённый политикой: отдельного согласия у клонирования нет.
+        # Открытый http сюда доходит только с согласием человека (`_checked_input`): его и запоминает remote.
         target = RemoteTarget(url, inp.credential_id, insecure_http=url.kind is RemoteKind.http)
         self._operations.update(operation_id, phase=OperationPhase.download)
         probe = await self._transport.probe(target)

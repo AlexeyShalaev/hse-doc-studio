@@ -237,7 +237,13 @@ async def update_git_host_settings(
 async def probe_git_remote(body: ProbeRequest, uc: FromDishka[ProbeRemoteUC]) -> ProbeResponse:
     try:
         view = await uc.execute(
-            ProbeInput(url=body.url, credential_id=body.credential_id, project_id=body.project_id, branch=body.branch)
+            ProbeInput(
+                url=body.url,
+                credential_id=body.credential_id,
+                project_id=body.project_id,
+                branch=body.branch,
+                insecure_http=bool(body.insecure_http),
+            )
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -249,7 +255,12 @@ async def clone_git_project(body: CloneRequest, uc: FromDishka[CloneProjectUC]) 
     try:
         operation = await uc.execute(
             CloneProjectInput(
-                url=body.url, folder=body.folder, credential_id=body.credential_id, branch=body.branch, name=body.name
+                url=body.url,
+                folder=body.folder,
+                credential_id=body.credential_id,
+                branch=body.branch,
+                name=body.name,
+                insecure_http=bool(body.insecure_http),
             )
         )
     except ValueError as exc:

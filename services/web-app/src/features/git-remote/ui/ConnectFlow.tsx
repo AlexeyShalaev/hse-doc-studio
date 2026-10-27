@@ -216,6 +216,7 @@ const ConnectFlowBody = ({
           credential_id: id,
           project_id: projectId,
           ...(branchValue !== "" ? { branch: branchValue } : {}),
+          ...(insecureHttp ? { insecure_http: true } : {}),
         });
         result = outcomeFromProbe(answer);
       } catch (error) {
@@ -232,7 +233,7 @@ const ConnectFlowBody = ({
         setTlsOpen(true);
       }
     },
-    [branch, credentialId, probe, projectId, repoUrl],
+    [branch, credentialId, insecureHttp, probe, projectId, repoUrl],
   );
 
   const goTo = (next: ConnectStep): void => {

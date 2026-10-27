@@ -191,6 +191,7 @@ export const ProbeRequestSchema = z.object({
   credential_id: z.string().nullish(),
   project_id: z.string().nullish(),
   branch: z.string().nullish(),
+  insecure_http: z.boolean().nullish(),
 });
 
 export const ProbeUrlSchema = z.object({
@@ -249,6 +250,7 @@ export const CloneRequestSchema = z.object({
   branch: z.string().nullish(),
   folder: z.string(),
   name: z.string().nullish(),
+  insecure_http: z.boolean().nullish(),
 });
 
 export const CloneDefaultsSchema = z.object({
