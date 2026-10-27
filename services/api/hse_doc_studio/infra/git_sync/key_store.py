@@ -1,8 +1,8 @@
 """Ключи шифрования секретов: файл в data_dir или ключ из окружения.
 
 Файл `secrets/master.keys.json` создаётся лениво, при первом сохранении секрета, и никогда
-не перезаписывается: повреждённый файл откладывается рядом под другим именем, а ключи, записанные
-в старом файле, остаются на диске. Файл, который не удалось прочитать (сбой чтения, а не негодное
+не перезаписывается (при одновременном создании двумя процессами остаётся ключ первого): повреждённый
+файл откладывается рядом под другим именем, а ключи, записанные в старом файле, остаются на диске. Файл, который не удалось прочитать (сбой чтения, а не негодное
 содержимое), не трогается вовсе: ключ не создаётся, пока файл не прочитается. Формат допускает
 несколько ключей (первый в `primary` пишет, остальные читают), поэтому смену ключа можно добавить,
 не меняя файлов.
@@ -201,10 +201,17 @@ class KeyFileStore:
             ],
         }
         try:
-            write_private_file(self._path, json.dumps(payload, indent=2).encode())
+            created = write_private_file(self._path, json.dumps(payload, indent=2).encode(), exclusive=True)
         except OSError as exc:
             logger.exception("could not write the secrets key file")
             raise _unavailable() from exc
+        if not created:
+            # Другой процесс успел раньше: его ключ уже мог зашифровать токены, поэтому берём именно его.
+            ring, _state = self._read_file()
+            if ring is None:
+                raise _unavailable()
+            logger.info("secrets key file was created by another process", path=str(self._path))
+            return ring
         logger.info("secrets key file created", path=str(self._path))
         return ring
 
@@ -217,8 +224,13 @@ class KeyFileStore:
             return True
 
 
-def write_private_file(path: Path, data: bytes) -> None:
-    """Атомарная запись файла с правами 0600 в каталоге 0700: чужим пользователям машины он не виден."""
+def write_private_file(path: Path, data: bytes, *, exclusive: bool = False) -> bool:
+    """Атомарная запись файла с правами 0600 в каталоге 0700: чужим пользователям машины он не виден.
+
+    `exclusive` не заменяет существующий файл: временный файл привязывается к имени через `os.link`, и если имя
+    занято, возвращается False (файл уже создал кто-то другой, в том числе другой процесс). Без `exclusive`
+    файл заменяется, результат всегда True.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         os.chmod(path.parent, 0o700)
@@ -231,7 +243,32 @@ def write_private_file(path: Path, data: bytes) -> None:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
+        if exclusive:
+            return _link_exclusive(tmp, path)
         os.replace(tmp, path)
-    except BaseException:
+        return True
+    finally:
         tmp.unlink(missing_ok=True)
-        raise
+
+
+def _link_exclusive(tmp: Path, path: Path) -> bool:
+    try:
+        os.link(tmp, path)
+    except FileExistsError:
+        return False
+    except OSError:
+        # Файловая система без жёстких ссылок: O_EXCL всё равно не даёт затереть чужой файл.
+        return _create_exclusive(tmp, path)
+    return True
+
+
+def _create_exclusive(tmp: Path, path: Path) -> bool:
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return False
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(tmp.read_bytes())
+        handle.flush()
+        os.fsync(handle.fileno())
+    return True

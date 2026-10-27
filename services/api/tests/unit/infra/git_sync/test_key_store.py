@@ -106,6 +106,21 @@ def test__ensure_primary__corrupt_file__is_set_aside_not_overwritten(key_path: P
     assert store.status().available is True
 
 
+def test__ensure_primary__another_process_created_the_key_first__its_key_wins(key_path: Path) -> None:
+    # Два процесса увидели «файла нет»: второй не должен затереть ключ первого, иначе токены под ним потеряны.
+    slow = KeyFileStore(key_path)
+    other_ring = KeyFileStore(key_path).ensure_primary()
+    seen_missing = iter([(None, "missing")])
+    real_read = slow._read_file
+    slow._read_file = lambda: next(seen_missing, None) or real_read()  # type: ignore[method-assign]
+
+    ring = slow.ensure_primary()
+
+    assert ring == other_ring
+    assert KeyFileStore(key_path).load() == other_ring
+    assert list(key_path.parent.iterdir()) == [key_path]
+
+
 def test__ensure_primary__read_error__keeps_the_file_and_does_not_create_a_new_key(
     key_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
