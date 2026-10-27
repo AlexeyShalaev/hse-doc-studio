@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 
 import pytest
+from hse_doc_studio.core.git_sync.merge import paths
 from hse_doc_studio.core.git_sync.merge.paths import collision_groups, comparison_key, is_safe_entry, is_safe_path
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -40,7 +41,6 @@ def test__is_safe_path__ordinary_project_file__is_safe(path: str) -> None:
         "./a",
         "a\\b.tex",
         "C:/Windows/x",
-        "a/b:stream",
         "..",
         "...",
         ".. /x",
@@ -63,6 +63,27 @@ def test__is_safe_path__ordinary_project_file__is_safe(path: str) -> None:
     ],
 )
 def test__is_safe_path__escaping_or_private_path__is_unsafe(path: str) -> None:
+    assert not is_safe_path(path)
+
+
+@pytest.mark.parametrize("path", ["thesis/Отчёт: итог.tex", "a/report:v2.tex", "notes: draft.md"])
+def test__is_safe_path__colon_in_a_name__follows_what_the_file_system_allows(
+    monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    monkeypatch.setattr(paths, "_STRICT_NAMES", True)
+    assert not is_safe_path(path)
+
+    monkeypatch.setattr(paths, "_STRICT_NAMES", False)
+    assert is_safe_path(path)
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize("path", ["C:/Windows/x", "C:", "a/d:/x"])
+def test__is_safe_path__drive_letter__is_unsafe_everywhere(
+    monkeypatch: pytest.MonkeyPatch, path: str, strict: bool
+) -> None:
+    monkeypatch.setattr(paths, "_STRICT_NAMES", strict)
+
     assert not is_safe_path(path)
 
 

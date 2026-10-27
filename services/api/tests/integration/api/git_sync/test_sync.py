@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -711,6 +712,24 @@ async def test__sync__incoming_file_over_the_size_limit__refused_before_it_is_re
     assert "big.bin" in operation.error.detail
     assert not _file(project, "assets/big.bin").exists()
     assert _git(project, "rev-parse", "master") == head
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="на Windows двоеточия в имени файла быть не может")
+async def test__sync__colon_in_a_file_name__file_survives_the_merge_and_the_push(
+    stack: Stack, project: dict[str, Any], remote: BareRemote
+) -> None:
+    peer = await _connect_in_sync(stack, project, remote)
+    peer.write("thesis/Отчёт: итог.tex", "итог\n")
+    peer.commit_push("report with a colon")
+    _snapshot(project, "local work")
+
+    result = await _sync_ok(stack, project)
+
+    assert result.outcome == "merged"
+    assert result.warnings == []
+    assert _file(project, "thesis/Отчёт: итог.tex").read_text(encoding="utf-8") == "итог\n"
+    pushed = run_git("-c", "core.quotepath=false", "ls-tree", "-r", "--name-only", "main", git_dir=remote.path)
+    assert "thesis/Отчёт: итог.tex" in pushed.splitlines()
 
 
 # --- отказы до начала --------------------------------------------------------------------------------------------
