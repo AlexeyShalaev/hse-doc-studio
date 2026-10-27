@@ -216,7 +216,12 @@ markers = [
     "integration: mark a test as an integration test.",
     "http: mark a test as an HTTP integration test.",
     "pg: needs a real Postgres (HSE_TEST_PG_DSN); skipped without it.",
+    "s3: needs S3 (moto in process, or MinIO via HSE_TEST_S3_ENDPOINT); skipped without the server extra.",
     "requires_sshd: needs a local sshd and ssh-keygen; skipped when they are missing.",
+]
+
+filterwarnings = [
+    "error::RuntimeWarning",
 ]
 
 addopts = """
