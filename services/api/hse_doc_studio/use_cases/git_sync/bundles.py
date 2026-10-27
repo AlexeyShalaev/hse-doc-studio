@@ -206,11 +206,12 @@ class ExportBundleUC:
         filename = _filename(project.name, bool(password))
         final = workdir / filename
         plain = workdir / "plain.bundle" if password else final
-        # Несохранённое попадает в файл, а ветка не двигается, пока снимается копия: оба шага под блокировкой.
+        # Несохранённое попадает в историю под блокировкой, а сама упаковка идёт без неё: `git bundle create` только
+        # читает ссылки и объекты (неизменяемые), а блокировка на минуты остановила бы каждое сохранение в редакторе.
         async with self._locks.for_folder(project.folder):
             branch = await asyncio.to_thread(self._gate.check, project, needs_profile=False)
             await asyncio.to_thread(self._applier.snapshot, project)
-            await self._bundles.create_bundle(project.folder, branch=branch, dest=plain)
+        await self._bundles.create_bundle(project.folder, branch=branch, dest=plain)
         if password:
             # Шифрование долгое, а папке оно не нужно: блокировка уже отпущена.
             await finish_before_cancel(self._bundles.encrypt_bundle, plain, final, password)

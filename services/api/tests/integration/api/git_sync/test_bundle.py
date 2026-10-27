@@ -22,6 +22,7 @@ from hse_doc_studio.api.schemas.git_sync import (
     GitStatusResponse,
     OperationResponse,
 )
+from hse_doc_studio.infra.git_sync.bundle import GitBundleService
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
@@ -266,6 +267,34 @@ async def test__export__unsaved_edit__is_snapshotted_into_the_file(
 
     assert "% typed but never saved" in _text(cloned)
     assert _git(project, "status", "--porcelain", "--", ".", ":(exclude)*.pdf") == ""
+
+
+async def test__export__while_the_bundle_is_being_packed__editor_saves_are_not_blocked(
+    anna: Studio, project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    original = GitBundleService.create_bundle
+
+    async def slow(service: GitBundleService, *args: Any, **kwargs: Any) -> None:
+        entered.set()
+        await release.wait()
+        await original(service, *args, **kwargs)
+
+    monkeypatch.setattr(GitBundleService, "create_bundle", slow)
+    exporting = asyncio.create_task(_export(anna, project))
+    async with asyncio.timeout(30):
+        await entered.wait()
+
+    async with asyncio.timeout(5):
+        saved = await anna.client.put(
+            f"/api/v1/projects/{project['id']}/files/{TRACKED_FILE}", content=b"% typed during the export\n"
+        )
+    release.set()
+    resp = await exporting
+
+    assert saved.status_code in (200, 204), saved.text
+    assert resp.status_code == 200, resp.text
 
 
 async def test__export__leaves_no_scratch_files_after_the_response(anna: Studio, project: dict[str, Any]) -> None:
