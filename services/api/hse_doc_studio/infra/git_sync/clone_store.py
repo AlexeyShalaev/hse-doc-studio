@@ -28,6 +28,8 @@ class GitCloneStore:
         info = store_git_dir(folder) / "info"
         info.mkdir(parents=True, exist_ok=True)
         (info / "exclude").write_text("\n".join(patterns) + "\n", encoding="utf-8")
+        # До checkout: чужой `.gitattributes` не должен преобразовывать файлы при развёртывании дерева.
+        self._vcs.write_attributes_at(folder)
 
     def checkout(self, folder: Path, branch: str, ref: str | None = None) -> None:
         branch = validate_ref_name(branch)

@@ -57,6 +57,13 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
 )
 
 
+# Содержимое <git-dir>/info/attributes. Это самый сильный источник атрибутов: он перекрывает `.gitattributes` из
+# рабочей папки, который приезжает с чужой веткой. Без него `working-tree-encoding`, `eol`, `ident` и `filter`
+# из чужого файла меняют то, что попадает в коммит, или обрывают `git add` (BOM is required), и снимки перестают
+# создаваться. Студия хранит файлы проекта байт в байт, поэтому все преобразования выключены.
+VCS_ATTRIBUTES: str = "* -text -eol -ident -filter -working-tree-encoding\n"
+
+
 def vcs_exclude_for(version: TemplateVersion | None) -> list[str]:
     """Исключения истории для проекта на версии шаблона `version`.
 

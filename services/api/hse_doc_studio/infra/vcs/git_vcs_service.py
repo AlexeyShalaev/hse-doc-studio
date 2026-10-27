@@ -20,6 +20,7 @@ from hse_doc_studio.core.enums import (
     VcsTagKind,
 )
 from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig
+from hse_doc_studio.core.vcs.constants import VCS_ATTRIBUTES
 from hse_doc_studio.core.vcs.entities import (
     VcsAuthorCount,
     VcsBranch,
@@ -263,6 +264,22 @@ class GitVcsService:
         info_dir = self.git_dir(project) / "info"
         info_dir.mkdir(parents=True, exist_ok=True)
         (info_dir / "exclude").write_text("\n".join(ignore) + "\n", encoding="utf-8")
+        self.write_attributes_at(project.folder)
+
+    def write_attributes_at(self, folder: Path) -> None:
+        """Атрибуты хранилища, перекрывающие `.gitattributes` из рабочей папки (см. VCS_ATTRIBUTES).
+
+        Идемпотентно и дёшево: файл переписывается, только если он отличается. Нужно и хранилищам, созданным
+        до появления файла, поэтому его же проверяет каждый коммит.
+        """
+        target = store_git_dir(folder) / "info" / "attributes"
+        try:
+            if target.read_text(encoding="utf-8") == VCS_ATTRIBUTES:
+                return
+        except OSError:
+            pass
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(VCS_ATTRIBUTES, encoding="utf-8")
 
     def destroy(self, project: Project) -> None:
         shutil.rmtree(self.git_dir(project), ignore_errors=True)
@@ -354,6 +371,7 @@ class GitVcsService:
         замороженные PDF подписей лежат под `.hse-studio/`, но должны ехать с проектом."""
         if not self.is_initialized(project):
             raise VcsNotInitializedError(str(project.folder))
+        self.write_attributes_at(project.folder)
         add_args = ["add", "-A", "--"]
         add_args += list(paths) if paths else ["."]
         if not include_pdf:

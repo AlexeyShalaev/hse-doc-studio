@@ -299,3 +299,42 @@ def test__commit__force_paths_adds_ignored_pdf_only_when_asked(tmp_path: Path) -
     )
     assert commit is not None
     assert [f.path for f in svc.commit_detail(project, commit.id).files] == [".hse-studio/frozen/doc.pdf"]
+
+
+# ── .gitattributes из рабочей папки ──────────────────────────────────────────
+_FOREIGN_ATTRIBUTES = "*.md working-tree-encoding=UTF-16\n* ident\n*.txt eol=crlf\n*.dat filter=lfs\n"
+
+
+def _blob(svc: GitVcsService, project: object, rel: str) -> bytes:
+    proc = svc.run_bytes(project, ["cat-file", "blob", f"HEAD:{rel}"])  # type: ignore[arg-type]
+    return proc.stdout
+
+
+def test__commit__foreign_gitattributes__files_are_committed_byte_for_byte(tmp_path: Path) -> None:
+    svc, project = _init(tmp_path)
+    (tmp_path / ".gitattributes").write_text(_FOREIGN_ATTRIBUTES, encoding="utf-8")
+    ident = b"line $Id: SECRET-USER-DATA $ keep\n"
+    (tmp_path / "notes.txt").write_bytes(ident + b"two\n")
+    (tmp_path / "enc.md").write_bytes(b"plain, no BOM\n")
+    (tmp_path / "raw.dat").write_bytes(b"data\n")
+
+    commit = svc.commit(project, message="foreign attributes", kind=VcsCommitKind.manual)  # type: ignore[arg-type]
+
+    assert commit is not None
+    assert _blob(svc, project, "notes.txt") == ident + b"two\n"
+    assert _blob(svc, project, "enc.md") == b"plain, no BOM\n"
+    assert _blob(svc, project, "raw.dat") == b"data\n"
+
+
+def test__commit__store_created_before_the_attributes_file__gets_it_on_the_next_commit(tmp_path: Path) -> None:
+    svc, project = _init(tmp_path)
+    attributes = tmp_path / ".hse-studio" / "git" / "info" / "attributes"
+    attributes.unlink()
+    (tmp_path / ".gitattributes").write_text("*.md working-tree-encoding=UTF-16\n", encoding="utf-8")
+    (tmp_path / "enc.md").write_bytes(b"plain, no BOM\n")
+
+    commit = svc.commit(project, message="old store", kind=VcsCommitKind.manual)  # type: ignore[arg-type]
+
+    assert commit is not None
+    assert attributes.exists()
+    assert _blob(svc, project, "enc.md") == b"plain, no BOM\n"
