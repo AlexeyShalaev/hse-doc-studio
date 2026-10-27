@@ -346,7 +346,27 @@ async def test__fetch__redirect_to_another_host__header_is_not_leaked(
             studio_pair.first.git_dir, _http_target(origin, "r.git", credential_id), branch="main"
         )
 
-    assert evil.requests, "redirect was expected to be followed"
+    assert evil.requests == [], "with a token redirects must not be followed at all"
+    assert evil.authorizations() == []
+
+
+async def test__fetch__redirect_to_server_with_same_repo__token_does_not_reach_it(
+    stack: Stack, http_git_server_factory: Callable[..., GitHttpServer], studio_pair: StudioPair
+) -> None:
+    # Чужой сервер отдаёт настоящий репозиторий, поэтому git не обрывается после первого прыжка и шлёт на него
+    # все следующие запросы (git-upload-pack): заголовок доступа не должен уйти ни в одном из них.
+    origin = http_git_server_factory()
+    evil = http_git_server_factory(token=None)
+    seed_remote(origin.create_repo("r.git"), {"a.txt": "a"})
+    seed_remote(evil.create_repo("r.git"), {"a.txt": "a"})
+    origin.redirect_to = evil.base_url
+    credential_id = stack.add_pat(token=origin.token or "")
+
+    with pytest.raises(GitSyncError):
+        await stack.transport.fetch(
+            studio_pair.first.git_dir, _http_target(origin, "r.git", credential_id), branch="main"
+        )
+
     assert evil.authorizations() == []
 
 

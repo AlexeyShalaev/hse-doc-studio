@@ -3,8 +3,8 @@
 Безопасность держится на трёх вещах. Окружение собирается по белому списку (`base_git_env`), а не
 копируется у сервера: ключи API и GIT_TRACE туда не попадают. Конфиг хранилища проекта недоверенный,
 поэтому поверх него идут защитные `-c`. Токен доставляется только через окружение процесса и привязан
-к хосту адреса (см. auth_env). Всё, что git напечатал, проходит очистку от секретов до того, как
-текст увидит кто-то ещё.
+к хосту адреса (см. auth_env); редиректы с токеном отключены, потому что git шлёт заголовок и на новый
+хост. Всё, что git напечатал, проходит очистку от секретов до того, как текст увидит кто-то ещё.
 """
 
 from __future__ import annotations
@@ -124,6 +124,10 @@ class GitRemoteRunner:
         credential, secret = self._load_credential(target)
         auth = build_http_auth(target.url, credential, secret) if credential and secret else None
         trust_config = await self._trust_config(target)
+        if auth is not None:
+            # Заголовок доступа git добавляет ко всем запросам сессии, в том числе после перехода на другой хост:
+            # с токеном редиректы не идут вовсе. Без доступа публичный адрес по-прежнему может перенаправлять.
+            trust_config = [*trust_config, "-c", "http.followRedirects=false"]
         env = {
             **base_git_env(),
             "GIT_ALLOW_PROTOCOL": allowed_protocols(target.url),
