@@ -1,4 +1,5 @@
 import pytest
+from cryptography.fernet import Fernet
 from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.entrypoint import ensure_supported_mode
 from hse_doc_studio.core.mode import StudioMode
@@ -48,7 +49,14 @@ def test__ensure_supported_mode__server_with_missing_zones__names_them() -> None
 
 
 def test__ensure_supported_mode__server_all_green__passes() -> None:
-    ensure_supported_mode(Settings(_env_file=None, mode=StudioMode.server), _all_green())
+    cfg = Settings(_env_file=None, mode=StudioMode.server, secrets={"key": Fernet.generate_key().decode()})
+
+    ensure_supported_mode(cfg, _all_green())
+
+
+def test__ensure_supported_mode__server_without_secrets_key__is_refused() -> None:
+    with pytest.raises(RuntimeError, match="persistence/secrets_key.*HSE_STUDIO__SECRETS__KEY"):
+        ensure_supported_mode(Settings(_env_file=None, mode=StudioMode.server), _all_green())
 
 
 def test__ensure_supported_mode__global_registry__still_refuses_server() -> None:

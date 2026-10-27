@@ -25,7 +25,12 @@ from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.core.readiness import ServerReadinessRegistry, server_readiness
+from hse_doc_studio.core.readiness import (
+    ReadinessZone,
+    ServerReadinessCheck,
+    ServerReadinessRegistry,
+    server_readiness,
+)
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -52,12 +57,30 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
+_secrets_cfg_by_registry: dict[int, Settings] = {}
+
+
+def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
+
+    # create_app зовут не один раз за процесс (тесты, перезапуск воркера): проверка одна, настройки берутся свежие
+    _secrets_cfg_by_registry[id(readiness)] = cfg
+    check = ServerReadinessCheck(
+        ReadinessZone.persistence,
+        "secrets_key",
+        lambda: secrets_key_problem(_secrets_cfg_by_registry[id(readiness)]),
+    )
+    with suppress(ValueError):
+        readiness.register(check)
+
+
 def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
     """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
 
     Server пускают, только когда все зоны зарегистрировали проверки готовности и все они зелёные.
     """
     if cfg.mode is StudioMode.server:
+        _register_secrets_check(cfg, readiness)
         problems = readiness.unmet()
         if problems:
             msg = (
