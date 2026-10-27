@@ -208,7 +208,6 @@ export const GitErrorBodySchema = z.object({
   can_adopt: z.boolean().nullish(),
   paths: z.array(z.string()).nullish(),
   host_keys: z.array(GitHostKeySchema).nullish(),
-  missing: z.array(z.string()).nullish(), // token_insufficient_scope
   certificate: GitTlsCertificateSchema.nullish(), // tls_untrusted_ca
 });
 

@@ -36,10 +36,6 @@ const COPY: Record<string, IssueCopy> = {
   tls_untrusted_ca: { tone: "warn", actions: ["review_certificate", "retry"] },
   tls_pin_mismatch: { tone: "err", actions: ["review_certificate"] },
   token_expired: { tone: "err", actions: ["back_to_access", "retry"] },
-  token_insufficient_scope: {
-    tone: "err",
-    actions: ["back_to_access", "retry"],
-  },
   provider_unknown: { tone: "warn", actions: ["back_to_repo", "retry"] },
   host_key_unknown: { tone: "warn", actions: ["review_host_key"] },
   host_key_changed: { tone: "err", actions: ["review_host_key"] },

@@ -23,7 +23,6 @@ class GitErrorCode(StrEnum):
     forbidden_write = "forbidden_write"
     sso_required = "sso_required"
     token_expired = "token_expired"  # noqa: S105 — код ошибки, не пароль
-    token_insufficient_scope = "token_insufficient_scope"  # noqa: S105 — код ошибки, не пароль
     not_found_or_no_access = "not_found_or_no_access"
     rate_limited = "rate_limited"
     host_key_unknown = "host_key_unknown"

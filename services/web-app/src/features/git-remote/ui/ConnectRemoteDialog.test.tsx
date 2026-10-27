@@ -1737,7 +1737,7 @@ describe("ConnectRemoteDialog: тип сервера и ответы прове�
     expect(probe).toHaveBeenCalledTimes(2);
   });
 
-  it("токен просрочен и токену не хватает прав: отказы разобраны и ведут к доступу", async () => {
+  it("токен просрочен: отказ разобран и ведёт к доступу", async () => {
     const { probe } = setup({ credentials: [GL_PAT] });
     probe.mockResolvedValueOnce(
       failedProbe("token_expired", "Срок действия токена истёк."),
@@ -1750,34 +1750,11 @@ describe("ConnectRemoteDialog: тип сервера и ответы прове�
     await user.click(screen.getByRole("button", { name: "Проверить" }));
     const expired = await screen.findByTestId("probe-result-token_expired");
     expect(expired).toHaveTextContent("Срок токена истёк");
-
-    probe.mockResolvedValueOnce(
-      failedProbe("token_insufficient_scope", "d", {
-        token_info: {
-          login: "anna",
-          scopes: ["read_repository"],
-          expires_at: null,
-          sufficiency: "too_narrow",
-          missing: ["write_repository"],
-        },
-      }),
-    );
     await user.click(
-      within(expired).getByRole("button", { name: "Проверить ещё раз" }),
-    );
-    const narrow = await screen.findByTestId(
-      "probe-result-token_insufficient_scope",
-    );
-    expect(screen.getByTestId("issue-missing-scopes")).toHaveTextContent(
-      "write_repository",
-    );
-    await user.click(
-      within(narrow).getByRole("button", { name: "Изменить доступ" }),
+      within(expired).getByRole("button", { name: "Изменить доступ" }),
     );
     expect(await screen.findByTestId("credential-picker")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("probe-result-token_insufficient_scope"),
-    ).toBeNull();
+    expect(screen.queryByTestId("probe-result-token_expired")).toBeNull();
   });
 
   it("срок сохранённого токена виден в списке доступов", async () => {

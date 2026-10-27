@@ -1,7 +1,0 @@
-{
-  "detail": "Токену не хватает прав для чтения и записи репозитория.",
-  "code": "token_insufficient_scope",
-  "missing": [
-    "write_repository"
-  ]
-}

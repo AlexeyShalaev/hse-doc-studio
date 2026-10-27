@@ -17,7 +17,6 @@ export const GIT_ERROR_CODES = [
   "forbidden_write",
   "sso_required",
   "token_expired",
-  "token_insufficient_scope",
   "not_found_or_no_access",
   "rate_limited",
   "host_key_unknown",

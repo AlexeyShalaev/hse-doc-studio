@@ -127,23 +127,6 @@ export const ProbeIssueCard = ({
       ))}
     >
       <p style={{ margin: 0 }}>{hint}</p>
-      {issue.code === "token_insufficient_scope" &&
-        issue.missing.length > 0 && (
-          <div
-            className="flex items-center"
-            data-testid="issue-missing-scopes"
-            style={{ gap: 6, flexWrap: "wrap" }}
-          >
-            <span className="dim" style={{ fontSize: 11.5 }}>
-              {t("issue.token_insufficient_scope.missing")}
-            </span>
-            {issue.missing.map((scope) => (
-              <span key={scope} className="chip accent mono">
-                {scope}
-              </span>
-            ))}
-          </div>
-        )}
       {issue.certificate && (
         <Facts
           items={[

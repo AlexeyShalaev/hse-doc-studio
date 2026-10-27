@@ -82,7 +82,6 @@ class GitErrorBody(_Contract):
     can_adopt: bool | None = None  # unrelated_histories
     paths: list[str] | None = None  # unresolved_conflicts, invalid_resolution, unresolved_markers
     host_keys: list[GitHostKey] | None = None  # host_key_unknown
-    missing: list[str] | None = None  # token_insufficient_scope
     certificate: GitTlsCertificate | None = None  # tls_untrusted_ca
 
 

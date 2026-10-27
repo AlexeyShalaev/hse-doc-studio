@@ -296,11 +296,6 @@
       "title": "The token has expired",
       "hint": "The server no longer accepts this token. Issue a new one on the token page and paste it at the Access step."
     },
-    "token_insufficient_scope": {
-      "title": "The token lacks rights",
-      "hint": "The repository can be read, but versions cannot be pushed. Issue a token with the needed rights and replace the old one.",
-      "missing": "To add"
-    },
     "tls_untrusted_ca": {
       "title": "The server certificate was issued by an unknown authority",
       "hint": "This is common for servers inside an organization. Add the issuing authority's certificate for this server or pin the certificate fingerprint. Studio never turns the check off."

@@ -58,10 +58,6 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Срок действия токена истёк. Выпустите новый",
         "The token has expired. Issue a new one",
     ),
-    GitErrorCode.token_insufficient_scope: (
-        "Токену не хватает прав для чтения и записи репозитория",
-        "The token lacks the permissions to read and write the repository",
-    ),
     GitErrorCode.provider_unknown: (
         "Неизвестный тип сервера. Выберите GitHub, GitLab, Gitea, Bitbucket или другое",
         "Unknown server type. Choose GitHub, GitLab, Gitea, Bitbucket or other",

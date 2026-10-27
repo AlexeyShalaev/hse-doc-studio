@@ -64,7 +64,6 @@ export const cloneVerdictFromProbe = (probe: Probe): CloneVerdict => {
         certificate: null,
         expectedFingerprint: null,
         actualFingerprint: null,
-        missing: [],
       },
     };
   }
@@ -96,7 +95,6 @@ export const cloneVerdictFromError = (error: unknown): CloneVerdict => {
       certificate: null,
       expectedFingerprint: null,
       actualFingerprint: null,
-      missing: [],
     },
   };
 };

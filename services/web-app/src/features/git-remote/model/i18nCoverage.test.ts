@@ -134,7 +134,6 @@ const dynamicKeys = (): string[] => {
     );
   for (const code of [
     "token_expired",
-    "token_insufficient_scope",
     "tls_untrusted_ca",
     "tls_pin_mismatch",
     "provider_unknown",

@@ -38,7 +38,6 @@
     "forbidden_write": "This access has no write permission for the repository.",
     "sso_required": "The organization requires SSO: authorize the token for it on the server.",
     "token_expired": "The token has expired. Issue a new one.",
-    "token_insufficient_scope": "The token lacks the permissions to read and write the repository.",
     "not_found_or_no_access": "The repository was not found or you have no access to it.",
     "rate_limited": "The server asks to wait: too many requests.",
     "host_key_unknown": "The server key is not confirmed yet. Compare the fingerprint and confirm it.",

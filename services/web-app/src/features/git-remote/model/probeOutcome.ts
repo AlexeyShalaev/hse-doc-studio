@@ -36,8 +36,6 @@ export type CheckIssue = {
   expectedFingerprint: string | null;
   /** Для tls_pin_mismatch: отпечаток, который сервер предъявил сейчас. */
   actualFingerprint: string | null;
-  /** Для token_insufficient_scope: каких прав токену не хватает. */
-  missing: string[];
 };
 
 export type ReadyWarning = "schema_newer" | "template_missing";
@@ -66,7 +64,6 @@ const issueOf = (
   certificate: null,
   expectedFingerprint: null,
   actualFingerprint: null,
-  missing: [],
   ...extra,
 });
 
@@ -81,7 +78,6 @@ export const outcomeFromProbe = (probe: Probe): CheckOutcome => {
         certificate: error?.certificate ?? null,
         expectedFingerprint: error?.expected ?? null,
         actualFingerprint: error?.actual ?? null,
-        missing: probe.token_info?.missing ?? [],
       }),
     };
   }
@@ -141,7 +137,6 @@ const outcomeFromBody = (body: GitErrorBody): CheckOutcome => {
       certificate: body.certificate ?? null,
       expectedFingerprint: body.expected ?? null,
       actualFingerprint: body.actual ?? null,
-      missing: body.missing ?? [],
     }),
   };
 };
@@ -177,7 +172,6 @@ const AUTH_CODES = new Set([
   "email_privacy",
   "profile_required",
   "token_expired",
-  "token_insufficient_scope",
 ]);
 
 const FOUND_CODES = new Set(["not_found_or_no_access", "branch_missing"]);

@@ -283,7 +283,6 @@ def test_credential_fixtures_carry_expiry_for_tokens_only() -> None:
 
 def test_tls_and_token_error_fixtures_carry_their_details() -> None:
     errors = {body["code"]: body for body in _fixtures_of("GitErrorBody")}
-    assert errors["token_insufficient_scope"]["missing"]
     assert errors["tls_untrusted_ca"]["certificate"]["fingerprint_sha256"].startswith("SHA256:")
     assert {"expected", "actual"} <= set(errors["tls_pin_mismatch"])
     probe_codes = {body["error"]["code"] for body in _fixtures_of("Probe") if body["error"]}

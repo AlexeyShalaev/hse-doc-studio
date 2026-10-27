@@ -70,7 +70,6 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.tls_error: _UPSTREAM,
     GitErrorCode.tls_untrusted_ca: _UPSTREAM,
     GitErrorCode.token_expired: _UPSTREAM,
-    GitErrorCode.token_insufficient_scope: _UPSTREAM,
     GitErrorCode.timeout: _UPSTREAM,
     GitErrorCode.remote_moved: _UPSTREAM,
     GitErrorCode.protected_branch: _UPSTREAM,

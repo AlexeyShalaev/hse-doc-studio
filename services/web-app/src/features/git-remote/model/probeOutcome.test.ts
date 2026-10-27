@@ -102,12 +102,11 @@ describe("outcomeFromProbe", () => {
         certificate: null,
         expectedFingerprint: null,
         actualFingerprint: null,
-        missing: [],
       },
     });
   });
 
-  it("сертификат сервера и недостающие права доходят до карточки отказа", () => {
+  it("сертификат и отпечатки сервера доходят до карточки отказа", () => {
     const certificate = {
       fingerprint_sha256: "SHA256:abc",
       subject: "CN=gitlab.hse.local",
@@ -148,24 +147,6 @@ describe("outcomeFromProbe", () => {
       },
     });
 
-    const narrow = outcomeFromProbe(
-      probe({
-        ok: false,
-        error: { code: "token_insufficient_scope", detail: "d" },
-        token_info: {
-          login: "anna",
-          scopes: ["read_repository"],
-          expires_at: null,
-          sufficiency: "too_narrow",
-          missing: ["write_repository"],
-        },
-      }),
-    );
-    expect(narrow).toMatchObject({
-      kind: "error",
-      issue: { missing: ["write_repository"] },
-    });
-    expect(rowOfCode("token_insufficient_scope")).toBe("auth");
     expect(rowOfCode("token_expired")).toBe("auth");
   });
 });
