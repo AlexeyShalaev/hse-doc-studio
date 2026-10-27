@@ -172,8 +172,15 @@ class TemplateUpdateTransaction:
             # и удаление старого имени после записи нового стёрло бы только что записанное. Сортировка устойчива.
             for write in sorted(writes, key=lambda item: item.kind != FileWriteKind.delete):
                 apply_write(folder, write)
-            save_state()
+            sync = journal.kind == UpdateJournalKind.sync
+            if not sync:
+                save_state()
             commit_id = commit() if commit is not None else self._commit_template_update(project, journal, message)
+            if sync:
+                # Состояние синхронизации (сессия конфликтов с черновиками) сбрасывается только после коммита:
+                # откат по журналу возвращает файлы, а hse-sync.json он не восстанавливает. Если процесс умрёт
+                # между коммитом и записью, устаревшая сессия сама снимется при следующей синхронизации.
+                save_state()
             self._finalize(project, journal)
         except BaseException:
             self.recover(project, journal)

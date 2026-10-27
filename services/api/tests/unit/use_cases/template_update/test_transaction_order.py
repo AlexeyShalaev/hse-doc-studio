@@ -62,3 +62,41 @@ def test__apply_write__failure__leaves_no_temporary_file(tmp_path: Path) -> None
         transaction_module.apply_write(tmp_path, FileWrite("notes", FileWriteKind.write, b"x"))
 
     assert [entry.name for entry in tmp_path.iterdir()] == ["notes"]
+
+
+def _run(tmp_path: Path, calls: list[str], commit: object) -> None:
+    project = make_project(folder=tmp_path)
+    tx = sync_transaction(JsonUpdateJournalRepository(), _Store(), None)  # type: ignore[arg-type]
+    journal = tx.start_sync_journal(pre_commit="a", merge_parent="b", sync_id="s")
+    tx.run(
+        project,
+        journal,
+        [FileWrite("a.txt", FileWriteKind.write, b"x")],
+        save_state=lambda: calls.append("save_state"),
+        commit=commit,  # type: ignore[arg-type]
+    )
+
+
+def test__run__sync_state_is_saved_after_the_commit(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def commit() -> str:
+        calls.append("commit")
+        return "c"
+
+    _run(tmp_path, calls, commit)
+
+    assert calls == ["commit", "save_state"]
+
+
+def test__run__sync_commit_fails__state_is_left_as_it_was(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def commit() -> str:
+        raise RuntimeError("head moved")
+
+    with pytest.raises(RuntimeError):
+        _run(tmp_path, calls, commit)
+
+    assert calls == []
+    assert not (tmp_path / "a.txt").exists()
