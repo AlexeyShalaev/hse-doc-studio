@@ -400,6 +400,35 @@ async def test__gitlab_introspection__401__tells_expired_from_rejected(
     assert result.state is state
 
 
+async def test__gitlab_introspection__plain_401_without_a_reason__cannot_introspect_and_does_not_fail(
+    server_factory: Callable[..., GitHttpServer],
+) -> None:
+    server = server_factory(_gitlab_routes(own=_constant(401, {"message": "401 Unauthorized"})))
+
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
+
+    assert (result.state, result.login, result.scopes) == (TokenState.unknown, None, None)
+
+
+@pytest.mark.parametrize(
+    "token", ["gldt-DeployTokenValue1234567890", "legacy20charsecretxyz", "glcbt-1234567890abcdef"]
+)
+async def test__gitlab_introspection__401_for_a_token_that_is_not_a_personal_one__is_not_a_verdict(
+    server_factory: Callable[..., GitHttpServer], token: str
+) -> None:
+    body = {"error": "invalid_token", "error_description": "Token was revoked. You have to re-authorize from the user."}
+    server = server_factory(_gitlab_routes(own=_constant(401, body)))
+    request = IntrospectionRequest(
+        provider=GitProvider.gitlab, api_base=f"{server.base_url}/api/v4", token=Secret(token)
+    )
+
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(request)
+
+    assert result.state is TokenState.unknown
+
+
 async def test__gitlab_introspection__old_server_without_endpoint__cannot_introspect_and_does_not_fail(
     server_factory: Callable[..., GitHttpServer],
 ) -> None:

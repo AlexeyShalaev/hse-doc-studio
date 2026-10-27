@@ -20,6 +20,7 @@ from typing import Any
 import httpx
 import structlog
 
+from hse_doc_studio.core.git_sync.credentials import token_family
 from hse_doc_studio.core.git_sync.entities import TokenIntrospection, TokenState
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -49,6 +50,7 @@ _CACHE_MAX_ENTRIES = 256
 _HTTP_OK = 200
 _HTTP_UNAUTHORIZED = 401
 _HTTP_FORBIDDEN = 403
+_GITLAB_PAT_FAMILY = "glpat"
 _GITHUB_ENTERPRISE_HEADER = "x-github-enterprise-version"
 _GITHUB_EXPIRY_HEADER = "github-authentication-token-expiration"
 _GITHUB_SCOPES_HEADER = "x-oauth-scopes"
@@ -263,13 +265,28 @@ def _expired(expires_at: datetime | None) -> bool:
     return expires_at is not None and expires_at <= datetime.now(timezone.utc)
 
 
+def _gitlab_unauthorized(response: _Reply, token: str) -> TokenIntrospection:
+    """401 от /personal_access_tokens/self не приговор токену: эта проверка знает только личные токены.
+
+    Токены развёртывания (gldt-), CI и прочие годятся для git по https, но здесь получают тот же 401, а у старого
+    сервера и безымянный 401 ничего не говорит. Отказом он считается, лишь когда личный токен (glpat-) сам назван
+    просроченным или отозванным; иначе вердикт остаётся за git.
+    """
+    if token_family(token) != _GITLAB_PAT_FAMILY:
+        return TokenIntrospection(TokenState.unknown)
+    description = str((response.json_object() or {}).get("error_description", "")).lower()
+    if "expired" in description:
+        return TokenIntrospection(TokenState.expired)
+    if "revoked" in description:
+        return TokenIntrospection(TokenState.rejected)
+    return TokenIntrospection(TokenState.unknown)
+
+
 async def _gitlab_self(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospection:
     headers = {"PRIVATE-TOKEN": token}
     response = await fetcher.get(f"{api}/personal_access_tokens/self", headers=headers)
     if response.status_code == _HTTP_UNAUTHORIZED:
-        body = response.json_object() or {}
-        description = str(body.get("error_description", "")).lower()
-        return TokenIntrospection(TokenState.expired if "expired" in description else TokenState.rejected)
+        return _gitlab_unauthorized(response, token)
     body = response.json_object()
     if response.status_code != _HTTP_OK or body is None:
         return TokenIntrospection(TokenState.unknown)

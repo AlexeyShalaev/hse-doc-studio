@@ -423,19 +423,38 @@ async def test__probe__expired_token__fails_with_token_expired_and_marks_the_cre
     assert listed[0]["status"] == "auth_failed"
 
 
-async def test__probe__server_rejects_the_token__fails_with_auth_failed(
+async def test__probe__introspection_answers_401_for_a_token_git_accepts__the_git_check_decides(
     test_app: AsyncClient, gitlab_server: GitHttpServer, gitlab: Gitlab
 ) -> None:
+    # Токены развёртывания и CI годятся для git, а этот адрес GitLab знает только личные токены.
     gitlab.token_status = 401
     await _trusted(test_app, gitlab_server)
     credential = await _credential(test_app)
 
     probe = await _probe(test_app, _url(gitlab_server), str(credential.id))
 
+    assert probe.ok is True
+    assert probe.token_info is not None
+    assert probe.token_info.sufficiency == "unknown"
+    listed = (await test_app.get("/api/v1/git/credentials")).json()
+    assert listed[0]["status"] != "auth_failed"
+
+
+async def test__probe__introspection_answers_401_and_git_rejects_the_token__fails_with_auth_failed(
+    test_app: AsyncClient, gitlab_server: GitHttpServer
+) -> None:
+    await _trusted(test_app, gitlab_server)
+    created = await test_app.post(
+        "/api/v1/git/credentials",
+        json={"kind": "pat", "label": "Чужой", "host": "127.0.0.1", "token": "wrong-token-0123456789"},
+    )
+    assert created.status_code == 201, created.text
+
+    probe = await _probe(test_app, _url(gitlab_server), created.json()["id"])
+
     assert probe.ok is False
     assert probe.error is not None
     assert probe.error.code == "auth_failed"
-    assert probe.token_info is None
 
 
 async def test__probe__old_gitlab_without_token_endpoint__falls_back_to_the_git_check(
