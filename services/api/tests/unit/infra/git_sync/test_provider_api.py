@@ -9,6 +9,7 @@ import time
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from hse_doc_studio.core.git_sync.entities import TokenState
@@ -16,6 +17,7 @@ from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import DetectionRequest, IntrospectionRequest
 from hse_doc_studio.core.git_sync.providers import ApiDetection, GitProvider
 from hse_doc_studio.core.git_sync.secret import Secret
+from hse_doc_studio.infra.git_sync import provider_api
 from hse_doc_studio.infra.git_sync.provider_api import HttpProviderDetector, HttpTokenIntrospector
 from hse_doc_studio.infra.git_sync.tls_certificates import TlsCertificateService
 
@@ -166,6 +168,90 @@ async def test__detect__answers_are_cached_for_the_same_request(server_factory: 
     await detector.detect(_request(server))
 
     assert len(server.requests) == count
+
+
+async def test__detect__no_provider_answers__the_none_is_cached_too(
+    server_factory: Callable[..., GitHttpServer],
+) -> None:
+    server = server_factory({})
+    detector = HttpProviderDetector(3.0)
+
+    assert await detector.detect(_request(server)) is None
+    count = len(server.requests)
+    assert await detector.detect(_request(server)) is None
+
+    assert len(server.requests) == count
+
+
+async def test__detect__timeout__is_not_remembered_for_the_long_ttl(
+    server_factory: Callable[..., GitHttpServer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [1000.0]
+    monkeypatch.setattr(provider_api, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    slow = threading.Event()
+
+    def version(_headers: object) -> ApiReply:
+        if not slow.is_set():
+            time.sleep(1.0)
+        return _json(200, _GITLAB_VERSION)
+
+    server = server_factory({"/api/v4/version": version})
+    detector = HttpProviderDetector(0.2)
+    assert await detector.detect(_request(server)) is None
+    slow.set()
+
+    clock[0] += provider_api._FAILURE_TTL_S + 1  # noqa: SLF001
+
+    found = await detector.detect(_request(server))
+    assert found is not None
+    assert found.provider is GitProvider.gitlab
+
+
+async def test__detect__timeout__is_not_asked_again_within_the_short_ttl(
+    server_factory: Callable[..., GitHttpServer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [1000.0]
+    monkeypatch.setattr(provider_api, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+
+    def version(_headers: object) -> ApiReply:
+        time.sleep(1.0)
+        return _json(200, _GITLAB_VERSION)
+
+    server = server_factory({"/api/v4/version": version})
+    detector = HttpProviderDetector(0.2)
+    await detector.detect(_request(server))
+    count = len(server.requests)
+
+    await detector.detect(_request(server))
+
+    assert len(server.requests) == count
+
+
+async def test__detect__repositories_of_one_server__share_one_entry(
+    server_factory: Callable[..., GitHttpServer],
+) -> None:
+    server = server_factory({"/api/v4/version": _constant(200, _GITLAB_VERSION)})
+    detector = HttpProviderDetector(3.0)
+
+    await detector.detect(_request(server, "team", "paper.git"))
+    count = len(server.requests)
+    await detector.detect(_request(server, "other", "thesis.git"))
+
+    assert len(server.requests) == count
+    assert len(detector._cache) == 1  # noqa: SLF001
+
+
+async def test__detect__cache__stays_within_its_bound(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(provider_api, "_CACHE_MAX_ENTRIES", 3)
+    detector = HttpProviderDetector(1.0)
+
+    for number in range(10):
+        request = DetectionRequest(
+            secure=True, host=f"git{number}.example", port=None, segments=("a", "b"), providers=()
+        )
+        await detector.detect(request)
+
+    assert len(detector._cache) == 3  # noqa: SLF001
 
 
 async def test__detect__host_that_does_not_answer__is_none() -> None:

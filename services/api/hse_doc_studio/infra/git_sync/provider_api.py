@@ -42,6 +42,10 @@ _MAX_BODY_BYTES = 1_000_000
 # заканчивает ответ, держал бы запрос вечно. Поэтому на весь запрос (до конца тела) есть общий срок.
 _TOTAL_TIMEOUT_FACTOR = 2.0
 _CACHE_TTL_S = 300.0
+# Сбой (таймаут, обрыв, сертификат) не ответ сервера: тот же запрос через несколько секунд может дать другое.
+_FAILURE_TTL_S = 5.0
+# Ключ зависит от адреса, который печатает человек: без потолка кэш рос бы с каждым новым адресом до конца процесса.
+_CACHE_MAX_ENTRIES = 256
 _HTTP_OK = 200
 _HTTP_UNAUTHORIZED = 401
 _HTTP_FORBIDDEN = 403
@@ -108,19 +112,37 @@ class HttpProviderDetector:
         self._cache: dict[tuple[object, ...], tuple[float, ApiDetection | None]] = {}
 
     async def detect(self, request: DetectionRequest) -> ApiDetection | None:
-        key = (request.secure, request.host, request.port, request.segments, request.providers, request.ca_file)
+        # Ответ зависит от адресов, которые спрашивают (префиксы), а не от самого репозитория: у одного сервера
+        # все репозитории из двух частей пути делят одну запись.
+        prefixes = tuple(instance_prefix_candidates(request.segments))
+        key = (request.secure, request.host, request.port, prefixes, request.providers, request.ca_file)
+        now = time.monotonic()
         cached = self._cache.get(key)
-        if cached is not None and time.monotonic() < cached[0]:
+        if cached is not None and now < cached[0]:
             return cached[1]
-        found = await self._search(request)
-        self._cache[key] = (time.monotonic() + _CACHE_TTL_S, found)
+        found, answered = await self._search(request, prefixes)
+        # Надолго запоминается только то, что сказал сам сервер; «не отвечает» не должно скрывать провайдера
+        # после того, как сервер оправился или человек добавил его сертификат.
+        self._remember(key, found, _CACHE_TTL_S if answered else _FAILURE_TTL_S)
         return found
 
-    async def _search(self, request: DetectionRequest) -> ApiDetection | None:
-        prefixes = instance_prefix_candidates(request.segments)
+    def _remember(self, key: tuple[object, ...], found: ApiDetection | None, ttl_s: float) -> None:
+        now = time.monotonic()
+        if len(self._cache) >= _CACHE_MAX_ENTRIES:
+            for stale in [name for name, (until, _) in self._cache.items() if until <= now]:
+                del self._cache[stale]
+        while len(self._cache) >= _CACHE_MAX_ENTRIES:
+            del self._cache[next(iter(self._cache))]
+        self._cache.pop(key, None)
+        self._cache[key] = (now + ttl_s, found)
+
+    async def _search(
+        self, request: DetectionRequest, prefixes: tuple[str, ...]
+    ) -> tuple[ApiDetection | None, bool]:
+        """Найденный провайдер и признак, что ответ окончательный: нашли или каждый сервер ответил по-своему."""
         candidates = [(provider, prefix) for provider in request.providers for prefix in prefixes]
         if not candidates:
-            return None
+            return None, True
         async with httpx.AsyncClient(
             verify=_ssl_context(request.ca_file),
             timeout=self._timeout_s,
@@ -131,23 +153,25 @@ class HttpProviderDetector:
             results = await asyncio.gather(
                 *(self._probe(fetcher, request, provider, prefix) for provider, prefix in candidates)
             )
-        return next((result for result in results if result is not None), None)
+        found = next((detection for detection, _ in results if detection is not None), None)
+        return found, found is not None or all(answered for _, answered in results)
 
     async def _probe(
         self, fetcher: _Fetcher, request: DetectionRequest, provider: GitProvider, prefix: str
-    ) -> ApiDetection | None:
+    ) -> tuple[ApiDetection | None, bool]:
+        """(провайдер, ответил ли сервер): таймаут и сбой соединения дают (None, False), а не «здесь такого нет»."""
         spec = provider_spec(provider)
         base = web_base(host=request.host, port=request.port, secure=request.secure, subpath=prefix)
         if spec.api.detect is None or base is None:
-            return None
+            return None, True
         try:
             response = await fetcher.get(base + spec.api.detect.path)
         except (httpx.HTTPError, ssl.SSLError, OSError):
-            return None
+            return None, False
         version = self._recognize(provider, response)
         if version is None:
-            return None
-        return ApiDetection(provider, version[0], api_base(provider, host=request.host, base=base))
+            return None, True
+        return ApiDetection(provider, version[0], api_base(provider, host=request.host, base=base)), True
 
     @staticmethod
     def _recognize(provider: GitProvider, response: _Reply) -> tuple[str | None] | None:
