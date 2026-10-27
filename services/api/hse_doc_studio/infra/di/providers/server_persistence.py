@@ -17,6 +17,8 @@ from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
+from hse_doc_studio.infra.secrets.key_store import KeyFileStore
+from hse_doc_studio.infra.secrets.server_keys import server_key_store
 
 
 class ServerPersistenceProvider(Provider):
@@ -53,3 +55,8 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_unit_of_work(self, sessions: SessionProvider) -> IUnitOfWork:
         return SqlUnitOfWork(sessions)
+
+    @provide(override=True)
+    def get_git_key_store(self) -> KeyFileStore:
+        """В server ключ только из окружения: без него контейнер не создаётся."""
+        return server_key_store(settings)

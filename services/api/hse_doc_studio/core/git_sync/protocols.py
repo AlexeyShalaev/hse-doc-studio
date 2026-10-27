@@ -69,8 +69,11 @@ class ISecretCipher(Protocol):
         """Бросает GitSyncError(secrets_unavailable), если ключ нельзя ни прочитать, ни создать."""
         ...
 
-    def decrypt(self, token: str, *, aad: str) -> Secret:
-        """Бросает GitSyncError(secrets_unavailable), если ключа нет, он не тот или шифртекст повреждён."""
+    def decrypt(self, token: str, *, aad: str, legacy_aad: str | None = None) -> Secret:
+        """Бросает GitSyncError(secrets_unavailable), если ключа нет, он не тот или шифртекст повреждён.
+
+        `legacy_aad` позволяет прочитать запись со старой привязкой; шифруется всегда по `aad`.
+        """
         ...
 
     def can_read(self, token: str) -> bool:

@@ -122,7 +122,37 @@ def _parser() -> argparse.ArgumentParser:
     db_sub.add_parser("upgrade", help="довести схему до последней ревизии")
     db_sub.add_parser("current", help="показать ревизию базы и head")
     db_sub.add_parser("check", help="проверить, что база на head и без дрейфа (код 1, если нет)")
+    secrets_cmd = sub.add_parser("secrets", help="секреты серверного режима")
+    secrets_sub = secrets_cmd.add_subparsers(dest="secrets_command", required=True)
+    reencrypt = secrets_sub.add_parser(
+        "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
+    )
+    reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
     return parser
+
+
+async def _reencrypt(*, dry_run: bool) -> int:
+    from hse_doc_studio.core.secrets import encrypted_columns  # noqa: PLC0415
+    from hse_doc_studio.infra.db.engine import create_engine  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.reencrypt import reencrypt_all  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.server_keys import SecretsKeyMissingError, server_key_store  # noqa: PLC0415
+
+    try:
+        cipher = FernetSecretCipher(server_key_store(settings))
+    except SecretsKeyMissingError as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
+    engine = create_engine(settings.db)
+    try:
+        report = await reencrypt_all(engine, cipher, encrypted_columns, dry_run=dry_run)
+    finally:
+        await engine.dispose()
+    verb = "будет перешифровано" if dry_run else "перешифровано"
+    _write(f"{verb}: {report.updated}; уже на первичном ключе: {report.current}; нечитаемых: {len(report.unreadable)}")
+    for item in report.unreadable:
+        _write(f"unreadable: {item}", stream=sys.stderr)
+    return _EXIT_OK if report.ok else _EXIT_BUILD_FAILED
 
 
 async def _db(command: str) -> int:
@@ -163,10 +193,20 @@ def _run_db(command: str) -> int:
         return _EXIT_USAGE
 
 
+def _run_secrets(*, dry_run: bool) -> int:
+    try:
+        return asyncio.run(_reencrypt(dry_run=dry_run))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "db":
         return _run_db(args.db_command)
+    if args.command == "secrets":
+        return _run_secrets(dry_run=args.dry_run)
     folder = args.project_dir.expanduser().resolve()
     out_dir = args.out if args.out.is_absolute() else folder / args.out
     doc_ids = tuple(args.docs) if args.docs else None
