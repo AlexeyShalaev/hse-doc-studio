@@ -1,16 +1,13 @@
 ---
-description: Generate a new Alembic migration for a service.
+description: Add a new Alembic migration for the server-mode database.
 ---
 
 # /migrate command
 
-**Purpose**: Generate a new Alembic migration for a service.
+**Purpose**: Add an Alembic migration to the single revision chain of `services/api`.
 
-**Usage**:
-1. Identify target service.
-2. Edit `scripts/tools/.env.tools`.
-3. Run `make alembic-new-migration`.
+**Usage**: follow skill `backend-add-migration` (throwaway Postgres, `uv run alembic revision --autogenerate`, no `.env.tools`).
 
 **Rules**:
 - Check for naming conventions (`op.f()`).
-- Verify `upgrade` and `downgrade`.
+- Verify `upgrade` and `downgrade`, exactly one head, `alembic check` without drift.

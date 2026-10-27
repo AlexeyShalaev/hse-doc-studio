@@ -485,6 +485,8 @@ quota_policy(owner_kind, owner_id, on_exhausted[low_priority|reject|warn])
 
 Этапы 1 и 2 друг от друга не зависят, их можно вести параллельно после этапа 0.
 
+Персистентность этапа 2 (что на томе, что в БД, репозитории, ambient UoW, тесты): `docs/design/persistence-server.md`. Владельцы сущностей: `docs/design/stage2-ownership.md`.
+
 ### 18.1 Что вошло в этап 0
 
 - Права: `StudioMode` (режим `server` отклоняется на старте до этапа 2), `core/access` (Actor, Role, Action, ProjectAcl, единая политика), таблица «маршрут → действие» с тестом полноты и гард `project_access_guard`. Нет доступа: не участник получает 404, участник с недостаточной ролью 403. Для локального актора гард ничего не делает.

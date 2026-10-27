@@ -1,5 +1,7 @@
 # Use Case Layer Standards
 
+> Note: this file's `uow.transaction()` / `tx.<repo>` examples come from a template service. In this repo repositories are APP-scope and injected directly; `IUnitOfWork.begin()` only opens an ambient transaction boundary (see `backend-repositories.md` and `docs/design/persistence-server.md`). Where this file disagrees, those win.
+
 Use cases orchestrate business logic and MUST follow these patterns.
 
 ## Core Principles

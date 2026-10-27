@@ -1,6 +1,6 @@
 ---
 name: backend-add-repository
-description: Add a new repository for a domain entity — protocol in core/, ORM model, Postgres implementation, UoW registration, migration, tests.
+description: Add a new repository for a domain entity — protocol in core/, ORM model, Postgres implementation, migration, contract tests.
 ---
 
 # Skill: Add Repository
@@ -26,24 +26,27 @@ Procedure for adding a new repository for a domain entity.
        ...
    ```
 
-3. **Implement Repository**:
+3. **Implement Repository** (APP-scope: hold the sessionmaker provider, not a session; see `.claude/rules/backend-repositories.md`):
    In `infra/repositories/<entity>.py`:
    ```python
-   class PostgresNounRepository(NounRepository):
-       def __init__(self, session: AsyncSession) -> None:
-           self._session = session
+   class PostgresNounRepository:
+       def __init__(self, sessions: SessionProvider) -> None:
+           self._sessions = sessions
 
        async def create(self, entity: Noun) -> Noun:
-           db_obj = NounDB(...)
-           self._session.add(db_obj)
-           return self._to_entity(db_obj)
+           async with self._sessions.use() as session:
+               row = NounDB(...)
+               session.add(row)
+               await session.flush()
+               return self._to_entity(row)
    ```
+   The owner of per-user data comes from `current_actor()` (`ActorRequired` when absent). No commit/refresh in the repository.
 
-4. **Register in UoW**:
-   Update the `UowTransaction` implementation in `infra/uow.py` to include the new repository as a lazy property.
+4. **Register in DI**:
+   Provide it with `Scope.APP` in the server provider (`infra/di`). Do not add it to a UoW: `IUnitOfWork` only opens the ambient transaction.
 
 5. **Generate Migration**:
-   Use `make alembic-new-migration` to create the table.
+   Follow skill `backend-add-migration` (`uv run alembic`, one head).
 
 6. **Add Tests**:
-   Unit tests for the repository implementation in `tests/unit/repositories/`.
+   Extend or add the contract suite in `tests/contract/` (Json, InMemory, Postgres) and a two-actor isolation test; Postgres cases use marker `pg`.
