@@ -66,6 +66,35 @@ def test__commit_merge__without_changes_keeps_the_tree_of_ours(repo: Repo) -> No
     assert tree == repo.git.text(repo.folder, ["rev-parse", f"{ours}^{{tree}}"])
 
 
+def test__commit_merge__keeps_theirs_added_entry_that_the_planner_skipped_as_unsafe(repo: Repo) -> None:
+    # Пропущенный как небезопасный чужой файл не должен исчезнуть из дерева слияния: отправка удалила бы его у всех.
+    base = repo.head()
+    repo.branch("side")
+    repo.write("side/a\\b.tex", "theirs\n")
+    theirs = repo.snap("side")
+    repo.switch("master")
+    ours = repo.snap("master", vkr__own="ours\n")
+    assert base != ours
+
+    sha = _committer(repo).commit_merge(repo.folder, ours=ours, theirs=theirs, changes={}, message="m", trailers={})
+
+    assert repo.show(sha, "side/a\\b.tex") == b"theirs\n"
+
+
+def test__commit_merge__does_not_resurrect_unsafe_entry_that_we_deleted(repo: Repo) -> None:
+    repo.write("old/a\\b.tex", "x\n")
+    repo.snap("base")
+    repo.branch("side")
+    repo.switch("master")
+    repo.remove("old/a\\b.tex")
+    ours = repo.snap("master")
+    theirs = repo.git.text(repo.folder, ["rev-parse", "side"]).strip()
+
+    sha = _committer(repo).commit_merge(repo.folder, ours=ours, theirs=theirs, changes={}, message="m", trailers={})
+
+    assert repo.show(sha, "old/a\\b.tex") is None
+
+
 def test__commit_merge__message_carries_kind_and_trailers(repo: Repo) -> None:
     sha = _merge(repo, {}, {"Hse-Sync": "abc123"})
     body = repo.git.text(repo.folder, ["log", "-1", "--format=%B", sha])

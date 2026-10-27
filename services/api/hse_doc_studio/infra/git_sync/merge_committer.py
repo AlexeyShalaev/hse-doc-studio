@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import re
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from hse_doc_studio.core.git_sync.merge.paths import is_safe_entry
 from hse_doc_studio.core.git_sync.refs import BUNDLE_PREFIX
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.errors import VcsCommandError
@@ -56,7 +57,7 @@ class GitMergeCommitter:
         body = _message(message, trailers)
         with tempfile.TemporaryDirectory(prefix="hse-studio-merge-") as scratch:
             env = {"GIT_INDEX_FILE": str(Path(scratch) / "index")}
-            tree = self._build_tree(project_folder, parents[0], changes, env)
+            tree = self._build_tree(project_folder, parents, changes, env)
             author = self._author()
             args = ["commit-tree", tree, "-p", parents[0], "-p", parents[1], "-F", "-"]
             proc = self._git.run(project_folder, args, input_bytes=body.encode("utf-8"), author=author)
@@ -93,9 +94,11 @@ class GitMergeCommitter:
         return self.advance_branch(project_folder, branch, expected=expected, new=new)
 
     def _build_tree(
-        self, project_folder: Path, ours: str, changes: Mapping[str, bytes | None], env: Mapping[str, str]
+        self, project_folder: Path, parents: Sequence[str], changes: Mapping[str, bytes | None], env: Mapping[str, str]
     ) -> str:
+        ours, theirs = parents
         self._git.run(project_folder, ["read-tree", f"{ours}^{{tree}}"], env=env)
+        self._carry_skipped(project_folder, ours, theirs, changes, env)
         if changes:
             modes = self._modes(project_folder, env)
             lines = [self._index_line(project_folder, path, data, modes) for path, data in changes.items()]
@@ -103,6 +106,30 @@ class GitMergeCommitter:
                 project_folder, ["update-index", "-z", "--index-info"], input_bytes="".join(lines).encode(), env=env
             )
         return self._git.text(project_folder, ["write-tree"], env=env).strip()
+
+    def _carry_skipped(
+        self, project_folder: Path, ours: str, theirs: str, changes: Mapping[str, bytes | None], env: Mapping[str, str]
+    ) -> None:
+        """Чужие добавленные записи, которые планировщик пропустил как небезопасные, переносятся в дерево как есть.
+
+        Без этого коммит слияния не содержит такой записи, и его отправка удаляет её из ветки у всех. На диск
+        запись по-прежнему не пишется: в индекс она попадает прямо из чужого дерева, минуя рабочую папку.
+        """
+        have = {entry.path for entry in self._reader.tree_entries(project_folder, ours)}
+        base_sha = self._reader.merge_base(project_folder, ours, theirs)
+        base = {e.path: e.sha for e in self._reader.tree_entries(project_folder, base_sha)} if base_sha else {}
+        for entry in self._reader.tree_entries(project_folder, theirs):
+            if entry.path in have or entry.path in changes or base.get(entry.path) == entry.sha:
+                continue
+            if is_safe_entry(entry.path, entry.mode):
+                continue
+            # Путь, который git сам не примет в индекс (`.git/...`), остаётся пропущенным.
+            self._git.run(
+                project_folder,
+                ["update-index", "--add", "--cacheinfo", f"{entry.mode},{entry.sha},{entry.path}"],
+                env=env,
+                check=False,
+            )
 
     def _index_line(self, project_folder: Path, path: str, data: bytes | None, modes: Mapping[str, str]) -> str:
         if data is None:
