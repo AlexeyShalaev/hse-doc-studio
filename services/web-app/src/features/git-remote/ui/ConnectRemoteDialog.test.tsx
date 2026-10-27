@@ -4,10 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@shared/api";
 import { useToastStore } from "@shared/lib";
 import { i18n } from "@shared/lib/i18n";
-import { gitRemoteApi } from "@entities/git-remote";
+import { gitRemoteApi, type GitCredentialCheck } from "@entities/git-remote";
 import { gitSyncApi, useSyncUiStore } from "@entities/git-sync";
 import { profileApi } from "@entities/profile";
 import {
+  CHECK_OK,
   CONTENTS,
   CUSTOM_PROFILE,
   DEFAULT_PROFILE,
@@ -66,6 +67,8 @@ const setup = (options: Setup = {}) => {
     data_dir_shared_folder: null,
   });
   vi.spyOn(gitRemoteApi, "listHosts").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(CHECK_OK);
   const probe = vi
     .spyOn(gitRemoteApi, "probe")
     .mockResolvedValue(makeProbe({ relation: "empty", empty: true }));
@@ -127,7 +130,7 @@ const goThroughToken = async (
   await typeUrl(user, url);
   await user.click(next());
   await user.click(await screen.findByLabelText("Токен"));
-  await user.paste(TOKEN);
+  await user.keyboard(TOKEN);
   await user.click(
     screen.getByRole("button", { name: "Сохранить и проверить" }),
   );
@@ -198,7 +201,7 @@ describe("ConnectRemoteDialog: шаг «Репозиторий»", () => {
     expect(urlInput()).toHaveValue("https://github.com/hse-team/paper.git");
     await user.click(next());
     await user.click(await screen.findByLabelText("Токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -353,7 +356,7 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     expect(field).toHaveAttribute("type", "password");
     expect(field).toHaveAttribute("autocomplete", "off");
     await user.click(field);
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     expect(field).toHaveValue(TOKEN);
 
     // Показать и спрятать.
@@ -399,7 +402,7 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     await user.click(next());
     const field = await screen.findByLabelText("Токен");
     await user.click(field);
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -462,9 +465,9 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     mount();
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(next());
-    // Для ssh-адреса сразу открыт способ «ключ».
+    // Для ssh-адреса сразу открыт способ «ключ Студии».
     expect(
-      await screen.findByRole("button", { name: "Ключ (ssh)", pressed: true }),
+      await screen.findByRole("tab", { name: /Ключ Студии/, selected: true }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Создать ключ" }));
     await waitFor(() => {
@@ -481,14 +484,11 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     expect(screen.getByTestId("ssh-fingerprint")).toHaveTextContent(
       SSH_KEY.fingerprint_sha256 ?? "",
     );
-    expect(screen.getAllByText(/Allow write access/).length).toBeGreaterThan(0);
-    // Прямая ссылка на страницу ключей репозитория.
+    // Ключ пользователя добавляется на странице ключей профиля.
     expect(
       screen.getByRole("link", { name: /Открыть страницу ключей GitHub/ }),
-    ).toHaveAttribute(
-      "href",
-      "https://github.com/hse-team/paper/settings/keys/new",
-    );
+    ).toHaveAttribute("href", "https://github.com/settings/keys");
+    expect(screen.queryByText(/Allow write access/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /Копировать/ }));
     expect(await navigator.clipboard.readText()).toBe(SSH_KEY.public_key);
@@ -504,7 +504,7 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(next());
     await user.click(
-      await screen.findByRole("button", { name: "Токен (https)" }),
+      await screen.findByRole("tab", { name: /Токен \(HTTPS\)/ }),
     );
     expect(
       screen.getByText(/Токен работает только с https-адресом/),
@@ -519,15 +519,15 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
     ).toBeNull();
   });
 
-  it("вход через браузер виден, но выключен", async () => {
+  it("входа через браузер нет: ни карточки, ни обещания", async () => {
     setup();
     const user = userEvent.setup();
     mount();
     await typeUrl(user, "https://github.com/hse-team/paper");
     await user.click(next());
-    const card = await screen.findByTestId("browser-login-card");
-    expect(card).toHaveAttribute("aria-disabled", "true");
-    expect(card).toHaveTextContent("Скоро");
+    await screen.findByTestId("pat-panel");
+    expect(screen.queryByTestId("browser-login-card")).toBeNull();
+    expect(screen.queryByText(/Скоро/)).toBeNull();
   });
 
   it("недоступное хранилище секретов запрещает сохранять токен", async () => {
@@ -548,7 +548,7 @@ describe("ConnectRemoteDialog: шаг «Доступ»", () => {
       await screen.findByText(/Хранилище секретов недоступно: токены и ключи/),
     ).toBeInTheDocument();
     await user.click(screen.getByLabelText("Токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     expect(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     ).toBeDisabled();
@@ -639,7 +639,7 @@ describe("ConnectRemoteDialog: шаг «Проверка»", () => {
     await user.type(screen.getByLabelText(/Ветка в репозитории/), "develop");
     await user.click(next());
     await user.click(await screen.findByLabelText("Токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -1044,7 +1044,7 @@ describe("ConnectRemoteDialog: ход проверки и английский �
     await user.paste("https://github.com/hse-team/paper");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(await screen.findByLabelText("Token"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(screen.getByRole("button", { name: "Save and check" }));
     const card = await screen.findByTestId("probe-result-auth_failed");
     expect(card).toHaveTextContent("The repository did not accept the access");
@@ -1096,7 +1096,7 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
     expect(await screen.findByText("Отклонён сервером")).toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Новый токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -1140,7 +1140,7 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
     const user = userEvent.setup();
     mount("fix_access");
     await user.click(await screen.findByLabelText("Токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -1182,7 +1182,7 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
     const user = userEvent.setup();
     mount("fix_access");
     await user.click(await screen.findByLabelText("Токен"));
-    await user.paste(TOKEN);
+    await user.keyboard(TOKEN);
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -1204,5 +1204,795 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
       screen.getByRole("dialog", { name: "Обновить доступ" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Адрес репозитория")).toBeNull();
+  });
+});
+
+// --- проверка токена по вставке, типы серверов, сертификаты -------------------------
+
+const GL_PROVIDER = { id: "gitlab", detected_by: "host", version: "17.3.1" };
+const GL_CHECK = (
+  over: Partial<GitCredentialCheck> = {},
+): GitCredentialCheck => ({
+  credential: GL_PAT,
+  provider_info: GL_PROVIDER,
+  token_info: {
+    login: "anna.petrova",
+    scopes: ["read_repository", "write_repository"],
+    expires_at: null,
+    sufficiency: "sufficient",
+    missing: [],
+  },
+  ...over,
+});
+const GL_PAT: typeof PAT = {
+  ...PAT,
+  id: "cred-gl",
+  label: "GitLab, gitlab.com",
+  host: "gitlab.com",
+  token_family: "glpat",
+  status: "unverified",
+};
+const GL_URL = "https://gitlab.com/hse-team/paper";
+
+const toTokenStep = async (
+  user: ReturnType<typeof userEvent.setup>,
+  url = GL_URL,
+) => {
+  await typeUrl(user, url);
+  await user.click(next());
+  await screen.findByLabelText("Токен");
+};
+
+describe("ConnectRemoteDialog: токен проверяется сразу после вставки", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("вставка сохраняет доступ, проверяет токен и показывает владельца, права и срок", async () => {
+    const { createCredential, probe } = setup();
+    savesCredential(createCredential, GL_PAT);
+    const check = vi
+      .spyOn(gitRemoteApi, "checkCredential")
+      .mockResolvedValue(GL_CHECK());
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    // Подсказка про выпуск токена стоит прямо над полем.
+    expect(screen.getByTestId("token-create-link")).toHaveTextContent(
+      "Создать токен на GitLab",
+    );
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+
+    expect(
+      await screen.findByTestId("token-check-sufficient"),
+    ).toBeInTheDocument();
+    expect(createCredential).toHaveBeenCalledTimes(1);
+    expect(createCredential).toHaveBeenCalledWith({
+      kind: "pat",
+      label: "GitLab, gitlab.com",
+      host: "gitlab.com",
+      token: TOKEN,
+    });
+    expect(check).toHaveBeenCalledWith(GL_PAT.id);
+    const facts = screen.getByTestId("token-facts");
+    expect(facts).toHaveTextContent("anna.petrova");
+    expect(facts).toHaveTextContent("write_repository");
+    expect(facts).toHaveTextContent("GitLab 17.3");
+    // Токена нет ни в поле, ни в разметке; сохранённый доступ выбран.
+    expect(document.body.innerHTML).not.toContain(TOKEN);
+    expect(screen.queryByLabelText("Токен")).toBeNull();
+    expect(screen.getByLabelText(/GitLab, gitlab.com/)).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalledWith({
+        url: GL_URL,
+        credential_id: GL_PAT.id,
+        project_id: PROJECT_ID,
+      });
+    });
+  });
+
+  it("набранный вручную токен проверяется кнопкой «Проверить токен»", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    const check = vi
+      .spyOn(gitRemoteApi, "checkCredential")
+      .mockResolvedValue(GL_CHECK());
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    const checkButton = screen.getByRole("button", { name: "Проверить токен" });
+    expect(checkButton).toBeDisabled();
+    await user.click(screen.getByLabelText("Токен"));
+    await user.keyboard(TOKEN);
+    expect(createCredential).not.toHaveBeenCalled();
+    await user.click(checkButton);
+    expect(
+      await screen.findByTestId("token-check-sufficient"),
+    ).toBeInTheDocument();
+    expect(check).toHaveBeenCalledTimes(1);
+  });
+
+  it("токену не хватает прав: названо, что добавить, продолжить всё равно можно", async () => {
+    const { createCredential, probe } = setup();
+    savesCredential(createCredential, GL_PAT);
+    vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(
+      GL_CHECK({
+        token_info: {
+          login: "anna.petrova",
+          scopes: ["read_repository"],
+          expires_at: null,
+          sufficiency: "too_narrow",
+          missing: ["write_repository"],
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    const card = await screen.findByTestId("token-check-too_narrow");
+    expect(card).toHaveTextContent("Добавь права: write_repository");
+    expect(
+      within(card).getByRole("link", { name: /Создать новый токен/ }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("scopes=read_repository"),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalled();
+    });
+  });
+
+  it("слишком широкий и непроверяемый токены: предупреждение и пояснение, не ошибка", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    const check = vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(
+      GL_CHECK({
+        token_info: {
+          login: "anna",
+          scopes: ["api"],
+          expires_at: null,
+          sufficiency: "too_broad",
+          missing: [],
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    expect(
+      await screen.findByTestId("token-check-too_broad"),
+    ).toHaveTextContent("Лишние права: api");
+    check.mockResolvedValue(
+      GL_CHECK({
+        token_info: {
+          login: null,
+          scopes: [],
+          expires_at: null,
+          sufficiency: "unknown",
+          missing: [],
+        },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить ещё раз" }));
+    expect(await screen.findByTestId("token-check-unknown")).toHaveAttribute(
+      "data-tone",
+      "info",
+    );
+  });
+
+  it("срок токена истёк: проверка говорит об этом и даёт ссылку на новый токен", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    // Истёкший токен приходит ошибкой с кодом; срок берётся из доступа.
+    vi.spyOn(gitRemoteApi, "checkCredential").mockRejectedValue(
+      new ApiError("d", "token_expired", 502),
+    );
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    const card = await screen.findByTestId("token-check-expired");
+    expect(card).toHaveTextContent("Срок токена истёк");
+    expect(
+      within(card).getByRole("link", { name: /Создать новый токен/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("сертификат сервера: из проверки токена открывается окно, после доверия проверка повторяется", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    const check = vi
+      .spyOn(gitRemoteApi, "checkCredential")
+      .mockRejectedValueOnce(
+        new ApiError("d", "tls_untrusted_ca", 502, {
+          certificate: {
+            fingerprint_sha256: "SHA256:abc",
+            subject: "CN=gitlab.com",
+            issuer: "CN=HSE Internal CA",
+            not_before: "2026-01-10T00:00:00Z",
+            not_after: "2027-01-10T00:00:00Z",
+            self_signed: false,
+          },
+        }),
+      );
+    const update = vi
+      .spyOn(gitRemoteApi, "updateHostSettings")
+      .mockResolvedValue({
+        host: "gitlab.com",
+        port: null,
+        provider_override: null,
+        provider_info: GL_PROVIDER,
+        ca_present: false,
+        pinned_fingerprint: "SHA256:abc",
+      });
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    await user.click(
+      await screen.findByRole("button", { name: "Проверить сертификат" }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Закрепить сертификат сервера",
+      }),
+    );
+    await user.click(screen.getByTestId("tls-pin-confirm"));
+    await user.click(screen.getByTestId("tls-submit"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        host: "gitlab.com",
+        port: null,
+        pinned_fingerprint: "SHA256:abc",
+      });
+    });
+    expect(
+      await screen.findByTestId("token-check-sufficient"),
+    ).toBeInTheDocument();
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
+  it("если окно закрыли, не взяв доступ в работу, вставленный токен убирается", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(GL_CHECK());
+    const remove = vi
+      .spyOn(gitRemoteApi, "deleteCredential")
+      .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    await screen.findByTestId("token-check-sufficient");
+    expect(remove).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await waitFor(() => {
+      expect(remove).toHaveBeenCalledWith(GL_PAT.id);
+    });
+  });
+
+  it("взятый в работу доступ не убирается", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(GL_CHECK());
+    const remove = vi
+      .spyOn(gitRemoteApi, "deleteCredential")
+      .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.paste(TOKEN);
+    await screen.findByTestId("token-check-sufficient");
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await screen.findByTestId("probe-checklist");
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("обновление доступа: вставка заменяет токен у привязанного доступа и проверяется", async () => {
+    const { probe } = setup({
+      status: connectedStatus(),
+      credentials: [PAT],
+    });
+    probe.mockResolvedValue(makeProbe());
+    const update = vi
+      .spyOn(gitRemoteApi, "updateCredential")
+      .mockResolvedValue({ ...PAT, status: "unverified" });
+    const check = vi
+      .spyOn(gitRemoteApi, "checkCredential")
+      .mockResolvedValue(CHECK_OK);
+    vi.spyOn(gitSyncApi, "fetchRemote").mockResolvedValue(
+      connectedStatus({ ui_state: "up_to_date", health: "ok" }),
+    );
+    const user = userEvent.setup();
+    mount("fix_access");
+    await user.click(await screen.findByLabelText("Новый токен"));
+    await user.paste(TOKEN);
+    expect(
+      await screen.findByTestId("token-check-sufficient"),
+    ).toBeInTheDocument();
+    expect(update).toHaveBeenCalledWith(PAT.id, { token: TOKEN });
+    expect(check).toHaveBeenCalledWith(PAT.id);
+    // Токен заменён: кнопка идёт дальше без повторной вставки.
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    expect(
+      await screen.findByTestId("probe-result-ready-same"),
+    ).toBeInTheDocument();
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ConnectRemoteDialog: тип сервера и ответы проверки адреса", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("выбранный человеком тип сервера меняет ссылку на токен", async () => {
+    setup();
+    const update = vi
+      .spyOn(gitRemoteApi, "updateHostSettings")
+      .mockResolvedValue({
+        host: "git.corp.example",
+        port: null,
+        provider_override: "gitlab",
+        provider_info: { id: "gitlab", detected_by: "override", version: null },
+        ca_present: false,
+        pinned_fingerprint: null,
+      });
+    const user = userEvent.setup();
+    mount();
+    await typeUrl(user, "https://git.corp.example/team/paper");
+    expect(screen.getByTestId("provider-chip")).toHaveTextContent(
+      "Другой сервер",
+    );
+    // Выбор типа запоминается, список настроек после этого приходит уже с ним.
+    vi.mocked(gitRemoteApi.listHostSettings).mockResolvedValue([
+      {
+        host: "git.corp.example",
+        port: null,
+        provider_override: "gitlab",
+        provider_info: { id: "gitlab", detected_by: "override", version: null },
+        ca_present: false,
+        pinned_fingerprint: null,
+      },
+    ]);
+    await user.click(screen.getByTestId("provider-change"));
+    await user.click(await screen.findByTestId("provider-option-gitlab"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("provider-chip")).toHaveTextContent("GitLab");
+    });
+    await user.click(next());
+    expect(await screen.findByTestId("token-create-link")).toHaveTextContent(
+      "Создать токен на GitLab",
+    );
+    expect(
+      new URL(
+        screen.getByTestId("token-create-link").getAttribute("href") ?? "",
+      ).host,
+    ).toBe("git.corp.example");
+  });
+
+  it("версия сервера из ответа проверки видна в итоге", async () => {
+    const { probe, createCredential } = setup();
+    savesCredential(createCredential, GL_PAT);
+    probe.mockResolvedValue(
+      makeProbe({
+        relation: "empty",
+        empty: true,
+        provider_info: GL_PROVIDER,
+        token_info: {
+          login: "anna.petrova",
+          scopes: ["read_repository"],
+          expires_at: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+          sufficiency: "too_narrow",
+          missing: ["write_repository"],
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    mount();
+    await toTokenStep(user);
+    await user.click(screen.getByLabelText("Токен"));
+    await user.keyboard(TOKEN);
+    await user.click(
+      screen.getByRole("button", { name: "Сохранить и проверить" }),
+    );
+    const card = await screen.findByTestId("probe-result-ready-empty");
+    expect(card).toHaveTextContent("GitLab 17.3");
+    expect(card).toHaveTextContent("anna.petrova");
+    expect(card).toHaveTextContent("добавь write_repository");
+    expect(card).toHaveTextContent("перестанет действовать через 3 дня");
+  });
+
+  it("сертификат внутреннего сервера: окно открывается само, после доверия проверка идёт заново", async () => {
+    const { probe } = setup({
+      credentials: [{ ...GL_PAT, host: "gitlab.hse.local" }],
+    });
+    const certificate = {
+      fingerprint_sha256: "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+      subject: "CN=gitlab.hse.local",
+      issuer: "CN=HSE Internal CA",
+      not_before: "2026-01-10T00:00:00Z",
+      not_after: "2027-01-10T00:00:00Z",
+      self_signed: false,
+    };
+    probe.mockResolvedValueOnce(
+      failedProbe("tls_untrusted_ca", "d", {
+        reachable: false,
+        error: { code: "tls_untrusted_ca", detail: "d", certificate },
+      }),
+    );
+    probe.mockResolvedValue(makeProbe({ relation: "empty", empty: true }));
+    const update = vi
+      .spyOn(gitRemoteApi, "updateHostSettings")
+      .mockResolvedValue({
+        host: "gitlab.hse.local",
+        port: null,
+        provider_override: null,
+        provider_info: GL_PROVIDER,
+        ca_present: true,
+        pinned_fingerprint: null,
+      });
+    const user = userEvent.setup();
+    mount();
+    await typeUrl(user, "https://gitlab.hse.local/team/paper");
+    await user.click(next());
+    await user.click(await screen.findByLabelText(/GitLab, gitlab.com/));
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Сертификат gitlab.hse.local не из известного центра/,
+    });
+    // За окном видна карточка отказа с данными сертификата.
+    expect(
+      screen.getByTestId("probe-result-tls_untrusted_ca"),
+    ).toHaveTextContent("CN=HSE Internal CA");
+    await user.click(within(dialog).getByTestId("tls-ca-text"));
+    await user.paste(PEM_TEXT);
+    await user.click(within(dialog).getByTestId("tls-submit"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        host: "gitlab.hse.local",
+        port: null,
+        ca_pem: PEM_TEXT,
+      });
+    });
+    expect(
+      await screen.findByTestId("probe-result-ready-empty"),
+    ).toBeInTheDocument();
+    expect(probe).toHaveBeenCalledTimes(2);
+  });
+
+  it("токен просрочен и токену не хватает прав: отказы разобраны и ведут к доступу", async () => {
+    const { probe } = setup({ credentials: [GL_PAT] });
+    probe.mockResolvedValueOnce(
+      failedProbe("token_expired", "Срок действия токена истёк."),
+    );
+    const user = userEvent.setup();
+    mount();
+    await typeUrl(user, GL_URL);
+    await user.click(next());
+    await user.click(await screen.findByLabelText(/GitLab, gitlab.com/));
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    const expired = await screen.findByTestId("probe-result-token_expired");
+    expect(expired).toHaveTextContent("Срок токена истёк");
+
+    probe.mockResolvedValueOnce(
+      failedProbe("token_insufficient_scope", "d", {
+        token_info: {
+          login: "anna",
+          scopes: ["read_repository"],
+          expires_at: null,
+          sufficiency: "too_narrow",
+          missing: ["write_repository"],
+        },
+      }),
+    );
+    await user.click(
+      within(expired).getByRole("button", { name: "Проверить ещё раз" }),
+    );
+    const narrow = await screen.findByTestId(
+      "probe-result-token_insufficient_scope",
+    );
+    expect(screen.getByTestId("issue-missing-scopes")).toHaveTextContent(
+      "write_repository",
+    );
+    await user.click(
+      within(narrow).getByRole("button", { name: "Изменить доступ" }),
+    );
+    expect(await screen.findByTestId("credential-picker")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("probe-result-token_insufficient_scope"),
+    ).toBeNull();
+  });
+
+  it("срок сохранённого токена виден в списке доступов", async () => {
+    setup({
+      credentials: [
+        {
+          ...GL_PAT,
+          status: "ok",
+          expires_at: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString(),
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    mount();
+    await typeUrl(user, GL_URL);
+    await user.click(next());
+    expect(await screen.findByTestId("expiry-badge")).toHaveTextContent(
+      "Истекает через 5 дней",
+    );
+  });
+});
+
+const PEM_TEXT =
+  "-----BEGIN CERTIFICATE-----\nMIIBdemo\n-----END CERTIFICATE-----";
+
+const DEPLOY_KEY = {
+  ...SSH_KEY,
+  id: "cred-deploy",
+  label: "Deploy-ключ: hse-team/paper",
+};
+
+describe("ConnectRemoteDialog: способы доступа вкладками", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const openAccess = async (
+    user: ReturnType<typeof userEvent.setup>,
+    url = "https://github.com/hse-team/paper",
+  ) => {
+    await typeUrl(user, url);
+    await user.click(next());
+    return screen.findByTestId("access-tabs");
+  };
+
+  it("предлагает токен, ключ, deploy-ключ и публичный репозиторий; по умолчанию токен", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    const names = within(tabs)
+      .getAllByRole("tab")
+      .map((tab) => tab.id.split("-tab-")[1]);
+    expect(names).toEqual(["pat", "ssh", "deploy", "none"]);
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toBeInTheDocument();
+    // Панель связана с выбранной вкладкой.
+    const panel = screen.getByRole("tabpanel");
+    expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      within(tabs).getByRole("tab", { selected: true }).id,
+    );
+    expect(within(panel).getByTestId("pat-panel")).toBeInTheDocument();
+  });
+
+  it("стрелки переключают вкладки по кругу", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    within(tabs).getByRole("tab", { selected: true }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(
+      within(tabs).getByRole("tab", { name: /Ключ Студии/, selected: true }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Публичный репозиторий/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(
+      within(tabs).getByRole("tab", {
+        name: /Токен \(HTTPS\)/,
+        selected: true,
+      }),
+    ).toHaveFocus();
+  });
+
+  it("deploy-ключ: создаётся для репозитория, ссылка ведёт на его страницу, ключ в поле копирования", async () => {
+    const { createCredential } = setup();
+    savesCredential(createCredential, DEPLOY_KEY);
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(within(tabs).getByRole("tab", { name: /Deploy-ключ/ }));
+    expect(await screen.findByTestId("deploy-repo")).toHaveTextContent(
+      "hse-team/paper",
+    );
+    expect(
+      screen.getByText("Deploy-ключа для hse-team/paper ещё нет"),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Создать deploy-ключ" }),
+    );
+    await waitFor(() => {
+      expect(createCredential).toHaveBeenCalledWith({
+        kind: "ssh_key",
+        label: "Deploy-ключ: hse-team/paper",
+        host: "github.com",
+      });
+    });
+    expect(
+      await screen.findByLabelText("Публичный ключ", { selector: "textarea" }),
+    ).toHaveValue(DEPLOY_KEY.public_key);
+    expect(
+      screen.getByRole("link", {
+        name: /Открыть страницу deploy-ключей GitHub/,
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/hse-team/paper/settings/keys/new",
+    );
+    // Запись разрешают отдельно: без неё отправить версии не получится.
+    expect(screen.getAllByText(/Allow write access/).length).toBeGreaterThan(0);
+    await user.click(
+      screen.getByRole("button", { name: "Я добавил(а) ключ, проверить" }),
+    );
+    await waitFor(() => {
+      expect(vi.mocked(gitRemoteApi.probe)).toHaveBeenCalledWith({
+        url: "https://github.com/hse-team/paper",
+        credential_id: DEPLOY_KEY.id,
+        project_id: PROJECT_ID,
+      });
+    });
+  });
+
+  it("ключи пользователя и deploy-ключи не смешиваются, чужой репозиторий не подходит", async () => {
+    setup({
+      credentials: [
+        SSH_KEY,
+        DEPLOY_KEY,
+        {
+          ...DEPLOY_KEY,
+          id: "cred-other",
+          label: "Deploy-ключ: hse-team/other",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(within(tabs).getByRole("tab", { name: /Ключ Студии/ }));
+    const userPanel = await screen.findByTestId("ssh-panel");
+    expect(userPanel).toHaveAttribute("data-scope", "user");
+    expect(within(userPanel).queryByText(/Deploy-ключ/)).toBeNull();
+    expect(
+      within(userPanel).getByLabelText("Публичный ключ", {
+        selector: "textarea",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(within(tabs).getByRole("tab", { name: /Deploy-ключ/ }));
+    const deployPanel = await screen.findByTestId("ssh-panel");
+    expect(deployPanel).toHaveAttribute("data-scope", "deploy");
+    // Нашёлся ровно один ключ этого репозитория, выбор не нужен.
+    expect(within(deployPanel).queryByRole("radiogroup")).toBeNull();
+    expect(
+      within(deployPanel).getByLabelText("Публичный ключ", {
+        selector: "textarea",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("у провайдера без deploy-ключей такой вкладки нет", async () => {
+    setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(
+      user,
+      "https://git.example.org/team/paper.git",
+    );
+    expect(within(tabs).queryByRole("tab", { name: /Deploy-ключ/ })).toBeNull();
+    expect(within(tabs).getAllByRole("tab")).toHaveLength(3);
+  });
+
+  it("публичный репозиторий: без токена, проверка идёт без доступа и говорит про чтение", async () => {
+    const { probe, connect } = setup();
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(
+      within(tabs).getByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    const panel = await screen.findByTestId("public-panel");
+    expect(panel).toHaveTextContent("Получать версии из репозитория");
+    expect(panel).toHaveTextContent("Отправлять свои версии нельзя");
+    expect(screen.queryByTestId("pat-panel")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalledWith({
+        url: "https://github.com/hse-team/paper",
+        credential_id: null,
+        project_id: PROJECT_ID,
+      });
+    });
+    expect(
+      await screen.findByText(/версии будут только приходить/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Только подключить" }));
+    await waitFor(() => {
+      expect(connect).toHaveBeenCalledWith(PROJECT_ID, {
+        url: "https://github.com/hse-team/paper",
+        credential_id: null,
+      });
+    });
+  });
+
+  it("вернулся с публичного на токен, проверка берёт токен, а не «без доступа»", async () => {
+    const { probe } = setup({ credentials: [{ ...PAT, status: "ok" }] });
+    const user = userEvent.setup();
+    mount();
+    const tabs = await openAccess(user);
+    await user.click(
+      within(tabs).getByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await screen.findByText(/версии будут только приходить/);
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await user.click(
+      await screen.findByRole("tab", { name: /Токен \(HTTPS\)/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Проверить" }));
+    await waitFor(() => {
+      expect(probe).toHaveBeenLastCalledWith(
+        expect.objectContaining({ credential_id: PAT.id }),
+      );
+    });
+  });
+
+  it("при обновлении доступа вкладок нет: меняется только токен или ключ", async () => {
+    setup({
+      status: connectedStatus(),
+      credentials: [{ ...PAT, status: "auth_failed" }],
+    });
+    const user = userEvent.setup();
+    mount("fix_access");
+    await screen.findByTestId("pat-panel");
+    expect(user).toBeDefined();
+    expect(screen.queryByTestId("access-tabs")).toBeNull();
   });
 });

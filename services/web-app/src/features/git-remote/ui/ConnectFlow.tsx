@@ -27,6 +27,7 @@ import { flushPendingSaves, toast } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { Stepper, type StepperStep } from "@shared/ui/Stepper";
 import { parseRemoteUrl } from "../lib/parseRemoteUrl";
+import { useHostProvider } from "../model/useHostProvider";
 import {
   outcomeFromError,
   outcomeFromProbe,
@@ -37,6 +38,7 @@ import { CheckStep } from "./CheckStep";
 import { HostKeyDialog, type HostKeyMode } from "./HostKeyDialog";
 import { ProfileStep } from "./ProfileStep";
 import { RepositoryStep } from "./RepositoryStep";
+import { TlsTrustDialog } from "./TlsTrustDialog";
 
 export type ConnectStep = "profile" | "repo" | "access" | "check";
 
@@ -47,6 +49,8 @@ export type ConnectFlowProps = {
   mode: ConnectDialogMode;
   onClose: () => void;
   onCloneInstead?: ((target: CloneTarget) => void) | undefined;
+  /** Адрес, с которого начать (галерея и демо); обычно окно открывается с пустым полем. */
+  initialUrl?: string | undefined;
 };
 
 const STEP_IDS = ["repo", "access", "check"] as const;
@@ -55,6 +59,11 @@ const isHostKeyCode = (
   code: string,
 ): code is "host_key_unknown" | "host_key_changed" =>
   code === "host_key_unknown" || code === "host_key_changed";
+
+const isTlsCode = (
+  code: string,
+): code is "tls_untrusted_ca" | "tls_pin_mismatch" =>
+  code === "tls_untrusted_ca" || code === "tls_pin_mismatch";
 
 const Loading = () => {
   const { t } = useTranslation("gitRemote");
@@ -87,6 +96,7 @@ const ConnectFlowBody = ({
   status,
   onClose,
   onCloneInstead,
+  initialUrl,
 }: ConnectFlowProps & { status: SyncStatusView | undefined }) => {
   const { t } = useTranslation("gitRemote");
 
@@ -111,7 +121,9 @@ const ConnectFlowBody = ({
   const updateSettings = useUpdateGitSettings();
 
   const [step, setStep] = useState<ConnectStep | null>(null);
-  const [urlText, setUrlText] = useState(remote?.display_url ?? "");
+  const [urlText, setUrlText] = useState(
+    remote?.display_url ?? initialUrl ?? "",
+  );
   const [tokenStripped, setTokenStripped] = useState(false);
   const [branch, setBranch] = useState(fixing ? remote.branch : "");
   const [ndaAck, setNdaAck] = useState(false);
@@ -121,13 +133,20 @@ const ConnectFlowBody = ({
   const [probeResult, setProbeResult] = useState<Probe | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [hostKeyOpen, setHostKeyOpen] = useState(false);
+  const [tlsOpen, setTlsOpen] = useState(false);
   const runId = useRef(0);
 
   const parsed = useMemo(
     () => parseRemoteUrl(urlText, { allow_local: true }),
     [urlText],
   );
-  const repoUrl = parsed.ok ? parsed.url : null;
+  // Провайдер решён с учётом выбора человека и ответа сервера: подсказки и
+  // ссылки на следующих шагах берут его, а не догадку по виду адреса.
+  const hostProvider = useHostProvider(
+    parsed.ok ? parsed.url : null,
+    probeResult?.provider_info,
+  );
+  const repoUrl = hostProvider.url;
 
   // Токен из адреса убираем и из самого поля: «мы его убрали» должно быть правдой.
   const changeUrl = (value: string): void => {
@@ -171,7 +190,11 @@ const ConnectFlowBody = ({
       overrides: { credentialId?: string | null; branch?: string } = {},
     ) => {
       if (!repoUrl) return;
-      const id = overrides.credentialId ?? credentialId;
+      // null в overrides значит «без доступа», а не «возьми прежний».
+      const id =
+        overrides.credentialId !== undefined
+          ? overrides.credentialId
+          : credentialId;
       const branchValue = (overrides.branch ?? branch).trim();
       runId.current += 1;
       const run = runId.current;
@@ -180,6 +203,7 @@ const ConnectFlowBody = ({
       setProbeResult(null);
       setAdoptConfirmed(false);
       setHostKeyOpen(false);
+      setTlsOpen(false);
       let result: CheckOutcome;
       let answer: Probe | null = null;
       try {
@@ -199,6 +223,9 @@ const ConnectFlowBody = ({
       setOutcome(result);
       if (result.kind === "error" && isHostKeyCode(result.issue.code)) {
         setHostKeyOpen(true);
+      }
+      if (result.kind === "error" && isTlsCode(result.issue.code)) {
+        setTlsOpen(true);
       }
     },
     [branch, credentialId, probe, projectId, repoUrl],
@@ -290,6 +317,9 @@ const ConnectFlowBody = ({
       setOutcome(result);
       if (result.kind === "error" && isHostKeyCode(result.issue.code)) {
         setHostKeyOpen(true);
+      }
+      if (result.kind === "error" && isTlsCode(result.issue.code)) {
+        setTlsOpen(true);
       }
     } finally {
       setIsConnecting(false);
@@ -410,6 +440,7 @@ const ConnectFlowBody = ({
           credentials={credentialsQuery.data ?? []}
           isLoadingCredentials={credentialsQuery.isLoading}
           secretsOk={secretsQuery.data?.ok ?? true}
+          projectName={projectQuery.data?.name ?? null}
           onContinue={(id) => {
             continueWithCredential(id);
           }}
@@ -429,6 +460,7 @@ const ConnectFlowBody = ({
           fixing={fixing}
           isConnecting={isConnecting}
           adoptConfirmed={adoptConfirmed}
+          publicAccess={credentialId === null && repoUrl?.kind !== "file"}
           onAdoptConfirmedChange={setAdoptConfirmed}
           onBack={() => {
             goTo(fixing || repoUrl?.kind !== "file" ? "access" : "repo");
@@ -452,6 +484,9 @@ const ConnectFlowBody = ({
           onReviewHostKey={() => {
             setHostKeyOpen(true);
           }}
+          onReviewCertificate={() => {
+            setTlsOpen(true);
+          }}
           onPickBranch={(picked) => {
             setBranch(picked);
             void runCheck({ branch: picked });
@@ -467,6 +502,27 @@ const ConnectFlowBody = ({
                 }
               : undefined
           }
+        />
+      )}
+
+      {repoUrl?.host && (
+        <TlsTrustDialog
+          isOpen={tlsOpen && issue !== null && isTlsCode(issue.code)}
+          mode={
+            issue?.code === "tls_pin_mismatch" ? "pin_mismatch" : "untrusted"
+          }
+          host={repoUrl.host}
+          port={hostProvider.port}
+          certificate={issue?.certificate ?? null}
+          expected={issue?.expectedFingerprint ?? null}
+          actual={issue?.actualFingerprint ?? null}
+          onTrusted={() => {
+            setTlsOpen(false);
+            void runCheck();
+          }}
+          onClose={() => {
+            setTlsOpen(false);
+          }}
         />
       )}
 

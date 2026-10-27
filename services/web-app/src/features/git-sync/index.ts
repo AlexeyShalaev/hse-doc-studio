@@ -1,9 +1,18 @@
 export { SyncControl } from "./ui/SyncControl";
 export type { SyncControlProps } from "./ui/SyncControl";
-export { SyncStatusSegment } from "./ui/SyncStatusSegment";
-export type { SyncStatusSegmentProps } from "./ui/SyncStatusSegment";
-export { ConflictBanner } from "./ui/ConflictBanner";
-export type { ConflictBannerProps } from "./ui/ConflictBanner";
+export {
+  SyncStatusSegment,
+  SyncStatusSegmentView,
+} from "./ui/SyncStatusSegment";
+export type {
+  SyncStatusSegmentProps,
+  SyncStatusSegmentViewProps,
+} from "./ui/SyncStatusSegment";
+export { ConflictBanner, ConflictBannerView } from "./ui/ConflictBanner";
+export type {
+  ConflictBannerProps,
+  ConflictBannerViewProps,
+} from "./ui/ConflictBanner";
 export { SyncPanel } from "./ui/SyncPanel";
 export type { SyncPanelProps } from "./ui/SyncPanel";
 export { SyncPanelView } from "./ui/SyncPanelView";
@@ -27,3 +36,5 @@ export type {
   SyncUiContext,
   SyncViewState,
 } from "./model/syncUi.model";
+// Галерея состояний для страницы разработчика (только DEV).
+export { getSyncGallery } from "./fixtures/syncGallery";

@@ -1,8 +1,20 @@
-import type { GitProvider } from "@entities/git-remote";
+import {
+  PROVIDER_CATALOG,
+  defaultTokenDescription,
+  defaultTokenName,
+  sshLinks,
+  tokenLinks,
+  webBase,
+  type GitProvider,
+  type SshLinks,
+  type TokenLinks,
+} from "@entities/git-remote";
 import type { ParsedRemoteUrl } from "./parseRemoteUrl";
 
-// Где на сервере выпускают токен и добавляют ключ. Ссылки ведут на страницы
-// настроек самого сервера; тексты шагов лежат в переводах (gitRemote:help.*).
+// Где на сервере выпускают токен и добавляют ключ. Шаблоны ссылок берутся из
+// каталога провайдеров (contracts/git-sync/providers.json): подставляются только
+// проверенные параметры, всё остальное остаётся простой ссылкой. Тексты шагов
+// лежат в переводах (gitAccess:help.*).
 
 export type HelpProvider = GitProvider;
 
@@ -15,7 +27,7 @@ export const TOKEN_STEPS: Record<HelpProvider, readonly string[]> = {
   other: ["create", "copy"],
 };
 
-/** Шаги инструкции по ключу: ключи help.<провайдер>.key.<шаг>. */
+/** Шаги инструкции по deploy-ключу: ключи help.<провайдер>.key.<шаг>. */
 export const KEY_STEPS: Record<HelpProvider, readonly string[]> = {
   github: ["open", "paste", "write"],
   gitlab: ["open", "paste", "write"],
@@ -24,60 +36,108 @@ export const KEY_STEPS: Record<HelpProvider, readonly string[]> = {
   other: ["paste", "write"],
 };
 
-// Адрес сайта сервера: у https тот же хост и порт, у ssh порт относится к
+/** Шаги инструкции по ключу пользователя: ключи help.<провайдер>.userKey.<шаг>. */
+export const USER_KEY_STEPS: Record<HelpProvider, readonly string[]> = {
+  github: ["open", "paste"],
+  gitlab: ["open", "paste"],
+  gitea: ["open", "paste"],
+  bitbucket: ["open", "paste"],
+  other: ["paste"],
+};
+
+export type LinkContext = {
+  /** Провайдер с учётом выбора человека; по умолчанию тот, что в адресе. */
+  provider?: GitProvider;
+  /** Путь установки сервера (https://host/gitlab), если он не в корне. */
+  subpath?: string;
+  /** Название проекта для имени токена. */
+  projectName?: string | null;
+  /** Язык описания токена. */
+  lang?: string;
+  /** Сегодняшняя дата YYYY-MM-DD для описания токена. */
+  today?: string;
+};
+
+// Адрес сайта сервера: у https и http тот же хост и порт, у ssh порт относится к
 // ssh, а не к сайту, поэтому его отбрасываем.
-const webBase = (url: ParsedRemoteUrl): string | null => {
+const siteBase = (url: ParsedRemoteUrl, subpath = ""): string | null => {
   if (!url.host || url.kind === "file") return null;
-  const port =
-    url.kind === "https" && url.port !== null ? `:${String(url.port)}` : "";
-  return `https://${url.host}${port}`;
+  const hasSitePort = url.kind === "https" || url.kind === "http";
+  return webBase({
+    host: url.host,
+    port: hasSitePort ? url.port : null,
+    secure: url.kind !== "http",
+    subpath,
+  });
 };
 
 const repoPath = (url: ParsedRemoteUrl): string =>
   [url.owner, url.repo].filter(Boolean).join("/");
 
+const todayIso = (): string => new Date().toISOString().slice(0, 10);
+
 /** Страница сайта репозитория: ссылка «открыть на сервере». */
-export const repoWebUrl = (url: ParsedRemoteUrl): string | null => {
-  const base = webBase(url);
+export const repoWebUrl = (
+  url: ParsedRemoteUrl,
+  subpath = "",
+): string | null => {
+  const base = siteBase(url, subpath);
   return base && url.repo ? `${base}/${repoPath(url)}` : null;
 };
 
-/** Страница выпуска токена для этого сервера. */
-export const tokenCreateUrl = (url: ParsedRemoteUrl): string | null => {
-  const base = webBase(url);
+/** Ссылки на выпуск токена: основная и запасная; null, если адрес без сайта. */
+export const tokenLinksFor = (
+  url: ParsedRemoteUrl,
+  context: LinkContext = {},
+): TokenLinks | null => {
+  const base = siteBase(url, context.subpath);
   if (!base) return null;
-  switch (url.provider) {
-    case "github":
-      return `${base}/settings/personal-access-tokens/new`;
-    case "gitlab":
-      return `${base}/-/user_settings/personal_access_tokens?name=HSE+Doc+Studio&scopes=write_repository`;
-    case "gitea":
-      return `${base}/user/settings/applications`;
-    case "bitbucket":
-      return `${base}/account/settings/app-passwords/`;
-    default:
-      return null;
+  try {
+    return tokenLinks(context.provider ?? url.provider, {
+      webBase: base,
+      name: defaultTokenName(context.projectName ?? null),
+      description: defaultTokenDescription(
+        context.today ?? todayIso(),
+        context.lang ?? "ru",
+      ),
+      owner: url.owner,
+      repo: url.repo,
+      expiresInDays: PROVIDER_CATALOG.defaults.expires_in_days,
+    });
+  } catch {
+    return null;
   }
 };
 
-/** Страница добавления ключа к репозиторию (deploy key с правом записи). */
-export const deployKeyUrl = (url: ParsedRemoteUrl): string | null => {
-  const base = webBase(url);
-  if (!base || !url.repo) return null;
-  const path = repoPath(url);
-  switch (url.provider) {
-    case "github":
-      return `${base}/${path}/settings/keys/new`;
-    case "gitlab":
-      return `${base}/${path}/-/settings/repository`;
-    case "gitea":
-      return `${base}/${path}/settings/keys`;
-    case "bitbucket":
-      return `${base}/${path}/admin/access-keys/`;
-    default:
-      return null;
+/** Ссылки на страницы ключей: ключ пользователя и deploy-ключ репозитория. */
+export const sshLinksFor = (
+  url: ParsedRemoteUrl,
+  context: LinkContext = {},
+): SshLinks | null => {
+  const base = siteBase(url, context.subpath);
+  if (!base) return null;
+  try {
+    return sshLinks(context.provider ?? url.provider, {
+      webBase: base,
+      owner: url.owner,
+      repo: url.repo,
+    });
+  } catch {
+    return null;
   }
 };
+
+/** Страница выпуска токена для этого сервера. */
+export const tokenCreateUrl = (
+  url: ParsedRemoteUrl,
+  context: LinkContext = {},
+): string | null => tokenLinksFor(url, context)?.primary?.url ?? null;
+
+/** Страница добавления ключа к репозиторию (deploy key с правом записи). */
+export const deployKeyUrl = (
+  url: ParsedRemoteUrl,
+  context: LinkContext = {},
+): string | null => sshLinksFor(url, context)?.deployKey?.url ?? null;
 
 /** Имя доступа по умолчанию: «GitHub, github.com». */
 export const defaultCredentialLabel = (

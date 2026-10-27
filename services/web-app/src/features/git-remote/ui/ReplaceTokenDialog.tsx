@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useUpdateCredential, type GitCredential } from "@entities/git-remote";
+import {
+  providerOfHost,
+  useHostSettings,
+  useUpdateCredential,
+  type GitCredential,
+} from "@entities/git-remote";
 import { describeGitError } from "@entities/git-sync";
 import { toast } from "@shared/lib";
 import { Modal } from "@shared/ui/Modal";
 import { Spinner } from "@shared/ui/Spinner";
-import { parseRemoteUrl, type ParsedRemoteUrl } from "../lib/parseRemoteUrl";
+import { urlForHost } from "../lib/hostUrl";
 import { PatPanel, type PatDraft } from "./PatPanel";
 
 export type ReplaceTokenDialogProps = {
@@ -29,22 +34,12 @@ export const ReplaceTokenDialog = ({
 
   // Памятка «как получить токен» зависит только от сервера. Адрес репозитория
   // доступу не принадлежит, поэтому подставляем условный: owner/repo.
-  const url = useMemo<ParsedRemoteUrl>(() => {
-    const parsed = parseRemoteUrl(`https://${credential.host}/owner/repo`);
-    if (parsed.ok) return parsed.url;
-    return {
-      display_url: `https://${credential.host}`,
-      kind: "https",
-      host: credential.host,
-      port: null,
-      user: null,
-      provider: "other",
-      owner: null,
-      repo: null,
-      path: "",
-      token_stripped: false,
-    };
-  }, [credential.host]);
+  const hostSettings = useHostSettings();
+  const provider = providerOfHost(credential.host, null, hostSettings.data).id;
+  const url = useMemo(
+    () => urlForHost(credential.host, provider),
+    [credential.host, provider],
+  );
 
   const close = (): void => {
     if (update.isPending) return;

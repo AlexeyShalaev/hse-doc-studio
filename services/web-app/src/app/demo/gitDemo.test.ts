@@ -21,17 +21,22 @@ import {
   OperationSchema,
   OperationStartedSchema,
   SyncResultSchema,
+  type GitErrorBody,
   type GitOperation,
 } from "@entities/git-sync";
 import {
   CloneDefaultsSchema,
   GIT_PROBE_RELATIONS,
+  GitCredentialCheckSchema,
   GitCredentialListSchema,
   GitCredentialSchema,
   GitHostListSchema,
+  GitHostSettingsListSchema,
+  GitHostSettingsSchema,
   ProbeSchema,
   SecretsStatusSchema,
   SharedFolderSchema,
+  type GitCredentialCheck,
 } from "@entities/git-remote";
 import { ProfileSchema } from "@entities/profile";
 import { getWorld, gitDemoRoutes, resetWorld } from "./routes";
@@ -115,6 +120,21 @@ const EXPECTED_STATE: Record<DemoScenarioId, string> = {
   read_only: "blocked",
   no_profile: "blocked",
   shared_folder: "up_to_date",
+  provider_gitlab_com: "no_remote",
+  provider_gitlab_self: "no_remote",
+  provider_gitlab_old: "no_remote",
+  provider_tls_ca: "no_remote",
+  provider_tls_selfsigned: "no_remote",
+  provider_tls_pin_changed: "no_remote",
+  provider_github: "no_remote",
+  provider_gitea: "no_remote",
+  provider_api_detect: "no_remote",
+  token_narrow: "no_remote",
+  token_broad: "no_remote",
+  token_expired: "no_remote",
+  token_opaque: "no_remote",
+  credentials_expiry: "no_remote",
+  servers_settings: "no_remote",
 };
 
 beforeEach(() => {
@@ -1238,5 +1258,417 @@ describe("demo app settings", () => {
     resetWorld("up_to_date");
     const res = await call("GET", "/settings");
     expect(res.data).toMatchObject({ git_fetch_interval_s: 300 });
+  });
+});
+
+// --- серверы, токены и сертификаты ---------------------------------------------------
+
+const PEM = "-----BEGIN CERTIFICATE-----\nMIIBdemo\n-----END CERTIFICATE-----";
+
+const createToken = async (host: string, token: string, label = host) =>
+  parsed(
+    call("POST", "/git/credentials", {
+      body: { kind: "pat", label, host, token },
+    }),
+    GitCredentialSchema,
+    201,
+  );
+
+// Проверка токена: данные о токене (200) или ошибка с кодом, как у бэкенда.
+type CheckAnswer = {
+  ok: boolean;
+  result: GitCredentialCheck | null;
+  error: GitErrorBody | null;
+};
+
+const checkOf = async (id: string): Promise<CheckAnswer> => {
+  const res = await call("POST", `/git/credentials/${id}/check`);
+  if (res.status === 200) {
+    return {
+      ok: true,
+      result: GitCredentialCheckSchema.parse(res.data),
+      error: null,
+    };
+  }
+  expect(res.status).toBeGreaterThanOrEqual(400);
+  return { ok: false, result: null, error: GitErrorBodySchema.parse(res.data) };
+};
+
+describe("demo servers and token checks", () => {
+  it("every provider scenario gives hints and keeps the contract shapes", async () => {
+    for (const id of [
+      "provider_gitlab_com",
+      "provider_tls_pin_changed",
+      "servers_settings",
+      "credentials_expiry",
+    ] as const) {
+      resetWorld(id);
+      await parsed(
+        call("GET", "/git/host-settings"),
+        GitHostSettingsListSchema,
+      );
+      await parsed(call("GET", "/git/credentials"), GitCredentialListSchema);
+    }
+  });
+
+  it("host settings: list, override, CA, pin and reset", async () => {
+    resetWorld("not_connected");
+    const initial = await parsed(
+      call("GET", "/git/host-settings"),
+      GitHostSettingsListSchema,
+    );
+    expect(initial.map((item) => item.host)).toEqual(["github.com"]);
+    expect(initial[0]?.provider_info).toMatchObject({
+      id: "github",
+      detected_by: "host",
+    });
+
+    const unknown = await parsed(
+      call("PUT", "/git/host-settings", {
+        body: { host: "Git.Corp.Example", port: null },
+      }),
+      GitHostSettingsSchema,
+    );
+    expect(unknown).toMatchObject({
+      host: "git.corp.example",
+      provider_override: null,
+      provider_info: { id: "other", detected_by: "unknown" },
+    });
+
+    const overridden = await parsed(
+      call("PUT", "/git/host-settings", {
+        body: { host: "git.corp.example", provider_override: "gitlab" },
+      }),
+      GitHostSettingsSchema,
+    );
+    expect(overridden.provider_info).toMatchObject({
+      id: "gitlab",
+      detected_by: "override",
+    });
+    // Отсутствующее поле оставляет значение, null сбрасывает его.
+    const withCa = await parsed(
+      call("PUT", "/git/host-settings", {
+        body: { host: "git.corp.example", ca_pem: PEM },
+      }),
+      GitHostSettingsSchema,
+    );
+    expect(withCa).toMatchObject({
+      provider_override: "gitlab",
+      ca_present: true,
+    });
+    const pinned = await parsed(
+      call("PUT", "/git/host-settings", {
+        body: { host: "git.corp.example", pinned_fingerprint: "SHA256:abc" },
+      }),
+      GitHostSettingsSchema,
+    );
+    expect(pinned).toMatchObject({
+      ca_present: true,
+      pinned_fingerprint: "SHA256:abc",
+    });
+    const reset = await parsed(
+      call("PUT", "/git/host-settings", {
+        body: {
+          host: "git.corp.example",
+          provider_override: null,
+          ca_pem: null,
+          pinned_fingerprint: null,
+        },
+      }),
+      GitHostSettingsSchema,
+    );
+    expect(reset).toMatchObject({
+      provider_override: null,
+      ca_present: false,
+      pinned_fingerprint: null,
+    });
+    expect(
+      (
+        await parsed(
+          call("GET", "/git/host-settings"),
+          GitHostSettingsListSchema,
+        )
+      ).length,
+    ).toBe(2);
+  });
+
+  it("host settings reject a private key and a text that is not a certificate", async () => {
+    resetWorld("not_connected");
+    for (const ca_pem of [
+      "-----BEGIN PRIVATE KEY-----\nx\n-----END PRIVATE KEY-----",
+      "hello",
+    ]) {
+      const res = await call("PUT", "/git/host-settings", {
+        body: { host: "git.corp.example", ca_pem },
+      });
+      expect(res.status).toBe(422);
+    }
+    expect(
+      (
+        await parsed(
+          call("GET", "/git/host-settings"),
+          GitHostSettingsListSchema,
+        )
+      ).length,
+    ).toBe(1);
+  });
+
+  it("the token word decides the verdict of the check", async () => {
+    resetWorld("not_connected");
+    const ok = await checkOf(
+      (await createToken("gitlab.com", "glpat-demo")).id,
+    );
+    expect(ok.ok).toBe(true);
+    expect(ok.result?.credential.status).toBe("ok");
+    expect(ok.result?.token_info).toMatchObject({
+      sufficiency: "sufficient",
+      scopes: ["read_repository", "write_repository"],
+      login: "ivan-smirnov",
+    });
+
+    const narrow = await checkOf(
+      (await createToken("gitlab.com", "glpat-narrow")).id,
+    );
+    expect(narrow.result?.token_info).toMatchObject({
+      sufficiency: "too_narrow",
+      missing: ["write_repository"],
+    });
+
+    const broad = await checkOf(
+      (await createToken("gitlab.com", "glpat-broad")).id,
+    );
+    expect(broad.result?.token_info).toMatchObject({
+      sufficiency: "too_broad",
+      scopes: ["api"],
+    });
+
+    // Истёкший и отозванный токены приходят ошибкой с кодом.
+    const expired = await checkOf(
+      (await createToken("gitlab.com", "glpat-expired")).id,
+    );
+    expect(expired).toMatchObject({
+      ok: false,
+      error: { code: "token_expired" },
+    });
+
+    const revoked = await checkOf(
+      (await createToken("gitlab.com", "glpat-revoked")).id,
+    );
+    expect(revoked.error?.code).toBe("auth_failed");
+
+    // Точный токен GitHub прав не показывает.
+    const fine = await checkOf(
+      (await createToken("github.com", "github_pat_demo")).id,
+    );
+    expect(fine.result?.token_info).toMatchObject({
+      sufficiency: "unknown",
+      scopes: [],
+    });
+    // Bitbucket спросить нечем.
+    const bitbucket = await checkOf(
+      (await createToken("bitbucket.org", "abc123")).id,
+    );
+    expect(bitbucket.ok).toBe(true);
+    expect(bitbucket.result?.token_info).toBeNull();
+  });
+
+  it("a token gets a term by its verdict and the list shows the result of the check", async () => {
+    resetWorld("not_connected");
+    const fine = await createToken("gitlab.com", "glpat-demo");
+    expect(new Date(fine.expires_at ?? "").getTime()).toBeGreaterThan(
+      Date.now(),
+    );
+    const expired = await createToken("gitlab.com", "glpat-expired");
+    expect(new Date(expired.expires_at ?? "").getTime()).toBeLessThan(
+      Date.now(),
+    );
+    await checkOf(expired.id);
+    const list = await parsed(
+      call("GET", "/git/credentials"),
+      GitCredentialListSchema,
+    );
+    expect(list.find((item) => item.id === expired.id)?.status).toBe(
+      "auth_failed",
+    );
+    // Заменённый токен получает новый срок и новый режим.
+    const replaced = await parsed(
+      call("PATCH", `/git/credentials/${expired.id}`, {
+        body: { token: "glpat-new" },
+      }),
+      GitCredentialSchema,
+    );
+    expect(new Date(replaced.expires_at ?? "").getTime()).toBeGreaterThan(
+      Date.now(),
+    );
+    expect((await checkOf(expired.id)).ok).toBe(true);
+  });
+
+  it("a scenario forces one verdict for any token", async () => {
+    resetWorld("token_narrow");
+    const result = await checkOf(
+      (await createToken("gitlab.com", "anything")).id,
+    );
+    expect(result.result?.token_info?.sufficiency).toBe("too_narrow");
+    resetWorld("token_expired");
+    expect(
+      (await checkOf((await createToken("gitlab.com", "anything")).id)).error
+        ?.code,
+    ).toBe("token_expired");
+    resetWorld("token_opaque");
+    const opaque = await checkOf(
+      (await createToken("gitlab.com", "anything")).id,
+    );
+    expect(opaque.ok).toBe(true);
+    expect(opaque.result?.token_info?.sufficiency).toBe("unknown");
+    expect(opaque.result?.token_info?.scopes).toEqual([]);
+  });
+
+  it("checking a key is refused and an unknown credential is not found", async () => {
+    resetWorld("not_connected");
+    const key = await parsed(
+      call("POST", "/git/credentials", {
+        body: { kind: "ssh_key", label: "k", host: "github.com" },
+      }),
+      GitCredentialSchema,
+      201,
+    );
+    expect(
+      (await call("POST", `/git/credentials/${key.id}/check`)).status,
+    ).toBe(422);
+    expect((await call("POST", "/git/credentials/nope/check")).status).toBe(
+      404,
+    );
+  });
+
+  it("an internal server asks for trust until a CA or a pin is set", async () => {
+    resetWorld("provider_tls_ca");
+    const token = await createToken("gitlab.hse.local", "glpat-demo");
+    const blocked = await checkOf(token.id);
+    expect(blocked).toMatchObject({
+      ok: false,
+      error: { code: "tls_untrusted_ca" },
+    });
+    expect(blocked.error?.certificate?.issuer).toBe("CN=HSE Internal CA");
+    await call("PUT", "/git/host-settings", {
+      body: { host: "gitlab.hse.local", ca_pem: PEM },
+    });
+    expect((await checkOf(token.id)).ok).toBe(true);
+  });
+
+  it("a self-signed server is pinned by the shown fingerprint and a changed pin is refused", async () => {
+    resetWorld("provider_tls_selfsigned");
+    const token = await createToken("gitlab.lab.local", "glpat-demo");
+    const blocked = await checkOf(token.id);
+    const certificate = blocked.error?.certificate;
+    expect(certificate?.self_signed).toBe(true);
+    await call("PUT", "/git/host-settings", {
+      body: {
+        host: "gitlab.lab.local",
+        pinned_fingerprint: certificate?.fingerprint_sha256,
+      },
+    });
+    expect((await checkOf(token.id)).ok).toBe(true);
+    resetWorld("provider_tls_pin_changed");
+    const other = await createToken("gitlab.rotated.local", "glpat-demo");
+    const mismatch = (await checkOf(other.id)).error;
+    expect(mismatch?.code).toBe("tls_pin_mismatch");
+    // Контракт: отпечатки до и после, сертификата в ответе нет.
+    expect(mismatch?.expected).toMatch(/^SHA256:0ldPinned/);
+    expect(mismatch?.actual).toMatch(/^SHA256:/);
+    expect(mismatch?.certificate).toBeUndefined();
+  });
+
+  it("the probe tells the provider, its version, the token and the certificate", async () => {
+    resetWorld("provider_gitlab_self");
+    const token = await createToken("gitlab.hse.ru", "glpat-demo");
+    const answer = await parsed(
+      call("POST", "/git/remote/probe", {
+        body: {
+          url: "https://gitlab.hse.ru/team/empty-paper.git",
+          credential_id: token.id,
+          project_id: PROJECT,
+        },
+      }),
+      ProbeSchema,
+    );
+    expect(answer.provider_info).toMatchObject({
+      id: "gitlab",
+      detected_by: "host",
+      version: "17.3.1",
+    });
+    expect(answer.url.provider).toBe("gitlab");
+    expect(answer.token_info?.sufficiency).toBe("sufficient");
+
+    resetWorld("provider_api_detect");
+    const api = await parsed(
+      call("POST", "/git/remote/probe", {
+        body: { url: "https://forge.hse.ru/team/paper.git" },
+      }),
+      ProbeSchema,
+    );
+    expect(api.provider_info).toEqual({
+      id: "gitlab",
+      detected_by: "api",
+      version: "16.11.2",
+    });
+
+    resetWorld("provider_tls_ca");
+    const tls = await parsed(
+      call("POST", "/git/remote/probe", {
+        body: { url: "https://gitlab.hse.local:8443/team/paper.git" },
+      }),
+      ProbeSchema,
+    );
+    expect(tls).toMatchObject({
+      ok: false,
+      reachable: false,
+      error: { code: "tls_untrusted_ca" },
+    });
+    expect(tls.error?.certificate?.subject).toBe("CN=gitlab.hse.local");
+    // Для хоста с портом доверие задаётся отдельно от хоста без порта.
+    await call("PUT", "/git/host-settings", {
+      body: { host: "gitlab.hse.local", port: 8443, ca_pem: PEM },
+    });
+    expect(
+      (
+        await parsed(
+          call("POST", "/git/remote/probe", {
+            body: { url: "https://gitlab.hse.local:8443/team/paper.git" },
+          }),
+          ProbeSchema,
+        )
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("an expired or revoked token stops the probe with its own code", async () => {
+    resetWorld("not_connected");
+    const expired = await createToken("gitlab.com", "glpat-expired");
+    const revoked = await createToken("gitlab.com", "glpat-revoked");
+    const probe = (id: string) =>
+      parsed(
+        call("POST", "/git/remote/probe", {
+          body: { url: "https://gitlab.com/hse/paper.git", credential_id: id },
+        }),
+        ProbeSchema,
+      );
+    expect((await probe(expired.id)).error?.code).toBe("token_expired");
+    expect((await probe(revoked.id)).error?.code).toBe("auth_failed");
+  });
+
+  it("the credentials-expiry scenario lists tokens with different terms", async () => {
+    resetWorld("credentials_expiry");
+    const list = await parsed(
+      call("GET", "/git/credentials"),
+      GitCredentialListSchema,
+    );
+    const days = list.map((item) =>
+      item.expires_at
+        ? Math.round(
+            (new Date(item.expires_at).getTime() - Date.now()) / 86_400_000,
+          )
+        : null,
+    );
+    expect(days).toEqual([120, 5, -3, null]);
   });
 });

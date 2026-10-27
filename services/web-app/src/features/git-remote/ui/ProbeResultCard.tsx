@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
 import type { Probe } from "@entities/git-remote";
 import type { GitContents } from "@entities/git-sync";
+import { credentialExpiry } from "@entities/git-remote";
 import { formatFileSize } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
+import { shortVersion } from "../lib/formatDate";
 import { issueCopyOf, type IssueAction } from "../model/issueCopy";
 import type { CheckIssue, CheckOutcome } from "../model/probeOutcome";
 import { ConfirmCheck } from "./ConfirmCheck";
@@ -16,6 +18,8 @@ export type ProbeResultHandlers = {
   onBackToRepo: () => void;
   onBackToAccess: () => void;
   onReviewHostKey: () => void;
+  /** Окно сертификата сервера (tls_untrusted_ca, tls_pin_mismatch). */
+  onReviewCertificate?: (() => void) | undefined;
   onPickBranch: (branch: string) => void;
   onClose: () => void;
   onCloneInstead?: (() => void) | undefined;
@@ -27,6 +31,7 @@ export type IssueHandlers = Pick<
   | "onBackToRepo"
   | "onBackToAccess"
   | "onReviewHostKey"
+  | "onReviewCertificate"
   | "onPickBranch"
   | "onClose"
 >;
@@ -39,6 +44,8 @@ export type ProbeResultCardProps = ProbeResultHandlers & {
   isConnecting: boolean;
   adoptConfirmed: boolean;
   onAdoptConfirmedChange: (value: boolean) => void;
+  /** Проект подключается без токена и ключа: версии только приходят. */
+  publicAccess?: boolean;
 };
 
 export const ProbeIssueCard = ({
@@ -56,7 +63,9 @@ export const ProbeIssueCard = ({
   const base = issueCopyOf(issue.code);
   // Адрес подключённого проекта не меняется: «Изменить адрес» там не предлагаем.
   const actions = base.actions.filter(
-    (action) => !(fixing && action === "back_to_repo"),
+    (action) =>
+      !(fixing && action === "back_to_repo") &&
+      !(action === "review_certificate" && !handlers.onReviewCertificate),
   );
   const copy = {
     tone: base.tone,
@@ -91,6 +100,9 @@ export const ProbeIssueCard = ({
       case "review_host_key":
         handlers.onReviewHostKey();
         return;
+      case "review_certificate":
+        handlers.onReviewCertificate?.();
+        return;
       case "close":
         handlers.onClose();
     }
@@ -115,6 +127,35 @@ export const ProbeIssueCard = ({
       ))}
     >
       <p style={{ margin: 0 }}>{hint}</p>
+      {issue.code === "token_insufficient_scope" &&
+        issue.missing.length > 0 && (
+          <div
+            className="flex items-center"
+            data-testid="issue-missing-scopes"
+            style={{ gap: 6, flexWrap: "wrap" }}
+          >
+            <span className="dim" style={{ fontSize: 11.5 }}>
+              {t("issue.token_insufficient_scope.missing")}
+            </span>
+            {issue.missing.map((scope) => (
+              <span key={scope} className="chip accent mono">
+                {scope}
+              </span>
+            ))}
+          </div>
+        )}
+      {issue.certificate && (
+        <Facts
+          items={[
+            [t("issue.certificate.subject"), issue.certificate.subject],
+            [t("issue.certificate.issuer"), issue.certificate.issuer],
+            [
+              t("issue.certificate.fingerprint"),
+              issue.certificate.fingerprint_sha256,
+            ],
+          ]}
+        />
+      )}
       {branches.length > 0 && (
         <div>
           <div className="dim" style={{ fontSize: 11.5, marginBottom: 5 }}>
@@ -168,6 +209,7 @@ export const ProbeResultCard = ({
   isConnecting,
   adoptConfirmed,
   onAdoptConfirmedChange,
+  publicAccess = false,
   ...handlers
 }: ProbeResultCardProps) => {
   const { t } = useTranslation("gitRemote");
@@ -283,6 +325,17 @@ export const ProbeResultCard = ({
   }
   const branchName = probe?.default_branch;
   if (branchName) facts.push([t("result.facts.branch"), branchName]);
+  const providerInfo = probe?.provider_info ?? null;
+  if (providerInfo?.version) {
+    facts.push([
+      t("result.facts.server"),
+      `${t(`provider.${providerInfo.id}`)} ${shortVersion(providerInfo.version)}`,
+    ]);
+  }
+  const tokenInfo = probe?.token_info ?? null;
+  const tokenExpiry = credentialExpiry(tokenInfo?.expires_at);
+  if (tokenInfo?.login)
+    facts.push([t("result.facts.tokenOwner"), tokenInfo.login]);
 
   const title = fixing
     ? t("result.fix.title")
@@ -348,6 +401,32 @@ export const ProbeResultCard = ({
               ? `${t("result.warn.schemaNewer")} ${t("result.warn.schemaNewerVersion", { version: probe.required_studio })}`
               : t("result.warn.schemaNewer")
           }
+        />
+      )}
+      {publicAccess && (
+        <Notice
+          tone="info"
+          role="status"
+          text={t("result.warn.publicReadOnly")}
+        />
+      )}
+      {tokenInfo?.sufficiency === "too_narrow" && (
+        <Notice
+          tone="warn"
+          role="status"
+          text={t("result.warn.tokenNarrow", {
+            missing: tokenInfo.missing.join(", "),
+          })}
+        />
+      )}
+      {tokenInfo?.sufficiency === "too_broad" && (
+        <Notice tone="warn" role="status" text={t("result.warn.tokenBroad")} />
+      )}
+      {tokenExpiry.state === "soon" && (
+        <Notice
+          tone="warn"
+          role="status"
+          text={t("result.warn.tokenExpiring", { count: tokenExpiry.days })}
         />
       )}
       {outcome.warnings.includes("template_missing") && (

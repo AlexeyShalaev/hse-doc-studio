@@ -163,6 +163,43 @@ describe("карточка репозитория в настройках про
     });
   });
 
+  it("токен с близким сроком: плашка срока и «Заменить доступ» выделена", async () => {
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([
+      {
+        ...PAT,
+        status: "ok",
+        expires_at: new Date(Date.now() + 4 * 24 * 3600 * 1000).toISOString(),
+      },
+    ]);
+    renderSettings(<RemoteConnectionCard projectId={PROJECT_ID} />, {
+      status: connected(),
+    });
+    expect(await screen.findByTestId("expiry-badge")).toHaveTextContent(
+      /Истекает через 4 дня/,
+    );
+    expect(screen.getByRole("button", { name: "Заменить доступ" })).toHaveClass(
+      "primary",
+    );
+  });
+
+  it("токен без проблем: срока-плашки нет и кнопка обычная", async () => {
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([
+      {
+        ...PAT,
+        status: "ok",
+        expires_at: new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString(),
+      },
+    ]);
+    renderSettings(<RemoteConnectionCard projectId={PROJECT_ID} />, {
+      status: connected(),
+    });
+    await screen.findByText(/github_pat…/);
+    expect(screen.queryByTestId("expiry-badge")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Заменить доступ" }),
+    ).not.toHaveClass("primary");
+  });
+
   it("публичный ключ показывается по кнопке и копируется", async () => {
     vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([SSH_KEY]);
     const user = userEvent.setup();

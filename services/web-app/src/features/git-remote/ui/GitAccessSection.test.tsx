@@ -10,7 +10,7 @@ import {
   type GitHost,
   type SecretsStatus,
 } from "@entities/git-remote";
-import { PAT, SSH_KEY } from "../testing/connectFixtures";
+import { CHECK_OK, PAT, SSH_KEY } from "../testing/connectFixtures";
 import {
   installPointerPolyfills,
   renderSettings,
@@ -65,6 +65,8 @@ const setup = ({
 }: Setup = {}) => {
   vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue(credentials);
   vi.spyOn(gitRemoteApi, "listHosts").mockResolvedValue(hosts);
+  vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(CHECK_OK);
   vi.spyOn(gitRemoteApi, "getSecretsStatus").mockResolvedValue(secrets);
   vi.spyOn(settingsApi, "get").mockResolvedValue({
     git_fetch_interval_s: 300,
@@ -72,10 +74,13 @@ const setup = ({
 };
 
 const card = async (label: string): Promise<HTMLElement> => {
-  const title = await screen.findByText(label);
-  const element = title.closest("[data-testid='credential-card']");
-  if (!(element instanceof HTMLElement)) throw new Error("нет карточки");
-  return element;
+  // Подпись доступа есть и в карточке, и в списке сервера: нужна карточка.
+  const titles = await screen.findAllByText(label);
+  for (const title of titles) {
+    const element = title.closest("[data-testid='credential-card']");
+    if (element instanceof HTMLElement) return element;
+  }
+  throw new Error("нет карточки");
 };
 
 describe("раздел «Доступ к репозиториям»", () => {
@@ -100,7 +105,10 @@ describe("раздел «Доступ к репозиториям»", () => {
     expect(
       screen.getByText("Фоновая проверка по умолчанию"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("browser-login-card")).toHaveTextContent("Скоро");
+    expect(await screen.findByText("Серверы git")).toBeInTheDocument();
+    // Входа через браузер нет ни в виде карточки, ни в виде обещания.
+    expect(screen.queryByTestId("browser-login-card")).toBeNull();
+    expect(screen.queryByText("Скоро")).toBeNull();
   });
 
   it("пока данные грузятся, показывает индикаторы", () => {
@@ -587,6 +595,63 @@ describe("раздел «Доступ к репозиториям»", () => {
     });
   });
 
+  it("токены, которым нужна замена, собраны в одно предупреждение", async () => {
+    const day = 24 * 3600 * 1000;
+    setup({
+      credentials: [
+        { ...PAT, id: "a", label: "Отклонён", status: "auth_failed" },
+        {
+          ...PAT,
+          id: "b",
+          label: "Просрочен",
+          status: "ok",
+          expires_at: new Date(Date.now() - 3 * day).toISOString(),
+        },
+        {
+          ...PAT,
+          id: "c",
+          label: "Скоро",
+          status: "ok",
+          expires_at: new Date(Date.now() + 5 * day).toISOString(),
+        },
+        {
+          ...PAT,
+          id: "d",
+          label: "Здоров",
+          status: "ok",
+          expires_at: new Date(Date.now() + 120 * day).toISOString(),
+        },
+      ],
+    });
+    renderSettings(<GitAccessSection />);
+    expect(
+      await screen.findByText(/3 токена требуют внимания/),
+    ).toBeInTheDocument();
+    const expired = await card("Просрочен");
+    expect(within(expired).getByTestId("expiry-badge")).toHaveAttribute(
+      "data-state",
+      "expired",
+    );
+    expect(
+      within(expired).getByRole("button", { name: "Заменить токен" }),
+    ).toHaveClass("primary");
+    const soon = await card("Скоро");
+    expect(within(soon).getByTestId("expiry-badge")).toHaveTextContent(
+      /Истекает через 5 дней/,
+    );
+    const healthy = await card("Здоров");
+    expect(
+      within(healthy).getByRole("button", { name: "Заменить токен" }),
+    ).not.toHaveClass("primary");
+  });
+
+  it("без проблемных токенов предупреждения нет", async () => {
+    setup();
+    renderSettings(<GitAccessSection />);
+    await card(USED_PAT.label);
+    expect(screen.queryByText(/требуют внимания|требует внимания/)).toBeNull();
+  });
+
   it("английский язык: тексты переведены", async () => {
     const { i18n } = await import("@shared/lib/i18n");
     await i18n.changeLanguage("en");
@@ -599,7 +664,9 @@ describe("раздел «Доступ к репозиториям»", () => {
     expect(
       await screen.findByRole("region", { name: "Encryption" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("browser-login-card")).toHaveTextContent("Soon");
+    expect(await screen.findByText("Git servers")).toBeInTheDocument();
+    expect(screen.queryByTestId("browser-login-card")).toBeNull();
+    expect(screen.queryByText("Soon")).toBeNull();
     await i18n.changeLanguage("ru");
   });
 });

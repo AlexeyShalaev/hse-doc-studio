@@ -3,6 +3,7 @@ import {
   readGitError,
   type GitErrorBody,
   type GitHostKey,
+  type GitTlsCertificate,
 } from "@entities/git-sync";
 import type { Probe } from "@entities/git-remote";
 
@@ -29,6 +30,14 @@ export type CheckIssue = {
   requiredStudio: string | null;
   /** Для unrelated_histories: можно ли объединить истории. */
   canAdopt: boolean | null;
+  /** Для tls_untrusted_ca и tls_pin_mismatch: сертификат, который предъявил сервер. */
+  certificate: GitTlsCertificate | null;
+  /** Для tls_pin_mismatch: отпечаток, закреплённый раньше. */
+  expectedFingerprint: string | null;
+  /** Для tls_pin_mismatch: отпечаток, который сервер предъявил сейчас. */
+  actualFingerprint: string | null;
+  /** Для token_insufficient_scope: каких прав токену не хватает. */
+  missing: string[];
 };
 
 export type ReadyWarning = "schema_newer" | "template_missing";
@@ -54,6 +63,10 @@ const issueOf = (
   hostKeys: [],
   requiredStudio: null,
   canAdopt: null,
+  certificate: null,
+  expectedFingerprint: null,
+  actualFingerprint: null,
+  missing: [],
   ...extra,
 });
 
@@ -65,6 +78,10 @@ export const outcomeFromProbe = (probe: Probe): CheckOutcome => {
       kind: "error",
       issue: issueOf(error?.code ?? "git_error", error?.detail ?? "", {
         hostKeys: error?.host_keys ?? [],
+        certificate: error?.certificate ?? null,
+        expectedFingerprint: error?.expected ?? null,
+        actualFingerprint: error?.actual ?? null,
+        missing: probe.token_info?.missing ?? [],
       }),
     };
   }
@@ -121,6 +138,10 @@ const outcomeFromBody = (body: GitErrorBody): CheckOutcome => {
       hostKeys: body.host_keys ?? [],
       requiredStudio: body.required_studio ?? null,
       canAdopt: body.can_adopt ?? null,
+      certificate: body.certificate ?? null,
+      expectedFingerprint: body.expected ?? null,
+      actualFingerprint: body.actual ?? null,
+      missing: body.missing ?? [],
     }),
   };
 };
@@ -136,6 +157,9 @@ const REACHABILITY_CODES = new Set([
   "url_invalid",
   "url_scheme_forbidden",
   "store_untrusted",
+  "tls_untrusted_ca",
+  "tls_pin_mismatch",
+  "provider_unknown",
   "git_error",
 ]);
 
@@ -151,6 +175,8 @@ const AUTH_CODES = new Set([
   "rate_limited",
   "email_privacy",
   "profile_required",
+  "token_expired",
+  "token_insufficient_scope",
 ]);
 
 const FOUND_CODES = new Set(["not_found_or_no_access", "branch_missing"]);

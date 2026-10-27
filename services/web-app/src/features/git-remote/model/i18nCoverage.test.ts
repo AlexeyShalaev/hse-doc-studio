@@ -6,7 +6,7 @@ import {
   GIT_UI_STATES,
 } from "@entities/git-sync";
 import { i18n } from "@shared/lib/i18n";
-import { KEY_STEPS, TOKEN_STEPS } from "../lib/providerHelp";
+import { KEY_STEPS, TOKEN_STEPS, USER_KEY_STEPS } from "../lib/providerHelp";
 import { CHECK_ROWS } from "./probeOutcome";
 import { COPIED_ISSUE_CODES } from "./issueCopy";
 
@@ -18,7 +18,20 @@ const ISSUE_ACTIONS = [
   "back_to_access",
   "updateAccess",
   "review_host_key",
+  "review_certificate",
   "close",
+];
+
+const TOKEN_ERROR_CODES = [
+  "generic",
+  "auth_failed",
+  "tls_untrusted_ca",
+  "tls_pin_mismatch",
+  "tls_error",
+  "offline",
+  "timeout",
+  "rate_limited",
+  "sso_required",
 ];
 
 const dynamicKeys = (): string[] => {
@@ -65,9 +78,69 @@ const dynamicKeys = (): string[] => {
     for (const step of KEY_STEPS[provider]) {
       keys.push(`gitAccess:help.${provider}.key.${step}`);
     }
+    for (const step of USER_KEY_STEPS[provider]) {
+      keys.push(`gitAccess:help.${provider}.userKey.${step}`);
+    }
+    keys.push(
+      `gitRemote:providerPicker.option.${provider}`,
+      `gitAccess:servers.detectedBy.${provider === "other" ? "unknown" : "host"}`,
+    );
   }
-  for (const method of ["pat", "ssh", "none"])
-    keys.push(`gitAccess:method.${method}`);
+  // Определение типа сервера, подсказки по токену и ключу, проверка токена.
+  for (const how of ["override", "host", "api", "unknown"]) {
+    keys.push(`gitRemote:providerChip.detectedBy.${how}`);
+    keys.push(`gitAccess:servers.detectedBy.${how}`);
+  }
+  for (const step of ["create", "copy", "paste"]) {
+    keys.push(
+      `gitAccess:tokenLink.helper.${step}.title`,
+      `gitAccess:tokenLink.helper.${step}.text`,
+    );
+  }
+  for (const provider of ["github", "gitlab", "gitlabNew"]) {
+    keys.push(
+      `gitAccess:tokenLink.fallback.${provider}.lead`,
+      `gitAccess:tokenLink.fallback.${provider}.link`,
+    );
+  }
+  for (const kind of [
+    "sufficient",
+    "too_narrow",
+    "too_broad",
+    "unknown",
+    "expired",
+  ]) {
+    keys.push(
+      `gitAccess:tokenCheck.${kind}.title`,
+      `gitAccess:tokenCheck.${kind}.text`,
+    );
+  }
+  for (const code of TOKEN_ERROR_CODES) {
+    keys.push(`gitAccess:tokenCheck.error.${code}.title`);
+    if (code !== "generic")
+      keys.push(`gitAccess:tokenCheck.error.${code}.text`);
+  }
+  for (const scope of ["deploy", "user"])
+    keys.push(`gitAccess:ssh.scope.${scope}Hint`);
+  for (const choice of ["ca", "pin"])
+    keys.push(`gitAccess:tls.choice.${choice}`);
+  for (const problem of ["private_key", "not_pem", "too_large"]) {
+    keys.push(`gitAccess:tls.ca.problem.${problem}`);
+  }
+  for (const method of ["pat", "ssh", "deploy", "none"])
+    keys.push(
+      `gitAccess:method.${method}`,
+      `gitAccess:method.caption.${method}`,
+    );
+  for (const code of [
+    "token_expired",
+    "token_insufficient_scope",
+    "tls_untrusted_ca",
+    "tls_pin_mismatch",
+    "provider_unknown",
+  ]) {
+    keys.push(`gitRemote:issue.${code}.title`, `gitRemote:issue.${code}.hint`);
+  }
   for (const status of ["unverified", "ok", "auth_failed", "unreadable"]) {
     keys.push(`gitRemote:credentialStatus.${status}`);
   }

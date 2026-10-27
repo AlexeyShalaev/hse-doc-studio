@@ -6,6 +6,7 @@ import { gitRemoteApi } from "@entities/git-remote";
 import { gitSyncApi, type GitOperation } from "@entities/git-sync";
 import { profileApi } from "@entities/profile";
 import {
+  CHECK_OK,
   CUSTOM_PROFILE,
   DEFAULT_PROFILE,
   PAT,
@@ -90,6 +91,8 @@ const setup = (options: Setup = {}) => {
     data_dir_shared_folder: null,
   });
   vi.spyOn(gitRemoteApi, "listHosts").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(CHECK_OK);
   vi.spyOn(gitRemoteApi, "getSharedFolder").mockResolvedValue({
     detected: false,
     provider: null,
@@ -163,7 +166,9 @@ const typeUrl = async (user: User, url = URL_TEXT) => {
 
 const checkPublic = async (user: User, url = URL_TEXT) => {
   await typeUrl(user, url);
-  await user.click(await screen.findByRole("button", { name: "Без доступа" }));
+  await user.click(
+    await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
+  );
   await user.click(
     screen.getByRole("button", { name: "Проверить репозиторий" }),
   );
@@ -224,13 +229,13 @@ describe("мастер клонирования: источник и прове�
     const access = await screen.findByTestId("clone-access");
     expect(within(access).getByLabelText("Токен")).toBeInTheDocument();
     expect(
-      within(access).getByRole("button", { name: "Без доступа" }),
+      within(access).getByRole("tab", { name: /Публичный репозиторий/ }),
     ).toBeInTheDocument();
     await user.click(
-      within(access).getByRole("button", { name: "Без доступа" }),
+      within(access).getByRole("tab", { name: /Публичный репозиторий/ }),
     );
     expect(
-      within(access).getByText(/Открытые репозитории клонируются без токена/),
+      within(access).getByText(/Токен и ключ не нужны/),
     ).toBeInTheDocument();
   });
 
@@ -269,7 +274,7 @@ describe("мастер клонирования: источник и прове�
     mount();
     await typeUrl(user);
     await user.click(await screen.findByLabelText("Токен"));
-    await user.paste("github_pat_SECRET_TOKEN_VALUE_123");
+    await user.keyboard("github_pat_SECRET_TOKEN_VALUE_123");
     await user.click(
       screen.getByRole("button", { name: "Сохранить и проверить" }),
     );
@@ -442,7 +447,7 @@ describe("мастер клонирования: источник и прове�
     mount();
     await typeUrl(user, "git@github.com:hse-team/paper.git");
     await user.click(
-      await screen.findByRole("button", { name: "Без доступа" }),
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
     );
     await user.click(
       screen.getByRole("button", { name: "Проверить репозиторий" }),
@@ -452,6 +457,62 @@ describe("мастер клонирования: источник и прове�
         name: /Сервер github.com подключается впервые/,
       }),
     ).toBeInTheDocument();
+  });
+
+  it("сертификат внутреннего сервера: окно открывается само, после доверия проверка идёт заново", async () => {
+    const certificate = {
+      fingerprint_sha256: "SHA256:b1Kq0vU7m4Zl9Xc2Tn8RjHf3eWyAo5DsPi6GgLxEu0w",
+      subject: "CN=gitlab.hse.local",
+      issuer: "CN=HSE Internal CA",
+      not_before: "2026-01-10T00:00:00Z",
+      not_after: "2027-01-10T00:00:00Z",
+      self_signed: false,
+    };
+    const { probe } = setup();
+    probe.mockResolvedValueOnce(
+      failedProbe("tls_untrusted_ca", "", {
+        error: { code: "tls_untrusted_ca", detail: "", certificate },
+      }),
+    );
+    const update = vi
+      .spyOn(gitRemoteApi, "updateHostSettings")
+      .mockResolvedValue({
+        host: "gitlab.hse.local",
+        port: null,
+        provider_override: null,
+        provider_info: { id: "gitlab", detected_by: "host", version: null },
+        ca_present: false,
+        pinned_fingerprint: certificate.fingerprint_sha256,
+      });
+    const user = userEvent.setup();
+    mount();
+    await typeUrl(user, "https://gitlab.hse.local/team/paper.git");
+    await user.click(
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Проверить репозиторий" }),
+    );
+    expect(
+      await screen.findByRole("dialog", {
+        name: /Сертификат gitlab.hse.local не из известного центра/,
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Закрепить сертификат сервера" }),
+    );
+    await user.click(screen.getByTestId("tls-pin-confirm"));
+    await user.click(screen.getByTestId("tls-submit"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        host: "gitlab.hse.local",
+        port: null,
+        pinned_fingerprint: certificate.fingerprint_sha256,
+      });
+    });
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("ветка из списка запускает проверку заново с этой веткой", async () => {
@@ -495,7 +556,7 @@ describe("мастер клонирования: источник и прове�
     ).toHaveValue("https://github.com/hse-team/paper.git");
     expect(screen.getByText(/Токен в адресе не нужен/)).toBeInTheDocument();
     await user.click(
-      await screen.findByRole("button", { name: "Без доступа" }),
+      await screen.findByRole("tab", { name: /Публичный репозиторий/ }),
     );
     await user.click(
       screen.getByRole("button", { name: "Проверить репозиторий" }),

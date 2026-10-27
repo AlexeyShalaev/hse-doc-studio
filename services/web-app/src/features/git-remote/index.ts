@@ -33,3 +33,8 @@ export type {
   RemoteUrlPolicy,
 } from "./lib/parseRemoteUrl";
 export { deployKeyUrl, repoWebUrl, tokenCreateUrl } from "./lib/providerHelp";
+
+// Галерея состояний для страницы разработчика (только DEV).
+export { getRemoteStaticGallery } from "./fixtures/connectGallery";
+export { getRemoteAccessStaticGallery } from "./fixtures/accessGallery";
+export { getRemoteLiveGallery } from "./fixtures/liveGallery";

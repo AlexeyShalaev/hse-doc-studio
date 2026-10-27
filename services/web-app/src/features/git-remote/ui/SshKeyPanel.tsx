@@ -1,16 +1,20 @@
-import { Fingerprint, KeyRound, Plus } from "lucide-react";
+import { Fingerprint, FolderGit2, KeyRound, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitCredential } from "@entities/git-remote";
-import { localeTag } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
 import { CopyField } from "@shared/ui/CopyField";
 import { Spinner } from "@shared/ui/Spinner";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
 import { CredentialStatusChip } from "./CredentialStatusChip";
-import { ProviderHelp } from "./ProviderHelp";
+import { formatDate } from "../lib/formatDate";
+import { ProviderHelp, type KeyScope } from "./ProviderHelp";
 
 export type SshKeyPanelProps = {
   url: ParsedRemoteUrl;
+  /** Какой это ключ: пользователя (на все репозитории сервера) или deploy (на один). */
+  scope: KeyScope;
+  /** «владелец/репозиторий»: для deploy-ключа это то, к чему он привязан. */
+  repoPath?: string;
   /** Ключи ssh, созданные для этого сервера. */
   keys: GitCredential[];
   selectedId: string | null;
@@ -21,21 +25,12 @@ export type SshKeyPanelProps = {
   error?: string | null;
 };
 
-const formatDate = (iso: string): string => {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ""
-    : date.toLocaleDateString(localeTag(), {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-};
-
 // Ключ ssh: создаётся одной кнопкой, закрытая часть остаётся на компьютере, а
 // публичную человек добавляет в репозиторий по подсказке с прямой ссылкой.
 export const SshKeyPanel = ({
   url,
+  scope,
+  repoPath = "",
   keys,
   selectedId,
   onSelect,
@@ -46,6 +41,29 @@ export const SshKeyPanel = ({
 }: SshKeyPanelProps) => {
   const { t } = useTranslation("gitAccess");
   const selected = keys.find((key) => key.id === selectedId) ?? null;
+  const repoPill =
+    scope === "deploy" && repoPath !== "" ? (
+      <div
+        className="flex items-center"
+        data-testid="deploy-repo"
+        style={{
+          gap: 6,
+          alignSelf: "flex-start",
+          maxWidth: "100%",
+          padding: "3px 8px",
+          borderRadius: "var(--r-2)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-2)",
+          fontSize: 11.5,
+        }}
+      >
+        <FolderGit2 size={12} aria-hidden="true" style={{ flexShrink: 0 }} />
+        <span className="dim">{t("ssh.deployFor")}</span>
+        <span className="mono truncate" style={{ minWidth: 0 }}>
+          {repoPath}
+        </span>
+      </div>
+    ) : null;
 
   const createButton = (primary: boolean) => (
     <button
@@ -59,7 +77,9 @@ export const SshKeyPanel = ({
       ) : (
         <Plus size={13} aria-hidden="true" />
       )}
-      {primary ? t("ssh.create") : t("ssh.createAnother")}
+      {primary
+        ? t(scope === "deploy" ? "ssh.createDeploy" : "ssh.create")
+        : t("ssh.createAnother")}
     </button>
   );
 
@@ -69,7 +89,9 @@ export const SshKeyPanel = ({
         className="flex flex-col"
         style={{ gap: 12 }}
         data-testid="ssh-panel"
+        data-scope={scope}
       >
+        {repoPill}
         <div
           className="flex flex-col items-start"
           style={{
@@ -97,9 +119,13 @@ export const SshKeyPanel = ({
           </span>
           <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
             <strong style={{ display: "block", fontWeight: 600 }}>
-              {t("ssh.emptyTitle")}
+              {scope === "deploy"
+                ? t("ssh.deployEmptyTitle", { repo: repoPath })
+                : t("ssh.emptyTitle")}
             </strong>
-            <span className="dim">{t("ssh.emptyText")}</span>
+            <span className="dim">
+              {t(scope === "deploy" ? "ssh.deployEmptyText" : "ssh.emptyText")}
+            </span>
           </div>
           {createButton(true)}
         </div>
@@ -109,7 +135,13 @@ export const SshKeyPanel = ({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 12 }} data-testid="ssh-panel">
+    <div
+      className="flex flex-col"
+      style={{ gap: 12 }}
+      data-testid="ssh-panel"
+      data-scope={scope}
+    >
+      {repoPill}
       {keys.length > 1 && (
         <div
           role="radiogroup"
@@ -186,9 +218,15 @@ export const SshKeyPanel = ({
         </div>
       )}
 
-      <Notice tone="warn" role="status" text={t("ssh.allowWrite")} />
+      <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        {t(`ssh.scope.${scope}Hint`)}
+      </p>
 
-      <ProviderHelp url={url} kind="key" defaultOpen />
+      {scope === "deploy" && (
+        <Notice tone="warn" role="status" text={t("ssh.allowWrite")} />
+      )}
+
+      <ProviderHelp url={url} scope={scope} defaultOpen />
 
       {error && <Notice tone="err" role="alert" text={error} />}
 

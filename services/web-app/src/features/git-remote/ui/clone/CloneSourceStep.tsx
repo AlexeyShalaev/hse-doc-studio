@@ -8,11 +8,13 @@ import {
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
 import { isEncryptedBundleName } from "../../lib/cloneNames";
+import { useHostProvider } from "../../model/useHostProvider";
 import { useRemoteAuth } from "../../model/useRemoteAuth";
 import type { CloneSource, CloneTab } from "../../model/useCloneSource";
 import { HostKeyDialog, type HostKeyMode } from "../HostKeyDialog";
 import { RemoteAuthFields } from "../RemoteAuthFields";
 import { RepoUrlField } from "../RepoUrlField";
+import { TlsTrustDialog } from "../TlsTrustDialog";
 import { CloneBundleSource } from "./CloneBundleSource";
 import { CloneStepLayout } from "./CloneStepLayout";
 import { CloneVerdictCard } from "./CloneVerdictCard";
@@ -32,6 +34,11 @@ const isHostKeyCode = (
 ): code is "host_key_unknown" | "host_key_changed" =>
   code === "host_key_unknown" || code === "host_key_changed";
 
+const isTlsCode = (
+  code: string,
+): code is "tls_untrusted_ca" | "tls_pin_mismatch" =>
+  code === "tls_untrusted_ca" || code === "tls_pin_mismatch";
+
 // Шаг 1. Откуда клонировать: адрес репозитория с проверкой доступа или файл
 // bundle. Результат проверки показывает, что за проект там лежит и как он откроется.
 export const CloneSourceStep = ({
@@ -47,9 +54,16 @@ export const CloneSourceStep = ({
   const hostsQuery = useGitHosts();
   // Результат проверки, для которого окно ключа сервера уже закрыли.
   const [hostKeyClosedFor, setHostKeyClosedFor] = useState<unknown>(null);
+  const [tlsClosedFor, setTlsClosedFor] = useState<unknown>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const { tab, parsed, repoUrl, check } = source;
+  const { tab, parsed, check } = source;
+  // Провайдер решён с учётом выбора человека и ответа сервера.
+  const hostProvider = useHostProvider(
+    source.repoUrl,
+    check.status === "done" ? check.probe?.provider_info : null,
+  );
+  const repoUrl = hostProvider.url;
   const secretsOk = secretsQuery.data?.ok ?? true;
   const verdict = check.status === "done" ? check.verdict : null;
   const ready = verdict?.kind === "ready";
@@ -127,6 +141,9 @@ export const CloneSourceStep = ({
   // Незнакомый или изменившийся ключ сервера спрашиваем сразу, как в окне подключения.
   const hostKeyOpen =
     issue !== null && isHostKeyCode(issue.code) && hostKeyClosedFor !== check;
+  // Сертификат внутреннего сервера спрашиваем так же сразу.
+  const tlsOpen =
+    issue !== null && isTlsCode(issue.code) && tlsClosedFor !== check;
 
   return (
     <CloneStepLayout
@@ -254,6 +271,9 @@ export const CloneSourceStep = ({
                 onBackToRepo: source.resetCheck,
                 onBackToAccess: source.resetCheck,
                 onReviewHostKey: openHostKey,
+                onReviewCertificate: () => {
+                  setTlsClosedFor(null);
+                },
                 onPickBranch: (picked) => {
                   source.setBranch(picked);
                   void source.runCheck({ branch: picked });
@@ -277,6 +297,26 @@ export const CloneSourceStep = ({
             error={bundleError}
           />
         </div>
+      )}
+
+      {tab === "url" && repoUrl?.host && (
+        <TlsTrustDialog
+          isOpen={tlsOpen}
+          mode={
+            issue?.code === "tls_pin_mismatch" ? "pin_mismatch" : "untrusted"
+          }
+          host={repoUrl.host}
+          port={hostProvider.port}
+          certificate={issue?.certificate ?? null}
+          expected={issue?.expectedFingerprint ?? null}
+          actual={issue?.actualFingerprint ?? null}
+          onTrusted={() => {
+            void source.runCheck();
+          }}
+          onClose={() => {
+            setTlsClosedFor(check);
+          }}
+        />
       )}
 
       {tab === "url" && repoUrl?.host && (

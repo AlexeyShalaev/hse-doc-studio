@@ -447,6 +447,7 @@
     "aboutUpdates": "Updates",
     "gitAccess": "Repository access",
     "gitAccessCredentials": "Tokens and keys",
+    "gitAccessServers": "Git servers",
     "gitAccessHosts": "Trusted servers",
     "gitAccessEncryption": "Token encryption",
     "gitAccessFetch": "Default background check"

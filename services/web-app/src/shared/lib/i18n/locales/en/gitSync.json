@@ -85,7 +85,8 @@
     "group": {
       "connect": "Connecting",
       "state": "States",
-      "problem": "Problems"
+      "problem": "Problems",
+      "provider": "Servers and tokens"
     },
     "scenario": {
       "not_connected": {
@@ -167,6 +168,66 @@
       "shared_folder": {
         "title": "Folder in a cloud drive",
         "hint": "Yandex.Disk style warning"
+      },
+      "provider_gitlab_com": {
+        "title": "GitLab.com: token by link",
+        "hint": "Address https://gitlab.com/hse/paper.git. The Create token button opens the page with the rights filled in. Paste any token, for example glpat-demo"
+      },
+      "provider_gitlab_self": {
+        "title": "Own GitLab 17",
+        "hint": "Address https://gitlab.hse.ru/team/paper.git. The chip shows the server version. Any token"
+      },
+      "provider_gitlab_old": {
+        "title": "Old GitLab 13",
+        "hint": "Address https://gitlab.old.hse.ru/team/paper.git. The main link may not open: there is a fallback. Token rights cannot be read"
+      },
+      "provider_tls_ca": {
+        "title": "Internal server with an organization certificate",
+        "hint": "Address https://gitlab.hse.local/team/paper.git. The certificate window opens: add a CA (paste any BEGIN CERTIFICATE text) or pin the fingerprint"
+      },
+      "provider_tls_selfsigned": {
+        "title": "Internal server with a self-signed certificate",
+        "hint": "Address https://gitlab.lab.local/team/paper.git. The certificate window suggests pinning the fingerprint"
+      },
+      "provider_tls_pin_changed": {
+        "title": "Certificate changed after pinning",
+        "hint": "Address https://gitlab.rotated.local/team/paper.git. Type the server name to pin the new certificate"
+      },
+      "provider_github": {
+        "title": "GitHub: fine-grained token",
+        "hint": "Address https://github.com/hse/paper.git. A reminder to pick the repository sits under the token button. Token github_pat_demo: rights cannot be checked"
+      },
+      "provider_gitea": {
+        "title": "Gitea and Codeberg",
+        "hint": "Address https://codeberg.org/anna/paper.git. A link without prefilling and numbered steps"
+      },
+      "provider_api_detect": {
+        "title": "Server type from the server answer",
+        "hint": "Address https://forge.hse.ru/team/paper.git. The host name tells nothing, the server calls itself GitLab 16"
+      },
+      "token_narrow": {
+        "title": "The token lacks rights",
+        "hint": "Any GitLab address and any token. The check says write_repository must be added"
+      },
+      "token_broad": {
+        "title": "The token has too many rights",
+        "hint": "Any GitLab address and any token. The check warns about the api right"
+      },
+      "token_opaque": {
+        "title": "The token permissions cannot be checked",
+        "hint": "Any address and any token. The check says the permissions cannot be read and suggests testing by connecting"
+      },
+      "token_expired": {
+        "title": "The token has expired",
+        "hint": "Any address and any token. The check says the token is out of date"
+      },
+      "credentials_expiry": {
+        "title": "Accesses with different expiry",
+        "hint": "App settings, Repository access: expires soon, expired, no expiry. A Check button on each token"
+      },
+      "servers_settings": {
+        "title": "Servers in settings",
+        "hint": "App settings, Repository access, Git servers: chosen type, own CA, pinned certificate"
       }
     },
     "urlTitle": "What to type as the address",

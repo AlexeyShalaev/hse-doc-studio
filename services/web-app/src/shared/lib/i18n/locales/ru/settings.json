@@ -449,6 +449,7 @@
     "aboutUpdates": "Обновления",
     "gitAccess": "Доступ к репозиториям",
     "gitAccessCredentials": "Токены и ключи",
+    "gitAccessServers": "Серверы git",
     "gitAccessHosts": "Доверенные серверы",
     "gitAccessEncryption": "Шифрование токенов",
     "gitAccessFetch": "Фоновая проверка по умолчанию"

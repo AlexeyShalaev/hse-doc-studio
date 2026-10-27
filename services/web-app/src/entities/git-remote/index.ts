@@ -20,6 +20,17 @@ export type {
   WebBaseInput,
 } from "./model/providerCatalog";
 export {
+  findHostSettings,
+  hostKey,
+  providerOfHost,
+} from "./model/hostProvider";
+export {
+  EXPIRING_SOON_DAYS,
+  credentialExpiry,
+  worstExpiry,
+} from "./model/credentialExpiry";
+export type { CredentialExpiry, ExpiryState } from "./model/credentialExpiry";
+export {
   cleanText,
   defaultTokenDescription,
   defaultTokenName,
@@ -41,11 +52,13 @@ export {
   gitRemoteKeys,
   useCiPreview,
   useCloneDefaults,
+  useCheckCredential,
   useCreateCredential,
   useCredentials,
   useDeleteCredential,
   useDeleteHost,
   useGitHosts,
+  useHostSettings,
   useProbe,
   useSecretsStatus,
   useSharedFolder,
@@ -53,5 +66,6 @@ export {
   useStartCloneFromBundle,
   useTrustHost,
   useUpdateCredential,
+  useUpdateHostSettings,
   useWriteCi,
 } from "./api/gitRemoteQueries";

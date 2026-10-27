@@ -61,6 +61,10 @@ export const cloneVerdictFromProbe = (probe: Probe): CloneVerdict => {
         hostKeys: [],
         requiredStudio: null,
         canAdopt: null,
+        certificate: null,
+        expectedFingerprint: null,
+        actualFingerprint: null,
+        missing: [],
       },
     };
   }
@@ -89,6 +93,10 @@ export const cloneVerdictFromError = (error: unknown): CloneVerdict => {
       hostKeys: [],
       requiredStudio: null,
       canAdopt: null,
+      certificate: null,
+      expectedFingerprint: null,
+      actualFingerprint: null,
+      missing: [],
     },
   };
 };

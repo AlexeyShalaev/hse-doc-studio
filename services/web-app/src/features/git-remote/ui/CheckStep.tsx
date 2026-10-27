@@ -20,6 +20,7 @@ export type CheckStepProps = Omit<ProbeResultHandlers, "onClose"> & {
   fixing: boolean;
   isConnecting: boolean;
   adoptConfirmed: boolean;
+  publicAccess?: boolean;
   onAdoptConfirmedChange: (value: boolean) => void;
   onBack: () => void;
   onCancel: () => void;
@@ -33,6 +34,7 @@ export const CheckStep = ({
   fixing,
   isConnecting,
   adoptConfirmed,
+  publicAccess = false,
   onAdoptConfirmedChange,
   onBack,
   onCancel,
@@ -92,6 +94,7 @@ export const CheckStep = ({
           fixing={fixing}
           isConnecting={isConnecting}
           adoptConfirmed={adoptConfirmed}
+          publicAccess={publicAccess}
           onAdoptConfirmedChange={onAdoptConfirmedChange}
           onClose={onCancel}
           {...handlers}

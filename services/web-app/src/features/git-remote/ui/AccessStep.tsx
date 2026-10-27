@@ -19,8 +19,10 @@ export type AccessStepProps = {
   isLoadingCredentials: boolean;
   /** false: хранилище секретов недоступно, сохранить токен или ключ нельзя. */
   secretsOk: boolean;
-  /** Доступ выбран (или сохранён): можно проверять подключение. */
-  onContinue: (credentialId: string) => void;
+  /** Название проекта: попадает в имя токена на странице сервера. */
+  projectName?: string | null;
+  /** Доступ выбран или сохранён (null: открытый репозиторий без токена): можно проверять подключение. */
+  onContinue: (credentialId: string | null) => void;
   onBack: () => void;
   onSwitchUrl: (value: string) => void;
 };
@@ -33,6 +35,7 @@ export const AccessStep = ({
   credentials,
   isLoadingCredentials,
   secretsOk,
+  projectName = null,
   onContinue,
   onBack,
   onSwitchUrl,
@@ -44,10 +47,10 @@ export const AccessStep = ({
     bound,
     credentials,
     secretsOk,
-    onResolved: (id) => {
-      // Без «Без доступа» id здесь всегда есть.
-      if (id !== null) onContinue(id);
-    },
+    // Открытый репозиторий подключается без токена; доступ уже подключённого
+    // проекта (`fix_access`) обновляется только токеном или ключом.
+    allowAnonymous: !fixing,
+    onResolved: onContinue,
   });
 
   return (
@@ -95,6 +98,7 @@ export const AccessStep = ({
         isLoadingCredentials={isLoadingCredentials}
         secretsOk={secretsOk}
         onSwitchUrl={onSwitchUrl}
+        projectName={projectName}
       />
     </StepLayout>
   );

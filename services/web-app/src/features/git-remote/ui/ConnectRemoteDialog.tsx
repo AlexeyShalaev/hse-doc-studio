@@ -12,6 +12,8 @@ export type ConnectRemoteDialogProps = {
    * виджет; без него кнопки в карточке нет.
    */
   onCloneInstead?: (target: CloneTarget) => void;
+  /** Адрес, который окно подставит в первое поле (галерея состояний). */
+  initialUrl?: string;
 };
 
 /**
@@ -23,6 +25,7 @@ export type ConnectRemoteDialogProps = {
 export const ConnectRemoteDialog = ({
   projectId,
   onCloneInstead,
+  initialUrl,
 }: ConnectRemoteDialogProps) => {
   const { t } = useTranslation("gitRemote");
   const dialog = useSyncUiStore((state) => state.connectDialog);
@@ -49,6 +52,7 @@ export const ConnectRemoteDialog = ({
         mode={mode}
         onClose={close}
         onCloneInstead={onCloneInstead}
+        initialUrl={initialUrl}
       />
     </Modal>
   );

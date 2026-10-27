@@ -81,3 +81,11 @@ export {
   usePendingSave,
 } from "./pendingSaves";
 export type { FlushResult, PendingSaveFlush } from "./pendingSaves";
+
+export { GALLERY_PROJECT_ID } from "./stateGallery";
+export type {
+  GalleryEntry,
+  GalleryFrame,
+  GalleryGroup,
+  GallerySection,
+} from "./stateGallery";

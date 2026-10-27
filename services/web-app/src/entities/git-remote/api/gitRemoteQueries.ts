@@ -9,12 +9,14 @@ import type {
   ProbeRequest,
   TrustHostRequest,
   UpdateCredentialRequest,
+  UpdateGitHostSettingsRequest,
 } from "./gitRemoteSchemas";
 
 export const gitRemoteKeys = {
   all: ["git-remote"] as const,
   credentials: () => [...gitRemoteKeys.all, "credentials"] as const,
   hosts: () => [...gitRemoteKeys.all, "hosts"] as const,
+  hostSettings: () => [...gitRemoteKeys.all, "host-settings"] as const,
   secrets: () => [...gitRemoteKeys.all, "secrets"] as const,
   sharedFolder: (folder: string) =>
     [...gitRemoteKeys.all, "shared-folder", folder] as const,
@@ -81,6 +83,50 @@ export const useDeleteCredential = () => {
       });
       void queryClient.invalidateQueries({ queryKey: gitRemoteKeys.secrets() });
       void queryClient.invalidateQueries({ queryKey: gitSyncKeys.all });
+    },
+  });
+};
+
+// Проверка токена: права и срок могли обновиться (в том числе при отказе: токен
+// стал «не принят»), поэтому список доступов перечитывается в любом случае.
+export const useCheckCredential = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gitRemoteApi.checkCredential(id),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: gitRemoteKeys.credentials(),
+      });
+    },
+  });
+};
+
+// --- настройки серверов -------------------------------------------------------------
+
+export const useHostSettings = (enabled = true) =>
+  useQuery({
+    queryKey: gitRemoteKeys.hostSettings(),
+    queryFn: () => gitRemoteApi.listHostSettings(),
+    enabled,
+  });
+
+const invalidateAfterHostSettings = (
+  queryClient: ReturnType<typeof useQueryClient>,
+): void => {
+  void queryClient.invalidateQueries({
+    queryKey: gitRemoteKeys.hostSettings(),
+  });
+  // Подмена провайдера и свой CA меняют и состояние подключённых проектов.
+  void queryClient.invalidateQueries({ queryKey: gitSyncKeys.all });
+};
+
+export const useUpdateHostSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: UpdateGitHostSettingsRequest) =>
+      gitRemoteApi.updateHostSettings(params),
+    onSuccess: () => {
+      invalidateAfterHostSettings(queryClient);
     },
   });
 };

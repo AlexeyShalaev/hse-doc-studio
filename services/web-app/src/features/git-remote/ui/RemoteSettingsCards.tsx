@@ -10,7 +10,11 @@ import {
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAppSettings } from "@entities/app-settings";
-import { useCredentials, type GitCredential } from "@entities/git-remote";
+import {
+  credentialExpiry,
+  useCredentials,
+  type GitCredential,
+} from "@entities/git-remote";
 import {
   GIT_ACCESS_PATH,
   gitConflictsPath,
@@ -36,6 +40,7 @@ import {
 } from "../model/fetchIntervals";
 import { CredentialStatusChip } from "./CredentialStatusChip";
 import { DisconnectDialog } from "./DisconnectDialog";
+import { ExpiryBadge } from "./ExpiryBadge";
 import { SharedFolderWarning } from "./SharedFolderWarning";
 import { SwitchRow } from "./SwitchRow";
 
@@ -161,6 +166,11 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
   const publicKey = credential?.public_key ?? null;
   const fingerprint = credential?.fingerprint_sha256 ?? null;
   const Icon = kind === "ssh_key" ? KeyRound : Lock;
+  // Токен не принят или срок вышел (или выходит): заменить доступ нужно в первую очередь.
+  const expiry = credentialExpiry(credential?.expires_at);
+  const needsAttention =
+    credential?.status === "auth_failed" ||
+    (kind === "pat" && (expiry.state === "expired" || expiry.state === "soon"));
   return (
     <div className="flex flex-col" style={{ gap: 8 }}>
       <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -176,6 +186,7 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
           {t(`credentialKind.${kind}`, { defaultValue: kind })}
         </span>
         <CredentialStatusChip status={credential?.status ?? "unverified"} />
+        {kind === "pat" && <ExpiryBadge expiresAt={credential?.expires_at} />}
         {credential?.token_family && (
           <span className="mono dim" style={{ fontSize: 11 }}>
             {t("settings.remote.tokenFamily", {
@@ -187,7 +198,7 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
       <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
         <button
           type="button"
-          className="btn xs"
+          className={needsAttention ? "btn xs primary" : "btn xs"}
           onClick={() => {
             useSyncUiStore.getState().openConnectDialog("fix_access");
           }}

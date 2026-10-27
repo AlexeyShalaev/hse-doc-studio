@@ -1,15 +1,31 @@
 import { useState } from "react";
-import { KeyRound, Lock, Trash2 } from "lucide-react";
+import { KeyRound, Lock, ScanSearch, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import type { GitCredential } from "@entities/git-remote";
+import {
+  credentialExpiry,
+  providerOfHost,
+  useCheckCredential,
+  useHostSettings,
+  type GitCredential,
+} from "@entities/git-remote";
 import { gitSettingsPath } from "@entities/git-sync";
 import { formatRelativeTime } from "@shared/lib";
 import { CopyField } from "@shared/ui/CopyField";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
+import { urlForHost } from "../lib/hostUrl";
+import { tokenCreateUrl } from "../lib/providerHelp";
+import {
+  verdictOfCheck,
+  verdictOfError,
+  type TokenVerdict,
+} from "../model/tokenVerdict";
 import { CredentialStatusChip } from "./CredentialStatusChip";
 import { DeleteCredentialDialog } from "./DeleteCredentialDialog";
+import { ExpiryBadge } from "./ExpiryBadge";
 import { ReplaceTokenDialog } from "./ReplaceTokenDialog";
+import { TlsTrustDialog } from "./TlsTrustDialog";
+import { TokenCheckCard } from "./TokenCheckCard";
 
 export type CredentialCardProps = {
   credential: GitCredential;
@@ -21,12 +37,45 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
   const { t } = useTranslation("gitAccess");
   const { t: tRemote } = useTranslation("gitRemote");
   const [keyShown, setKeyShown] = useState(false);
-  const [dialog, setDialog] = useState<"replace" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"replace" | "delete" | "tls" | null>(
+    null,
+  );
+  const hostSettings = useHostSettings();
+  const checkCredential = useCheckCredential();
+  // null: проверку не просили; "running": идёт; иначе ответ сервера.
+  const [check, setCheck] = useState<
+    null | "running" | { verdict: TokenVerdict; version: string | null }
+  >(null);
 
   const isKey = credential.kind === "ssh_key";
   const Icon = isKey ? KeyRound : Lock;
   const usedCount = credential.used_by.length;
+  const detection = providerOfHost(credential.host, null, hostSettings.data);
   const keyId = `credential-key-${credential.id}`;
+
+  const runCheck = async (): Promise<void> => {
+    setCheck("running");
+    try {
+      const result = await checkCredential.mutateAsync(credential.id);
+      setCheck({
+        verdict: verdictOfCheck(result),
+        version: result.provider_info.version ?? null,
+      });
+    } catch (caught) {
+      setCheck({
+        verdict: verdictOfError(caught, credential.expires_at),
+        version: null,
+      });
+    }
+  };
+  const verdict = typeof check === "object" && check ? check.verdict : null;
+  // Токен не принят или срок вышел (или вот-вот выйдет): первым делом нужен новый.
+  const expiryState = credentialExpiry(credential.expires_at).state;
+  const needsNewToken =
+    !isKey &&
+    (credential.status === "auth_failed" ||
+      expiryState === "expired" ||
+      expiryState === "soon");
 
   return (
     <li
@@ -70,6 +119,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
               })}
             </span>
             <CredentialStatusChip status={credential.status} />
+            {!isKey && <ExpiryBadge expiresAt={credential.expires_at} />}
           </div>
           <span
             className="dim flex items-center"
@@ -100,6 +150,9 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
                 })
               : t("credentials.neverUsed")}
           </span>
+          {!isKey && (
+            <ExpiryBadge expiresAt={credential.expires_at} showFar hideSoon />
+          )}
           {credential.status === "auth_failed" && (
             <span style={{ fontSize: 11.5, color: "var(--c-err)" }}>
               {t("access.credentials.authFailedHint")}
@@ -187,6 +240,20 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
           <button
             type="button"
             className="btn xs"
+            data-testid="credential-check"
+            disabled={check === "running"}
+            onClick={() => {
+              void runCheck();
+            }}
+          >
+            <ScanSearch size={11} aria-hidden="true" />
+            {t("access.credentials.check")}
+          </button>
+        )}
+        {!isKey && (
+          <button
+            type="button"
+            className={needsNewToken ? "btn xs primary" : "btn xs"}
             onClick={() => {
               setDialog("replace");
             }}
@@ -217,6 +284,49 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
             label={t("access.credentials.publicKey")}
           />
         </div>
+      )}
+
+      {check !== null && (
+        <TokenCheckCard
+          verdict={verdict}
+          provider={detection.id}
+          version={
+            (typeof check === "object" ? check.version : null) ??
+            detection.version
+          }
+          createUrl={tokenCreateUrl(urlForHost(credential.host, detection.id), {
+            provider: detection.id,
+          })}
+          onRetry={() => {
+            void runCheck();
+          }}
+          onReviewCertificate={() => {
+            setDialog("tls");
+          }}
+        />
+      )}
+
+      {dialog === "tls" && (
+        <TlsTrustDialog
+          isOpen
+          mode={
+            verdict?.kind === "error" && verdict.code === "tls_pin_mismatch"
+              ? "pin_mismatch"
+              : "untrusted"
+          }
+          host={credential.host}
+          port={null}
+          certificate={verdict?.kind === "error" ? verdict.certificate : null}
+          expected={verdict?.kind === "error" ? verdict.expected : null}
+          actual={verdict?.kind === "error" ? verdict.actual : null}
+          onTrusted={() => {
+            setDialog(null);
+            void runCheck();
+          }}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
       )}
 
       {dialog === "replace" && (
