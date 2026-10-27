@@ -19,6 +19,7 @@ from hse_doc_studio.core.git_sync.ci import CiOptions, CiProvider, CiPublish, Re
 from hse_doc_studio.core.git_sync.protocols import ICiRenderer
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IFileRepository, IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 
 logger = structlog.get_logger()
 
@@ -135,16 +136,30 @@ class PreviewCiUC(_CiBase):
 
 
 class WriteCiUC(_CiBase):
+    def __init__(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        file_repo: IFileRepository,
+        renderer: ICiRenderer,
+        default_image: str,
+        vcs_locks: IVcsFolderLocks,
+    ) -> None:
+        super().__init__(project_repo, project_index_repo, file_repo, renderer, default_image)
+        self._vcs_locks = vcs_locks
+
     async def execute(self, inp: CiWriteInput) -> CiWritten:
         folder, project = self._find(inp.project_id)
         options = self._options(inp, project)
         file = self._inspect(folder, self._renderer.render(options))
         if file.same or (file.exists and not inp.overwrite):
             return CiWritten(written=[])
-        try:
-            self._file_repo.write(folder, file.path, file.content.encode("utf-8"))
-        except OSError as exc:
-            raise ValueError(_unwritable(file.path, exc)) from exc
+        # Применение синхронизации держит замок папки между снимком и записью: без него файл CI попал бы в это окно.
+        async with self._vcs_locks.for_folder(folder):
+            try:
+                self._file_repo.write(folder, file.path, file.content.encode("utf-8"))
+            except OSError as exc:
+                raise ValueError(_unwritable(file.path, exc)) from exc
         return CiWritten(written=[file.path])
 
 

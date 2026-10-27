@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -44,11 +46,30 @@ class _Index:
         return self._folders
 
 
+class _Locks:
+    """Замок папки: помнит, держится ли он сейчас, чтобы проверить запись под замком."""
+
+    def __init__(self) -> None:
+        self.held = False
+
+    @asynccontextmanager
+    async def for_folder(self, folder: Path) -> AsyncIterator[None]:  # noqa: ARG002
+        self.held = True
+        try:
+            yield
+        finally:
+            self.held = False
+
+
 class _Files:
     """Файлы в памяти; пишет только то, что ему велели."""
 
-    def __init__(self, files: dict[str, bytes] | None = None, *, write_error: OSError | None = None) -> None:
+    def __init__(
+        self, files: dict[str, bytes] | None = None, *, write_error: OSError | None = None, locks: _Locks | None = None
+    ) -> None:
         self.files = files or {}
+        self.locks = locks
+        self.written_under_lock: list[bool] = []
         self.writes: list[str] = []
         self._write_error = write_error
 
@@ -63,18 +84,20 @@ class _Files:
             raise self._write_error
         self.files[path] = content
         self.writes.append(path)
+        self.written_under_lock.append(self.locks is not None and self.locks.held)
 
 
 @dataclass
 class _Setup:
     project: _Project
     files: _Files
+    locks: _Locks
 
     def preview(self) -> PreviewCiUC:
         return PreviewCiUC(*self._deps())
 
     def write(self) -> WriteCiUC:
-        return WriteCiUC(*self._deps())
+        return WriteCiUC(*self._deps(), self.locks)
 
     def _deps(self) -> tuple[Any, Any, Any, Any, str]:
         return (
@@ -88,7 +111,8 @@ class _Setup:
 
 def _setup(*, files: _Files | None = None, meta: dict[str, Any] | None = None) -> _Setup:
     project = _Project(id=uuid4(), documents=[_Doc("tz"), _Doc("vkr")], meta=meta or {})
-    return _Setup(project=project, files=files or _Files())
+    locks = _Locks()
+    return _Setup(project=project, files=files or _Files(locks=locks), locks=locks)
 
 
 def _input(setup: _Setup, **overrides: Any) -> CiInput:
@@ -265,3 +289,12 @@ async def test__write__disk_refuses__raises_value_error() -> None:
 
     with pytest.raises(ValueError, match="denied"):
         await setup.write().execute(_write_input(setup, overwrite=False))
+
+
+async def test__write__file_is_written_under_the_folder_lock() -> None:
+    # Применение синхронизации держит замок между снимком и записью: запись CI-файла не должна влезать в это окно.
+    setup = _setup()
+
+    await setup.write().execute(_write_input(setup, overwrite=False))
+
+    assert setup.files.written_under_lock == [True]

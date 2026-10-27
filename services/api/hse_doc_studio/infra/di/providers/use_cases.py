@@ -1086,8 +1086,9 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         file_repo: IFileRepository,
         ci_renderer: ICiRenderer,
+        vcs_locks: IVcsFolderLocks,
     ) -> WriteCiUC:
-        return WriteCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image())
+        return WriteCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image(), vcs_locks)
 
     # ------------------------------------------------------------------ Template updates
 
