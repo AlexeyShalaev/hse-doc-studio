@@ -669,6 +669,8 @@ async def test__tick__project_without_remote_any_more__is_dropped_from_the_regis
     registry = await stack.get(IGitRemoteRegistry)
     assert len(registry.list()) == 1
     run_git("remote", "remove", "origin", git_dir=_store(project))
+    # Подключение читается, когда проекту пора на выборку: до этого тик не запускает git ради каждого проекта.
+    await _age_fetch(stack, project, _PERIOD_PASSED)
 
     await _tick(stack, Clock())
 

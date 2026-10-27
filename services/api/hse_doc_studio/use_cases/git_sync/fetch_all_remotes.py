@@ -110,17 +110,24 @@ class FetchAllGitRemotesUC:
         if loaded is None:
             return None
         state, config = loaded
+        if not self._is_due(folder, state, stored):
+            return None
+        # Пора опрашивать: теперь подключение читается в любом случае (запуск git оправдан), и проект,
+        # у которого его больше нет, выпадает из реестра.
+        config = config or self._remotes.read(project)
+        if config is None:
+            self._registry.remove(folder)
+            return None
+        if halts_auto_fetch(state) and not self._credential_replaced(state, config.credential_id):
+            return None
+        return project
+
+    def _is_due(self, folder: Path, state: SyncState, stored: dict[str, Any]) -> bool:
         enabled, interval = fetch_interval(state, stored)
         if not enabled or self._operations.is_busy(folder):
-            return None
+            return False
         due = next_attempt_at(state.last_fetch_at, interval, self._book.failures(folder), str(folder.resolve()))
-        if due is not None and due > self._clock():
-            return None
-        if halts_auto_fetch(state):
-            config = config or self._remotes.read(project)
-            if not self._credential_replaced(state, config.credential_id if config else None):
-                return None
-        return project
+        return due is None or due <= self._clock()
 
     def _load_state(self, project: Project, folder: Path) -> tuple[SyncState, StoreRemoteConfig | None] | None:
         """Состояние проекта и, если пришлось его читать, подключение; None: подключения больше нет."""
