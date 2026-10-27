@@ -117,11 +117,56 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("build"),
         help="куда положить готовые файлы; относительный путь считается от папки проекта (по умолчанию build)",
     )
+    db = sub.add_parser("db", help="миграции базы серверного режима")
+    db_sub = db.add_subparsers(dest="db_command", required=True)
+    db_sub.add_parser("upgrade", help="довести схему до последней ревизии")
+    db_sub.add_parser("current", help="показать ревизию базы и head")
+    db_sub.add_parser("check", help="проверить, что база на head и без дрейфа (код 1, если нет)")
     return parser
+
+
+async def _db(command: str) -> int:
+    # extra server необязателен: local-режим не должен тянуть SQLAlchemy при импорте CLI
+    from hse_doc_studio.infra.db import migrator  # noqa: PLC0415
+    from hse_doc_studio.infra.db.engine import create_engine  # noqa: PLC0415
+
+    engine = create_engine(settings.db)
+    try:
+        if command == "upgrade":
+            await migrator.migrate_if_needed(engine)
+            _write(f"ok: {await migrator.current_revision(engine)}")
+            return _EXIT_OK
+        current = await migrator.current_revision(engine)
+        head = migrator.head_revision()
+        _write(f"current: {current or '-'}\nhead: {head}")
+        if command == "current":
+            return _EXIT_OK
+        if current != head:
+            _write("db_outdated: выполните `hse-doc-studio db upgrade`", stream=sys.stderr)
+            return _EXIT_BUILD_FAILED
+        drift = await migrator.check_drift(engine)
+        for diff in drift:
+            _write(f"drift: {diff}", stream=sys.stderr)
+        return _EXIT_BUILD_FAILED if drift else _EXIT_OK
+    finally:
+        await engine.dispose()
+
+
+def _run_db(command: str) -> int:
+    try:
+        return asyncio.run(_db(command))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
+    except RuntimeError as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "db":
+        return _run_db(args.db_command)
     folder = args.project_dir.expanduser().resolve()
     out_dir = args.out if args.out.is_absolute() else folder / args.out
     doc_ids = tuple(args.docs) if args.docs else None

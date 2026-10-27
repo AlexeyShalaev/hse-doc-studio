@@ -5,11 +5,11 @@ description: Add an Alembic migration to the server-mode database (autogenerate 
 
 # Skill: Add Alembic Migration
 
-Server mode keeps one SQLAlchemy `MetaData` and one alembic revision chain in `services/api` (`migrations/`, `alembic.ini`). Design and table ownership: `docs/design/persistence-server.md`.
+Server mode keeps one SQLAlchemy `MetaData` and one alembic revision chain in `services/api` (`hse_doc_studio/infra/db/migrations/`, `alembic.ini`; миграции лежат в пакете, чтобы попасть в образ). Design and table ownership: `docs/design/persistence-server.md`.
 
 ## Prerequisites
 - Extra `server` installed (`uv sync --all-extras`), Docker available.
-- The foundation slice (engine, `migrations/`, `alembic.ini`) is in your branch. Before it, there is nothing to migrate.
+- The foundation slice (engine, `infra/db/migrations/`, `alembic.ini`) is in your branch. Before it, there is nothing to migrate.
 
 ## Procedure
 
@@ -26,7 +26,7 @@ Server mode keeps one SQLAlchemy `MetaData` and one alembic revision chain in `s
    uv run --frozen --all-extras alembic upgrade head
    uv run --frozen --all-extras alembic revision --autogenerate -m "<short_message>"
    ```
-   The file lands in `migrations/versions/` as `YYYY_MM_DD_HHMM-<id>_<message>.py`.
+   The file lands in `hse_doc_studio/infra/db/migrations/versions/` as `YYYY_MM_DD_HHMM-<id>_<message>.py`.
 
 4. **Review the generated code.** Autogenerate misses data migrations, server defaults changes and renames. Check:
    - `op.f()` is used for index/key names (naming convention);

@@ -133,3 +133,17 @@ def test__allowlists__paths__exist() -> None:
     }
 
     assert not missing, "Allowlist ссылается на несуществующие файлы:\n" + _format(missing)
+
+
+_SQL_PACKAGES = ("sqlalchemy", "alembic", "asyncpg")
+
+
+def test__core_and_use_cases__imports__no_sql_libraries() -> None:
+    violations: set[Pair] = set()
+    for root in (_CORE, _USE_CASES):
+        for prefix in _SQL_PACKAGES:
+            violations |= _scan(root, prefix)
+
+    assert not violations, "SQL-библиотеки живут только в infra/db; в core и use_cases идут порты:\n" + _format(
+        violations
+    )

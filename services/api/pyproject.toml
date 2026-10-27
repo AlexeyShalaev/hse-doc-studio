@@ -215,6 +215,7 @@ markers = [
     "unit: mark a test as a unit test.",
     "integration: mark a test as an integration test.",
     "http: mark a test as an HTTP integration test.",
+    "pg: needs a real Postgres (HSE_TEST_PG_DSN); skipped without it.",
     "requires_sshd: needs a local sshd and ssh-keygen; skipped when they are missing.",
 ]
 

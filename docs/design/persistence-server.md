@@ -73,3 +73,7 @@ async with uow.begin():
 ## 6. Порядок срезов
 
 Фундамент: конфиг-пакет и зависимости (S2-02), БД и ambient UoW (S2-03), тестовая инфраструктура (S2-04). Затем проекты и том, данные пользователя, чаты и записи сборок, git-данные, S3 и блобы, квоты диска. Конвертации sync в async идут строго по одному PR. Точный список и зависимости: план этапа 2.
+
+## 7. Миграции и запуск
+
+Одна цепочка alembic в `hse_doc_studio/infra/db/migrations` (внутри пакета, чтобы попасть в образ), один `MetaData` с naming convention в `infra/db/base.py`. Команды: `hse-doc-studio db upgrade|current|check`. При `HSE_STUDIO__DB__AUTO_MIGRATE=true` api мигрирует сам под `pg_advisory_lock`, иначе при ревизии не на head старт отказывает с `db_outdated` (`infra/db/migrator.ensure_db_current`). Откат только для разработки, в проде миграции идут вперёд.
