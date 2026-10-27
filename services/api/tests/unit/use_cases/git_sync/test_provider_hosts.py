@@ -534,6 +534,32 @@ async def test__check_credential__expired__raises_token_expired_and_marks_the_cr
     assert credentials.get(credential.id).status is CredentialStatus.auth_failed  # type: ignore[union-attr]
 
 
+async def test__check_credential__valid_token_after_a_failure__clears_auth_failed(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    credentials = _Credentials()
+    credential = credentials.add(replace(_credential(), status=CredentialStatus.auth_failed))
+    checker, _ = _checker(TokenIntrospection(TokenState.valid, login="anna"), credentials)
+
+    view = await _check_uc(settings, credentials, checker).execute(credential.id)
+
+    assert view.credential.credential.status is CredentialStatus.ok
+    assert credentials.marks == [(credential.id, CredentialStatus.ok)]
+
+
+@pytest.mark.parametrize("status", [CredentialStatus.unverified, CredentialStatus.ok, CredentialStatus.unreadable])
+async def test__check_credential__valid_token_without_a_failure__status_is_left_alone(
+    settings: JsonGitHostSettingsRepository, status: CredentialStatus
+) -> None:
+    credentials = _Credentials()
+    credential = credentials.add(replace(_credential(), status=status))
+    checker, _ = _checker(TokenIntrospection(TokenState.valid, login="anna"), credentials)
+
+    await _check_uc(settings, credentials, checker).execute(credential.id)
+
+    assert credentials.marks == []
+
+
 async def test__check_credential__rejected__raises_auth_failed(settings: JsonGitHostSettingsRepository) -> None:
     credentials = _Credentials()
     credential = credentials.add(_credential())

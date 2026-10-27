@@ -71,3 +71,6 @@ class TokenChecker:
             self._credentials.update(replace(credential, expires_at=expires_at))
         if state in {TokenState.rejected, TokenState.expired}:
             self._credentials.mark(credential.id, CredentialStatus.auth_failed)
+        elif state is TokenState.valid and credential.status is CredentialStatus.auth_failed:
+            # Сервер подтвердил токен: прежний отказ был временным или токен заменили, значок «обновить доступ» лишний.
+            self._credentials.mark(credential.id, CredentialStatus.ok)
