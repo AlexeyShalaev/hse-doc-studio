@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 
 import pytest
+
+from tests.fixtures.pg import PG_DSN_ENV
 
 pytest_plugins = [
     "tests.fixtures.actors",
@@ -22,6 +25,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(pytest.mark.unit)
         elif "integration" in parts:
             item.add_marker(pytest.mark.integration)
+        # skip внутри session-фикстуры ломает последующие async-фикстуры, поэтому pg пропускаем до setup
+        if item.get_closest_marker("pg") and not os.environ.get(PG_DSN_ENV):
+            item.add_marker(pytest.mark.skip(reason=f"{PG_DSN_ENV} не задан"))
 
 
 # Без extra server (CI-задача test-no-server) серверные тесты не собираются: они импортируют sqlalchemy и boto3.

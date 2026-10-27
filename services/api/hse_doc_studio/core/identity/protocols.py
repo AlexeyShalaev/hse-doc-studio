@@ -35,6 +35,16 @@ class IUserRepository(Protocol):
     async def list_identities(self, user_id: str) -> list[UserIdentity]: ...
 
 
+class IFirstAdminRepository(Protocol):
+    async def create_first_admin(self, user: User, password_hash: str) -> None:
+        """Атомарно создаёт пользователя-админа с паролем, если админа установки ещё нет.
+
+        Параллельные вызовы сериализуются: успешным будет ровно один, остальные получат
+        `IdentityError(setup_already_done)`. Занятый e-mail даёт `IdentityError(email_taken)`.
+        """
+        ...
+
+
 class ICredentialRepository(Protocol):
     async def get_hash(self, user_id: str) -> str | None: ...
     async def set_hash(self, user_id: str, password_hash: str) -> None: ...
