@@ -136,9 +136,7 @@ class HttpProviderDetector:
         self._cache.pop(key, None)
         self._cache[key] = (now + ttl_s, found)
 
-    async def _search(
-        self, request: DetectionRequest, prefixes: tuple[str, ...]
-    ) -> tuple[ApiDetection | None, bool]:
+    async def _search(self, request: DetectionRequest, prefixes: tuple[str, ...]) -> tuple[ApiDetection | None, bool]:
         """Найденный провайдер и признак, что ответ окончательный: нашли или каждый сервер ответил по-своему."""
         candidates = [(provider, prefix) for provider in request.providers for prefix in prefixes]
         if not candidates:
