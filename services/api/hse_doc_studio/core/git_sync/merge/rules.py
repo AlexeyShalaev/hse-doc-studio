@@ -20,7 +20,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable, Hashable, Mapping
 from datetime import UTC, datetime
@@ -52,6 +51,7 @@ from hse_doc_studio.core.git_sync.merge.jsonmerge import (
     same,
 )
 from hse_doc_studio.core.git_sync.protocols import MergeDecision, MergeMeta
+from hse_doc_studio.core.git_sync.untrusted_json import loads_untrusted
 from hse_doc_studio.core.template_versions import parse_app_version, parse_version_key
 
 _STUDIO = ".hse-studio/"
@@ -258,7 +258,7 @@ def _parse(raw: bytes | None) -> Any:
     if raw is None:
         return ABSENT
     try:
-        return json.loads(raw.decode("utf-8-sig"))
+        return loads_untrusted(raw)
     except ValueError as exc:
         raise _UnparsableError from exc
 

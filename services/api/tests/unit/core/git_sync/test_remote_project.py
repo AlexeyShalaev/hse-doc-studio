@@ -98,3 +98,11 @@ def test__required_studio__nothing_is_required_when_everything_is_available() ->
     assert project is not None
 
     assert remote_required_studio(project, template_available=True) is None
+
+
+@pytest.mark.parametrize("depth", [100, 20_000])
+def test__parse__deeply_nested_document__is_not_a_project_and_does_not_raise(depth: int) -> None:
+    nested = "[" * depth + "]" * depth
+    raw = f'{{"id": "{_ID}", "lock": {{}}, "x": {nested}}}'.encode()
+
+    assert parse_remote_project(raw) is None

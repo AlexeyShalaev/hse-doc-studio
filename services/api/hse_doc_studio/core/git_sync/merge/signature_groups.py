@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
@@ -22,6 +21,7 @@ from hse_doc_studio.core.git_sync.merge.choices import (
 )
 from hse_doc_studio.core.git_sync.merge.entities import MergeOp, MergePlan
 from hse_doc_studio.core.git_sync.merge.jsonmerge import ConflictKind
+from hse_doc_studio.core.git_sync.untrusted_json import loads_untrusted
 
 SIGNATURES_FILE: Final = ".hse-studio/signatures.json"
 _GROUP_PREFIX: Final = "/signature_groups/"
@@ -57,7 +57,7 @@ def _referenced(raw: bytes | None, doc_id: str) -> frozenset[str]:
     if raw is None:
         return frozenset()
     try:
-        data: Any = json.loads(raw.decode("utf-8-sig"))
+        data: Any = loads_untrusted(raw)
     except ValueError:
         return frozenset()
     frozen = _entry(data, "frozen", doc_id)

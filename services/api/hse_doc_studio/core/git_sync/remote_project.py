@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -14,6 +13,7 @@ from hse_doc_studio.core.git_sync.entities import SchemaAccess
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
 from hse_doc_studio.core.git_sync.protocols import IRemoteProjectCheck
+from hse_doc_studio.core.git_sync.untrusted_json import loads_untrusted
 from hse_doc_studio.core.project_schema import PROJECT_SCHEMA_VERSION
 from hse_doc_studio.core.value_objects import ProjectSchema
 
@@ -45,7 +45,7 @@ def _text(value: object, default: str = "") -> str:
 def parse_remote_project(raw: bytes) -> RemoteProject | None:
     """None, если файл не разбирается как проект Студии."""
     try:
-        data = json.loads(raw.decode("utf-8-sig"))
+        data = loads_untrusted(raw)
         lock = data["lock"]
         project_id = UUID(data["id"])
     except (ValueError, KeyError, TypeError, AttributeError):
@@ -83,8 +83,8 @@ def is_loadable_project(raw: bytes, check: IRemoteProjectCheck) -> bool:
     `parse_remote_project` пропускает, а загрузчик проекта нет: проект пропал бы из списка после перемотки.
     """
     try:
-        document = json.loads(raw.decode("utf-8-sig"))
-    except (ValueError, RecursionError):
+        document = loads_untrusted(raw)
+    except ValueError:
         return False
     return isinstance(document, dict) and check.is_loadable(document)
 
