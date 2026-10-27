@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
@@ -55,6 +56,7 @@ def ensure_supported_mode(cfg: Settings) -> None:
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
     """Factory function for uvicorn to create the app instance."""
     ensure_supported_mode(settings)
+    configure_logging()
     app = FastAPI(
         title="hse-doc-studio",
         version=settings.get_app_version(),
