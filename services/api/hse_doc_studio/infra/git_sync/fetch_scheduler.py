@@ -56,12 +56,20 @@ class GitFetchScheduler:
         if self._woken_early:
             self._wake.set()
         await self._wait(self._startup_delay_s)
+        failing = False
         while True:
             delay = self._tick_s
             # Тик не имеет права уронить фоновую задачу: упавший цикл не поднимется до перезапуска, и выборка
-            # тихо перестанет работать. CancelledError при этом должен проходить насквозь.
-            with suppress(Exception):
+            # тихо перестанет работать. CancelledError при этом должен проходить насквозь. Сбой пишется в журнал
+            # один раз за серию, чтобы постоянная поломка не засыпала его каждые полминуты.
+            try:
                 result = await self._run_tick()
+            except Exception:
+                if not failing:
+                    logger.warning("git fetch tick failed", exc_info=True)
+                failing = True
+            else:
+                failing = False
                 logger.debug(
                     "git fetch tick",
                     registered=result.registered,

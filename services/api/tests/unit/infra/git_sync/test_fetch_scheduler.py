@@ -4,6 +4,7 @@ import asyncio
 import threading
 from contextlib import suppress
 
+import structlog.testing
 from hse_doc_studio.infra.git_sync.fetch_scheduler import GitFetchScheduler
 from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchTickResult
 
@@ -80,6 +81,23 @@ async def test__loop__failing_tick__keeps_the_loop_alive() -> None:
 
     assert calls == 3
     assert waits.delays == [0, 30, 30, 30]
+
+
+async def test__loop__failing_ticks__are_logged_once_per_streak() -> None:
+    waits = _Waits(stop_after=6)
+    outcomes: list[object] = [RuntimeError("1"), RuntimeError("2"), _BUSY, RuntimeError("3")]
+
+    async def tick() -> FetchTickResult:
+        outcome = outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return _BUSY
+
+    with structlog.testing.capture_logs() as logs:
+        await _run(GitFetchScheduler(tick, tick_s=30, startup_delay_s=0, wait=waits))
+
+    failures = [entry for entry in logs if entry["event"] == "git fetch tick failed"]
+    assert len(failures) == 2
 
 
 async def test__loop__cancellation_during_a_tick__is_not_swallowed() -> None:
