@@ -151,6 +151,12 @@ describe("раздел «Доступ к репозиториям»: серве�
     expect(within(row).getByTestId("expiry-badge")).toHaveTextContent(
       "Истекает через 5 дней",
     );
+    // Доступы сервера видны списком вместе со сроком каждого.
+    expect(
+      within(within(row).getByTestId("server-credentials")).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(1);
   });
 
   it("настройка сервера: тип, добавление CA и снятие закрепления уходят одним запросом", async () => {
@@ -320,10 +326,13 @@ describe("раздел «Доступ к репозиториям»: сроки 
   });
 
   const card = async (label: string): Promise<HTMLElement> => {
-    const title = await screen.findByText(label);
-    const element = title.closest("[data-testid='credential-card']");
-    if (!(element instanceof HTMLElement)) throw new Error("нет карточки");
-    return element;
+    // Подпись доступа есть и в карточке, и в списке сервера: нужна карточка.
+    const titles = await screen.findAllByText(label);
+    for (const title of titles) {
+      const element = title.closest("[data-testid='credential-card']");
+      if (element instanceof HTMLElement) return element;
+    }
+    throw new Error("нет карточки");
   };
 
   it("срок токена: далеко, скоро, просрочен, без срока", async () => {

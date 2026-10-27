@@ -308,6 +308,8 @@ export const CloneSourceStep = ({
           host={repoUrl.host}
           port={hostProvider.port}
           certificate={issue?.certificate ?? null}
+          expected={issue?.expectedFingerprint ?? null}
+          actual={issue?.actualFingerprint ?? null}
           onTrusted={() => {
             void source.runCheck();
           }}

@@ -448,6 +448,7 @@
       "count_one": "The text holds {{count}} certificate.",
       "count_other": "The text holds {{count}} certificates.",
       "stored": "The certificate is stored on this computer next to the tokens and works only for {{host}}.",
+      "replacesPin": "The fingerprint pinned earlier will be removed.",
       "readFailed": "Could not read the file.",
       "submit": "Add the certificate",
       "problem": {
@@ -459,6 +460,8 @@
     "pin": {
       "text": "Studio will remember the fingerprint of this server's certificate and recognize it later, like a server key in ssh. Compare the fingerprint with the server administrator.",
       "fingerprint": "SHA-256 fingerprint",
+      "expected": "Pinned earlier",
+      "actual": "The server presents now",
       "confirm": "I compared the fingerprint with the server administrator or another reliable source",
       "typeHost": "To pin the new certificate, type the server name: {{host}}",
       "noCertificate": "The server did not send a certificate. Check again to see it.",

@@ -54,6 +54,7 @@ export type DemoScenarioId =
   | "token_narrow"
   | "token_broad"
   | "token_expired"
+  | "token_opaque"
   | "credentials_expiry"
   | "servers_settings";
 
@@ -427,6 +428,15 @@ export const SCENARIOS: DemoScenario[] = [
     setup: () => undefined,
     configureWorld: (world) => {
       world.forcedTokenMode = "broad";
+    },
+  },
+  {
+    // Сервер не даёт прочитать права токена (старая версия, точный токен GitHub).
+    id: "token_opaque",
+    group: "provider",
+    setup: () => undefined,
+    configureWorld: (world) => {
+      world.forcedTokenMode = "opaque";
     },
   },
   {

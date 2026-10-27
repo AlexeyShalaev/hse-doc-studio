@@ -32,6 +32,10 @@ export type CheckIssue = {
   canAdopt: boolean | null;
   /** Для tls_untrusted_ca и tls_pin_mismatch: сертификат, который предъявил сервер. */
   certificate: GitTlsCertificate | null;
+  /** Для tls_pin_mismatch: отпечаток, закреплённый раньше. */
+  expectedFingerprint: string | null;
+  /** Для tls_pin_mismatch: отпечаток, который сервер предъявил сейчас. */
+  actualFingerprint: string | null;
   /** Для token_insufficient_scope: каких прав токену не хватает. */
   missing: string[];
 };
@@ -60,6 +64,8 @@ const issueOf = (
   requiredStudio: null,
   canAdopt: null,
   certificate: null,
+  expectedFingerprint: null,
+  actualFingerprint: null,
   missing: [],
   ...extra,
 });
@@ -73,6 +79,8 @@ export const outcomeFromProbe = (probe: Probe): CheckOutcome => {
       issue: issueOf(error?.code ?? "git_error", error?.detail ?? "", {
         hostKeys: error?.host_keys ?? [],
         certificate: error?.certificate ?? null,
+        expectedFingerprint: error?.expected ?? null,
+        actualFingerprint: error?.actual ?? null,
         missing: probe.token_info?.missing ?? [],
       }),
     };
@@ -131,6 +139,8 @@ const outcomeFromBody = (body: GitErrorBody): CheckOutcome => {
       requiredStudio: body.required_studio ?? null,
       canAdopt: body.can_adopt ?? null,
       certificate: body.certificate ?? null,
+      expectedFingerprint: body.expected ?? null,
+      actualFingerprint: body.actual ?? null,
       missing: body.missing ?? [],
     }),
   };

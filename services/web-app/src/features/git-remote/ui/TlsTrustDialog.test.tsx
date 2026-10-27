@@ -220,6 +220,70 @@ describe("TlsTrustDialog", () => {
     });
   });
 
+  it("смена сертификата по контракту: сертификата нет, есть отпечатки до и после", async () => {
+    const { update, onTrusted } = setup();
+    renderWithClient(
+      <TlsTrustDialog
+        isOpen
+        mode="pin_mismatch"
+        host="gitlab.hse.local"
+        port={null}
+        certificate={null}
+        expected="SHA256:OLDOLDOLD"
+        actual="SHA256:NEWNEWNEW"
+        onTrusted={onTrusted}
+        onClose={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+    const compare = await screen.findByTestId("tls-compare");
+    expect(screen.getByDisplayValue("SHA256:OLDOLDOLD")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("SHA256:NEWNEWNEW")).toBeInTheDocument();
+    expect(compare).toHaveTextContent("Закреплён раньше");
+    expect(compare).toHaveTextContent("Сервер предъявляет сейчас");
+    expect(screen.queryByTestId("tls-certificate")).toBeNull();
+    expect(screen.queryByText(/Сервер не прислал сертификат/)).toBeNull();
+    await user.click(screen.getByTestId("tls-pin-confirm"));
+    await user.type(
+      screen.getByLabelText(/введи имя сервера/),
+      "gitlab.hse.local",
+    );
+    await user.click(screen.getByTestId("tls-submit"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        host: "gitlab.hse.local",
+        port: null,
+        pinned_fingerprint: "SHA256:NEWNEWNEW",
+      });
+    });
+    await waitFor(() => {
+      expect(onTrusted).toHaveBeenCalled();
+    });
+  });
+
+  it("смена сертификата: доверие центру выдачи снимает старое закрепление", async () => {
+    const { mount, update } = setup();
+    mount(null, "pin_mismatch");
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Добавить сертификат центра (CA)",
+      }),
+    );
+    await user.click(screen.getByTestId("tls-ca-text"));
+    await user.paste(PEM);
+    expect(screen.getByText(/отпечаток будет снят/)).toBeInTheDocument();
+    await user.click(screen.getByTestId("tls-submit"));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({
+        host: "gitlab.hse.local",
+        port: null,
+        ca_pem: PEM,
+        pinned_fingerprint: null,
+      });
+    });
+  });
+
   it("отказ сервера показан в окне, окно остаётся открытым", async () => {
     const { mount, update, onTrusted } = setup();
     update.mockRejectedValue(

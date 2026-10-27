@@ -132,6 +132,7 @@ const EXPECTED_STATE: Record<DemoScenarioId, string> = {
   token_narrow: "no_remote",
   token_broad: "no_remote",
   token_expired: "no_remote",
+  token_opaque: "no_remote",
   credentials_expiry: "no_remote",
   servers_settings: "no_remote",
 };
@@ -1513,6 +1514,13 @@ describe("demo servers and token checks", () => {
       (await checkOf((await createToken("gitlab.com", "anything")).id)).error
         ?.code,
     ).toBe("token_expired");
+    resetWorld("token_opaque");
+    const opaque = await checkOf(
+      (await createToken("gitlab.com", "anything")).id,
+    );
+    expect(opaque.ok).toBe(true);
+    expect(opaque.result?.token_info?.sufficiency).toBe("unknown");
+    expect(opaque.result?.token_info?.scopes).toEqual([]);
   });
 
   it("checking a key is refused and an unknown credential is not found", async () => {
@@ -1562,7 +1570,12 @@ describe("demo servers and token checks", () => {
     expect((await checkOf(token.id)).ok).toBe(true);
     resetWorld("provider_tls_pin_changed");
     const other = await createToken("gitlab.rotated.local", "glpat-demo");
-    expect((await checkOf(other.id)).error?.code).toBe("tls_pin_mismatch");
+    const mismatch = (await checkOf(other.id)).error;
+    expect(mismatch?.code).toBe("tls_pin_mismatch");
+    // Контракт: отпечатки до и после, сертификата в ответе нет.
+    expect(mismatch?.expected).toMatch(/^SHA256:0ldPinned/);
+    expect(mismatch?.actual).toMatch(/^SHA256:/);
+    expect(mismatch?.certificate).toBeUndefined();
   });
 
   it("the probe tells the provider, its version, the token and the certificate", async () => {

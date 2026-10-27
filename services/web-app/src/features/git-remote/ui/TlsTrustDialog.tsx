@@ -22,6 +22,10 @@ export type TlsTrustDialogProps = {
   port: number | null;
   /** Сертификат, который сервер предъявил сейчас. */
   certificate: GitTlsCertificate | null;
+  /** Только pin_mismatch: отпечаток, закреплённый раньше. */
+  expected?: string | null;
+  /** Только pin_mismatch: отпечаток, который сервер предъявил сейчас. */
+  actual?: string | null;
   onTrusted: () => void;
   onClose: () => void;
 };
@@ -83,6 +87,8 @@ export const TlsTrustDialog = ({
   host,
   port,
   certificate,
+  expected = null,
+  actual = null,
   onTrusted,
   onClose,
 }: TlsTrustDialogProps) => {
@@ -121,8 +127,10 @@ export const TlsTrustDialog = ({
 
   const problem = pemProblem(pem);
   const canAddCa = problem === null;
+  // Что закрепить: отпечаток сертификата или, при смене, тот, что сервер прислал сейчас.
+  const newFingerprint = certificate?.fingerprint_sha256 ?? actual;
   const canPin =
-    certificate !== null &&
+    newFingerprint !== null &&
     checked &&
     (!mismatch || typedHost.trim().toLowerCase() === host.toLowerCase());
 
@@ -131,12 +139,14 @@ export const TlsTrustDialog = ({
     try {
       await save.mutateAsync(
         choice === "ca"
-          ? { host, port, ca_pem: pem.trim() }
-          : {
+          ? {
               host,
               port,
-              pinned_fingerprint: certificate?.fingerprint_sha256 ?? null,
-            },
+              ca_pem: pem.trim(),
+              // Доверие центру выдачи заменяет старое закрепление.
+              ...(mismatch ? { pinned_fingerprint: null } : {}),
+            }
+          : { host, port, pinned_fingerprint: newFingerprint },
       );
       reset();
       onTrusted();
@@ -248,6 +258,7 @@ export const TlsTrustDialog = ({
             />
             <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
               {t("tls.ca.stored", { host: hostLabel })}
+              {mismatch ? ` ${t("tls.ca.replacesPin")}` : ""}
             </p>
           </div>
         ) : (
@@ -256,24 +267,60 @@ export const TlsTrustDialog = ({
             style={{ gap: 10 }}
             data-testid="tls-pin"
           >
-            {certificate ? (
+            {newFingerprint !== null ? (
               <>
                 <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
                   {t("tls.pin.text")}
                 </p>
-                <CertificateFacts cert={certificate} />
-                <div>
+                {certificate && <CertificateFacts cert={certificate} />}
+                {mismatch && expected ? (
                   <div
-                    className="dim"
-                    style={{ fontSize: 11.5, marginBottom: 4 }}
+                    className="flex flex-col"
+                    style={{ gap: 8 }}
+                    data-testid="tls-compare"
                   >
-                    {t("tls.pin.fingerprint")}
+                    <div>
+                      <div
+                        className="dim"
+                        style={{ fontSize: 11.5, marginBottom: 4 }}
+                      >
+                        {t("tls.pin.expected")}
+                      </div>
+                      <CopyField
+                        value={expected}
+                        label={t("tls.pin.expected")}
+                      />
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          marginBottom: 4,
+                          color: "var(--c-err)",
+                        }}
+                      >
+                        {t("tls.pin.actual")}
+                      </div>
+                      <CopyField
+                        value={newFingerprint}
+                        label={t("tls.pin.actual")}
+                      />
+                    </div>
                   </div>
-                  <CopyField
-                    value={certificate.fingerprint_sha256}
-                    label={t("tls.pin.fingerprint")}
-                  />
-                </div>
+                ) : (
+                  <div>
+                    <div
+                      className="dim"
+                      style={{ fontSize: 11.5, marginBottom: 4 }}
+                    >
+                      {t("tls.pin.fingerprint")}
+                    </div>
+                    <CopyField
+                      value={newFingerprint}
+                      label={t("tls.pin.fingerprint")}
+                    />
+                  </div>
+                )}
                 <ConfirmCheck
                   checked={checked}
                   onChange={setChecked}

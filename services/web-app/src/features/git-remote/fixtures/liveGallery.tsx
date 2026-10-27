@@ -21,13 +21,16 @@ const connectEntry = (
   note: string,
   scenario: string,
   mode: ConnectDialogMode = "connect",
+  url?: string,
 ): GalleryEntry => ({
   id,
   title,
   note,
   scenario,
   frame: "plain",
-  render: () => <ConnectLauncher mode={mode} />,
+  render: () => (
+    <ConnectLauncher mode={mode} {...(url === undefined ? {} : { url })} />
+  ),
 });
 
 const cloneEntry = (
@@ -72,6 +75,162 @@ const cardEntry = (
   },
 });
 
+const TOKEN_HINT = "Адрес уже в поле. После «Далее» вставь любой токен.";
+
+// Живые записи про серверы и токены: адрес подставлен, сценарий выбирается сам.
+const accessLiveGroups = (): GalleryGroup[] => [
+  {
+    id: "live-providers",
+    title: "Серверы и токены (живое)",
+    description:
+      "Окно подключения с готовым адресом. Токен подойдёт любой: слова в нём (narrow, broad, expired, revoked, opaque) задают исход проверки.",
+    entries: [
+      connectEntry(
+        "live_provider_gitlab_com",
+        "GitLab.com: токен по ссылке",
+        `${TOKEN_HINT} Кнопка «Создать токен на GitLab» открывает страницу с подставленными правами.`,
+        "provider_gitlab_com",
+        "connect",
+        "https://gitlab.com/hse/paper.git",
+      ),
+      connectEntry(
+        "live_provider_gitlab_self",
+        "Свой GitLab 17",
+        `${TOKEN_HINT} В чипе версия сервера, ссылка ведёт на страницу токенов этого сервера.`,
+        "provider_gitlab_self",
+        "connect",
+        "https://gitlab.hse.ru/team/paper.git",
+      ),
+      connectEntry(
+        "live_provider_gitlab_old",
+        "Старый GitLab 13: запасная ссылка",
+        `${TOKEN_HINT} Основная ссылка может не открыться, рядом запасная; права токена прочитать нельзя.`,
+        "provider_gitlab_old",
+        "connect",
+        "https://gitlab.old.hse.ru/team/paper.git",
+      ),
+      connectEntry(
+        "live_provider_api_detect",
+        "Тип сервера по его ответу",
+        "По имени хоста тип не понять: сервер называет себя GitLab 16, это видно в чипе.",
+        "provider_api_detect",
+        "connect",
+        "https://forge.hse.ru/team/paper.git",
+      ),
+      connectEntry(
+        "live_provider_github",
+        "GitHub: точный токен",
+        `${TOKEN_HINT} Под кнопкой напоминание выбрать репозиторий; токен github_pat_demo проверить по правам нельзя.`,
+        "provider_github",
+        "connect",
+        "https://github.com/hse/paper.git",
+      ),
+      connectEntry(
+        "live_provider_gitea",
+        "Gitea и Codeberg: шаги по номерам",
+        `${TOKEN_HINT} Ссылка без подстановки прав и шаги по номерам.`,
+        "provider_gitea",
+        "connect",
+        "https://codeberg.org/anna/paper.git",
+      ),
+    ],
+  },
+  {
+    id: "live-tokens",
+    title: "Итоги проверки токена (живое)",
+    entries: [
+      connectEntry(
+        "live_token_narrow",
+        "Токену не хватает прав",
+        `${TOKEN_HINT} Проверка называет право, которое нужно добавить (write_repository).`,
+        "token_narrow",
+        "connect",
+        "https://gitlab.com/hse/paper.git",
+      ),
+      connectEntry(
+        "live_token_broad",
+        "У токена слишком много прав",
+        `${TOKEN_HINT} Предупреждение про право api, подключиться можно.`,
+        "token_broad",
+        "connect",
+        "https://gitlab.com/hse/paper.git",
+      ),
+      connectEntry(
+        "live_token_expired",
+        "Срок токена истёк",
+        `${TOKEN_HINT} Проверка говорит, когда токен истёк, и предлагает выпустить новый.`,
+        "token_expired",
+        "connect",
+        "https://gitlab.com/hse/paper.git",
+      ),
+      connectEntry(
+        "live_token_opaque",
+        "Права проверить нельзя",
+        `${TOKEN_HINT} Это не отказ: сервер не отдаёт права токена, доступ проверит само подключение.`,
+        "token_opaque",
+        "connect",
+        "https://gitlab.com/hse/paper.git",
+      ),
+    ],
+  },
+  {
+    id: "live-certificates",
+    title: "Сертификат сервера (живое)",
+    description:
+      "Окно сертификата можно пройти до конца: добавить центр выдачи (подойдёт любой текст между BEGIN CERTIFICATE и END CERTIFICATE) или закрепить отпечаток.",
+    entries: [
+      connectEntry(
+        "live_tls_ca",
+        "Сертификат организации",
+        `${TOKEN_HINT} После «Сохранить и проверить» откроется окно сертификата: добавь центр выдачи.`,
+        "provider_tls_ca",
+        "connect",
+        "https://gitlab.hse.local/team/paper.git",
+      ),
+      connectEntry(
+        "live_tls_selfsigned",
+        "Самоподписанный сертификат",
+        `${TOKEN_HINT} Окно предложит закрепить отпечаток после сверки.`,
+        "provider_tls_selfsigned",
+        "connect",
+        "https://gitlab.lab.local/team/paper.git",
+      ),
+      connectEntry(
+        "live_tls_pin_changed",
+        "Сертификат изменился после закрепления",
+        `${TOKEN_HINT} Видны оба отпечатка; чтобы закрепить новый, нужно набрать имя сервера.`,
+        "provider_tls_pin_changed",
+        "connect",
+        "https://gitlab.rotated.local/team/paper.git",
+      ),
+    ],
+  },
+  {
+    id: "live-servers",
+    title: "Настройки приложения: доступ к git (живое)",
+    entries: [
+      {
+        id: "live_access_expiry",
+        title: "Доступы с разным сроком",
+        note: "Скоро истекает, истёк, без срока; у каждого токена кнопка «Проверить».",
+        scenario: "credentials_expiry",
+        frame: "window",
+        width: 760,
+        render: () => <GitAccessSection />,
+      },
+      {
+        id: "live_access_servers",
+        title: "Серверы: тип, свой центр, закрепление",
+        note: "Список серверов с версиями; «Настроить» и «Добавить сервер» работают на демо-данных.",
+        scenario: "servers_settings",
+        frame: "window",
+        width: 760,
+        render: () => <GitAccessSection />,
+      },
+    ],
+  },
+];
+
 /**
  * Живые записи: работают на демо-API, поэтому их можно пройти до конца
  * (ввести адрес, получить ключ, выбрать папку). В адрес можно вписать слова,
@@ -79,6 +238,7 @@ const cardEntry = (
  * offline, tls, sso, limit, changed (для ssh: ключ сервера изменился).
  */
 export const getRemoteLiveGallery = (): GalleryGroup[] => [
+  ...accessLiveGroups(),
   {
     id: "live-connect",
     title: "Окно подключения (живое)",

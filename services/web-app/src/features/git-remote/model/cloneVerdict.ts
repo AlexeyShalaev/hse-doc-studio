@@ -62,6 +62,8 @@ export const cloneVerdictFromProbe = (probe: Probe): CloneVerdict => {
         requiredStudio: null,
         canAdopt: null,
         certificate: null,
+        expectedFingerprint: null,
+        actualFingerprint: null,
         missing: [],
       },
     };
@@ -92,6 +94,8 @@ export const cloneVerdictFromError = (error: unknown): CloneVerdict => {
       requiredStudio: null,
       canAdopt: null,
       certificate: null,
+      expectedFingerprint: null,
+      actualFingerprint: null,
       missing: [],
     },
   };

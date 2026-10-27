@@ -286,7 +286,14 @@ export const runDemoProbe = (
           code: tls.code,
           detail: tls.detail,
           host_keys: null,
-          certificate: tls.certificate,
+          // Контракт: у недоверенного центра сертификат, у смены закреплённого
+          // два отпечатка (закреплённый и предъявленный).
+          ...(tls.code === "tls_untrusted_ca"
+            ? { certificate: tls.certificate }
+            : {
+                expected: tls.expected,
+                actual: tls.certificate.fingerprint_sha256,
+              }),
         },
         reachable: false,
         auth_ok: false,

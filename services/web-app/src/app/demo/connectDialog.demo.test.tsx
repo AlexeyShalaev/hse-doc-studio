@@ -346,6 +346,73 @@ describe("окно подключения поверх демо-транспор
     ).toBeInTheDocument();
   });
 
+  it("самоподписанный сервер: отпечаток закрепляется после отметки о сверке", async () => {
+    resetWorld("provider_tls_selfsigned");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.lab.local/team/empty-paper.git",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await typeInto(user, "Токен", "glpat-demo-token-123456");
+    await user.click(
+      screen.getByRole("button", { name: "Сохранить и проверить" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /Сертификат gitlab.lab.local не из известного центра/,
+    });
+    // Самоподписанный сертификат: сразу предлагается закрепить его отпечаток.
+    expect(within(dialog).getByTestId("tls-certificate")).toHaveTextContent(
+      "самоподписанный",
+    );
+    const submit = within(dialog).getByTestId("tls-submit");
+    expect(submit).toBeDisabled();
+    await user.click(within(dialog).getByTestId("tls-pin-confirm"));
+    await user.click(submit);
+    expect(
+      await screen.findByTestId("probe-result-ready-empty"),
+    ).toBeInTheDocument();
+  });
+
+  it("сертификат сменился: видны оба отпечатка, новый закрепляется после ввода имени сервера", async () => {
+    resetWorld("provider_tls_pin_changed");
+    const user = userEvent.setup();
+    mount();
+    await paste(
+      user,
+      "Адрес репозитория",
+      "https://gitlab.rotated.local/team/empty-paper.git",
+    );
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await typeInto(user, "Токен", "glpat-demo-token-123456");
+    await user.click(
+      screen.getByRole("button", { name: "Сохранить и проверить" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /Сертификат gitlab.rotated.local изменился/,
+    });
+    const compare = within(dialog).getByTestId("tls-compare");
+    expect(
+      within(compare).getByDisplayValue(
+        "SHA256:0ldPinnedCertificateFingerprintNoLongerPresented123",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(compare).getByDisplayValue(/^SHA256:b1Kq0vU7m4Zl9Xc2/),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByTestId("tls-pin-confirm"));
+    await user.type(
+      within(dialog).getByLabelText(/введи имя сервера/),
+      "gitlab.rotated.local",
+    );
+    await user.click(within(dialog).getByTestId("tls-submit"));
+    expect(
+      await screen.findByTestId("probe-result-ready-empty"),
+    ).toBeInTheDocument();
+  });
+
   it("токену не хватает прав: проверка называет право, подключиться всё равно можно", async () => {
     resetWorld("token_narrow");
     const user = userEvent.setup();

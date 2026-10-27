@@ -74,10 +74,13 @@ const setup = ({
 };
 
 const card = async (label: string): Promise<HTMLElement> => {
-  const title = await screen.findByText(label);
-  const element = title.closest("[data-testid='credential-card']");
-  if (!(element instanceof HTMLElement)) throw new Error("нет карточки");
-  return element;
+  // Подпись доступа есть и в карточке, и в списке сервера: нужна карточка.
+  const titles = await screen.findAllByText(label);
+  for (const title of titles) {
+    const element = title.closest("[data-testid='credential-card']");
+    if (element instanceof HTMLElement) return element;
+  }
+  throw new Error("нет карточки");
 };
 
 describe("раздел «Доступ к репозиториям»", () => {

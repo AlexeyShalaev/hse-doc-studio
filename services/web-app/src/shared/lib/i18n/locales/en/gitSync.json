@@ -213,6 +213,10 @@
         "title": "The token has too many rights",
         "hint": "Any GitLab address and any token. The check warns about the api right"
       },
+      "token_opaque": {
+        "title": "The token permissions cannot be checked",
+        "hint": "Any address and any token. The check says the permissions cannot be read and suggests testing by connecting"
+      },
       "token_expired": {
         "title": "The token has expired",
         "hint": "Any address and any token. The check says the token is out of date"

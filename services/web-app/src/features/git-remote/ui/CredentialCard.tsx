@@ -317,6 +317,8 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
           host={credential.host}
           port={null}
           certificate={verdict?.kind === "error" ? verdict.certificate : null}
+          expected={verdict?.kind === "error" ? verdict.expected : null}
+          actual={verdict?.kind === "error" ? verdict.actual : null}
           onTrusted={() => {
             setDialog(null);
             void runCheck();

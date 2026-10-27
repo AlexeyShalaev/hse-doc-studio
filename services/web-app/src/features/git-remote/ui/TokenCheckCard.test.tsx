@@ -128,6 +128,8 @@ describe("TokenCheckCard", () => {
         code: "auth_failed",
         detail: "d",
         certificate: null,
+        expected: null,
+        actual: null,
         info: null,
       },
       { onRetry },
@@ -147,6 +149,8 @@ describe("TokenCheckCard", () => {
       code: "git_error",
       detail: "boom",
       certificate: null,
+      expected: null,
+      actual: null,
       info: null,
     });
     expect(screen.getByTestId("token-check-git_error")).toHaveTextContent(
@@ -162,6 +166,8 @@ describe("TokenCheckCard", () => {
         code: "tls_untrusted_ca",
         detail: "d",
         certificate: null,
+        expected: null,
+        actual: null,
         info: null,
       },
       { onReviewCertificate: onReview },

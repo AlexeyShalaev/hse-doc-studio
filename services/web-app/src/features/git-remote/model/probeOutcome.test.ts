@@ -100,6 +100,8 @@ describe("outcomeFromProbe", () => {
         requiredStudio: null,
         canAdopt: null,
         certificate: null,
+        expectedFingerprint: null,
+        actualFingerprint: null,
         missing: [],
       },
     });
@@ -125,6 +127,26 @@ describe("outcomeFromProbe", () => {
       issue: { code: "tls_untrusted_ca", certificate },
     });
     expect(rowOfCode("tls_untrusted_ca")).toBe("reachable");
+
+    const mismatch = outcomeFromProbe(
+      probe({
+        ok: false,
+        error: {
+          code: "tls_pin_mismatch",
+          detail: "d",
+          expected: "SHA256:old",
+          actual: "SHA256:new",
+        },
+      }),
+    );
+    expect(mismatch).toMatchObject({
+      kind: "error",
+      issue: {
+        code: "tls_pin_mismatch",
+        expectedFingerprint: "SHA256:old",
+        actualFingerprint: "SHA256:new",
+      },
+    });
 
     const narrow = outcomeFromProbe(
       probe({

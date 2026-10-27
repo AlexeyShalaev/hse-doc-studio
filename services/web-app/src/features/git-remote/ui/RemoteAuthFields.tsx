@@ -67,6 +67,8 @@ export const RemoteAuthFields = ({
     (check.status === "checking" || check.credentialId === currentId);
   const verdict = check.status === "done" ? check.verdict : null;
   const certificate = verdict?.kind === "error" ? verdict.certificate : null;
+  const pinExpected = verdict?.kind === "error" ? verdict.expected : null;
+  const pinActual = verdict?.kind === "error" ? verdict.actual : null;
   const createUrl = tokenCreateUrl(url, {
     provider: url.provider,
     subpath: provider.subpath,
@@ -251,6 +253,8 @@ export const RemoteAuthFields = ({
           host={url.host}
           port={provider.port}
           certificate={certificate}
+          expected={pinExpected}
+          actual={pinActual}
           onTrusted={() => {
             setTlsOpen(false);
             auth.recheck();

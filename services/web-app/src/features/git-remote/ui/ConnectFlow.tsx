@@ -49,6 +49,8 @@ export type ConnectFlowProps = {
   mode: ConnectDialogMode;
   onClose: () => void;
   onCloneInstead?: ((target: CloneTarget) => void) | undefined;
+  /** Адрес, с которого начать (галерея и демо); обычно окно открывается с пустым полем. */
+  initialUrl?: string | undefined;
 };
 
 const STEP_IDS = ["repo", "access", "check"] as const;
@@ -94,6 +96,7 @@ const ConnectFlowBody = ({
   status,
   onClose,
   onCloneInstead,
+  initialUrl,
 }: ConnectFlowProps & { status: SyncStatusView | undefined }) => {
   const { t } = useTranslation("gitRemote");
 
@@ -118,7 +121,9 @@ const ConnectFlowBody = ({
   const updateSettings = useUpdateGitSettings();
 
   const [step, setStep] = useState<ConnectStep | null>(null);
-  const [urlText, setUrlText] = useState(remote?.display_url ?? "");
+  const [urlText, setUrlText] = useState(
+    remote?.display_url ?? initialUrl ?? "",
+  );
   const [tokenStripped, setTokenStripped] = useState(false);
   const [branch, setBranch] = useState(fixing ? remote.branch : "");
   const [ndaAck, setNdaAck] = useState(false);
@@ -509,6 +514,8 @@ const ConnectFlowBody = ({
           host={repoUrl.host}
           port={hostProvider.port}
           certificate={issue?.certificate ?? null}
+          expected={issue?.expectedFingerprint ?? null}
+          actual={issue?.actualFingerprint ?? null}
           onTrusted={() => {
             setTlsOpen(false);
             void runCheck();

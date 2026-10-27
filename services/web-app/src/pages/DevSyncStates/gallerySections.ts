@@ -2,6 +2,7 @@ import { getProfileGallery } from "@features/author-profile";
 import { getConflictsGallery } from "@features/git-conflicts";
 import { getExchangeGallery } from "@features/git-exchange";
 import {
+  getRemoteAccessStaticGallery,
   getRemoteLiveGallery,
   getRemoteStaticGallery,
 } from "@features/git-remote";
@@ -18,6 +19,7 @@ const pick = (groups: GalleryGroup[], ids: string[]): GalleryGroup[] =>
 export const buildGallerySections = (): GallerySection[] => {
   const remoteStatic = getRemoteStaticGallery();
   const remoteLive = getRemoteLiveGallery();
+  const remoteAccess = getRemoteAccessStaticGallery();
   return [
     {
       id: "sync",
@@ -35,6 +37,18 @@ export const buildGallerySections = (): GallerySection[] => {
           "connect-dialogs",
         ]),
         ...pick(remoteLive, ["live-connect"]),
+      ],
+    },
+    {
+      id: "access",
+      title: "Серверы, токены и сертификаты",
+      groups: [
+        ...pick(remoteAccess, ["access-providers", "access-token-check"]),
+        ...pick(remoteLive, ["live-providers", "live-tokens"]),
+        ...pick(remoteAccess, ["access-tls"]),
+        ...pick(remoteLive, ["live-certificates"]),
+        ...pick(remoteAccess, ["access-servers", "access-credentials"]),
+        ...pick(remoteLive, ["live-servers"]),
       ],
     },
     {

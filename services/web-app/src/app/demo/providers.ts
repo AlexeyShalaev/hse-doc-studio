@@ -117,6 +117,8 @@ export type DemoTlsIssue = {
   code: "tls_untrusted_ca" | "tls_pin_mismatch";
   detail: string;
   certificate: GitTlsCertificate;
+  /** tls_pin_mismatch: отпечаток, закреплённый раньше. */
+  expected: string | null;
 };
 
 /** Серверы внутри сети (*.local) подписаны своим центром, пока человек не доверил его. */
@@ -135,6 +137,7 @@ export const tlsIssueFor = (
           code: "tls_pin_mismatch",
           detail: "Сертификат сервера не совпадает с закреплённым.",
           certificate,
+          expected: saved.pinned_fingerprint,
         };
   }
   if (saved?.ca_present) return null;
@@ -143,6 +146,7 @@ export const tlsIssueFor = (
     detail:
       "Сертификат сервера выдан неизвестным центром. Добавь его сертификат или подтверди отпечаток.",
     certificate,
+    expected: null,
   };
 };
 
@@ -223,9 +227,7 @@ export const checkCredentialOutcome = (
         tls.code === "tls_untrusted_ca"
           ? { certificate: tls.certificate }
           : {
-              expected:
-                findHostSettings(world.hostSettings, host, null)
-                  ?.pinned_fingerprint ?? "",
+              expected: tls.expected ?? "",
               actual: tls.certificate.fingerprint_sha256,
             },
     };

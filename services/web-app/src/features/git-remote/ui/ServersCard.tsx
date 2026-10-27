@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Plus, Server } from "lucide-react";
+import { KeyRound, Plus, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   providerOfHost,
-  worstExpiry,
   type GitCredential,
   type GitHostSettings,
 } from "@entities/git-remote";
@@ -83,9 +82,6 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
               const detection = providerOfHost(item.host, item.port ?? null, [
                 item,
               ]);
-              const expiry = worstExpiry(
-                row.credentials.map((c) => c.expires_at),
-              );
               const version = shortVersion(detection.version);
               return (
                 <li
@@ -158,18 +154,43 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                         count: row.credentials.length,
                       })}
                     </span>
-                    {expiry.state !== "none" && expiry.state !== "ok" && (
-                      <span>
-                        <ExpiryBadge
-                          expiresAt={
-                            row.credentials.find(
-                              (c) =>
-                                worstExpiry([c.expires_at]).state ===
-                                expiry.state,
-                            )?.expires_at
-                          }
-                        />
-                      </span>
+                    {row.credentials.length > 0 && (
+                      <ul
+                        data-testid="server-credentials"
+                        style={{
+                          margin: "2px 0 0",
+                          padding: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 3,
+                        }}
+                      >
+                        {row.credentials.map((credential) => (
+                          <li
+                            key={credential.id}
+                            className="flex items-center"
+                            style={{
+                              gap: 8,
+                              listStyle: "none",
+                              fontSize: 12,
+                              minWidth: 0,
+                            }}
+                          >
+                            <KeyRound
+                              size={12}
+                              aria-hidden="true"
+                              style={{ color: "var(--fg-3)", flexShrink: 0 }}
+                            />
+                            <span className="truncate" style={{ minWidth: 0 }}>
+                              {credential.label}
+                            </span>
+                            <ExpiryBadge
+                              expiresAt={credential.expires_at}
+                              showFar
+                            />
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <button

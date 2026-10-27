@@ -21,6 +21,9 @@ export type TokenVerdict =
       code: string;
       detail: string;
       certificate: GitTlsCertificate | null;
+      /** tls_pin_mismatch: закреплённый раньше отпечаток и тот, что сервер прислал сейчас. */
+      expected: string | null;
+      actual: string | null;
       info: GitTokenInfo | null;
     };
 
@@ -69,6 +72,8 @@ export const verdictOfError = (
     code,
     detail: body?.detail ?? (error instanceof Error ? error.message : ""),
     certificate: body?.certificate ?? null,
+    expected: body?.expected ?? null,
+    actual: body?.actual ?? null,
     info: null,
   };
 };
