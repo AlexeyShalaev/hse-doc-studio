@@ -8,6 +8,7 @@ import structlog
 
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
@@ -43,11 +44,13 @@ class ConnectProjectUC:
         project_index_repo: IProjectIndexRepository,
         vcs_service: IVcsService,
         template_repo: ITemplateRepository | None = None,
+        git_remotes: IGitRemoteRegistry | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._vcs = vcs_service
         self._template_repo = template_repo
+        self._git_remotes = git_remotes
 
     async def execute(self, inp: ConnectProjectInput) -> ConnectProjectOutput:
         folder = inp.folder.expanduser().resolve()
@@ -76,6 +79,10 @@ class ConnectProjectUC:
         # always return the project so the UI can navigate into it, mirroring
         # IDE "open project" semantics.
         self._project_index_repo.register(folder)
+        if self._git_remotes is not None:
+            # Папку скопировали с другого компьютера вместе с хранилищем, где уже записан репозиторий: фоновая
+            # выборка должна подхватить её сразу, а не после перезапуска, когда реестр просматривается заново.
+            await asyncio.to_thread(self._git_remotes.consider, folder)
 
         # Ensure the isolated VCS store exists (recreate if the user deleted it).
         # Best-effort: never block connecting a project on a VCS hiccup.

@@ -58,6 +58,11 @@ class ConfigScanRemoteRegistry:
             except Exception:  # noqa: BLE001 — чужой обработчик не должен срывать подключение проекта
                 logger.warning("git remotes: a listener failed", exc_info=True)
 
+    def consider(self, folder: Path) -> None:
+        """Папка, открытая из готового проекта: подключение, записанное в её хранилище, надо учесть без перезапуска."""
+        if store_has_remote(folder):
+            self.add(folder)
+
     def remove(self, folder: Path) -> None:
         with self._lock:
             self._scan()

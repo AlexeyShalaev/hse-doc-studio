@@ -125,3 +125,20 @@ def test__subscribe__a_failing_listener_does_not_break_adding_a_project(tmp_path
 
     assert registry.list() == [tmp_path / "a"]
     assert heard == [1]
+
+
+def test__consider__folder_with_a_remote_added_after_the_scan__is_listed_and_wakes_the_listeners(
+    tmp_path: Path,
+) -> None:
+    registry = ConfigScanRemoteRegistry(_Index([]))
+    woken: list[bool] = []
+    registry.subscribe(lambda: woken.append(True))
+    assert registry.list() == []
+    copied = _store_config(tmp_path / "copied", _WITH_REMOTE)
+    plain = _store_config(tmp_path / "plain", "[core]\n")
+
+    registry.consider(copied)
+    registry.consider(plain)
+
+    assert registry.list() == [copied]
+    assert woken == [True]

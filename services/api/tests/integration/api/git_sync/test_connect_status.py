@@ -1178,3 +1178,19 @@ async def test__cancel_operation__finished__409_and_unknown__404(stack: Stack, c
 
     assert finished.status_code == 409
     assert unknown.status_code == 404
+
+
+async def test__open_existing_folder_with_a_remote__is_registered_for_background_fetch_at_once(
+    stack: Stack, client: AsyncClient, project: dict[str, Any], remote: BareRemote
+) -> None:
+    _publish(project, remote)
+    await _connect(client, project, remote)
+    registry = await stack.get(IGitRemoteRegistry)
+    # Реестр уже просмотрен; папку убирают из списка проектов и открывают снова, как скопированную с другого компьютера.
+    assert (await client.delete(f"/api/v1/projects/{project['id']}")).status_code == 204
+    assert registry.list() == []
+
+    resp = await client.post("/api/v1/projects/connect", json={"folder": project["folder"]})
+
+    assert resp.status_code == 201, resp.text
+    assert [p.resolve() for p in registry.list()] == [Path(project["folder"]).resolve()]

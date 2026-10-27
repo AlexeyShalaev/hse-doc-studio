@@ -558,12 +558,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         vcs_service: IVcsService,
         template_repo: ITemplateRepository,
+        git_remotes: IGitRemoteRegistry,
     ) -> ConnectProjectUC:
         return ConnectProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             vcs_service=vcs_service,
             template_repo=template_repo,
+            git_remotes=git_remotes,
         )
 
     @provide
