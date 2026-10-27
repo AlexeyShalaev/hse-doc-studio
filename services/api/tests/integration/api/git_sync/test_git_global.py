@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
+import pytest
 from hse_doc_studio.api.schemas.git_sync import CloneDefaultsResponse, SharedFolderResponse
 from httpx import AsyncClient
 
@@ -55,3 +57,32 @@ async def test__api__clone_defaults__no_name__falls_back(test_app: AsyncClient) 
     resp = await test_app.get("/api/v1/git/clone/defaults")
 
     assert Path(resp.json()["folder"]).name == "project"
+
+
+_URL_TOKEN = "ghp_SECRETSECRET123"
+_TOKEN_URL = f"https://user:{_URL_TOKEN}@github.com/o/r.git"
+_PROJECT_ID = "6f1c9a0e-0000-4000-8000-000000000001"
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("POST", "/api/v1/git/remote/probe", {"url": _TOKEN_URL, "unexpected": _TOKEN_URL}),
+        ("POST", "/api/v1/git/remote/probe", {"unexpected": _TOKEN_URL}),
+        ("POST", "/api/v1/git/clone", {"url": _TOKEN_URL}),
+        ("PUT", f"/api/v1/projects/{_PROJECT_ID}/git/remote", {"url": _TOKEN_URL}),
+        (
+            "PUT",
+            f"/api/v1/projects/{_PROJECT_ID}/git/remote",
+            {"url": _TOKEN_URL, "credential_id": None, "x": _TOKEN_URL},
+        ),
+    ],
+)
+async def test__api__request_validation_error__422_does_not_echo_a_token_in_the_url(
+    test_app: AsyncClient, method: str, path: str, body: dict[str, Any]
+) -> None:
+    resp = await test_app.request(method, path, json=body)
+
+    assert resp.status_code == 422, resp.text
+    assert _URL_TOKEN not in resp.text
+    assert resp.json()["detail"], "the error itself must stay"

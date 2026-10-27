@@ -82,8 +82,9 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.git_unavailable: _UNAVAILABLE,
 }
 
-# Запросы, в теле которых лежит секрет: эхо входных данных в ответе проверки (`input`) вернуло бы токен или пароль.
-_SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/credentials|git/clone/bundle|projects/[^/]+/git/bundle/)")
+# Запросы Git-синхронизации: в теле лежит секрет (токен, пароль пакета) или адрес, в который вставили токен
+# (`https://user:TOKEN@host/...`). Эхо входных данных в ответе проверки (`input`) вернуло бы его вызывающему.
+_SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/)")
 
 
 def git_error_body(exc: GitSyncError) -> dict[str, object]:
