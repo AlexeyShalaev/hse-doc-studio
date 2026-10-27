@@ -755,6 +755,28 @@ async def test__sync__file_and_folder_with_one_name__refused_clearly_and_nothing
     assert not any(path.endswith(".hse-update.tmp") for path in _git(project, "ls-files").splitlines())
 
 
+async def test__sync__after_the_push_succeeded__the_operation_can_no_longer_be_cancelled(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connect_in_sync(stack, project, remote)
+    _snapshot(project, "local work")
+    seen: list[bool] = []
+    original = sync_project.SyncProjectUC._finish
+
+    async def spy(self: Any, project_: Any, *args: Any, **kwargs: Any) -> Any:
+        operation = (await stack.get(IGitOperationRegistry)).current_for(project_.id)
+        assert operation is not None
+        seen.append(operation.cancellable)
+        return await original(self, project_, *args, **kwargs)
+
+    monkeypatch.setattr(sync_project.SyncProjectUC, "_finish", spy)
+
+    result = await _sync_ok(stack, project)
+
+    assert result.outcome == "pushed"
+    assert seen == [False]
+
+
 # --- отказы до начала --------------------------------------------------------------------------------------------
 
 

@@ -346,6 +346,9 @@ class SyncProjectUC:
             if exc.code is not GitErrorCode.remote_moved:
                 await self._record_failure(project, exc, fetch=False)
             raise
+        # Коммиты уже на сервере: отмена здесь выдала бы «отменено» при том, что отправка прошла, и не записала бы
+        # итог в last_sync. Дальше идёт только запись состояния.
+        self._phase(operation_id, OperationPhase.push, cancellable=False)
         return ahead
 
     def _prepare_push(self, project: Project, state: SyncState) -> tuple[str, int, bool] | None:
