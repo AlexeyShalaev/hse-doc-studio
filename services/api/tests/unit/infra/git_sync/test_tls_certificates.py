@@ -135,9 +135,11 @@ def test__normalize_ca_pem__too_many_certificates__is_rejected(tmp_path: Path) -
 class _ConnectProxy:
     """Минимальный http-прокси: принимает CONNECT, записывает запрос и перекачивает байты к серверу."""
 
-    def __init__(self, *, refuse: bool = False) -> None:
+    def __init__(self, *, refuse: bool = False, hang_up: bool = False, flood: bool = False) -> None:
         self.requests: list[str] = []
         self._refuse = refuse
+        self._hang_up = hang_up
+        self._flood = flood
         self._server: asyncio.Server | None = None
 
     @property
@@ -157,6 +159,14 @@ class _ConnectProxy:
     async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         head = (await reader.readuntil(b"\r\n\r\n")).decode("ascii")
         self.requests.append(head)
+        if self._hang_up:
+            writer.close()
+            return
+        if self._flood:
+            writer.write(b"X" * 200_000)
+            await writer.drain()
+            writer.close()
+            return
         if self._refuse:
             writer.write(b"HTTP/1.1 403 Forbidden\r\n\r\n")
             await writer.drain()
@@ -223,6 +233,22 @@ async def test__fetch__proxy_refuses_the_tunnel__is_offline(
             await _service.fetch("127.0.0.1", tls_server.port)
 
     assert info.value.code is GitErrorCode.offline
+
+
+@pytest.mark.parametrize("mode", ["hang_up", "flood"])
+async def test__fetch__proxy_breaks_the_reply__is_offline_not_a_crash(
+    mode: str, tls_server: GitHttpServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _ConnectProxy(**{mode: True}) as proxy:
+        monkeypatch.setenv("HTTPS_PROXY", f"http://127.0.0.1:{proxy.port}")
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.delenv("no_proxy", raising=False)
+
+        with pytest.raises(GitSyncError) as info:
+            await _service.fetch("127.0.0.1", tls_server.port)
+
+        assert info.value.code is GitErrorCode.offline
+        assert await _service.issuer_is_untrusted("127.0.0.1", tls_server.port, None) is False
 
 
 async def test__issuer_is_untrusted__self_signed_server__is_true(tls_server: GitHttpServer) -> None:

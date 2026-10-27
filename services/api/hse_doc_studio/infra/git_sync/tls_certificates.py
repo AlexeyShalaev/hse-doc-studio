@@ -192,7 +192,11 @@ async def _connect_through(
         lines.append(f"Proxy-Authorization: {authorization}")
     writer.write(("\r\n".join(lines) + "\r\n\r\n").encode("ascii"))
     await writer.drain()
-    reply = await reader.readuntil(b"\r\n\r\n")
+    try:
+        reply = await reader.readuntil(b"\r\n\r\n")
+    except (asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+        # Прокси закрыл соединение без ответа или прислал заголовок сверх лимита потока.
+        raise ConnectionError("proxy sent no valid reply") from None
     if len(reply) > _MAX_PROXY_REPLY_BYTES:
         raise ConnectionError("proxy reply is too long")
     status = reply.split(b"\r\n", 1)[0].split()
