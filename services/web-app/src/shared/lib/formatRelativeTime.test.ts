@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "./i18n";
-import { formatRelativeTime } from "./formatRelativeTime";
+import { formatPastTime, formatRelativeTime } from "./formatRelativeTime";
 
 const NOW = new Date("2026-10-26T12:00:00Z");
 const ago = (seconds: number): Date => new Date(NOW.getTime() - seconds * 1000);
@@ -72,5 +72,24 @@ describe("formatRelativeTime (en)", () => {
     expect(formatRelativeTime(new Date(NOW.getTime() + 2 * 3600000), NOW)).toBe(
       "in 2 hours",
     );
+  });
+});
+
+describe("formatPastTime", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+
+  it("never talks about the future for an event that already happened", () => {
+    // «Сейчас» страницы отстало от события на 20 секунд (тик раз в 30 секунд).
+    const event = new Date(NOW.getTime() + 20_000);
+    expect(formatRelativeTime(event, NOW)).toBe("через 20 секунд");
+    expect(formatPastTime(event, NOW)).toBe("сейчас");
+  });
+
+  it("counts the age as usual otherwise and ignores empty values", () => {
+    expect(formatPastTime(ago(3 * 60), NOW)).toBe("3 минуты назад");
+    expect(formatPastTime(null, NOW)).toBe("");
+    expect(formatPastTime("не дата", NOW)).toBe("");
   });
 });

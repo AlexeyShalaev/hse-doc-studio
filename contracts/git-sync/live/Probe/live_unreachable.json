@@ -1,0 +1,36 @@
+{
+  "ok": false,
+  "error": {
+    "code": "not_found_or_no_access",
+    "detail": "Репозиторий не найден или нет доступа к нему",
+    "host_keys": null,
+    "certificate": null,
+    "expected": null,
+    "actual": null
+  },
+  "url": {
+    "display_url": "file:///studio/nowhere.git",
+    "kind": "file",
+    "host": null,
+    "provider": "other",
+    "owner": null,
+    "repo": "nowhere",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "other",
+    "detected_by": "unknown",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": false,
+  "empty": false,
+  "default_branch": null,
+  "branches": [],
+  "relation": "unknown",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

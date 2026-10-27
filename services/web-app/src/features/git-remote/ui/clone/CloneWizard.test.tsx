@@ -836,13 +836,15 @@ describe("мастер клонирования: папка и запуск", ()
           projectName: "Курсовая работа",
         };
       }
-      return { state: "ready", exists: false };
+      // Так отвечает настоящий сервер: для несуществующего пути is_dir=false.
+      return { state: "ready", exists: false, isDir: false };
     };
     mount({ folderSlot: pickerSlot(inspect) });
     await toFolderStep(user);
     expect(
       await screen.findByText(/Такой папки ещё нет: Студия создаст её/),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Клонировать" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Обзор…" }));
     await user.click(

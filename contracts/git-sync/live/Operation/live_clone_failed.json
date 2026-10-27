@@ -1,0 +1,17 @@
+{
+  "id": "op_000000000004",
+  "kind": "clone",
+  "project_id": null,
+  "status": "failed",
+  "phase": "download",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": "2030-01-01T00:00:00Z",
+  "result": null,
+  "error": {
+    "code": "not_found_or_no_access",
+    "detail": "Репозиторий не найден или нет доступа к нему"
+  }
+}

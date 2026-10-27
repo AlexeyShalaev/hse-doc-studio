@@ -18,7 +18,7 @@ import {
   type GitOperation,
   type SyncResult,
 } from "@entities/git-sync";
-import { flushPendingSaves, toast } from "@shared/lib";
+import { flushPendingSaves, toast, useToastStore } from "@shared/lib";
 import type { SyncPrimaryAction } from "./syncUi.model";
 import { useSyncView, type SyncView } from "./useSyncView";
 
@@ -80,8 +80,12 @@ export const useSyncController = (projectId: string): SyncController => {
   // Когда итог показан по операции: новую запись last_sync, что появится в
   // состоянии следом, «погасим» без второго тоста.
   const expectSyncRecordAt = useRef(0);
+  // Бессрочное уведомление о конфликтах: когда решение принято, оно теряет смысл.
+  const conflictToastId = useRef<string | null>(null);
 
   const openConflicts = useCallback((): void => {
+    // Панель, из которой запустили синхронизацию, не должна повиснуть над экраном конфликтов.
+    useSyncUiStore.getState().setPopoverOpen(false);
     void navigate(gitConflictsPath(projectId));
   }, [navigate, projectId]);
 
@@ -113,12 +117,15 @@ export const useSyncController = (projectId: string): SyncController => {
 
       if (result.outcome === "conflicts") {
         const count = result.conflicts?.files_open ?? 0;
-        toast.warning(t("toast.conflicts", { count }), {
-          title: t("toast.conflictsTitle"),
-          // Конфликт не исчезает сам: уведомление остаётся, пока его не закроют.
-          duration: 0,
-          action: { label: t("toast.resolve"), onClick: openConflicts },
-        });
+        conflictToastId.current = toast.warning(
+          t("toast.conflicts", { count }),
+          {
+            title: t("toast.conflictsTitle"),
+            // Конфликт не исчезает сам: уведомление остаётся, пока его не закроют.
+            duration: 0,
+            action: { label: t("toast.resolve"), onClick: openConflicts },
+          },
+        );
         // Только тому, кто сам запустил: чужой экран из-под рук не уводим.
         if (mine) openConflicts();
         return;
@@ -186,6 +193,14 @@ export const useSyncController = (projectId: string): SyncController => {
       invalidateAfterSync(queryClient, projectId);
     });
   }, [announceFinished, projectId, queryClient]);
+
+  const syncState = status ? ui.state : null;
+  useEffect(() => {
+    if (syncState === null || syncState === "conflicts") return;
+    if (conflictToastId.current === null) return;
+    useToastStore.getState().dismiss(conflictToastId.current);
+    conflictToastId.current = null;
+  }, [syncState]);
 
   // Операция закончилась, пока страница была закрыта (или в другой вкладке и без
   // нашего наблюдения): сервер помнит итог в last_sync, показываем его один раз.

@@ -212,6 +212,39 @@ describe("useSyncController", () => {
     expect(toasts()[0]).toMatchObject({ kind: "warning", duration: 0 });
   });
 
+  it("removes the standing conflict toast once the project leaves the conflict state", async () => {
+    vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+      operation({
+        id: "op-9",
+        result: {
+          ...RESULT,
+          outcome: "conflicts",
+          conflicts: { files_total: 1, files_open: 1 },
+        },
+      }),
+    );
+    const { client } = setup(
+      connected({
+        ui_state: "conflicts",
+        pending: { session_id: "s-1", files_total: 1, files_open: 1 },
+        operation: runningOperation({ id: "op-9" }),
+      }),
+    );
+    await waitFor(() => {
+      expect(toasts()).toHaveLength(1);
+    });
+    expect(toasts()[0]).toMatchObject({ kind: "warning", duration: 0 });
+
+    // Конфликты решены на экране решения: состояние проекта снова обычное.
+    vi.mocked(gitSyncApi.getStatus).mockResolvedValue(connected());
+    await act(async () => {
+      await client.refetchQueries({ queryKey: gitSyncKeys.status(PROJECT_ID) });
+    });
+    await waitFor(() => {
+      expect(toasts()).toHaveLength(0);
+    });
+  });
+
   it("resumes an operation found in the status after a reload, without moving the screen", async () => {
     vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
       operation({

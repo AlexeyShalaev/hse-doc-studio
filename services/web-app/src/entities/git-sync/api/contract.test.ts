@@ -1,63 +1,20 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { ZodType } from "zod";
 
-import { VcsCommitSchema } from "@entities/vcs";
+import { ProbeUrlSchema } from "@entities/git-remote";
 import {
-  CloneDefaultsSchema,
-  CloneRequestSchema,
-  CreateCredentialRequestSchema,
-  GitCredentialCheckSchema,
-  GitCredentialListSchema,
-  GitCredentialSchema,
-  GitHostListSchema,
-  GitHostSettingsListSchema,
-  GitHostSettingsSchema,
-  ProbeRequestSchema,
-  ProbeSchema,
-  ProbeUrlSchema,
-  SecretsStatusSchema,
-  SharedFolderSchema,
-  TrustHostRequestSchema,
-  UpdateCredentialRequestSchema,
-  UpdateGitHostSettingsRequestSchema,
-} from "@entities/git-remote";
-import {
-  ProfileRequestSchema,
-  ProfileSchema,
-  ProfileValidationErrorSchema,
-} from "@entities/profile";
-import {
-  CiPreviewSchema,
-  CiRequestSchema,
-  CiWriteRequestSchema,
-  CiWriteSchema,
-  CloneResultSchema,
-  ConflictDiffSchema,
-  ConflictFileDetailSchema,
-  ConflictSessionSchema,
-  ConnectRemoteRequestSchema,
   GIT_ERROR_CODES,
   GIT_OPERATION_KINDS,
   GIT_OPERATION_PHASES,
   GIT_OPERATION_STATUSES,
   GIT_SYNC_OUTCOMES,
   GIT_UI_STATES,
-  GitContentsSchema,
-  GitErrorBodySchema,
-  GitStatusSchema,
-  HistoryCommitExtrasSchema,
-  HistoryFacetsSchema,
   OperationSchema,
-  OperationStartedSchema,
-  ResolveConflictsRequestSchema,
-  SaveConflictDraftRequestSchema,
-  SyncResultSchema,
-  UpdateGitSettingsRequestSchema,
   gitErrorI18nKey,
   isGitErrorCode,
 } from "@entities/git-sync";
+import { CONTRACT_SCHEMAS } from "./contractSchemas";
 
 // Контракт Git-синхронизации: те же эталонные JSON из contracts/git-sync разбирает
 // и backend-тест (tests/unit/contract/test_git_sync_contract.py). Форму меняют так:
@@ -79,53 +36,6 @@ const LOCALES = join(
 
 const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8"));
-
-const HistoryCommitSchema = VcsCommitSchema.extend(
-  HistoryCommitExtrasSchema.shape,
-);
-
-// Каталог эталонов -> схема, которой он обязан соответствовать.
-const SCHEMAS: Record<string, ZodType> = {
-  GitErrorBody: GitErrorBodySchema,
-  ProfileValidationError: ProfileValidationErrorSchema,
-  Profile: ProfileSchema,
-  ProfileRequest: ProfileRequestSchema,
-  GitCredential: GitCredentialSchema,
-  GitCredentialList: GitCredentialListSchema,
-  GitCredentialCheck: GitCredentialCheckSchema,
-  CreateCredentialRequest: CreateCredentialRequestSchema,
-  UpdateCredentialRequest: UpdateCredentialRequestSchema,
-  GitHostList: GitHostListSchema,
-  GitHostSettings: GitHostSettingsSchema,
-  GitHostSettingsList: GitHostSettingsListSchema,
-  UpdateGitHostSettingsRequest: UpdateGitHostSettingsRequestSchema,
-  TrustHostRequest: TrustHostRequestSchema,
-  SecretsStatus: SecretsStatusSchema,
-  SharedFolder: SharedFolderSchema,
-  CloneDefaults: CloneDefaultsSchema,
-  Probe: ProbeSchema,
-  ProbeRequest: ProbeRequestSchema,
-  OperationStarted: OperationStartedSchema,
-  SyncResult: SyncResultSchema,
-  CloneResult: CloneResultSchema,
-  Operation: OperationSchema,
-  CloneRequest: CloneRequestSchema,
-  GitStatus: GitStatusSchema,
-  ConnectRemoteRequest: ConnectRemoteRequestSchema,
-  UpdateGitSettingsRequest: UpdateGitSettingsRequestSchema,
-  GitContents: GitContentsSchema,
-  ConflictSession: ConflictSessionSchema,
-  ConflictFileDetail: ConflictFileDetailSchema,
-  ConflictDiff: ConflictDiffSchema,
-  ResolveConflictsRequest: ResolveConflictsRequestSchema,
-  SaveConflictDraftRequest: SaveConflictDraftRequestSchema,
-  CiRequest: CiRequestSchema,
-  CiWriteRequest: CiWriteRequestSchema,
-  CiPreview: CiPreviewSchema,
-  CiWrite: CiWriteSchema,
-  HistoryCommit: HistoryCommitSchema,
-  HistoryFacets: HistoryFacetsSchema,
-};
 
 type Fixture = {
   schema: string;
@@ -184,13 +94,13 @@ describe("контракт git-sync: коды ошибок", () => {
 
 describe("контракт git-sync: эталоны", () => {
   it("у каждого каталога эталонов есть схема", () => {
-    expect(directories).toEqual(Object.keys(SCHEMAS).sort());
+    expect(directories).toEqual(Object.keys(CONTRACT_SCHEMAS).sort());
   });
 
   it.each(fixtures.map((f) => [`${f.schema}/${f.name}`, f] as const))(
     "%s разбирается zod без потерь",
     (_label, fixture) => {
-      const schema = SCHEMAS[fixture.schema];
+      const schema = CONTRACT_SCHEMAS[fixture.schema];
       if (!schema) throw new Error(`нет схемы для ${fixture.schema}`);
       const parsed = schema.safeParse(fixture.body);
       expect(parsed.success).toBe(true);

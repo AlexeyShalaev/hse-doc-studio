@@ -1160,6 +1160,53 @@ describe("ConnectRemoteDialog: обновить доступ", () => {
     });
   });
 
+  it("открытый http: доступ обновляется у подключения, которое уже живёт на нём, и флаг не теряется", async () => {
+    const disconnect = vi
+      .spyOn(gitSyncApi, "disconnectRemote")
+      .mockResolvedValue();
+    const { probe, connect, createCredential } = setup({
+      status: connectedStatus({
+        remote: {
+          ...REMOTE,
+          display_url: "http://git.lan:8080/team/paper.git",
+          kind: "http",
+          host: "git.lan",
+          provider: "other",
+          web_url: null,
+          credential: null,
+          insecure_http: true,
+        },
+      }),
+      credentials: [],
+    });
+    probe.mockResolvedValue(makeProbe());
+    createCredential.mockResolvedValue({ ...PAT, status: "unverified" });
+    const user = userEvent.setup();
+    mount("fix_access");
+
+    // Раньше адрес с http не разбирался, и шаг «Доступ» оставался пустым.
+    await user.click(await screen.findByLabelText("Токен"));
+    await user.keyboard(TOKEN);
+    await user.click(
+      screen.getByRole("button", { name: "Сохранить и проверить" }),
+    );
+    const card = await screen.findByTestId("probe-result-ready-same");
+    await user.click(
+      within(card).getByRole("button", { name: "Сохранить доступ" }),
+    );
+    await waitFor(() => {
+      expect(disconnect).toHaveBeenCalledWith(PROJECT_ID, false);
+    });
+    await waitFor(() => {
+      expect(connect).toHaveBeenCalledWith(PROJECT_ID, {
+        url: "http://git.lan:8080/team/paper.git",
+        credential_id: PAT.id,
+        remote_branch: "main",
+        insecure_http: true,
+      });
+    });
+  });
+
   it("замена доступа оборвалась: прежний доступ возвращается, окно остаётся «обновить доступ»", async () => {
     const disconnect = vi
       .spyOn(gitSyncApi, "disconnectRemote")

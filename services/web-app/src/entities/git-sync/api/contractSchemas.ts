@@ -1,0 +1,98 @@
+import type { ZodType } from "zod";
+
+import { VcsCommitSchema } from "@entities/vcs";
+import {
+  CloneDefaultsSchema,
+  CloneRequestSchema,
+  CreateCredentialRequestSchema,
+  GitCredentialCheckSchema,
+  GitCredentialListSchema,
+  GitCredentialSchema,
+  GitHostListSchema,
+  GitHostSettingsListSchema,
+  GitHostSettingsSchema,
+  ProbeRequestSchema,
+  ProbeSchema,
+  SecretsStatusSchema,
+  SharedFolderSchema,
+  TrustHostRequestSchema,
+  UpdateCredentialRequestSchema,
+  UpdateGitHostSettingsRequestSchema,
+} from "@entities/git-remote";
+import {
+  ProfileRequestSchema,
+  ProfileSchema,
+  ProfileValidationErrorSchema,
+} from "@entities/profile";
+import {
+  CiPreviewSchema,
+  CiRequestSchema,
+  CiWriteRequestSchema,
+  CiWriteSchema,
+  CloneResultSchema,
+  ConflictDiffSchema,
+  ConflictFileDetailSchema,
+  ConflictSessionSchema,
+  ConnectRemoteRequestSchema,
+  GitContentsSchema,
+  GitErrorBodySchema,
+  GitStatusSchema,
+  HistoryCommitExtrasSchema,
+  HistoryFacetsSchema,
+  OperationSchema,
+  OperationStartedSchema,
+  ResolveConflictsRequestSchema,
+  SaveConflictDraftRequestSchema,
+  SyncResultSchema,
+  UpdateGitSettingsRequestSchema,
+} from "@entities/git-sync";
+
+// Каталог контракта -> схема, которой разбирается ответ. Один список на тесты
+// эталонов (contract.test.ts) и снимков настоящего бэкенда (liveContract.test.ts):
+// в приложение он не попадает.
+
+const HistoryCommitSchema = VcsCommitSchema.extend(
+  HistoryCommitExtrasSchema.shape,
+);
+
+export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
+  GitErrorBody: GitErrorBodySchema,
+  ProfileValidationError: ProfileValidationErrorSchema,
+  Profile: ProfileSchema,
+  ProfileRequest: ProfileRequestSchema,
+  GitCredential: GitCredentialSchema,
+  GitCredentialList: GitCredentialListSchema,
+  GitCredentialCheck: GitCredentialCheckSchema,
+  CreateCredentialRequest: CreateCredentialRequestSchema,
+  UpdateCredentialRequest: UpdateCredentialRequestSchema,
+  GitHostList: GitHostListSchema,
+  GitHostSettings: GitHostSettingsSchema,
+  GitHostSettingsList: GitHostSettingsListSchema,
+  UpdateGitHostSettingsRequest: UpdateGitHostSettingsRequestSchema,
+  TrustHostRequest: TrustHostRequestSchema,
+  SecretsStatus: SecretsStatusSchema,
+  SharedFolder: SharedFolderSchema,
+  CloneDefaults: CloneDefaultsSchema,
+  Probe: ProbeSchema,
+  ProbeRequest: ProbeRequestSchema,
+  OperationStarted: OperationStartedSchema,
+  SyncResult: SyncResultSchema,
+  CloneResult: CloneResultSchema,
+  Operation: OperationSchema,
+  CloneRequest: CloneRequestSchema,
+  GitStatus: GitStatusSchema,
+  ConnectRemoteRequest: ConnectRemoteRequestSchema,
+  UpdateGitSettingsRequest: UpdateGitSettingsRequestSchema,
+  GitContents: GitContentsSchema,
+  ConflictSession: ConflictSessionSchema,
+  ConflictFileDetail: ConflictFileDetailSchema,
+  ConflictDiff: ConflictDiffSchema,
+  ResolveConflictsRequest: ResolveConflictsRequestSchema,
+  SaveConflictDraftRequest: SaveConflictDraftRequestSchema,
+  CiRequest: CiRequestSchema,
+  CiWriteRequest: CiWriteRequestSchema,
+  CiPreview: CiPreviewSchema,
+  CiWrite: CiWriteSchema,
+  HistoryCommit: HistoryCommitSchema,
+  HistoryFacets: HistoryFacetsSchema,
+};

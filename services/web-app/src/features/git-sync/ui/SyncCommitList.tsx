@@ -1,5 +1,5 @@
 import type { GitCommitBrief } from "@entities/git-sync";
-import { formatRelativeTime, initialsOf } from "@shared/lib";
+import { formatPastTime, initialsOf } from "@shared/lib";
 import { sectionTitleStyle } from "../model/commitUi";
 
 // Короткий список версий для панели и страницы истории: кто, что и когда.
@@ -46,7 +46,7 @@ const CommitBody = ({
       >
         {commit.author}
         {" · "}
-        {formatRelativeTime(commit.created_at, now)}
+        {formatPastTime(commit.created_at, now)}
       </span>
     </span>
   </>

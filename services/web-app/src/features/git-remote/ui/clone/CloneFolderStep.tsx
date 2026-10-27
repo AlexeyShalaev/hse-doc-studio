@@ -132,8 +132,11 @@ export const CloneFolderStep = ({
   const trimmed = folder.trim();
   const sharedFolder = useSharedFolder(trimmed, trimmed !== "");
 
+  // Папки может не быть вовсе: сервер тогда отвечает is_dir=false, но это не
+  // «файл на месте папки», Студия создаст её сама.
   const blocked =
     inspection.state === "ready" &&
+    inspection.exists !== false &&
     (inspection.isDir === false || inspection.hasProject === true);
   const canStart = trimmed !== "" && !blocked && !isStarting;
 

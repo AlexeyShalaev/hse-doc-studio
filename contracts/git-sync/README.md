@@ -7,6 +7,7 @@
 
 Состав:
 
+- `live/<Схема>/<вариант>.json` нормализованные ответы настоящего бэкенда (идентификаторы, хеши, даты и пути заменены стабильными значениями). Их снимает `services/api/tests/integration/api/git_sync/test_live_responses.py`: сценарий двух Студий с локальными репозиториями проходит подключение, отправку, получение, расхождение, конфликты и отказы, каждый ответ проверяется строгой моделью, а форма сверяется со снимком. Разбирают снимки zod-тест `entities/git-sync/api/liveContract.test.ts`, тест панели `features/git-sync/ui/liveStates.test.tsx` и сверка с демо `app/demo/liveParity.test.ts`. Обновить после осознанной смены ответа: `HSE_UPDATE_LIVE=1 uv run pytest tests/integration/api/git_sync/test_live_responses.py` из `services/api`. Те же состояния вживую даёт `make demo-git` (`services/api/scripts/git_sync_demo.py`);
 - `error_codes.json` закрытый список кодов ошибок (тело ответа `{detail, code}`);
 - `fixtures/<Схема>/<вариант>.json` эталонные тела запросов и ответов, по каталогу на схему; каталог без схемы в обоих тестах считается ошибкой;
 - `url_cases.json` векторы разбора адреса репозитория для `parse_remote_url` (Python) и `parseRemoteUrl` (TypeScript);
@@ -15,4 +16,4 @@
 - настройки серверов и проверка токена: `GET` и `PUT /git/host-settings` (`GitHostSettings`, `UpdateGitHostSettingsRequest`: отсутствующее поле оставляет значение, `null` сбрасывает) и `POST /git/credentials/{id}/check` (`GitCredentialCheck`); отказ сервера приходит ошибкой с кодом (`auth_failed`, `token_expired`, `tls_untrusted_ca`), а не телом ответа;
 - `profile_cases.json` векторы проверки имени и e-mail автора для `core/vcs/author` (Python) и `validateProfile` (TypeScript); коды ошибок поля в ответе 422: `name_required`, `name_too_long`, `name_invalid`, `email_required`, `email_too_long`, `email_invalid`.
 
-Форму меняют так: сначала эталоны, затем обе стороны и оба набора тестов в одном коммите. Эталон содержит все поля ответа явно, в том числе `null`.
+Форму меняют так: сначала эталоны, затем обе стороны и оба набора тестов в одном коммите; снимки `live` обновляют последними, когда бэкенд уже отвечает по-новому. Эталон содержит все поля ответа явно, в том числе `null`.

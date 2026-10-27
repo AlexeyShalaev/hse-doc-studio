@@ -73,7 +73,7 @@ export {
   metaFieldVisibleForKind,
 } from "./metaFields";
 
-export { formatRelativeTime } from "./formatRelativeTime";
+export { formatPastTime, formatRelativeTime } from "./formatRelativeTime";
 
 export {
   flushPendingSaves,

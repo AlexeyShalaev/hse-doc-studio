@@ -1,0 +1,29 @@
+{
+  "id": "op_000000000006",
+  "kind": "sync",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "status": "succeeded",
+  "phase": "merge",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": "2030-01-01T00:00:00Z",
+  "result": {
+    "outcome": "fast_forwarded",
+    "pulled_commits": 1,
+    "pushed_commits": 0,
+    "merge_commit": null,
+    "files_changed": 1,
+    "auto": [
+      {
+        "path": "notes/boris-1.md",
+        "action": "take_theirs",
+        "copy_path": null
+      }
+    ],
+    "conflicts": null,
+    "warnings": []
+  },
+  "error": null
+}

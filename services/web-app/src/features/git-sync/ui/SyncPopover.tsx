@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ExternalLink, GitBranch, RefreshCw, Settings, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { gitErrorMessage, type SyncStatusView } from "@entities/git-sync";
-import { formatRelativeTime } from "@shared/lib";
+import { formatPastTime } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
 import { CopyField } from "@shared/ui/CopyField";
 import { Stepper, type StepperStep } from "@shared/ui/Stepper";
@@ -71,13 +71,13 @@ export const SyncPopover = ({
   if (isConnected) {
     metaParts.push(
       checkedAt
-        ? t("popover.checked", { when: formatRelativeTime(checkedAt, now) })
+        ? t("popover.checked", { when: formatPastTime(checkedAt, now) })
         : t("popover.neverChecked"),
     );
     if (status.last_sync_at && ui.state !== "up_to_date") {
       metaParts.push(
         t("popover.synced", {
-          when: formatRelativeTime(status.last_sync_at, now),
+          when: formatPastTime(status.last_sync_at, now),
         }),
       );
     }

@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "error": null,
+  "url": {
+    "display_url": "file:///studio/remotes/empty.git",
+    "kind": "file",
+    "host": null,
+    "provider": "other",
+    "owner": null,
+    "repo": "empty",
+    "token_stripped": false
+  },
+  "provider_info": {
+    "id": "other",
+    "detected_by": "unknown",
+    "version": null
+  },
+  "token_info": null,
+  "reachable": true,
+  "auth_ok": true,
+  "empty": true,
+  "default_branch": null,
+  "branches": [],
+  "relation": "empty",
+  "project": null,
+  "schema_access": null,
+  "required_studio": null,
+  "template_available": null
+}

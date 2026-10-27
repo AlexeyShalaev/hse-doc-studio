@@ -1,0 +1,17 @@
+{
+  "kind": "binary",
+  "ours": {
+    "exists": true,
+    "size": 1000,
+    "author": "Анна Петрова",
+    "at": "2030-01-01T00:00:00Z"
+  },
+  "theirs": {
+    "exists": true,
+    "size": 1000,
+    "author": "Борис Сидоров",
+    "at": "2030-01-01T00:00:00Z"
+  },
+  "newer": "theirs",
+  "copy_path": "figures/diagram.conflict-0000000.png"
+}

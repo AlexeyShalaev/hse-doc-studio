@@ -71,6 +71,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         allow_credentials=settings.cors.allow_credentials,
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
+        # Имя файла выгрузки (bundle, PDF) приходит в Content-Disposition; без этой строки фронт на другом
+        # origin его не видит и сохраняет файл под запасным именем.
+        expose_headers=["Content-Disposition"],
     )
 
     @app.middleware("http")

@@ -42,3 +42,16 @@ export const formatRelativeTime = (
   }
   return "";
 };
+
+// Возраст события, которое уже случилось. «Сейчас» у подписей обновляется по таймеру, а
+// события бывают свежее последнего тика (синхронизация только что закончилась): без
+// ограничения вышло бы «через 13 секунд» про прошлое.
+export const formatPastTime = (
+  value: string | number | Date | null | undefined,
+  now: number | Date = Date.now(),
+): string => {
+  if (value == null || value === "") return "";
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return "";
+  return formatRelativeTime(value, Math.max(new Date(now).getTime(), then));
+};

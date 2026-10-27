@@ -136,9 +136,13 @@ const ConnectFlowBody = ({
   const [tlsOpen, setTlsOpen] = useState(false);
   const runId = useRef(0);
 
+  // Открытый http разрешён только тому подключению, которое уже живёт на нём
+  // (сервер пустил его по своей политике): иначе обновить доступ было бы нечем.
+  const insecureHttp = fixing && remote.insecure_http;
   const parsed = useMemo(
-    () => parseRemoteUrl(urlText, { allow_local: true }),
-    [urlText],
+    () =>
+      parseRemoteUrl(urlText, { allow_local: true, allow_http: insecureHttp }),
+    [urlText, insecureHttp],
   );
   // Провайдер решён с учётом выбора человека и ответа сервера: подсказки и
   // ссылки на следующих шагах берут его, а не догадку по виду адреса.
@@ -266,6 +270,7 @@ const ConnectFlowBody = ({
                 ...(branch.trim() !== ""
                   ? { remote_branch: branch.trim() }
                   : {}),
+                ...(insecureHttp ? { insecure_http: true } : {}),
               },
             });
           } catch (error) {
@@ -277,6 +282,7 @@ const ConnectFlowBody = ({
                   url: remote.display_url,
                   credential_id: boundId,
                   remote_branch: remote.branch,
+                  ...(insecureHttp ? { insecure_http: true } : {}),
                 },
               })
               .catch(() => undefined);

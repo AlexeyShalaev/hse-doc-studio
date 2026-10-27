@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { formatRelativeTime } from "@shared/lib";
+import { formatPastTime } from "@shared/lib";
 import type { SyncUi } from "./syncUi.model";
 
 export type SyncText = {
@@ -30,7 +30,7 @@ export const useSyncText = (ui: SyncUi, now: number): SyncText => {
     return t(`phase.${ui.phase}`);
   })();
 
-  const when = formatRelativeTime(ui.since, now);
+  const when = formatPastTime(ui.since, now);
   const params: Record<string, string | number> = {
     ...ui.statusParams,
     when,

@@ -1,0 +1,20 @@
+{
+  "id": "op_000000000003",
+  "kind": "clone",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "status": "succeeded",
+  "phase": "register",
+  "percent": null,
+  "message": null,
+  "cancellable": false,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": "2030-01-01T00:00:00Z",
+  "result": {
+    "project_id": "00000000-0000-4000-8000-000000000002",
+    "folder": "/studio/boris/work/thesis",
+    "access": "full",
+    "required_studio": null,
+    "warnings": []
+  },
+  "error": null
+}

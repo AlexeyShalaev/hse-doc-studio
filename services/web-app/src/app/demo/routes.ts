@@ -38,6 +38,7 @@ import {
 import {
   checkCredentialBody,
   checkCredentialOutcome,
+  detectDemoProvider,
   emptyHostSettings,
   expiryFor,
   hostSettingsView,
@@ -116,7 +117,15 @@ const statusOf = (projectId: string): GitStatus => {
   return {
     connected: project.remote !== null,
     ui_state: deriveUiState({ ...project, blocked }),
-    remote: project.remote,
+    // Тип сервера бэкенд присылает всегда; в демо он считается по адресу и настройкам серверов.
+    remote: project.remote
+      ? {
+          ...project.remote,
+          provider_info:
+            project.remote.provider_info ??
+            detectDemoProvider(world, project.remote.host ?? null, null),
+        }
+      : null,
     relation: project.relation,
     ahead: project.ahead,
     behind: project.behind,

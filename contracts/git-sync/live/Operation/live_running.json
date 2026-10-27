@@ -1,0 +1,14 @@
+{
+  "id": "op_000000000001",
+  "kind": "sync",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "status": "running",
+  "phase": "queued",
+  "percent": null,
+  "message": null,
+  "cancellable": true,
+  "started_at": "2030-01-01T00:00:00Z",
+  "finished_at": null,
+  "result": null,
+  "error": null
+}
