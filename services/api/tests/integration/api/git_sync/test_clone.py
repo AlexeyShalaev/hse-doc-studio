@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import subprocess
+import threading
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ import pytest
 import pytest_asyncio
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.schemas.git_sync import GitErrorBody, GitStatusResponse, OperationResponse
+from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.use_cases.git_sync import clone_project
 from httpx import ASGITransport, AsyncClient
@@ -361,6 +363,72 @@ async def test__clone__names_that_differ_only_by_case__refused_where_the_fs_woul
         assert not folder.exists()
     else:
         assert operation.status == "succeeded", operation.error
+
+
+async def test__clone__failed_clone_in_a_shared_new_parent__does_not_remove_the_sibling_clone(
+    target: Studio,
+    remote: BareRemote,
+    published: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    broken = make_bare_remote(tmp_path / "remotes" / "broken.git")
+    seed_remote(broken, {"README.md": "just a repo"})
+    parent = tmp_path / "clones"
+    release = asyncio.Event()
+    original = GitTransport.probe
+
+    async def probe(transport: GitTransport, probed: Any) -> Any:
+        if probed.url.display_url.endswith("broken.git"):
+            await release.wait()
+        return await original(transport, probed)
+
+    monkeypatch.setattr(GitTransport, "probe", probe)
+    # Оба клона планируются, пока родительской папки ещё нет: у обоих «созданный корень» это она.
+    failing = await _start(target, broken, parent / "second")
+    assert failing.status_code == 202, failing.text
+    good = await _clone(target, remote, parent / "first")
+    assert good.status == "succeeded", good.error
+
+    release.set()
+    bad = await _finished(target, failing.json()["operation_id"])
+
+    assert bad.status == "failed"
+    assert (parent / "first" / ".hse-studio" / "project.json").exists()
+    assert not (parent / "second").exists()
+    shown = await target.client.get(f"/api/v1/projects/{good.result.project_id}")  # type: ignore[union-attr]
+    assert shown.status_code == 200
+
+
+async def test__clone__two_clones_of_one_project_at_once__only_one_is_registered(
+    target: Studio,
+    remote: BareRemote,
+    published: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Оба клонирования проходят проверку «проект уже открыт» раньше, чем любое из них запишется в список.
+    gate = threading.Barrier(2, timeout=30)
+    original = GitCloneStore.checkout
+
+    def checkout(store: GitCloneStore, *args: Any, **kwargs: Any) -> None:
+        gate.wait()
+        original(store, *args, **kwargs)
+
+    monkeypatch.setattr(GitCloneStore, "checkout", checkout)
+    first = await _start(target, remote, tmp_path / "clones" / "one")
+    second = await _start(target, remote, tmp_path / "clones" / "two")
+    assert (first.status_code, second.status_code) == (202, 202)
+
+    done = [await _finished(target, resp.json()["operation_id"]) for resp in (first, second)]
+
+    assert sorted(operation.status for operation in done) == ["failed", "succeeded"]
+    failed = next(operation for operation in done if operation.status == "failed")
+    assert failed.error is not None
+    assert failed.error.code == "project_exists"
+    listed = (await target.client.get("/api/v1/projects")).json()
+    assert [item["id"] for item in listed] == [published["id"]]
+    assert len(list((tmp_path / "clones").iterdir())) == 1
 
 
 async def test__clone__empty_remote__fails_without_leftovers(

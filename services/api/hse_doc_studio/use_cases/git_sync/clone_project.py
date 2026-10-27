@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import re
 import shutil
+import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -71,6 +72,9 @@ from hse_doc_studio.use_cases.git_sync.status import TRACKING_PREFIX
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
 logger = structlog.get_logger()
+
+# Запись проекта в список идёт в потоке, поэтому замок потоковый: он не привязан к циклу событий.
+_REGISTER_LOCK = threading.Lock()
 
 _STUDIO_DIR = ".hse-studio"
 _GITATTRIBUTES = ".gitattributes"
@@ -306,7 +310,7 @@ class CloneProjectUC:
             await asyncio.to_thread(
                 self._persist, folder, remote.url, branch, remote.credential_id, remote.insecure_http
             )
-        self._index.register(folder)
+        await asyncio.to_thread(self._register, folder, verified.project.id)
         await asyncio.to_thread(self._ensure_template_base, folder, verified)
         if remote is not None:
             self._registry.add(folder)
@@ -337,14 +341,7 @@ class CloneProjectUC:
         project = self._remote_project(raw)
         existing = self._registered_folder(project.id)
         if existing is not None:
-            raise GitSyncError(
-                GitErrorCode.project_exists,
-                localized_error(
-                    f"Этот проект уже открыт в Студии: {existing}",
-                    f"This project is already open in the Studio: {existing}",
-                ),
-                folder=str(existing),
-            )
+            raise self._exists_error(existing)
         entries = self._reader.tree_entries(folder, tracking)
         self._check_paths(entries, plan)
         # Дерево разворачивается в папку целиком: гигантский блоб отвергается, пока он не лёг на диск.
@@ -377,6 +374,29 @@ class CloneProjectUC:
             # Данные схемы этой Студии, которые загрузчик не разберёт: после клонирования проект не открылся бы.
             raise git_error(GitErrorCode.not_a_studio_project)
         return project
+
+    def _register(self, folder: Path, project_id: UUID) -> None:
+        """Проверка «такой проект уже открыт» и запись в список одним шагом.
+
+        Два клонирования одного репозитория в разные папки оба проходили проверку в `_verify`, пока ни одно не
+        успело записаться, и в списке оказывались две папки с одним id: поиск по id попадал в любую из них.
+        """
+        with _REGISTER_LOCK:
+            existing = self._registered_folder(project_id)
+            if existing is not None:
+                raise self._exists_error(existing)
+            self._index.register(folder)
+
+    @staticmethod
+    def _exists_error(existing: Path) -> GitSyncError:
+        return GitSyncError(
+            GitErrorCode.project_exists,
+            localized_error(
+                f"Этот проект уже открыт в Студии: {existing}",
+                f"This project is already open in the Studio: {existing}",
+            ),
+            folder=str(existing),
+        )
 
     def _registered_folder(self, project_id: UUID) -> Path | None:
         for known in self._index.list_known():
@@ -470,7 +490,9 @@ class CloneProjectUC:
         try:
             self._index.unregister(plan.folder)
             if plan.created_root is not None:
-                shutil.rmtree(plan.created_root, ignore_errors=True)
+                # Убирается только то, что создала эта операция: соседний клон в той же новой папке не трогается.
+                shutil.rmtree(plan.folder, ignore_errors=True)
+                _remove_empty_parents(plan.folder.parent, plan.created_root)
                 return
             if not plan.folder.is_dir():
                 return
@@ -483,6 +505,19 @@ class CloneProjectUC:
                     entry.unlink(missing_ok=True)
         except OSError as exc:
             logger.warning("clone cleanup failed", folder=str(plan.folder), exc=str(exc))
+
+
+def _remove_empty_parents(start: Path, root: Path) -> None:
+    """Убирает пустые каталоги от `start` вверх до `root` включительно; непустой останавливает подъём."""
+    current = start
+    while current == root or root in current.parents:
+        try:
+            current.rmdir()
+        except OSError:
+            return
+        if current == root:
+            return
+        current = current.parent
 
 
 def _folds_names(folder: Path) -> bool:
