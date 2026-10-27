@@ -250,3 +250,20 @@ async def test__api__export_then_import_encrypted__correct_password__decrypts_in
 
         providers = (await fresh.get("/api/v1/ai-providers")).json()
         assert providers[0]["has_api_key"] is True
+
+
+async def test__import__bad_git_fetch_interval__is_skipped_and_settings_stay_readable(test_app: AsyncClient) -> None:
+    resp = await test_app.post(
+        "/api/v1/data/import",
+        json={
+            "version": "1",
+            "exported_at": "2030-01-01T00:00:00Z",
+            "encrypted": False,
+            "settings": {"git_fetch_interval_s": "abc", "theme": "dark"},
+        },
+    )
+
+    assert resp.status_code == 201, resp.text
+    shown = await test_app.get("/api/v1/settings")
+    assert shown.status_code == 200, shown.text
+    assert (shown.json()["git_fetch_interval_s"], shown.json()["theme"]) == (300, "dark")

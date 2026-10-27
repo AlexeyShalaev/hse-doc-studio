@@ -248,6 +248,52 @@ async def test__import_settings__merges_known_keys_only() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("imported", "expected"),
+    [
+        (0, 0),
+        (60, 60),
+        (900, 900),
+        (5, 60),
+    ],
+)
+async def test__import_settings__git_fetch_interval__goes_through_the_put_rule(imported: int, expected: int) -> None:
+    settings = _FakeSettingsRepo()
+
+    await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(encrypted=False, settings={"git_fetch_interval_s": imported})
+    )
+
+    assert settings.get()["git_fetch_interval_s"] == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("key", "bad"),
+    [
+        ("git_fetch_interval_s", "abc"),
+        ("git_fetch_interval_s", -3),
+        ("git_fetch_interval_s", True),
+        ("git_fetch_interval_s", 12.5),
+        ("disk_usage_warn_gb", "много"),
+        ("disk_usage_warn_gb", 501),
+        ("disk_usage_warn_gb", -1),
+    ],
+)
+async def test__import_settings__invalid_numeric_value__is_skipped_and_the_rest_applies(key: str, bad: object) -> None:
+    settings = _FakeSettingsRepo({key: 7 if key == "disk_usage_warn_gb" else 300})
+
+    result = await _import_uc(settings, _FakeProviderRepo()).execute(
+        ImportDataInput(encrypted=False, settings={key: bad, "theme": "light"})
+    )
+
+    assert result.settings_imported is True
+    saved = settings.get()
+    assert saved[key] == (7 if key == "disk_usage_warn_gb" else 300)
+    assert saved["theme"] == "light"
+
+
+@pytest.mark.unit
 async def test__export__includes_agent_personas() -> None:
     personas = _FakePersonaRepo([_persona(label="Мой ревьюер")])
     out = await _export_uc(_FakeSettingsRepo(), _FakeProviderRepo(), personas).execute(ExportDataInput())

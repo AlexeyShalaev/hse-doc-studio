@@ -11,8 +11,15 @@ from hse_doc_studio.use_cases.settings.update_settings import (
     UpdateSettingsInput,
     UpdateSettingsUC,
 )
+from hse_doc_studio.use_cases.settings.value_rules import disk_usage_warn_gb, git_fetch_interval_s
 
 router = APIRouter(route_class=DishkaRoute)
+
+
+def _int_setting(settings: dict[str, Any], key: str, default: int) -> int:
+    """Число из config.json: испорченное значение (чужой файл, правка вручную) не должно ронять весь GET /settings."""
+    value = settings.get(key, default)
+    return value if isinstance(value, int) and not isinstance(value, bool) else default
 
 
 def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
@@ -20,8 +27,8 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
         theme=str(settings.get("theme", "system")),
         interface_language=str(settings.get("interface_language", "ru")),
         default_engine=str(settings.get("default_engine", "xelatex")),
-        latex_passes=int(settings.get("latex_passes", 3)),
-        max_concurrent_compiles=int(settings.get("max_concurrent_compiles", 2)),
+        latex_passes=_int_setting(settings, "latex_passes", 3),
+        max_concurrent_compiles=_int_setting(settings, "max_concurrent_compiles", 2),
         latex_flags=settings.get("latex_flags"),
         compile_image=settings.get("compile_image"),
         default_ai_provider_id=settings.get("default_ai_provider_id"),
@@ -31,8 +38,8 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
         default_agent_persona=settings.get("default_agent_persona"),
         default_agent_persona_instructions=settings.get("default_agent_persona_instructions"),
         auto_update=bool(settings.get("auto_update", True)),
-        disk_usage_warn_gb=int(settings.get("disk_usage_warn_gb", 10)),
-        git_fetch_interval_s=int(settings.get("git_fetch_interval_s", 300)),
+        disk_usage_warn_gb=_int_setting(settings, "disk_usage_warn_gb", 10),
+        git_fetch_interval_s=_int_setting(settings, "git_fetch_interval_s", 300),
     )
 
 
@@ -101,20 +108,21 @@ async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mappi
     if "default_agent_persona_instructions" in fields_set:
         patch["default_agent_persona_instructions"] = body.default_agent_persona_instructions
     if "disk_usage_warn_gb" in fields_set and body.disk_usage_warn_gb is not None:
-        if not 0 <= body.disk_usage_warn_gb <= 500:
+        if disk_usage_warn_gb(body.disk_usage_warn_gb) is None:
             raise HTTPException(
                 status_code=400,
                 detail="disk_usage_warn_gb must be between 0 and 500",
             )
         patch["disk_usage_warn_gb"] = body.disk_usage_warn_gb
     if "git_fetch_interval_s" in fields_set and body.git_fetch_interval_s is not None:
-        if body.git_fetch_interval_s < 0:
+        interval = git_fetch_interval_s(body.git_fetch_interval_s)
+        if interval is None:
             raise HTTPException(
                 status_code=400,
                 detail="git_fetch_interval_s must be 0 or at least 60",
             )
-        # 0 выключает проверку; всё, что меньше минуты, поднимаем до минуты.
-        patch["git_fetch_interval_s"] = 0 if body.git_fetch_interval_s == 0 else max(60, body.git_fetch_interval_s)
+        # 0 выключает проверку; всё, что меньше минуты, поднимается до минуты.
+        patch["git_fetch_interval_s"] = interval
 
     try:
         result = await uc.execute(UpdateSettingsInput(patch=patch))

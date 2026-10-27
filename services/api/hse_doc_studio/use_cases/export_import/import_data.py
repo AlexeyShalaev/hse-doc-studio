@@ -18,6 +18,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, MACHINE_LOCAL_SETTING_KEYS
+from hse_doc_studio.use_cases.settings.value_rules import SETTING_VALUE_RULES
 
 logger = structlog.get_logger()
 
@@ -132,7 +133,18 @@ class ImportDataUC:
 
     def _import_settings(self, imported: dict[str, Any]) -> None:
         current = self._settings_repo.get()
-        patch = {k: v for k, v in imported.items() if k in _ALLOWED_SETTING_KEYS}
+        patch: dict[str, Any] = {}
+        for key, value in imported.items():
+            if key not in _ALLOWED_SETTING_KEYS:
+                continue
+            rule = SETTING_VALUE_RULES.get(key)
+            # Чужой файл идёт через те же правила, что и PUT /settings: негодное значение пропускается,
+            # остальные настройки применяются, а прежнее значение остаётся.
+            checked = value if rule is None else rule(value)
+            if checked is None:
+                logger.warning("import_data: invalid setting skipped", key=key)
+                continue
+            patch[key] = checked
         self._settings_repo.save({**current, **patch})
 
     def _import_provider(
