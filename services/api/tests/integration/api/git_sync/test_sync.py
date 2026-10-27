@@ -608,6 +608,28 @@ async def test__sync__symlink_from_remote__is_skipped_with_warning(
     assert [(w.code, w.paths) for w in result.warnings] == [("unsafe_path", ["evil"])]
 
 
+@pytest.mark.parametrize("local_edit", [False, True], ids=["fast_forward", "merge"])
+async def test__sync__case_only_rename_on_remote__file_stays_on_disk(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, local_edit: bool
+) -> None:
+    peer = await _connect_in_sync(stack, project, remote)
+    peer.write("notes/a.txt", "заметка\n")
+    peer.commit_push("add note")
+    await _sync_ok(stack, project)
+    peer.git("mv", "notes/a.txt", "Notes/a.txt")
+    peer.commit_push("rename note by case")
+    if local_edit:
+        _snapshot(project, "local work")
+
+    result = await _sync_ok(stack, project)
+
+    assert result.outcome == ("merged" if local_edit else "fast_forwarded")
+    # На файловой системе без учёта регистра имя на диске могло остаться прежним, содержимое обязано уцелеть.
+    assert _file(project, "Notes/a.txt").read_text(encoding="utf-8") == "заметка\n"
+    assert _git(project, "ls-tree", "-r", "--name-only", "HEAD").splitlines().count("Notes/a.txt") == 1
+    assert _git(project, "status", "--porcelain", "--", ".", ":(exclude)*.pdf") == ""
+
+
 async def test__sync__incoming_file_over_untracked_local_one__local_copy_is_kept_beside(
     stack: Stack, project: dict[str, Any], remote: BareRemote
 ) -> None:

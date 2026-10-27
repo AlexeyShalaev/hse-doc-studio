@@ -163,7 +163,9 @@ class TemplateUpdateTransaction:
         self._journals.backup(folder, touched)
         self._journals.save(folder, journal)
         try:
-            for write in writes:
+            # Сначала удаления: на файловой системе без учёта регистра `notes/a.txt` и `Notes/a.txt` один файл,
+            # и удаление старого имени после записи нового стёрло бы только что записанное. Сортировка устойчива.
+            for write in sorted(writes, key=lambda item: item.kind != FileWriteKind.delete):
                 apply_write(folder, write)
             save_state()
             commit_id = commit() if commit is not None else self._commit_template_update(project, journal, message)
