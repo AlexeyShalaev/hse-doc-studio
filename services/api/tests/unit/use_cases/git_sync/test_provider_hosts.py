@@ -171,6 +171,36 @@ async def test__resolve__unknown_host_answering_like_gitlab__is_detected_by_api_
     assert resolver.known("git.hse.ru", None).version == "17.3.1"
 
 
+async def test__resolve__http_api_base_stored_earlier__is_not_reused_for_an_https_address(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    # Хост и порт без схемы: проба по http (при разрешённом http) сохранила бы http-корень для https-адреса тоже.
+    settings.save(
+        GitHostSettings(
+            "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
+        )
+    )
+
+    resolved = await _resolver(settings).resolve(_url("https://git.hse.ru/team/paper.git"))
+
+    assert resolved.info.id is GitProvider.gitlab
+    assert resolved.api_base == "https://git.hse.ru/api/v4"
+
+
+async def test__resolve__http_api_base_stored_earlier__is_kept_for_the_same_http_address(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    settings.save(
+        GitHostSettings(
+            "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
+        )
+    )
+
+    resolved = await _resolver(settings).resolve(_url("http://git.hse.ru/team/paper.git"))
+
+    assert resolved.api_base == "http://git.hse.ru/api/v4"
+
+
 async def test__resolve__host_heuristic_hit__asks_only_that_provider_for_the_version(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
@@ -565,6 +595,23 @@ async def test__check_credential__uses_the_detected_api_base_and_trust_of_the_kn
     assert view.token is not None
     assert view.token.info is not None
     assert view.token.info.sufficiency is Sufficiency.too_broad
+
+
+async def test__check_credential__http_api_base_stored_earlier__token_goes_to_https(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    settings.save(
+        GitHostSettings(
+            "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
+        )
+    )
+    credentials = _Credentials()
+    credential = credentials.add(_credential("git.hse.ru"))
+    checker, introspector = _checker(TokenIntrospection(TokenState.valid, scopes=("api",)), credentials)
+
+    await _check_uc(settings, credentials, checker).execute(credential.id)
+
+    assert introspector.requests[0].api_base == "https://git.hse.ru/api/v4"
 
 
 async def test__check_credential__unknown_credential__is_not_found(settings: JsonGitHostSettingsRepository) -> None:

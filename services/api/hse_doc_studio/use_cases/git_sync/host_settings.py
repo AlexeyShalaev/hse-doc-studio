@@ -169,6 +169,9 @@ class CheckCredentialUC:
         known = next((item for item in self._settings.list() if item.host == credential.host), None)
         info = self._resolver.known(credential.host, known.port if known else None)
         api = known.detected.api_base if known and known.detected and known.detected.provider is info.id else None
+        if api is not None and not api.startswith("https://"):
+            # У токена нет адреса и согласия на http: запомненный по http корень API ему не подходит.
+            api = None
         base = web_base(host=credential.host, port=known.port if known else None)
         ca_file = self._settings.trust_file(known.host, known.port) if known and known.has_trust else None
         return ResolvedProvider(info, api or api_base(info.id, host=credential.host, base=base), ca_file)

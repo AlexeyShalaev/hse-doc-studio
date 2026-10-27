@@ -793,7 +793,9 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_git_token_introspector(self, certificates: ICertificateService) -> ITokenIntrospector:
-        return HttpTokenIntrospector(settings.git.token_check_timeout_s, certificates)
+        return HttpTokenIntrospector(
+            settings.git.token_check_timeout_s, certificates, allow_insecure_http=settings.git.allow_insecure_http
+        )
 
     @provide
     def get_git_credential_usage(

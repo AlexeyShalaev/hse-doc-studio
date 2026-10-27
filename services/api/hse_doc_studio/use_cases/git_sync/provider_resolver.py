@@ -99,6 +99,10 @@ class ProviderResolver:
     @staticmethod
     def _api_base(url: RemoteUrl, info: ProviderInfo, detection: ApiDetection | None) -> str | None:
         if detection is not None and detection.provider is info.id and detection.api_base is not None:
-            return detection.api_base
+            # Настройки хоста не знают схемы: http-корень, найденный пробой по http, не годится для https-адреса,
+            # иначе токен ушёл бы открытым текстом туда, куда человек этого не разрешал.
+            expected = "http://" if url.kind is RemoteKind.http else "https://"
+            if detection.api_base.startswith(expected):
+                return detection.api_base
         base = web_base(host=url.host, port=url.port, secure=url.kind is not RemoteKind.http)
         return api_base(info.id, host=url.host, base=base)

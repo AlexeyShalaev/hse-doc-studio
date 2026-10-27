@@ -172,11 +172,17 @@ class HttpProviderDetector:
 class HttpTokenIntrospector:
     """Спрашивает у сервера, чей токен, какие у него права и до какого срока он действует."""
 
-    def __init__(self, timeout_s: float, certificates: ICertificateService | None = None) -> None:
+    def __init__(
+        self, timeout_s: float, certificates: ICertificateService | None = None, *, allow_insecure_http: bool = False
+    ) -> None:
         self._timeout_s = timeout_s
         self._certificates = certificates
+        self._allow_insecure_http = allow_insecure_http
 
     async def introspect(self, request: IntrospectionRequest) -> TokenIntrospection:
+        if request.api_base.lower().startswith("http://") and not self._allow_insecure_http:
+            # Та же политика, что у git: токен открытым текстом идёт только туда, куда администратор это разрешил.
+            raise git_error(GitErrorCode.url_scheme_forbidden)
         token = request.token.reveal()
         try:
             async with httpx.AsyncClient(

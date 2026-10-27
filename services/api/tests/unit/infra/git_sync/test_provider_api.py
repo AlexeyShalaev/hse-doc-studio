@@ -232,7 +232,9 @@ async def test__gitlab_introspection__valid_token__returns_login_scopes_and_expi
         _gitlab_routes(own=_constant(200, _gitlab_token()), user=_constant(200, {"username": "anna.petrova"}))
     )
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert result.state is TokenState.valid
     assert (result.login, result.scopes) == ("anna.petrova", ("read_repository", "write_repository"))
@@ -251,7 +253,9 @@ async def test__gitlab_introspection__user_endpoint_forbidden__falls_back_to_the
         )
     )
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert result.login == "anna.petrova"
 
@@ -261,7 +265,9 @@ async def test__gitlab_introspection__login_not_available__stays_valid_without_l
 ) -> None:
     server = server_factory(_gitlab_routes(own=_constant(200, _gitlab_token(expires_at=None))))
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert (result.state, result.login, result.expires_at) == (TokenState.valid, None, None)
 
@@ -270,7 +276,9 @@ async def test__gitlab_introspection__past_expiry__is_expired(server_factory: Ca
     past = (datetime.now(timezone.utc) - timedelta(days=3)).date().isoformat()
     server = server_factory(_gitlab_routes(own=_constant(200, _gitlab_token(expires_at=past))))
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert result.state is TokenState.expired
     assert result.expires_at is not None
@@ -279,7 +287,9 @@ async def test__gitlab_introspection__past_expiry__is_expired(server_factory: Ca
 async def test__gitlab_introspection__revoked_token__is_rejected(server_factory: Callable[..., GitHttpServer]) -> None:
     server = server_factory(_gitlab_routes(own=_constant(200, _gitlab_token(revoked=True, active=False))))
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert result.state is TokenState.rejected
 
@@ -297,7 +307,9 @@ async def test__gitlab_introspection__401__tells_expired_from_rejected(
     body = {"error": "invalid_token", "error_description": description}
     server = server_factory(_gitlab_routes(own=_constant(401, body)))
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert result.state is state
 
@@ -307,7 +319,9 @@ async def test__gitlab_introspection__old_server_without_endpoint__cannot_intros
 ) -> None:
     server = server_factory(_gitlab_routes(own=_constant(404, {"message": "404 Not Found"})))
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitlab, "/api/v4")
+    )
 
     assert (result.state, result.login, result.scopes) == (TokenState.unknown, None, None)
 
@@ -328,7 +342,9 @@ async def test__github_introspection__classic_token__returns_login_scopes_and_ex
         }
     )
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.github, "/api/v3"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.github, "/api/v3")
+    )
 
     assert result.state is TokenState.valid
     assert (result.login, result.scopes) == ("anna-petrova", ("repo", "workflow"))
@@ -341,7 +357,9 @@ async def test__github_introspection__fine_grained_token_has_no_scopes_header__s
 ) -> None:
     server = server_factory({"/api/v3/user": _constant(200, {"login": "anna-petrova"})})
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.github, "/api/v3"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.github, "/api/v3")
+    )
 
     assert (result.state, result.login, result.scopes) == (TokenState.valid, "anna-petrova", None)
 
@@ -351,7 +369,9 @@ async def test__github_introspection__bad_credentials__is_rejected(
 ) -> None:
     server = server_factory({"/api/v3/user": _constant(401, {"message": "Bad credentials"})})
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.github, "/api/v3"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.github, "/api/v3")
+    )
 
     assert result.state is TokenState.rejected
 
@@ -367,7 +387,9 @@ async def test__github_introspection__expiry_header_in_the_past__is_expired(
         }
     )
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.github, "/api/v3"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.github, "/api/v3")
+    )
 
     assert result.state is TokenState.expired
 
@@ -377,7 +399,9 @@ async def test__gitea_introspection__valid_token__returns_login_without_scopes(
 ) -> None:
     server = server_factory({"/api/v1/user": _constant(200, {"login": "anna", "id": 4})})
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitea, "/api/v1"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitea, "/api/v1")
+    )
 
     assert (result.state, result.login, result.scopes) == (TokenState.valid, "anna", None)
     assert {request.headers.get("authorization") for request in server.requests} == {f"token {_TOKEN}"}
@@ -388,7 +412,9 @@ async def test__gitea_introspection__token_cannot_read_the_user__is_unknown_not_
 ) -> None:
     server = server_factory({"/api/v1/user": _constant(403, {"message": "token does not have required scope"})})
 
-    result = await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitea, "/api/v1"))
+    result = await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(
+        _introspect(server, GitProvider.gitea, "/api/v1")
+    )
 
     assert result.state is TokenState.unknown
 
@@ -396,14 +422,26 @@ async def test__gitea_introspection__token_cannot_read_the_user__is_unknown_not_
 async def test__introspection__provider_without_a_way_to_check__is_unknown() -> None:
     request = IntrospectionRequest(GitProvider.bitbucket, "https://api.bitbucket.org/2.0", Secret(_TOKEN))
 
-    assert (await HttpTokenIntrospector(3.0).introspect(request)).state is TokenState.unknown
+    assert (await HttpTokenIntrospector(3.0, allow_insecure_http=True).introspect(request)).state is TokenState.unknown
+
+
+async def test__introspection__http_api_base_without_the_insecure_http_policy__token_is_not_sent(
+    server_factory: Callable[..., GitHttpServer],
+) -> None:
+    server = server_factory(_gitlab_routes(own=_constant(200, _gitlab_token())))
+
+    with pytest.raises(GitSyncError) as error:
+        await HttpTokenIntrospector(3.0).introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
+
+    assert error.value.code is GitErrorCode.url_scheme_forbidden
+    assert server.requests == []
 
 
 async def test__introspection__nobody_listens__raises_offline() -> None:
     request = IntrospectionRequest(GitProvider.gitlab, "http://127.0.0.1:1/api/v4", Secret(_TOKEN))
 
     with pytest.raises(GitSyncError) as error:
-        await HttpTokenIntrospector(1.0).introspect(request)
+        await HttpTokenIntrospector(1.0, allow_insecure_http=True).introspect(request)
 
     assert error.value.code is GitErrorCode.offline
 
@@ -553,7 +591,9 @@ async def test__introspection__endless_body__is_cut_at_the_size_limit_and_is_unk
     server = endless_factory(chunk=b" " * 65536)
     request = IntrospectionRequest(GitProvider.gitlab, f"http://127.0.0.1:{server.port}/api/v4", Secret(_TOKEN))
 
-    result = await asyncio.wait_for(HttpTokenIntrospector(1.0).introspect(request), timeout=10)
+    result = await asyncio.wait_for(
+        HttpTokenIntrospector(1.0, allow_insecure_http=True).introspect(request), timeout=10
+    )
 
     assert result.state is TokenState.unknown
     assert server.sent < 50_000_000
@@ -564,6 +604,6 @@ async def test__introspection__dripping_body__raises_timeout(endless_factory: Ca
     request = IntrospectionRequest(GitProvider.gitlab, f"http://127.0.0.1:{server.port}/api/v4", Secret(_TOKEN))
 
     with pytest.raises(GitSyncError) as error:
-        await asyncio.wait_for(HttpTokenIntrospector(0.5).introspect(request), timeout=15)
+        await asyncio.wait_for(HttpTokenIntrospector(0.5, allow_insecure_http=True).introspect(request), timeout=15)
 
     assert error.value.code is GitErrorCode.timeout
