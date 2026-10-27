@@ -5,6 +5,7 @@ import stat
 from pathlib import Path
 
 import pytest
+from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.host_settings import GitHostSettings
 from hse_doc_studio.core.git_sync.providers import ApiDetection, GitProvider
 from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSettingsRepository
@@ -12,6 +13,19 @@ from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSe
 from tests.fixtures.tls import make_ca_signed, make_self_signed
 
 _posix_only = pytest.mark.skipif(os.name != "posix", reason="file modes are posix-only")
+
+
+def _unreadable(monkeypatch: pytest.MonkeyPatch, target: Path, error: OSError | None = None) -> None:
+    """Чтение этого файла падает, как при блокировке клиентом синхронизации; остальное работает."""
+    original = Path.read_bytes
+    failure = error or PermissionError("locked")
+
+    def read_bytes(self: Path) -> bytes:
+        if self == target:
+            raise failure
+        return original(self)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
 
 
 @pytest.fixture
@@ -133,6 +147,25 @@ def test__list__damaged_file__is_empty_and_set_aside_on_the_next_write(
 
     assert len(repo.list()) == 1
     assert list(path.parent.glob("host_settings.json.corrupt-*"))
+
+
+def test__save__read_error__fails_and_keeps_the_saved_settings(
+    repo: JsonGitHostSettingsRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "data" / "git" / "host_settings.json"
+    repo.save(GitHostSettings("git.hse.local", None, ca_pem="CA"))
+    before = path.read_bytes()
+
+    with monkeypatch.context() as patch:
+        _unreadable(patch, path)
+        assert repo.list() == []
+        with pytest.raises(GitSyncError) as raised:
+            repo.save(GitHostSettings("other.local", None, provider_override=GitProvider.gitea))
+
+    assert raised.value.code is GitErrorCode.secrets_unavailable
+    assert list(path.parent.glob("host_settings.json.corrupt-*")) == []
+    assert path.read_bytes() == before
+    assert [item.host for item in repo.list()] == ["git.hse.local"]
 
 
 def test__list__malformed_record__is_skipped_and_others_are_kept(

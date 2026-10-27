@@ -2,7 +2,8 @@
 
 Файл `secrets/master.keys.json` создаётся лениво, при первом сохранении секрета, и никогда
 не перезаписывается: повреждённый файл откладывается рядом под другим именем, а ключи, записанные
-в старом файле, остаются на диске. Формат допускает несколько ключей (первый в `primary` пишет,
+в старом файле, остаются на диске. Файл, который не удалось прочитать (сбой чтения, а не негодное
+содержимое), не трогается вовсе: ключ не создаётся, пока файл не прочитается. Формат допускает несколько ключей (первый в `primary` пишет,
 остальные читают), поэтому смену ключа можно добавить, не меняя файлов.
 
 Ключ из окружения (`HSE_STUDIO__SECRETS__KEY` или `HSE_STUDIO__SECRETS__KEY_FILE`) выключает
@@ -54,6 +55,17 @@ def _unavailable() -> GitSyncError:
     )
 
 
+def store_unavailable_error() -> GitSyncError:
+    """Файл хранилища не прочитался (сбой, а не негодное содержимое): запись остановлена, файл не тронут."""
+    return GitSyncError(
+        GitErrorCode.secrets_unavailable,
+        localized_error(
+            "Хранилище доступов сейчас недоступно, ничего не изменено. Повторите попытку.",
+            "The credentials storage is unavailable right now; nothing was changed. Try again.",
+        ),
+    )
+
+
 def _fernet_key(raw: str) -> bytes | None:
     key = raw.strip().encode()
     try:
@@ -91,6 +103,9 @@ class KeyFileStore:
             ring, state = self._read_file()
             if ring is not None:
                 return ring
+            if state == "unreadable":
+                # Сбой чтения не доказывает, что ключа нет: новый ключ сделал бы все токены нечитаемыми.
+                raise _unavailable()
             if state == "corrupt":
                 self._set_aside()
             return self._create()
@@ -99,7 +114,11 @@ class KeyFileStore:
         if self.source is KeySource.env:
             return CipherStatus(KeySource.env, available=self._load_env() is not None, permissions_enforced=True)
         _ring, state = self._read_file()
-        return CipherStatus(KeySource.file, available=state != "corrupt", permissions_enforced=self._permissions_ok())
+        return CipherStatus(
+            KeySource.file,
+            available=state not in {"corrupt", "unreadable"},
+            permissions_enforced=self._permissions_ok(),
+        )
 
     def _load_env(self) -> KeyRing | None:
         raw = self._env_key
@@ -116,12 +135,18 @@ class KeyFileStore:
         return KeyRing(ENV_KEY_ID, {ENV_KEY_ID: key})
 
     def _read_file(self) -> tuple[KeyRing | None, str]:
-        if not self._path.exists():
-            return None, "missing"
+        """Ключи и состояние файла: missing, ok, corrupt (прочитан, но негоден) или unreadable (чтение не удалось)."""
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-            ring = self._parse(data)
-        except (OSError, ValueError):
+            if not self._path.exists():
+                return None, "missing"
+            content = self._path.read_bytes()
+        except OSError:
+            # Блокировка клиентом синхронизации, нехватка дескрипторов, EIO: файл мог остаться целым.
+            logger.warning("secrets key file is not readable", path=str(self._path))
+            return None, "unreadable"
+        try:
+            ring = self._parse(json.loads(content))
+        except ValueError:
             ring = None
         if ring is None:
             logger.warning("secrets key file is damaged", path=str(self._path))

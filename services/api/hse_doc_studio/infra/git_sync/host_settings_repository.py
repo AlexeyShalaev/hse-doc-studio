@@ -18,7 +18,7 @@ import structlog
 
 from hse_doc_studio.core.git_sync.host_settings import GitHostSettings, host_settings_key
 from hse_doc_studio.core.git_sync.providers import ApiDetection, GitProvider
-from hse_doc_studio.infra.git_sync.key_store import write_private_file
+from hse_doc_studio.infra.git_sync.key_store import store_unavailable_error, write_private_file
 
 logger = structlog.get_logger()
 
@@ -98,12 +98,20 @@ class JsonGitHostSettingsRepository:
         return path
 
     def _read(self, *, for_write: bool) -> _Items:
-        if not self._path.exists():
+        # Сбой чтения не считается порчей: читающему пусто, пишущий получает ошибку и файл остаётся на месте.
+        try:
+            if not self._path.exists():
+                return []
+            content = self._path.read_bytes()
+        except OSError as exc:
+            logger.warning("git host settings file is not readable", path=str(self._path))
+            if for_write:
+                raise store_unavailable_error() from exc
             return []
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
+            data = json.loads(content)
             records = data["hosts"] if data.get("version") == _FILE_VERSION else None
-        except (OSError, ValueError, KeyError, AttributeError):
+        except (ValueError, KeyError, AttributeError):
             records = None
         if not isinstance(records, list):
             logger.warning("git host settings file is damaged", path=str(self._path))

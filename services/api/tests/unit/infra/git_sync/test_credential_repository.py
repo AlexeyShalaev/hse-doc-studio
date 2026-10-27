@@ -47,6 +47,19 @@ def repo(tmp_path: Path, key_path: Path) -> JsonGitCredentialRepository:
     return JsonGitCredentialRepository(tmp_path, FernetSecretCipher(KeyFileStore(key_path)))
 
 
+def _unreadable(monkeypatch: pytest.MonkeyPatch, target: Path, error: OSError | None = None) -> None:
+    """Чтение этого файла падает, как при блокировке клиентом синхронизации; остальное работает."""
+    original = Path.read_bytes
+    failure = error or PermissionError("locked")
+
+    def read_bytes(self: Path) -> bytes:
+        if self == target:
+            raise failure
+        return original(self)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+
+
 def _file(tmp_path: Path) -> Path:
     return tmp_path / "git" / "credentials.json"
 
@@ -277,6 +290,46 @@ def test__add__damaged_file__is_set_aside_before_writing(repo: JsonGitCredential
     assert len(aside) == 1
     assert aside[0].read_text(encoding="utf-8") == "{ damaged"
     assert len(repo.list()) == 1
+
+
+def test__add__read_error__fails_and_keeps_the_saved_tokens(
+    repo: JsonGitCredentialRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first = _credential(label="first")
+    repo.add(first, Secret(_CANARY))
+    before = _file(tmp_path).read_bytes()
+
+    with monkeypatch.context() as patch:
+        _unreadable(patch, _file(tmp_path), OSError(24, "Too many open files"))
+        assert repo.list() == []
+        with pytest.raises(GitSyncError) as raised:
+            repo.add(_credential(label="second"), Secret("other-secret-value"))
+        with pytest.raises(GitSyncError):
+            repo.delete(first.id)
+
+    assert raised.value.code is GitErrorCode.secrets_unavailable
+    assert list(_file(tmp_path).parent.iterdir()) == [_file(tmp_path)]
+    assert _file(tmp_path).read_bytes() == before
+    assert [c.label for c in repo.list()] == ["first"]
+    assert repo.get_secret(first.id).reveal() == _CANARY
+
+
+def test__mark__read_error_or_damaged_file__is_skipped_without_touching_the_file(
+    repo: JsonGitCredentialRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    credential = _credential()
+    repo.add(credential, Secret(_CANARY))
+    before = _file(tmp_path).read_bytes()
+
+    with monkeypatch.context() as patch:
+        _unreadable(patch, _file(tmp_path))
+        repo.mark(credential.id, CredentialStatus.ok, used_at=_NOW)
+    assert _file(tmp_path).read_bytes() == before
+
+    _file(tmp_path).write_text("{ damaged", encoding="utf-8")
+    repo.mark(credential.id, CredentialStatus.ok, used_at=_NOW)
+    assert list(_file(tmp_path).parent.iterdir()) == [_file(tmp_path)]
+    assert _file(tmp_path).read_text(encoding="utf-8") == "{ damaged"
 
 
 def test__logs__never_contain_the_secret(repo: JsonGitCredentialRepository) -> None:

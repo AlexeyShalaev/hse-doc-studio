@@ -20,6 +20,19 @@ def key_path(tmp_path: Path) -> Path:
     return tmp_path / "secrets" / "master.keys.json"
 
 
+def _unreadable(monkeypatch: pytest.MonkeyPatch, target: Path, error: OSError | None = None) -> None:
+    """Чтение этого файла падает, как при блокировке клиентом синхронизации; остальное работает."""
+    original = Path.read_bytes
+    failure = error or PermissionError("locked")
+
+    def read_bytes(self: Path) -> bytes:
+        if self == target:
+            raise failure
+        return original(self)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+
+
 def test__load__no_file__is_none_and_creates_nothing(key_path: Path) -> None:
     store = KeyFileStore(key_path)
 
@@ -91,6 +104,53 @@ def test__ensure_primary__corrupt_file__is_set_aside_not_overwritten(key_path: P
     assert aside[0].read_text(encoding="utf-8") == "{ not json"
     assert store.load() == ring
     assert store.status().available is True
+
+
+def test__ensure_primary__read_error__keeps_the_file_and_does_not_create_a_new_key(
+    key_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ring = KeyFileStore(key_path).ensure_primary()
+    before = key_path.read_bytes()
+    store = KeyFileStore(key_path)
+
+    with monkeypatch.context() as patch:
+        _unreadable(patch, key_path)
+        assert store.load() is None
+        assert store.status().available is False
+        with pytest.raises(GitSyncError) as raised:
+            store.ensure_primary()
+
+    assert raised.value.code is GitErrorCode.secrets_unavailable
+    assert list(key_path.parent.iterdir()) == [key_path]
+    assert key_path.read_bytes() == before
+    assert store.load() == ring
+
+
+def test__ensure_primary__inaccessible_directory__is_unavailable_not_a_crash(
+    key_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def exists(self: Path) -> bool:
+        raise PermissionError("no access")
+
+    monkeypatch.setattr(Path, "exists", exists)
+    store = KeyFileStore(key_path)
+
+    assert store.load() is None
+    assert store.status().available is False
+    with pytest.raises(GitSyncError) as raised:
+        store.ensure_primary()
+    assert raised.value.code is GitErrorCode.secrets_unavailable
+
+
+def test__ensure_primary__file_not_utf8__is_corrupt_and_set_aside(key_path: Path) -> None:
+    key_path.parent.mkdir(parents=True)
+    key_path.write_bytes(b"\xff\xfe\x00garbage")
+    store = KeyFileStore(key_path)
+
+    assert store.status().available is False
+    store.ensure_primary()
+
+    assert len(list(key_path.parent.glob("master.keys.json.corrupt-*"))) == 1
 
 
 @pytest.mark.parametrize(

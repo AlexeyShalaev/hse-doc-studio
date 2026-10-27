@@ -20,10 +20,11 @@ import structlog
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.credentials import secret_aad
 from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, GitCredentialKind
+from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.infra.git_sync.key_store import write_private_file
+from hse_doc_studio.infra.git_sync.key_store import store_unavailable_error, write_private_file
 
 logger = structlog.get_logger()
 
@@ -141,7 +142,11 @@ class JsonGitCredentialRepository:
         if status is CredentialStatus.unreadable:
             return
         with self._lock:
-            records = self._records(for_write=True)
+            try:
+                # Статус вторичен: ради него файл не откладывают и не перезаписывают, при сбое чтения пропускаем.
+                records = self._records(for_write=True, set_aside=False)
+            except GitSyncError:
+                return
             for raw in records:
                 if raw.get("id") == str(credential_id):
                     raw["status"] = status.value
@@ -165,17 +170,28 @@ class JsonGitCredentialRepository:
             return False
         return isinstance(raw.get("secret"), str)
 
-    def _records(self, *, for_write: bool = False) -> _Records:
-        if not self._path.exists():
+    def _records(self, *, for_write: bool = False, set_aside: bool = True) -> _Records:
+        """Записи файла. Сбой чтения не считается порчей: читающему пусто, пишущий получает ошибку и файл цел.
+
+        Откладывается в сторону только файл, который прочитался и не разобрался (`set_aside=False` это запрещает).
+        """
+        try:
+            if not self._path.exists():
+                return []
+            content = self._path.read_bytes()
+        except OSError as exc:
+            logger.warning("git credentials file is not readable", path=str(self._path))
+            if for_write:
+                raise store_unavailable_error() from exc
             return []
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
+            data = json.loads(content)
             records = data["credentials"] if data.get("version") == _FILE_VERSION else None
-        except (OSError, ValueError, KeyError, AttributeError):
+        except (ValueError, KeyError, AttributeError):
             records = None
         if not isinstance(records, list):
             logger.warning("git credentials file is damaged", path=str(self._path))
-            if for_write:
+            if for_write and set_aside:
                 self._set_aside()
             return []
         return [raw for raw in records if isinstance(raw, dict)]
