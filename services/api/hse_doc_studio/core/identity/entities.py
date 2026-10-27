@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -115,6 +116,59 @@ class RegistrationInvite:
     created_by: str
     expires_at: datetime
     used_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class LoginAttempt:
+    """Счётчик неудачных входов по ключу (e-mail и IP или один IP); задержка растёт, постоянной блокировки нет."""
+
+    key: str
+    failures: int
+    updated_at: datetime
+    next_allowed_at: datetime | None = None
+
+
+class MailKind(StrEnum):
+    verify_email = "verify_email"
+    reset_password = "reset_password"  # noqa: S105 — вид письма, не пароль
+    invite = "invite"
+
+
+@dataclass(frozen=True)
+class MailOutboxEntry:
+    """Письмо, которое не ушло по почте (SMTP не настроен): ссылку показывают администратору и приглашающему."""
+
+    id: str
+    kind: MailKind
+    to_email: str
+    link: str
+    created_at: datetime
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class OidcProvider:
+    id: str
+    label: str
+    issuer: str
+    client_id: str
+    # Шифртекст `ISecretCipher` с привязкой `column_aad("oidc_providers", "client_secret_enc", id)`.
+    client_secret_enc: str
+    created_at: datetime
+    scopes: str = "openid email profile"
+    enabled: bool = True
+    # Создавать пользователя при первом входе без регистрационной политики (решает админ).
+    auto_provision: bool = False
+
+
+@dataclass(frozen=True)
+class AuditEntry:
+    id: int
+    at: datetime
+    action: str
+    actor_id: str | None = None
+    target: str | None = None
+    details: Mapping[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

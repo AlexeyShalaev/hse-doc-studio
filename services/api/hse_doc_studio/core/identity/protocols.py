@@ -3,14 +3,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from datetime import datetime
+from collections.abc import Callable, Mapping
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from hse_doc_studio.core.identity.entities import (
     ApiToken,
+    AuditEntry,
     AuthToken,
     AuthTokenKind,
+    LoginAttempt,
+    MailOutboxEntry,
+    OidcProvider,
     RegistrationInvite,
     Session,
     User,
@@ -70,6 +74,7 @@ class IApiTokenRepository(Protocol):
 
 class IAuthTokenRepository(Protocol):
     async def add(self, token: AuthToken) -> None: ...
+    async def delete_expired(self, now: datetime) -> int: ...
     async def consume(self, token_hash: str, kind: AuthTokenKind, now: datetime) -> AuthToken | None:
         """Атомарно помечает токен использованным; просроченный или использованный даёт None."""
         ...
@@ -78,6 +83,38 @@ class IAuthTokenRepository(Protocol):
 class IRegistrationInviteRepository(Protocol):
     async def add(self, invite: RegistrationInvite) -> None: ...
     async def consume(self, token_hash: str, email: str, now: datetime) -> RegistrationInvite | None: ...
+
+
+class ILoginAttemptRepository(Protocol):
+    async def get(self, key: str) -> LoginAttempt | None: ...
+    async def record_failure(self, key: str, now: datetime, delay_for: Callable[[int], timedelta]) -> LoginAttempt:
+        """Атомарно увеличивает счётчик и назначает `next_allowed_at = now + delay_for(failures)`."""
+        ...
+
+    async def reset(self, key: str) -> None: ...
+    async def delete_stale(self, before: datetime) -> int:
+        """Удаляет счётчики без обновлений с момента `before`."""
+        ...
+
+
+class IMailOutboxRepository(Protocol):
+    async def add(self, entry: MailOutboxEntry) -> None: ...
+    async def list_active(self, now: datetime, *, limit: int = 100) -> list[MailOutboxEntry]:
+        """Непросроченные письма, новые первыми."""
+        ...
+
+    async def delete(self, entry_id: str) -> bool: ...
+    async def delete_expired(self, now: datetime) -> int: ...
+
+
+class IOidcProviderRepository(Protocol):
+    async def get(self, provider_id: str) -> OidcProvider | None: ...
+    async def list(self, *, only_enabled: bool = False) -> list[OidcProvider]: ...
+    async def save(self, provider: OidcProvider) -> None:
+        """Создаёт или заменяет провайдера (`created_at` существующего не меняется)."""
+        ...
+
+    async def delete(self, provider_id: str) -> bool: ...
 
 
 class IInstanceSettingsRepository(Protocol):
@@ -94,7 +131,16 @@ class IAuditLog(Protocol):
         target: str | None = None,
         details: Mapping[str, object] | None = None,
     ) -> None:
-        """Только дозапись: приложение не изменяет и не удаляет события."""
+        """Только дозапись: приложение не изменяет и не удаляет события. Значения секретных ключей
+        в `details` вычёркиваются (`redact`)."""
+        ...
+
+
+class IAuditReader(Protocol):
+    async def list(
+        self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None
+    ) -> list[AuditEntry]:
+        """События, новые первыми."""
         ...
 
 

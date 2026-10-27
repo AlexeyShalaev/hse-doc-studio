@@ -1,5 +1,15 @@
 """ORM-модели. Каждая зона держит свои таблицы в своём модуле и импортирует их здесь для autogenerate."""
 
+from hse_doc_studio.infra.db.orm.auth import (
+    ApiTokenRow,
+    AuditLogRow,
+    AuthTokenRow,
+    LoginAttemptRow,
+    MailOutboxRow,
+    OidcProviderRow,
+    RegistrationInviteRow,
+    SessionRow,
+)
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
@@ -9,9 +19,17 @@ from hse_doc_studio.infra.db.orm.identity import (
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
 
 __all__ = [
+    "ApiTokenRow",
+    "AuditLogRow",
+    "AuthTokenRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
+    "LoginAttemptRow",
+    "MailOutboxRow",
+    "OidcProviderRow",
     "PasswordCredentialRow",
+    "RegistrationInviteRow",
+    "SessionRow",
     "UserIdentityRow",
     "UserRow",
 ]

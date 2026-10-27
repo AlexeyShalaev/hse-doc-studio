@@ -133,6 +133,7 @@ def _parser() -> argparse.ArgumentParser:
 
 async def _reencrypt(*, dry_run: bool) -> int:
     from hse_doc_studio.core.secrets import encrypted_columns  # noqa: PLC0415
+    from hse_doc_studio.infra.db import orm  # noqa: F401, PLC0415 — регистрирует шифруемые колонки таблиц
     from hse_doc_studio.infra.db.engine import create_engine  # noqa: PLC0415
     from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher  # noqa: PLC0415
     from hse_doc_studio.infra.secrets.reencrypt import reencrypt_all  # noqa: PLC0415
