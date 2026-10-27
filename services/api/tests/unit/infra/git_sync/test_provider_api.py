@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import socket
+import threading
+import time
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -446,3 +450,120 @@ async def test__introspection__certificate_issued_by_an_unknown_ca__is_untrusted
     assert error.value.code is GitErrorCode.tls_untrusted_ca
     assert error.value.ctx["certificate"].self_signed is False  # type: ignore[attr-defined]
     assert trusted.state is TokenState.valid
+
+
+# --- сервер, который не заканчивает ответ ---------------------------------------------------------------------------
+
+
+class _EndlessServer:
+    """Принимает соединение и отвечает 200 без Content-Length, не заканчивая тело: потоком или по байту с паузой."""
+
+    def __init__(self, *, chunk: bytes, pause_s: float) -> None:
+        self.sent = 0
+        self._chunk = chunk
+        self._pause_s = pause_s
+        self._stop = threading.Event()
+        self._socket = socket.socket()
+        self._socket.bind(("127.0.0.1", 0))
+        self._socket.listen(16)
+        self._socket.settimeout(0.1)
+        self.port = int(self._socket.getsockname()[1])
+        threading.Thread(target=self._accept, daemon=True).start()
+
+    def close(self) -> None:
+        self._stop.set()
+        self._socket.close()
+
+    def _accept(self) -> None:
+        while not self._stop.is_set():
+            try:
+                connection, _ = self._socket.accept()
+            except TimeoutError:
+                continue
+            except OSError:
+                return
+            threading.Thread(target=self._serve, args=(connection,), daemon=True).start()
+
+    def _serve(self, connection: socket.socket) -> None:
+        with connection:
+            # На macOS принятое соединение наследует короткий таймаут слушающего сокета.
+            connection.settimeout(None)
+            try:
+                connection.recv(65536)
+                connection.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{")
+                while not self._stop.is_set():
+                    connection.sendall(self._chunk)
+                    self.sent += len(self._chunk)
+                    if self._pause_s:
+                        time.sleep(self._pause_s)
+            except OSError:
+                return
+
+
+@pytest.fixture
+def endless_factory() -> Iterator[Callable[..., _EndlessServer]]:
+    servers: list[_EndlessServer] = []
+
+    def make(*, chunk: bytes, pause_s: float = 0.0) -> _EndlessServer:
+        server = _EndlessServer(chunk=chunk, pause_s=pause_s)
+        servers.append(server)
+        return server
+
+    yield make
+    for server in servers:
+        server.close()
+
+
+def _endless_request(server: _EndlessServer) -> DetectionRequest:
+    return DetectionRequest(
+        secure=False,
+        host="127.0.0.1",
+        port=server.port,
+        segments=("team", "paper.git"),
+        providers=(GitProvider.gitlab,),
+    )
+
+
+async def test__detect__endless_body__is_cut_at_the_size_limit_and_returns(
+    endless_factory: Callable[..., _EndlessServer],
+) -> None:
+    server = endless_factory(chunk=b" " * 65536)
+
+    found = await asyncio.wait_for(HttpProviderDetector(1.0).detect(_endless_request(server)), timeout=10)
+
+    assert found is None
+    assert server.sent < 50_000_000
+
+
+async def test__detect__dripping_body__is_cut_by_the_total_deadline(
+    endless_factory: Callable[..., _EndlessServer],
+) -> None:
+    server = endless_factory(chunk=b" ", pause_s=0.1)
+    started = time.monotonic()
+
+    found = await asyncio.wait_for(HttpProviderDetector(0.5).detect(_endless_request(server)), timeout=15)
+
+    assert found is None
+    assert time.monotonic() - started < 5
+
+
+async def test__introspection__endless_body__is_cut_at_the_size_limit_and_is_unknown(
+    endless_factory: Callable[..., _EndlessServer],
+) -> None:
+    server = endless_factory(chunk=b" " * 65536)
+    request = IntrospectionRequest(GitProvider.gitlab, f"http://127.0.0.1:{server.port}/api/v4", Secret(_TOKEN))
+
+    result = await asyncio.wait_for(HttpTokenIntrospector(1.0).introspect(request), timeout=10)
+
+    assert result.state is TokenState.unknown
+    assert server.sent < 50_000_000
+
+
+async def test__introspection__dripping_body__raises_timeout(endless_factory: Callable[..., _EndlessServer]) -> None:
+    server = endless_factory(chunk=b" ", pause_s=0.1)
+    request = IntrospectionRequest(GitProvider.gitlab, f"http://127.0.0.1:{server.port}/api/v4", Secret(_TOKEN))
+
+    with pytest.raises(GitSyncError) as error:
+        await asyncio.wait_for(HttpTokenIntrospector(0.5).introspect(request), timeout=15)
+
+    assert error.value.code is GitErrorCode.timeout

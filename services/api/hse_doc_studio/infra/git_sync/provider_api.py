@@ -9,9 +9,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import ssl
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -36,6 +38,9 @@ logger = structlog.get_logger()
 
 _USER_AGENT = "HSE-Doc-Studio"
 _MAX_BODY_BYTES = 1_000_000
+# Таймаут httpx действует на каждую фазу и сбрасывается с каждым байтом: сервер, который капает по байту или не
+# заканчивает ответ, держал бы запрос вечно. Поэтому на весь запрос (до конца тела) есть общий срок.
+_TOTAL_TIMEOUT_FACTOR = 2.0
 _CACHE_TTL_S = 300.0
 _HTTP_OK = 200
 _HTTP_UNAUTHORIZED = 401
@@ -55,14 +60,40 @@ def _ssl_context(ca_file: Path | None) -> ssl.SSLContext:
     return context
 
 
-def _json_object(response: httpx.Response) -> dict[str, Any] | None:
-    if len(response.content) > _MAX_BODY_BYTES:
-        return None
-    try:
-        body = response.json()
-    except ValueError:
-        return None
-    return body if isinstance(body, dict) else None
+@dataclass(frozen=True)
+class _Reply:
+    """Ответ сервера: статус, заголовки и тело, прочитанное не дальше `_MAX_BODY_BYTES` (None, если тело длиннее)."""
+
+    status_code: int
+    headers: httpx.Headers
+    body: bytes | None
+
+    def json_object(self) -> dict[str, Any] | None:
+        if self.body is None:
+            return None
+        try:
+            parsed = json.loads(self.body)
+        except ValueError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+
+
+class _Fetcher:
+    """GET с потолком по размеру тела и общим сроком: длинный или медленный ответ не копится в памяти и не висит."""
+
+    def __init__(self, client: httpx.AsyncClient, timeout_s: float) -> None:
+        self._client = client
+        self._deadline_s = timeout_s * _TOTAL_TIMEOUT_FACTOR
+
+    async def get(self, url: str, headers: Mapping[str, str] | None = None) -> _Reply:
+        """Бросает TimeoutError, когда срок вышел, и httpx.HTTPError при сбое соединения."""
+        async with asyncio.timeout(self._deadline_s), self._client.stream("GET", url, headers=headers) as response:
+            body = bytearray()
+            async for chunk in response.aiter_bytes():
+                body += chunk
+                if len(body) > _MAX_BODY_BYTES:
+                    return _Reply(response.status_code, response.headers, None)
+            return _Reply(response.status_code, response.headers, bytes(body))
 
 
 def _text(value: object) -> str | None:
@@ -96,20 +127,21 @@ class HttpProviderDetector:
             follow_redirects=False,
             headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
         ) as client:
+            fetcher = _Fetcher(client, self._timeout_s)
             results = await asyncio.gather(
-                *(self._probe(client, request, provider, prefix) for provider, prefix in candidates)
+                *(self._probe(fetcher, request, provider, prefix) for provider, prefix in candidates)
             )
         return next((result for result in results if result is not None), None)
 
     async def _probe(
-        self, client: httpx.AsyncClient, request: DetectionRequest, provider: GitProvider, prefix: str
+        self, fetcher: _Fetcher, request: DetectionRequest, provider: GitProvider, prefix: str
     ) -> ApiDetection | None:
         spec = provider_spec(provider)
         base = web_base(host=request.host, port=request.port, secure=request.secure, subpath=prefix)
         if spec.api.detect is None or base is None:
             return None
         try:
-            response = await client.get(base + spec.api.detect.path)
+            response = await fetcher.get(base + spec.api.detect.path)
         except (httpx.HTTPError, ssl.SSLError, OSError):
             return None
         version = self._recognize(provider, response)
@@ -118,13 +150,13 @@ class HttpProviderDetector:
         return ApiDetection(provider, version[0], api_base(provider, host=request.host, base=base))
 
     @staticmethod
-    def _recognize(provider: GitProvider, response: httpx.Response) -> tuple[str | None] | None:
+    def _recognize(provider: GitProvider, response: _Reply) -> tuple[str | None] | None:
         """(версия,) если ответ принадлежит провайдеру, иначе None. Версия может быть неизвестна."""
         headers = response.headers
         if provider is GitProvider.github:
             version = _text(headers.get(_GITHUB_ENTERPRISE_HEADER))
             return (version,) if version is not None else None
-        body = _json_object(response)
+        body = response.json_object()
         if provider is GitProvider.gitea:
             version = _text(body.get("version")) if body else None
             return (version,) if response.status_code == _HTTP_OK and version is not None else None
@@ -153,23 +185,22 @@ class HttpTokenIntrospector:
                 follow_redirects=False,
                 headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
             ) as client:
-                return await self._dispatch(client, request.provider, request.api_base, token)
-        except httpx.TimeoutException:
+                fetcher = _Fetcher(client, self._timeout_s)
+                return await self._dispatch(fetcher, request.provider, request.api_base, token)
+        except (httpx.TimeoutException, TimeoutError):
             raise git_error(GitErrorCode.timeout) from None
         except httpx.ConnectError as exc:
             raise await self._connect_error(exc, request) from None
         except (httpx.HTTPError, OSError):
             raise git_error(GitErrorCode.offline) from None
 
-    async def _dispatch(
-        self, client: httpx.AsyncClient, provider: GitProvider, api: str, token: str
-    ) -> TokenIntrospection:
+    async def _dispatch(self, fetcher: _Fetcher, provider: GitProvider, api: str, token: str) -> TokenIntrospection:
         if provider is GitProvider.gitlab:
-            return await _gitlab_self(client, api, token)
+            return await _gitlab_self(fetcher, api, token)
         if provider is GitProvider.github:
-            return await _github_user(client, api, token)
+            return await _github_user(fetcher, api, token)
         if provider is GitProvider.gitea:
-            return await _gitea_user(client, api, token)
+            return await _gitea_user(fetcher, api, token)
         return TokenIntrospection(TokenState.unknown)
 
     async def _connect_error(self, exc: httpx.ConnectError, request: IntrospectionRequest) -> GitSyncError:
@@ -214,14 +245,14 @@ def _expired(expires_at: datetime | None) -> bool:
     return expires_at is not None and expires_at <= datetime.now(timezone.utc)
 
 
-async def _gitlab_self(client: httpx.AsyncClient, api: str, token: str) -> TokenIntrospection:
+async def _gitlab_self(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospection:
     headers = {"PRIVATE-TOKEN": token}
-    response = await client.get(f"{api}/personal_access_tokens/self", headers=headers)
+    response = await fetcher.get(f"{api}/personal_access_tokens/self", headers=headers)
     if response.status_code == _HTTP_UNAUTHORIZED:
-        body = _json_object(response) or {}
+        body = response.json_object() or {}
         description = str(body.get("error_description", "")).lower()
         return TokenIntrospection(TokenState.expired if "expired" in description else TokenState.rejected)
-    body = _json_object(response)
+    body = response.json_object()
     if response.status_code != _HTTP_OK or body is None:
         return TokenIntrospection(TokenState.unknown)
     expires_at = _gitlab_date(body.get("expires_at"))
@@ -229,22 +260,22 @@ async def _gitlab_self(client: httpx.AsyncClient, api: str, token: str) -> Token
         return TokenIntrospection(TokenState.expired, expires_at=expires_at)
     if body.get("revoked") is True or body.get("active") is False:
         return TokenIntrospection(TokenState.rejected, expires_at=expires_at)
-    login = await _gitlab_login(client, api, headers, body.get("user_id"))
+    login = await _gitlab_login(fetcher, api, headers, body.get("user_id"))
     return TokenIntrospection(
         TokenState.valid, login=login, scopes=_string_list(body.get("scopes")), expires_at=expires_at
     )
 
 
-async def _gitlab_login(client: httpx.AsyncClient, api: str, headers: Mapping[str, str], user_id: object) -> str | None:
+async def _gitlab_login(fetcher: _Fetcher, api: str, headers: Mapping[str, str], user_id: object) -> str | None:
     """Имя владельца нужно для показа; токену только с правами на репозиторий GitLab его не отдаёт."""
     for path in ("/user", f"/users/{user_id}" if isinstance(user_id, int) else None):
         if path is None:
             continue
         try:
-            response = await client.get(api + path, headers=headers)
-        except httpx.HTTPError:
+            response = await fetcher.get(api + path, headers=headers)
+        except (httpx.HTTPError, TimeoutError):
             return None
-        body = _json_object(response)
+        body = response.json_object()
         if response.status_code == _HTTP_OK and body and (login := _text(body.get("username"))):
             return login
     return None
@@ -262,11 +293,11 @@ def _github_expiry(raw: str | None) -> datetime | None:
     return None
 
 
-async def _github_user(client: httpx.AsyncClient, api: str, token: str) -> TokenIntrospection:
-    response = await client.get(f"{api}/user", headers={"Authorization": f"Bearer {token}"})
+async def _github_user(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospection:
+    response = await fetcher.get(f"{api}/user", headers={"Authorization": f"Bearer {token}"})
     if response.status_code == _HTTP_UNAUTHORIZED:
         return TokenIntrospection(TokenState.rejected)
-    body = _json_object(response)
+    body = response.json_object()
     if response.status_code != _HTTP_OK or body is None:
         return TokenIntrospection(TokenState.unknown)
     expires_at = _github_expiry(response.headers.get(_GITHUB_EXPIRY_HEADER))
@@ -278,11 +309,11 @@ async def _github_user(client: httpx.AsyncClient, api: str, token: str) -> Token
     return TokenIntrospection(TokenState.valid, login=_text(body.get("login")), scopes=scopes, expires_at=expires_at)
 
 
-async def _gitea_user(client: httpx.AsyncClient, api: str, token: str) -> TokenIntrospection:
-    response = await client.get(f"{api}/user", headers={"Authorization": f"token {token}"})
+async def _gitea_user(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospection:
+    response = await fetcher.get(f"{api}/user", headers={"Authorization": f"token {token}"})
     if response.status_code == _HTTP_UNAUTHORIZED:
         return TokenIntrospection(TokenState.rejected)
-    body = _json_object(response)
+    body = response.json_object()
     if response.status_code == _HTTP_FORBIDDEN or response.status_code != _HTTP_OK or body is None:
         # Токен с узкими правами не читает /user: он может быть годным, просто о нём ничего не узнать.
         return TokenIntrospection(TokenState.unknown)
