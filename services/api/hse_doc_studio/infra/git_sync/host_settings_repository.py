@@ -97,16 +97,22 @@ class JsonGitHostSettingsRepository:
                 write_private_file(path, bundle.encode("ascii"))
         return path
 
-    def _read(self, *, for_write: bool) -> _Items:
-        # Сбой чтения не считается порчей: читающему пусто, пишущий получает ошибку и файл остаётся на месте.
+    def _content(self, *, for_write: bool) -> bytes | None:
+        """Байты файла; None, если файла нет или он не прочитался и пишущему это не мешает.
+
+        Сбой чтения не считается порчей: читающему пусто, пишущий получает ошибку и файл остаётся на месте.
+        """
         try:
-            if not self._path.exists():
-                return []
-            content = self._path.read_bytes()
+            return self._path.read_bytes() if self._path.exists() else None
         except OSError as exc:
             logger.warning("git host settings file is not readable", path=str(self._path))
             if for_write:
                 raise store_unavailable_error() from exc
+            return None
+
+    def _read(self, *, for_write: bool) -> _Items:
+        content = self._content(for_write=for_write)
+        if content is None:
             return []
         try:
             data = json.loads(content)
