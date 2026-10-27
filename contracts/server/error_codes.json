@@ -1,0 +1,19 @@
+[
+  "invalid_credentials",
+  "email_not_verified",
+  "pending_approval",
+  "account_disabled",
+  "registration_closed",
+  "domain_not_allowed",
+  "invitation_required",
+  "invitation_invalid",
+  "rate_limited",
+  "sso_login_required",
+  "csrf_failed",
+  "auth_required",
+  "forbidden",
+  "setup_token_invalid",
+  "setup_already_done",
+  "password_policy",
+  "token_invalid"
+]

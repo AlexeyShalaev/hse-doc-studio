@@ -1,0 +1,25 @@
+{
+  "mode": "local",
+  "version": "0.2.0",
+  "setup_state": "ready",
+  "auth": {
+    "registration_mode": "closed",
+    "password_enabled": false,
+    "oidc_providers": [],
+    "smtp_enabled": false,
+    "password_min_length": 10
+  },
+  "user": null,
+  "capabilities": {
+    "fs_browse": true,
+    "connect_folder": true,
+    "open_in_editor": true,
+    "move_project": true,
+    "docker_ui": true,
+    "self_update": true,
+    "local_services_ui": true,
+    "admin": false,
+    "personal_signing_keys": false
+  },
+  "csrf_token": null
+}

@@ -1,0 +1,8 @@
+{
+  "state": "ready",
+  "token_required": false,
+  "steps_done": [
+    "admin",
+    "settings"
+  ]
+}

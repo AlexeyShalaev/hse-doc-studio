@@ -1,0 +1,19 @@
+{
+  "user": {
+    "id": "u_01hx7k2m9c",
+    "name": "Анна Петрова",
+    "email": "anna.petrova@example.org",
+    "avatar_initials": "АП",
+    "is_instance_admin": false,
+    "email_verified": true,
+    "locale": "ru",
+    "org_roles": [
+      {
+        "slug": "msp-2025",
+        "name": "МСПИН 2025",
+        "role": "member"
+      }
+    ]
+  },
+  "csrf_token": "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o"
+}

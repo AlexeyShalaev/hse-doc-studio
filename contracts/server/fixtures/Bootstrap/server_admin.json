@@ -1,0 +1,40 @@
+{
+  "mode": "server",
+  "version": "0.2.0",
+  "setup_state": "ready",
+  "auth": {
+    "registration_mode": "invite",
+    "password_enabled": true,
+    "oidc_providers": [],
+    "smtp_enabled": true,
+    "password_min_length": 10
+  },
+  "user": {
+    "id": "u_01hx7k1a0b",
+    "name": "Иван Сидоров",
+    "email": "ivan.sidorov@example.org",
+    "avatar_initials": "ИС",
+    "is_instance_admin": true,
+    "email_verified": true,
+    "locale": "en",
+    "org_roles": [
+      {
+        "slug": "msp-2025",
+        "name": "МСПИН 2025",
+        "role": "owner"
+      }
+    ]
+  },
+  "capabilities": {
+    "fs_browse": false,
+    "connect_folder": false,
+    "open_in_editor": false,
+    "move_project": false,
+    "docker_ui": false,
+    "self_update": false,
+    "local_services_ui": false,
+    "admin": true,
+    "personal_signing_keys": true
+  },
+  "csrf_token": "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i"
+}

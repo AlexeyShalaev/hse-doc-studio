@@ -1,0 +1,7 @@
+{
+  "state": "needs_admin",
+  "token_required": false,
+  "steps_done": [
+    "admin"
+  ]
+}

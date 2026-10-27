@@ -1,0 +1,38 @@
+[
+  {
+    "id": "p_01hxa1c4de",
+    "name": "Bertie: курсовой проект",
+    "kind": "project",
+    "staffing": "team",
+    "lang": "ru",
+    "owner": {
+      "kind": "user",
+      "id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "slug": null
+    },
+    "my_role": "owner",
+    "updated_at": "2026-10-26T18:20:00Z",
+    "pinned": true,
+    "archived": false,
+    "shared_enabled": true
+  },
+  {
+    "id": "p_01hxa2f8gh",
+    "name": "Industry adoption of CI",
+    "kind": "research",
+    "staffing": "solo",
+    "lang": "en",
+    "owner": {
+      "kind": "org",
+      "id": "org_01hx5a",
+      "name": "МСПИН 2025",
+      "slug": "msp-2025"
+    },
+    "my_role": "reviewer",
+    "updated_at": "2026-10-24T10:05:00Z",
+    "pinned": false,
+    "archived": false,
+    "shared_enabled": true
+  }
+]

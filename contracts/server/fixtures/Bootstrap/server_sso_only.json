@@ -1,0 +1,34 @@
+{
+  "mode": "server",
+  "version": "0.2.0",
+  "setup_state": "ready",
+  "auth": {
+    "registration_mode": "closed",
+    "password_enabled": false,
+    "oidc_providers": [
+      {
+        "id": "keycloak",
+        "label": "HSE SSO"
+      },
+      {
+        "id": "google",
+        "label": "Google"
+      }
+    ],
+    "smtp_enabled": true,
+    "password_min_length": 10
+  },
+  "user": null,
+  "capabilities": {
+    "fs_browse": false,
+    "connect_folder": false,
+    "open_in_editor": false,
+    "move_project": false,
+    "docker_ui": false,
+    "self_update": false,
+    "local_services_ui": false,
+    "admin": false,
+    "personal_signing_keys": true
+  },
+  "csrf_token": null
+}

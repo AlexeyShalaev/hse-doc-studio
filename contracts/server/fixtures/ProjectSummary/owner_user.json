@@ -1,0 +1,18 @@
+{
+  "id": "p_01hxa1c4de",
+  "name": "Bertie: курсовой проект",
+  "kind": "project",
+  "staffing": "team",
+  "lang": "ru",
+  "owner": {
+    "kind": "user",
+    "id": "u_01hx7k2m9c",
+    "name": "Анна Петрова",
+    "slug": null
+  },
+  "my_role": "owner",
+  "updated_at": "2026-10-26T18:20:00Z",
+  "pinned": true,
+  "archived": false,
+  "shared_enabled": true
+}

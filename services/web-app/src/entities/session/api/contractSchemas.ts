@@ -1,0 +1,38 @@
+import type { ZodType } from "zod";
+import { z } from "zod";
+
+import * as s from "./schemas";
+
+// Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
+export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
+  Bootstrap: s.BootstrapSchema,
+  SessionUser: s.SessionUserSchema,
+  LoginRequest: s.LoginRequestSchema,
+  LoginResponse: s.LoginResponseSchema,
+  RegisterRequest: s.RegisterRequestSchema,
+  RegisterResponse: s.RegisterResponseSchema,
+  VerifyEmailRequest: s.VerifyEmailRequestSchema,
+  ForgotRequest: s.ForgotRequestSchema,
+  ForgotResponse: s.ForgotResponseSchema,
+  ResetRequest: s.ResetRequestSchema,
+  ServerSetupStatus: s.ServerSetupStatusSchema,
+  ServerSetupAdminRequest: s.ServerSetupAdminRequestSchema,
+  ServerSetupSettingsRequest: s.ServerSetupSettingsRequestSchema,
+  AuthErrorBody: s.AuthErrorBodySchema,
+  UpdateAccountRequest: s.UpdateAccountRequestSchema,
+  ChangePasswordRequest: s.ChangePasswordRequestSchema,
+  AccountSession: s.AccountSessionSchema,
+  AccountSessionList: z.array(s.AccountSessionSchema),
+  ApiToken: s.ApiTokenSchema,
+  ApiTokenList: z.array(s.ApiTokenSchema),
+  CreateApiTokenRequest: s.CreateApiTokenRequestSchema,
+  CreateApiTokenResponse: s.CreateApiTokenResponseSchema,
+  ProjectSummary: s.ProjectSummarySchema,
+  ProjectSummaryList: z.array(s.ProjectSummarySchema),
+  CreateServerProjectRequest: s.CreateServerProjectRequestSchema,
+  AdminUser: s.AdminUserSchema,
+  AdminUserList: z.array(s.AdminUserSchema),
+  AdminOrgList: z.array(s.AdminOrgSchema),
+  AdminRunnerList: z.array(s.AdminRunnerSchema),
+  AdminSettings: s.AdminSettingsSchema,
+};

@@ -1,0 +1,12 @@
+{
+  "name": "Industry adoption of CI",
+  "pack_id": "hse-cs-sse",
+  "template_id": "course-project",
+  "version": "1.0.0",
+  "engine": "xelatex",
+  "kind": "research",
+  "staffing": "solo",
+  "lang": "en",
+  "owner_org_slug": "msp-2025",
+  "shared_enabled": true
+}

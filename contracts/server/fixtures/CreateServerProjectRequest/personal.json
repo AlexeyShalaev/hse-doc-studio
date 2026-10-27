@@ -1,0 +1,12 @@
+{
+  "name": "Bertie: курсовой проект",
+  "pack_id": "hse-cs-sse",
+  "template_id": "course-project",
+  "version": "1.0.0",
+  "engine": "xelatex",
+  "kind": "project",
+  "staffing": "team",
+  "lang": "ru",
+  "owner_org_slug": null,
+  "shared_enabled": true
+}

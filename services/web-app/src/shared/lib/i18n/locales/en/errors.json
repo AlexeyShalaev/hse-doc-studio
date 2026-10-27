@@ -76,6 +76,22 @@
     "bundle_password_wrong": "The password is wrong.",
     "bundle_prerequisites_missing": "The bundle lacks the history it is built on.",
     "operation_not_cancellable": "This operation can no longer be cancelled.",
-    "git_error": "Git returned an error."
+    "git_error": "Git returned an error.",
+    "invalid_credentials": "Wrong email or password.",
+    "email_not_verified": "Email is not verified: open the link from the message.",
+    "pending_approval": "The account is waiting for administrator approval.",
+    "account_disabled": "The account is disabled. Contact the administrator.",
+    "registration_closed": "Registration is closed. Accounts are created by the administrator.",
+    "domain_not_allowed": "Registration is only open to email addresses from allowed domains.",
+    "invitation_required": "Registration is by invitation only.",
+    "invitation_invalid": "The invitation is invalid or has expired.",
+    "sso_login_required": "This email can only sign in through single sign-on (SSO).",
+    "csrf_failed": "The session is out of date: reload the page and try again.",
+    "auth_required": "Sign in required.",
+    "forbidden": "You do not have permission to do this.",
+    "setup_token_invalid": "The setup token is wrong.",
+    "setup_already_done": "First-run setup is already complete.",
+    "password_policy": "The password is too short or too easy to guess.",
+    "token_invalid": "The link is invalid or has expired."
   }
 }

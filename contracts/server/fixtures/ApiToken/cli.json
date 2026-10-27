@@ -1,0 +1,12 @@
+{
+  "id": "pat_01hx9b",
+  "name": "CLI на ноутбуке",
+  "prefix": "hsd_pat_4Kq",
+  "scopes": [
+    "api",
+    "git:read"
+  ],
+  "created_at": "2026-10-21T12:00:00Z",
+  "expires_at": "2027-01-21T12:00:00Z",
+  "last_used_at": null
+}

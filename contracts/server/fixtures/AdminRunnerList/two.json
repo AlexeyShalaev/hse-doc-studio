@@ -1,0 +1,25 @@
+[
+  {
+    "id": "rn_01hxb1",
+    "name": "runner-1",
+    "status": "online",
+    "tags": [
+      "tex",
+      "office"
+    ],
+    "version": "0.2.0",
+    "last_seen_at": "2026-10-27T09:44:50Z",
+    "running_jobs": 1
+  },
+  {
+    "id": "rn_01hxb2",
+    "name": "runner-2",
+    "status": "offline",
+    "tags": [
+      "tex"
+    ],
+    "version": "0.2.0",
+    "last_seen_at": "2026-10-27T06:10:00Z",
+    "running_jobs": 0
+  }
+]

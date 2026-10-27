@@ -1,0 +1,8 @@
+{
+  "registration_mode": "invite",
+  "require_approval": false,
+  "password_enabled": true,
+  "allowed_domains": [],
+  "smtp_enabled": false,
+  "public_url": "https://studio.example.org"
+}
