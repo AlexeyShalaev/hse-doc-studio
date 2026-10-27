@@ -9,18 +9,17 @@ from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.infra.persistence.chat import JsonChatRepository
 from hse_doc_studio.use_cases.chat.cancel_chat_turn import CancelChatTurnInput, CancelChatTurnUC
-from tests.unit.use_cases.chat.conftest import _FakeIndex, _FakeProjects
+from tests.unit.use_cases.chat.conftest import _FakeLocator
 
 
 async def test__execute__no_live_task_for_run__force_finalizes_orphan_run(
     tmp_path: Path,
-    project_index: _FakeIndex,
-    projects: _FakeProjects,
+    locator: _FakeLocator,
     project_id: UUID,
     chat_repo: JsonChatRepository,
     running_run: AgentRunRecord,
 ) -> None:
-    uc = CancelChatTurnUC(projects, project_index, chat_repo, AgentRunBus(), AgentRunManager())  # type: ignore[arg-type]
+    uc = CancelChatTurnUC(locator, chat_repo, AgentRunBus(), AgentRunManager())  # type: ignore[arg-type]
 
     out = await uc.execute(
         CancelChatTurnInput(project_id=project_id, session_id=running_run.session_id, run_id=running_run.id)

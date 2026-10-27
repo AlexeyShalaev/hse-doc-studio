@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -16,27 +15,16 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class _FakeIndex:
-    def __init__(self, folder: Path) -> None:
-        self._folder = folder
-
-    def list_known(self) -> list[Path]:
-        return [self._folder]
-
-    def register(self, folder: Path) -> None: ...
-
-    def unregister(self, folder: Path) -> None: ...
-
-
-class _FakeProjects:
+class _FakeLocator:
     def __init__(self, folder: Path, project_id: UUID) -> None:
         self._folder = folder
         self._project_id = project_id
 
-    def get(self, folder: Path) -> object | None:
-        return SimpleNamespace(id=self._project_id) if folder == self._folder else None
+    async def folder_of(self, project_id: UUID) -> Path | None:
+        return self._folder if project_id == self._project_id else None
 
-    def save(self, project: object) -> None: ...
+    async def list_all(self) -> list[Path]:
+        return [self._folder]
 
 
 @pytest.fixture
@@ -45,13 +33,8 @@ def project_id() -> UUID:
 
 
 @pytest.fixture
-def project_index(tmp_path: Path) -> _FakeIndex:
-    return _FakeIndex(tmp_path)
-
-
-@pytest.fixture
-def projects(tmp_path: Path, project_id: UUID) -> _FakeProjects:
-    return _FakeProjects(tmp_path, project_id)
+def locator(tmp_path: Path, project_id: UUID) -> _FakeLocator:
+    return _FakeLocator(tmp_path, project_id)
 
 
 @pytest.fixture
@@ -62,12 +45,11 @@ def chat_repo() -> JsonChatRepository:
 @pytest.fixture
 async def created_session(
     chat_repo: JsonChatRepository,
-    projects: _FakeProjects,
-    project_index: _FakeIndex,
+    locator: _FakeLocator,
     project_id: UUID,
 ) -> ChatSession:
     """A session persisted through the real create-session use case, title 'My chat'."""
-    out = await CreateChatSessionUC(projects, project_index, chat_repo).execute(  # type: ignore[arg-type]
+    out = await CreateChatSessionUC(locator, chat_repo).execute(  # type: ignore[arg-type]
         CreateChatSessionInput(project_id=project_id, title="My chat")
     )
     return out.session

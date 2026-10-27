@@ -272,7 +272,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         try:
             async with container() as request_container:
                 uc = await request_container.get(RecoverStaleCompilesUC)
-                result = uc.execute()
+                result = await uc.execute()
                 if result.recovered_compiles or result.unstuck_documents:
                     logger.info(
                         "startup recovery",

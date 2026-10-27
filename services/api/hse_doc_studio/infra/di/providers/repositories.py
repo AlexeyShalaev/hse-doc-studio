@@ -4,6 +4,7 @@ from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -48,6 +49,7 @@ from hse_doc_studio.infra.persistence.filesystem_browser import LocalFilesystemB
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_index import JsonProjectIndexRepository
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.persistence.settings import JsonSettingsRepository
 from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository
@@ -72,6 +74,12 @@ class LocalPersistenceProvider(Provider):
     @provide
     def get_project_index_repo(self) -> IProjectIndexRepository:
         return JsonProjectIndexRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_project_locator(
+        self, project_index: IProjectIndexRepository, project_repo: IProjectRepository
+    ) -> IProjectLocator:
+        return LocalProjectLocator(project_index, project_repo)
 
     @provide
     def get_template_repo(self) -> ITemplateRepository:

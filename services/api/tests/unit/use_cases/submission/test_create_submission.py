@@ -21,6 +21,7 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.use_cases.submission.create_submission import (
     CreateSubmissionInput,
@@ -122,7 +123,7 @@ class Harness:
         self.changelog_repo.append.side_effect = lambda *_: self.events.append("changelog")
         self.uc = CreateSubmissionUC(
             project_repo=project_repo,
-            project_index_repo=index,
+            locator=LocalProjectLocator(index, project_repo),
             template_repo=templates,
             submission_repo=self.submission_repo,
             submission_profile_service=profiles,

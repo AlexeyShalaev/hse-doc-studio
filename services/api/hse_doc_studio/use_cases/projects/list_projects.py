@@ -4,9 +4,10 @@ from dataclasses import dataclass
 
 import structlog
 
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
-    IProjectIndexRepository,
     IProjectRepository,
 )
 
@@ -22,13 +23,13 @@ class ListProjectsUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
     ) -> None:
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
 
     async def execute(self) -> ListProjectsOutput:
-        known_folders = self._project_index_repo.list_known()
+        known_folders = await self._locator.list_visible(current_actor())
         projects: list[Project] = []
 
         for folder in known_folders:

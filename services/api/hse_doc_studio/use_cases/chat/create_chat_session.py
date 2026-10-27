@@ -8,12 +8,10 @@ from hse_doc_studio.core.entities import ChatSession
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChatRepository,
-    IProjectIndexRepository,
-    IProjectRepository,
 )
-from hse_doc_studio.use_cases.chat._support import find_project_folder
 
 # Resolved at creation against the interface language, then stored on the session.
 _DEFAULT_TITLE = {Lang.ru: "Новый чат", Lang.en: "New chat"}
@@ -38,16 +36,14 @@ class CreateChatSessionOutput:
 class CreateChatSessionUC:
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._chat_repo = chat_repo
 
     async def execute(self, inp: CreateChatSessionInput) -> CreateChatSessionOutput:
-        folder = find_project_folder(inp.project_id, self._project_repo, self._project_index_repo)
+        folder = await self._locator.folder_of(inp.project_id)
         if folder is None:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")

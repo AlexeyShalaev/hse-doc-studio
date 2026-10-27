@@ -10,9 +10,8 @@ import structlog
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
-    IProjectIndexRepository,
-    IProjectRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.team import nda_bases, prefix_path
@@ -34,20 +33,11 @@ class NdaStatusOutput:
     files: list[str] = field(default_factory=list)
 
 
-def _resolve(
-    project_id: UUID,
-    project_repo: IProjectRepository,
-    project_index_repo: IProjectIndexRepository,
-) -> tuple[Path, Project]:
-    for folder in project_index_repo.list_known():
-        try:
-            project = project_repo.get(folder)
-        except Exception as exc:
-            logger.warning("manage_nda: error loading project", folder=str(folder), exc=str(exc))
-            continue
-        if project is not None and project.id == project_id:
-            return folder, project
-    raise NotFoundError(localized_error(f"Проект {project_id!r} не найден", f"Project {project_id!r} not found"))
+async def _resolve(project_id: UUID, locator: IProjectLocator) -> tuple[Path, Project]:
+    found = await locator.locate(project_id)
+    if found is None:
+        raise NotFoundError(localized_error(f"Проект {project_id!r} не найден", f"Project {project_id!r} not found"))
+    return found
 
 
 def _status(folder: Path, project: Project, template_repo: ITemplateRepository) -> NdaStatusOutput:
@@ -82,16 +72,14 @@ class GetNdaStatusUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
 
     async def execute(self, inp: NdaInput) -> NdaStatusOutput:
-        folder, project = _resolve(inp.project_id, self._project_repo, self._project_index_repo)
+        folder, project = await _resolve(inp.project_id, self._locator)
         return _status(folder, project, self._template_repo)
 
 
@@ -105,18 +93,16 @@ class InstantiateNdaUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         base_service: TemplateBaseService | None = None,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
         self._base_service = base_service
 
     async def execute(self, inp: NdaInput) -> NdaStatusOutput:
-        folder, project = _resolve(inp.project_id, self._project_repo, self._project_index_repo)
+        folder, project = await _resolve(inp.project_id, self._locator)
         version = self._template_repo.get_version(
             project.lock.pack_id,
             project.lock.template_id,
@@ -137,16 +123,14 @@ class DeleteNdaFilesUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
 
     async def execute(self, inp: NdaInput) -> NdaStatusOutput:
-        folder, project = _resolve(inp.project_id, self._project_repo, self._project_index_repo)
+        folder, project = await _resolve(inp.project_id, self._locator)
         version = self._template_repo.get_version(
             project.lock.pack_id,
             project.lock.template_id,
