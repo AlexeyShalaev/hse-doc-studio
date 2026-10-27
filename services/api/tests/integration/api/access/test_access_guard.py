@@ -88,6 +88,19 @@ async def test__guard__local_actor__read_only_project_still_locked_except_restor
     assert (await guarded_app.delete(base)).status_code == 204
 
 
+async def test__guard__read_only_project__file_path_ending_like_an_exempt_route_is_still_locked(
+    guarded_app: AsyncClient, project: dict[str, Any]
+) -> None:
+    _make_read_only(project)
+    base = _base(project)
+
+    for tail in ("a/git/fetch", "notes/git/ci/preview", "x/vcs/restore", f"projects/{project['id']}"):
+        assert (await guarded_app.put(f"{base}/files/{tail}", content=b"x")).status_code == 423, tail
+        assert (await guarded_app.delete(f"{base}/files/{tail}")).status_code == 423, tail
+    assert (await guarded_app.post(f"{base}/git/fetch")).status_code != 423
+    assert (await guarded_app.post(f"{base}/git/ci/preview", json={})).status_code != 423
+
+
 async def test__guard__stub_non_local_user_without_grant__404_before_423(
     guarded_app: AsyncClient, project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -39,10 +39,12 @@ _NOT_FOUND = 404
 
 
 def _allowed(request: Request) -> bool:
-    path = request.url.path.rstrip("/")
-    if request.method == "DELETE" and path.endswith(f"/projects/{request.path_params.get('project_id')}"):
+    # Сверяется шаблон найденного маршрута, а не адрес запроса: в адресе `files/{path:path}` лежит произвольный
+    # путь файла, и `a/git/fetch` или `projects/<id>` в его конце не должны снимать запрет записи.
+    route_path = str(getattr(request.scope.get("route"), "path", ""))
+    if request.method == "DELETE" and route_path.endswith("/projects/{project_id}"):
         return True
-    return path.endswith(_ALLOWED_SUFFIXES)
+    return route_path.endswith(_ALLOWED_SUFFIXES)
 
 
 def access_detail(access: ProjectAccess) -> dict[str, Any]:
