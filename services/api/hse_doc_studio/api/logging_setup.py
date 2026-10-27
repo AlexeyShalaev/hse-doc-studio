@@ -8,18 +8,26 @@
 
 from __future__ import annotations
 
+import sys
+
 import structlog
 
 
 def configure_logging() -> None:
-    """Те же процессоры, что у structlog по умолчанию, но трассировка простая и без значений переменных."""
+    """Те же процессоры, что у structlog по умолчанию, но трассировка простая и без значений переменных.
+
+    Время местное и цвета только в терминале, как у structlog без настройки: в файле и `docker logs` нет ни UTC, ни
+    escape-кодов.
+    """
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
-            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-            structlog.dev.ConsoleRenderer(exception_formatter=structlog.dev.plain_traceback),
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.dev.ConsoleRenderer(
+                colors=sys.stdout.isatty(), exception_formatter=structlog.dev.plain_traceback
+            ),
         ]
     )
