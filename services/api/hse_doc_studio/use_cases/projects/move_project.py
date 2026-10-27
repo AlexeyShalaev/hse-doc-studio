@@ -13,6 +13,7 @@ from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
@@ -61,12 +62,14 @@ class MoveProjectUC:
         dispatcher: IJobDispatcher,
         git_operations: IGitOperationRegistry,
         git_remotes: IGitRemoteRegistry,
+        fetch_book: FetchBook,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
         self._dispatcher = dispatcher
         self._git_operations = git_operations
         self._git_remotes = git_remotes
+        self._fetch_book = fetch_book
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: MoveProjectInput) -> MoveProjectOutput:  # noqa: C901, PLR0912
@@ -122,26 +125,10 @@ class MoveProjectUC:
                 else f"Папка '{new}' уже зарегистрирована как проект."
             )
 
-        # Move the tree. shutil.move renames within a device and copies+removes
-        # across devices. When the (empty) target already exists, move children
-        # into it and drop the old shell.
-        new.parent.mkdir(parents=True, exist_ok=True)
-        if new.exists():
-            for entry in old.iterdir():
-                shutil.move(str(entry), str(new / entry.name))
-            try:
-                old.rmdir()
-            except OSError as exc:
-                logger.warning("move_project: could not remove old folder shell", old=str(old), exc=str(exc))
-        else:
-            shutil.move(str(old), str(new))
-
-        # Repoint the index: drop the old location, register the new one.
-        self._project_index_repo.unregister(old)
-        self._project_index_repo.register(new)
-        if old in {folder.resolve() for folder in self._git_remotes.list()}:
-            self._git_remotes.remove(old)
-            self._git_remotes.add(new)
+        # Выборка, которая ещё идёт, писала бы состояние в старую папку: переносим, дождавшись её конца.
+        async with self._fetch_book.lock(old):
+            self._relocate(old, new)
+        self._fetch_book.forget(old)
 
         # Reload from the new location and refresh updated_at so the move shows
         # up as activity. folder is set from the load path, not the JSON.
@@ -162,3 +149,25 @@ class MoveProjectUC:
             new=str(new),
         )
         return MoveProjectOutput(project=moved)
+
+    def _relocate(self, old: Path, new: Path) -> None:
+        # Move the tree. shutil.move renames within a device and copies+removes
+        # across devices. When the (empty) target already exists, move children
+        # into it and drop the old shell.
+        new.parent.mkdir(parents=True, exist_ok=True)
+        if new.exists():
+            for entry in old.iterdir():
+                shutil.move(str(entry), str(new / entry.name))
+            try:
+                old.rmdir()
+            except OSError as exc:
+                logger.warning("move_project: could not remove old folder shell", old=str(old), exc=str(exc))
+        else:
+            shutil.move(str(old), str(new))
+
+        # Repoint the index: drop the old location, register the new one.
+        self._project_index_repo.unregister(old)
+        self._project_index_repo.register(new)
+        if old in {folder.resolve() for folder in self._git_remotes.list()}:
+            self._git_remotes.remove(old)
+            self._git_remotes.add(new)

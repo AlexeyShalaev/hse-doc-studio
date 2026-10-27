@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import re
 import shutil
@@ -33,6 +34,10 @@ _HEADS = "refs/heads/"
 _SYMREF = "ref: "
 _SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _LOCAL_TIMEOUT_S = 30.0
+# Две выборки в одну ссылку (две Студии на одной папке): git отказывает второй, и через мгновение ссылка свободна.
+_REF_LOCK_ATTEMPTS = 3
+_REF_LOCK_PAUSE_S = 0.3
+_REF_LOCK = re.compile(r"cannot lock ref|unable to update local ref", re.IGNORECASE)
 # Крупнее этого файлы при поверхностной выборке вершины не скачиваются: project.json мал, PDF и картинки нет.
 _TIP_BLOB_LIMIT = "1m"
 _MISSING_PATH = ("does not exist in", "exists on disk, but not in")
@@ -135,23 +140,33 @@ class GitTransport:
         on_progress: ProgressCallback | None = None,
     ) -> None:
         branch = _branch(branch)
-        await self._runner.run(
-            [
-                "fetch",
-                "--no-tags",
-                "--no-recurse-submodules",
-                "--no-write-fetch-head",
-                "--progress",
-                "--",
-                target.url.display_url,
-                f"+{_HEADS}{branch}:refs/remotes/origin/{branch}",
-            ],
-            op=GitOp.fetch,
-            git_dir=git_dir,
-            target=target,
-            timeout_s=timeout_s or self._config.fetch_timeout_s,
-            on_progress=on_progress,
-        )
+        args = [
+            "fetch",
+            "--no-tags",
+            "--no-recurse-submodules",
+            "--no-write-fetch-head",
+            "--progress",
+            "--",
+            target.url.display_url,
+            f"+{_HEADS}{branch}:refs/remotes/origin/{branch}",
+        ]
+        for attempt in range(_REF_LOCK_ATTEMPTS):
+            try:
+                await self._runner.run(
+                    args,
+                    op=GitOp.fetch,
+                    git_dir=git_dir,
+                    target=target,
+                    timeout_s=timeout_s or self._config.fetch_timeout_s,
+                    on_progress=on_progress,
+                )
+            except GitSyncError as exc:
+                # Другой процесс (вторая Студия на той же папке) обновлял ту же ссылку: через мгновение она свободна.
+                if attempt + 1 < _REF_LOCK_ATTEMPTS and _ref_locked(exc):
+                    await asyncio.sleep(_REF_LOCK_PAUSE_S)
+                    continue
+                raise
+            return
 
     async def push(
         self,
@@ -232,3 +247,7 @@ class GitTransport:
             expected_fingerprint=_text(exc.ctx.get("expected")),
             actual_fingerprint=_text(exc.ctx.get("actual")),
         )
+
+
+def _ref_locked(error: GitSyncError) -> bool:
+    return error.code is GitErrorCode.git_error and _REF_LOCK.search(error.detail) is not None

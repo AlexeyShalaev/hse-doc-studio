@@ -37,6 +37,7 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.text import has_hse_markers
 from hse_doc_studio.core.git_sync.policy import DEFAULT_REMOTE_BRANCH, GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
@@ -128,6 +129,7 @@ class SyncProjectUC:
         locks: IVcsFolderLocks,
         dispatcher: IJobDispatcher,
         policy: GitSyncPolicy,
+        fetch_book: FetchBook,
     ) -> None:
         self._get_project = get_project
         self._applier = applier
@@ -139,6 +141,7 @@ class SyncProjectUC:
         self._locks = locks
         self._dispatcher = dispatcher
         self._policy = policy
+        self._fetch_book = fetch_book
 
     async def run(self, project: Project, operation_id: str, resolve: ResolveRequest | None = None) -> None:
         """Итог (успех, сбой, отмена) записывается в операцию. Наружу выходит только CancelledError.
@@ -270,19 +273,25 @@ class SyncProjectUC:
         state = await asyncio.to_thread(self._load_state, project)
         git_dir = self._remotes.git_dir(project)
         try:
-            await self._transport.fetch(
-                git_dir,
-                target,
-                branch=state.remote_branch,
-                on_progress=lambda percent, _line: self._operations.update(operation_id, percent=percent),
-            )
+            # Фоновая выборка, начатая до синхронизации, ещё может идти: две выборки в одну ссылку мешают друг
+            # другу (cannot lock ref), поэтому ждём её конца и только потом обновляем ссылку сами.
+            async with self._fetch_book.lock(project.folder):
+                await self._transport.fetch(
+                    git_dir,
+                    target,
+                    branch=state.remote_branch,
+                    on_progress=lambda percent, _line: self._operations.update(operation_id, percent=percent),
+                )
         except GitSyncError as exc:
             if exc.code is GitErrorCode.branch_missing and state.remote_empty:
                 # Репозиторий всё ещё пуст: первая отправка ещё впереди.
+                self._fetch_book.succeeded(project.folder)
                 await self._update_state(project, lambda s: with_success(s, at=_now()))
                 return
             await self._record_failure(project, exc, fetch=True)
             raise
+        # Связь есть: растущая после сбоев пауза фоновой выборки больше не нужна.
+        self._fetch_book.succeeded(project.folder)
         await self._update_state(project, lambda s: replace(with_success(s, at=_now()), remote_empty=False))
 
     async def _apply(

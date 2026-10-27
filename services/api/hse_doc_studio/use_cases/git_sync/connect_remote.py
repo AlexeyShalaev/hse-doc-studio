@@ -27,6 +27,7 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
@@ -87,6 +88,7 @@ class ConnectRemoteUC:
         status_builder: GitStatusBuilder,
         policy: GitSyncPolicy,
         project_check: IRemoteProjectCheck,
+        fetch_book: FetchBook,
     ) -> None:
         self._get_project = get_project
         self._ensure_vcs = ensure_vcs
@@ -102,6 +104,7 @@ class ConnectRemoteUC:
         self._status = status_builder
         self._policy = policy
         self._project_check = project_check
+        self._fetch_book = fetch_book
 
     async def execute(self, inp: ConnectRemoteInput) -> GitStatusView:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
@@ -202,16 +205,20 @@ class ConnectRemoteUC:
         """Скачивает ветку и проверяет, что на сервере тот же проект. True: принято слияние без общей истории."""
         git_dir = self._remotes.git_dir(project)
         try:
-            await self._transport.fetch(
-                git_dir,
-                target,
-                branch=remote_branch,
-                on_progress=lambda percent, _line: self._operations.update(operation_id, percent=percent),
-            )
-            return await asyncio.to_thread(self._verify_remote, project, local_branch, remote_branch, inp)
+            # Фоновая выборка того же проекта не должна двигать отслеживаемую ветку, пока её проверяют.
+            async with self._fetch_book.lock(project.folder):
+                await self._transport.fetch(
+                    git_dir,
+                    target,
+                    branch=remote_branch,
+                    on_progress=lambda percent, _line: self._operations.update(operation_id, percent=percent),
+                )
+                adopted = await asyncio.to_thread(self._verify_remote, project, local_branch, remote_branch, inp)
         except BaseException:
             await asyncio.to_thread(self._remotes.drop_tracking_refs, project)
             raise
+        self._fetch_book.succeeded(project.folder)
+        return adopted
 
     def _verify_remote(self, project: Project, local_branch: str, remote_branch: str, inp: ConnectRemoteInput) -> bool:
         folder = project.folder
@@ -262,6 +269,7 @@ class DisconnectRemoteUC:
         registry: IGitRemoteRegistry,
         credentials: IGitCredentialRepository,
         credential_usage: IGitCredentialUsage,
+        fetch_book: FetchBook,
     ) -> None:
         self._get_project = get_project
         self._remotes = store_remotes
@@ -270,13 +278,17 @@ class DisconnectRemoteUC:
         self._registry = registry
         self._credentials = credentials
         self._usage = credential_usage
+        self._fetch_book = fetch_book
 
     async def execute(self, inp: DisconnectRemoteInput) -> None:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
         if self._operations.is_busy(project.folder):
             current = self._operations.current_for(project.id)
             raise git_error(GitErrorCode.sync_busy, operation_id=current.id if current else None)
-        await asyncio.to_thread(self._disconnect, project, inp.forget_credential)
+        # Выборка, которая ещё идёт, вернула бы отслеживаемую ветку и состояние, которые отключение только что убрало.
+        async with self._fetch_book.lock(project.folder):
+            await asyncio.to_thread(self._disconnect, project, inp.forget_credential)
+        self._fetch_book.forget(project.folder)
 
     def _disconnect(self, project: Project, forget_credential: bool) -> None:
         config = self._remotes.read(project)

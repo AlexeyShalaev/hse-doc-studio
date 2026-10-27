@@ -616,12 +616,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         git_operations: IGitOperationRegistry,
         git_remotes: IGitRemoteRegistry,
+        book: FetchBook,
     ) -> UnregisterProjectUC:
         return UnregisterProjectUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             git_operations=git_operations,
             git_remotes=git_remotes,
+            fetch_book=book,
         )
 
     @provide
@@ -632,6 +634,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         git_operations: IGitOperationRegistry,
         git_remotes: IGitRemoteRegistry,
+        book: FetchBook,
     ) -> MoveProjectUC:
         return MoveProjectUC(
             project_repo=project_repo,
@@ -639,6 +642,7 @@ class UseCaseProvider(Provider):
             dispatcher=dispatcher,
             git_operations=git_operations,
             git_remotes=git_remotes,
+            fetch_book=book,
         )
 
     @provide
@@ -1660,6 +1664,7 @@ class UseCaseProvider(Provider):
         status_builder: GitStatusBuilder,
         policy: GitSyncPolicy,
         project_check: IRemoteProjectCheck,
+        book: FetchBook,
     ) -> ConnectRemoteUC:
         return ConnectRemoteUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1676,6 +1681,7 @@ class UseCaseProvider(Provider):
             status_builder=status_builder,
             policy=policy,
             project_check=project_check,
+            fetch_book=book,
         )
 
     @provide
@@ -1689,6 +1695,7 @@ class UseCaseProvider(Provider):
         registry: IGitRemoteRegistry,
         credentials: IGitCredentialRepository,
         usage: IGitCredentialUsage,
+        book: FetchBook,
     ) -> DisconnectRemoteUC:
         return DisconnectRemoteUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1698,6 +1705,7 @@ class UseCaseProvider(Provider):
             registry=registry,
             credentials=credentials,
             credential_usage=usage,
+            fetch_book=book,
         )
 
     @provide
@@ -1753,6 +1761,7 @@ class UseCaseProvider(Provider):
         vcs_locks: IVcsFolderLocks,
         dispatcher: IJobDispatcher,
         policy: GitSyncPolicy,
+        book: FetchBook,
     ) -> SyncProjectUC:
         return SyncProjectUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1765,6 +1774,7 @@ class UseCaseProvider(Provider):
             locks=vcs_locks,
             dispatcher=dispatcher,
             policy=policy,
+            fetch_book=book,
         )
 
     @provide

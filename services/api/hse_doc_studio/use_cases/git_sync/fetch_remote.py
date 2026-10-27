@@ -28,7 +28,7 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
-from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
+from hse_doc_studio.core.git_sync.fetch_schedule import MAX_BACKOFF_S, FetchBook
 from hse_doc_studio.core.git_sync.policy import FETCH_DEBOUNCE_S, GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitOperationRegistry,
@@ -113,7 +113,11 @@ class FetchGitRemoteUC:
         return await asyncio.to_thread(self._status.build, project)
 
     async def fetch(self, project: Project, *, manual: bool) -> FetchOutcome:
-        """Одна выборка. `manual=False` это расписание: занятую папку и недоверенное хранилище оно молча пропускает."""
+        """Одна выборка. `manual=False` это расписание: занятую папку и недоверенное хранилище оно молча пропускает.
+
+        Просьбы интерфейса присоединяются к идущей выборке и получают её итог: при недоступном сервере каждая
+        просьба иначе запускала бы собственную попытку на весь срок и ставилась бы в очередь за предыдущими.
+        """
         folder = project.folder
         if not self._policy.enabled:
             return FetchOutcome(FetchResult.skipped)
@@ -123,9 +127,21 @@ class FetchGitRemoteUC:
         lock = self._book.lock(folder)
         if self._is_busy(project, manual=manual) or (lock.locked() and not manual):
             return FetchOutcome(FetchResult.skipped)
-        async with lock:
-            # Пока ждали замок, могла начаться синхронизация.
+        running = self._book.running(folder)
+        if running is not None:
+            # Отмена просьбы (клиент ушёл) не должна обрывать выборку, которую ждут другие: ждём через shield.
+            return await asyncio.shield(running) if manual else FetchOutcome(FetchResult.skipped)
+        task = asyncio.ensure_future(self._fetch_exclusive(project, manual=manual))
+        self._book.track(folder, task)
+        return await asyncio.shield(task)
+
+    async def _fetch_exclusive(self, project: Project, *, manual: bool) -> FetchOutcome:
+        async with self._book.lock(project.folder):
+            # Пока ждали замок, могла начаться синхронизация, а проект отключиться, переехать или сменить адрес.
             if self._is_busy(project, manual=manual):
+                return FetchOutcome(FetchResult.skipped)
+            config = await asyncio.to_thread(self._remotes.read, project)
+            if config is None:
                 return FetchOutcome(FetchResult.skipped)
             return await self._fetch_locked(project, config, manual=manual)
 
@@ -146,6 +162,8 @@ class FetchGitRemoteUC:
             if manual:
                 raise
             logger.warning("git fetch skipped: store is not trusted", project_id=str(project.id))
+            # Без паузы расписание повторяло бы отказ и предупреждение в журнале при каждом тике.
+            self._book.hold(folder, self._clock() + timedelta(seconds=MAX_BACKOFF_S))
             return FetchOutcome(FetchResult.skipped)
         state = await asyncio.to_thread(self._load_state, project, config)
         now = self._clock()

@@ -17,7 +17,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.git_sync.entities import SyncState
+from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig, SyncState
 from hse_doc_studio.core.git_sync.fetch_schedule import (
     FetchBook,
     credential_replaced,
@@ -104,22 +104,35 @@ class FetchAllGitRemotesUC:
 
     def _due_project(self, folder: Path, stored: dict[str, Any]) -> Project | None:
         project = self._projects.get(folder)
-        if project is None:
+        if project is None or self._book.held(folder, self._clock()):
             return None
-        config = self._remotes.read(project)
-        if config is None:
-            self._registry.remove(folder)
+        loaded = self._load_state(project, folder)
+        if loaded is None:
             return None
-        state = self._states.get(folder) or default_state(config, None)
+        state, config = loaded
         enabled, interval = fetch_interval(state, stored)
         if not enabled or self._operations.is_busy(folder):
-            return None
-        if halts_auto_fetch(state) and not self._credential_replaced(state, config.credential_id):
             return None
         due = next_attempt_at(state.last_fetch_at, interval, self._book.failures(folder), str(folder.resolve()))
         if due is not None and due > self._clock():
             return None
+        if halts_auto_fetch(state):
+            config = config or self._remotes.read(project)
+            if not self._credential_replaced(state, config.credential_id if config else None):
+                return None
         return project
+
+    def _load_state(self, project: Project, folder: Path) -> tuple[SyncState, StoreRemoteConfig | None] | None:
+        """Состояние проекта и, если пришлось его читать, подключение; None: подключения больше нет."""
+        state = self._states.get(folder)
+        if state is not None:
+            return state, None
+        # Состояния ещё нет: подключение известно только из config хранилища, и ради него запускается git.
+        config = self._remotes.read(project)
+        if config is None:
+            self._registry.remove(folder)
+            return None
+        return default_state(config, None), config
 
     def _credential_replaced(self, state: SyncState, config_credential: UUID | None) -> bool:
         credential_id = state.credential_id or config_credential

@@ -175,3 +175,41 @@ async def test__fetch_book__forget__drops_failures_and_the_lock(tmp_path: Path) 
     assert book.failures(tmp_path) == 0
     assert book.lock(tmp_path) is not first
     assert isinstance(first, asyncio.Lock)
+
+
+async def test__fetch_book__running_fetch__is_remembered_until_it_ends(tmp_path: Path) -> None:
+    book = FetchBook()
+    release = asyncio.Event()
+
+    async def fetch() -> str:
+        await release.wait()
+        return "done"
+
+    task = asyncio.ensure_future(fetch())
+    book.track(tmp_path, task)
+    assert book.running(tmp_path) is task
+
+    release.set()
+    assert await task == "done"
+    await asyncio.sleep(0)
+
+    assert book.running(tmp_path) is None
+
+
+def test__fetch_book__held_folder__is_skipped_until_the_deadline(tmp_path: Path) -> None:
+    book = FetchBook()
+    book.hold(tmp_path, _NOW + timedelta(seconds=MAX_BACKOFF_S))
+
+    assert book.held(tmp_path, _NOW)
+    assert book.held(tmp_path, _NOW + timedelta(seconds=MAX_BACKOFF_S - 1))
+    assert not book.held(tmp_path, _NOW + timedelta(seconds=MAX_BACKOFF_S))
+    assert not book.held(tmp_path, _NOW)
+
+
+def test__fetch_book__forget__drops_the_hold(tmp_path: Path) -> None:
+    book = FetchBook()
+    book.hold(tmp_path, _NOW + timedelta(hours=1))
+
+    book.forget(tmp_path)
+
+    assert not book.held(tmp_path, _NOW)

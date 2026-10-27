@@ -12,6 +12,7 @@ import asyncio
 import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, SyncHealth, SyncState
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
@@ -90,15 +91,19 @@ def credential_replaced(state: SyncState, credential: GitCredential | None) -> b
 
 
 class FetchBook:
-    """Что помнит процесс о выборках: число сбоев подряд и замок на каждую папку.
+    """Что помнит процесс о выборках: число сбоев подряд, замок и идущая выборка на каждую папку.
 
-    Один на процесс. Замок не даёт двум выборкам одного проекта идти разом (кнопка и расписание),
-    сбои живут до перезапуска: после него проект просто опрашивается по обычному периоду.
+    Один на процесс. Замок не даёт двум сетевым обменам одного проекта идти разом (кнопка, расписание,
+    синхронизация, подключение; отключение и перенос тоже ждут его), идущая выборка нужна, чтобы просьбы
+    интерфейса присоединялись к ней, а не выстраивались в очередь. Сбои живут до перезапуска: после него проект
+    просто опрашивается по обычному периоду.
     """
 
     def __init__(self) -> None:
         self._failures: dict[Path, int] = {}
         self._locks: dict[Path, asyncio.Lock] = {}
+        self._running: dict[Path, asyncio.Task[Any]] = {}
+        self._held: dict[Path, datetime] = {}
 
     def failures(self, folder: Path) -> int:
         return self._failures.get(_key(folder), 0)
@@ -113,10 +118,41 @@ class FetchBook:
     def lock(self, folder: Path) -> asyncio.Lock:
         return self._locks.setdefault(_key(folder), asyncio.Lock())
 
+    def running(self, folder: Path) -> asyncio.Task[Any] | None:
+        """Идущая выборка этой папки, если она есть."""
+        return self._running.get(_key(folder))
+
+    def track(self, folder: Path, task: asyncio.Task[Any]) -> None:
+        """Запомнить идущую выборку; по её окончании запись убирается сама."""
+        key = _key(folder)
+        self._running[key] = task
+
+        def done(finished: asyncio.Task[Any]) -> None:
+            if self._running.get(key) is finished:
+                del self._running[key]
+
+        task.add_done_callback(done)
+
+    def hold(self, folder: Path, until: datetime) -> None:
+        """Не опрашивать папку по расписанию до `until` (например, недоверенное хранилище)."""
+        self._held[_key(folder)] = until
+
+    def held(self, folder: Path, now: datetime) -> bool:
+        key = _key(folder)
+        until = self._held.get(key)
+        if until is None:
+            return False
+        if until <= now:
+            del self._held[key]
+            return False
+        return True
+
     def forget(self, folder: Path) -> None:
         key = _key(folder)
         self._failures.pop(key, None)
         self._locks.pop(key, None)
+        self._running.pop(key, None)
+        self._held.pop(key, None)
 
 
 def _key(folder: Path) -> Path:

@@ -6,6 +6,7 @@ GitTransport.fetch, чтобы они были точными и быстрым�
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
@@ -19,15 +20,18 @@ import pytest_asyncio
 from hse_doc_studio.api.schemas.git_sync import GitErrorBody, GitStatusResponse
 from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, GitCredentialKind, OperationKind
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitOperationRegistry,
     IGitRemoteRegistry,
+    IGitStoreGuard,
     IGitSyncStateRepository,
 )
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
+from hse_doc_studio.infra.git_sync.store_remotes import GitStoreRemotes
 from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC, FetchTickResult
 from httpx import ASGITransport, AsyncClient
 
@@ -681,3 +685,210 @@ async def test__connect__wakes_the_background_fetch(
     await _connected(client, project, remote)
 
     assert woken == [1]
+
+
+# --- выборка идёт долго: просьбы, отключение, перенос, синхронизация --------------------------------------------------
+
+
+class ParkedFetch:
+    """Выборка, которая стоит, пока тест её не отпустит; считает вызовы и одновременно идущие выборки."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch, *, error: GitSyncError | None = None) -> None:
+        self.calls = 0
+        self.active = 0
+        self.max_active = 0
+        self.entered = asyncio.Event()
+        self.release = asyncio.Event()
+        original = GitTransport.fetch
+
+        async def parked(transport: GitTransport, *args: Any, **kwargs: Any) -> None:
+            self.calls += 1
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            self.entered.set()
+            try:
+                await self.release.wait()
+                if error is not None:
+                    raise error
+                await original(transport, *args, **kwargs)
+            finally:
+                self.active -= 1
+
+        monkeypatch.setattr(GitTransport, "fetch", parked)
+
+    async def started(self) -> None:
+        async with asyncio.timeout(10):
+            await self.entered.wait()
+
+
+async def test__post_fetch__requests_while_a_fetch_is_running__join_it_instead_of_queueing(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connected(client, project, remote)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+    parked = ParkedFetch(monkeypatch, error=GitSyncError(GitErrorCode.timeout, "black hole"))
+    requests = [asyncio.create_task(client.post(_fetch_url(project))) for _ in range(3)]
+    await parked.started()
+    await asyncio.sleep(0.3)
+
+    parked.release.set()
+    responses = await asyncio.gather(*requests)
+
+    assert [resp.status_code for resp in responses] == [200, 200, 200]
+    assert {GitStatusResponse.model_validate(resp.json()).health for resp in responses} == {"offline"}
+    assert parked.calls == 1
+
+
+async def test__disconnect__while_a_fetch_is_running__nothing_of_the_old_remote_comes_back(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connected(client, project, remote)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+    parked = ParkedFetch(monkeypatch)
+    fetching = asyncio.create_task(client.post(_fetch_url(project)))
+    await parked.started()
+    disconnecting = asyncio.create_task(client.delete(f"/api/v1/projects/{project['id']}/git/remote"))
+    await asyncio.sleep(0.3)
+    assert not disconnecting.done()
+
+    parked.release.set()
+    await fetching
+    resp = await disconnecting
+
+    assert resp.status_code == 204
+    assert not (_store(project) / "hse-sync.json").exists()
+    tracking = run_git(
+        "rev-parse", "--verify", "--quiet", "refs/remotes/origin/main", git_dir=_store(project), check=False
+    )
+    assert tracking == ""
+    assert Path(project["folder"]) not in await asyncio.to_thread((await stack.get(IGitRemoteRegistry)).list)
+
+
+async def test__move__while_a_fetch_is_running__the_old_location_does_not_reappear(
+    client: AsyncClient,
+    project: dict[str, Any],
+    remote: BareRemote,
+    stack: Stack,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _connected(client, project, remote)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+    parked = ParkedFetch(monkeypatch)
+    fetching = asyncio.create_task(client.post(_fetch_url(project)))
+    await parked.started()
+    moving = asyncio.create_task(
+        client.post(f"/api/v1/projects/{project['id']}/move", json={"folder": str(tmp_path / "moved")})
+    )
+    await asyncio.sleep(0.3)
+    assert not moving.done()
+
+    parked.release.set()
+    await fetching
+    resp = await moving
+
+    assert resp.status_code == 200, resp.text
+    assert not Path(project["folder"]).exists()
+    assert (tmp_path / "moved" / ".hse-studio" / "git" / "hse-sync.json").exists()
+
+
+async def test__sync__while_a_background_fetch_is_running__waits_for_it_instead_of_racing_on_the_ref(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connected(client, project, remote)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+    parked = ParkedFetch(monkeypatch)
+    fetching = asyncio.create_task(client.post(_fetch_url(project)))
+    await parked.started()
+    started = await client.post(f"/api/v1/projects/{project['id']}/git/sync", json={})
+    assert started.status_code == 202, started.text
+    await asyncio.sleep(0.3)
+
+    parked.release.set()
+    await fetching
+    async with asyncio.timeout(60):
+        while True:
+            operation = (await client.get(f"/api/v1/git/operations/{started.json()['operation_id']}")).json()
+            if operation["status"] != "running":
+                break
+            await asyncio.sleep(0.05)
+
+    assert operation["status"] == "succeeded", operation
+    assert parked.max_active == 1
+
+
+async def test__sync__after_failures__resets_the_background_fetch_delay(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack
+) -> None:
+    await _connected(client, project, remote)
+    book = await stack.get(FetchBook)
+    folder = Path(project["folder"])
+    book.failed(folder)
+    book.failed(folder)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+
+    resp = await client.post(f"/api/v1/projects/{project['id']}/git/sync", json={})
+    assert resp.status_code == 202, resp.text
+    async with asyncio.timeout(60):
+        while book.failures(folder):
+            await asyncio.sleep(0.05)
+
+    assert book.failures(folder) == 0
+
+
+async def test__disconnect__forgets_what_the_fetch_book_knew_about_the_folder(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack
+) -> None:
+    await _connected(client, project, remote)
+    book = await stack.get(FetchBook)
+    book.failed(Path(project["folder"]))
+
+    resp = await client.delete(f"/api/v1/projects/{project['id']}/git/remote")
+
+    assert resp.status_code == 204
+    assert book.failures(Path(project["folder"])) == 0
+
+
+async def test__tick__project_that_is_not_due__does_not_spawn_git_to_read_its_remote(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connected(client, project, remote)
+    reads = 0
+    original = GitStoreRemotes.read
+
+    def counting(self: GitStoreRemotes, *args: Any, **kwargs: Any) -> Any:
+        nonlocal reads
+        reads += 1
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(GitStoreRemotes, "read", counting)
+
+    result = await _tick(stack, Clock())
+
+    assert (result.registered, result.fetched) == (1, 0)
+    assert reads == 0
+
+
+async def test__tick__untrusted_store__is_not_retried_on_every_tick(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack
+) -> None:
+    await _connected(client, project, remote)
+    (_store(project) / "hooks").mkdir(exist_ok=True)
+    (_store(project) / "hooks" / "post-checkout").write_text("#!/bin/sh\n", encoding="utf-8")
+    await _age_fetch(stack, project, _PERIOD_PASSED)
+    clock = Clock()
+    guard_calls = 0
+    guard = await stack.get(IGitStoreGuard)
+    original = guard.ensure_trusted
+
+    def counting(folder: Path) -> None:
+        nonlocal guard_calls
+        guard_calls += 1
+        original(folder)
+
+    guard.ensure_trusted = counting  # type: ignore[method-assign]
+
+    await _tick(stack, clock)
+    await _tick(stack, clock)
+
+    assert guard_calls == 1
