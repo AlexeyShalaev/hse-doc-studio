@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,10 +21,11 @@ import pytest_asyncio
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.schemas.git_sync import GitErrorBody, GitStatusResponse, OperationResponse
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
+from hse_doc_studio.use_cases.git_sync import clone_project
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
-from tests.fixtures.git_remote import BareRemote, make_bare_remote, run_git, seed_remote
+from tests.fixtures.git_remote import BareRemote, git_env, make_bare_remote, run_git, seed_remote
 from tests.integration.api.vcs.conftest import TRACKED_FILE, create_project
 
 _PROFILE = {"name": "Анна Петрова", "email": "a.petrova@edu.hse.ru"}
@@ -87,6 +89,17 @@ def _store(project: dict[str, Any]) -> Path:
 
 def _git(project: dict[str, Any], *args: str) -> str:
     return run_git(*args, git_dir=_store(project), work_tree=Path(project["folder"]))
+
+
+def _blob_sha(project: dict[str, Any], content: bytes) -> str:
+    done = subprocess.run(  # noqa: S603 — аргументы собирает тест
+        ["git", "--git-dir", str(_store(project)), "hash-object", "-w", "--stdin"],  # noqa: S607
+        input=content,
+        capture_output=True,
+        check=True,
+        env=git_env(),
+    )
+    return done.stdout.decode().strip()
 
 
 def _commit(project: dict[str, Any], remote: BareRemote, message: str, *, force: bool = False) -> None:
@@ -318,6 +331,36 @@ async def test__clone__file_over_the_size_limit__refused_and_no_leftovers(
     assert operation.error is not None
     assert "big.bin" in operation.error.detail
     assert not folder.exists()
+
+
+@pytest.mark.parametrize("folds", [True, False], ids=["case_insensitive_fs", "case_sensitive_fs"])
+async def test__clone__names_that_differ_only_by_case__refused_where_the_fs_would_merge_them(
+    target: Studio,
+    remote: BareRemote,
+    published: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    folds: bool,
+) -> None:
+    # Два имени в одном дереве без рабочих файлов: на регистронезависимой ФС их не создать, поэтому через индекс.
+    first = _blob_sha(published, b"A\n")
+    second = _blob_sha(published, b"B\n")
+    _git(published, "update-index", "--add", "--cacheinfo", f"100644,{first},chapters/Intro.tex")
+    _git(published, "update-index", "--add", "--cacheinfo", f"100644,{second},chapters/intro.tex")
+    _git(published, "-c", "user.name=Test", "-c", "user.email=t@test.local", "commit", "--quiet", "-m", "two names")
+    _git(published, "push", "--quiet", remote.url, "master:refs/heads/main")
+    monkeypatch.setattr(clone_project, "_folds_names", lambda _folder: folds)
+    folder = tmp_path / "clones" / "thesis"
+
+    operation = await _clone(target, remote, folder)
+
+    if folds:
+        assert operation.status == "failed"
+        assert operation.error is not None
+        assert "Intro.tex" in operation.error.detail
+        assert not folder.exists()
+    else:
+        assert operation.status == "succeeded", operation.error
 
 
 async def test__clone__empty_remote__fails_without_leftovers(

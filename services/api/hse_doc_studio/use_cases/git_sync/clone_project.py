@@ -16,7 +16,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 
@@ -40,7 +40,7 @@ from hse_doc_studio.core.git_sync.entities import (
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.incoming import ensure_incoming_fits
-from hse_doc_studio.core.git_sync.merge.paths import is_safe_entry
+from hse_doc_studio.core.git_sync.merge.paths import collision_groups, is_safe_entry
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCloneStore,
@@ -401,6 +401,27 @@ class CloneProjectUC:
         top_level = {entry.path.split("/", 1)[0] for entry in entries}
         if top_level & plan.preexisting:
             raise _folder_not_empty("collides", plan.folder)
+        CloneProjectUC._check_name_collisions(entries, plan.folder)
+
+    @staticmethod
+    def _check_name_collisions(entries: list[TreeEntry], folder: Path) -> None:
+        """Имена, которые эта файловая система считает одним файлом, при разворачивании дерева слились бы.
+
+        Один из двух файлов тихо не появился бы на диске, а дерево осталось бы с вечной правкой. Проверка идёт
+        только на файловой системе, которая действительно сводит имена: на Linux оба файла лягут как есть.
+        """
+        groups = collision_groups(entry.path for entry in entries)
+        if not groups or not _folds_names(folder):
+            return
+        shown = "; ".join(" и ".join(group) for group in groups[:_MAX_REPORTED_PATHS])
+        shown_en = "; ".join(" and ".join(group) for group in groups[:_MAX_REPORTED_PATHS])
+        raise git_error(
+            GitErrorCode.git_error,
+            tail=localized_error(
+                f"В репозитории есть файлы, имена которых эта файловая система не различает: {shown}",
+                f"The repository has files whose names this file system does not tell apart: {shown_en}",
+            ),
+        )
 
     def _lfs_pointers(self, folder: Path, tracking: str, entries: list[TreeEntry]) -> tuple[str, ...]:
         """Файлы, которые в репозитории заменены указателями LFS: Студия их не скачивает, и документ не соберётся."""
@@ -462,6 +483,21 @@ class CloneProjectUC:
                     entry.unlink(missing_ok=True)
         except OSError as exc:
             logger.warning("clone cleanup failed", folder=str(plan.folder), exc=str(exc))
+
+
+def _folds_names(folder: Path) -> bool:
+    """Сводит ли файловая система под `folder` регистр или форму Юникода в именах (macOS, Windows)."""
+    probe = folder / f".hse-name-probe-{uuid4().hex[:8]}-\u00e9a"
+    try:
+        probe.write_bytes(b"")
+    except OSError:
+        return False
+    try:
+        # NFD-запись той же буквы и верхний регистр: на регистро- и нормализационно-чувствительной ФС их нет.
+        variants = (probe.with_name(probe.name.upper()), probe.with_name(probe.name.replace("\u00e9", "e\u0301")))
+        return any(variant.exists() for variant in variants)
+    finally:
+        probe.unlink(missing_ok=True)
 
 
 _UNSAFE_NAME = re.compile(r"[^\w.-]+", re.UNICODE)
