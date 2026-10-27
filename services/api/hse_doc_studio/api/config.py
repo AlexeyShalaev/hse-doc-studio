@@ -890,6 +890,19 @@ class GitConfig(BaseModel):
         ge=1,
         description="Largest bundle file the Studio accepts for import or for cloning a project.",
     )
+    max_incoming_blob_bytes: int = Field(
+        default=512_000_000,
+        ge=1,
+        description=(
+            "Largest single file of a remote branch the Studio reads into memory and writes to the project. "
+            "A tiny pack can expand into a huge blob, so a sync, a clone or an import refuses bigger files."
+        ),
+    )
+    max_incoming_total_bytes: int = Field(
+        default=2_000_000_000,
+        ge=1,
+        description="Largest total size of the files one sync, clone or import takes from a remote branch.",
+    )
     fetch_tick_s: float = Field(
         default=30.0, description="How often the background fetch looks for projects that are due."
     )

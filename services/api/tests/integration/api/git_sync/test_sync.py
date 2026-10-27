@@ -687,6 +687,32 @@ async def test__sync__remote_project_json_the_studio_cannot_load__refused_and_pr
     assert (await stack.client.get(f"/api/v1/projects/{project['id']}")).status_code == 200
 
 
+@pytest.mark.parametrize("local_edit", [False, True], ids=["fast_forward", "merge"])
+async def test__sync__incoming_file_over_the_size_limit__refused_before_it_is_read_or_written(
+    stack: Stack,
+    project: dict[str, Any],
+    remote: BareRemote,
+    monkeypatch: pytest.MonkeyPatch,
+    local_edit: bool,
+) -> None:
+    # Политика собирается при первом обращении к синхронизации, поэтому предел меняется до подключения.
+    monkeypatch.setattr(app_settings.git, "max_incoming_blob_bytes", 100_000)
+    peer = await _connect_in_sync(stack, project, remote)
+    peer.write("assets/big.bin", bytes(300_000))
+    peer.commit_push("a big file")
+    if local_edit:
+        _snapshot(project, "local work")
+    head = _git(project, "rev-parse", "master")
+
+    operation = await _sync(stack, project)
+
+    assert operation.status == "failed"
+    assert operation.error is not None
+    assert "big.bin" in operation.error.detail
+    assert not _file(project, "assets/big.bin").exists()
+    assert _git(project, "rev-parse", "master") == head
+
+
 # --- отказы до начала --------------------------------------------------------------------------------------------
 
 

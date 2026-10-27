@@ -17,6 +17,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.schemas.git_sync import GitErrorBody, GitStatusResponse, OperationResponse
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from httpx import ASGITransport, AsyncClient
@@ -296,6 +297,26 @@ async def test__clone__project_json_the_studio_cannot_load__not_a_studio_project
     assert operation.status == "failed"
     assert operation.error is not None
     assert operation.error.code == "not_a_studio_project"
+    assert not folder.exists()
+
+
+async def test__clone__file_over_the_size_limit__refused_and_no_leftovers(
+    target: Studio,
+    remote: BareRemote,
+    published: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (Path(published["folder"]) / "big.bin").write_bytes(bytes(300_000))
+    _commit(published, remote, "a big file")
+    monkeypatch.setattr(app_settings.git, "max_incoming_blob_bytes", 100_000)
+    folder = tmp_path / "clones" / "thesis"
+
+    operation = await _clone(target, remote, folder)
+
+    assert operation.status == "failed"
+    assert operation.error is not None
+    assert "big.bin" in operation.error.detail
     assert not folder.exists()
 
 

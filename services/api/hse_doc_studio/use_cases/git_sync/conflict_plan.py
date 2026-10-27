@@ -17,9 +17,11 @@ from typing import Final
 from hse_doc_studio.core.git_sync.entities import TreeEntry
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.incoming import ensure_incoming_fits
 from hse_doc_studio.core.git_sync.merge.entities import MergePlan
 from hse_doc_studio.core.git_sync.merge.paths import comparison_key, is_safe_entry
 from hse_doc_studio.core.git_sync.merge.planner import MergeInput, plan_merge
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IFileMergeStrategy,
     IGitMergeEngine,
@@ -37,7 +39,10 @@ _CacheKey = tuple[str, str, str, bool]
 
 
 class ConflictPlanner:
-    def __init__(self, *, reader: IGitRepoReader, engine: IGitMergeEngine, structured: IFileMergeStrategy) -> None:
+    def __init__(
+        self, *, reader: IGitRepoReader, engine: IGitMergeEngine, structured: IFileMergeStrategy, policy: GitSyncPolicy
+    ) -> None:
+        self._policy = policy
         self._reader = reader
         self._engine = engine
         self._structured = structured
@@ -66,6 +71,8 @@ class ConflictPlanner:
             raise git_error(GitErrorCode.unrelated_histories, can_adopt=True)
         theirs_entries = {entry.path: entry for entry in self._reader.tree_entries(folder, theirs)}
         paths = self._merge_paths(folder, base, ours, theirs, theirs_entries)
+        # Размеры известны из дерева: гигантский блоб отвергается до того, как его прочтут в память.
+        ensure_incoming_fits((theirs_entries[path] for path in paths if path in theirs_entries), self._policy)
         merge_input = self._merge_input(folder, base, ours, theirs, paths, theirs_entries)
         return plan_merge(merge_input, self._engine, self._structured)
 

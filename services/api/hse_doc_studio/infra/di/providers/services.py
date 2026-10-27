@@ -823,6 +823,8 @@ class DomainServiceProvider(Provider):
             allow_local_remotes=cfg.allow_local_remotes and settings.mode is StudioMode.local,
             bot_email=settings.vcs.author_email,
             large_file_bytes=cfg.large_file_warn_bytes,
+            max_incoming_blob_bytes=cfg.max_incoming_blob_bytes,
+            max_incoming_total_bytes=cfg.max_incoming_total_bytes,
             first_push_timeout_s=cfg.clone_timeout_s,
         )
 
@@ -945,10 +947,10 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_conflict_planner(
-        self, reader: IGitRepoReader, engine: IGitMergeEngine, state_merge: StateFileMerge
+        self, reader: IGitRepoReader, engine: IGitMergeEngine, state_merge: StateFileMerge, policy: GitSyncPolicy
     ) -> ConflictPlanner:
         # App-scoped: план определяется тройкой коммитов, и экран конфликтов читает его десятки раз подряд.
-        return ConflictPlanner(reader=reader, engine=engine, structured=state_merge)
+        return ConflictPlanner(reader=reader, engine=engine, structured=state_merge, policy=policy)
 
     @provide
     def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:

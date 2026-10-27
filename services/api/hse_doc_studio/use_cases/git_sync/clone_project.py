@@ -39,6 +39,7 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.incoming import ensure_incoming_fits
 from hse_doc_studio.core.git_sync.merge.paths import is_safe_entry
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
@@ -346,6 +347,8 @@ class CloneProjectUC:
             )
         entries = self._reader.tree_entries(folder, tracking)
         self._check_paths(entries, plan)
+        # Дерево разворачивается в папку целиком: гигантский блоб отвергается, пока он не лёг на диск.
+        ensure_incoming_fits(entries, self._policy)
         version = self._templates.get_version(project.pack_id, project.template_id, project.template_version)
         warnings: list[SyncWarning] = []
         access = SchemaAccess(remote_schema_access(project.schema).value)

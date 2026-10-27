@@ -1725,6 +1725,7 @@ class UseCaseProvider(Provider):
         planner: ConflictPlanner,
         state_merge: StateFileMerge,
         project_check: IRemoteProjectCheck,
+        policy: GitSyncPolicy,
     ) -> SyncApplier:
         return SyncApplier(
             vcs=vcs_service,
@@ -1735,6 +1736,7 @@ class UseCaseProvider(Provider):
             planner=planner,
             resolver=state_merge,
             project_check=project_check,
+            policy=policy,
         )
 
     @provide

@@ -8,6 +8,7 @@ from hse_doc_studio.core.git_sync.entities import PathStamp, TreeEntry
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
 from hse_doc_studio.use_cases.git_sync import conflict_plan
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
@@ -54,7 +55,7 @@ class _Reader:
 
 
 def _planner(reader: _Reader, engine: GitMergeFileEngine) -> ConflictPlanner:
-    return ConflictPlanner(reader=reader, engine=engine, structured=StateFileMerge())  # type: ignore[arg-type]
+    return ConflictPlanner(reader=reader, engine=engine, structured=StateFileMerge(), policy=GitSyncPolicy())  # type: ignore[arg-type]
 
 
 def test__plan__same_commits__are_read_once_and_the_plan_is_reused(engine: GitMergeFileEngine) -> None:

@@ -39,12 +39,14 @@ from hse_doc_studio.core.git_sync.entities import (
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error, localized_resolution_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.core.git_sync.incoming import ensure_incoming_fits
 from hse_doc_studio.core.git_sync.merge.choices import FileChoice, FileResolution
 from hse_doc_studio.core.git_sync.merge.drafts import progress, prune_all
 from hse_doc_studio.core.git_sync.merge.entities import MergeAction, MergePlan
 from hse_doc_studio.core.git_sync.merge.paths import collision_groups, is_safe_entry, is_safe_path
 from hse_doc_studio.core.git_sync.merge.planner import resolve_plan
 from hse_doc_studio.core.git_sync.merge.signature_groups import conflicting_groups, group_paths, sides_of
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IFieldResolver,
     IGitMergeCommitter,
@@ -124,6 +126,7 @@ class SyncApplier:
         planner: ConflictPlanner,
         resolver: IFieldResolver,
         project_check: IRemoteProjectCheck,
+        policy: GitSyncPolicy,
     ) -> None:
         self._vcs = vcs
         self._reader = reader
@@ -133,6 +136,7 @@ class SyncApplier:
         self._planner = planner
         self._resolver = resolver
         self._project_check = project_check
+        self._policy = policy
 
     def snapshot(self, project: Project) -> None:
         """Всё, что человек успел изменить, попадает в историю: уйти на сервер может только закоммитенное."""
@@ -195,6 +199,7 @@ class SyncApplier:
         if not _can_fast_forward(changed, entries):
             return None
         wanted = [path for status, path in changed if status != "D"]
+        ensure_incoming_fits((entries[path] for path in wanted if path in entries), self._policy)
         contents = self._reader.read_files(folder, theirs, wanted)
         writes: list[FileWrite] = []
         for status, path in changed:
