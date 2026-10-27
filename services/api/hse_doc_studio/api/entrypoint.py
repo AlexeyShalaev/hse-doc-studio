@@ -20,6 +20,7 @@ from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.readiness import ServerReadinessRegistry, server_readiness
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -46,11 +47,19 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
-def ensure_supported_mode(cfg: Settings) -> None:
-    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы)."""
+def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
+    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
+
+    Server пускают, только когда все зоны зарегистрировали проверки готовности и все они зелёные.
+    """
     if cfg.mode is StudioMode.server:
-        msg = "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local"
-        raise RuntimeError(msg)
+        problems = readiness.unmet()
+        if problems:
+            msg = (
+                "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local. "
+                f"Not ready: {'; '.join(problems)}"
+            )
+            raise RuntimeError(msg)
 
 
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
@@ -95,7 +104,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
 
     configure_docker_binary(settings.docker_binary)
 
-    container = create_container()
+    container = create_container(settings.mode)
     setup_dishka(container, app)
 
     @app.on_event("startup")

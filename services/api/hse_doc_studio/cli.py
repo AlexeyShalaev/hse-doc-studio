@@ -26,7 +26,7 @@ from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import IProjectIndexRepository
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.di.providers.repositories import RepositoryProvider
+from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
@@ -78,7 +78,7 @@ def _report(line: str) -> None:
 async def _build(folder: Path, out_dir: Path, doc_ids: tuple[str, ...] | None) -> BuildProjectOutput:
     configure_docker_binary(settings.docker_binary)
     container = make_async_container(
-        RepositoryProvider(), DomainServiceProvider(), UseCaseProvider(), _CliProvider(folder)
+        LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider(), _CliProvider(folder)
     )
     try:
         async with container() as scope:

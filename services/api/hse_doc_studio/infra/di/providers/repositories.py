@@ -62,7 +62,7 @@ from hse_doc_studio.infra.update.self_update_gateway import DockerSelfUpdateGate
 from hse_doc_studio.infra.update.update_manager import UpdateManager
 
 
-class RepositoryProvider(Provider):
+class LocalPersistenceProvider(Provider):
     scope = Scope.APP
 
     @provide
