@@ -121,7 +121,9 @@ _RULES: tuple[_Rule, ...] = (
     _rule(
         GitErrorCode.tls_untrusted_ca,
         r"unable to get (?:local )?issuer certificate|unable to verify the first certificate"
-        r"|self[- ]signed certificate|certificate is not trusted|unknown certificate authority",
+        r"|self[- ]signed certificate|certificate is not trusted|unknown certificate authority"
+        # schannel (Git for Windows) называет причину кодом; текст рядом зависит от языка системы.
+        r"|SEC_E_UNTRUSTED_ROOT|CERT_E_UNTRUSTEDROOT",
         transports=_HTTP,
     ),
     _rule(
@@ -157,6 +159,20 @@ _RULES: tuple[_Rule, ...] = (
         r"|TLS connection was non-properly terminated|Could not connect|Unable to connect to|RPC failed; curl \d+",
     ),
 )
+
+# Причина, которую git назвал сам. У libcurl-gnutls (образ Студии на Debian) для любого сбоя проверки сертификата
+# одна строка «server certificate verification failed»: чем он плох (чужой центр, срок, имя), по ней не видно.
+_SPECIFIC_TLS_REASON = re.compile(
+    r"SSL certificate problem|certificate verify failed|no alternative certificate subject name"
+    r"|certificate subject name .* does not match|SEC_E_|CERT_E_",
+    re.IGNORECASE,
+)
+
+
+def tls_reason_is_hidden(stderr: str) -> bool:
+    """Git сообщил о сбое TLS, не назвав причины: центр выдачи надо выяснить самим (см. раннер)."""
+    return not _SPECIFIC_TLS_REASON.search(stderr)
+
 
 # Коды, которые способен вернуть classify_git_stderr; остальные коды из контракта ставят другие места.
 CLASSIFIER_CODES = frozenset({rule.code for rule in _RULES} | {GitErrorCode.git_error})

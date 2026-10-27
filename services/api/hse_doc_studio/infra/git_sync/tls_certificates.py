@@ -11,6 +11,7 @@ import base64
 import hashlib
 import ssl
 import urllib.request
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from cryptography import x509
@@ -27,6 +28,16 @@ _MAX_CA_CERTIFICATES = 10
 _PRIVATE_KEY_MARK = "PRIVATE KEY"
 _MAX_PROXY_REPLY_BYTES = 16 * 1024
 _HTTP_OK = range(200, 300)
+# Коды openssl X509_V_ERR_*, при которых сертификат не принят из-за незнакомого центра выдачи.
+UNTRUSTED_VERIFY_CODES = frozenset({18, 19, 20, 21})
+
+
+def verifying_ssl_context(ca_file: Path | None) -> ssl.SSLContext:
+    """Проверка как у git (curl): внутренние центры часто выдают сертификаты без идентификаторов ключа, а строгий
+    режим Python их отвергает; git при этом работает, и проверка не должна быть строже него."""
+    context = ssl.create_default_context(cafile=str(ca_file)) if ca_file is not None else ssl.create_default_context()
+    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return context
 
 
 def certificate_fingerprint(der: bytes) -> str:
@@ -96,6 +107,28 @@ class TlsCertificateService:
         if not der:
             raise git_error(GitErrorCode.tls_error)
         return describe_certificate(x509.load_der_x509_certificate(der))
+
+    async def issuer_is_untrusted(self, host: str, port: int | None, ca_file: Path | None) -> bool:
+        """Сервер предъявил сертификат, цепочка которого не сходится с доверенными центрами (система и `ca_file`).
+
+        Нужен там, где git не называет причину отказа (libcurl-gnutls): по ответу «проверка не прошла» нельзя
+        отличить неизвестный центр от истёкшего срока или чужого имени, а доверять центру можно предложить только
+        в первом случае.
+        Любой другой исход (сеть, срок, имя, успех) даёт False: решает тот отказ, который назвал git.
+        """
+        writer: asyncio.StreamWriter | None = None
+        try:
+            writer = await asyncio.wait_for(
+                self._open(host, port or DEFAULT_HTTPS_PORT, verifying_ssl_context(ca_file)), timeout=self._timeout_s
+            )
+        except ssl.SSLCertVerificationError as exc:
+            return exc.verify_code in UNTRUSTED_VERIFY_CODES
+        except (TimeoutError, ssl.SSLError, OSError):
+            return False
+        finally:
+            if writer is not None:
+                writer.close()
+        return False
 
     async def _open(self, host: str, port: int, context: ssl.SSLContext) -> asyncio.StreamWriter:
         """Соединение с сервером, как его открыл бы git: напрямую или через прокси из окружения (CONNECT)."""

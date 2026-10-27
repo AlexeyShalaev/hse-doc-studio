@@ -1,0 +1,1 @@
+fatal: unable to access 'https://git.corp.example/team/repo.git/': schannel: SEC_E_UNTRUSTED_ROOT (0x80090325) - The certificate chain was issued by an authority that is not trusted.

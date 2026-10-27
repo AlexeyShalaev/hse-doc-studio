@@ -68,9 +68,15 @@ class _Settings:
 
 
 class _Certificates:
-    def __init__(self, fingerprint: str | None = _PIN) -> None:
+    def __init__(self, fingerprint: str | None = _PIN, *, untrusted_issuer: bool = False) -> None:
         self.fingerprint = fingerprint
+        self.untrusted_issuer = untrusted_issuer
         self.fetched: list[tuple[str, int | None]] = []
+        self.issuer_checks: list[tuple[str, int | None, Path | None]] = []
+
+    async def issuer_is_untrusted(self, host: str, port: int | None, ca_file: Path | None) -> bool:
+        self.issuer_checks.append((host, port, ca_file))
+        return self.untrusted_issuer
 
     async def fetch(self, host: str, port: int | None) -> ServerCertificate:
         self.fetched.append((host, port))
@@ -281,3 +287,58 @@ async def test__run__expired_certificate__is_a_plain_tls_error_that_a_new_ca_can
         await _run(runner, _target("https://git.hse.local/x.git"))
 
     assert error.value.code is GitErrorCode.tls_error
+
+
+# Debian (образ Студии): libcurl-gnutls для любого сбоя проверки печатает одну и ту же строку.
+_GNUTLS = (
+    "fatal: unable to access 'https://git.hse.local:8443/team/paper.git/': "
+    "server certificate verification failed. CAfile: none CRLfile: none\n"
+)
+
+
+async def test__run__gnutls_verification_failed_and_issuer_unknown__is_untrusted_ca_with_the_certificate() -> None:
+    certificates = _Certificates(_PIN, untrusted_issuer=True)
+    runner = _runner(_Process(GitResult(128, stderr=_GNUTLS)), _Settings(), certificates)
+
+    with pytest.raises(GitSyncError) as error:
+        await _run(runner)
+
+    assert error.value.code is GitErrorCode.tls_untrusted_ca
+    assert error.value.ctx["certificate"].fingerprint_sha256 == _PIN  # type: ignore[attr-defined]
+    assert certificates.issuer_checks == [("git.hse.local", 8443, None)]
+
+
+async def test__run__gnutls_verification_failed_for_another_reason__stays_a_tls_error() -> None:
+    certificates = _Certificates(_PIN, untrusted_issuer=False)
+    runner = _runner(_Process(GitResult(128, stderr=_GNUTLS)), _Settings(), certificates)
+
+    with pytest.raises(GitSyncError) as error:
+        await _run(runner)
+
+    assert error.value.code is GitErrorCode.tls_error
+    assert "certificate" not in error.value.ctx
+
+
+async def test__run__gnutls_failure_on_a_server_with_trust_file__checks_the_chain_against_that_file() -> None:
+    trust = Path("/data/git/trust/abc.pem")
+    settings = _Settings(GitHostSettings("git.hse.local", 8443, ca_pem="PEM"), trust=trust)
+    certificates = _Certificates(_PIN, untrusted_issuer=True)
+
+    with pytest.raises(GitSyncError):
+        await _run(_runner(_Process(GitResult(128, stderr=_GNUTLS)), settings, certificates))
+
+    assert certificates.issuer_checks == [("git.hse.local", 8443, trust)]
+
+
+async def test__run__openssl_names_the_reason__the_chain_is_not_checked_again() -> None:
+    stderr = "fatal: unable to access 'https://git.hse.local/x/': SSL certificate problem: certificate has expired\n"
+    certificates = _Certificates(_PIN, untrusted_issuer=True)
+
+    with pytest.raises(GitSyncError) as error:
+        await _run(
+            _runner(_Process(GitResult(128, stderr=stderr)), _Settings(), certificates),
+            _target("https://git.hse.local/x.git"),
+        )
+
+    assert error.value.code is GitErrorCode.tls_error
+    assert certificates.issuer_checks == []

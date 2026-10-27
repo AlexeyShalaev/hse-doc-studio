@@ -173,6 +173,10 @@ class ICertificateService(Protocol):
         """Сертификат, который сервер предъявляет сейчас, без проверки цепочки. Нет связи: offline или timeout."""
         ...
 
+    async def issuer_is_untrusted(self, host: str, port: int | None, ca_file: Path | None) -> bool:
+        """Цепочка сертификата сервера не сходится с доверенными центрами именно из-за незнакомого центра выдачи."""
+        ...
+
 
 @dataclass(frozen=True)
 class DetectionRequest:

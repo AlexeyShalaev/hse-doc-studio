@@ -15,7 +15,6 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -33,6 +32,7 @@ from hse_doc_studio.core.git_sync.providers import (
     provider_spec,
     web_base,
 )
+from hse_doc_studio.infra.git_sync.tls_certificates import UNTRUSTED_VERIFY_CODES, verifying_ssl_context
 
 logger = structlog.get_logger()
 
@@ -49,19 +49,9 @@ _CACHE_MAX_ENTRIES = 256
 _HTTP_OK = 200
 _HTTP_UNAUTHORIZED = 401
 _HTTP_FORBIDDEN = 403
-# Коды openssl X509_V_ERR_*, при которых сертификат не принят из-за незнакомого центра выдачи.
-_UNTRUSTED_VERIFY_CODES = frozenset({18, 19, 20, 21})
 _GITHUB_ENTERPRISE_HEADER = "x-github-enterprise-version"
 _GITHUB_EXPIRY_HEADER = "github-authentication-token-expiration"
 _GITHUB_SCOPES_HEADER = "x-oauth-scopes"
-
-
-def _ssl_context(ca_file: Path | None) -> ssl.SSLContext:
-    """Проверка как у git (curl): внутренние центры часто выдают сертификаты без идентификаторов ключа, а строгий
-    режим Python их отвергает; git при этом работает, и проверка токена не должна быть строже него."""
-    context = ssl.create_default_context(cafile=str(ca_file)) if ca_file is not None else ssl.create_default_context()
-    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
-    return context
 
 
 @dataclass(frozen=True)
@@ -142,7 +132,7 @@ class HttpProviderDetector:
         if not candidates:
             return None, True
         async with httpx.AsyncClient(
-            verify=_ssl_context(request.ca_file),
+            verify=verifying_ssl_context(request.ca_file),
             timeout=self._timeout_s,
             follow_redirects=False,
             headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
@@ -208,7 +198,7 @@ class HttpTokenIntrospector:
         token = request.token.reveal()
         try:
             async with httpx.AsyncClient(
-                verify=_ssl_context(request.ca_file),
+                verify=verifying_ssl_context(request.ca_file),
                 timeout=self._timeout_s,
                 follow_redirects=False,
                 headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
@@ -237,7 +227,7 @@ class HttpTokenIntrospector:
             cause = cause.__cause__ or cause.__context__
         if not isinstance(cause, ssl.SSLCertVerificationError):
             return git_error(GitErrorCode.offline)
-        if cause.verify_code not in _UNTRUSTED_VERIFY_CODES or self._certificates is None:
+        if cause.verify_code not in UNTRUSTED_VERIFY_CODES or self._certificates is None:
             return git_error(GitErrorCode.tls_error)
         host_port = _authority(request.api_base)
         try:

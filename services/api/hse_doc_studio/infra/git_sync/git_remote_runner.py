@@ -33,6 +33,7 @@ from hse_doc_studio.core.git_sync.error_classifier import (
     Transport,
     classify_git_stderr,
     scrub,
+    tls_reason_is_hidden,
 )
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -347,9 +348,22 @@ class GitRemoteRunner:
             code = GitErrorCode.credentials_missing
         if code in {GitErrorCode.host_key_unknown, GitErrorCode.host_key_changed}:
             return await self._host_key_error(code, target)
+        if code is GitErrorCode.tls_error and tls_reason_is_hidden(text) and await self._issuer_untrusted(target):
+            code = GitErrorCode.tls_untrusted_ca
         if code is GitErrorCode.tls_untrusted_ca:
             return await self._untrusted_ca_error(target)
         return git_error(code, tail=classified.detail)
+
+    async def _issuer_untrusted(self, target: RemoteTarget) -> bool:
+        """Git (libcurl-gnutls) не назвал причину отказа: по сертификату сервера видно, дело ли в центре выдачи.
+
+        Проверка идёт теми же доверенными центрами, что у git: система плюс файл PEM этого сервера, если он задан.
+        """
+        host = target.url.host
+        if self._certificates is None or host is None or target.url.kind is not RemoteKind.https:
+            return False
+        trust_file = self._host_settings.trust_file(host, target.url.port) if self._host_settings is not None else None
+        return await self._certificates.issuer_is_untrusted(host, target.url.port, trust_file)
 
     async def _untrusted_ca_error(self, target: RemoteTarget) -> GitSyncError:
         """Сертификат не принят: он идёт в ошибке, чтобы человек сверил отпечаток и решил, добавить CA или закрепить."""

@@ -223,3 +223,28 @@ async def test__fetch__proxy_refuses_the_tunnel__is_offline(
             await _service.fetch("127.0.0.1", tls_server.port)
 
     assert info.value.code is GitErrorCode.offline
+
+
+async def test__issuer_is_untrusted__self_signed_server__is_true(tls_server: GitHttpServer) -> None:
+    assert await _service.issuer_is_untrusted("127.0.0.1", tls_server.port, None) is True
+
+
+async def test__issuer_is_untrusted__server_of_a_trusted_ca__is_false(tmp_path: Path) -> None:
+    material = make_ca_signed(tmp_path / "tls")
+    ca_file = tmp_path / "ca.pem"
+    ca_file.write_text(material.ca_pem, encoding="ascii")
+    server = GitHttpServer(root=tmp_path / "root", token=None, tls=material)
+    server.start()
+    try:
+        assert await _service.issuer_is_untrusted("127.0.0.1", server.port, ca_file) is False
+        assert await _service.issuer_is_untrusted("127.0.0.1", server.port, None) is True
+    finally:
+        server.stop()
+
+
+async def test__issuer_is_untrusted__nobody_listens__is_false() -> None:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+
+    assert await _service.issuer_is_untrusted("127.0.0.1", port, None) is False
