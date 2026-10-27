@@ -77,3 +77,11 @@ async with uow.begin():
 ## 7. Миграции и запуск
 
 Одна цепочка alembic в `hse_doc_studio/infra/db/migrations` (внутри пакета, чтобы попасть в образ), один `MetaData` с naming convention в `infra/db/base.py`. Команды: `hse-doc-studio db upgrade|current|check`. При `HSE_STUDIO__DB__AUTO_MIGRATE=true` api мигрирует сам под `pg_advisory_lock`, иначе при ревизии не на head старт отказывает с `db_outdated` (`infra/db/migrator.ensure_db_current`). Откат только для разработки, в проде миграции идут вперёд.
+
+## 8. Секреты в базе
+
+Один `ISecretCipher` (`infra/secrets`) на всё: токены git, OIDC, SMTP, ключи ИИ и подписи. Шифртекст привязан к ячейке: `column_aad(таблица, колонка, id)`, перенос в другую запись не расшифруется. Каждая таблица с секретом регистрирует колонки в `core/secrets.encrypted_columns`; по реестру работает `hse-doc-studio secrets reencrypt [--dry-run]`. Старая привязка читается через `legacy_aad`, пишется всегда новая.
+
+Ключ в server обязателен и только из окружения: `HSE_STUDIO__SECRETS__KEY` или `__KEY_FILE` (Fernet), файла в данных нет, без ключа старт отказывает. Ключи HMAC (job-token, setup-токен) выводятся из него через HKDF с назначением (`KeyRing.derive`).
+
+Смена ключа: задать новый `KEY`, старый перенести в `__RETIRED_KEYS` (через запятую), перезапустить, выполнить `secrets reencrypt`, после нулевого счётчика нечитаемых старый ключ можно убрать. Потеря ключа необратима: секреты в базе не прочитать, их вводят заново. Храните ключ отдельно от резервной копии базы.

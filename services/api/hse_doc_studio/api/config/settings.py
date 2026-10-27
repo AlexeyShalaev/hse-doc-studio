@@ -13,6 +13,7 @@ from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
@@ -81,6 +82,7 @@ class Settings(BaseSettings):
     db: DbConfig = Field(default_factory=DbConfig)
     s3: StorageConfig = Field(default_factory=StorageConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)
+    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 
     # Режим инстанса (HSE_STUDIO__MODE). Не путать с DeploymentMode (all-in-one/standard/native):

@@ -14,12 +14,23 @@ from fastapi.staticfiles import StaticFiles
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.logging_setup import configure_logging
+from hse_doc_studio.api.observability.install import (
+    install_background,
+    install_health,
+    install_server_observability,
+)
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.readiness import (
+    ReadinessZone,
+    ServerReadinessCheck,
+    ServerReadinessRegistry,
+    server_readiness,
+)
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -46,11 +57,28 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
-def ensure_supported_mode(cfg: Settings) -> None:
-    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы)."""
+def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
+
+    check = ServerReadinessCheck(ReadinessZone.persistence, "secrets_key", lambda: secrets_key_problem(cfg))
+    with suppress(ValueError):  # create_app зовут не один раз за процесс (тесты, перезапуск воркера)
+        readiness.register(check)
+
+
+def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
+    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
+
+    Server пускают, только когда все зоны зарегистрировали проверки готовности и все они зелёные.
+    """
     if cfg.mode is StudioMode.server:
-        msg = "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local"
-        raise RuntimeError(msg)
+        _register_secrets_check(cfg, readiness)
+        problems = readiness.unmet()
+        if problems:
+            msg = (
+                "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local. "
+                f"Not ready: {'; '.join(problems)}"
+            )
+            raise RuntimeError(msg)
 
 
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
@@ -93,10 +121,22 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    health_checks = install_health(app, settings)
+
     configure_docker_binary(settings.docker_binary)
 
-    container = create_container()
+    container = create_container(settings.mode)
     setup_dishka(container, app)
+
+    if settings.mode is StudioMode.server:
+        server_metrics = install_server_observability(app, settings, health_checks)
+        install_background(
+            app,
+            container,
+            health_checks,
+            server_metrics,
+            shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
+        )
 
     @app.on_event("startup")
     async def _probe_docker() -> None:

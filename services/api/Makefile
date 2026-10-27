@@ -18,7 +18,7 @@ endif
 # Targets
 # ============================================================
 
-.PHONY: fmt check install reinstall-custom-libs run-api test test-unit
+.PHONY: fmt check install reinstall-custom-libs run-api test test-unit test-pg test-s3 test-no-server
 
 fmt:  ##@Code Check code with pre-commit
 	uv run --extra dev python -m pre_commit run --all-files
@@ -42,3 +42,15 @@ test:	##@App Test application
 
 test-unit:	##@App Run unit tests only (fast, no coverage)
 	uv run --all-extras pytest -m unit --no-cov
+
+# Postgres и MinIO для pg/s3-тестов поднимает `docker compose -f scripts/dev/compose.pg.yml up -d`.
+HSE_TEST_PG_DSN ?= postgresql://postgres:postgres@localhost:15432/postgres
+
+test-pg:	##@App Run pg tests (needs Postgres, see scripts/dev/compose.pg.yml)
+	HSE_TEST_PG_DSN=$(HSE_TEST_PG_DSN) uv run --all-extras pytest -m pg --no-cov
+
+test-s3:	##@App Run s3 tests (moto in process; MinIO via HSE_TEST_S3_ENDPOINT)
+	uv run --all-extras pytest -m s3 --no-cov
+
+test-no-server:	##@App Local mode must pass without the server extra
+	uv run --extra api --extra test pytest -m "not pg and not s3" --no-cov

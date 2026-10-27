@@ -91,6 +91,22 @@ jobs:
     defaults:
       run:
         working-directory: services/api
+    # Сервисы для pg и s3 тестов: без DSN pg-тесты пропускаются, но в CI они должны идти.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      HSE_TEST_PG_DSN: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -109,6 +125,25 @@ jobs:
           files: services/api/coverage.xml
           flags: backend
         continue-on-error: true
+
+  # Локальный режим обязан работать без extra server: sqlalchemy, boto3 и прочие не установлены,
+  # серверные тесты не собираются (tests/conftest.py).
+  backend-test-no-server:
+    name: Backend · Local mode without server extra
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
+        run: uv sync --frozen --extra api --extra test
+      - name: Pytest (without server extra)
+        run: uv run pytest -m "not pg and not s3" --no-cov
 
   # ── Frontend ─────────────────────────────────────────────────────────────
   # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
@@ -162,7 +197,7 @@ jobs:
   all-checks-passed:
     name: All checks passed
     if: always()
-    needs: [backend-lint, backend-test-unit, backend-coverage, frontend]
+    needs: [backend-lint, backend-test-unit, backend-test-no-server, backend-coverage, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Verify

@@ -138,12 +138,10 @@ from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
-from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
 from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSettingsRepository
-from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
 from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
@@ -179,6 +177,8 @@ from hse_doc_studio.infra.persistence.serializers import (
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
+from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
@@ -759,6 +759,7 @@ class DomainServiceProvider(Provider):
             settings.data_dir.expanduser() / "secrets" / "master.keys.json",
             env_key=None if cfg.key is None else cfg.key.get_secret_value(),
             env_key_file=cfg.key_file,
+            retired_keys=None if cfg.retired_keys is None else cfg.retired_keys.get_secret_value(),
         )
 
     @provide

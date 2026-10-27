@@ -1,5 +1,7 @@
 """Настройки HTTP-сервера, CORS и логирования."""
 
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +16,10 @@ class HttpServerConfig(BaseModel):
     access_log: bool = Field(default=False, description="Enable uvicorn access log")
     proxy_headers: bool = Field(default=True, description="Trust proxy headers")
     forwarded_allow_ips: str = Field(default="*", description="Trusted proxy IPs")
+    projects_root: Path | None = Field(
+        default=None,
+        description="Корень томов проектов сервера (projects_root/<project_id>); по умолчанию data_dir/projects.",
+    )
 
 
 class CorsConfig(BaseModel):
