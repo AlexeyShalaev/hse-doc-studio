@@ -74,8 +74,13 @@ def apply_write(folder: Path, write: FileWrite) -> None:
         return
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_name(f".{target.name}.hse-update.tmp")
-    tmp.write_bytes(write.content or b"")
-    os.replace(tmp, target)
+    try:
+        tmp.write_bytes(write.content or b"")
+        os.replace(tmp, target)
+    except BaseException:
+        # Недописанный временный файл не должен остаться в папке: следующий снимок закоммитил бы его.
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 CommittedPredicate = Callable[[Project, UpdateJournal], bool]

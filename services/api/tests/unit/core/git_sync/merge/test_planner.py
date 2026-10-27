@@ -20,7 +20,13 @@ from hse_doc_studio.core.git_sync.merge.choices import (
     TextResolution,
 )
 from hse_doc_studio.core.git_sync.merge.entities import ConflictType, ContentKind, MergeAction, MergeOp, MergeSide
-from hse_doc_studio.core.git_sync.merge.planner import MergeInput, plan_fingerprint, plan_merge, resolve_plan
+from hse_doc_studio.core.git_sync.merge.planner import (
+    MergeInput,
+    ensure_tree_shape,
+    plan_fingerprint,
+    plan_merge,
+    resolve_plan,
+)
 from hse_doc_studio.core.git_sync.protocols import MergeDecision, MergeMeta
 from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
 from hse_doc_studio.infra.template_update.merge_engine import GitMergeFileEngine
@@ -218,6 +224,37 @@ def test__plan_merge__unsafe_paths__are_skipped_with_a_warning(engine: GitMergeF
     assert [op.path for op in plan.ops] == ["ok.tex"]
     (warning,) = plan.warnings
     assert warning == SyncWarning(SyncWarningCode.unsafe_path, ("../escape.tex", ".git/config", ".hse-studio/git/HEAD"))
+
+
+@pytest.mark.parametrize(
+    ("ours", "theirs"),
+    [
+        ({"notes/x.txt": b"mine\n"}, {"notes": b"theirs\n"}),
+        ({"notes": b"mine\n"}, {"notes/x.txt": b"theirs\n"}),
+        ({"a/b/c.tex": b"mine\n"}, {"a/b": b"theirs\n"}),
+    ],
+    ids=["their_file_over_my_folder", "their_folder_over_my_file", "deeper"],
+)
+def test__plan_merge__file_and_folder_with_one_name__is_refused_before_anything_is_written(
+    engine: GitMergeFileEngine, ours: dict[str, bytes], theirs: dict[str, bytes]
+) -> None:
+    plan = _plan(engine, {}, {}, theirs)
+
+    with pytest.raises(GitSyncError) as info:
+        ensure_tree_shape(plan, ours)
+
+    assert info.value.code is GitErrorCode.git_error
+    assert info.value.ctx["paths"]
+
+
+def test__plan_merge__their_deletion_of_the_folder_makes_room_for_the_file(engine: GitMergeFileEngine) -> None:
+    plan = _plan(engine, {"notes/x.txt": b"a\n"}, {"notes/x.txt": b"a\n"}, {"notes": b"theirs\n"})
+
+    ensure_tree_shape(plan, ["notes/x.txt"])
+    assert {(op.path, op.action) for op in plan.ops} == {
+        ("notes", MergeAction.take_theirs),
+        ("notes/x.txt", MergeAction.delete),
+    }
 
 
 def test__plan_merge__blocked_paths__are_never_planned(engine: GitMergeFileEngine) -> None:

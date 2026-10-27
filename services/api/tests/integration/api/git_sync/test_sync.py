@@ -732,6 +732,29 @@ async def test__sync__colon_in_a_file_name__file_survives_the_merge_and_the_push
     assert "thesis/Отчёт: итог.tex" in pushed.splitlines()
 
 
+@pytest.mark.parametrize("their_side", ["file", "folder"])
+async def test__sync__file_and_folder_with_one_name__refused_clearly_and_nothing_is_left_behind(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, their_side: str
+) -> None:
+    peer = await _connect_in_sync(stack, project, remote)
+    mine, theirs = ("notes/x.txt", "notes") if their_side == "file" else ("notes", "notes/x.txt")
+    _file(project, mine).parent.mkdir(parents=True, exist_ok=True)
+    _file(project, mine).write_text("мой\n", encoding="utf-8")
+    peer.write(theirs, "чужой\n")
+    peer.commit_push("same name")
+
+    for _ in range(2):
+        operation = await _sync(stack, project)
+
+        assert operation.status == "failed"
+        assert operation.error is not None
+        assert operation.error.code == "git_error"
+        assert "notes" in operation.error.detail
+        assert not list(Path(project["folder"]).rglob("*.hse-update.tmp"))
+    assert _file(project, mine).read_text(encoding="utf-8") == "мой\n"
+    assert not any(path.endswith(".hse-update.tmp") for path in _git(project, "ls-files").splitlines())
+
+
 # --- отказы до начала --------------------------------------------------------------------------------------------
 
 

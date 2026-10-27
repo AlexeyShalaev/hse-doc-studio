@@ -52,3 +52,13 @@ def test__run__deletes_go_before_writes__case_only_rename_keeps_the_new_name(
         ("Notes/a.txt", FileWriteKind.write),
         ("z.txt", FileWriteKind.write),
     ]
+
+
+def test__apply_write__failure__leaves_no_temporary_file(tmp_path: Path) -> None:
+    (tmp_path / "notes").mkdir()
+
+    # Запись файла `notes` поверх папки с тем же именем падает на os.replace.
+    with pytest.raises(OSError):  # noqa: PT011
+        transaction_module.apply_write(tmp_path, FileWrite("notes", FileWriteKind.write, b"x"))
+
+    assert [entry.name for entry in tmp_path.iterdir()] == ["notes"]

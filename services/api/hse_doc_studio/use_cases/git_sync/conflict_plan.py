@@ -20,7 +20,7 @@ from hse_doc_studio.core.git_sync.errors import GitErrorCode
 from hse_doc_studio.core.git_sync.incoming import ensure_incoming_fits
 from hse_doc_studio.core.git_sync.merge.entities import MergePlan
 from hse_doc_studio.core.git_sync.merge.paths import comparison_key, is_safe_entry
-from hse_doc_studio.core.git_sync.merge.planner import MergeInput, plan_merge
+from hse_doc_studio.core.git_sync.merge.planner import MergeInput, ensure_tree_shape, plan_merge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IFileMergeStrategy,
@@ -70,14 +70,22 @@ class ConflictPlanner:
         if base is None and not adopted_unrelated:
             raise git_error(GitErrorCode.unrelated_histories, can_adopt=True)
         theirs_entries = {entry.path: entry for entry in self._reader.tree_entries(folder, theirs)}
-        paths = self._merge_paths(folder, base, ours, theirs, theirs_entries)
+        ours_entries = self._reader.tree_entries(folder, ours)
+        paths = self._merge_paths(folder, base, theirs, theirs_entries, ours_entries)
         # Размеры известны из дерева: гигантский блоб отвергается до того, как его прочтут в память.
         ensure_incoming_fits((theirs_entries[path] for path in paths if path in theirs_entries), self._policy)
         merge_input = self._merge_input(folder, base, ours, theirs, paths, theirs_entries)
-        return plan_merge(merge_input, self._engine, self._structured)
+        plan = plan_merge(merge_input, self._engine, self._structured)
+        ensure_tree_shape(plan, (entry.path for entry in ours_entries))
+        return plan
 
     def _merge_paths(
-        self, folder: Path, base: str | None, ours: str, theirs: str, theirs_entries: Mapping[str, TreeEntry]
+        self,
+        folder: Path,
+        base: str | None,
+        theirs: str,
+        theirs_entries: Mapping[str, TreeEntry],
+        ours_entries: Sequence[TreeEntry],
     ) -> list[str]:
         """Пути, которые изменила чужая сторона: для остальных слияние ничего не меняет, читать их незачем.
 
@@ -89,7 +97,7 @@ class ConflictPlanner:
         else:
             paths = {path for _, path in self._reader.changed_paths(folder, base, theirs)}
         mine: dict[str, list[str]] = {}
-        for entry in self._reader.tree_entries(folder, ours):
+        for entry in ours_entries:
             mine.setdefault(comparison_key(entry.path), []).append(entry.path)
         for path in tuple(paths):
             paths.update(mine.get(comparison_key(path), ()))

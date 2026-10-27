@@ -54,6 +54,8 @@ DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     "# template update journal and pre-migration backups — transaction state, not work",
     ".hse-studio/update/",
     ".hse-studio/backup/",
+    "# временный файл записи применения: остаётся только после сбоя и в историю не идёт",
+    "*.hse-update.tmp",
 )
 
 

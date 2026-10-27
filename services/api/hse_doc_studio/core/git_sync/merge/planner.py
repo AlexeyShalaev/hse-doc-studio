@@ -22,6 +22,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 
 from hse_doc_studio.core.git_sync.entities import SyncWarning, SyncWarningCode
+from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.merge.binary import blob_sha, conflict_copy_name, merge_binary
 from hse_doc_studio.core.git_sync.merge.choices import (
@@ -51,6 +52,7 @@ from hse_doc_studio.core.git_sync.merge.text import (
     single_hunk,
 )
 from hse_doc_studio.core.git_sync.protocols import IFieldResolver, IFileMergeStrategy, MergeMeta
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.template_update.entities import FileWrite, FileWriteKind
 from hse_doc_studio.core.template_update.protocols import IMergeEngine
 from hse_doc_studio.core.template_update.text import is_binary, restore_text_style, same_content
@@ -220,6 +222,42 @@ def _resolve_collisions(ops: list[MergeOp], ours: Mapping[str, bytes]) -> tuple[
     if not displaced:
         return ops, []
     return [_beside(op) if op.path in displaced else op for op in ops], sorted(displaced)
+
+
+_MAX_LISTED_CLASHES = 5
+
+
+def ensure_tree_shape(plan: MergePlan, ours_paths: Iterable[str]) -> None:
+    """Файл и каталог с одним именем в итоговом дереве не уживаются: запись упала бы посреди применения.
+
+    Чужая ветка добавила файл `notes`, а у меня лежит `notes/x.txt` (или наоборот). Слияние само это не решит и
+    не должно молча терять один из вариантов, поэтому синхронизация останавливается до записи на диск с понятным
+    указанием, какие пути столкнулись: один из них нужно переименовать.
+
+    `ours_paths` это все пути моего дерева, а не только затронутые планом: `MergeInput` их не несёт.
+    """
+    ops = plan.ops
+    removed = {op.path for op in ops if op.action is MergeAction.delete}
+    final = {path for path in ours_paths if is_safe_path(path)} - removed
+    final |= {op.path for op in ops if op.action is not MergeAction.delete and (op.theirs is not None or op.merged)}
+    parents = {parent for path in final for parent in _parents(path)}
+    clashes = sorted(final & parents)
+    if not clashes:
+        return
+    shown = ", ".join(clashes[:_MAX_LISTED_CLASHES])
+    raise git_error(
+        GitErrorCode.git_error,
+        tail=localized_error(
+            f"Файл и папка с одним именем не могут лежать рядом: {shown}. Переименуйте один из них и повторите",
+            f"A file and a folder cannot share a name: {shown}. Rename one of them and try again",
+        ),
+        paths=clashes[:_MAX_LISTED_CLASHES],
+    )
+
+
+def _parents(path: str) -> list[str]:
+    parts = path.split("/")
+    return ["/".join(parts[:end]) for end in range(1, len(parts))]
 
 
 def _adds_file(op: MergeOp) -> bool:
