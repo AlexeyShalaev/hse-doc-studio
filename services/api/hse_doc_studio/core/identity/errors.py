@@ -100,8 +100,10 @@ def message_for(code: IdentityErrorCode) -> str:
 class IdentityError(Exception):
     """Ошибка identity с кодом из закрытого списка; `detail` уже локализован."""
 
-    def __init__(self, code: IdentityErrorCode, detail: str = "") -> None:
+    def __init__(self, code: IdentityErrorCode, detail: str = "", *, retry_after_s: int | None = None) -> None:
         detail = detail or message_for(code)
         super().__init__(detail)
         self.code = code
         self.detail = detail
+        # Для rate_limited: через сколько секунд повторить (заголовок Retry-After).
+        self.retry_after_s = retry_after_s

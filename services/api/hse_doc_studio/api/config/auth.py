@@ -29,3 +29,10 @@ class AuthConfig(BaseModel):
         default_factory=list,
         description="IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента.",
     )
+
+    session_idle_days: int = Field(
+        default=7, ge=1, description="Сессия гаснет без активности столько дней (скользящий срок)."
+    )
+    session_absolute_days: int = Field(
+        default=30, ge=1, description="Предельный возраст сессии, после которого нужен новый вход."
+    )

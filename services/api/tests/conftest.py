@@ -34,5 +34,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 collect_ignore_glob: list[str] = []
 if importlib.util.find_spec("sqlalchemy") is None:
     collect_ignore_glob += ["integration/db/*", "unit/infra/db/*"]
+if importlib.util.find_spec("argon2") is None:
+    collect_ignore_glob += ["unit/infra/identity/*"]
 if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto") is None:
     collect_ignore_glob += ["integration/test_s3_fixtures.py"]
