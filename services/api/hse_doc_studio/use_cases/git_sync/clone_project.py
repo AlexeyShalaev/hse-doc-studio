@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import re
 import shutil
+from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -116,6 +118,17 @@ _FOLDER_PROBLEMS: dict[str, tuple[str, str]] = {
         "the repository files would collide with what is already there",
     ),
 }
+
+
+async def _finish_before_cancel[**P](work: Callable[P, object], *args: P.args, **kwargs: P.kwargs) -> None:
+    """Поток нельзя прервать: отмена дожидается его конца, иначе уборка папки разойдётся с ним и оставит хвост."""
+    task = asyncio.ensure_future(asyncio.to_thread(work, *args, **kwargs))
+    try:
+        await asyncio.shield(task)
+    except asyncio.CancelledError:
+        with suppress(Exception):
+            await task
+        raise
 
 
 def _folder_not_empty(reason: str, folder: Path) -> GitSyncError:
@@ -255,8 +268,7 @@ class CloneProjectUC:
         if branch not in probe.branches:
             raise git_error(GitErrorCode.branch_missing)
 
-        await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
-        await asyncio.to_thread(self._store.init, folder, branch)
+        await _finish_before_cancel(self._init_store, folder, branch)
         git_dir = folder / _STUDIO_DIR / "git"
         await self._transport.fetch(
             git_dir,
@@ -285,6 +297,10 @@ class CloneProjectUC:
             required_studio=verified.required_studio,
             warnings=verified.warnings,
         )
+
+    def _init_store(self, folder: Path, branch: str) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        self._store.init(folder, branch)
 
     def _verify(self, plan: _FolderPlan, branch: str) -> _Verified:
         """Проверка вершины скачанной ветки до того, как её дерево тронет папку."""

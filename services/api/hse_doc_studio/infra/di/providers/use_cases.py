@@ -1057,7 +1057,7 @@ class UseCaseProvider(Provider):
     ) -> RestoreVcsUC:
         return RestoreVcsUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks)
 
-    # ------------------------------------------------------------------ Git sync
+    # ------------------------------------------------------------------ Git-синхронизация: сборка в CI
 
     @provide
     def get_preview_ci_uc(
@@ -1705,6 +1705,8 @@ class UseCaseProvider(Provider):
     ) -> UpdateGitSettingsUC:
         return UpdateGitSettingsUC(project_repo, project_index_repo, store_remotes, state_repo, status_builder)
 
+    # ------------------------------------------------------------------ Git-синхронизация: слияние и конфликты
+
     @provide
     def get_git_sync_applier(
         self,
@@ -1852,6 +1854,8 @@ class UseCaseProvider(Provider):
             sessions=sessions, state_repo=state_repo, operations=operations, locks=vcs_locks, status=status
         )
 
+    # ------------------------------------------------------------------ Git-синхронизация: выборка
+
     @provide
     def get_fetch_git_remote_uc(
         self,
@@ -1906,6 +1910,8 @@ class UseCaseProvider(Provider):
             book=book,
             concurrency=settings.git.fetch_concurrency,
         )
+
+    # ------------------------------------------------------------------ Git-синхронизация: клонирование и операции
 
     @provide
     def get_clone_git_project_uc(

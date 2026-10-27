@@ -46,6 +46,8 @@ class StoreGit:
             "-c",
             "commit.gpgsign=false",
             "-c",
+            "tag.gpgsign=false",
+            "-c",
             "core.quotepath=false",
             "-c",
             "safe.directory=*",
