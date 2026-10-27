@@ -36,6 +36,7 @@ from hse_doc_studio.api.schemas.git_sync import (
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
+from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.use_cases.git_sync.bundles import BundleScratch, CloneFromBundleInput, CloneFromBundleUC
@@ -107,8 +108,10 @@ async def list_git_credentials(uc: FromDishka[ListCredentialsUC]) -> list[GitCre
 
 @router.post("/git/credentials", response_model=GitCredentialResponse, status_code=status.HTTP_201_CREATED)
 async def create_git_credential(
-    body: CreateCredentialRequest, uc: FromDishka[CreateCredentialUC]
+    body: CreateCredentialRequest, uc: FromDishka[CreateCredentialUC], policy: FromDishka[GitSyncPolicy]
 ) -> GitCredentialResponse:
+    # Без синхронизации токены и ключи копить негде и незачем: ни запись, ни файл ключа шифрования не появляются.
+    policy.require_enabled()
     if isinstance(body, CreatePatCredentialRequest):
         inp = CreateCredentialInput(
             kind=GitCredentialKind.pat,
@@ -124,8 +127,12 @@ async def create_git_credential(
 
 @router.patch("/git/credentials/{credential_id}", response_model=GitCredentialResponse)
 async def update_git_credential(
-    credential_id: UUID, body: UpdateCredentialRequest, uc: FromDishka[UpdateCredentialUC]
+    credential_id: UUID,
+    body: UpdateCredentialRequest,
+    uc: FromDishka[UpdateCredentialUC],
+    policy: FromDishka[GitSyncPolicy],
 ) -> GitCredentialResponse:
+    policy.require_enabled()
     try:
         view = await uc.execute(
             UpdateCredentialInput(
@@ -141,7 +148,10 @@ async def update_git_credential(
 
 
 @router.post("/git/credentials/{credential_id}/check", response_model=GitCredentialCheckResponse)
-async def check_git_credential(credential_id: UUID, uc: FromDishka[CheckCredentialUC]) -> GitCredentialCheckResponse:
+async def check_git_credential(
+    credential_id: UUID, uc: FromDishka[CheckCredentialUC], policy: FromDishka[GitSyncPolicy]
+) -> GitCredentialCheckResponse:
+    policy.require_enabled()
     try:
         view = await uc.execute(credential_id)
     except NotFoundError as exc:
@@ -193,7 +203,10 @@ async def list_git_hosts(uc: FromDishka[ListHostsUC]) -> list[GitHostResponse]:
 
 
 @router.post("/git/hosts/trust", status_code=status.HTTP_204_NO_CONTENT)
-async def trust_git_host(body: TrustHostRequest, uc: FromDishka[TrustHostUC]) -> None:
+async def trust_git_host(
+    body: TrustHostRequest, uc: FromDishka[TrustHostUC], policy: FromDishka[GitSyncPolicy]
+) -> None:
+    policy.require_enabled()
     await uc.execute(
         TrustHostInput(
             host=body.host,
@@ -217,8 +230,9 @@ async def list_git_host_settings(uc: FromDishka[ListHostSettingsUC]) -> list[Git
 
 @router.put("/git/host-settings", response_model=GitHostSettingsResponse)
 async def update_git_host_settings(
-    body: UpdateGitHostSettingsRequest, uc: FromDishka[UpdateHostSettingsUC]
+    body: UpdateGitHostSettingsRequest, uc: FromDishka[UpdateHostSettingsUC], policy: FromDishka[GitSyncPolicy]
 ) -> GitHostSettingsResponse:
+    policy.require_enabled()
     given = body.model_fields_set & {FIELD_PROVIDER_OVERRIDE, FIELD_CA_PEM, FIELD_PINNED_FINGERPRINT}
     view = await uc.execute(
         UpdateHostSettingsInput(

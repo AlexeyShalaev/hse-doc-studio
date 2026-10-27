@@ -45,6 +45,7 @@ const COPY: Record<string, IssueCopy> = {
   host_key_changed: { tone: "err", actions: ["review_host_key"] },
   ssh_unavailable: { tone: "err", actions: ["back_to_repo", "back_to_access"] },
   git_unavailable: { tone: "err", actions: ["retry"] },
+  git_disabled: { tone: "err", actions: ["close"] },
   secrets_unavailable: { tone: "err", actions: ["retry"] },
   store_untrusted: { tone: "err", actions: ["retry"] },
   remote_exists: { tone: "info", actions: ["close"] },

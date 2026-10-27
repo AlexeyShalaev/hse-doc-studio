@@ -82,6 +82,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Git не найден или слишком старый. Нужен Git не ниже 2.31",
         "Git was not found or is too old. Git 2.31 or newer is required",
     ),
+    GitErrorCode.git_disabled: (
+        "Синхронизация с git отключена в настройках развёртывания Студии",
+        "Git sync is turned off in the Studio deployment settings",
+    ),
     GitErrorCode.profile_required: (
         "Сначала укажите имя и почту автора: они попадут в историю проекта",
         "Set your author name and e-mail first: they go into the project history",

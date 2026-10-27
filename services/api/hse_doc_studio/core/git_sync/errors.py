@@ -35,6 +35,7 @@ class GitErrorCode(StrEnum):
     timeout = "timeout"
     ssh_unavailable = "ssh_unavailable"
     git_unavailable = "git_unavailable"
+    git_disabled = "git_disabled"
     branch_missing = "branch_missing"
     remote_exists = "remote_exists"
     not_a_studio_project = "not_a_studio_project"

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from hse_doc_studio.core.git_sync.error_messages import git_error
+from hse_doc_studio.core.git_sync.errors import GitErrorCode
+
 DEFAULT_REMOTE_BRANCH = "main"
 DEFAULT_FETCH_INTERVAL_S = 300
 MIN_FETCH_INTERVAL_S = 60
@@ -28,3 +31,8 @@ class GitSyncPolicy:
     max_incoming_total_bytes: int = 2_000_000_000
     # Первая отправка длинной истории идёт дольше обычной; None: обычный срок отправки.
     first_push_timeout_s: float | None = None
+
+    def require_enabled(self) -> None:
+        """Выключенная настройкой развёртывания синхронизация отвечает своим кодом, а не «Git не найден»."""
+        if not self.enabled:
+            raise git_error(GitErrorCode.git_disabled)

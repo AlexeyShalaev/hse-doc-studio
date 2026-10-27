@@ -52,8 +52,7 @@ class LocalSyncGate:
 
         Блокирует на запусках git: вызывающий уводит вызов в поток.
         """
-        if not self._policy.enabled:
-            raise git_error(GitErrorCode.git_unavailable)
+        self._policy.require_enabled()
         if needs_profile and self._profile.get() is None:
             raise git_error(GitErrorCode.profile_required)
         folder = project.folder

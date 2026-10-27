@@ -207,8 +207,7 @@ class CloneProjectUC:
         self._operations.attach_task(operation_id, task)
 
     def _checked_input(self, inp: CloneProjectInput) -> RemoteUrl:
-        if not self._policy.enabled:
-            raise git_error(GitErrorCode.git_unavailable)
+        self._policy.require_enabled()
         if self._profile.get() is None:
             raise git_error(GitErrorCode.profile_required)
         url = parse_remote_url(

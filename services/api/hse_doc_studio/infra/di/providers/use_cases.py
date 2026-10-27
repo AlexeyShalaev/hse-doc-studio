@@ -1631,8 +1631,9 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         builder: GitStatusBuilder,
+        policy: GitSyncPolicy,
     ) -> GetGitStatusUC:
-        return GetGitStatusUC(project_repo, project_index_repo, builder)
+        return GetGitStatusUC(project_repo, project_index_repo, builder, policy)
 
     @provide
     def get_probe_git_remote_uc(

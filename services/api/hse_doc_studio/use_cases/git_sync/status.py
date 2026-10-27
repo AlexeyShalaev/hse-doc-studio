@@ -434,10 +434,14 @@ class GetGitStatusUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         builder: GitStatusBuilder,
+        policy: GitSyncPolicy,
     ) -> None:
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
         self._builder = builder
+        self._policy = policy
 
     async def execute(self, inp: GetGitStatusInput) -> GitStatusView:
+        # Выключенная синхронизация не обещает подключения: клиент читает отказ как «не поддерживается».
+        self._policy.require_enabled()
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
         return await asyncio.to_thread(self._builder.build, project)

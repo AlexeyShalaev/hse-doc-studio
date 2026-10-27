@@ -154,6 +154,7 @@ const REACHABILITY_CODES = new Set([
   "timeout",
   "ssh_unavailable",
   "git_unavailable",
+  "git_disabled",
   "url_invalid",
   "url_scheme_forbidden",
   "store_untrusted",

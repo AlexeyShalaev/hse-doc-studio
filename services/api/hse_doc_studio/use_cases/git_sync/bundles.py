@@ -375,8 +375,7 @@ class CloneFromBundleUC:
 
     async def execute(self, inp: CloneFromBundleInput) -> GitOperation:
         try:
-            if not self._policy.enabled:
-                raise git_error(GitErrorCode.git_unavailable)
+            self._policy.require_enabled()
             if self._profile.get() is None:
                 raise git_error(GitErrorCode.profile_required)
             plan = await asyncio.to_thread(self._clone.plan_folder, inp.folder)

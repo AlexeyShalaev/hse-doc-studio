@@ -91,8 +91,7 @@ class StartSyncUC:
 
     def preflight(self, project: Project) -> None:
         """Быстрые проверки перед любой операцией синхронизации; общие с применением решений по конфликтам."""
-        if not self._policy.enabled:
-            raise git_error(GitErrorCode.git_unavailable)
+        self._policy.require_enabled()
         config = self._remotes.read(project)
         if config is None:
             raise NotFoundError(localized_error("Удалённый репозиторий не подключён", "No remote is connected"))

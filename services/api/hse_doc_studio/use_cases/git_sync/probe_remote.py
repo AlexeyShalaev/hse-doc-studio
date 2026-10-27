@@ -142,8 +142,7 @@ class ProbeRemoteUC:
         self._tokens = token_checker
 
     async def execute(self, inp: ProbeInput) -> ProbeView:
-        if not self._policy.enabled:
-            raise git_error(GitErrorCode.git_unavailable)
+        self._policy.require_enabled()
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )

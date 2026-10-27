@@ -50,6 +50,7 @@
     "timeout": "The server did not respond in time. Try again.",
     "ssh_unavailable": "ssh is not installed. Install an OpenSSH client or use https.",
     "git_unavailable": "Git was not found. Install Git or use the Studio image.",
+    "git_disabled": "Git sync is turned off in the Studio deployment settings. Ask the administrator.",
     "branch_missing": "The repository has no such branch.",
     "remote_exists": "A repository is already connected. Disconnect it to connect another.",
     "not_a_studio_project": "The repository does not contain a Studio project.",

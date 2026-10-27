@@ -263,6 +263,10 @@
       "title": "Git not found",
       "hint": "Install Git or run Studio from an image that includes it."
     },
+    "git_disabled": {
+      "title": "Sync is turned off",
+      "hint": "The administrator turned off git sync in the Studio deployment settings."
+    },
     "secrets_unavailable": {
       "title": "The secret store is unavailable",
       "hint": "Tokens and keys cannot be read right now. Check the Studio data folder and its permissions."

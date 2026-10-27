@@ -136,8 +136,7 @@ class ConnectRemoteUC:
         return await asyncio.to_thread(self._status.build, project)
 
     def _checked_input(self, inp: ConnectRemoteInput) -> RemoteUrl:
-        if not self._policy.enabled:
-            raise git_error(GitErrorCode.git_unavailable)
+        self._policy.require_enabled()
         if inp.adopt not in (None, ADOPT_MERGE_REMOTE):
             raise ValueError("adopt must be null or 'merge_remote'")
         if self._profile.get() is None:

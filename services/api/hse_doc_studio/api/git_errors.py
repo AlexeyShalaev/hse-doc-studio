@@ -80,6 +80,8 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.git_error: _UPSTREAM,
     GitErrorCode.ssh_unavailable: _UNAVAILABLE,
     GitErrorCode.git_unavailable: _UNAVAILABLE,
+    # Возможности на этом сервере нет: 404 клиент читает как «не поддерживается» и прячет всё, что с ней связано.
+    GitErrorCode.git_disabled: _MISSING,
 }
 
 # Запросы Git-синхронизации: в теле лежит секрет (токен, пароль пакета) или адрес, в который вставили токен

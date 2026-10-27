@@ -29,6 +29,7 @@ export const GIT_ERROR_CODES = [
   "timeout",
   "ssh_unavailable",
   "git_unavailable",
+  "git_disabled",
   "branch_missing",
   "remote_exists",
   "not_a_studio_project",
