@@ -97,7 +97,11 @@ def test__log__is_merge_follows_parent_count(svc: GitVcsService, project: Projec
     base = _git(folder, ["rev-parse", "HEAD"])
     side = _snap(svc, project, "Ветка")
     tree = _git(folder, ["rev-parse", "HEAD^{tree}"])
-    merge = _git(folder, ["commit-tree", tree, "-p", base, "-p", side.id, "-m", "Слияние\n\nHse-Kind: sync"])
+    merge = _git(
+        folder,
+        ["-c", f"user.name={_ANNA[0]}", "-c", f"user.email={_ANNA[1]}", "commit-tree", tree]
+        + ["-p", base, "-p", side.id, "-m", "Слияние\n\nHse-Kind: sync"],
+    )
     _git(folder, ["update-ref", "HEAD", merge])
 
     top = svc.log(project, limit=1)[0]

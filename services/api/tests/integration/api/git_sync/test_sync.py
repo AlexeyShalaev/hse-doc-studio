@@ -618,6 +618,8 @@ async def test__sync__case_only_rename_on_remote__file_stays_on_disk(
     peer.write("notes/a.txt", "заметка\n")
     peer.commit_push("add note")
     await _sync_ok(stack, project)
+    # Чтобы переименование сработало и там, где регистр различается, каталог с новым именем создаётся заранее.
+    (peer.path / "Notes").mkdir(exist_ok=True)
     peer.git("mv", "notes/a.txt", "Notes/a.txt")
     peer.commit_push("rename note by case")
     if local_edit:
