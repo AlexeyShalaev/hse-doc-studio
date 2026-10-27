@@ -10,6 +10,8 @@ import asyncio
 import base64
 import hashlib
 import ssl
+import urllib.request
+from urllib.parse import unquote, urlsplit
 
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
@@ -23,6 +25,8 @@ from hse_doc_studio.core.i18n import localized_error
 _MAX_CA_PEM_BYTES = 128 * 1024
 _MAX_CA_CERTIFICATES = 10
 _PRIVATE_KEY_MARK = "PRIVATE KEY"
+_MAX_PROXY_REPLY_BYTES = 16 * 1024
+_HTTP_OK = range(200, 300)
 
 
 def certificate_fingerprint(der: bytes) -> str:
@@ -75,11 +79,9 @@ class TlsCertificateService:
         context.verify_mode = ssl.CERT_NONE
         writer: asyncio.StreamWriter | None = None
         try:
-            opened = await asyncio.wait_for(
-                asyncio.open_connection(host, port or DEFAULT_HTTPS_PORT, ssl=context, server_hostname=host),
-                timeout=self._timeout_s,
+            writer = await asyncio.wait_for(
+                self._open(host, port or DEFAULT_HTTPS_PORT, context), timeout=self._timeout_s
             )
-            writer = opened[1]
             ssl_object = writer.get_extra_info("ssl_object")
             der = ssl_object.getpeercert(binary_form=True) if ssl_object is not None else None
         except TimeoutError:
@@ -94,3 +96,72 @@ class TlsCertificateService:
         if not der:
             raise git_error(GitErrorCode.tls_error)
         return describe_certificate(x509.load_der_x509_certificate(der))
+
+    async def _open(self, host: str, port: int, context: ssl.SSLContext) -> asyncio.StreamWriter:
+        """Соединение с сервером, как его открыл бы git: напрямую или через прокси из окружения (CONNECT)."""
+        proxy = _proxy_for(host)
+        if proxy is None:
+            _, writer = await asyncio.open_connection(host, port, ssl=context, server_hostname=host)
+            return writer
+        reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
+        try:
+            await _connect_through(reader, writer, host, port, proxy.authorization)
+            await writer.start_tls(context, server_hostname=host)
+        except BaseException:
+            writer.close()
+            raise
+        return writer
+
+
+class _Proxy:
+    def __init__(self, host: str, port: int, authorization: str | None) -> None:
+        self.host = host
+        self.port = port
+        self.authorization = authorization
+
+
+def _proxy_for(host: str) -> _Proxy | None:
+    """Прокси для https-адреса по тем же переменным окружения, что получает git; None, если соединяться напрямую.
+
+    Поддерживается обычный http-прокси (CONNECT). Адрес из NO_PROXY и прокси другого вида (socks, https) идут
+    напрямую: ради сертификата это усложнение не стоит.
+    """
+    proxies = urllib.request.getproxies_environment()
+    raw = proxies.get("https") or proxies.get("all")
+    if not raw or _bypassed(host, proxies.get("no", "")):
+        return None
+    parts = urlsplit(raw if "://" in raw else f"http://{raw}")
+    if parts.scheme != "http" or not parts.hostname:
+        return None
+    authorization = None
+    if parts.username is not None:
+        credentials = f"{unquote(parts.username)}:{unquote(parts.password or '')}"
+        authorization = "Basic " + base64.b64encode(credentials.encode()).decode()
+    return _Proxy(parts.hostname, parts.port or 80, authorization)
+
+
+def _bypassed(host: str, no_proxy: str) -> bool:
+    """Адрес из NO_PROXY: `*`, имя хоста или суффикс домена (`.corp.example`, `corp.example`) без учёта регистра."""
+    name = host.lower().rstrip(".")
+    for item in (part.strip().lower() for part in no_proxy.split(",")):
+        suffix = item.split(":", 1)[0].lstrip("*").lstrip(".")
+        if item == "*" or (suffix and (name == suffix or name.endswith(f".{suffix}"))):
+            return True
+    return False
+
+
+async def _connect_through(
+    reader: asyncio.StreamReader, writer: asyncio.StreamWriter, host: str, port: int, authorization: str | None
+) -> None:
+    target = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+    lines = [f"CONNECT {target} HTTP/1.1", f"Host: {target}"]
+    if authorization is not None:
+        lines.append(f"Proxy-Authorization: {authorization}")
+    writer.write(("\r\n".join(lines) + "\r\n\r\n").encode("ascii"))
+    await writer.drain()
+    reply = await reader.readuntil(b"\r\n\r\n")
+    if len(reply) > _MAX_PROXY_REPLY_BYTES:
+        raise ConnectionError("proxy reply is too long")
+    status = reply.split(b"\r\n", 1)[0].split()
+    if len(status) < 2 or not status[1].isdigit() or int(status[1]) not in _HTTP_OK:  # noqa: PLR2004
+        raise ConnectionError("proxy refused the tunnel")

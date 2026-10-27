@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import socket
@@ -126,3 +127,99 @@ def test__normalize_ca_pem__too_many_certificates__is_rejected(tmp_path: Path) -
         _service.normalize_ca_pem(material.cert_pem * 11)
 
     assert error.value.code is GitErrorCode.host_settings_invalid
+
+
+# --- прокси из окружения ------------------------------------------------------------------------------------
+
+
+class _ConnectProxy:
+    """Минимальный http-прокси: принимает CONNECT, записывает запрос и перекачивает байты к серверу."""
+
+    def __init__(self, *, refuse: bool = False) -> None:
+        self.requests: list[str] = []
+        self._refuse = refuse
+        self._server: asyncio.Server | None = None
+
+    @property
+    def port(self) -> int:
+        assert self._server is not None
+        return int(self._server.sockets[0].getsockname()[1])
+
+    async def __aenter__(self) -> _ConnectProxy:
+        self._server = await asyncio.start_server(self._serve, "127.0.0.1", 0)
+        return self
+
+    async def __aexit__(self, *_exc: object) -> None:
+        assert self._server is not None
+        self._server.close()
+        await self._server.wait_closed()
+
+    async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        head = (await reader.readuntil(b"\r\n\r\n")).decode("ascii")
+        self.requests.append(head)
+        if self._refuse:
+            writer.write(b"HTTP/1.1 403 Forbidden\r\n\r\n")
+            await writer.drain()
+            writer.close()
+            return
+        host, _, port = head.split("\r\n", 1)[0].split()[1].rpartition(":")
+        upstream_reader, upstream_writer = await asyncio.open_connection(host, int(port))
+        writer.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
+        await writer.drain()
+
+        async def pipe(source: asyncio.StreamReader, sink: asyncio.StreamWriter) -> None:
+            try:
+                while chunk := await source.read(65536):
+                    sink.write(chunk)
+                    await sink.drain()
+            except OSError:
+                pass
+            finally:
+                sink.close()
+
+        await asyncio.gather(pipe(reader, upstream_writer), pipe(upstream_reader, writer))
+
+
+async def test__fetch__proxy_in_the_environment__certificate_is_read_through_connect(
+    tls_server: GitHttpServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert tls_server.tls is not None
+    async with _ConnectProxy() as proxy:
+        monkeypatch.setenv("HTTPS_PROXY", f"http://user:p%40ss@127.0.0.1:{proxy.port}")
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.delenv("no_proxy", raising=False)
+
+        certificate = await _service.fetch("127.0.0.1", tls_server.port)
+
+    assert certificate.fingerprint_sha256 == certificate_fingerprint(_der(tls_server.tls))
+    (request,) = proxy.requests
+    assert request.startswith(f"CONNECT 127.0.0.1:{tls_server.port} HTTP/1.1\r\n")
+    expected = "Basic " + base64.b64encode(b"user:p@ss").decode()
+    assert f"Proxy-Authorization: {expected}" in request
+
+
+async def test__fetch__host_in_no_proxy__goes_directly(
+    tls_server: GitHttpServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _ConnectProxy() as proxy:
+        monkeypatch.setenv("HTTPS_PROXY", f"http://127.0.0.1:{proxy.port}")
+        monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1")
+
+        certificate = await _service.fetch("127.0.0.1", tls_server.port)
+
+    assert certificate.self_signed is True
+    assert proxy.requests == []
+
+
+async def test__fetch__proxy_refuses_the_tunnel__is_offline(
+    tls_server: GitHttpServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _ConnectProxy(refuse=True) as proxy:
+        monkeypatch.setenv("HTTPS_PROXY", f"http://127.0.0.1:{proxy.port}")
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        monkeypatch.delenv("no_proxy", raising=False)
+
+        with pytest.raises(GitSyncError) as info:
+            await _service.fetch("127.0.0.1", tls_server.port)
+
+    assert info.value.code is GitErrorCode.offline
