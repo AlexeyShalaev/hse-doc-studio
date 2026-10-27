@@ -15,11 +15,13 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
 import structlog
 
+from hse_doc_studio.core.egress import EgressBlockedError, IEgressPolicy
 from hse_doc_studio.core.git_sync.credentials import token_family
 from hse_doc_studio.core.git_sync.entities import TokenIntrospection, TokenState
 from hse_doc_studio.core.git_sync.error_messages import git_error
@@ -33,6 +35,8 @@ from hse_doc_studio.core.git_sync.providers import (
     provider_spec,
     web_base,
 )
+from hse_doc_studio.infra.egress.http import egress_client
+from hse_doc_studio.infra.git_sync.egress_guard import egress_error
 from hse_doc_studio.infra.git_sync.tls_certificates import UNTRUSTED_VERIFY_CODES, verifying_ssl_context
 
 logger = structlog.get_logger()
@@ -92,6 +96,19 @@ class _Fetcher:
             return _Reply(response.status_code, response.headers, bytes(body))
 
 
+def _http_client(egress: IEgressPolicy | None, *, ca_file: Path | None, timeout_s: float) -> httpx.AsyncClient:
+    """Клиент к серверу git; с политикой egress он подключается только к проверенным адресам."""
+    options: dict[str, Any] = {
+        "timeout": timeout_s,
+        "follow_redirects": False,
+        "headers": {"User-Agent": _USER_AGENT, "Accept": "application/json"},
+    }
+    verify = verifying_ssl_context(ca_file)
+    if egress is None:
+        return httpx.AsyncClient(verify=verify, **options)
+    return egress_client(egress, verify=verify, **options)
+
+
 def _text(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
@@ -99,8 +116,9 @@ def _text(value: object) -> str | None:
 class HttpProviderDetector:
     """Спрашивает адреса версии GitLab, Gitea и GitHub Enterprise; ответы кэшируются на несколько минут."""
 
-    def __init__(self, timeout_s: float) -> None:
+    def __init__(self, timeout_s: float, egress: IEgressPolicy | None = None) -> None:
         self._timeout_s = timeout_s
+        self._egress = egress
         self._cache: dict[tuple[object, ...], tuple[float, ApiDetection | None]] = {}
 
     async def detect(self, request: DetectionRequest) -> ApiDetection | None:
@@ -133,12 +151,7 @@ class HttpProviderDetector:
         candidates = [(provider, prefix) for provider in request.providers for prefix in prefixes]
         if not candidates:
             return None, True
-        async with httpx.AsyncClient(
-            verify=verifying_ssl_context(request.ca_file),
-            timeout=self._timeout_s,
-            follow_redirects=False,
-            headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
-        ) as client:
+        async with _http_client(self._egress, ca_file=request.ca_file, timeout_s=self._timeout_s) as client:
             fetcher = _Fetcher(client, self._timeout_s)
             results = await asyncio.gather(
                 *(self._probe(fetcher, request, provider, prefix) for provider, prefix in candidates)
@@ -156,6 +169,8 @@ class HttpProviderDetector:
             return None, True
         try:
             response = await fetcher.get(base + spec.api.detect.path)
+        except EgressBlockedError:
+            return None, True
         except (httpx.HTTPError, ssl.SSLError, OSError):
             return None, False
         version = self._recognize(provider, response)
@@ -187,9 +202,15 @@ class HttpTokenIntrospector:
     """Спрашивает у сервера, чей токен, какие у него права и до какого срока он действует."""
 
     def __init__(
-        self, timeout_s: float, certificates: ICertificateService | None = None, *, allow_insecure_http: bool = False
+        self,
+        timeout_s: float,
+        certificates: ICertificateService | None = None,
+        *,
+        allow_insecure_http: bool = False,
+        egress: IEgressPolicy | None = None,
     ) -> None:
         self._timeout_s = timeout_s
+        self._egress = egress
         self._certificates = certificates
         self._allow_insecure_http = allow_insecure_http
 
@@ -199,14 +220,11 @@ class HttpTokenIntrospector:
             raise git_error(GitErrorCode.url_scheme_forbidden)
         token = request.token.reveal()
         try:
-            async with httpx.AsyncClient(
-                verify=verifying_ssl_context(request.ca_file),
-                timeout=self._timeout_s,
-                follow_redirects=False,
-                headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
-            ) as client:
+            async with _http_client(self._egress, ca_file=request.ca_file, timeout_s=self._timeout_s) as client:
                 fetcher = _Fetcher(client, self._timeout_s)
                 return await self._dispatch(fetcher, request.provider, request.api_base, token)
+        except EgressBlockedError:
+            raise egress_error() from None
         except (httpx.TimeoutException, TimeoutError):
             raise git_error(GitErrorCode.timeout) from None
         except httpx.ConnectError as exc:

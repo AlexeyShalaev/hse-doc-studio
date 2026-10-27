@@ -12,10 +12,12 @@ import shutil
 import subprocess
 
 from hse_doc_studio.api.config import GitConfig
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.entities import ScannedHostKey
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode
 from hse_doc_studio.core.git_sync.host_keys import DEFAULT_SSH_PORT, key_fingerprint, parse_key_fields
+from hse_doc_studio.infra.git_sync.egress_guard import authorize_git_host
 from hse_doc_studio.infra.vcs.git_env import base_git_env
 
 _KEY_TYPES = "ed25519,ecdsa,rsa"
@@ -40,10 +42,12 @@ def parse_keyscan(output: str) -> list[ScannedHostKey]:
 
 
 class SshKeyscanScanner:
-    def __init__(self, config: GitConfig) -> None:
+    def __init__(self, config: GitConfig, egress: IEgressPolicy | None = None) -> None:
         self._config = config
+        self._egress = egress
 
     async def scan(self, host: str, port: int | None) -> list[ScannedHostKey]:
+        await authorize_git_host(self._egress, host, port)
         binary = shutil.which(self._config.ssh_keyscan_binary)
         if binary is None:
             raise git_error(GitErrorCode.ssh_unavailable)

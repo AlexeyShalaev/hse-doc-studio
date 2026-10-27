@@ -11,6 +11,7 @@ from hse_doc_studio.api.config.admin import AdminConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
@@ -82,6 +83,7 @@ class Settings(BaseSettings):
     db: DbConfig = Field(default_factory=DbConfig)
     s3: StorageConfig = Field(default_factory=StorageConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)
+    egress: EgressConfig = Field(default_factory=EgressConfig)
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 

@@ -61,6 +61,7 @@ class GitErrorCode(StrEnum):
     bundle_password_wrong = "bundle_password_wrong"  # noqa: S105 — код ошибки, не пароль
     bundle_prerequisites_missing = "bundle_prerequisites_missing"
     operation_not_cancellable = "operation_not_cancellable"
+    egress_blocked = "egress_blocked"
     git_error = "git_error"
 
 

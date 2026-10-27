@@ -14,6 +14,7 @@ from hse_doc_studio.api.config.build import (
     FontsConfig,
 )
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
@@ -38,6 +39,7 @@ __all__ = [
     "CompileConfig",
     "CorsConfig",
     "DbConfig",
+    "EgressConfig",
     "FontCatalogEntryConfig",
     "FontCatalogFileConfig",
     "FontsConfig",
