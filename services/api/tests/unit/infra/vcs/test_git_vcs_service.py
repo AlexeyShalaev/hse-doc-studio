@@ -233,6 +233,17 @@ def test__delete_tag__removes_it(tmp_path: Path) -> None:
     assert svc.list_tags(project) == []
 
 
+def test__create_tag__duplicate__error_names_the_tag_not_the_separator(tmp_path: Path) -> None:
+    svc, project = _init_with_files(tmp_path)
+    svc.create_tag(project, name="v1", kind=VcsTagKind.tag)
+
+    with pytest.raises(VcsCommandError) as raised:
+        svc.create_tag(project, name="v1", kind=VcsTagKind.tag)
+
+    assert "--" not in raised.value.command
+    assert str(raised.value).startswith("git tag")
+
+
 def test__commit__sync_kind__is_read_back_from_the_trailer(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
     (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")

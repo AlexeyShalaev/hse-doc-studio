@@ -897,7 +897,8 @@ def _parse_uuid(raw: str | None) -> UUID | None:
 
 
 def _cmd_label(args: Sequence[str]) -> str:
-    return " ".join(args[:2])
+    """Подкоманда и первый аргумент; разделитель `--` в подпись не попадает."""
+    return " ".join([arg for arg in args if arg != "--"][:2])
 
 
 def _map_change(letter: str) -> VcsChange:
