@@ -11,10 +11,18 @@ from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.entities import Role
 
 
 class ProjectForbiddenError(Exception):
-    """Актор участник проекта, но его роли для действия не хватает."""
+    """Актор участник проекта, но его роли для действия не хватает.
+
+    `required_role` задан, когда отказ объясняется ролью: клиент называет её в сообщении.
+    """
+
+    def __init__(self, message: str = "Forbidden", required_role: Role | None = None) -> None:
+        super().__init__(message)
+        self.required_role = required_role
 
 
 class IProjectAccessChecker(Protocol):

@@ -34,6 +34,7 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.sso_login_required: _FORBIDDEN,
     IdentityErrorCode.csrf_failed: _FORBIDDEN,
     IdentityErrorCode.forbidden: _FORBIDDEN,
+    IdentityErrorCode.forbidden_role: _FORBIDDEN,
     IdentityErrorCode.setup_token_invalid: _FORBIDDEN,
     IdentityErrorCode.rate_limited: _LIMIT,
     IdentityErrorCode.setup_required: _UNAVAILABLE,

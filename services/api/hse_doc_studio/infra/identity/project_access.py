@@ -7,7 +7,7 @@ from uuid import UUID
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor
-from hse_doc_studio.core.access.policy import Decision, decide
+from hse_doc_studio.core.access.policy import Decision, decide, required_role
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.errors import NotFoundError
 
@@ -29,7 +29,7 @@ class ServerProjectAccessChecker:
         if decision is Decision.not_found:
             raise NotFoundError("Project not found")
         if decision is Decision.forbidden:
-            raise ProjectForbiddenError("Forbidden")
+            raise ProjectForbiddenError("Forbidden", required_role(actor, action, acl))
 
     def __init__(self, acl: IProjectAclRepository) -> None:
         self._acl = acl

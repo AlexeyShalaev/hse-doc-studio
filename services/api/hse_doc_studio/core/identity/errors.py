@@ -26,6 +26,7 @@ class IdentityErrorCode(StrEnum):
     csrf_failed = "csrf_failed"
     auth_required = "auth_required"
     forbidden = "forbidden"
+    forbidden_role = "forbidden_role"
     setup_token_invalid = "setup_token_invalid"  # noqa: S105 — код ошибки, не токен
     setup_already_done = "setup_already_done"
     password_policy = "password_policy"  # noqa: S105 — код ошибки, не пароль
@@ -77,6 +78,7 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     ),
     IdentityErrorCode.auth_required: ("Нужно войти.", "Sign in required."),
     IdentityErrorCode.forbidden: ("Недостаточно прав.", "You do not have permission."),
+    IdentityErrorCode.forbidden_role: ("Недостаточно прав на проекте.", "You do not have the role this needs."),
     IdentityErrorCode.setup_token_invalid: ("Неверный токен установки.", "The setup token is wrong."),
     IdentityErrorCode.setup_already_done: ("Первый запуск уже выполнен.", "First-run setup is already done."),
     IdentityErrorCode.password_policy: (

@@ -9,6 +9,8 @@ from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
 from hse_doc_studio.core.access.paths import classify_path, path_in_author_scope
 from hse_doc_studio.core.team import split_instance_id
 
+_ROLE_ORDER = (Role.reader, Role.reviewer, Role.editor, Role.owner)
+
 
 class Decision(StrEnum):
     allow = "allow"
@@ -32,6 +34,18 @@ def decide(actor: Actor, action: Action, acl: ProjectAcl | None, path: str | Non
     if actor.is_guest and action in GUEST_DENIED:
         return Decision.forbidden
     return Decision.allow if _allowed(action, acl, grant, path) else Decision.forbidden
+
+
+def required_role(actor: Actor, action: Action, acl: ProjectAcl | None) -> Role | None:
+    """Слабейшая роль, дающая действие, если отказ вышел из-за нехватки роли.
+
+    Для гостя, личных условий (общий доступ, область автора) и участников без членства роли нет: отказ
+    нельзя объяснить словом «нужна роль X», и клиент показывает обычный отказ.
+    """
+    grant = acl.grant_for(actor) if acl is not None else None
+    if grant is None or (actor.is_guest and action in GUEST_DENIED) or action in ROLE_ACTIONS[grant.role]:
+        return None
+    return next((role for role in _ROLE_ORDER if action in ROLE_ACTIONS[role]), None)
 
 
 def can(actor: Actor, action: Action, acl: ProjectAcl | None = None, path: str | None = None) -> bool:

@@ -30,8 +30,8 @@ from hse_doc_studio.api.route_scopes import (
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor, set_current_actor
-from hse_doc_studio.core.access.entities import Actor, ProjectAcl
-from hse_doc_studio.core.access.policy import Decision, decide
+from hse_doc_studio.core.access.entities import Actor, ProjectAcl, Role
+from hse_doc_studio.core.access.policy import Decision, decide, required_role
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
@@ -135,7 +135,8 @@ async def project_access_guard(request: Request) -> None:
         _require_project_in_body(rule)
         return
     acl = await load_project_acl(request, str(project_id))
-    _enforce(decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params)))
+    decision = decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params))
+    _enforce(decision, required_role(actor, rule.action, acl))
 
 
 async def _server_request_handled(request: Request) -> bool:
@@ -188,11 +189,11 @@ def _enforce_scope(actor: Actor, request: Request) -> None:
         raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
 
 
-def _enforce(decision: Decision) -> None:
+def _enforce(decision: Decision, missing_role: Role | None = None) -> None:
     if decision is Decision.not_found:
         raise HTTPException(status_code=_NOT_FOUND, detail="Project not found")
     if decision is Decision.forbidden:
-        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+        raise ProjectForbiddenError("Forbidden", missing_role)
 
 
 async def project_write_guard(request: Request) -> None:
@@ -218,8 +219,13 @@ async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=_LOCKED, content={"detail": str(exc)})
 
 
-async def _forbidden_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return JSONResponse(status_code=_FORBIDDEN, content={"detail": "Forbidden"})
+async def _forbidden_handler(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, ProjectForbiddenError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
+    content: dict[str, str] = {"detail": "Forbidden"}
+    if exc.required_role is not None:
+        # Контракт contracts/server: клиент называет нужную роль в тосте.
+        content |= {"code": IdentityErrorCode.forbidden_role.value, "required_role": exc.required_role.value}
+    return JSONResponse(status_code=_FORBIDDEN, content=content)
 
 
 def install_exception_handlers(app: FastAPI) -> None:

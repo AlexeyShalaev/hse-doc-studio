@@ -134,7 +134,9 @@ async def test__guard__stub_non_local_reader__member_with_too_little_role_gets_4
     base = _base(project)
 
     assert (await guarded_app.get(base)).status_code == 200
-    assert (await guarded_app.patch(base, json={"name": "Не моё"})).status_code == 403
+    denied = await guarded_app.patch(base, json={"name": "Не моё"})
+    assert denied.status_code == 403
+    assert denied.json() == {"detail": "Forbidden", "code": "forbidden_role", "required_role": "owner"}
     assert (await guarded_app.get(f"{base}/files", params={"path": "."})).status_code == 403
 
 

@@ -7,7 +7,7 @@ from hse_doc_studio.core.access.paths import (
     path_in_author_scope,
     scope_path_of_instance_id,
 )
-from hse_doc_studio.core.access.policy import Decision, can, decide
+from hse_doc_studio.core.access.policy import Decision, can, decide, required_role
 
 USER = Actor.user("u1", "Иван", "ivan@example.com")
 GUEST = Actor.guest("l1", "Гость")
@@ -41,6 +41,23 @@ def test__decide__insufficient_role__forbidden() -> None:
 
     assert decide(USER, Action.FILES_WRITE, acl, "main.tex") is Decision.forbidden
     assert decide(USER, Action.PROJECT_VIEW, acl) is Decision.allow
+
+
+def test__required_role__lacking_role__names_weakest_role_with_action() -> None:
+    reader, editor = _acl(Grant(Role.reader)), _acl(Grant(Role.editor))
+
+    assert required_role(USER, Action.FILES_WRITE, reader) is Role.editor
+    assert required_role(USER, Action.COMMENT, reader) is Role.reviewer
+    assert required_role(USER, Action.PROJECT_DELETE, editor) is Role.owner
+
+
+def test__required_role__personal_condition_guest_or_no_grant__none() -> None:
+    editor = _acl(Grant(Role.editor))
+
+    assert required_role(USER, Action.FILES_WRITE, editor) is None
+    assert required_role(GUEST, Action.AGENT_USE, _acl(Grant(Role.editor), actor=GUEST)) is None
+    assert required_role(Actor.guest("other"), Action.PROJECT_VIEW, editor) is None
+    assert required_role(USER, Action.PROJECT_VIEW, None) is None
 
 
 _MATRIX = {
