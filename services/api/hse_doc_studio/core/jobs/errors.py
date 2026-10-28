@@ -48,3 +48,11 @@ class JobFailure(Exception):  # noqa: N818
     @classmethod
     def of(cls, category: JobErrorCategory, code: str, detail: str = "") -> JobFailure:
         return cls(JobError(category=category, code=code, detail=detail))
+
+
+class StaleAttemptError(Exception):
+    """Запрос по попытке, которая уже не текущая: аренда истекла или задачу взял другой раннер (409 `stale_attempt`)."""
+
+
+class QueuedJobNotFoundError(NotFoundError):
+    """Записи очереди с таким id нет (404 `job_not_found`)."""
