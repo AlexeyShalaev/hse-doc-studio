@@ -222,6 +222,19 @@ class SqlAuthTokenRepository:
             return (await db.execute(delete(AuthTokenRow).where(AuthTokenRow.expires_at <= now))).rowcount  # type: ignore[attr-defined]
 
 
+def _invite(row: RegistrationInviteRow) -> RegistrationInvite:
+    return RegistrationInvite(
+        token_hash=row.token_hash,
+        email=row.email,
+        created_by=row.created_by,
+        expires_at=row.expires_at,
+        used_at=row.used_at,
+        id=row.id,
+        org_id=row.org_id,
+        org_role=row.org_role,
+    )
+
+
 class SqlRegistrationInviteRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -235,9 +248,31 @@ class SqlRegistrationInviteRepository:
                     created_by=invite.created_by,
                     expires_at=invite.expires_at,
                     used_at=invite.used_at,
+                    id=invite.id or invite.token_hash[:32],
+                    org_id=invite.org_id,
+                    org_role=invite.org_role,
                 )
             )
             await db.flush()
+
+    async def get(self, token_hash: str) -> RegistrationInvite | None:
+        async with self._sessions.use() as db:
+            row = await db.get(RegistrationInviteRow, token_hash)
+            return _invite(row) if row else None
+
+    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
+        stmt = select(RegistrationInviteRow).order_by(RegistrationInviteRow.expires_at.desc(), RegistrationInviteRow.id)
+        if created_by is not None:
+            stmt = stmt.where(RegistrationInviteRow.created_by == created_by)
+        async with self._sessions.use() as db:
+            return [_invite(row) for row in (await db.execute(stmt.limit(limit))).scalars()]
+
+    async def revoke(self, invite_id: str) -> bool:
+        stmt = delete(RegistrationInviteRow).where(
+            RegistrationInviteRow.id == invite_id, RegistrationInviteRow.used_at.is_(None)
+        )
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).rowcount > 0  # type: ignore[attr-defined]
 
     async def consume(self, token_hash: str, email: str, now: datetime) -> RegistrationInvite | None:
         stmt = (
@@ -253,15 +288,7 @@ class SqlRegistrationInviteRepository:
         )
         async with self._sessions.use() as db:
             row = (await db.execute(stmt)).scalar_one_or_none()
-            if row is None:
-                return None
-            return RegistrationInvite(
-                token_hash=row.token_hash,
-                email=row.email,
-                created_by=row.created_by,
-                expires_at=row.expires_at,
-                used_at=row.used_at,
-            )
+            return _invite(row) if row else None
 
 
 def _attempt(row: LoginAttemptRow) -> LoginAttempt:

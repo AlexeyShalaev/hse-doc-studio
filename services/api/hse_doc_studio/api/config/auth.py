@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, SecretStr
 
+from hse_doc_studio.core.identity.entities import RegistrationMode
+
 
 class SecretsConfig(BaseModel):
     """Ключ шифрования токенов и ключей доступа (HSE_STUDIO__SECRETS__*).
@@ -46,4 +48,22 @@ class AuthConfig(BaseModel):
     )
     session_absolute_days: int = Field(
         default=30, ge=1, description="Предельный возраст сессии, после которого нужен новый вход."
+    )
+
+    registration_mode: RegistrationMode | None = Field(
+        default=None,
+        description=(
+            "Режим регистрации из окружения: open, domains, invite или closed. "
+            "Заданное побеждает БД и не правится в админке."
+        ),
+    )
+    registration_domains: list[str] | None = Field(
+        default=None,
+        description="Разрешённые домены почты для режима domains; заданный список блокирует правку в админке.",
+    )
+    require_approval: bool | None = Field(
+        default=None, description="Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке."
+    )
+    password_enabled: bool | None = Field(
+        default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )

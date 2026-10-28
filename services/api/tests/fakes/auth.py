@@ -112,7 +112,21 @@ class InMemoryRegistrationInviteRepository:
 
     async def add(self, invite: RegistrationInvite) -> None:
         email = normalize_email(invite.email) if invite.email else None
-        self._items[invite.token_hash] = replace(invite, email=email)
+        self._items[invite.token_hash] = replace(invite, email=email, id=invite.id or invite.token_hash[:32])
+
+    async def get(self, token_hash: str) -> RegistrationInvite | None:
+        return self._items.get(token_hash)
+
+    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
+        found = [i for i in self._items.values() if created_by is None or i.created_by == created_by]
+        return sorted(found, key=lambda i: (-i.expires_at.timestamp(), i.id))[:limit]
+
+    async def revoke(self, invite_id: str) -> bool:
+        for key, invite in self._items.items():
+            if invite.id == invite_id and invite.used_at is None:
+                del self._items[key]
+                return True
+        return False
 
     async def consume(self, token_hash: str, email: str, now: datetime) -> RegistrationInvite | None:
         invite = self._items.get(token_hash)

@@ -46,3 +46,30 @@ def test_unknown_mode_falls_back_to_invite(junk: object) -> None:
 )
 def test_avatar_initials(name: str, email: str, expected: str) -> None:
     assert avatar_initials(name, email) == expected
+
+
+def test_env_wins_over_stored_values_and_locks_only_set_keys() -> None:
+    from hse_doc_studio.core.identity.auth_settings import (
+        KEY_REGISTRATION_MODE,
+        KEY_REQUIRE_APPROVAL,
+        AuthEnvOverrides,
+        effective_auth_settings,
+    )
+
+    stored = {KEY_REGISTRATION_MODE: "closed", KEY_REQUIRE_APPROVAL: True, KEY_REGISTRATION_DOMAINS: ["a.org"]}
+    env = AuthEnvOverrides(registration_mode=RegistrationMode.open, registration_domains=(" @HSE.ru", "hse.ru"))
+
+    result = effective_auth_settings(stored, env)
+
+    assert result.registration_mode is RegistrationMode.open
+    assert result.registration_domains == ("hse.ru",)
+    assert result.require_approval is True
+    assert env.locked_keys() == {KEY_REGISTRATION_MODE, KEY_REGISTRATION_DOMAINS}
+
+
+def test_empty_env_domain_list_is_still_a_lock() -> None:
+    from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides, effective_auth_settings
+
+    env = AuthEnvOverrides(registration_domains=())
+    assert effective_auth_settings({KEY_REGISTRATION_DOMAINS: ["a.org"]}, env).registration_domains == ()
+    assert KEY_REGISTRATION_DOMAINS in env.locked_keys()

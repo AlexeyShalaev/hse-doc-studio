@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from hse_doc_studio.core.identity.auth_settings import auth_settings_from
 from hse_doc_studio.core.identity.entities import AuthSettings, Session, User
 from hse_doc_studio.core.identity.passwords import PASSWORD_MIN_LENGTH
-from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository, IUserRepository
+from hse_doc_studio.core.identity.protocols import IUserRepository
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 
 SetupState = Literal["needs_admin", "ready"]
@@ -28,7 +28,7 @@ class BootstrapUC:
     def __init__(
         self,
         users: IUserRepository,
-        settings: IInstanceSettingsRepository,
+        settings: AuthSettingsService,
         sessions: SessionService,
         *,
         smtp_enabled: bool = False,
@@ -39,7 +39,7 @@ class BootstrapUC:
         self._smtp_enabled = smtp_enabled
 
     async def auth_settings(self) -> AuthSettings:
-        return auth_settings_from(await self._settings.get_all())
+        return await self._settings.effective()
 
     async def execute(self, session_secret: str | None) -> BootstrapResult:
         """Пока в установке нет ни одного пользователя, ей нужен первый администратор (мастер /first-run)."""
