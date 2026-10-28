@@ -1,10 +1,13 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import { i18n, toast } from "@shared/lib";
 import {
   clearUserScopedCache,
   sessionApi,
+  sessionKeys,
   useRefreshSession,
+  type Bootstrap,
 } from "@entities/session";
 
 /**
@@ -18,6 +21,7 @@ import {
  */
 export const useLogout = () => {
   const client = useQueryClient();
+  const navigate = useNavigate();
   const refresh = useRefreshSession();
   const [pending, setPending] = useState(false);
 
@@ -31,12 +35,19 @@ export const useLogout = () => {
       return;
     }
     await clearUserScopedCache(client);
+    // Явный выход ведёт на чистый /login без ?next: адрес прежнего человека
+    // не должен достаться следующему. Пока bootstrap не обновился, помечаем
+    // его анонимным, иначе шлюз вернул бы вошедшего с /login обратно на главную.
+    client.setQueryData<Bootstrap>(sessionKeys.bootstrap(), (old) =>
+      old ? { ...old, user: null, csrf_token: null } : old,
+    );
+    void navigate("/login", { replace: true });
     try {
       await refresh();
     } finally {
       setPending(false);
     }
-  }, [client, refresh]);
+  }, [client, navigate, refresh]);
 
   return { logout, pending };
 };

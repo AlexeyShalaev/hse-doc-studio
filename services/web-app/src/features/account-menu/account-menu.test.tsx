@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, getCsrfToken, setCsrfToken } from "@shared/api";
 import { i18n } from "@shared/lib";
@@ -26,6 +26,8 @@ const serverUser = JSON.parse(
   ),
 ) as Bootstrap;
 
+const Where = () => <div data-testid="where">{useLocation().pathname}</div>;
+
 const mount = (bootstrap: Bootstrap) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -34,8 +36,9 @@ const mount = (bootstrap: Bootstrap) => {
   render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={["/projects/P1/documents"]}>
           <AccountMenu />
+          <Where />
         </MemoryRouter>
       </I18nextProvider>
     </QueryClientProvider>,
@@ -111,6 +114,8 @@ describe("AccountMenu", () => {
     expect(client.getQueryState(sessionKeys.bootstrap())?.isInvalidated).toBe(
       true,
     );
+    // Чистый /login, без адреса прежнего человека в ?next.
+    expect(screen.getByTestId("where")).toHaveTextContent(/^\/login$/);
   });
 
   it("keeps the cache when the server did not confirm the logout", async () => {
