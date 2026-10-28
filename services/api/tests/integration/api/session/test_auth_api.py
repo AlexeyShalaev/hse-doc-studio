@@ -144,7 +144,7 @@ class _Provider(Provider):
 
     @provide
     def logout(self) -> LogoutUC:
-        return LogoutUC(self._w.sessions, self._w.audit)
+        return LogoutUC(self._w.sessions, self._w.audit, _Uow())
 
     @provide
     def list_sessions(self) -> ListSessionsUC:
@@ -152,11 +152,11 @@ class _Provider(Provider):
 
     @provide
     def revoke(self) -> RevokeSessionUC:
-        return RevokeSessionUC(self._w.sessions, self._w.audit)
+        return RevokeSessionUC(self._w.sessions, self._w.audit, _Uow())
 
     @provide
     def revoke_others(self) -> RevokeOtherSessionsUC:
-        return RevokeOtherSessionsUC(self._w.sessions, self._w.audit)
+        return RevokeOtherSessionsUC(self._w.sessions, self._w.audit, _Uow())
 
 
 @pytest_asyncio.fixture

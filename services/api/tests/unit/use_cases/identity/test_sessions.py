@@ -79,7 +79,7 @@ async def test_resolve_rejects_disabled_user(world: World) -> None:
 async def test_logout_is_idempotent(world: World) -> None:
     await world.add_user()
     login = await _login(world)
-    uc = LogoutUC(world.sessions, world.audit)
+    uc = LogoutUC(world.sessions, world.audit, world.uow)
     await uc.execute(login.secret)
     await uc.execute(login.secret)
     await uc.execute("")
@@ -98,7 +98,7 @@ async def test_list_and_revoke(world: World) -> None:
         (mine.session.id_hash, True),
         (other.session.id_hash, False),
     }
-    revoke = RevokeSessionUC(world.sessions, world.audit)
+    revoke = RevokeSessionUC(world.sessions, world.audit, world.uow)
     with pytest.raises(IdentityError) as exc:
         await revoke.execute("u1", bobs.session.id_hash)
     assert exc.value.code is IdentityErrorCode.forbidden
@@ -112,7 +112,7 @@ async def test_revoke_others_keeps_current(world: World) -> None:
     mine = await _login(world)
     await _login(world)
     await _login(world)
-    assert await RevokeOtherSessionsUC(world.sessions, world.audit).execute("u1", mine.session.id_hash) == 2
+    assert await RevokeOtherSessionsUC(world.sessions, world.audit, world.uow).execute("u1", mine.session.id_hash) == 2
     assert [s.id_hash for s in await world.sessions.list_for_user("u1")] == [mine.session.id_hash]
 
 
@@ -157,3 +157,17 @@ async def test_change_password_rejects_wrong_current_and_weak_new(world: World) 
     assert exc.value.code is IdentityErrorCode.password_policy
     assert world.store.hashes["u1"] == f"v2:{PASSWORD}"
     assert hash_token(mine.secret) == mine.session.id_hash
+
+
+async def test_logout_and_revokes_write_state_and_audit_in_one_unit_of_work(world: World) -> None:
+    await world.add_user()
+    first, second, third = await _login(world), await _login(world), await _login(world)
+    begins = world.uow.begins
+
+    await RevokeSessionUC(world.sessions, world.audit, world.uow).execute("u1", second.session.id_hash)
+    assert world.uow.begins == begins + 1
+    await RevokeOtherSessionsUC(world.sessions, world.audit, world.uow).execute("u1", first.session.id_hash)
+    assert world.uow.begins == begins + 2
+    await LogoutUC(world.sessions, world.audit, world.uow).execute(first.secret)
+    assert world.uow.begins == begins + 3
+    assert third.session.id_hash != first.session.id_hash

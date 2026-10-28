@@ -11,6 +11,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.protocols import IAuditLog, ISessionRepository, IUserRepository
 from hse_doc_studio.core.identity.session_policy import Clock, SessionPolicy, utc_now
+from hse_doc_studio.core.uow import IUnitOfWork
 
 
 @dataclass(frozen=True)
@@ -66,9 +67,10 @@ class SessionService:
 
 
 class LogoutUC:
-    def __init__(self, sessions: ISessionRepository, audit: IAuditLog) -> None:
+    def __init__(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> None:
         self._sessions = sessions
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, secret: str) -> None:
         """Выход идемпотентен: неизвестная или уже удалённая сессия не ошибка."""
@@ -78,8 +80,9 @@ class LogoutUC:
         session = await self._sessions.get(id_hash)
         if session is None:
             return
-        await self._sessions.delete(id_hash)
-        await self._audit.record("auth.logout", actor_id=session.user_id)
+        async with self._uow.begin():
+            await self._sessions.delete(id_hash)
+            await self._audit.record("auth.logout", actor_id=session.user_id)
 
 
 class ListSessionsUC:
@@ -94,26 +97,30 @@ class ListSessionsUC:
 
 
 class RevokeSessionUC:
-    def __init__(self, sessions: ISessionRepository, audit: IAuditLog) -> None:
+    def __init__(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> None:
         self._sessions = sessions
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, user_id: str, id_hash: str) -> None:
         """Чужая сессия неотличима от несуществующей: `forbidden` не раскрывает, что она есть."""
         owned = {s.id_hash for s in await self._sessions.list_for_user(user_id)}
         if id_hash not in owned:
             raise IdentityError(IdentityErrorCode.forbidden)
-        await self._sessions.delete(id_hash)
-        await self._audit.record("auth.session_revoked", actor_id=user_id, target=id_hash[:12])
+        async with self._uow.begin():
+            await self._sessions.delete(id_hash)
+            await self._audit.record("auth.session_revoked", actor_id=user_id, target=id_hash[:12])
 
 
 class RevokeOtherSessionsUC:
-    def __init__(self, sessions: ISessionRepository, audit: IAuditLog) -> None:
+    def __init__(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> None:
         self._sessions = sessions
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, user_id: str, current_id_hash: str) -> int:
-        revoked = await self._sessions.delete_for_user(user_id, except_id_hash=current_id_hash)
-        if revoked:
-            await self._audit.record("auth.sessions_revoked", actor_id=user_id, details={"count": revoked})
+        async with self._uow.begin():
+            revoked = await self._sessions.delete_for_user(user_id, except_id_hash=current_id_hash)
+            if revoked:
+                await self._audit.record("auth.sessions_revoked", actor_id=user_id, details={"count": revoked})
         return revoked

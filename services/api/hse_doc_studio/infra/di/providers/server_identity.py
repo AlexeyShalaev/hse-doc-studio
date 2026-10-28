@@ -143,20 +143,24 @@ class ServerIdentityProvider(Provider):
         return LoginUC(users, credentials, sessions, attempts, hasher, audit, uow, policy)
 
     @provide
-    def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog) -> LogoutUC:
-        return LogoutUC(sessions, audit)
+    def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> LogoutUC:
+        return LogoutUC(sessions, audit, uow)
 
     @provide
     def get_list_sessions_uc(self, sessions: ISessionRepository) -> ListSessionsUC:
         return ListSessionsUC(sessions)
 
     @provide
-    def get_revoke_session_uc(self, sessions: ISessionRepository, audit: IAuditLog) -> RevokeSessionUC:
-        return RevokeSessionUC(sessions, audit)
+    def get_revoke_session_uc(
+        self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeSessionUC:
+        return RevokeSessionUC(sessions, audit, uow)
 
     @provide
-    def get_revoke_other_sessions_uc(self, sessions: ISessionRepository, audit: IAuditLog) -> RevokeOtherSessionsUC:
-        return RevokeOtherSessionsUC(sessions, audit)
+    def get_revoke_other_sessions_uc(
+        self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeOtherSessionsUC:
+        return RevokeOtherSessionsUC(sessions, audit, uow)
 
     @provide
     def get_auth_token_repository(self, sessions: SessionProvider) -> IAuthTokenRepository:
