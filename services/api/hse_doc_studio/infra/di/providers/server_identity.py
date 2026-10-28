@@ -189,7 +189,7 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
-        return LinkDelivery(sender, outbox)
+        return LinkDelivery(sender, outbox, background=True)
 
     @provide
     def get_auth_env_overrides(self) -> AuthEnvOverrides:

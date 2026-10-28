@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timedelta
@@ -98,12 +99,32 @@ def _lang(locale: str | None) -> Lang:
 
 
 class LinkDelivery:
-    """Письмо уходит по SMTP; без SMTP или при сбое ссылка остаётся в outbox и возвращается вызывающему."""
+    """Письмо уходит по SMTP; без SMTP или при сбое ссылка остаётся в outbox.
 
-    def __init__(self, sender: IMailSender, outbox: IMailOutboxRepository, ttl: timedelta = timedelta(days=7)) -> None:
+    Без SMTP ссылка возвращается вызывающему. С `background=True` отправка идёт отдельной задачей: запрос не ждёт
+    SMTP (до его таймаута), а время ответа не выдаёт, существует ли адрес. Сбой такой отправки кладёт ссылку в
+    outbox, вызывающему её уже не вернуть.
+    """
+
+    def __init__(
+        self,
+        sender: IMailSender,
+        outbox: IMailOutboxRepository,
+        ttl: timedelta = timedelta(days=7),
+        *,
+        background: bool = False,
+    ) -> None:
         self._sender = sender
         self._outbox = outbox
         self._ttl = ttl
+        self._background = background
+        # Ссылки на задачи: цикл событий держит задачи слабо, и незавершённая отправка могла бы пропасть.
+        self._pending: set[asyncio.Task[None]] = set()
+
+    async def drain(self) -> None:
+        """Дожидается отправок, начатых в фоне (остановка и тесты)."""
+        if self._pending:
+            await asyncio.gather(*self._pending, return_exceptions=True)
 
     @property
     def smtp_enabled(self) -> bool:
@@ -119,13 +140,35 @@ class LinkDelivery:
         if self._sender.enabled:
             ru, en = _TEXTS[kind]
             subject, body = en if _lang(locale) is Lang.en else ru
+            text = body.format(link=link)
+            if self._background:
+                task = asyncio.create_task(self._send_in_background(kind, to_email, link, now, subject, text))
+                self._pending.add(task)
+                task.add_done_callback(self._pending.discard)
+                return None
             try:
-                await self._sender.send(to_email, subject, body.format(link=link))
+                await self._sender.send(to_email, subject, text)
             except Exception:
                 # Сбой почты не должен ломать регистрацию: человек получит ссылку другим путём.
                 _log.warning("mail delivery failed, link kept in outbox", extra={"kind": kind.value})
             else:
                 return None
+        await self._keep_in_outbox(kind, to_email, link, now)
+        return link
+
+    async def _send_in_background(
+        self, kind: MailKind, to_email: str, link: str, now: datetime, subject: str, text: str
+    ) -> None:
+        try:
+            await self._sender.send(to_email, subject, text)
+        except Exception:
+            _log.warning("mail delivery failed, link kept in outbox", extra={"kind": kind.value})
+            try:
+                await self._keep_in_outbox(kind, to_email, link, now)
+            except Exception:
+                _log.exception("mail outbox write failed", extra={"kind": kind.value})
+
+    async def _keep_in_outbox(self, kind: MailKind, to_email: str, link: str, now: datetime) -> None:
         await self._outbox.add(
             MailOutboxEntry(
                 id=uuid.uuid4().hex,
@@ -136,7 +179,6 @@ class LinkDelivery:
                 expires_at=now + self._ttl,
             )
         )
-        return link
 
     async def notify(self, kind: MailKind, to_email: str, *, locale: str | None = None) -> bool:
         """Уведомление без ссылки; уходит только по SMTP, сбой не мешает действию, о котором уведомляют."""
