@@ -84,6 +84,7 @@ class RunnerRegisterRequestBody(StrictModel):
 
 class RunnerRegisterResponseBody(StrictModel):
     runner_id: str
+    runner_token: str
     lease_s: int
     heartbeat_s: int
     max_poll_wait_s: int

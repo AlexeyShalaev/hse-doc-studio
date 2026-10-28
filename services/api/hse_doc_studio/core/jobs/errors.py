@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from hse_doc_studio.core.errors import NotFoundError
-from hse_doc_studio.core.jobs.enums import JobErrorCategory
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, RunnerErrorCode
 
 
 class JobFailedError(RuntimeError):
@@ -56,3 +56,16 @@ class StaleAttemptError(Exception):
 
 class QueuedJobNotFoundError(NotFoundError):
     """Записи очереди с таким id нет (404 `job_not_found`)."""
+
+
+class RunnerAuthError(Exception):
+    """Раннер или задача не доказали подлинность: код из закрытого списка протокола раннера."""
+
+    def __init__(self, code: RunnerErrorCode, detail: str = "") -> None:
+        super().__init__(detail or code.value)
+        self.code = code
+        self.detail = detail or code.value
+
+
+class RunnerNotFoundError(NotFoundError):
+    """Нет раннера или токена регистрации с таким id."""

@@ -26,6 +26,7 @@ x-error-codes:
   - runner_unauthorized
   - runner_disabled
   - job_token_invalid
+  - runner_protocol_unsupported
 x-defaults:
   lease_s: 45
   heartbeat_s: 10
@@ -494,6 +495,8 @@ components:
       properties:
         runner_id:
           type: string
+        runner_token:
+          type: string
         lease_s:
           type: integer
         heartbeat_s:
@@ -502,6 +505,7 @@ components:
           type: integer
       required:
       - runner_id
+      - runner_token
       - lease_s
       - heartbeat_s
       - max_poll_wait_s

@@ -77,7 +77,10 @@ class RunnerRegisterRequest:
 
 @dataclass(frozen=True)
 class RunnerRegisterResponse:
+    """`runner_token` показывается один раз: раннер хранит его сам, на сервере остаётся только хеш."""
+
     runner_id: str
+    runner_token: str
     lease_s: int
     heartbeat_s: int
     max_poll_wait_s: int

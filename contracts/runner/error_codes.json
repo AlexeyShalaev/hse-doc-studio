@@ -12,5 +12,6 @@
   "artifact_invalid",
   "runner_unauthorized",
   "runner_disabled",
-  "job_token_invalid"
+  "job_token_invalid",
+  "runner_protocol_unsupported"
 ]

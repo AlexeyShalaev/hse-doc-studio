@@ -102,3 +102,44 @@ class JobRunnerPollRow(Base):
     runner_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     concurrency: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class RunnerRow(Base):
+    """Раннер установки. Токен только хешем; создатель без внешнего ключа: запись переживает удаление человека."""
+
+    __tablename__ = "runners"
+    __table_args__ = (
+        Index("ix_runners_owner", "owner_kind", "owner_id"),
+        CheckConstraint("concurrency >= 1", name="runner_concurrency"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="instance")
+    owner_id: Mapped[str | None] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String(64)), nullable=False)
+    resource_class: Mapped[str] = mapped_column(String(32), nullable=False)
+    concurrency: Mapped[int] = mapped_column(Integer, nullable=False)
+    version: Mapped[str] = mapped_column(String(64), nullable=False)
+    paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    created_by: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RunnerRegistrationTokenRow(Base):
+    __tablename__ = "runner_registration_tokens"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="instance")
+    owner_id: Mapped[str | None] = mapped_column(String(64))
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    label: Mapped[str] = mapped_column(String(128), nullable=False, server_default="")
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    uses: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created_by: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

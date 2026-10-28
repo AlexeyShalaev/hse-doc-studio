@@ -1,6 +1,6 @@
 """Диспетчер задач."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class JobsConfig(BaseModel):
@@ -25,4 +25,11 @@ class JobsConfig(BaseModel):
         default=15.0,
         ge=0,
         description="Сколько раннер получает на остановку задачи после таймаута, прежде чем сервер закончит её сам.",
+    )
+    runner_bootstrap_token: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Одноразовый токен регистрации первого раннера. api кладёт его хеш в базу при старте; после "
+            "регистрации раннера уберите значение из окружения."
+        ),
     )

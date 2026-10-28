@@ -8,6 +8,7 @@ from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI, Request
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentProvider
@@ -455,6 +456,7 @@ def create_test_app(container: AsyncContainer) -> FastAPI:
         return await call_next(request)
 
     app.include_router(api_router)
+    include_server_routers(app)
     install_exception_handlers(app)
     setup_dishka(container, app)
     return app

@@ -17,7 +17,14 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserRow,
 )
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
-from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow
+from hse_doc_studio.infra.db.orm.jobs import (
+    FairShareRow,
+    JobQueueStateRow,
+    JobRow,
+    JobRunnerPollRow,
+    RunnerRegistrationTokenRow,
+    RunnerRow,
+)
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
@@ -37,6 +44,8 @@ __all__ = [
     "ProjectMemberRow",
     "ProjectRow",
     "RegistrationInviteRow",
+    "RunnerRegistrationTokenRow",
+    "RunnerRow",
     "SessionRow",
     "UserIdentityRow",
     "UserRow",

@@ -26,6 +26,7 @@ from httpx import ASGITransport, AsyncClient
 from tests.fixtures.app import create_test_app, create_test_container
 
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
+_PREFIXES = ("/api/v1", "/api/admin", "/api/runner/")
 # Потолок общих пользовательских маршрутов: только уменьшается, когда срез переводит данные под владельца.
 _PENDING_CEILING = 55
 _USER = Actor.user("user")
@@ -36,7 +37,7 @@ def _app_route_keys(tmp_path: Path) -> set[RouteKey]:
     app = create_test_app(create_test_container(tmp_path / "data"))
     keys: set[RouteKey] = set()
     for ctx in iter_route_contexts(app.routes):
-        if ctx.path.startswith("/api/v1") and isinstance(ctx.original_route, APIRoute):
+        if ctx.path.startswith(_PREFIXES) and isinstance(ctx.original_route, APIRoute):
             keys.update(route_key(m, ctx.path) for m in ctx.original_route.methods - _SKIPPED_METHODS)
     return keys
 

@@ -73,3 +73,4 @@ class RunnerErrorCode(StrEnum):
     runner_unauthorized = "runner_unauthorized"
     runner_disabled = "runner_disabled"
     job_token_invalid = "job_token_invalid"  # noqa: S105
+    runner_protocol_unsupported = "runner_protocol_unsupported"

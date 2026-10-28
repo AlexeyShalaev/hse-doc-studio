@@ -24,6 +24,7 @@ from hse_doc_studio.api.observability.install import (
     install_server_observability,
 )
 from hse_doc_studio.api.rate_limit import install_rate_limiter
+from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.api.server_setup import prepare_server_setup
@@ -173,6 +174,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         return await call_next(request)
 
     app.include_router(api_router)
+    include_server_routers(app)
     install_exception_handlers(app)
 
     @app.get("/health")
@@ -213,6 +215,14 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_project_purge(app, container, settings)
         install_auth_cleanup(app, container, settings)
         install_job_reaper(app, container, settings)
+
+        @app.on_event("startup")
+        async def _register_runner_bootstrap_token() -> None:
+            from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry  # noqa: PLC0415
+
+            bootstrap = settings.jobs.runner_bootstrap_token
+            if bootstrap is not None and bootstrap.get_secret_value().strip():
+                await (await container.get(RunnerRegistry)).ensure_bootstrap_token(bootstrap.get_secret_value().strip())
 
         @app.on_event("shutdown")
         async def _drain_project_mirror() -> None:
