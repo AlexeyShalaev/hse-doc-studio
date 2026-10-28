@@ -12,7 +12,8 @@ export type ServerDemoScenarioId =
   | "sso_only"
   | "registration_open"
   | "registration_domains"
-  | "registration_open_nosmtp";
+  | "registration_open_nosmtp"
+  | "newcomer";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -48,6 +49,18 @@ export const DEMO_ADMIN: SessionUser = {
   email_verified: true,
   locale: "en",
   org_roles: [{ slug: "msp-2025", name: "МСПИН 2025", role: "owner" }],
+};
+
+/** Новичок: вошёл впервые, ни проектов, ни организаций. */
+export const DEMO_NEWCOMER: SessionUser = {
+  id: "u_01hx7k9newcomer",
+  name: "Мария Келлер",
+  email: "maria.keller@example.org",
+  avatar_initials: "МК",
+  is_instance_admin: false,
+  email_verified: true,
+  locale: "ru",
+  org_roles: [],
 };
 
 export const STUDENT_CSRF = "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o";
@@ -124,6 +137,22 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           password_min_length: 10,
         },
         user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "newcomer",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_NEWCOMER,
         csrf_token: STUDENT_CSRF,
       }),
   },

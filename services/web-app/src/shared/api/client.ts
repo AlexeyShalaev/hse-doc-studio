@@ -180,10 +180,22 @@ export const createApiClient = (options: ApiClientOptions): AxiosInstance => {
         // translation for, show the localized message; otherwise fall back to the
         // backend `detail` (which may be Russian — un-coded errors are localized
         // incrementally as codes are added at their raise sites).
-        const codeKey = `errors:code.${code}`;
-        const message = i18n.exists(codeKey)
-          ? i18n.t(codeKey, extra ?? {})
-          : detail;
+        const roleNamed =
+          code === "forbidden_role" && typeof extra?.required_role === "string";
+        // Без названия роли отказ по роли читается как обычный отказ.
+        const codeKey =
+          code === "forbidden_role" && !roleNamed
+            ? "errors:code.forbidden"
+            : `errors:code.${code}`;
+        // Отказ по роли называет нужную роль словами интерфейса, а не кодом.
+        const params =
+          roleNamed && typeof extra?.required_role === "string"
+            ? {
+                ...extra,
+                role: i18n.t(`projectAccess:roles.${extra.required_role}`),
+              }
+            : (extra ?? {});
+        const message = i18n.exists(codeKey) ? i18n.t(codeKey, params) : detail;
         const silent = error.config?.silentError === true;
         if (status === 401) {
           // Сессия кончилась или её нет: это не ошибка для тоста. Форма входа

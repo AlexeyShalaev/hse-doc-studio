@@ -2,6 +2,8 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAuthRoutes } from "./authRoutes";
+import { catalogRoutes } from "./catalogRoutes";
+import { createProjectRoutes } from "./projectRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
 
 // Серверное демо включается явно (VITE_SERVER_DEMO=1 или галерея /dev/server-screens).
@@ -133,6 +135,8 @@ const routes: DemoRoute[] = [
 export const serverDemoRoutes: DemoRoute[] = [
   ...routes,
   ...createAuthRoutes(() => world),
+  ...createProjectRoutes(() => world),
+  ...catalogRoutes,
 ].map((route) => ({
   ...route,
   handler: guarded(route.handler),

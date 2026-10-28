@@ -215,7 +215,10 @@ export type ProjectResponse = {
 
 export type CreateProjectRequest = {
   name: string;
-  folder: string;
+  // Нет на сервере: папку проекта выбирает сервер.
+  folder?: string;
+  // Организация-владелец (slug); без поля проект личный.
+  owner_org_slug?: string | null;
   pack_id: string;
   template_id: string;
   version: string;

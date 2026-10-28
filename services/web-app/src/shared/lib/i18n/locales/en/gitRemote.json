@@ -398,12 +398,14 @@
       "label": "Clone steps",
       "source": "Source",
       "folder": "Folder",
+      "name": "Name",
       "progress": "Download"
     },
     "lead": {
       "profile": "First introduce yourself: your name and e-mail sign the versions you make in this project.",
       "folder": "Where to put the project on this computer.",
-      "progress": "Downloading the history and checking the project. This can take a few minutes."
+      "progress": "Downloading the history and checking the project. This can take a few minutes.",
+      "name": "Name the project. There is no folder to pick: the project is stored on the server."
     },
     "source": {
       "tabs": {
@@ -489,7 +491,10 @@
       "source": "Source",
       "sourceBundle": "File {{name}}",
       "clone": "Clone",
-      "failed": "Could not start cloning."
+      "failed": "Could not start cloning.",
+      "nameOnly": {
+        "note": "Project files are stored on the server. Only you and the people you share with can see them."
+      }
     },
     "progress": {
       "label": "Clone progress",

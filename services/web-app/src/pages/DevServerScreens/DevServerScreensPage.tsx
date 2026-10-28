@@ -11,6 +11,8 @@ export type DevServerScreensPageProps = {
   demo?: GalleryDemo | null;
   /** Разделы для проверки; по умолчанию собираются из экранов серверного режима. */
   sections?: GallerySection[];
+  /** Разделы страниц-соседей: страницы друг друга не импортируют, их передаёт приложение. */
+  extraSections?: GallerySection[];
 };
 
 /**
@@ -21,10 +23,14 @@ export type DevServerScreensPageProps = {
 export const DevServerScreensPage = ({
   demo = null,
   sections: sectionsProp,
+  extraSections,
 }: DevServerScreensPageProps) => {
   const sections = useMemo(
-    () => sectionsProp ?? buildServerSections(),
-    [sectionsProp],
+    () => [
+      ...(sectionsProp ?? buildServerSections()),
+      ...(extraSections ?? []),
+    ],
+    [sectionsProp, extraSections],
   );
   return (
     <StateGalleryPage

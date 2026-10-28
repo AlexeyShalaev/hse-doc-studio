@@ -21,6 +21,10 @@
         "title": "Student",
         "hint": "A regular organisation member is signed in."
       },
+      "newcomer": {
+        "title": "Newcomer",
+        "hint": "First sign-in: no projects and no organizations."
+      },
       "registration_closed": {
         "title": "Registration closed",
         "hint": "Only existing accounts can sign in."

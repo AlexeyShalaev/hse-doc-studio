@@ -12,3 +12,4 @@ export * from "./InvitePage";
 export * from "./VerifyPage";
 export * from "./FirstRunPage";
 export * from "./AuthErrorPage";
+export * from "./ProjectUnavailablePage";

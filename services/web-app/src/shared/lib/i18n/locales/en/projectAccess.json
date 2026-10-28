@@ -1,0 +1,41 @@
+{
+  "roles": {
+    "reader": "Reader",
+    "reviewer": "Reviewer",
+    "editor": "Editor",
+    "owner": "Owner"
+  },
+  "header": {
+    "kicker": "Server · Shared storage",
+    "subtitle": "Your projects and the ones shared with you. Files live on the server, so there is no folder to pick."
+  },
+  "card": {
+    "ownerSelf": "Personal project",
+    "ownerUser": "Owner: {{name}}",
+    "ownerOrg": "Organization: {{name}}",
+    "myRole": "Your role: {{role}}"
+  },
+  "scope": {
+    "label": "Whose projects",
+    "all": "All",
+    "mine": "Mine",
+    "orgs": "Organizations"
+  },
+  "empty": {
+    "title": "No projects yet",
+    "description": "Create a project, or ask an owner to invite you to theirs.",
+    "scopeTitle": "No projects in this view",
+    "scopeDescription": "Switch to “All” or create a new project."
+  },
+  "loadError": {
+    "title": "Could not load projects",
+    "description": "The server did not answer. Check your connection and try again: your projects are safe.",
+    "retry": "Try again"
+  },
+  "unavailable": {
+    "title": "Project not found or you do not have access",
+    "message": "The project may have been deleted, or it was never shared with you. If you are waiting for an invitation, contact the project owner.",
+    "home": "To my projects",
+    "back": "Back"
+  }
+}

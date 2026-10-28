@@ -20,6 +20,10 @@
       "title": "Folder",
       "sub": "Where the project will live on disk. The folder must be empty or not yet exist."
     },
+    "name": {
+      "title": "Name",
+      "sub": "How the project is called in the list. Studio picks the place on the server."
+    },
     "lang": {
       "title": "Language",
       "sub": "Primary language of the documents."
@@ -168,7 +172,9 @@
     "notManagedBadge": "not managed",
     "sharedLabel": "Shared",
     "sharedOff": "no shared documents",
-    "sharedOn": "shared/ — shared documents will be created"
+    "sharedOn": "shared/ — shared documents will be created",
+    "ownerLabel": "Owner",
+    "storedOnServer": "On the server"
   },
   "wizard": {
     "newProject": "New project",
@@ -179,5 +185,15 @@
     "back": "Back",
     "next": "Next",
     "create": "Create project"
+  },
+  "name": {
+    "nameLabel": "Project name",
+    "namePlaceholder": "For example: Diff analytics for git repositories",
+    "nameHint": "This name goes into the document title block and the project list. There is no folder to pick: project files are stored on the server.",
+    "ownerLabel": "Project owner",
+    "ownerHint": "The owner manages access to the project. You can pick an organization where you are an administrator.",
+    "ownerMe": "Me",
+    "ownerMeHint": "Personal project",
+    "ownerOrgHint": "Organization project"
   }
 }

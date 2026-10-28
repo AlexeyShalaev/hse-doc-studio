@@ -1308,3 +1308,62 @@ describe("мастер клонирования: жизненный цикл", (
     ).toBeInTheDocument();
   });
 });
+
+describe("мастер клонирования на сервере: без выбора папки", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const toNameStep = async (user: User) => {
+    await checkPublic(user);
+    await screen.findByText("Проект найден");
+    await user.click(next());
+    await screen.findByLabelText("Название проекта", { exact: false });
+  };
+
+  it("шаг называется «Название», поля папки и запроса дефолтной папки нет", async () => {
+    const { getCloneDefaults } = {
+      getCloneDefaults: vi.spyOn(gitRemoteApi, "getCloneDefaults"),
+    };
+    setup();
+    const user = userEvent.setup();
+    mount({ folderless: true });
+    await toNameStep(user);
+    expect(screen.queryByLabelText("Папка на компьютере")).toBeNull();
+    expect(screen.queryByText("Обзор…")).toBeNull();
+    expect(screen.getByText(/ляжет на сервер/)).toBeInTheDocument();
+    expect(getCloneDefaults).not.toHaveBeenCalled();
+  });
+
+  it("запуск уходит без folder", async () => {
+    const { startClone } = setup();
+    const user = userEvent.setup();
+    mount({ folderless: true });
+    await toNameStep(user);
+    await startCloning(user);
+    await waitFor(() => {
+      expect(startClone).toHaveBeenCalledTimes(1);
+    });
+    const params = startClone.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(params.url).toBeTruthy();
+    expect("folder" in params).toBe(false);
+  });
+
+  it("локально папка по-прежнему обязательна и уходит в запросе", async () => {
+    const { startClone } = setup();
+    const user = userEvent.setup();
+    mount();
+    await toFolderStep(user);
+    await startCloning(user);
+    await waitFor(() => {
+      expect(startClone).toHaveBeenCalledTimes(1);
+    });
+    expect(startClone.mock.calls[0]?.[0]).toMatchObject({
+      folder: DEFAULT_FOLDER,
+    });
+  });
+});

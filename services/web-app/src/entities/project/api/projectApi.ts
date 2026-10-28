@@ -6,15 +6,44 @@ import type {
   UpdateProjectRequest,
 } from "@shared/api/types";
 import { CheckRuleSchema } from "@entities/document";
+import { ProjectSummarySchema } from "@entities/session";
 import {
   NdaStatusResponseSchema,
   ProjectResponseSchema,
   ProjectSuggestionsSchema,
 } from "./projectSchemas";
 
+type ProjectItem = z.infer<typeof ProjectResponseSchema>;
+type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
+
+// Сервер отдаёт в списке не папку и шаблон, а владельца и роль человека
+// (ProjectSummary). Приводим к форме списка локального режима, чтобы карточки,
+// переключатель и палитра команд не знали о двух форматах: папки нет (пустая
+// строка), шаблон не указан (пустой lock), владелец и роль лежат рядом.
+const fromSummary = (summary: ProjectSummary): ProjectItem => ({
+  id: summary.id,
+  name: summary.name,
+  folder: "",
+  lock: { pack_id: "", template_id: "", version: "", engine: "xelatex" },
+  kind: summary.kind,
+  staffing: summary.staffing,
+  lang: summary.lang,
+  updated_at: summary.updated_at,
+  pinned: summary.pinned,
+  archived: summary.archived,
+  shared_enabled: summary.shared_enabled,
+  owner: summary.owner,
+  my_role: summary.my_role,
+});
+
+const ProjectListSchema = z
+  .array(z.union([ProjectResponseSchema, ProjectSummarySchema]))
+  .transform((items) =>
+    items.map((item) => ("folder" in item ? item : fromSummary(item))),
+  );
+
 export const projectApi = {
-  list: () =>
-    apiClient.get("/projects").then(parseResp(z.array(ProjectResponseSchema))),
+  list: () => apiClient.get("/projects").then(parseResp(ProjectListSchema)),
 
   suggestions: () =>
     apiClient

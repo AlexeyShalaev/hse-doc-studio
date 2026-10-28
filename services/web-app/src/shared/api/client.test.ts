@@ -3,7 +3,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { toast } from "@shared/lib";
+import { i18n, toast } from "@shared/lib";
 import { installDemoAdapter } from "./demo/adapter";
 import { createDemoRouter, demoError, demoJson } from "./demo/router";
 import { ApiError, adminClient, apiClient, createApiClient } from "./client";
@@ -176,5 +176,51 @@ describe("createApiClient", () => {
       status: 409,
       code: "conflict",
     });
+  });
+});
+
+describe("отказ по роли (forbidden_role)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const run = async (body: unknown) => {
+    const spy = vi.spyOn(toast, "error").mockImplementation(() => "");
+    const client = createApiClient({ baseURL: "/api/v1" });
+    client.defaults.adapter = stub(403, body);
+    await expect(client.patch("/projects/p1", {})).rejects.toBeInstanceOf(
+      ApiError,
+    );
+    return spy;
+  };
+
+  it("тост называет нужную роль словами интерфейса", async () => {
+    await i18n.changeLanguage("ru");
+    const spy = await run({
+      detail: "Forbidden",
+      code: "forbidden_role",
+      required_role: "editor",
+    });
+    expect(spy.mock.calls[0]?.[0]).toBe(
+      "Недостаточно прав: нужна роль «Редактор».",
+    );
+    await i18n.changeLanguage("en");
+    const spyEn = await run({
+      detail: "Forbidden",
+      code: "forbidden_role",
+      required_role: "owner",
+    });
+    expect(spyEn.mock.calls.at(-1)?.[0]).toBe(
+      "Not enough permissions: the “Owner” role is required.",
+    );
+    await i18n.changeLanguage("ru");
+  });
+
+  it("без названия роли читается как обычный отказ", async () => {
+    await i18n.changeLanguage("ru");
+    const spy = await run({ detail: "Forbidden", code: "forbidden_role" });
+    expect(spy.mock.calls[0]?.[0]).toBe(
+      "Недостаточно прав для этого действия.",
+    );
   });
 });

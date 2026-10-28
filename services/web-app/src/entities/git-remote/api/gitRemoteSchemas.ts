@@ -248,7 +248,8 @@ export const CloneRequestSchema = z.object({
   url: z.string(),
   credential_id: z.string().nullish(),
   branch: z.string().nullish(),
-  folder: z.string(),
+  // Нет на сервере: папку выбирает сервер.
+  folder: z.string().optional(),
   name: z.string().nullish(),
   insecure_http: z.boolean().nullish(),
 });

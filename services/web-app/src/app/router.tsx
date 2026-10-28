@@ -14,6 +14,7 @@ import { WelcomePage } from "@pages/WelcomePage";
 import { WizardPage } from "@pages/WizardPage";
 import { WorkspacePage } from "@pages/WorkspacePage";
 import { AuthLayout } from "@widgets/AuthLayout";
+import { ProjectAccessGate } from "./ProjectAccessGate";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
 import { RootLayout } from "./RootLayout";
 
@@ -39,15 +40,29 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
       {
         path: "/dev/server-screens",
         lazy: async () => {
-          const [{ DevServerScreensPage }, demo] = await Promise.all([
-            import("@pages/DevServerScreens"),
-            import("./demo"),
-          ]);
+          const [{ DevServerScreensPage }, { getProjectsGallery }, demo] =
+            await Promise.all([
+              import("@pages/DevServerScreens"),
+              import("@pages/WelcomePage"),
+              import("./demo"),
+            ]);
+          const extraSections = [
+            {
+              id: "projects",
+              title: "Проекты и доступ",
+              groups: getProjectsGallery(),
+            },
+          ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
           demo.installServerDemo();
           const gallery = { activate: demo.activateServerScenario };
           return {
-            Component: () => <DevServerScreensPage demo={gallery} />,
+            Component: () => (
+              <DevServerScreensPage
+                demo={gallery}
+                extraSections={extraSections}
+              />
+            ),
           };
         },
       },
@@ -90,65 +105,72 @@ export const router = createBrowserRouter([
         path: "/settings/:section",
         element: <SettingsPage />,
       },
+      // Проекты за охранником: 404 сервера на чужой проект даёт одну страницу
+      // «не найден или нет доступа», а не пустую рабочую область.
       {
-        path: "/projects/:projectId",
-        element: <ProjectIndexRedirect />,
-      },
-      // Инструменты выехали из слота :docId в собственные маршруты. Адрес
-      // документа НЕ ТРОГАЕМ — на него ссылаются RecentActivity, палитра
-      // команд, ссылки агента doc:<id> и закладки пользователей.
-      {
-        path: "/projects/:projectId/documents",
-        element: <WorkspacePage canvas="overview" />,
-      },
-      {
-        path: "/projects/:projectId/documents/:docId",
-        element: <WorkspacePage canvas="document" />,
-      },
-      {
-        path: "/projects/:projectId/files",
-        element: <WorkspacePage canvas="files" />,
-      },
-      {
-        path: "/projects/:projectId/versions",
-        element: <WorkspacePage canvas="versions" />,
-      },
-      // Настройки проекта разложены по секциям, как и системные /settings/:section.
-      // Голый адрес и незнакомая секция не редиректят, а показывают первую
-      // секцию: подмена считается в самой странице, поэтому сохранённая ссылка
-      // на «Метаданные» переживает загрузку каталога версии.
-      {
-        path: "/projects/:projectId/project-settings",
-        element: <WorkspacePage canvas="project-settings" />,
-      },
-      {
-        path: "/projects/:projectId/project-settings/:section",
-        element: <WorkspacePage canvas="project-settings" />,
-      },
-      // Разбор конфликтов синхронизации: полноэкранная страница, как «Версии».
-      {
-        path: "/projects/:projectId/sync/conflicts",
-        element: <WorkspacePage canvas="sync-conflicts" />,
-      },
-      {
-        path: "/projects/:projectId/submit",
-        element: <WorkspacePage canvas="submit-pack" />,
-      },
-      {
-        path: "/projects/:projectId/submit/cp/:profileId",
-        element: <WorkspacePage canvas="submit-checkpoint" />,
-      },
-      {
-        path: "/projects/:projectId/submit/signatures",
-        element: <WorkspacePage canvas="submit-signatures" />,
-      },
-      {
-        path: "/projects/:projectId/submit/requirements",
-        element: <WorkspacePage canvas="submit-requirements" />,
-      },
-      {
-        path: "/projects/:projectId/submit/form/:formId",
-        element: <WorkspacePage canvas="submit-form" />,
+        element: <ProjectAccessGate />,
+        children: [
+          {
+            path: "/projects/:projectId",
+            element: <ProjectIndexRedirect />,
+          },
+          // Инструменты выехали из слота :docId в собственные маршруты. Адрес
+          // документа НЕ ТРОГАЕМ — на него ссылаются RecentActivity, палитра
+          // команд, ссылки агента doc:<id> и закладки пользователей.
+          {
+            path: "/projects/:projectId/documents",
+            element: <WorkspacePage canvas="overview" />,
+          },
+          {
+            path: "/projects/:projectId/documents/:docId",
+            element: <WorkspacePage canvas="document" />,
+          },
+          {
+            path: "/projects/:projectId/files",
+            element: <WorkspacePage canvas="files" />,
+          },
+          {
+            path: "/projects/:projectId/versions",
+            element: <WorkspacePage canvas="versions" />,
+          },
+          // Настройки проекта разложены по секциям, как и системные /settings/:section.
+          // Голый адрес и незнакомая секция не редиректят, а показывают первую
+          // секцию: подмена считается в самой странице, поэтому сохранённая ссылка
+          // на «Метаданные» переживает загрузку каталога версии.
+          {
+            path: "/projects/:projectId/project-settings",
+            element: <WorkspacePage canvas="project-settings" />,
+          },
+          {
+            path: "/projects/:projectId/project-settings/:section",
+            element: <WorkspacePage canvas="project-settings" />,
+          },
+          // Разбор конфликтов синхронизации: полноэкранная страница, как «Версии».
+          {
+            path: "/projects/:projectId/sync/conflicts",
+            element: <WorkspacePage canvas="sync-conflicts" />,
+          },
+          {
+            path: "/projects/:projectId/submit",
+            element: <WorkspacePage canvas="submit-pack" />,
+          },
+          {
+            path: "/projects/:projectId/submit/cp/:profileId",
+            element: <WorkspacePage canvas="submit-checkpoint" />,
+          },
+          {
+            path: "/projects/:projectId/submit/signatures",
+            element: <WorkspacePage canvas="submit-signatures" />,
+          },
+          {
+            path: "/projects/:projectId/submit/requirements",
+            element: <WorkspacePage canvas="submit-requirements" />,
+          },
+          {
+            path: "/projects/:projectId/submit/form/:formId",
+            element: <WorkspacePage canvas="submit-form" />,
+          },
+        ],
       },
       ...devRoutes,
       {

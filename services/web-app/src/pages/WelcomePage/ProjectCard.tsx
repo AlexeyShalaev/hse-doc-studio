@@ -1,9 +1,26 @@
-import { Archive, Briefcase, Building, Lock, Pin, User } from "lucide-react";
+import {
+  Archive,
+  Briefcase,
+  Building,
+  Building2,
+  Eye,
+  Lock,
+  MessageSquareText,
+  PencilLine,
+  Pin,
+  User,
+  type LucideIcon,
+} from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
 import type { ProjectResponseSchema } from "@entities/project";
-import { useKindMeta, useTemplateMeta } from "@entities/project";
+import {
+  useKindMeta,
+  useProjectRoleLabel,
+  useTemplateMeta,
+} from "@entities/project";
+import type { ProjectRole } from "@entities/session";
 import { localeTag } from "@shared/lib";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
@@ -13,6 +30,13 @@ export type ProjectCardProps = {
   onOpen: () => void;
   onTogglePin: () => void;
   onToggleArchive: () => void;
+};
+
+const ROLE_ICONS: Record<ProjectRole, LucideIcon> = {
+  reader: Eye,
+  reviewer: MessageSquareText,
+  editor: PencilLine,
+  owner: User,
 };
 
 const formatRelative = (
@@ -49,6 +73,8 @@ export const ProjectCard = ({
   onToggleArchive,
 }: ProjectCardProps) => {
   const { t } = useTranslation("welcome");
+  const { t: tAccess } = useTranslation("projectAccess");
+  const roleLabel = useProjectRoleLabel();
   const meta = useTemplateMeta(project);
   const Icon = meta.icon;
 
@@ -69,6 +95,26 @@ export const ProjectCard = ({
 
   const isNda = project.meta?.nda === true;
   const supervisor = project.supervisor ?? null;
+
+  // Серверные поля: папки у проекта нет, зато есть владелец и роль человека.
+  // Шаблон в списке сервера не приходит, поэтому его значок прячем.
+  const owner = project.owner ?? null;
+  const role = project.my_role ?? null;
+  const hasTemplate = owner === null;
+  const RoleIcon = role ? ROLE_ICONS[role] : null;
+  const ownerLine = owner
+    ? owner.kind === "org"
+      ? {
+          Icon: Building2,
+          text: tAccess("card.ownerOrg", { name: owner.name }),
+        }
+      : role === "owner"
+        ? { Icon: User, text: tAccess("card.ownerSelf") }
+        : {
+            Icon: User,
+            text: tAccess("card.ownerUser", { name: owner.name }),
+          }
+    : null;
 
   return (
     <div
@@ -110,18 +156,20 @@ export const ProjectCard = ({
           >
             <Icon size={16} />
           </div>
-          <span
-            className="chip"
-            title={meta.label}
-            style={{
-              minWidth: 0,
-              background: accentBg,
-              color: accentFg,
-              borderColor: accentLine,
-            }}
-          >
-            <span className="truncate">{meta.label}</span>
-          </span>
+          {hasTemplate && (
+            <span
+              className="chip"
+              title={meta.label}
+              style={{
+                minWidth: 0,
+                background: accentBg,
+                color: accentFg,
+                borderColor: accentLine,
+              }}
+            >
+              <span className="truncate">{meta.label}</span>
+            </span>
+          )}
           <span
             className="chip shrink-0"
             title={kindMeta.label}
@@ -173,9 +221,25 @@ export const ProjectCard = ({
       >
         {project.name}
       </h3>
-      <div className="mono dim" style={{ fontSize: 11, marginBottom: 14 }}>
-        {project.folder}
-      </div>
+      {ownerLine ? (
+        <div
+          className="flex items-center gap-2 dim"
+          style={{ fontSize: 11.5, marginBottom: 14, minWidth: 0 }}
+          data-testid="project-owner"
+        >
+          <ownerLine.Icon
+            size={11}
+            style={{ color: "var(--fg-3)", flexShrink: 0 }}
+          />
+          <span className="truncate" style={{ minWidth: 0 }}>
+            {ownerLine.text}
+          </span>
+        </div>
+      ) : (
+        <div className="mono dim" style={{ fontSize: 11, marginBottom: 14 }}>
+          {project.folder}
+        </div>
+      )}
 
       <div
         className="flex items-center justify-between"
@@ -192,6 +256,17 @@ export const ProjectCard = ({
                 {supervisor.name}
               </span>
             </>
+          )}
+          {role !== null && role !== "owner" && RoleIcon && (
+            <span
+              className="chip shrink-0"
+              data-testid="project-role"
+              title={tAccess("card.myRole", { role: roleLabel(role) })}
+              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+            >
+              <RoleIcon size={8} />
+              {roleLabel(role)}
+            </span>
           )}
           {supervisor?.role === "company" && (
             <span
