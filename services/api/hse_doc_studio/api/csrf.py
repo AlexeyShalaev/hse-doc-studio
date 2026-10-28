@@ -2,8 +2,9 @@
 
 Токен лежит в строке сессии и приходит клиенту в bootstrap и ответе входа; читаемой cookie нет, поэтому чужой
 сайт токен не прочитает. Небезопасный запрос с cookie обязан прислать его в `X-CSRF-Token`. Освобождены запросы
-без cookie (вход, регистрация: Origin всё равно проверяется), запросы с `Authorization: Bearer` (браузер
-такой заголовок сам не подставит) и маршруты со своей подписью (раннер, обратный вызов ONLYOFFICE).
+без cookie (вход, регистрация: Origin всё равно проверяется), запросы с `Authorization: Bearer` без cookie
+сессии (браузер такой заголовок сам не подставит; при наличии cookie заголовок защиту не отключает, иначе любой
+Bearer снимал бы проверку с запроса, который всё равно аутентифицирует cookie) и маршруты со своей подписью (раннер, обратный вызов ONLYOFFICE).
 """
 
 from __future__ import annotations
@@ -63,7 +64,8 @@ class CsrfMiddleware:
             return
         request = Request(scope)
         credentials = credentials_from_request(request)
-        if credentials.bearer_token is None and not await self._passes(request, credentials.session_secret):
+        bearer_only = credentials.bearer_token is not None and not credentials.session_secret
+        if not bearer_only and not await self._passes(request, credentials.session_secret):
             await self._reject(scope, receive, send)
             return
         await self.app(scope, receive, send)

@@ -66,13 +66,23 @@ async def test__get_with_session_needs_no_token() -> None:
     assert response.status_code == 200
 
 
-async def test__bearer_is_exempt() -> None:
+async def test__bearer_without_cookie_is_exempt() -> None:
     async with _client() as client:
-        response = await client.post(
-            "/api/v1/things", cookies={"hse_session": _SECRET}, headers={"Authorization": "Bearer pat"}
-        )
+        response = await client.post("/api/v1/things", headers={"Authorization": "Bearer pat"})
 
     assert response.status_code == 200
+
+
+async def test__bearer_does_not_disable_csrf_for_cookie_session() -> None:
+    async with _client() as client:
+        response = await client.post(
+            "/api/v1/things",
+            cookies={"hse_session": _SECRET},
+            headers={"Authorization": "Bearer x", "Origin": "http://evil.com"},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "csrf_failed"
 
 
 async def test__signed_runner_route_is_exempt() -> None:
