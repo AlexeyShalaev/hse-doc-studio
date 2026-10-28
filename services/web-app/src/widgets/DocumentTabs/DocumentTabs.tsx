@@ -32,6 +32,7 @@ import {
 import { useStartCompile } from "@entities/compile";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { useProject } from "@entities/project";
+import { useCapabilities } from "@entities/session";
 import { EditorIcon, openInEditor, useEditors } from "@entities/system";
 import { env } from "@shared/config";
 import { Modal, Spinner } from "@shared/ui";
@@ -112,6 +113,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   const { data: project } = useProject(projectId);
   const { data: doc } = useDocument(projectId, docId);
   const { data: editorsData } = useEditors();
+  // Путь файла и «открыть в редакторе» имеют смысл только у проекта в папке.
+  const { lacks } = useCapabilities();
+  const hasLocalFiles = !lacks("open_in_editor");
   const {
     start: handleBuild,
     isRunning,
@@ -637,84 +641,91 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                     </a>
                   </DropdownMenu.Item>
                 )}
-                <DropdownMenu.Item
-                  className={menuItemClass}
-                  style={{ padding: "8px 12px", fontSize: 12.5 }}
-                  onSelect={handleCopyPath}
-                >
-                  <Copy size={12} />
-                  <span>{t("header.copyPath")}</span>
-                </DropdownMenu.Item>
+                {hasLocalFiles && (
+                  <>
+                    <DropdownMenu.Item
+                      className={menuItemClass}
+                      style={{ padding: "8px 12px", fontSize: 12.5 }}
+                      onSelect={handleCopyPath}
+                    >
+                      <Copy size={12} />
+                      <span>{t("header.copyPath")}</span>
+                    </DropdownMenu.Item>
 
-                <div className="divider" style={{ margin: "4px 0" }} />
-                <div
-                  className="label-up dimmer"
-                  style={{
-                    padding: "4px 12px 6px",
-                    fontSize: 9.5,
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  {t("header.openInEditor")}
-                </div>
-                {!hasAnyEditor && (
-                  <div
-                    className="dim"
-                    style={{ padding: "0 12px 8px", fontSize: 11.5 }}
-                  >
-                    {t("header.noEditorsDetected")}
-                  </div>
-                )}
-                {availableEditors.map((e) => (
-                  <DropdownMenu.Item
-                    key={e.id}
-                    className={clsx(
-                      "group relative flex cursor-pointer select-none items-center gap-3 outline-none",
-                      "transition-colors",
-                      "focus:bg-bg-hover",
-                    )}
-                    style={{ padding: "8px 12px" }}
-                    onSelect={() => {
-                      openInEditor(e.scheme, fullPath, 1);
-                    }}
-                  >
+                    <div className="divider" style={{ margin: "4px 0" }} />
                     <div
-                      className="flex items-center justify-center shrink-0"
+                      className="label-up dimmer"
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 6,
-                        background: "var(--bg-2)",
-                        border: "1px solid var(--border)",
-                        color: "var(--fg-0)",
+                        padding: "4px 12px 6px",
+                        fontSize: 9.5,
+                        letterSpacing: "0.1em",
                       }}
                     >
-                      <EditorIcon editorId={e.id} size={15} />
+                      {t("header.openInEditor")}
                     </div>
-                    <div className="flex flex-col min-w-0" style={{ gap: 1 }}>
-                      <span
-                        className="text-fg-0 group-focus:text-fg-0"
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 500,
-                          lineHeight: 1.2,
+                    {!hasAnyEditor && (
+                      <div
+                        className="dim"
+                        style={{ padding: "0 12px 8px", fontSize: 11.5 }}
+                      >
+                        {t("header.noEditorsDetected")}
+                      </div>
+                    )}
+                    {availableEditors.map((e) => (
+                      <DropdownMenu.Item
+                        key={e.id}
+                        className={clsx(
+                          "group relative flex cursor-pointer select-none items-center gap-3 outline-none",
+                          "transition-colors",
+                          "focus:bg-bg-hover",
+                        )}
+                        style={{ padding: "8px 12px" }}
+                        onSelect={() => {
+                          openInEditor(e.scheme, fullPath, 1);
                         }}
                       >
-                        {e.label}
-                      </span>
-                      <span
-                        className="mono dimmer"
-                        style={{ fontSize: 10, lineHeight: 1.2 }}
-                      >
-                        {e.scheme}://
-                      </span>
-                    </div>
-                    <ExternalLink
-                      size={11}
-                      className="ml-auto shrink-0 text-fg-3 opacity-0 transition-opacity group-focus:opacity-100"
-                    />
-                  </DropdownMenu.Item>
-                ))}
+                        <div
+                          className="flex items-center justify-center shrink-0"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            background: "var(--bg-2)",
+                            border: "1px solid var(--border)",
+                            color: "var(--fg-0)",
+                          }}
+                        >
+                          <EditorIcon editorId={e.id} size={15} />
+                        </div>
+                        <div
+                          className="flex flex-col min-w-0"
+                          style={{ gap: 1 }}
+                        >
+                          <span
+                            className="text-fg-0 group-focus:text-fg-0"
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 500,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {e.label}
+                          </span>
+                          <span
+                            className="mono dimmer"
+                            style={{ fontSize: 10, lineHeight: 1.2 }}
+                          >
+                            {e.scheme}://
+                          </span>
+                        </div>
+                        <ExternalLink
+                          size={11}
+                          className="ml-auto shrink-0 text-fg-3 opacity-0 transition-opacity group-focus:opacity-100"
+                        />
+                      </DropdownMenu.Item>
+                    ))}
+                  </>
+                )}
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
