@@ -187,6 +187,7 @@ class SqlAuthTokenRepository:
                     user_id=token.user_id,
                     expires_at=token.expires_at,
                     used_at=token.used_at,
+                    payload=token.payload,
                 )
             )
             await db.flush()
@@ -215,6 +216,7 @@ class SqlAuthTokenRepository:
                 user_id=row.user_id,
                 expires_at=row.expires_at,
                 used_at=row.used_at,
+                payload=row.payload,
             )
 
     async def delete_expired(self, now: datetime) -> int:

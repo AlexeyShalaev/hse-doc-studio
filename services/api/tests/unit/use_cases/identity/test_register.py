@@ -45,8 +45,8 @@ async def test_open_without_smtp_activates_and_returns_copyable_link(world: Worl
     assert (user.status, user.email_verified) == (UserStatus.active, False)
     assert result.outcome is RegistrationOutcome.check_email
     assert result.link is not None
-    assert result.link.startswith("https://studio.test/auth/verify?token=")
-    token = result.link.rpartition("=")[2]
+    assert result.link.startswith("https://studio.test/verify/")
+    token = result.link.rpartition("/")[2]
     consumed = await world.auth_tokens.consume(hash_token(token), AuthTokenKind.verify_email, world.clock.now)
     assert consumed is not None
     assert consumed.user_id == user.id
@@ -64,7 +64,7 @@ async def test_open_with_smtp_sends_mail_and_waits_for_verification(world: World
     assert result.link is None
     [(to, _subject, body)] = world.sender.sent
     assert to == "new@example.org"
-    assert "https://studio.test/auth/verify?token=" in body
+    assert "https://studio.test/verify/" in body
     assert await world.outbox.list_active(world.clock.now) == []
 
 
@@ -227,7 +227,7 @@ async def test_invite_lifecycle_create_list_revoke(world: World) -> None:
     await _admin(world)
     plain = await world.create_invite_uc().execute(ADMIN)
     assert plain.link is not None
-    assert plain.link.startswith("https://studio.test/auth/register?token=")
+    assert plain.link.startswith("https://studio.test/invite/")
     assert await world.outbox.list_active(world.clock.now) == []
     mailed = await world.create_invite_uc().execute(ADMIN, email="Bob@Example.org", ttl=timedelta(days=1))
     assert mailed.link is not None  # без SMTP ссылку пересылает админ

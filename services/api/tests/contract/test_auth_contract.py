@@ -221,6 +221,13 @@ async def test__auth_token__consume__single_use_and_kind_checked(repos: Repos, u
     assert await repos.auth_tokens.consume("h", AuthTokenKind.reset_password, NOW) is None
 
 
+async def test__auth_token__payload__survives_consume(repos: Repos, user: str) -> None:
+    await repos.auth_tokens.add(AuthToken("p", AuthTokenKind.change_email, user, NOW + HOUR, payload="new@example.org"))
+    consumed = await repos.auth_tokens.consume("p", AuthTokenKind.change_email, NOW)
+    assert consumed is not None
+    assert consumed.payload == "new@example.org"
+
+
 async def test__auth_token__expired__cannot_be_consumed_and_is_cleaned(repos: Repos, user: str) -> None:
     await repos.auth_tokens.add(AuthToken("h", AuthTokenKind.setup, None, NOW + HOUR))
     assert await repos.auth_tokens.consume("h", AuthTokenKind.setup, NOW + HOUR) is None

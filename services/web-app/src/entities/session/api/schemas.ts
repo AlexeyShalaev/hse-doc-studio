@@ -179,6 +179,15 @@ export const ChangePasswordRequestSchema = z.strictObject({
   new_password: z.string(),
   sign_out_other_sessions: z.boolean(),
 });
+export const ChangeEmailRequestSchema = z.strictObject({
+  email: z.string(),
+  password: z.string(),
+});
+export const ChangeEmailResponseSchema = z.strictObject({
+  status: z.literal("check_email"),
+  link: z.string().nullable(),
+});
+export type ChangeEmailResponse = z.infer<typeof ChangeEmailResponseSchema>;
 export const AccountSessionSchema = z.strictObject({
   id: z.string(),
   created_at: iso,

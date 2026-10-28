@@ -28,7 +28,7 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) |
 | OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` |
 | мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `POST .../settings`, `POST .../complete`; после завершения все 404 |
-| аккаунт | `/account` (профиль, пароль), `/account/sessions`, `/account/tokens`, `/account/identities` |
+| аккаунт | `/account` (профиль, пароль), `POST /account/email` и `POST /account/email/confirm` (смена e-mail, `ChangeEmailRequest`/`ChangeEmailResponse`), `/account/sessions`, `/account/tokens`, `/account/identities` |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`), `/projects/{id}/members` |
 | админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` |
 | раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` |

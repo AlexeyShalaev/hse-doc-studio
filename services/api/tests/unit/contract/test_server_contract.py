@@ -40,6 +40,8 @@ _SCHEMAS: dict[str, Any] = {
     "AuthErrorBody": s.AuthErrorBody,
     "UpdateAccountRequest": s.UpdateAccountRequest,
     "ChangePasswordRequest": s.ChangePasswordRequest,
+    "ChangeEmailRequest": s.ChangeEmailRequest,
+    "ChangeEmailResponse": s.ChangeEmailResponse,
     "AccountSession": s.AccountSession,
     "AccountSessionList": list[s.AccountSession],
     "ApiToken": s.ApiToken,

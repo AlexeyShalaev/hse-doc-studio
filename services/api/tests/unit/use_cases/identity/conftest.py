@@ -9,6 +9,7 @@ from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.entities import User, UserStatus
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
+from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.invites import (
@@ -19,6 +20,13 @@ from hse_doc_studio.use_cases.identity.invites import (
 )
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.recovery import (
+    ForgotPasswordUC,
+    IssueResetLinkUC,
+    ResendVerificationUC,
+    ResetPasswordUC,
+    VerifyEmailUC,
+)
 from hse_doc_studio.use_cases.identity.register import RegisterUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 
@@ -136,6 +144,41 @@ class World:
             self.users, self.creds, self.auth_tokens, self.invites, self.settings_service(), self.delivery(),
             self.hasher, self.audit, self.uow, public_url="https://studio.test", clock=self.clock,
         )  # fmt: skip
+
+    def verify_uc(self) -> VerifyEmailUC:
+        return VerifyEmailUC(self.users, self.auth_tokens, self.audit, self.uow, self.clock)
+
+    def resend_uc(self) -> ResendVerificationUC:
+        return ResendVerificationUC(
+            self.users, self.auth_tokens, self.delivery(), self.audit, self.uow,
+            public_url="https://studio.test", clock=self.clock,
+        )  # fmt: skip
+
+    def forgot_uc(self) -> ForgotPasswordUC:
+        return ForgotPasswordUC(
+            self.users, self.auth_tokens, self.delivery(), self.audit, self.uow,
+            public_url="https://studio.test", clock=self.clock,
+        )  # fmt: skip
+
+    def reset_uc(self) -> ResetPasswordUC:
+        return ResetPasswordUC(
+            self.users, self.creds, self.auth_tokens, self.sessions, self.hasher, self.audit, self.uow, self.clock
+        )
+
+    def issue_reset_link_uc(self) -> IssueResetLinkUC:
+        return IssueResetLinkUC(
+            self.users, self.auth_tokens, self.delivery(), self.audit, self.uow,
+            public_url="https://studio.test", clock=self.clock,
+        )  # fmt: skip
+
+    def request_email_change_uc(self) -> RequestEmailChangeUC:
+        return RequestEmailChangeUC(
+            self.users, self.creds, self.auth_tokens, self.delivery(), self.hasher, self.audit, self.uow,
+            public_url="https://studio.test", clock=self.clock,
+        )  # fmt: skip
+
+    def confirm_email_change_uc(self) -> ConfirmEmailChangeUC:
+        return ConfirmEmailChangeUC(self.users, self.auth_tokens, self.audit, self.uow, self.clock)
 
     def update_settings_uc(self) -> UpdateAuthSettingsUC:
         return UpdateAuthSettingsUC(self.settings_service(), self.settings, self.audit)

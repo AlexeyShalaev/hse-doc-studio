@@ -14,7 +14,7 @@ from hse_doc_studio.core.identity.registration import invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
-INVITE_PATH = "/auth/register"
+INVITE_PATH = "/invite"
 DEFAULT_INVITE_TTL = timedelta(days=7)
 MAX_INVITE_TTL = timedelta(days=30)
 

@@ -13,13 +13,27 @@ from hse_doc_studio.api.auth_cookie import (
 )
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.observability.client_ip import client_ip
-from hse_doc_studio.api.rate_limit import enforce_ip
+from hse_doc_studio.api.rate_limit import enforce_email, enforce_ip
 from hse_doc_studio.api.routers.v1.session import session_user
-from hse_doc_studio.api.schemas.session import LoginRequest, LoginResponse
+from hse_doc_studio.api.schemas.session import (
+    ForgotRequest,
+    ForgotResponse,
+    LoginRequest,
+    LoginResponse,
+    ResendVerificationRequest,
+    ResetRequest,
+    VerifyEmailRequest,
+)
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.rate_limit import AUTH_IP
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
+from hse_doc_studio.use_cases.identity.recovery import (
+    ForgotPasswordUC,
+    ResendVerificationUC,
+    ResetPasswordUC,
+    VerifyEmailUC,
+)
 from hse_doc_studio.use_cases.identity.sessions import LogoutUC
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
@@ -60,3 +74,37 @@ async def logout(request: Request) -> Response:
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_session_cookie(response, secure=is_secure_public_url(settings.auth.public_url))
     return response
+
+
+@router.post("/auth/verify", status_code=status.HTTP_204_NO_CONTENT)
+async def verify_email(body: VerifyEmailRequest, request: Request) -> Response:
+    await enforce_ip(request, AUTH_IP)
+    await (await request.state.dishka_container.get(VerifyEmailUC)).execute(body.token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/auth/verify/resend", response_model=ForgotResponse)
+async def resend_verification(body: ResendVerificationRequest, request: Request, response: Response) -> ForgotResponse:
+    """Всегда один и тот же ответ: по нему не узнать, есть ли такой аккаунт. Ссылка уходит только на почту."""
+    await enforce_ip(request, AUTH_IP)
+    await enforce_email(request, body.email)
+    await (await request.state.dishka_container.get(ResendVerificationUC)).execute(body.email)
+    response.headers["Cache-Control"] = "no-store"
+    return ForgotResponse(status="check_email", link=None)
+
+
+@router.post("/auth/forgot", response_model=ForgotResponse)
+async def forgot_password(body: ForgotRequest, request: Request, response: Response) -> ForgotResponse:
+    """Ответ нейтральный. Ссылку сброса не показываем и без SMTP: её выдаёт администратор."""
+    await enforce_ip(request, AUTH_IP)
+    await enforce_email(request, body.email)
+    await (await request.state.dishka_container.get(ForgotPasswordUC)).execute(body.email)
+    response.headers["Cache-Control"] = "no-store"
+    return ForgotResponse(status="check_email", link=None)
+
+
+@router.post("/auth/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(body: ResetRequest, request: Request) -> Response:
+    await enforce_ip(request, AUTH_IP)
+    await (await request.state.dishka_container.get(ResetPasswordUC)).execute(body.token, body.password)
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})

@@ -201,6 +201,26 @@ class ChangePasswordRequest(StrictModel):
     sign_out_other_sessions: bool
 
 
+# Смена e-mail: ссылка уходит на новый адрес. Ответ нейтральный (занятый адрес отвечает так же);
+# link заполнен только без SMTP.
+class ChangeEmailRequest(StrictModel):
+    email: str
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def _email_is_valid(cls, value: str) -> str:
+        if not is_valid_email(value):
+            msg = "email is not valid"
+            raise ValueError(msg)
+        return value
+
+
+class ChangeEmailResponse(StrictModel):
+    status: Literal["check_email"]
+    link: str | None
+
+
 class AccountSession(StrictModel):
     id: str
     created_at: datetime

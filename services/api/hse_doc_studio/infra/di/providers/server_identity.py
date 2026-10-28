@@ -49,11 +49,20 @@ from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.recovery import (
+    ForgotPasswordUC,
+    IssueResetLinkUC,
+    ResendVerificationUC,
+    ResetPasswordUC,
+    VerifyEmailUC,
+)
 from hse_doc_studio.use_cases.identity.register import RegisterUC
 from hse_doc_studio.use_cases.identity.sessions import (
     ListSessionsUC,
@@ -162,8 +171,21 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_mail_sender(self) -> IMailSender:
-        # SMTP появится отдельным срезом; до него ссылки показываются копируемыми.
-        return LinkOnlyMailSender()
+        cfg = settings.mail
+        if not cfg.host:
+            return LinkOnlyMailSender()
+        return SmtpMailSender(
+            SmtpSettings(
+                host=cfg.host,
+                port=cfg.port,
+                security=cfg.security,
+                username=cfg.username,
+                password=cfg.password.get_secret_value() if cfg.password else None,
+                from_address=cfg.from_address,
+                from_name=cfg.from_name,
+                timeout_s=cfg.timeout_s,
+            )
+        )
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
@@ -210,6 +232,79 @@ class ServerIdentityProvider(Provider):
         )  # fmt: skip
 
     @provide
+    def get_verify_email_uc(
+        self, users: IUserRepository, auth_tokens: IAuthTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> VerifyEmailUC:
+        return VerifyEmailUC(users, auth_tokens, audit, uow)
+
+    @provide
+    def get_resend_verification_uc(
+        self,
+        users: IUserRepository,
+        auth_tokens: IAuthTokenRepository,
+        delivery: LinkDelivery,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> ResendVerificationUC:
+        return ResendVerificationUC(users, auth_tokens, delivery, audit, uow, public_url=settings.auth.public_url)
+
+    @provide
+    def get_forgot_password_uc(
+        self,
+        users: IUserRepository,
+        auth_tokens: IAuthTokenRepository,
+        delivery: LinkDelivery,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> ForgotPasswordUC:
+        return ForgotPasswordUC(users, auth_tokens, delivery, audit, uow, public_url=settings.auth.public_url)
+
+    @provide
+    def get_reset_password_uc(
+        self,
+        users: IUserRepository,
+        credentials: ICredentialRepository,
+        auth_tokens: IAuthTokenRepository,
+        sessions: ISessionRepository,
+        hasher: IPasswordHasher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> ResetPasswordUC:
+        return ResetPasswordUC(users, credentials, auth_tokens, sessions, hasher, audit, uow)
+
+    @provide
+    def get_issue_reset_link_uc(
+        self,
+        users: IUserRepository,
+        auth_tokens: IAuthTokenRepository,
+        delivery: LinkDelivery,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> IssueResetLinkUC:
+        return IssueResetLinkUC(users, auth_tokens, delivery, audit, uow, public_url=settings.auth.public_url)
+
+    @provide
+    def get_request_email_change_uc(
+        self,
+        users: IUserRepository,
+        credentials: ICredentialRepository,
+        auth_tokens: IAuthTokenRepository,
+        delivery: LinkDelivery,
+        hasher: IPasswordHasher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> RequestEmailChangeUC:
+        return RequestEmailChangeUC(
+            users, credentials, auth_tokens, delivery, hasher, audit, uow, public_url=settings.auth.public_url
+        )
+
+    @provide
+    def get_confirm_email_change_uc(
+        self, users: IUserRepository, auth_tokens: IAuthTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> ConfirmEmailChangeUC:
+        return ConfirmEmailChangeUC(users, auth_tokens, audit, uow)
+
+    @provide
     def get_create_invite_uc(
         self, invites: IRegistrationInviteRepository, delivery: LinkDelivery, audit: IAuditLog
     ) -> CreateInviteUC:
@@ -231,10 +326,13 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_bootstrap_uc(
-        self, setup: SetupStateService, auth_settings: AuthSettingsService, sessions: SessionService
+        self,
+        setup: SetupStateService,
+        auth_settings: AuthSettingsService,
+        sessions: SessionService,
+        sender: IMailSender,
     ) -> BootstrapUC:
-        # SMTP появится вместе с почтовиком; до него ссылки показываются копируемыми.
-        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=False)
+        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=sender.enabled)
 
     @provide
     def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:

@@ -51,6 +51,7 @@ class AuthTokenRow(Base):
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[str | None] = mapped_column(String(320))
 
 
 class RegistrationInviteRow(Base):

@@ -24,7 +24,7 @@ from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
-VERIFY_PATH = "/auth/verify"
+VERIFY_PATH = "/verify"
 VERIFY_TTL = timedelta(hours=48)
 
 
@@ -112,7 +112,11 @@ class RegisterUC:
         link = None
         if secret is not None:
             link = await self._delivery.deliver(
-                MailKind.verify_email, user.email, auth_link(self._public_url, VERIFY_PATH, secret), now
+                MailKind.verify_email,
+                user.email,
+                auth_link(self._public_url, VERIFY_PATH, secret),
+                now,
+                locale=user.locale,
             )
         return RegisterResult(decision.outcome, link)
 
