@@ -87,11 +87,17 @@ async def test__migrate_if_needed__lock_held_elsewhere__times_out_instead_of_han
 
 
 async def test__upgrade__works_under_tight_statement_timeout(pg_engine: AsyncEngine) -> None:
-    tight = create_async_engine(pg_engine.url, connect_args={"server_settings": {"statement_timeout": "1"}})
+    # Предел на базе, а не на движке: служебные запросы первого подключения идут без него (иначе тест плавает).
+    db = pg_engine.url.database
+    async with pg_engine.connect() as admin:
+        admin = await admin.execution_options(isolation_level="AUTOCOMMIT")
+        await admin.execute(text(f'ALTER DATABASE "{db}" SET statement_timeout = 1'))
     try:
-        await migrator.upgrade(tight)
+        await migrator.upgrade(pg_engine)
     finally:
-        await tight.dispose()
+        async with pg_engine.connect() as admin:
+            admin = await admin.execution_options(isolation_level="AUTOCOMMIT")
+            await admin.execute(text(f'ALTER DATABASE "{db}" RESET statement_timeout'))
 
     assert await migrator.current_revision(pg_engine) == migrator.head_revision()
 

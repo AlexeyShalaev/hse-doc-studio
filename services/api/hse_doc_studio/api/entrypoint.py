@@ -223,6 +223,13 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
 
             await (await container.get(MirroringProjectRepository)).drain()
 
+        @app.on_event("shutdown")
+        async def _drain_link_delivery() -> None:
+            # Письма уходят фоновыми задачами: без ожидания ссылка последнего приглашения не попала бы в outbox.
+            from hse_doc_studio.use_cases.identity.mail import LinkDelivery  # noqa: PLC0415
+
+            await (await container.get(LinkDelivery)).drain()
+
         @app.on_event("startup")
         async def _prepare_server_setup() -> None:
             await prepare_server_setup(app, container, settings, health_checks)

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 import structlog
@@ -14,7 +16,8 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from hse_doc_studio.infra.db import orm as _orm  # noqa: F401 — регистрирует таблицы в Base.metadata для db check
 from hse_doc_studio.infra.db.base import Base
@@ -79,15 +82,26 @@ async def _without_timeouts(connection: AsyncConnection) -> None:
     await connection.execute(text("SET LOCAL lock_timeout = 0"))
 
 
+@contextlib.asynccontextmanager
+async def _migration_connection(engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
+    """Отдельное соединение без клиентского `command_timeout` asyncpg: `SET LOCAL` его не снимает, а долгая
+    миграция (индекс, бэкфилл) оборвалась бы на клиенте."""
+    own = create_async_engine(engine.url, poolclass=NullPool, connect_args={"command_timeout": None})
+    try:
+        async with own.begin() as connection:
+            await _without_timeouts(connection)
+            yield connection
+    finally:
+        await own.dispose()
+
+
 async def upgrade(engine: AsyncEngine, revision: str = "head") -> None:
-    async with engine.begin() as connection:
-        await _without_timeouts(connection)
+    async with _migration_connection(engine) as connection:
         await connection.run_sync(lambda sync: command.upgrade(_config(sync), revision))
 
 
 async def downgrade(engine: AsyncEngine, revision: str) -> None:
-    async with engine.begin() as connection:
-        await _without_timeouts(connection)
+    async with _migration_connection(engine) as connection:
         await connection.run_sync(lambda sync: command.downgrade(_config(sync), revision))
 
 

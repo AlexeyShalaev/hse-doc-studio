@@ -85,6 +85,8 @@ class _TokenIssuer:
         secret = new_token()
         async with self._uow.begin():
             # Действует только последняя ссылка: ушедшая раньше (и, возможно, утёкшая) больше не сработает.
+            # Цена: чужой POST /auth/forgot на адрес жертвы гасит её свежую ссылку, и ей нужно взять письмо
+            # поновее. Принято: ответ нейтральный, запросы ограничены по (ip, email).
             await self._auth_tokens.invalidate_for_user(user.id, kind, now)
             await self._auth_tokens.add(AuthToken(hash_token(secret), kind, user.id, now + ttl))
         return await self._delivery.deliver(
