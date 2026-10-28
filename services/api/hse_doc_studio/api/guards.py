@@ -37,7 +37,7 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.project_access import ProjectAccess
@@ -128,7 +128,7 @@ async def project_access_guard(request: Request) -> None:
     if rule is None:
         _enforce_scope(actor, request)
         if project_id is not None:
-            raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+            raise IdentityError(IdentityErrorCode.forbidden)
         return
     if isinstance(rule.action, RouteExemption):
         return
@@ -166,33 +166,33 @@ def _require_project_in_body(rule: RouteRule) -> None:
     """Без project_id в пути проект может быть только в теле или query: его права проверит сценарий
     через IProjectAccessChecker, когда прочитает запрос. Иначе в таблице ошибка, и маршрут закрыт."""
     if rule.project_source == "path":
-        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+        raise IdentityError(IdentityErrorCode.forbidden)
 
 
 def _handled_before_actor(request: Request) -> bool:
     """True, если запросу не нужен актор по cookie; локальные маршруты на сервере не существуют."""
     scope = scope_for_request(request)
     if scope is RouteScope.local_only:
-        raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
+        raise IdentityError(IdentityErrorCode.not_found)
     return scope is RouteScope.public or scope in SELF_AUTHENTICATED
 
 
 def _enforce_scope(actor: Actor, request: Request) -> None:
     scope = scope_for_request(request)
     if scope is None:
-        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+        raise IdentityError(IdentityErrorCode.forbidden)
     if scope is RouteScope.local_only:
-        raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
+        raise IdentityError(IdentityErrorCode.not_found)
     if scope in {RouteScope.instance_admin, RouteScope.org_admin} and not actor.is_instance_admin:
         # Админка не должна выдавать себя чужому: нет прав, значит нет и маршрута.
         if scope is RouteScope.org_admin or route_path_of(request).startswith(ADMIN_PREFIX):
-            raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
-        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+            raise IdentityError(IdentityErrorCode.not_found)
+        raise IdentityError(IdentityErrorCode.forbidden)
 
 
 def _enforce(decision: Decision, missing_role: Role | None = None) -> None:
     if decision is Decision.not_found:
-        raise HTTPException(status_code=_NOT_FOUND, detail="Project not found")
+        raise IdentityError(IdentityErrorCode.not_found)
     if decision is Decision.forbidden:
         raise ProjectForbiddenError("Forbidden", missing_role)
 
@@ -222,10 +222,11 @@ async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:
 
 async def _forbidden_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, ProjectForbiddenError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
-    content: dict[str, str] = {"detail": "Forbidden"}
+    code = IdentityErrorCode.forbidden if exc.required_role is None else IdentityErrorCode.forbidden_role
+    content: dict[str, str] = {"detail": message_for(code), "code": code.value}
     if exc.required_role is not None:
         # Контракт contracts/server: клиент называет нужную роль в тосте.
-        content |= {"code": IdentityErrorCode.forbidden_role.value, "required_role": exc.required_role.value}
+        content["required_role"] = exc.required_role.value
     return JSONResponse(status_code=_FORBIDDEN, content=content)
 
 

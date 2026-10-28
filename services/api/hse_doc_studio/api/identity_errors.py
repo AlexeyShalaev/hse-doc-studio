@@ -1,6 +1,6 @@
 """HTTP-вид ошибок identity: тело `{detail, code}` и статус по коду.
 
-Нужно войти: 401 (клиент уводит на страницу входа). Не хватает прав или не прошла проверка
+Нужно войти: 401 (клиент уводит на страницу входа). Нет такого или не твоё: 404. Не хватает прав или не прошла проверка
 запроса: 403. Неверный ввод: 422. Занятое имя или адрес, уже завершённый шаг: 409. Новый код
 обязан попасть в таблицу: тест сверяет её со всем перечислением.
 """
@@ -19,6 +19,7 @@ _FORBIDDEN = 403
 _INPUT = 422
 _STATE = 409
 _LIMIT = 429
+_NOT_FOUND = 404
 _UNAVAILABLE = 503
 
 IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
@@ -36,6 +37,7 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.forbidden: _FORBIDDEN,
     IdentityErrorCode.forbidden_role: _FORBIDDEN,
     IdentityErrorCode.setup_token_invalid: _FORBIDDEN,
+    IdentityErrorCode.not_found: _NOT_FOUND,
     IdentityErrorCode.rate_limited: _LIMIT,
     IdentityErrorCode.setup_required: _UNAVAILABLE,
     IdentityErrorCode.setup_already_done: _STATE,

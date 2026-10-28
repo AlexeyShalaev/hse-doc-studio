@@ -90,6 +90,7 @@
     "csrf_failed": "The session is out of date: reload the page and try again.",
     "auth_required": "Sign in required.",
     "forbidden": "You do not have permission to do this.",
+    "not_found": "Not found or no access.",
     "setup_token_invalid": "The setup token is wrong.",
     "setup_already_done": "First-run setup is already complete.",
     "password_policy": "The password is too short or too easy to guess.",
