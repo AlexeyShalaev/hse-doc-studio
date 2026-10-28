@@ -9,4 +9,6 @@ declare const __APP_VERSION__: string;
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 interface ImportMetaEnv {
   readonly VITE_GIT_DEMO?: string;
+  // Демо серверного режима: вход и сессия на данных вкладки. VITE_SERVER_DEMO=1 pnpm dev.
+  readonly VITE_SERVER_DEMO?: string;
 }

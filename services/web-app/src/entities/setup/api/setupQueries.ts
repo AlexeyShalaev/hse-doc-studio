@@ -21,15 +21,20 @@ export const setupKeys = {
  * опрашивается по таймеру: измениться оно может ровно одним способом — через
  * мастер, а тот пересоздаёт контейнер, после чего страница и так перезагружается.
  *
+ * `enabled: false` отключает запрос целиком (серверный режим, bootstrap ещё в пути).
+ *
  * `retry: false` намеренно: пока бэкенд старой версии не знает этой ручки,
  * повторять запрос бессмысленно, а стартовый экран не должен на этом висеть.
  */
-export const useSetupStatus = () =>
+export const useSetupStatus = (options: { enabled?: boolean } = {}) =>
   useQuery<SetupStatus>({
     queryKey: setupKeys.status(),
     queryFn: () => setupApi.status(),
     retry: false,
     staleTime: Infinity,
+    // Серверный режим этой ручки не знает: до ответа bootstrap и там, где
+    // docker_ui выключен, её не спрашиваем вовсе.
+    enabled: options.enabled ?? true,
   });
 
 /**

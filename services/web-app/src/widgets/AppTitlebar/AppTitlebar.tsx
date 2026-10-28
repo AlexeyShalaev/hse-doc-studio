@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
+import { AccountMenu } from "@features/account-menu";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -216,6 +217,7 @@ export const AppTitlebar = ({
         >
           <Settings size={16} />
         </button>
+        <AccountMenu />
       </div>
     </div>
   );

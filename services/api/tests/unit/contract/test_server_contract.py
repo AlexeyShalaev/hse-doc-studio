@@ -28,6 +28,8 @@ _SCHEMAS: dict[str, Any] = {
     "RegisterRequest": s.RegisterRequest,
     "RegisterResponse": s.RegisterResponse,
     "VerifyEmailRequest": s.VerifyEmailRequest,
+    "InvitationInfo": s.InvitationInfo,
+    "ResendVerificationRequest": s.ResendVerificationRequest,
     "ForgotRequest": s.ForgotRequest,
     "ForgotResponse": s.ForgotResponse,
     "ResetRequest": s.ResetRequest,

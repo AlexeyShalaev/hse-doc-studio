@@ -7,7 +7,9 @@ import {
 } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
 import { ZodError, type ZodIssue } from "zod";
+import { sessionKeys } from "@entities/session";
 import { ApiError } from "@shared/api/client";
+import { setUnauthorizedHandler } from "@shared/api/session";
 import { SchemaParseError } from "@shared/api/parse";
 import {
   useApplyTheme,
@@ -175,6 +177,13 @@ const queryClient = new QueryClient({
     },
   }),
 });
+
+// 401 или устаревший CSRF-токен: заново читаем bootstrap. Он сам 401 не отдаёт
+// (аноним получает user: null), поэтому цикла нет; пачку параллельных 401
+// транспорт сводит к одному вызову.
+setUnauthorizedHandler(() =>
+  queryClient.invalidateQueries({ queryKey: sessionKeys.bootstrap() }),
+);
 
 type ProvidersProps = {
   children: React.ReactNode;

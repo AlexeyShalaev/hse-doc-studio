@@ -23,6 +23,11 @@ const chunksOf = (result: unknown): { fileName: string; code: string }[] => {
 const FORBIDDEN = [
   "hse-dev-sync-states-gallery",
   "/dev/sync-states",
+  // Галерея серверных экранов и демо-мир сервера.
+  "hse-dev-server-screens-gallery",
+  "/dev/server-screens",
+  "server-demo-world",
+  "session_unavailable_retrying",
   // Записи галереи разных фич: все они живут в fixtures и тоже не должны попасть в бандл.
   "syncing_queued",
   "check_host_key_changed",

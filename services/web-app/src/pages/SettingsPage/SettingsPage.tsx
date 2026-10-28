@@ -42,15 +42,36 @@ import {
 import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
+import { LOCAL_BOOTSTRAP, useCapabilities } from "@entities/session";
+import type { Capabilities } from "@entities/session";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
+
+/**
+ * Чьи это настройки. user: личные, видны всем. installation: уровень установки,
+ * в серверном режиме их место в админке, а в локальном человек и есть владелец.
+ * local-only: про машину пользователя (диск, локальные модели, выгрузка данных),
+ * на сервере смысла не имеют. Область совпадает с SettingScope бэкенда: пока
+ * реестр не отдаётся в bootstrap, она записана здесь, а видимость решает
+ * возможность клиента, а не режим.
+ */
+type SectionScope = "user" | "installation" | "local-only";
 
 type SectionDef = {
   id: SettingsSectionId;
   labelKey: string;
   icon: LucideIcon;
   group: SectionGroupId;
+  scope: SectionScope;
+  /** Раздел виден, только если у клиента есть эта возможность. */
+  requires?: keyof Capabilities;
 };
+
+/** Раздел доступен при данных возможностях: личные всегда, остальные по requires. */
+const isSectionAvailable = (
+  def: Pick<SectionDef, "scope" | "requires">,
+  has: (name: keyof Capabilities) => boolean,
+): boolean => def.requires === undefined || has(def.requires);
 
 /**
  * Группы разделов. Список из двенадцати пунктов без структуры читается как
@@ -70,84 +91,103 @@ const SECTIONS: readonly SectionDef[] = [
   {
     id: "appearance",
     group: "general",
+    scope: "user",
     labelKey: "settingsPage.sections.appearance",
     icon: Sliders,
   },
   {
     id: "profile",
     group: "general",
+    scope: "user",
     labelKey: "settingsPage.sections.profile",
     icon: UserRound,
   },
   {
     id: "compiler",
     group: "documents",
+    scope: "installation",
+    requires: "docker_ui",
     labelKey: "settingsPage.sections.compiler",
     icon: Terminal,
   },
   {
     id: "fonts",
     group: "documents",
+    scope: "installation",
+    requires: "docker_ui",
     labelKey: "settingsPage.sections.fonts",
     icon: Type,
   },
   {
     id: "checks",
     group: "documents",
+    scope: "user",
     labelKey: "settingsPage.sections.checks",
     icon: ListChecks,
   },
   {
     id: "presentations",
     group: "documents",
+    scope: "user",
     labelKey: "settingsPage.sections.presentations",
     icon: Presentation,
   },
   {
     id: "signing",
     group: "documents",
+    scope: "user",
     labelKey: "settingsPage.sections.signing",
     icon: ShieldCheck,
   },
   {
     id: "providers",
     group: "ai",
+    scope: "user",
     labelKey: "settingsPage.sections.providers",
     icon: Bot,
   },
   {
     id: "local-models",
     group: "ai",
+    scope: "local-only",
+    requires: "local_services_ui",
     labelKey: "settingsPage.sections.localModels",
     icon: Cpu,
   },
   {
     id: "agent-personas",
     group: "ai",
+    scope: "user",
     labelKey: "settingsPage.sections.agentPersonas",
     icon: Drama,
   },
   {
     id: "disk",
     group: "system",
+    scope: "local-only",
+    requires: "docker_ui",
     labelKey: "settingsPage.sections.disk",
     icon: HardDrive,
   },
   {
     id: "data",
     group: "system",
+    scope: "local-only",
+    requires: "local_services_ui",
     labelKey: "settingsPage.sections.data",
     icon: DatabaseBackup,
   },
   {
     id: "git-access",
     group: "system",
+    scope: "user",
     labelKey: "settingsPage.sections.gitAccess",
     icon: KeyRound,
   },
   {
     id: "about",
     group: "system",
+    scope: "user",
     labelKey: "settingsPage.sections.about",
     icon: Info,
   },
@@ -228,7 +268,19 @@ export const SettingsPage = () => {
     nonce: number;
   } | null>(null);
 
-  const active = SECTIONS.find((s) => s.id === section);
+  // Пока bootstrap не пришёл (шлюз приложения его уже ждёт, так что в работе
+  // он есть всегда), считаем клиента локальным: так страница в тестах и
+  // галереях ведёт себя как раньше.
+  const { capabilities } = useCapabilities();
+  const caps = capabilities ?? LOCAL_BOOTSTRAP.capabilities;
+  const visibleSections = SECTIONS.filter((s) =>
+    isSectionAvailable(s, (name) => caps[name]),
+  );
+  const visibleIds = new Set<SettingsSectionId>(
+    visibleSections.map((s) => s.id),
+  );
+
+  const active = visibleSections.find((s) => s.id === section);
   const activeId = active?.id;
 
   useEffect(() => {
@@ -268,13 +320,20 @@ export const SettingsPage = () => {
   }, [flash, activeId]);
 
   if (!active) {
-    return <Navigate to={`/settings/${DEFAULT_SECTION}`} replace />;
+    // Прямая ссылка на скрытый раздел ведёт на первый доступный, а не на пустую страницу.
+    const fallback = visibleIds.has(DEFAULT_SECTION)
+      ? DEFAULT_SECTION
+      : (visibleSections[0]?.id ?? DEFAULT_SECTION);
+    return <Navigate to={`/settings/${fallback}`} replace />;
   }
 
   const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const isSearching = tokens.length > 0;
   const results = isSearching
-    ? SETTINGS_SEARCH_INDEX.filter((entry) => matchesQuery(entry, tokens))
+    ? SETTINGS_SEARCH_INDEX.filter(
+        (entry) =>
+          visibleIds.has(entry.sectionId) && matchesQuery(entry, tokens),
+      )
     : [];
 
   const handleQueryChange = (value: string) => {
@@ -365,13 +424,14 @@ export const SettingsPage = () => {
               </div>
             ) : (
               <nav className="settings-modal-nav">
-                {SECTIONS.map((s, index) => {
+                {visibleSections.map((s, index) => {
                   const Icon = s.icon;
                   const isActive = s.id === active.id;
                   // Заголовок печатается на первом разделе группы: список
                   // объявлен уже сгруппированным, поэтому достаточно сравнить
                   // с предыдущим — отдельная вложенная структура тут лишняя.
-                  const isGroupStart = SECTIONS[index - 1]?.group !== s.group;
+                  const isGroupStart =
+                    visibleSections[index - 1]?.group !== s.group;
                   return (
                     <Fragment key={s.id}>
                       {isGroupStart && (

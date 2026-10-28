@@ -45,5 +45,19 @@
     "current": "current step",
     "upcoming": "upcoming",
     "error": "failed"
+  },
+  "linkDelivery": {
+    "title": "Emails are not sent",
+    "kinds": {
+      "verify": "Email is not configured on this installation. Copy the confirmation link and open it in your browser.",
+      "reset": "Email is not configured on this installation. Copy the new-password link and open it in your browser.",
+      "invite": "Email is not configured on this installation. Copy the link and pass it to the invited person."
+    },
+    "once": "The link will not be shown again.",
+    "labels": {
+      "verify": "Confirmation link",
+      "reset": "New-password link",
+      "invite": "Invitation link"
+    }
   }
 }

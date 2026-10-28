@@ -12,6 +12,7 @@ import {
   VersionSwitcher,
 } from "@features/check-update";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
+import { useCapabilities } from "@entities/session";
 import { i18n, toast } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { Setting, SettingHead } from "./Setting";
@@ -59,9 +60,14 @@ const copyPath = (value: string) => {
     });
 };
 
-export const AboutSection = () => {
+const AboutUpdates = ({
+  data,
+  isLoading,
+}: {
+  data: SystemInfo | undefined;
+  isLoading: boolean;
+}) => {
   const { t } = useTranslation("settings");
-  const { data, isLoading } = useSystemInfo();
   const update = useCheckUpdate();
   const { data: appSettings } = useAppSettings();
   const updateAppSettings = useUpdateAppSettings();
@@ -70,75 +76,8 @@ export const AboutSection = () => {
   // чтобы галочка не мигала из «выкл» в «вкл».
   const autoUpdate = appSettings?.auto_update ?? true;
 
-  const sub = data
-    ? t("about.license", { version: data.version, license: data.license })
-    : undefined;
-  const sourceLabel = data?.source_url.replace(/^https?:\/\//, "");
-
   return (
-    <div className="flex flex-col" style={{ gap: 16 }}>
-      <SettingHead
-        anchorId="about"
-        title="HSE Studio"
-        {...(sub ? { sub } : {})}
-      />
-      <div
-        className="flex flex-col"
-        style={{
-          gap: 8,
-          padding: 14,
-          background: "var(--bg-0)",
-          borderRadius: "var(--r-3)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <Logomark />
-          <strong>{t("about.productName")}</strong>
-        </div>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
-          {t("about.description")}
-        </p>
-      </div>
-
-      <Setting anchorId="about-mode" label={t("about.runMode")}>
-        {isLoading ? (
-          <Spinner size="sm" />
-        ) : (
-          <span style={{ fontSize: 12 }}>
-            {data ? t(MODE_LABELS[data.deployment_mode]) : "—"}
-          </span>
-        )}
-      </Setting>
-
-      <Setting anchorId="about-image" label={t("about.image")}>
-        <Mono>{data?.image_ref ?? "—"}</Mono>
-      </Setting>
-
-      {/* Дату сборки знает только CI (build-arg в образе) — в исходной сборке её
-          нет, и строку тогда не показываем вовсе. */}
-      {data?.built && (
-        <Setting anchorId="about-built" label={t("about.built")}>
-          <Mono>{data.built}</Mono>
-        </Setting>
-      )}
-
-      <Setting anchorId="about-source" label={t("about.source")}>
-        {data ? (
-          <a
-            href={data.source_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="mono"
-            style={{ fontSize: 11.5, color: "var(--accent)" }}
-          >
-            {sourceLabel}
-          </a>
-        ) : (
-          <Mono>—</Mono>
-        )}
-      </Setting>
-
+    <>
       {data?.data_dir && (
         <div id="about-data-dir" className="field settings-anchor">
           <label>{t("about.configFolder")}</label>
@@ -253,6 +192,88 @@ export const AboutSection = () => {
         canSelfUpdate={data?.can_self_update ?? false}
         sourceUrl={data?.source_url ?? null}
       />
+    </>
+  );
+};
+
+export const AboutSection = () => {
+  const { t } = useTranslation("settings");
+  const { data, isLoading } = useSystemInfo();
+  const { capabilities } = useCapabilities();
+  // В серверном режиме обновляет администратор, а путь к данным сервера
+  // пользователю не нужен: этих строк нет, и их запросов тоже.
+  const selfUpdate = capabilities?.self_update ?? true;
+
+  const sub = data
+    ? t("about.license", { version: data.version, license: data.license })
+    : undefined;
+  const sourceLabel = data?.source_url.replace(/^https?:\/\//, "");
+
+  return (
+    <div className="flex flex-col" style={{ gap: 16 }}>
+      <SettingHead
+        anchorId="about"
+        title="HSE Studio"
+        {...(sub ? { sub } : {})}
+      />
+      <div
+        className="flex flex-col"
+        style={{
+          gap: 8,
+          padding: 14,
+          background: "var(--bg-0)",
+          borderRadius: "var(--r-3)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div className="flex items-center" style={{ gap: 8 }}>
+          <Logomark />
+          <strong>{t("about.productName")}</strong>
+        </div>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+          {t("about.description")}
+        </p>
+      </div>
+
+      <Setting anchorId="about-mode" label={t("about.runMode")}>
+        {isLoading ? (
+          <Spinner size="sm" />
+        ) : (
+          <span style={{ fontSize: 12 }}>
+            {data ? t(MODE_LABELS[data.deployment_mode]) : "—"}
+          </span>
+        )}
+      </Setting>
+
+      <Setting anchorId="about-image" label={t("about.image")}>
+        <Mono>{data?.image_ref ?? "—"}</Mono>
+      </Setting>
+
+      {/* Дату сборки знает только CI (build-arg в образе) — в исходной сборке её
+          нет, и строку тогда не показываем вовсе. */}
+      {data?.built && (
+        <Setting anchorId="about-built" label={t("about.built")}>
+          <Mono>{data.built}</Mono>
+        </Setting>
+      )}
+
+      <Setting anchorId="about-source" label={t("about.source")}>
+        {data ? (
+          <a
+            href={data.source_url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mono"
+            style={{ fontSize: 11.5, color: "var(--accent)" }}
+          >
+            {sourceLabel}
+          </a>
+        ) : (
+          <Mono>—</Mono>
+        )}
+      </Setting>
+
+      {selfUpdate && <AboutUpdates data={data} isLoading={isLoading} />}
     </div>
   );
 };

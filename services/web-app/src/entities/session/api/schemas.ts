@@ -100,6 +100,7 @@ export const LoginResponseSchema = z.strictObject({
   user: SessionUserSchema,
   csrf_token: z.string(),
 });
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export const RegisterRequestSchema = z.strictObject({
   email: z.string(),
   name: z.string(),
@@ -111,11 +112,22 @@ export const RegisterResponseSchema = z.strictObject({
   status: z.enum(["check_email", "pending_approval"]),
   link: z.string().nullable(),
 });
+export const InvitationInfoSchema = z.strictObject({
+  email: z.string(),
+  invited_by: z.string(),
+  org_name: z.string().nullable(),
+});
+export type InvitationInfo = z.infer<typeof InvitationInfoSchema>;
+export const ResendVerificationRequestSchema = z.strictObject({
+  email: z.string(),
+});
 export const ForgotRequestSchema = z.strictObject({ email: z.string() });
+export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export const ForgotResponseSchema = z.strictObject({
   status: z.literal("check_email"),
   link: z.string().nullable(),
 });
+export type ForgotResponse = z.infer<typeof ForgotResponseSchema>;
 export const ResetRequestSchema = z.strictObject({
   token: z.string(),
   password: z.string(),
