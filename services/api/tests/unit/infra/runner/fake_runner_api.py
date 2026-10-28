@@ -1,0 +1,164 @@
+"""Минимальный сервер протокола раннера для тестов клиента и цикла: тела проверяются строгими схемами контракта."""
+
+from __future__ import annotations
+
+import asyncio
+import copy
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import httpx
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
+from hse_doc_studio.api.schemas import runner as schemas
+
+TOKEN = "runner-secret"  # noqa: S105
+_FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "runner" / "fixtures"
+
+
+def envelope_body(kind: str = "compile", *, attempt: int = 1, job_id: str | None = None) -> dict[str, Any]:
+    body: dict[str, Any] = copy.deepcopy(json.loads((_FIXTURES / "JobEnvelopeBody" / f"{kind}.json").read_text()))
+    body["attempt"] = attempt
+    if job_id is not None:
+        body["spec"]["id"] = job_id
+    return body
+
+
+@dataclass
+class FakeJob:
+    envelope: dict[str, Any]
+    cancel: bool = False
+    stale: bool = False
+    heartbeats: int = 0
+    log_batches: dict[int, list[str]] = field(default_factory=dict)
+    completed: list[dict[str, Any]] = field(default_factory=list)
+    artifacts: dict[str, bytes] = field(default_factory=dict)
+    announced: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def job_id(self) -> str:
+        return str(self.envelope["spec"]["id"])
+
+    @property
+    def log_lines(self) -> list[str]:
+        return [line for seq in sorted(self.log_batches) for line in self.log_batches[seq]]
+
+
+class FakeRunnerState:
+    def __init__(self) -> None:
+        self.queue: list[FakeJob] = []
+        self.jobs: dict[str, FakeJob] = {}
+        self.registrations: list[dict[str, Any]] = []
+        self.polls = 0
+        self.headers_seen: list[dict[str, str]] = []
+        self.fail_register_with: int | None = None
+
+    def enqueue(self, envelope: dict[str, Any]) -> FakeJob:
+        job = FakeJob(envelope)
+        self.queue.append(job)
+        self.jobs[job.job_id] = job
+        return job
+
+
+def _error(status: int, code: str, detail: str = "x") -> JSONResponse:
+    return JSONResponse({"detail": detail, "code": code}, status_code=status)
+
+
+def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def auth(request: Request, call_next: Any) -> Response:
+        state.headers_seen.append(dict(request.headers))
+        if request.headers.get("authorization") != f"Bearer {TOKEN}":
+            return _error(401, "runner_unauthorized")
+        return await call_next(request)
+
+    @app.post("/api/runner/v1/register")
+    async def register(body: schemas.RunnerRegisterRequestBody) -> Any:
+        if state.fail_register_with is not None:
+            return _error(state.fail_register_with, "runner_disabled")
+        state.registrations.append(body.model_dump())
+        return schemas.RunnerRegisterResponseBody(
+            runner_id="runner-1", lease_s=45, heartbeat_s=10, max_poll_wait_s=25
+        ).model_dump()
+
+    @app.post("/api/runner/v1/poll")
+    async def poll(body: schemas.PollRequestBody) -> Any:
+        state.polls += 1
+        if state.queue:
+            return {"envelope": state.queue.pop(0).envelope}
+        await asyncio.sleep(0.02)
+        return {"envelope": None}
+
+    def job_or_error(job_id: str, attempt: int) -> FakeJob | JSONResponse:
+        job = state.jobs.get(job_id)
+        if job is None:
+            return _error(404, "job_not_found")
+        if job.stale or attempt != job.envelope["attempt"]:
+            return _error(409, "stale_attempt")
+        return job
+
+    @app.post("/api/runner/v1/jobs/{job_id}/heartbeat")
+    async def heartbeat(job_id: str, body: schemas.HeartbeatRequestBody) -> Any:
+        job = job_or_error(job_id, body.attempt)
+        if isinstance(job, JSONResponse):
+            return job
+        job.heartbeats += 1
+        return {"cancel": job.cancel, "lease_until": "2026-10-26T09:31:00+00:00"}
+
+    @app.post("/api/runner/v1/jobs/{job_id}/log")
+    async def log(job_id: str, body: schemas.LogBatchBody) -> Any:
+        job = job_or_error(job_id, body.attempt)
+        if isinstance(job, JSONResponse):
+            return job
+        job.log_batches.setdefault(body.seq, list(body.lines))
+        return Response(status_code=204)
+
+    @app.post("/api/runner/v1/jobs/{job_id}/artifacts")
+    async def announce(job_id: str, body: schemas.ArtifactUploadRequestBody) -> Any:
+        job = job_or_error(job_id, body.attempt)
+        if isinstance(job, JSONResponse):
+            return job
+        job.announced.append(body.artifact.model_dump())
+        return {"url": None}
+
+    @app.put("/api/runner/v1/jobs/{job_id}/artifacts/{sha256}")
+    async def put_artifact(job_id: str, sha256: str, request: Request) -> Any:
+        state.jobs[job_id].artifacts[sha256] = await request.body()
+        return Response(status_code=204)
+
+    @app.post("/api/runner/v1/jobs/{job_id}/complete")
+    async def complete(job_id: str, body: schemas.CompleteRequestBody) -> Any:
+        job = job_or_error(job_id, body.attempt)
+        if isinstance(job, JSONResponse):
+            return job
+        job.completed.append(body.model_dump(mode="json"))
+        return {"accepted": True}
+
+    return app
+
+
+class SwitchTransport(httpx.AsyncBaseTransport):
+    """ASGI-транспорт с рубильником: пока `down`, соединение рвётся, как при остановленном api."""
+
+    def __init__(self, app: FastAPI) -> None:
+        self._inner = httpx.ASGITransport(app=app)
+        self.down = False
+        self.failures = 0
+        self.fail_next: int = 0
+        self.status_next: int = 0
+        self.status_calls = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if self.down or self.fail_next > 0:
+            self.fail_next = max(0, self.fail_next - 1)
+            self.failures += 1
+            raise httpx.ConnectError("api is down", request=request)
+        if self.status_next > 0:
+            self.status_next -= 1
+            self.status_calls += 1
+            return httpx.Response(503, request=request)
+        return await self._inner.handle_async_request(request)
