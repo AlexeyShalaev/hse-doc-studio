@@ -9,6 +9,7 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
+    IProjectIndexLookup,
     IProjectIndexRepository,
     IProjectRepository,
 )
@@ -36,7 +37,17 @@ class GetProjectUC:
         self._project_index_repo = project_index_repo
 
     async def execute(self, inp: GetProjectInput) -> GetProjectOutput:
-        known_folders = self._project_index_repo.list_known()
+        index = self._project_index_repo
+        if isinstance(index, IProjectIndexLookup):
+            # Серверный режим: проект ищет каталог в БД, папок индекса там нет.
+            found = await index.locate(inp.project_id)
+            if found is not None:
+                return GetProjectOutput(project=found[1])
+            raise NotFoundError(
+                localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
+            )
+
+        known_folders = index.list_known()
 
         for folder in known_folders:
             try:
