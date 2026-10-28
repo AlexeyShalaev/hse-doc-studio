@@ -87,3 +87,17 @@ class AuthConfig(BaseModel):
             "Не задано: нужен, если сервер слушает не только loopback."
         ),
     )
+    experimental: bool = Field(
+        default=False,
+        description=(
+            "Пустить server до финального среза этапа 2, минуя реестр готовности (dev-стенд server-lite). "
+            "Запрещено при публичном bind: адрес сервера должен быть loopback."
+        ),
+    )
+    experimental_in_container: bool = Field(
+        default=False,
+        description=(
+            "Подтверждение для experimental: api слушает 0.0.0.0 внутри контейнера, а порт опубликован "
+            "только на loopback хоста (compose server-lite)."
+        ),
+    )

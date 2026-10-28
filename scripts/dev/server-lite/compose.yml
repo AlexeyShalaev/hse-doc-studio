@@ -1,0 +1,88 @@
+# Стенд server-lite: api в режиме server (experimental) и Postgres, без раннера и S3 (исходники на томе api).
+# Нужен, чтобы глазами проверить вход и «мои проекты» до финального среза этапа 2. Запуск и учётные данные:
+#   make -C scripts/dev server-lite-up        # поднять; на первом запуске создаёт server-lite/.env с секретами
+#   make -C scripts/dev server-lite-seed      # 3 пользователя и проекты
+#   make -C scripts/dev server-lite-down      # остановить (данные остаются), server-lite-reset стирает и данные
+# Порт api публикуется только на loopback хоста: experimental не должен слушать публичный интерфейс.
+name: hse-doc-studio-server-lite
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${SERVER_LITE_PG_PASSWORD:?запустите через make server-lite-up}
+      POSTGRES_DB: studio
+    volumes:
+      - server-lite-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d studio"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: production
+      args:
+        BACKEND_EXTRAS: "--extra server"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${SERVER_LITE_PORT:-8100}:8000"
+    environment: &api-env
+      HSE_STUDIO__MODE: server
+      HSE_STUDIO__AUTH__EXPERIMENTAL: "true"
+      HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER: "true"
+      HSE_STUDIO__SERVER__HOST: "0.0.0.0"
+      HSE_STUDIO__SERVER__PORT: "8000"
+      HSE_STUDIO__DATA_DIR: /data
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+      HSE_STUDIO__DB__DSN: postgresql://studio:${SERVER_LITE_PG_PASSWORD:?}@postgres:5432/studio
+      HSE_STUDIO__DB__AUTO_MIGRATE: "true"
+      HSE_STUDIO__SECRETS__KEY: ${SERVER_LITE_SECRETS_KEY:?}
+      HSE_STUDIO__AUTH__PUBLIC_URL: http://localhost:${SERVER_LITE_PORT:-8100}
+      # Режим регистрации из окружения заменяет шаг мастера: стенд сразу готов, админ создан при старте.
+      HSE_STUDIO__AUTH__REGISTRATION_MODE: invite
+      HSE_STUDIO__AUTH__ADMIN_EMAIL: ${SERVER_LITE_ADMIN_EMAIL:-admin@example.org}
+      HSE_STUDIO__AUTH__ADMIN_NAME: Администратор
+      HSE_STUDIO__AUTH__ADMIN_PASSWORD: ${SERVER_LITE_ADMIN_PASSWORD:?}
+      HSE_STUDIO__CORS__ALLOW_ORIGINS: '["http://localhost:${SERVER_LITE_PORT:-8100}","http://localhost:5173"]'
+    volumes:
+      - server-lite-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      start_period: 20s
+      retries: 20
+    restart: unless-stopped
+
+  # Одноразовая заливка демо-данных: docker compose run --rm seed (через make server-lite-seed).
+  seed:
+    profiles: [seed]
+    build:
+      context: ../../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: production
+      args:
+        BACKEND_EXTRAS: "--extra server"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      <<: *api-env
+      SERVER_LITE_API_URL: http://api:8000
+      SERVER_LITE_SEED_PASSWORD: ${SERVER_LITE_SEED_PASSWORD:?}
+    volumes:
+      - ./seed.py:/seed/seed.py:ro
+    command: ["python", "/seed/seed.py"]
+    restart: "no"
+
+volumes:
+  server-lite-pg:
+  server-lite-data:

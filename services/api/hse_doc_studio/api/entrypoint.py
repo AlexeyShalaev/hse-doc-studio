@@ -86,6 +86,28 @@ def _register_per_user_routes_check(readiness: ServerReadinessRegistry) -> None:
         readiness.register(check)
 
 
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def _ensure_experimental_allowed(cfg: Settings) -> None:
+    """Experimental пускает server мимо реестра готовности, поэтому только на закрытом адресе и с рабочими основами."""
+    if cfg.server.host not in _LOOPBACK_HOSTS and not cfg.auth.experimental_in_container:
+        msg = (
+            "HSE_STUDIO__AUTH__EXPERIMENTAL is refused on a public bind "
+            f"(server.host={cfg.server.host}): listen on 127.0.0.1, or set HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER "
+            "when the port is published to the host loopback only"
+        )
+        raise RuntimeError(msg)
+    if not (cfg.db.dsn or "").strip():
+        msg = "HSE_STUDIO__MODE=server needs HSE_STUDIO__DB__DSN even in experimental mode"
+        raise RuntimeError(msg)
+    from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
+
+    if (problem := secrets_key_problem(cfg)) is not None:
+        msg = f"HSE_STUDIO__MODE=server needs a secrets key even in experimental mode: {problem}"
+        raise RuntimeError(msg)
+
+
 def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
     """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
 
@@ -95,6 +117,11 @@ def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = se
         _register_secrets_check(cfg, readiness)
         _register_per_user_routes_check(readiness)
         problems = readiness.unmet()
+        if cfg.auth.experimental:
+            _ensure_experimental_allowed(cfg)
+            if problems:
+                logger.warning("server mode runs as experimental", not_ready=problems)
+            return
         if problems:
             msg = (
                 "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local. "
@@ -154,6 +181,18 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     setup_dishka(container, app)
 
     if settings.mode is StudioMode.server:
+
+        @app.on_event("startup")
+        async def _ensure_db_current() -> None:
+            # Раньше всех фоновых задач и мастера: им нужна схема. В compose мигрируем сами под advisory-локом,
+            # иначе отказываем с db_outdated (в helm мигрирует отдельный job).
+            from sqlalchemy.ext.asyncio import AsyncEngine  # noqa: PLC0415
+
+            from hse_doc_studio.infra.db.migrator import ensure_db_current  # noqa: PLC0415
+
+            engine = await container.get(AsyncEngine)
+            await ensure_db_current(engine, auto_migrate=settings.db.auto_migrate)
+
         server_metrics = install_server_observability(app, settings, health_checks)
         install_background(
             app,
