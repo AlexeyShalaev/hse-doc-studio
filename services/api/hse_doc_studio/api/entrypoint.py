@@ -132,6 +132,12 @@ def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = se
             raise RuntimeError(msg)
 
 
+# Имя файла выгрузки (bundle, PDF) приходит в Content-Disposition; без него фронт на другом origin сохраняет файл
+# под запасным именем. Retry-After нужен форме входа: по нему идёт обратный отсчёт блокировки (429), без него
+# при кросс-доменной разработке (Vite на :5173) браузер скрывает заголовок и отсчёт берёт значение по умолчанию.
+CORS_EXPOSE_HEADERS = ["Content-Disposition", "Retry-After"]
+
+
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
     """Factory function for uvicorn to create the app instance."""
     ensure_supported_mode(settings)
@@ -158,9 +164,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         allow_credentials=settings.cors.allow_credentials,
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
-        # Имя файла выгрузки (bundle, PDF) приходит в Content-Disposition; без этой строки фронт на другом
-        # origin его не видит и сохраняет файл под запасным именем.
-        expose_headers=["Content-Disposition"],
+        expose_headers=CORS_EXPOSE_HEADERS,
     )
 
     @app.middleware("http")
