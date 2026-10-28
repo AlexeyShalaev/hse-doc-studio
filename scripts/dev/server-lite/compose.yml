@@ -1,8 +1,8 @@
 # Стенд server-lite: api в режиме server (experimental) и Postgres, без раннера и S3 (исходники на томе api).
 # Нужен, чтобы глазами проверить вход и «мои проекты» до финального среза этапа 2. Запуск и учётные данные:
-#   make -C scripts/dev server-lite-up        # поднять; на первом запуске создаёт server-lite/.env с секретами
-#   make -C scripts/dev server-lite-seed      # 3 пользователя и проекты
-#   make -C scripts/dev server-lite-down      # остановить (данные остаются), server-lite-reset стирает и данные
+#   make server-lite-up        # поднять; на первом запуске создаёт server-lite/.env с секретами
+#   make server-lite-seed      # 3 пользователя и проекты
+#   make server-lite-down      # остановить (данные остаются), server-lite-reset стирает и данные
 # Порт api публикуется только на loopback хоста: experimental не должен слушать публичный интерфейс.
 name: hse-doc-studio-server-lite
 
