@@ -59,6 +59,8 @@ class QueuedJob:
     affinity_runner_id: UUID | None = None
     runner_id: UUID | None = None
     lease_until: datetime | None = None
+    # Начало текущей попытки: от него считается таймаут задачи.
+    started_at: datetime | None = None
     cancel_requested: bool = False
     finished_at: datetime | None = None
     result: dict[str, Any] | None = None

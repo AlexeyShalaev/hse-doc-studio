@@ -68,6 +68,7 @@ class JobRow(Base):
     affinity_runner_id: Mapped[UUID | None] = mapped_column(Uuid)
     runner_id: Mapped[UUID | None] = mapped_column(Uuid)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

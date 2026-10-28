@@ -83,6 +83,7 @@ class TestJobQueueContract(PortContract):
             port.runner.id,
         )
         assert taken.lease_until == port.clock.now + timedelta(seconds=LEASE_S)
+        assert taken.started_at == port.clock.now
         assert await port.claim() is None
 
     async def test__claim__runner_without_tag__skips_job(self, port: _Harness) -> None:

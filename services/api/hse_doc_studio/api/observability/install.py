@@ -100,3 +100,13 @@ def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings)
     app.state.background.register(
         PeriodicTask(name="auth_cleanup", interval_s=cfg.server.auth_cleanup_interval_s, run=_cleanup)
     )
+
+
+def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодический возврат задач с истёкшей арендой и контроль таймаутов; идёт только у лидера."""
+    from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService  # noqa: PLC0415
+
+    async def _sweep() -> None:
+        await (await container.get(JobQueueService)).sweep()
+
+    app.state.background.register(PeriodicTask(name="job_reaper", interval_s=cfg.jobs.reaper_interval_s, run=_sweep))

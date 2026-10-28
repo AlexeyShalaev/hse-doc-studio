@@ -112,6 +112,7 @@ class InMemoryJobQueue:
             attempt=best.attempt + 1,
             runner_id=runner.id,
             lease_until=now + timedelta(seconds=lease_s),
+            started_at=now,
         )
         self._jobs[taken.id] = taken
         self._global_vtime = advance_global_vtime(self._global_vtime, taken.vtime)
@@ -165,7 +166,14 @@ class InMemoryJobQueue:
                 done = replace(job, state=JobState.cancelled, finished_at=now, lease_until=None)
                 outcomes.append(ExpiredOutcome(done, requeued=False))
             elif retry_available(job.attempt, job.max_attempts):
-                done = replace(job, state=JobState.queued, runner_id=None, lease_until=None, affinity_runner_id=None)
+                done = replace(
+                    job,
+                    state=JobState.queued,
+                    runner_id=None,
+                    lease_until=None,
+                    started_at=None,
+                    affinity_runner_id=None,
+                )
                 outcomes.append(ExpiredOutcome(done, requeued=True))
             else:
                 done = replace(

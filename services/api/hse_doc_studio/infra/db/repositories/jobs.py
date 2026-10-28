@@ -60,6 +60,7 @@ def _job(row: JobRow) -> QueuedJob:
         affinity_runner_id=row.affinity_runner_id,
         runner_id=row.runner_id,
         lease_until=row.lease_until,
+        started_at=row.started_at,
         cancel_requested=row.cancel_requested,
         finished_at=row.finished_at,
         result=row.result,
@@ -152,6 +153,7 @@ class PostgresJobQueue:
             row.attempt += 1
             row.runner_id = runner.id
             row.lease_until = now + timedelta(seconds=lease_s)
+            row.started_at = now
             await session.flush()
             await session.execute(
                 update(JobQueueStateRow).values(global_vtime=func.greatest(JobQueueStateRow.global_vtime, row.vtime))
@@ -219,6 +221,7 @@ class PostgresJobQueue:
                 elif retry_available(row.attempt, row.max_attempts):
                     row.state = JobState.queued.value
                     row.runner_id = None
+                    row.started_at = None
                     row.affinity_runner_id = None
                     requeued = True
                 else:

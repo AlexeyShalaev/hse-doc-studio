@@ -19,6 +19,7 @@ from hse_doc_studio.api.observability.install import (
     install_auth_cleanup,
     install_background,
     install_health,
+    install_job_reaper,
     install_project_purge,
     install_server_observability,
 )
@@ -211,6 +212,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         )
         install_project_purge(app, container, settings)
         install_auth_cleanup(app, container, settings)
+        install_job_reaper(app, container, settings)
 
         @app.on_event("shutdown")
         async def _drain_project_mirror() -> None:
