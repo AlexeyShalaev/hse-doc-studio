@@ -5,6 +5,7 @@ import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -12,8 +13,11 @@ from fastapi import APIRouter, Depends, FastAPI
 from hse_doc_studio.api import guards, route_scopes
 from hse_doc_studio.api.guards import project_access_guard
 from hse_doc_studio.api.route_scopes import RouteScope
+from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import current_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
+from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
@@ -196,3 +200,30 @@ async def test__guard__office_callback_reachable_for_non_local(
 
     assert resp.status_code == 400
     assert resp.json() == {"detail": "callback body must be a JSON object"}
+
+
+async def test__guard__body_scoped_route__reaches_use_case_and_checker_maps_to_404_403(
+    guarded_app: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_server(monkeypatch, _STRANGER)
+    foreign, weak = uuid4(), uuid4()
+
+    async def require(_self: object, project_id: UUID, _action: object) -> None:
+        if project_id == foreign:
+            raise NotFoundError("Project not found")
+        if project_id == weak:
+            raise ProjectForbiddenError("Forbidden")
+
+    monkeypatch.setattr(LocalProjectAccessChecker, "require", require)
+
+    assert (await guarded_app.post("/api/v1/agent/chats", json={})).status_code == 201
+    chat = await guarded_app.post("/api/v1/agent/chats", json={"project_id": str(foreign)})
+    assert (chat.status_code, chat.json()) == (404, {"detail": "Project not found"})
+    assert (await guarded_app.post("/api/v1/agent/chats", json={"project_id": str(weak)})).status_code == 403
+    probe = {"url": "https://example.test/a.git"}
+    assert (
+        await guarded_app.post("/api/v1/git/remote/probe", json=probe | {"project_id": str(foreign)})
+    ).status_code == 404
+    assert (
+        await guarded_app.post("/api/v1/git/remote/probe", json=probe | {"project_id": str(weak)})
+    ).status_code == 403

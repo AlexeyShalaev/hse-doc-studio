@@ -31,8 +31,15 @@ class ServerConfig:
     projects_root: Path
     s3: StorageConfig
     caps: ServerCapabilities = field(default_factory=ServerCapabilities)
+    project_retention_days: int = 30
+    project_purge_interval_s: float = 3600.0
 
     @classmethod
     def from_settings(cls, cfg: Settings) -> ServerConfig:
         root = cfg.server.projects_root or cfg.data_dir.expanduser() / "projects"
-        return cls(projects_root=root.expanduser(), s3=cfg.s3)
+        return cls(
+            projects_root=root.expanduser(),
+            s3=cfg.s3,
+            project_retention_days=cfg.server.project_retention_days,
+            project_purge_interval_s=cfg.server.project_purge_interval_s,
+        )

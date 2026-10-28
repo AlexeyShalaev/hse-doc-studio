@@ -34,8 +34,10 @@ class GetProjectSuggestionsUC:
     can reuse a common location) and every distinct author (ranked by how often
     they appear — so co-authors autocomplete)."""
 
-    def __init__(self, list_projects: ListProjectsUC, default_projects_dir: Path) -> None:
+    def __init__(self, list_projects: ListProjectsUC, default_projects_dir: Path, *, with_folders: bool = True) -> None:
         self._list_projects = list_projects
+        # На сервере папки выбирает сервер, а их пути чужим не показывают.
+        self._with_folders = with_folders
         # `<data_dir>/projects` — создаётся приложением на старте, чтобы у
         # свежей установки сразу было готовое место под работы.
         self._default_projects_dir = default_projects_dir
@@ -45,7 +47,9 @@ class GetProjectSuggestionsUC:
 
         # Parent dir of each project folder = the location the user keeps
         # projects in. Ranked by project count, most-used first.
-        folder_counts: Counter[str] = Counter(str(p.folder.parent) for p in projects)
+        folder_counts: Counter[str] = (
+            Counter(str(p.folder.parent) for p in projects) if self._with_folders else Counter()
+        )
         folder_roots = [
             FolderRootSuggestion(path=path, count=count) for path, count in folder_counts.most_common(_MAX_FOLDER_ROOTS)
         ]
@@ -53,7 +57,7 @@ class GetProjectSuggestionsUC:
         # Дефолтный корень в конце: привычные пользователю места (по числу
         # проектов) важнее, но у пустой установки должен быть хотя бы один чип.
         default = self._default_projects_dir
-        if default.is_dir() and str(default) not in {r.path for r in folder_roots}:
+        if self._with_folders and default.is_dir() and str(default) not in {r.path for r in folder_roots}:
             folder_roots.append(FolderRootSuggestion(path=str(default), count=0))
 
         # Distinct authors (by name + group), ranked by frequency across all

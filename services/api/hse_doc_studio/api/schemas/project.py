@@ -89,7 +89,8 @@ class NdaStatusResponse(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     name: str
-    folder: str
+    # В локальном режиме обязательна; на общем сервере папку выбирает сервер, и поле отклоняется.
+    folder: str | None = None
     pack_id: str
     template_id: str
     version: str

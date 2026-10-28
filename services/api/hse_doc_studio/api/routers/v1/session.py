@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response
 
 from hse_doc_studio.api.auth_cookie import credentials_from_request
-from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.schemas.session import (
     AuthOptions,
     BootstrapResponse,
@@ -72,6 +72,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
     uc = await request.state.dishka_container.get(BootstrapUC)
     result = await uc.execute(credentials_from_request(request).session_secret)
     is_admin = result.user is not None and result.user.is_instance_admin
+    caps = ServerConfig.from_settings(settings).caps
     return BootstrapResponse(
         mode="server",
         version=settings.get_app_version(),
@@ -86,15 +87,15 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         ),
         user=session_user(result.user) if result.user else None,
         capabilities=Capabilities(
-            fs_browse=False,
-            connect_folder=False,
-            open_in_editor=False,
-            move_project=False,
-            docker_ui=False,
-            self_update=False,
-            local_services_ui=False,
+            fs_browse=caps.fs_browse,
+            connect_folder=caps.connect_folder,
+            open_in_editor=caps.open_in_editor,
+            move_project=caps.move_project,
+            docker_ui=caps.docker_ui,
+            self_update=caps.self_update,
+            local_services_ui=caps.local_services_ui,
             admin=is_admin,
-            personal_signing_keys=True,
+            personal_signing_keys=caps.personal_signing_keys,
         ),
         csrf_token=result.session.csrf_token if result.session else None,
     )

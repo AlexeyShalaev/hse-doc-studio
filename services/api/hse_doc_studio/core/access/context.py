@@ -17,3 +17,14 @@ def set_current_actor(actor: Actor | None) -> None:
 
 def current_actor() -> Actor | None:
     return _current_actor.get()
+
+
+class ActorRequired(RuntimeError):  # noqa: N818 — имя из правил репозиториев
+    """Серверная операция вызвана без актора: владельца данных назвать нельзя."""
+
+
+def require_actor() -> Actor:
+    actor = _current_actor.get()
+    if actor is None:
+        raise ActorRequired("нет текущего актора")
+    return actor

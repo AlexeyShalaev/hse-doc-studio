@@ -25,3 +25,11 @@ def test__caps__server_defaults__no_local_only_features() -> None:
     assert not caps.docker_ui
     assert not caps.self_update
     assert caps.personal_signing_keys
+
+
+def test__from_settings__retention__thirty_days_by_default_and_overridable() -> None:
+    default = ServerConfig.from_settings(Settings(_env_file=None))
+    custom = ServerConfig.from_settings(Settings(_env_file=None, server={"project_retention_days": 7}))
+
+    assert default.project_retention_days == 30
+    assert custom.project_retention_days == 7

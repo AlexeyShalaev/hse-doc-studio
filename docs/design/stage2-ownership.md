@@ -58,6 +58,7 @@ CSRF: токен привязан к строке сессии, приходит
 | Переменная | Смысл |
 |---|---|
 | `HSE_STUDIO__SERVER__PROJECTS_ROOT` | корень томов проектов `projects_root/<project_id>` |
+| `HSE_STUDIO__SERVER__PROJECT_RETENTION_DAYS`, `__PROJECT_PURGE_INTERVAL_S` | срок хранения удалённого проекта (по умолчанию 30 суток, 0 выключает стирание) и период проверки |
 | `HSE_STUDIO__DB__*`, `HSE_STUDIO__DB__AUTO_MIGRATE` | Postgres; автомиграция под advisory lock (только compose) |
 | `HSE_STUDIO__S3__*` | S3-совместимое хранилище |
 | `HSE_STUDIO__SECRETS__KEY`, `__KEY_FILE`, `__RETIRED_KEYS` | `KeyRing` для `ISecretCipher` |

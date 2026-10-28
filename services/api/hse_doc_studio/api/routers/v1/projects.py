@@ -6,6 +6,7 @@ from uuid import UUID
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -22,9 +23,12 @@ from hse_doc_studio.api.schemas.project import (
     UpdateProjectRequest,
     UpdateTeamSetRequest,
 )
+from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectSummary
+from hse_doc_studio.core.access.repositories import ProjectMembership
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
 from hse_doc_studio.use_cases.projects.connect_project import (
@@ -112,6 +116,23 @@ def _map_project_list_item(project: Project, paths: PathMapping) -> ProjectListI
     )
 
 
+def _map_project_summary(project: Project, membership: ProjectMembership) -> ProjectSummary:
+    owner = membership.owner
+    return ProjectSummary(
+        id=str(project.id),
+        name=project.name,
+        kind=project.kind.value,
+        staffing=project.staffing.value,
+        lang=project.lang.value,
+        owner=ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug),
+        my_role=membership.my_role.value,
+        updated_at=project.updated_at,
+        pinned=project.pinned,
+        archived=project.archived,
+        shared_enabled=project.shared_enabled,
+    )
+
+
 def _map_checks_override(co: ChecksOverride) -> ChecksOverrideSchema:
     return ChecksOverrideSchema(
         disabled_categories=list(co.disabled_categories),
@@ -176,13 +197,16 @@ def _parse_person(schema: PersonSchema | None) -> Person | None:
     )
 
 
-@router.get("/projects", response_model=list[ProjectListItemResponse])
+@router.get("/projects", response_model=list[ProjectListItemResponse] | list[ProjectSummary])
 async def list_projects(
     uc: FromDishka[ListProjectsUC],
     paths: FromDishka[PathMapping],
-) -> list[ProjectListItemResponse]:
+) -> list[ProjectListItemResponse] | list[ProjectSummary]:
     result = await uc.execute()
-    return [_map_project_list_item(p, paths) for p in result.projects]
+    if settings.mode is StudioMode.local:
+        return [_map_project_list_item(p, paths) for p in result.projects]
+    # На сервере путь папки наружу не отдаётся: вместо него владелец и роль человека.
+    return [_map_project_summary(p, result.memberships[p.id]) for p in result.projects]
 
 
 @router.get("/projects/suggestions", response_model=ProjectSuggestionsResponse)
@@ -206,9 +230,11 @@ async def create_project(
     uc: FromDishka[CreateProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if body.folder is None and settings.mode is StudioMode.local:
+        raise HTTPException(status_code=422, detail="folder is required")
     try:
         inp = CreateProjectInput(
-            folder=Path(paths.accept(body.folder)),
+            folder=Path(paths.accept(body.folder)) if body.folder is not None else None,
             pack_id=body.pack_id,
             template_id=body.template_id,
             version=body.version,
@@ -315,6 +341,9 @@ async def move_project(
     uc: FromDishka[MoveProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if settings.mode is StudioMode.server and not ServerConfig.from_settings(settings).caps.move_project:
+        # Переезд на другую папку хоста на общем сервере не существует: том выбирает сервер.
+        raise HTTPException(status_code=404, detail="Not Found")
     try:
         result = await uc.execute(MoveProjectInput(project_id=project_id, new_folder=Path(paths.accept(body.folder))))
     except NotFoundError as exc:

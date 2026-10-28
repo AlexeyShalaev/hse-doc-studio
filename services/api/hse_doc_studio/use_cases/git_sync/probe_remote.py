@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.git_sync.entities import (
     GitCredential,
     GitCredentialKind,
@@ -132,8 +134,10 @@ class ProbeRemoteUC:
         policy: GitSyncPolicy,
         resolver: ProviderResolver,
         token_checker: TokenChecker,
+        access: IProjectAccessChecker,
     ) -> None:
         self._get_project = GetProjectUC(project_repo, project_index_repo)
+        self._access = access
         self._transport = transport
         self._credentials = credentials
         self._templates = template_repo
@@ -152,6 +156,7 @@ class ProbeRemoteUC:
             raise git_error(GitErrorCode.credentials_missing)
         local_id = None
         if inp.project_id is not None:
+            await self._access.require(inp.project_id, Action.PROJECT_SETTINGS)
             local_id = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project.id
         # Открытый http сюда доходит только с согласием человека (`require_http_consent`).
         target = RemoteTarget(url, inp.credential_id, insecure_http=url.kind is RemoteKind.http)

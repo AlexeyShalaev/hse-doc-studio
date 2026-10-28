@@ -17,6 +17,7 @@ from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
     install_background,
     install_health,
+    install_project_purge,
     install_server_observability,
 )
 from hse_doc_studio.api.rate_limit import install_rate_limiter
@@ -161,6 +162,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             server_metrics,
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
+        install_project_purge(app, container, settings)
 
         @app.on_event("startup")
         async def _prepare_server_setup() -> None:

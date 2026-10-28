@@ -383,14 +383,17 @@ async def create_system_chat(
     body: CreateChatSessionRequest,
     uc: FromDishka[SystemCreateChatSessionUC],
 ) -> ChatSessionResponse:
-    result = await uc.execute(
-        title=body.title,
-        default_provider_id=body.provider_id,
-        default_model=body.model,
-        project_id=body.project_id,
-        persona=body.persona,
-        persona_instructions=body.persona_instructions,
-    )
+    try:
+        result = await uc.execute(
+            title=body.title,
+            default_provider_id=body.provider_id,
+            default_model=body.model,
+            project_id=body.project_id,
+            persona=body.persona,
+            persona_instructions=body.persona_instructions,
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _map_session(result.session)
 
 

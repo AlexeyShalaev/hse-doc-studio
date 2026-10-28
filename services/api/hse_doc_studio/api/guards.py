@@ -19,7 +19,7 @@ from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
-from hse_doc_studio.api.route_actions import rule_for, scope_for_rule
+from hse_doc_studio.api.route_actions import RouteRule, rule_for, scope_for_rule
 from hse_doc_studio.api.route_scopes import (
     ADMIN_PREFIX,
     SELF_AUTHENTICATED,
@@ -28,9 +28,11 @@ from hse_doc_studio.api.route_scopes import (
     scope_for_request,
 )
 from hse_doc_studio.core.access.actions import RouteExemption
-from hse_doc_studio.core.access.context import set_current_actor
+from hse_doc_studio.core.access.checker import ProjectForbiddenError
+from hse_doc_studio.core.access.context import require_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, ProjectAcl
 from hse_doc_studio.core.access.policy import Decision, decide
+from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
@@ -87,10 +89,19 @@ def access_detail(access: ProjectAccess) -> dict[str, Any]:
     }
 
 
-async def load_project_acl(_request: Request, _project_id: str) -> ProjectAcl | None:
-    """Членство проекта. Хранилище членств появится на втором этапе, до него сюда не дойти."""
-    msg = "project membership storage is not implemented (stage 2 of collaboration)"
-    raise NotImplementedError(msg)
+async def load_project_acl(request: Request, project_id: str) -> ProjectAcl | None:
+    """Членство текущего актора в проекте; чужой, несуществующий и нечитаемый id дают None (ответ 404).
+
+    Только серверный режим: локальный актор уходит из гарда раньше и репозиторий не трогает.
+    """
+    actor = require_actor()
+    try:
+        parsed = UUID(project_id)
+    except ValueError:
+        return None
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    repository = await container.get(IProjectAclRepository)
+    return await repository.load_for(actor, parsed)
 
 
 async def project_access_guard(request: Request) -> None:
@@ -121,8 +132,8 @@ async def project_access_guard(request: Request) -> None:
     if isinstance(rule.action, RouteExemption):
         return
     if project_id is None:
-        # project_id в теле или query: право проверит сценарий, когда прочитает запрос.
-        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+        _require_project_in_body(rule)
+        return
     acl = await load_project_acl(request, str(project_id))
     _enforce(decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params)))
 
@@ -147,6 +158,13 @@ async def _ensure_setup_complete(request: Request) -> None:
     actor = await (await container.get(IActorResolver)).resolve(credentials_from_request(request))
     if actor is None or not actor.is_instance_admin:
         raise IdentityError(IdentityErrorCode.setup_required)
+
+
+def _require_project_in_body(rule: RouteRule) -> None:
+    """Без project_id в пути проект может быть только в теле или query: его права проверит сценарий
+    через IProjectAccessChecker, когда прочитает запрос. Иначе в таблице ошибка, и маршрут закрыт."""
+    if rule.project_source == "path":
+        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
 
 
 def _handled_before_actor(request: Request) -> bool:
@@ -200,8 +218,13 @@ async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=_LOCKED, content={"detail": str(exc)})
 
 
+async def _forbidden_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=_FORBIDDEN, content={"detail": "Forbidden"})
+
+
 def install_exception_handlers(app: FastAPI) -> None:
     """Ошибки домена, общие для всех роутеров (в create_app и в тестовом приложении)."""
     app.add_exception_handler(ProjectReadOnlyError, _read_only_handler)
+    app.add_exception_handler(ProjectForbiddenError, _forbidden_handler)
     install_git_error_handlers(app)
     install_identity_error_handlers(app)

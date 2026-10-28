@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.v1 import api_router
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentProvider
 from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOllamaRuntime
 from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
@@ -51,6 +52,7 @@ from hse_doc_studio.core.update.repositories import (
 )
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -261,6 +263,10 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
             self, project_index: IProjectIndexRepository, project_repo: IProjectRepository
         ) -> IProjectLocator:
             return LocalProjectLocator(project_index, project_repo)
+
+        @provide
+        def get_project_access_checker(self) -> IProjectAccessChecker:
+            return LocalProjectAccessChecker()
 
         @provide
         def get_template_repo(self) -> ITemplateRepository:

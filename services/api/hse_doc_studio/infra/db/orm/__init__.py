@@ -17,6 +17,7 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserRow,
 )
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
+from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
     "ApiTokenRow",
@@ -28,6 +29,8 @@ __all__ = [
     "MailOutboxRow",
     "OidcProviderRow",
     "PasswordCredentialRow",
+    "ProjectMemberRow",
+    "ProjectRow",
     "RegistrationInviteRow",
     "SessionRow",
     "UserIdentityRow",

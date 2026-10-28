@@ -73,3 +73,13 @@ async def test__api__post_projects__msc_sse_coursework__renders_proposal_and_app
     assert "И. И. Иванов" in meta
     assert "\\hseSupervisorName, к.т.н., доцент" in meta
     assert "\\hseExtendedProposaltrue" in meta
+
+
+async def test__api__post_projects__local_without_folder__unprocessable(test_app: AsyncClient, tmp_path: Path) -> None:
+    payload = project_api_payload(str(tmp_path / "no-folder"))
+    del payload["folder"]
+
+    response = await test_app.post("/api/v1/projects", json=payload)
+
+    assert response.status_code == 422, response.text
+    assert not (tmp_path / "no-folder").exists()

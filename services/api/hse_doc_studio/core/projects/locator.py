@@ -15,6 +15,10 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Project
 
 
+class ProjectAlreadyRegisteredError(RuntimeError):
+    """Проект с таким id уже принадлежит другому пользователю."""
+
+
 class IProjectLocator(Protocol):
     async def folder_of(self, project_id: UUID) -> Path | None: ...
 
