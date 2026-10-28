@@ -12,12 +12,15 @@ const FORBIDDEN = /[\u0000-\u001f\u007f\\\s]/;
 // Страницы входа и служебные адреса сервера: возврат на них ничего не даёт или зацикливает.
 const BLOCKED_PREFIXES = ["/login", "/register", "/auth", "/api", "/first-run"];
 
-const isBlocked = (path: string): boolean =>
-  BLOCKED_PREFIXES.some((prefix) => {
+// Без учёта регистра: роутер открывает /Login так же, как /login.
+const isBlocked = (rawPath: string): boolean => {
+  const path = rawPath.toLowerCase();
+  return BLOCKED_PREFIXES.some((prefix) => {
     if (!path.startsWith(prefix)) return false;
     const next = path.charAt(prefix.length);
     return next === "" || next === "/" || next === "?" || next === "#";
   });
+};
 
 const decodeOnce = (value: string): string | null => {
   try {

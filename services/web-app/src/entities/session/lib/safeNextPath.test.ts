@@ -31,6 +31,8 @@ describe("safeNextPath", () => {
     ["javascript scheme", "javascript:alert(1)"],
     ["data scheme", "data:text/html,x"],
     ["login loop", "/login"],
+    ["login loop in other case", "/Login?x=1"],
+    ["auth in upper case", "/AUTH/oidc/callback"],
     ["login with query", "/login?next=/"],
     ["auth endpoint", "/auth/oidc/callback"],
     ["api", "/api/v1/projects"],

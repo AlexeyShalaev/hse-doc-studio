@@ -6,8 +6,13 @@ const PUBLIC_PREFIXES = ["/invite/", "/verify/", "/reset/", "/auth/"];
 // Экраны только для гостей: вошедшему человеку на них делать нечего.
 const GUEST_ONLY = ["/login", "/register", "/forgot"];
 
+// React Router сопоставляет адреса без учёта регистра (/Login открывает вход),
+// поэтому и шлюз сравнивает в нижнем регистре.
 const trimSlash = (path: string): string =>
-  path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+  (path.length > 1 && path.endsWith("/")
+    ? path.slice(0, -1)
+    : path
+  ).toLowerCase();
 
 export const isPublicPath = (pathname: string): boolean => {
   const path = trimSlash(pathname);
@@ -19,7 +24,7 @@ export const isPublicPath = (pathname: string): boolean => {
 
 // Страницы разработчика (галереи состояний) живут вне сессии, но только в dev-сборке.
 const isDevPath = (pathname: string): boolean =>
-  import.meta.env.DEV && pathname.startsWith("/dev/");
+  import.meta.env.DEV && pathname.toLowerCase().startsWith("/dev/");
 
 export type GateLocation = { pathname: string; search: string; hash: string };
 

@@ -54,6 +54,13 @@ describe("resolveGateRedirect", () => {
     }
   });
 
+  it("сравнивает адреса без учёта регистра, как роутер", () => {
+    expect(resolveGateRedirect(anon, at("/Login"))).toBeNull();
+    expect(isPublicPath("/FORGOT")).toBe(true);
+    expect(resolveGateRedirect(user, at("/Login", "?next=%2FLogin"))).toBe("/");
+    expect(resolveGateRedirect(user, at("/REGISTER"))).toBe("/");
+  });
+
   it("closes /first-run once the instance is set up", () => {
     expect(resolveGateRedirect(anon, at("/first-run"))).toMatch(/^\/login/);
     expect(resolveGateRedirect(user, at("/first-run"))).toBe("/");
