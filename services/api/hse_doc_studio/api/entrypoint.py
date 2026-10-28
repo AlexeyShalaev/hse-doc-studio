@@ -15,6 +15,7 @@ from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
+    install_auth_cleanup,
     install_background,
     install_health,
     install_project_purge,
@@ -202,6 +203,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
         install_project_purge(app, container, settings)
+        install_auth_cleanup(app, container, settings)
 
         @app.on_event("startup")
         async def _prepare_server_setup() -> None:

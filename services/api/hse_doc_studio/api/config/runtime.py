@@ -36,6 +36,11 @@ class HttpServerConfig(BaseModel):
     project_purge_interval_s: float = Field(
         default=3600.0, gt=0, description="Как часто сервер ищет удалённые проекты с истёкшим сроком."
     )
+    auth_cleanup_interval_s: float = Field(
+        default=3600.0,
+        gt=0,
+        description="Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов.",
+    )
 
 
 class CorsConfig(BaseModel):

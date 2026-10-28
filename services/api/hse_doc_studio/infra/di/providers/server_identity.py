@@ -53,6 +53,7 @@ from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettin
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
+from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
@@ -168,6 +169,16 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_mail_outbox(self, sessions: SessionProvider) -> IMailOutboxRepository:
         return SqlMailOutboxRepository(sessions)
+
+    @provide
+    def get_auth_cleanup_service(
+        self,
+        sessions: ISessionRepository,
+        auth_tokens: IAuthTokenRepository,
+        outbox: IMailOutboxRepository,
+        attempts: ILoginAttemptRepository,
+    ) -> AuthCleanupService:
+        return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
 
     @provide
     def get_mail_sender(self) -> IMailSender:

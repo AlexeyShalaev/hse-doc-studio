@@ -88,3 +88,15 @@ def install_project_purge(app: FastAPI, container: AsyncContainer, cfg: Settings
     app.state.background.register(
         PeriodicTask(name="project_purge", interval_s=cfg.server.project_purge_interval_s, run=_purge)
     )
+
+
+def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическая чистка просроченных сессий, токенов, писем outbox и счётчиков входов."""
+    from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService  # noqa: PLC0415
+
+    async def _cleanup() -> None:
+        await (await container.get(AuthCleanupService)).run()
+
+    app.state.background.register(
+        PeriodicTask(name="auth_cleanup", interval_s=cfg.server.auth_cleanup_interval_s, run=_cleanup)
+    )
