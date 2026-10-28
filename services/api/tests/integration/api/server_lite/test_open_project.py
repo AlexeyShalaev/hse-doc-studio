@@ -164,3 +164,30 @@ def test__open_project__owner_works_stranger_gets_404_anonymous_401(stand: TestC
     with anonymous as client:
         for path in paths:
             assert client.get(f"{base}{path}").status_code == 401, path
+
+
+def test__project_detail__server__does_not_leak_the_volume_path(stand: TestClient) -> None:
+    owner = _Session(stand, ADMIN_EMAIL, ADMIN_PASSWORD)
+    with owner as client:
+        body = {
+            "name": "Без пути",
+            "pack_id": "hse-cs-sse",
+            "template_id": "coursework",
+            "version": "2026.1",
+            "lang": "ru",
+            "authors": [{"name": "Админ"}],
+        }
+        created = client.post("/api/v1/projects", json=body, headers=owner.headers)
+        assert created.status_code == 201, created.text
+        detail = client.get(f"/api/v1/projects/{created.json()['id']}")
+
+        assert created.json()["folder"] == ""
+        assert detail.json()["folder"] == ""
+        # Организаций в M1 нет: непустой owner_org_slug не должен молча давать личный проект.
+        rejected = client.post("/api/v1/projects", json={**body, "owner_org_slug": "mspin"}, headers=owner.headers)
+        assert rejected.status_code == 422
+        # Клонирование принимает папку сервера от клиента: на сервере маршрута нет.
+        clone = client.post(
+            "/api/v1/git/clone", json={"url": "https://example.org/r.git", "folder": "/tmp/x"}, headers=owner.headers
+        )
+        assert clone.status_code == 404

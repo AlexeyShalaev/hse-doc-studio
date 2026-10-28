@@ -83,3 +83,19 @@ async def test__api__post_projects__local_without_folder__unprocessable(test_app
 
     assert response.status_code == 422, response.text
     assert not (tmp_path / "no-folder").exists()
+
+
+async def test__api__post_projects__local_without_folder__keeps_the_pydantic_error_shape(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    payload = project_api_payload(str(tmp_path / "x"))
+    del payload["folder"]
+
+    missing = await test_app.post("/api/v1/projects", json=payload)
+    null = await test_app.post("/api/v1/projects", json={**payload, "folder": None})
+
+    assert missing.status_code == null.status_code == 422
+    (item,) = missing.json()["detail"]
+    assert (item["type"], item["loc"]) == ("missing", ["body", "folder"])
+    (item,) = null.json()["detail"]
+    assert (item["type"], item["loc"]) == ("string_type", ["body", "folder"])

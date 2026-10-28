@@ -5,6 +5,7 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
+from fastapi.exceptions import RequestValidationError
 
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
@@ -156,7 +157,8 @@ def _map_project_detail(project: Project, paths: PathMapping) -> ProjectDetailRe
     return ProjectDetailResponse(
         id=str(project.id),
         name=project.name,
-        folder=paths.display(str(project.folder)),
+        # Путь на томе проектов сервера наружу не отдаётся (как и в списке).
+        folder="" if settings.mode is StudioMode.server else paths.display(str(project.folder)),
         lock=_map_lock(project),
         kind=str(project.kind),
         staffing=str(project.staffing),
@@ -232,7 +234,23 @@ async def create_project(
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
     if body.folder is None and settings.mode is StudioMode.local:
-        raise HTTPException(status_code=422, detail="folder is required")
+        # Как раньше, когда поле было обязательным: список ошибок pydantic с loc ['body','folder'].
+        missing = "folder" not in body.model_fields_set
+        raise RequestValidationError(
+            [
+                {
+                    "type": "missing" if missing else "string_type",
+                    "loc": ("body", "folder"),
+                    "msg": "Field required" if missing else "Input should be a valid string",
+                    "input": body.model_dump(exclude_unset=True) if missing else None,
+                }
+            ]
+        )
+    if body.owner_org_slug is not None and settings.mode is StudioMode.server:
+        # Организаций в M1 нет: молча создать личный проект вместо организационного было бы подменой.
+        raise RequestValidationError(
+            [{"type": "value_error", "loc": ("body", "owner_org_slug"), "msg": "Organizations are not available yet"}]
+        )
     try:
         inp = CreateProjectInput(
             folder=Path(paths.accept(body.folder)) if body.folder is not None else None,

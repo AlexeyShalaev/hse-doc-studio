@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.routers.v1 import projects as projects_router
 from hse_doc_studio.api.schemas.project import CreateProjectRequest, MoveProjectRequest
@@ -30,8 +31,9 @@ async def test__create__local_without_folder__unprocessable(monkeypatch: pytest.
     body = CreateProjectRequest(name="n", pack_id="p", template_id="t", version="1")
     uc = AsyncMock()
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(RequestValidationError) as exc:
         await projects_router.create_project(body, uc, PathMapping())
 
-    assert exc.value.status_code == 422
+    # Тот же вид ошибки, что давала обязательная строка: loc ['body', 'folder']
+    assert exc.value.errors()[0]["loc"] == ("body", "folder")
     uc.execute.assert_not_called()

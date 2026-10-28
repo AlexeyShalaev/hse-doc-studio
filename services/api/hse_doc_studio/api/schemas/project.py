@@ -91,6 +91,8 @@ class CreateProjectRequest(BaseModel):
     name: str
     # В локальном режиме обязательна; на общем сервере папку выбирает сервер, и поле отклоняется.
     folder: str | None = None
+    # Из контракта серверного режима (CreateServerProjectRequest): организаций пока нет, непустое значение отклоняется.
+    owner_org_slug: str | None = None
     pack_id: str
     template_id: str
     version: str
