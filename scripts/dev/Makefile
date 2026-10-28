@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1
 
 dev-help:
 	@echo.
@@ -38,6 +38,8 @@ dev-help:
 	@echo   make server-lite-credentials - Print stand logins and passwords
 	@echo   make server-lite-down  - Stop the stand, keep its data
 	@echo   make server-lite-reset - Stop the stand and erase its data (DESTRUCTIVE)
+	@echo   make e2e-install       - Install Playwright and Chromium for the stand acceptance tests
+	@echo   make e2e-m1            - Run the M1 acceptance e2e against a seeded stand (screenshots in e2e/screenshots)
 	@echo.
 	@echo Note: the frontend has no dev container - a container would serve a production
 	@echo       build without HMR. Use 'make dev' (Vite) while working on the UI.
@@ -139,3 +141,13 @@ server-lite-reset: $(SERVER_LITE_ENV)
 	@$(SHELL) -c 'read confirm && [ "$$confirm" = "yes" ]' || (echo "Cancelled." && exit 1)
 	$(SERVER_LITE_COMPOSE) --profile seed down --volumes --remove-orphans
 	rm -f $(SERVER_LITE_ENV)
+
+# ---- Приёмочные e2e M1 (Playwright) против поднятого и залитого стенда ----
+# Стенд: make server-lite-up server-lite-seed. Свой Chrome вместо загрузки Chromium: make e2e-m1 E2E_CHANNEL=chrome.
+e2e-install:
+	cd e2e && pnpm install --frozen-lockfile && pnpm exec playwright install chromium
+
+e2e-m1: $(SERVER_LITE_ENV)
+	@. $(SERVER_LITE_ENV); cd e2e && \
+	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
+	  pnpm exec playwright test
