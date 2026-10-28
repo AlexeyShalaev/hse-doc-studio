@@ -75,6 +75,9 @@ def test__route_scopes__host_routes_are_local_only_and_settings_stay_authenticat
     assert scope_of_route_path("GET", "/api/v1/fs/browse") is RouteScope.local_only
     assert scope_of_route_path("POST", "/api/v1/setup/apply") is RouteScope.local_only
     assert scope_of_route_path("POST", "/api/v1/projects/connect") is RouteScope.local_only
+    # Клон пишет в папку, которую назвал клиент: на сервере такого маршрута нет
+    assert scope_of_route_path("POST", "/api/v1/git/clone") is RouteScope.local_only
+    assert scope_of_route_path("POST", "/api/v1/git/clone/bundle") is RouteScope.local_only
     assert scope_of_route_path("GET", "/api/v1/settings") is RouteScope.authenticated
     assert scope_of_route_path("POST", "/api/v1/data/export") is RouteScope.instance_admin
     assert scope_of_route_path("GET", "/api/v1/nope") is None
