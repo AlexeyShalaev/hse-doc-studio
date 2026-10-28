@@ -9,8 +9,9 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from fastapi import APIRouter, Depends, FastAPI
-from hse_doc_studio.api import guards
+from hse_doc_studio.api import guards, route_scopes
 from hse_doc_studio.api.guards import project_access_guard
+from hse_doc_studio.api.route_scopes import RouteScope
 from hse_doc_studio.core.access.context import current_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
 from httpx import ASGITransport, AsyncClient
@@ -147,6 +148,7 @@ async def test__guard__non_local_project_route_without_rule__denied(monkeypatch:
     app = FastAPI()
     app.include_router(router)
     _stub_server(monkeypatch, _OWNER, _OWNER_ACL_GRANTS)
+    monkeypatch.setattr(route_scopes, "ROUTE_SCOPES", {("GET", "/open-route"): RouteScope.authenticated})
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         assert (await client.get("/api/v1/unlisted/abc")).status_code == 403

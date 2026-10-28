@@ -10,8 +10,10 @@ import pytest_asyncio
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import APIRouter, Depends, FastAPI
+from hse_doc_studio.api import route_scopes
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers, project_access_guard
+from hse_doc_studio.api.route_scopes import RouteScope
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.identity.entities import Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
@@ -50,6 +52,7 @@ class _ResolverProvider(Provider):
 @pytest_asyncio.fixture
 async def server_app(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[tuple[AsyncClient, _Fixture]]:
     monkeypatch.setattr(settings, "mode", StudioMode.server)
+    monkeypatch.setattr(route_scopes, "ROUTE_SCOPES", {("GET", "/whoami"): RouteScope.authenticated})
     fixture = _Fixture()
     email = "ann@example.org"
     await fixture.users.add(

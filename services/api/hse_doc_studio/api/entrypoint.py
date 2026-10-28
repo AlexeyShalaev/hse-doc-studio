@@ -75,6 +75,14 @@ def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -
         readiness.register(check)
 
 
+def _register_per_user_routes_check(readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.api.route_scopes import per_user_routes_problem  # noqa: PLC0415
+
+    check = ServerReadinessCheck(ReadinessZone.per_user_routes, "global_user_routes", per_user_routes_problem)
+    with suppress(ValueError):
+        readiness.register(check)
+
+
 def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
     """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
 
@@ -82,6 +90,7 @@ def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = se
     """
     if cfg.mode is StudioMode.server:
         _register_secrets_check(cfg, readiness)
+        _register_per_user_routes_check(readiness)
         problems = readiness.unmet()
         if problems:
             msg = (
