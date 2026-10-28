@@ -15,7 +15,7 @@ From `services/api`:
 
 ## Dev infrastructure
 
-`scripts/dev/` holds compose files for auxiliary services. Postgres and S3 for server-mode work run from a compose file there (the dev compose slice adds the server stack). Rules:
+`scripts/dev/` holds compose files for auxiliary services. Postgres and S3 for server-mode work run from a compose file there (the stand `scripts/dev/server-lite`: api in `server` + `AUTH__EXPERIMENTAL` and Postgres, `make -C scripts/dev server-lite-up`, then `server-lite-seed` for three demo users; the api port is published on the host loopback only). Rules:
 - Use throwaway containers on dedicated ports for tests; never reuse the ports of containers that are already running on the machine; remove them afterwards.
 - Test infrastructure ports differ from dev ports so both can run at once.
 - Configuration comes from `HSE_STUDIO__*` environment variables, nested with double underscores (for example `HSE_STUDIO__DB__DSN`). Secrets (DB password, `SECRETS__KEY`) come from env or files, never from the repository.

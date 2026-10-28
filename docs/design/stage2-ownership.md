@@ -63,7 +63,7 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__S3__*` | S3-совместимое хранилище |
 | `HSE_STUDIO__SECRETS__KEY`, `__KEY_FILE`, `__RETIRED_KEYS` | `KeyRing` для `ISecretCipher` |
 | `HSE_STUDIO__AUTH__*`, `__AUTH__ADMIN_EMAIL`, `__AUTH__ADMIN_NAME`, `__AUTH__ADMIN_PASSWORD` / `__AUTH__ADMIN_PASSWORD_FILE`, `__AUTH__SETUP_TOKEN_REQUIRED`, `__AUTH__TRUSTED_PROXIES`, `__AUTH__OIDC__*` | вход, мастер, прокси, OIDC |
-| `HSE_STUDIO__AUTH__EXPERIMENTAL` | пускает server до финального среза; запрещён при публичном bind |
+| `HSE_STUDIO__AUTH__EXPERIMENTAL`, `__AUTH__EXPERIMENTAL_IN_CONTAINER` | пускает server до финального среза (нужны DSN и ключ секретов); запрещён при публичном bind, а 0.0.0.0 внутри контейнера допускает только подтверждение `EXPERIMENTAL_IN_CONTAINER` (стенд `scripts/dev/server-lite`, порт на loopback хоста) |
 | `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN`, `__METRICS_TOKEN` | Bearer-токены деталей `/health/ready` и `/metrics` |
 | `HSE_STUDIO__ADMIN__ALLOWED_HOSTS`, `__ADMIN__ALLOWED_CIDRS` | ограничение `/admin` по host/IP |
 | `HSE_STUDIO__EGRESS__ALLOWLIST` | внутренние узлы (имя, `*.суффикс`, IP, CIDR), к которым разрешено ходить по адресам пользователей; метаданные облака и link-local закрыты всегда |

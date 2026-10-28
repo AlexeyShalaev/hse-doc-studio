@@ -36,8 +36,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential ca-certificates libffi-dev libssl-dev \
   && rm -rf /var/lib/apt/lists/*
 
+# Дополнительные extras бэкенда (dev-стенд server-lite собирает с `--extra server`); по умолчанию только api.
+ARG BACKEND_EXTRAS=""
 COPY services/api/pyproject.toml services/api/uv.lock* ./
-RUN /uv/bin/uv export --frozen --no-hashes --extra api | grep -v "^-e \.$" > requirements.txt
+# shellcheck disable=SC2086 — BACKEND_EXTRAS намеренно раскрывается в несколько аргументов
+RUN /uv/bin/uv export --frozen --no-hashes --extra api ${BACKEND_EXTRAS} | grep -v "^-e \.$" > requirements.txt
 RUN --mount=type=cache,target=/root/.cache/uv \
     /uv/bin/uv pip install --system -r requirements.txt
 
@@ -81,6 +84,10 @@ RUN set -eux; \
 
 RUN addgroup --system app && adduser --system --ingroup app \
     --no-create-home --disabled-password --shell /usr/sbin/nologin app
+
+# Каталог данных принадлежит app: именованный том (стенд server-lite) наследует владельца при создании.
+# Привязанная папка хоста (deploy/all-in-one) закрывает его своим владельцем, как и раньше.
+RUN mkdir -p /data && chown app:app /data
 
 COPY --from=backend-builder /usr/local /usr/local
 COPY --from=backend-builder /app /app
