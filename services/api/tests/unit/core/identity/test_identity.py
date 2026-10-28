@@ -67,7 +67,8 @@ def test_tokens_are_unique_and_hashed() -> None:
 
 def test_error_codes_match_contract() -> None:
     contract = set(json.loads(_CODES.read_text(encoding="utf-8")))
-    assert contract <= {c.value for c in IdentityErrorCode}
+    # Закрытый список контракта и перечисление совпадают: достижимый код нельзя оставить без записи и текста
+    assert contract == {c.value for c in IdentityErrorCode}
 
 
 def test_every_code_has_ru_and_en() -> None:

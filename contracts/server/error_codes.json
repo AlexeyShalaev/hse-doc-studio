@@ -17,5 +17,10 @@
   "setup_already_done",
   "password_policy",
   "token_invalid",
-  "setup_required"
+  "setup_required",
+  "email_taken",
+  "last_owner",
+  "slug_reserved",
+  "slug_invalid",
+  "setting_locked"
 ]

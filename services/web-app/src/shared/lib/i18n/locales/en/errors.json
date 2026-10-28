@@ -95,6 +95,11 @@
     "password_policy": "The password is too short or too easy to guess.",
     "token_invalid": "The link is invalid or has expired.",
     "setup_required": "The server is still being set up: wait until the administrator finishes the first run.",
-    "forbidden_role": "Not enough permissions: the “{{role}}” role is required."
+    "forbidden_role": "Not enough permissions: the “{{role}}” role is required.",
+    "email_taken": "This email is already taken.",
+    "last_owner": "The last owner cannot be removed.",
+    "slug_reserved": "This name is reserved.",
+    "slug_invalid": "Use lowercase Latin letters, digits and hyphens.",
+    "setting_locked": "This value is set by the environment and cannot be changed here."
   }
 }
