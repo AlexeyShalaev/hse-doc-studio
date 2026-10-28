@@ -54,11 +54,12 @@ export const ForgotCard = ({
           onChange={(e) => {
             setEmail(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
         />
         <Button
           type="submit"
-          disabled={pending || email.trim() === ""}
+          disabled={email.trim() === ""}
+          aria-disabled={pending}
           style={{ justifyContent: "center", gap: 8 }}
         >
           {pending ? (

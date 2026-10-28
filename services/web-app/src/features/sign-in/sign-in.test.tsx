@@ -49,6 +49,16 @@ describe("sign-in", () => {
     vi.useRealTimers();
   });
 
+  it("во время отправки поля остаются фокусируемыми (readOnly, не disabled)", () => {
+    renderCard({ pending: true });
+    const email = screen.getByLabelText("Почта");
+    expect(email).not.toBeDisabled();
+    expect(email).toHaveAttribute("readonly");
+    expect(
+      screen.getByTestId("login-form").querySelector("button"),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("каждый код отказа показывает свой текст", () => {
     const seen = new Set<string>();
     for (const code of [...LOGIN_ERROR_CODES, "network", "unknown"]) {

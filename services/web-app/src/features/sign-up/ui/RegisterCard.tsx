@@ -129,7 +129,7 @@ export const RegisterCard = ({
           onChange={(e) => {
             setName(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
         />
         <Input
           id={`${uid}-email`}
@@ -139,11 +139,10 @@ export const RegisterCard = ({
           autoComplete="username"
           required
           value={email}
-          readOnly={invitation !== null}
+          readOnly={invitation !== null || pending}
           onChange={(e) => {
             setEmail(e.target.value);
           }}
-          disabled={pending}
           {...hintProp(invitation ? t("register.emailLocked") : undefined)}
           {...errorProp(
             field === "email"
@@ -162,7 +161,7 @@ export const RegisterCard = ({
           onChange={(e) => {
             setPassword(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
           hint={t("register.passwordHint", { count: min })}
           {...errorProp(
             field === "password"
@@ -183,12 +182,12 @@ export const RegisterCard = ({
           onChange={(e) => {
             setConfirm(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
           {...errorProp(mismatch ? t("register.mismatch") : undefined)}
         />
         <Button
           type="submit"
-          disabled={pending}
+          aria-disabled={pending}
           style={{ justifyContent: "center", gap: 8 }}
         >
           {pending ? (

@@ -111,7 +111,7 @@ export const LoginCard = ({
             onChange={(e) => {
               setEmail(e.target.value);
             }}
-            disabled={pending}
+            readOnly={pending}
           />
           <Input
             id={`${uid}-password`}
@@ -124,7 +124,7 @@ export const LoginCard = ({
             onChange={(e) => {
               setPassword(e.target.value);
             }}
-            disabled={pending}
+            readOnly={pending}
           />
           <div className="flex justify-end" style={{ marginTop: -6 }}>
             <Link
@@ -136,7 +136,8 @@ export const LoginCard = ({
           </div>
           <Button
             type="submit"
-            disabled={pending || waiting || email === "" || password === ""}
+            disabled={waiting || email === "" || password === ""}
+            aria-disabled={pending}
             style={{ justifyContent: "center", gap: 8 }}
           >
             {pending ? (

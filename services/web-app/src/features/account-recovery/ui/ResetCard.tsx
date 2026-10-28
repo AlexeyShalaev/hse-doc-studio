@@ -66,7 +66,7 @@ export const ResetCard = ({
           onChange={(e) => {
             setPassword(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
           hint={t("register.passwordHint", { count: minLength })}
           {...errorProp(
             policy
@@ -87,12 +87,12 @@ export const ResetCard = ({
           onChange={(e) => {
             setConfirm(e.target.value);
           }}
-          disabled={pending}
+          readOnly={pending}
           {...errorProp(mismatch ? t("register.mismatch") : undefined)}
         />
         <Button
           type="submit"
-          disabled={pending}
+          aria-disabled={pending}
           style={{ justifyContent: "center", gap: 8 }}
         >
           {pending ? (
