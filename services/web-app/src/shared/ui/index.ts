@@ -158,3 +158,18 @@ export type {
   ViewTab,
   ViewTabsProps,
 } from "./ConflictKit";
+
+export { DataTable } from "./DataTable";
+export type { DataTableProps, DataTablePagination } from "./DataTable";
+
+export { FilterBar } from "./FilterBar";
+export type { FilterBarProps, FilterGroup, FilterOption } from "./FilterBar";
+
+export { ConfirmByName } from "./ConfirmByName";
+export type { ConfirmByNameProps } from "./ConfirmByName";
+
+export { SecretOnce } from "./SecretOnce";
+export type { SecretOnceProps } from "./SecretOnce";
+
+export { StatusDot } from "./StatusDot";
+export type { StatusDotProps, StatusDotStatus } from "./StatusDot";

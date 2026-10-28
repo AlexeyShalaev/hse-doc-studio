@@ -59,5 +59,42 @@
       "reset": "New-password link",
       "invite": "Invitation link"
     }
+  },
+  "dataTable": {
+    "sortBy": "sort",
+    "sortedAsc": "ascending",
+    "sortedDesc": "descending",
+    "emptyTitle": "Nothing here yet",
+    "errorTitle": "Could not load the data",
+    "retry": "Retry",
+    "pagination": "Pages",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "pageOf": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "filterBar": {
+    "search": "Search",
+    "searchPlaceholder": "Search",
+    "all": "All",
+    "reset": "Reset"
+  },
+  "confirmByName": {
+    "cancel": "Cancel",
+    "prompt": "To confirm, type the name:"
+  },
+  "secretOnce": {
+    "warning": "The value is shown once: after you close this panel you cannot see it again.",
+    "notCopied": "You have not copied the value. After closing it cannot be retrieved again.",
+    "back": "Back",
+    "closeAnyway": "Close without copying",
+    "done": "Done"
+  },
+  "statusDot": {
+    "online": "Online",
+    "stale": "Not responding",
+    "offline": "Offline",
+    "paused": "Paused",
+    "degraded": "Degraded"
   }
 }
