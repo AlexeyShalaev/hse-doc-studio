@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
@@ -87,7 +88,9 @@ class MirroringProjectRepository:
         except RuntimeError:
             logger.debug("project mirror: нет цикла, копию исправит сверка", project_id=str(project_id))
             return
-        task = loop.create_task(self._mirror.mirror(project_id, project))
+        # Чистый контекст: иначе задача унаследует ambient-транзакцию запроса и будет делить с ним одну
+        # AsyncSession (параллельный вызов или уже закрытая транзакция); копия идёт в своей короткой транзакции.
+        task = loop.create_task(self._mirror.mirror(project_id, project), context=contextvars.Context())
         self._pending.add(task)
         task.add_done_callback(self._done)
 

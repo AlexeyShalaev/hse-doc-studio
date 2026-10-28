@@ -205,6 +205,13 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_project_purge(app, container, settings)
         install_auth_cleanup(app, container, settings)
 
+        @app.on_event("shutdown")
+        async def _drain_project_mirror() -> None:
+            # Копии name/kind/lang уходят задачами: дожидаемся их, чтобы остановка не потеряла последние.
+            from hse_doc_studio.infra.projects.catalog_sync import MirroringProjectRepository  # noqa: PLC0415
+
+            await (await container.get(MirroringProjectRepository)).drain()
+
         @app.on_event("startup")
         async def _prepare_server_setup() -> None:
             await prepare_server_setup(app, container, settings, health_checks)

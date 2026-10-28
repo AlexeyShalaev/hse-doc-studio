@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,7 +20,7 @@ from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
-from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.db.session import SessionProvider, live_ambient
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.projects.catalog_sync import (
     MirroringProjectRepository,
@@ -223,6 +224,26 @@ async def test__mirroring_repository__save__copies_after_drain(world: World) -> 
     loaded = repo.get(project.folder)
     assert loaded is not None
     assert loaded.name == "Renamed"
+
+
+async def test__mirroring_repository__save_inside_transaction__copy_runs_in_own_session(world: World) -> None:
+    project = await world.add("Before")
+    seen: list[object] = []
+
+    class _Spy(ProjectCatalogMirror):
+        async def mirror(self, project_id: UUID, project: Project) -> bool:
+            seen.append(live_ambient())
+            return await super().mirror(project_id, project)
+
+    repo = MirroringProjectRepository(world.repo, world.volume, _Spy(world.sessions))
+
+    async with world.sessions.begin():
+        repo.save(replace(project, name="Renamed"))
+        await asyncio.sleep(0)  # задача копии стартует при ещё открытой транзакции запроса
+    await repo.drain()
+
+    assert seen == [None]  # копия не делит сессию запроса с основным кодом
+    assert (await _row(world, project.id)).name == "Renamed"
 
 
 async def test__mirroring_repository__folder_outside_volume__only_inner_save(world: World, tmp_path: Path) -> None:
