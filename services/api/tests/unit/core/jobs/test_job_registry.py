@@ -82,7 +82,7 @@ def test__registry__compile_policy__streams_log_is_active_and_blocks_folder_ops(
     assert not policy.awaitable
     assert not policy.detachable
     assert policy.embedded_concurrency is None
-    assert policy.default_timeout_s is None
+    assert policy.default_timeout_s == 600.0
 
 
 def test__registry__office_convert_policy__awaitable_detachable_idempotent_not_counted() -> None:

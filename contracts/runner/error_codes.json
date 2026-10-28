@@ -1,0 +1,16 @@
+[
+  "runner_lost",
+  "superseded",
+  "superseded_by",
+  "no_runner",
+  "quota",
+  "stale_attempt",
+  "job_not_found",
+  "job_not_running",
+  "blob_forbidden",
+  "blob_missing",
+  "artifact_invalid",
+  "runner_unauthorized",
+  "runner_disabled",
+  "job_token_invalid"
+]
