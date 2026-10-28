@@ -27,7 +27,7 @@ jobs:
           # (deploy/all-in-one/Dockerfile: python:3.14-slim-bookworm).
           python-version: "3.14"
       - name: Sync
-        run: uv sync --frozen --extra dev
+        run: uv sync --frozen --extra dev --extra server
       - name: Ruff lint
         run: uv run ruff check
       - name: Ruff format
