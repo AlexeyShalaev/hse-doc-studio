@@ -53,6 +53,7 @@ from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettin
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
+from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
@@ -297,6 +298,19 @@ class ServerIdentityProvider(Provider):
         uow: IUnitOfWork,
     ) -> IssueResetLinkUC:
         return IssueResetLinkUC(users, auth_tokens, delivery, audit, uow, public_url=settings.auth.public_url)
+
+    @provide
+    def get_change_password_uc(
+        self,
+        users: IUserRepository,
+        credentials: ICredentialRepository,
+        sessions: ISessionRepository,
+        auth_tokens: IAuthTokenRepository,
+        hasher: IPasswordHasher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> ChangePasswordUC:
+        return ChangePasswordUC(users, credentials, sessions, hasher, audit, uow, auth_tokens)
 
     @provide
     def get_request_email_change_uc(

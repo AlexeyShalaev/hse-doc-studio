@@ -58,6 +58,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/auth/verify/resend"): _P,
     ("POST", "/auth/forgot"): _P,
     ("POST", "/auth/reset"): _P,
+    # Регистрация (открытая и по приглашению) и карточка приглашения для формы
+    ("POST", "/auth/register"): _P,
+    ("GET", "/auth/invitations/{token}"): _P,
     # Мастер первого запуска: до завершения права проверяет сам маршрут (токен установки или сессия админа),
     # после завершения маршрутов нет (404)
     ("GET", "/server-setup/status"): _P,
@@ -65,6 +68,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/server-setup/environment"): _P,
     ("POST", "/server-setup/settings"): _P,
     ("POST", "/server-setup/complete"): _P,
+    ("POST", "/account/password"): _A,
     ("POST", "/account/email"): _A,
     ("POST", "/account/email/confirm"): _P,
     ("GET", "/account/sessions"): _A,

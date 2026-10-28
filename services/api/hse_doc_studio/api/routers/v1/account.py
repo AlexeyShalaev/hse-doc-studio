@@ -12,12 +12,14 @@ from hse_doc_studio.api.schemas.session import (
     AccountSession,
     ChangeEmailRequest,
     ChangeEmailResponse,
+    ChangePasswordRequest,
     VerifyEmailRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.sessions import (
     ListSessionsUC,
     RevokeOtherSessionsUC,
@@ -110,4 +112,19 @@ async def change_email(body: ChangeEmailRequest, request: Request, response: Res
 async def confirm_email_change(body: VerifyEmailRequest, request: Request) -> Response:
     """Ссылку открывает владелец нового ящика; вход не нужен, личность подтверждает сам одноразовый токен."""
     await (await request.state.dishka_container.get(ConfirmEmailChangeUC)).execute(body.token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/account/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(body: ChangePasswordRequest, request: Request) -> Response:
+    """Смена пароля вошедшим: нужен текущий пароль; остальные сессии закрываются, если не попросили иначе."""
+    user_id = _user_id()
+    await enforce_email(request, user_id, action="change_password")
+    await (await request.state.dishka_container.get(ChangePasswordUC)).execute(
+        user_id,
+        _current_hash(request),
+        body.current_password,
+        body.new_password,
+        sign_out_others=body.sign_out_other_sessions,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
