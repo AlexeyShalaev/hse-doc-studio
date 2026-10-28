@@ -589,7 +589,8 @@ export const WelcomePage = () => {
               </div>
             )}
 
-            <RecentActivity />
+            {/* Лента строится из локальных логов сборки: на сервере её нет. */}
+            {!lacks("local_services_ui") && <RecentActivity />}
           </div>
         </div>
 
