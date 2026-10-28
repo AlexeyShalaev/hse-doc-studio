@@ -42,6 +42,12 @@ for (const lang of LANGS) {
 
     test("в списке только свои проекты", async ({ page }) => {
       await login(page, USERS.anna.email);
+      // Проекты демо-данных открываются: каждый из списка отвечает владельцу 200, а не «не найден».
+      const own = await page.request.get("/api/v1/projects");
+      for (const item of (await own.json()) as { id: string }[]) {
+        const opened = await page.request.get(`/api/v1/projects/${item.id}`);
+        expect(opened.status()).toBe(200);
+      }
       const names = await visibleProjectNames(page);
       for (const own of USERS.anna.projects) expect(names).toContain(own);
       for (const foreign of [
@@ -78,7 +84,21 @@ for (const lang of LANGS) {
       await expect(page).toHaveURL(/\/projects\/[^/]+\/documents/);
       createdId = /\/projects\/([^/]+)\//.exec(page.url())?.[1] ?? "";
       expect(createdId).not.toBe("");
+      // Создатель открывает свой проект: рабочее место, а не экран «не найден или нет доступа».
+      await expect(page.getByTestId("project-unavailable")).toHaveCount(0);
+      const own = await page.request.get(`/api/v1/projects/${createdId}`);
+      expect(own.status()).toBe(200);
+      expect((await own.json()).name).toBe(createdName);
+      const ownDocuments = await page.request.get(
+        `/api/v1/projects/${createdId}/documents`,
+      );
+      expect(ownDocuments.status()).toBe(200);
       await shot(page, lang, "06-project-created");
+
+      // Повторное открытие по прямой ссылке (как из списка проектов) тоже ведёт в рабочее место.
+      await page.goto(`/projects/${createdId}/documents`);
+      await expect(page.getByTestId("project-unavailable")).toHaveCount(0);
+      await expect(page).toHaveURL(/\/projects\/[^/]+\/documents/);
 
       await page.goto("/");
       const names = await visibleProjectNames(page);

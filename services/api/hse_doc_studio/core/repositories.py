@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
 from hse_doc_studio.core.catalog import PackInfo, TemplateVersion
@@ -39,6 +39,13 @@ class IProjectIndexRepository(Protocol):
     def list_known(self) -> list[Path]: ...
     def register(self, folder: Path) -> None: ...
     def unregister(self, folder: Path) -> None: ...
+
+
+@runtime_checkable
+class IProjectIndexLookup(Protocol):
+    """Индекс, умеющий найти проект по id сам, без перебора папок (серверный каталог в Postgres)."""
+
+    async def locate(self, project_id: UUID) -> tuple[Path, Project] | None: ...
 
 
 class ICompileRepository(Protocol):

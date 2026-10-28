@@ -34,6 +34,7 @@ from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChec
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
+from hse_doc_studio.infra.projects.catalog_index import CatalogProjectIndex
 from hse_doc_studio.infra.projects.catalog_sync import (
     MirroringProjectRepository,
     ProjectCatalogMirror,
@@ -146,6 +147,11 @@ class ServerPersistenceProvider(Provider):
         self, sessions: SessionProvider, volume: IProjectVolume, projects: IProjectRepository
     ) -> IProjectLocator:
         return PostgresProjectLocator(sessions, volume, projects)
+
+    @provide(override=True)
+    def get_project_index_repo(self, locator: IProjectLocator) -> IProjectIndexRepository:
+        """Локальный projects.json в серверном режиме пуст: проект по id находит каталог в БД."""
+        return CatalogProjectIndex(locator)
 
     @provide
     def get_project_catalog_reconciler(
