@@ -11,6 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
+from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
@@ -23,6 +24,7 @@ from hse_doc_studio.api.observability.install import (
     install_server_observability,
 )
 from hse_doc_studio.api.rate_limit import install_rate_limiter
+from hse_doc_studio.api.routers.admin import make_admin_router
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.api.server_setup import prepare_server_setup
@@ -152,6 +154,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     if settings.mode is StudioMode.server:
         install_server_security(app, settings)
         install_rate_limiter(app, settings)
+        install_admin_access(app, settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,
@@ -172,6 +175,8 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         return await call_next(request)
 
     app.include_router(api_router)
+    if settings.mode is StudioMode.server:
+        app.include_router(make_admin_router(), tags=["admin"])
     install_exception_handlers(app)
 
     @app.get("/health")

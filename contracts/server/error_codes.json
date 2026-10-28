@@ -21,6 +21,7 @@
   "setup_required",
   "email_taken",
   "last_owner",
+  "last_admin",
   "slug_reserved",
   "slug_invalid",
   "setting_locked"

@@ -137,6 +137,16 @@ class SqlUserRepository:
         async with self._sessions.use() as session:
             return (await session.execute(select(func.count()).select_from(UserRow))).scalar_one()
 
+    async def lock_active_admins(self) -> int:
+        async with self._sessions.use() as session:
+            rows = await session.execute(
+                select(UserRow.id)
+                .where(UserRow.is_instance_admin.is_(True), UserRow.status == UserStatus.active.value)
+                .order_by(UserRow.id)
+                .with_for_update()
+            )
+            return len(rows.all())
+
     async def get_by_identity(self, provider: str, subject: str) -> User | None:
         async with self._sessions.use() as session:
             row = (

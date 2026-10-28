@@ -135,6 +135,15 @@ async def test__update__email_of_other_user__raises_email_taken(repos: Repos) ->
     assert err.value.code is IdentityErrorCode.email_taken
 
 
+async def test__lock_active_admins__counts_only_active_admins(repos: Repos) -> None:
+    await repos.users.add(make_user("a", admin=True))
+    await repos.users.add(make_user("b", admin=True))
+    await repos.users.add(make_user("m"))
+    await repos.users.add(replace(make_user("d", admin=True), status=UserStatus.disabled))
+
+    assert await repos.users.lock_active_admins() == 2
+
+
 async def test__identity__add_then_lookup__returns_user(repos: Repos) -> None:
     await repos.users.add(make_user("u1"))
     identity = UserIdentity(user_id="u1", provider="corp", subject="sub-1", email="x@corp.test", email_verified=True)

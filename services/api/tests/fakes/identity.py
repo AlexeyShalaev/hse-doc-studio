@@ -50,6 +50,9 @@ class InMemoryUserRepository:
     async def count(self) -> int:
         return len(self._store.users)
 
+    async def lock_active_admins(self) -> int:
+        return sum(1 for u in self._store.users.values() if u.is_instance_admin and u.can_sign_in)
+
     async def get_by_identity(self, provider: str, subject: str) -> User | None:
         identity = self._store.identities.get((provider, subject))
         return self._store.users.get(identity.user_id) if identity else None

@@ -43,6 +43,7 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.setup_already_done: _STATE,
     IdentityErrorCode.email_taken: _STATE,
     IdentityErrorCode.last_owner: _STATE,
+    IdentityErrorCode.last_admin: _STATE,
     IdentityErrorCode.setting_locked: _STATE,
     IdentityErrorCode.password_policy: _INPUT,
     IdentityErrorCode.token_invalid: _INPUT,
