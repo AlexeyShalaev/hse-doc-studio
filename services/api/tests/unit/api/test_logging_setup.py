@@ -70,3 +70,23 @@ def test__configure_logging__timestamp_is_local_time_as_before(
     finally:
         monkeypatch.undo()
         time.tzset()
+
+
+def test__configure_logging__use_json_writes_one_json_object_without_locals(
+    restored_structlog: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json  # noqa: PLC0415
+
+    configure_logging(use_json=True)
+
+    try:
+        _decrypt(_CANARY)
+    except OSError:
+        structlog.get_logger().exception("bundle import failed")
+
+    out = capsys.readouterr().out.strip()
+    record = json.loads(out)
+    assert record["event"] == "bundle import failed"
+    assert record["level"] == "error"
+    assert "disk full" in record["exception"]
+    assert _CANARY not in out

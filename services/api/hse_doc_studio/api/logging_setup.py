@@ -13,12 +13,27 @@ import sys
 import structlog
 
 
-def configure_logging() -> None:
+def configure_logging(*, use_json: bool = False) -> None:
     """Те же процессоры, что у structlog по умолчанию, но трассировка простая и без значений переменных.
 
     Время местное и цвета только в терминале, как у structlog без настройки: в файле и `docker logs` нет ни UTC, ни
     escape-кодов.
+
+    ``use_json`` (HSE_STUDIO__LOGGING__USE_JSON) включает одну JSON-строку на запись для сборщиков логов; исключение
+    в ней тоже обычным текстом без локалей.
     """
+    if use_json:
+        structlog.configure(
+            processors=[
+                structlog.contextvars.merge_contextvars,
+                structlog.processors.add_log_level,
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+                structlog.processors.TimeStamper(fmt="iso", utc=True),
+                structlog.processors.JSONRenderer(),
+            ]
+        )
+        return
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

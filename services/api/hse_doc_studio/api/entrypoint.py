@@ -135,7 +135,7 @@ def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = se
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
     """Factory function for uvicorn to create the app instance."""
     ensure_supported_mode(settings)
-    configure_logging()
+    configure_logging(use_json=settings.logging.use_json)
     # Документация API лежит вне /api/v1, поэтому гард и реестр маршрутов её не видят: на сервере без входа
     # она открыта всем. В серверном режиме её нет вовсе.
     docs_enabled = settings.mode is not StudioMode.server

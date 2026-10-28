@@ -53,6 +53,8 @@ def create_engine(cfg: DbConfig) -> AsyncEngine:
         pool_pre_ping=True,
         connect_args=connect_args(cfg),
         echo=cfg.echo,
+        # Значения параметров (e-mail в ключах входа, хеши) не должны попадать в текст ошибок и логи.
+        hide_parameters=True,
     )
 
 
