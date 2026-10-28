@@ -22,12 +22,13 @@ from hse_doc_studio.core.identity.entities import Session
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.invites import InvitationInfoUC
 from hse_doc_studio.use_cases.identity.register import RegisterUC
 from httpx import ASGITransport, AsyncClient
 
+from tests.fakes.auth import empty_bearer_resolver
 from tests.unit.use_cases.identity.conftest import T0, World
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "server" / "fixtures"
@@ -48,7 +49,7 @@ class _Provider(Provider):
 
     @provide
     def resolver(self) -> IActorResolver:
-        return ChainActorResolver([SessionCookieResolver(self._w.service()), BearerActorResolver()])
+        return ChainActorResolver([SessionCookieResolver(self._w.service()), empty_bearer_resolver()])
 
     @provide
     def register(self) -> RegisterUC:

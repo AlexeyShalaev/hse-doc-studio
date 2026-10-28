@@ -248,9 +248,9 @@ class ApiToken(StrictModel):
 
 
 class CreateApiTokenRequest(StrictModel):
-    name: str
-    scopes: list[TokenScope]
-    expires_in_days: int | None
+    name: str = Field(min_length=1, max_length=80)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=3)
+    expires_in_days: int | None = Field(ge=1, le=365)
 
 
 class CreateApiTokenResponse(StrictModel):

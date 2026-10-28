@@ -23,7 +23,7 @@ from hse_doc_studio.core.identity.entities import MailKind, Session, User, UserS
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 from hse_doc_studio.use_cases.identity.recovery import (
@@ -40,6 +40,7 @@ from tests.fakes.auth import (
     InMemoryAuthTokenRepository,
     InMemoryMailOutboxRepository,
     InMemorySessionRepository,
+    empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryCredentialRepository, InMemoryIdentityStore, InMemoryUserRepository
 
@@ -125,7 +126,7 @@ class _Provider(Provider):
     @provide
     def resolver(self) -> IActorResolver:
         service = SessionService(self._w.sessions, self._w.users)
-        return ChainActorResolver([SessionCookieResolver(service), BearerActorResolver()])
+        return ChainActorResolver([SessionCookieResolver(service), empty_bearer_resolver()])
 
     @provide
     def verify(self) -> VerifyEmailUC:

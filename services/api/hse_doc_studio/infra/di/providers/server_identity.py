@@ -14,6 +14,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
+    IApiTokenRepository,
     IAuditLog,
     IAuditReader,
     IAuditRetention,
@@ -34,6 +35,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
+    SqlApiTokenRepository,
     SqlAuditLog,
     SqlAuthTokenRepository,
     SqlLoginAttemptRepository,
@@ -68,6 +70,7 @@ from hse_doc_studio.use_cases.admin.users import (
     SetUserAdminUC,
 )
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
@@ -127,8 +130,14 @@ class ServerIdentityProvider(Provider):
         return SessionService(sessions, users, policy)
 
     @provide
-    def get_actor_resolver(self, sessions: SessionService) -> IActorResolver:
-        return ChainActorResolver([SessionCookieResolver(sessions), BearerActorResolver()])
+    def get_api_token_repository(self, sessions: SessionProvider) -> IApiTokenRepository:
+        return SqlApiTokenRepository(sessions)
+
+    @provide
+    def get_actor_resolver(
+        self, sessions: SessionService, tokens: IApiTokenRepository, users: IUserRepository
+    ) -> IActorResolver:
+        return ChainActorResolver([SessionCookieResolver(sessions), BearerActorResolver(tokens, users)])
 
     @provide
     def get_credential_repository(self, sessions: SessionProvider) -> ICredentialRepository:
@@ -199,6 +208,22 @@ class ServerIdentityProvider(Provider):
         self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> RevokeOtherSessionsUC:
         return RevokeOtherSessionsUC(sessions, audit, uow)
+
+    @provide
+    def get_list_api_tokens_uc(self, tokens: IApiTokenRepository) -> ListApiTokensUC:
+        return ListApiTokensUC(tokens)
+
+    @provide
+    def get_create_api_token_uc(
+        self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> CreateApiTokenUC:
+        return CreateApiTokenUC(tokens, audit, uow)
+
+    @provide
+    def get_revoke_api_token_uc(
+        self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeApiTokenUC:
+        return RevokeApiTokenUC(tokens, audit, uow)
 
     @provide
     def get_auth_token_repository(self, sessions: SessionProvider) -> IAuthTokenRepository:

@@ -31,7 +31,7 @@ from hse_doc_studio.core.identity.entities import RegistrationMode, User, UserSt
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver, IUserRepository
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
@@ -42,7 +42,12 @@ from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupS
 from hse_doc_studio.use_cases.server_setup.token import SetupToken
 from httpx import ASGITransport, AsyncClient
 
-from tests.fakes.auth import InMemoryAuditLog, InMemoryLoginAttemptRepository, InMemorySessionRepository
+from tests.fakes.auth import (
+    InMemoryAuditLog,
+    InMemoryLoginAttemptRepository,
+    InMemorySessionRepository,
+    empty_bearer_resolver,
+)
 from tests.fakes.identity import (
     InMemoryCredentialRepository,
     InMemoryFirstAdminRepository,
@@ -96,7 +101,7 @@ class _Provider(Provider):
 
     @provide
     def resolver(self) -> IActorResolver:
-        return ChainActorResolver([SessionCookieResolver(self._w.session_service), BearerActorResolver()])
+        return ChainActorResolver([SessionCookieResolver(self._w.session_service), empty_bearer_resolver()])
 
     @provide
     def users(self) -> IUserRepository:

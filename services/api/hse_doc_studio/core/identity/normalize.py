@@ -72,6 +72,25 @@ def new_token() -> str:
     return secrets.token_urlsafe(TOKEN_BYTES)
 
 
+PAT_PREFIX = "hsd_pat_"
+PAT_SECRET_LENGTH = 32
+PAT_DISPLAY_LENGTH = 11
+
+
+def new_pat() -> str:
+    """Персональный токен доступа: опознаваемый префикс и 32 случайных символа (около 190 бит)."""
+    return PAT_PREFIX + secrets.token_urlsafe(PAT_SECRET_LENGTH)[:PAT_SECRET_LENGTH]
+
+
+def is_pat(token: str) -> bool:
+    return token.startswith(PAT_PREFIX)
+
+
+def pat_display_prefix(token: str) -> str:
+    """Начало токена для списка: по нему токен узнают, но не восстановят."""
+    return token[:PAT_DISPLAY_LENGTH]
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

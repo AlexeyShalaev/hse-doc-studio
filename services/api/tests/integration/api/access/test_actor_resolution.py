@@ -19,11 +19,11 @@ from hse_doc_studio.core.identity.entities import Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 from httpx import ASGITransport, AsyncClient
 
-from tests.fakes.auth import InMemorySessionRepository
+from tests.fakes.auth import InMemorySessionRepository, empty_bearer_resolver
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 SECRET = "valid-cookie-secret"
@@ -46,7 +46,7 @@ class _ResolverProvider(Provider):
     @provide
     def get_resolver(self) -> IActorResolver:
         service = SessionService(self._fixture.sessions, self._fixture.users)
-        return ChainActorResolver([SessionCookieResolver(service), BearerActorResolver()])
+        return ChainActorResolver([SessionCookieResolver(service), empty_bearer_resolver()])
 
 
 @pytest_asyncio.fixture

@@ -19,7 +19,7 @@ from hse_doc_studio.core.identity.entities import Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.users import (
@@ -45,6 +45,7 @@ from tests.fakes.auth import (
     InMemoryMailOutboxRepository,
     InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
+    empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserDirectory, InMemoryUserRepository
 from tests.unit.use_cases.identity.conftest import FakeSender, FakeUow
@@ -98,7 +99,7 @@ class _Provider(Provider):
     @provide
     def resolver(self) -> IActorResolver:
         return ChainActorResolver(
-            [SessionCookieResolver(SessionService(self.e.sessions, self.e.users)), BearerActorResolver()]
+            [SessionCookieResolver(SessionService(self.e.sessions, self.e.users)), empty_bearer_resolver()]
         )
 
     @provide

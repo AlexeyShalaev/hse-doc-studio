@@ -21,6 +21,9 @@ from hse_doc_studio.core.identity.entities import (
 )
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.infra.identity.resolvers import BearerActorResolver
+
+from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 
 class InMemorySessionRepository:
@@ -261,3 +264,8 @@ class InMemoryAuditLog:
         purged = len(self._entries) - len(kept)
         self._entries = kept
         return purged
+
+
+def empty_bearer_resolver() -> BearerActorResolver:
+    """Bearer-резолвер без единого токена: опознаёт только пустоту, для тестов цепочки с cookie."""
+    return BearerActorResolver(InMemoryApiTokenRepository(), InMemoryUserRepository(InMemoryIdentityStore()))
