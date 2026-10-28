@@ -14,11 +14,7 @@ import { i18n } from "@shared/lib";
 import type { AuthOptions } from "@entities/session";
 import { AuthErrorCard, LoginCard } from "./index";
 import { AUTH_ERROR_CODES } from "./lib/authErrorCodes";
-import {
-  LOGIN_ERROR_CODES,
-  loginErrorKey,
-  type LoginFailure,
-} from "./lib/loginErrors";
+import { LOGIN_ERROR_CODES, loginErrorKey } from "./lib/loginErrors";
 
 const AUTH: AuthOptions = {
   registration_mode: "open",

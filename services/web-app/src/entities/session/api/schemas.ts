@@ -138,6 +138,7 @@ export const ServerSetupStatusSchema = z.strictObject({
   token_required: z.boolean(),
   steps_done: z.array(z.enum(["admin", "settings"])),
 });
+export type ServerSetupStatus = z.infer<typeof ServerSetupStatusSchema>;
 export const ServerSetupAdminRequestSchema = z.strictObject({
   setup_token: z.string().nullable(),
   name: z.string(),
@@ -158,6 +159,23 @@ export const ServerSetupSettingsRequestSchema = z
       value.registration_domains.some((d) => d.trim().replace(/^@/, "") !== ""),
     { path: ["registration_domains"] },
   );
+export const SetupSettingKeySchema = z.enum([
+  "registration_mode",
+  "registration_domains",
+  "require_approval",
+  "password_enabled",
+]);
+export type SetupSettingKey = z.infer<typeof SetupSettingKeySchema>;
+// Действующие настройки входа для шага мастера. Ключи из locked_by_env заданы
+// окружением: экран показывает их только для чтения, запись их пропускает.
+export const ServerSetupSettingsSchema = z.strictObject({
+  registration_mode: RegistrationModeSchema,
+  registration_domains: z.array(z.string()),
+  require_approval: z.boolean(),
+  password_enabled: z.boolean(),
+  locked_by_env: z.array(SetupSettingKeySchema),
+});
+export type ServerSetupSettings = z.infer<typeof ServerSetupSettingsSchema>;
 export const ServerSetupCheckSchema = z.strictObject({
   id: z.enum(["database", "storage", "runner"]),
   status: z.enum(["ok", "fail", "not_configured"]),
@@ -166,6 +184,7 @@ export const ServerSetupCheckSchema = z.strictObject({
 export const ServerSetupEnvironmentSchema = z.strictObject({
   checks: z.array(ServerSetupCheckSchema),
 });
+export type ServerSetupCheck = z.infer<typeof ServerSetupCheckSchema>;
 export type ServerSetupEnvironment = z.infer<
   typeof ServerSetupEnvironmentSchema
 >;

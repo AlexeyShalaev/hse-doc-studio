@@ -44,6 +44,18 @@
       "registration_open_nosmtp": {
         "title": "Open, no email",
         "hint": "Emails are not sent: links are shown on screen."
+      },
+      "fresh_install_env": {
+        "title": "Install, admin from env",
+        "hint": "The admin is already created by the environment and the sign-up mode is set: the wizard is read-only."
+      },
+      "fresh_install_raced": {
+        "title": "Setup already in progress",
+        "hint": "Someone else created the admin: neutral screen and a sign-in form."
+      },
+      "fresh_install_broken": {
+        "title": "Install, storage is down",
+        "hint": "The environment check is red: setup cannot be finished."
       }
     }
   }

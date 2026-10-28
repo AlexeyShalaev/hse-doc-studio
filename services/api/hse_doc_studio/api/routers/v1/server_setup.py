@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from hse_doc_studio.api.actor import require_server_mode
@@ -21,14 +23,22 @@ from hse_doc_studio.api.schemas.session import (
     ServerSetupAdminRequest,
     ServerSetupCheck,
     ServerSetupEnvironment,
+    ServerSetupSettings,
     ServerSetupSettingsRequest,
     ServerSetupStatus,
 )
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.identity.auth_settings import (
+    KEY_PASSWORD_ENABLED,
+    KEY_REGISTRATION_DOMAINS,
+    KEY_REGISTRATION_MODE,
+    KEY_REQUIRE_APPROVAL,
+)
 from hse_doc_studio.core.identity.entities import RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.rate_limit import AUTH_IP
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC
 from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC, InitialSettings
 from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService, SetupStatus
@@ -122,6 +132,32 @@ async def setup_environment(request: Request, response: Response) -> ServerSetup
     ]
     response.headers["Cache-Control"] = "no-store"
     return ServerSetupEnvironment(checks=checks)
+
+
+# Ключ в хранилище настроек -> имя поля в ответе мастера.
+_SETTING_FIELDS: dict[
+    str, Literal["registration_mode", "registration_domains", "require_approval", "password_enabled"]
+] = {
+    KEY_REGISTRATION_MODE: "registration_mode",
+    KEY_REGISTRATION_DOMAINS: "registration_domains",
+    KEY_REQUIRE_APPROVAL: "require_approval",
+    KEY_PASSWORD_ENABLED: "password_enabled",
+}
+
+
+@router.get("/settings", response_model=ServerSetupSettings)
+async def current_settings(request: Request, response: Response) -> ServerSetupSettings:
+    """Действующие настройки входа и какие из них заданы окружением: шаг мастера показывает такие только для чтения."""
+    await _admin_actor(request)
+    view = await (await request.state.dishka_container.get(AuthSettingsService)).view()
+    response.headers["Cache-Control"] = "no-store"
+    return ServerSetupSettings(
+        registration_mode=view.settings.registration_mode,
+        registration_domains=list(view.settings.registration_domains),
+        require_approval=view.settings.require_approval,
+        password_enabled=view.settings.password_enabled,
+        locked_by_env=[field for key, field in _SETTING_FIELDS.items() if key in view.locked],
+    )
 
 
 @router.post("/settings", response_model=ServerSetupStatus)

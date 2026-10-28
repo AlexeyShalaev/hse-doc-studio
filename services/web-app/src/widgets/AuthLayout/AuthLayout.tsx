@@ -1,4 +1,4 @@
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useBootstrap } from "@entities/session";
 import { AuthSwitches } from "./AuthSwitches";
@@ -31,6 +31,8 @@ export const AuthLayout = () => {
   const { t } = useTranslation("auth");
   const { data } = useBootstrap();
   const version = data?.version ?? "";
+  // Мастеру первого запуска нужна ширина под степпер с подписями.
+  const wide = useLocation().pathname.replace(/\/$/, "") === "/first-run";
 
   return (
     <div
@@ -57,7 +59,7 @@ export const AuthLayout = () => {
         <div
           style={{
             width: "100%",
-            maxWidth: 420,
+            maxWidth: wide ? 600 : 420,
             background: "var(--bg-1)",
             border: "1px solid var(--line)",
             borderRadius: 12,

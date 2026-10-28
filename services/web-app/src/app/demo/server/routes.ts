@@ -4,6 +4,7 @@ import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
 import { createProjectRoutes } from "./projectRoutes";
+import { createSetupRoutes } from "./setupRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
 
 // Серверное демо включается явно (VITE_SERVER_DEMO=1 или галерея /dev/server-screens).
@@ -118,23 +119,12 @@ const routes: DemoRoute[] = [
       return demoNoContent();
     },
   },
-  {
-    method: "GET",
-    pattern: "/server-setup/status",
-    handler: () => {
-      const ready = world.bootstrap.setup_state === "ready";
-      return demoJson({
-        state: world.bootstrap.setup_state,
-        token_required: !ready && world.scenario.tokenRequired,
-        steps_done: ready ? ["admin", "settings"] : [],
-      });
-    },
-  },
 ];
 
 export const serverDemoRoutes: DemoRoute[] = [
   ...routes,
   ...createAuthRoutes(() => world),
+  ...createSetupRoutes(() => world),
   ...createProjectRoutes(() => world),
   ...catalogRoutes,
 ].map((route) => ({
