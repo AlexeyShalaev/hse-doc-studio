@@ -54,6 +54,14 @@ class GetCompileStreamUC:
         bus = self._log_stream
         compile_repo = self._compile_repo
 
+        # Шина логов глобальна и знает только compile_id: сначала убеждаемся, что запись из проекта в URL.
+        if compile_repo.get_for_project(project_folder, compile_id) is None:
+
+            async def _record_not_found() -> AsyncGenerator[str, None]:
+                yield f"[error] compile record not found: {compile_id}"
+
+            return _record_not_found()
+
         async def _stream() -> AsyncGenerator[str, None]:
             seen: set[str] = set()
             # Live tail while the build is active.

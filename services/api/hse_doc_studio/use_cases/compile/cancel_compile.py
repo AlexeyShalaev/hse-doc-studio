@@ -61,11 +61,7 @@ class CancelCompileUC:
         self._log_stream = log_stream
 
     async def execute(self, inp: CancelCompileInput) -> CancelCompileOutput:
-        if self._dispatcher.is_active(inp.compile_id):
-            await self._dispatcher.cancel(inp.compile_id)
-            return CancelCompileOutput(cancelled_task=True, record_finalised=False)
-
-        # No live task → force-finalise the record so the UI lock unsticks.
+        # Сначала принадлежность: реестр задач глобальный и знает только compile_id, а проект в URL может быть чужим.
         located = await self._locator.locate(inp.project_id)
         if located is None:
             raise NotFoundError(
@@ -81,6 +77,11 @@ class CancelCompileUC:
                 )
             )
 
+        if self._dispatcher.is_active(inp.compile_id):
+            await self._dispatcher.cancel(inp.compile_id)
+            return CancelCompileOutput(cancelled_task=True, record_finalised=False)
+
+        # No live task → force-finalise the record so the UI lock unsticks.
         if record.status in (CompileStatus.success, CompileStatus.failure, CompileStatus.cancelled):
             # Already terminal. Still flip the document if it's somehow
             # stuck in `building` because the previous save was interrupted.
