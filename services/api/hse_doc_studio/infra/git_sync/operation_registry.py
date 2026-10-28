@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.git_sync.entities import (
     CloneResult,
     GitOperation,
@@ -58,8 +59,13 @@ class InMemoryGitOperationRegistry:
                 running = self._running_for(folder)
                 if running is not None:
                     raise git_error(GitErrorCode.sync_busy, operation_id=running.operation.id)
+            actor = current_actor()
             operation = GitOperation(
-                id=f"op_{uuid4().hex[:12]}", kind=kind, project_id=project_id, started_at=self._now()
+                id=f"op_{uuid4().hex[:12]}",
+                kind=kind,
+                project_id=project_id,
+                started_at=self._now(),
+                owner=actor.key if actor is not None else None,
             )
             self._entries[operation.id] = _Entry(operation, folder)
             return replace(operation)

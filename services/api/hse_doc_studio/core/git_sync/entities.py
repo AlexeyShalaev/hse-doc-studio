@@ -284,6 +284,9 @@ class GitOperation:
     finished_at: datetime | None = None
     result: SyncResult | CloneResult | None = None
     error: GitOperationError | None = None
+    # Ключ актора, начавшего операцию (`Actor.key`); None в локальном режиме и без запроса.
+    # Другим акторам операция не видна.
+    owner: str | None = None
 
 
 @dataclass(frozen=True)
