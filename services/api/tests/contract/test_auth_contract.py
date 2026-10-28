@@ -11,6 +11,7 @@ import pytest
 import pytest_asyncio
 from hse_doc_studio.core.identity.entities import (
     ApiToken,
+    AuditQuery,
     AuthToken,
     AuthTokenKind,
     MailKind,
@@ -24,6 +25,7 @@ from hse_doc_studio.core.identity.protocols import (
     IApiTokenRepository,
     IAuditLog,
     IAuditReader,
+    IAuditRetention,
     IAuthTokenRepository,
     ILoginAttemptRepository,
     IMailOutboxRepository,
@@ -54,7 +56,7 @@ NOW = datetime(2026, 10, 28, 10, 0, tzinfo=UTC)
 HOUR = timedelta(hours=1)
 
 
-class _Audit(IAuditLog, IAuditReader):
+class _Audit(IAuditLog, IAuditReader, IAuditRetention):
     pass
 
 
@@ -402,6 +404,44 @@ async def test__audit__record_then_list_newest_first_with_filters(repos: Repos) 
     assert [e.actor_id for e in await repos.audit.list(action="login.ok")] == ["u2", "u1"]
     assert [e.action for e in await repos.audit.list(actor_id="u1")] == ["login.ok"]
     assert len(await repos.audit.list(limit=2)) == 2
+
+
+async def test__audit__query__filters_and_keyset_page(repos: Repos) -> None:
+    await repos.audit.record("admin.user_disabled", actor_id="boss", target="u1")
+    await repos.audit.record("admin.user_enabled", actor_id="boss", target="u2")
+    await repos.audit.record("auth.login", actor_id="u1", target=None)
+    await repos.audit.record("auth_x.login", actor_id="u1", target="u1")
+
+    everything = await repos.audit.query(AuditQuery(limit=10))
+    first = await repos.audit.query(AuditQuery(limit=2))
+    second = await repos.audit.query(AuditQuery(limit=2, before_id=first[-1].id))
+
+    assert [e.action for e in everything] == ["auth_x.login", "auth.login", "admin.user_enabled", "admin.user_disabled"]
+    assert [e.id for e in first + second] == [e.id for e in everything]
+    assert [e.action for e in await repos.audit.query(AuditQuery(action_prefix="admin."))] == [
+        "admin.user_enabled",
+        "admin.user_disabled",
+    ]
+    assert [e.action for e in await repos.audit.query(AuditQuery(action_prefix="auth_"))] == ["auth_x.login"]
+    assert [e.action for e in await repos.audit.query(AuditQuery(target="u1"))] == [
+        "auth_x.login",
+        "admin.user_disabled",
+    ]
+    assert len(await repos.audit.query(AuditQuery(actor_id="boss", target="u2"))) == 1
+    assert await repos.audit.query(AuditQuery(since=everything[0].at + HOUR)) == []
+    assert len(await repos.audit.query(AuditQuery(until=everything[0].at + HOUR))) == 4
+
+
+async def test__audit__purge_before__removes_only_old_events(repos: Repos) -> None:
+    await repos.audit.record("old", actor_id=None)
+    (old,) = await repos.audit.list()
+    cutoff = old.at + timedelta(seconds=1)
+    await asyncio.sleep(1.1)
+    await repos.audit.record("fresh", actor_id=None)
+
+    assert await repos.audit.purge_before(cutoff) == 1
+    assert [e.action for e in await repos.audit.list()] == ["fresh"]
+    assert await repos.audit.purge_before(cutoff) == 0
 
 
 async def test__audit__details_with_secret_keys__are_redacted(repos: Repos) -> None:

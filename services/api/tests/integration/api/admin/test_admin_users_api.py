@@ -20,6 +20,7 @@ from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.use_cases.admin.audit import ListAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
@@ -99,6 +100,10 @@ class _Provider(Provider):
         return ChainActorResolver(
             [SessionCookieResolver(SessionService(self.e.sessions, self.e.users)), BearerActorResolver()]
         )
+
+    @provide
+    def list_audit(self) -> ListAuditUC:
+        return ListAuditUC(self.e.audit)
 
     @provide
     def list_users(self) -> ListUsersUC:

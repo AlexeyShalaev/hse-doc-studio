@@ -43,6 +43,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminSessionsRevoked: s.AdminSessionsRevokedSchema,
   AdminInvitation: s.AdminInvitationSchema,
   AdminInvitationList: s.AdminInvitationPageSchema,
+  AdminAuditEvent: s.AdminAuditEventSchema,
+  AdminAuditList: s.AdminAuditPageSchema,
   CreateAdminInvitationRequest: s.CreateAdminInvitationRequestSchema,
   AdminInvitationCreated: s.AdminInvitationCreatedSchema,
   AdminOrgList: z.array(s.AdminOrgSchema),

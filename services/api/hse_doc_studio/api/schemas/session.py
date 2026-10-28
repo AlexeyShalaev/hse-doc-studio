@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -346,6 +346,22 @@ class AdminInvitationPage(StrictModel):
     total: int
     limit: int
     offset: int
+
+
+class AdminAuditEvent(StrictModel):
+    id: int
+    at: datetime
+    action: str
+    actor_id: str | None
+    target: str | None
+    details: dict[str, Any]
+
+
+class AdminAuditPage(StrictModel):
+    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице."""
+
+    items: list[AdminAuditEvent]
+    next_cursor: str | None
 
 
 class CreateAdminInvitationRequest(StrictModel):

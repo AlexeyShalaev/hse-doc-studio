@@ -59,6 +59,8 @@ _SCHEMAS: dict[str, Any] = {
     "AdminSessionsRevoked": s.AdminSessionsRevoked,
     "AdminInvitation": s.AdminInvitation,
     "AdminInvitationList": s.AdminInvitationPage,
+    "AdminAuditEvent": s.AdminAuditEvent,
+    "AdminAuditList": s.AdminAuditPage,
     "CreateAdminInvitationRequest": s.CreateAdminInvitationRequest,
     "AdminInvitationCreated": s.AdminInvitationCreated,
     "AdminOrgList": list[s.AdminOrg],

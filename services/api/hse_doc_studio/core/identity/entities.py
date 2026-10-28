@@ -191,6 +191,25 @@ class AuditEntry:
 
 
 @dataclass(frozen=True)
+class AuditQuery:
+    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного)."""
+
+    actor_id: str | None = None
+    action_prefix: str | None = None
+    target: str | None = None
+    since: datetime | None = None
+    until: datetime | None = None
+    before_id: int | None = None
+    limit: int = 50
+
+
+@dataclass(frozen=True)
+class AuditPage:
+    items: list[AuditEntry]
+    next_before_id: int | None
+
+
+@dataclass(frozen=True)
 class ActorCredentials:
     """Что запрос предъявил для входа: значение cookie сессии и токен из заголовка Authorization: Bearer."""
 

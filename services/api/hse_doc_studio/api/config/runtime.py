@@ -36,6 +36,12 @@ class HttpServerConfig(BaseModel):
     project_purge_interval_s: float = Field(
         default=3600.0, gt=0, description="Как часто сервер ищет удалённые проекты с истёкшим сроком."
     )
+    audit_retention_days: int = Field(
+        default=365, ge=0, description="Сколько суток хранится журнал аудита; 0 хранит его без срока."
+    )
+    audit_purge_interval_s: float = Field(
+        default=86400.0, gt=0, description="Как часто сервер стирает события аудита старше срока хранения."
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

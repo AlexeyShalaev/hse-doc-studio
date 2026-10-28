@@ -12,6 +12,7 @@ from hse_doc_studio.core.identity.entities import (
     ActorCredentials,
     ApiToken,
     AuditEntry,
+    AuditQuery,
     AuthToken,
     AuthTokenKind,
     LoginAttempt,
@@ -177,10 +178,20 @@ class IAuditLog(Protocol):
 
 
 class IAuditReader(Protocol):
+    async def query(self, query: AuditQuery) -> list[AuditEntry]:
+        """Не больше `query.limit` событий, новые первыми, старше `query.before_id`; фильтры сочетаются по И."""
+        ...
+
     async def list(
         self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None
     ) -> list[AuditEntry]:
         """События, новые первыми."""
+        ...
+
+
+class IAuditRetention(Protocol):
+    async def purge_before(self, cutoff: datetime) -> int:
+        """Единственный путь стирания журнала: события старше `cutoff`. Возвращает, сколько стёрто."""
         ...
 
 

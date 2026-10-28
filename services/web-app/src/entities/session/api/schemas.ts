@@ -288,6 +288,18 @@ export const AdminInvitationSchema = z.strictObject({
   used_at: iso.nullable(),
 });
 export const AdminInvitationPageSchema = pageOf(AdminInvitationSchema);
+export const AdminAuditEventSchema = z.strictObject({
+  id: z.number().int(),
+  at: iso,
+  action: z.string(),
+  actor_id: z.string().nullable(),
+  target: z.string().nullable(),
+  details: z.record(z.string(), z.unknown()),
+});
+export const AdminAuditPageSchema = z.strictObject({
+  items: z.array(AdminAuditEventSchema),
+  next_cursor: z.string().nullable(),
+});
 export const CreateAdminInvitationRequestSchema = z.strictObject({
   email: z.string().nullable(),
   ttl_days: z.number().int().nullable(),

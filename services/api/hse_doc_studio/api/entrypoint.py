@@ -17,6 +17,7 @@ from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
+    install_audit_retention,
     install_auth_cleanup,
     install_background,
     install_health,
@@ -216,6 +217,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         )
         install_project_purge(app, container, settings)
         install_auth_cleanup(app, container, settings)
+        install_audit_retention(app, container, settings)
 
         @app.on_event("shutdown")
         async def _drain_project_mirror() -> None:

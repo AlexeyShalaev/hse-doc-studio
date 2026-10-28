@@ -15,6 +15,8 @@ from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
     IAuditLog,
+    IAuditReader,
+    IAuditRetention,
     IAuthTokenRepository,
     ICredentialRepository,
     IFirstAdminRepository,
@@ -52,6 +54,7 @@ from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
@@ -142,6 +145,22 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_audit_log(self, sessions: SessionProvider) -> IAuditLog:
         return SqlAuditLog(sessions)
+
+    @provide
+    def get_audit_reader(self, sessions: SessionProvider) -> IAuditReader:
+        return SqlAuditLog(sessions)
+
+    @provide
+    def get_audit_retention(self, sessions: SessionProvider) -> IAuditRetention:
+        return SqlAuditLog(sessions)
+
+    @provide
+    def get_list_audit_uc(self, reader: IAuditReader) -> ListAuditUC:
+        return ListAuditUC(reader)
+
+    @provide
+    def get_purge_audit_uc(self, retention: IAuditRetention, audit: IAuditLog) -> PurgeAuditUC:
+        return PurgeAuditUC(retention, audit, timedelta(days=settings.server.audit_retention_days))
 
     @provide
     def get_password_hasher(self) -> IPasswordHasher:
