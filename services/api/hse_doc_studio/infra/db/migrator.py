@@ -17,7 +17,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from hse_doc_studio.infra.db.base import Base
-from hse_doc_studio.infra.db.errors import DbOutdatedError, MigrationLockTimeoutError
+from hse_doc_studio.infra.db.errors import DbAheadError, DbOutdatedError, MigrationLockTimeoutError
 
 logger = structlog.get_logger(__name__)
 
@@ -47,6 +47,15 @@ def head_revision() -> str:
     if len(heads) != 1:
         raise RuntimeError(f"в цепочке миграций {len(heads)} head вместо одного: {', '.join(heads)}")
     return heads[0]
+
+
+def _raise_if_ahead(current: str | None, head: str) -> None:
+    """Ревизия, которой нет в цепочке этого образа, значит базу мигрировал более новый код: апгрейдить нечего."""
+    if current is None:
+        return
+    known = {script.revision for script in ScriptDirectory.from_config(_config()).walk_revisions()}
+    if current not in known:
+        raise DbAheadError(current, head)
 
 
 def _current(connection: Connection) -> str | None:
@@ -111,8 +120,10 @@ async def migrate_if_needed(engine: AsyncEngine, *, lock_wait_s: float = MIGRATI
     async with engine.connect() as lock_conn:
         await _acquire_migration_lock(lock_conn, lock_wait_s)
         try:
-            if await current_revision(engine) == head:
+            current = await current_revision(engine)
+            if current == head:
                 return False
+            _raise_if_ahead(current, head)
             await upgrade(engine)
             logger.info("db_migrated", head=head)
             return True
@@ -131,4 +142,5 @@ async def ensure_db_current(
     head = head_revision()
     current = await current_revision(engine)
     if current != head:
+        _raise_if_ahead(current, head)
         raise DbOutdatedError(current, head)

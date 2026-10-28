@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 from hse_doc_studio.infra.db import migrator
-from hse_doc_studio.infra.db.errors import DbOutdatedError, MigrationLockTimeoutError
+from hse_doc_studio.infra.db.errors import DbAheadError, DbOutdatedError, MigrationLockTimeoutError
 from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -94,3 +94,23 @@ async def test__upgrade__works_under_tight_statement_timeout(pg_engine: AsyncEng
         await tight.dispose()
 
     assert await migrator.current_revision(pg_engine) == migrator.head_revision()
+
+
+async def _stamp_future(engine: AsyncEngine) -> None:
+    await migrator.upgrade(engine)
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE alembic_version SET version_num = '9999_future'"))
+
+
+@pytest.mark.parametrize("auto_migrate", [True, False], ids=["auto", "manual"])
+async def test__ensure_db_current__db_ahead_of_code__db_ahead_error_and_schema_untouched(
+    pg_engine: AsyncEngine, auto_migrate: bool
+) -> None:
+    await _stamp_future(pg_engine)
+
+    with pytest.raises(DbAheadError) as exc:
+        await migrator.ensure_db_current(pg_engine, auto_migrate=auto_migrate)
+
+    assert exc.value.code == "db_ahead"
+    assert "9999_future" in str(exc.value)
+    assert await migrator.current_revision(pg_engine) == "9999_future"

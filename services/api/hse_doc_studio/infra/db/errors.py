@@ -23,3 +23,17 @@ class DbOutdatedError(RuntimeError):
 
 class MigrationLockTimeoutError(RuntimeError):
     """Advisory-лок миграций занят другим процессом дольше отведённого срока."""
+
+
+class DbAheadError(RuntimeError):
+    """База новее кода: в ней ревизия, которой нет в цепочке миграций этого образа (код ``db_ahead``)."""
+
+    code = "db_ahead"
+
+    def __init__(self, current: str, head: str) -> None:
+        self.current = current
+        self.head = head
+        super().__init__(
+            f"db_ahead: ревизия базы {current} неизвестна этой версии приложения (ожидается {head}); "
+            "запущен более старый образ, чем применённые миграции: верните новую версию, схему не трогаем"
+        )
