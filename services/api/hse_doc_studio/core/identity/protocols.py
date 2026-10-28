@@ -81,6 +81,10 @@ class IAuthTokenRepository(Protocol):
         """Атомарно помечает токен использованным; просроченный или использованный даёт None."""
         ...
 
+    async def invalidate_for_user(self, user_id: str, kind: AuthTokenKind, now: datetime) -> int:
+        """Помечает использованными все ещё не использованные токены вида у пользователя; возвращает их число."""
+        ...
+
 
 class IRegistrationInviteRepository(Protocol):
     async def add(self, invite: RegistrationInvite) -> None: ...

@@ -58,6 +58,7 @@ class VerifyEmailUC:
             status = UserStatus.active if user.status is UserStatus.pending_verification else user.status
             if not user.email_verified or status is not user.status:
                 await self._users.update(replace(user, email_verified=True, status=status))
+            await self._auth_tokens.invalidate_for_user(user.id, AuthTokenKind.verify_email, self._clock())
             await self._audit.record("auth.email_verified", actor_id=user.id)
 
 
@@ -83,6 +84,8 @@ class _TokenIssuer:
         now: datetime = self._clock()
         secret = new_token()
         async with self._uow.begin():
+            # Действует только последняя ссылка: ушедшая раньше (и, возможно, утёкшая) больше не сработает.
+            await self._auth_tokens.invalidate_for_user(user.id, kind, now)
             await self._auth_tokens.add(AuthToken(hash_token(secret), kind, user.id, now + ttl))
         return await self._delivery.deliver(
             mail, user.email, auth_link(self._public_url, path, secret), now, locale=user.locale
@@ -178,6 +181,8 @@ class ResetPasswordUC:
             # Пароль, равный адресу, виден только теперь; отказ откатывает и погашение ссылки.
             check_password(new_password, user.email)
             await self._credentials.set_hash(user.id, new_hash)
+            # Остальные неиспользованные ссылки сброса (прежние запросы, ссылка администратора) тоже гаснут.
+            await self._auth_tokens.invalidate_for_user(user.id, AuthTokenKind.reset_password, self._clock())
             revoked = await self._sessions.delete_for_user(user.id)
             await self._audit.record("auth.password_reset", actor_id=user.id, details={"revoked_sessions": revoked})
 
@@ -226,6 +231,7 @@ class IssueResetLinkUC:
         secret = new_token()
         expires_at = now + ADMIN_RESET_TTL
         async with self._uow.begin():
+            await self._auth_tokens.invalidate_for_user(user.id, AuthTokenKind.reset_password, now)
             await self._auth_tokens.add(
                 AuthToken(hash_token(secret), AuthTokenKind.reset_password, user.id, expires_at)
             )

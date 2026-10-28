@@ -162,6 +162,32 @@ async def test_forgot_mail_follows_the_account_language(world: World) -> None:
     assert world.sender.sent[0][1] == "Password reset"
 
 
+async def test_newer_reset_link_invalidates_the_older_one(world: World) -> None:
+    world.sender = FakeSender(enabled=True)
+    await world.add_user()
+
+    await world.forgot_uc().execute("ann@example.org")
+    await world.forgot_uc().execute("ann@example.org")
+    first, second = (_token(body) for (_to, _subject, body) in world.sender.sent)
+
+    await _expect(world.reset_uc().execute(first, NEW_PASSWORD), IdentityErrorCode.token_invalid)
+    await world.reset_uc().execute(second, NEW_PASSWORD)
+
+
+async def test_new_admin_link_replaces_the_mailed_one_and_reset_spends_it(world: World) -> None:
+    world.sender = FakeSender(enabled=True)
+    user = await world.add_user()
+    await world.forgot_uc().execute("ann@example.org")
+    mailed = _token(world.sender.sent[0][2])
+    admin_link = await world.issue_reset_link_uc().execute(ADMIN, user.id, confirmed=True)
+    admin_token = admin_link.link.rpartition("/")[2]
+
+    await _expect(world.reset_uc().execute(mailed, NEW_PASSWORD), IdentityErrorCode.token_invalid)
+    await world.reset_uc().execute(admin_token, NEW_PASSWORD)
+
+    await _expect(world.reset_uc().execute(admin_token, NEW_PASSWORD), IdentityErrorCode.token_invalid)
+
+
 async def test_forgot_is_indistinguishable_for_known_unknown_and_disabled(world: World) -> None:
     await world.add_user("ann@example.org")
     await world.add_user("off@example.org", user_id="off", status=UserStatus.disabled)

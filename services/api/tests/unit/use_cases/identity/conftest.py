@@ -198,7 +198,9 @@ class World:
         return InvitationInfoUC(self.invites, self.users, self.clock)
 
     def change_uc(self) -> ChangePasswordUC:
-        return ChangePasswordUC(self.users, self.creds, self.sessions, self.hasher, self.audit, self.uow)
+        return ChangePasswordUC(
+            self.users, self.creds, self.sessions, self.hasher, self.audit, self.uow, self.auth_tokens, self.clock
+        )
 
     async def add_user(
         self, email: str = "ann@example.org", password: str = "correct horse battery", *,

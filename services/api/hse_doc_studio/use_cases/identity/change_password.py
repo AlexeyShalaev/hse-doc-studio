@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from hse_doc_studio.core.identity.entities import AuthTokenKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.passwords import check_password
 from hse_doc_studio.core.identity.protocols import (
     IAuditLog,
+    IAuthTokenRepository,
     ICredentialRepository,
     IPasswordHasher,
     ISessionRepository,
     IUserRepository,
 )
+from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.uow import IUnitOfWork
 
 
@@ -23,9 +26,13 @@ class ChangePasswordUC:
         hasher: IPasswordHasher,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        auth_tokens: IAuthTokenRepository,
+        clock: Clock = utc_now,
     ) -> None:
         self._users = users
         self._credentials = credentials
+        self._auth_tokens = auth_tokens
+        self._clock = clock
         self._sessions = sessions
         self._hasher = hasher
         self._audit = audit
@@ -42,6 +49,8 @@ class ChangePasswordUC:
         new_hash = self._hasher.hash(new_password)
         async with self._uow.begin():
             await self._credentials.set_hash(user_id, new_hash)
+            # Ссылки сброса, выданные до смены пароля, больше не должны его перезаписать.
+            await self._auth_tokens.invalidate_for_user(user_id, AuthTokenKind.reset_password, self._clock())
             revoked = await self._sessions.delete_for_user(user_id, except_id_hash=current_id_hash)
             await self._audit.record("auth.password_changed", actor_id=user_id, details={"revoked_sessions": revoked})
         return revoked

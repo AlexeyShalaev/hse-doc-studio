@@ -99,6 +99,12 @@ class InMemoryAuthTokenRepository:
         self._items[token_hash] = used
         return used
 
+    async def invalidate_for_user(self, user_id: str, kind: AuthTokenKind, now: datetime) -> int:
+        pending = [k for k, t in self._items.items() if t.user_id == user_id and t.kind is kind and t.used_at is None]
+        for key in pending:
+            self._items[key] = replace(self._items[key], used_at=now)
+        return len(pending)
+
     async def delete_expired(self, now: datetime) -> int:
         doomed = [key for key, t in self._items.items() if t.expires_at <= now]
         for key in doomed:

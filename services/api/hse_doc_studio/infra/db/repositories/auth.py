@@ -219,6 +219,15 @@ class SqlAuthTokenRepository:
                 payload=row.payload,
             )
 
+    async def invalidate_for_user(self, user_id: str, kind: AuthTokenKind, now: datetime) -> int:
+        stmt = (
+            update(AuthTokenRow)
+            .where(AuthTokenRow.user_id == user_id, AuthTokenRow.kind == kind.value, AuthTokenRow.used_at.is_(None))
+            .values(used_at=now)
+        )
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).rowcount  # type: ignore[attr-defined]
+
     async def delete_expired(self, now: datetime) -> int:
         async with self._sessions.use() as db:
             return (await db.execute(delete(AuthTokenRow).where(AuthTokenRow.expires_at <= now))).rowcount  # type: ignore[attr-defined]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
-from hse_doc_studio.core.identity.entities import UserStatus
+from hse_doc_studio.core.identity.entities import AuthToken, AuthTokenKind, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
@@ -131,6 +131,18 @@ async def test_change_password_revokes_other_sessions_only(world: World) -> None
     entry = (await world.audit.list(action="auth.password_changed"))[0]
     assert entry.details == {"revoked_sessions": 1}
     assert "passphrase" not in str(await world.audit.list())
+
+
+async def test_change_password_invalidates_outstanding_reset_links(world: World) -> None:
+    await world.add_user()
+    mine = await _login(world)
+    await world.auth_tokens.add(
+        AuthToken(hash_token("leaked"), AuthTokenKind.reset_password, "u1", world.clock() + timedelta(hours=1))
+    )
+
+    await world.change_uc().execute("u1", mine.session.id_hash, PASSWORD, "a brand new passphrase")
+
+    assert await world.auth_tokens.consume(hash_token("leaked"), AuthTokenKind.reset_password, world.clock()) is None
 
 
 async def test_change_password_rejects_wrong_current_and_weak_new(world: World) -> None:
