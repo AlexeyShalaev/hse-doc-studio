@@ -22,7 +22,8 @@ async def test__move__server_mode__closed_before_use_case(monkeypatch: pytest.Mo
     with pytest.raises(HTTPException) as exc:
         await projects_router.move_project(uuid4(), MoveProjectRequest(folder="/x"), uc, PathMapping())
 
-    assert exc.value.status_code == 404
+    assert exc.value.status_code == 409
+    assert exc.value.detail["code"] == "not_available_in_server_mode"
     uc.execute.assert_not_called()
 
 

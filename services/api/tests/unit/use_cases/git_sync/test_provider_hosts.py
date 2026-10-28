@@ -105,7 +105,7 @@ class _Credentials:
 
 
 class _Usage:
-    def by_credential(self) -> dict[UUID, list[object]]:
+    async def by_credential(self) -> dict[UUID, list[object]]:
         return {}
 
 

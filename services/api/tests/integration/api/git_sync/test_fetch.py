@@ -667,14 +667,14 @@ async def test__tick__project_without_remote_any_more__is_dropped_from_the_regis
 ) -> None:
     await _connected(client, project, remote)
     registry = await stack.get(IGitRemoteRegistry)
-    assert len(registry.list()) == 1
+    assert len(await registry.list()) == 1
     run_git("remote", "remove", "origin", git_dir=_store(project))
     # Подключение читается, когда проекту пора на выборку: до этого тик не запускает git ради каждого проекта.
     await _age_fetch(stack, project, _PERIOD_PASSED)
 
     await _tick(stack, Clock())
 
-    assert registry.list() == []
+    assert await registry.list() == []
 
 
 async def test__connect__wakes_the_background_fetch(
@@ -763,7 +763,7 @@ async def test__disconnect__while_a_fetch_is_running__nothing_of_the_old_remote_
         "rev-parse", "--verify", "--quiet", "refs/remotes/origin/main", git_dir=_store(project), check=False
     )
     assert tracking == ""
-    assert Path(project["folder"]) not in await asyncio.to_thread((await stack.get(IGitRemoteRegistry)).list)
+    assert Path(project["folder"]) not in await (await stack.get(IGitRemoteRegistry)).list()
 
 
 async def test__move__while_a_fetch_is_running__the_old_location_does_not_reappear(

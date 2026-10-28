@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 from uuid import UUID
@@ -15,7 +16,8 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.git_sync.entities import CredentialUsage
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.repositories import IProjectRepository
 from hse_doc_studio.infra.vcs.git_vcs_service import store_git_dir
 
 logger = structlog.get_logger()
@@ -54,13 +56,17 @@ def read_bound_credential(store_config: Path) -> UUID | None:
 
 
 class StoreConfigCredentialUsage:
-    def __init__(self, project_index: IProjectIndexRepository, projects: IProjectRepository) -> None:
-        self._index = project_index
+    def __init__(self, locator: IProjectLocator, projects: IProjectRepository) -> None:
+        self._locator = locator
         self._projects = projects
 
-    def by_credential(self) -> dict[UUID, list[CredentialUsage]]:
+    async def by_credential(self) -> dict[UUID, list[CredentialUsage]]:
+        folders = await self._locator.list_all()
+        return await asyncio.to_thread(self._collect, folders)
+
+    def _collect(self, folders: list[Path]) -> dict[UUID, list[CredentialUsage]]:
         usage: dict[UUID, list[CredentialUsage]] = {}
-        for folder in self._index.list_known():
+        for folder in folders:
             credential_id = read_bound_credential(store_git_dir(folder) / "config")
             if credential_id is None:
                 continue

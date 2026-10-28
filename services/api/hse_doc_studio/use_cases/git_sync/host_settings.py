@@ -161,7 +161,7 @@ class CheckCredentialUC:
         if check is not None and check.state is TokenState.rejected:
             raise git_error(GitErrorCode.auth_failed)
         refreshed = self._credentials.get(credential_id) or credential
-        used_by = tuple(self._usage.by_credential().get(credential_id, ()))
+        used_by = tuple((await self._usage.by_credential()).get(credential_id, ()))
         return CredentialCheckView(CredentialView(refreshed, used_by), resolved.info, check)
 
     async def _resolve(self, credential: GitCredential) -> ResolvedProvider:

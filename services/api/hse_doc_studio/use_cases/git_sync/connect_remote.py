@@ -17,6 +17,7 @@ import structlog
 
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.git_sync.entities import (
+    CredentialUsage,
     GitOperationError,
     OperationKind,
     OperationPhase,
@@ -285,11 +286,13 @@ class DisconnectRemoteUC:
             current = self._operations.current_for(project.id)
             raise git_error(GitErrorCode.sync_busy, operation_id=current.id if current else None)
         # Выборка, которая ещё идёт, вернула бы отслеживаемую ветку и состояние, которые отключение только что убрало.
+        # Список проектов с этим доступом читается в цикле: в серверном режиме он идёт из БД.
+        usage = await self._usage.by_credential() if inp.forget_credential else {}
         async with self._fetch_book.lock(project.folder):
-            await asyncio.to_thread(self._disconnect, project, inp.forget_credential)
+            await asyncio.to_thread(self._disconnect, project, inp.forget_credential, usage)
         self._fetch_book.forget(project.folder)
 
-    def _disconnect(self, project: Project, forget_credential: bool) -> None:
+    def _disconnect(self, project: Project, forget_credential: bool, usage: dict[UUID, list[CredentialUsage]]) -> None:
         config = self._remotes.read(project)
         credential_id = None
         if config is not None:
@@ -298,9 +301,14 @@ class DisconnectRemoteUC:
             self._remotes.clear(project)
         self._states.clear(project.folder)
         self._registry.remove(project.folder)
-        if forget_credential and credential_id is not None and not self._used_elsewhere(credential_id, project.id):
+        if (
+            forget_credential
+            and credential_id is not None
+            and not self._used_elsewhere(usage, credential_id, project.id)
+        ):
             self._credentials.delete(credential_id)
         logger.info("git remote disconnected", project_id=str(project.id), forgot_credential=forget_credential)
 
-    def _used_elsewhere(self, credential_id: UUID, project_id: UUID) -> bool:
-        return any(u.project_id != project_id for u in self._usage.by_credential().get(credential_id, ()))
+    @staticmethod
+    def _used_elsewhere(usage: dict[UUID, list[CredentialUsage]], credential_id: UUID, project_id: UUID) -> bool:
+        return any(u.project_id != project_id for u in usage.get(credential_id, ()))

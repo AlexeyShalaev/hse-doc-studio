@@ -231,7 +231,7 @@ async def test__connect__is_registered_for_background_fetch(
 
     await _connect(client, project, remote)
 
-    assert [p.resolve() for p in registry.list()] == [Path(project["folder"]).resolve()]
+    assert [p.resolve() for p in await registry.list()] == [Path(project["folder"]).resolve()]
 
 
 async def test__connect__other_project__refused_without_adopt(
@@ -765,7 +765,7 @@ async def test__disconnect__keeps_remote_and_credentials_and_clears_project(
     assert _git(project, "config", "--get", "remote.origin.url", check=False) == ""
     assert _git(project, "for-each-ref", "refs/remotes/") == ""
     registry = await stack.get(IGitRemoteRegistry)
-    assert registry.list() == []
+    assert await registry.list() == []
 
 
 async def test__disconnect__forget_credential__deletes_unused_one(
@@ -861,7 +861,7 @@ async def test__move_project__keeps_remote_registered_under_new_folder(
 
     await client.post(f"/api/v1/projects/{project['id']}/move", json={"folder": str(tmp_path / "moved")})
 
-    assert [p.resolve() for p in registry.list()] == [(tmp_path / "moved").resolve()]
+    assert [p.resolve() for p in await registry.list()] == [(tmp_path / "moved").resolve()]
     assert (await _status(client, project)).ui_state == "up_to_date"
 
 
@@ -880,7 +880,7 @@ async def test__unregister_project__refused_while_operation_runs_then_forgets_re
     assert refused.status_code == 409
     assert _error(refused).code == "sync_busy"
     assert removed.status_code == 204
-    assert registry.list() == []
+    assert await registry.list() == []
 
 
 # --- проверка адреса ----------------------------------------------------------------------------------------------
@@ -1188,9 +1188,9 @@ async def test__open_existing_folder_with_a_remote__is_registered_for_background
     registry = await stack.get(IGitRemoteRegistry)
     # Реестр уже просмотрен; папку убирают из списка проектов и открывают снова, как скопированную с другого компьютера.
     assert (await client.delete(f"/api/v1/projects/{project['id']}")).status_code == 204
-    assert registry.list() == []
+    assert await registry.list() == []
 
     resp = await client.post("/api/v1/projects/connect", json={"folder": project["folder"]})
 
     assert resp.status_code == 201, resp.text
-    assert [p.resolve() for p in registry.list()] == [Path(project["folder"]).resolve()]
+    assert [p.resolve() for p in await registry.list()] == [Path(project["folder"]).resolve()]

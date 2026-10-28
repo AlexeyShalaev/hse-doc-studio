@@ -77,7 +77,7 @@ class FetchAllGitRemotesUC:
         self._clock = clock
 
     async def run_once(self) -> FetchTickResult:
-        folders = await asyncio.to_thread(self._registry.list)
+        folders = await self._registry.list()
         if not folders:
             return FetchTickResult()
         stored = await asyncio.to_thread(self._settings.get)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import re
 import shutil
-import threading
+import weakref
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -64,7 +64,8 @@ from hse_doc_studio.core.git_sync.remote_project import (
 )
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.repositories import IProjectRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
 from hse_doc_studio.use_cases.git_sync.probe_remote import (
@@ -78,8 +79,17 @@ from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseSe
 
 logger = structlog.get_logger()
 
-# Запись проекта в список идёт в потоке, поэтому замок потоковый: он не привязан к циклу событий.
-_REGISTER_LOCK = threading.Lock()
+# Проверка «проект уже открыт» и запись в список идут одним шагом в цикле; замок свой на каждый цикл событий.
+_REGISTER_LOCKS: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = weakref.WeakKeyDictionary()
+
+
+def _register_lock() -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    lock = _REGISTER_LOCKS.get(loop)
+    if lock is None:
+        lock = _REGISTER_LOCKS[loop] = asyncio.Lock()
+    return lock
+
 
 _STUDIO_DIR = ".hse-studio"
 _GITATTRIBUTES = ".gitattributes"
@@ -162,7 +172,7 @@ class CloneProjectUC:
         self,
         *,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         base_service: TemplateBaseService | None,
         clone_store: IGitCloneStore,
@@ -178,7 +188,7 @@ class CloneProjectUC:
         clone_timeout_s: float,
     ) -> None:
         self._projects = project_repo
-        self._index = project_index_repo
+        self._locator = locator
         self._templates = template_repo
         self._base_service = base_service
         self._store = clone_store
@@ -196,7 +206,7 @@ class CloneProjectUC:
     async def execute(self, inp: CloneProjectInput) -> GitOperation:
         """Проверяет всё, что можно проверить без сети, и запускает клонирование в фоне."""
         url = self._checked_input(inp)
-        plan = await asyncio.to_thread(self.plan_folder, inp.folder)
+        plan = await self.plan_folder(inp.folder)
         operation = self._operations.begin(OperationKind.clone, project_id=None, folder=plan.folder)
         self.start(operation.id, plan, lambda: self._clone(operation.id, url, plan, inp))
         return operation
@@ -220,13 +230,17 @@ class CloneProjectUC:
             valid_branch(inp.branch)
         return url
 
-    def plan_folder(self, raw: str) -> FolderPlan:
+    async def plan_folder(self, raw: str) -> FolderPlan:
         """Папка годится под новый проект: пуста (с точностью до скрытых файлов), не внутри проекта и не занята."""
+        taken = {known.resolve() for known in await self._locator.list_all()}
+        return await asyncio.to_thread(self._plan_folder, raw, taken)
+
+    def _plan_folder(self, raw: str, taken: set[Path]) -> FolderPlan:
         path = Path(raw).expanduser()
         if not path.is_absolute():
             raise ValueError(localized_error("Укажите полный путь к папке", "Specify the full path of the folder"))
         folder = path.resolve()
-        self._check_folder_free(folder)
+        self._check_folder_free(folder, taken)
         if folder.exists():
             return FolderPlan(folder, None, frozenset(entry.name for entry in folder.iterdir()))
         created_root = folder
@@ -236,7 +250,8 @@ class CloneProjectUC:
             created_root = parent
         return FolderPlan(folder, created_root, frozenset())
 
-    def _check_folder_free(self, folder: Path) -> None:
+    @staticmethod
+    def _check_folder_free(folder: Path, taken: set[Path]) -> None:
         if folder.exists():
             if not folder.is_dir():
                 raise _folder_not_empty("not_a_folder", folder)
@@ -247,25 +262,25 @@ class CloneProjectUC:
                 raise _folder_not_empty("has_project", folder)
         if any((parent / _STUDIO_DIR / "project.json").exists() for parent in folder.parents):
             raise _folder_not_empty("inside_project", folder)
-        if folder in {known.resolve() for known in self._index.list_known()}:
+        if folder in taken:
             raise _folder_not_empty("registered", folder)
 
     async def _run(self, operation_id: str, plan: FolderPlan, work: Callable[[], Awaitable[CloneResult]]) -> None:
         try:
             result = await work()
         except asyncio.CancelledError:
-            self._cleanup(plan)
+            await self._cleanup(plan)
             self._operations.finish(operation_id, status=OperationStatus.cancelled)
             raise
         except GitSyncError as exc:
-            self._cleanup(plan)
+            await self._cleanup(plan)
             self._operations.finish(
                 operation_id, status=OperationStatus.failed, error=GitOperationError(exc.code, exc.detail)
             )
             return
         except Exception:
             logger.exception("git clone failed", folder=str(plan.folder))
-            self._cleanup(plan)
+            await self._cleanup(plan)
             error = git_error(GitErrorCode.git_error)
             self._operations.finish(
                 operation_id, status=OperationStatus.failed, error=GitOperationError(error.code, error.detail)
@@ -307,7 +322,8 @@ class CloneProjectUC:
         """
         folder = plan.folder
         self._operations.update(operation_id, phase=OperationPhase.verify)
-        verified = await asyncio.to_thread(self._verify, plan, ref)
+        known = await self._locator.list_all()
+        verified = await asyncio.to_thread(self._verify, plan, ref, known)
 
         # Дальше дерево разворачивается в папку: прерывать это на полпути нельзя.
         self._operations.update(operation_id, phase=OperationPhase.register, cancellable=False)
@@ -317,7 +333,7 @@ class CloneProjectUC:
             await asyncio.to_thread(
                 self._persist, folder, remote.url, branch, remote.credential_id, remote.insecure_http
             )
-        await asyncio.to_thread(self._register, folder, verified.project.id)
+        await self._register(folder, verified.project.id)
         await asyncio.to_thread(self._ensure_template_base, folder, verified)
         if remote is not None:
             self._registry.add(folder)
@@ -339,14 +355,14 @@ class CloneProjectUC:
         folder.mkdir(parents=True, exist_ok=True)
         self._store.init(folder, branch)
 
-    def _verify(self, plan: FolderPlan, tracking: str) -> _Verified:
+    def _verify(self, plan: FolderPlan, tracking: str, known: list[Path]) -> _Verified:
         """Проверка вершины скачанной ветки до того, как её дерево тронет папку."""
         folder = plan.folder
         if self._reader.rev_parse(folder, tracking) is None:
             raise git_error(GitErrorCode.branch_missing)
         raw = self._reader.read_files(folder, tracking, [PROJECT_FILE]).get(PROJECT_FILE)
         project = self._remote_project(raw)
-        existing = self._registered_folder(project.id)
+        existing = self._registered_folder(project.id, known)
         if existing is not None:
             raise self._exists_error(existing)
         entries = self._reader.tree_entries(folder, tracking)
@@ -382,17 +398,18 @@ class CloneProjectUC:
             raise git_error(GitErrorCode.not_a_studio_project)
         return project
 
-    def _register(self, folder: Path, project_id: UUID) -> None:
+    async def _register(self, folder: Path, project_id: UUID) -> None:
         """Проверка «такой проект уже открыт» и запись в список одним шагом.
 
         Два клонирования одного репозитория в разные папки оба проходили проверку в `_verify`, пока ни одно не
         успело записаться, и в списке оказывались две папки с одним id: поиск по id попадал в любую из них.
         """
-        with _REGISTER_LOCK:
-            existing = self._registered_folder(project_id)
+        async with _register_lock():
+            known = await self._locator.list_all()
+            existing = await asyncio.to_thread(self._registered_folder, project_id, known)
             if existing is not None:
                 raise self._exists_error(existing)
-            self._index.register(folder)
+            await self._locator.register(folder)
 
     @staticmethod
     def _exists_error(existing: Path) -> GitSyncError:
@@ -405,8 +422,8 @@ class CloneProjectUC:
             folder=str(existing),
         )
 
-    def _registered_folder(self, project_id: UUID) -> Path | None:
-        for known in self._index.list_known():
+    def _registered_folder(self, project_id: UUID, folders: list[Path]) -> Path | None:
+        for known in folders:
             existing = self._projects.get(known)
             if existing is not None and existing.id == project_id:
                 return known
@@ -492,10 +509,17 @@ class CloneProjectUC:
         except Exception as exc:  # noqa: BLE001
             logger.warning("template base not recorded on clone", folder=str(folder), exc=str(exc))
 
-    def _cleanup(self, plan: FolderPlan) -> None:
+    async def _cleanup(self, plan: FolderPlan) -> None:
         """Убирает созданное клонированием; всё, что было в папке до него, остаётся на месте."""
         try:
-            self._index.unregister(plan.folder)
+            await self._locator.unregister(plan.folder)
+        except Exception as exc:  # noqa: BLE001 — уборка не должна терять исходную причину отказа
+            logger.warning("clone cleanup: unregister failed", folder=str(plan.folder), exc=str(exc))
+        self._remove_created(plan)
+
+    @staticmethod
+    def _remove_created(plan: FolderPlan) -> None:
+        try:
             if plan.created_root is not None:
                 # Убирается только то, что создала эта операция: соседний клон в той же новой папке не трогается.
                 shutil.rmtree(plan.folder, ignore_errors=True)
@@ -547,18 +571,27 @@ _MAX_NAME_CHARS = 60
 
 
 class GetCloneDefaultsUC:
-    """Папка по умолчанию для клона: свободное имя рядом с остальными проектами."""
+    """Папка по умолчанию для клона: свободное имя рядом с остальными проектами.
 
-    def __init__(self, default_projects_dir: Path, project_index_repo: IProjectIndexRepository) -> None:
+    На сервере папку выбирает сервер: это свободный `<uuid>` под корнем томов проектов, а не имя по названию.
+    """
+
+    def __init__(self, default_projects_dir: Path, locator: IProjectLocator, *, uuid_names: bool = False) -> None:
         self._root = default_projects_dir
-        self._index = project_index_repo
+        self._locator = locator
+        self._uuid_names = uuid_names
 
     async def execute(self, name: str | None) -> Path:
-        return await asyncio.to_thread(self._free_folder, name)
+        taken = {known.resolve() for known in await self._locator.list_all()}
+        return await asyncio.to_thread(self._free_folder, name, taken)
 
-    def _free_folder(self, name: str | None) -> Path:
+    def _free_folder(self, name: str | None, taken: set[Path]) -> Path:
+        if self._uuid_names:
+            while True:
+                candidate = self._root / str(uuid4())
+                if not candidate.exists() and candidate.resolve() not in taken:
+                    return candidate
         slug = _UNSAFE_NAME.sub("-", (name or "").strip()).strip("-.")[:_MAX_NAME_CHARS] or "project"
-        taken = {known.resolve() for known in self._index.list_known()}
         candidate = self._root / slug
         suffix = 2
         while candidate.exists() or candidate.resolve() in taken:

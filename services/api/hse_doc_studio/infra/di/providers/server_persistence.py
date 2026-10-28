@@ -44,6 +44,7 @@ from hse_doc_studio.infra.projects.purge import ProjectPurger
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
+from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
@@ -152,6 +153,10 @@ class ServerPersistenceProvider(Provider):
     def get_project_index_repo(self, locator: IProjectLocator) -> IProjectIndexRepository:
         """Локальный projects.json в серверном режиме пуст: проект по id находит каталог в БД."""
         return CatalogProjectIndex(locator)
+
+    @provide(override=True)
+    def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(volume.root, locator, uuid_names=True)
 
     @provide
     def get_project_catalog_reconciler(
