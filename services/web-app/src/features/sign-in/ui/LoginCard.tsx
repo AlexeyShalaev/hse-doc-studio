@@ -73,13 +73,21 @@ export const LoginCard = ({
             title={t(loginErrorKey(failure.code))}
           >
             {waiting && (
-              <p
-                data-testid="login-countdown"
-                className="mono"
-                style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}
-              >
-                {t("login.retryIn", { count: left })}
-              </p>
+              <>
+                {/* Тикающее число скринридер не читает: иначе role=alert
+                    повторял бы его каждую секунду. Время объявляется один раз. */}
+                <span className="sr-only" data-testid="login-countdown-static">
+                  {t("login.retryIn", { count: failure.retryAfter ?? left })}
+                </span>
+                <p
+                  data-testid="login-countdown"
+                  aria-hidden="true"
+                  className="mono"
+                  style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}
+                >
+                  {t("login.retryIn", { count: left })}
+                </p>
+              </>
             )}
             {failure.code !== "rate_limited" && (
               <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
