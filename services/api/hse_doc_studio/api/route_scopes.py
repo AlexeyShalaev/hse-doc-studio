@@ -49,6 +49,13 @@ _ADM = RouteScope.instance_admin
 _LOCAL = RouteScope.local_only
 
 ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
+    # Вход и сессии: в локальной установке входа нет, маршруты входа и аккаунта отвечают 404 сами
+    ("GET", "/session/bootstrap"): _P,
+    ("POST", "/auth/login"): _P,
+    ("POST", "/auth/logout"): _P,
+    ("GET", "/account/sessions"): _A,
+    ("DELETE", "/account/sessions"): _A,
+    ("DELETE", "/account/sessions/{session_id}"): _A,
     # Каталог шаблонов
     ("GET", "/catalog/packs"): _A,
     ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions"): _A,

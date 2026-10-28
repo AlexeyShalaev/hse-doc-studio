@@ -74,3 +74,11 @@ def new_token() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def avatar_initials(name: str, email: str = "") -> str:
+    """Одна-две заглавные буквы для аватара: первые буквы первых двух слов имени, иначе первая буква e-mail."""
+    words = [w for w in name.split() if w[:1].isalnum()]
+    if words:
+        return "".join(w[0] for w in words[:2]).upper()
+    return email.strip()[:1].upper() or "?"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import settings
@@ -23,3 +23,9 @@ async def resolve_actor(request: Request) -> Actor:
     if actor is None:
         raise IdentityError(IdentityErrorCode.auth_required)
     return actor
+
+
+def require_server_mode() -> None:
+    """Вход, выход и сессии существуют только на сервере: у локальной установки один актор и нет cookie."""
+    if settings.mode is StudioMode.local:
+        raise HTTPException(status_code=404, detail="Not Found")

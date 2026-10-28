@@ -33,6 +33,7 @@ class RunnerHealthResponse(BaseModel):
 
 class SystemInfoResponse(BaseModel):
     version: str
+    mode: Literal["local", "server"]
     # ISO-8601 build timestamp baked into the image by CI; "" in a source run.
     built: str
     deployment_mode: DeploymentMode
@@ -274,6 +275,7 @@ async def system_info(
     update = await uc.execute()
     return SystemInfoResponse(
         version=settings.get_app_version(),
+        mode=settings.mode.value,
         built=settings.built,
         deployment_mode=mode,
         os=_detect_os(),

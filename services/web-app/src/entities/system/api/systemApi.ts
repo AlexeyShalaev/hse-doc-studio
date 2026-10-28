@@ -43,6 +43,7 @@ export type ArchiveFormatsResponse = z.infer<
 
 export const SystemInfoSchema = z.object({
   version: z.string(),
+  mode: z.enum(["local", "server"]).default("local"),
   deployment_mode: z.enum(["all-in-one", "standard", "native"]),
   os: z.enum(["windows", "macos", "linux", "other"]),
   os_version: z.string(),

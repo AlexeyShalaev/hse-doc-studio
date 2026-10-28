@@ -3,9 +3,11 @@ from fastapi import APIRouter, Depends
 from hse_doc_studio.api.guards import project_access_guard, project_write_guard
 from hse_doc_studio.api.rate_limit import rate_limit_guard
 from hse_doc_studio.api.routers.v1 import (
+    account,
     agent_personas,
     ai_providers,
     ai_runtime,
+    auth,
     catalog,
     changelog,
     chat,
@@ -28,6 +30,7 @@ from hse_doc_studio.api.routers.v1 import (
     profile,
     projects,
     requirements,
+    session,
     settings,
     setup,
     signatures,
@@ -48,6 +51,9 @@ api_router = APIRouter(
     dependencies=[Depends(project_access_guard), Depends(project_write_guard), Depends(rate_limit_guard)],
 )
 
+api_router.include_router(session.router, tags=["session"])
+api_router.include_router(auth.router, tags=["auth"])
+api_router.include_router(account.router, tags=["account"])
 api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])
