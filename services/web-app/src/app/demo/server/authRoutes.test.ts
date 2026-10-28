@@ -170,7 +170,7 @@ describe("демо регистрации и ссылок из писем", () =
     expect(code(bad)).toBe("token_invalid");
   });
 
-  it("повторная отправка: нейтральный ответ, ссылка только без SMTP", async () => {
+  it("повторная отправка: нейтральный ответ и без SMTP, ссылки нет", async () => {
     activateServerScenario("registration_open");
     const smtp = await call(
       "POST",
@@ -184,7 +184,7 @@ describe("демо регистрации и ссылок из писем", () =
     const none = await call("POST", "/auth/verify/resend", {
       email: "a@b.org",
     });
-    expect(ForgotResponseSchema.parse(none.data).link).toMatch(/\/verify\//);
+    expect(ForgotResponseSchema.parse(none.data).link).toBeNull();
   });
 
   it("forgot: ответ не зависит от адреса и совпадает с эталоном", async () => {
@@ -203,7 +203,7 @@ describe("демо регистрации и ссылок из писем", () =
     );
     activateServerScenario("registration_open_nosmtp");
     const link = await call("POST", "/auth/forgot", { email: "a@b.org" });
-    expect(ForgotResponseSchema.parse(link.data).link).toMatch(/\/reset\//);
+    expect(ForgotResponseSchema.parse(link.data).link).toBeNull();
   });
 
   it("reset: токен, политика пароля и успех", async () => {

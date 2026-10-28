@@ -149,11 +149,8 @@ export const createAuthRoutes = (
       const body = (req.body ?? {}) as Record<string, unknown>;
       const rate = limited(str(body.email));
       if (rate) return rate;
-      const { smtp_enabled } = getWorld().bootstrap.auth;
-      return demoJson({
-        status: "check_email",
-        link: smtp_enabled ? null : linkTo("verify", "vf_demo_Rs4Tq9Lk"),
-      });
+      // Как на сервере: ссылку не отдаём ни с SMTP, ни без (не раскрываем, есть ли аккаунт).
+      return demoJson({ status: "check_email", link: null });
     },
   },
   {
@@ -163,12 +160,8 @@ export const createAuthRoutes = (
       const body = (req.body ?? {}) as Record<string, unknown>;
       const rate = limited(str(body.email));
       if (rate) return rate;
-      const { smtp_enabled } = getWorld().bootstrap.auth;
-      // Ответ не зависит от того, есть ли такой аккаунт.
-      return demoJson({
-        status: "check_email",
-        link: smtp_enabled ? null : linkTo("reset", "rs_demo_6Yp1Vm9G"),
-      });
+      // Ответ не зависит от того, есть ли такой аккаунт; ссылку, как и сервер, не отдаём.
+      return demoJson({ status: "check_email", link: null });
     },
   },
   {

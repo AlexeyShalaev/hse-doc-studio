@@ -120,17 +120,14 @@ describe("демо: регистрация и ссылки из писем", () 
     );
   });
 
-  it("forgot: одинаковый итог, а без SMTP ещё и ссылка", async () => {
+  it("forgot: одинаковый итог, без SMTP ссылки нет, как на сервере", async () => {
     activateServerScenario("registration_open_nosmtp");
     const user = userEvent.setup();
     mount(<ForgotForm />);
     await user.type(await input("Почта"), "nobody@example.org");
     await user.click(screen.getByRole("button", { name: "Отправить ссылку" }));
     expect(await screen.findByTestId("forgot-sent")).toBeInTheDocument();
-    expect(screen.getByTestId("link-delivery")).toHaveAttribute(
-      "data-kind",
-      "reset",
-    );
+    expect(screen.queryByTestId("link-delivery")).toBeNull();
   });
 
   it("reset: просроченный токен ведёт к новому запросу, действующий меняет пароль", async () => {
@@ -162,7 +159,7 @@ describe("демо: регистрация и ссылки из писем", () 
     expect(await screen.findByTestId("verify-done")).toBeInTheDocument();
   });
 
-  it("verify: просроченная ссылка и повторная отправка со ссылкой без SMTP", async () => {
+  it("verify: просроченная ссылка и повторная отправка без SMTP без ссылки", async () => {
     activateServerScenario("registration_open_nosmtp");
     const user = userEvent.setup();
     mount(<VerifyEmail token="vf_expired" />);
@@ -174,9 +171,6 @@ describe("демо: регистрация и ссылки из писем", () 
       screen.getByRole("button", { name: "Отправить ссылку ещё раз" }),
     );
     expect(await screen.findByTestId("verify-resent")).toBeInTheDocument();
-    expect(screen.getByTestId("link-delivery")).toHaveAttribute(
-      "data-kind",
-      "verify",
-    );
+    expect(screen.queryByTestId("link-delivery")).toBeNull();
   });
 });

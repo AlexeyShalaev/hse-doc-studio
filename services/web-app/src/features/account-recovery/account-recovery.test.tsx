@@ -71,7 +71,7 @@ describe("account-recovery", () => {
     );
     expect(screen.queryByTestId("link-delivery")).toBeNull();
     expect(screen.getByTestId("forgot-sent")).toHaveTextContent(
-      "попросите администратора",
+      "обратитесь к администратору",
     );
   });
 
