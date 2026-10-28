@@ -31,6 +31,7 @@ from hse_doc_studio.core.identity.protocols import (
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
+from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
     SqlAuditLog,
@@ -47,6 +48,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlInstanceSettingsRepository,
     SqlUserRepository,
 )
+from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
@@ -122,6 +124,11 @@ class ServerIdentityProvider(Provider):
     def get_local_author_profile(self) -> ILocalAuthorProfile:
         """Подпись коммитов берётся из актора запроса, а не из config.json машины."""
         return UserAuthorProfile()
+
+    @provide(override=True)
+    def get_settings_repo(self, sessions: SessionProvider) -> ISettingsRepository:
+        """Настройки живут в Postgres: свои у пользователя, общие ключи только у админа."""
+        return PostgresSettingsRepository(sessions)
 
     @provide
     def get_account_uc(self, users: IUserRepository) -> GetAccountUC:

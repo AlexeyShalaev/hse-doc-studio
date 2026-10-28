@@ -15,6 +15,7 @@ from hse_doc_studio.infra.db.orm.identity import (
     PasswordCredentialRow,
     UserIdentityRow,
     UserRow,
+    UserSettingRow,
 )
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
@@ -35,4 +36,5 @@ __all__ = [
     "SessionRow",
     "UserIdentityRow",
     "UserRow",
+    "UserSettingRow",
 ]

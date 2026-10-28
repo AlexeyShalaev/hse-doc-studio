@@ -6,6 +6,7 @@ from typing import Any
 import structlog
 
 from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.settings_scope import SETTING_SCOPES, SettingScope
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, MACHINE_LOCAL_SETTING_KEYS, GetSettingsUC
 
@@ -45,8 +46,17 @@ class UpdateSettingsUC:
         if unknown_keys:
             logger.warning("update_settings: unknown keys ignored", keys=list(unknown_keys))
 
-        merged = {**current, **{k: v for k, v in inp.patch.items() if k in _ALLOWED_KEYS}}
-        await self._settings_repo.save(merged)
+        allowed_patch = {k: v for k, v in inp.patch.items() if k in _ALLOWED_KEYS}
+        merged = {**current, **allowed_patch}
+        # Ключ установки, которого нет в хранилище и который не правили, остаётся умолчанием:
+        # записывать его нельзя, иначе обычный пользователь упрётся в запрет, а админ зафиксирует умолчания.
+        stored = await self._settings_repo.get()
+        to_save = {
+            k: v
+            for k, v in merged.items()
+            if k in stored or k in allowed_patch or SETTING_SCOPES.get(k) is not SettingScope.instance
+        }
+        await self._settings_repo.save(to_save)
 
         logger.info("settings updated")
         return UpdateSettingsOutput(settings=merged)

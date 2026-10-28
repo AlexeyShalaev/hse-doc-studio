@@ -235,7 +235,6 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
     if key[1].split("/")[1]
     in {
         "projects",
-        "settings",
         "ai-providers",
         "agent-personas",
         "agent",

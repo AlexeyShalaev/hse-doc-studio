@@ -11,6 +11,10 @@ from enum import StrEnum
 
 from hse_doc_studio.core.vcs.author import PROFILE_EMAIL_KEY, PROFILE_NAME_KEY
 
+# Откуда взято значение ключа установки; строка с источником env правке из интерфейса не поддаётся.
+SOURCE_ADMIN = "admin"
+SOURCE_ENV = "env"
+
 
 class SettingScope(StrEnum):
     user = "user"
