@@ -55,6 +55,7 @@ export const GIT_ERROR_CODES = [
   "bundle_password_wrong",
   "bundle_prerequisites_missing",
   "operation_not_cancellable",
+  "egress_blocked",
   "git_error",
 ] as const;
 

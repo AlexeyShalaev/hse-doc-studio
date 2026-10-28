@@ -126,6 +126,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Эту операцию уже нельзя отменить",
         "This operation can no longer be cancelled",
     ),
+    GitErrorCode.egress_blocked: (
+        "Этот адрес закрыт политикой сервера: внутренние сети недоступны",
+        "This address is blocked by the server policy: internal networks are not reachable",
+    ),
     GitErrorCode.remote_schema_newer: (
         "Проект в репозитории записан более новой Студией. Обновите Студию",
         "The project in the repository was saved by a newer Studio. Update the Studio",

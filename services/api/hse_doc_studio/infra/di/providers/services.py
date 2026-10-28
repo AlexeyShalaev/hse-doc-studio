@@ -17,6 +17,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import CatalogModel
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog, FontCatalogFile, FontCatalogItem
@@ -127,6 +128,7 @@ from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
 from hse_doc_studio.infra.docker.siblings import Reachability, SiblingNetwork
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
+from hse_doc_studio.infra.egress.policy import AllowAllEgressPolicy, ResolvingEgressPolicy
 from hse_doc_studio.infra.fonts.font_downloader import HttpxFontDownloader
 from hse_doc_studio.infra.fonts.font_store import LocalFontStore
 from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
@@ -207,6 +209,11 @@ from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseSe
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
 
 logger = structlog.get_logger()
+
+
+def _server_egress(egress: IEgressPolicy) -> IEgressPolicy | None:
+    """Политика egress нужна только общему серверу: в режиме local клиенты и git работают как прежде."""
+    return None if settings.mode is StudioMode.local else egress
 
 
 class DomainServiceProvider(Provider):
@@ -779,25 +786,36 @@ class DomainServiceProvider(Provider):
         return FileKnownHostsStore(settings.data_dir.expanduser())
 
     @provide
-    def get_host_key_scanner(self) -> IHostKeyScanner:
-        return SshKeyscanScanner(settings.git)
+    def get_egress_policy(self) -> IEgressPolicy:
+        if settings.mode is StudioMode.local:
+            return AllowAllEgressPolicy()
+        return ResolvingEgressPolicy(settings.egress.allowlist)
+
+    @provide
+    def get_host_key_scanner(self, egress: IEgressPolicy) -> IHostKeyScanner:
+        return SshKeyscanScanner(settings.git, _server_egress(egress))
 
     @provide
     def get_git_host_settings_repo(self) -> IGitHostSettingsRepository:
         return JsonGitHostSettingsRepository(settings.data_dir.expanduser())
 
     @provide
-    def get_git_certificate_service(self) -> ICertificateService:
-        return TlsCertificateService(settings.git.scan_timeout_s)
+    def get_git_certificate_service(self, egress: IEgressPolicy) -> ICertificateService:
+        return TlsCertificateService(settings.git.scan_timeout_s, _server_egress(egress))
 
     @provide
-    def get_git_provider_detector(self) -> IProviderDetector:
-        return HttpProviderDetector(settings.git.provider_detect_timeout_s)
+    def get_git_provider_detector(self, egress: IEgressPolicy) -> IProviderDetector:
+        return HttpProviderDetector(settings.git.provider_detect_timeout_s, _server_egress(egress))
 
     @provide
-    def get_git_token_introspector(self, certificates: ICertificateService) -> ITokenIntrospector:
+    def get_git_token_introspector(
+        self, certificates: ICertificateService, egress: IEgressPolicy
+    ) -> ITokenIntrospector:
         return HttpTokenIntrospector(
-            settings.git.token_check_timeout_s, certificates, allow_insecure_http=settings.git.allow_insecure_http
+            settings.git.token_check_timeout_s,
+            certificates,
+            allow_insecure_http=settings.git.allow_insecure_http,
+            egress=_server_egress(egress),
         )
 
     @provide
@@ -853,6 +871,7 @@ class DomainServiceProvider(Provider):
         scanner: IHostKeyScanner,
         host_settings: IGitHostSettingsRepository,
         certificates: ICertificateService,
+        egress: IEgressPolicy,
     ) -> IGitRemoteRunner:
         return GitRemoteRunner(
             settings.git,
@@ -862,6 +881,7 @@ class DomainServiceProvider(Provider):
             scanner=scanner,
             host_settings=host_settings,
             certificates=certificates,
+            egress=_server_egress(egress),
         )
 
     @provide

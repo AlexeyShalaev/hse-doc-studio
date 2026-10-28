@@ -19,7 +19,9 @@ from hse_doc_studio.api.observability.install import (
     install_health,
     install_server_observability,
 )
+from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.v1 import api_router
+from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
@@ -74,6 +76,14 @@ def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -
         readiness.register(check)
 
 
+def _register_per_user_routes_check(readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.api.route_scopes import per_user_routes_problem  # noqa: PLC0415
+
+    check = ServerReadinessCheck(ReadinessZone.per_user_routes, "global_user_routes", per_user_routes_problem)
+    with suppress(ValueError):
+        readiness.register(check)
+
+
 def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
     """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
 
@@ -81,6 +91,7 @@ def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = se
     """
     if cfg.mode is StudioMode.server:
         _register_secrets_check(cfg, readiness)
+        _register_per_user_routes_check(readiness)
         problems = readiness.unmet()
         if problems:
             msg = (
@@ -104,6 +115,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    if settings.mode is StudioMode.server:
+        install_server_security(app, settings)
+        install_rate_limiter(app, settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,

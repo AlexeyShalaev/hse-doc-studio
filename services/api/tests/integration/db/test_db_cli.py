@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from hse_doc_studio import cli
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.infra.db import migrator
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 pytestmark = pytest.mark.pg
@@ -24,7 +25,7 @@ async def test__db_cli__upgrade_current_check__flow(
     assert await _run(["db", "upgrade"]) == 0
     assert await _run(["db", "current"]) == 0
     assert await _run(["db", "check"]) == 0
-    assert "head: 0001" in capsys.readouterr().out
+    assert f"head: {migrator.head_revision()}" in capsys.readouterr().out
 
 
 def test__db_cli__without_dsn__exits_with_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:

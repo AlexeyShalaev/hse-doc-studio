@@ -76,6 +76,7 @@
     "bundle_password_wrong": "The password is wrong.",
     "bundle_prerequisites_missing": "The bundle lacks the history it is built on.",
     "operation_not_cancellable": "This operation can no longer be cancelled.",
+    "egress_blocked": "This address is blocked by the server policy: internal networks are not reachable. Ask an administrator to add the server to the allowlist.",
     "git_error": "Git returned an error.",
     "invalid_credentials": "Wrong email or password.",
     "email_not_verified": "Email is not verified: open the link from the message.",

@@ -59,6 +59,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.plan_outdated: _STATE,
     GitErrorCode.remote_schema_newer: _STATE,
     GitErrorCode.operation_not_cancellable: _STATE,
+    GitErrorCode.egress_blocked: _INPUT,
     GitErrorCode.no_conflicts: _MISSING,
     GitErrorCode.auth_failed: _UPSTREAM,
     GitErrorCode.forbidden_write: _UPSTREAM,

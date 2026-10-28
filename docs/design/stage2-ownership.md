@@ -65,6 +65,7 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__AUTH__EXPERIMENTAL` | пускает server до финального среза; запрещён при публичном bind |
 | `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN`, `__METRICS_TOKEN` | Bearer-токены деталей `/health/ready` и `/metrics` |
 | `HSE_STUDIO__ADMIN__ALLOWED_HOSTS`, `__ADMIN__ALLOWED_CIDRS` | ограничение `/admin` по host/IP |
+| `HSE_STUDIO__EGRESS__ALLOWLIST` | внутренние узлы (имя, `*.суффикс`, IP, CIDR), к которым разрешено ходить по адресам пользователей; метаданные облака и link-local закрыты всегда |
 | `HSE_STUDIO__RUNNER__BOOTSTRAP_TOKEN` | токен регистрации раннеров |
 | `HSE_STUDIO__QUOTAS__*` | значения квот по умолчанию (раздел 6) |
 

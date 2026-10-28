@@ -1,0 +1,87 @@
+"""Сессии аккаунта: список, отзыв одной и всех остальных (серверный режим)."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+
+from hse_doc_studio.api.actor import require_server_mode
+from hse_doc_studio.api.auth_cookie import clear_session_cookie, credentials_from_request, is_secure_public_url
+from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.schemas.session import AccountSession
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.use_cases.identity.sessions import (
+    ListSessionsUC,
+    RevokeOtherSessionsUC,
+    RevokeSessionUC,
+    SessionInfo,
+)
+
+router = APIRouter(dependencies=[Depends(require_server_mode)])
+
+_PUBLIC_PREFIX = "ses_"
+_PUBLIC_LENGTH = 24
+
+
+def public_session_id(id_hash: str) -> str:
+    """Наружу уходит укороченный хеш: по нему сессию не подставить в cookie, только отозвать."""
+    return f"{_PUBLIC_PREFIX}{id_hash[:_PUBLIC_LENGTH]}"
+
+
+def _user_id() -> str:
+    actor = current_actor()
+    if actor is None or not actor.id:
+        raise IdentityError(IdentityErrorCode.auth_required)
+    return actor.id
+
+
+def _current_hash(request: Request) -> str:
+    """Сессиями управляет только вошедший по cookie: Bearer-токену это не положено."""
+    secret = credentials_from_request(request).session_secret
+    if not secret:
+        raise IdentityError(IdentityErrorCode.forbidden)
+    return hash_token(secret)
+
+
+def _item(info: SessionInfo) -> AccountSession:
+    session = info.session
+    return AccountSession(
+        id=public_session_id(session.id_hash),
+        created_at=session.created_at,
+        last_seen_at=session.last_seen_at,
+        ip=session.ip,
+        user_agent=session.user_agent,
+        current=info.current,
+    )
+
+
+@router.get("/account/sessions", response_model=list[AccountSession])
+async def list_sessions(request: Request) -> list[AccountSession]:
+    user_id = _user_id()
+    uc = await request.state.dishka_container.get(ListSessionsUC)
+    infos = await uc.execute(user_id, _current_hash(request))
+    return [_item(info) for info in sorted(infos, key=lambda i: i.session.last_seen_at, reverse=True)]
+
+
+@router.delete("/account/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_session(session_id: str, request: Request) -> Response:
+    user_id = _user_id()
+    current = _current_hash(request)
+    container = request.state.dishka_container
+    infos = await (await container.get(ListSessionsUC)).execute(user_id, current)
+    target = next((i for i in infos if public_session_id(i.session.id_hash) == session_id), None)
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    await (await container.get(RevokeSessionUC)).execute(user_id, target.session.id_hash)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    if target.current:
+        clear_session_cookie(response, secure=is_secure_public_url(settings.auth.public_url))
+    return response
+
+
+@router.delete("/account/sessions", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_other_sessions(request: Request) -> Response:
+    user_id = _user_id()
+    await (await request.state.dishka_container.get(RevokeOtherSessionsUC)).execute(user_id, _current_hash(request))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

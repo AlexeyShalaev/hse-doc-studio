@@ -15,15 +15,25 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
+from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.route_actions import rule_for, scope_for_rule
+from hse_doc_studio.api.route_scopes import (
+    ADMIN_PREFIX,
+    SELF_AUTHENTICATED,
+    RouteScope,
+    route_path_of,
+    scope_for_request,
+)
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.context import set_current_actor
-from hse_doc_studio.core.access.entities import ProjectAcl
+from hse_doc_studio.core.access.entities import Actor, ProjectAcl
 from hse_doc_studio.core.access.policy import Decision, decide
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.project_access import ProjectAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
 
@@ -81,15 +91,19 @@ async def load_project_acl(_request: Request, _project_id: str) -> ProjectAcl | 
 
 
 async def project_access_guard(request: Request) -> None:
-    """Проверка прав актора на маршрут проекта по таблице `api.route_actions`.
+    """Проверка прав актора на маршрут по таблицам `api.route_actions` и `api.route_scopes`.
 
     Кладёт актора в контекст запроса для всего `/api/v1`. Локальный актор уходит
     сразу, без обращения к контейнеру зависимостей и без чтения проекта: часть
     тестов собирает свои приложения вокруг `api_router`, а локальный режим не
-    должен менять поведение. Остальным акторам отказ по умолчанию: маршрут проекта
-    без записи в таблице не открывается никому. Гард стоит перед `project_write_guard`,
-    чтобы чужой получил 404, а не 423.
+    должен менять поведение. На сервере до цепочки cookie обрабатываются маршруты,
+    которым актор не нужен: публичные, с собственным токеном (раннер, задача,
+    подписанная ссылка) и только локальные (им отвечаем 404). Остальным отказ по
+    умолчанию: маршрут без записи ни в одной таблице не открывается никому.
+    Гард стоит перед `project_write_guard`, чтобы чужой получил 404, а не 423.
     """
+    if settings.mode is not StudioMode.local and _handled_before_actor(request):
+        return
     actor = await resolve_actor(request)
     set_current_actor(actor)
     if actor.is_local:
@@ -97,6 +111,7 @@ async def project_access_guard(request: Request) -> None:
     rule = rule_for(request)
     project_id = request.path_params.get("project_id")
     if rule is None:
+        _enforce_scope(actor, request)
         if project_id is not None:
             raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
         return
@@ -107,6 +122,27 @@ async def project_access_guard(request: Request) -> None:
         raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
     acl = await load_project_acl(request, str(project_id))
     _enforce(decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params)))
+
+
+def _handled_before_actor(request: Request) -> bool:
+    """True, если запросу не нужен актор по cookie; локальные маршруты на сервере не существуют."""
+    scope = scope_for_request(request)
+    if scope is RouteScope.local_only:
+        raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
+    return scope is RouteScope.public or scope in SELF_AUTHENTICATED
+
+
+def _enforce_scope(actor: Actor, request: Request) -> None:
+    scope = scope_for_request(request)
+    if scope is None:
+        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
+    if scope is RouteScope.local_only:
+        raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
+    if scope in {RouteScope.instance_admin, RouteScope.org_admin} and not actor.is_instance_admin:
+        # Админка не должна выдавать себя чужому: нет прав, значит нет и маршрута.
+        if scope is RouteScope.org_admin or route_path_of(request).startswith(ADMIN_PREFIX):
+            raise HTTPException(status_code=_NOT_FOUND, detail="Not Found")
+        raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
 
 
 def _enforce(decision: Decision) -> None:
@@ -143,3 +179,4 @@ def install_exception_handlers(app: FastAPI) -> None:
     """Ошибки домена, общие для всех роутеров (в create_app и в тестовом приложении)."""
     app.add_exception_handler(ProjectReadOnlyError, _read_only_handler)
     install_git_error_handlers(app)
+    install_identity_error_handlers(app)

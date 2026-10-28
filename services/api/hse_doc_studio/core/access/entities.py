@@ -18,6 +18,15 @@ class ActorKind(StrEnum):
     guest = "guest"
 
 
+class ActorSource(StrEnum):
+    """Чем подтверждён актор: сессией, персональным токеном, гостевой ссылкой или локальным запуском."""
+
+    session = "session"
+    pat = "pat"
+    link = "link"
+    local = "local"
+
+
 class Role(StrEnum):
     reader = "reader"
     reviewer = "reviewer"
@@ -32,18 +41,40 @@ class Actor:
     name: str | None = None
     email: str | None = None
     link_id: str | None = None
+    # Админ установки; доступа к содержимому чужих проектов это не даёт.
+    is_instance_admin: bool = False
+    source: ActorSource | None = None
+    # Ограничения персонального токена (`api`, `git:read`, `git:write`); у сессии пусто.
+    scopes: frozenset[str] = frozenset()
 
     @classmethod
     def local(cls) -> Actor:
-        return cls(kind=ActorKind.local)
+        return cls(kind=ActorKind.local, source=ActorSource.local)
 
     @classmethod
-    def user(cls, id: str, name: str | None = None, email: str | None = None) -> Actor:
-        return cls(kind=ActorKind.user, id=id, name=name, email=email)
+    def user(
+        cls,
+        id: str,
+        name: str | None = None,
+        email: str | None = None,
+        *,
+        is_instance_admin: bool = False,
+        source: ActorSource | None = None,
+        scopes: frozenset[str] = frozenset(),
+    ) -> Actor:
+        return cls(
+            kind=ActorKind.user,
+            id=id,
+            name=name,
+            email=email,
+            is_instance_admin=is_instance_admin,
+            source=source,
+            scopes=scopes,
+        )
 
     @classmethod
     def guest(cls, link_id: str, name: str | None = None) -> Actor:
-        return cls(kind=ActorKind.guest, link_id=link_id, name=name)
+        return cls(kind=ActorKind.guest, link_id=link_id, name=name, source=ActorSource.link)
 
     @property
     def is_local(self) -> bool:

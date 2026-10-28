@@ -1,9 +1,9 @@
 """Корневые настройки приложения (Settings)."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
@@ -11,9 +11,11 @@ from hse_doc_studio.api.config.admin import AdminConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
+from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
@@ -82,6 +84,8 @@ class Settings(BaseSettings):
     db: DbConfig = Field(default_factory=DbConfig)
     s3: StorageConfig = Field(default_factory=StorageConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)
+    egress: EgressConfig = Field(default_factory=EgressConfig)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 
@@ -175,6 +179,15 @@ class Settings(BaseSettings):
         default=_DEFAULT_RELEASE_NOTES_FILE,
         description="Curated bilingual release notes (release-notes.json), read once at startup.",
     )
+
+    @model_validator(mode="after")
+    def _server_cors_has_no_wildcard_with_credentials(self) -> Self:
+        # Браузер не принимает `*` вместе с cookie, а Starlette в таком случае отражает любой Origin:
+        # любой сайт получил бы запросы от имени вошедшего пользователя.
+        if self.mode is StudioMode.server and self.cors.allow_credentials and "*" in self.cors.allow_origins:
+            msg = "cors.allow_origins must list explicit origins, not '*', while cors.allow_credentials is on"
+            raise ValueError(msg)
+        return self
 
     @staticmethod
     def get_app_version() -> str:

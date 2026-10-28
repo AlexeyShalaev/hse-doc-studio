@@ -1,5 +1,6 @@
 import pytest
 from cryptography.fernet import Fernet
+from hse_doc_studio.api import route_scopes
 from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.entrypoint import ensure_supported_mode
 from hse_doc_studio.core.mode import StudioMode
@@ -48,10 +49,18 @@ def test__ensure_supported_mode__server_with_missing_zones__names_them() -> None
         ensure_supported_mode(Settings(_env_file=None, mode=StudioMode.server), ServerReadinessRegistry())
 
 
-def test__ensure_supported_mode__server_all_green__passes() -> None:
+def test__ensure_supported_mode__server_all_green__passes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(route_scopes, "PER_USER_PENDING", frozenset())
     cfg = Settings(_env_file=None, mode=StudioMode.server, secrets={"key": Fernet.generate_key().decode()})
 
     ensure_supported_mode(cfg, _all_green())
+
+
+def test__ensure_supported_mode__server_with_global_user_routes__is_refused() -> None:
+    cfg = Settings(_env_file=None, mode=StudioMode.server, secrets={"key": Fernet.generate_key().decode()})
+
+    with pytest.raises(RuntimeError, match="per_user_routes/global_user_routes"):
+        ensure_supported_mode(cfg, _all_green())
 
 
 def test__ensure_supported_mode__server_without_secrets_key__is_refused() -> None:

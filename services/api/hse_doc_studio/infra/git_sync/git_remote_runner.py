@@ -18,6 +18,7 @@ from pathlib import Path
 import structlog
 
 from hse_doc_studio.api.config import GitConfig
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import (
     CredentialStatus,
@@ -52,6 +53,7 @@ from hse_doc_studio.infra.git_sync.auth_env import (
     build_http_auth,
     check_credential_matches,
 )
+from hse_doc_studio.infra.git_sync.egress_guard import authorize_git_host
 from hse_doc_studio.infra.git_sync.git_capabilities import GitCapabilities
 from hse_doc_studio.infra.git_sync.process_runner import GitProcessRunner, ProcessTimeoutError
 from hse_doc_studio.infra.git_sync.ssh_command import build_ssh_command, temporary_key_file
@@ -106,8 +108,10 @@ class GitRemoteRunner:
         scanner: IHostKeyScanner | None = None,
         host_settings: IGitHostSettingsRepository | None = None,
         certificates: ICertificateService | None = None,
+        egress: IEgressPolicy | None = None,
     ) -> None:
         self._config = config
+        self._egress = egress
         self._credentials = credentials
         self._host_settings = host_settings
         self._certificates = certificates
@@ -129,6 +133,7 @@ class GitRemoteRunner:
         timeout_s: float,
         on_progress: ProgressCallback | None = None,
     ) -> GitResult:
+        await authorize_git_host(self._egress, target.url.host, target.url.port)
         self._check_policy(target)
         if target.url.kind is RemoteKind.ssh:
             return await self._run_ssh(
@@ -148,9 +153,10 @@ class GitRemoteRunner:
             for name in _CA_ENV_OVERRIDES:
                 env.pop(name, None)
         extra_config = trust_config
-        if auth is not None:
+        if auth is not None or self._egress is not None:
             # Заголовок доступа git добавляет ко всем запросам сессии, в том числе после перехода на другой хост:
-            # с токеном редиректы не идут вовсе. Без доступа публичный адрес по-прежнему может перенаправлять.
+            # с токеном редиректы не идут вовсе. На общем сервере они выключены и без токена: редирект уводит git
+            # на адрес, который политика egress не видела. Локально публичный адрес по-прежнему может перенаправлять.
             extra_config = [*trust_config, "-c", "http.followRedirects=false"]
             args = _with_dot_git(args, target.url)
         return await self._execute(
