@@ -54,6 +54,8 @@ class FakeRunnerState:
         self.polls = 0
         self.headers_seen: list[dict[str, str]] = []
         self.fail_register_with: int | None = None
+        self.blobs: dict[str, bytes] = {}
+        self.blob_requests: list[tuple[str, str]] = []
 
     def enqueue(self, envelope: dict[str, Any]) -> FakeJob:
         job = FakeJob(envelope)
@@ -116,6 +118,14 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
             return job
         job.log_batches.setdefault(body.seq, list(body.lines))
         return Response(status_code=204)
+
+    @app.get("/api/runner/v1/jobs/{job_id}/blobs/{sha256}")
+    async def get_blob(job_id: str, sha256: str, request: Request) -> Any:
+        state.blob_requests.append((job_id, request.headers.get("x-job-token", "")))
+        data = state.blobs.get(sha256)
+        if data is None:
+            return _error(404, "blob_missing")
+        return Response(content=data, media_type="application/octet-stream")
 
     @app.post("/api/runner/v1/jobs/{job_id}/artifacts")
     async def announce(job_id: str, body: schemas.ArtifactUploadRequestBody) -> Any:

@@ -20,6 +20,7 @@ from typing import TextIO
 
 import structlog
 from dishka import Provider, Scope, make_async_container, provide
+from pydantic import ValidationError
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.compile.errors import CompileSetupError
@@ -128,7 +129,44 @@ def _parser() -> argparse.ArgumentParser:
         "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
     )
     reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
+    sub.add_parser(
+        "runner",
+        help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
+    )
     return parser
+
+
+async def _runner() -> int:
+    # Лениво: раннеру не нужны ни настройки api, ни extra server.
+    import contextlib  # noqa: PLC0415
+    import signal  # noqa: PLC0415
+
+    from hse_doc_studio.infra.di.containers.runner import create_runner_container  # noqa: PLC0415
+    from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
+    from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
+
+    try:
+        config = RunnerConfig()
+    except ValidationError as exc:
+        missing = ", ".join(f"HSE_RUNNER__{'.'.join(map(str, e['loc'])).upper()}" for e in exc.errors())
+        _write(f"error: настройки раннера неверны или не заданы: {missing}", stream=sys.stderr)
+        return _EXIT_USAGE
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    container = create_runner_container(config)
+    try:
+        loop = await container.get(RunnerLoop)
+        running = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            with contextlib.suppress(NotImplementedError):
+                running.add_signal_handler(sig, loop.request_stop)
+        try:
+            await loop.run()
+        except RunnerFatalError as exc:
+            _write(f"error: {exc}", stream=sys.stderr)
+            return _EXIT_BUILD_FAILED
+        return _EXIT_OK
+    finally:
+        await container.close()
 
 
 async def _reencrypt(*, dry_run: bool) -> int:
@@ -211,6 +249,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "db":
         return _run_db(args.db_command)
+    if args.command == "runner":
+        return asyncio.run(_runner())
     if args.command == "secrets":
         return _run_secrets(dry_run=args.dry_run)
     folder = args.project_dir.expanduser().resolve()
