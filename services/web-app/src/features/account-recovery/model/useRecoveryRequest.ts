@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { failureCode } from "@shared/api";
+import { useRefreshSession } from "@entities/session";
 import type { RecoveryFailure } from "../lib/recoveryErrors";
 
 /**
@@ -10,6 +11,7 @@ export const useRecoveryRequest = <Input, Output>(
   call: (input: Input) => Promise<Output>,
   onFailure?: (code: string) => void | Promise<void>,
 ) => {
+  const refresh = useRefreshSession();
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<RecoveryFailure | null>(null);
   const [result, setResult] = useState<Output | null>(null);
@@ -23,12 +25,15 @@ export const useRecoveryRequest = <Input, Output>(
       } catch (error) {
         const code = failureCode(error);
         setFailure({ code });
+        // Устаревший CSRF лечится новым bootstrap: следующая попытка пройдёт.
+        // Глобальный перехват 403 эти адреса (/auth/*) пропускает, поэтому здесь.
+        if (code === "csrf_failed") await refresh();
         await onFailure?.(code);
       } finally {
         setPending(false);
       }
     },
-    [call, onFailure],
+    [call, onFailure, refresh],
   );
 
   return { submit, pending, failure, result };
