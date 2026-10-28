@@ -194,7 +194,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             from hse_doc_studio.infra.db.migrator import ensure_db_current  # noqa: PLC0415
 
             engine = await container.get(AsyncEngine)
-            await ensure_db_current(engine, auto_migrate=settings.db.auto_migrate)
+            await ensure_db_current(
+                engine, auto_migrate=settings.db.auto_migrate, lock_wait_s=settings.db.migration_lock_wait_s
+            )
 
         server_metrics = install_server_observability(app, settings, health_checks)
         install_background(

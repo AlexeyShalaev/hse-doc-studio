@@ -19,3 +19,7 @@ class DbOutdatedError(RuntimeError):
             f"db_outdated: ревизия базы {current or 'пусто'}, ожидается {head}; "
             "выполните `hse-doc-studio db upgrade` или включите HSE_STUDIO__DB__AUTO_MIGRATE"
         )
+
+
+class MigrationLockTimeoutError(RuntimeError):
+    """Advisory-лок миграций занят другим процессом дольше отведённого срока."""

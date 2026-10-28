@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 from hse_doc_studio.infra.db import migrator
-from hse_doc_studio.infra.db.errors import DbOutdatedError
+from hse_doc_studio.infra.db.errors import DbOutdatedError, MigrationLockTimeoutError
 from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -72,5 +72,25 @@ async def test__ensure_db_current__outdated_without_auto__raises(pg_engine: Asyn
 async def test__ensure_db_current__auto_migrate__brings_to_head(pg_engine: AsyncEngine) -> None:
     await migrator.ensure_db_current(pg_engine, auto_migrate=True)
     await migrator.ensure_db_current(pg_engine, auto_migrate=False)
+
+    assert await migrator.current_revision(pg_engine) == migrator.head_revision()
+
+
+async def test__migrate_if_needed__lock_held_elsewhere__times_out_instead_of_hanging(pg_engine: AsyncEngine) -> None:
+    async with pg_engine.connect() as holder:
+        await holder.execute(text("SELECT pg_advisory_lock(:key)"), {"key": migrator.MIGRATION_LOCK_KEY})
+        try:
+            with pytest.raises(MigrationLockTimeoutError):
+                await migrator.migrate_if_needed(pg_engine, lock_wait_s=0.3)
+        finally:
+            await holder.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": migrator.MIGRATION_LOCK_KEY})
+
+
+async def test__upgrade__works_under_tight_statement_timeout(pg_engine: AsyncEngine) -> None:
+    tight = create_async_engine(pg_engine.url, connect_args={"server_settings": {"statement_timeout": "1"}})
+    try:
+        await migrator.upgrade(tight)
+    finally:
+        await tight.dispose()
 
     assert await migrator.current_revision(pg_engine) == migrator.head_revision()

@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 BACKGROUND_LEADER_LOCK_KEY = 0x48534D32  # "HSM2"
+LEADER_OP_TIMEOUT_S = 5.0  # проверка лока не должна подвисать вместе с отрезанной базой
 
 
 class PgAdvisoryLeaderLock:
@@ -23,9 +25,13 @@ class PgAdvisoryLeaderLock:
     async def acquire(self) -> bool:
         if self._conn is not None:
             return await self.is_held()
-        conn = await self._engine.connect()
+        conn = await asyncio.wait_for(self._engine.connect(), LEADER_OP_TIMEOUT_S)
         try:
-            got = (await conn.execute(text("SELECT pg_try_advisory_lock(:key)"), {"key": self._key})).scalar_one()
+            got = (
+                await asyncio.wait_for(
+                    conn.execute(text("SELECT pg_try_advisory_lock(:key)"), {"key": self._key}), LEADER_OP_TIMEOUT_S
+                )
+            ).scalar_one()
         except BaseException:
             await conn.close()
             raise
@@ -40,7 +46,7 @@ class PgAdvisoryLeaderLock:
         if conn is None:
             return False
         try:
-            await conn.execute(text("SELECT 1"))
+            await asyncio.wait_for(conn.execute(text("SELECT 1")), LEADER_OP_TIMEOUT_S)
         except Exception:
             self._conn = None
             await _invalidate_quietly(conn)
