@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import Request
+from urllib.parse import urlsplit
+
+from fastapi import Request, Response
 
 from hse_doc_studio.core.identity.entities import ActorCredentials
 
@@ -26,3 +28,35 @@ def credentials_from_request(request: Request) -> ActorCredentials:
     cookies = request.cookies
     secret = cookies.get(SECURE_SESSION_COOKIE) or cookies.get(SESSION_COOKIE)
     return ActorCredentials(session_secret=secret or None, bearer_token=bearer_token(request))
+
+
+def public_origin(public_url: str | None) -> str | None:
+    """Origin (схема и хост) внешнего адреса либо None, если адрес не задан или не похож на URL."""
+    if not public_url:
+        return None
+    parts = urlsplit(public_url.strip())
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return None
+    return f"{parts.scheme}://{parts.netloc}".lower()
+
+
+def is_secure_public_url(public_url: str | None) -> bool:
+    origin = public_origin(public_url)
+    return origin is not None and origin.startswith("https://")
+
+
+def set_session_cookie(response: Response, secret: str, *, secure: bool, max_age_s: int) -> None:
+    """HttpOnly и SameSite=Lax всегда; Secure и префикс `__Host-` по HTTPS. Без Domain."""
+    response.set_cookie(
+        session_cookie_name(secure=secure),
+        secret,
+        max_age=max_age_s,
+        path="/",
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+    )
+
+
+def clear_session_cookie(response: Response, *, secure: bool) -> None:
+    response.delete_cookie(session_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax")

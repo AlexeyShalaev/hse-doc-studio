@@ -25,6 +25,17 @@ class SecretsConfig(BaseModel):
 class AuthConfig(BaseModel):
     """Вход, сессии и мастер первого запуска сервера (HSE_STUDIO__AUTH__*). Поля добавляет срез identity."""
 
+    public_url: str | None = Field(
+        default=None,
+        description=(
+            "Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, "
+            "адрес входит в список допустимых Origin для небезопасных запросов."
+        ),
+    )
+    frame_ancestors: list[str] = Field(
+        default_factory=list,
+        description="Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors).",
+    )
     trusted_proxies: list[str] = Field(
         default_factory=list,
         description="IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента.",

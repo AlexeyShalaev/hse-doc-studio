@@ -20,6 +20,7 @@ from hse_doc_studio.api.observability.install import (
     install_server_observability,
 )
 from hse_doc_studio.api.routers.v1 import api_router
+from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
@@ -104,6 +105,8 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    if settings.mode is StudioMode.server:
+        install_server_security(app, settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,
