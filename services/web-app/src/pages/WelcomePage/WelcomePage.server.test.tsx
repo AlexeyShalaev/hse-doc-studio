@@ -147,6 +147,14 @@ describe("главная в серверном режиме", () => {
     ).toEqual(["Рецензент", "Читатель"]);
   });
 
+  it("закрепить и архивировать может только владелец", () => {
+    mount();
+    // Три карточки, кнопки только у проекта с ролью owner.
+    expect(screen.getAllByTestId("project-owner")).toHaveLength(3);
+    expect(screen.getAllByTestId("project-pin")).toHaveLength(1);
+    expect(screen.getAllByTestId("project-archive")).toHaveLength(1);
+  });
+
   it("фильтр «Мои / Организации» делит проекты по владельцу", async () => {
     const user = userEvent.setup();
     mount();

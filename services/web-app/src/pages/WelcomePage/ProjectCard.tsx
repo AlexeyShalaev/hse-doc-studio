@@ -101,6 +101,7 @@ export const ProjectCard = ({
   const owner = project.owner ?? null;
   const role = project.my_role ?? null;
   const hasTemplate = owner === null;
+  const canManage = role === null || role === "owner";
   const RoleIcon = role ? ROLE_ICONS[role] : null;
   const ownerLine = owner
     ? owner.kind === "org"
@@ -190,23 +191,33 @@ export const ProjectCard = ({
             e.stopPropagation();
           }}
         >
-          <button
-            type="button"
-            onClick={onTogglePin}
-            className={clsx("icon-btn sm tt", project.pinned && "active")}
-            data-tt={project.pinned ? t("card.unpin") : t("card.pin")}
-            style={project.pinned ? { color: "var(--accent)" } : undefined}
-          >
-            <Pin size={11} />
-          </button>
-          <button
-            type="button"
-            onClick={onToggleArchive}
-            className="icon-btn sm tt"
-            data-tt={project.archived ? t("card.unarchive") : t("card.archive")}
-          >
-            <Archive size={11} />
-          </button>
+          {/* Закрепление и архив меняют сам проект (PATCH, только владелец), поэтому
+              остальным ролям кнопок нет. В локальном режиме роли нет, кнопки есть. */}
+          {canManage && (
+            <>
+              <button
+                type="button"
+                onClick={onTogglePin}
+                data-testid="project-pin"
+                className={clsx("icon-btn sm tt", project.pinned && "active")}
+                data-tt={project.pinned ? t("card.unpin") : t("card.pin")}
+                style={project.pinned ? { color: "var(--accent)" } : undefined}
+              >
+                <Pin size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={onToggleArchive}
+                data-testid="project-archive"
+                className="icon-btn sm tt"
+                data-tt={
+                  project.archived ? t("card.unarchive") : t("card.archive")
+                }
+              >
+                <Archive size={11} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
