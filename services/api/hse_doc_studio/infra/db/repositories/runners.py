@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 from hse_doc_studio.infra.db.orm.jobs import RunnerRegistrationTokenRow, RunnerRow
@@ -116,7 +117,7 @@ class SqlRegistrationTokenRepository:
 
     async def add(self, token: RegistrationToken) -> None:
         async with self._sessions.use() as db:
-            db.add(_row(token))
+            db.add(RunnerRegistrationTokenRow(**_values(token)))
             await db.flush()
 
     async def get(self, token_id: str) -> RegistrationToken | None:
@@ -161,19 +162,20 @@ class SqlRegistrationTokenRepository:
 
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         async with self._sessions.use() as db:
-            row = await db.get(RunnerRegistrationTokenRow, token.id, with_for_update=True)
-            if row is None:
-                db.add(_row(token))
-            elif row.token_hash != token.token_hash:
-                row.token_hash = token.token_hash
-                row.uses = 0
-                row.revoked_at = None
-                row.created_at = token.created_at
-            await db.flush()
+            # Вставка без гонки между воркерами; смена хеша сбрасывает счётчик одним UPDATE.
+            await db.execute(pg_insert(RunnerRegistrationTokenRow).values(_values(token)).on_conflict_do_nothing())
+            await db.execute(
+                update(RunnerRegistrationTokenRow)
+                .where(
+                    RunnerRegistrationTokenRow.id == token.id,
+                    RunnerRegistrationTokenRow.token_hash != token.token_hash,
+                )
+                .values(token_hash=token.token_hash, uses=0, revoked_at=None, created_at=token.created_at)
+            )
 
 
-def _row(token: RegistrationToken) -> RunnerRegistrationTokenRow:
-    return RunnerRegistrationTokenRow(
+def _values(token: RegistrationToken) -> dict[str, object]:
+    return dict(
         id=token.id,
         owner_kind=token.owner_kind.value,
         owner_id=token.owner_id,

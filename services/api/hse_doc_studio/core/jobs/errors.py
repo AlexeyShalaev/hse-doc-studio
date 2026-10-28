@@ -58,6 +58,22 @@ class QueuedJobNotFoundError(NotFoundError):
     """Записи очереди с таким id нет (404 `job_not_found`)."""
 
 
+class JobNotRunningError(Exception):
+    """Задача не идёт: уже закончена или отменена, выходы и лог по ней не принимаются (409 `job_not_running`)."""
+
+
+class BlobForbiddenError(Exception):
+    """Блоба нет в манифесте этой задачи: чужие блобы раннеру не выдаются (403 `blob_forbidden`)."""
+
+
+class BlobMissingError(Exception):
+    """Блоб есть в манифесте или не заявлен, но хранилище его не отдаёт (404 `blob_missing`)."""
+
+
+class ArtifactInvalidError(Exception):
+    """Выход не прошёл проверку: не заявлен, неверный размер или хеш, не загружен (422 `artifact_invalid`)."""
+
+
 class RunnerAuthError(Exception):
     """Раннер или задача не доказали подлинность: код из закрытого списка протокола раннера."""
 

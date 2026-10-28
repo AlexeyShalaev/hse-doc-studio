@@ -167,7 +167,7 @@ class JobTokenSigner:
                 runner_id=str(payload["r"]),
                 expires_at=datetime.fromtimestamp(int(payload["e"]), tz=now.tzinfo),
             )
-        except (ValueError, KeyError, TypeError, UnicodeError):
+        except (ValueError, KeyError, TypeError, UnicodeError, OverflowError, OSError):
             raise invalid from None
         # Перебор без раннего выхода: время проверки не зависит от того, какой ключ подошёл.
         matched = False

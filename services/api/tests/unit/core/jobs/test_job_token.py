@@ -61,6 +61,16 @@ def test__verify__tampered_payload__rejected() -> None:
     _invalid(signer, f"{version}.{forged}.{mac}")
 
 
+@pytest.mark.parametrize("expiry", ["99999999999999999999", "1e400", "Infinity", "-Infinity", "NaN"])
+def test__verify__forged_expiry_out_of_range__rejected(expiry: str) -> None:
+    signer = _signer(_ring(Fernet.generate_key()))
+    version, _payload, mac = signer.sign("job-1", "runner-1", NOW + timedelta(minutes=5)).split(".")
+    body = f'{{"e":{expiry},"j":"job-1","r":"runner-1"}}'.encode()
+    forged = base64.urlsafe_b64encode(body).rstrip(b"=").decode()
+
+    _invalid(signer, f"{version}.{forged}.{mac}")
+
+
 def test__verify__signed_with_foreign_key__rejected() -> None:
     mine = _signer(_ring(Fernet.generate_key()))
     foreign = _signer(_ring(Fernet.generate_key()))

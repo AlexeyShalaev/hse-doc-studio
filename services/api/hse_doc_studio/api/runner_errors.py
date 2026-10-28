@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
-from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, RunnerAuthError, StaleAttemptError
+from hse_doc_studio.core.jobs.errors import (
+    ArtifactInvalidError,
+    BlobForbiddenError,
+    BlobMissingError,
+    JobNotRunningError,
+    QueuedJobNotFoundError,
+    RunnerAuthError,
+    StaleAttemptError,
+)
 
 RUNNER_ERROR_STATUS: Mapping[RunnerErrorCode, int] = {
     RunnerErrorCode.runner_unauthorized: 401,
@@ -35,7 +43,18 @@ async def _job_not_found_handler(_request: Request, exc: Exception) -> JSONRespo
     return JSONResponse(status_code=404, content={"detail": str(exc), "code": RunnerErrorCode.job_not_found.value})
 
 
+def _coded_handler(status: int, code: RunnerErrorCode) -> Callable[[Request, Exception], Awaitable[JSONResponse]]:
+    async def handler(_request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(status_code=status, content={"detail": str(exc), "code": code.value})
+
+    return handler
+
+
 def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RunnerAuthError, _runner_auth_handler)
     app.add_exception_handler(StaleAttemptError, _stale_attempt_handler)
     app.add_exception_handler(QueuedJobNotFoundError, _job_not_found_handler)
+    app.add_exception_handler(JobNotRunningError, _coded_handler(409, RunnerErrorCode.job_not_running))
+    app.add_exception_handler(BlobForbiddenError, _coded_handler(403, RunnerErrorCode.blob_forbidden))
+    app.add_exception_handler(BlobMissingError, _coded_handler(404, RunnerErrorCode.blob_missing))
+    app.add_exception_handler(ArtifactInvalidError, _coded_handler(422, RunnerErrorCode.artifact_invalid))
