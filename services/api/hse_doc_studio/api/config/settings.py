@@ -1,9 +1,9 @@
 """Корневые настройки приложения (Settings)."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
@@ -177,6 +177,15 @@ class Settings(BaseSettings):
         default=_DEFAULT_RELEASE_NOTES_FILE,
         description="Curated bilingual release notes (release-notes.json), read once at startup.",
     )
+
+    @model_validator(mode="after")
+    def _server_cors_has_no_wildcard_with_credentials(self) -> Self:
+        # Браузер не принимает `*` вместе с cookie, а Starlette в таком случае отражает любой Origin:
+        # любой сайт получил бы запросы от имени вошедшего пользователя.
+        if self.mode is StudioMode.server and self.cors.allow_credentials and "*" in self.cors.allow_origins:
+            msg = "cors.allow_origins must list explicit origins, not '*', while cors.allow_credentials is on"
+            raise ValueError(msg)
+        return self
 
     @staticmethod
     def get_app_version() -> str:

@@ -56,6 +56,22 @@ async def test__server_container__fake_engine__resolves_uow_config_and_use_cases
     assert isinstance(get_project, GetProjectUC)
 
 
+async def test__server_container__resolves_actor_resolver_chain() -> None:
+    from hse_doc_studio.core.identity.protocols import IActorResolver
+    from hse_doc_studio.infra.identity.resolvers import ChainActorResolver
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        resolver = await container.get(IActorResolver)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert isinstance(resolver, ChainActorResolver)
+
+
 def test__local_container__does_not_import_server_modules() -> None:
     for name in list(sys.modules):
         if name.startswith("hse_doc_studio.infra.di.providers.server_"):

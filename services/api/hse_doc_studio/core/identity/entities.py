@@ -172,6 +172,14 @@ class AuditEntry:
 
 
 @dataclass(frozen=True)
+class ActorCredentials:
+    """Что запрос предъявил для входа: значение cookie сессии и токен из заголовка Authorization: Bearer."""
+
+    session_secret: str | None = None
+    bearer_token: str | None = None
+
+
+@dataclass(frozen=True)
 class AuthSettings:
     """Настройки входа установки; хранятся в instance_settings."""
 

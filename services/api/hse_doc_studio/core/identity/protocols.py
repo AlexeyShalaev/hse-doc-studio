@@ -7,7 +7,9 @@ from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.entities import (
+    ActorCredentials,
     ApiToken,
     AuditEntry,
     AuthToken,
@@ -160,3 +162,9 @@ class IMailSender(Protocol):
     @property
     def enabled(self) -> bool: ...
     async def send(self, to: str, subject: str, body: str) -> None: ...
+
+
+class IActorResolver(Protocol):
+    async def resolve(self, credentials: ActorCredentials) -> Actor | None:
+        """Актор по предъявленным данным либо None, если этот способ входа их не распознал."""
+        ...
