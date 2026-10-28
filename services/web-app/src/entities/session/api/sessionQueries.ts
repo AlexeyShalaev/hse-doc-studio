@@ -26,6 +26,9 @@ export type CapabilitiesState = {
   // null, пока bootstrap не пришёл: решать по догадке нельзя.
   capabilities: Capabilities | null;
   has: (name: keyof Capabilities) => boolean;
+  // Возможности точно нет: bootstrap пришёл и говорит «нет». Пока он не пришёл,
+  // ответ false, чтобы локальные кнопки не пропадали из-за недозагрузки.
+  lacks: (name: keyof Capabilities) => boolean;
 };
 
 export const useCapabilities = (): CapabilitiesState => {
@@ -35,7 +38,11 @@ export const useCapabilities = (): CapabilitiesState => {
     (name: keyof Capabilities) => capabilities?.[name] === true,
     [capabilities],
   );
-  return { isLoading, capabilities, has };
+  const lacks = useCallback(
+    (name: keyof Capabilities) => capabilities !== null && !capabilities[name],
+    [capabilities],
+  );
+  return { isLoading, capabilities, has, lacks };
 };
 
 /** Обновить bootstrap: после входа, выхода и 401. */

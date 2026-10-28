@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProjectRoleSchema, ProjectSummarySchema } from "@entities/session";
 
 const ProjectLockSchema = z.object({
   pack_id: z.string(),
@@ -38,6 +39,9 @@ const ChecksOverrideSchema = z.object({
     .default({}),
 });
 
+export const ProjectOwnerSchema = ProjectSummarySchema.shape.owner;
+export type ProjectOwner = z.infer<typeof ProjectOwnerSchema>;
+
 export const ProjectResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -58,6 +62,10 @@ export const ProjectResponseSchema = z.object({
   checks_override: ChecksOverrideSchema.optional(),
   // Team mode: whether the shared/ docs group exists. Old backends omit it.
   shared_enabled: z.boolean().default(true),
+  // Только на сервере: чей проект и какая у человека роль. В локальном режиме
+  // владельца нет (проект лежит в папке на этом компьютере), поля не приходят.
+  owner: ProjectOwnerSchema.optional(),
+  my_role: ProjectRoleSchema.optional(),
   // Что эта Студия может делать с проектом (только в GET /projects/{id}).
   // mode ∈ full | read_only | files_only; reasons — коды причин ограничения.
   access: z
@@ -71,7 +79,10 @@ export const ProjectResponseSchema = z.object({
 
 export const CreateProjectRequestSchema = z.object({
   name: z.string().min(1),
-  folder: z.string().min(1),
+  // На сервере папку выбирает сервер: поле не отправляется.
+  folder: z.string().min(1).optional(),
+  // Организация-владелец (slug); null или нет поля: проект личный.
+  owner_org_slug: z.string().nullish(),
   pack_id: z.string().min(1),
   template_id: z.string().min(1),
   version: z.string().min(1),

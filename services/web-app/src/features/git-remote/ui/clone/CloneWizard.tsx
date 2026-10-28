@@ -41,6 +41,8 @@ export type CloneFolderSlot = {
 
 export type CloneWizardProps = {
   folderSlot?: CloneFolderSlot | undefined;
+  /** Сервер: папку проекта выбирает сервер, шаг просит только название. */
+  folderless?: boolean | undefined;
   /** Адрес и доступ, с которыми открыли мастер (из окна подключения). */
   initialTarget?: CloneTarget | null | undefined;
   /** «Отмена» и «К списку проектов». */
@@ -60,6 +62,7 @@ const noInspect = (): FolderInspection => IDLE_INSPECTION;
 // шагов лежит здесь, поэтому «Назад» ничего не стирает.
 const CloneWizardBody = ({
   folderSlot,
+  folderless = false,
   initialTarget = null,
   onExit,
   onOpenProject,
@@ -114,7 +117,7 @@ const CloneWizardBody = ({
   const debouncedName = useDebouncedValue(name.trim(), 300);
   const defaults = useCloneDefaults(
     debouncedName,
-    currentStep === "folder" || currentStep === "progress",
+    !folderless && (currentStep === "folder" || currentStep === "progress"),
   );
   const folder = folderDraft ?? defaults.data?.folder ?? "";
   const inspection = useInspect(folder.trim());
@@ -128,8 +131,8 @@ const CloneWizardBody = ({
   // --- запуск --------------------------------------------------------------
 
   const start = async (): Promise<void> => {
-    const target = folder.trim();
-    if (target === "" || isStarting) return;
+    const target = folderless ? "" : folder.trim();
+    if ((!folderless && target === "") || isStarting) return;
     setFolderError(null);
     setStartError(null);
     setIsStarting(true);
@@ -140,7 +143,7 @@ const CloneWizardBody = ({
         if (!source.bundleFile) return;
         started = await startBundle.mutateAsync({
           file: source.bundleFile,
-          folder: target,
+          ...(folderless ? {} : { folder: target }),
           ...(projectName !== "" ? { name: projectName } : {}),
           ...(source.bundlePassword.trim() !== ""
             ? { password: source.bundlePassword }
@@ -152,7 +155,7 @@ const CloneWizardBody = ({
           url: source.repoUrl.display_url,
           credential_id: source.credentialId,
           ...(source.branch !== "" ? { branch: source.branch } : {}),
-          folder: target,
+          ...(folderless ? {} : { folder: target }),
           ...(projectName !== "" ? { name: projectName } : {}),
         });
       }
@@ -211,7 +214,7 @@ const CloneWizardBody = ({
         : null;
   const stepperSteps: StepperStep[] = STEP_IDS.map((id) => ({
     id,
-    label: t(`clone.steps.${id}`),
+    label: t(`clone.steps.${id === "folder" && folderless ? "name" : id}`),
     ...(id === "progress" && finalState ? { state: finalState } : {}),
   }));
 
@@ -253,7 +256,7 @@ const CloneWizardBody = ({
           {currentStep === "profile"
             ? t("clone.lead.profile")
             : currentStep === "folder"
-              ? t("clone.lead.folder")
+              ? t(folderless ? "clone.lead.name" : "clone.lead.folder")
               : t("clone.description")}
         </p>
       </div>
@@ -293,6 +296,7 @@ const CloneWizardBody = ({
           name={name}
           namePlaceholder={suggestion}
           onNameChange={setNameDraft}
+          folderless={folderless}
           folder={folder}
           onFolderChange={(value) => {
             setFolderDraft(value);

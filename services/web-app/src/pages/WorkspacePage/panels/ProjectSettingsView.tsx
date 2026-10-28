@@ -11,6 +11,7 @@ import {
   useTemplateMeta,
   useUpdateTeamSet,
 } from "@entities/project";
+import { useCapabilities } from "@entities/session";
 import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
@@ -108,6 +109,7 @@ export const ProjectSettingsView = ({
   const { mutate: instantiateNda } = useInstantiateNda();
   const { mutate: deleteNdaFiles } = useDeleteNdaFiles();
   const { mutate: moveProject, isPending: isMoving } = useMoveProject();
+  const { lacks } = useCapabilities();
   const updateTeamSet = useUpdateTeamSet();
   const [ndaConfirmOpen, setNdaConfirmOpen] = useState(false);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
@@ -634,16 +636,18 @@ export const ProjectSettingsView = ({
         }
       />
 
-      <FolderPickerModal
-        isOpen={movePickerOpen}
-        onClose={() => {
-          setMovePickerOpen(false);
-        }}
-        onSelect={moveToParent}
-        initialPath={project.folder
-          .replace(/[/\\]+$/, "")
-          .replace(/[/\\][^/\\]+$/, "")}
-      />
+      {!lacks("move_project") && (
+        <FolderPickerModal
+          isOpen={movePickerOpen}
+          onClose={() => {
+            setMovePickerOpen(false);
+          }}
+          onSelect={moveToParent}
+          initialPath={project.folder
+            .replace(/[/\\]+$/, "")
+            .replace(/[/\\][^/\\]+$/, "")}
+        />
+      )}
     </div>
   );
 };

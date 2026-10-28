@@ -16,12 +16,16 @@ export {
   useDeleteNdaFiles,
 } from "./api/projectQueries";
 export {
+  ProjectOwnerSchema,
   ProjectResponseSchema,
   CreateProjectRequestSchema,
   ConnectProjectRequestSchema,
   UpdateProjectRequestSchema,
   NdaStatusResponseSchema,
 } from "./api/projectSchemas";
+export type { ProjectOwner } from "./api/projectSchemas";
+export { isProjectUnavailable } from "./lib/projectAccess";
+export { PROJECT_ROLES, useProjectRoleLabel } from "./lib/projectRole";
 export { useTemplateMeta } from "./lib/templateMeta";
 export type { TemplateMeta } from "./lib/templateMeta";
 export { useKindMeta } from "./lib/kindMeta";

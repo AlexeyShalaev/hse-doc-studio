@@ -1,4 +1,5 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
+import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
   DEFAULT_SERVER_SCENARIO_ID,
@@ -18,6 +19,8 @@ export type ServerDemoWorld = {
   bootstrap: Bootstrap;
   /** Администратор создан мастером первого запуска. */
   adminCreated: boolean;
+  /** Проекты мира: у каждого своя роль у каждого человека. */
+  projects: DemoProject[];
 };
 
 export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
@@ -25,7 +28,12 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     findServerScenario(scenarioId) ??
     findServerScenario(DEFAULT_SERVER_SCENARIO_ID);
   if (!scenario) throw new Error("server demo: no default scenario");
-  return { scenario, bootstrap: scenario.bootstrap(), adminCreated: false };
+  return {
+    scenario,
+    bootstrap: scenario.bootstrap(),
+    adminCreated: false,
+    projects: seedProjects(),
+  };
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

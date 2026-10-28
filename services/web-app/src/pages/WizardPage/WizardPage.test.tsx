@@ -21,17 +21,26 @@ vi.mock("@features/folder-picker", () => ({
   FolderPickerModal: () => null,
   useInspectFolder: () => ({ data: undefined, isError: false }),
 }));
+// Возможности клиента: по умолчанию локальные (всё есть), сервер убирает папки.
+const absent = new Set<string>();
+vi.mock("@entities/session", async () => ({
+  ...(await vi.importActual<Record<string, unknown>>("@entities/session")),
+  useCapabilities: () => ({ lacks: (name: string) => absent.has(name) }),
+}));
 vi.mock("@features/git-remote", () => ({
   CloneWizard: ({
+    folderless,
     initialTarget,
     onExit,
     onOpenProject,
   }: {
+    folderless?: boolean;
     initialTarget?: { url: string; credentialId: string | null } | null;
     onExit: () => void;
     onOpenProject: (id: string) => void;
   }) => (
     <div>
+      <div data-testid="folderless">{String(folderless ?? false)}</div>
       <div data-testid="target">{JSON.stringify(initialTarget)}</div>
       <button type="button" onClick={onExit}>
         exit
@@ -113,5 +122,41 @@ describe("страница мастеров: режим клонирования
     mount("/wizard?mode=connect");
     expect(screen.getByText("connect wizard")).toBeInTheDocument();
     expect(screen.queryByTestId("target")).toBeNull();
+  });
+});
+
+describe("страница мастеров: серверный режим без папок", () => {
+  afterEach(() => {
+    cleanup();
+    absent.clear();
+  });
+
+  const useServer = () => {
+    absent.add("fs_browse");
+    absent.add("connect_folder");
+  };
+
+  it("локально клонирование идёт с выбором папки", () => {
+    mount("/wizard?mode=clone");
+    expect(screen.getByTestId("folderless")).toHaveTextContent("false");
+  });
+
+  it("на сервере клонирование без выбора папки", () => {
+    useServer();
+    mount("/wizard?mode=clone");
+    expect(screen.getByTestId("folderless")).toHaveTextContent("true");
+  });
+
+  it("на сервере подключения папки нет: ссылка возвращает на главную", async () => {
+    useServer();
+    mount("/wizard?mode=connect");
+    expect(screen.queryByText("connect wizard")).toBeNull();
+    expect((await screen.findByTestId("where")).textContent).toBe("/");
+  });
+
+  it("на сервере создание проекта доступно", () => {
+    useServer();
+    mount("/wizard?mode=create");
+    expect(screen.getByText("create wizard")).toBeInTheDocument();
   });
 });

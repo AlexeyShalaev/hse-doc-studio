@@ -8,6 +8,11 @@ export type EmptyStateProps = {
   /** Непустой запрос → «ничего не нашлось», а не «проектов ещё нет». */
   query?: string | undefined;
   onResetQuery?: (() => void) | undefined;
+  /** server: проекты лежат на сервере, подключать папку нечем, есть приглашения. */
+  variant?: "local" | "server" | undefined;
+  /** Выбран раздел «Мои» или «Организации», и в нём пусто. */
+  scopeFiltered?: boolean | undefined;
+  onResetScope?: (() => void) | undefined;
 };
 
 export const EmptyState = ({
@@ -15,8 +20,13 @@ export const EmptyState = ({
   onClone,
   query,
   onResetQuery,
+  variant = "local",
+  scopeFiltered = false,
+  onResetScope,
 }: EmptyStateProps) => {
   const { t } = useTranslation("welcome");
+  const { t: tAccess } = useTranslation("projectAccess");
+  const isServer = variant === "server";
   const trimmedQuery = (query ?? "").trim();
   const isSearchMiss = trimmedQuery !== "";
 
@@ -37,17 +47,34 @@ export const EmptyState = ({
         {isSearchMiss ? <SearchX size={32} /> : <GraduationCap size={32} />}
       </div>
       <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-        {isSearchMiss ? t("empty.noMatchTitle") : t("empty.title")}
+        {isSearchMiss
+          ? t("empty.noMatchTitle")
+          : scopeFiltered
+            ? tAccess("empty.scopeTitle")
+            : isServer
+              ? tAccess("empty.title")
+              : t("empty.title")}
       </h3>
-      <p className="dim" style={{ margin: "8px 0 18px" }}>
+      <p
+        className="dim"
+        style={{ margin: "8px auto 18px", maxWidth: 440, lineHeight: 1.5 }}
+      >
         {isSearchMiss
           ? t("empty.noMatchDescription", { query: trimmedQuery })
-          : t("empty.description")}
+          : scopeFiltered
+            ? tAccess("empty.scopeDescription")
+            : isServer
+              ? tAccess("empty.description")
+              : t("empty.description")}
       </p>
       {isSearchMiss ? (
         <button type="button" className="btn" onClick={onResetQuery}>
           <SearchX size={13} />
           {t("empty.resetQuery")}
+        </button>
+      ) : scopeFiltered && onResetScope ? (
+        <button type="button" className="btn" onClick={onResetScope}>
+          {tAccess("scope.all")}
         </button>
       ) : (
         <div
