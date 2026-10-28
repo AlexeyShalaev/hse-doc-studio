@@ -4,10 +4,11 @@ import json
 from collections.abc import AsyncIterator
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
     CheckResultsResponse,
 )
@@ -45,7 +46,7 @@ from hse_doc_studio.use_cases.compile.get_compile_stream import (
 from hse_doc_studio.use_cases.compile.list_compiles import ListCompilesInput, ListCompilesUC
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _severity_counts(check_results: list[CheckResult]) -> tuple[int, int]:

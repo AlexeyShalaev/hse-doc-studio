@@ -11,9 +11,10 @@ from collections.abc import Awaitable, Callable
 from typing import TypeVar
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.template_update import (
     ApplyTemplateUpdateRequest,
     ApplyTemplateUpdateResponse,
@@ -74,7 +75,7 @@ from hse_doc_studio.use_cases.template_update.set_template_tracking import (
     SetTemplateTrackingUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 T = TypeVar("T")
 

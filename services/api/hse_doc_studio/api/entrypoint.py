@@ -136,12 +136,15 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     """Factory function for uvicorn to create the app instance."""
     ensure_supported_mode(settings)
     configure_logging()
+    # Документация API лежит вне /api/v1, поэтому гард и реестр маршрутов её не видят: на сервере без входа
+    # она открыта всем. В серверном режиме её нет вовсе.
+    docs_enabled = settings.mode is not StudioMode.server
     app = FastAPI(
         title="hse-doc-studio",
         version=settings.get_app_version(),
-        openapi_url="/system/openapi.json",
-        docs_url="/system/docs",
-        redoc_url="/system/redoc",
+        openapi_url="/system/openapi.json" if docs_enabled else None,
+        docs_url="/system/docs" if docs_enabled else None,
+        redoc_url="/system/redoc" if docs_enabled else None,
         redirect_slashes=False,
     )
 

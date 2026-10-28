@@ -9,9 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.git_mapping import map_operation, map_probe, map_provider_info, map_token_info
 from hse_doc_studio.api.schemas.git_sync import (
     CloneDefaultsResponse,
@@ -67,7 +68,7 @@ from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetO
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeInput, ProbeRemoteUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderInput, DetectSharedFolderUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_credential(view: CredentialView) -> GitCredentialResponse:

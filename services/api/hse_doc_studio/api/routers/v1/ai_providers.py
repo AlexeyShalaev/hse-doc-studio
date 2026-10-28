@@ -3,9 +3,10 @@ from __future__ import annotations
 from uuid import UUID
 
 import structlog
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, status
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.ai_providers import (
     AIProviderResponse,
     CreateAIProviderRequest,
@@ -35,7 +36,7 @@ from hse_doc_studio.use_cases.ai_providers.update_ai_provider import (
     UpdateAIProviderUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 logger = structlog.get_logger()
 
 

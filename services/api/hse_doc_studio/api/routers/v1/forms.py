@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.forms import (
     FormColumnResponse,
     FormErrorResponse,
@@ -26,7 +27,7 @@ from hse_doc_studio.use_cases.forms.list_forms import ListFormsInput, ListFormsU
 from hse_doc_studio.use_cases.forms.render_form import RenderFormInput, RenderFormUC
 from hse_doc_studio.use_cases.forms.update_form import UpdateFormInput, UpdateFormUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_field(f: FormFieldDef) -> FormFieldResponse:

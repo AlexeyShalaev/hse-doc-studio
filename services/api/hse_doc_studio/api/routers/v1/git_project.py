@@ -8,7 +8,7 @@ from __future__ import annotations
 from urllib.parse import quote
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
@@ -19,6 +19,7 @@ from hse_doc_studio.api.conflict_mapping import (
     map_session,
     resolutions_from_body,
 )
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.git_mapping import map_status
 from hse_doc_studio.api.schemas.git_sync import (
     BundleExportRequest,
@@ -78,7 +79,7 @@ from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncInput, StartSy
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC
 from hse_doc_studio.use_cases.git_sync.update_git_settings import UpdateGitSettingsInput, UpdateGitSettingsUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 @router.get("/projects/{project_id}/git", response_model=GitStatusResponse)

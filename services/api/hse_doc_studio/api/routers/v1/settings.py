@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.settings import SettingsResponse, UpdateSettingsRequest
 from hse_doc_studio.use_cases.settings.get_settings import GetSettingsUC
 from hse_doc_studio.use_cases.settings.update_settings import (
@@ -13,7 +14,7 @@ from hse_doc_studio.use_cases.settings.update_settings import (
 )
 from hse_doc_studio.use_cases.settings.value_rules import disk_usage_warn_gb, git_fetch_interval_s
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _int_setting(settings: dict[str, Any], key: str, default: int) -> int:

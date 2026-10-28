@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.catalog import (
     SubmissionDocItemResponse,
     SubmissionExtraItemResponse,
@@ -42,7 +43,7 @@ from hse_doc_studio.use_cases.submission.preview_custom_docs import (
     PreviewSubmissionCustomDocsUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_custom_doc_preview(item: CustomDocPreviewItem) -> CustomDocPreviewItemResponse:

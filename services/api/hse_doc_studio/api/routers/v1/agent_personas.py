@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, status
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.agent_personas import (
     AgentPersonaResponse,
     BuiltinPersonaResponse,
@@ -33,7 +34,7 @@ from hse_doc_studio.use_cases.agent_personas.update_agent_persona import (
 )
 from hse_doc_studio.use_cases.chat.personas import builtin_duplicable_personas
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_persona(persona: AgentPersona) -> AgentPersonaResponse:

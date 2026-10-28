@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.languagetool import (
     LanguageToolImageResponse,
     LanguageToolImagesListResponse,
@@ -36,7 +37,7 @@ from hse_doc_studio.use_cases.languagetool.set_active_languagetool_image import 
     SetActiveLanguageToolImageUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_local(info: LocalImageInfo) -> LanguageToolImageResponse:

@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -67,7 +68,7 @@ from hse_doc_studio.use_cases.projects.update_team_set import (
     UpdateTeamSetUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_lock(project: Project) -> LockResponse:

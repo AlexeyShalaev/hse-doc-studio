@@ -75,3 +75,12 @@ def test__login__env_admin__sees_empty_project_list(stand: TestClient) -> None:
 
 def test__projects__anonymous__is_unauthorized(stand: TestClient) -> None:
     assert stand.get("/api/v1/projects").status_code == 401
+
+
+def test__docs__server_mode__not_mounted(stand: TestClient) -> None:
+    # Swagger, ReDoc и схема лежат вне /api/v1 и гардом не закрыты: на сервере их нет вовсе.
+    for path in ("/system/docs", "/system/redoc", "/system/openapi.json"):
+        body = stand.get(path).text.lower()
+        assert "swagger-ui" not in body
+        assert "redoc" not in body
+        assert '"openapi"' not in body

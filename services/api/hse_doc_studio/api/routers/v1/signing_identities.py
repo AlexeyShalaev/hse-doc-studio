@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.signing_identity import (
     CreateSelfSignedRequest,
     GenerateOpenPgpKeyRequest,
@@ -45,7 +46,7 @@ from hse_doc_studio.use_cases.signing_identities.openpgp_keys import (
     ListOpenPgpKeysUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 @router.get("/signing-identities", response_model=list[SigningIdentityResponse])

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.hse_persons import (
     HseFacetOptionResponse,
     HseFacetsResponse,
@@ -18,7 +19,7 @@ from hse_doc_studio.use_cases.hse_persons.get_person_detail import (
 )
 from hse_doc_studio.use_cases.hse_persons.search_persons import SearchHsePersonsInput, SearchHsePersonsUC
 
-router = APIRouter(route_class=DishkaRoute, prefix="/hse/persons")
+router = APIRouter(route_class=SafeDishkaRoute, prefix="/hse/persons")
 
 _MAX_LIMIT = 60
 

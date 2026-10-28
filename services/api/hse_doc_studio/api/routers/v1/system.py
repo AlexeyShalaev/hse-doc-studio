@@ -5,11 +5,12 @@ import shutil
 from pathlib import Path
 from typing import Literal
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.update.repositories import IReleaseNotesRepository, ISelfUpdateGateway
@@ -21,7 +22,7 @@ from hse_doc_studio.use_cases.system.check_updates import CheckUpdatesUC
 from hse_doc_studio.use_cases.system.get_update_status import GetUpdateStatusUC
 from hse_doc_studio.use_cases.system.list_versions import ListVersionsUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 EditorId = Literal["cursor", "vscode"]
 OsName = Literal["windows", "macos", "linux", "other"]

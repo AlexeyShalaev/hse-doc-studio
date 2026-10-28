@@ -4,11 +4,12 @@ import dataclasses
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.signature import (
     AttachDetachedSignatureResponse,
     DetachedSignatureResponse,
@@ -92,7 +93,7 @@ from hse_doc_studio.use_cases.signatures.upload_signature_png import (
     UploadSignaturePngUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_slot(slot: SignatureSlot) -> SlotInfoResponse:

@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Request
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.office_editor import OfficeEditorConfigResponse
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.office import IOfficeEditorService
@@ -19,7 +20,7 @@ from hse_doc_studio.use_cases.office_editor.handle_callback import (
     OfficeEditorCallbackUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 @router.get(

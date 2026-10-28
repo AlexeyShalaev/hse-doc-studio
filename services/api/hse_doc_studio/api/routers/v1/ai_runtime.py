@@ -4,11 +4,12 @@ import json
 from collections.abc import AsyncIterator
 
 import structlog
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.ai_runtime import (
     CatalogModelResponse,
     DeleteModelResponse,
@@ -51,7 +52,7 @@ from hse_doc_studio.use_cases.ai_runtime.stop_runtime import StopOllamaRuntimeUC
 from hse_doc_studio.use_cases.ai_runtime.sync_local_provider import SyncLocalOllamaProviderUC
 from hse_doc_studio.use_cases.ai_runtime.unload_model import UnloadModelInput, UnloadModelUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 logger = structlog.get_logger()
 
 

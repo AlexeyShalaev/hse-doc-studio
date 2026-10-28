@@ -3,10 +3,11 @@ from __future__ import annotations
 import mimetypes
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import Response
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.file import (
     CreateDirRequest,
     FileTreeItemResponse,
@@ -29,7 +30,7 @@ from hse_doc_studio.use_cases.files.list_file_tree import (
 from hse_doc_studio.use_cases.files.move_file import MoveFileInput, MoveFileUC
 from hse_doc_studio.use_cases.files.put_file import PutFileInput, PutFileUC, StaleFileError
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 _EXTENSION_CONTENT_TYPES: dict[str, str] = {
     ".tex": "text/plain; charset=utf-8",

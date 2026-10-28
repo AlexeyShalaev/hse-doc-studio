@@ -5,10 +5,11 @@ from collections.abc import AsyncIterator
 from uuid import UUID
 
 import structlog
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.chat import (
     AgentToolResponse,
     AnswerTurnRequest,
@@ -64,7 +65,7 @@ from hse_doc_studio.use_cases.chat.system_start_chat_turn import (
     SystemStartChatTurnUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 logger = structlog.get_logger()
 
 

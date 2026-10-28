@@ -8,11 +8,12 @@
 
 from __future__ import annotations
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.core.fonts.repositories import ISystemFontProvider
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.setup import (
@@ -27,7 +28,7 @@ from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.setup.apply_setup import ApplySetupInput, ApplySetupUC
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 class SetupCheckResponse(BaseModel):
