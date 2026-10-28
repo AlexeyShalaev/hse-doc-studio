@@ -68,3 +68,10 @@ def test_server_cors_wildcard_without_credentials_and_explicit_origins_pass() ->
 
 def test_local_cors_is_not_validated() -> None:
     Settings(_env_file=None, mode=StudioMode.local, cors={"allow_origins": ["*"], "allow_credentials": True})
+
+
+def test_uvicorn_does_not_trust_forwarded_headers_by_default() -> None:
+    kwargs = Settings(_env_file=None).get_uvicorn_kwargs()
+
+    assert kwargs["proxy_headers"] is False
+    assert kwargs["forwarded_allow_ips"] != "*"

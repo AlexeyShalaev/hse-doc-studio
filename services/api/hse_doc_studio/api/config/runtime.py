@@ -14,8 +14,16 @@ class HttpServerConfig(BaseModel):
     timeout_keep_alive: int = Field(default=5, description="Keep-alive timeout in seconds")
     timeout_graceful_shutdown: int = Field(default=10, description="Graceful shutdown timeout in seconds")
     access_log: bool = Field(default=False, description="Enable uvicorn access log")
-    proxy_headers: bool = Field(default=True, description="Trust proxy headers")
-    forwarded_allow_ips: str = Field(default="*", description="Trusted proxy IPs")
+    proxy_headers: bool = Field(
+        default=False,
+        description=(
+            "Пусть uvicorn сам подменяет адрес клиента по X-Forwarded-For. Выключено: адрес за прокси определяет "
+            "client_ip() по auth.trusted_proxies, иначе любой пир подставит себе произвольный адрес."
+        ),
+    )
+    forwarded_allow_ips: str = Field(
+        default="127.0.0.1", description="Пиры, чьим заголовкам верит uvicorn при proxy_headers=true"
+    )
     projects_root: Path | None = Field(
         default=None,
         description="Корень томов проектов сервера (projects_root/<project_id>); по умолчанию data_dir/projects.",
