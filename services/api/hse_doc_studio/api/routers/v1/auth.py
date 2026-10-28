@@ -13,7 +13,7 @@ from hse_doc_studio.api.auth_cookie import (
 )
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.observability.client_ip import client_ip
-from hse_doc_studio.api.rate_limit import enforce_email, enforce_ip
+from hse_doc_studio.api.rate_limit import email_send_allowed, enforce_ip
 from hse_doc_studio.api.routers.v1.session import session_user
 from hse_doc_studio.api.schemas.session import (
     ForgotRequest,
@@ -87,8 +87,9 @@ async def verify_email(body: VerifyEmailRequest, request: Request) -> Response:
 async def resend_verification(body: ResendVerificationRequest, request: Request, response: Response) -> ForgotResponse:
     """Всегда один и тот же ответ: по нему не узнать, есть ли такой аккаунт. Ссылка уходит только на почту."""
     await enforce_ip(request, AUTH_IP)
-    await enforce_email(request, body.email)
-    await (await request.state.dishka_container.get(ResendVerificationUC)).execute(body.email)
+    # Сверх лимита письмо молча не шлём, а ответ тот же: по нему адрес не различить и сброс владельцу не закрыть.
+    if await email_send_allowed(request, body.email, "verify_resend"):
+        await (await request.state.dishka_container.get(ResendVerificationUC)).execute(body.email)
     response.headers["Cache-Control"] = "no-store"
     return ForgotResponse(status="check_email", link=None)
 
@@ -97,8 +98,9 @@ async def resend_verification(body: ResendVerificationRequest, request: Request,
 async def forgot_password(body: ForgotRequest, request: Request, response: Response) -> ForgotResponse:
     """Ответ нейтральный. Ссылку сброса не показываем и без SMTP: её выдаёт администратор."""
     await enforce_ip(request, AUTH_IP)
-    await enforce_email(request, body.email)
-    await (await request.state.dishka_container.get(ForgotPasswordUC)).execute(body.email)
+    # Сверх лимита письмо молча не шлём, а ответ тот же: по нему адрес не различить и сброс владельцу не закрыть.
+    if await email_send_allowed(request, body.email, "forgot"):
+        await (await request.state.dishka_container.get(ForgotPasswordUC)).execute(body.email)
     response.headers["Cache-Control"] = "no-store"
     return ForgotResponse(status="check_email", link=None)
 

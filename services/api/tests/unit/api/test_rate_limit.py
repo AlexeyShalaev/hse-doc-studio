@@ -6,6 +6,7 @@ from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.rate_limit import (
     EXPENSIVE_ROUTES,
+    email_send_allowed,
     enforce_email,
     enforce_ip,
     install_rate_limiter,
@@ -36,6 +37,10 @@ def _app(*, limited: bool = True, scale: float = 1.0) -> FastAPI:
     async def forgot(request: Request, email: str) -> dict[str, bool]:
         await enforce_email(request, email, TIGHT)
         return {"ok": True}
+
+    @app.post("/silent")
+    async def silent(request: Request, email: str, action: str = "forgot") -> dict[str, bool]:
+        return {"sent": await email_send_allowed(request, email, action, TIGHT)}
 
     async def as_user(request: Request) -> None:
         set_current_actor(Actor.user(request.headers["x-user"]))
@@ -82,6 +87,27 @@ async def test__forgot__email_key_is_normalized_and_isolated() -> None:
             assert (await client.post("/forgot", params={"email": address})).status_code == 200
         assert (await client.post("/forgot", params={"email": " ANN@example.org"})).status_code == 429
         assert (await client.post("/forgot", params={"email": "bob@example.org"})).status_code == 200
+
+
+async def test__silent_email_limit__never_429_and_actions_do_not_share_a_key() -> None:
+    async with _client(_app()) as client:
+        sent = []
+        for _ in range(4):
+            response = await client.post("/silent", params={"email": "victim@example.org"})
+            assert response.status_code == 200
+            sent.append(response.json()["sent"])
+        other_action = await client.post("/silent", params={"email": "victim@example.org", "action": "verify_resend"})
+    assert sent == [True, True, False, False]
+    assert other_action.json() == {"sent": True}
+
+
+async def test__silent_email_limit__other_client_address_is_not_locked_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings.auth, "trusted_proxies", ["127.0.0.1"])
+    async with _client(_app()) as client:
+        for _ in range(3):
+            await client.post("/silent", params={"email": "v@example.org"}, headers={"x-forwarded-for": "9.9.9.9"})
+        owner = await client.post("/silent", params={"email": "v@example.org"}, headers={"x-forwarded-for": "8.8.8.8"})
+    assert owner.json() == {"sent": True}
 
 
 @pytest.mark.parametrize(

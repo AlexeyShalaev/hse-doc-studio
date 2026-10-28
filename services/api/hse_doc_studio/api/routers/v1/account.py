@@ -98,7 +98,7 @@ async def revoke_other_sessions(request: Request) -> Response:
 async def change_email(body: ChangeEmailRequest, request: Request, response: Response) -> ChangeEmailResponse:
     """Ссылка подтверждения уходит на новый адрес; пока её не открыли, действует прежний."""
     user_id = _user_id()
-    await enforce_email(request, body.email)
+    await enforce_email(request, body.email, action=f"change_email:{user_id}")
     result = await (await request.state.dishka_container.get(RequestEmailChangeUC)).execute(
         user_id, body.password, body.email
     )

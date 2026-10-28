@@ -73,9 +73,27 @@ async def enforce_ip(request: Request, rule: RateRule) -> None:
     await enforce(request, rule, f"ip:{client_ip(request)}")
 
 
-async def enforce_email(request: Request, email: str, rule: RateRule = AUTH_EMAIL) -> None:
-    """Для маршрутов, что отправляют письмо: нельзя завалить чужой ящик."""
-    await enforce(request, rule, f"email:{normalize_email(email)}")
+def _email_key(request: Request, email: str, action: str) -> str:
+    # Ключ включает действие и адрес клиента: иначе пять запросов чужака закрывали бы владельцу адреса
+    # сброс пароля, а запросы одного действия съедали бы лимит другого.
+    return f"email:{action}:{client_ip(request)}:{normalize_email(email)}"
+
+
+async def enforce_email(request: Request, email: str, rule: RateRule = AUTH_EMAIL, *, action: str = "mail") -> None:
+    """Для маршрутов с известным пользователем, что отправляют письмо: 429, если с этого адреса слишком часто."""
+    await enforce(request, rule, _email_key(request, email, action))
+
+
+async def email_send_allowed(request: Request, email: str, action: str, rule: RateRule = AUTH_EMAIL) -> bool:
+    """Для маршрутов с нейтральным ответом (забыл пароль, повтор подтверждения): False значит письмо не слать.
+
+    Отказа 429 здесь нет намеренно: он различал бы адреса и позволял бы чужому исчерпать лимит владельца.
+    """
+    limiter: IRateLimiter | None = getattr(request.app.state, "rate_limiter", None)
+    if limiter is None:
+        return True
+    decision = await limiter.hit(_scaled(request, rule), _email_key(request, email, action))
+    return decision.allowed
 
 
 def _subject(request: Request) -> str:
