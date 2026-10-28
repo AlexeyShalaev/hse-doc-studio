@@ -11,7 +11,7 @@ From the repo root (see `make help`):
 From `services/api`:
 - `make run-api`: run the API (local mode by default).
 - `make fmt` / `make check`: format, ruff, mypy.
-- `make test` / `make test-unit`: tests; server-mode targets (`test-pg`, `test-no-server`) arrive with the test-infrastructure slice.
+- `make test` / `make test-unit`: tests; server-mode targets `make test-pg` and `make test-no-server`.
 
 ## Dev infrastructure
 

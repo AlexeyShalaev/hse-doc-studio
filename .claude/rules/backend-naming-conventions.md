@@ -8,7 +8,7 @@ Follow these strict naming conventions to ensure consistency across the monorepo
 | :--- | :--- | :--- | :--- |
 | **Entity** | `entities.py` | `SingularNoun` (e.g., `User`) | - |
 | **Repository Protocol** | `repositories.py` | `NounRepository` (e.g., `UserRepository`) | `plural_nouns` (e.g., `users`) |
-| **Repository Impl** | `{entity}.py` | `PostgresNounRepository` | - |
+| **Repository Impl** | `{entity}.py` | `SqlNounRepository` | - |
 | **Domain Service** | `services.py` | `NounDomainService` | - |
 | **Use Case** | `{verb}_{noun}.py` | `VerbNounUseCase` | - |
 | **DTO** | `dto.py` | `VerbNounDTO`, `NounDTO` (Pydantic models) | - |
@@ -27,7 +27,7 @@ Follow these strict naming conventions to ensure consistency across the monorepo
 
 ### Infrastructure (infra/)
 - **ORM Models**: In `infra/db/orm/`. Classes must have `DB` suffix.
-- **Repository Implementations**: In `infra/repositories/`. Classes prefixed with `Postgres` or `Redis`.
+- **Repository Implementations**: In `infra/db/repositories/`. Classes prefixed with `Sql` (or `Redis`).
 
 ### API (api/)
 - **Servicers**: Named as `<Noun>ServiceServicer` (following gRPC naming).

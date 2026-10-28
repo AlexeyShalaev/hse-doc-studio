@@ -142,7 +142,7 @@ class CreateUserUseCase:
 class CreateUserUseCase:
     def __init__(self, uow: AsyncUnitOfWork) -> None:
         self._uow = uow
-        self._user_repo = PostgresUserRepository(...)  # ❌ WRONG
+        self._user_repo = SqlUserRepository(...)  # ❌ WRONG
 ```
 
 ### ❌ NEVER call session.commit() manually
@@ -157,7 +157,7 @@ async def execute(self, email: str) -> User:
 ### ❌ NEVER import from infra in use cases
 ```python
 # ❌ WRONG
-from infra.repositories.user import PostgresUserRepository  # ❌ WRONG
+from infra.db.repositories.user import SqlUserRepository  # ❌ WRONG
 from infra.clients.google import GoogleOAuthClient  # ❌ WRONG
 ```
 

@@ -21,18 +21,23 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 
 Единственный источник форм: `contracts/server`. Ошибки: тело `{detail, code}`, коды из `error_codes.json`.
 
-| Назначение | URL |
-|---|---|
-| состояние входа | `GET /api/v1/session/bootstrap` |
-| вход, выход, сессия | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` |
-| регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) |
-| OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` |
-| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `POST .../settings`, `POST .../complete`; после завершения все 404 |
-| аккаунт | `/account` (профиль, пароль), `POST /account/email` и `POST /account/email/confirm` (смена e-mail, `ChangeEmailRequest`/`ChangeEmailResponse`), `/account/sessions`, `/account/tokens`, `/account/identities` |
-| проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`), `/projects/{id}/members` |
-| админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` |
-| раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` |
-| здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» |
+Колонка «Статус»: **есть** значит маршрут смонтирован в M1, **план** значит это целевой контракт, маршрута пока нет (формы в `contracts/server` могут существовать раньше роутера).
+
+| Назначение | URL | Статус |
+|---|---|---|
+| состояние входа | `GET /api/v1/session/bootstrap` | есть |
+| вход, выход | `POST /auth/login`, `POST /auth/logout` | есть |
+| сессия | `GET /auth/session` | план |
+| регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) | есть |
+| OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` | план |
+| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `POST .../settings`, `POST .../complete`; после завершения все 404 | есть |
+| аккаунт: сессии, пароль, e-mail | `/account/sessions`, `POST /account/password`, `POST /account/email` и `POST /account/email/confirm` (смена e-mail, `ChangeEmailRequest`/`ChangeEmailResponse`) | есть |
+| аккаунт: профиль, токены, identities | `/account` (профиль), `/account/tokens`, `/account/identities` | план |
+| проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`) | есть |
+| участники проекта | `/projects/{id}/members` | план |
+| админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` | план |
+| раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` | план |
+| здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» | есть |
 
 CSRF: токен привязан к строке сессии, приходит в bootstrap и ответе входа, шлётся в `X-CSRF-Token`; кроме того проверяется `Origin`. Bearer PAT освобождён от CSRF и не управляет токенами.
 
@@ -44,8 +49,8 @@ CSRF: токен привязан к строке сессии, приходит
 |---|---|---|
 | `public` | любой | |
 | `authenticated` | вошедший пользователь | 401 аноним |
-| `instance_admin` | админ установки и допущенный хост/IP | 404 не-админу |
-| `org_admin` | админ или владелец организации | 404 чужому, 403 при нехватке роли |
+| `instance_admin` | админ установки и допущенный хост/IP | 404 не-админу под `/api/admin`, 403 на остальных маршрутах (`guards._enforce_scope`) |
+| `org_admin` | админ или владелец организации | 404 не-админу установки |
 | `runner_token` | токен раннера (хеш) | 401 |
 | `job_token` | HMAC job-токен на задачу | 401 |
 | `signed_token` | короткоживущий подписанный токен (ONLYOFFICE, превью) | 401 |

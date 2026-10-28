@@ -27,9 +27,9 @@ Procedure for adding a new repository for a domain entity.
    ```
 
 3. **Implement Repository** (APP-scope: hold the sessionmaker provider, not a session; see `.claude/rules/backend-repositories.md`):
-   In `infra/repositories/<entity>.py`:
+   In `infra/db/repositories/<entity>.py`:
    ```python
-   class PostgresNounRepository:
+   class SqlNounRepository:
        def __init__(self, sessions: SessionProvider) -> None:
            self._sessions = sessions
 

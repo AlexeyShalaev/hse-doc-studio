@@ -45,11 +45,11 @@ Repositories handle data persistence and MUST return Domain Entities, NOT ORM mo
 
 ### ✅ Correct Repository Implementation:
 ```python
-# infra/repositories/user.py
+# infra/db/repositories/user.py
 from core.users.entities import User  # Domain Entity
 from infra.db.orm.user import UserDB  # ORM model
 
-class PostgresUserRepository:
+class SqlUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -97,8 +97,8 @@ class UserRepository(Protocol):
 ```
 
 ### Repository Naming Convention
-- Repository implementations MUST be prefixed with the database type
-- Examples: `PostgresUserRepository`, `PostgresSocialAccountRepository`
+- Repository implementations MUST be prefixed with `Sql` (the older `PostgresProjectAclRepository` and `PostgresProjectLocator` keep their names)
+- Examples: `SqlUserRepository`, `SqlSessionRepository`
 - NOT: `UserRepository` (this is the protocol name in core/)
 
 ## Transactional Outbox

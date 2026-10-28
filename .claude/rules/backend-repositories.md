@@ -3,13 +3,13 @@
 Repositories handle persistence. Two families exist and both follow the same port discipline:
 
 - **Local mode** (default): synchronous JSON-file repositories in `infra/persistence/` (`data_dir` and the project folder). They stay as they are.
-- **Server mode** (stage 2): `Postgres*` repositories in `infra/repositories/`, async, behind the same protocols once a port has been converted. Design: `docs/design/persistence-server.md`.
+- **Server mode** (stage 2): `Sql*` repositories in `infra/db/repositories/`, async, behind the same protocols once a port has been converted. Design: `docs/design/persistence-server.md`.
 
 ## Core Principles
 
 1. Repositories MUST return domain entities, NEVER ORM models.
 2. Protocols live in `core/` (`core/repositories.py` or the owning package); implementations in `infra/`.
-3. SQL implementations are prefixed with the database type (`PostgresUserRepository`); JSON ones keep the `Json*` naming of their neighbours.
+3. SQL implementations are prefixed with `Sql` (`SqlUserRepository`; the older project locator and ACL repositories keep `Postgres*`, do not add new ones); JSON ones keep the `Json*` naming of their neighbours.
 4. Repositories are **APP-scope**: one instance per container, holding an `async_sessionmaker`, never a session. A request-scoped repository injected into an APP-scope service ends up with a dead session.
 5. Each method runs in its own short transaction (`async with sessionmaker.begin()`), unless an ambient transaction is alive (see UoW below).
 6. Only the use case decides that several writes are atomic. A repository NEVER calls `commit()`, `rollback()` or `refresh()` itself.
@@ -28,8 +28,8 @@ class IUserRepository(Protocol):
 ```
 
 ```python
-# infra/repositories/user.py
-class PostgresUserRepository:
+# infra/db/repositories/user.py
+class SqlUserRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions  # wraps async_sessionmaker + ambient transaction
 

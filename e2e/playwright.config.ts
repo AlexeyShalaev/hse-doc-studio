@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Стенд поднимает make e2e-stand-up (или шаг CI); адрес и учётные данные приходят из окружения.
+// Стенд поднимает make server-lite-up server-lite-seed (или шаг CI); адрес и учётные данные приходят из окружения.
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:8100";
 
 export default defineConfig({
