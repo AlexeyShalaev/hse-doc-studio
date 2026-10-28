@@ -106,6 +106,15 @@ describe("мастер создания проекта на сервере", () 
     expect(screen.getByPlaceholderText(/Diff-аналитика/)).toBeInTheDocument();
   });
 
+  it("список шагов на узком экране ложится полосой сверху, а не колонкой 220 px", () => {
+    mount(SERVER);
+    const steps = screen.getByTestId("wizard-steps");
+    expect(steps.className).toContain("flex-row");
+    expect(steps.className).toContain("sm:flex-col");
+    expect(steps.className).toContain("sm:w-[220px]");
+    expect(steps.getAttribute("style") ?? "").not.toContain("width");
+  });
+
   it("владельцем можно выбрать только организацию, где ты администратор", () => {
     useCreateWizard.setState({ ...filled, step: 4, maxReached: 4 });
     mount(SERVER);

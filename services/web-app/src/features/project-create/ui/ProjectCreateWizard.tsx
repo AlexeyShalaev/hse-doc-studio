@@ -2437,20 +2437,21 @@ export const ProjectCreateWizard = () => {
   const isLastStep = step === totalSteps - 1;
 
   return (
-    <div className="flex h-full" style={{ background: "var(--bg-0)" }}>
-      {/* Sidebar */}
+    <div
+      className="flex h-full flex-col sm:flex-row"
+      style={{ background: "var(--bg-0)" }}
+    >
+      {/* Список шагов: колонка слева, а на узком экране полоса сверху с прокруткой */}
       <div
-        className="flex flex-col shrink-0"
+        className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[220px] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
+        data-testid="wizard-steps"
         style={{
-          width: 220,
           padding: "20px 8px 24px",
           background: "var(--bg-1)",
-          borderRight: "1px solid var(--border)",
-          overflowY: "auto",
         }}
       >
         <div
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 max-sm:hidden"
           style={{ padding: "0 12px 16px" }}
         >
           <Logomark />
@@ -2495,7 +2496,7 @@ export const ProjectCreateWizard = () => {
               disabled={!reachable}
               aria-current={active ? "step" : undefined}
               title={reachable ? undefined : t("wizard.lockedStepTitle")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 max-sm:!w-auto max-sm:shrink-0 max-sm:whitespace-nowrap"
               style={{
                 width: "100%",
                 padding: "6px 14px",
@@ -2570,7 +2571,7 @@ export const ProjectCreateWizard = () => {
 
       {/* Right pane */}
       <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
-        <div style={{ padding: "20px 28px 8px" }}>
+        <div className="max-sm:!px-4" style={{ padding: "20px 28px 8px" }}>
           <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
             <CurIcon size={14} style={{ color: "var(--accent)" }} />
             <span
@@ -2604,7 +2605,7 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex-1"
+          className="flex-1 max-sm:!px-4"
           style={{
             padding: "20px 28px 24px",
             overflowY: "auto",
@@ -2616,7 +2617,7 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex items-center justify-between"
+          className="flex flex-wrap items-center justify-between gap-2 max-sm:!px-3"
           style={{
             padding: "12px 20px",
             borderTop: "1px solid var(--border)",
