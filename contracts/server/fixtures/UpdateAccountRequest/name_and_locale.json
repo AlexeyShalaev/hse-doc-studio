@@ -1,4 +1,7 @@
 {
   "name": "Анна Петрова-Иванова",
-  "locale": "en"
+  "locale": "en",
+  "commit_name": null,
+  "commit_email": null,
+  "commit_use_account_email": null
 }

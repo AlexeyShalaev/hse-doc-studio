@@ -173,7 +173,23 @@ export type ServerSetupEnvironment = z.infer<
 export const UpdateAccountRequestSchema = z.strictObject({
   name: z.string().nullish(),
   locale: LocaleSchema.nullish(),
+  commit_name: z.string().nullish(),
+  commit_email: z.string().nullish(),
+  commit_use_account_email: z.boolean().nullish(),
 });
+export const AccountProfileSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  locale: LocaleSchema.nullable(),
+  commit_name: z.string().nullable(),
+  commit_email: z.string().nullable(),
+  commit_use_account_email: z.boolean(),
+  effective_commit_name: z.string(),
+  effective_commit_email: z.string(),
+  commit_email_is_noreply: z.boolean(),
+});
+export type AccountProfile = z.infer<typeof AccountProfileSchema>;
 export const ChangePasswordRequestSchema = z.strictObject({
   current_password: z.string(),
   new_password: z.string(),

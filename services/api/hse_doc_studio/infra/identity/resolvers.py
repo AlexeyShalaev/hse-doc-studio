@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from hse_doc_studio.core.access.entities import Actor, ActorSource
+from hse_doc_studio.core.identity.commit_identity import DEFAULT_NOREPLY_DOMAIN, commit_identity
 from hse_doc_studio.core.identity.entities import ActorCredentials
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.use_cases.identity.sessions import SessionService
@@ -18,8 +19,11 @@ class LocalActorResolver:
 
 
 class SessionCookieResolver:
-    def __init__(self, sessions: SessionService) -> None:
+    """Имя и e-mail актора это подпись его коммитов (см. `commit_identity`), а не данные аккаунта."""
+
+    def __init__(self, sessions: SessionService, noreply_domain: str = DEFAULT_NOREPLY_DOMAIN) -> None:
         self._sessions = sessions
+        self._noreply_domain = noreply_domain
 
     async def resolve(self, credentials: ActorCredentials) -> Actor | None:
         if not credentials.session_secret:
@@ -28,10 +32,11 @@ class SessionCookieResolver:
         if resolved is None:
             return None
         user = resolved.user
+        author = commit_identity(user, self._noreply_domain)
         return Actor.user(
             user.id,
-            user.name,
-            user.email,
+            author.name,
+            author.email,
             is_instance_admin=user.is_instance_admin,
             source=ActorSource.session,
         )

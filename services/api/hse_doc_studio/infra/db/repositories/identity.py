@@ -35,6 +35,9 @@ def _user(row: UserRow) -> User:
         is_instance_admin=row.is_instance_admin,
         locale=row.locale,
         last_login_at=row.last_login_at,
+        commit_name=row.commit_name,
+        commit_email=row.commit_email,
+        commit_use_account_email=row.commit_use_account_email,
     )
 
 
@@ -50,6 +53,9 @@ def _user_values(user: User) -> dict[str, Any]:
         "locale": user.locale,
         "created_at": user.created_at,
         "last_login_at": user.last_login_at,
+        "commit_name": user.commit_name,
+        "commit_email": user.commit_email,
+        "commit_use_account_email": user.commit_use_account_email,
     }
 
 

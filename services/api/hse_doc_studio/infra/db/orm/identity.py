@@ -23,6 +23,9 @@ class UserRow(Base):
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_instance_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     locale: Mapped[str | None] = mapped_column(String(16))
+    commit_name: Mapped[str | None] = mapped_column(String(256))
+    commit_email: Mapped[str | None] = mapped_column(String(320))
+    commit_use_account_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

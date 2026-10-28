@@ -23,6 +23,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ServerSetupEnvironment: s.ServerSetupEnvironmentSchema,
   AuthErrorBody: s.AuthErrorBodySchema,
   UpdateAccountRequest: s.UpdateAccountRequestSchema,
+  AccountProfile: s.AccountProfileSchema,
   ChangePasswordRequest: s.ChangePasswordRequestSchema,
   ChangeEmailRequest: s.ChangeEmailRequestSchema,
   ChangeEmailResponse: s.ChangeEmailResponseSchema,

@@ -1,0 +1,12 @@
+{
+  "id": "u_01hx7k1a0b",
+  "name": "Иван Сидоров",
+  "email": "ivan.sidorov@example.org",
+  "locale": "en",
+  "commit_name": "Ivan Sidorov",
+  "commit_email": "ivan@personal.example.com",
+  "commit_use_account_email": false,
+  "effective_commit_name": "Ivan Sidorov",
+  "effective_commit_email": "ivan@personal.example.com",
+  "commit_email_is_noreply": false
+}

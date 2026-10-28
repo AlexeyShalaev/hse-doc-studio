@@ -11,7 +11,9 @@ from datetime import timedelta
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
+from hse_doc_studio.core.identity.commit_identity import noreply_domain
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
     IAuditLog,
@@ -50,7 +52,9 @@ from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.infra.identity.user_author_profile import UserAuthorProfile
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.account_profile import GetAccountUC, UpdateAccountUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
@@ -73,6 +77,9 @@ from hse_doc_studio.use_cases.identity.sessions import (
     RevokeSessionUC,
     SessionService,
 )
+from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
+from hse_doc_studio.use_cases.profile.server_profile import ServerClearProfileUC, ServerUpdateProfileUC
+from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
 from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, EnsureBootstrapAdminUC
 from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
 from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService
@@ -107,7 +114,30 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_actor_resolver(self, sessions: SessionService) -> IActorResolver:
-        return ChainActorResolver([SessionCookieResolver(sessions), BearerActorResolver()])
+        return ChainActorResolver(
+            [SessionCookieResolver(sessions, noreply_domain(settings.auth.public_url)), BearerActorResolver()]
+        )
+
+    @provide(override=True)
+    def get_local_author_profile(self) -> ILocalAuthorProfile:
+        """Подпись коммитов берётся из актора запроса, а не из config.json машины."""
+        return UserAuthorProfile()
+
+    @provide
+    def get_account_uc(self, users: IUserRepository) -> GetAccountUC:
+        return GetAccountUC(users, noreply_domain(settings.auth.public_url))
+
+    @provide
+    def get_update_account_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> UpdateAccountUC:
+        return UpdateAccountUC(users, audit, uow, noreply_domain(settings.auth.public_url))
+
+    @provide(override=True)
+    def get_update_profile_uc(self, accounts: UpdateAccountUC) -> UpdateProfileUC:
+        return ServerUpdateProfileUC(accounts)
+
+    @provide(override=True)
+    def get_clear_profile_uc(self, accounts: UpdateAccountUC) -> ClearProfileUC:
+        return ServerClearProfileUC(accounts)
 
     @provide
     def get_credential_repository(self, sessions: SessionProvider) -> ICredentialRepository:
