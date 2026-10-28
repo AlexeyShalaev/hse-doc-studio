@@ -6,6 +6,7 @@ from uuid import UUID
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -25,6 +26,7 @@ from hse_doc_studio.api.schemas.project import (
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
 from hse_doc_studio.use_cases.projects.connect_project import (
@@ -206,9 +208,11 @@ async def create_project(
     uc: FromDishka[CreateProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if body.folder is None and settings.mode is StudioMode.local:
+        raise HTTPException(status_code=422, detail="folder is required")
     try:
         inp = CreateProjectInput(
-            folder=Path(paths.accept(body.folder)),
+            folder=Path(paths.accept(body.folder)) if body.folder is not None else None,
             pack_id=body.pack_id,
             template_id=body.template_id,
             version=body.version,
@@ -315,6 +319,9 @@ async def move_project(
     uc: FromDishka[MoveProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if settings.mode is StudioMode.server and not ServerConfig.from_settings(settings).caps.move_project:
+        # Переезд на другую папку хоста на общем сервере не существует: том выбирает сервер.
+        raise HTTPException(status_code=404, detail="Not Found")
     try:
         result = await uc.execute(MoveProjectInput(project_id=project_id, new_folder=Path(paths.accept(body.folder))))
     except NotFoundError as exc:

@@ -20,6 +20,14 @@ class HttpServerConfig(BaseModel):
         default=None,
         description="Корень томов проектов сервера (projects_root/<project_id>); по умолчанию data_dir/projects.",
     )
+    project_retention_days: int = Field(
+        default=30,
+        ge=0,
+        description="Через сколько суток удалённый проект стирается с тома и из каталога; 0 выключает стирание.",
+    )
+    project_purge_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер ищет удалённые проекты с истёкшим сроком."
+    )
 
 
 class CorsConfig(BaseModel):

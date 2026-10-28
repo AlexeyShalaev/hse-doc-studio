@@ -13,7 +13,7 @@ from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.observability.health import HealthRegistry, build_health_router, build_metrics_router
 from hse_doc_studio.api.observability.metrics import MetricsMiddleware, MetricsRegistry, background_collector
 from hse_doc_studio.api.observability.request_id import RequestIdMiddleware
-from hse_doc_studio.core.background import BackgroundTaskRunner
+from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
 
 if TYPE_CHECKING:
     from dishka import AsyncContainer
@@ -76,3 +76,15 @@ def install_background(
         await runner.stop(shutdown_timeout_s)
 
     return runner
+
+
+def install_project_purge(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическое стирание удалённых проектов по сроку хранения; регистрируется до старта раннера."""
+    from hse_doc_studio.infra.projects.purge import ProjectPurger  # noqa: PLC0415 — sqlalchemy только с extra server
+
+    async def _purge() -> None:
+        await (await container.get(ProjectPurger)).purge_expired()
+
+    app.state.background.register(
+        PeriodicTask(name="project_purge", interval_s=cfg.server.project_purge_interval_s, run=_purge)
+    )
