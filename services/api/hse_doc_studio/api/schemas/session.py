@@ -10,9 +10,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from hse_doc_studio.core.identity.normalize import is_valid_email
+
+# Пределы полей, которые клиент присылает без входа: ключ попыток входа и журнал не должны раздуваться от ввода.
+EMAIL_MAX = 254
+PASSWORD_MAX = 1024
+NAME_MAX = 200
+TOKEN_MAX = 512
 
 StudioModeName = Literal["local", "server"]
 SetupState = Literal["needs_admin", "ready"]
@@ -87,8 +93,8 @@ class AuthErrorBody(StrictModel):
 
 
 class LoginRequest(StrictModel):
-    email: str
-    password: str
+    email: str = Field(max_length=EMAIL_MAX)
+    password: str = Field(max_length=PASSWORD_MAX)
 
 
 class LoginResponse(StrictModel):
@@ -97,14 +103,14 @@ class LoginResponse(StrictModel):
 
 
 class RegisterRequest(StrictModel):
-    email: str
-    name: str
-    password: str
-    invitation_token: str | None
+    email: str = Field(max_length=EMAIL_MAX)
+    name: str = Field(max_length=NAME_MAX)
+    password: str = Field(max_length=PASSWORD_MAX)
+    invitation_token: str | None = Field(max_length=TOKEN_MAX)
 
 
 class VerifyEmailRequest(StrictModel):
-    token: str
+    token: str = Field(max_length=TOKEN_MAX)
 
 
 # Ответ всегда нейтральный. link заполнен только без SMTP (ссылку копирует сам человек).
@@ -122,11 +128,11 @@ class InvitationInfo(StrictModel):
 
 # Повторная отправка письма подтверждения. Ответ нейтральный: ForgotResponse.
 class ResendVerificationRequest(StrictModel):
-    email: str
+    email: str = Field(max_length=EMAIL_MAX)
 
 
 class ForgotRequest(StrictModel):
-    email: str
+    email: str = Field(max_length=EMAIL_MAX)
 
 
 class ForgotResponse(StrictModel):
@@ -135,8 +141,8 @@ class ForgotResponse(StrictModel):
 
 
 class ResetRequest(StrictModel):
-    token: str
-    password: str
+    token: str = Field(max_length=TOKEN_MAX)
+    password: str = Field(max_length=PASSWORD_MAX)
 
 
 class ServerSetupStatus(StrictModel):
@@ -196,16 +202,16 @@ class UpdateAccountRequest(StrictModel):
 
 
 class ChangePasswordRequest(StrictModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(max_length=PASSWORD_MAX)
+    new_password: str = Field(max_length=PASSWORD_MAX)
     sign_out_other_sessions: bool
 
 
 # Смена e-mail: ссылка уходит на новый адрес. Ответ нейтральный (занятый адрес отвечает так же);
 # link заполнен только без SMTP.
 class ChangeEmailRequest(StrictModel):
-    email: str
-    password: str
+    email: str = Field(max_length=EMAIL_MAX)
+    password: str = Field(max_length=PASSWORD_MAX)
 
     @field_validator("email")
     @classmethod

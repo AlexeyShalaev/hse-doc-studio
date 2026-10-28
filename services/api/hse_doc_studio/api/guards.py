@@ -27,6 +27,7 @@ from hse_doc_studio.api.route_scopes import (
     route_path_of,
     scope_for_request,
 )
+from hse_doc_studio.api.validation_errors import install_validation_error_handler
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor, set_current_actor
@@ -234,3 +235,4 @@ def install_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProjectForbiddenError, _forbidden_handler)
     install_git_error_handlers(app)
     install_identity_error_handlers(app)
+    install_validation_error_handler(app)
