@@ -63,6 +63,14 @@ class User:
 
 
 @dataclass(frozen=True)
+class UserListing:
+    """Строка списка пользователей админки: человек и число его проектов (без содержимого)."""
+
+    user: User
+    project_count: int
+
+
+@dataclass(frozen=True)
 class UserIdentity:
     """Внешняя учётная запись (OIDC): пара (provider, subject) уникальна."""
 

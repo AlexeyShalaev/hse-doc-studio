@@ -26,6 +26,7 @@ from hse_doc_studio.core.identity.protocols import (
     IPasswordHasher,
     IRegistrationInviteRepository,
     ISessionRepository,
+    IUserDirectory,
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
@@ -43,6 +44,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlCredentialRepository,
     SqlFirstAdminRepository,
     SqlInstanceSettingsRepository,
+    SqlUserDirectory,
     SqlUserRepository,
 )
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -50,6 +52,18 @@ from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.users import (
+    ApproveUserUC,
+    DisableUserUC,
+    EnableUserUC,
+    GetUserUC,
+    ListApprovalsUC,
+    ListUsersUC,
+    RejectUserUC,
+    RevokeUserSessionsUC,
+    SetUserAdminUC,
+)
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
@@ -87,6 +101,10 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_user_repository(self, sessions: SessionProvider) -> IUserRepository:
         return SqlUserRepository(sessions)
+
+    @provide
+    def get_user_directory(self, sessions: SessionProvider) -> IUserDirectory:
+        return SqlUserDirectory(sessions)
 
     @provide
     def get_session_repository(self, sessions: SessionProvider) -> ISessionRepository:
@@ -352,6 +370,52 @@ class ServerIdentityProvider(Provider):
         self, invites: IRegistrationInviteRepository, users: IUserRepository
     ) -> InvitationInfoUC:
         return InvitationInfoUC(invites, users)
+
+    @provide
+    def get_list_users_uc(self, directory: IUserDirectory) -> ListUsersUC:
+        return ListUsersUC(directory)
+
+    @provide
+    def get_get_user_uc(self, directory: IUserDirectory) -> GetUserUC:
+        return GetUserUC(directory)
+
+    @provide
+    def get_disable_user_uc(
+        self, users: IUserRepository, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DisableUserUC:
+        return DisableUserUC(users, sessions, audit, uow)
+
+    @provide
+    def get_enable_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> EnableUserUC:
+        return EnableUserUC(users, audit, uow)
+
+    @provide
+    def get_set_user_admin_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> SetUserAdminUC:
+        return SetUserAdminUC(users, audit, uow)
+
+    @provide
+    def get_revoke_user_sessions_uc(
+        self, users: IUserRepository, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeUserSessionsUC:
+        return RevokeUserSessionsUC(users, sessions, audit, uow)
+
+    @provide
+    def get_list_approvals_uc(self, directory: IUserDirectory) -> ListApprovalsUC:
+        return ListApprovalsUC(directory)
+
+    @provide
+    def get_approve_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> ApproveUserUC:
+        return ApproveUserUC(users, audit, uow)
+
+    @provide
+    def get_reject_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> RejectUserUC:
+        return RejectUserUC(users, audit, uow)
+
+    @provide
+    def get_resend_invite_uc(
+        self, invites: IRegistrationInviteRepository, create: CreateInviteUC, audit: IAuditLog, uow: IUnitOfWork
+    ) -> ResendInviteUC:
+        return ResendInviteUC(invites, create, audit, uow)
 
     @provide
     def get_bootstrap_uc(

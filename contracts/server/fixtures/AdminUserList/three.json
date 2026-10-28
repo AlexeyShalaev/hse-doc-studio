@@ -1,32 +1,37 @@
-[
-  {
-    "id": "u_01hx7k2m9c",
-    "name": "Анна Петрова",
-    "email": "anna.petrova@example.org",
-    "status": "active",
-    "is_instance_admin": false,
-    "created_at": "2026-09-12T10:00:00Z",
-    "last_login_at": "2026-10-27T09:41:10Z",
-    "project_count": 3
-  },
-  {
-    "id": "u_01hx7k3p4d",
-    "name": "Maria Keller",
-    "email": "maria.keller@example.org",
-    "status": "pending_approval",
-    "is_instance_admin": false,
-    "created_at": "2026-10-26T14:00:00Z",
-    "last_login_at": null,
-    "project_count": 0
-  },
-  {
-    "id": "u_01hx7k1a0b",
-    "name": "Иван Сидоров",
-    "email": "ivan.sidorov@example.org",
-    "status": "active",
-    "is_instance_admin": true,
-    "created_at": "2026-09-10T08:00:00Z",
-    "last_login_at": "2026-10-27T07:00:00Z",
-    "project_count": 1
-  }
-]
+{
+  "items": [
+    {
+      "id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "email": "anna.petrova@example.org",
+      "status": "active",
+      "is_instance_admin": false,
+      "created_at": "2026-09-12T10:00:00Z",
+      "last_login_at": "2026-10-27T09:41:10Z",
+      "project_count": 3
+    },
+    {
+      "id": "u_01hx7k3p4d",
+      "name": "Maria Keller",
+      "email": "maria.keller@example.org",
+      "status": "pending_approval",
+      "is_instance_admin": false,
+      "created_at": "2026-10-26T14:00:00Z",
+      "last_login_at": null,
+      "project_count": 0
+    },
+    {
+      "id": "u_01hx7k1a0b",
+      "name": "Иван Сидоров",
+      "email": "ivan.sidorov@example.org",
+      "status": "active",
+      "is_instance_admin": true,
+      "created_at": "2026-09-10T08:00:00Z",
+      "last_login_at": "2026-10-27T07:00:00Z",
+      "project_count": 1
+    }
+  ],
+  "total": 3,
+  "limit": 50,
+  "offset": 0
+}

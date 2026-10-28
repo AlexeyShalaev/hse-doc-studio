@@ -304,6 +304,61 @@ class AdminUser(StrictModel):
     project_count: int
 
 
+class AdminUserPage(StrictModel):
+    items: list[AdminUser]
+    total: int
+    limit: int
+    offset: int
+
+
+class UpdateAdminUserRequest(StrictModel):
+    is_instance_admin: bool
+
+
+class AdminResetLinkRequest(StrictModel):
+    # Выдача ссылки сброса это захват аккаунта: без явного подтверждения не выполняется.
+    confirm: bool
+
+
+class AdminResetLink(StrictModel):
+    link: str
+    expires_at: datetime
+    user_notified: bool
+
+
+class AdminSessionsRevoked(StrictModel):
+    revoked: int
+
+
+AdminInvitationStatus = Literal["pending", "used", "expired"]
+
+
+class AdminInvitation(StrictModel):
+    id: str
+    email: str | None
+    status: AdminInvitationStatus
+    expires_at: datetime
+    used_at: datetime | None
+
+
+class AdminInvitationPage(StrictModel):
+    items: list[AdminInvitation]
+    total: int
+    limit: int
+    offset: int
+
+
+class CreateAdminInvitationRequest(StrictModel):
+    email: str | None
+    ttl_days: int | None
+
+
+class AdminInvitationCreated(StrictModel):
+    invitation: AdminInvitation
+    # Непустая, когда письмо не ушло по почте: ссылку пересылает сам админ.
+    link: str | None
+
+
 class AdminOrg(StrictModel):
     slug: str
     name: str

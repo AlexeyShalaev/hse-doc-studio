@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "4f1c2a9e7b3d4c58a0e1b6d29c7f3a10",
+      "email": "new.student@example.org",
+      "status": "pending",
+      "expires_at": "2026-11-04T09:00:00Z",
+      "used_at": null
+    },
+    {
+      "id": "a7d20e5c91b84f6e8c3d0a1f5b2e9c44",
+      "email": null,
+      "status": "used",
+      "expires_at": "2026-10-20T09:00:00Z",
+      "used_at": "2026-10-15T12:30:00Z"
+    }
+  ],
+  "total": 2,
+  "limit": 50,
+  "offset": 0
+}

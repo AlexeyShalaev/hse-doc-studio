@@ -6,7 +6,7 @@ import copy
 from collections.abc import Mapping
 from dataclasses import replace
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity
+from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
 
@@ -66,6 +66,34 @@ class InMemoryUserRepository:
     async def list_identities(self, user_id: str) -> list[UserIdentity]:
         found = [i for i in self._store.identities.values() if i.user_id == user_id]
         return sorted(found, key=lambda i: (i.provider, i.subject))
+
+
+class InMemoryUserDirectory:
+    """Список пользователей над общим хранилищем; число проектов задаёт тест через `project_counts`."""
+
+    def __init__(self, store: InMemoryIdentityStore, project_counts: Mapping[str, int] | None = None) -> None:
+        self._store = store
+        self.project_counts: dict[str, int] = dict(project_counts or {})
+
+    def _listing(self, user: User) -> UserListing:
+        return UserListing(user, self.project_counts.get(user.id, 0))
+
+    async def get(self, user_id: str) -> UserListing | None:
+        user = self._store.users.get(user_id)
+        return self._listing(user) if user else None
+
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        needle = (q or "").strip().lower()
+        found = [
+            u
+            for u in self._store.users.values()
+            if (status is None or u.status is status)
+            and (not needle or needle in u.name.lower() + " " + u.email_normalized)
+        ]
+        found.sort(key=lambda u: (-u.created_at.timestamp(), u.id))
+        return [self._listing(u) for u in found[offset : offset + limit]], len(found)
 
 
 class InMemoryCredentialRepository:

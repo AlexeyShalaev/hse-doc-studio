@@ -258,6 +258,44 @@ export const AdminUserSchema = z.strictObject({
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
 });
+const pageOf = <T extends z.ZodType>(item: T) =>
+  z.strictObject({
+    items: z.array(item),
+    total: z.number().int(),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  });
+export const AdminUserPageSchema = pageOf(AdminUserSchema);
+export const UpdateAdminUserRequestSchema = z.strictObject({
+  is_instance_admin: z.boolean(),
+});
+export const AdminResetLinkRequestSchema = z.strictObject({
+  confirm: z.boolean(),
+});
+export const AdminResetLinkSchema = z.strictObject({
+  link: z.string(),
+  expires_at: iso,
+  user_notified: z.boolean(),
+});
+export const AdminSessionsRevokedSchema = z.strictObject({
+  revoked: z.number().int(),
+});
+export const AdminInvitationSchema = z.strictObject({
+  id: z.string(),
+  email: z.string().nullable(),
+  status: z.enum(["pending", "used", "expired"]),
+  expires_at: iso,
+  used_at: iso.nullable(),
+});
+export const AdminInvitationPageSchema = pageOf(AdminInvitationSchema);
+export const CreateAdminInvitationRequestSchema = z.strictObject({
+  email: z.string().nullable(),
+  ttl_days: z.number().int().nullable(),
+});
+export const AdminInvitationCreatedSchema = z.strictObject({
+  invitation: AdminInvitationSchema,
+  link: z.string().nullable(),
+});
 export const AdminOrgSchema = z.strictObject({
   slug: z.string(),
   name: z.string(),

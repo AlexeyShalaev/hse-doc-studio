@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity, UserStatus
+from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.infra.db.orm.identity import (
@@ -18,6 +18,7 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserIdentityRow,
     UserRow,
 )
+from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 FIRST_ADMIN_LOCK_KEY = 0x48534D33  # "HSM3"
@@ -185,6 +186,67 @@ class SqlUserRepository:
                 )
             ).scalars()
             return [_identity(row) for row in rows]
+
+
+def _like_pattern(q: str) -> str:
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+async def _project_counts(session: AsyncSession, user_ids: list[str]) -> dict[str, int]:
+    if not user_ids:
+        return {}
+    found = await session.execute(
+        select(ProjectRow.owner_user_id, func.count())
+        .where(ProjectRow.owner_user_id.in_(user_ids), ProjectRow.deleted_at.is_(None))
+        .group_by(ProjectRow.owner_user_id)
+    )
+    return {owner: n for owner, n in found.all() if owner is not None}
+
+
+class SqlUserDirectory:
+    def __init__(self, sessions: SessionProvider) -> None:
+        self._sessions = sessions
+
+    async def get(self, user_id: str) -> UserListing | None:
+        async with self._sessions.use() as session:
+            row = await session.get(UserRow, user_id)
+            if row is None:
+                return None
+            counts = await _project_counts(session, [row.id])
+            return UserListing(_user(row), counts.get(row.id, 0))
+
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        conditions = []
+        if q:
+            pattern = _like_pattern(q.strip().lower())
+            conditions.append(
+                or_(
+                    func.lower(UserRow.name).like(pattern, escape="\\"),
+                    UserRow.email_normalized.like(pattern, escape="\\"),
+                )
+            )
+        if status is not None:
+            conditions.append(UserRow.status == status.value)
+        async with self._sessions.use() as session:
+            total = (await session.execute(select(func.count()).select_from(UserRow).where(*conditions))).scalar_one()
+            rows = (
+                (
+                    await session.execute(
+                        select(UserRow)
+                        .where(*conditions)
+                        .order_by(UserRow.created_at.desc(), UserRow.id)
+                        .limit(limit)
+                        .offset(offset)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            counts = await _project_counts(session, [r.id for r in rows])
+            return [UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total
 
 
 class SqlCredentialRepository:

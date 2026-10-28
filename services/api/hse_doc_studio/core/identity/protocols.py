@@ -21,6 +21,8 @@ from hse_doc_studio.core.identity.entities import (
     Session,
     User,
     UserIdentity,
+    UserListing,
+    UserStatus,
 )
 
 
@@ -47,6 +49,18 @@ class IUserRepository(Protocol):
     async def get_by_identity(self, provider: str, subject: str) -> User | None: ...
     async def add_identity(self, identity: UserIdentity) -> None: ...
     async def list_identities(self, user_id: str) -> list[UserIdentity]: ...
+
+
+class IUserDirectory(Protocol):
+    async def get(self, user_id: str) -> UserListing | None: ...
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        """Страница пользователей (новые первыми) и общее число под тем же фильтром.
+
+        `q` ищет подстроку в имени и e-mail без учёта регистра.
+        """
+        ...
 
 
 class IFirstAdminRepository(Protocol):
