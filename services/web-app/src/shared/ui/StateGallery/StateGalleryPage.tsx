@@ -172,17 +172,20 @@ export const StateGalleryPage = ({
         </Link>
       </header>
 
-      <div className="flex" style={{ flex: 1, minHeight: 0 }}>
+      <div
+        className="flex flex-col sm:flex-row"
+        style={{ flex: 1, minHeight: 0 }}
+      >
+        {/* На узком экране навигация ложится над содержимым и не отнимает ширину */}
         <nav
           aria-label="Разделы галереи"
-          className="flex flex-col"
+          className="flex flex-col max-sm:max-h-40 max-sm:w-full max-sm:border-b max-sm:border-border sm:w-[250px] sm:border-r sm:border-border"
+          data-testid="gallery-nav"
           style={{
-            width: 250,
             flexShrink: 0,
             overflowY: "auto",
             padding: "14px 10px",
             gap: 14,
-            borderRight: "1px solid var(--border)",
             background: "var(--bg-1)",
           }}
         >
@@ -237,6 +240,7 @@ export const StateGalleryPage = ({
 
         <main
           data-gallery-scroll
+          className="max-sm:!px-3"
           style={{
             flex: 1,
             minWidth: 0,
