@@ -120,7 +120,7 @@ export const AppTitlebar = ({
       </button>
 
       <div
-        className="flex items-center flex-1 min-w-0 overflow-hidden"
+        className="flex items-center flex-1 min-w-0 overflow-hidden max-sm:!ml-2"
         style={{
           gap: 8,
           marginLeft: 26,
@@ -138,9 +138,11 @@ export const AppTitlebar = ({
             color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
           }}
           onClick={handleBackToWelcome}
+          aria-label={t("titlebar.projects")}
         >
           <GraduationCap size={15} />
-          {t("titlebar.projects")}
+          {/* На телефоне подпись схлопывалась до одной буквы: оставляем значок */}
+          <span className="max-sm:hidden">{t("titlebar.projects")}</span>
         </button>
         {projectName && (
           <>
