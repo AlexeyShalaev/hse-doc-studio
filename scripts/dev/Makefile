@@ -112,12 +112,12 @@ SERVER_LITE_COMPOSE = $(DOCKER_COMPOSE) -p hse-doc-studio-server-lite -f $(SERVE
 
 # Секреты стенда создаются один раз и лежат в server-lite/.env (не коммитится); ключ Fernet: 32 случайных байта base64url.
 $(SERVER_LITE_ENV):
-	@{ \
+	@umask 077; { \
 	  echo "SERVER_LITE_PG_PASSWORD=$$(openssl rand -hex 16)"; \
 	  echo "SERVER_LITE_SECRETS_KEY=$$(openssl rand 32 | openssl base64 -A | tr '+/' '-_')"; \
 	  echo "SERVER_LITE_ADMIN_PASSWORD=admin-$$(openssl rand -hex 6)"; \
 	  echo "SERVER_LITE_SEED_PASSWORD=demo-$$(openssl rand -hex 6)"; \
-	} > $(SERVER_LITE_ENV)
+	} > $(SERVER_LITE_ENV); chmod 600 $(SERVER_LITE_ENV)
 	@echo "Created $(SERVER_LITE_ENV)"
 
 server-lite-up: $(SERVER_LITE_ENV)

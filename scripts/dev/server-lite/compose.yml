@@ -74,8 +74,14 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    # Только нужное сидеру: режим, DSN и ключ секретов для DI-контейнера. Пароля админа и CORS здесь нет.
     environment:
-      <<: *api-env
+      HSE_STUDIO__MODE: server
+      HSE_STUDIO__DATA_DIR: /data
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+      HSE_STUDIO__DB__DSN: postgresql://studio:${SERVER_LITE_PG_PASSWORD:?}@postgres:5432/studio
+      HSE_STUDIO__SECRETS__KEY: ${SERVER_LITE_SECRETS_KEY:?}
+      HSE_STUDIO__AUTH__PUBLIC_URL: http://localhost:${SERVER_LITE_PORT:-8100}
       SERVER_LITE_API_URL: http://api:8000
       SERVER_LITE_SEED_PASSWORD: ${SERVER_LITE_SEED_PASSWORD:?}
     volumes:
