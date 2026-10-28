@@ -150,10 +150,10 @@ class SystemStartChatTurnUC:
         folder = await self._locator.folder_of(project_id)
         return self._project_repo.get(folder) if folder is not None else None
 
-    def _enabled_tools(self) -> frozenset[str] | None:
+    async def _enabled_tools(self) -> frozenset[str] | None:
         # null/missing → all tools; a stored list restricts the agent's catalog
         # (shared with the project turn via the same settings key).
-        stored = self._settings_repo.get().get(_ENABLED_TOOLS_KEY)
+        stored = (await self._settings_repo.get()).get(_ENABLED_TOOLS_KEY)
         if isinstance(stored, list):
             return frozenset(str(name) for name in stored)
         return None
@@ -173,10 +173,10 @@ class SystemStartChatTurnUC:
             raise PermissionError("a turn is already running in this chat")
         if inp.run_id is not None:
             return self._resume(inp)
-        return self._start_new(inp, session)
+        return await self._start_new(inp, session)
 
-    def _start_new(self, inp: SystemStartChatTurnInput, session: ChatSession) -> SystemStartChatTurnOutput:
-        provider, model = self._resolve_provider(inp.provider_id, inp.model, session)
+    async def _start_new(self, inp: SystemStartChatTurnInput, session: ChatSession) -> SystemStartChatTurnOutput:
+        provider, model = await self._resolve_provider(inp.provider_id, inp.model, session)
         now = _now()
         if session.message_count == 0 and session.title.strip() in _DEFAULT_TITLES and inp.text.strip():
             session.title = _fallback_title(inp.text)
@@ -226,13 +226,13 @@ class SystemStartChatTurnUC:
         self._spawn(run, provider, run.model or "", inp.approved_call_ids, inp.tool_answers)
         return SystemStartChatTurnOutput(run_id=run.id, user_message_seq=run.trigger_seq)
 
-    def _resolve_provider(
+    async def _resolve_provider(
         self, provider_id: UUID | None, model: str | None, session: ChatSession
     ) -> tuple[AIProvider, str]:
         pid = provider_id or session.default_provider_id
         mdl = model or session.default_model
         if pid is None or not mdl:
-            stored = self._settings_repo.get()
+            stored = await self._settings_repo.get()
             if pid is None and stored.get("default_ai_provider_id"):
                 pid = UUID(str(stored["default_ai_provider_id"]))
             if not mdl:
@@ -289,7 +289,7 @@ class SystemStartChatTurnUC:
             config=settings.agent,
             context_service=self._context_service,
             summarizer=self._summarizer,
-            allowed_tools=self._enabled_tools(),
+            allowed_tools=await self._enabled_tools(),
         )
         # The chat is bound to a project iff its session carries project_id; then
         # the agent gets project tools + a project-aware prompt. Otherwise it runs
@@ -298,7 +298,7 @@ class SystemStartChatTurnUC:
         # Interface (conversation) language: the request header (inherited by this
         # background task) wins; fall back to persisted settings, then ru. Re-set
         # it so deeper code (e.g. the chat summarizer) reads the resolved value.
-        language = current_interface_language(self._settings_repo.get().get(_INTERFACE_LANGUAGE_KEY))
+        language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         set_interface_language(language.value)
         session = self._chat_repo.get_session(self._folder, run.session_id)
         persona_id = session.persona if session else None

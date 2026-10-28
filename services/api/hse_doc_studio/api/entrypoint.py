@@ -320,7 +320,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 if not (await inspect_uc.execute()).report.is_ready:
                     return
                 settings_repo = await request_container.get(ISettingsRepository)
-                image = resolve_active_image(settings_repo)
+                image = await resolve_active_image(settings_repo)
             if await image_present(image):
                 return
         except Exception:

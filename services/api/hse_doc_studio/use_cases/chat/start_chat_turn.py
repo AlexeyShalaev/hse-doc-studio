@@ -195,16 +195,16 @@ class StartChatTurnUC:
             raise PermissionError("a turn is already running in this chat")
         if inp.run_id is not None:
             return self._resume(inp, folder, project)
-        return self._start_new(inp, folder, project, session)
+        return await self._start_new(inp, folder, project, session)
 
-    def _start_new(
+    async def _start_new(
         self,
         inp: StartChatTurnInput,
         folder: Path,
         project: Project,
         session: ChatSession,
     ) -> StartChatTurnOutput:
-        provider, model = self._resolve_provider(inp, session.default_provider_id, session.default_model)
+        provider, model = await self._resolve_provider(inp, session.default_provider_id, session.default_model)
         should_generate_title = session.message_count == 0 and _is_default_title(session.title)
         now = _now()
         user_message = ChatMessage(
@@ -290,7 +290,7 @@ class StartChatTurnUC:
         model: str,
     ) -> None:
         fallback = _fallback_title(user_text)
-        language = current_interface_language(self._settings_repo.get().get(_INTERFACE_LANGUAGE_KEY))
+        language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         try:
             turn = await asyncio.wait_for(
                 self._agent_provider.run_turn(
@@ -323,13 +323,13 @@ class StartChatTurnUC:
         session.updated_at = _now()
         self._chat_repo.save_session(session)
 
-    def _resolve_provider(
+    async def _resolve_provider(
         self, inp: StartChatTurnInput, session_provider_id: UUID | None, session_model: str | None
     ) -> tuple[AIProvider, str]:
         provider_id = inp.provider_id or session_provider_id
         model = inp.model or session_model
         if provider_id is None or not model:
-            stored = self._settings_repo.get()
+            stored = await self._settings_repo.get()
             if provider_id is None and stored.get(_DEFAULT_PROVIDER_KEY):
                 provider_id = UUID(str(stored[_DEFAULT_PROVIDER_KEY]))
             if not model:
@@ -355,9 +355,9 @@ class StartChatTurnUC:
             )
         return provider, model
 
-    def _enabled_tools(self) -> frozenset[str] | None:
+    async def _enabled_tools(self) -> frozenset[str] | None:
         # null/missing → all tools; a stored list restricts the agent's catalog.
-        stored = self._settings_repo.get().get(_ENABLED_TOOLS_KEY)
+        stored = (await self._settings_repo.get()).get(_ENABLED_TOOLS_KEY)
         if isinstance(stored, list):
             return frozenset(str(name) for name in stored)
         return None
@@ -385,12 +385,12 @@ class StartChatTurnUC:
             config=settings.agent,
             context_service=self._context_service,
             summarizer=self._summarizer,
-            allowed_tools=self._enabled_tools(),
+            allowed_tools=await self._enabled_tools(),
         )
         # Interface (conversation) language: request header (inherited by this
         # background task) → persisted settings → ru. Re-set so deeper code (chat
         # summarizer) reads the resolved value.
-        language = current_interface_language(self._settings_repo.get().get(_INTERFACE_LANGUAGE_KEY))
+        language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         set_interface_language(language.value)
         session = self._chat_repo.get_session(folder, run.session_id)
         custom_personas = {str(p.id): p.instruction for p in self._agent_persona_repo.list_all()}

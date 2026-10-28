@@ -115,8 +115,14 @@ class IFileRepository(Protocol):
 
 
 class ISettingsRepository(Protocol):
-    def get(self) -> dict[str, Any]: ...
-    def save(self, settings: dict[str, Any]) -> None: ...
+    async def get(self) -> dict[str, Any]: ...
+    async def save(self, settings: dict[str, Any]) -> None: ...
+
+
+class ILocalSettingsReader(Protocol):
+    # Синхронное чтение config.json для мест, куда await не дотянуть (подпись коммита
+    # на git-подпроцессе). Только локальный режим: на сервере профиль берётся из users.
+    def read_local(self) -> dict[str, Any]: ...
 
 
 class IAIProviderRepository(Protocol):

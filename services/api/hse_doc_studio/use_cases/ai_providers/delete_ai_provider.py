@@ -29,8 +29,8 @@ class DeleteAIProviderUC:
             )
         # Clear the global default if it pointed at the deleted provider, so the
         # stored settings never dangle on a non-existent provider.
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         if stored.get(_DEFAULT_PROVIDER_KEY) == str(inp.provider_id):
             stored[_DEFAULT_PROVIDER_KEY] = None
             stored[_DEFAULT_MODEL_KEY] = None
-            self._settings_repo.save(stored)
+            await self._settings_repo.save(stored)

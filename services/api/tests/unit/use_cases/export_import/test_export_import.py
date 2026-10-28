@@ -55,10 +55,10 @@ class _FakeSettingsRepo:
     def __init__(self, data: dict[str, object] | None = None) -> None:
         self._data: dict[str, object] = dict(data or {})
 
-    def get(self) -> dict[str, object]:
+    async def get(self) -> dict[str, object]:
         return dict(self._data)
 
-    def save(self, settings: dict[str, object]) -> None:
+    async def save(self, settings: dict[str, object]) -> None:
         self._data = dict(settings)
 
 
@@ -196,7 +196,7 @@ async def test__import_encrypted__wrong_password__raises_and_changes_nothing() -
 
     # Atomic: a wrong password applies neither providers nor settings.
     assert dst_providers.list_all() == []
-    assert dst_settings.get()["theme"] == "dark"
+    assert (await dst_settings.get())["theme"] == "dark"
 
 
 @pytest.mark.unit
@@ -241,7 +241,7 @@ async def test__import_settings__merges_known_keys_only() -> None:
     )
 
     assert result.settings_imported is True
-    saved = settings.get()
+    saved = await settings.get()
     assert saved["theme"] == "light"  # known key applied
     assert saved["default_engine"] == "xelatex"  # untouched key preserved
     assert "bogus" not in saved  # unknown key dropped
@@ -264,7 +264,7 @@ async def test__import_settings__git_fetch_interval__goes_through_the_put_rule(i
         ImportDataInput(encrypted=False, settings={"git_fetch_interval_s": imported})
     )
 
-    assert settings.get()["git_fetch_interval_s"] == expected
+    assert (await settings.get())["git_fetch_interval_s"] == expected
 
 
 @pytest.mark.unit
@@ -288,7 +288,7 @@ async def test__import_settings__invalid_numeric_value__is_skipped_and_the_rest_
     )
 
     assert result.settings_imported is True
-    saved = settings.get()
+    saved = await settings.get()
     assert saved[key] == (7 if key == "disk_usage_warn_gb" else 300)
     assert saved["theme"] == "light"
 
@@ -366,7 +366,7 @@ async def test__import__profile_keys_in_bundle_are_ignored_and_local_profile_kep
     )
 
     assert result.settings_imported is True
-    saved = settings.get()
+    saved = await settings.get()
     assert saved["theme"] == "light"
     assert saved["profile_name"] == "Алиса"
     assert saved["profile_email"] == "alice@example.org"
@@ -380,5 +380,5 @@ async def test__import__bundle_without_local_profile__does_not_create_one() -> N
         ImportDataInput(encrypted=False, settings={"profile_name": "Чужой", "profile_email": "other@example.org"})
     )
 
-    assert "profile_name" not in settings.get()
-    assert "profile_email" not in settings.get()
+    assert "profile_name" not in (await settings.get())
+    assert "profile_email" not in (await settings.get())

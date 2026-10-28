@@ -27,7 +27,7 @@ class RemoveLanguageToolImageUC:
         self._settings_repo = settings_repo
 
     async def execute(self, inp: RemoveLanguageToolImageInput) -> None:
-        if inp.image == resolve_active_languagetool_image(self._settings_repo):
+        if inp.image == await resolve_active_languagetool_image(self._settings_repo):
             raise ValueError(
                 localized_error(
                     "нельзя удалить активный образ LanguageTool", "cannot remove the active LanguageTool image"

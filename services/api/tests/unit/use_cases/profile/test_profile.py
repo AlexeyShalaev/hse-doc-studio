@@ -20,10 +20,13 @@ class _Repo:
         self.data: dict[str, Any] = dict(data or {})
         self.saves = 0
 
-    def get(self) -> dict[str, Any]:
+    def read_local(self) -> dict[str, Any]:
         return dict(self.data)
 
-    def save(self, settings: dict[str, Any]) -> None:
+    async def get(self) -> dict[str, Any]:
+        return dict(self.data)
+
+    async def save(self, settings: dict[str, Any]) -> None:
         self.data = dict(settings)
         self.saves += 1
 

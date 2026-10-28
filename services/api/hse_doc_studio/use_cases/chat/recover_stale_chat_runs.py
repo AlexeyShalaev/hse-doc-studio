@@ -47,7 +47,7 @@ class RecoverStaleChatRunsUC:
         now = datetime.now(timezone.utc)
         # Runs at startup (no request context), so resolve the saved interface
         # language directly as the fallback.
-        lang = current_interface_language(self._settings_repo.get().get(_INTERFACE_LANGUAGE_KEY))
+        lang = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         error_text = _SERVER_RESTARTED.get(lang, _SERVER_RESTARTED[Lang.ru])
         recovered = 0
         for folder in await self._locator.list_all():

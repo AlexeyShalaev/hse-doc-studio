@@ -49,7 +49,7 @@ class GetLanguageToolStatusUC:
         self._settings_repo = settings_repo
 
     async def execute(self) -> LanguageToolStatusOutput:
-        active_image = resolve_active_languagetool_image(self._settings_repo)
+        active_image = await resolve_active_languagetool_image(self._settings_repo)
 
         docker_status = await self._image_manager.docker_status()
         image_installed = False

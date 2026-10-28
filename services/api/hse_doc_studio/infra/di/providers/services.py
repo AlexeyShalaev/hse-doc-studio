@@ -71,6 +71,7 @@ from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
 from hse_doc_studio.core.repositories import (
+    ILocalSettingsReader,
     IProjectIndexRepository,
     IProjectRepository,
     ISettingsRepository,
@@ -825,8 +826,8 @@ class DomainServiceProvider(Provider):
         return StoreConfigCredentialUsage(project_index, projects)
 
     @provide
-    def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
-        return ConfigAuthorProfile(settings_repo)
+    def get_local_author_profile(self, settings_reader: ILocalSettingsReader) -> ILocalAuthorProfile:
+        return ConfigAuthorProfile(settings_reader)
 
     @provide
     def get_ci_renderer(self) -> ICiRenderer:

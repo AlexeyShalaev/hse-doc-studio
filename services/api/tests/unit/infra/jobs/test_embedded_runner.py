@@ -91,13 +91,22 @@ class Harness:
         self.lt_manager = MagicMock()
         self.lt_manager.ensure_running = AsyncMock(return_value=None)
         self.settings_repo = MagicMock()
-        self.settings_repo.get.side_effect = lambda: dict(self.settings)
+        self.settings_repo.get = AsyncMock(side_effect=lambda: dict(self.settings))
         self.settings: dict[str, object] = {"max_concurrent_compiles": 2, **(settings or {})}
         self.capacity_probe = MagicMock()
         self.limiter = CompileConcurrencyLimiter()
         self.image = "texlive:one"
         self.processes: list[object] = []
         self.runner = self.make_runner()
+
+    async def _resolve_image(self) -> str:
+        return self.image
+
+    async def _resolve_lt_image(self) -> str:
+        return "lt:image"
+
+    async def _resolve_office_image(self) -> str:
+        return "gotenberg:active"
 
     def make_runner(self, heartbeat_interval_s: float = 25.0) -> EmbeddedCompileRunner:
         return EmbeddedCompileRunner(
@@ -110,9 +119,9 @@ class Harness:
             capacity_probe=self.capacity_probe,
             limiter=self.limiter,
             outputs=LocalJobOutputs(),
-            resolve_image=lambda: self.image,
-            resolve_lt_image=lambda: "lt:image",
-            resolve_office_image=lambda: "gotenberg:active",
+            resolve_image=self._resolve_image,
+            resolve_lt_image=self._resolve_lt_image,
+            resolve_office_image=self._resolve_office_image,
             heartbeat_interval_s=heartbeat_interval_s,
         )
 

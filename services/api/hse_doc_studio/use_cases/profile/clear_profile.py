@@ -18,8 +18,8 @@ class ClearProfileUC:
         self._fallback = fallback
 
     async def execute(self) -> ProfileView:
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         if PROFILE_NAME_KEY in stored or PROFILE_EMAIL_KEY in stored:
-            self._settings_repo.save({**stored, PROFILE_NAME_KEY: None, PROFILE_EMAIL_KEY: None})
+            await self._settings_repo.save({**stored, PROFILE_NAME_KEY: None, PROFILE_EMAIL_KEY: None})
             logger.info("author profile cleared")
         return make_profile_view(None, self._fallback)

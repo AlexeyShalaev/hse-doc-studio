@@ -193,11 +193,11 @@ class OfficeEditorCallbackUC:
             bytes=len(content),
         )
         self._manager.mark_closed(key)
-        self._schedule_preview_refresh(project, output_file)
+        await self._schedule_preview_refresh(project, output_file)
 
     # ── preview refresh (office-документ → соседний PDF) ────────────────────
 
-    def _schedule_preview_refresh(self, project: Project, output_file: str) -> None:
+    async def _schedule_preview_refresh(self, project: Project, output_file: str) -> None:
         """Фоново пересоздать PDF-предпросмотр сохранённого office-документа.
 
         В фоне, а не в колбэке: холодный старт Gotenberg-контейнера — до
@@ -212,7 +212,7 @@ class OfficeEditorCallbackUC:
             payload = OfficeConvertPayload(
                 source=ManifestFile(output_file),
                 output_path=sibling_pdf_path(output_file),
-                image=resolve_active_office_image(self._settings_repo, "convert"),
+                image=await resolve_active_office_image(self._settings_repo, "convert"),
                 reason=OfficeConvertReason.save_refresh,
             )
             spec = JobSpec(

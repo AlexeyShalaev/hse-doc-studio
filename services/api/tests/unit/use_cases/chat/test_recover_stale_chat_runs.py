@@ -10,7 +10,7 @@ from tests.unit.use_cases.chat.conftest import _FakeLocator
 
 
 class _FakeSettings:
-    def get(self) -> dict[str, str]:
+    async def get(self) -> dict[str, str]:
         return {}
 
 

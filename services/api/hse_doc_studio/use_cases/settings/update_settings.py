@@ -46,7 +46,7 @@ class UpdateSettingsUC:
             logger.warning("update_settings: unknown keys ignored", keys=list(unknown_keys))
 
         merged = {**current, **{k: v for k, v in inp.patch.items() if k in _ALLOWED_KEYS}}
-        self._settings_repo.save(merged)
+        await self._settings_repo.save(merged)
 
         logger.info("settings updated")
         return UpdateSettingsOutput(settings=merged)

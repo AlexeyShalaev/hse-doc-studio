@@ -15,6 +15,7 @@ from hse_doc_studio.core.repositories import (
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
+    ILocalSettingsReader,
     IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -123,6 +124,10 @@ class LocalPersistenceProvider(Provider):
 
     @provide
     def get_settings_repo(self) -> ISettingsRepository:
+        return JsonSettingsRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_local_settings_reader(self) -> ILocalSettingsReader:
         return JsonSettingsRepository(settings.data_dir.expanduser())
 
     @provide
