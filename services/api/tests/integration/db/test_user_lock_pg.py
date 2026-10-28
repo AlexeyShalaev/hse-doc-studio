@@ -19,7 +19,7 @@ pytestmark = pytest.mark.pg
 async def test__get_for_update__second_reader_waits_and_sees_committed_change(pg_migrated_engine) -> None:
     sessions = SessionProvider(create_sessionmaker(pg_migrated_engine))
     users = SqlUserRepository(sessions)
-    user = make_user()
+    user = make_user("u1")
     await users.add(user)
     locked = asyncio.Event()
 
