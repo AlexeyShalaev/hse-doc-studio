@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from hse_doc_studio.core.identity.auth_settings import auth_settings_from
 from hse_doc_studio.core.identity.entities import AuthSettings, Session, User
 from hse_doc_studio.core.identity.passwords import PASSWORD_MIN_LENGTH
-from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository, IUserRepository
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.sessions import SessionService
+from hse_doc_studio.use_cases.server_setup.state import SetupStateService
 
 SetupState = Literal["needs_admin", "ready"]
 
@@ -27,23 +27,23 @@ class BootstrapResult:
 class BootstrapUC:
     def __init__(
         self,
-        users: IUserRepository,
-        settings: IInstanceSettingsRepository,
+        setup: SetupStateService,
+        settings: AuthSettingsService,
         sessions: SessionService,
         *,
         smtp_enabled: bool = False,
     ) -> None:
-        self._users = users
+        self._setup = setup
         self._settings = settings
         self._sessions = sessions
         self._smtp_enabled = smtp_enabled
 
     async def auth_settings(self) -> AuthSettings:
-        return auth_settings_from(await self._settings.get_all())
+        return await self._settings.effective()
 
     async def execute(self, session_secret: str | None) -> BootstrapResult:
-        """Пока в установке нет ни одного пользователя, ей нужен первый администратор (мастер /first-run)."""
-        needs_admin = await self._users.count() == 0
+        """Пока мастер первого запуска не завершён, клиент ведёт к нему (/first-run)."""
+        needs_admin = not await self._setup.is_completed()
         resolved = await self._sessions.resolve(session_secret) if session_secret else None
         return BootstrapResult(
             setup_state="needs_admin" if needs_admin else "ready",

@@ -30,11 +30,13 @@ class IdentityErrorCode(StrEnum):
     setup_already_done = "setup_already_done"
     password_policy = "password_policy"  # noqa: S105 — код ошибки, не пароль
     token_invalid = "token_invalid"  # noqa: S105 — код ошибки, не токен
+    setup_required = "setup_required"
     # Внутренние коды: наружу не отдаются как есть (нейтральные ответы), нужны use cases.
     email_taken = "email_taken"
     last_owner = "last_owner"
     slug_reserved = "slug_reserved"
     slug_invalid = "slug_invalid"
+    setting_locked = "setting_locked"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -82,12 +84,20 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "The password does not meet the requirements.",
     ),
     IdentityErrorCode.token_invalid: ("Ссылка недействительна или истекла.", "The link is invalid or has expired."),
+    IdentityErrorCode.setup_required: (
+        "Сервер ещё настраивается. Подождите, пока администратор завершит первый запуск.",
+        "The server is still being set up. Wait until the administrator finishes the first run.",
+    ),
     IdentityErrorCode.email_taken: ("Этот e-mail уже занят.", "This email is already taken."),
     IdentityErrorCode.last_owner: ("Нельзя убрать последнего владельца.", "The last owner cannot be removed."),
     IdentityErrorCode.slug_reserved: ("Это имя зарезервировано.", "This name is reserved."),
     IdentityErrorCode.slug_invalid: (
         "Допустимы строчные латинские буквы, цифры и дефис.",
         "Use lowercase Latin letters, digits and hyphens.",
+    ),
+    IdentityErrorCode.setting_locked: (
+        "Значение задано через окружение и не меняется из интерфейса.",
+        "This value is set by the environment and cannot be changed here.",
     ),
 }
 

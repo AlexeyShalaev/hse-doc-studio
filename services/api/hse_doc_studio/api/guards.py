@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
@@ -33,6 +34,8 @@ from hse_doc_studio.core.access.policy import Decision, decide
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.project_access import ProjectAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
@@ -102,7 +105,7 @@ async def project_access_guard(request: Request) -> None:
     умолчанию: маршрут без записи ни в одной таблице не открывается никому.
     Гард стоит перед `project_write_guard`, чтобы чужой получил 404, а не 423.
     """
-    if settings.mode is not StudioMode.local and _handled_before_actor(request):
+    if settings.mode is not StudioMode.local and await _server_request_handled(request):
         return
     actor = await resolve_actor(request)
     set_current_actor(actor)
@@ -122,6 +125,28 @@ async def project_access_guard(request: Request) -> None:
         raise HTTPException(status_code=_FORBIDDEN, detail="Forbidden")
     acl = await load_project_acl(request, str(project_id))
     _enforce(decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params)))
+
+
+async def _server_request_handled(request: Request) -> bool:
+    """True, если запросу актор не нужен; иначе до разбора актора проверяется, что мастер первого запуска завершён."""
+    if _handled_before_actor(request):
+        return True
+    await _ensure_setup_complete(request)
+    return False
+
+
+async def _ensure_setup_complete(request: Request) -> None:
+    """Пока мастер первого запуска не завершён, работает только админ: остальным 503 `setup_required`.
+
+    Шлюз кладёт в приложение серверный запуск (`api.server_setup`); без него (тестовые приложения) проверки нет.
+    """
+    gate = getattr(request.app.state, "setup_gate", None)
+    if gate is None or await gate.is_completed():
+        return
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    actor = await (await container.get(IActorResolver)).resolve(credentials_from_request(request))
+    if actor is None or not actor.is_instance_admin:
+        raise IdentityError(IdentityErrorCode.setup_required)
 
 
 def _handled_before_actor(request: Request) -> bool:

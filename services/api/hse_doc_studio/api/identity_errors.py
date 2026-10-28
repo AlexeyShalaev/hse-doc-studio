@@ -19,6 +19,7 @@ _FORBIDDEN = 403
 _INPUT = 422
 _STATE = 409
 _LIMIT = 429
+_UNAVAILABLE = 503
 
 IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.auth_required: _UNAUTHORIZED,
@@ -35,9 +36,11 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.forbidden: _FORBIDDEN,
     IdentityErrorCode.setup_token_invalid: _FORBIDDEN,
     IdentityErrorCode.rate_limited: _LIMIT,
+    IdentityErrorCode.setup_required: _UNAVAILABLE,
     IdentityErrorCode.setup_already_done: _STATE,
     IdentityErrorCode.email_taken: _STATE,
     IdentityErrorCode.last_owner: _STATE,
+    IdentityErrorCode.setting_locked: _STATE,
     IdentityErrorCode.password_policy: _INPUT,
     IdentityErrorCode.token_invalid: _INPUT,
     IdentityErrorCode.slug_reserved: _INPUT,

@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, SecretStr
 
+from hse_doc_studio.core.identity.entities import RegistrationMode
+
 
 class SecretsConfig(BaseModel):
     """Ключ шифрования токенов и ключей доступа (HSE_STUDIO__SECRETS__*).
@@ -46,4 +48,42 @@ class AuthConfig(BaseModel):
     )
     session_absolute_days: int = Field(
         default=30, ge=1, description="Предельный возраст сессии, после которого нужен новый вход."
+    )
+
+    registration_mode: RegistrationMode | None = Field(
+        default=None,
+        description=(
+            "Режим регистрации из окружения: open, domains, invite или closed. "
+            "Заданное побеждает БД и не правится в админке."
+        ),
+    )
+    registration_domains: list[str] | None = Field(
+        default=None,
+        description="Разрешённые домены почты для режима domains; заданный список блокирует правку в админке.",
+    )
+    require_approval: bool | None = Field(
+        default=None, description="Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке."
+    )
+    password_enabled: bool | None = Field(
+        default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
+    )
+
+    admin_email: str | None = Field(
+        default=None,
+        description=(
+            "Первый администратор из окружения: вместе с паролем создаётся при старте, если админа ещё нет "
+            "(идемпотентно, пароль существующего не трогается). Рекомендуемый путь для compose и helm."
+        ),
+    )
+    admin_name: str | None = Field(default=None, description="Имя первого администратора из окружения.")
+    admin_password: SecretStr | None = Field(default=None, description="Пароль первого администратора из окружения.")
+    admin_password_file: Path | None = Field(
+        default=None, description="Файл с паролем первого администратора (docker secret)."
+    )
+    setup_token_required: bool | None = Field(
+        default=None,
+        description=(
+            "Нужен ли токен установки в мастере первого запуска (печатается в журнале api). "
+            "Не задано: нужен, если сервер слушает не только loopback."
+        ),
     )

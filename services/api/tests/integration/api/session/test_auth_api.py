@@ -24,6 +24,7 @@ from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.sessions import (
@@ -33,6 +34,7 @@ from hse_doc_studio.use_cases.identity.sessions import (
     RevokeSessionUC,
     SessionService,
 )
+from hse_doc_studio.use_cases.server_setup.state import KEY_SETUP_COMPLETED, SetupStateService
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import InMemoryAuditLog, InMemoryLoginAttemptRepository, InMemorySessionRepository
@@ -96,6 +98,8 @@ class _World:
         )
         await self.users.add(user)
         await self.creds.set_hash(user.id, _Hasher().hash(PASSWORD))
+        # Установка с пользователями считается настроенной: мастер первого запуска завершён.
+        await self.settings.set(KEY_SETUP_COMPLETED, True, source="test")
         return user
 
     async def _ids(self) -> list[str]:
@@ -131,7 +135,7 @@ class _Provider(Provider):
 
     @provide
     def bootstrap(self) -> BootstrapUC:
-        return BootstrapUC(self._w.users, self._w.settings, self._service)
+        return BootstrapUC(SetupStateService(self._w.settings), AuthSettingsService(self._w.settings), self._service)
 
     @provide
     def login(self) -> LoginUC:

@@ -14,6 +14,7 @@ from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
@@ -81,6 +82,7 @@ class Settings(BaseSettings):
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
+    mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)
     s3: StorageConfig = Field(default_factory=StorageConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)

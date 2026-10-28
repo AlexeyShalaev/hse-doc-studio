@@ -7,10 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.auth_cookie import clear_session_cookie, credentials_from_request, is_secure_public_url
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.api.schemas.session import AccountSession
+from hse_doc_studio.api.rate_limit import enforce_email
+from hse_doc_studio.api.schemas.session import (
+    AccountSession,
+    ChangeEmailRequest,
+    ChangeEmailResponse,
+    VerifyEmailRequest,
+)
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.sessions import (
     ListSessionsUC,
     RevokeOtherSessionsUC,
@@ -85,3 +92,22 @@ async def revoke_other_sessions(request: Request) -> Response:
     user_id = _user_id()
     await (await request.state.dishka_container.get(RevokeOtherSessionsUC)).execute(user_id, _current_hash(request))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/account/email", response_model=ChangeEmailResponse)
+async def change_email(body: ChangeEmailRequest, request: Request, response: Response) -> ChangeEmailResponse:
+    """Ссылка подтверждения уходит на новый адрес; пока её не открыли, действует прежний."""
+    user_id = _user_id()
+    await enforce_email(request, body.email)
+    result = await (await request.state.dishka_container.get(RequestEmailChangeUC)).execute(
+        user_id, body.password, body.email
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return ChangeEmailResponse(status="check_email", link=result.link)
+
+
+@router.post("/account/email/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def confirm_email_change(body: VerifyEmailRequest, request: Request) -> Response:
+    """Ссылку открывает владелец нового ящика; вход не нужен, личность подтверждает сам одноразовый токен."""
+    await (await request.state.dishka_container.get(ConfirmEmailChangeUC)).execute(body.token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})

@@ -40,6 +40,7 @@ class AuthTokenKind(StrEnum):
     verify_email = "verify_email"
     reset_password = "reset_password"  # noqa: S105 — вид токена, не пароль
     setup = "setup"
+    change_email = "change_email"
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,8 @@ class AuthToken:
     user_id: str | None
     expires_at: datetime
     used_at: datetime | None = None
+    # Данные, ради которых выдан токен: для смены адреса это новый адрес.
+    payload: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +119,11 @@ class RegistrationInvite:
     created_by: str
     expires_at: datetime
     used_at: datetime | None = None
+    # Публичный идентификатор для списка и отзыва; хеш токена наружу не отдаётся. Пусто: хранилище берёт начало хеша.
+    id: str = ""
+    # Членство, которое получит принявший приглашение; организации появятся в срезе орг.
+    org_id: str | None = None
+    org_role: str | None = None
 
 
 @dataclass(frozen=True)
@@ -132,6 +140,9 @@ class MailKind(StrEnum):
     verify_email = "verify_email"
     reset_password = "reset_password"  # noqa: S105 — вид письма, не пароль
     invite = "invite"
+    email_change = "email_change"
+    # Уведомление без ссылки: админ выдал ссылку для сброса пароля.
+    reset_notice = "reset_notice"
 
 
 @dataclass(frozen=True)

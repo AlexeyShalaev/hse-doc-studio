@@ -51,6 +51,7 @@ class AuthTokenRow(Base):
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payload: Mapped[str | None] = mapped_column(String(320))
 
 
 class RegistrationInviteRow(Base):
@@ -61,6 +62,9 @@ class RegistrationInviteRow(Base):
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    org_id: Mapped[str | None] = mapped_column(String(64))
+    org_role: Mapped[str | None] = mapped_column(String(32))
 
 
 class LoginAttemptRow(Base):

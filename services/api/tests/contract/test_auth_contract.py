@@ -221,6 +221,13 @@ async def test__auth_token__consume__single_use_and_kind_checked(repos: Repos, u
     assert await repos.auth_tokens.consume("h", AuthTokenKind.reset_password, NOW) is None
 
 
+async def test__auth_token__payload__survives_consume(repos: Repos, user: str) -> None:
+    await repos.auth_tokens.add(AuthToken("p", AuthTokenKind.change_email, user, NOW + HOUR, payload="new@example.org"))
+    consumed = await repos.auth_tokens.consume("p", AuthTokenKind.change_email, NOW)
+    assert consumed is not None
+    assert consumed.payload == "new@example.org"
+
+
 async def test__auth_token__expired__cannot_be_consumed_and_is_cleaned(repos: Repos, user: str) -> None:
     await repos.auth_tokens.add(AuthToken("h", AuthTokenKind.setup, None, NOW + HOUR))
     assert await repos.auth_tokens.consume("h", AuthTokenKind.setup, NOW + HOUR) is None
@@ -239,8 +246,43 @@ async def test__invite__consume__matches_email_once(repos: Repos, user: str) -> 
     await repos.invites.add(invite)
     assert await repos.invites.consume("h", "other@example.test", NOW) is None
     consumed = await repos.invites.consume("h", " NEW@example.test ", NOW)
-    assert consumed == replace(invite, used_at=NOW)
+    assert consumed == replace(invite, used_at=NOW, id="h")
     assert await repos.invites.consume("h", "new@example.test", NOW) is None
+
+
+async def test__invite__get_keeps_org_scope_and_defaults_id(repos: Repos, user: str) -> None:
+    await repos.invites.add(
+        RegistrationInvite("hash-a", "A@Example.test", "u1", NOW + HOUR, id="inv-a", org_id="org1", org_role="member")
+    )
+    await repos.invites.add(RegistrationInvite("hash-b", None, "u1", NOW + HOUR))
+    first = await repos.invites.get("hash-a")
+    assert first == RegistrationInvite(
+        "hash-a", "a@example.test", "u1", NOW + HOUR, id="inv-a", org_id="org1", org_role="member"
+    )
+    second = await repos.invites.get("hash-b")
+    assert second is not None
+    assert second.id == "hash-b"
+    assert await repos.invites.get("missing") is None
+
+
+async def test__invite__list_newest_first_and_filter(repos: Repos, user: str) -> None:
+    await repos.invites.add(RegistrationInvite("h1", None, "u1", NOW + HOUR, id="i1"))
+    await repos.invites.add(RegistrationInvite("h2", None, "u2", NOW + 3 * HOUR, id="i2"))
+    await repos.invites.add(RegistrationInvite("h3", None, "u1", NOW + 2 * HOUR, id="i3"))
+    assert [i.id for i in await repos.invites.list()] == ["i2", "i3", "i1"]
+    assert [i.id for i in await repos.invites.list(created_by="u1")] == ["i3", "i1"]
+    assert [i.id for i in await repos.invites.list(limit=1)] == ["i2"]
+
+
+async def test__invite__revoke_removes_only_unused(repos: Repos, user: str) -> None:
+    await repos.invites.add(RegistrationInvite("h1", None, "u1", NOW + HOUR, id="i1"))
+    await repos.invites.add(RegistrationInvite("h2", None, "u1", NOW + HOUR, id="i2"))
+    assert await repos.invites.consume("h2", "x@example.test", NOW) is not None
+    assert await repos.invites.revoke("i1") is True
+    assert await repos.invites.get("h1") is None
+    assert await repos.invites.revoke("i1") is False
+    assert await repos.invites.revoke("i2") is False
+    assert await repos.invites.consume("h1", "x@example.test", NOW) is None
 
 
 async def test__invite__without_email_and_expired(repos: Repos, user: str) -> None:

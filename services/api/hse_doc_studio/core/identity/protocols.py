@@ -84,6 +84,18 @@ class IAuthTokenRepository(Protocol):
 
 class IRegistrationInviteRepository(Protocol):
     async def add(self, invite: RegistrationInvite) -> None: ...
+    async def get(self, token_hash: str) -> RegistrationInvite | None:
+        """Приглашение любого состояния; годность (срок, использование, адрес) решает вызывающий."""
+        ...
+
+    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
+        """Приглашения любого состояния, новые по сроку первыми."""
+        ...
+
+    async def revoke(self, invite_id: str) -> bool:
+        """Удаляет неиспользованное приглашение; False, если такого нет или оно уже принято."""
+        ...
+
     async def consume(self, token_hash: str, email: str, now: datetime) -> RegistrationInvite | None: ...
 
 

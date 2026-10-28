@@ -144,11 +144,31 @@ export const ServerSetupAdminRequestSchema = z.strictObject({
   email: z.string(),
   password: z.string(),
 });
-export const ServerSetupSettingsRequestSchema = z.strictObject({
-  registration_mode: RegistrationModeSchema,
-  require_approval: z.boolean(),
-  password_enabled: z.boolean(),
+export const ServerSetupSettingsRequestSchema = z
+  .strictObject({
+    registration_mode: RegistrationModeSchema,
+    // Домены почты для режима domains (для него нужен хотя бы один).
+    registration_domains: z.array(z.string()),
+    require_approval: z.boolean(),
+    password_enabled: z.boolean(),
+  })
+  .refine(
+    (value) =>
+      value.registration_mode !== "domains" ||
+      value.registration_domains.some((d) => d.trim().replace(/^@/, "") !== ""),
+    { path: ["registration_domains"] },
+  );
+export const ServerSetupCheckSchema = z.strictObject({
+  id: z.enum(["database", "storage", "runner"]),
+  status: z.enum(["ok", "fail", "not_configured"]),
+  reason: z.string().nullable(),
 });
+export const ServerSetupEnvironmentSchema = z.strictObject({
+  checks: z.array(ServerSetupCheckSchema),
+});
+export type ServerSetupEnvironment = z.infer<
+  typeof ServerSetupEnvironmentSchema
+>;
 
 export const UpdateAccountRequestSchema = z.strictObject({
   name: z.string().nullish(),
@@ -159,6 +179,15 @@ export const ChangePasswordRequestSchema = z.strictObject({
   new_password: z.string(),
   sign_out_other_sessions: z.boolean(),
 });
+export const ChangeEmailRequestSchema = z.strictObject({
+  email: z.string(),
+  password: z.string(),
+});
+export const ChangeEmailResponseSchema = z.strictObject({
+  status: z.literal("check_email"),
+  link: z.string().nullable(),
+});
+export type ChangeEmailResponse = z.infer<typeof ChangeEmailResponseSchema>;
 export const AccountSessionSchema = z.strictObject({
   id: z.string(),
   created_at: iso,

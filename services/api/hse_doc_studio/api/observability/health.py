@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -29,7 +29,9 @@ class HealthRegistry:
             raise ValueError(msg)
         self.probes[name] = probe
 
-    async def run(self) -> dict[str, str | None]:
+    async def run(self, only: Collection[str] | None = None) -> dict[str, str | None]:
+        """Результаты всех проверок или только названных (незарегистрированные имена пропускаются)."""
+
         async def one(probe: HealthProbe) -> str | None:
             try:
                 return await asyncio.wait_for(probe(), timeout=_PROBE_TIMEOUT_S)
@@ -38,7 +40,7 @@ class HealthRegistry:
             except Exception as exc:
                 return f"{type(exc).__name__}"
 
-        names = list(self.probes)
+        names = [name for name in self.probes if only is None or name in only]
         results = await asyncio.gather(*(one(self.probes[n]) for n in names))
         return dict(zip(names, results, strict=True))
 

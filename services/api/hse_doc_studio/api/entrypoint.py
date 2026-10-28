@@ -22,6 +22,7 @@ from hse_doc_studio.api.observability.install import (
 from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
+from hse_doc_studio.api.server_setup import prepare_server_setup
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
@@ -160,6 +161,10 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             server_metrics,
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
+
+        @app.on_event("startup")
+        async def _prepare_server_setup() -> None:
+            await prepare_server_setup(app, container, settings, health_checks)
 
     @app.on_event("startup")
     async def _probe_docker() -> None:

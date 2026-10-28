@@ -36,9 +36,12 @@ _SCHEMAS: dict[str, Any] = {
     "ServerSetupStatus": s.ServerSetupStatus,
     "ServerSetupAdminRequest": s.ServerSetupAdminRequest,
     "ServerSetupSettingsRequest": s.ServerSetupSettingsRequest,
+    "ServerSetupEnvironment": s.ServerSetupEnvironment,
     "AuthErrorBody": s.AuthErrorBody,
     "UpdateAccountRequest": s.UpdateAccountRequest,
     "ChangePasswordRequest": s.ChangePasswordRequest,
+    "ChangeEmailRequest": s.ChangeEmailRequest,
+    "ChangeEmailResponse": s.ChangeEmailResponse,
     "AccountSession": s.AccountSession,
     "AccountSessionList": list[s.AccountSession],
     "ApiToken": s.ApiToken,
@@ -137,3 +140,25 @@ def test_bootstrap_variants_cover_states() -> None:
     assert any(b["user"] is None for b in boots)
     assert any(b["user"] and b["user"]["is_instance_admin"] for b in boots)
     assert any(not b["auth"]["password_enabled"] for b in boots)
+
+
+def test_setup_settings_domains_mode_needs_a_domain() -> None:
+    body = _read(_FIXTURES / "ServerSetupSettingsRequest" / "domains.json")
+    body["registration_domains"] = [" @ "]
+
+    with pytest.raises(ValidationError):
+        s.ServerSetupSettingsRequest.model_validate(body)
+
+
+def test_setup_admin_request_needs_a_valid_email() -> None:
+    body = _read(_FIXTURES / "ServerSetupAdminRequest" / "with_token.json")
+    body["email"] = "not-an-email"
+
+    with pytest.raises(ValidationError):
+        s.ServerSetupAdminRequest.model_validate(body)
+
+
+def test_setup_environment_covers_ok_fail_and_not_configured() -> None:
+    envs = [_read(f) for d, _, f in _CASES if d == "ServerSetupEnvironment"]
+    statuses = {c["status"] for e in envs for c in e["checks"]}
+    assert statuses == {"ok", "fail", "not_configured"}

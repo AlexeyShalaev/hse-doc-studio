@@ -15,5 +15,6 @@
   "setup_token_invalid",
   "setup_already_done",
   "password_policy",
-  "token_invalid"
+  "token_invalid",
+  "setup_required"
 ]

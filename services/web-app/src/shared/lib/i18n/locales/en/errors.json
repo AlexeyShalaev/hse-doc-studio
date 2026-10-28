@@ -93,6 +93,7 @@
     "setup_token_invalid": "The setup token is wrong.",
     "setup_already_done": "First-run setup is already complete.",
     "password_policy": "The password is too short or too easy to guess.",
-    "token_invalid": "The link is invalid or has expired."
+    "token_invalid": "The link is invalid or has expired.",
+    "setup_required": "The server is still being set up: wait until the administrator finishes the first run."
   }
 }
