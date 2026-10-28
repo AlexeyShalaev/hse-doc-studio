@@ -17,10 +17,12 @@ from hse_doc_studio.core.identity.protocols import (
     IAuditLog,
     IAuthTokenRepository,
     ICredentialRepository,
+    IFirstAdminRepository,
     IInstanceSettingsRepository,
     ILoginAttemptRepository,
     IMailOutboxRepository,
     IMailSender,
+    IOidcProviderRepository,
     IPasswordHasher,
     IRegistrationInviteRepository,
     ISessionRepository,
@@ -33,11 +35,13 @@ from hse_doc_studio.infra.db.repositories.auth import (
     SqlAuthTokenRepository,
     SqlLoginAttemptRepository,
     SqlMailOutboxRepository,
+    SqlOidcProviderRepository,
     SqlRegistrationInviteRepository,
     SqlSessionRepository,
 )
 from hse_doc_studio.infra.db.repositories.identity import (
     SqlCredentialRepository,
+    SqlFirstAdminRepository,
     SqlInstanceSettingsRepository,
     SqlUserRepository,
 )
@@ -58,6 +62,12 @@ from hse_doc_studio.use_cases.identity.sessions import (
     RevokeSessionUC,
     SessionService,
 )
+from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, EnsureBootstrapAdminUC
+from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
+from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService
+from hse_doc_studio.use_cases.server_setup.token import SetupToken
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 
 class ServerIdentityProvider(Provider):
@@ -221,7 +231,76 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_bootstrap_uc(
-        self, users: IUserRepository, auth_settings: AuthSettingsService, sessions: SessionService
+        self, setup: SetupStateService, auth_settings: AuthSettingsService, sessions: SessionService
     ) -> BootstrapUC:
         # SMTP появится вместе с почтовиком; до него ссылки показываются копируемыми.
-        return BootstrapUC(users, auth_settings, sessions, smtp_enabled=False)
+        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=False)
+
+    @provide
+    def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:
+        return SqlFirstAdminRepository(sessions)
+
+    @provide
+    def get_oidc_provider_repository(self, sessions: SessionProvider) -> IOidcProviderRepository:
+        return SqlOidcProviderRepository(sessions)
+
+    @provide
+    def get_setup_token(self) -> SetupToken:
+        # Токен одноразовый и живёт в памяти процесса: один экземпляр на приложение (APP-scope).
+        required = settings.auth.setup_token_required
+        if required is None:
+            required = settings.server.host not in _LOOPBACK_HOSTS
+        return SetupToken(required=required)
+
+    @provide
+    def get_setup_state(self, settings_repo: IInstanceSettingsRepository) -> SetupStateService:
+        return SetupStateService(settings_repo)
+
+    @provide
+    def get_setup_status_uc(
+        self,
+        state: SetupStateService,
+        settings_repo: IInstanceSettingsRepository,
+        users: IUserRepository,
+        token: SetupToken,
+        env: AuthEnvOverrides,
+    ) -> GetSetupStatusUC:
+        return GetSetupStatusUC(state, settings_repo, users, token, env)
+
+    @provide
+    def get_create_first_admin_uc(
+        self,
+        first_admin: IFirstAdminRepository,
+        hasher: IPasswordHasher,
+        login: LoginUC,
+        token: SetupToken,
+        state: SetupStateService,
+        audit: IAuditLog,
+    ) -> CreateFirstAdminUC:
+        return CreateFirstAdminUC(first_admin, hasher, login, token, state, audit)
+
+    @provide
+    def get_ensure_bootstrap_admin_uc(
+        self,
+        users: IUserRepository,
+        first_admin: IFirstAdminRepository,
+        hasher: IPasswordHasher,
+        state: SetupStateService,
+        audit: IAuditLog,
+        env: AuthEnvOverrides,
+    ) -> EnsureBootstrapAdminUC:
+        return EnsureBootstrapAdminUC(users, first_admin, hasher, state, audit, env)
+
+    @provide
+    def get_apply_initial_settings_uc(
+        self,
+        service: AuthSettingsService,
+        update: UpdateAuthSettingsUC,
+        oidc: IOidcProviderRepository,
+        state: SetupStateService,
+    ) -> ApplyInitialSettingsUC:
+        return ApplyInitialSettingsUC(service, update, oidc, state)
+
+    @provide
+    def get_complete_setup_uc(self, state: SetupStateService, audit: IAuditLog) -> CompleteSetupUC:
+        return CompleteSetupUC(state, audit)

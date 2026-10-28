@@ -72,6 +72,38 @@ async def test__server_container__resolves_actor_resolver_chain() -> None:
     assert isinstance(resolver, ChainActorResolver)
 
 
+async def test__server_container__resolves_the_setup_wizard_use_cases() -> None:
+    from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, EnsureBootstrapAdminUC
+    from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
+    from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService
+    from hse_doc_studio.use_cases.server_setup.token import SetupToken
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        resolved = [
+            await container.get(kind)
+            for kind in (
+                CreateFirstAdminUC,
+                EnsureBootstrapAdminUC,
+                ApplyInitialSettingsUC,
+                CompleteSetupUC,
+                GetSetupStatusUC,
+            )
+        ]
+        state, token = await container.get(SetupStateService), await container.get(SetupToken)
+        same_token = await container.get(SetupToken)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert len(resolved) == 5
+    assert isinstance(state, SetupStateService)
+    # Токен один на процесс: иначе в журнал попал бы один, а проверялся другой.
+    assert token is same_token
+
+
 def test__local_container__does_not_import_server_modules() -> None:
     for name in list(sys.modules):
         if name.startswith("hse_doc_studio.infra.di.providers.server_"):

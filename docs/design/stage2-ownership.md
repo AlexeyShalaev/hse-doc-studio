@@ -27,12 +27,12 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | вход, выход, сессия | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` |
 | регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) |
 | OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` |
-| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `POST .../settings`, `POST .../complete` |
+| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `POST .../settings`, `POST .../complete`; после завершения все 404 |
 | аккаунт | `/account` (профиль, пароль), `/account/sessions`, `/account/tokens`, `/account/identities` |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`), `/projects/{id}/members` |
 | админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` |
 | раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` |
-| здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404) |
+| здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» |
 
 CSRF: токен привязан к строке сессии, приходит в bootstrap и ответе входа, шлётся в `X-CSRF-Token`; кроме того проверяется `Origin`. Bearer PAT освобождён от CSRF и не управляет токенами.
 
@@ -61,7 +61,7 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__DB__*`, `HSE_STUDIO__DB__AUTO_MIGRATE` | Postgres; автомиграция под advisory lock (только compose) |
 | `HSE_STUDIO__S3__*` | S3-совместимое хранилище |
 | `HSE_STUDIO__SECRETS__KEY`, `__KEY_FILE`, `__RETIRED_KEYS` | `KeyRing` для `ISecretCipher` |
-| `HSE_STUDIO__AUTH__*`, `__AUTH__ADMIN_EMAIL`, `__AUTH__SETUP_TOKEN_REQUIRED`, `__AUTH__TRUSTED_PROXIES`, `__AUTH__OIDC__*` | вход, мастер, прокси, OIDC |
+| `HSE_STUDIO__AUTH__*`, `__AUTH__ADMIN_EMAIL`, `__AUTH__ADMIN_NAME`, `__AUTH__ADMIN_PASSWORD` / `__AUTH__ADMIN_PASSWORD_FILE`, `__AUTH__SETUP_TOKEN_REQUIRED`, `__AUTH__TRUSTED_PROXIES`, `__AUTH__OIDC__*` | вход, мастер, прокси, OIDC |
 | `HSE_STUDIO__AUTH__EXPERIMENTAL` | пускает server до финального среза; запрещён при публичном bind |
 | `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN`, `__METRICS_TOKEN` | Bearer-токены деталей `/health/ready` и `/metrics` |
 | `HSE_STUDIO__ADMIN__ALLOWED_HOSTS`, `__ADMIN__ALLOWED_CIDRS` | ограничение `/admin` по host/IP |

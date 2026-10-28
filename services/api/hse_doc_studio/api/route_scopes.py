@@ -53,6 +53,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/session/bootstrap"): _P,
     ("POST", "/auth/login"): _P,
     ("POST", "/auth/logout"): _P,
+    # Мастер первого запуска: до завершения права проверяет сам маршрут (токен установки или сессия админа),
+    # после завершения маршрутов нет (404)
+    ("GET", "/server-setup/status"): _P,
+    ("POST", "/server-setup/admin"): _P,
+    ("GET", "/server-setup/environment"): _P,
+    ("POST", "/server-setup/settings"): _P,
+    ("POST", "/server-setup/complete"): _P,
     ("GET", "/account/sessions"): _A,
     ("DELETE", "/account/sessions"): _A,
     ("DELETE", "/account/sessions/{session_id}"): _A,

@@ -67,3 +67,23 @@ class AuthConfig(BaseModel):
     password_enabled: bool | None = Field(
         default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )
+
+    admin_email: str | None = Field(
+        default=None,
+        description=(
+            "Первый администратор из окружения: вместе с паролем создаётся при старте, если админа ещё нет "
+            "(идемпотентно, пароль существующего не трогается). Рекомендуемый путь для compose и helm."
+        ),
+    )
+    admin_name: str | None = Field(default=None, description="Имя первого администратора из окружения.")
+    admin_password: SecretStr | None = Field(default=None, description="Пароль первого администратора из окружения.")
+    admin_password_file: Path | None = Field(
+        default=None, description="Файл с паролем первого администратора (docker secret)."
+    )
+    setup_token_required: bool | None = Field(
+        default=None,
+        description=(
+            "Нужен ли токен установки в мастере первого запуска (печатается в журнале api). "
+            "Не задано: нужен, если сервер слушает не только loopback."
+        ),
+    )

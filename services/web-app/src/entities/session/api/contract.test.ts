@@ -5,7 +5,7 @@ import type { ZodError } from "zod";
 
 import { SchemaParseError } from "@shared/api/parse";
 import { CONTRACT_SCHEMAS } from "./contractSchemas";
-import { BootstrapSchema } from "./schemas";
+import { BootstrapSchema, ServerSetupSettingsRequestSchema } from "./schemas";
 
 // Контракт серверного режима: те же эталонные JSON из contracts/server разбирает и backend-тест
 // (tests/unit/contract/test_server_contract.py). Форму меняют так: сначала эталоны, затем обе
@@ -127,6 +127,31 @@ describe("контракт server: эталоны", () => {
     );
     expect(new Set(boots.map((b) => b.setup_state))).toEqual(
       new Set(["needs_admin", "ready"]),
+    );
+  });
+
+  it("режим domains в мастере требует хотя бы один домен", () => {
+    const body = {
+      ...asRecord(
+        fixtures.find(
+          (f) =>
+            f.schema === "ServerSetupSettingsRequest" && f.name === "domains",
+        )?.body,
+      ),
+      registration_domains: [" @ "],
+    };
+    expect(ServerSetupSettingsRequestSchema.safeParse(body).success).toBe(
+      false,
+    );
+  });
+
+  it("проверки окружения мастера покрывают ok, fail и not_configured", () => {
+    const statuses = fixtures
+      .filter((f) => f.schema === "ServerSetupEnvironment")
+      .flatMap((f) => asRecord(f.body).checks as { status: string }[])
+      .map((c) => c.status);
+    expect(new Set(statuses)).toEqual(
+      new Set(["ok", "fail", "not_configured"]),
     );
   });
 });

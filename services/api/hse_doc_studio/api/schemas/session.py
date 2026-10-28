@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+from hse_doc_studio.core.identity.normalize import is_valid_email
 
 StudioModeName = Literal["local", "server"]
 SetupState = Literal["needs_admin", "ready"]
@@ -149,11 +151,43 @@ class ServerSetupAdminRequest(StrictModel):
     email: str
     password: str
 
+    @field_validator("email")
+    @classmethod
+    def _email_is_valid(cls, value: str) -> str:
+        if not is_valid_email(value):
+            msg = "email is not valid"
+            raise ValueError(msg)
+        return value
+
 
 class ServerSetupSettingsRequest(StrictModel):
     registration_mode: RegistrationMode
+    # Домены почты для режима domains (для него нужен хотя бы один); в остальных режимах пустой список.
+    registration_domains: list[str]
     require_approval: bool
     password_enabled: bool
+
+    @model_validator(mode="after")
+    def _domains_mode_needs_domains(self) -> ServerSetupSettingsRequest:
+        if self.registration_mode == "domains" and not any(d.strip().lstrip("@") for d in self.registration_domains):
+            msg = "registration_domains must not be empty in domains mode"
+            raise ValueError(msg)
+        return self
+
+
+SetupCheckId = Literal["database", "storage", "runner"]
+SetupCheckStatus = Literal["ok", "fail", "not_configured"]
+
+
+class ServerSetupCheck(StrictModel):
+    id: SetupCheckId
+    status: SetupCheckStatus
+    # Короткая причина для fail (класс ошибки); подробности только в журнале сервера.
+    reason: str | None
+
+
+class ServerSetupEnvironment(StrictModel):
+    checks: list[ServerSetupCheck]
 
 
 class UpdateAccountRequest(StrictModel):
