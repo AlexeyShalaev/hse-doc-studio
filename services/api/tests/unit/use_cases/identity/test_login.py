@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from hse_doc_studio.core.identity.entities import UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
@@ -108,3 +110,39 @@ async def test_delay_survives_restart_and_is_never_a_permanent_block(world: Worl
 def test_login_delay_grows_to_cap() -> None:
     seconds = [login_delay(n).total_seconds() for n in (1, 4, 5, 6, 7, 30)]
     assert seconds == [0, 0, 1, 2, 4, 900]
+
+
+async def test_user_disabled_during_password_check_is_denied_and_not_resurrected(world: World) -> None:
+    await world.add_user()
+    verify = world.hasher.verify
+
+    def verify_then_disable(password: str, stored: str) -> bool:
+        ok = verify(password, stored)
+        # админ отключает пользователя, пока идёт проверка пароля
+        world.store.users["u1"] = replace(world.store.users["u1"], status=UserStatus.disabled)
+        return ok
+
+    world.hasher.verify = verify_then_disable  # type: ignore[method-assign]
+
+    err = await _fail(world, "ann@example.org", PASSWORD)
+
+    assert err.code is IdentityErrorCode.account_disabled
+    assert world.store.users["u1"].status is UserStatus.disabled
+    assert await world.sessions.list_for_user("u1") == []
+
+
+async def test_login_keeps_changes_made_during_password_check(world: World) -> None:
+    await world.add_user()
+    verify = world.hasher.verify
+
+    def verify_then_promote(password: str, stored: str) -> bool:
+        ok = verify(password, stored)
+        world.store.users["u1"] = replace(world.store.users["u1"], is_instance_admin=True)
+        return ok
+
+    world.hasher.verify = verify_then_promote  # type: ignore[method-assign]
+
+    result = await world.login_uc().execute("ann@example.org", PASSWORD, ip="1.2.3.4")
+
+    assert result.user.is_instance_admin
+    assert world.store.users["u1"].is_instance_admin

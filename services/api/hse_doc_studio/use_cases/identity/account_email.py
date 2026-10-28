@@ -102,7 +102,7 @@ class ConfirmEmailChangeUC:
     async def execute(self, token: str) -> None:
         async with self._uow.begin():
             consumed = await self._auth_tokens.consume(hash_token(token), AuthTokenKind.change_email, self._clock())
-            user = await self._users.get(consumed.user_id) if consumed and consumed.user_id else None
+            user = await self._users.get_for_update(consumed.user_id) if consumed and consumed.user_id else None
             if consumed is None or user is None or not consumed.payload:
                 raise IdentityError(IdentityErrorCode.token_invalid)
             # Адрес могли занять между запросом и подтверждением: репозиторий ответит email_taken.

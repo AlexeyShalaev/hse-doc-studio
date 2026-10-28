@@ -52,7 +52,7 @@ class VerifyEmailUC:
         """Погашенная, просроченная и неизвестная ссылки дают один и тот же отказ."""
         async with self._uow.begin():
             consumed = await self._auth_tokens.consume(hash_token(token), AuthTokenKind.verify_email, self._clock())
-            user = await self._users.get(consumed.user_id) if consumed and consumed.user_id else None
+            user = await self._users.get_for_update(consumed.user_id) if consumed and consumed.user_id else None
             if user is None:
                 raise IdentityError(IdentityErrorCode.token_invalid)
             status = UserStatus.active if user.status is UserStatus.pending_verification else user.status

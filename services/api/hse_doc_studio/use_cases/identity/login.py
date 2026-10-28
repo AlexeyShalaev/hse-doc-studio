@@ -111,8 +111,16 @@ class LoginUC:
             user_agent=user_agent[:512],
         )
         session = replace(session, expires_at=session_deadline(session, self._policy, now))
-        user = replace(user, last_login_at=now)
         async with self._uow.begin():
+            # Пользователь прочитан до проверки пароля (долгий argon2): за это время его могли отключить или
+            # поменять. Под блокировкой читаем свежую строку, перепроверяем статус и пишем поверх неё.
+            fresh = await self._users.get_for_update(user.id)
+            if fresh is None:
+                raise IdentityError(IdentityErrorCode.invalid_credentials)
+            denied = _STATUS_ERRORS.get(fresh.status)
+            if denied is not None:
+                raise IdentityError(denied)
+            user = replace(fresh, last_login_at=now)
             if new_hash is not None:
                 await self._credentials.set_hash(user.id, new_hash)
             if previous_secret:

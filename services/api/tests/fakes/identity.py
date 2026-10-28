@@ -27,6 +27,9 @@ class InMemoryUserRepository:
     async def get(self, user_id: str) -> User | None:
         return self._store.users.get(user_id)
 
+    async def get_for_update(self, user_id: str) -> User | None:
+        return self._store.users.get(user_id)
+
     async def get_by_email(self, email: str) -> User | None:
         key = normalize_email(email)
         return next((u for u in self._store.users.values() if u.email_normalized == key), None)

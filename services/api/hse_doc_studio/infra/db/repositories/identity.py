@@ -93,6 +93,18 @@ class SqlUserRepository:
             row = await session.get(UserRow, user_id)
             return _user(row) if row else None
 
+    async def get_for_update(self, user_id: str) -> User | None:
+        async with self._sessions.use() as session:
+            row = (
+                await session.execute(
+                    select(UserRow)
+                    .where(UserRow.id == user_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalar_one_or_none()
+            return _user(row) if row else None
+
     async def get_by_email(self, email: str) -> User | None:
         async with self._sessions.use() as session:
             row = (
