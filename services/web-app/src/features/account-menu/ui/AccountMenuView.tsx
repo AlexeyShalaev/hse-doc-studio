@@ -1,4 +1,4 @@
-import { LogOut, Settings, ShieldAlert } from "lucide-react";
+import { LogOut, Settings, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
 import { Spinner } from "@shared/ui/Spinner";
@@ -10,6 +10,8 @@ export type AccountMenuViewProps = {
   /** Начальное состояние, нужно галерее. */
   defaultOpen?: boolean;
   onOpenSettings: () => void;
+  /** Есть только при capabilities.admin: ссылка не показывается тому, кому админка ответит 404. */
+  onOpenAdmin?: () => void;
   onLogout: () => void;
 };
 
@@ -46,6 +48,7 @@ export const AccountMenuView = ({
   pending = false,
   defaultOpen,
   onOpenSettings,
+  onOpenAdmin,
   onLogout,
 }: AccountMenuViewProps) => {
   const { t } = useTranslation("appChrome");
@@ -155,6 +158,18 @@ export const AccountMenuView = ({
             <Settings size={14} />
             {t("accountMenu.settings")}
           </button>
+          {onOpenAdmin && (
+            <button
+              type="button"
+              className="row-btn"
+              style={itemStyle}
+              onClick={onOpenAdmin}
+              data-testid="account-menu-open-admin"
+            >
+              <ShieldCheck size={14} />
+              {t("accountMenu.openAdmin")}
+            </button>
+          )}
           <button
             type="button"
             className="row-btn"

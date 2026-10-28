@@ -154,6 +154,7 @@
   "accountMenu": {
     "title": "Account",
     "open": "Account menu: {{name}}",
+    "openAdmin": "Administration",
     "settings": "Settings",
     "logout": "Sign out",
     "logoutFailed": "Could not sign out: the server did not respond. Try again.",

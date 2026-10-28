@@ -86,6 +86,25 @@ describe("AccountMenu", () => {
     );
   });
 
+  it("links to the admin only with the admin capability", async () => {
+    const user = userEvent.setup();
+    mount(serverUser);
+    await user.click(screen.getByTestId("account-menu-trigger"));
+    await screen.findByTestId("account-menu");
+    expect(
+      screen.queryByTestId("account-menu-open-admin"),
+    ).not.toBeInTheDocument();
+    cleanup();
+
+    mount({
+      ...serverUser,
+      capabilities: { ...serverUser.capabilities, admin: true },
+    });
+    await user.click(screen.getByTestId("account-menu-trigger"));
+    await user.click(await screen.findByTestId("account-menu-open-admin"));
+    expect(screen.getByTestId("where")).toHaveTextContent(/^\/admin$/);
+  });
+
   it("logout drops every cached query of the user and the CSRF token", async () => {
     const user = userEvent.setup();
     const post = vi
