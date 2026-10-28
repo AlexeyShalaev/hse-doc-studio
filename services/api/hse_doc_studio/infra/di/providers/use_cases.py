@@ -6,6 +6,7 @@ import httpx
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
@@ -1640,9 +1641,18 @@ class UseCaseProvider(Provider):
         policy: GitSyncPolicy,
         resolver: ProviderResolver,
         token_checker: TokenChecker,
+        access: IProjectAccessChecker,
     ) -> ProbeRemoteUC:
         return ProbeRemoteUC(
-            project_repo, project_index_repo, transport, credentials, template_repo, policy, resolver, token_checker
+            project_repo,
+            project_index_repo,
+            transport,
+            credentials,
+            template_repo,
+            policy,
+            resolver,
+            token_checker,
+            access,
         )
 
     @provide
@@ -3405,8 +3415,10 @@ class UseCaseProvider(Provider):
         return SystemListChatSessionsUC(self._system_folder(), chat_repo, run_manager)
 
     @provide
-    def get_system_create_chat_session_uc(self, chat_repo: IChatRepository) -> SystemCreateChatSessionUC:
-        return SystemCreateChatSessionUC(self._system_folder(), chat_repo)
+    def get_system_create_chat_session_uc(
+        self, chat_repo: IChatRepository, access: IProjectAccessChecker
+    ) -> SystemCreateChatSessionUC:
+        return SystemCreateChatSessionUC(self._system_folder(), chat_repo, access)
 
     @provide
     def get_system_get_chat_session_uc(
@@ -3451,6 +3463,7 @@ class UseCaseProvider(Provider):
         summarizer: IChatSummarizer,
         project_repo: IProjectRepository,
         locator: IProjectLocator,
+        access: IProjectAccessChecker,
         agent_persona_repo: IAgentPersonaRepository,
     ) -> SystemStartChatTurnUC:
         return SystemStartChatTurnUC(
@@ -3467,6 +3480,7 @@ class UseCaseProvider(Provider):
             summarizer=summarizer,
             project_repo=project_repo,
             locator=locator,
+            access=access,
             agent_persona_repo=agent_persona_repo,
         )
 

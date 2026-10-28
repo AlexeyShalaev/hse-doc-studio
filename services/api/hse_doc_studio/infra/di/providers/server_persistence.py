@@ -14,6 +14,7 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
@@ -29,6 +30,7 @@ from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclR
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
+from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
@@ -42,6 +44,8 @@ from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
+from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
+from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
@@ -118,6 +122,24 @@ class ServerPersistenceProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_project_acl(self, inner: PostgresProjectAclRepository) -> IProjectAclRepository:
         return RequestAclCache(inner)
+
+    @provide(override=True)
+    def get_project_access_checker(self, acl: PostgresProjectAclRepository) -> IProjectAccessChecker:
+        return ServerProjectAccessChecker(acl)
+
+    @provide(override=True)
+    def get_list_projects_uc(
+        self, project_repo: IProjectRepository, locator: IProjectLocator, acl: PostgresProjectAclRepository
+    ) -> ListProjectsUC:
+        return ListProjectsUC(project_repo=project_repo, locator=locator, memberships=acl)
+
+    @provide(override=True)
+    def get_project_suggestions_uc(self, list_projects: ListProjectsUC) -> GetProjectSuggestionsUC:
+        return GetProjectSuggestionsUC(
+            list_projects=list_projects,
+            default_projects_dir=settings.data_dir.expanduser() / "projects",
+            with_folders=False,
+        )
 
     @provide(override=True)
     def get_project_locator(

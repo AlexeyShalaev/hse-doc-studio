@@ -3,6 +3,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
@@ -39,6 +40,7 @@ from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.infra.docker.environment_probe import DockerEnvironmentProbe
 from hse_doc_studio.infra.docker.mount_probe import DockerHealthProbe, MountProbe
 from hse_doc_studio.infra.docker.self_info import DockerSelfInfo
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -80,6 +82,10 @@ class LocalPersistenceProvider(Provider):
         self, project_index: IProjectIndexRepository, project_repo: IProjectRepository
     ) -> IProjectLocator:
         return LocalProjectLocator(project_index, project_repo)
+
+    @provide
+    def get_project_access_checker(self) -> IProjectAccessChecker:
+        return LocalProjectAccessChecker()
 
     @provide
     def get_template_repo(self) -> ITemplateRepository:

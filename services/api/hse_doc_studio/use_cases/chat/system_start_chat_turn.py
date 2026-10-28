@@ -9,6 +9,8 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.edits import select_edit_format
 from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IChatSummarizer
@@ -123,6 +125,7 @@ class SystemStartChatTurnUC:
         summarizer: IChatSummarizer,
         project_repo: IProjectRepository,
         locator: IProjectLocator,
+        access: IProjectAccessChecker,
         agent_persona_repo: IAgentPersonaRepository,
     ) -> None:
         self._folder = folder
@@ -139,6 +142,7 @@ class SystemStartChatTurnUC:
         self._summarizer = summarizer
         self._project_repo = project_repo
         self._locator = locator
+        self._access = access
 
     async def _resolve_project(self, project_id: UUID | None) -> Project | None:
         if project_id is None:
@@ -162,6 +166,9 @@ class SystemStartChatTurnUC:
                     f"Сессия чата {inp.session_id!r} не найдена", f"Chat session {inp.session_id!r} not found"
                 )
             )
+        # Права на проект могли отозвать уже после создания чата.
+        if session.project_id is not None:
+            await self._access.require(session.project_id, Action.AGENT_USE)
         if self._run_manager.active_run_for_session(inp.session_id) is not None:
             raise PermissionError("a turn is already running in this chat")
         if inp.run_id is not None:

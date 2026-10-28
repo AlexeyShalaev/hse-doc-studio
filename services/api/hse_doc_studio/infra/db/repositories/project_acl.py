@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -9,7 +10,12 @@ import structlog
 from sqlalchemy import and_, select, update
 
 from hse_doc_studio.core.access.entities import Actor, ActorKind, Grant, ProjectAcl, Role
-from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.access.repositories import (
+    IProjectAclRepository,
+    ProjectMembership,
+    ProjectOwnerView,
+)
+from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.repositories.projects import USER_PRINCIPAL
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -68,6 +74,43 @@ class PostgresProjectAclRepository:
             grants={actor.id: grant},
         )
 
+    async def memberships_for(self, actor: Actor, project_ids: Sequence[UUID]) -> dict[UUID, ProjectMembership]:
+        if actor.kind is not ActorKind.user or actor.id is None or not project_ids:
+            return {}
+        stmt = (
+            select(
+                ProjectRow.id,
+                ProjectRow.owner_user_id,
+                ProjectRow.owner_org_id,
+                UserRow.name.label("owner_name"),
+                ProjectMemberRow.role,
+                ProjectMemberRow.persona,
+                ProjectMemberRow.show_sources,
+                ProjectMemberRow.can_share,
+                ProjectMemberRow.can_edit_all,
+            )
+            .select_from(ProjectRow)
+            .outerjoin(UserRow, UserRow.id == ProjectRow.owner_user_id)
+            .outerjoin(
+                ProjectMemberRow,
+                and_(
+                    ProjectMemberRow.project_id == ProjectRow.id,
+                    ProjectMemberRow.principal_kind == USER_PRINCIPAL,
+                    ProjectMemberRow.principal_id == actor.id,
+                ),
+            )
+            .where(ProjectRow.id.in_(list(project_ids)), ProjectRow.deleted_at.is_(None))
+        )
+        async with self._sessions.use() as session:
+            rows = (await session.execute(stmt)).all()
+        result: dict[UUID, ProjectMembership] = {}
+        for row in rows:
+            grant = _grant_of(is_owner=row.owner_user_id == actor.id, row=row)
+            if grant is None:
+                continue
+            result[row.id] = ProjectMembership(project_id=row.id, owner=_owner_view(row), my_role=grant.role)
+        return result
+
     async def set_shared_enabled(self, project_id: UUID, enabled: bool) -> None:
         stmt = update(ProjectRow).where(ProjectRow.id == project_id).values(shared_enabled=enabled)
         async with self._sessions.use() as session:
@@ -75,6 +118,13 @@ class PostgresProjectAclRepository:
         current = self._flags.get(project_id)
         if current is not None:
             self._flags.put(project_id, AclFlags(team=current.team, shared_enabled=enabled))
+
+
+def _owner_view(row: Any) -> ProjectOwnerView:
+    if row.owner_user_id is not None:
+        return ProjectOwnerView(kind="user", id=row.owner_user_id, name=row.owner_name or "", slug=None)
+    # Таблицы организаций ещё нет: пока в колонке лежит сам slug.
+    return ProjectOwnerView(kind="org", id=row.owner_org_id or "", name=row.owner_org_id or "", slug=row.owner_org_id)
 
 
 def _grant_of(*, is_owner: bool, row: Any) -> Grant | None:

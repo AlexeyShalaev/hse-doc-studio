@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import ChatSession
 from hse_doc_studio.core.enums import AgentRunStatus, Lang
@@ -45,9 +47,10 @@ class SystemListChatSessionsUC:
 
 
 class SystemCreateChatSessionUC:
-    def __init__(self, folder: Path, chat_repo: IChatRepository) -> None:
+    def __init__(self, folder: Path, chat_repo: IChatRepository, access: IProjectAccessChecker) -> None:
         self._folder = folder
         self._chat_repo = chat_repo
+        self._access = access
 
     async def execute(
         self,
@@ -58,6 +61,8 @@ class SystemCreateChatSessionUC:
         persona: str | None = None,
         persona_instructions: str | None = None,
     ) -> CreateChatSessionOutput:
+        if project_id is not None:
+            await self._access.require(project_id, Action.AGENT_USE)
         now = _now()
         session = ChatSession(
             id=uuid4(),
