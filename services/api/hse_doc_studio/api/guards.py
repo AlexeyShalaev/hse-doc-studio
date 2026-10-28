@@ -27,9 +27,10 @@ from hse_doc_studio.api.route_scopes import (
     scope_for_request,
 )
 from hse_doc_studio.core.access.actions import RouteExemption
-from hse_doc_studio.core.access.context import set_current_actor
+from hse_doc_studio.core.access.context import require_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, ProjectAcl
 from hse_doc_studio.core.access.policy import Decision, decide
+from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
@@ -84,10 +85,19 @@ def access_detail(access: ProjectAccess) -> dict[str, Any]:
     }
 
 
-async def load_project_acl(_request: Request, _project_id: str) -> ProjectAcl | None:
-    """Членство проекта. Хранилище членств появится на втором этапе, до него сюда не дойти."""
-    msg = "project membership storage is not implemented (stage 2 of collaboration)"
-    raise NotImplementedError(msg)
+async def load_project_acl(request: Request, project_id: str) -> ProjectAcl | None:
+    """Членство текущего актора в проекте; чужой, несуществующий и нечитаемый id дают None (ответ 404).
+
+    Только серверный режим: локальный актор уходит из гарда раньше и репозиторий не трогает.
+    """
+    actor = require_actor()
+    try:
+        parsed = UUID(project_id)
+    except ValueError:
+        return None
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    repository = await container.get(IProjectAclRepository)
+    return await repository.load_for(actor, parsed)
 
 
 async def project_access_guard(request: Request) -> None:

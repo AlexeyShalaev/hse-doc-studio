@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from hse_doc_studio.core.access.context import ActorRequired, require_actor
 from hse_doc_studio.core.access.entities import Actor, ActorKind, Role
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.enums import ProjectStaffing
 from hse_doc_studio.core.projects.locator import ProjectAlreadyRegisteredError
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import IProjectRepository
@@ -94,6 +95,9 @@ class PostgresProjectLocator:
             "workspace_path": str(project_id),
             "kind": project.kind.value,
             "lang": project.lang.value,
+            # Единственный момент, когда права берутся из файла: проект создаёт его владелец.
+            "team": project.staffing is ProjectStaffing.team,
+            "shared_enabled": project.shared_enabled,
         }
         insert = pg_insert(ProjectRow).values(**values)
         stmt = insert.on_conflict_do_update(
@@ -102,6 +106,8 @@ class PostgresProjectLocator:
                 "name": insert.excluded.name,
                 "kind": insert.excluded.kind,
                 "lang": insert.excluded.lang,
+                "team": insert.excluded.team,
+                "shared_enabled": insert.excluded.shared_enabled,
                 "updated_at": func.now(),
                 "deleted_at": None,
             },

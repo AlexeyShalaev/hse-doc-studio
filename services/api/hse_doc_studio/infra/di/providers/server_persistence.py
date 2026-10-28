@@ -14,6 +14,7 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
@@ -24,11 +25,13 @@ from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
+from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
+from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
 from hse_doc_studio.infra.projects.catalog_sync import (
     MirroringProjectRepository,
     ProjectCatalogMirror,
@@ -40,6 +43,7 @@ from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
+from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
 
@@ -91,10 +95,29 @@ class ServerPersistenceProvider(Provider):
     def get_project_catalog_mirror(self, sessions: SessionProvider) -> ProjectCatalogMirror:
         return ProjectCatalogMirror(sessions)
 
+    @provide
+    def get_acl_flags(self) -> AclFlagsCache:
+        return AclFlagsCache()
+
+    @provide
+    def get_mirroring_project_repo(
+        self, volume: IProjectVolume, mirror: ProjectCatalogMirror, flags: AclFlagsCache
+    ) -> MirroringProjectRepository:
+        return MirroringProjectRepository(JsonProjectRepository(), volume, mirror, flags)
+
     @provide(override=True)
-    def get_project_repo(self, volume: IProjectVolume, mirror: ProjectCatalogMirror) -> IProjectRepository:
-        """project.json остаётся источником содержимого; копия name/kind/lang уходит в каталог на каждый save."""
-        return MirroringProjectRepository(JsonProjectRepository(), volume, mirror)
+    def get_project_repo(self, repo: MirroringProjectRepository) -> IProjectRepository:
+        """project.json остаётся источником содержимого; копия name/kind/lang уходит в каталог на каждый save,
+        а поля, от которых зависят права, читаются и пишутся значением из БД."""
+        return repo
+
+    @provide
+    def get_postgres_project_acl(self, sessions: SessionProvider, flags: AclFlagsCache) -> PostgresProjectAclRepository:
+        return PostgresProjectAclRepository(sessions, flags)
+
+    @provide(scope=Scope.REQUEST)
+    def get_project_acl(self, inner: PostgresProjectAclRepository) -> IProjectAclRepository:
+        return RequestAclCache(inner)
 
     @provide(override=True)
     def get_project_locator(
@@ -104,7 +127,7 @@ class ServerPersistenceProvider(Provider):
 
     @provide
     def get_project_catalog_reconciler(
-        self, sessions: SessionProvider, volume: IProjectVolume, projects: IProjectRepository
+        self, sessions: SessionProvider, volume: IProjectVolume, projects: MirroringProjectRepository
     ) -> ProjectCatalogReconciler:
         return ProjectCatalogReconciler(sessions, volume, projects)
 
@@ -141,6 +164,27 @@ class ServerPersistenceProvider(Provider):
             vcs_service=vcs_service,
             base_service=base_service,
             server_storage=storage,
+        )
+
+    @provide(scope=Scope.REQUEST, override=True)
+    def get_update_team_set_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        template_renderer: TemplateRenderer,
+        vcs_service: IVcsService,
+        base_service: TemplateBaseService,
+        acl: IProjectAclRepository,
+    ) -> UpdateTeamSetUC:
+        return UpdateTeamSetUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            template_repo=template_repo,
+            template_renderer=template_renderer,
+            vcs_service=vcs_service,
+            base_service=base_service,
+            acl=acl,
         )
 
     @provide(scope=Scope.REQUEST, override=True)

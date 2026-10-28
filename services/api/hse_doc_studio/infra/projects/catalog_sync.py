@@ -20,6 +20,7 @@ from hse_doc_studio.core.projects.volume import IProjectVolume, UnsafePathError
 from hse_doc_studio.core.repositories import IProjectRepository
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.projects.acl_flags import AclFlags, AclFlagsCache
 
 logger = structlog.get_logger()
 
@@ -52,16 +53,30 @@ class MirroringProjectRepository:
     Если цикла нет или запись не удалась, копию исправит сверка на старте.
     """
 
-    def __init__(self, inner: IProjectRepository, volume: IProjectVolume, mirror: ProjectCatalogMirror) -> None:
+    def __init__(
+        self,
+        inner: IProjectRepository,
+        volume: IProjectVolume,
+        mirror: ProjectCatalogMirror,
+        flags: AclFlagsCache | None = None,
+    ) -> None:
         self._inner = inner
         self._volume = volume
         self._mirror = mirror
+        self._flags = flags if flags is not None else AclFlagsCache()
         self._pending: set[asyncio.Task[bool]] = set()
 
+    @property
+    def flags(self) -> AclFlagsCache:
+        return self._flags
+
     def get(self, folder: Path) -> Project | None:
-        return self._inner.get(folder)
+        """Поля прав берутся из БД, а не из файла: подтянутый git-ом project.json их не меняет."""
+        project = self._inner.get(folder)
+        return self._with_db_flags(project, folder) if project is not None else None
 
     def save(self, project: Project) -> None:
+        project = self._with_db_flags(project, project.folder)
         self._inner.save(project)
         try:
             project_id = self._volume.id_of(project.folder)
@@ -75,6 +90,24 @@ class MirroringProjectRepository:
         task = loop.create_task(self._mirror.mirror(project_id, project))
         self._pending.add(task)
         task.add_done_callback(self._done)
+
+    def enforce_acl(self, folder: Path) -> bool:
+        """Перезаписывает project.json значениями из БД, если файл с ними разошёлся; True, если переписал."""
+        raw = self._inner.get(folder)
+        if raw is None:
+            return False
+        fixed = self._with_db_flags(raw, folder)
+        if fixed is raw:
+            return False
+        self._inner.save(fixed)
+        return True
+
+    def _with_db_flags(self, project: Project, folder: Path) -> Project:
+        try:
+            flags = self._flags.get(self._volume.id_of(folder))
+        except UnsafePathError:
+            return project
+        return project if flags is None else flags.apply(project)
 
     async def drain(self) -> None:
         """Дожидается отправленных копий: для остановки сервера и тестов."""
@@ -93,6 +126,7 @@ class ReconcileReport:
     missing: list[UUID] = field(default_factory=list)
     restored: list[UUID] = field(default_factory=list)
     refreshed: list[UUID] = field(default_factory=list)
+    acl_rewritten: list[UUID] = field(default_factory=list)
 
 
 class ProjectCatalogReconciler:
@@ -106,12 +140,16 @@ class ProjectCatalogReconciler:
 
     async def reconcile(self) -> ReconcileReport:
         report = ReconcileReport()
-        stmt = select(ProjectRow.id, ProjectRow.volume_missing_at).where(ProjectRow.deleted_at.is_(None))
+        stmt = select(ProjectRow.id, ProjectRow.volume_missing_at, ProjectRow.team, ProjectRow.shared_enabled).where(
+            ProjectRow.deleted_at.is_(None)
+        )
         async with self._sessions.use() as session:
             rows = (await session.execute(stmt)).all()
-        for project_id, missing_at in rows:
+        for project_id, missing_at, team, shared_enabled in rows:
             report.checked += 1
             try:
+                if isinstance(self._projects, MirroringProjectRepository):
+                    self._projects.flags.put(project_id, AclFlags(team=team, shared_enabled=shared_enabled))
                 await self._check(project_id, missing_at is not None, report)
             except Exception as exc:  # noqa: BLE001 — одна битая строка не должна останавливать сверку
                 logger.warning("project reconcile: error", project_id=str(project_id), exc=str(exc))
@@ -128,7 +166,10 @@ class ProjectCatalogReconciler:
         if was_missing:
             await self._set_missing(project_id, missing=False)
             report.restored.append(project_id)
-        project = self._projects.get(self._volume.path_of(project_id))
+        folder = self._volume.path_of(project_id)
+        if isinstance(self._projects, MirroringProjectRepository) and self._projects.enforce_acl(folder):
+            report.acl_rewritten.append(project_id)
+        project = self._projects.get(folder)
         if project is not None and await self._mirror.mirror(project_id, project):
             report.refreshed.append(project_id)
 

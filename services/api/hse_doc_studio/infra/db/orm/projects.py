@@ -27,6 +27,9 @@ class ProjectRow(Base):
     lang: Mapped[str] = mapped_column(String(8), nullable=False)
     org_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     nda: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Права зависят от этих двух полей, поэтому их источник БД: project.json (и git) их не задаёт.
+    team: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    shared_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
