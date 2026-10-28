@@ -1,0 +1,8 @@
+{
+  "attempt": 1,
+  "seq": 0,
+  "lines": [
+    "latexmk: run 1",
+    "Output written"
+  ]
+}

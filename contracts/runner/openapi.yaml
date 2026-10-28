@@ -1,0 +1,524 @@
+openapi: 3.0.3
+info:
+  title: Протокол раннера Студии
+  version: "1"
+  description: |
+    Раннер сам забирает работу (pull) по HTTPS JSON; веб-сокетов нет. Регистрация идёт токеном
+    регистрации, остальные вызовы токеном раннера (`Authorization: Bearer`), а вызовы по задаче
+    дополнительно подписанным токеном задачи (`X-Job-Token`, из конверта). Каждый вызов по задаче
+    несёт `attempt`; устаревшая попытка получает 409 `stale_attempt`, её выходы игнорируются.
+    Раннер видит только блобы манифеста своей задачи. Ошибки имеют тело `RunnerErrorBody`
+    с кодом из `x-error-codes` (тот же список в error_codes.json).
+servers:
+  - url: /api/runner/v1
+x-error-codes:
+  - runner_lost
+  - superseded
+  - superseded_by
+  - no_runner
+  - quota
+  - stale_attempt
+  - job_not_found
+  - job_not_running
+  - blob_forbidden
+  - blob_missing
+  - artifact_invalid
+  - runner_unauthorized
+  - runner_disabled
+  - job_token_invalid
+x-defaults:
+  lease_s: 45
+  heartbeat_s: 10
+  max_poll_wait_s: 25
+paths:
+  /register:
+    post:
+      operationId: registerRunner
+      summary: Регистрация раннера, возможности и версия протокола.
+      security: [{registrationToken: []}]
+      requestBody: {$ref: '#/components/requestBodies/RunnerRegister'}
+      responses:
+        "200": {description: Раннер принят, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerRegisterResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+  /poll:
+    post:
+      operationId: pollJob
+      summary: Долгий опрос до 25 с; пустой конверт значит работы нет.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/PollRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Конверт или пусто, content: {application/json: {schema: {$ref: '#/components/schemas/PollResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/heartbeat:
+    post:
+      operationId: heartbeatJob
+      summary: Продлевает аренду; ответ доставляет отмену идущей задачи.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/HeartbeatRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Аренда продлена, content: {application/json: {schema: {$ref: '#/components/schemas/HeartbeatResponseBody'}}}}
+        "409": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/log:
+    post:
+      operationId: appendJobLog
+      summary: Порция живого лога; повтор той же порции безвреден.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/LogBatchBody'}}}, required: true}
+      responses:
+        "204": {description: Принято}
+        "409": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/blobs/need:
+    post:
+      operationId: needBlobs
+      summary: Где взять нужные блобы манифеста; чужие блобы отклоняются.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/BlobNeedRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Ссылки или прокси, content: {application/json: {schema: {$ref: '#/components/schemas/BlobNeedResponseBody'}}}}
+        "403": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/blobs/{sha256}:
+    get:
+      operationId: getBlob
+      summary: Содержимое блоба через API, когда подписанной ссылки нет.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}, {$ref: '#/components/parameters/Sha256'}]
+      responses:
+        "200": {description: Байты блоба, content: {application/octet-stream: {schema: {type: string, format: binary}}}}
+        "403": {$ref: '#/components/responses/Error'}
+        "404": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/artifacts:
+    post:
+      operationId: announceArtifact
+      summary: Заявка на загрузку выхода; в ответе ссылка или пусто для загрузки через API.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/ArtifactUploadRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Куда грузить, content: {application/json: {schema: {$ref: '#/components/schemas/ArtifactUploadResponseBody'}}}}
+        "422": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/artifacts/{sha256}:
+    put:
+      operationId: putArtifact
+      summary: Загрузка выхода через API; хеш и размер проверяются по заявке.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}, {$ref: '#/components/parameters/Sha256'}]
+      requestBody: {content: {application/octet-stream: {schema: {type: string, format: binary}}}, required: true}
+      responses:
+        "204": {description: Принято}
+        "422": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/complete:
+    post:
+      operationId: completeJob
+      summary: Итог попытки; устаревшая попытка получает 409.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/CompleteRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Итог принят, content: {application/json: {schema: {$ref: '#/components/schemas/CompleteResponseBody'}}}}
+        "409": {$ref: '#/components/responses/Error'}
+components:
+  schemas:
+    ActorWire:
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+          - local
+          - user
+          - guest
+          type: string
+        id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+        link_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        is_instance_admin:
+          type: boolean
+        source:
+          anyOf:
+          - enum:
+            - session
+            - pat
+            - link
+            - local
+            type: string
+          - type: 'null'
+        scopes:
+          items:
+            type: string
+          type: array
+      required:
+      - kind
+      - id
+      - name
+      - email
+      - link_id
+      - is_instance_admin
+      - source
+      - scopes
+      type: object
+    ArtifactRefBody:
+      additionalProperties: false
+      properties:
+        path:
+          minLength: 1
+          type: string
+        sha256:
+          pattern: ^[0-9a-f]{64}$
+          type: string
+        size:
+          minimum: 0
+          type: integer
+      required:
+      - path
+      - sha256
+      - size
+      type: object
+    ArtifactUploadRequestBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+        artifact:
+          $ref: '#/components/schemas/ArtifactRefBody'
+      required:
+      - attempt
+      - artifact
+      type: object
+    ArtifactUploadResponseBody:
+      additionalProperties: false
+      properties:
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - url
+      type: object
+    BlobLocationBody:
+      additionalProperties: false
+      properties:
+        sha256:
+          pattern: ^[0-9a-f]{64}$
+          type: string
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - sha256
+      - url
+      type: object
+    BlobNeedRequestBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+        sha256:
+          items:
+            type: string
+          type: array
+      required:
+      - attempt
+      - sha256
+      type: object
+    BlobNeedResponseBody:
+      additionalProperties: false
+      properties:
+        blobs:
+          items:
+            $ref: '#/components/schemas/BlobLocationBody'
+          type: array
+      required:
+      - blobs
+      type: object
+    CompleteRequestBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+        result:
+          $ref: '#/components/schemas/JobResultWire'
+        artifacts:
+          items:
+            $ref: '#/components/schemas/ArtifactRefBody'
+          type: array
+      required:
+      - attempt
+      - result
+      - artifacts
+      type: object
+    CompleteResponseBody:
+      additionalProperties: false
+      properties:
+        accepted:
+          type: boolean
+      required:
+      - accepted
+      type: object
+    HeartbeatRequestBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+      required:
+      - attempt
+      type: object
+    HeartbeatResponseBody:
+      additionalProperties: false
+      properties:
+        cancel:
+          type: boolean
+        lease_until:
+          format: date-time
+          type: string
+      required:
+      - cancel
+      - lease_until
+      type: object
+    JobEnvelopeBody:
+      additionalProperties: false
+      properties:
+        spec:
+          $ref: '#/components/schemas/JobSpecWire'
+        manifest:
+          items:
+            $ref: '#/components/schemas/ManifestEntry'
+          type: array
+        timeout_s:
+          exclusiveMinimum: 0
+          type: number
+        attempt:
+          minimum: 1
+          type: integer
+        job_token:
+          minLength: 1
+          type: string
+        actor_role:
+          anyOf:
+          - enum:
+            - reader
+            - reviewer
+            - editor
+            - owner
+            type: string
+          - type: 'null'
+      required:
+      - spec
+      - manifest
+      - timeout_s
+      - attempt
+      - job_token
+      - actor_role
+      type: object
+    JobResultWire:
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+          - succeeded
+          - failed
+          - cancelled
+          - timed_out
+          type: string
+        data:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+        error:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+      required:
+      - status
+      - data
+      - error
+      type: object
+    JobSpecWire:
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        kind:
+          enum:
+          - compile
+          - office.convert
+          - signature.verify_detached
+          - pack.submission
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+        project_id:
+          type: string
+        actor:
+          $ref: '#/components/schemas/ActorWire'
+        locale:
+          enum:
+          - ru
+          - en
+          type: string
+        payload:
+          additionalProperties: true
+          type: object
+      required:
+      - id
+      - kind
+      - tags
+      - project_id
+      - actor
+      - locale
+      - payload
+      type: object
+    LogBatchBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+        seq:
+          minimum: 0
+          type: integer
+        lines:
+          items:
+            type: string
+          type: array
+      required:
+      - attempt
+      - seq
+      - lines
+      type: object
+    ManifestEntry:
+      additionalProperties: false
+      properties:
+        path:
+          minLength: 1
+          type: string
+        sha256:
+          pattern: ^[0-9a-f]{64}$
+          type: string
+        size:
+          minimum: 0
+          type: integer
+      required:
+      - path
+      - sha256
+      - size
+      type: object
+    PollRequestBody:
+      additionalProperties: false
+      properties:
+        wait_s:
+          maximum: 25
+          minimum: 0
+          type: integer
+        free_slots:
+          minimum: 1
+          type: integer
+      required:
+      - wait_s
+      - free_slots
+      type: object
+    PollResponseBody:
+      additionalProperties: false
+      properties:
+        envelope:
+          anyOf:
+          - $ref: '#/components/schemas/JobEnvelopeBody'
+          - type: 'null'
+      required:
+      - envelope
+      type: object
+    RunnerErrorBody:
+      additionalProperties: false
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - detail
+      - code
+      type: object
+    RunnerRegisterRequestBody:
+      additionalProperties: false
+      properties:
+        name:
+          minLength: 1
+          type: string
+        protocol:
+          type: integer
+        version:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+        concurrency:
+          minimum: 1
+          type: integer
+        resource_class:
+          type: string
+      required:
+      - name
+      - protocol
+      - version
+      - tags
+      - concurrency
+      - resource_class
+      type: object
+    RunnerRegisterResponseBody:
+      additionalProperties: false
+      properties:
+        runner_id:
+          type: string
+        lease_s:
+          type: integer
+        heartbeat_s:
+          type: integer
+        max_poll_wait_s:
+          type: integer
+      required:
+      - runner_id
+      - lease_s
+      - heartbeat_s
+      - max_poll_wait_s
+      type: object
+
+  securitySchemes:
+    registrationToken: {type: http, scheme: bearer}
+    runnerToken: {type: http, scheme: bearer}
+    jobToken: {type: apiKey, in: header, name: X-Job-Token}
+  parameters:
+    JobId: {name: job_id, in: path, required: true, schema: {type: string, format: uuid}}
+    Sha256: {name: sha256, in: path, required: true, schema: {type: string, pattern: "^[0-9a-f]{64}$"}}
+  requestBodies:
+    RunnerRegister:
+      required: true
+      content: {application/json: {schema: {$ref: '#/components/schemas/RunnerRegisterRequestBody'}}}
+  responses:
+    Error:
+      description: Отказ с кодом из x-error-codes
+      content: {application/json: {schema: {$ref: '#/components/schemas/RunnerErrorBody'}}}
