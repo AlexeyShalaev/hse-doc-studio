@@ -23,11 +23,11 @@ from hse_doc_studio.core.entities import (
 from hse_doc_studio.core.enums import AgentRunStatus, ChatContentKind, ChatMessageRole, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error, set_interface_language
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
     IChatRepository,
-    IProjectIndexRepository,
     IProjectRepository,
     ISettingsRepository,
 )
@@ -36,7 +36,7 @@ from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.chat._support import describe_run_error, find_project_folder
+from hse_doc_studio.use_cases.chat._support import describe_run_error
 from hse_doc_studio.use_cases.chat.personas import apply_persona
 
 logger = structlog.get_logger()
@@ -122,7 +122,7 @@ class SystemStartChatTurnUC:
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         agent_persona_repo: IAgentPersonaRepository,
     ) -> None:
         self._folder = folder
@@ -138,12 +138,12 @@ class SystemStartChatTurnUC:
         self._context_service = context_service
         self._summarizer = summarizer
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
 
-    def _resolve_project(self, project_id: UUID | None) -> Project | None:
+    async def _resolve_project(self, project_id: UUID | None) -> Project | None:
         if project_id is None:
             return None
-        folder = find_project_folder(project_id, self._project_repo, self._project_index_repo)
+        folder = await self._locator.folder_of(project_id)
         return self._project_repo.get(folder) if folder is not None else None
 
     def _enabled_tools(self) -> frozenset[str] | None:
@@ -297,7 +297,7 @@ class SystemStartChatTurnUC:
         persona_id = session.persona if session else None
         persona_instructions = session.persona_instructions if session else None
         custom_personas = {str(p.id): p.instruction for p in self._agent_persona_repo.list_all()}
-        project = self._resolve_project(session.project_id if session else None)
+        project = await self._resolve_project(session.project_id if session else None)
         if project is not None:
             system = build_system_prompt(
                 project,

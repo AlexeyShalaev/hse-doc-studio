@@ -102,7 +102,7 @@ async def list_compiles(
     doc_id: str,
     uc: FromDishka[ListCompilesUC],
 ) -> list[CompileListItemResponse]:
-    records = uc.execute(ListCompilesInput(project_id=project_id, doc_id=doc_id))
+    records = await uc.execute(ListCompilesInput(project_id=project_id, doc_id=doc_id))
     return [_to_list_item(r) for r in records]
 
 
@@ -117,7 +117,7 @@ async def get_archived_pdf(
 ) -> Response:
     """Serve a previously-archived compiled PDF (for visual diff)."""
     try:
-        result = uc.execute(GetArchivedPdfInput(project_id=project_id, doc_id=doc_id, compile_id=compile_id))
+        result = await uc.execute(GetArchivedPdfInput(project_id=project_id, doc_id=doc_id, compile_id=compile_id))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NotFoundError as exc:
@@ -135,7 +135,7 @@ async def get_compile(
     compile_id: UUID,
     uc: FromDishka[GetCompileUC],
 ) -> CompileDetailResponse:
-    record = uc.execute(GetCompileInput(project_id=project_id, compile_id=compile_id))
+    record = await uc.execute(GetCompileInput(project_id=project_id, compile_id=compile_id))
     if record is None:
         raise HTTPException(status_code=404, detail=f"Compile record not found: {compile_id}")
     warnings, errors = _severity_counts(record.check_results)

@@ -11,12 +11,10 @@ from hse_doc_studio.core.agent.entities import AgentEvent
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import AgentRunRecord
 from hse_doc_studio.core.enums import AgentEventType, AgentRunStatus
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChatRepository,
-    IProjectIndexRepository,
-    IProjectRepository,
 )
-from hse_doc_studio.use_cases.chat._support import find_project_folder
 
 logger = structlog.get_logger()
 
@@ -46,18 +44,16 @@ class GetChatRunStreamUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._chat_repo = chat_repo
         self._bus = bus
 
     async def execute(self, inp: GetChatRunStreamInput) -> AsyncGenerator[AgentEvent, None]:
-        folder = find_project_folder(inp.project_id, self._project_repo, self._project_index_repo)
+        folder = await self._locator.folder_of(inp.project_id)
         if folder is None:
             return self._error_stream("project not found")
         return self._stream(folder, inp.session_id, inp.run_id)

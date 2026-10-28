@@ -14,6 +14,7 @@ from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.protocols import IJobHooks
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.value_objects import ChecksOverride
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
 
@@ -72,7 +73,7 @@ class Harness:
         project_index_repo.list_known.return_value = [project_folder]
         self.uc = TriggerCompileUC(
             project_repo=self.project_repo,
-            project_index_repo=project_index_repo,
+            locator=LocalProjectLocator(project_index_repo, self.project_repo),
             compile_repo=self.compile_repo,
             template_repo=self.template_repo,
             template_service=ProjectTemplateService(),

@@ -12,6 +12,7 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.ci import CiOptions, CiProvider, CiPublish, CiTrigger, RenderedCiFile
 from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.use_cases.git_sync.ci import CiInput, CiWriteInput, PreviewCiUC, WriteCiUC
 
 _IMAGE = "ghcr.io/alexeyshalaev/hse-doc-studio:0.2.0"
@@ -99,10 +100,9 @@ class _Setup:
     def write(self) -> WriteCiUC:
         return WriteCiUC(*self._deps(), self.locks)
 
-    def _deps(self) -> tuple[Any, Any, Any, Any, str]:
+    def _deps(self) -> tuple[Any, Any, Any, str]:
         return (
-            _Projects(self.project),
-            _Index([Path("/p")]),
+            LocalProjectLocator(_Index([Path("/p")]), _Projects(self.project)),  # type: ignore[arg-type]
             self.files,
             JinjaCiRenderer(),
             _IMAGE,

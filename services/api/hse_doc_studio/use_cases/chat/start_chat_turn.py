@@ -24,12 +24,11 @@ from hse_doc_studio.core.entities import (
 from hse_doc_studio.core.enums import AgentRunStatus, ChatContentKind, ChatMessageRole, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error, set_interface_language
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
     IChatRepository,
-    IProjectIndexRepository,
-    IProjectRepository,
     ISettingsRepository,
 )
 from hse_doc_studio.core.services import ChatContextService
@@ -37,7 +36,7 @@ from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.chat._support import describe_run_error, find_project_folder
+from hse_doc_studio.use_cases.chat._support import describe_run_error
 
 logger = structlog.get_logger()
 
@@ -149,8 +148,7 @@ class StartChatTurnUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         ai_provider_repo: IAIProviderRepository,
         settings_repo: ISettingsRepository,
@@ -163,8 +161,7 @@ class StartChatTurnUC:
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._chat_repo = chat_repo
         self._ai_provider_repo = ai_provider_repo
         self._settings_repo = settings_repo
@@ -181,16 +178,12 @@ class StartChatTurnUC:
         self._title_tasks: set[asyncio.Task[None]] = set()
 
     async def execute(self, inp: StartChatTurnInput) -> StartChatTurnOutput:
-        folder = find_project_folder(inp.project_id, self._project_repo, self._project_index_repo)
-        if folder is None:
+        located = await self._locator.locate(inp.project_id)
+        if located is None:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
-        project = self._project_repo.get(folder)
-        if project is None:
-            raise NotFoundError(
-                localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
-            )
+        folder, project = located
         session = self._chat_repo.get_session(folder, inp.session_id)
         if session is None:
             raise NotFoundError(

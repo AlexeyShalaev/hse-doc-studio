@@ -46,14 +46,6 @@ class _Projects:
         raise AssertionError("recovery must not save the project")
 
 
-class _Index:
-    def __init__(self, folder: Path) -> None:
-        self._folder = folder
-
-    def list_known(self) -> list[Path]:
-        return [self._folder]
-
-
 class Env:
     def __init__(self, repo: Repo) -> None:
         self.repo = repo
@@ -108,12 +100,12 @@ class Env:
     def recover(self) -> list[bool]:
         uc = RecoverTemplateUpdatesUC(
             _Projects(self.repo.project),  # type: ignore[arg-type]
-            _Index(self.repo.folder),  # type: ignore[arg-type]
+            None,  # type: ignore[arg-type]  # локатор нужен только execute(), здесь папки передаются явно
             self.journals,
             self.store,
             self.repo.svc,
         )
-        return [item.finalized for item in uc._recover_all().recovered]
+        return [item.finalized for item in uc._recover_all([self.repo.folder]).recovered]
 
     def assert_pre_state(self) -> None:
         folder = self.repo.folder

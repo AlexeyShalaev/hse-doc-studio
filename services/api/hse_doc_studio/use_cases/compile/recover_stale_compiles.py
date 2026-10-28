@@ -8,9 +8,9 @@ import structlog
 
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
-    IProjectIndexRepository,
     IProjectRepository,
 )
 
@@ -39,18 +39,18 @@ class RecoverStaleCompilesUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
     ) -> None:
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._compile_repo = compile_repo
 
-    def execute(self) -> RecoverStaleCompilesOutput:  # noqa: C901
+    async def execute(self) -> RecoverStaleCompilesOutput:  # noqa: C901
         recovered_compiles = 0
         unstuck_documents = 0
 
-        for folder in self._project_index_repo.list_known():
+        for folder in await self._locator.list_all():
             try:
                 project = self._project_repo.get(folder)
             except Exception as exc:

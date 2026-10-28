@@ -27,10 +27,10 @@ from hse_doc_studio.core.jobs.office import (
 from hse_doc_studio.core.jobs.pack import PackResult
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.office import ConvertRequest, custom_docs_to_convert
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     IPackSubmissionRepository,
-    IProjectIndexRepository,
     IProjectRepository,
     ISignatureRepository,
     ITemplateRepository,
@@ -92,31 +92,11 @@ class CreateSubmissionOutput:
     submission: PackSubmissionRecord
 
 
-def _resolve_project(
-    project_id: UUID,
-    project_repo: IProjectRepository,
-    project_index_repo: IProjectIndexRepository,
-) -> tuple[Path, Project] | tuple[None, None]:
-    known_folders = project_index_repo.list_known()
-    for folder in known_folders:
-        try:
-            project = project_repo.get(folder)
-            if project is not None and project.id == project_id:
-                return folder, project
-        except Exception as exc:
-            logger.warning(
-                "create_submission: error loading project",
-                folder=str(folder),
-                exc=str(exc),
-            )
-    return None, None
-
-
 class CreateSubmissionUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         submission_repo: IPackSubmissionRepository,
         submission_profile_service: SubmissionProfileService,
@@ -130,7 +110,7 @@ class CreateSubmissionUC:
         file_probes: IProjectFileProbeFactory,
     ) -> None:
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
         self._submission_repo = submission_repo
         self._submission_profile_service = submission_profile_service
@@ -169,11 +149,12 @@ class CreateSubmissionUC:
         )
 
     async def execute(self, inp: CreateSubmissionInput) -> CreateSubmissionOutput:  # noqa: C901, PLR0915
-        project_folder, project = _resolve_project(inp.project_id, self._project_repo, self._project_index_repo)
-        if project is None or project_folder is None:
+        located = await self._locator.locate(inp.project_id)
+        if located is None:
             raise NotFoundError(
                 localized_error(f"Проект не найден: {inp.project_id}", f"Project not found: {inp.project_id}")
             )
+        project_folder, project = located
 
         version = self._template_repo.get_version(
             project.lock.pack_id,

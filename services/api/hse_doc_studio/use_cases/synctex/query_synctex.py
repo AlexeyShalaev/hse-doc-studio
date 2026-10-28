@@ -6,12 +6,10 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
-    IProjectIndexRepository,
-    IProjectRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
@@ -72,18 +70,16 @@ class SyncTexUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
         self._template_service = template_service
 
-    def forward(self, inp: SyncTexForwardInput) -> SyncTexForwardOutput:
-        doc = self._load(inp.project_id, inp.doc_id)
+    async def forward(self, inp: SyncTexForwardInput) -> SyncTexForwardOutput:
+        doc = await self._load(inp.project_id, inp.doc_id)
         boxes = doc.forward(inp.file, inp.line)
         return SyncTexForwardOutput(
             boxes=[
@@ -98,8 +94,8 @@ class SyncTexUC:
             ]
         )
 
-    def inverse(self, inp: SyncTexInverseInput) -> SyncTexInverseOutput | None:
-        doc = self._load(inp.project_id, inp.doc_id)
+    async def inverse(self, inp: SyncTexInverseInput) -> SyncTexInverseOutput | None:
+        doc = await self._load(inp.project_id, inp.doc_id)
         hit = doc.inverse(inp.page, inp.x, inp.y)
         if hit is None:
             return None
@@ -107,8 +103,8 @@ class SyncTexUC:
         return SyncTexInverseOutput(file=normalize_input_path(file), line=line, column=column)
 
     # ── internals ────────────────────────────────────────────────────────────
-    def _load(self, project_id: UUID, doc_id: str) -> SyncTexDocument:
-        path = self._synctex_path(project_id, doc_id)
+    async def _load(self, project_id: UUID, doc_id: str) -> SyncTexDocument:
+        path = await self._synctex_path(project_id, doc_id)
         doc = load_synctex(path)
         if doc is None:
             raise NotFoundError(
@@ -119,10 +115,11 @@ class SyncTexUC:
             )
         return doc
 
-    def _synctex_path(self, project_id: UUID, doc_id: str) -> Path:
-        project_folder, project = self._find_project(project_id)
-        if project is None or project_folder is None:
+    async def _synctex_path(self, project_id: UUID, doc_id: str) -> Path:
+        located = await self._locator.locate(project_id)
+        if located is None:
             raise NotFoundError(localized_error(f"Проект {project_id} не найден", f"Project not found: {project_id}"))
+        project_folder, project = located
         doc = next((d for d in project.documents if d.id == doc_id), None)
         if doc is None:
             raise NotFoundError(localized_error(f"Документ {doc_id!r} не найден", f"Document {doc_id!r} not found"))
@@ -149,13 +146,3 @@ class SyncTexUC:
                 )
             )
         return target
-
-    def _find_project(self, project_id: UUID) -> tuple[Path, Project] | tuple[None, None]:
-        for folder in self._project_index_repo.list_known():
-            try:
-                project = self._project_repo.get(folder)
-                if project is not None and project.id == project_id:
-                    return folder, project
-            except Exception as exc:
-                logger.warning("synctex: project load error", folder=str(folder), exc=str(exc))
-        return None, None

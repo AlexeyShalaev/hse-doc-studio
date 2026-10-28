@@ -2,16 +2,14 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from pathlib import Path
 from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.events import IJobLogStream
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
-    IProjectIndexRepository,
-    IProjectRepository,
 )
 
 logger = structlog.get_logger()
@@ -35,18 +33,16 @@ class GetCompileStreamUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
         log_stream: IJobLogStream,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._compile_repo = compile_repo
         self._log_stream = log_stream
 
     async def execute(self, inp: GetCompileStreamInput) -> AsyncGenerator[str, None]:  # noqa: C901
-        project_folder = self._find_folder(inp.project_id)
+        project_folder = await self._locator.folder_of(inp.project_id)
         if project_folder is None:
 
             async def _not_found() -> AsyncGenerator[str, None]:
@@ -86,18 +82,3 @@ class GetCompileStreamUC:
             yield f"__STATUS__:{record.status}"
 
         return _stream()
-
-    def _find_folder(self, project_id: UUID) -> Path | None:
-        known_folders: list[Path] = self._project_index_repo.list_known()
-        for folder in known_folders:
-            try:
-                project = self._project_repo.get(folder)
-                if project is not None and project.id == project_id:
-                    return folder
-            except Exception as exc:
-                logger.warning(
-                    "get_compile_stream: error loading project",
-                    folder=str(folder),
-                    exc=str(exc),
-                )
-        return None

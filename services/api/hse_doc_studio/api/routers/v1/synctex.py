@@ -33,7 +33,7 @@ async def synctex_forward(
 ) -> SyncTexForwardResponse:
     """Source (file, line) -> PDF boxes (page + position in PDF points)."""
     try:
-        out = uc.forward(SyncTexForwardInput(project_id=project_id, doc_id=doc_id, file=file, line=line))
+        out = await uc.forward(SyncTexForwardInput(project_id=project_id, doc_id=doc_id, file=file, line=line))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NotFoundError as exc:
@@ -59,7 +59,7 @@ async def synctex_inverse(
 ) -> SyncTexInverseResponse:
     """PDF (page, x, y) -> source (file, line, column)."""
     try:
-        out = uc.inverse(SyncTexInverseInput(project_id=project_id, doc_id=doc_id, page=page, x=x, y=y))
+        out = await uc.inverse(SyncTexInverseInput(project_id=project_id, doc_id=doc_id, page=page, x=x, y=y))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NotFoundError as exc:
