@@ -19,7 +19,9 @@ from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRep
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 
 class ServerJobsProvider(Provider):
@@ -51,3 +53,26 @@ class ServerJobsProvider(Provider):
     def get_job_token_signer(self, key_store: KeyFileStore) -> JobTokenSigner:
         """Ключи подписи производные от связки секретов: ротация ключа охватывает и токены задач."""
         return JobTokenSigner(key_store.ensure_primary().derive_all(JOB_TOKEN_KEY_PURPOSE))
+
+    @provide
+    def get_job_wakeup(self) -> JobWakeup:
+        return JobWakeup()
+
+    @provide
+    def get_runner_job_service(
+        self,
+        queue: IJobQueue,
+        queue_service: JobQueueService,
+        runners: IRunnerRepository,
+        signer: JobTokenSigner,
+        wakeup: JobWakeup,
+    ) -> RunnerJobService:
+        return RunnerJobService(
+            queue,
+            queue_service,
+            runners,
+            signer,
+            wakeup,
+            lease_s=settings.jobs.lease_s,
+            timeout_grace_s=settings.jobs.timeout_grace_s,
+        )

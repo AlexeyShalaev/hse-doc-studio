@@ -223,6 +223,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/shared-folder"): _LOCAL,
     # Протокол раннера и админка раннеров лежат вне /api/v1, ключ это полный путь маршрута
     ("POST", "/api/runner/v1/register"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/poll"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/heartbeat"): RouteScope.job_token,
     ("POST", "/api/admin/runner-tokens"): _ADM,
     ("GET", "/api/admin/runner-tokens"): _ADM,
     ("DELETE", "/api/admin/runner-tokens/{token_id}"): _ADM,

@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
-from hse_doc_studio.core.jobs.errors import RunnerAuthError
+from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, RunnerAuthError, StaleAttemptError
 
 RUNNER_ERROR_STATUS: Mapping[RunnerErrorCode, int] = {
     RunnerErrorCode.runner_unauthorized: 401,
@@ -27,5 +27,15 @@ async def _runner_auth_handler(_request: Request, exc: Exception) -> JSONRespons
     )
 
 
+async def _stale_attempt_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc), "code": RunnerErrorCode.stale_attempt.value})
+
+
+async def _job_not_found_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc), "code": RunnerErrorCode.job_not_found.value})
+
+
 def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RunnerAuthError, _runner_auth_handler)
+    app.add_exception_handler(StaleAttemptError, _stale_attempt_handler)
+    app.add_exception_handler(QueuedJobNotFoundError, _job_not_found_handler)
