@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ReactNode } from "react";
@@ -12,6 +18,7 @@ import {
   RequireCapability,
   ServerUnavailable,
   useBootstrap,
+  useSessionIdentityGuard,
 } from "./index";
 
 const fixture = (name: string): unknown =>
@@ -142,5 +149,42 @@ describe("ServerUnavailable", () => {
   it("disables retry while retrying", () => {
     render(wrap(<ServerUnavailable onRetry={() => undefined} retrying />));
     expect(screen.getByTestId("server-unavailable-retry")).toBeDisabled();
+  });
+});
+
+describe("useSessionIdentityGuard", () => {
+  const Guard = () => {
+    useSessionIdentityGuard();
+    return null;
+  };
+
+  it("clears user-scoped cache when the signed-in user disappears", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const get = vi.spyOn(apiClient, "get").mockResolvedValue({
+      data: fixture("server_user"),
+      config: {},
+    });
+    client.setQueryData(["projects", "list"], ["A"]);
+    render(
+      <QueryClientProvider client={client}>
+        <Guard />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => {
+      expect(client.getQueryData(["session", "bootstrap"])).toBeDefined();
+    });
+    expect(client.getQueryData(["projects", "list"])).toEqual(["A"]);
+
+    get.mockResolvedValue({ data: fixture("server_anonymous"), config: {} });
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ["session", "bootstrap"] });
+    });
+    await waitFor(() => {
+      expect(client.getQueryData(["projects", "list"])).toBeUndefined();
+    });
+    expect(client.getQueryData(["session", "bootstrap"])).toBeDefined();
+    get.mockRestore();
   });
 });

@@ -1,8 +1,11 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { setCsrfToken } from "@shared/api";
 import { i18n, toast } from "@shared/lib";
-import { sessionApi, sessionKeys, useRefreshSession } from "@entities/session";
+import {
+  clearUserScopedCache,
+  sessionApi,
+  useRefreshSession,
+} from "@entities/session";
 
 /**
  * Выход. Сервер закрывает сессию, после чего из памяти уходит всё, что принадлежало
@@ -27,12 +30,7 @@ export const useLogout = () => {
       setPending(false);
       return;
     }
-    setCsrfToken(null);
-    await client.cancelQueries();
-    client.removeQueries({
-      predicate: (query) => query.queryKey[0] !== sessionKeys.all[0],
-    });
-    client.getMutationCache().clear();
+    await clearUserScopedCache(client);
     try {
       await refresh();
     } finally {

@@ -1,5 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useEffect, useRef } from "react";
+import { setCsrfToken } from "@shared/api";
 import { sessionApi } from "./sessionApi";
 import type { Bootstrap, Capabilities } from "./schemas";
 
@@ -52,4 +57,40 @@ export const useRefreshSession = () => {
     () => client.invalidateQueries({ queryKey: sessionKeys.bootstrap() }),
     [client],
   );
+};
+
+/**
+ * Убрать из памяти всё, что принадлежало прежнему пользователю: CSRF-токен,
+ * запросы (кроме сессии, её обновит шлюз) и мутации. Иначе следующий человек в
+ * той же вкладке увидел бы чужие проекты, пока запросы не перезагрузятся.
+ */
+export const clearUserScopedCache = async (
+  client: QueryClient,
+): Promise<void> => {
+  setCsrfToken(null);
+  await client.cancelQueries();
+  client.removeQueries({
+    predicate: (query) => query.queryKey[0] !== sessionKeys.all[0],
+  });
+  client.getMutationCache().clear();
+};
+
+/**
+ * Следит за пользователем в bootstrap: если вошедший человек исчез (сессия
+ * истекла, отозвана, выход) или сменился другим, чистит кэш прежнего. Покрывает
+ * пути, где useLogout не вызывался.
+ */
+export const useSessionIdentityGuard = (): void => {
+  const client = useQueryClient();
+  const { data } = useBootstrap();
+  const userId = data ? (data.user?.id ?? null) : undefined;
+  const previous = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (userId === undefined) return;
+    const was = previous.current;
+    previous.current = userId;
+    if (was != null && was !== userId) {
+      void clearUserScopedCache(client);
+    }
+  }, [client, userId]);
 };

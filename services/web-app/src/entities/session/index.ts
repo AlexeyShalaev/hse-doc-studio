@@ -1,10 +1,12 @@
 export * from "./api/schemas";
 export { LOCAL_BOOTSTRAP, sessionApi } from "./api/sessionApi";
 export {
+  clearUserScopedCache,
   sessionKeys,
   useBootstrap,
   useCapabilities,
   useRefreshSession,
+  useSessionIdentityGuard,
 } from "./api/sessionQueries";
 export type { CapabilitiesState } from "./api/sessionQueries";
 export { DEFAULT_NEXT_PATH, safeNextPath } from "./lib/safeNextPath";

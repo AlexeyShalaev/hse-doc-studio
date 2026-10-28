@@ -1,6 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { ApiError, setCsrfToken } from "@shared/api";
-import { useRefreshSession } from "@entities/session";
+import { clearUserScopedCache, useRefreshSession } from "@entities/session";
 import { signInApi, toLoginFailure } from "../api/signInApi";
 import type { LoginFailure } from "../lib/loginErrors";
 
@@ -9,6 +10,7 @@ import type { LoginFailure } from "../lib/loginErrors";
  * обновляется, а шлюз приложения сам переводит человека на безопасный next.
  */
 export const useSignIn = () => {
+  const client = useQueryClient();
   const refresh = useRefreshSession();
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<LoginFailure | null>(null);
@@ -19,6 +21,8 @@ export const useSignIn = () => {
       setFailure(null);
       try {
         const res = await signInApi.login(email, password);
+        // Остатки чужой сессии (истекла в этой вкладке) не должны достаться новому.
+        await clearUserScopedCache(client);
         setCsrfToken(res.csrf_token);
         await refresh();
       } catch (error) {
@@ -31,7 +35,7 @@ export const useSignIn = () => {
         setPending(false);
       }
     },
-    [refresh],
+    [client, refresh],
   );
 
   return { submit, pending, failure };

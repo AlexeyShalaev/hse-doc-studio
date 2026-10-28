@@ -1,7 +1,11 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { SystemChatPanel } from "@features/agent-chat";
-import { ServerUnavailable, useBootstrap } from "@entities/session";
+import {
+  ServerUnavailable,
+  useBootstrap,
+  useSessionIdentityGuard,
+} from "@entities/session";
 import { useSetupStatus } from "@entities/setup";
 import { SetupPage } from "@pages/SetupPage";
 import { CommandPalette } from "@widgets/CommandPalette";
@@ -46,6 +50,7 @@ export const RootLayout = () => {
   );
   const agentDocked = routeDocksAgent(location.pathname);
   const bootstrap = useBootstrap();
+  useSessionIdentityGuard();
   const session = bootstrap.data;
   // Ручки установки и Docker существуют только там, где есть docker_ui. Пока
   // bootstrap не пришёл, их не спрашиваем: аноним на сервере не должен получить
