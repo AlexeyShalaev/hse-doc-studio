@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.host_details import hides_host_details
 from hse_doc_studio.api.schemas.languagetool import (
     LanguageToolImageResponse,
     LanguageToolImagesListResponse,
@@ -64,11 +65,12 @@ async def get_languagetool_status(
     uc: FromDishka[GetLanguageToolStatusUC],
 ) -> LanguageToolStatusResponse:
     r = await uc.execute()
+    hide = hides_host_details()  # текст ошибки docker и gid сокета нужны админу, обычному пользователю они не для чего
     return LanguageToolStatusResponse(
         docker_available=r.docker_available,
-        docker_detail=r.docker_detail,
-        docker_reason=r.docker_reason,
-        docker_socket_gid=r.docker_socket_gid,
+        docker_detail=None if hide else r.docker_detail,
+        docker_reason=None if hide else r.docker_reason,
+        docker_socket_gid=None if hide else r.docker_socket_gid,
         active_image=r.active_image,
         image_installed=r.image_installed,
         container_present=r.container_present,

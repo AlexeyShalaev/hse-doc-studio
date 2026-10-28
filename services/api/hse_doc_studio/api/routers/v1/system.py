@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.host_details import hides_host_details
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.update.repositories import IReleaseNotesRepository, ISelfUpdateGateway
@@ -266,6 +267,20 @@ def _image_ref(mode: DeploymentMode) -> str | None:
     return f"{settings.image_base}:{settings.get_app_version()}"
 
 
+def hide_host_details(info: SystemInfoResponse) -> SystemInfoResponse:
+    """Версия, лицензия и состояние обновления остаются, сведения о хосте и установке убираются."""
+    return info.model_copy(
+        update={
+            "os_version": "",
+            "python_version": "",
+            "image_ref": None,
+            "docker": "stopped",
+            "can_self_update": False,
+            "data_dir": "",
+        }
+    )
+
+
 @router.get("/system/info", response_model=SystemInfoResponse)
 async def system_info(
     uc: FromDishka[GetUpdateStatusUC],
@@ -274,7 +289,7 @@ async def system_info(
 ) -> SystemInfoResponse:
     mode = deployment_mode(settings.static_dir)
     update = await uc.execute()
-    return SystemInfoResponse(
+    info = SystemInfoResponse(
         version=settings.get_app_version(),
         mode=settings.mode.value,
         built=settings.built,
@@ -301,6 +316,7 @@ async def system_info(
         latest_release_date=update.latest_date,
         latest_release_notes=list(update.latest_notes),
     )
+    return hide_host_details(info) if hides_host_details() else info
 
 
 @router.get("/system/release-notes", response_model=ReleaseNotesResponse)
