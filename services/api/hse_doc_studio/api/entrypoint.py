@@ -19,6 +19,7 @@ from hse_doc_studio.api.observability.install import (
     install_health,
     install_server_observability,
 )
+from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
@@ -116,6 +117,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     if settings.mode is StudioMode.server:
         install_server_security(app, settings)
+        install_rate_limiter(app, settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,

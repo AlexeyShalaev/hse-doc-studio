@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from hse_doc_studio.api.guards import project_access_guard, project_write_guard
+from hse_doc_studio.api.rate_limit import rate_limit_guard
 from hse_doc_studio.api.routers.v1 import (
     agent_personas,
     ai_providers,
@@ -42,7 +43,10 @@ from hse_doc_studio.api.routers.v1 import (
 # Стоит первым, чтобы посторонний получил 404, а не 423.
 # Гард записи: проект, который эта Студия может только смотреть (данные более
 # новой Студии, нет версии шаблона, идёт обновление), не меняется ни одним запросом.
-api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(project_access_guard), Depends(project_write_guard)])
+api_router = APIRouter(
+    prefix="/api/v1",
+    dependencies=[Depends(project_access_guard), Depends(project_write_guard), Depends(rate_limit_guard)],
+)
 
 api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(projects.router, tags=["projects"])

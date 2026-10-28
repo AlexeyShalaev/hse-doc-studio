@@ -93,6 +93,18 @@ async def test_progressive_delay_and_reset(world: World) -> None:
     assert await world.attempts.get("login:ann@example.org|1.2.3.4") is None
 
 
+async def test_delay_survives_restart_and_is_never_a_permanent_block(world: World) -> None:
+    await world.add_user()
+    for _ in range(8):
+        await _fail(world, "ann@example.org")
+    # «Перезапуск»: новый экземпляр сценария поверх того же хранилища попыток видит прежнюю задержку.
+    err = await _fail(world, "ann@example.org", PASSWORD)
+    assert err.code is IdentityErrorCode.rate_limited
+    assert err.retry_after_s is not None
+    world.clock.advance(seconds=err.retry_after_s)
+    await world.login_uc().execute("ann@example.org", PASSWORD, ip="1.2.3.4")
+
+
 def test_login_delay_grows_to_cap() -> None:
     seconds = [login_delay(n).total_seconds() for n in (1, 4, 5, 6, 7, 30)]
     assert seconds == [0, 0, 1, 2, 4, 900]

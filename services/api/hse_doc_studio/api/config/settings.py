@@ -15,6 +15,7 @@ from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
+from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
@@ -84,6 +85,7 @@ class Settings(BaseSettings):
     s3: StorageConfig = Field(default_factory=StorageConfig)
     admin: AdminConfig = Field(default_factory=AdminConfig)
     egress: EgressConfig = Field(default_factory=EgressConfig)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
 
