@@ -80,3 +80,28 @@ def test__local_container__does_not_import_server_modules() -> None:
     create_container(StudioMode.local)
 
     assert "hse_doc_studio.infra.di.providers.server_persistence" not in sys.modules
+
+
+async def test__server_container__resolves_postgres_project_locator_and_volume() -> None:
+    from hse_doc_studio.core.projects.locator import IProjectLocator
+    from hse_doc_studio.core.projects.volume import IProjectVolume
+    from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
+    from hse_doc_studio.infra.projects.catalog_sync import MirroringProjectRepository, ProjectCatalogReconciler
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        async with container() as request:
+            locator = await request.get(IProjectLocator)
+            volume = await request.get(IProjectVolume)
+            repo = await request.get(IProjectRepository)
+            reconciler = await request.get(ProjectCatalogReconciler)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert isinstance(locator, PostgresProjectLocator)
+    assert isinstance(repo, MirroringProjectRepository)
+    assert isinstance(reconciler, ProjectCatalogReconciler)
+    assert volume.root == Path(settings.data_dir) / "projects"
