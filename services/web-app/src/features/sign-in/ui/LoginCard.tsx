@@ -46,7 +46,11 @@ export const LoginCard = ({
   const showFailure =
     failure !== null && !(failure.code === "rate_limited" && left <= 0);
   const hasSso = auth.oidc_providers.length > 0;
-  const canRegister = auth.registration_mode !== "closed";
+  // Ссылка только там, где форма регистрации откроется: при «по приглашению»
+  // и без пароля она вела бы на экран-тупик.
+  const canRegister =
+    auth.password_enabled &&
+    (auth.registration_mode === "open" || auth.registration_mode === "domains");
   const errorId = `${uid}-error`;
 
   const submit = (event: FormEvent) => {
@@ -200,7 +204,11 @@ export const LoginCard = ({
               <Button key={provider.id} variant="secondary" asChild>
                 <a
                   href={ssoHref(provider.id)}
-                  style={{ justifyContent: "center", gap: 8 }}
+                  style={{
+                    justifyContent: "center",
+                    gap: 8,
+                    textDecoration: "none",
+                  }}
                 >
                   <KeyRound size={15} aria-hidden="true" />
                   {t("login.sso", { name: provider.label })}

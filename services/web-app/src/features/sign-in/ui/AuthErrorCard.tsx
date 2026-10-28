@@ -30,7 +30,9 @@ export const AuthErrorCard = ({ code }: AuthErrorCardProps) => {
       </ResultFrame>
       <div style={{ marginTop: 18 }}>
         <Button asChild style={{ width: "100%", justifyContent: "center" }}>
-          <Link to="/login">{t("links.login")}</Link>
+          <Link to="/login" style={{ textDecoration: "none" }}>
+            {t("links.login")}
+          </Link>
         </Button>
       </div>
     </section>

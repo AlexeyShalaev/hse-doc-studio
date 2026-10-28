@@ -143,7 +143,9 @@ export const ResetExpiredCard = () => {
       </ResultFrame>
       <div style={{ marginTop: 18 }}>
         <Button asChild style={{ width: "100%", justifyContent: "center" }}>
-          <Link to="/forgot">{t("reset.expired.action")}</Link>
+          <Link to="/forgot" style={{ textDecoration: "none" }}>
+            {t("reset.expired.action")}
+          </Link>
         </Button>
       </div>
     </section>

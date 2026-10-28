@@ -49,6 +49,19 @@ describe("sign-in", () => {
     vi.useRealTimers();
   });
 
+  it("ссылка «Создать аккаунт» только при открытой регистрации или по доменам", () => {
+    for (const [mode, shown] of [
+      ["open", true],
+      ["domains", true],
+      ["invite", false],
+      ["closed", false],
+    ] as const) {
+      renderCard({ auth: { ...AUTH, registration_mode: mode } });
+      expect(screen.queryByText("Создать аккаунт") !== null).toBe(shown);
+      cleanup();
+    }
+  });
+
   it("после истёкшей сессии форма объясняет, почему она показана", () => {
     renderCard({ sessionEnded: true });
     expect(screen.getByTestId("login-session-ended")).toHaveTextContent(
