@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from hse_doc_studio.infra.db import orm as _orm  # noqa: F401 — регистрирует таблицы в Base.metadata для db check
 from hse_doc_studio.infra.db.base import Base
 from hse_doc_studio.infra.db.errors import DbAheadError, DbOutdatedError, MigrationLockTimeoutError
 
