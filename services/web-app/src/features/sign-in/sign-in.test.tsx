@@ -53,9 +53,19 @@ describe("sign-in", () => {
     vi.useRealTimers();
   });
 
+  it("после истёкшей сессии форма объясняет, почему она показана", () => {
+    renderCard({ sessionEnded: true });
+    expect(screen.getByTestId("login-session-ended")).toHaveTextContent(
+      "Сессия закончилась",
+    );
+    cleanup();
+    renderCard();
+    expect(screen.queryByTestId("login-session-ended")).toBeNull();
+  });
+
   it("тикающий отсчёт скрыт от скринридера, время объявлено один раз", () => {
     renderCard({
-      failure: { code: "rate_limited", retryAfter: 30 } as LoginFailure,
+      failure: { code: "rate_limited", retryAfter: 30 },
     });
     expect(screen.getByTestId("login-countdown")).toHaveAttribute(
       "aria-hidden",

@@ -15,3 +15,8 @@ export type { RequireCapabilityProps } from "./ui/RequireCapability";
 export { ServerUnavailable } from "./ui/ServerUnavailable";
 export type { ServerUnavailableProps } from "./ui/ServerUnavailable";
 export { getSessionGallery } from "./ui/sessionGallery";
+export {
+  clearSessionEnded,
+  markSessionEnded,
+  wasSessionEnded,
+} from "./lib/sessionEnded";

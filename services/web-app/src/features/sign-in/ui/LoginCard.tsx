@@ -16,6 +16,8 @@ export type LoginCardProps = {
   auth: AuthOptions;
   pending?: boolean;
   failure?: LoginFailure | null;
+  /** Сессия закончилась сама: показываем пояснение, откуда экран входа. */
+  sessionEnded?: boolean;
   /** Куда ведёт кнопка внешнего входа. */
   ssoHref: (providerId: string) => string;
   onSubmit: (email: string, password: string) => void;
@@ -30,6 +32,7 @@ export const LoginCard = ({
   auth,
   pending = false,
   failure = null,
+  sessionEnded = false,
   ssoHref,
   onSubmit,
   initialEmail = "",
@@ -63,6 +66,21 @@ export const LoginCard = ({
       <p style={{ margin: "0 0 18px", color: "var(--fg-2)", fontSize: 13.5 }}>
         {auth.password_enabled ? t("pages.login.body") : t("login.ssoOnlyBody")}
       </p>
+
+      {sessionEnded && !showFailure && (
+        <div style={{ marginBottom: 16 }}>
+          <ResultFrame
+            tone="info"
+            role="status"
+            testId="login-session-ended"
+            title={t("login.sessionEnded")}
+          >
+            <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+              {t("login.sessionEndedHint")}
+            </p>
+          </ResultFrame>
+        </div>
+      )}
 
       {showFailure && (
         <div id={errorId} style={{ marginBottom: 16 }}>

@@ -7,7 +7,11 @@ import {
 } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
 import { ZodError, type ZodIssue } from "zod";
-import { sessionKeys } from "@entities/session";
+import {
+  markSessionEnded,
+  sessionKeys,
+  type Bootstrap,
+} from "@entities/session";
 import { ApiError } from "@shared/api/client";
 import { setUnauthorizedHandler } from "@shared/api/session";
 import { SchemaParseError } from "@shared/api/parse";
@@ -181,9 +185,14 @@ const queryClient = new QueryClient({
 // 401 или устаревший CSRF-токен: заново читаем bootstrap. Он сам 401 не отдаёт
 // (аноним получает user: null), поэтому цикла нет; пачку параллельных 401
 // транспорт сводит к одному вызову.
-setUnauthorizedHandler(() =>
-  queryClient.invalidateQueries({ queryKey: sessionKeys.bootstrap() }),
-);
+setUnauthorizedHandler(() => {
+  // Был вошедший пользователь, а сервер ответил 401: сессия кончилась, форма
+  // входа это объяснит. (Для csrf_failed флаг погаснет, когда bootstrap вернёт
+  // того же пользователя.)
+  const current = queryClient.getQueryData<Bootstrap>(sessionKeys.bootstrap());
+  if (current?.user) markSessionEnded();
+  return queryClient.invalidateQueries({ queryKey: sessionKeys.bootstrap() });
+});
 
 type ProvidersProps = {
   children: React.ReactNode;

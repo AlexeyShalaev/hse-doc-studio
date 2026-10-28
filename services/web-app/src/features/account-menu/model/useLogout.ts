@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { i18n, toast } from "@shared/lib";
 import {
+  clearSessionEnded,
   clearUserScopedCache,
   sessionApi,
   sessionKeys,
@@ -34,6 +35,7 @@ export const useLogout = () => {
       setPending(false);
       return;
     }
+    clearSessionEnded();
     await clearUserScopedCache(client);
     // Явный выход ведёт на чистый /login без ?next: адрес прежнего человека
     // не должен достаться следующему. Пока bootstrap не обновился, помечаем

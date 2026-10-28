@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { setCsrfToken } from "@shared/api";
+import { clearSessionEnded } from "../lib/sessionEnded";
 import { sessionApi } from "./sessionApi";
 import type { Bootstrap, Capabilities } from "./schemas";
 
@@ -93,4 +94,9 @@ export const useSessionIdentityGuard = (): void => {
       void clearUserScopedCache(client);
     }
   }, [client, userId]);
+  // Свежий bootstrap с пользователем: сессия жива (в том числе после csrf_failed).
+  const signedIn = data?.user != null;
+  useEffect(() => {
+    if (signedIn) clearSessionEnded();
+  }, [data, signedIn]);
 };
