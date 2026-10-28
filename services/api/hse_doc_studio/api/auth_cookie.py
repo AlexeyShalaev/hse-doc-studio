@@ -24,9 +24,20 @@ def bearer_token(request: Request) -> str | None:
     return value if scheme.lower() == _BEARER and value else None
 
 
-def credentials_from_request(request: Request) -> ActorCredentials:
+def credentials_from_request(request: Request, *, secure: bool | None = None) -> ActorCredentials:
+    """Данные для входа из запроса.
+
+    По HTTPS читается только `__Host-hse_session`: простое имя может подложить соседний поддомен или посредник по
+    HTTP, а префикс как раз это запрещает. `secure` по умолчанию берётся из `auth.public_url`.
+    """
+    if secure is None:
+        from hse_doc_studio.api.config import settings  # noqa: PLC0415
+
+        secure = is_secure_public_url(settings.auth.public_url)
     cookies = request.cookies
-    secret = cookies.get(SECURE_SESSION_COOKIE) or cookies.get(SESSION_COOKIE)
+    secret = cookies.get(SECURE_SESSION_COOKIE)
+    if not secret and not secure:
+        secret = cookies.get(SESSION_COOKIE)
     return ActorCredentials(session_secret=secret or None, bearer_token=bearer_token(request))
 
 
@@ -59,4 +70,7 @@ def set_session_cookie(response: Response, secret: str, *, secure: bool, max_age
 
 
 def clear_session_cookie(response: Response, *, secure: bool) -> None:
+    """Гасит cookie обоих имён: после смены схемы или подкладки простого имени старое не должно остаться."""
     response.delete_cookie(session_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax")
+    if secure:
+        response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, secure=False, samesite="lax")

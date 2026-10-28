@@ -151,3 +151,11 @@ def test__clear_cookie__expires_it() -> None:
     cookie = response.headers["set-cookie"]
     assert cookie.startswith('__Host-hse_session=""') or cookie.startswith("__Host-hse_session=;")
     assert "Max-Age=0" in cookie
+
+
+def test__clear_cookie_over_https__clears_plain_name_too() -> None:
+    response = Response()
+    clear_session_cookie(response, secure=True)
+
+    names = [value.decode().split("=", 1)[0] for key, value in response.raw_headers if key == b"set-cookie"]
+    assert names == ["__Host-hse_session", "hse_session"]

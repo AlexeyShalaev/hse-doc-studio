@@ -19,7 +19,9 @@ def test_cookie_name_depends_on_transport() -> None:
 
 
 def test_credentials_read_cookie_and_bearer() -> None:
-    creds = credentials_from_request(_request({"cookie": "hse_session=abc", "authorization": "Bearer tok"}))
+    creds = credentials_from_request(
+        _request({"cookie": "hse_session=abc", "authorization": "Bearer tok"}), secure=False
+    )
 
     assert creds.session_secret == "abc"
     assert creds.bearer_token == "tok"
@@ -27,11 +29,24 @@ def test_credentials_read_cookie_and_bearer() -> None:
 
 def test_secure_cookie_wins_and_other_auth_scheme_is_ignored() -> None:
     creds = credentials_from_request(
-        _request({"cookie": "hse_session=a; __Host-hse_session=b", "authorization": "Basic x"})
+        _request({"cookie": "hse_session=a; __Host-hse_session=b", "authorization": "Basic x"}), secure=False
     )
 
     assert creds.session_secret == "b"
     assert creds.bearer_token is None
+
+
+def test_plain_cookie_is_ignored_over_https() -> None:
+    request = _request({"cookie": "hse_session=planted"})
+
+    assert credentials_from_request(request, secure=True).session_secret is None
+    assert credentials_from_request(request, secure=False).session_secret == "planted"
+
+
+def test_host_cookie_is_read_over_https() -> None:
+    request = _request({"cookie": "hse_session=planted; __Host-hse_session=real"})
+
+    assert credentials_from_request(request, secure=True).session_secret == "real"
 
 
 def test_anonymous_request_has_no_credentials() -> None:
