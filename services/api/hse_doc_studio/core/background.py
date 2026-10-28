@@ -75,6 +75,7 @@ class BackgroundTaskRunner:
         self._stop = asyncio.Event()
         self._supervisor: asyncio.Task[None] | None = None
         self._workers: dict[str, asyncio.Task[None]] = {}
+        self._lock_failing = False
 
     def use_leader_lock(self, leader: ILeaderLock) -> None:
         """Подменить лок до старта: движок БД доступен только после сборки контейнера."""
@@ -139,17 +140,29 @@ class BackgroundTaskRunner:
 
     async def _try_lead(self) -> bool:
         try:
-            return await self._lock.acquire()
-        except Exception:
-            logger.exception("background_leader_acquire_failed")
+            got = await self._lock.acquire()
+        except Exception as exc:
+            self._log_lock_failure("background_leader_acquire_failed", exc)
             return False
+        self._lock_failing = False
+        return got
 
     async def _still_leader(self) -> bool:
         try:
-            return await self._lock.is_held()
-        except Exception:
-            logger.exception("background_leader_check_failed")
+            held = await self._lock.is_held()
+        except Exception as exc:
+            self._log_lock_failure("background_leader_check_failed", exc)
             return False
+        self._lock_failing = False
+        return held
+
+    def _log_lock_failure(self, event: str, exc: Exception) -> None:
+        """Трейсбек один раз на сбой; пока база лежит, повторы идут одной строкой раз в ``leader_retry_s``."""
+        if self._lock_failing:
+            logger.warning(event, exc_type=type(exc).__name__, exc=str(exc)[:200])
+        else:
+            self._lock_failing = True
+            logger.exception(event)
 
     def _gain_leadership(self) -> None:
         self._state.leader = True

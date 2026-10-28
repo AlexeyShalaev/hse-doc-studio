@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from hse_doc_studio.api.config import Settings, settings
+from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
@@ -182,6 +183,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     setup_dishka(container, app)
 
     if settings.mode is StudioMode.server:
+        install_db_error_handlers(app)
 
         @app.on_event("startup")
         async def _ensure_db_current() -> None:

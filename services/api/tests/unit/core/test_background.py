@@ -169,3 +169,29 @@ def test__register__duplicate_or_bad_interval__rejected() -> None:
         runner.register(PeriodicTask("t", 1, noop))
     with pytest.raises(ValueError, match="положительным"):
         runner.register(PeriodicTask("z", 0, noop))
+
+
+class _DownLock:
+    async def acquire(self) -> bool:
+        raise ConnectionRefusedError("db down")
+
+    async def is_held(self) -> bool:
+        return False
+
+    async def release(self) -> None:
+        return None
+
+
+async def test__lock_unreachable__traceback_logged_once_per_outage() -> None:
+    from structlog.testing import capture_logs
+
+    runner = BackgroundTaskRunner(_DownLock(), leader_retry_s=0.005)
+    with capture_logs() as logs:
+        runner.start()
+        await _until(lambda: len([e for e in logs if e["event"] == "background_leader_acquire_failed"]) >= 4)
+        await runner.stop(1)
+
+    failures = [e for e in logs if e["event"] == "background_leader_acquire_failed"]
+    assert [e.get("exc_info") for e in failures[:1]] == [True]
+    assert all("exc_info" not in e for e in failures[1:])
+    assert all(e["log_level"] == "warning" for e in failures[1:])
