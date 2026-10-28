@@ -17,14 +17,19 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserRow,
 )
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
+from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
+    "FairShareRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
+    "JobQueueStateRow",
+    "JobRow",
+    "JobRunnerPollRow",
     "LoginAttemptRow",
     "MailOutboxRow",
     "OidcProviderRow",

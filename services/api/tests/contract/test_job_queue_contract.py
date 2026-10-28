@@ -1,6 +1,6 @@
 """Контрактный набор IJobQueue: порядок, справедливость, склейка, лимиты, аффинность, аренды и fencing.
 
-Сейчас его проходит память; Postgres-очередь подключится к тому же набору.
+Его проходят память и Postgres-очередь; для Postgres нужен `HSE_TEST_PG_DSN`, без него тесты пропускаются.
 """
 
 from __future__ import annotations
@@ -8,17 +8,24 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID, uuid4
 
 import pytest
+import pytest_asyncio
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, IJobQueue, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.scheduler import AFFINITY_WAIT, QueueQuota
+from hse_doc_studio.infra.db.engine import create_sessionmaker
+from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
+from hse_doc_studio.infra.db.session import SessionProvider
 
 from tests.contract.base import PortContract
 from tests.fakes.job_queue import InMemoryJobQueue
+
+if TYPE_CHECKING:
+    from tests.fixtures.pg import PgDbFactory
 
 LEASE_S = 45.0
 
@@ -35,9 +42,9 @@ class FakeClock:
 
 
 class _Harness:
-    def __init__(self, _root: Path) -> None:
+    def __init__(self, _root: Path, queue: Callable[[FakeClock], IJobQueue] = InMemoryJobQueue) -> None:
         self.clock = FakeClock()
-        self.queue: IJobQueue = InMemoryJobQueue(self.clock)
+        self.queue: IJobQueue = queue(self.clock)
         self.runner = RunnerRef(id=uuid4(), tags=frozenset({"tex", "pack"}), concurrency=2)
 
     async def put(self, user: UUID, **kwargs: Any) -> QueuedJob:
@@ -309,3 +316,14 @@ class TestJobQueueContract(PortContract):
         assert [j.id for j in await port.queue.list(project_id=project)] == [mine.id]
         assert len(await port.queue.list(state=JobState.queued)) == 2
         assert await port.queue.list(state=JobState.running) == ()
+
+
+@pytest.mark.pg
+class TestPostgresJobQueueContract(TestJobQueueContract):
+    # Свой async-фикстуры `port`: пустой реестр не даёт базовому классу подменить её.
+    implementations: ClassVar[dict[str, Callable[..., Any]]] = {}
+
+    @pytest_asyncio.fixture
+    async def port(self, pg_db_factory: PgDbFactory) -> _Harness:
+        sessions = SessionProvider(create_sessionmaker(await pg_db_factory()))
+        return _Harness(Path(), lambda clock: PostgresJobQueue(sessions, clock))
