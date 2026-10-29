@@ -9,6 +9,7 @@ import pytest_asyncio
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.routing import APIRoute, iter_route_contexts
 from hse_doc_studio.api import guards, route_scopes
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers, project_access_guard
 from hse_doc_studio.api.route_actions import ROUTE_ACTIONS, RouteKey, route_key
 from hse_doc_studio.api.route_scopes import (
@@ -34,7 +35,10 @@ _ADMIN = Actor(kind="user", id="admin", is_instance_admin=True)
 
 
 def _app_route_keys(tmp_path: Path) -> set[RouteKey]:
-    app = create_test_app(create_test_container(tmp_path / "data"))
+    # Админка монтируется только на сервере: реестр сверяется с приложением, где она есть.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(settings, "mode", StudioMode.server)
+        app = create_test_app(create_test_container(tmp_path / "data"))
     keys: set[RouteKey] = set()
     for ctx in iter_route_contexts(app.routes):
         if ctx.path.startswith(_PREFIXES) and isinstance(ctx.original_route, APIRoute):
