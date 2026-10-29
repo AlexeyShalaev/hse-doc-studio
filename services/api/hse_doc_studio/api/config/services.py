@@ -62,6 +62,19 @@ class LanguageToolConfig(BaseModel):
         default=True,
         description="Stop the managed container when the backend shuts down (it auto-starts again on demand).",
     )
+    pool_replicas: list[str] = Field(
+        default_factory=list,
+        description="Серверный режим: URL реплик LanguageTool за общим пулом (…LANGUAGETOOL__POOL_REPLICAS).",
+    )
+    pool_max_inflight: int = Field(default=4, ge=1, description="Одновременных запросов на одну реплику пула.")
+    pool_user_rate_per_s: float = Field(
+        default=2.0, gt=0, description="Пополнение доли пользователя, запросов в секунду."
+    )
+    pool_user_burst: int = Field(default=20, ge=1, description="Запас запросов у пользователя.")
+    pool_circuit_failures: int = Field(default=3, ge=1, description="Подряд неудач реплики до размыкания цепи.")
+    pool_circuit_open_s: float = Field(default=30.0, gt=0, description="Сколько реплика исключена после размыкания.")
+    pool_cache_entries: int = Field(default=2048, ge=0, description="Размер LRU-кэша абзацев прокси, 0 выключает.")
+    pool_max_text_chars: int = Field(default=400_000, ge=1, description="Наибольший текст одного запроса к прокси.")
 
 
 class OfficeConvertConfig(BaseModel):
