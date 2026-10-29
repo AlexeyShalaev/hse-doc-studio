@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from hse_doc_studio.core.identity.entities import (
     ApiToken,
     AuditEntry,
+    AuditQuery,
     AuthToken,
     AuthTokenKind,
     LoginAttempt,
@@ -20,6 +21,9 @@ from hse_doc_studio.core.identity.entities import (
 )
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.infra.identity.resolvers import BearerActorResolver
+
+from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 
 class InMemorySessionRepository:
@@ -211,6 +215,7 @@ class InMemoryOidcProviderRepository:
 class InMemoryAuditLog:
     def __init__(self) -> None:
         self._entries: list[AuditEntry] = []
+        self._next_id = 1
 
     async def record(
         self,
@@ -221,13 +226,14 @@ class InMemoryAuditLog:
         details: Mapping[str, object] | None = None,
     ) -> None:
         entry = AuditEntry(
-            id=len(self._entries) + 1,
+            id=self._next_id,
             at=datetime.now(UTC),
             action=action,
             actor_id=actor_id,
             target=target,
             details=copy.deepcopy(redact(details or {})),
         )
+        self._next_id += 1
         self._entries.append(entry)
 
     async def list(
@@ -239,3 +245,27 @@ class InMemoryAuditLog:
             if (action is None or e.action == action) and (actor_id is None or e.actor_id == actor_id)
         ]
         return found[:limit]
+
+    async def query(self, query: AuditQuery) -> list[AuditEntry]:
+        found = [
+            e
+            for e in reversed(self._entries)
+            if (query.actor_id is None or e.actor_id == query.actor_id)
+            and (not query.action_prefix or e.action.startswith(query.action_prefix))
+            and (query.target is None or e.target == query.target)
+            and (query.since is None or e.at >= query.since)
+            and (query.until is None or e.at < query.until)
+            and (query.before_id is None or e.id < query.before_id)
+        ]
+        return found[: query.limit]
+
+    async def purge_before(self, cutoff: datetime) -> int:
+        kept = [e for e in self._entries if e.at >= cutoff]
+        purged = len(self._entries) - len(kept)
+        self._entries = kept
+        return purged
+
+
+def empty_bearer_resolver() -> BearerActorResolver:
+    """Bearer-резолвер без единого токена: опознаёт только пустоту, для тестов цепочки с cookie."""
+    return BearerActorResolver(InMemoryApiTokenRepository(), InMemoryUserRepository(InMemoryIdentityStore()))

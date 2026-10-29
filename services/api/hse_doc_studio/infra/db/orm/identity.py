@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from hse_doc_studio.core.secrets import EncryptedColumn, encrypted_columns
 from hse_doc_studio.infra.db.base import Base
 
 
@@ -52,4 +53,9 @@ class InstanceSettingRow(Base):
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
     value: Mapped[Any] = mapped_column(JSONB, nullable=False)
     source: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Шифртекст секрета настройки (пароль SMTP); привязка `column_aad("instance_settings", "secret_enc", key)`.
+    secret_enc: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+encrypted_columns.register(EncryptedColumn("instance_settings", "secret_enc", pk="key"))

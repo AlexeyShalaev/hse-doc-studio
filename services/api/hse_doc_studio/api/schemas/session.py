@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -248,9 +248,9 @@ class ApiToken(StrictModel):
 
 
 class CreateApiTokenRequest(StrictModel):
-    name: str
-    scopes: list[TokenScope]
-    expires_in_days: int | None
+    name: str = Field(min_length=1, max_length=80)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=3)
+    expires_in_days: int | None = Field(ge=1, le=365)
 
 
 class CreateApiTokenResponse(StrictModel):
@@ -304,6 +304,77 @@ class AdminUser(StrictModel):
     project_count: int
 
 
+class AdminUserPage(StrictModel):
+    items: list[AdminUser]
+    total: int
+    limit: int
+    offset: int
+
+
+class UpdateAdminUserRequest(StrictModel):
+    is_instance_admin: bool
+
+
+class AdminResetLinkRequest(StrictModel):
+    # Выдача ссылки сброса это захват аккаунта: без явного подтверждения не выполняется.
+    confirm: bool
+
+
+class AdminResetLink(StrictModel):
+    link: str
+    expires_at: datetime
+    user_notified: bool
+
+
+class AdminSessionsRevoked(StrictModel):
+    revoked: int
+
+
+AdminInvitationStatus = Literal["pending", "used", "expired"]
+
+
+class AdminInvitation(StrictModel):
+    id: str
+    email: str | None
+    status: AdminInvitationStatus
+    expires_at: datetime
+    used_at: datetime | None
+
+
+class AdminInvitationPage(StrictModel):
+    items: list[AdminInvitation]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminAuditEvent(StrictModel):
+    id: int
+    at: datetime
+    action: str
+    actor_id: str | None
+    target: str | None
+    details: dict[str, Any]
+
+
+class AdminAuditPage(StrictModel):
+    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице."""
+
+    items: list[AdminAuditEvent]
+    next_cursor: str | None
+
+
+class CreateAdminInvitationRequest(StrictModel):
+    email: str | None
+    ttl_days: int | None
+
+
+class AdminInvitationCreated(StrictModel):
+    invitation: AdminInvitation
+    # Непустая, когда письмо не ушло по почте: ссылку пересылает сам админ.
+    link: str | None
+
+
 class AdminOrg(StrictModel):
     slug: str
     name: str
@@ -328,3 +399,113 @@ class AdminSettings(StrictModel):
     allowed_domains: list[str]
     smtp_enabled: bool
     public_url: str
+
+
+SettingSourceName = Literal["env", "admin", "default"]
+SmtpSecurityName = Literal["starttls", "tls", "none"]
+
+
+class SettingState(StrictModel):
+    """Откуда значение; `locked` значит «задано окружением, из интерфейса не меняется»."""
+
+    source: SettingSourceName
+    locked: bool
+
+
+class AdminRegistrationSettings(StrictModel):
+    registration_mode: RegistrationMode
+    registration_domains: list[str]
+    require_approval: bool
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminRegistrationRequest(StrictModel):
+    """Меняется только заданное (не null)."""
+
+    registration_mode: RegistrationMode | None = None
+    registration_domains: list[str] | None = Field(default=None, max_length=200)
+    require_approval: bool | None = None
+
+
+class AdminAuthSettings(StrictModel):
+    password_enabled: bool
+    # Сколько провайдеров единого входа включено: отключить пароль можно, только если есть куда войти иначе.
+    oidc_enabled_count: int
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminAuthRequest(StrictModel):
+    password_enabled: bool | None = None
+
+
+class AdminSmtpSettings(StrictModel):
+    """Пароль не возвращается никогда: только признак `password_set`."""
+
+    enabled: bool
+    host: str | None
+    port: int
+    security: SmtpSecurityName
+    username: str | None
+    password_set: bool
+    from_address: str
+    from_name: str
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminSmtpRequest(StrictModel):
+    """Меняется только заданное (не null). `host: ""` выключает почту, пустые `username` и `password` стирают их."""
+
+    host: str | None = Field(default=None, max_length=253)
+    port: int | None = Field(default=None, ge=1, le=65535)
+    security: SmtpSecurityName | None = None
+    username: str | None = Field(default=None, max_length=256)
+    password: str | None = Field(default=None, max_length=1024)
+    from_address: str | None = Field(default=None, max_length=254)
+    from_name: str | None = Field(default=None, max_length=200)
+
+
+class AdminSmtpTestRequest(StrictModel):
+    """Без `to` письмо уходит на адрес самого админа."""
+
+    to: str | None = Field(default=None, max_length=EMAIL_MAX)
+
+
+class AdminSmtpTestResult(StrictModel):
+    ok: bool
+    error: str | None
+
+
+class AdminOidcProvider(StrictModel):
+    """Секрет клиента не возвращается никогда: только признак `client_secret_set`."""
+
+    id: str
+    label: str
+    issuer: str
+    client_id: str
+    client_secret_set: bool
+    scopes: str
+    enabled: bool
+    auto_provision: bool
+    created_at: datetime
+
+
+class CreateAdminOidcProviderRequest(StrictModel):
+    label: str = Field(max_length=128)
+    issuer: str = Field(max_length=2048)
+    client_id: str = Field(max_length=256)
+    client_secret: str = Field(max_length=1024)
+    scopes: str = Field(default="openid email profile", max_length=256)
+    enabled: bool = True
+    auto_provision: bool = False
+
+
+class UpdateAdminOidcProviderRequest(StrictModel):
+    """Меняется только заданное (не null); секрет заменяется только новым значением."""
+
+    label: str | None = Field(default=None, max_length=128)
+    issuer: str | None = Field(default=None, max_length=2048)
+    client_id: str | None = Field(default=None, max_length=256)
+    client_secret: str | None = Field(default=None, max_length=1024)
+    scopes: str | None = Field(default=None, max_length=256)
+    enabled: bool | None = None
+    auto_provision: bool | None = None

@@ -6,14 +6,13 @@ from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource
 from hse_doc_studio.core.identity.entities import ActorCredentials, Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.infra.identity.resolvers import (
-    BearerActorResolver,
     ChainActorResolver,
     LocalActorResolver,
     SessionCookieResolver,
 )
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 
-from tests.fakes.auth import InMemorySessionRepository
+from tests.fakes.auth import InMemorySessionRepository, empty_bearer_resolver
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 NOW = datetime(2026, 10, 28, 12, 0, tzinfo=UTC)
@@ -73,7 +72,7 @@ async def test_cookie_resolver_disabled_user_gives_none() -> None:
 async def test_chain_first_recognised_wins_and_anonymous_is_none() -> None:
     cookie = await _setup()
 
-    chain = ChainActorResolver([cookie, BearerActorResolver()])
+    chain = ChainActorResolver([cookie, empty_bearer_resolver()])
 
     assert (await chain.resolve(ActorCredentials(session_secret=SECRET))) is not None
     assert await chain.resolve(ActorCredentials(bearer_token="pat-123")) is None

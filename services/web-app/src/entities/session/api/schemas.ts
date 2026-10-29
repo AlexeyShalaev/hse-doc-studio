@@ -258,6 +258,56 @@ export const AdminUserSchema = z.strictObject({
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
 });
+const pageOf = <T extends z.ZodType>(item: T) =>
+  z.strictObject({
+    items: z.array(item),
+    total: z.number().int(),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  });
+export const AdminUserPageSchema = pageOf(AdminUserSchema);
+export const UpdateAdminUserRequestSchema = z.strictObject({
+  is_instance_admin: z.boolean(),
+});
+export const AdminResetLinkRequestSchema = z.strictObject({
+  confirm: z.boolean(),
+});
+export const AdminResetLinkSchema = z.strictObject({
+  link: z.string(),
+  expires_at: iso,
+  user_notified: z.boolean(),
+});
+export const AdminSessionsRevokedSchema = z.strictObject({
+  revoked: z.number().int(),
+});
+export const AdminInvitationSchema = z.strictObject({
+  id: z.string(),
+  email: z.string().nullable(),
+  status: z.enum(["pending", "used", "expired"]),
+  expires_at: iso,
+  used_at: iso.nullable(),
+});
+export const AdminInvitationPageSchema = pageOf(AdminInvitationSchema);
+export const AdminAuditEventSchema = z.strictObject({
+  id: z.number().int(),
+  at: iso,
+  action: z.string(),
+  actor_id: z.string().nullable(),
+  target: z.string().nullable(),
+  details: z.record(z.string(), z.unknown()),
+});
+export const AdminAuditPageSchema = z.strictObject({
+  items: z.array(AdminAuditEventSchema),
+  next_cursor: z.string().nullable(),
+});
+export const CreateAdminInvitationRequestSchema = z.strictObject({
+  email: z.string().nullable(),
+  ttl_days: z.number().int().nullable(),
+});
+export const AdminInvitationCreatedSchema = z.strictObject({
+  invitation: AdminInvitationSchema,
+  link: z.string().nullable(),
+});
 export const AdminOrgSchema = z.strictObject({
   slug: z.string(),
   name: z.string(),
@@ -280,4 +330,86 @@ export const AdminSettingsSchema = z.strictObject({
   allowed_domains: z.array(z.string()),
   smtp_enabled: z.boolean(),
   public_url: z.string(),
+});
+
+const SettingStateSchema = z.strictObject({
+  source: z.enum(["env", "admin", "default"]),
+  locked: z.boolean(),
+});
+const settingFields = z.record(z.string(), SettingStateSchema);
+const SmtpSecuritySchema = z.enum(["starttls", "tls", "none"]);
+export const AdminRegistrationSettingsSchema = z.strictObject({
+  registration_mode: RegistrationModeSchema,
+  registration_domains: z.array(z.string()),
+  require_approval: z.boolean(),
+  fields: settingFields,
+});
+export const UpdateAdminRegistrationRequestSchema = z.strictObject({
+  registration_mode: RegistrationModeSchema.nullable(),
+  registration_domains: z.array(z.string()).nullable(),
+  require_approval: z.boolean().nullable(),
+});
+export const AdminAuthSettingsSchema = z.strictObject({
+  password_enabled: z.boolean(),
+  oidc_enabled_count: z.number().int(),
+  fields: settingFields,
+});
+export const UpdateAdminAuthRequestSchema = z.strictObject({
+  password_enabled: z.boolean().nullable(),
+});
+export const AdminSmtpSettingsSchema = z.strictObject({
+  enabled: z.boolean(),
+  host: z.string().nullable(),
+  port: z.number().int(),
+  security: SmtpSecuritySchema,
+  username: z.string().nullable(),
+  password_set: z.boolean(),
+  from_address: z.string(),
+  from_name: z.string(),
+  fields: settingFields,
+});
+export const UpdateAdminSmtpRequestSchema = z.strictObject({
+  host: z.string().nullable(),
+  port: z.number().int().nullable(),
+  security: SmtpSecuritySchema.nullable(),
+  username: z.string().nullable(),
+  password: z.string().nullable(),
+  from_address: z.string().nullable(),
+  from_name: z.string().nullable(),
+});
+export const AdminSmtpTestRequestSchema = z.strictObject({
+  to: z.string().nullable(),
+});
+export const AdminSmtpTestResultSchema = z.strictObject({
+  ok: z.boolean(),
+  error: z.string().nullable(),
+});
+export const AdminOidcProviderSchema = z.strictObject({
+  id: z.string(),
+  label: z.string(),
+  issuer: z.string(),
+  client_id: z.string(),
+  client_secret_set: z.boolean(),
+  scopes: z.string(),
+  enabled: z.boolean(),
+  auto_provision: z.boolean(),
+  created_at: iso,
+});
+export const CreateAdminOidcProviderRequestSchema = z.strictObject({
+  label: z.string(),
+  issuer: z.string(),
+  client_id: z.string(),
+  client_secret: z.string(),
+  scopes: z.string(),
+  enabled: z.boolean(),
+  auto_provision: z.boolean(),
+});
+export const UpdateAdminOidcProviderRequestSchema = z.strictObject({
+  label: z.string().nullable(),
+  issuer: z.string().nullable(),
+  client_id: z.string().nullable(),
+  client_secret: z.string().nullable(),
+  scopes: z.string().nullable(),
+  enabled: z.boolean().nullable(),
+  auto_provision: z.boolean().nullable(),
 });

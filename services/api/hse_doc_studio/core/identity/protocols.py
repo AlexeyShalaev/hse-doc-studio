@@ -12,6 +12,7 @@ from hse_doc_studio.core.identity.entities import (
     ActorCredentials,
     ApiToken,
     AuditEntry,
+    AuditQuery,
     AuthToken,
     AuthTokenKind,
     LoginAttempt,
@@ -21,6 +22,8 @@ from hse_doc_studio.core.identity.entities import (
     Session,
     User,
     UserIdentity,
+    UserListing,
+    UserStatus,
 )
 
 
@@ -40,9 +43,25 @@ class IUserRepository(Protocol):
         ...
 
     async def count(self) -> int: ...
+    async def lock_active_admins(self) -> int:
+        """Блокирует строки действующих админов установки до конца транзакции и возвращает их число."""
+        ...
+
     async def get_by_identity(self, provider: str, subject: str) -> User | None: ...
     async def add_identity(self, identity: UserIdentity) -> None: ...
     async def list_identities(self, user_id: str) -> list[UserIdentity]: ...
+
+
+class IUserDirectory(Protocol):
+    async def get(self, user_id: str) -> UserListing | None: ...
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        """Страница пользователей (новые первыми) и общее число под тем же фильтром.
+
+        `q` ищет подстроку в имени и e-mail без учёта регистра.
+        """
+        ...
 
 
 class IFirstAdminRepository(Protocol):
@@ -142,6 +161,17 @@ class IOidcProviderRepository(Protocol):
 class IInstanceSettingsRepository(Protocol):
     async def get_all(self) -> Mapping[str, object]: ...
     async def set(self, key: str, value: object, *, source: str) -> None: ...
+    async def delete(self, key: str) -> None:
+        """Снимает значение админа: дальше действует умолчание. Нет такого ключа: ничего не делает."""
+        ...
+
+    async def get_secret(self, key: str) -> str | None:
+        """Шифртекст секрета ключа (расшифровывает вызывающий) либо None."""
+        ...
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        """Сохраняет шифртекст; в `get_all` ключ виден как `True`, сам секрет наружу не отдаётся."""
+        ...
 
 
 class IAuditLog(Protocol):
@@ -159,10 +189,20 @@ class IAuditLog(Protocol):
 
 
 class IAuditReader(Protocol):
+    async def query(self, query: AuditQuery) -> list[AuditEntry]:
+        """Не больше `query.limit` событий, новые первыми, старше `query.before_id`; фильтры сочетаются по И."""
+        ...
+
     async def list(
         self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None
     ) -> list[AuditEntry]:
         """События, новые первыми."""
+        ...
+
+
+class IAuditRetention(Protocol):
+    async def purge_before(self, cutoff: datetime) -> int:
+        """Единственный путь стирания журнала: события старше `cutoff`. Возвращает, сколько стёрто."""
         ...
 
 

@@ -1,0 +1,9 @@
+{
+  "label": "HSE ID",
+  "issuer": "https://id.example.org",
+  "client_id": "studio",
+  "client_secret": "s3cret-value",
+  "scopes": "openid email profile",
+  "enabled": true,
+  "auto_provision": false
+}

@@ -74,6 +74,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/sessions"): _A,
     ("DELETE", "/account/sessions"): _A,
     ("DELETE", "/account/sessions/{session_id}"): _A,
+    ("GET", "/account/tokens"): _A,
+    ("POST", "/account/tokens"): _A,
+    ("DELETE", "/account/tokens/{token_id}"): _A,
     # Каталог шаблонов
     ("GET", "/catalog/packs"): _A,
     ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions"): _A,

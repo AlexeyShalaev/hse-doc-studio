@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.identity.entities import (
     ApiToken,
     AuditEntry,
+    AuditQuery,
     AuthToken,
     AuthTokenKind,
     LoginAttempt,
@@ -483,6 +484,23 @@ class SqlAuditLog:
             db.add(AuditLogRow(action=action, actor_id=actor_id, target=target, details=redact(details or {})))
             await db.flush()
 
+    async def query(self, query: AuditQuery) -> list[AuditEntry]:
+        stmt = select(AuditLogRow).order_by(AuditLogRow.id.desc()).limit(query.limit)
+        if query.actor_id is not None:
+            stmt = stmt.where(AuditLogRow.actor_id == query.actor_id)
+        if query.action_prefix:
+            stmt = stmt.where(AuditLogRow.action.startswith(query.action_prefix, autoescape=True))
+        if query.target is not None:
+            stmt = stmt.where(AuditLogRow.target == query.target)
+        if query.since is not None:
+            stmt = stmt.where(AuditLogRow.at >= query.since)
+        if query.until is not None:
+            stmt = stmt.where(AuditLogRow.at < query.until)
+        if query.before_id is not None:
+            stmt = stmt.where(AuditLogRow.id < query.before_id)
+        async with self._sessions.use() as db:
+            return [_audit(row) for row in (await db.execute(stmt)).scalars()]
+
     async def list(
         self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None
     ) -> list[AuditEntry]:
@@ -493,3 +511,8 @@ class SqlAuditLog:
             stmt = stmt.where(AuditLogRow.actor_id == actor_id)
         async with self._sessions.use() as db:
             return [_audit(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def purge_before(self, cutoff: datetime) -> int:
+        """Стирает только функция `audit_log_purge` (SECURITY DEFINER): прямой DELETE запрещён триггером и правами."""
+        async with self._sessions.use() as db:
+            return int((await db.execute(select(func.audit_log_purge(cutoff)))).scalar_one())

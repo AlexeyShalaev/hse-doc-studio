@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": 4182,
+      "at": "2026-10-28T09:41:12Z",
+      "action": "admin.user_disabled",
+      "actor_id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+      "target": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "details": {}
+    },
+    {
+      "id": 4181,
+      "at": "2026-10-28T09:40:03Z",
+      "action": "admin.reset_link_issued",
+      "actor_id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+      "target": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "details": {
+        "break_glass": true
+      }
+    }
+  ],
+  "next_cursor": "4181"
+}

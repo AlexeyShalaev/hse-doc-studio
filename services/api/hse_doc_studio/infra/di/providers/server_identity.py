@@ -11,10 +11,14 @@ from datetime import timedelta
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
+    IApiTokenRepository,
     IAuditLog,
+    IAuditReader,
+    IAuditRetention,
     IAuthTokenRepository,
     ICredentialRepository,
     IFirstAdminRepository,
@@ -26,11 +30,14 @@ from hse_doc_studio.core.identity.protocols import (
     IPasswordHasher,
     IRegistrationInviteRepository,
     ISessionRepository,
+    IUserDirectory,
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
+from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
+    SqlApiTokenRepository,
     SqlAuditLog,
     SqlAuthTokenRepository,
     SqlLoginAttemptRepository,
@@ -43,14 +50,36 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlCredentialRepository,
     SqlFirstAdminRepository,
     SqlInstanceSettingsRepository,
+    SqlUserDirectory,
     SqlUserRepository,
 )
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
-from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
+from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
-from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
+from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.oidc import (
+    CreateOidcProviderUC,
+    DeleteOidcProviderUC,
+    GetOidcProviderUC,
+    ListOidcProvidersUC,
+    UpdateOidcProviderUC,
+)
+from hse_doc_studio.use_cases.admin.settings import GetAuthGroupUC, UpdateAuthMethodsUC, UpdateRegistrationUC
+from hse_doc_studio.use_cases.admin.users import (
+    ApproveUserUC,
+    DisableUserUC,
+    EnableUserUC,
+    GetUserUC,
+    ListApprovalsUC,
+    ListUsersUC,
+    RejectUserUC,
+    RevokeUserSessionsUC,
+    SetUserAdminUC,
+)
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
@@ -73,6 +102,12 @@ from hse_doc_studio.use_cases.identity.sessions import (
     RevokeSessionUC,
     SessionService,
 )
+from hse_doc_studio.use_cases.identity.smtp_settings import (
+    GetSmtpSettingsUC,
+    SendTestMailUC,
+    SmtpSettingsService,
+    UpdateSmtpSettingsUC,
+)
 from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, EnsureBootstrapAdminUC
 from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
 from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService
@@ -87,6 +122,10 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_user_repository(self, sessions: SessionProvider) -> IUserRepository:
         return SqlUserRepository(sessions)
+
+    @provide
+    def get_user_directory(self, sessions: SessionProvider) -> IUserDirectory:
+        return SqlUserDirectory(sessions)
 
     @provide
     def get_session_repository(self, sessions: SessionProvider) -> ISessionRepository:
@@ -106,8 +145,14 @@ class ServerIdentityProvider(Provider):
         return SessionService(sessions, users, policy)
 
     @provide
-    def get_actor_resolver(self, sessions: SessionService) -> IActorResolver:
-        return ChainActorResolver([SessionCookieResolver(sessions), BearerActorResolver()])
+    def get_api_token_repository(self, sessions: SessionProvider) -> IApiTokenRepository:
+        return SqlApiTokenRepository(sessions)
+
+    @provide
+    def get_actor_resolver(
+        self, sessions: SessionService, tokens: IApiTokenRepository, users: IUserRepository
+    ) -> IActorResolver:
+        return ChainActorResolver([SessionCookieResolver(sessions), BearerActorResolver(tokens, users)])
 
     @provide
     def get_credential_repository(self, sessions: SessionProvider) -> ICredentialRepository:
@@ -124,6 +169,22 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_audit_log(self, sessions: SessionProvider) -> IAuditLog:
         return SqlAuditLog(sessions)
+
+    @provide
+    def get_audit_reader(self, sessions: SessionProvider) -> IAuditReader:
+        return SqlAuditLog(sessions)
+
+    @provide
+    def get_audit_retention(self, sessions: SessionProvider) -> IAuditRetention:
+        return SqlAuditLog(sessions)
+
+    @provide
+    def get_list_audit_uc(self, reader: IAuditReader) -> ListAuditUC:
+        return ListAuditUC(reader)
+
+    @provide
+    def get_purge_audit_uc(self, retention: IAuditRetention, audit: IAuditLog) -> PurgeAuditUC:
+        return PurgeAuditUC(retention, audit, timedelta(days=settings.server.audit_retention_days))
 
     @provide
     def get_password_hasher(self) -> IPasswordHasher:
@@ -164,6 +225,22 @@ class ServerIdentityProvider(Provider):
         return RevokeOtherSessionsUC(sessions, audit, uow)
 
     @provide
+    def get_list_api_tokens_uc(self, tokens: IApiTokenRepository) -> ListApiTokensUC:
+        return ListApiTokensUC(tokens)
+
+    @provide
+    def get_create_api_token_uc(
+        self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> CreateApiTokenUC:
+        return CreateApiTokenUC(tokens, audit, uow)
+
+    @provide
+    def get_revoke_api_token_uc(
+        self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeApiTokenUC:
+        return RevokeApiTokenUC(tokens, audit, uow)
+
+    @provide
     def get_auth_token_repository(self, sessions: SessionProvider) -> IAuthTokenRepository:
         return SqlAuthTokenRepository(sessions)
 
@@ -186,12 +263,12 @@ class ServerIdentityProvider(Provider):
         return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
 
     @provide
-    def get_mail_sender(self) -> IMailSender:
+    def get_smtp_env(self) -> SmtpEnv:
         cfg = settings.mail
         if not cfg.host:
-            return LinkOnlyMailSender()
-        return SmtpMailSender(
-            SmtpSettings(
+            return SmtpEnv()
+        return SmtpEnv(
+            SmtpParams(
                 host=cfg.host,
                 port=cfg.port,
                 security=cfg.security,
@@ -202,6 +279,84 @@ class ServerIdentityProvider(Provider):
                 timeout_s=cfg.timeout_s,
             )
         )
+
+    @provide
+    def get_smtp_settings_service(
+        self, settings_repo: IInstanceSettingsRepository, cipher: ISecretCipher, env: SmtpEnv
+    ) -> SmtpSettingsService:
+        return SmtpSettingsService(settings_repo, cipher, env)
+
+    @provide
+    async def get_configured_mail_sender(self, service: SmtpSettingsService) -> ConfiguredMailSender:
+        sender = ConfiguredMailSender(service)
+        await sender.refresh()
+        return sender
+
+    @provide
+    def get_mail_sender(self, sender: ConfiguredMailSender) -> IMailSender:
+        return sender
+
+    @provide
+    def get_update_smtp_settings_uc(
+        self,
+        service: SmtpSettingsService,
+        settings_repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        sender: ConfiguredMailSender,
+    ) -> UpdateSmtpSettingsUC:
+        return UpdateSmtpSettingsUC(service, settings_repo, audit, on_change=sender.refresh)
+
+    @provide
+    def get_smtp_settings_uc(self, service: SmtpSettingsService) -> GetSmtpSettingsUC:
+        return GetSmtpSettingsUC(service)
+
+    @provide
+    def get_send_test_mail_uc(self, sender: IMailSender, audit: IAuditLog) -> SendTestMailUC:
+        return SendTestMailUC(sender, audit)
+
+    @provide
+    def get_auth_group_uc(self, service: AuthSettingsService, oidc: IOidcProviderRepository) -> GetAuthGroupUC:
+        return GetAuthGroupUC(service, oidc)
+
+    @provide
+    def get_update_registration_uc(self, update: UpdateAuthSettingsUC, group: GetAuthGroupUC) -> UpdateRegistrationUC:
+        return UpdateRegistrationUC(update, group)
+
+    @provide
+    def get_update_auth_methods_uc(
+        self,
+        update: UpdateAuthSettingsUC,
+        service: AuthSettingsService,
+        oidc: IOidcProviderRepository,
+        group: GetAuthGroupUC,
+    ) -> UpdateAuthMethodsUC:
+        return UpdateAuthMethodsUC(update, service, oidc, group)
+
+    @provide
+    def get_list_oidc_providers_uc(self, oidc: IOidcProviderRepository) -> ListOidcProvidersUC:
+        return ListOidcProvidersUC(oidc)
+
+    @provide
+    def get_oidc_provider_uc(self, oidc: IOidcProviderRepository) -> GetOidcProviderUC:
+        return GetOidcProviderUC(oidc)
+
+    @provide
+    def get_create_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, audit: IAuditLog
+    ) -> CreateOidcProviderUC:
+        return CreateOidcProviderUC(oidc, cipher, audit)
+
+    @provide
+    def get_update_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, service: AuthSettingsService, audit: IAuditLog
+    ) -> UpdateOidcProviderUC:
+        return UpdateOidcProviderUC(oidc, cipher, service, audit)
+
+    @provide
+    def get_delete_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, service: AuthSettingsService, audit: IAuditLog
+    ) -> DeleteOidcProviderUC:
+        return DeleteOidcProviderUC(oidc, service, audit)
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
@@ -354,6 +509,52 @@ class ServerIdentityProvider(Provider):
         return InvitationInfoUC(invites, users)
 
     @provide
+    def get_list_users_uc(self, directory: IUserDirectory) -> ListUsersUC:
+        return ListUsersUC(directory)
+
+    @provide
+    def get_get_user_uc(self, directory: IUserDirectory) -> GetUserUC:
+        return GetUserUC(directory)
+
+    @provide
+    def get_disable_user_uc(
+        self, users: IUserRepository, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DisableUserUC:
+        return DisableUserUC(users, sessions, audit, uow)
+
+    @provide
+    def get_enable_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> EnableUserUC:
+        return EnableUserUC(users, audit, uow)
+
+    @provide
+    def get_set_user_admin_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> SetUserAdminUC:
+        return SetUserAdminUC(users, audit, uow)
+
+    @provide
+    def get_revoke_user_sessions_uc(
+        self, users: IUserRepository, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RevokeUserSessionsUC:
+        return RevokeUserSessionsUC(users, sessions, audit, uow)
+
+    @provide
+    def get_list_approvals_uc(self, directory: IUserDirectory) -> ListApprovalsUC:
+        return ListApprovalsUC(directory)
+
+    @provide
+    def get_approve_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> ApproveUserUC:
+        return ApproveUserUC(users, audit, uow)
+
+    @provide
+    def get_reject_user_uc(self, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork) -> RejectUserUC:
+        return RejectUserUC(users, audit, uow)
+
+    @provide
+    def get_resend_invite_uc(
+        self, invites: IRegistrationInviteRepository, create: CreateInviteUC, audit: IAuditLog, uow: IUnitOfWork
+    ) -> ResendInviteUC:
+        return ResendInviteUC(invites, create, audit, uow)
+
+    @provide
     def get_bootstrap_uc(
         self,
         setup: SetupStateService,
@@ -361,7 +562,7 @@ class ServerIdentityProvider(Provider):
         sessions: SessionService,
         sender: IMailSender,
     ) -> BootstrapUC:
-        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=sender.enabled)
+        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled)
 
     @provide
     def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:

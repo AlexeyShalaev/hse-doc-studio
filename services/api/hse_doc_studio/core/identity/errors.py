@@ -36,9 +36,12 @@ class IdentityErrorCode(StrEnum):
     # Внутренние коды: наружу не отдаются как есть (нейтральные ответы), нужны use cases.
     email_taken = "email_taken"
     last_owner = "last_owner"
+    last_admin = "last_admin"
     slug_reserved = "slug_reserved"
     slug_invalid = "slug_invalid"
     setting_locked = "setting_locked"
+    last_login_method = "last_login_method"
+    input_invalid = "input_invalid"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -94,6 +97,10 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     ),
     IdentityErrorCode.email_taken: ("Этот e-mail уже занят.", "This email is already taken."),
     IdentityErrorCode.last_owner: ("Нельзя убрать последнего владельца.", "The last owner cannot be removed."),
+    IdentityErrorCode.last_admin: (
+        "Нельзя лишить установку последнего администратора.",
+        "The installation cannot be left without an administrator.",
+    ),
     IdentityErrorCode.slug_reserved: ("Это имя зарезервировано.", "This name is reserved."),
     IdentityErrorCode.slug_invalid: (
         "Допустимы строчные латинские буквы, цифры и дефис.",
@@ -103,6 +110,11 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "Значение задано через окружение и не меняется из интерфейса.",
         "This value is set by the environment and cannot be changed here.",
     ),
+    IdentityErrorCode.last_login_method: (
+        "Нельзя выключить последний способ входа: останется вход, которым никто не сможет воспользоваться.",
+        "The last way to sign in cannot be turned off: nobody would be able to sign in.",
+    ),
+    IdentityErrorCode.input_invalid: ("Некорректные данные.", "Invalid input."),
 }
 
 

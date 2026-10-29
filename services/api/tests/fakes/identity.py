@@ -6,7 +6,7 @@ import copy
 from collections.abc import Mapping
 from dataclasses import replace
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity
+from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
 
@@ -50,6 +50,9 @@ class InMemoryUserRepository:
     async def count(self) -> int:
         return len(self._store.users)
 
+    async def lock_active_admins(self) -> int:
+        return sum(1 for u in self._store.users.values() if u.is_instance_admin and u.can_sign_in)
+
     async def get_by_identity(self, provider: str, subject: str) -> User | None:
         identity = self._store.identities.get((provider, subject))
         return self._store.users.get(identity.user_id) if identity else None
@@ -63,6 +66,34 @@ class InMemoryUserRepository:
     async def list_identities(self, user_id: str) -> list[UserIdentity]:
         found = [i for i in self._store.identities.values() if i.user_id == user_id]
         return sorted(found, key=lambda i: (i.provider, i.subject))
+
+
+class InMemoryUserDirectory:
+    """Список пользователей над общим хранилищем; число проектов задаёт тест через `project_counts`."""
+
+    def __init__(self, store: InMemoryIdentityStore, project_counts: Mapping[str, int] | None = None) -> None:
+        self._store = store
+        self.project_counts: dict[str, int] = dict(project_counts or {})
+
+    def _listing(self, user: User) -> UserListing:
+        return UserListing(user, self.project_counts.get(user.id, 0))
+
+    async def get(self, user_id: str) -> UserListing | None:
+        user = self._store.users.get(user_id)
+        return self._listing(user) if user else None
+
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        needle = (q or "").strip().lower()
+        found = [
+            u
+            for u in self._store.users.values()
+            if (status is None or u.status is status)
+            and (not needle or needle in u.name.lower() + " " + u.email_normalized)
+        ]
+        found.sort(key=lambda u: (-u.created_at.timestamp(), u.id))
+        return [self._listing(u) for u in found[offset : offset + limit]], len(found)
 
 
 class InMemoryCredentialRepository:
@@ -92,9 +123,22 @@ class InMemoryFirstAdminRepository:
 class InMemoryInstanceSettingsRepository:
     def __init__(self) -> None:
         self._values: dict[str, object] = {}
+        self._secrets: dict[str, str] = {}
 
     async def get_all(self) -> Mapping[str, object]:
         return copy.deepcopy(self._values)
 
     async def set(self, key: str, value: object, *, source: str) -> None:
         self._values[key] = copy.deepcopy(value)
+        self._secrets.pop(key, None)
+
+    async def delete(self, key: str) -> None:
+        self._values.pop(key, None)
+        self._secrets.pop(key, None)
+
+    async def get_secret(self, key: str) -> str | None:
+        return self._secrets.get(key)
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        self._values[key] = True
+        self._secrets[key] = token

@@ -86,7 +86,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
 
 # Запросы Git-синхронизации: в теле лежит секрет (токен, пароль пакета) или адрес, в который вставили токен
 # (`https://user:TOKEN@host/...`). Эхо входных данных в ответе проверки (`input`) вернуло бы его вызывающему.
-_SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/)")
+SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/)")
 
 
 def git_error_body(exc: GitSyncError) -> dict[str, object]:
@@ -101,7 +101,7 @@ async def _git_error_handler(_request: Request, exc: Exception) -> JSONResponse:
 async def _validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)  # noqa: S101
     errors = exc.errors()
-    if _SECRET_BODY_PATHS.match(request.url.path):
+    if SECRET_BODY_PATHS.match(request.url.path):
         errors = [{key: value for key, value in error.items() if key not in {"input", "ctx"}} for error in errors]
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 

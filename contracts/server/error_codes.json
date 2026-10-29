@@ -21,7 +21,10 @@
   "setup_required",
   "email_taken",
   "last_owner",
+  "last_admin",
   "slug_reserved",
   "slug_invalid",
-  "setting_locked"
+  "setting_locked",
+  "last_login_method",
+  "input_invalid"
 ]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
+from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.schemas.session import (
@@ -71,7 +72,8 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         return _local_bootstrap()
     uc = await request.state.dishka_container.get(BootstrapUC)
     result = await uc.execute(credentials_from_request(request).session_secret)
-    is_admin = result.user is not None and result.user.is_instance_admin
+    # С чужого host/IP админки для человека нет, даже если он админ установки
+    is_admin = result.user is not None and result.user.is_instance_admin and admin_request_allowed(request)
     caps = ServerConfig.from_settings(settings).caps
     return BootstrapResponse(
         mode="server",

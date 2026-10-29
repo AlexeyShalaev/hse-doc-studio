@@ -135,6 +135,15 @@ async def test__update__email_of_other_user__raises_email_taken(repos: Repos) ->
     assert err.value.code is IdentityErrorCode.email_taken
 
 
+async def test__lock_active_admins__counts_only_active_admins(repos: Repos) -> None:
+    await repos.users.add(make_user("a", admin=True))
+    await repos.users.add(make_user("b", admin=True))
+    await repos.users.add(make_user("m"))
+    await repos.users.add(replace(make_user("d", admin=True), status=UserStatus.disabled))
+
+    assert await repos.users.lock_active_admins() == 2
+
+
 async def test__identity__add_then_lookup__returns_user(repos: Repos) -> None:
     await repos.users.add(make_user("u1"))
     identity = UserIdentity(user_id="u1", provider="corp", subject="sub-1", email="x@corp.test", email_verified=True)
@@ -208,3 +217,24 @@ async def test__instance_settings__set_get_overwrite(repos: Repos) -> None:
         "auth": {"registration_mode": "invite", "domains": ["a.test"]},
         "flag": False,
     }
+
+
+async def test__settings__delete_returns_to_default_and_ignores_missing_key(repos: Repos) -> None:
+    await repos.settings.set("smtp.host", "smtp.example.org", source="admin")
+
+    await repos.settings.delete("smtp.host")
+    await repos.settings.delete("smtp.host")
+
+    assert "smtp.host" not in await repos.settings.get_all()
+
+
+async def test__settings__secret_is_stored_apart_and_visible_only_as_a_marker(repos: Repos) -> None:
+    assert await repos.settings.get_secret("smtp.password") is None
+
+    await repos.settings.set_secret("smtp.password", "token-1", source="admin")
+    await repos.settings.set_secret("smtp.password", "token-2", source="admin")
+
+    assert await repos.settings.get_secret("smtp.password") == "token-2"
+    assert (await repos.settings.get_all())["smtp.password"] is True
+    await repos.settings.delete("smtp.password")
+    assert await repos.settings.get_secret("smtp.password") is None

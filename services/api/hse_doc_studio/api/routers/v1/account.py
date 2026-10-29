@@ -10,15 +10,22 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.rate_limit import enforce_email
 from hse_doc_studio.api.schemas.session import (
     AccountSession,
+    ApiToken,
     ChangeEmailRequest,
     ChangeEmailResponse,
     ChangePasswordRequest,
+    CreateApiTokenRequest,
+    CreateApiTokenResponse,
     VerifyEmailRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import ActorSource
+from hse_doc_studio.core.identity.entities import ApiToken as ApiTokenEntity
+from hse_doc_studio.core.identity.entities import TokenScope as TokenScopeEntity
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.sessions import (
     ListSessionsUC,
@@ -128,3 +135,51 @@ async def change_password(body: ChangePasswordRequest, request: Request) -> Resp
         sign_out_others=body.sign_out_other_sessions,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
+
+
+def _session_user_id() -> str:
+    """Токенами управляет только вошедший по cookie: украденный токен не должен плодить новые."""
+    actor = current_actor()
+    if actor is None or not actor.id:
+        raise IdentityError(IdentityErrorCode.auth_required)
+    if actor.source is not ActorSource.session:
+        raise IdentityError(IdentityErrorCode.forbidden)
+    return actor.id
+
+
+def _token_item(token: ApiTokenEntity) -> ApiToken:
+    return ApiToken(
+        id=token.id,
+        name=token.name,
+        prefix=token.prefix,
+        scopes=sorted(token.scopes, key=lambda scope: scope.value),
+        created_at=token.created_at,
+        expires_at=token.expires_at,
+        last_used_at=token.last_used_at,
+    )
+
+
+@router.get("/account/tokens", response_model=list[ApiToken])
+async def list_tokens(request: Request, response: Response) -> list[ApiToken]:
+    user_id = _session_user_id()
+    tokens = await (await request.state.dishka_container.get(ListApiTokensUC)).execute(user_id)
+    response.headers["Cache-Control"] = "no-store"
+    return [_token_item(token) for token in tokens]
+
+
+@router.post("/account/tokens", response_model=CreateApiTokenResponse, status_code=status.HTTP_201_CREATED)
+async def create_token(body: CreateApiTokenRequest, request: Request, response: Response) -> CreateApiTokenResponse:
+    """Открытое значение токена есть только в этом ответе."""
+    user_id = _session_user_id()
+    created = await (await request.state.dishka_container.get(CreateApiTokenUC)).execute(
+        user_id, body.name, frozenset(TokenScopeEntity(scope) for scope in body.scopes), body.expires_in_days
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return CreateApiTokenResponse(token=created.secret, item=_token_item(created.item))
+
+
+@router.delete("/account/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_token(token_id: str, request: Request) -> Response:
+    user_id = _session_user_id()
+    await (await request.state.dishka_container.get(RevokeApiTokenUC)).execute(user_id, token_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

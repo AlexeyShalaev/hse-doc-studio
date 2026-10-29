@@ -8,22 +8,15 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.api.git_errors import _SECRET_BODY_PATHS
+from hse_doc_studio.api.git_errors import SECRET_BODY_PATHS
 from hse_doc_studio.core.mode import StudioMode
 
 _UNPROCESSABLE = 422
-
-
-def _without_input(exc: RequestValidationError) -> JSONResponse:
-    """Git-запросы: токен, пароль пакета и адрес с токеном не возвращаем и локально (нет `input` и `ctx`)."""
-    errors = [{key: value for key, value in item.items() if key not in {"input", "ctx"}} for item in exc.errors()]
-    return JSONResponse(status_code=_UNPROCESSABLE, content={"detail": jsonable_encoder(errors)})
 
 
 def _sanitized(exc: RequestValidationError) -> JSONResponse:
@@ -36,10 +29,8 @@ def _sanitized(exc: RequestValidationError) -> JSONResponse:
 
 async def _validation_handler(request: Request, exc: Exception) -> Response:
     assert isinstance(exc, RequestValidationError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
-    if settings.mode is StudioMode.server:
+    if settings.mode is StudioMode.server or SECRET_BODY_PATHS.match(request.url.path):
         return _sanitized(exc)
-    if _SECRET_BODY_PATHS.match(request.url.path):
-        return _without_input(exc)
     # Локально ответ прежний (с `input`), пока кодирование его выдерживает.
     try:
         return await request_validation_exception_handler(request, exc)

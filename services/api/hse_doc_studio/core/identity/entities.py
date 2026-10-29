@@ -63,6 +63,14 @@ class User:
 
 
 @dataclass(frozen=True)
+class UserListing:
+    """Строка списка пользователей админки: человек и число его проектов (без содержимого)."""
+
+    user: User
+    project_count: int
+
+
+@dataclass(frozen=True)
 class UserIdentity:
     """Внешняя учётная запись (OIDC): пара (provider, subject) уникальна."""
 
@@ -180,6 +188,25 @@ class AuditEntry:
     actor_id: str | None = None
     target: str | None = None
     details: Mapping[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AuditQuery:
+    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного)."""
+
+    actor_id: str | None = None
+    action_prefix: str | None = None
+    target: str | None = None
+    since: datetime | None = None
+    until: datetime | None = None
+    before_id: int | None = None
+    limit: int = 50
+
+
+@dataclass(frozen=True)
+class AuditPage:
+    items: list[AuditEntry]
+    next_before_id: int | None
 
 
 @dataclass(frozen=True)

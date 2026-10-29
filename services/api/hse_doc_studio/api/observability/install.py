@@ -100,3 +100,15 @@ def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings)
     app.state.background.register(
         PeriodicTask(name="auth_cleanup", interval_s=cfg.server.auth_cleanup_interval_s, run=_cleanup)
     )
+
+
+def install_audit_retention(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическое стирание событий аудита старше срока хранения (единственный путь стирания журнала)."""
+    from hse_doc_studio.use_cases.admin.audit import PurgeAuditUC  # noqa: PLC0415
+
+    async def _purge() -> None:
+        await (await container.get(PurgeAuditUC)).execute()
+
+    app.state.background.register(
+        PeriodicTask(name="audit_retention", interval_s=cfg.server.audit_purge_interval_s, run=_purge)
+    )

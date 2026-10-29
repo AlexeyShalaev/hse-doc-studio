@@ -1,0 +1,40 @@
+{
+  "enabled": true,
+  "host": "smtp.example.org",
+  "port": 465,
+  "security": "tls",
+  "username": "mailer",
+  "password_set": true,
+  "from_address": "studio@example.org",
+  "from_name": "Studio",
+  "fields": {
+    "smtp.host": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.port": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.security": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.username": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.password": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.from_address": {
+      "source": "env",
+      "locked": true
+    },
+    "smtp.from_name": {
+      "source": "env",
+      "locked": true
+    }
+  }
+}

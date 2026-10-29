@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -31,7 +32,7 @@ class BootstrapUC:
         settings: AuthSettingsService,
         sessions: SessionService,
         *,
-        smtp_enabled: bool = False,
+        smtp_enabled: bool | Callable[[], bool] = False,
     ) -> None:
         self._setup = setup
         self._settings = settings
@@ -48,7 +49,7 @@ class BootstrapUC:
         return BootstrapResult(
             setup_state="needs_admin" if needs_admin else "ready",
             auth=await self.auth_settings(),
-            smtp_enabled=self._smtp_enabled,
+            smtp_enabled=self._smtp_enabled() if callable(self._smtp_enabled) else self._smtp_enabled,
             password_min_length=PASSWORD_MIN_LENGTH,
             user=resolved.user if resolved else None,
             session=resolved.session if resolved else None,

@@ -1,0 +1,7 @@
+{
+  "registration_mode": "domains",
+  "registration_domains": [
+    "hse.ru"
+  ],
+  "require_approval": null
+}

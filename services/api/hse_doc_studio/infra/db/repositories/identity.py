@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity, UserStatus
+from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.infra.db.orm.identity import (
@@ -18,6 +18,7 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserIdentityRow,
     UserRow,
 )
+from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 FIRST_ADMIN_LOCK_KEY = 0x48534D33  # "HSM3"
@@ -137,6 +138,16 @@ class SqlUserRepository:
         async with self._sessions.use() as session:
             return (await session.execute(select(func.count()).select_from(UserRow))).scalar_one()
 
+    async def lock_active_admins(self) -> int:
+        async with self._sessions.use() as session:
+            rows = await session.execute(
+                select(UserRow.id)
+                .where(UserRow.is_instance_admin.is_(True), UserRow.status == UserStatus.active.value)
+                .order_by(UserRow.id)
+                .with_for_update()
+            )
+            return len(rows.all())
+
     async def get_by_identity(self, provider: str, subject: str) -> User | None:
         async with self._sessions.use() as session:
             row = (
@@ -175,6 +186,67 @@ class SqlUserRepository:
                 )
             ).scalars()
             return [_identity(row) for row in rows]
+
+
+def _like_pattern(q: str) -> str:
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+async def _project_counts(session: AsyncSession, user_ids: list[str]) -> dict[str, int]:
+    if not user_ids:
+        return {}
+    found = await session.execute(
+        select(ProjectRow.owner_user_id, func.count())
+        .where(ProjectRow.owner_user_id.in_(user_ids), ProjectRow.deleted_at.is_(None))
+        .group_by(ProjectRow.owner_user_id)
+    )
+    return {owner: n for owner, n in found.all() if owner is not None}
+
+
+class SqlUserDirectory:
+    def __init__(self, sessions: SessionProvider) -> None:
+        self._sessions = sessions
+
+    async def get(self, user_id: str) -> UserListing | None:
+        async with self._sessions.use() as session:
+            row = await session.get(UserRow, user_id)
+            if row is None:
+                return None
+            counts = await _project_counts(session, [row.id])
+            return UserListing(_user(row), counts.get(row.id, 0))
+
+    async def search(
+        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
+    ) -> tuple[list[UserListing], int]:
+        conditions = []
+        if q:
+            pattern = _like_pattern(q.strip().lower())
+            conditions.append(
+                or_(
+                    func.lower(UserRow.name).like(pattern, escape="\\"),
+                    UserRow.email_normalized.like(pattern, escape="\\"),
+                )
+            )
+        if status is not None:
+            conditions.append(UserRow.status == status.value)
+        async with self._sessions.use() as session:
+            total = (await session.execute(select(func.count()).select_from(UserRow).where(*conditions))).scalar_one()
+            rows = (
+                (
+                    await session.execute(
+                        select(UserRow)
+                        .where(*conditions)
+                        .order_by(UserRow.created_at.desc(), UserRow.id)
+                        .limit(limit)
+                        .offset(offset)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            counts = await _project_counts(session, [r.id for r in rows])
+            return [UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total
 
 
 class SqlCredentialRepository:
@@ -226,6 +298,29 @@ class SqlInstanceSettingsRepository:
         stmt = stmt.on_conflict_do_update(
             index_elements=[InstanceSettingRow.key],
             set_={"value": stmt.excluded.value, "source": stmt.excluded.source, "updated_at": func.now()},
+        )
+        async with self._sessions.use() as session:
+            await session.execute(stmt)
+
+    async def delete(self, key: str) -> None:
+        async with self._sessions.use() as session:
+            await session.execute(delete(InstanceSettingRow).where(InstanceSettingRow.key == key))
+
+    async def get_secret(self, key: str) -> str | None:
+        async with self._sessions.use() as session:
+            row = await session.get(InstanceSettingRow, key)
+            return row.secret_enc if row else None
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        stmt = pg_insert(InstanceSettingRow).values(key=key, value=True, source=source, secret_enc=token)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[InstanceSettingRow.key],
+            set_={
+                "value": stmt.excluded.value,
+                "source": stmt.excluded.source,
+                "secret_enc": stmt.excluded.secret_enc,
+                "updated_at": func.now(),
+            },
         )
         async with self._sessions.use() as session:
             await session.execute(stmt)
