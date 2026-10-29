@@ -30,6 +30,35 @@ Take a backup first. Update runners together with the api: an incompatible versi
 
 One api replica runs at a time, so an update briefly interrupts access.
 
+## Version compatibility and rollback
+
+Migrations follow expand/contract: release N only adds (tables, columns with a default, indexes), and removal or tightening waits for release N+1. So the N-1 image keeps working on a database already upgraded to N. Tests enforce it: an N-1 to N migration on a populated database and a ban on destructive steps in `upgrade()`.
+
+- **Runner and api.** A runner announces its protocol version at registration; a mismatch is rejected with `runner_protocol_unsupported`. Update the api first, then the runners of the same release.
+- **Image rollback.** Restore the previous `TAG` (or `helm rollback`). Do not roll the schema back: image N-1 works with database N. If a release changed data irreversibly, restore the backup taken before the update (see below).
+- **Database newer than the image.** An older image that sees a revision it does not know refuses to start with `db_ahead`. This is a guard: start an image of the same or a newer release.
+- **Database older than the image.** A backup from an earlier release started with a newer image is caught up by migrations at startup.
+
+## Restoring from a backup
+
+The three stores (database, projects volume, S3) must come from the same moment. Order:
+
+1. Stop the api and runners: `docker compose stop api runner`.
+2. Bring back `SECRETS_KEY` from the secrets manager. Without it the secrets in the database are unreadable (see below).
+3. Restore the database into an empty one: `docker compose exec -T postgres psql -U studio studio < studio.sql`.
+4. Restore the `api-data` volume and the S3 bucket (or the `minio-data` volume) from snapshots of the same moment.
+5. Start the api with an image of the same or a newer release than the backup. Migrations run at startup.
+6. Start the runners after the api.
+
+Checks after the restore:
+
+- `hse-doc-studio db current` and `hse-doc-studio db check` show head with no drift;
+- `GET /health/ready` with `HEALTH_TOKEN` is green for every check;
+- sign in as an administrator, open a project, build a PDF: the build reads blobs from S3 and confirms their hashes;
+- if the database is newer than the bucket (blobs in the registry are missing from S3), a build that needs a missing file fails with a manifest error. Extra blobs in the bucket are harmless: cleanup removes them.
+
+If the database is newer than the projects volume, open the affected projects and re-save the files from users' working copies; if the volume is newer than the database, new projects are missing from the database and must be imported again.
+
 ## Key loss
 
 `SECRETS_KEY` (Fernet) encrypts secrets in the database: git tokens, the SMTP password, OIDC secrets, AI provider keys and signing. The key is never stored next to the database so a stolen dump does not reveal secrets.
