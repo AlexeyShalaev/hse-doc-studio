@@ -62,6 +62,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateGroupRequest: s.UpdateGroupRequestSchema,
   GroupMember: s.GroupMemberSchema,
   AddGroupMemberRequest: s.AddGroupMemberRequestSchema,
+  ProjectMember: s.ProjectMemberSchema,
+  SetProjectMemberRequest: s.SetProjectMemberRequestSchema,
   AdminSettings: s.AdminSettingsSchema,
   AdminRegistrationSettings: s.AdminRegistrationSettingsSchema,
   UpdateAdminRegistrationRequest: s.UpdateAdminRegistrationRequestSchema,

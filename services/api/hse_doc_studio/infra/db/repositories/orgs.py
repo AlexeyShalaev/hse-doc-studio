@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import delete, func, select
+from typing import Any
+
+from sqlalchemy import Delete, Select, delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +21,7 @@ from hse_doc_studio.core.orgs.entities import (
 )
 from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
-from hse_doc_studio.infra.db.orm.projects import ProjectRow
+from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 
@@ -40,6 +42,13 @@ def _member(row: OrgMemberRow) -> OrgMember:
 
 def _group(row: GroupRow) -> Group:
     return Group(id=row.id, org_id=row.org_id, name=row.name, created_at=row.created_at, external_ref=row.external_ref)
+
+
+def _group_grants_of(group_ids: Select[Any]) -> Delete:
+    """Роли групп на проектах: внешнего ключа на группу нет, запись убирается вместе с группой."""
+    return delete(ProjectMemberRow).where(
+        ProjectMemberRow.principal_kind == "group", ProjectMemberRow.principal_id.in_(group_ids)
+    )
 
 
 async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> list[OrgSummary]:
@@ -127,6 +136,8 @@ class SqlOrgRepository:
 
     async def delete(self, org_id: str) -> None:
         async with self._sessions.use() as session:
+            group_ids = select(GroupRow.id).where(GroupRow.org_id == org_id)
+            await session.execute(_group_grants_of(group_ids))
             await session.execute(delete(OrgRow).where(OrgRow.id == org_id))
 
     async def count_projects(self, org_id: str) -> int:
@@ -271,6 +282,7 @@ class SqlGroupRepository:
 
     async def delete(self, group_id: str) -> None:
         async with self._sessions.use() as session:
+            await session.execute(_group_grants_of(select(GroupRow.id).where(GroupRow.id == group_id)))
             await session.execute(delete(GroupRow).where(GroupRow.id == group_id))
 
     async def list_members(self, group_id: str) -> list[GroupMemberView]:

@@ -409,6 +409,29 @@ class AdminInvitationCreated(StrictModel):
     link: str | None
 
 
+ProjectMemberKind = Literal["user", "group"]
+ProjectMemberRole = Literal["reader", "reviewer", "editor"]
+
+
+class ProjectMember(StrictModel):
+    kind: ProjectMemberKind
+    principal_id: str
+    name: str
+    role: ProjectMemberRole
+    persona: str | None
+    can_share: bool
+    show_sources: bool
+    can_edit_all: bool
+
+
+class SetProjectMemberRequest(StrictModel):
+    role: ProjectMemberRole
+    persona: str | None = Field(max_length=64)
+    can_share: bool
+    show_sources: bool
+    can_edit_all: bool
+
+
 class AdminOrg(StrictModel):
     slug: str
     name: str

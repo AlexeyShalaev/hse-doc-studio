@@ -15,10 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
-from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.access.repositories import IProjectAclRepository, IProjectMemberRepository
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
+from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -37,6 +39,7 @@ from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
 from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
+from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
@@ -64,6 +67,7 @@ from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
+from hse_doc_studio.use_cases.projects.members import RemoveProjectMemberUC, SetProjectMemberUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
 from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
@@ -183,6 +187,28 @@ class ServerPersistenceProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_project_acl(self, inner: PostgresProjectAclRepository) -> IProjectAclRepository:
         return RequestAclCache(inner)
+
+    @provide
+    def get_project_member_repository(self, sessions: SessionProvider) -> IProjectMemberRepository:
+        return PostgresProjectMemberRepository(sessions)
+
+    @provide
+    def get_set_project_member_uc(
+        self,
+        members: IProjectMemberRepository,
+        users: IUserRepository,
+        groups: IGroupRepository,
+        orgs: IOrgRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> SetProjectMemberUC:
+        return SetProjectMemberUC(members, users, groups, orgs, audit, uow)
+
+    @provide
+    def get_remove_project_member_uc(
+        self, members: IProjectMemberRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveProjectMemberUC:
+        return RemoveProjectMemberUC(members, audit, uow)
 
     @provide(override=True)
     def get_project_access_checker(self, acl: PostgresProjectAclRepository) -> IProjectAccessChecker:

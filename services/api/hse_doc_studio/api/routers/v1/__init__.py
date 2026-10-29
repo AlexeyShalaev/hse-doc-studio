@@ -29,6 +29,7 @@ from hse_doc_studio.api.routers.v1 import (
     office_services,
     orgs,
     profile,
+    project_members,
     projects,
     requirements,
     server_setup,
@@ -59,6 +60,7 @@ api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
 api_router.include_router(orgs.router, tags=["orgs"])
 api_router.include_router(catalog.router, tags=["catalog"])
+api_router.include_router(project_members.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])
 api_router.include_router(compile.router, tags=["compile"])

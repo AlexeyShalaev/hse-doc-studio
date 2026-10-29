@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import Select, func, or_, select, update
+from sqlalchemy import ColumnElement, Select, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.access.context import ActorRequired, require_actor
@@ -17,12 +17,48 @@ from hse_doc_studio.core.enums import ProjectStaffing
 from hse_doc_studio.core.projects.locator import ProjectAlreadyRegisteredError
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import IProjectRepository
+from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, OrgMemberRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 logger = structlog.get_logger()
 
 USER_PRINCIPAL = "user"
+GROUP_PRINCIPAL = "group"
+
+
+def visible_to(user_id: str) -> ColumnElement[bool]:
+    """Условие «проект виден человеку»: свой, прямая запись, группа, админ организации-владельца
+    или участник организации при org_visible. Тот же набор источников, что у загрузчика прав."""
+    direct = (
+        select(ProjectMemberRow.project_id)
+        .where(
+            ProjectMemberRow.project_id == ProjectRow.id,
+            ProjectMemberRow.principal_kind == USER_PRINCIPAL,
+            ProjectMemberRow.principal_id == user_id,
+        )
+        .exists()
+    )
+    via_group = (
+        select(ProjectMemberRow.project_id)
+        .join(GroupMemberRow, GroupMemberRow.group_id == ProjectMemberRow.principal_id)
+        .where(
+            ProjectMemberRow.project_id == ProjectRow.id,
+            ProjectMemberRow.principal_kind == GROUP_PRINCIPAL,
+            GroupMemberRow.user_id == user_id,
+        )
+        .exists()
+    )
+    via_org = (
+        select(OrgMemberRow.org_id)
+        .where(
+            OrgMemberRow.org_id == ProjectRow.owner_org_id,
+            OrgMemberRow.user_id == user_id,
+            or_(OrgMemberRow.role.in_(("owner", "admin")), ProjectRow.org_visible.is_(True)),
+        )
+        .exists()
+    )
+    return or_(ProjectRow.owner_user_id == user_id, direct, via_group, via_org)
 
 
 class PostgresProjectLocator:
@@ -55,18 +91,9 @@ class PostgresProjectLocator:
             raise ActorRequired("список проектов без актора")
         if actor.kind is not ActorKind.user or actor.id is None:
             return []
-        member = (
-            select(ProjectMemberRow.project_id)
-            .where(
-                ProjectMemberRow.project_id == ProjectRow.id,
-                ProjectMemberRow.principal_kind == USER_PRINCIPAL,
-                ProjectMemberRow.principal_id == actor.id,
-            )
-            .exists()
-        )
         stmt = (
             select(ProjectRow.workspace_path)
-            .where(ProjectRow.deleted_at.is_(None), or_(ProjectRow.owner_user_id == actor.id, member))
+            .where(ProjectRow.deleted_at.is_(None), visible_to(actor.id))
             .order_by(ProjectRow.created_at, ProjectRow.id)
         )
         return await self._folders(stmt)

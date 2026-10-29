@@ -395,6 +395,24 @@ export const GroupMemberSchema = z.strictObject({
 export const AddGroupMemberRequestSchema = z.strictObject({
   user_id: z.string(),
 });
+export const ProjectMemberRoleSchema = z.enum(["reader", "reviewer", "editor"]);
+export const ProjectMemberSchema = z.strictObject({
+  kind: z.enum(["user", "group"]),
+  principal_id: z.string(),
+  name: z.string(),
+  role: ProjectMemberRoleSchema,
+  persona: z.string().nullable(),
+  can_share: z.boolean(),
+  show_sources: z.boolean(),
+  can_edit_all: z.boolean(),
+});
+export const SetProjectMemberRequestSchema = z.strictObject({
+  role: ProjectMemberRoleSchema,
+  persona: z.string().nullable(),
+  can_share: z.boolean(),
+  show_sources: z.boolean(),
+  can_edit_all: z.boolean(),
+});
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

@@ -78,6 +78,8 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateGroupRequest": s.UpdateGroupRequest,
     "GroupMember": s.GroupMember,
     "AddGroupMemberRequest": s.AddGroupMemberRequest,
+    "ProjectMember": s.ProjectMember,
+    "SetProjectMemberRequest": s.SetProjectMemberRequest,
     "AdminSettings": s.AdminSettings,
     "AdminRegistrationSettings": s.AdminRegistrationSettings,
     "UpdateAdminRegistrationRequest": s.UpdateAdminRegistrationRequest,
