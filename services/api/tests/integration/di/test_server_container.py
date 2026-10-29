@@ -185,6 +185,29 @@ async def test__server_container__compile_repo_is_postgres_while_local_stays_jso
     assert isinstance(server_repo, PostgresCompileRepository)
 
 
+async def test__server_container__chat_repo_is_postgres_while_local_stays_json() -> None:
+    from hse_doc_studio.core.repositories import IChatRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.chat import JsonChatRepository  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(IChatRepository)
+        async with server() as request:
+            server_repo = await request.get(IChatRepository)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonChatRepository)
+    assert isinstance(server_repo, PostgresChatRepository)
+
+
 async def test__server_container__artifact_store_is_s3_while_local_stays_on_disk() -> None:
     from hse_doc_studio.core.jobs.artifacts import IArtifactStore  # noqa: PLC0415
     from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore  # noqa: PLC0415

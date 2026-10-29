@@ -11,6 +11,7 @@ from hse_doc_studio.infra.db.orm.auth import (
     SessionRow,
 )
 from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
+from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
@@ -31,10 +32,14 @@ from hse_doc_studio.infra.db.orm.jobs import (
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
+    "AgentRunRow",
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
     "BlobRow",
+    "ChatMessageRow",
+    "ChatSessionRow",
+    "ChatSummaryRow",
     "CompileRecordRow",
     "FairShareRow",
     "FileHashCacheRow",

@@ -23,6 +23,7 @@ from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
+    IChatRepository,
     ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -35,6 +36,7 @@ from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
 from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
+from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
@@ -223,6 +225,10 @@ class ServerPersistenceProvider(Provider):
             keep_per_document=server_config.compile_records_per_document,
             log_limit_bytes=server_config.compile_log_limit_bytes,
         )
+
+    @provide(override=True)
+    def get_chat_repo(self, sessions: SessionProvider, volume: IProjectVolume) -> IChatRepository:
+        return PostgresChatRepository(sessions, volume, settings.data_dir.expanduser() / "system-chats")
 
     @provide(override=True)
     def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:
