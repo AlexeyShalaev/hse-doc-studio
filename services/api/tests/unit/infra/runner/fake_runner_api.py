@@ -14,7 +14,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from hse_doc_studio.api.schemas import runner as schemas
 
-TOKEN = "runner-secret"  # noqa: S105
+TOKEN = "registration-secret"  # noqa: S105 — токен регистрации: годится только для register
+RUNNER_TOKEN = "hsrn_runner-secret"  # noqa: S105 — токен раннера из ответа register
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "runner" / "fixtures"
 
 
@@ -74,7 +75,8 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
     @app.middleware("http")
     async def auth(request: Request, call_next: Any) -> Response:
         state.headers_seen.append(dict(request.headers))
-        if request.headers.get("authorization") != f"Bearer {TOKEN}":
+        expected = TOKEN if request.url.path.endswith("/register") else RUNNER_TOKEN
+        if request.headers.get("authorization") != f"Bearer {expected}":
             return _error(401, "runner_unauthorized")
         return await call_next(request)
 
@@ -84,7 +86,7 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
             return _error(state.fail_register_with, "runner_disabled")
         state.registrations.append(body.model_dump())
         return schemas.RunnerRegisterResponseBody(
-            runner_id="runner-1", lease_s=45, heartbeat_s=10, max_poll_wait_s=25
+            runner_id="runner-1", runner_token=RUNNER_TOKEN, lease_s=45, heartbeat_s=10, max_poll_wait_s=25
         ).model_dump()
 
     @app.post("/api/runner/v1/poll")

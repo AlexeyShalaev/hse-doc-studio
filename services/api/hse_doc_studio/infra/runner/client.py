@@ -28,7 +28,8 @@ from hse_doc_studio.infra.runner.backoff import Backoff
 
 logger = logging.getLogger(__name__)
 
-# Заголовки: токен раннера идёт как Bearer, токен задачи из конверта отдельным заголовком.
+# Заголовки: Bearer это токен регистрации (только в register), дальше токен раннера; токен задачи из конверта
+# идёт отдельным заголовком.
 JOB_TOKEN_HEADER = "X-Job-Token"  # noqa: S105
 RUNNER_VERSION_HEADER = "X-Runner-Version"
 RUNNER_ID_HEADER = "X-Runner-Id"
@@ -67,8 +68,10 @@ class RunnerClient:
         timeout_s: float = 30.0,
         retries: int = 3,
         backoff_factory: Callable[[], Backoff] = lambda: Backoff(base_s=0.2, cap_s=5.0),
+        on_registered: Callable[[RunnerRegisterResponse], None] | None = None,
     ) -> None:
         self._token = token
+        self._on_registered = on_registered
         self._version = version
         self._retries = retries
         self._backoff_factory = backoff_factory
@@ -80,6 +83,16 @@ class RunnerClient:
         await self._http.aclose()
 
     def bind_runner(self, runner_id: str) -> None:
+        self._runner_id = runner_id
+
+    @property
+    def is_registered(self) -> bool:
+        """Раннер уже зарегистрирован: `token` клиента это его постоянный токен, а не токен регистрации."""
+        return self._runner_id is not None
+
+    def restore(self, runner_id: str, runner_token: str) -> None:
+        """Продолжить с сохранённой личностью: токен регистрации тратится один раз, второй раз он не годится."""
+        self._token = runner_token
         self._runner_id = runner_id
 
     def _headers(self, job_token: str | None) -> dict[str, str]:
@@ -131,7 +144,9 @@ class RunnerClient:
     async def register(self, request: RunnerRegisterRequest) -> RunnerRegisterResponse:
         response = await self._send("POST", "/register", json=encode(request))
         registered = decode(RunnerRegisterResponse, _json_object(response))
-        self.bind_runner(registered.runner_id)
+        self.restore(registered.runner_id, registered.runner_token)
+        if self._on_registered is not None:
+            self._on_registered(registered)
         return registered
 
     async def poll(self, request: PollRequest) -> PollResponse:

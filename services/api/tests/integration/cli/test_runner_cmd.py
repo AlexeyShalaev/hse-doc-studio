@@ -11,7 +11,7 @@ import hashlib
 import io
 import uuid
 import zipfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Any
 
@@ -247,3 +247,24 @@ def test_runner_command_without_settings_is_a_usage_error(monkeypatch: pytest.Mo
         monkeypatch.delenv(f"HSE_RUNNER__{name}", raising=False)
 
     assert cli.main(["runner"]) == 2
+
+
+async def test_restart_reuses_saved_identity_and_does_not_register_again(tmp_path: Path) -> None:
+    first = Rig(tmp_path, office_url=None)
+    await first.start()
+    await _until(lambda: first.state.registrations)
+    await first.stop()
+    assert (tmp_path / "runner" / "identity.json").stat().st_mode & 0o777 == 0o600
+
+    second = Rig(tmp_path, office_url=None)
+    await second.start()
+    await _until(lambda: second.state.polls >= 1)
+    await second.stop()
+
+    assert second.state.registrations == []
+
+
+async def _until(predicate: Callable[[], object], timeout_s: float = 10.0) -> None:
+    async with asyncio.timeout(timeout_s):
+        while not predicate():
+            await asyncio.sleep(0.02)

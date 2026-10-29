@@ -18,6 +18,7 @@ from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.client import RunnerClient
 from hse_doc_studio.infra.runner.config import RunnerConfig
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
+from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.loop import RunnerLoop, RunnerLoopConfig
 from hse_doc_studio.infra.runner.office import GotenbergConverter
 from hse_doc_studio.infra.runner.verify import EphemeralVerifyHandler
@@ -44,9 +45,16 @@ class RunnerProvider(Provider):
 
     @provide
     async def get_client(self, config: RunnerConfig) -> AsyncIterator[RunnerClient]:
+        store = RunnerIdentityStore(config.data_dir)
         client = RunnerClient(
-            config.api_url, config.token.get_secret_value(), version=__version__, transport=self._transport
+            config.api_url,
+            config.token.get_secret_value(),
+            version=__version__,
+            transport=self._transport,
+            on_registered=lambda registered: store.save(config.api_url, registered),
         )
+        if (identity := store.load(config.api_url)) is not None:
+            client.restore(identity.runner_id, identity.runner_token)
         yield client
         await client.aclose()
 

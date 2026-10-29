@@ -94,23 +94,19 @@ class RunnerLoop:
         self._stop.set()
 
     async def run(self) -> None:
-        await self._register_until_ready()
+        if not self._client.is_registered:
+            await self._register_until_ready()
         backoff = self._config.backoff_factory()
-        need_register = False
         while not self._stop.is_set():
             if len(self._jobs) >= self._config.concurrency:
                 self._slot_freed.clear()
                 await self._wait_stop_or(self._slot_freed)
                 continue
             try:
-                if need_register:
-                    await self._register()
-                    need_register = False
                 response = await self._poll()
             except (RunnerApiError, RunnerUnreachable) as exc:
                 self._raise_if_fatal(exc)
                 logger.warning("poll failed: %s", exc)
-                need_register = True
                 await self._sleep_or_stop(backoff.next())
             else:
                 backoff.reset()

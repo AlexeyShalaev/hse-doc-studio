@@ -17,7 +17,12 @@ class RunnerConfig(BaseSettings):
     )
 
     api_url: str = Field(description="Адрес api Студии, например https://studio.example.org.")
-    token: SecretStr = Field(description="Токен раннера: идёт в заголовке Authorization каждого запроса.")
+    token: SecretStr = Field(
+        description=(
+            "Токен регистрации из админки: нужен один раз. Выданный раннеру токен хранится в data_dir/identity.json, "
+            "после этого значение можно убрать из окружения."
+        )
+    )
     name: str = Field(default_factory=socket.gethostname, description="Имя раннера в списке администратора.")
     tags: str = Field(
         default="",

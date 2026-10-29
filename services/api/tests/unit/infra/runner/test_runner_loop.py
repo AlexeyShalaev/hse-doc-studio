@@ -16,6 +16,7 @@ from hse_doc_studio.infra.runner.executor import JobContext, JobOutcome, OutputF
 from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop, RunnerLoopConfig
 
 from tests.unit.infra.runner.fake_runner_api import (
+    RUNNER_TOKEN,
     TOKEN,
     FakeJob,
     FakeRunnerState,
@@ -237,13 +238,33 @@ async def test_api_down_backs_off_and_recovers(rig: Rig) -> None:
     await until(lambda: rig.state.polls >= 1)
     rig.transport.down = True
     await until(lambda: rig.transport.failures >= 4)
-    registered_before = len(rig.state.registrations)
     job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
     rig.transport.down = False
     await until(lambda: job.completed)
     await rig.stop()
 
-    assert len(rig.state.registrations) > registered_before
+    assert len(rig.state.registrations) == 1
+
+
+async def test_api_down_does_not_spend_the_registration_token_again(rig: Rig) -> None:
+    rig.start()
+    await until(lambda: rig.state.polls >= 1)
+    rig.transport.down = True
+    await until(lambda: rig.transport.failures >= 4)
+    rig.transport.down = False
+    await until(lambda: rig.state.polls >= 3)
+    await rig.stop()
+
+    assert len(rig.state.registrations) == 1
+
+
+async def test_restored_identity_skips_registration(rig: Rig) -> None:
+    rig.client.restore("runner-1", RUNNER_TOKEN)
+    rig.start()
+    await until(lambda: rig.state.polls >= 1)
+    await rig.stop()
+
+    assert rig.state.registrations == []
 
 
 async def test_start_before_api_is_up_waits_for_registration(rig: Rig) -> None:

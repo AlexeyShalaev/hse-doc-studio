@@ -15,6 +15,7 @@ from hse_doc_studio.infra.runner.backoff import Backoff
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable
 
 from tests.unit.infra.runner.fake_runner_api import (
+    RUNNER_TOKEN,
     TOKEN,
     FakeRunnerState,
     SwitchTransport,
@@ -23,8 +24,10 @@ from tests.unit.infra.runner.fake_runner_api import (
 )
 
 
-def _client(transport: SwitchTransport, token: str = TOKEN, retries: int = 3) -> RunnerClient:
-    return RunnerClient(
+def _client(
+    transport: SwitchTransport, token: str = TOKEN, retries: int = 3, *, registered: bool = False
+) -> RunnerClient:
+    client = RunnerClient(
         "http://api",
         token,
         version="0.1",
@@ -32,6 +35,9 @@ def _client(transport: SwitchTransport, token: str = TOKEN, retries: int = 3) ->
         retries=retries,
         backoff_factory=lambda: Backoff(base_s=0.001, cap_s=0.005),
     )
+    if registered:
+        client.restore("runner-1", RUNNER_TOKEN)
+    return client
 
 
 @pytest.fixture
@@ -58,14 +64,14 @@ async def test_register_then_poll_returns_envelope(state: FakeRunnerState, trans
     assert polled.envelope is not None
     assert str(polled.envelope.spec.id) == "11111111-1111-4111-8111-111111111111"
     headers = state.headers_seen[-1]
-    assert headers["authorization"] == f"Bearer {TOKEN}"
+    assert headers["authorization"] == f"Bearer {RUNNER_TOKEN}"
     assert headers["x-runner-version"] == "0.1"
     assert headers["x-runner-id"] == "runner-1"
     assert state.registrations[0]["tags"] == ["tex"]
 
 
 async def test_empty_poll_returns_no_envelope(transport: SwitchTransport) -> None:
-    client = _client(transport)
+    client = _client(transport, registered=True)
     assert (await client.poll(PollRequest(wait_s=0))).envelope is None
     await client.aclose()
 
@@ -100,7 +106,7 @@ async def test_exhausted_retries_raise_unreachable(transport: SwitchTransport) -
 
 
 async def test_poll_is_not_retried_by_client(transport: SwitchTransport) -> None:
-    client = _client(transport)
+    client = _client(transport, registered=True)
     transport.down = True
     with pytest.raises(RunnerUnreachable):
         await client.poll(PollRequest(wait_s=0))
@@ -111,7 +117,7 @@ async def test_poll_is_not_retried_by_client(transport: SwitchTransport) -> None
 async def test_job_calls_carry_job_token_and_stale_attempt_is_409(
     state: FakeRunnerState, transport: SwitchTransport
 ) -> None:
-    client = _client(transport)
+    client = _client(transport, registered=True)
     job = state.enqueue(envelope_body("compile", attempt=1))
     ref = ArtifactRef(path="out/main.pdf", sha256="a" * 64, size=3)
     slot = await client.announce_artifact(job.job_id, "jt", ArtifactUploadRequest(attempt=1, artifact=ref))
