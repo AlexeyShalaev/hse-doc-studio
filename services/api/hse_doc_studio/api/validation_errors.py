@@ -13,6 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.git_errors import SECRET_BODY_PATHS
 from hse_doc_studio.core.mode import StudioMode
 
 _UNPROCESSABLE = 422
@@ -28,7 +29,7 @@ def _sanitized(exc: RequestValidationError) -> JSONResponse:
 
 async def _validation_handler(request: Request, exc: Exception) -> Response:
     assert isinstance(exc, RequestValidationError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
-    if settings.mode is StudioMode.server:
+    if settings.mode is StudioMode.server or SECRET_BODY_PATHS.match(request.url.path):
         return _sanitized(exc)
     # Локально ответ прежний (с `input`), пока кодирование его выдерживает.
     try:

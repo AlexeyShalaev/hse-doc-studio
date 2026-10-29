@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import delete, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -298,6 +298,29 @@ class SqlInstanceSettingsRepository:
         stmt = stmt.on_conflict_do_update(
             index_elements=[InstanceSettingRow.key],
             set_={"value": stmt.excluded.value, "source": stmt.excluded.source, "updated_at": func.now()},
+        )
+        async with self._sessions.use() as session:
+            await session.execute(stmt)
+
+    async def delete(self, key: str) -> None:
+        async with self._sessions.use() as session:
+            await session.execute(delete(InstanceSettingRow).where(InstanceSettingRow.key == key))
+
+    async def get_secret(self, key: str) -> str | None:
+        async with self._sessions.use() as session:
+            row = await session.get(InstanceSettingRow, key)
+            return row.secret_enc if row else None
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        stmt = pg_insert(InstanceSettingRow).values(key=key, value=True, source=source, secret_enc=token)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[InstanceSettingRow.key],
+            set_={
+                "value": stmt.excluded.value,
+                "source": stmt.excluded.source,
+                "secret_enc": stmt.excluded.secret_enc,
+                "updated_at": func.now(),
+            },
         )
         async with self._sessions.use() as session:
             await session.execute(stmt)

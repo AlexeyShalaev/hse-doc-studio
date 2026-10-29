@@ -331,3 +331,85 @@ export const AdminSettingsSchema = z.strictObject({
   smtp_enabled: z.boolean(),
   public_url: z.string(),
 });
+
+const SettingStateSchema = z.strictObject({
+  source: z.enum(["env", "admin", "default"]),
+  locked: z.boolean(),
+});
+const settingFields = z.record(z.string(), SettingStateSchema);
+const SmtpSecuritySchema = z.enum(["starttls", "tls", "none"]);
+export const AdminRegistrationSettingsSchema = z.strictObject({
+  registration_mode: RegistrationModeSchema,
+  registration_domains: z.array(z.string()),
+  require_approval: z.boolean(),
+  fields: settingFields,
+});
+export const UpdateAdminRegistrationRequestSchema = z.strictObject({
+  registration_mode: RegistrationModeSchema.nullable(),
+  registration_domains: z.array(z.string()).nullable(),
+  require_approval: z.boolean().nullable(),
+});
+export const AdminAuthSettingsSchema = z.strictObject({
+  password_enabled: z.boolean(),
+  oidc_enabled_count: z.number().int(),
+  fields: settingFields,
+});
+export const UpdateAdminAuthRequestSchema = z.strictObject({
+  password_enabled: z.boolean().nullable(),
+});
+export const AdminSmtpSettingsSchema = z.strictObject({
+  enabled: z.boolean(),
+  host: z.string().nullable(),
+  port: z.number().int(),
+  security: SmtpSecuritySchema,
+  username: z.string().nullable(),
+  password_set: z.boolean(),
+  from_address: z.string(),
+  from_name: z.string(),
+  fields: settingFields,
+});
+export const UpdateAdminSmtpRequestSchema = z.strictObject({
+  host: z.string().nullable(),
+  port: z.number().int().nullable(),
+  security: SmtpSecuritySchema.nullable(),
+  username: z.string().nullable(),
+  password: z.string().nullable(),
+  from_address: z.string().nullable(),
+  from_name: z.string().nullable(),
+});
+export const AdminSmtpTestRequestSchema = z.strictObject({
+  to: z.string().nullable(),
+});
+export const AdminSmtpTestResultSchema = z.strictObject({
+  ok: z.boolean(),
+  error: z.string().nullable(),
+});
+export const AdminOidcProviderSchema = z.strictObject({
+  id: z.string(),
+  label: z.string(),
+  issuer: z.string(),
+  client_id: z.string(),
+  client_secret_set: z.boolean(),
+  scopes: z.string(),
+  enabled: z.boolean(),
+  auto_provision: z.boolean(),
+  created_at: iso,
+});
+export const CreateAdminOidcProviderRequestSchema = z.strictObject({
+  label: z.string(),
+  issuer: z.string(),
+  client_id: z.string(),
+  client_secret: z.string(),
+  scopes: z.string(),
+  enabled: z.boolean(),
+  auto_provision: z.boolean(),
+});
+export const UpdateAdminOidcProviderRequestSchema = z.strictObject({
+  label: z.string().nullable(),
+  issuer: z.string().nullable(),
+  client_id: z.string().nullable(),
+  client_secret: z.string().nullable(),
+  scopes: z.string().nullable(),
+  enabled: z.boolean().nullable(),
+  auto_provision: z.boolean().nullable(),
+});

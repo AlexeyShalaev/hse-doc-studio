@@ -17,6 +17,7 @@ from hse_doc_studio.core.identity.auth_settings import (
 from hse_doc_studio.core.identity.entities import AuthSettings, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.setting_source import SettingDescription, describe_setting
 
 SOURCE_ADMIN = "admin"
 
@@ -37,6 +38,10 @@ class AuthSettingsService:
         return AuthSettingsView(
             settings=effective_auth_settings(await self._repo.get_all(), self._env), locked=self._env.locked_keys()
         )
+
+    async def describe(self, key: str) -> SettingDescription:
+        """Откуда значение ключа и можно ли его менять из интерфейса."""
+        return describe_setting(key, stored=await self._repo.get_all(), locked=self._env.locked_keys())
 
     async def effective(self) -> AuthSettings:
         return (await self.view()).settings

@@ -45,10 +45,12 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.last_owner: _STATE,
     IdentityErrorCode.last_admin: _STATE,
     IdentityErrorCode.setting_locked: _STATE,
+    IdentityErrorCode.last_login_method: _STATE,
     IdentityErrorCode.password_policy: _INPUT,
     IdentityErrorCode.token_invalid: _INPUT,
     IdentityErrorCode.slug_reserved: _INPUT,
     IdentityErrorCode.slug_invalid: _INPUT,
+    IdentityErrorCode.input_invalid: _INPUT,
 }
 
 

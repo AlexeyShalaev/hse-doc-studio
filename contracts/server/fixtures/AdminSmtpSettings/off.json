@@ -1,0 +1,40 @@
+{
+  "enabled": false,
+  "host": null,
+  "port": 587,
+  "security": "starttls",
+  "username": null,
+  "password_set": false,
+  "from_address": "no-reply@localhost",
+  "from_name": "HSE Doc Studio",
+  "fields": {
+    "smtp.host": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.port": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.security": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.username": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.password": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.from_address": {
+      "source": "default",
+      "locked": false
+    },
+    "smtp.from_name": {
+      "source": "default",
+      "locked": false
+    }
+  }
+}

@@ -399,3 +399,113 @@ class AdminSettings(StrictModel):
     allowed_domains: list[str]
     smtp_enabled: bool
     public_url: str
+
+
+SettingSourceName = Literal["env", "admin", "default"]
+SmtpSecurityName = Literal["starttls", "tls", "none"]
+
+
+class SettingState(StrictModel):
+    """Откуда значение; `locked` значит «задано окружением, из интерфейса не меняется»."""
+
+    source: SettingSourceName
+    locked: bool
+
+
+class AdminRegistrationSettings(StrictModel):
+    registration_mode: RegistrationMode
+    registration_domains: list[str]
+    require_approval: bool
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminRegistrationRequest(StrictModel):
+    """Меняется только заданное (не null)."""
+
+    registration_mode: RegistrationMode | None = None
+    registration_domains: list[str] | None = Field(default=None, max_length=200)
+    require_approval: bool | None = None
+
+
+class AdminAuthSettings(StrictModel):
+    password_enabled: bool
+    # Сколько провайдеров единого входа включено: отключить пароль можно, только если есть куда войти иначе.
+    oidc_enabled_count: int
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminAuthRequest(StrictModel):
+    password_enabled: bool | None = None
+
+
+class AdminSmtpSettings(StrictModel):
+    """Пароль не возвращается никогда: только признак `password_set`."""
+
+    enabled: bool
+    host: str | None
+    port: int
+    security: SmtpSecurityName
+    username: str | None
+    password_set: bool
+    from_address: str
+    from_name: str
+    fields: dict[str, SettingState]
+
+
+class UpdateAdminSmtpRequest(StrictModel):
+    """Меняется только заданное (не null). `host: ""` выключает почту, пустые `username` и `password` стирают их."""
+
+    host: str | None = Field(default=None, max_length=253)
+    port: int | None = Field(default=None, ge=1, le=65535)
+    security: SmtpSecurityName | None = None
+    username: str | None = Field(default=None, max_length=256)
+    password: str | None = Field(default=None, max_length=1024)
+    from_address: str | None = Field(default=None, max_length=254)
+    from_name: str | None = Field(default=None, max_length=200)
+
+
+class AdminSmtpTestRequest(StrictModel):
+    """Без `to` письмо уходит на адрес самого админа."""
+
+    to: str | None = Field(default=None, max_length=EMAIL_MAX)
+
+
+class AdminSmtpTestResult(StrictModel):
+    ok: bool
+    error: str | None
+
+
+class AdminOidcProvider(StrictModel):
+    """Секрет клиента не возвращается никогда: только признак `client_secret_set`."""
+
+    id: str
+    label: str
+    issuer: str
+    client_id: str
+    client_secret_set: bool
+    scopes: str
+    enabled: bool
+    auto_provision: bool
+    created_at: datetime
+
+
+class CreateAdminOidcProviderRequest(StrictModel):
+    label: str = Field(max_length=128)
+    issuer: str = Field(max_length=2048)
+    client_id: str = Field(max_length=256)
+    client_secret: str = Field(max_length=1024)
+    scopes: str = Field(default="openid email profile", max_length=256)
+    enabled: bool = True
+    auto_provision: bool = False
+
+
+class UpdateAdminOidcProviderRequest(StrictModel):
+    """Меняется только заданное (не null); секрет заменяется только новым значением."""
+
+    label: str | None = Field(default=None, max_length=128)
+    issuer: str | None = Field(default=None, max_length=2048)
+    client_id: str | None = Field(default=None, max_length=256)
+    client_secret: str | None = Field(default=None, max_length=1024)
+    scopes: str | None = Field(default=None, max_length=256)
+    enabled: bool | None = None
+    auto_provision: bool | None = None

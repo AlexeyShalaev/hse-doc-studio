@@ -66,6 +66,18 @@ _SCHEMAS: dict[str, Any] = {
     "AdminOrgList": list[s.AdminOrg],
     "AdminRunnerList": list[s.AdminRunner],
     "AdminSettings": s.AdminSettings,
+    "AdminRegistrationSettings": s.AdminRegistrationSettings,
+    "UpdateAdminRegistrationRequest": s.UpdateAdminRegistrationRequest,
+    "AdminAuthSettings": s.AdminAuthSettings,
+    "UpdateAdminAuthRequest": s.UpdateAdminAuthRequest,
+    "AdminSmtpSettings": s.AdminSmtpSettings,
+    "UpdateAdminSmtpRequest": s.UpdateAdminSmtpRequest,
+    "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
+    "AdminSmtpTestResult": s.AdminSmtpTestResult,
+    "AdminOidcProvider": s.AdminOidcProvider,
+    "AdminOidcProviderList": list[s.AdminOidcProvider],
+    "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,
+    "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
 }
 
 

@@ -123,9 +123,22 @@ class InMemoryFirstAdminRepository:
 class InMemoryInstanceSettingsRepository:
     def __init__(self) -> None:
         self._values: dict[str, object] = {}
+        self._secrets: dict[str, str] = {}
 
     async def get_all(self) -> Mapping[str, object]:
         return copy.deepcopy(self._values)
 
     async def set(self, key: str, value: object, *, source: str) -> None:
         self._values[key] = copy.deepcopy(value)
+        self._secrets.pop(key, None)
+
+    async def delete(self, key: str) -> None:
+        self._values.pop(key, None)
+        self._secrets.pop(key, None)
+
+    async def get_secret(self, key: str) -> str | None:
+        return self._secrets.get(key)
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        self._values[key] = True
+        self._secrets[key] = token

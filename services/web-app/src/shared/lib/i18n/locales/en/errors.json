@@ -102,6 +102,8 @@
     "last_admin": "The installation cannot be left without an administrator.",
     "slug_reserved": "This name is reserved.",
     "slug_invalid": "Use lowercase Latin letters, digits and hyphens.",
-    "setting_locked": "This value is set by the environment and cannot be changed here."
+    "setting_locked": "This value is set by the environment and cannot be changed here.",
+    "last_login_method": "The last way to sign in cannot be turned off: nobody would be able to sign in.",
+    "input_invalid": "Invalid input."
   }
 }

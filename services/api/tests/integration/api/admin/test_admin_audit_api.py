@@ -79,6 +79,17 @@ _MUTATIONS: list[tuple[str, str, Any, list[str]]] = [
     ("POST", "/api/admin/invitations", {"email": "new@example.org", "ttl_days": 3}, ["invite.create"]),
 ]
 
+# Ручки настроек: их проверяет test_admin_settings_api, здесь только покрытие аудитом по списку.
+_SETTINGS_MUTATIONS = {
+    ("PUT", "/api/admin/settings/registration"),
+    ("PUT", "/api/admin/settings/auth"),
+    ("PUT", "/api/admin/settings/smtp"),
+    ("POST", "/api/admin/settings/smtp/test"),
+    ("POST", "/api/admin/oidc-providers"),
+    ("PATCH", "/api/admin/oidc-providers/{id}"),
+    ("DELETE", "/api/admin/oidc-providers/{id}"),
+}
+
 
 def _mutating_routes() -> set[tuple[str, str]]:
     found: set[tuple[str, str]] = set()
@@ -155,6 +166,7 @@ async def test__audit__refused_mutations_write_nothing(env: _Env) -> None:
 def test__audit__every_mutating_admin_route_is_in_the_matrix() -> None:
     covered = {(m, _normalized(p)) for m, p, _, _ in _MUTATIONS}
     covered |= {("POST", "/api/admin/invitations/{id}/resend"), ("DELETE", "/api/admin/invitations/{id}")}
+    covered |= _SETTINGS_MUTATIONS
     routes = {(m, _normalized(p)) for m, p in _mutating_routes()}
 
     assert routes - covered == set(), "изменяющая ручка админки без проверки аудита"

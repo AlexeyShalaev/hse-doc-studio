@@ -1,0 +1,9 @@
+{
+  "host": "smtp.example.org",
+  "port": 587,
+  "security": "starttls",
+  "username": "mailer",
+  "password": "correct horse",
+  "from_address": "studio@example.org",
+  "from_name": null
+}

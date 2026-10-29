@@ -11,6 +11,7 @@ from datetime import timedelta
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
@@ -33,6 +34,7 @@ from hse_doc_studio.core.identity.protocols import (
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
+from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
     SqlApiTokenRepository,
@@ -53,11 +55,18 @@ from hse_doc_studio.infra.db.repositories.identity import (
 )
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
-from hse_doc_studio.infra.identity.mail import LinkOnlyMailSender
+from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
-from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.oidc import (
+    CreateOidcProviderUC,
+    DeleteOidcProviderUC,
+    GetOidcProviderUC,
+    ListOidcProvidersUC,
+    UpdateOidcProviderUC,
+)
+from hse_doc_studio.use_cases.admin.settings import GetAuthGroupUC, UpdateAuthMethodsUC, UpdateRegistrationUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
     DisableUserUC,
@@ -92,6 +101,12 @@ from hse_doc_studio.use_cases.identity.sessions import (
     RevokeOtherSessionsUC,
     RevokeSessionUC,
     SessionService,
+)
+from hse_doc_studio.use_cases.identity.smtp_settings import (
+    GetSmtpSettingsUC,
+    SendTestMailUC,
+    SmtpSettingsService,
+    UpdateSmtpSettingsUC,
 )
 from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, EnsureBootstrapAdminUC
 from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
@@ -248,12 +263,12 @@ class ServerIdentityProvider(Provider):
         return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
 
     @provide
-    def get_mail_sender(self) -> IMailSender:
+    def get_smtp_env(self) -> SmtpEnv:
         cfg = settings.mail
         if not cfg.host:
-            return LinkOnlyMailSender()
-        return SmtpMailSender(
-            SmtpSettings(
+            return SmtpEnv()
+        return SmtpEnv(
+            SmtpParams(
                 host=cfg.host,
                 port=cfg.port,
                 security=cfg.security,
@@ -264,6 +279,84 @@ class ServerIdentityProvider(Provider):
                 timeout_s=cfg.timeout_s,
             )
         )
+
+    @provide
+    def get_smtp_settings_service(
+        self, settings_repo: IInstanceSettingsRepository, cipher: ISecretCipher, env: SmtpEnv
+    ) -> SmtpSettingsService:
+        return SmtpSettingsService(settings_repo, cipher, env)
+
+    @provide
+    async def get_configured_mail_sender(self, service: SmtpSettingsService) -> ConfiguredMailSender:
+        sender = ConfiguredMailSender(service)
+        await sender.refresh()
+        return sender
+
+    @provide
+    def get_mail_sender(self, sender: ConfiguredMailSender) -> IMailSender:
+        return sender
+
+    @provide
+    def get_update_smtp_settings_uc(
+        self,
+        service: SmtpSettingsService,
+        settings_repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        sender: ConfiguredMailSender,
+    ) -> UpdateSmtpSettingsUC:
+        return UpdateSmtpSettingsUC(service, settings_repo, audit, on_change=sender.refresh)
+
+    @provide
+    def get_smtp_settings_uc(self, service: SmtpSettingsService) -> GetSmtpSettingsUC:
+        return GetSmtpSettingsUC(service)
+
+    @provide
+    def get_send_test_mail_uc(self, sender: IMailSender, audit: IAuditLog) -> SendTestMailUC:
+        return SendTestMailUC(sender, audit)
+
+    @provide
+    def get_auth_group_uc(self, service: AuthSettingsService, oidc: IOidcProviderRepository) -> GetAuthGroupUC:
+        return GetAuthGroupUC(service, oidc)
+
+    @provide
+    def get_update_registration_uc(self, update: UpdateAuthSettingsUC, group: GetAuthGroupUC) -> UpdateRegistrationUC:
+        return UpdateRegistrationUC(update, group)
+
+    @provide
+    def get_update_auth_methods_uc(
+        self,
+        update: UpdateAuthSettingsUC,
+        service: AuthSettingsService,
+        oidc: IOidcProviderRepository,
+        group: GetAuthGroupUC,
+    ) -> UpdateAuthMethodsUC:
+        return UpdateAuthMethodsUC(update, service, oidc, group)
+
+    @provide
+    def get_list_oidc_providers_uc(self, oidc: IOidcProviderRepository) -> ListOidcProvidersUC:
+        return ListOidcProvidersUC(oidc)
+
+    @provide
+    def get_oidc_provider_uc(self, oidc: IOidcProviderRepository) -> GetOidcProviderUC:
+        return GetOidcProviderUC(oidc)
+
+    @provide
+    def get_create_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, audit: IAuditLog
+    ) -> CreateOidcProviderUC:
+        return CreateOidcProviderUC(oidc, cipher, audit)
+
+    @provide
+    def get_update_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, service: AuthSettingsService, audit: IAuditLog
+    ) -> UpdateOidcProviderUC:
+        return UpdateOidcProviderUC(oidc, cipher, service, audit)
+
+    @provide
+    def get_delete_oidc_provider_uc(
+        self, oidc: IOidcProviderRepository, service: AuthSettingsService, audit: IAuditLog
+    ) -> DeleteOidcProviderUC:
+        return DeleteOidcProviderUC(oidc, service, audit)
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
@@ -469,7 +562,7 @@ class ServerIdentityProvider(Provider):
         sessions: SessionService,
         sender: IMailSender,
     ) -> BootstrapUC:
-        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=sender.enabled)
+        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled)
 
     @provide
     def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:

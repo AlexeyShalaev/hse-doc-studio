@@ -40,6 +40,8 @@ class IdentityErrorCode(StrEnum):
     slug_reserved = "slug_reserved"
     slug_invalid = "slug_invalid"
     setting_locked = "setting_locked"
+    last_login_method = "last_login_method"
+    input_invalid = "input_invalid"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -108,6 +110,11 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "Значение задано через окружение и не меняется из интерфейса.",
         "This value is set by the environment and cannot be changed here.",
     ),
+    IdentityErrorCode.last_login_method: (
+        "Нельзя выключить последний способ входа: останется вход, которым никто не сможет воспользоваться.",
+        "The last way to sign in cannot be turned off: nobody would be able to sign in.",
+    ),
+    IdentityErrorCode.input_invalid: ("Некорректные данные.", "Invalid input."),
 }
 
 

@@ -161,6 +161,17 @@ class IOidcProviderRepository(Protocol):
 class IInstanceSettingsRepository(Protocol):
     async def get_all(self) -> Mapping[str, object]: ...
     async def set(self, key: str, value: object, *, source: str) -> None: ...
+    async def delete(self, key: str) -> None:
+        """Снимает значение админа: дальше действует умолчание. Нет такого ключа: ничего не делает."""
+        ...
+
+    async def get_secret(self, key: str) -> str | None:
+        """Шифртекст секрета ключа (расшифровывает вызывающий) либо None."""
+        ...
+
+    async def set_secret(self, key: str, token: str, *, source: str) -> None:
+        """Сохраняет шифртекст; в `get_all` ключ виден как `True`, сам секрет наружу не отдаётся."""
+        ...
 
 
 class IAuditLog(Protocol):
