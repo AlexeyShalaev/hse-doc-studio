@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import NewType
+from uuid import UUID
 
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.runners import (
     JOB_TOKEN_KEY_PURPOSE,
@@ -19,13 +22,15 @@ from hse_doc_studio.core.jobs.runners import (
 from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.ingest import OutputLimits
-from hse_doc_studio.core.storage.manifest import ILiveBlobSource
+from hse_doc_studio.core.storage.manifest import IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
+from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
+from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 from hse_doc_studio.infra.jobs.storage_fs import FsJobLogSink
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
@@ -129,3 +134,19 @@ class ServerJobsProvider(Provider):
         logs: IJobLogSink,
     ) -> RunnerJobIoService:
         return RunnerJobIoService(queue, queue_service, runners, signer, blobs, outputs, logs)
+
+    @provide(override=True)
+    def get_job_dispatcher(
+        self,
+        queue: IJobQueue,
+        uploader: IBlobUploader,
+        runners: IRunnerRepository,
+        limits: ManifestLimits,
+        acl: PostgresProjectAclRepository,
+    ) -> IJobDispatcher:
+        async def role_of(actor: Actor, project_id: UUID) -> Role | None:
+            project_acl = await acl.load_for(actor, project_id)
+            grant = project_acl.grant_for(actor) if project_acl is not None else None
+            return grant.role if grant is not None else None
+
+        return QueueJobDispatcher(queue, uploader, runners, limits=limits, role_source=role_of)

@@ -280,3 +280,24 @@ async def test__server_container__resolves_the_admin_ops_use_cases(monkeypatch: 
 
     assert [type(r) for r in resolved] == kinds
     assert quotas is again
+
+
+async def test__server_container__dispatcher_is_the_queue_one_while_local_stays_embedded() -> None:
+    from hse_doc_studio.core.jobs.protocols import IJobDispatcher  # noqa: PLC0415
+    from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher  # noqa: PLC0415
+    from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        local_dispatcher = await local.get(IJobDispatcher)
+        server_dispatcher = await server.get(IJobDispatcher)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_dispatcher, LocalJobDispatcher)
+    assert isinstance(server_dispatcher, QueueJobDispatcher)

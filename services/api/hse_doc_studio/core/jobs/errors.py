@@ -50,6 +50,15 @@ class JobFailure(Exception):  # noqa: N818
         return cls(JobError(category=category, code=code, detail=detail))
 
 
+class NoRunnerAvailableError(Exception):
+    """Нет живого раннера с нужными тегами: задача встала бы в очередь без исполнителя (503 `no_runner`)."""
+
+    def __init__(self, tags: frozenset[str] = frozenset()) -> None:
+        needed = ", ".join(sorted(tags)) or "any"
+        super().__init__(f"no live runner for tags: {needed}")
+        self.tags = tags
+
+
 class StaleAttemptError(Exception):
     """Запрос по попытке, которая уже не текущая: аренда истекла или задачу взял другой раннер (409 `stale_attempt`)."""
 

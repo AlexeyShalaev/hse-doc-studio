@@ -13,6 +13,7 @@ from hse_doc_studio.core.jobs.errors import (
     BlobForbiddenError,
     BlobMissingError,
     JobNotRunningError,
+    NoRunnerAvailableError,
     QueuedJobNotFoundError,
     RunnerAuthError,
     StaleAttemptError,
@@ -55,6 +56,7 @@ def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StaleAttemptError, _stale_attempt_handler)
     app.add_exception_handler(QueuedJobNotFoundError, _job_not_found_handler)
     app.add_exception_handler(JobNotRunningError, _coded_handler(409, RunnerErrorCode.job_not_running))
+    app.add_exception_handler(NoRunnerAvailableError, _coded_handler(503, RunnerErrorCode.no_runner))
     app.add_exception_handler(BlobForbiddenError, _coded_handler(403, RunnerErrorCode.blob_forbidden))
     app.add_exception_handler(BlobMissingError, _coded_handler(404, RunnerErrorCode.blob_missing))
     app.add_exception_handler(ArtifactInvalidError, _coded_handler(422, RunnerErrorCode.artifact_invalid))
