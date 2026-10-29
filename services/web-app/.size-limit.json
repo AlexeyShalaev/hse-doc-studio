@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Основной бандл (entry)",
+    "path": "dist/assets/index-*.js",
+    "gzip": true,
+    "limit": "900 kB"
+  },
+  {
+    "name": "Чанк админки (lazy)",
+    "path": "dist/assets/admin-*.js",
+    "gzip": true,
+    "limit": "16 kB"
+  },
+  {
+    "name": "Словари админки (lazy)",
+    "path": "dist/assets/locale-admin-*.js",
+    "gzip": true,
+    "limit": "8 kB"
+  }
+]

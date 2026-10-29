@@ -1,0 +1,7 @@
+{
+  "registration_mode": "invite",
+  "registration_domains": [],
+  "require_approval": false,
+  "password_enabled": true,
+  "locked_by_env": []
+}

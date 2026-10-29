@@ -1,4 +1,9 @@
-import type { Bootstrap, Capabilities, SessionUser } from "@entities/session";
+import type {
+  Bootstrap,
+  Capabilities,
+  SessionUser,
+  SetupSettingKey,
+} from "@entities/session";
 
 // Сценарии серверного демо (VITE_SERVER_DEMO=1): с каким состоянием установки и
 // сессии открывается приложение. Формы совпадают с эталонами contracts/server/fixtures/Bootstrap:
@@ -6,6 +11,9 @@ import type { Bootstrap, Capabilities, SessionUser } from "@entities/session";
 
 export type ServerDemoScenarioId =
   | "fresh_install"
+  | "fresh_install_env"
+  | "fresh_install_raced"
+  | "fresh_install_broken"
   | "admin_ready"
   | "student_ready"
   | "registration_closed"
@@ -83,18 +91,90 @@ const base = (overrides: Partial<Bootstrap>): Bootstrap => ({
   ...overrides,
 });
 
+/** Токен установки демо: тот же, что в эталоне ServerSetupAdminRequest. */
+export const DEMO_SETUP_TOKEN = "st_7Fk2Rn5DxQ8WbHa1";
+
+/** Что уже есть на установке, когда открывается мастер первого запуска. */
+export type ServerDemoSetup = {
+  /** Администратор уже создан (окружением или другим человеком). */
+  adminExists: boolean;
+  /** Ключи, заданные окружением: мастер показывает их только для чтения. */
+  locked: SetupSettingKey[];
+  /** Хранилище файлов в проверке окружения. */
+  storage: "ok" | "fail";
+};
+
+export const DEFAULT_DEMO_SETUP: ServerDemoSetup = {
+  adminExists: false,
+  locked: [],
+  storage: "ok",
+};
+
 export type ServerDemoScenario = {
   id: ServerDemoScenarioId;
   /** Bootstrap, с которого начинается сценарий. */
   bootstrap: () => Bootstrap;
   /** Токен установки нужен для первого администратора. */
   tokenRequired: boolean;
+  /** Состояние мастера первого запуска; по умолчанию чистая установка. */
+  setup?: Partial<ServerDemoSetup>;
 };
 
 export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
   {
     id: "fresh_install",
     tokenRequired: true,
+    bootstrap: () =>
+      base({
+        setup_state: "needs_admin",
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "fresh_install_env",
+    tokenRequired: false,
+    setup: {
+      adminExists: true,
+      locked: ["registration_mode", "registration_domains", "require_approval"],
+    },
+    bootstrap: () =>
+      base({
+        setup_state: "needs_admin",
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "fresh_install_raced",
+    tokenRequired: false,
+    setup: { adminExists: true },
+    bootstrap: () =>
+      base({
+        setup_state: "needs_admin",
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+      }),
+  },
+  {
+    id: "fresh_install_broken",
+    tokenRequired: true,
+    setup: { storage: "fail" },
     bootstrap: () =>
       base({
         setup_state: "needs_admin",

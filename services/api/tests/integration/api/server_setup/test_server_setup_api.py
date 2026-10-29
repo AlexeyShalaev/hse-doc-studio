@@ -145,6 +145,10 @@ class _Provider(Provider):
         return ApplyInitialSettingsUC(service, UpdateAuthSettingsUC(service, w.settings, w.audit), _NoOidc(), w.state)
 
     @provide
+    def auth_settings_service(self) -> AuthSettingsService:
+        return self._w.auth_settings()
+
+    @provide
     def complete(self) -> CompleteSetupUC:
         return CompleteSetupUC(self._w.state, self._w.audit)
 
@@ -328,6 +332,47 @@ async def test__settings_and_complete__full_flow_then_everything_is_404(world: _
     assert [r.status_code for r in after] == [404] * 5
     assert bootstrap["setup_state"] == "ready"
     assert bootstrap["auth"]["registration_mode"] == "domains"
+
+
+async def test__settings_view__needs_an_admin_session(world: _World) -> None:
+    async with _client(world) as client:
+        anonymous = await client.get("/api/v1/server-setup/settings")
+        await _setup_admin(client)
+        client.cookies.clear()
+        member = await _add_member(world, client)
+        regular = await client.get("/api/v1/server-setup/settings", headers=member)
+
+    assert anonymous.status_code == 401
+    assert regular.status_code == 403
+
+
+async def test__settings_view__defaults_are_editable(world: _World) -> None:
+    async with _client(world) as client:
+        cookie = await _setup_admin(client)
+        response = await client.get("/api/v1/server-setup/settings", headers=cookie)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "registration_mode": "invite",
+        "registration_domains": [],
+        "require_approval": False,
+        "password_enabled": True,
+        "locked_by_env": [],
+    }
+
+
+async def test__settings_view__env_keys_are_reported_locked_with_their_values() -> None:
+    env = AuthEnvOverrides(registration_mode=RegistrationMode.domains, registration_domains=("hse.ru",))
+    world = _World(env, token_required=False)
+    async with _client(world) as client:
+        cookie = await _setup_admin(client)
+        response = await client.get("/api/v1/server-setup/settings", headers=cookie)
+
+    body = response.json()
+    assert body["registration_mode"] == "domains"
+    assert body["registration_domains"] == ["hse.ru"]
+    assert body["locked_by_env"] == ["registration_mode", "registration_domains"]
 
 
 async def test__settings__domains_mode_without_domains__422(world: _World) -> None:

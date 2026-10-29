@@ -1,0 +1,1 @@
+export { getAdminKitGallery } from "./adminKitGallery";

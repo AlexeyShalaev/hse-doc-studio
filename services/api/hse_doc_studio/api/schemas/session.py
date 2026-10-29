@@ -181,6 +181,19 @@ class ServerSetupSettingsRequest(StrictModel):
         return self
 
 
+SetupSettingKey = Literal["registration_mode", "registration_domains", "require_approval", "password_enabled"]
+
+
+class ServerSetupSettings(StrictModel):
+    """Действующие настройки входа для шага мастера: значения и ключи, заданные окружением (только чтение)."""
+
+    registration_mode: RegistrationMode
+    registration_domains: list[str]
+    require_approval: bool
+    password_enabled: bool
+    locked_by_env: list[SetupSettingKey]
+
+
 SetupCheckId = Literal["database", "storage", "runner"]
 SetupCheckStatus = Literal["ok", "fail", "not_configured"]
 

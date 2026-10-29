@@ -4588,3 +4588,20 @@
   outline: 2px solid var(--c-info);
   outline-offset: -2px;
 }
+
+/* Мастер первого запуска: степпер с подписями на широком экране, строка
+   «Шаг N из 6» на узком. Свои классы по той же причине, что и выше. */
+.setup-progress-wide {
+  display: none;
+}
+.setup-progress-narrow {
+  display: block;
+}
+@media (min-width: 560px) {
+  .setup-progress-wide {
+    display: block;
+  }
+  .setup-progress-narrow {
+    display: none;
+  }
+}

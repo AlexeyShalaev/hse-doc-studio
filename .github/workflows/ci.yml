@@ -190,6 +190,12 @@ jobs:
       # обнаруживается уже на релизном теге, когда чинить поздно.
       - name: Build
         run: pnpm build
+      # Админка в отдельном lazy-чанке: в entry и в экранах входа её кода нет,
+      # а размеры основного бандла и чанка укладываются в бюджет.
+      - name: Admin chunk isolation
+        run: pnpm verify:admin-chunk
+      - name: Bundle size
+        run: pnpm bundlesize
 
   # ── Sentinel — единственный required-статус в branch protection. ──────────
   # Список джобов правится здесь, а не в настройках репозитория.

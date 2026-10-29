@@ -37,6 +37,7 @@ _SCHEMAS: dict[str, Any] = {
     "ServerSetupAdminRequest": s.ServerSetupAdminRequest,
     "ServerSetupSettingsRequest": s.ServerSetupSettingsRequest,
     "ServerSetupEnvironment": s.ServerSetupEnvironment,
+    "ServerSetupSettings": s.ServerSetupSettings,
     "AuthErrorBody": s.AuthErrorBody,
     "UpdateAccountRequest": s.UpdateAccountRequest,
     "AccountProfile": s.AccountProfile,

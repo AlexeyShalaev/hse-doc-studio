@@ -9,10 +9,17 @@ const LOC = path.join(ROOT, "shared/lib/i18n/locales/ru");
 const cache = {};
 const load = (ns) => {
   if (ns in cache) return cache[ns];
+  // Словари админки: admin<Name> живёт в locales/ru/admin/<name>.json.
+  const admin = /^admin([A-Z][A-Za-z]*)$/.exec(ns);
+  const file = admin
+    ? path.join(
+        LOC,
+        "admin",
+        admin[1].charAt(0).toLowerCase() + admin[1].slice(1) + ".json",
+      )
+    : path.join(LOC, ns + ".json");
   try {
-    return (cache[ns] = JSON.parse(
-      fs.readFileSync(path.join(LOC, ns + ".json"), "utf8"),
-    ));
+    return (cache[ns] = JSON.parse(fs.readFileSync(file, "utf8")));
   } catch {
     return (cache[ns] = null);
   }

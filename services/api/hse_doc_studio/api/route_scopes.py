@@ -66,6 +66,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/server-setup/status"): _P,
     ("POST", "/server-setup/admin"): _P,
     ("GET", "/server-setup/environment"): _P,
+    ("GET", "/server-setup/settings"): _P,
     ("POST", "/server-setup/settings"): _P,
     ("POST", "/server-setup/complete"): _P,
     ("GET", "/account"): _A,

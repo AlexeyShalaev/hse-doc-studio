@@ -14,6 +14,7 @@ import { WelcomePage } from "@pages/WelcomePage";
 import { WizardPage } from "@pages/WizardPage";
 import { WorkspacePage } from "@pages/WorkspacePage";
 import { AuthLayout } from "@widgets/AuthLayout";
+import { AdminGate } from "./AdminGate";
 import { ProjectAccessGate } from "./ProjectAccessGate";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
 import { RootLayout } from "./RootLayout";
@@ -172,6 +173,8 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      // Админка: отдельный lazy-чанк за охранником по capabilities.admin.
+      { path: "/admin/*", element: <AdminGate /> },
       ...devRoutes,
       {
         path: "*",

@@ -123,10 +123,15 @@ describe("RootLayout gate", () => {
   it("leads to /first-run from any route when the admin is missing", async () => {
     const calls = mockApi({
       "/session/bootstrap": fixture("server_needs_admin"),
+      "/server-setup/status": {
+        state: "needs_admin",
+        token_required: true,
+        steps_done: [],
+      },
     });
     const router = renderAt("/projects/x");
     await waitFor(() => {
-      expect(screen.getByTestId("auth-screen-firstRun")).toBeInTheDocument();
+      expect(screen.getByTestId("setup-step-language")).toBeInTheDocument();
     });
     expect(router.state.location.pathname).toBe("/first-run");
     expect(calls).not.toContain("/setup/status");

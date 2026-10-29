@@ -30,13 +30,14 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | сессия | `GET /auth/session` | план |
 | регистрация | `POST /auth/register`, `POST /auth/verify`, `POST /auth/forgot`, `POST /auth/reset`, `POST /auth/verify/resend`, `GET /auth/invitations/{token}` (`InvitationInfo`) | есть |
 | OIDC | `GET /auth/oidc/{provider}/start`, `GET /auth/oidc/{provider}/callback` | план |
-| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `POST .../settings`, `POST .../complete`; после завершения все 404 | есть |
+| мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `GET .../settings` (действующие значения и `locked_by_env`), `POST .../settings`, `POST .../complete`; после завершения все 404 | есть |
 | аккаунт: сессии, пароль, e-mail | `/account/sessions`, `POST /account/password`, `POST /account/email` и `POST /account/email/confirm` (смена e-mail, `ChangeEmailRequest`/`ChangeEmailResponse`) | есть |
-| аккаунт: профиль, токены, identities | `/account` (профиль), `/account/tokens`, `/account/identities` | план |
+| аккаунт: профиль, токены | `/account` (профиль), `/account/tokens` | есть |
+| аккаунт: identities | `/account/identities` | план |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`) | есть |
 | участники проекта | `/projects/{id}/members` | план |
-| админка | `/api/admin/*`: `users`, `orgs`, `runners`, `settings`, `audit`, `overview` | план |
-| раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` | план |
+| админка | `/api/admin/*`: `users`, `runners`, `runner-tokens`, `settings`, `audit` | есть; `orgs`, `overview` план |
+| раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` | есть |
 | здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» | есть |
 
 CSRF: токен привязан к строке сессии, приходит в bootstrap и ответе входа, шлётся в `X-CSRF-Token`; кроме того проверяется `Origin`. Bearer PAT освобождён от CSRF и не управляет токенами.

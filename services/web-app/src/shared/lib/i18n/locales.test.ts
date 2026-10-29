@@ -35,10 +35,16 @@ const NEW_NAMESPACES = [
 ];
 
 describe("locale parity", () => {
-  const namespaces = readdirSync(join(LOCALES, "ru")).sort();
+  const namespaces = readdirSync(join(LOCALES, "ru"))
+    .filter((f) => f.endsWith(".json"))
+    .sort();
 
   it("ships the same files in both languages", () => {
-    expect(readdirSync(join(LOCALES, "en")).sort()).toEqual(namespaces);
+    expect(
+      readdirSync(join(LOCALES, "en"))
+        .filter((f) => f.endsWith(".json"))
+        .sort(),
+    ).toEqual(namespaces);
   });
 
   it.each(namespaces)("%s has the same keys in ru and en", (file) => {
@@ -48,5 +54,20 @@ describe("locale parity", () => {
   it.each(NEW_NAMESPACES)("%s exists and is not empty", (ns) => {
     expect(namespaces).toContain(`${ns}.json`);
     expect(keysOf("ru", `${ns}.json`).length).toBeGreaterThan(5);
+  });
+});
+
+// Словари админки лежат в подкаталоге admin/ и грузятся лениво; паритет тот же.
+describe("admin locale parity", () => {
+  const adminFiles = (lang: string) =>
+    readdirSync(join(LOCALES, lang, "admin")).sort();
+
+  it("ships the same admin files in both languages", () => {
+    expect(adminFiles("en")).toEqual(adminFiles("ru"));
+    expect(adminFiles("ru").length).toBeGreaterThan(0);
+  });
+
+  it.each(adminFiles("ru"))("admin/%s has the same keys in ru and en", (f) => {
+    expect(keysOf("en", `admin/${f}`)).toEqual(keysOf("ru", `admin/${f}`));
   });
 });

@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "verify:bundle": "node scripts/verify-no-dev-gallery.mjs",
+    "verify:admin-chunk": "node scripts/verify-admin-chunk.mjs",
     "bundlesize": "size-limit"
   },
   "dependencies": {
