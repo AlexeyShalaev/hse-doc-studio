@@ -196,9 +196,14 @@ class FontsConfig(BaseModel):
         default="/usr/local/share/fonts/hse",
         description="Where the fonts folder is mounted inside the TeX container (a fontconfig-scanned path).",
     )
-    allowed_extensions: list[str] = Field(default_factory=lambda: [".ttf", ".otf", ".ttc"])
+    allowed_extensions: list[str] = Field(
+        default_factory=lambda: [".ttf", ".otf", ".ttc"],
+        description="Расширения файлов, которые принимаются как шрифты.",
+    )
     download_timeout_s: float = Field(default=60.0, description="Per-file download timeout for catalog installs.")
-    catalog: list[FontCatalogEntryConfig] = Field(default_factory=_default_font_catalog)
+    catalog: list[FontCatalogEntryConfig] = Field(
+        default_factory=_default_font_catalog, description="Каталог рекомендуемых бесплатных шрифтов с кириллицей."
+    )
     # ── Online marketplace (Google Fonts) ──
     marketplace_metadata_url: str = Field(
         default="https://fonts.google.com/metadata/fonts",

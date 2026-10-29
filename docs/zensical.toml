@@ -56,6 +56,7 @@ nav = [
         { "Глоссарий" = "reference/glossary.md" },
         { "Раскладка на диске" = "reference/layout.md" },
         { "Что уходит в сеть" = "reference/privacy.md" },
+        { "Переменные окружения" = "deploy/env-reference.md" },
     ] },
     { "Что нового" = "whatsnew/index.md" },
 ]
