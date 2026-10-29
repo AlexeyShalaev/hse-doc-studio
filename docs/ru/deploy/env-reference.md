@@ -36,14 +36,14 @@ tags:
 | `HSE_STUDIO__SERVER__MANIFEST_MAX_FILE_BYTES` | int | `268435456` | оба | Предел размера одного файла во входе задачи; больший файл даёт типизированный отказ. |
 | `HSE_STUDIO__SERVER__MANIFEST_MAX_JOB_BYTES` | int | `1073741824` | оба | Предел суммарного размера входа одной задачи; не зависит от квоты проекта. |
 | `HSE_STUDIO__SERVER__AUTH_CLEANUP_INTERVAL_S` | float | `3600.0` | оба | Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов. |
-| `HSE_STUDIO__CORS__ALLOW_ORIGINS` | list[str] | `http://localhost:3000`, `http://localhost:5173`, `http://localhost:17240` | оба | Allowed origins |
+| `HSE_STUDIO__CORS__ALLOW_ORIGINS` | `list[str]` | `http://localhost:3000`, `http://localhost:5173`, `http://localhost:17240` | оба | Allowed origins |
 | `HSE_STUDIO__CORS__ALLOW_CREDENTIALS` | bool | `true` | оба | Отдавать Access-Control-Allow-Credentials (cookie и заголовки авторизации). |
-| `HSE_STUDIO__CORS__ALLOW_METHODS` | list[str] | `*` | оба | Разрешённые методы CORS. |
-| `HSE_STUDIO__CORS__ALLOW_HEADERS` | list[str] | `*` | оба | Разрешённые заголовки запроса CORS. |
+| `HSE_STUDIO__CORS__ALLOW_METHODS` | `list[str]` | `*` | оба | Разрешённые методы CORS. |
+| `HSE_STUDIO__CORS__ALLOW_HEADERS` | `list[str]` | `*` | оба | Разрешённые заголовки запроса CORS. |
 | `HSE_STUDIO__LOGGING__LEVEL` | str | `INFO` | оба | Log level |
 | `HSE_STUDIO__LOGGING__USE_JSON` | bool | `false` | оба | JSON format (False = console) |
 | `HSE_STUDIO__COMPILE__IMAGE` | str | `texlive/texlive:latest` | оба | Default active image when the user hasn't picked one in Settings → Образы. |
-| `HSE_STUDIO__COMPILE__ALLOWED_REPOS` | list[str] | `texlive/texlive` | оба | Docker Hub repos the UI is allowed to list, pull and activate. Acts as a security allowlist — without it the API could pull arbitrary images. |
+| `HSE_STUDIO__COMPILE__ALLOWED_REPOS` | `list[str]` | `texlive/texlive` | оба | Docker Hub repos the UI is allowed to list, pull and activate. Acts as a security allowlist — without it the API could pull arbitrary images. |
 | `HSE_STUDIO__COMPILE__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch tag lists. |
 | `HSE_STUDIO__COMPILE__CACHE_VOLUME_NAME` | str | `hse-tex-cache` | оба | Named Docker volume that persists font/format caches across compiles. |
 | `HSE_STUDIO__COMPILE__CACHE_VOLUME_TARGET` | str | `/root` | оба | Mount target for the cache volume inside the TeX container. |
@@ -53,18 +53,18 @@ tags:
 | `HSE_STUDIO__COMPILE__PROJECTS_HOST_PATH` | str | не задано | оба | Host-side root of the projects bind mount; required when backend runs in Docker. |
 | `HSE_STUDIO__COMPILE__PROJECTS_CONTAINER_PATH` | str | не задано | оба | In-container mount point of projects; required when backend runs in Docker. |
 | `HSE_STUDIO__FONTS__DIR_NAME` | str | `fonts` | оба | Subdirectory of data_dir holding the fonts. |
-| `HSE_STUDIO__FONTS__SYSTEM_DIRS` | list[str] | пусто | оба | Explicit font roots to scan instead of the OS ones (host fonts bind-mounted into the container). |
+| `HSE_STUDIO__FONTS__SYSTEM_DIRS` | `list[str]` | пусто | оба | Explicit font roots to scan instead of the OS ones (host fonts bind-mounted into the container). |
 | `HSE_STUDIO__FONTS__HOST_DIR` | str | не задано | оба | Explicit HOST font directory; empty means auto-detection over the known OS locations. |
 | `HSE_STUDIO__FONTS__CONTAINER_MOUNT` | str | `/usr/local/share/fonts/hse` | оба | Where the fonts folder is mounted inside the TeX container (a fontconfig-scanned path). |
-| `HSE_STUDIO__FONTS__ALLOWED_EXTENSIONS` | list[str] | `.ttf`, `.otf`, `.ttc` | оба | Расширения файлов, которые принимаются как шрифты. |
+| `HSE_STUDIO__FONTS__ALLOWED_EXTENSIONS` | `list[str]` | `.ttf`, `.otf`, `.ttc` | оба | Расширения файлов, которые принимаются как шрифты. |
 | `HSE_STUDIO__FONTS__DOWNLOAD_TIMEOUT_S` | float | `60.0` | оба | Per-file download timeout for catalog installs. |
-| `HSE_STUDIO__FONTS__CATALOG` | list[FontCatalogEntryConfig] | встроенный список (7) | оба | Каталог рекомендуемых бесплатных шрифтов с кириллицей. |
+| `HSE_STUDIO__FONTS__CATALOG` | `list[FontCatalogEntryConfig]` | встроенный список (7) | оба | Каталог рекомендуемых бесплатных шрифтов с кириллицей. |
 | `HSE_STUDIO__FONTS__MARKETPLACE_METADATA_URL` | str | `https://fonts.google.com/metadata/fonts` | оба | GF metadata (family/category/subsets) for the marketplace inventory. |
 | `HSE_STUDIO__FONTS__MARKETPLACE_TREE_URL` | str | `https://api.github.com/repos/google/fonts/git/trees/main?recursive=1` | оба | github.com/google/fonts file tree — source of static TTF download URLs. |
 | `HSE_STUDIO__FONTS__MARKETPLACE_INDEX_TTL_S` | float | `86400.0` | оба | How long the in-memory marketplace index is reused before a refresh (seconds). |
 | `HSE_STUDIO__FONTS__MARKETPLACE_FETCH_TIMEOUT_S` | float | `60.0` | оба | Timeout for the marketplace index fetches (tree + metadata). |
 | `HSE_STUDIO__LANGUAGETOOL__IMAGE` | str | `erikvl87/languagetool:latest` | оба | Default LanguageTool image when the user hasn't picked one in Settings. |
-| `HSE_STUDIO__LANGUAGETOOL__ALLOWED_REPOS` | list[str] | `erikvl87/languagetool` | оба | Docker Hub repos the UI may list/pull/run for LanguageTool (allowlist, separate from compile). |
+| `HSE_STUDIO__LANGUAGETOOL__ALLOWED_REPOS` | `list[str]` | `erikvl87/languagetool` | оба | Docker Hub repos the UI may list/pull/run for LanguageTool (allowlist, separate from compile). |
 | `HSE_STUDIO__LANGUAGETOOL__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch LanguageTool tag lists. |
 | `HSE_STUDIO__LANGUAGETOOL__CONTAINER_NAME` | str | `hse-languagetool` | оба | Stable name of the managed LanguageTool container (used to adopt/reconcile across restarts). |
 | `HSE_STUDIO__LANGUAGETOOL__CONTAINER_PORT` | int | `8010` | оба | Port LanguageTool listens on inside the container; published to a free host port. |
@@ -76,7 +76,7 @@ tags:
 | `HSE_STUDIO__LANGUAGETOOL__IDLE_TIMEOUT_S` | float | `600.0` | оба | Stop the auto-started container after this many seconds with no checks (frees RAM). |
 | `HSE_STUDIO__LANGUAGETOOL__STOP_ON_SHUTDOWN` | bool | `true` | оба | Stop the managed container when the backend shuts down (it auto-starts again on demand). |
 | `HSE_STUDIO__OFFICE_CONVERT__IMAGE` | str | `gotenberg/gotenberg:8` | оба | Default Gotenberg image when the user hasn't picked one in Settings (office→PDF conversion). |
-| `HSE_STUDIO__OFFICE_CONVERT__ALLOWED_REPOS` | list[str] | `gotenberg/gotenberg` | оба | Docker Hub repos the UI may list/pull/run for the convert service (allowlist, as LanguageTool). |
+| `HSE_STUDIO__OFFICE_CONVERT__ALLOWED_REPOS` | `list[str]` | `gotenberg/gotenberg` | оба | Docker Hub repos the UI may list/pull/run for the convert service (allowlist, as LanguageTool). |
 | `HSE_STUDIO__OFFICE_CONVERT__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch Gotenberg tag lists. |
 | `HSE_STUDIO__OFFICE_CONVERT__CONTAINER_NAME` | str | `hse-office-convert` | оба | Stable name of the managed Gotenberg container (adopted across backend restarts). |
 | `HSE_STUDIO__OFFICE_CONVERT__CONTAINER_PORT` | int | `3000` | оба | Port Gotenberg listens on inside the container; published to a free host port. |
@@ -86,7 +86,7 @@ tags:
 | `HSE_STUDIO__OFFICE_CONVERT__STARTUP_TIMEOUT_S` | float | `60.0` | оба | How long to wait for the container to become healthy after start. |
 | `HSE_STUDIO__OFFICE_CONVERT__IDLE_TIMEOUT_S` | float | `600.0` | оба | Stop the auto-started container after this many seconds without conversions (frees RAM). |
 | `HSE_STUDIO__OFFICE_EDITOR__IMAGE` | str | `onlyoffice/documentserver:latest` | оба | Default ONLYOFFICE Document Server image when the user hasn't picked one in Settings. |
-| `HSE_STUDIO__OFFICE_EDITOR__ALLOWED_REPOS` | list[str] | `onlyoffice/documentserver` | оба | Docker Hub repos the UI may list/pull/run for the editor service (allowlist, as LanguageTool). |
+| `HSE_STUDIO__OFFICE_EDITOR__ALLOWED_REPOS` | `list[str]` | `onlyoffice/documentserver` | оба | Docker Hub repos the UI may list/pull/run for the editor service (allowlist, as LanguageTool). |
 | `HSE_STUDIO__OFFICE_EDITOR__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch Document Server tag lists. |
 | `HSE_STUDIO__OFFICE_EDITOR__CONTAINER_NAME` | str | `hse-office-editor` | оба | Stable name of the managed Document Server container (adopted across backend restarts). |
 | `HSE_STUDIO__OFFICE_EDITOR__CONTAINER_PORT` | int | `80` | оба | Port Document Server listens on inside the container; published to a free host port. |
@@ -113,7 +113,7 @@ tags:
 | `HSE_STUDIO__OLLAMA__REGISTRY_SEARCH_URL` | str | `https://ollama.com/search` | оба | ollama.com search page scraped for live model discovery (best-effort, graceful on failure). |
 | `HSE_STUDIO__OLLAMA__REGISTRY_TIMEOUT_S` | float | `10.0` | оба | Timeout for a single registry search request. |
 | `HSE_STUDIO__OLLAMA__MAX_CONCURRENT_PULLS` | int | `2` | оба | Max simultaneous background model downloads (bounds disk/network use). |
-| `HSE_STUDIO__OLLAMA__CATALOG` | list[OllamaCatalogEntry] | встроенный список (16) | оба | Curated local models offered in the UI (the recommended starting set, not a hard allowlist). |
+| `HSE_STUDIO__OLLAMA__CATALOG` | `list[OllamaCatalogEntry]` | встроенный список (16) | оба | Curated local models offered in the UI (the recommended starting set, not a hard allowlist). |
 | `HSE_STUDIO__AGENT__TOKEN_BUDGET` | int | `128000` | оба | Conservative context-token ceiling per turn; real per-model window may override it. |
 | `HSE_STUDIO__AGENT__MAX_ITERATIONS` | int | `25` | оба | Hard cap on tool-call iterations in a single turn (stops runaway loops). |
 | `HSE_STUDIO__AGENT__MAX_OUTPUT_TOKENS` | int | `4096` | оба | Max tokens the model may generate per round-trip. |
@@ -169,12 +169,12 @@ tags:
 | `HSE_STUDIO__JOBS__MAX_ARTIFACT_BYTES` | int | `536870912` | оба | Предел одного выхода задачи; больший отвергается при заявке. |
 | `HSE_STUDIO__JOBS__MAX_LOG_BYTES` | int | `8388608` | оба | Предел лога одной попытки; остальное отбрасывается. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
-| `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | list[str] | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
-| `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | list[str] | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |
+| `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
+| `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |
 | `HSE_STUDIO__AUTH__SESSION_IDLE_DAYS` | int | `7` | server | Сессия гаснет без активности столько дней (скользящий срок). |
 | `HSE_STUDIO__AUTH__SESSION_ABSOLUTE_DAYS` | int | `30` | server | Предельный возраст сессии, после которого нужен новый вход. |
 | `HSE_STUDIO__AUTH__REGISTRATION_MODE` | open / domains / invite / closed | не задано | server | Режим регистрации из окружения: open, domains, invite или closed. Заданное побеждает БД и не правится в админке. |
-| `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | list[str] | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | `list[str]` | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__REQUIRE_APPROVAL` | bool | не задано | server | Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSWORD_ENABLED` | bool | не задано | server | Вход по паролю; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__ADMIN_EMAIL` | str | не задано | server | Первый администратор из окружения: вместе с паролем создаётся при старте, если админа ещё нет (идемпотентно, пароль существующего не трогается). Рекомендуемый путь для compose и helm. |
@@ -213,11 +213,11 @@ tags:
 | `HSE_STUDIO__S3__FS_ROOT` | Path | не задано | server | Каталог объектов, когда bucket не задан. |
 | `HSE_STUDIO__S3__MAX_OBJECT_BYTES` | int | `2147483648` | server | Предел размера одного объекта. |
 | `HSE_STUDIO__S3__MULTIPART_THRESHOLD_BYTES` | int | `67108864` | server | С какого размера загрузка идёт частями. |
-| `HSE_STUDIO__S3__CORS_ORIGINS` | list[str] | пусто | server | Источники, которым бакет разрешает читать подписанные ссылки (pdf.js ходит туда с Range); пусто означает не трогать CORS бакета. |
+| `HSE_STUDIO__S3__CORS_ORIGINS` | `list[str]` | пусто | server | Источники, которым бакет разрешает читать подписанные ссылки (pdf.js ходит туда с Range); пусто означает не трогать CORS бакета. |
 | `HSE_STUDIO__S3__PRESIGN_TTL_S` | int | `300` | server | Срок подписанной ссылки по умолчанию. |
-| `HSE_STUDIO__ADMIN__ALLOWED_HOSTS` | list[str] | пусто | server | Имена, под которыми открывается админка (заголовок Host): admin.example.org, *.example.org. Пусто: без ограничения. |
-| `HSE_STUDIO__ADMIN__ALLOWED_CIDRS` | list[str] | пусто | server | IP и CIDR клиентов, которым открыта админка (адрес по auth.trusted_proxies). Пусто: без ограничения. Заданы оба списка: нужно пройти оба. |
-| `HSE_STUDIO__EGRESS__ALLOWLIST` | list[str] | пусто | server | Внутренние узлы, к которым пользователям можно ходить: имя (git.corp.local, *.corp.local), IP или CIDR. Адреса метаданных облака и link-local закрыты всегда. |
+| `HSE_STUDIO__ADMIN__ALLOWED_HOSTS` | `list[str]` | пусто | server | Имена, под которыми открывается админка (заголовок Host): admin.example.org, *.example.org. Пусто: без ограничения. |
+| `HSE_STUDIO__ADMIN__ALLOWED_CIDRS` | `list[str]` | пусто | server | IP и CIDR клиентов, которым открыта админка (адрес по auth.trusted_proxies). Пусто: без ограничения. Заданы оба списка: нужно пройти оба. |
+| `HSE_STUDIO__EGRESS__ALLOWLIST` | `list[str]` | пусто | server | Внутренние узлы, к которым пользователям можно ходить: имя (git.corp.local, *.corp.local), IP или CIDR. Адреса метаданных облака и link-local закрыты всегда. |
 | `HSE_STUDIO__RATE_LIMIT__ENABLED` | bool | `true` | server | Включить ограничение частоты (счётчики по реплике api). |
 | `HSE_STUDIO__RATE_LIMIT__SCALE` | float | `1.0` | server | Множитель лимитов: больше 1 ослабляет (организация за одним NAT), меньше 1 ужесточает. |
 | `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` 🔒 | str | секрет, не печатается | server | Bearer-токен, по которому /health/ready отдаёт детали проверок; без него детали только админу. |
@@ -225,7 +225,7 @@ tags:
 | `HSE_STUDIO__HSE_PERSONS__BASE_URL` | str | `https://www.hse.ru` | оба | HSE site origin. |
 | `HSE_STUDIO__HSE_PERSONS__LIST_PATH` | str | `/org/persons/` | оба | Directory listing path (facets appended). |
 | `HSE_STUDIO__HSE_PERSONS__USER_AGENT` | str | `Mozilla/5.0 (compatible; hse-doc-studio; +https://github.com/AlexeyShalaev/hse-doc-studio)` | оба | Identifying, honest User-Agent for outbound directory requests. |
-| `HSE_STUDIO__HSE_PERSONS__CAMPUS_UDEPT` | dict[str, str] | `{'moscow': '', 'spb': '135083', 'nn': '135288', 'perm': '135213'}` | оба | Friendly campus key → top-level `udept` id (Moscow is the default, no param). |
+| `HSE_STUDIO__HSE_PERSONS__CAMPUS_UDEPT` | `dict[str, str]` | `{'moscow': '', 'spb': '135083', 'nn': '135288', 'perm': '135213'}` | оба | Friendly campus key → top-level `udept` id (Moscow is the default, no param). |
 | `HSE_STUDIO__HSE_PERSONS__REQUEST_TIMEOUT_S` | float | `15.0` | оба | Timeout for a single directory request. |
 | `HSE_STUDIO__HSE_PERSONS__MIN_REQUEST_INTERVAL_S` | float | `3.0` | оба | Global minimum gap between outbound requests (honours the site's Crawl-delay: 3). |
 | `HSE_STUDIO__HSE_PERSONS__MAX_CONCURRENCY` | int | `2` | оба | Bounded concurrent outbound requests (second guard). |

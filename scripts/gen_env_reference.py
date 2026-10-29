@@ -173,8 +173,10 @@ def render(model: type[BaseModel]) -> str:
     ]
     for row in rows:
         name = f"`{row.name}`" + (" 🔒" if row.secret else "")
+        # list[str] без кавычек читается как ссылочная ссылка markdown и даёт предупреждение сборки сайта.
+        type_ = f"`{row.type_}`" if "[" in row.type_ else row.type_
         lines.append(
-            f"| {name} | {_cell(row.type_)} | {_cell(row.default)} | {row.mode} | {_cell(row.description)} |"
+            f"| {name} | {_cell(type_)} | {_cell(row.default)} | {row.mode} | {_cell(row.description)} |"
         )
     lines.append("")
     return "\n".join(lines)

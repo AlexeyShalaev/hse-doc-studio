@@ -47,6 +47,14 @@ nav = [
         { "Visual editor" = "workbench/editor-visual.md" },
         { "AI agent" = "workbench/agent.md" },
     ] },
+    { "Deployment" = [
+        { "Shared server" = "deploy/index.md" },
+        { "Server installation" = "deploy/install.md" },
+        { "People and sign-in" = "deploy/accounts.md" },
+        { "Runners" = "deploy/runners.md" },
+        { "Security and personal data" = "deploy/security.md" },
+        { "Backup and updates" = "deploy/operations.md" },
+    ] },
     { "Reference" = [
         { "Reference map" = "reference/index.md" },
         { "Packs and templates" = "reference/pack.md" },
