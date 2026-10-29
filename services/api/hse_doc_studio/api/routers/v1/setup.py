@@ -230,7 +230,7 @@ async def setup_environment(
     font_files = await fonts.list_fonts() if font_dir else []
     # Наличие образа не кэшируем: предзагрузка идёт фоном, и «скачан» обязан
     # появиться без перезапуска.
-    tex_image = resolve_active_image(settings_repo)
+    tex_image = await resolve_active_image(settings_repo)
     tex_present = await image_present(tex_image)
     return SetupEnvironmentResponse(
         engine=DockerEngineResponse(**vars(engine)) if engine is not None else None,

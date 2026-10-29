@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 
 from hse_doc_studio.core.checks.protocols import ICheckRunner
@@ -44,9 +44,9 @@ class EmbeddedCompileRunner:
         capacity_probe: ISystemCapacityProbe | None,
         limiter: CompileConcurrencyLimiter,
         outputs: IJobOutputs,
-        resolve_image: Callable[[], str],
-        resolve_lt_image: Callable[[], str],
-        resolve_office_image: Callable[[], str],
+        resolve_image: Callable[[], Awaitable[str]],
+        resolve_lt_image: Callable[[], Awaitable[str]],
+        resolve_office_image: Callable[[], Awaitable[str]],
         heartbeat_interval_s: float | None = None,
     ) -> None:
         self._executor = executor
@@ -71,7 +71,7 @@ class EmbeddedCompileRunner:
         """
         if not compile_payload_of(spec).needs_compile:
             return
-        image = self._resolve_image()
+        image = await self._resolve_image()
         docker_status = await self._image_manager.docker_status()
         if not docker_status.available:
             raise DockerUnavailableError(
@@ -86,7 +86,7 @@ class EmbeddedCompileRunner:
         payload = compile_payload_of(spec)
         # Настройка пользователя (Settings → Compiler) важнее значения из шаблона;
         # latex_passes трактуется как предел $max_repeat у latexmk.
-        user_settings = self._settings_repo.get()
+        user_settings = await self._settings_repo.get()
         max_iterations = max(int(user_settings.get("latex_passes", payload.default_passes)), _MIN_LATEX_PASSES)
 
         state = BuildState()
@@ -100,8 +100,9 @@ class EmbeddedCompileRunner:
                     doc_id=payload.doc_id,
                     compile_id=spec.id,
                     # Образ выбирается заново после ожидания слота, как и раньше.
-                    image=self._resolve_image(),
+                    image=await self._resolve_image(),
                     on_process_started=ctx.on_process,
+                    project_id=spec.project_id,
                 )
                 await consume_build_stream(lines, ctx.log, state)
         else:

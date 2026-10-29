@@ -133,7 +133,7 @@ class ConnectRemoteUC:
             )
             raise
         self._operations.finish(operation.id)
-        return await asyncio.to_thread(self._status.build, project)
+        return await self._status.view(project)
 
     def _checked_input(self, inp: ConnectRemoteInput) -> RemoteUrl:
         self._policy.require_enabled()

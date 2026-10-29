@@ -80,7 +80,7 @@ class FetchAllGitRemotesUC:
         folders = await asyncio.to_thread(self._registry.list)
         if not folders:
             return FetchTickResult()
-        stored = await asyncio.to_thread(self._settings.get)
+        stored = await self._settings.get()
         gate = asyncio.Semaphore(self._concurrency)
         outcomes = await asyncio.gather(*(self._one(folder, stored, gate) for folder in folders))
         return FetchTickResult(

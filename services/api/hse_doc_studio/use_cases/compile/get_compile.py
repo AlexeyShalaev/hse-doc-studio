@@ -39,4 +39,4 @@ class GetCompileUC:
         project_folder = await self._locator.folder_of(inp.project_id)
         if project_folder is None:
             return None
-        return self._compile_repo.get_for_project(project_folder, inp.compile_id)
+        return await self._compile_repo.get_for_project(project_folder, inp.compile_id)

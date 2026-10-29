@@ -56,6 +56,10 @@ class User:
     is_instance_admin: bool = False
     locale: str | None = None
     last_login_at: datetime | None = None
+    # Подпись коммитов: пусто значит «как в аккаунте» (имя) и noreply-адрес, если не включён флаг.
+    commit_name: str | None = None
+    commit_email: str | None = None
+    commit_use_account_email: bool = False
 
     @property
     def can_sign_in(self) -> bool:

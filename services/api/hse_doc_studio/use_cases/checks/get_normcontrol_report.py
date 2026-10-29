@@ -104,7 +104,7 @@ class GetNormcontrolReportUC:
             # Невыбранные руководства (РП/РО) не учитываются в нормоконтроле.
             if not is_doc_active(project, doc):
                 continue
-            results = self._results_for(project.folder, doc.last_compile_id)
+            results = await self._results_for(project.folder, doc.last_compile_id)
             doc_counts = SeverityCounts()
             for r in results:
                 doc_counts.add(r.severity)
@@ -123,10 +123,10 @@ class GetNormcontrolReportUC:
         )
         return report
 
-    def _results_for(self, folder: Path, compile_id: UUID | None) -> list[CheckResult]:
+    async def _results_for(self, folder: Path, compile_id: UUID | None) -> list[CheckResult]:
         if compile_id is None:
             return []
-        record = self._compile_repo.get_for_project(folder, compile_id)
+        record = await self._compile_repo.get_for_project(folder, compile_id)
         return list(record.check_results) if record is not None else []
 
 

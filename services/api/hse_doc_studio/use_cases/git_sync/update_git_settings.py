@@ -45,15 +45,15 @@ class UpdateGitSettingsUC:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
         if inp.interval_given and inp.interval_s is not None and inp.interval_s < MIN_FETCH_INTERVAL_S:
             raise ValueError(f"interval_s must be at least {MIN_FETCH_INTERVAL_S} seconds")
-        return await asyncio.to_thread(self._apply, project, inp)
+        await asyncio.to_thread(self._apply, project, inp)
+        return await self._status.view(project)
 
-    def _apply(self, project: Project, inp: UpdateGitSettingsInput) -> GitStatusView:
+    def _apply(self, project: Project, inp: UpdateGitSettingsInput) -> None:
         config = self._remotes.read(project)
         if config is None:
             raise NotFoundError(localized_error("Удалённый репозиторий не подключён", "No remote is connected"))
         state = self._states.get(project.folder) or default_state(config, None)
         self._states.save(project.folder, self._changed(state, inp))
-        return self._status.build(project)
 
     @staticmethod
     def _changed(state: SyncState, inp: UpdateGitSettingsInput) -> SyncState:

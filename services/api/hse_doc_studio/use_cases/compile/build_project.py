@@ -139,7 +139,7 @@ class BuildProjectUC:
 
     async def _wait(self, folder: Path, compile_id: UUID) -> CompileRecord:
         while True:
-            record = self._compile_repo.get_for_project(folder, compile_id)
+            record = await self._compile_repo.get_for_project(folder, compile_id)
             if record is not None and record.status in _FINAL_STATUSES:
                 return record
             await asyncio.sleep(_POLL_INTERVAL_S)

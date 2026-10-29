@@ -197,7 +197,7 @@ class TriggerCompileUC:
             check_results=[],
             pages=None,
         )
-        self._compile_repo.save(record)
+        await self._compile_repo.save(record)
 
         doc_index = project.documents.index(doc)
         project.documents[doc_index] = replace(doc, status=DocumentStatus.building, last_compile_id=compile_id)

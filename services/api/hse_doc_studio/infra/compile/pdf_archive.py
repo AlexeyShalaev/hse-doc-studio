@@ -22,7 +22,7 @@ import structlog
 logger = structlog.get_logger()
 
 _ARCHIVE_DIRNAME = "pdf-archive"
-_KEEP = 8
+ARCHIVE_KEEP = 8
 
 
 def _archive_dir(project_folder: Path, doc_id: str) -> Path:
@@ -76,6 +76,6 @@ def _prune(dest_dir: Path) -> None:
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
-    for old in pdfs[_KEEP:]:
+    for old in pdfs[ARCHIVE_KEEP:]:
         with contextlib.suppress(OSError):
             old.unlink()

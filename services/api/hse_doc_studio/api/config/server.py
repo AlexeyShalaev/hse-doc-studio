@@ -33,6 +33,12 @@ class ServerConfig:
     caps: ServerCapabilities = field(default_factory=ServerCapabilities)
     project_retention_days: int = 30
     project_purge_interval_s: float = 3600.0
+    compile_records_per_document: int = 50
+    compile_log_limit_bytes: int = 1024 * 1024
+    blob_gc_interval_s: float = 3600.0
+    blob_gc_min_age_days: float = 14.0
+    manifest_max_file_bytes: int = 256 * 1024 * 1024
+    manifest_max_job_bytes: int = 1024 * 1024 * 1024
 
     @classmethod
     def from_settings(cls, cfg: Settings) -> ServerConfig:
@@ -42,4 +48,10 @@ class ServerConfig:
             s3=cfg.s3,
             project_retention_days=cfg.server.project_retention_days,
             project_purge_interval_s=cfg.server.project_purge_interval_s,
+            compile_records_per_document=cfg.server.compile_records_per_document,
+            compile_log_limit_bytes=cfg.server.compile_log_limit_bytes,
+            blob_gc_interval_s=cfg.server.blob_gc_interval_s,
+            blob_gc_min_age_days=cfg.server.blob_gc_min_age_days,
+            manifest_max_file_bytes=cfg.server.manifest_max_file_bytes,
+            manifest_max_job_bytes=cfg.server.manifest_max_job_bytes,
         )

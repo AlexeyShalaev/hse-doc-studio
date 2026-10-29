@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from uuid import UUID
 
 import structlog
 
@@ -15,8 +14,6 @@ from hse_doc_studio.core.repositories import (
 )
 
 logger = structlog.get_logger()
-
-_HSE_STUDIO = ".hse-studio"
 
 
 @dataclass
@@ -63,41 +60,28 @@ class RecoverStaleCompilesUC:
             if project is None:
                 continue
 
-            compiles_dir = folder / _HSE_STUDIO / "compiles"
-            if compiles_dir.exists():
-                for record_path in compiles_dir.glob("*.json"):
-                    try:
-                        compile_id = UUID(record_path.stem)
-                    except ValueError:
-                        continue
+            for record in await self._compile_repo.list_unfinished(folder):
+                finished_at = datetime.now(tz=timezone.utc)
+                log_tail = (record.log or "").rstrip()
+                suffix = "[stale] server restarted while build was running"
+                new_log = f"{log_tail}\n{suffix}" if log_tail else suffix
 
-                    record = self._compile_repo.get_for_project(folder, compile_id)
-                    if record is None:
-                        continue
-                    if record.status not in (CompileStatus.pending, CompileStatus.running):
-                        continue
-
-                    finished_at = datetime.now(tz=timezone.utc)
-                    log_tail = (record.log or "").rstrip()
-                    suffix = "[stale] server restarted while build was running"
-                    new_log = f"{log_tail}\n{suffix}" if log_tail else suffix
-
-                    self._compile_repo.save(
-                        CompileRecord(
-                            id=record.id,
-                            project_folder=record.project_folder,
-                            doc_id=record.doc_id,
-                            engine=record.engine,
-                            status=CompileStatus.failure,
-                            started_at=record.started_at,
-                            finished_at=finished_at,
-                            log=new_log,
-                            output_path=record.output_path,
-                            check_results=record.check_results,
-                            pages=record.pages,
-                        )
+                await self._compile_repo.save(
+                    CompileRecord(
+                        id=record.id,
+                        project_folder=record.project_folder,
+                        doc_id=record.doc_id,
+                        engine=record.engine,
+                        status=CompileStatus.failure,
+                        started_at=record.started_at,
+                        finished_at=finished_at,
+                        log=new_log,
+                        output_path=record.output_path,
+                        check_results=record.check_results,
+                        pages=record.pages,
                     )
-                    recovered_compiles += 1
+                )
+                recovered_compiles += 1
 
             building_docs = [d for d in project.documents if d.status == DocumentStatus.building]
             if building_docs:

@@ -55,7 +55,7 @@ class IToolHandler(Protocol):
 class IApprovalGate(Protocol):
     # Decides whether a tool of the given kind needs explicit user approval
     # before running. read → auto; write/exec → gated unless config opts in.
-    def requires_approval(self, kind: ToolKind) -> bool: ...
+    async def requires_approval(self, kind: ToolKind) -> bool: ...
 
 
 class IAgentRunBus(IEventBus[AgentEvent], Protocol):

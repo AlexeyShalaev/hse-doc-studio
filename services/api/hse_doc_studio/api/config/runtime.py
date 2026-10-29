@@ -42,6 +42,34 @@ class HttpServerConfig(BaseModel):
     audit_purge_interval_s: float = Field(
         default=86400.0, gt=0, description="Как часто сервер стирает события аудита старше срока хранения."
     )
+    compile_records_per_document: int = Field(
+        default=50,
+        ge=1,
+        description="Сколько последних записей сборок хранится на документ; старые стираются при записи новой.",
+    )
+    compile_log_limit_bytes: int = Field(
+        default=1024 * 1024,
+        ge=1024,
+        description="Предел размера лога в записи сборки; у более длинного лога теряется начало.",
+    )
+    blob_gc_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер стирает блобы входа задач, на которые давно нет ссылок."
+    )
+    blob_gc_min_age_days: float = Field(
+        default=14.0,
+        ge=0,
+        description="Сколько суток блоб живёт без упоминаний в манифестах до удаления; 0 выключает сборку мусора.",
+    )
+    manifest_max_file_bytes: int = Field(
+        default=256 * 1024 * 1024,
+        ge=1,
+        description="Предел размера одного файла во входе задачи; больший файл даёт типизированный отказ.",
+    )
+    manifest_max_job_bytes: int = Field(
+        default=1024 * 1024 * 1024,
+        ge=1,
+        description="Предел суммарного размера входа одной задачи; не зависит от квоты проекта.",
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

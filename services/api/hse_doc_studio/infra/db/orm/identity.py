@@ -24,6 +24,9 @@ class UserRow(Base):
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_instance_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     locale: Mapped[str | None] = mapped_column(String(16))
+    commit_name: Mapped[str | None] = mapped_column(String(256))
+    commit_email: Mapped[str | None] = mapped_column(String(320))
+    commit_use_account_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -55,6 +58,15 @@ class InstanceSettingRow(Base):
     source: Mapped[str] = mapped_column(String(64), nullable=False)
     # Шифртекст секрета настройки (пароль SMTP); привязка `column_aad("instance_settings", "secret_enc", key)`.
     secret_enc: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserSettingRow(Base):
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    value: Mapped[Any] = mapped_column(JSONB, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

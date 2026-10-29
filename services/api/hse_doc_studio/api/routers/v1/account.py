@@ -9,6 +9,7 @@ from hse_doc_studio.api.auth_cookie import clear_session_cookie, credentials_fro
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.rate_limit import enforce_email
 from hse_doc_studio.api.schemas.session import (
+    AccountProfile,
     AccountSession,
     ApiToken,
     ChangeEmailRequest,
@@ -16,6 +17,7 @@ from hse_doc_studio.api.schemas.session import (
     ChangePasswordRequest,
     CreateApiTokenRequest,
     CreateApiTokenResponse,
+    UpdateAccountRequest,
     VerifyEmailRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
@@ -24,7 +26,15 @@ from hse_doc_studio.core.identity.entities import ApiToken as ApiTokenEntity
 from hse_doc_studio.core.identity.entities import TokenScope as TokenScopeEntity
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.core.vcs.errors import ProfileInvalidError
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
+from hse_doc_studio.use_cases.identity.account_profile import (
+    UNSET,
+    AccountView,
+    GetAccountUC,
+    UpdateAccountInput,
+    UpdateAccountUC,
+)
 from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.sessions import (
@@ -70,6 +80,50 @@ def _item(info: SessionInfo) -> AccountSession:
         user_agent=session.user_agent,
         current=info.current,
     )
+
+
+def _profile(view: AccountView) -> AccountProfile:
+    user = view.user
+    locale = user.locale if user.locale in ("ru", "en") else None
+    return AccountProfile(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        locale=locale,
+        commit_name=user.commit_name,
+        commit_email=user.commit_email,
+        commit_use_account_email=user.commit_use_account_email,
+        effective_commit_name=view.identity.name,
+        effective_commit_email=view.identity.email,
+        commit_email_is_noreply=view.identity.is_noreply,
+    )
+
+
+@router.get("/account", response_model=AccountProfile)
+async def get_account(request: Request, response: Response) -> AccountProfile:
+    response.headers["Cache-Control"] = "no-store"
+    return _profile(await (await request.state.dishka_container.get(GetAccountUC)).execute(_user_id()))
+
+
+@router.patch("/account", response_model=AccountProfile)
+async def update_account(body: UpdateAccountRequest, request: Request, response: Response) -> AccountProfile:
+    inp = UpdateAccountInput(
+        name=UNSET if body.name is None else body.name,
+        locale=UNSET if body.locale is None else body.locale,
+        commit_name=UNSET if body.commit_name is None else body.commit_name,
+        commit_email=UNSET if body.commit_email is None else body.commit_email,
+        commit_use_account_email=UNSET if body.commit_use_account_email is None else body.commit_use_account_email,
+    )
+    try:
+        view = await (await request.state.dishka_container.get(UpdateAccountUC)).execute(_user_id(), inp)
+    except ProfileInvalidError as exc:
+        # Тот же вид, что у ошибок проверки FastAPI, плюс код правила для подсветки поля.
+        raise HTTPException(
+            status_code=422,
+            detail=[{"loc": ["body", e.field], "code": e.code, "msg": e.message} for e in exc.errors],
+        ) from exc
+    response.headers["Cache-Control"] = "no-store"
+    return _profile(view)
 
 
 @router.get("/account/sessions", response_model=list[AccountSession])

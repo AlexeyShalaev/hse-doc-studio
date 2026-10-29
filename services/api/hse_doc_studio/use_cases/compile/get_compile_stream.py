@@ -55,7 +55,7 @@ class GetCompileStreamUC:
         compile_repo = self._compile_repo
 
         # Шина логов глобальна и знает только compile_id: сначала убеждаемся, что запись из проекта в URL.
-        if compile_repo.get_for_project(project_folder, compile_id) is None:
+        if await compile_repo.get_for_project(project_folder, compile_id) is None:
 
             async def _record_not_found() -> AsyncGenerator[str, None]:
                 yield f"[error] compile record not found: {compile_id}"
@@ -76,7 +76,7 @@ class GetCompileStreamUC:
             #   - Subscriber arrived after build finished — replay everything.
             #   - Subscriber raced producer at very start — gap was tiny but
             #     we still want a deterministic final state.
-            record = compile_repo.get_for_project(project_folder, compile_id)
+            record = await compile_repo.get_for_project(project_folder, compile_id)
             if record is None:
                 if not seen:
                     yield f"[error] compile record not found: {compile_id}"

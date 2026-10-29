@@ -37,4 +37,8 @@ if importlib.util.find_spec("sqlalchemy") is None:
 if importlib.util.find_spec("argon2") is None:
     collect_ignore_glob += ["unit/infra/identity/*"]
 if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto") is None:
-    collect_ignore_glob += ["integration/test_s3_fixtures.py"]
+    collect_ignore_glob += [
+        "integration/test_s3_fixtures.py",
+        "contract/test_object_store_s3_contract.py",
+        "integration/storage/*",
+    ]

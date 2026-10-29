@@ -197,8 +197,32 @@ class ServerSetupEnvironment(StrictModel):
 
 
 class UpdateAccountRequest(StrictModel):
-    name: str | None = None
+    """Частичное обновление: отсутствующее поле и `null` значат «не менять».
+
+    Пустая строка в `commit_name` или `commit_email` сбрасывает своё значение к подписи по умолчанию.
+    """
+
+    name: str | None = Field(default=None, max_length=NAME_MAX)
     locale: Literal["ru", "en"] | None = None
+    commit_name: str | None = Field(default=None, max_length=NAME_MAX)
+    commit_email: str | None = Field(default=None, max_length=EMAIL_MAX)
+    commit_use_account_email: bool | None = None
+
+
+class AccountProfile(StrictModel):
+    """Профиль аккаунта и подпись, которой ставятся коммиты человека."""
+
+    id: str
+    name: str
+    email: str
+    locale: Literal["ru", "en"] | None
+    commit_name: str | None
+    commit_email: str | None
+    commit_use_account_email: bool
+    effective_commit_name: str
+    effective_commit_email: str
+    # Адрес в коммитах сгенерирован (настоящий e-mail наружу не уходит).
+    commit_email_is_noreply: bool
 
 
 class ChangePasswordRequest(StrictModel):

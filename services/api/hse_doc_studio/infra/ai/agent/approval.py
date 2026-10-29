@@ -19,12 +19,12 @@ class ConfigApprovalGate:
         self._static = auto_approve_writes
         self._settings_repo = settings_repo
 
-    def requires_approval(self, kind: ToolKind) -> bool:
+    async def requires_approval(self, kind: ToolKind) -> bool:
         if kind == ToolKind.read:
             return False
-        return not self._auto_approve()
+        return not await self._auto_approve()
 
-    def _auto_approve(self) -> bool:
+    async def _auto_approve(self) -> bool:
         if self._settings_repo is None:
             return self._static
-        return bool(self._settings_repo.get().get(_SETTINGS_KEY, self._static))
+        return bool((await self._settings_repo.get()).get(_SETTINGS_KEY, self._static))

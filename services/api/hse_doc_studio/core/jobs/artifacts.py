@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.storage.models import PresignedUrl
+
 
 @dataclass(frozen=True)
 class PublishPdfRequest:
@@ -14,6 +16,8 @@ class PublishPdfRequest:
     doc_id: str
     job_id: UUID
     source_file: str
+    project_id: UUID | None = None
+    """Ключ проекта для серверного хранилища; локальная реализация его не использует."""
 
 
 @dataclass(frozen=True)
@@ -29,10 +33,15 @@ class IArtifactStore(Protocol):
         """Переносит собранный PDF из `.build/<doc_id>/` к исходнику."""
         ...
 
-    def archive_pdf(self, workspace: Path, doc_id: str, job_id: UUID, source_file: str) -> None:
+    async def archive_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID, source_file: str) -> None:
         """Кладёт свежий PDF в архив документа, оставляя последние несколько."""
         ...
 
-    def read_archived_pdf(self, workspace: Path, doc_id: str, job_id: UUID) -> bytes:
+    async def read_archived_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID) -> bytes:
         """Отдаёт архивный PDF сборки. `FileNotFoundError`, если архива нет."""
+        ...
+
+    async def archived_pdf_link(self, project_id: UUID, doc_id: str, job_id: UUID) -> PresignedUrl | None:
+        """Короткоживущая ссылка на архивный PDF с Range; None, если хранилище ссылок не выдаёт.
+        `FileNotFoundError`, если архива нет."""
         ...

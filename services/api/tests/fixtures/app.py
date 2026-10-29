@@ -25,6 +25,7 @@ from hse_doc_studio.core.repositories import (
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
+    ILocalSettingsReader,
     IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -304,6 +305,10 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
 
         @provide
         def get_settings_repo(self) -> ISettingsRepository:
+            return JsonSettingsRepository(self._data_dir)
+
+        @provide
+        def get_local_settings_reader(self) -> ILocalSettingsReader:
             return JsonSettingsRepository(self._data_dir)
 
         @provide

@@ -20,7 +20,10 @@ from hse_doc_studio.api.observability.install import (
     install_audit_retention,
     install_auth_cleanup,
     install_background,
+    install_blob_gc,
+    install_bucket_cors,
     install_health,
+    install_object_store_health,
     install_project_purge,
     install_server_observability,
 )
@@ -219,7 +222,10 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             server_metrics,
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
+        install_object_store_health(app, container, health_checks)
+        install_bucket_cors(app, container, settings)
         install_project_purge(app, container, settings)
+        install_blob_gc(app, container, settings)
         install_auth_cleanup(app, container, settings)
         install_audit_retention(app, container, settings)
 
@@ -338,7 +344,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 if not (await inspect_uc.execute()).report.is_ready:
                     return
                 settings_repo = await request_container.get(ISettingsRepository)
-                image = resolve_active_image(settings_repo)
+                image = await resolve_active_image(settings_repo)
             if await image_present(image):
                 return
         except Exception:

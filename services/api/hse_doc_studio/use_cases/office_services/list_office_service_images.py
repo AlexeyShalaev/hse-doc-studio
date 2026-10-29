@@ -56,7 +56,7 @@ def office_service_label_hint(service: str) -> str:
     return hint
 
 
-def resolve_active_office_image(settings_repo: ISettingsRepository, service: str) -> str:
+async def resolve_active_office_image(settings_repo: ISettingsRepository, service: str) -> str:
     """Return the image the managed office-service container will run.
 
     User-configured `office_convert_image` / `office_editor_image` in
@@ -64,7 +64,7 @@ def resolve_active_office_image(settings_repo: ISettingsRepository, service: str
     default in api.config (mirrors `resolve_active_languagetool_image`).
     """
     cfg = office_service_config(service)
-    stored = settings_repo.get()
+    stored = await settings_repo.get()
     choice = stored.get(office_service_settings_key(service))
     if isinstance(choice, str) and choice.strip():
         return choice
@@ -109,7 +109,7 @@ class ListOfficeServiceImagesUC:
 
     async def execute(self, inp: ListOfficeServiceImagesInput) -> ListOfficeServiceImagesOutput:
         cfg = office_service_config(inp.service)
-        active = resolve_active_office_image(self._settings_repo, inp.service)
+        active = await resolve_active_office_image(self._settings_repo, inp.service)
         installed: list[LocalImageInfo] = []
         for repo in cfg.allowed_repos:
             installed.extend(await self._image_manager.list_local(repo))

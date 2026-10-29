@@ -22,6 +22,7 @@ from hse_doc_studio.use_cases.office_editor.get_editor_config import (
 )
 
 from tests.factories import make_document, make_document_definition, make_project, make_template_version
+from tests.fakes.settings import InMemorySettingsRepository
 
 _SECRET = "test-secret"  # noqa: S105
 _BACKEND_BASE = "http://host.docker.internal:17240"
@@ -69,8 +70,7 @@ def _make_uc(
 ) -> GetOfficeEditorConfigUC:
     template_repo = MagicMock()
     template_repo.get_version.return_value = make_template_version(documents=(_pres_definition(),))
-    settings_repo = MagicMock()
-    settings_repo.get.return_value = dict(stored_settings or {})
+    settings_repo = InMemorySettingsRepository(stored_settings)
     uc = GetOfficeEditorConfigUC(
         project_repo=MagicMock(),
         project_index_repo=MagicMock(),

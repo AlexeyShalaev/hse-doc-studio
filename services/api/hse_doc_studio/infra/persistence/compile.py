@@ -7,6 +7,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import CompileRecord
+from hse_doc_studio.core.enums import CompileStatus
 from hse_doc_studio.infra.persistence.serializers import (
     deserialize_compile_record,
     serialize_compile_record,
@@ -23,7 +24,7 @@ class JsonCompileRepository:
     def _compiles_dir(self, project_folder: Path) -> Path:
         return project_folder / _HSE_STUDIO / "compiles"
 
-    def get_for_project(self, project_folder: Path, compile_id: UUID) -> CompileRecord | None:
+    async def get_for_project(self, project_folder: Path, compile_id: UUID) -> CompileRecord | None:
         path = self._compiles_dir(project_folder) / f"{compile_id}.json"
         if not path.exists():
             return None
@@ -34,7 +35,7 @@ class JsonCompileRepository:
             logger.warning("compile record read error", path=str(path), exc=str(exc))
             return None
 
-    def list_for_document(self, project_folder: Path, doc_id: str) -> list[CompileRecord]:
+    async def list_for_document(self, project_folder: Path, doc_id: str) -> list[CompileRecord]:
         compiles_dir = self._compiles_dir(project_folder)
         if not compiles_dir.exists():
             return []
@@ -49,7 +50,24 @@ class JsonCompileRepository:
         records.sort(key=lambda r: r.started_at)
         return records
 
-    def save(self, record: CompileRecord) -> None:
+    async def list_unfinished(self, project_folder: Path) -> list[CompileRecord]:
+        compiles_dir = self._compiles_dir(project_folder)
+        if not compiles_dir.exists():
+            return []
+        records: list[CompileRecord] = []
+        for json_file in compiles_dir.glob("*.json"):
+            try:
+                UUID(json_file.stem)
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                record = deserialize_compile_record(data, project_folder=project_folder)
+            except Exception as exc:
+                logger.warning("compile record read error", path=str(json_file), exc=str(exc))
+                continue
+            if record.status in (CompileStatus.pending, CompileStatus.running):
+                records.append(record)
+        return records
+
+    async def save(self, record: CompileRecord) -> None:
         compiles_dir = self._compiles_dir(record.project_folder)
         compiles_dir.mkdir(parents=True, exist_ok=True)
         path = compiles_dir / f"{record.id}.json"

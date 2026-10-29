@@ -43,7 +43,7 @@ class UpdateProfileUC:
             errors.append(exc)
         if errors:
             raise ProfileInvalidError(errors)
-        stored = self._settings_repo.get()
-        self._settings_repo.save({**stored, PROFILE_NAME_KEY: name, PROFILE_EMAIL_KEY: email})
+        stored = await self._settings_repo.get()
+        await self._settings_repo.save({**stored, PROFILE_NAME_KEY: name, PROFILE_EMAIL_KEY: email})
         logger.info("author profile saved")
         return make_profile_view(AuthorProfile(name, email), self._fallback)

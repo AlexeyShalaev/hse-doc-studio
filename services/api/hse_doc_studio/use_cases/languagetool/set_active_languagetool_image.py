@@ -50,7 +50,7 @@ class SetActiveLanguageToolImageUC:
                     f"образ не установлен локально: {inp.image}", f"image not installed locally: {inp.image}"
                 )
             )
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         stored["languagetool_image"] = inp.image
-        self._settings_repo.save(stored)
+        await self._settings_repo.save(stored)
         return SetActiveLanguageToolImageOutput(image=inp.image)

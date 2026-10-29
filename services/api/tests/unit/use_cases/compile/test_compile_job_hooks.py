@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.entities import CompileRecord
@@ -18,7 +18,7 @@ from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
 
 from tests.factories import make_document, make_project
-from tests.unit.core.jobs.samples import JOB_ID, make_compile_spec
+from tests.unit.core.jobs.samples import JOB_ID, PROJECT_ID, make_compile_spec
 
 STARTED_AT = datetime(2026, 10, 26, 9, 0, tzinfo=timezone.utc)
 FINISHED_AT = datetime(2026, 10, 26, 9, 5, tzinfo=timezone.utc)
@@ -48,7 +48,7 @@ class Env:
     def __init__(self, tmp_path: Path) -> None:
         self.folder = tmp_path
         self.events: list[str] = []
-        self.compile_repo = MagicMock()
+        self.compile_repo = AsyncMock()
         self.compile_repo.get_for_project.return_value = _record(tmp_path)
         self.project = make_project(folder=tmp_path, documents=[make_document("tz"), make_document("other")])
         self.project_repo = MagicMock()
@@ -60,7 +60,7 @@ class Env:
         self.vcs_service.commit.side_effect = lambda *a, **kw: self.events.append("vcs")
         self.vcs_locks = MagicMock()
         self.vcs_locks.for_folder.side_effect = lambda folder: self._lock()
-        self.artifacts = MagicMock()
+        self.artifacts = AsyncMock()
         self.artifacts.archive_pdf.side_effect = lambda *a: self.events.append("archive")
         self.hooks = CompileJobHooks(
             compile_repo=self.compile_repo,
@@ -297,7 +297,7 @@ async def test__on_finished__success__vcs_commit_then_archive_in_that_order(tmp_
     await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
 
     assert env.events == ["vcs", "archive"]
-    env.artifacts.archive_pdf.assert_called_once_with(tmp_path, "tz", JOB_ID, "tz/main.tex")
+    env.artifacts.archive_pdf.assert_called_once_with(PROJECT_ID, tmp_path, "tz", JOB_ID, "tz/main.tex")
     commit = env.vcs_service.commit.call_args
     assert commit.kwargs["message"] == "Сборка: tz · 7 стр."
     assert commit.kwargs["include_pdf"] is False

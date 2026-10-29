@@ -216,11 +216,15 @@ class GitStatusBuilder:
         self._shared = shared_folders
         self._providers = providers
 
-    def build(self, project: Project) -> GitStatusView:
+    async def view(self, project: Project) -> GitStatusView:
+        """Настройки читаются здесь, а блокирующая часть с запусками git уходит в поток."""
+        stored = await self._settings.get()
+        return await asyncio.to_thread(self.build, project, stored)
+
+    def build(self, project: Project, stored: dict[str, object]) -> GitStatusView:
         """Блокирует на запусках git: вызывающий уводит вызов в поток."""
         profile_ok = self._profile.get() is not None
         config = self._remotes.read(project)
-        stored = self._settings.get()
         if config is None:
             return self._without_remote(project, stored, profile_ok)
         folder = project.folder
@@ -444,4 +448,4 @@ class GetGitStatusUC:
         # Выключенная синхронизация не обещает подключения: клиент читает отказ как «не поддерживается».
         self._policy.require_enabled()
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        return await asyncio.to_thread(self._builder.build, project)
+        return await self._builder.view(project)

@@ -10,11 +10,14 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
+from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
     UserIdentityRow,
     UserRow,
+    UserSettingRow,
 )
 from hse_doc_studio.infra.db.orm.instance_meta import InstanceMetaRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
@@ -23,6 +26,9 @@ __all__ = [
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
+    "BlobRow",
+    "CompileRecordRow",
+    "FileHashCacheRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
     "LoginAttemptRow",
@@ -35,4 +41,5 @@ __all__ = [
     "SessionRow",
     "UserIdentityRow",
     "UserRow",
+    "UserSettingRow",
 ]

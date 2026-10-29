@@ -14,13 +14,10 @@ class _Repo:
         self._data = data if data is not None else {}
         self._boom = boom
 
-    def get(self) -> Any:
+    def read_local(self) -> Any:
         if self._boom:
             raise OSError("диск недоступен")
         return self._data
-
-    def save(self, settings: dict[str, Any]) -> None:
-        self._data = settings
 
 
 def test__get__valid_pair__returns_profile() -> None:

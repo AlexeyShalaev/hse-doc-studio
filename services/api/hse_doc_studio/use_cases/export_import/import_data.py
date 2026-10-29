@@ -83,7 +83,7 @@ class ImportDataUC:
 
         if inp.settings is not None:
             try:
-                self._import_settings(inp.settings)
+                await self._import_settings(inp.settings)
                 result.settings_imported = True
             except Exception as exc:
                 result.errors.append(f"settings: {exc}")
@@ -131,8 +131,8 @@ class ImportDataUC:
                 ) from exc
             return
 
-    def _import_settings(self, imported: dict[str, Any]) -> None:
-        current = self._settings_repo.get()
+    async def _import_settings(self, imported: dict[str, Any]) -> None:
+        current = await self._settings_repo.get()
         patch: dict[str, Any] = {}
         for key, value in imported.items():
             if key not in _ALLOWED_SETTING_KEYS:
@@ -145,7 +145,7 @@ class ImportDataUC:
                 logger.warning("import_data: invalid setting skipped", key=key)
                 continue
             patch[key] = checked
-        self._settings_repo.save({**current, **patch})
+        await self._settings_repo.save({**current, **patch})
 
     def _import_provider(
         self,

@@ -68,6 +68,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/server-setup/environment"): _P,
     ("POST", "/server-setup/settings"): _P,
     ("POST", "/server-setup/complete"): _P,
+    ("GET", "/account"): _A,
+    ("PATCH", "/account"): _A,
     ("POST", "/account/password"): _A,
     ("POST", "/account/email"): _A,
     ("POST", "/account/email/confirm"): _P,
@@ -236,7 +238,6 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
     if key[1].split("/")[1]
     in {
         "projects",
-        "settings",
         "ai-providers",
         "agent-personas",
         "agent",

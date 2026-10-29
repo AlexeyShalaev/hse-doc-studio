@@ -454,9 +454,9 @@ class AgentLoop:
             if b.kind == ChatContentKind.tool_call and (b.call_id or "") not in answered
         ]
 
-    def _requires_gate(self, call: ToolCall) -> bool:
+    async def _requires_gate(self, call: ToolCall) -> bool:
         tool = self._registry.get(call.name)
-        return tool is not None and self._approval_gate.requires_approval(tool.kind)
+        return tool is not None and await self._approval_gate.requires_approval(tool.kind)
 
     def _persist_assistant(self, project_folder: Path, session_id: UUID, run_id: UUID, turn: NormalizedTurn) -> int:
         blocks: list[ChatContentBlock] = []
@@ -528,7 +528,7 @@ class AgentLoop:
         remaining = [c for c in calls if not self._is_ask(c)]
         # 2) Approval: if any remaining call needs approval and wasn't approved,
         # suspend the whole batch so the user reviews before any side effect.
-        unapproved = [c for c in remaining if self._requires_gate(c) and c.id not in approved_call_ids]
+        unapproved = [c for c in remaining if c.id not in approved_call_ids and await self._requires_gate(c)]
         if unapproved:
             trace(
                 "loop_suspend",

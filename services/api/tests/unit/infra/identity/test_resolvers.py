@@ -53,7 +53,8 @@ async def test_cookie_resolver_valid_session_gives_user_actor() -> None:
 
     actor = await resolver.resolve(ActorCredentials(session_secret=SECRET))
 
-    assert actor == Actor.user("u1", "Ann", "ann@example.org", is_instance_admin=True, source=ActorSource.session)
+    # В акторе подпись коммитов: настоящий адрес наружу не уходит, пока человек сам не разрешил
+    assert actor == Actor.user("u1", "Ann", "u1@noreply.localhost", is_instance_admin=True, source=ActorSource.session)
 
 
 async def test_cookie_resolver_unknown_or_missing_secret_gives_none() -> None:

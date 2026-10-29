@@ -17,7 +17,7 @@ def _foreign_compile_setup() -> tuple[MagicMock, MagicMock, MagicMock]:
     locator = MagicMock()
     locator.locate = AsyncMock(return_value=(Path("/p/mine"), MagicMock()))
     locator.folder_of = AsyncMock(return_value=Path("/p/mine"))
-    repo = MagicMock()
+    repo = AsyncMock()
     repo.get_for_project.return_value = None
     return locator, repo, MagicMock()
 

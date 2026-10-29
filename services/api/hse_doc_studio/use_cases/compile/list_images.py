@@ -35,7 +35,7 @@ class ListImagesUC:
         self._settings_repo = settings_repo
 
     async def execute(self) -> ListImagesOutput:
-        active = resolve_active_image(self._settings_repo)
+        active = await resolve_active_image(self._settings_repo)
         repos = settings.compile.allowed_repos
         installed: list[LocalImageInfo] = []
         for repo in repos:
@@ -47,13 +47,13 @@ class ListImagesUC:
         )
 
 
-def resolve_active_image(settings_repo: ISettingsRepository) -> str:
+async def resolve_active_image(settings_repo: ISettingsRepository) -> str:
     """Return the image tag the next compile will use.
 
     User-configured `compile_image` in settings.json wins; if absent or empty
     we fall back to the deployment-level default in `api.config`.
     """
-    stored = settings_repo.get()
+    stored = await settings_repo.get()
     user_choice = stored.get("compile_image")
     if isinstance(user_choice, str) and user_choice.strip():
         return user_choice

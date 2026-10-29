@@ -165,7 +165,7 @@ class GetOfficeEditorConfigUC:
         # Состояние движка: образ не установлен (opt-in) vs docker/старт умер.
         # Эффективный образ — runtime-выбор из настроек (office_editor_image),
         # дефолт — образ из api-конфига.
-        active_image = resolve_active_office_image(self._settings_repo, "editor")
+        active_image = await resolve_active_office_image(self._settings_repo, "editor")
         if await self._manager.is_image_missing(active_image):
             return GetOfficeEditorConfigOutput(state="image_missing", image=active_image)
         base = await self._manager.ensure_running(active_image)
@@ -227,7 +227,7 @@ class GetOfficeEditorConfigUC:
         """
         if self._ai_provider_repo is None:
             return
-        desired = build_ai_plugin_settings(self._ai_provider_repo.list_all(), self._settings_repo.get())
+        desired = build_ai_plugin_settings(self._ai_provider_repo.list_all(), await self._settings_repo.get())
         await self._manager.apply_ai_settings(desired)
 
     def _resolve_title(self, doc: Any, doc_def: Any, chosen_variant: str | None, output_file: str) -> str:

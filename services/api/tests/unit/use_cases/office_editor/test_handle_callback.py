@@ -25,6 +25,7 @@ from hse_doc_studio.use_cases.office_editor.handle_callback import (
 from hse_doc_studio.use_cases.office_editor.preview_observer import PreviewRefreshObserver
 
 from tests.factories import make_document, make_document_definition, make_project, make_template_version
+from tests.fakes.settings import InMemorySettingsRepository
 
 
 def _pres_definition() -> DocumentDefinition:
@@ -82,8 +83,7 @@ def _make_uc(
     template_repo = MagicMock()
     template_repo.get_version.return_value = make_template_version(documents=(_pres_definition(),))
     put_file_uc = AsyncMock()
-    settings_repo = MagicMock()
-    settings_repo.get.return_value = {}
+    settings_repo = InMemorySettingsRepository()
     uc = OfficeEditorCallbackUC(
         project_repo=MagicMock(),
         project_index_repo=MagicMock(),
