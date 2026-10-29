@@ -55,12 +55,12 @@ class CompileJobHooks:
         self._started_at: datetime | None = None
 
     async def on_started(self, spec: JobSpec) -> bool:
-        record = self._compile_repo.get_for_project(self._project_folder, spec.id)
+        record = await self._compile_repo.get_for_project(self._project_folder, spec.id)
         if record is None:
             logger.warning("compile task: record not found", compile_id=str(spec.id))
             return False
         self._started_at = record.started_at
-        self._compile_repo.save(
+        await self._compile_repo.save(
             CompileRecord(
                 id=record.id,
                 project_folder=record.project_folder,
@@ -99,7 +99,7 @@ class CompileJobHooks:
         has_errors = any(r.severity == CheckSeverity.err for r in check_results)
         has_warnings = any(r.severity == CheckSeverity.warn for r in check_results)
 
-        self._compile_repo.save(
+        await self._compile_repo.save(
             CompileRecord(
                 id=compile_id,
                 project_folder=self._project_folder,

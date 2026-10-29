@@ -10,6 +10,7 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
@@ -24,6 +25,7 @@ __all__ = [
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
+    "CompileRecordRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
     "LoginAttemptRow",

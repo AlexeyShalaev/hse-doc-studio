@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.entities import CompileRecord
@@ -48,7 +48,7 @@ class Env:
     def __init__(self, tmp_path: Path) -> None:
         self.folder = tmp_path
         self.events: list[str] = []
-        self.compile_repo = MagicMock()
+        self.compile_repo = AsyncMock()
         self.compile_repo.get_for_project.return_value = _record(tmp_path)
         self.project = make_project(folder=tmp_path, documents=[make_document("tz"), make_document("other")])
         self.project_repo = MagicMock()

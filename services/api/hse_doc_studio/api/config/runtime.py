@@ -36,6 +36,16 @@ class HttpServerConfig(BaseModel):
     project_purge_interval_s: float = Field(
         default=3600.0, gt=0, description="Как часто сервер ищет удалённые проекты с истёкшим сроком."
     )
+    compile_records_per_document: int = Field(
+        default=50,
+        ge=1,
+        description="Сколько последних записей сборок хранится на документ; старые стираются при записи новой.",
+    )
+    compile_log_limit_bytes: int = Field(
+        default=1024 * 1024,
+        ge=1024,
+        description="Предел размера лога в записи сборки; у более длинного лога теряется начало.",
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

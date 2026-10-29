@@ -26,7 +26,7 @@ def _make_uc(vkr_results: list[CheckResult]) -> GetNormcontrolReportUC:
         project_repo=MagicMock(),
         project_index_repo=MagicMock(),
         template_repo=MagicMock(),
-        compile_repo=MagicMock(),
+        compile_repo=AsyncMock(),
     )
     vkr = SimpleNamespace(id="vkr", def_id="vkr", last_compile_id=_CID, status="warn")
     tz = SimpleNamespace(id="tz", def_id="tz", last_compile_id=None, status="ok")

@@ -33,4 +33,4 @@ class ListCompilesUC:
         project_folder = await self._locator.folder_of(inp.project_id)
         if project_folder is None:
             return []
-        return self._compile_repo.list_for_document(project_folder, inp.doc_id)
+        return await self._compile_repo.list_for_document(project_folder, inp.doc_id)

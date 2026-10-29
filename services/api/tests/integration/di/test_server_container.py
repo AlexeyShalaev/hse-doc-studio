@@ -160,3 +160,26 @@ async def test__server_container__settings_repo_is_postgres_while_local_stays_js
 
     assert isinstance(local_repo, JsonSettingsRepository)
     assert isinstance(server_repo, PostgresSettingsRepository)
+
+
+async def test__server_container__compile_repo_is_postgres_while_local_stays_json() -> None:
+    from hse_doc_studio.core.repositories import ICompileRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.compile import JsonCompileRepository  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(ICompileRepository)
+        async with server() as request:
+            server_repo = await request.get(ICompileRepository)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonCompileRepository)
+    assert isinstance(server_repo, PostgresCompileRepository)

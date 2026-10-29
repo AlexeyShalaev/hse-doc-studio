@@ -69,7 +69,7 @@ class CancelCompileUC:
             )
         project_folder, project = located
 
-        record = self._compile_repo.get_for_project(project_folder, inp.compile_id)
+        record = await self._compile_repo.get_for_project(project_folder, inp.compile_id)
         if record is None:
             raise NotFoundError(
                 localized_error(
@@ -106,7 +106,7 @@ class CancelCompileUC:
             check_results=record.check_results,
             pages=record.pages,
         )
-        self._compile_repo.save(cancelled_record)
+        await self._compile_repo.save(cancelled_record)
 
         # Best-effort close the log bus in case any SSE subscriber is camped
         # on this id. discard() drops the channel entirely so subscribe()

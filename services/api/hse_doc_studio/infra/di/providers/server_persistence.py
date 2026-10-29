@@ -21,11 +21,17 @@ from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRe
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
+from hse_doc_studio.core.repositories import (
+    ICompileRepository,
+    IProjectIndexRepository,
+    IProjectRepository,
+    ITemplateRepository,
+)
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
+from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -152,6 +158,17 @@ class ServerPersistenceProvider(Provider):
     def get_project_index_repo(self, locator: IProjectLocator) -> IProjectIndexRepository:
         """Локальный projects.json в серверном режиме пуст: проект по id находит каталог в БД."""
         return CatalogProjectIndex(locator)
+
+    @provide(override=True)
+    def get_compile_repo(
+        self, sessions: SessionProvider, volume: IProjectVolume, server_config: ServerConfig
+    ) -> ICompileRepository:
+        return PostgresCompileRepository(
+            sessions,
+            volume,
+            keep_per_document=server_config.compile_records_per_document,
+            log_limit_bytes=server_config.compile_log_limit_bytes,
+        )
 
     @provide
     def get_project_catalog_reconciler(

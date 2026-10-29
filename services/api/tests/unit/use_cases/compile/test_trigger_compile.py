@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.compile.errors import ImageMissingError
@@ -66,7 +66,7 @@ class Harness:
         self.dispatcher = FakeJobDispatcher(self.events)
         self.materializer = FakeMaterializer(self.events)
         self.project_repo = MagicMock()
-        self.compile_repo = MagicMock()
+        self.compile_repo = AsyncMock()
         self.compile_repo.save.side_effect = lambda record: self.events.append(f"save:{record.status}")
         self.template_repo = MagicMock()
         project_index_repo = MagicMock()
