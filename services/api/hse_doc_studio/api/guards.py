@@ -41,7 +41,9 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.office_tokens import OfficeTokenPurpose
 from hse_doc_studio.core.project_access import ProjectAccess
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
 
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -53,6 +55,7 @@ _ALLOWED_SUFFIXES = ("/vcs/restore", "/git/ci/preview", "/git/fetch")
 _LOCKED = 423
 _FORBIDDEN = 403
 _NOT_FOUND = 404
+_FILE_ROUTE_SUFFIX = "/projects/{project_id}/files/{path:path}"
 
 
 def _allowed(request: Request) -> bool:
@@ -120,7 +123,7 @@ async def project_access_guard(request: Request) -> None:
     """
     if settings.mode is not StudioMode.local and await _server_request_handled(request):
         return
-    actor = await resolve_actor(request)
+    actor = await _request_actor(request)
     set_current_actor(actor)
     if actor.is_local:
         return
@@ -139,6 +142,36 @@ async def project_access_guard(request: Request) -> None:
     acl = await load_project_acl(request, str(project_id))
     decision = decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params))
     _enforce(decision, required_role(actor, rule.action, acl))
+
+
+async def _request_actor(request: Request) -> Actor:
+    if settings.mode is not StudioMode.local and (actor := await _office_document_actor(request)) is not None:
+        return actor
+    return await resolve_actor(request)
+
+
+async def _office_document_actor(request: Request) -> Actor | None:
+    """Актор по токену документа ONLYOFFICE: Document Server забирает файл без cookie пользователя.
+
+    Токен принимается только на чтении файла и только для того проекта и пути, на которые выдан;
+    права при этом проверяются заново. Без токена в адресе работает обычная цепочка cookie.
+    """
+    token = request.query_params.get("office_token")
+    if token is None or request.method not in {"GET", "HEAD"}:
+        return None
+    if not route_path_of(request).endswith(_FILE_ROUTE_SUFFIX):
+        return None
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    access = await container.get(IOfficeAccess)
+    try:
+        return await access.authorize(
+            token,
+            OfficeTokenPurpose.document,
+            UUID(str(request.path_params.get("project_id"))),
+            path=str(request.path_params.get("path", "")),
+        )
+    except (PermissionError, ValueError):
+        raise IdentityError(IdentityErrorCode.auth_required) from None
 
 
 async def _server_request_handled(request: Request) -> bool:

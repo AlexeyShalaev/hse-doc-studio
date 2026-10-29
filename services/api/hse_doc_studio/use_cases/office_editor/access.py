@@ -52,10 +52,13 @@ class IOfficeAccess(Protocol):
         token: str,
         purpose: OfficeTokenPurpose,
         project_id: UUID,
-        doc_id: str,
+        doc_id: str | None = None,
         path: str | None = None,
     ) -> Actor:
-        """Актор из токена, если подпись верна и права на запись сейчас есть; иначе PermissionError."""
+        """Актор из токена, если подпись верна и права на запись сейчас есть; иначе PermissionError.
+
+        Без doc_id документ не сверяется: файл по адресу скачивают, не зная идентификатора документа.
+        """
         ...
 
 
@@ -76,7 +79,7 @@ class LocalOfficeAccess:
         token: str,  # noqa: ARG002
         purpose: OfficeTokenPurpose,  # noqa: ARG002
         project_id: UUID,  # noqa: ARG002
-        doc_id: str,  # noqa: ARG002
+        doc_id: str | None = None,  # noqa: ARG002
         path: str | None = None,  # noqa: ARG002
     ) -> Actor:
         return Actor.local()
@@ -133,7 +136,7 @@ class ServerOfficeAccess:
         token: str,
         purpose: OfficeTokenPurpose,
         project_id: UUID,
-        doc_id: str,
+        doc_id: str | None = None,
         path: str | None = None,
     ) -> Actor:
         try:
