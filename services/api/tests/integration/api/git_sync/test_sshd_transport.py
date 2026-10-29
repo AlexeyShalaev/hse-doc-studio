@@ -195,7 +195,7 @@ async def test__ssh_remote__key_the_server_does_not_know__auth_failed(stack: Sta
 async def test__ssh_remote__server_key_differs_from_the_trusted_one__host_key_changed(stack: Stack) -> None:
     credential = await stack.add_key(authorize=True)
     impostor = Ed25519KeyGenerator().generate("impostor").public_key.split()[1]
-    stack.known_hosts.trust(
+    await stack.known_hosts.trust(
         "127.0.0.1", stack.server.port, [ScannedHostKey("ssh-ed25519", impostor, key_fingerprint(impostor))]
     )
 

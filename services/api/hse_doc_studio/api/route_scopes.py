@@ -214,10 +214,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/git/credentials/{credential_id}"): _A,
     ("GET", "/git/secrets/status"): _A,
     ("GET", "/git/hosts"): _A,
-    ("POST", "/git/hosts/trust"): _A,
-    ("DELETE", "/git/hosts"): _A,
+    ("POST", "/git/hosts/trust"): _ADM,
+    ("DELETE", "/git/hosts"): _ADM,
     ("GET", "/git/host-settings"): _A,
-    ("PUT", "/git/host-settings"): _A,
+    ("PUT", "/git/host-settings"): _ADM,
     # Клон принимает от клиента абсолютную папку и регистрирует проект в локальном индексе: на сервере это
     # запись в произвольное место диска. Пока клон не выбирает папку на томе проектов и не создаёт строку
     # с владельцем, маршруты существуют только в локальной установке.

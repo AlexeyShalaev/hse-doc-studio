@@ -15,6 +15,7 @@ from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
 from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.git_credentials import GitCredentialRow, GitRemoteBindingRow
+from hse_doc_studio.infra.db.orm.git_trust import GitHostSettingsRow, GitKnownHostRow
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
@@ -48,6 +49,8 @@ __all__ = [
     "FairShareRow",
     "FileHashCacheRow",
     "GitCredentialRow",
+    "GitHostSettingsRow",
+    "GitKnownHostRow",
     "GitRemoteBindingRow",
     "InstanceMetaRow",
     "InstanceSettingRow",

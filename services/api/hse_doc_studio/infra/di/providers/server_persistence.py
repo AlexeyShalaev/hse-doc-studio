@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import timedelta
+from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -23,9 +24,11 @@ from hse_doc_studio.core.git_sync.protocols import (
     ICredentialAccess,
     IGitCredentialRepository,
     IGitCredentialUsage,
+    IGitHostSettingsRepository,
     IGitOperationRegistry,
     IGitRemoteBindings,
     IGitRemoteRegistry,
+    IKnownHostsStore,
     ISecretCipher,
 )
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
@@ -59,6 +62,7 @@ from hse_doc_studio.infra.db.repositories.git_credentials import (
     PostgresGitCredentialRepository,
     PostgresGitRemoteBindings,
 )
+from hse_doc_studio.infra.db.repositories.git_trust import PostgresGitHostSettingsRepository, PostgresKnownHostsStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
@@ -96,6 +100,11 @@ from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProje
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
 from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+
+
+def _git_runtime_dir() -> Path:
+    """Каталог выполнения для файлов, которые читает git: материализованное доверие к серверам."""
+    return settings.data_dir.expanduser() / "runtime" / "git-trust"
 
 
 class ServerPersistenceProvider(Provider):
@@ -288,6 +297,14 @@ class ServerPersistenceProvider(Provider):
     ) -> ICredentialAccess:
         # Права не из кэша запроса: секрет просят и фоновые задачи, которые переживают запрос.
         return PostgresCredentialAccess(sessions, cipher, acl, audit)
+
+    @provide(override=True)
+    def get_git_host_settings_repo(self, sessions: SessionProvider) -> IGitHostSettingsRepository:
+        return PostgresGitHostSettingsRepository(sessions, _git_runtime_dir())
+
+    @provide(override=True)
+    def get_known_hosts_store(self, sessions: SessionProvider) -> IKnownHostsStore:
+        return PostgresKnownHostsStore(sessions, _git_runtime_dir())
 
     @provide(override=True)
     def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:

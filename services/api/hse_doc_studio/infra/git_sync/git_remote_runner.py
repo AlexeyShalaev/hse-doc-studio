@@ -139,6 +139,8 @@ class GitRemoteRunner:
     ) -> GitResult:
         await authorize_git_host(self._egress, target.url.host, target.url.port)
         self._check_policy(target)
+        # Файлы доверия сверяются с хранилищем перед каждой командой: удалённая запись не доживёт до запуска git.
+        await self._materialize_trust()
         if target.url.kind is RemoteKind.ssh:
             return await self._run_ssh(
                 args, op=op, git_dir=git_dir, target=target, timeout_s=timeout_s, on_progress=on_progress
@@ -187,7 +189,7 @@ class GitRemoteRunner:
         on_progress: ProgressCallback | None,
     ) -> GitResult:
         # Сервер без подтверждённого ключа не пускаем дальше: человек сначала сверяет отпечаток, потом выбирает ключ.
-        if self._known_hosts is not None and self._known_hosts.find(*self._host_port(target)) is None:
+        if self._known_hosts is not None and await self._known_hosts.find(*self._host_port(target)) is None:
             keys = await self._scan(target, swallow=False)
             raise git_error(GitErrorCode.host_key_unknown, host_keys=tuple(key.public() for key in keys))
         credential, secret = await self._load_credential(target)
@@ -288,6 +290,12 @@ class GitRemoteRunner:
         except OSError:
             raise git_error(GitErrorCode.git_unavailable) from None
 
+    async def _materialize_trust(self) -> None:
+        if self._host_settings is not None:
+            await self._host_settings.materialize()
+        if self._known_hosts is not None:
+            await self._known_hosts.materialize()
+
     async def _trust_config(self, target: RemoteTarget) -> list[str]:
         """Доверие к серверу с самоподписанным или внутренним сертификатом: `-c` только для адреса этого сервера.
 
@@ -297,7 +305,7 @@ class GitRemoteRunner:
         if self._host_settings is None or target.url.kind is not RemoteKind.https or target.url.host is None:
             return []
         host, port = target.url.host, target.url.port
-        settings = self._host_settings.get(host, port)
+        settings = await self._host_settings.get(host, port)
         if settings is None or not settings.has_trust:
             return []
         if settings.pinned_fingerprint is not None and self._certificates is not None:
@@ -406,7 +414,7 @@ class GitRemoteRunner:
         scanned = await self._scan(target, swallow=True)
         if code is GitErrorCode.host_key_unknown:
             return git_error(code, host_keys=tuple(key.public() for key in scanned))
-        known = self._known_hosts.find(*self._host_port(target)) if self._known_hosts is not None else None
+        known = await self._known_hosts.find(*self._host_port(target)) if self._known_hosts is not None else None
         if known is None or not known.fingerprints_sha256 or not scanned:
             return git_error(code)
         same_type = [key for key in scanned if key.type in known.key_types]
