@@ -7,11 +7,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
-
-class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+from hse_doc_studio.api.schemas.common import StrictModel
 
 
 class CreateRegistrationTokenRequest(StrictModel):

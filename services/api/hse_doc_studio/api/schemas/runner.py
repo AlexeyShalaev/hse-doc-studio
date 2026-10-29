@@ -10,7 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
+
+from hse_doc_studio.api.schemas.common import StrictModel
 
 JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission"]
 JobStatusName = Literal["succeeded", "failed", "cancelled", "timed_out"]
@@ -20,10 +22,6 @@ ActorSourceName = Literal["session", "pat", "link", "local"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 LangName = Literal["ru", "en"]
 Sha256 = Field(pattern=r"^[0-9a-f]{64}$")
-
-
-class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
 
 class RunnerErrorBody(StrictModel):

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+class StrictModel(BaseModel):
+    """Тело запроса или ответа серверных ручек: лишние поля отвергаются."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ErrorResponse(BaseModel):

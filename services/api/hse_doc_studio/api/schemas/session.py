@@ -10,8 +10,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
+from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.core.identity.normalize import is_valid_email
 
 # Пределы полей, которые клиент присылает без входа: ключ попыток входа и журнал не должны раздуваться от ввода.
@@ -27,10 +28,6 @@ OrgRoleName = Literal["owner", "admin", "member"]
 AccountStatus = Literal["active", "pending_verification", "pending_approval", "disabled"]
 TokenScope = Literal["api", "git:read", "git:write"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
-
-
-class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
 
 class Capabilities(StrictModel):
