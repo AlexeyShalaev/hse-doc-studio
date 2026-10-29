@@ -46,7 +46,16 @@ class _Flow:
         catalog = _Catalog(PROVIDER)
         self.start = StartOidcLoginUC(catalog, client, self.codec, world.clock)
         self.complete = CompleteOidcLoginUC(
-            catalog, client, self.codec, world.users, world.sessions, world.audit, world.uow, world.policy, world.clock
+            catalog,
+            client,
+            self.codec,
+            world.users,
+            world.sessions,
+            world.audit,
+            world.uow,
+            world.policy,
+            world.clock,
+            auth_settings=world.settings_service(),
         )
 
     async def begin(self, **overrides: object) -> tuple[str, str, str]:
@@ -184,16 +193,6 @@ async def test_bad_id_token_does_not_sign_in(flow: _Flow, override: dict[str, ob
     assert not flow.world.sessions._items  # noqa: SLF001
 
 
-async def test_unlinked_identity_does_not_sign_in_even_with_matching_email(flow: _Flow) -> None:
-    sealed, state, code = await flow.begin(sub="stranger", email="ann@example.org", email_verified=True)
-
-    with pytest.raises(OidcLoginError) as caught:
-        await flow.finish(sealed, state, code)
-
-    assert caught.value.code is OidcErrorCode.not_linked
-    assert len(await flow.world.users.list_identities("u1")) == 1
-
-
 @pytest.mark.parametrize("status", [UserStatus.disabled, UserStatus.pending_approval, UserStatus.pending_verification])
 async def test_inactive_account_does_not_sign_in(flow: _Flow, status: UserStatus) -> None:
     user = await flow.world.users.get("u1")
@@ -204,7 +203,8 @@ async def test_inactive_account_does_not_sign_in(flow: _Flow, status: UserStatus
     with pytest.raises(OidcLoginError) as caught:
         await flow.finish(sealed, state, code)
 
-    assert caught.value.code is OidcErrorCode.account_denied
+    expected = OidcErrorCode.pending_approval if status is UserStatus.pending_approval else OidcErrorCode.account_denied
+    assert caught.value.code is expected
 
 
 async def test_previous_session_is_closed_on_sign_in(flow: _Flow) -> None:

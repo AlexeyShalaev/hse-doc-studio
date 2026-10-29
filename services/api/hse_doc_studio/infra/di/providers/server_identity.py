@@ -101,6 +101,7 @@ from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
 from hse_doc_studio.use_cases.identity.oidc_login import CompleteOidcLoginUC, StartOidcLoginUC
 from hse_doc_studio.use_cases.identity.recovery import (
     ForgotPasswordUC,
@@ -314,8 +315,28 @@ class ServerIdentityProvider(Provider):
         audit: IAuditLog,
         uow: IUnitOfWork,
         policy: SessionPolicy,
+        auth_settings: AuthSettingsService,
     ) -> CompleteOidcLoginUC:
-        return CompleteOidcLoginUC(catalog, client, codec, users, sessions, audit, uow, policy)
+        return CompleteOidcLoginUC(
+            catalog, client, codec, users, sessions, audit, uow, policy, auth_settings=auth_settings
+        )
+
+    @provide
+    def get_list_oidc_identities_uc(
+        self, users: IUserRepository, catalog: IOidcProviderCatalog
+    ) -> ListOidcIdentitiesUC:
+        return ListOidcIdentitiesUC(users, catalog)
+
+    @provide
+    def get_unlink_oidc_identity_uc(
+        self,
+        users: IUserRepository,
+        credentials: ICredentialRepository,
+        settings: AuthSettingsService,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> UnlinkOidcIdentityUC:
+        return UnlinkOidcIdentityUC(users, credentials, settings, audit, uow)
 
     @provide
     def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> LogoutUC:

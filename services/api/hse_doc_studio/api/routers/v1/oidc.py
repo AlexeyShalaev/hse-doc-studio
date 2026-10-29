@@ -33,13 +33,13 @@ _DAY_S = 24 * 60 * 60
 _ERROR_PAGE = "/auth/error"
 
 
-def _redirect_uri(request: Request, provider_id: str) -> str:
+def oidc_redirect_uri(request: Request, provider_id: str) -> str:
     """Адрес возврата: из public_url (его же надо зарегистрировать у провайдера), без него по адресу запроса."""
     origin = public_origin(settings.auth.public_url) or str(request.base_url).rstrip("/")
     return f"{origin}/api/v1/auth/oidc/{quote(provider_id, safe='')}/callback"
 
 
-def _failure(request: Request, failure: OidcLoginError) -> RedirectResponse:
+def oidc_failure(request: Request, failure: OidcLoginError) -> RedirectResponse:
     logger.info("oidc login failed: %s", failure)
     response = RedirectResponse(f"{_ERROR_PAGE}?code={failure.public_code}", status_code=302)
     response.headers["Cache-Control"] = "no-store"
@@ -52,10 +52,10 @@ async def oidc_start(provider_id: str, request: Request, next: str | None = None
     await enforce_ip(request, AUTH_IP)
     try:
         started = await (await request.state.dishka_container.get(StartOidcLoginUC)).execute(
-            provider_id, redirect_uri=_redirect_uri(request, provider_id), next_path=next
+            provider_id, redirect_uri=oidc_redirect_uri(request, provider_id), next_path=next
         )
     except OidcLoginError as failure:
-        return _failure(request, failure)
+        return oidc_failure(request, failure)
     response = RedirectResponse(started.authorize_url, status_code=302)
     response.headers["Cache-Control"] = "no-store"
     set_oidc_state_cookie(response, started.sealed_state, secure=is_secure_public_url(settings.auth.public_url))
@@ -84,9 +84,13 @@ async def oidc_callback(
             previous_secret=credentials_from_request(request).session_secret,
         )
     except OidcLoginError as failure:
-        return _failure(request, failure)
+        return oidc_failure(request, failure)
     response = RedirectResponse(result.next_path, status_code=302)
     response.headers["Cache-Control"] = "no-store"
     clear_oidc_state_cookie(response, secure=secure)
-    set_session_cookie(response, result.secret, secure=secure, max_age_s=settings.auth.session_absolute_days * _DAY_S)
+    # Привязка из профиля идёт в уже открытой сессии: новую не создаём.
+    if result.secret is not None:
+        set_session_cookie(
+            response, result.secret, secure=secure, max_age_s=settings.auth.session_absolute_days * _DAY_S
+        )
     return response

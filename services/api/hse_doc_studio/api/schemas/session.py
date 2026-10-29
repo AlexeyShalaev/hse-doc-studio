@@ -270,6 +270,16 @@ class AccountSession(StrictModel):
     current: bool
 
 
+class AccountIdentity(StrictModel):
+    """Внешний вход, привязанный к аккаунту."""
+
+    provider: str
+    # Название для экрана; None, если провайдер удалён или выключен (отвязать всё равно можно).
+    label: str | None
+    email: str | None
+    email_verified: bool
+
+
 class ApiToken(StrictModel):
     id: str
     name: str

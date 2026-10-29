@@ -40,6 +40,7 @@ class HmacOidcStateCodec:
                 "r": state.redirect_uri,
                 "x": state.next_path,
                 "e": int(state.expires_at.timestamp()),
+                "l": state.link_user_id,
             },
             separators=(",", ":"),
         ).encode()
@@ -63,6 +64,7 @@ class HmacOidcStateCodec:
                 redirect_uri=str(data["r"]),
                 next_path=str(data["x"]),
                 expires_at=datetime.fromtimestamp(int(data["e"]), UTC),
+                link_user_id=str(data["l"]) if data.get("l") else None,
             )
         except (ValueError, KeyError, TypeError):
             return None

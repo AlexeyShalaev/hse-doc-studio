@@ -182,6 +182,15 @@ class SqlUserRepository:
             if (await session.execute(stmt)).scalar_one_or_none() is None:
                 raise IdentityError(IdentityErrorCode.forbidden)
 
+    async def delete_identity(self, user_id: str, provider: str) -> int:
+        stmt = (
+            delete(UserIdentityRow)
+            .where(UserIdentityRow.user_id == user_id, UserIdentityRow.provider == provider)
+            .returning(UserIdentityRow.subject)
+        )
+        async with self._sessions.use() as session:
+            return len((await session.execute(stmt)).all())
+
     async def list_identities(self, user_id: str) -> list[UserIdentity]:
         async with self._sessions.use() as session:
             rows = (

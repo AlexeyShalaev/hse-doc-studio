@@ -63,6 +63,12 @@ class InMemoryUserRepository:
             raise IdentityError(IdentityErrorCode.forbidden)
         self._store.identities[key] = identity
 
+    async def delete_identity(self, user_id: str, provider: str) -> int:
+        keys = [k for k, i in self._store.identities.items() if i.user_id == user_id and i.provider == provider]
+        for key in keys:
+            del self._store.identities[key]
+        return len(keys)
+
     async def list_identities(self, user_id: str) -> list[UserIdentity]:
         found = [i for i in self._store.identities.values() if i.user_id == user_id]
         return sorted(found, key=lambda i: (i.provider, i.subject))

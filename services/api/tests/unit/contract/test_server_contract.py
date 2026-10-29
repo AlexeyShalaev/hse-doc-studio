@@ -46,6 +46,8 @@ _SCHEMAS: dict[str, Any] = {
     "ChangeEmailResponse": s.ChangeEmailResponse,
     "AccountSession": s.AccountSession,
     "AccountSessionList": list[s.AccountSession],
+    "AccountIdentity": s.AccountIdentity,
+    "AccountIdentityList": list[s.AccountIdentity],
     "ApiToken": s.ApiToken,
     "ApiTokenList": list[s.ApiToken],
     "CreateApiTokenRequest": s.CreateApiTokenRequest,

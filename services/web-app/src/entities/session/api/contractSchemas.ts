@@ -30,6 +30,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ChangeEmailResponse: s.ChangeEmailResponseSchema,
   AccountSession: s.AccountSessionSchema,
   AccountSessionList: z.array(s.AccountSessionSchema),
+  AccountIdentity: s.AccountIdentitySchema,
+  AccountIdentityList: z.array(s.AccountIdentitySchema),
   ApiToken: s.ApiTokenSchema,
   ApiTokenList: z.array(s.ApiTokenSchema),
   CreateApiTokenRequest: s.CreateApiTokenRequestSchema,

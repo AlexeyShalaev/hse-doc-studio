@@ -24,6 +24,14 @@ class OidcErrorCode(StrEnum):
     token_invalid = "token_invalid"  # noqa: S105 — код ошибки, не токен
     not_linked = "not_linked"
     account_denied = "account_denied"
+    # Почта у провайдера не подтверждена или её нет: по ней нельзя ни связать аккаунт, ни завести новый.
+    email_unverified = "email_unverified"
+    # Аккаунт с этой почтой есть, но его почта не подтверждена: сначала войти по паролю и привязать вход из профиля.
+    link_required = "link_required"
+    # Режим регистрации не пускает нового человека (закрыта, по приглашению, чужой домен).
+    registration_denied = "registration_denied"
+    pending_approval = "pending_approval"
+    identity_taken = "identity_taken"
 
 
 class OidcLoginError(Exception):
@@ -75,6 +83,8 @@ class OidcLoginState:
     redirect_uri: str
     next_path: str
     expires_at: datetime
+    # Не None, когда вошедший человек привязывает провайдера к своему аккаунту, а не входит.
+    link_user_id: str | None = None
 
 
 @dataclass(frozen=True)

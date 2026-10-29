@@ -22,6 +22,7 @@ from hse_doc_studio.infra.identity.oidc.client import OidcClient
 from hse_doc_studio.infra.identity.oidc.state import HmacOidcStateCodec
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
+from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
 from hse_doc_studio.use_cases.identity.oidc_login import CompleteOidcLoginUC, StartOidcLoginUC
 from hse_doc_studio.use_cases.server_setup.state import SetupStateService
 from httpx import ASGITransport, AsyncClient
@@ -47,7 +48,16 @@ class _Stack(Provider):
         codec = HmacOidcStateCodec([b"k" * 32])
         self._start = StartOidcLoginUC(catalog, client, codec, world.clock)
         self._complete = CompleteOidcLoginUC(
-            catalog, client, codec, world.users, world.sessions, world.audit, world.uow, world.policy, world.clock
+            catalog,
+            client,
+            codec,
+            world.users,
+            world.sessions,
+            world.audit,
+            world.uow,
+            world.policy,
+            world.clock,
+            auth_settings=world.settings_service(),
         )
 
     @provide
@@ -61,6 +71,15 @@ class _Stack(Provider):
     @provide
     def complete(self) -> CompleteOidcLoginUC:
         return self._complete
+
+    @provide
+    def list_identities(self) -> ListOidcIdentitiesUC:
+        return ListOidcIdentitiesUC(self._w.users, _Catalog(PROVIDER))
+
+    @provide
+    def unlink(self) -> UnlinkOidcIdentityUC:
+        w = self._w
+        return UnlinkOidcIdentityUC(w.users, w.creds, w.settings_service(), w.audit, w.uow)
 
     @provide
     def bootstrap(self) -> BootstrapUC:
@@ -181,7 +200,7 @@ async def test_provider_error_and_unlinked_account_codes(env: tuple[AsyncClient,
     client, _, idp = env
     _, _, state = await _start(client, idp)
     denied = await client.get(CALLBACK, params={"error": "access_denied", "state": state})
-    _, code, state = await _start(client, idp, sub="stranger")
+    _, code, state = await _start(client, idp, sub="stranger", email="new@example.org")
     unlinked = await client.get(CALLBACK, params={"code": code, "state": state})
 
     assert denied.headers["location"] == "/auth/error?code=oidc_provider_denied"
@@ -206,3 +225,62 @@ async def test_routes_are_absent_in_local_mode(
 
     assert (await client.get(START)).status_code == 404
     assert (await client.get(CALLBACK)).status_code == 404
+
+
+async def test_verified_email_of_an_unlinked_identity_links_and_signs_in(
+    env: tuple[AsyncClient, World, FakeIdp],
+) -> None:
+    client, world, idp = env
+    await world.add_user("bob@example.org", user_id="u2")
+    _, code, state = await _start(client, idp, sub="bobs-sub", email="bob@example.org", email_verified=True)
+
+    response = await client.get(CALLBACK, params={"code": code, "state": state})
+
+    assert response.headers["location"] == "/projects"
+    assert SESSION_COOKIE in response.headers["set-cookie"]
+    assert [i.subject for i in await world.users.list_identities("u2")] == ["bobs-sub"]
+
+
+async def test_unverified_email_does_not_take_over_the_account(env: tuple[AsyncClient, World, FakeIdp]) -> None:
+    client, world, idp = env
+    _, code, state = await _start(client, idp, sub="evil", email="ann@example.org", email_verified=False)
+
+    response = await client.get(CALLBACK, params={"code": code, "state": state})
+
+    assert response.headers["location"] == "/auth/error?code=oidc_email_unverified"
+    assert SESSION_COOKIE not in response.headers.get("set-cookie", "")
+    assert [i.subject for i in await world.users.list_identities("u1")] == ["idp-user-1"]
+
+
+async def test_link_from_profile_and_unlink(env: tuple[AsyncClient, World, FakeIdp]) -> None:
+    client, world, idp = env
+    await world.users.delete_identity("u1", "sso")
+    login = await world.login_uc().execute("ann@example.org", "correct horse battery")
+
+    anonymous = await client.get("/api/v1/account/identities/sso/link")
+    client.cookies.set(SESSION_COOKIE, login.secret)
+    started = await client.get("/api/v1/account/identities/sso/link", params={"next": "/settings"})
+    code, state = idp.authorize(started.headers["location"], sub="linked-sub", email="other@else.org")
+    done = await client.get(CALLBACK, params={"code": code, "state": state})
+    listing = await client.get("/api/v1/account/identities")
+    unlinked = await client.delete("/api/v1/account/identities/sso")
+
+    assert anonymous.status_code == 401
+    assert done.headers["location"] == "/settings"
+    assert "set-cookie" in done.headers
+    assert SESSION_COOKIE not in "".join(done.headers.get_list("set-cookie"))
+    assert [i["provider"] for i in listing.json()] == ["sso"]
+    assert unlinked.status_code == 204
+    assert await world.users.list_identities("u1") == []
+
+
+async def test_last_login_method_cannot_be_unlinked(env: tuple[AsyncClient, World, FakeIdp]) -> None:
+    client, world, _ = env
+    login = await world.login_uc().execute("ann@example.org", "correct horse battery")
+    world.store.hashes.clear()
+
+    response = await client.delete(
+        "/api/v1/account/identities/sso", headers={"Cookie": f"{SESSION_COOKIE}={login.secret}"}
+    )
+
+    assert (response.status_code, response.json()["code"]) == (409, "last_login_method")

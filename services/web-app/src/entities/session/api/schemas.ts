@@ -231,6 +231,13 @@ export const AccountSessionSchema = z.strictObject({
   user_agent: z.string(),
   current: z.boolean(),
 });
+export const AccountIdentitySchema = z.strictObject({
+  provider: z.string(),
+  label: z.string().nullable(),
+  email: z.string().nullable(),
+  email_verified: z.boolean(),
+});
+export type AccountIdentity = z.infer<typeof AccountIdentitySchema>;
 export const ApiTokenSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

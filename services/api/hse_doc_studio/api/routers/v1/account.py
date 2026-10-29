@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 
 from hse_doc_studio.api.actor import require_server_mode
-from hse_doc_studio.api.auth_cookie import clear_session_cookie, credentials_from_request, is_secure_public_url
+from hse_doc_studio.api.auth_cookie import (
+    clear_session_cookie,
+    credentials_from_request,
+    is_secure_public_url,
+    set_oidc_state_cookie,
+)
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.rate_limit import enforce_email
+from hse_doc_studio.api.routers.v1.oidc import oidc_failure, oidc_redirect_uri
 from hse_doc_studio.api.schemas.session import (
+    AccountIdentity,
     AccountProfile,
     AccountSession,
     ApiToken,
@@ -26,6 +34,7 @@ from hse_doc_studio.core.identity.entities import ApiToken as ApiTokenEntity
 from hse_doc_studio.core.identity.entities import TokenScope as TokenScopeEntity
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.core.identity.oidc import OidcLoginError
 from hse_doc_studio.core.vcs.errors import ProfileInvalidError
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.account_profile import (
@@ -37,6 +46,8 @@ from hse_doc_studio.use_cases.identity.account_profile import (
 )
 from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
+from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
+from hse_doc_studio.use_cases.identity.oidc_login import StartOidcLoginUC
 from hse_doc_studio.use_cases.identity.sessions import (
     ListSessionsUC,
     RevokeOtherSessionsUC,
@@ -155,6 +166,47 @@ async def revoke_other_sessions(request: Request) -> Response:
     user_id = _user_id()
     await (await request.state.dishka_container.get(RevokeOtherSessionsUC)).execute(user_id, _current_hash(request))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/account/identities", response_model=list[AccountIdentity])
+async def list_identities(request: Request, response: Response) -> list[AccountIdentity]:
+    views = await (await request.state.dishka_container.get(ListOidcIdentitiesUC)).execute(_user_id())
+    response.headers["Cache-Control"] = "no-store"
+    return [
+        AccountIdentity(
+            provider=v.identity.provider,
+            label=v.label,
+            email=v.identity.email,
+            email_verified=v.identity.email_verified,
+        )
+        for v in views
+    ]
+
+
+@router.get("/account/identities/{provider_id}/link", include_in_schema=False)
+async def link_identity(provider_id: str, request: Request, next: str | None = None) -> RedirectResponse:  # noqa: A002
+    """Начало привязки провайдера к аккаунту: вошедший по cookie уходит к провайдеру, возврат тем же callback."""
+    user_id = _session_user_id()
+    try:
+        started = await (await request.state.dishka_container.get(StartOidcLoginUC)).execute(
+            provider_id,
+            redirect_uri=oidc_redirect_uri(request, provider_id),
+            next_path=next,
+            link_user_id=user_id,
+        )
+    except OidcLoginError as failure:
+        return oidc_failure(request, failure)
+    response = RedirectResponse(started.authorize_url, status_code=302)
+    response.headers["Cache-Control"] = "no-store"
+    set_oidc_state_cookie(response, started.sealed_state, secure=is_secure_public_url(settings.auth.public_url))
+    return response
+
+
+@router.delete("/account/identities/{provider_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def unlink_identity(provider_id: str, request: Request) -> Response:
+    """Отвязка внешнего входа; последний способ войти убрать нельзя (409 last_login_method)."""
+    await (await request.state.dishka_container.get(UnlinkOidcIdentityUC)).execute(_session_user_id(), provider_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/account/email", response_model=ChangeEmailResponse)
