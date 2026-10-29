@@ -124,7 +124,7 @@ class UpdateSlotSignerUC:
         if inp.manual is not None:
             return inp.manual
         if inp.identity_id is not None:
-            identity = self._identity_repo.get(inp.identity_id)
+            identity = await self._identity_repo.get(inp.identity_id)
             if identity is None:
                 raise NotFoundError(localized_error("Ключ подписи не найден", "Signing key not found"))
             return await self._from_identity(identity)
@@ -159,7 +159,7 @@ class UpdateSlotSignerUC:
                     localized_error("Ключ OpenPGP не найден в связке", "OpenPGP key not in the keyring")
                 )
             return _openpgp_signer(key)
-        cert_pem = self._identity_repo.key_dir(identity.id) / "cert.pem"
-        if not cert_pem.is_file():
+        cert_pem = await self._identity_repo.read_cert(identity.id)
+        if cert_pem is None:
             raise ValueError(localized_error("У ключа нет сертификата", "The key has no certificate"))
-        return _x509_signer(cert_pem.read_bytes())
+        return _x509_signer(cert_pem)

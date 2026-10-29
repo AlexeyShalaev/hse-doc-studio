@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -18,6 +19,7 @@ from hse_doc_studio.core.entities import (
     PackSubmissionRecord,
     Project,
     SigningIdentity,
+    SigningKeyMaterial,
 )
 from hse_doc_studio.core.value_objects import FormState, SignaturesState
 
@@ -140,15 +142,20 @@ class IAIProviderRepository(Protocol):
 
 
 class ISigningIdentityRepository(Protocol):
-    # CRUD over locally-stored signing credentials (data_dir/signing_identities.json).
-    # Key material lives separately in data_dir/signing_keys/<id>/; the repo only
-    # manages the metadata records. Mirrors IAIProviderRepository.
-    def list_all(self) -> list[SigningIdentity]: ...
-    def get(self, identity_id: UUID) -> SigningIdentity | None: ...
-    def create(self, identity: SigningIdentity) -> None: ...
-    def delete(self, identity_id: UUID) -> bool: ...
-    # Key-material helpers — the repo owns the on-disk layout.
-    def key_dir(self, identity_id: UUID) -> Path: ...
+    # CRUD over signing credentials. Local: data_dir/signing_identities.json plus key
+    # material in data_dir/signing_keys/<id>/; server: Postgres, the private key is
+    # stored encrypted and only if the instance admin allowed it (ISigningKeyPolicy).
+    async def list_all(self) -> list[SigningIdentity]: ...
+    async def get(self, identity_id: UUID) -> SigningIdentity | None: ...
+    # `material` is written together with the record (self-signed / PKCS#12 identities).
+    async def create(self, identity: SigningIdentity, material: SigningKeyMaterial | None = None) -> None: ...
+    # Removes the record together with its key material.
+    async def delete(self, identity_id: UUID) -> bool: ...
+    # Public part (cert.pem); None when the identity has no certificate.
+    async def read_cert(self, identity_id: UUID) -> bytes | None: ...
+    # Directory with key.pem + cert.pem for the duration of the block. Local: the real
+    # folder, no copy; server: a 0700 temp dir wiped on exit.
+    def private_key_session(self, identity_id: UUID) -> AbstractAsyncContextManager[Path]: ...
 
 
 class IAgentPersonaRepository(Protocol):

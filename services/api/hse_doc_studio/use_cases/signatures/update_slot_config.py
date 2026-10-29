@@ -84,7 +84,7 @@ class UpdateSlotConfigUC:
             )
 
         if inp.signing_identity_id is not None:
-            identity = self._signing_identity_repo.get(UUID(inp.signing_identity_id))
+            identity = await self._signing_identity_repo.get(UUID(inp.signing_identity_id))
             if identity is None:
                 raise NotFoundError(
                     localized_error(

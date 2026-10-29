@@ -20,6 +20,7 @@ from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry, ISecretCipher
+from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -30,9 +31,11 @@ from hse_doc_studio.core.repositories import (
     ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
+    ISigningIdentityRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -44,6 +47,8 @@ from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
+from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
+from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
@@ -240,6 +245,16 @@ class ServerPersistenceProvider(Provider):
     @provide(override=True)
     def get_ai_provider_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IAIProviderRepository:
         return PostgresAIProviderRepository(sessions, cipher)
+
+    @provide
+    def get_signing_key_policy(self, instance_settings: IInstanceSettingsRepository) -> ISigningKeyPolicy:
+        return InstanceSigningKeyPolicy(instance_settings)
+
+    @provide(override=True)
+    def get_signing_identity_repo(
+        self, sessions: SessionProvider, cipher: ISecretCipher, policy: ISigningKeyPolicy
+    ) -> ISigningIdentityRepository:
+        return PostgresSigningIdentityRepository(sessions, cipher, policy)
 
     @provide(override=True)
     def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:

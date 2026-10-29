@@ -31,6 +31,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRow,
 )
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
+from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
 
 __all__ = [
     "AIProviderRow",
@@ -60,6 +61,7 @@ __all__ = [
     "RunnerRegistrationTokenRow",
     "RunnerRow",
     "SessionRow",
+    "SigningIdentityRow",
     "UserIdentityRow",
     "UserRow",
     "UserSettingRow",

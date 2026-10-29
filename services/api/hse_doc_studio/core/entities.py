@@ -188,6 +188,14 @@ class SigningIdentity:
     protected: bool = False
 
 
+@dataclass(frozen=True)
+class SigningKeyMaterial:
+    """Закрытый ключ и сертификат в PEM: передаётся репозиторию при создании идентичности и нигде не печатается."""
+
+    key_pem: bytes = field(repr=False)
+    cert_pem: bytes
+
+
 @dataclass
 class AgentPersona:
     # A user-defined agent role, stored locally (data_dir/agent_personas.json),

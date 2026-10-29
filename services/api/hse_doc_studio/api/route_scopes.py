@@ -292,7 +292,18 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "git",
     }
     and ROUTE_SCOPES[key] is RouteScope.authenticated
-    and key[1] not in {"/git/secrets/status", "/git/clone/defaults", "/agent/tools", "/agent/personas"}
+    and key[1]
+    not in {
+        "/git/secrets/status",
+        "/git/clone/defaults",
+        "/agent/tools",
+        "/agent/personas",
+        # Идентичности подписи лежат в Postgres у владельца; ключи OpenPGP остаются в общей связке установки.
+        "/signing-identities",
+        "/signing-identities/self-signed",
+        "/signing-identities/import-pkcs12",
+        "/signing-identities/{identity_id}",
+    }
 )
 
 

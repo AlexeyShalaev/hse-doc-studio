@@ -77,7 +77,7 @@ class CreateOpenPgpKeyUC:
         except GpgError as exc:
             raise ValueError(str(exc)) from exc
         identity = _identity_for(key, inp.label.strip() or name, protected=bool(inp.passphrase))
-        self._repo.create(identity)
+        await self._repo.create(identity)
         logger.info("signing_identity: openpgp key generated", id=str(identity.id), fpr=key.fingerprint)
         return CreateOpenPgpKeyOutput(identity=identity)
 
@@ -114,7 +114,7 @@ class ImportOpenPgpKeyUC:
         except GpgError as exc:
             raise ValueError(str(exc)) from exc
 
-        known = {i.fingerprint for i in self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
+        known = {i.fingerprint for i in await self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
         out = ImportOpenPgpKeyOutput()
         for key in keys:
             if not key.has_secret:
@@ -125,7 +125,7 @@ class ImportOpenPgpKeyUC:
             protected = await asyncio.to_thread(self._keyring.is_protected, key.fingerprint)
             label = inp.label.strip() or (key.uids[0] if key.uids else key.key_id)
             identity = _identity_for(key, label, protected)
-            self._repo.create(identity)
+            await self._repo.create(identity)
             out.identities.append(identity)
         logger.info(
             "openpgp key imported", identities=len(out.identities), public=len(out.public_keys), total=len(keys)
@@ -150,7 +150,7 @@ class ExportOpenPgpPublicKeyUC:
         self._keyring = keyring
 
     async def execute(self, inp: ExportOpenPgpPublicKeyInput) -> ExportOpenPgpPublicKeyOutput:
-        identity = self._repo.get(inp.identity_id)
+        identity = await self._repo.get(inp.identity_id)
         if identity is None or identity.kind is not SigningIdentityKind.openpgp or not identity.fingerprint:
             raise NotFoundError(localized_error("Ключ OpenPGP не найден", "OpenPGP key not found"))
         blob = await asyncio.to_thread(self._keyring.export_public, identity.fingerprint)

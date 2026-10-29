@@ -285,3 +285,37 @@ async def test__server_container__ai_provider_repo_is_postgres_while_local_stays
     # В local адрес провайдера не проверяется, в server проверяется политикой egress
     assert local_create._egress is None  # noqa: SLF001
     assert server_create._egress is not None  # noqa: SLF001
+
+
+async def test__server_container__signing_identity_repo_is_postgres_with_default_deny_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.repositories import ISigningIdentityRepository  # noqa: PLC0415
+    from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.signing_identities import (  # noqa: PLC0415
+        PostgresSigningIdentityRepository,
+    )
+    from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(ISigningIdentityRepository)
+        async with server() as request:
+            server_repo = await request.get(ISigningIdentityRepository)
+            policy = await request.get(ISigningKeyPolicy)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonSigningIdentityRepository)
+    assert isinstance(server_repo, PostgresSigningIdentityRepository)
+    assert isinstance(policy, InstanceSigningKeyPolicy)
