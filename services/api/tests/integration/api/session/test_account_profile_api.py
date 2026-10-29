@@ -23,12 +23,12 @@ from hse_doc_studio.core.identity.entities import Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.account_profile import GetAccountUC, UpdateAccountUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 from httpx import ASGITransport, AsyncClient
 
-from tests.fakes.auth import InMemoryAuditLog, InMemorySessionRepository
+from tests.fakes.auth import InMemoryAuditLog, InMemorySessionRepository, empty_bearer_resolver
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 _FIXTURES = Path(__file__).resolve().parents[5].parent / "contracts" / "server" / "fixtures"
@@ -80,7 +80,7 @@ class _Provider(Provider):
     @provide
     def resolver(self) -> IActorResolver:
         service = SessionService(self._w.sessions, self._w.users)
-        return ChainActorResolver([SessionCookieResolver(service, DOMAIN), BearerActorResolver()])
+        return ChainActorResolver([SessionCookieResolver(service, DOMAIN), empty_bearer_resolver()])
 
     @provide
     def get_uc(self) -> GetAccountUC:
