@@ -11,12 +11,12 @@ import pytest_asyncio
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI
-from hse_doc_studio.api import guards
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.entities import ActorCredentials
+from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -35,11 +35,22 @@ class _Uow:
         yield
 
 
+class _HeldActorResolver:
+    """Кто вошёл, задаёт тест; `None` значит аноним."""
+
+    def __init__(self) -> None:
+        self.actor: Actor | None = None
+
+    async def resolve(self, _credentials: ActorCredentials) -> Actor | None:
+        return self.actor
+
+
 class _Provider(Provider):
     scope = Scope.APP
 
     def __init__(self) -> None:
         super().__init__()
+        self.resolver_ = _HeldActorResolver()
         self.registry = RunnerRegistry(
             InMemoryRunnerRepository(), InMemoryRegistrationTokenRepository(), InMemoryAuditLog(), _Uow()
         )
@@ -48,10 +59,15 @@ class _Provider(Provider):
     def registry_(self) -> RunnerRegistry:
         return self.registry
 
+    @provide
+    def resolver(self) -> IActorResolver:
+        return self.resolver_
+
 
 class _Env:
-    def __init__(self, client: AsyncClient) -> None:
+    def __init__(self, client: AsyncClient, resolver: _HeldActorResolver) -> None:
         self.client = client
+        self.resolver = resolver
 
 
 @pytest_asyncio.fixture
@@ -60,10 +76,11 @@ async def env(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Env]:
     app = FastAPI()
     include_server_routers(app)
     install_exception_handlers(app)
-    container = make_async_container(_Provider(), FastapiProvider())
+    provider = _Provider()
+    container = make_async_container(provider, FastapiProvider())
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        result = _Env(client)
+        result = _Env(client, provider.resolver_)
         yield result
     await container.close()
 
@@ -87,14 +104,9 @@ async def _admin_token(env: _Env) -> str:
 
 
 @pytest.fixture
-def as_actor(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
+def as_actor(env: _Env):  # type: ignore[no-untyped-def]
     def _set(actor: Actor | None) -> None:
-        async def resolve(_request: object) -> Actor:
-            if actor is None:
-                raise IdentityError(IdentityErrorCode.auth_required)
-            return actor
-
-        monkeypatch.setattr(guards, "resolve_actor", resolve)
+        env.resolver.actor = actor
 
     return _set
 
