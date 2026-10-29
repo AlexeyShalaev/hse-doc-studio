@@ -40,7 +40,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def _job(row: JobRow) -> QueuedJob:
+def job_from_row(row: JobRow) -> QueuedJob:
     return QueuedJob(
         id=row.id,
         kind=JobKind(row.kind),
@@ -128,7 +128,7 @@ class PostgresJobQueue:
             session.add(row)
             await session.flush()
             await session.refresh(row)
-            return EnqueueOutcome(job=_job(row), superseded=tuple(_job(r) for r in superseded))
+            return EnqueueOutcome(job=job_from_row(row), superseded=tuple(job_from_row(r) for r in superseded))
 
     async def claim(self, runner: RunnerRef, *, lease_s: float, quota: QueueQuota | None = None) -> QueuedJob | None:
         now = self._clock()
@@ -158,7 +158,7 @@ class PostgresJobQueue:
             await session.execute(
                 update(JobQueueStateRow).values(global_vtime=func.greatest(JobQueueStateRow.global_vtime, row.vtime))
             )
-            return _job(row)
+            return job_from_row(row)
 
     async def heartbeat(self, job_id: UUID, attempt: int, *, lease_s: float) -> Heartbeat:
         async with self._sessions.use() as session:
@@ -184,7 +184,7 @@ class PostgresJobQueue:
             row.result = result
             row.error_code = error_code
             await session.flush()
-            return _job(row)
+            return job_from_row(row)
 
     async def request_cancel(self, job_id: UUID) -> QueuedJob:
         async with self._sessions.use() as session:
@@ -198,7 +198,7 @@ class PostgresJobQueue:
             elif row.state == JobState.running.value:
                 row.cancel_requested = True
             await session.flush()
-            return _job(row)
+            return job_from_row(row)
 
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:
         now = self._clock()
@@ -229,7 +229,7 @@ class PostgresJobQueue:
                     row.finished_at = now
                     row.error_code = RunnerErrorCode.runner_lost.value
                 row.lease_until = None
-                outcomes.append(ExpiredOutcome(_job(row), requeued=requeued))
+                outcomes.append(ExpiredOutcome(job_from_row(row), requeued=requeued))
             await session.flush()
         return tuple(outcomes)
 
@@ -240,7 +240,7 @@ class PostgresJobQueue:
                     select(JobRow).where(JobRow.id == job_id).execution_options(populate_existing=True)
                 )
             ).scalar_one_or_none()
-            return _job(row) if row is not None else None
+            return job_from_row(row) if row is not None else None
 
     async def list(self, *, state: JobState | None = None, project_id: UUID | None = None) -> tuple[QueuedJob, ...]:
         stmt = select(JobRow).order_by(JobRow.seq).execution_options(populate_existing=True)
@@ -249,7 +249,7 @@ class PostgresJobQueue:
         if project_id is not None:
             stmt = stmt.where(JobRow.project_id == project_id)
         async with self._sessions.use() as session:
-            return tuple(_job(row) for row in (await session.execute(stmt)).scalars())
+            return tuple(job_from_row(row) for row in (await session.execute(stmt)).scalars())
 
     @staticmethod
     def _best_candidate(runner: RunnerRef, limits: QueueQuota, now: datetime, lease_s: float) -> Select[Any]:

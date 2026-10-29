@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import Field
 
@@ -31,11 +32,14 @@ class RegistrationTokenInfo(StrictModel):
 class CreatedRegistrationTokenResponse(StrictModel):
     token: RegistrationTokenInfo
     secret: str
+    # Готовая команда запуска раннера с этим токеном; секрет в ней виден так же один раз.
+    command: str
 
 
 class RunnerInfo(StrictModel):
     id: str
     name: str
+    status: Literal["online", "stale", "offline", "paused", "revoked"]
     tags: list[str]
     concurrency: int
     resource_class: str

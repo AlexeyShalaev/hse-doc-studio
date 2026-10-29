@@ -272,6 +272,21 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PATCH", "/api/admin/runners/{runner_id}"): _ADM,
     ("POST", "/api/admin/runners/{runner_id}/rotate-token"): _ADM,
     ("DELETE", "/api/admin/runners/{runner_id}"): _ADM,
+    ("GET", "/api/admin/queue"): _ADM,
+    ("GET", "/api/admin/queue/summary"): _ADM,
+    ("POST", "/api/admin/queue/{job_id}/cancel"): _ADM,
+    ("GET", "/api/admin/quotas"): _ADM,
+    ("PUT", "/api/admin/quotas"): _ADM,
+    ("GET", "/api/admin/services"): _ADM,
+    ("GET", "/api/admin/storage"): _ADM,
+    ("GET", "/api/admin/settings/signing"): _ADM,
+    ("PUT", "/api/admin/settings/signing"): _ADM,
+    ("GET", "/api/admin/ai-providers"): _ADM,
+    ("POST", "/api/admin/ai-providers"): _ADM,
+    ("GET", "/api/admin/ai-providers/{provider_id}"): _ADM,
+    ("PATCH", "/api/admin/ai-providers/{provider_id}"): _ADM,
+    ("DELETE", "/api/admin/ai-providers/{provider_id}"): _ADM,
+    ("POST", "/api/admin/ai-providers/{provider_id}/check"): _ADM,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

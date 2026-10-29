@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -11,6 +11,7 @@ from hse_doc_studio.core.jobs.codec import decode_envelope
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import IJobQueue, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner, Runner
+from hse_doc_studio.core.jobs.scheduler import QueueQuota
 from hse_doc_studio.core.jobs.wire import HeartbeatResponse, JobEnvelope, PollRequest, PollResponse
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
@@ -35,6 +36,7 @@ class RunnerJobService:
         timeout_grace_s: float,
         poll_interval_s: float = POLL_INTERVAL_S,
         clock: Callable[[], datetime] = _utc_now,
+        quota_source: Callable[[], Awaitable[QueueQuota | None]] | None = None,
     ) -> None:
         self._queue = queue
         self._service = queue_service
@@ -45,6 +47,7 @@ class RunnerJobService:
         self._grace_s = timeout_grace_s
         self._interval = poll_interval_s
         self._clock = clock
+        self._quota_source = quota_source
 
     async def poll(self, runner: Runner, request: PollRequest) -> PollResponse:
         """Держит запрос до `wait_s`: отвечает, как только появилась подходящая задача, иначе пустым ответом.
@@ -56,7 +59,8 @@ class RunnerJobService:
         while True:
             await self._runners.touch(runner.id, self._clock())
             if not runner.paused:
-                job = await self._queue.claim(ref, lease_s=self._lease_s)
+                quota = await self._quota_source() if self._quota_source is not None else None
+                job = await self._queue.claim(ref, lease_s=self._lease_s, quota=quota)
                 if job is not None:
                     return PollResponse(envelope=self._envelope(job, runner))
             remaining = deadline - time.monotonic()

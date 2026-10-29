@@ -29,6 +29,7 @@ from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, O
 from hse_doc_studio.infra.jobs.storage_fs import FsJobLogSink
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
+from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
@@ -80,6 +81,7 @@ class ServerJobsProvider(Provider):
         runners: IRunnerRepository,
         signer: JobTokenSigner,
         wakeup: JobWakeup,
+        quotas: QuotaService,
     ) -> RunnerJobService:
         return RunnerJobService(
             queue,
@@ -89,6 +91,7 @@ class ServerJobsProvider(Provider):
             wakeup,
             lease_s=settings.jobs.lease_s,
             timeout_grace_s=settings.jobs.timeout_grace_s,
+            quota_source=quotas.current,
         )
 
     @provide

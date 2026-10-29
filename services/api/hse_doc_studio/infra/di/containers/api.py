@@ -16,11 +16,12 @@ if TYPE_CHECKING:
 
 def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     # Лениво: серверные модули тянут sqlalchemy, а локальная сборка живёт без extra server.
+    from hse_doc_studio.infra.di.providers.server_admin_ops import ServerAdminOpsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_identity import ServerIdentityProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_jobs import ServerJobsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_persistence import ServerPersistenceProvider  # noqa: PLC0415
 
-    return [ServerPersistenceProvider(engine), ServerIdentityProvider(), ServerJobsProvider()]
+    return [ServerPersistenceProvider(engine), ServerIdentityProvider(), ServerJobsProvider(), ServerAdminOpsProvider()]
 
 
 def create_container(mode: StudioMode = StudioMode.local, *, engine: AsyncEngine | None = None) -> AsyncContainer:

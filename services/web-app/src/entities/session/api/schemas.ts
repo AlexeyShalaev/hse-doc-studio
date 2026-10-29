@@ -352,11 +352,28 @@ export const AdminOrgSchema = z.strictObject({
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
-  status: z.enum(["online", "offline", "draining"]),
+  status: z.enum(["online", "stale", "offline", "paused", "revoked"]),
   tags: z.array(z.string()),
+  concurrency: z.number().int(),
+  resource_class: z.string(),
   version: z.string(),
+  created_at: iso,
   last_seen_at: iso.nullable(),
-  running_jobs: z.number().int(),
+  paused: z.boolean(),
+  revoked: z.boolean(),
+});
+export const AdminRegistrationTokenCreatedSchema = z.strictObject({
+  token: z.strictObject({
+    id: z.string(),
+    label: z.string(),
+    created_at: iso,
+    expires_at: iso.nullable(),
+    max_uses: z.number().int(),
+    uses: z.number().int(),
+    revoked: z.boolean(),
+  }),
+  secret: z.string(),
+  command: z.string(),
 });
 export const AdminSettingsSchema = z.strictObject({
   registration_mode: RegistrationModeSchema,
@@ -447,4 +464,109 @@ export const UpdateAdminOidcProviderRequestSchema = z.strictObject({
   scopes: z.string().nullable(),
   enabled: z.boolean().nullable(),
   auto_provision: z.boolean().nullable(),
+});
+
+const JobStateSchema = z.enum(["queued", "running", "succeeded", "failed", "cancelled", "timed_out"]);
+export const AdminJobSchema = z.strictObject({
+  id: z.string(),
+  kind: z.enum(["compile", "office.convert", "signature.verify_detached", "pack.submission"]),
+  state: JobStateSchema,
+  project_id: z.string(),
+  user_id: z.string(),
+  org_id: z.string().nullable(),
+  tags: z.array(z.string()),
+  priority_class: z.string(),
+  queued_at: iso,
+  started_at: iso.nullable(),
+  finished_at: iso.nullable(),
+  attempt: z.number().int(),
+  max_attempts: z.number().int(),
+  runner_id: z.string().nullable(),
+  cancel_requested: z.boolean(),
+  error_code: z.string().nullable(),
+});
+export const AdminJobPageSchema = z.strictObject({
+  items: z.array(AdminJobSchema),
+  next_cursor: z.string().nullable(),
+});
+export const AdminQueueSummarySchema = z.strictObject({
+  by_state: z.record(z.string(), z.number().int()),
+  queued_by_class: z.record(z.string(), z.number().int()),
+  oldest_queued_at: iso.nullable(),
+  wait_p50_s: z.number().nullable(),
+  wait_p95_s: z.number().nullable(),
+});
+export const AdminQuotasSchema = z.strictObject({
+  user_concurrent: z.number().int().nullable(),
+  org_concurrent: z.number().int().nullable(),
+  max_duration_s: z.number().int().nullable(),
+  on_exhausted: z.literal("wait"),
+});
+export const UpdateAdminQuotasRequestSchema = z.strictObject({
+  user_concurrent: z.number().int().min(1).max(1000).nullable(),
+  org_concurrent: z.number().int().min(1).max(1000).nullable(),
+  max_duration_s: z.number().int().min(10).max(86400).nullable(),
+});
+export const AdminServiceHealthSchema = z.strictObject({
+  id: z.string(),
+  state: z.enum(["ok", "down", "degraded", "not_configured"]),
+  reason: z.string().nullable(),
+  total: z.number().int().nullable(),
+  online: z.number().int().nullable(),
+});
+export const AdminStorageUsageSchema = z.strictObject({
+  blob_count: z.number().int(),
+  blob_bytes: z.number().int(),
+  projects: z.number().int(),
+  deleted_projects: z.number().int(),
+  top_owners: z.array(
+    z.strictObject({ owner_id: z.string(), owner_name: z.string(), projects: z.number().int() }),
+  ),
+  volume_total_bytes: z.number().int().nullable(),
+  volume_free_bytes: z.number().int().nullable(),
+  computed_at: iso.nullable(),
+});
+const ServerKeyPolicySchema = z.enum(["allowed", "forbidden"]);
+export const AdminSigningPolicySchema = z.strictObject({ server_keys: ServerKeyPolicySchema });
+export const UpdateAdminSigningPolicyRequestSchema = z.strictObject({
+  server_keys: ServerKeyPolicySchema,
+});
+const AiProviderTypeSchema = z.enum(["claude", "openai", "openai_compat", "ollama"]);
+export const AdminAiProviderSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  type: AiProviderTypeSchema,
+  base_url: z.string(),
+  models: z.array(z.string()),
+  key_set: z.boolean(),
+  ssl_verify: z.boolean(),
+  connect_timeout_s: z.number(),
+  request_timeout_s: z.number(),
+  created_at: iso,
+});
+export const CreateAdminAiProviderRequestSchema = z.strictObject({
+  name: z.string().min(1).max(128),
+  type: AiProviderTypeSchema,
+  api_key: z.string(),
+  base_url: z.string(),
+  models: z.array(z.string()),
+  ssl_verify: z.boolean(),
+  connect_timeout_s: z.number(),
+  request_timeout_s: z.number(),
+});
+export const UpdateAdminAiProviderRequestSchema = z.strictObject({
+  name: z.string().nullable(),
+  type: AiProviderTypeSchema.nullable(),
+  api_key: z.string().nullable(),
+  clear_key: z.boolean(),
+  base_url: z.string().nullable(),
+  models: z.array(z.string()).nullable(),
+  ssl_verify: z.boolean().nullable(),
+  connect_timeout_s: z.number().nullable(),
+  request_timeout_s: z.number().nullable(),
+});
+export const AdminAiProviderCheckSchema = z.strictObject({
+  ok: z.boolean(),
+  models: z.array(z.string()),
+  error: z.string().nullable(),
 });

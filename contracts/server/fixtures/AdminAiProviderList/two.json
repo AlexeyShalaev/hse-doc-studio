@@ -1,0 +1,28 @@
+[
+  {
+    "id": "9b2c7e1a-3d4f-4a5b-8c6d-7e8f9a0b1c2d",
+    "name": "Ollama кафедры",
+    "type": "ollama",
+    "base_url": "http://10.0.0.5:11434",
+    "models": [
+      "llama3.1"
+    ],
+    "key_set": false,
+    "ssl_verify": true,
+    "connect_timeout_s": 10.0,
+    "request_timeout_s": 60.0,
+    "created_at": "2026-10-20T08:00:00Z"
+  },
+  {
+    "id": "1e2d3c4b-5a69-4788-97a6-b5c4d3e2f1a0",
+    "name": "OpenAI",
+    "type": "openai",
+    "base_url": "",
+    "models": [],
+    "key_set": true,
+    "ssl_verify": true,
+    "connect_timeout_s": 10.0,
+    "request_timeout_s": 60.0,
+    "created_at": "2026-10-20T08:00:00Z"
+  }
+]

@@ -36,7 +36,7 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | аккаунт: identities | `/account/identities` | план |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`) | есть |
 | участники проекта | `/projects/{id}/members` | план |
-| админка | `/api/admin/*`: `users`, `runners`, `runner-tokens`, `settings`, `audit` | есть; `orgs`, `overview` план |
+| админка | `/api/admin/*`: `users`, `runners`, `runner-tokens`, `settings` (в том числе `settings/signing`), `audit`, `queue`, `quotas`, `services`, `storage`, `ai-providers` | есть; `orgs`, `overview` план |
 | раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` | есть |
 | здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» | есть |
 
