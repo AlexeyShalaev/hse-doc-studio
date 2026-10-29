@@ -14,7 +14,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.jobs.admin import JobAdminFilter
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
-from hse_doc_studio.core.jobs.quotas import QuotaSettings
+from hse_doc_studio.core.jobs.quotas import QuotaOverride, QuotaOwnerKind, QuotaResource, QuotaSettings
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
@@ -35,6 +35,7 @@ from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
+from tests.fakes.job_quotas import InMemoryQuotaOverrides
 from tests.fakes.ops import CountingStorageReader, InMemoryJobAdminReader, NoopUow, ReversingCipher
 
 ADMIN = Actor(kind=ActorKind.user, id="boss", is_instance_admin=True)
@@ -381,3 +382,35 @@ async def test__services_overview__probes_runners_and_smtp() -> None:
     await runners.add(runner("fresh", now))
     live = by_id(await uc.execute(ADMIN, {}))
     assert (live["runners"].state, live["runners"].total, live["runners"].online) == (ServiceState.ok, 2, 1)
+
+
+async def test__quota_service__overrides_reach_the_queue_and_duration() -> None:
+    user, org = uuid4(), uuid4()
+    repo = InMemoryInstanceSettingsRepository()
+    await repo.set("jobs.concurrent", 3, source="admin")
+    await repo.set("jobs.max_duration_s", 300, source="admin")
+    overrides = InMemoryQuotaOverrides(
+        QuotaOverride(QuotaOwnerKind.user, str(user), QuotaResource.concurrent_user, 1),
+        QuotaOverride(QuotaOwnerKind.org, str(org), QuotaResource.max_duration_s, 90),
+    )
+    service = QuotaService(repo, overrides, ttl_s=0)
+
+    quota = await service.current()
+
+    assert quota is not None
+    assert quota.user_cap(user, None) == 1
+    assert quota.user_cap(uuid4(), None) == 3
+    assert await service.max_duration_s(uuid4(), org) == 90.0
+    assert await service.max_duration_s(uuid4(), None) == 300.0
+
+
+async def test__quota_service__only_overrides__still_limits() -> None:
+    user = uuid4()
+    overrides = InMemoryQuotaOverrides(QuotaOverride(QuotaOwnerKind.user, str(user), QuotaResource.concurrent_user, 2))
+    service = QuotaService(InMemoryInstanceSettingsRepository(), overrides, ttl_s=0)
+
+    quota = await service.current()
+
+    assert quota is not None
+    assert quota.user_caps == {user: 2}
+    assert await service.max_duration_s(user, None) is None

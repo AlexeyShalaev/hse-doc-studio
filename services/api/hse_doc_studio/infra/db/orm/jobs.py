@@ -150,3 +150,17 @@ class RunnerRegistrationTokenRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class QuotaRow(Base):
+    """Переопределение квоты для организации или пользователя; уровень установки живёт в instance_settings."""
+
+    __tablename__ = "quotas"
+    __table_args__ = (CheckConstraint("hard_limit >= 1", name="quota_hard_limit"),)
+
+    owner_kind: Mapped[str] = mapped_column(String(16), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    resource: Mapped[str] = mapped_column(String(32), primary_key=True)
+    period: Mapped[str] = mapped_column(String(16), primary_key=True, server_default="none")
+    soft_limit: Mapped[int | None] = mapped_column(Integer)
+    hard_limit: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -6,8 +6,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
+from enum import StrEnum
+from typing import Protocol
+from uuid import NAMESPACE_OID, UUID, uuid5
 
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 
@@ -19,6 +22,95 @@ QUOTA_KEYS = (KEY_USER_CONCURRENT, KEY_ORG_CONCURRENT, KEY_MAX_DURATION_S)
 MAX_CONCURRENT = 1000
 MIN_DURATION_S = 10
 MAX_DURATION_S = 24 * 3600
+
+
+class QuotaOwnerKind(StrEnum):
+    org = "org"
+    user = "user"
+
+
+class QuotaResource(StrEnum):
+    """`concurrent_user` на уровне организации задаёт предел каждому её участнику без своего значения."""
+
+    concurrent_user = "jobs.concurrent_user"
+    concurrent_org = "jobs.concurrent_org"
+    max_duration_s = "jobs.max_duration_s"
+
+
+@dataclass(frozen=True)
+class QuotaOverride:
+    owner_kind: QuotaOwnerKind
+    owner_id: str
+    resource: QuotaResource
+    hard_limit: int
+
+
+class IQuotaOverrideRepository(Protocol):
+    async def list_all(self) -> Sequence[QuotaOverride]: ...
+
+    async def set(self, override: QuotaOverride) -> None: ...
+
+    async def delete(self, owner_kind: QuotaOwnerKind, owner_id: str, resource: QuotaResource) -> None: ...
+
+
+class IProjectOrgReader(Protocol):
+    async def org_of(self, project_id: UUID) -> UUID | None:
+        """Организация-владелец проекта; `None` у личного проекта и у неизвестного."""
+        ...
+
+
+class IQuotaResolver(Protocol):
+    async def current(self) -> QueueQuota | None:
+        """Лимиты для выдачи задач; `None` когда ни одного лимита нет."""
+        ...
+
+    async def max_duration_s(self, user_id: UUID, org_id: UUID | None) -> float | None:
+        """Предельная длительность задачи пользователя: user > org > установка."""
+        ...
+
+
+def org_key(owner_org_id: str) -> UUID:
+    """Ключ организации в очереди: `jobs.org_id` это UUID, а владелец проекта хранится строкой."""
+    try:
+        return UUID(owner_org_id)
+    except ValueError:
+        return uuid5(NAMESPACE_OID, owner_org_id)
+
+
+def overrides_to_queue_quota(base: QueueQuota, overrides: Sequence[QuotaOverride]) -> QueueQuota:
+    user_caps: dict[UUID, int] = {}
+    org_user_caps: dict[UUID, int] = {}
+    org_caps: dict[UUID, int] = {}
+    for item in overrides:
+        if item.owner_kind is QuotaOwnerKind.user:
+            try:
+                key = UUID(item.owner_id)
+            except ValueError:
+                continue
+            if item.resource is QuotaResource.concurrent_user:
+                user_caps[key] = item.hard_limit
+        elif item.resource is QuotaResource.concurrent_user:
+            org_user_caps[org_key(item.owner_id)] = item.hard_limit
+        elif item.resource is QuotaResource.concurrent_org:
+            org_caps[org_key(item.owner_id)] = item.hard_limit
+    return replace(base, user_caps=user_caps, org_user_caps=org_user_caps, org_caps=org_caps)
+
+
+def duration_cap(
+    default: int | None, overrides: Sequence[QuotaOverride], user_id: UUID, org_id: UUID | None
+) -> int | None:
+    """Приоритет user > org > установка для предельной длительности."""
+    by_owner = {
+        (item.owner_kind, org_key(item.owner_id) if item.owner_kind is QuotaOwnerKind.org else item.owner_id): item
+        for item in overrides
+        if item.resource is QuotaResource.max_duration_s
+    }
+    own = by_owner.get((QuotaOwnerKind.user, str(user_id)))
+    if own is not None:
+        return own.hard_limit
+    if org_id is not None and (of_org := by_owner.get((QuotaOwnerKind.org, org_id))) is not None:
+        return of_org.hard_limit
+    return default
 
 
 class QuotaValueError(ValueError):

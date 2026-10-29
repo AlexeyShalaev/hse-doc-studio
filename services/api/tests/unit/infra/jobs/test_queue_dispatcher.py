@@ -23,6 +23,7 @@ from hse_doc_studio.core.storage.manifest import ManifestFileTooLargeError, Mani
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 
 from tests.fakes.job_queue import InMemoryJobQueue
+from tests.fakes.job_quotas import FixedProjectOrgs
 from tests.fakes.runners import InMemoryRunnerRepository
 from tests.unit.core.jobs.samples import make_compile_spec, make_office_result, make_office_spec, make_verify_spec
 
@@ -208,6 +209,55 @@ async def test__submit__queue_payload_is_an_envelope_with_manifest_and_role(rig:
     assert envelope.timeout_s == 600.0
     assert job.user_id == _USER
     assert job.max_attempts == 2
+
+
+class _Resolver:
+    def __init__(self, cap: float | None) -> None:
+        self.cap = cap
+        self.asked: list[tuple[UUID, UUID | None]] = []
+
+    async def current(self) -> None:
+        return None
+
+    async def max_duration_s(self, user_id: UUID, org_id: UUID | None) -> float | None:
+        self.asked.append((user_id, org_id))
+        return self.cap
+
+
+async def test__submit__project_org_and_duration_quota__reach_the_queue_row(rig: Rig) -> None:
+    org = uuid4()
+    resolver = _Resolver(120.0)
+    dispatcher = QueueJobDispatcher(
+        rig.queue,
+        rig.uploader,
+        rig.runners,
+        quotas=resolver,
+        project_orgs=FixedProjectOrgs(org),
+        poll_interval_s=0.005,
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = rig.queue._jobs[spec.id]
+    assert job.org_id == org
+    assert job.timeout_s == 120.0
+    assert resolver.asked == [(_USER, org)]
+
+
+async def test__submit__duration_quota_above_kind_default__keeps_the_default(rig: Rig) -> None:
+    dispatcher = QueueJobDispatcher(
+        rig.queue, rig.uploader, rig.runners, quotas=_Resolver(99999.0), poll_interval_s=0.005
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = rig.queue._jobs[spec.id]
+    assert job.timeout_s == 600.0
+    assert job.org_id is None
 
 
 async def test__submit__staging_fails__failed_record_and_nothing_queued(rig: Rig) -> None:

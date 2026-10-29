@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, 
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.jobs.queue import IJobQueue
+from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import (
     JOB_TOKEN_KEY_PURPOSE,
     IRegistrationTokenRepository,
@@ -35,6 +36,7 @@ from hse_doc_studio.core.storage.ingest import OutputLimits
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
+from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.repositories.jobs_applied import SqlJobApplyLedger
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
@@ -76,6 +78,14 @@ class ServerJobsProvider(Provider):
     @provide
     def get_registration_token_repository(self, sessions: SessionProvider) -> IRegistrationTokenRepository:
         return SqlRegistrationTokenRepository(sessions)
+
+    @provide
+    def get_quota_override_repository(self, sessions: SessionProvider) -> IQuotaOverrideRepository:
+        return SqlQuotaOverrideRepository(sessions)
+
+    @provide
+    def get_project_org_reader(self, sessions: SessionProvider) -> IProjectOrgReader:
+        return SqlProjectOrgReader(sessions)
 
     @provide
     def get_runner_registry(
@@ -187,6 +197,8 @@ class ServerJobsProvider(Provider):
         hooks_factory: IJobHooksFactory,
         volume: IProjectVolume,
         settings_repo: ISettingsRepository,
+        quotas: QuotaService,
+        project_orgs: IProjectOrgReader,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -204,4 +216,6 @@ class ServerJobsProvider(Provider):
             hooks_factory=hooks_factory,
             volume=volume,
             settings_repo=settings_repo,
+            quotas=quotas,
+            project_orgs=project_orgs,
         )

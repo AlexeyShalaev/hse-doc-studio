@@ -11,6 +11,7 @@ from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.admin import IJobAdminReader
 from hse_doc_studio.core.jobs.queue import IJobQueue
+from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -47,8 +48,8 @@ class ServerAdminOpsProvider(Provider):
         return SqlStorageUsageReader(sessions, server_config.projects_root)
 
     @provide
-    def get_quota_service(self, repo: IInstanceSettingsRepository) -> QuotaService:
-        return QuotaService(repo)
+    def get_quota_service(self, repo: IInstanceSettingsRepository, overrides: IQuotaOverrideRepository) -> QuotaService:
+        return QuotaService(repo, overrides)
 
     @provide
     def get_list_queue_uc(self, reader: IJobAdminReader) -> ListQueueUC:

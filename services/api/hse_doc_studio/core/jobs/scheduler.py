@@ -12,7 +12,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -33,6 +34,32 @@ class QueueQuota:
     max_running_per_user: int | None = None
     max_running_per_org: int | None = None
     max_timeout_s: float | None = None
+    # Переопределения по владельцам, приоритет user > org > установка. Ключ организации это `jobs.org_id`.
+    user_caps: Mapping[UUID, int] = field(default_factory=dict, hash=False)
+    org_user_caps: Mapping[UUID, int] = field(default_factory=dict, hash=False)
+    org_caps: Mapping[UUID, int] = field(default_factory=dict, hash=False)
+
+    @property
+    def is_unlimited(self) -> bool:
+        return (
+            self.max_running_per_user is None
+            and self.max_running_per_org is None
+            and self.max_timeout_s is None
+            and not (self.user_caps or self.org_user_caps or self.org_caps)
+        )
+
+    def user_cap(self, user_id: UUID, org_id: UUID | None) -> int | None:
+        """Сколько задач пользователя могут идти разом: своё значение, затем организации, затем установки."""
+        if user_id in self.user_caps:
+            return self.user_caps[user_id]
+        if org_id is not None and org_id in self.org_user_caps:
+            return self.org_user_caps[org_id]
+        return self.max_running_per_user
+
+    def org_cap(self, org_id: UUID | None) -> int | None:
+        if org_id is not None and org_id in self.org_caps:
+            return self.org_caps[org_id]
+        return self.max_running_per_org
 
     def __post_init__(self) -> None:
         for name in ("max_running_per_user", "max_running_per_org"):
@@ -41,6 +68,9 @@ class QueueQuota:
                 raise ValueError(f"{name} must be at least 1")
         if self.max_timeout_s is not None and self.max_timeout_s <= 0:
             raise ValueError("max_timeout_s must be positive")
+        for caps in (self.user_caps, self.org_user_caps, self.org_caps):
+            if any(limit < 1 for limit in caps.values()):
+                raise ValueError("per-owner caps must be at least 1")
 
 
 def priority_class_of(kind: JobKind) -> JobPriorityClass:
@@ -75,15 +105,20 @@ def coalesce_key_of(spec: JobSpec) -> str | None:
     return coalesce_key(spec.project_id, spec.kind, compile_payload_of(spec).doc_id)
 
 
-def caps_allow(running_of_user: int, running_of_org: int | None, quota: QueueQuota) -> bool:
+def caps_allow(
+    running_of_user: int,
+    running_of_org: int | None,
+    quota: QueueQuota,
+    *,
+    user_id: UUID | None = None,
+    org_id: UUID | None = None,
+) -> bool:
     """Можно ли ещё одну задачу пользователя; `running_of_org=None` когда пользователь вне организации."""
-    if quota.max_running_per_user is not None and running_of_user >= quota.max_running_per_user:
+    user_cap = quota.user_cap(user_id, org_id) if user_id is not None else quota.max_running_per_user
+    if user_cap is not None and running_of_user >= user_cap:
         return False
-    return not (
-        quota.max_running_per_org is not None
-        and running_of_org is not None
-        and running_of_org >= quota.max_running_per_org
-    )
+    org_cap = quota.org_cap(org_id)
+    return not (org_cap is not None and running_of_org is not None and running_of_org >= org_cap)
 
 
 def resolve_timeout(kind: JobKind, quota: QueueQuota | None = None) -> float:

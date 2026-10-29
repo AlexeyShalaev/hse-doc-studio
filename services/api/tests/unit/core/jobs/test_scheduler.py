@@ -116,3 +116,40 @@ def test__affinity_allows__other_runner__waits_while_affine_is_available() -> No
 def test__retry_available__until_attempts_exhausted() -> None:
     assert retry_available(1, 2)
     assert not retry_available(2, 2)
+
+
+def test__quota_caps__priority_user_then_org_then_installation() -> None:
+    user, member, org, other_org = uuid4(), uuid4(), uuid4(), uuid4()
+    quota = QueueQuota(
+        max_running_per_user=4,
+        max_running_per_org=10,
+        user_caps={user: 1},
+        org_user_caps={org: 2},
+        org_caps={org: 3},
+    )
+
+    assert quota.user_cap(user, org) == 1
+    assert quota.user_cap(member, org) == 2
+    assert quota.user_cap(member, other_org) == 4
+    assert quota.user_cap(member, None) == 4
+    assert quota.org_cap(org) == 3
+    assert quota.org_cap(other_org) == 10
+
+
+def test__caps_allow__uses_per_owner_caps() -> None:
+    user, org = uuid4(), uuid4()
+    quota = QueueQuota(max_running_per_user=5, user_caps={user: 1}, org_caps={org: 2})
+
+    assert not caps_allow(1, 0, quota, user_id=user, org_id=None)
+    assert caps_allow(1, 0, quota, user_id=uuid4(), org_id=None)
+    assert not caps_allow(0, 2, quota, user_id=uuid4(), org_id=org)
+
+
+def test__queue_quota__rejects_non_positive_owner_cap() -> None:
+    with pytest.raises(ValueError, match="per-owner"):
+        QueueQuota(user_caps={uuid4(): 0})
+
+
+def test__queue_quota__only_overrides__is_not_unlimited() -> None:
+    assert QueueQuota().is_unlimited
+    assert not QueueQuota(org_caps={uuid4(): 1}).is_unlimited

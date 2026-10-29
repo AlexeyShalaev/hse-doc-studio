@@ -44,6 +44,7 @@ from hse_doc_studio.core.jobs.office import OfficeConvertPayload
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.jobs.protocols import IJobHooks, IJobObserver
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, IJobQueue, QueuedJob
+from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
@@ -99,6 +100,8 @@ class QueueJobDispatcher:
         hooks_factory: IJobHooksFactory | None = None,
         volume: IProjectVolume | None = None,
         settings_repo: ISettingsRepository | None = None,
+        quotas: IQuotaResolver | None = None,
+        project_orgs: IProjectOrgReader | None = None,
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
@@ -113,6 +116,8 @@ class QueueJobDispatcher:
         self._hooks_factory = hooks_factory
         self._volume = volume
         self._settings_repo = settings_repo
+        self._quotas = quotas
+        self._project_orgs = project_orgs
         self._interval = poll_interval_s
         self._live_window = timedelta(seconds=runner_live_window_s)
         self._clock = clock
@@ -396,6 +401,11 @@ class QueueJobDispatcher:
             return None
         policy = job_kind_spec(spec.kind).policy
         timeout = timeout_s or policy.default_timeout_s or DEFAULT_TIMEOUT_S
+        org_id = await self._project_orgs.org_of(spec.project_id) if self._project_orgs is not None else None
+        if self._quotas is not None:
+            cap = await self._quotas.max_duration_s(user_id, org_id)
+            if cap is not None:
+                timeout = min(timeout, cap)
         role = await self._role_of(spec)
         spec = await self._with_user_passes(spec)
         envelope = JobEnvelope(
@@ -413,6 +423,7 @@ class QueueJobDispatcher:
                 kind=spec.kind,
                 project_id=spec.project_id,
                 user_id=user_id,
+                org_id=org_id,
                 tags=spec.tags,
                 payload=payload,
                 priority_class=policy.priority_class,

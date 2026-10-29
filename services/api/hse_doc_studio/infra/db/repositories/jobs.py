@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, func, literal, select, text, update
+from sqlalchemy import ColumnElement, Select, case, func, literal, null, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -67,6 +67,16 @@ def job_from_row(row: JobRow) -> QueuedJob:
         error_code=row.error_code,
         seq=row.seq,
     )
+
+
+def _cap_expression(default: int | None, *levels: tuple[Any, Mapping[UUID, int]]) -> ColumnElement[int] | None:
+    """Предел конкретной задачи: переопределения по владельцам, затем значение установки; `None` без лимитов."""
+    parts: list[Any] = [case(dict(caps), value=column, else_=null()) for column, caps in levels if caps]
+    if default is not None:
+        parts.append(literal(default))
+    if not parts:
+        return None
+    return func.coalesce(*parts) if len(parts) > 1 else parts[0]
 
 
 class PostgresJobQueue:
@@ -142,7 +152,7 @@ class PostgresJobQueue:
                     set_={"last_seen_at": now, "concurrency": runner.concurrency},
                 )
             )
-            if limits.max_running_per_user is not None or limits.max_running_per_org is not None:
+            if not limits.is_unlimited:
                 await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CAPS_LOCK_KEY})
             row: JobRow | None = (
                 await session.execute(self._best_candidate(runner, limits, now, lease_s))
@@ -257,20 +267,26 @@ class PostgresJobQueue:
         running = aliased(JobRow, name="r")
         busy = aliased(JobRow, name="b")
         conditions = [job.state == JobState.queued.value, job.tags.contained_by(sorted(runner.tags))]
-        if limits.max_running_per_user is not None:
+        user_cap = _cap_expression(
+            limits.max_running_per_user,
+            (job.user_id, limits.user_caps),
+            (job.org_id, limits.org_user_caps),
+        )
+        if user_cap is not None:
             of_user = (
                 select(func.count())
                 .where(running.state == JobState.running.value, running.user_id == job.user_id)
                 .scalar_subquery()
             )
-            conditions.append(of_user < limits.max_running_per_user)
-        if limits.max_running_per_org is not None:
+            conditions.append(user_cap.is_(None) | (of_user < user_cap))
+        org_cap = _cap_expression(limits.max_running_per_org, (job.org_id, limits.org_caps))
+        if org_cap is not None:
             of_org = (
                 select(func.count())
                 .where(running.state == JobState.running.value, running.org_id == job.org_id)
                 .scalar_subquery()
             )
-            conditions.append((job.org_id.is_(None)) | (of_org < limits.max_running_per_org))
+            conditions.append(job.org_id.is_(None) | org_cap.is_(None) | (of_org < org_cap))
         # Закреплённый раннер жив (опрашивал в пределах аренды) и у него есть свободный слот.
         busy_count = (
             select(func.count())
