@@ -1,4 +1,5 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
+import { createDemoAccount, type DemoAccount } from "./accounts";
 import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
@@ -36,6 +37,18 @@ export type ServerDemoWorld = {
   setup: DemoSetupState;
   /** Проекты мира: у каждого своя роль у каждого человека. */
   projects: DemoProject[];
+  /** Аккаунт вошедшего человека (подпись версий, сессии); строится при первом обращении. */
+  account: DemoAccount | null;
+};
+
+/** Аккаунт текущего человека; для другого пользователя строится заново. */
+export const accountOf = (world: ServerDemoWorld): DemoAccount | null => {
+  const user = world.bootstrap.user;
+  if (!user) return null;
+  if (world.account?.profile.id !== user.id) {
+    world.account = createDemoAccount(user);
+  }
+  return world.account;
 };
 
 const createSetupState = (scenario: ServerDemoScenario): DemoSetupState => {
@@ -68,6 +81,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminCreated: false,
     setup: createSetupState(scenario),
     projects: seedProjects(),
+    account: null,
   };
 };
 
@@ -81,6 +95,7 @@ export const signIn = (world: ServerDemoWorld, email: string): SessionUser => {
     capabilities: { ...world.bootstrap.capabilities, admin: isAdmin },
     csrf_token: isAdmin ? ADMIN_CSRF : STUDENT_CSRF,
   };
+  world.account = null;
   return user;
 };
 

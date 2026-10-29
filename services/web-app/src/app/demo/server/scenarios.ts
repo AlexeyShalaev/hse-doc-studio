@@ -21,7 +21,9 @@ export type ServerDemoScenarioId =
   | "registration_open"
   | "registration_domains"
   | "registration_open_nosmtp"
-  | "newcomer";
+  | "newcomer"
+  | "student_nosmtp"
+  | "student_sso";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -213,6 +215,38 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           registration_mode: "domains",
           password_enabled: true,
           oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "student_nosmtp",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "student_sso",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "closed",
+          password_enabled: false,
+          oidc_providers: [{ id: "keycloak", label: "HSE SSO" }],
           smtp_enabled: true,
           password_min_length: 10,
         },

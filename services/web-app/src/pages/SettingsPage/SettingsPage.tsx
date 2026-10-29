@@ -17,6 +17,7 @@ import {
   Sliders,
   Terminal,
   Type,
+  UserCircle,
   UserRound,
   X,
   type LucideIcon,
@@ -39,10 +40,15 @@ import {
   type SettingSearchEntry,
   type SettingsSectionId,
 } from "@widgets/settings";
+import { AccountSection } from "@features/account-settings";
 import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
-import { LOCAL_BOOTSTRAP, useCapabilities } from "@entities/session";
+import {
+  LOCAL_BOOTSTRAP,
+  useBootstrap,
+  useCapabilities,
+} from "@entities/session";
 import type { Capabilities } from "@entities/session";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
@@ -65,13 +71,22 @@ type SectionDef = {
   scope: SectionScope;
   /** Раздел виден, только если у клиента есть эта возможность. */
   requires?: keyof Capabilities;
+  /**
+   * Раздел зависит от того, есть ли у клиента аккаунт (вошедший пользователь):
+   * "with" только с ним, "without" только без него. Подпись версий на сервере
+   * живёт в аккаунте, поэтому второго профиля автора рядом нет.
+   */
+  account?: "with" | "without";
 };
 
 /** Раздел доступен при данных возможностях: личные всегда, остальные по requires. */
 const isSectionAvailable = (
-  def: Pick<SectionDef, "scope" | "requires">,
+  def: Pick<SectionDef, "scope" | "requires" | "account">,
   has: (name: keyof Capabilities) => boolean,
-): boolean => def.requires === undefined || has(def.requires);
+  hasAccount: boolean,
+): boolean =>
+  (def.requires === undefined || has(def.requires)) &&
+  (def.account === undefined || (def.account === "with") === hasAccount);
 
 /**
  * Группы разделов. Список из двенадцати пунктов без структуры читается как
@@ -96,9 +111,18 @@ const SECTIONS: readonly SectionDef[] = [
     icon: Sliders,
   },
   {
+    id: "account",
+    group: "general",
+    scope: "user",
+    account: "with",
+    labelKey: "settingsPage.sections.account",
+    icon: UserCircle,
+  },
+  {
     id: "profile",
     group: "general",
     scope: "user",
+    account: "without",
     labelKey: "settingsPage.sections.profile",
     icon: UserRound,
   },
@@ -206,6 +230,8 @@ const renderSection = (id: SettingsSectionId) => {
   switch (id) {
     case "appearance":
       return <AppearanceSection />;
+    case "account":
+      return <AccountSection />;
     case "profile":
       return <AuthorProfileSection />;
     case "compiler":
@@ -273,8 +299,9 @@ export const SettingsPage = () => {
   // галереях ведёт себя как раньше.
   const { capabilities } = useCapabilities();
   const caps = capabilities ?? LOCAL_BOOTSTRAP.capabilities;
+  const hasAccount = useBootstrap().data?.user != null;
   const visibleSections = SECTIONS.filter((s) =>
-    isSectionAvailable(s, (name) => caps[name]),
+    isSectionAvailable(s, (name) => caps[name], hasAccount),
   );
   const visibleIds = new Set<SettingsSectionId>(
     visibleSections.map((s) => s.id),

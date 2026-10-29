@@ -1,0 +1,116 @@
+{
+  "section": {
+    "title": "Account",
+    "subtitle": "Name, email, password, version signature and sign-ins to this account.",
+    "loading": "Loading your account…",
+    "loadFailed": "Could not load your account.",
+    "retry": "Retry"
+  },
+  "profile": {
+    "title": "Profile",
+    "sub": "How colleagues see you in projects and organizations.",
+    "name": "Name",
+    "nameRequired": "Enter a name.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved"
+  },
+  "email": {
+    "verified": "Verified",
+    "unverified": "Not verified",
+    "change": "Change address",
+    "new": "New address",
+    "hint": "A link is sent to the new address. Until you open it, the current address stays.",
+    "same": "This is your current address.",
+    "invalid": "This does not look like an email address.",
+    "password": "Password to confirm",
+    "submit": "Send link",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "sent": {
+      "title": "A link was sent to {{email}}",
+      "body": "Open it from the email to switch the address. Until then the current one stays.",
+      "close": "Done"
+    }
+  },
+  "password": {
+    "title": "Password",
+    "sub": "Changing it requires the current password.",
+    "current": "Current password",
+    "next": "New password",
+    "confirm": "Repeat the new password",
+    "hint": "At least {{count}} characters.",
+    "short": "At least {{count}} characters.",
+    "same": "The new password equals the current one.",
+    "mismatch": "Passwords do not match.",
+    "signOutOthers": "Sign out other sessions",
+    "signOutOthersHint": "Recommended if someone else may have the password. This session stays.",
+    "submit": "Change password",
+    "submitting": "Changing…",
+    "done": "Password changed",
+    "ssoOnly": "This account signs in through your organization's single sign-on and has no password of its own."
+  },
+  "commit": {
+    "title": "Version signature",
+    "sub": "The name and address recorded in project version history and in external repositories.",
+    "name": "Name in versions",
+    "nameHint": "Empty: the account name is used.",
+    "emailLegend": "Address in versions",
+    "recommended": "default",
+    "modes": {
+      "noreply": {
+        "title": "Hidden address",
+        "hint": "A Studio address like id@noreply…: your email is not published anywhere."
+      },
+      "account": {
+        "title": "Account email",
+        "hint": "Versions will show the address of your account."
+      },
+      "own": {
+        "title": "Own address",
+        "hint": "A separate address for versions only, for example the one linked to your GitHub."
+      }
+    },
+    "ownEmail": "Address for versions",
+    "ownInvalid": "This does not look like an email address.",
+    "privateNote": "Your real email will not reach the project history or any external repository.",
+    "publicNote": "This address is written into versions for good, and anyone with access to an external repository will see it after you push.",
+    "preview": "A version will be signed as",
+    "save": "Save signature",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "toast": "Version signature saved"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "sub": "Devices signed in to this account.",
+    "loading": "Loading sessions…",
+    "loadFailed": "Could not load sessions.",
+    "retry": "Retry",
+    "current": "This session",
+    "currentHint": "To end it, sign out of the account.",
+    "unknownDevice": "Unknown device",
+    "noIp": "address unknown",
+    "lastSeen": "Active: {{when}}",
+    "end": "End",
+    "endAria": "End session: {{device}}",
+    "alone": "No other active sessions.",
+    "endOthers_one": "End other sessions ({{count}})",
+    "endOthers_other": "End other sessions ({{count}})",
+    "confirmAll_one": "End {{count}} other session?",
+    "confirmAll_other": "End {{count}} other sessions?",
+    "confirmYes": "End",
+    "confirmNo": "Cancel",
+    "toastOthers": "Other sessions ended"
+  },
+  "failure": {
+    "invalid_credentials": "Wrong password.",
+    "password_policy": "The password is too weak. Make it longer and less predictable.",
+    "rate_limited": "Too many attempts. Wait a moment and try again.",
+    "csrf_failed": "Your session is stale. Refresh the page and try again.",
+    "email_taken": "This address cannot be used.",
+    "forbidden": "You do not have permission for this action.",
+    "network": "No connection to the server. Check your network and try again.",
+    "unknown": "Something went wrong. Try again later."
+  }
+}

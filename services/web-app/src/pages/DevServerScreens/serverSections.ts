@@ -1,3 +1,4 @@
+import { getAccountSettingsGallery } from "@features/account-settings";
 import { getAccountMenuGallery } from "@features/account-menu";
 import { getRecoveryGallery } from "@features/account-recovery";
 import { getServerSetupGallery } from "@features/server-setup";
@@ -21,6 +22,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "recovery",
     title: "Пароль и подтверждение почты",
     groups: getRecoveryGallery(),
+  },
+  {
+    id: "account",
+    title: "Настройки аккаунта",
+    groups: getAccountSettingsGallery(),
   },
   { id: "shell", title: "Оболочка", groups: getAccountMenuGallery() },
   { id: "admin-kit", title: "Примитивы админки", groups: getAdminKitGallery() },

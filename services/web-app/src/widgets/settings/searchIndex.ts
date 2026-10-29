@@ -15,6 +15,7 @@
 
 export type SettingsSectionId =
   | "appearance"
+  | "account"
   | "profile"
   | "compiler"
   | "fonts"
@@ -93,6 +94,55 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "language",
       "локализация",
       "перевод",
+    ],
+  },
+
+  // ── Аккаунт (серверный режим) ────────────────────────────────
+  {
+    sectionId: "account",
+    anchorId: "account",
+    labelKey: "search.account",
+    keywords: ["аккаунт", "учётная запись", "профиль", "account", "profile"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-email",
+    labelKey: "search.accountEmail",
+    keywords: ["почта", "e-mail", "email", "mail", "адрес", "сменить почту"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-password",
+    labelKey: "search.accountPassword",
+    keywords: ["пароль", "password", "сменить пароль", "смена пароля"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-commit",
+    labelKey: "search.accountCommit",
+    keywords: [
+      "подпись",
+      "коммиты",
+      "версии",
+      "noreply",
+      "commit",
+      "author",
+      "signature",
+      "приватность",
+      "privacy",
+    ],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-sessions",
+    labelKey: "search.accountSessions",
+    keywords: [
+      "сессии",
+      "устройства",
+      "выйти",
+      "sessions",
+      "devices",
+      "sign out",
     ],
   },
 

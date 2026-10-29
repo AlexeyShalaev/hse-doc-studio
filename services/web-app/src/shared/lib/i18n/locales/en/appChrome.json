@@ -119,7 +119,8 @@
       "disk": "Disk",
       "data": "Import / Export",
       "about": "About",
-      "gitAccess": "Repository access"
+      "gitAccess": "Repository access",
+      "account": "Account"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",

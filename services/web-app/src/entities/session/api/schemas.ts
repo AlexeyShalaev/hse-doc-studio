@@ -231,6 +231,7 @@ export const AccountSessionSchema = z.strictObject({
   user_agent: z.string(),
   current: z.boolean(),
 });
+export type AccountSession = z.infer<typeof AccountSessionSchema>;
 export const ApiTokenSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

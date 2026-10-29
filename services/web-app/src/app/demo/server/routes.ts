@@ -1,6 +1,7 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import { useServerDemoScenarioStore } from "./scenarioStore";
+import { createAccountRoutes } from "./accountRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
 import { createProjectRoutes } from "./projectRoutes";
@@ -124,6 +125,7 @@ const routes: DemoRoute[] = [
 export const serverDemoRoutes: DemoRoute[] = [
   ...routes,
   ...createAuthRoutes(() => world),
+  ...createAccountRoutes(() => world),
   ...createSetupRoutes(() => world),
   ...createProjectRoutes(() => world),
   ...catalogRoutes,

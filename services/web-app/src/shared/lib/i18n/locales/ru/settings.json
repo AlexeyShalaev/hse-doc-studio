@@ -452,6 +452,11 @@
     "gitAccessServers": "Серверы git",
     "gitAccessHosts": "Доверенные серверы",
     "gitAccessEncryption": "Шифрование токенов",
-    "gitAccessFetch": "Фоновая проверка по умолчанию"
+    "gitAccessFetch": "Фоновая проверка по умолчанию",
+    "account": "Аккаунт",
+    "accountEmail": "Почта аккаунта",
+    "accountPassword": "Пароль",
+    "accountCommit": "Подпись версий",
+    "accountSessions": "Сессии"
   }
 }

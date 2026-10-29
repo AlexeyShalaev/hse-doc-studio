@@ -450,6 +450,11 @@
     "gitAccessServers": "Git servers",
     "gitAccessHosts": "Trusted servers",
     "gitAccessEncryption": "Token encryption",
-    "gitAccessFetch": "Default background check"
+    "gitAccessFetch": "Default background check",
+    "account": "Account",
+    "accountEmail": "Account email",
+    "accountPassword": "Password",
+    "accountCommit": "Version signature",
+    "accountSessions": "Sessions"
   }
 }
