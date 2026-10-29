@@ -171,7 +171,9 @@ class CompileJobHooks:
         if success:
             await self._vcs_commit_on_success(doc_id, pages)
             # PDF сохраняется для визуального diff с последующими сборками.
-            self._artifacts.archive_pdf(self._project_folder, doc_id, compile_id, payload.source_file)
+            await self._artifacts.archive_pdf(
+                spec.project_id, self._project_folder, doc_id, compile_id, payload.source_file
+            )
 
         logger.debug(
             "compile task finished",

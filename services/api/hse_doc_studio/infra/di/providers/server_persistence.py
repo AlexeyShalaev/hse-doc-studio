@@ -18,6 +18,7 @@ from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -40,6 +41,8 @@ from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
+from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
+from hse_doc_studio.infra.jobs.s3_artifact_store import S3ArtifactStore
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
@@ -113,6 +116,10 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_object_store(self, server_config: ServerConfig) -> IObjectStore:
         return create_object_store(server_config.s3, settings.data_dir.expanduser())
+
+    @provide(override=True)
+    def get_artifact_store(self, store: IObjectStore) -> IArtifactStore:
+        return S3ArtifactStore(store, LocalDiskArtifactStore())
 
     @provide
     def get_blob_store(self, store: IObjectStore) -> IBlobStore:

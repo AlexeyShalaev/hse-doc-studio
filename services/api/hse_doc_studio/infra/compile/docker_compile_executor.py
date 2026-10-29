@@ -129,6 +129,7 @@ class DockerCompileExecutor:
         compile_id: uuid.UUID,
         image: str | None = None,
         on_process_started: ProcessCallback | None = None,
+        project_id: uuid.UUID | None = None,
     ) -> AsyncGenerator[str, None]:
         return self._stream(
             project_folder=project_folder,
@@ -139,6 +140,7 @@ class DockerCompileExecutor:
             compile_id=compile_id,
             image=image or self._image,
             on_process_started=on_process_started,
+            project_id=project_id,
         )
 
     async def _stream(  # noqa: C901, PLR0911, PLR0912, PLR0915
@@ -151,6 +153,7 @@ class DockerCompileExecutor:
         compile_id: uuid.UUID,
         image: str,
         on_process_started: ProcessCallback | None,
+        project_id: uuid.UUID | None,
     ) -> AsyncGenerator[str, None]:
         engine_flag = _ENGINE_FLAG.get(engine)
         if engine_flag is None:
@@ -291,7 +294,13 @@ class DockerCompileExecutor:
         # The move is retried inside the store (on Windows the target PDF may be
         # briefly locked by an antivirus scan, an indexer or an open viewer).
         outcome = await self._artifacts.publish_pdf(
-            PublishPdfRequest(workspace=project_folder, doc_id=doc_id, job_id=compile_id, source_file=source_file)
+            PublishPdfRequest(
+                workspace=project_folder,
+                doc_id=doc_id,
+                job_id=compile_id,
+                source_file=source_file,
+                project_id=project_id,
+            )
         )
         if not outcome.replaced:
             # A persistent lock (typically the PDF is open in a desktop viewer)

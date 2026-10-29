@@ -7,7 +7,7 @@ boto3 синхронный, поэтому каждый вызов уходит 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
@@ -36,6 +36,20 @@ def build_client_config(*, path_style: bool) -> Config:
         connect_timeout=5,
         read_timeout=60,
     )
+
+
+def cors_rules(origins: Sequence[str]) -> dict[str, Any]:
+    return {
+        "CORSRules": [
+            {
+                "AllowedOrigins": list(origins),
+                "AllowedMethods": ["GET", "HEAD"],
+                "AllowedHeaders": ["Range", "If-Range", "If-None-Match", "If-Modified-Since"],
+                "ExposeHeaders": ["Content-Range", "Content-Length", "Accept-Ranges", "ETag"],
+                "MaxAgeSeconds": 3600,
+            }
+        ]
+    }
 
 
 class S3ObjectStore:
@@ -182,6 +196,11 @@ class S3ObjectStore:
 
     async def check(self) -> None:
         await self._call(lambda: self._client.head_bucket(Bucket=self._bucket))
+
+    async def apply_cors(self, origins: Sequence[str]) -> None:
+        """Выставляет CORS бакета под чтение по подписанным ссылкам (GET и HEAD с Range)."""
+        rules = cors_rules(origins)
+        await self._call(lambda: self._client.put_bucket_cors(Bucket=self._bucket, CORSConfiguration=rules))
 
 
 def _code(exc: ClientError) -> str:

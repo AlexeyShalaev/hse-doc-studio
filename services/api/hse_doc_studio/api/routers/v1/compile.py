@@ -6,7 +6,7 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
@@ -123,7 +123,10 @@ async def get_archived_pdf(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return Response(content=result.content, media_type="application/pdf")
+    if result.redirect_url is not None:
+        # Временная ссылка на хранилище: тело и Range отдаёт оно, права уже проверил гард.
+        return RedirectResponse(result.redirect_url, status_code=307, headers={"Cache-Control": "no-store"})
+    return Response(content=result.content or b"", media_type="application/pdf")
 
 
 @router.get(

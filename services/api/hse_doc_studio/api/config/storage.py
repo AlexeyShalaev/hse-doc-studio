@@ -29,4 +29,9 @@ class StorageConfig(BaseModel):
     multipart_threshold_bytes: int = Field(
         default=64 * 1024**2, ge=5 * 1024**2, description="С какого размера загрузка идёт частями."
     )
+    cors_origins: list[str] = Field(
+        default_factory=list,
+        description="Источники, которым бакет разрешает читать подписанные ссылки (pdf.js ходит туда с Range); "
+        "пусто означает не трогать CORS бакета.",
+    )
     presign_ttl_s: int = Field(default=300, ge=1, le=3600, description="Срок подписанной ссылки по умолчанию.")

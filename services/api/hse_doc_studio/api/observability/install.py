@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import structlog
 from fastapi import FastAPI
 
 from hse_doc_studio.api.config import Settings
@@ -17,6 +18,8 @@ from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
 
 if TYPE_CHECKING:
     from dishka import AsyncContainer
+
+logger = structlog.get_logger()
 
 
 def install_health(app: FastAPI, cfg: Settings, registry: HealthRegistry | None = None) -> HealthRegistry:
@@ -110,6 +113,25 @@ def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings)
     app.state.background.register(
         PeriodicTask(name="auth_cleanup", interval_s=cfg.server.auth_cleanup_interval_s, run=_cleanup)
     )
+
+
+def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """На старте выставляет CORS бакета, если заданы источники: без него pdf.js не читает PDF по ссылке с Range."""
+    if not cfg.s3.cors_origins:
+        return
+
+    @app.on_event("startup")
+    async def _apply_cors() -> None:
+        from hse_doc_studio.core.storage import IObjectStore, ObjectStoreError  # noqa: PLC0415
+        from hse_doc_studio.infra.storage.s3 import S3ObjectStore  # noqa: PLC0415
+
+        store = await container.get(IObjectStore)
+        if not isinstance(store, S3ObjectStore):
+            return
+        try:
+            await store.apply_cors(cfg.s3.cors_origins)
+        except ObjectStoreError as exc:
+            logger.warning("bucket cors not applied", exc=str(exc))
 
 
 def install_object_store_health(app: FastAPI, container: AsyncContainer, health: HealthRegistry) -> None:

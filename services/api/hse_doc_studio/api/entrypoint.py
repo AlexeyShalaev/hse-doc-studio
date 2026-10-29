@@ -19,6 +19,7 @@ from hse_doc_studio.api.observability.install import (
     install_auth_cleanup,
     install_background,
     install_blob_gc,
+    install_bucket_cors,
     install_health,
     install_object_store_health,
     install_project_purge,
@@ -212,6 +213,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
         install_object_store_health(app, container, health_checks)
+        install_bucket_cors(app, container, settings)
         install_project_purge(app, container, settings)
         install_blob_gc(app, container, settings)
         install_auth_cleanup(app, container, settings)

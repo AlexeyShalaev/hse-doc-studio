@@ -22,7 +22,10 @@ class GetArchivedPdfInput:
 
 @dataclass
 class GetArchivedPdfOutput:
-    content: bytes
+    """Либо байты, либо ссылка на хранилище (Range для pdf.js читает уже оно)."""
+
+    content: bytes | None = None
+    redirect_url: str | None = None
 
 
 class GetArchivedPdfUC:
@@ -43,7 +46,10 @@ class GetArchivedPdfUC:
                 localized_error(f"Проект {inp.project_id} не найден", f"Project not found: {inp.project_id}")
             )
         try:
-            content = self._artifacts.read_archived_pdf(folder, inp.doc_id, inp.compile_id)
+            link = await self._artifacts.archived_pdf_link(inp.project_id, inp.doc_id, inp.compile_id)
+            if link is not None:
+                return GetArchivedPdfOutput(redirect_url=link.url)
+            content = await self._artifacts.read_archived_pdf(inp.project_id, folder, inp.doc_id, inp.compile_id)
         except FileNotFoundError:
             raise NotFoundError(
                 localized_error("Для этой сборки нет архивного PDF", "No archived PDF for this build")

@@ -102,6 +102,7 @@ class EmbeddedCompileRunner:
                     # Образ выбирается заново после ожидания слота, как и раньше.
                     image=await self._resolve_image(),
                     on_process_started=ctx.on_process,
+                    project_id=spec.project_id,
                 )
                 await consume_build_stream(lines, ctx.log, state)
         else:
