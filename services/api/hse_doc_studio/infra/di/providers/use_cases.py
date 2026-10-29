@@ -335,6 +335,7 @@ from hse_doc_studio.use_cases.languagetool.set_active_languagetool_image import 
 )
 
 # --- Office editor (ONLYOFFICE Document Server) ---
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess
 from hse_doc_studio.use_cases.office_editor.get_editor_config import GetOfficeEditorConfigUC
 from hse_doc_studio.use_cases.office_editor.handle_callback import OfficeEditorCallbackUC
 
@@ -2739,6 +2740,7 @@ class UseCaseProvider(Provider):
         reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository,
+        office_access: IOfficeAccess,
     ) -> GetOfficeEditorConfigUC:
         # reachability — как DS-контейнер достучится до нас: по общей сети или
         # через хостовый шлюз, выясняется в рантайме.
@@ -2752,6 +2754,8 @@ class UseCaseProvider(Provider):
             reachability=reachability,
             settings_repo=settings_repo,
             ai_provider_repo=ai_provider_repo,
+            access=office_access,
+            busy_retry_after_s=settings.office_editor.pool_retry_after_s,
         )
 
     @provide
@@ -2765,6 +2769,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
+        office_access: IOfficeAccess,
     ) -> OfficeEditorCallbackUC:
         # Запись сохранённого документа идёт через put-file: guard путей +
         # edit-коммит в ProjectVCS — как у любой другой правки файла.
@@ -2779,6 +2784,7 @@ class UseCaseProvider(Provider):
             dispatcher=dispatcher,
             settings_repo=settings_repo,
             client=client,
+            access=office_access,
         )
 
     # ------------------------------------------------------------------ Office services (images)

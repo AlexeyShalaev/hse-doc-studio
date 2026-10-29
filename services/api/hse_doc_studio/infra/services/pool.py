@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 import time
 from collections import OrderedDict
@@ -126,6 +127,17 @@ class ServicePool:
     def pick_url(self) -> str:
         """URL наименее занятой здоровой реплики без учёта доли пользователя (проверки внутри процесса)."""
         return self._pick().url
+
+    def pick_sticky(self, key: str) -> str:
+        """Реплика для ключа по rendezvous-хешу среди здоровых: ключ остаётся на своей реплике, пока она жива.
+
+        Занятость не учитывается: сессия редактора держит одну реплику долго, а лимит сессий считает вызывающий.
+        """
+        now = self._clock()
+        alive = [r for r in self._replicas if r.healthy and r.open_until <= now]
+        if not alive:
+            raise ServiceUnavailableError(f"{self.name}: no healthy replica", 5)
+        return max(alive, key=lambda r: hashlib.sha256(f"{key}\0{r.url}".encode()).digest()).url
 
     async def call(
         self,

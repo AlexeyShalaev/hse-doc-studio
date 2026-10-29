@@ -186,6 +186,38 @@ class OfficeEditorConfig(BaseModel):
             "override with the backend service name."
         ),
     )
+    pool_replicas: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Server mode: base URLs of the Document Server replicas (empty means the editor is unavailable). "
+            "A document is pinned to one replica by rendezvous hashing of its key."
+        ),
+    )
+    pool_max_sessions: int = Field(
+        default=18,
+        ge=1,
+        description="Concurrent editing sessions across the installation (Community Edition allows about 20).",
+    )
+    pool_session_ttl_s: float = Field(
+        default=1800.0,
+        gt=0,
+        description="A session without a callback or keepalive for this long is released.",
+    )
+    pool_probe_interval_s: float = Field(default=15.0, gt=0, description="How often replica health is re-polled.")
+    pool_retry_after_s: int = Field(default=30, ge=1, description="Retry hint returned with the editor_busy state.")
+    jwt_secret: str = Field(
+        default="",
+        description="Server mode: JWT secret shared with all replicas; derived from the key ring if empty.",
+    )
+    backend_internal_url: str = Field(
+        default="",
+        description="Server mode: base URL of this API as the Document Server replicas see it (document and callback).",
+    )
+    token_ttl_s: int = Field(
+        default=43_200,
+        ge=60,
+        description="Lifetime of the signed document and callback tokens (a long editing session needs saves).",
+    )
 
 
 class OllamaCatalogEntry(BaseModel):

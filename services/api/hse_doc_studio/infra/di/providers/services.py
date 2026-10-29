@@ -203,6 +203,7 @@ from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
@@ -462,6 +463,11 @@ class DomainServiceProvider(Provider):
             client=lt_client,
             siblings=siblings,
         )
+
+    @provide
+    def get_office_access(self) -> IOfficeAccess:
+        # Локально токенов нет: документ отдаёт обычный маршрут, колбэк проверяют подпись и JWT DS.
+        return LocalOfficeAccess()
 
     @provide
     def get_sibling_network(self) -> SiblingNetwork:

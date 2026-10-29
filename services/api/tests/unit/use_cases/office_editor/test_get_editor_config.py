@@ -59,6 +59,8 @@ def _manager_mock() -> MagicMock:
     manager.is_image_missing = AsyncMock(return_value=False)
     manager.ensure_running = AsyncMock(return_value="http://127.0.0.1:9999")
     manager.jwt_secret = _SECRET
+    manager.base_url_for = MagicMock(return_value="http://127.0.0.1:9999")
+    manager.try_open_session = MagicMock(return_value=True)
     manager.image = "onlyoffice/documentserver:latest"
     return manager
 
