@@ -2,6 +2,7 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAccountRoutes } from "./accountRoutes";
+import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
 import { createProjectRoutes } from "./projectRoutes";
@@ -121,6 +122,16 @@ const routes: DemoRoute[] = [
     },
   },
 ];
+
+const withGuard = (route: DemoRoute): DemoRoute => ({
+  ...route,
+  handler: guarded(route.handler),
+});
+
+/** Маршруты клиента /api/admin: ставятся на adminClient отдельно от /api/v1. */
+export const serverAdminDemoRoutes: DemoRoute[] = createAdminRoutes(
+  () => world,
+).map(withGuard);
 
 export const serverDemoRoutes: DemoRoute[] = [
   ...routes,

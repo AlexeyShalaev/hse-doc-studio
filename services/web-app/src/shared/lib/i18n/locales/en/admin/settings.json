@@ -1,0 +1,165 @@
+{
+  "page": {
+    "title": "Sign-in settings",
+    "lead": "Who gets into the installation and how: registration, password, single sign-on and mail. Values set by the environment are read-only."
+  },
+  "loading": "Loading settings…",
+  "loadFailed": "Could not load the settings.",
+  "retry": "Retry",
+  "save": "Save",
+  "saving": "Saving…",
+  "saved": "Saved",
+  "cancel": "Cancel",
+  "locked": {
+    "badge": "Set by environment",
+    "note": "Every value in this section is set by the installation environment. To change them, edit the environment variables and restart the server."
+  },
+  "failure": {
+    "setting_locked": "This value is set by the environment and cannot be changed here.",
+    "last_login_method": "You cannot remove the last sign-in method: nobody could sign in afterwards. Enable the password or another sign-in first.",
+    "forbidden": "You do not have permission for this action.",
+    "rate_limited": "Too many attempts. Wait a moment and try again.",
+    "csrf_failed": "Your session is stale. Refresh the page and try again.",
+    "input_invalid": "The server did not accept the values. Check the form fields.",
+    "network": "No connection to the server. Check your network and try again.",
+    "unknown": "Something went wrong. Try again later."
+  },
+  "registration": {
+    "title": "Registration",
+    "sub": "Who can create an account on their own.",
+    "modeLabel": "Registration mode",
+    "mode": {
+      "invite": {
+        "title": "By invitation",
+        "body": "Accounts are created only from an invitation link. The recommended mode."
+      },
+      "domains": {
+        "title": "For email domains",
+        "body": "Only addresses from the domain list can register, for example hse.ru."
+      },
+      "open": {
+        "title": "Open",
+        "body": "Anyone with an email address can register."
+      },
+      "closed": {
+        "title": "Closed",
+        "body": "Self-registration is off; an administrator creates accounts."
+      }
+    },
+    "domains": "Allowed domains",
+    "domainsHint": "Separated by commas or spaces, without @.",
+    "domainsRequired": "Enter at least one domain.",
+    "domainsInvalid": "This does not look like a domain: {{list}}.",
+    "approval": "Require administrator approval",
+    "approvalHint": "A new account waits in the approval queue until an administrator allows sign-in.",
+    "noSmtpDomains": "Mail is not configured, so an address cannot be confirmed by email. New accounts by domain will wait for administrator approval.",
+    "openWarning": "Anyone will be able to create an account and use build resources. Turn on approval if the installation is reachable from the internet.",
+    "closedNote": "New people can only appear through an administrator invitation or single sign-on.",
+    "toast": "Registration settings saved"
+  },
+  "signin": {
+    "title": "Sign-in methods",
+    "sub": "How people prove who they are when signing in.",
+    "password": "Password sign-in",
+    "passwordHint": "People sign in with email and password. If turned off, only single sign-on remains.",
+    "sso": "Single sign-on providers enabled: {{count}}.",
+    "onlyMethod": "This is the only sign-in method. To turn off the password, enable a single sign-on provider first.",
+    "disableWarning": "After saving, password sign-in stops working for everyone, including you. Make sure single sign-on is set up and you can use it."
+  },
+  "oidc": {
+    "title": "Single sign-on (OIDC)",
+    "sub": "Sign-in through your organization's external service. The client secret is saved once and never shown.",
+    "add": "Add provider",
+    "loadFailed": "Could not load the providers.",
+    "empty": {
+      "title": "No providers yet",
+      "body": "Add a provider and a single sign-on button appears on the sign-in screen."
+    },
+    "on": "Enabled",
+    "off": "Disabled",
+    "autoProvision": "Creates accounts",
+    "secretSet": "Client secret is set",
+    "secretMissing": "Client secret is not set",
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": {
+      "title": "Delete the provider?",
+      "body": "Provider “{{name}}” disappears from the sign-in screen. Accounts linked to it stay, but they cannot sign in through it. Type the name to confirm.",
+      "action": "Delete provider"
+    },
+    "form": {
+      "createTitle": "New provider",
+      "editTitle": "Single sign-on provider",
+      "lead": "Take the values from the application settings at your provider (Keycloak, Authentik, Google and similar).",
+      "label": "Button name",
+      "labelHint": "This is how the button is labelled on the sign-in screen.",
+      "issuer": "Issuer address",
+      "issuerHint": "The address without /.well-known: the settings are discovered automatically.",
+      "clientId": "Client ID",
+      "secret": "Client secret",
+      "secretHint": "Write-only: it is accepted and never shown again.",
+      "secretKeep": "Leave empty to keep it",
+      "secretSet": "Secret is set",
+      "scopes": "Scopes",
+      "scopesHint": "Separated by spaces. openid is required, usually email and profile too.",
+      "enabled": "Show on the sign-in screen",
+      "enabledHint": "A disabled provider is kept, but nobody can sign in through it.",
+      "provision": "Create accounts automatically",
+      "provisionHint": "A person without an account gets one on first sign-in. Without it only existing accounts can sign in.",
+      "redirect": "Redirect URI",
+      "redirectNew": "Register it with the provider. {id} is replaced by the provider ID, which appears after saving.",
+      "redirectHint": "Register this address with the provider as an allowed redirect URI.",
+      "noBaseUrl": "The public address of the installation is not set, so the redirect URI cannot be built. Set the public address in the server settings."
+    },
+    "issue": {
+      "labelRequired": "Enter a name.",
+      "issuerRequired": "Enter the issuer address.",
+      "issuerInvalid": "This does not look like an address. Use the form https://id.example.org without parameters.",
+      "issuerInsecure": "https is required. Plain http is allowed only for localhost.",
+      "clientIdRequired": "Enter the client ID.",
+      "secretRequired": "Enter the client secret.",
+      "scopesOpenid": "The list must contain openid."
+    }
+  },
+  "smtp": {
+    "title": "Mail (SMTP)",
+    "sub": "Confirmation, password reset and invitation emails go through it.",
+    "on": "On",
+    "off": "Off",
+    "offNote": "Until mail is configured, confirmation and reset links are shown on screen, and the by-domain registration mode requires approval.",
+    "host": "Server",
+    "port": "Port",
+    "security": "Connection security",
+    "securityOption": {
+      "starttls": "STARTTLS (port 587)",
+      "tls": "TLS from the start (port 465)",
+      "none": "No encryption"
+    },
+    "username": "Login",
+    "password": "Password",
+    "passwordHint": "Write-only: it is accepted and never shown again.",
+    "passwordKeep": "Leave empty to keep it",
+    "passwordSet": "Password is set",
+    "fromAddress": "Sender address",
+    "fromName": "Sender name",
+    "issue": {
+      "hostRequired": "Enter the server.",
+      "portInvalid": "Port from 1 to 65535.",
+      "fromInvalid": "This does not look like an email address."
+    },
+    "test": {
+      "title": "Test email",
+      "sub": "Checks the saved settings. Save your changes first.",
+      "to": "To",
+      "toHint": "Empty: the email goes to your own address.",
+      "send": "Send test",
+      "sending": "Sending…",
+      "ok": "Email sent. Check the inbox.",
+      "failed": "The email was not sent",
+      "needSmtp": "Enter the server and save the settings first.",
+      "saveFirst": "There are unsaved changes: the test checks the previous settings, so save first."
+    }
+  }
+}

@@ -449,3 +449,24 @@ export const UpdateAdminOidcProviderRequestSchema = z.strictObject({
   enabled: z.boolean().nullable(),
   auto_provision: z.boolean().nullable(),
 });
+
+export type AdminSettingState = z.infer<typeof SettingStateSchema>;
+export type AdminRegistrationSettings = z.infer<
+  typeof AdminRegistrationSettingsSchema
+>;
+export type UpdateAdminRegistrationRequest = z.infer<
+  typeof UpdateAdminRegistrationRequestSchema
+>;
+export type AdminAuthSettings = z.infer<typeof AdminAuthSettingsSchema>;
+export type AdminSmtpSettings = z.infer<typeof AdminSmtpSettingsSchema>;
+export type UpdateAdminSmtpRequest = z.infer<
+  typeof UpdateAdminSmtpRequestSchema
+>;
+export type AdminSmtpTestResult = z.infer<typeof AdminSmtpTestResultSchema>;
+export type AdminOidcProvider = z.infer<typeof AdminOidcProviderSchema>;
+export type CreateAdminOidcProviderRequest = z.infer<
+  typeof CreateAdminOidcProviderRequestSchema
+>;
+export type UpdateAdminOidcProviderRequest = z.infer<
+  typeof UpdateAdminOidcProviderRequestSchema
+>;

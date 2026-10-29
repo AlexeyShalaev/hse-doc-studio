@@ -15,6 +15,8 @@ export type ServerDemoScenarioId =
   | "fresh_install_raced"
   | "fresh_install_broken"
   | "admin_ready"
+  | "admin_env_locked"
+  | "admin_sso"
   | "student_ready"
   | "registration_closed"
   | "sso_only"
@@ -120,7 +122,12 @@ export type ServerDemoScenario = {
   tokenRequired: boolean;
   /** Состояние мастера первого запуска; по умолчанию чистая установка. */
   setup?: Partial<ServerDemoSetup>;
+  /** Настройки входа в админке: чем они заданы. По умолчанию всё редактируется. */
+  adminSeed?: ServerDemoAdminSeed;
 };
+
+/** default: всё редактируется; env_locked: регистрация и почта заданы окружением; sso: пароль выключен, провайдеры включены. */
+export type ServerDemoAdminSeed = "default" | "env_locked" | "sso";
 
 export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
   {
@@ -199,6 +206,45 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           password_enabled: true,
           oidc_providers: [],
           smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_env_locked",
+    tokenRequired: false,
+    adminSeed: "env_locked",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_sso",
+    tokenRequired: false,
+    adminSeed: "sso",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "closed",
+          password_enabled: false,
+          oidc_providers: [
+            { id: "keycloak", label: "HSE SSO" },
+            { id: "google", label: "Google" },
+          ],
+          smtp_enabled: false,
           password_min_length: 10,
         },
         user: DEMO_ADMIN,

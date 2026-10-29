@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Spinner } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
 import { AdminLayout } from "./AdminLayout";
 import { AdminOverview, AdminSectionSoon } from "./AdminSections";
+
+// Настройки входа тяжелее остальной оболочки: свой чанк, чтобы admin-*.js оставался лёгким.
+const AdminSettingsPage = lazy(() =>
+  import("./AdminSettingsPage").then((m) => ({ default: m.AdminSettingsPage })),
+);
 
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
 // auth-чанках. Она лежит в коде чанка, а не в словарях.
@@ -43,6 +48,20 @@ export const AdminApp = () => {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
+        <Route
+          path="settings"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center" role="status">
+                  <Spinner size="md" />
+                </div>
+              }
+            >
+              <AdminSettingsPage />
+            </Suspense>
+          }
+        />
         <Route path=":section" element={<AdminSectionSoon />} />
       </Route>
     </Routes>

@@ -1,5 +1,9 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
 import { createDemoAccount, type DemoAccount } from "./accounts";
+import {
+  createDemoAdminSettings,
+  type DemoAdminSettings,
+} from "./adminSettings";
 import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
@@ -39,6 +43,8 @@ export type ServerDemoWorld = {
   projects: DemoProject[];
   /** Аккаунт вошедшего человека (подпись версий, сессии); строится при первом обращении. */
   account: DemoAccount | null;
+  /** Настройки входа в админке; строятся при первом обращении. */
+  adminSettings: DemoAdminSettings | null;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -82,7 +88,14 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     setup: createSetupState(scenario),
     projects: seedProjects(),
     account: null,
+    adminSettings: null,
   };
+};
+
+/** Настройки входа мира; для сценария берутся его заготовки. */
+export const adminSettingsOf = (world: ServerDemoWorld): DemoAdminSettings => {
+  world.adminSettings ??= createDemoAdminSettings(world.scenario.adminSeed);
+  return world.adminSettings;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

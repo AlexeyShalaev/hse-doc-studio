@@ -41,6 +41,14 @@
         "title": "Registration by domain",
         "hint": "Allowed domains only, emails are sent."
       },
+      "admin_env_locked": {
+        "title": "Admin, environment-set",
+        "hint": "Registration and mail are set by the environment: read-only."
+      },
+      "admin_sso": {
+        "title": "Admin, SSO only",
+        "hint": "Password is off, two providers, no mail."
+      },
       "registration_open_nosmtp": {
         "title": "Open, no email",
         "hint": "Emails are not sent: links are shown on screen."
