@@ -37,7 +37,7 @@ class JobsConfig(BaseModel):
     )
     storage_dir: Path | None = Field(
         default=None,
-        description="Корень хранилища задач: входные блобы, принятые выходы и лог; по умолчанию data_dir/jobs.",
+        description="Каталог лога задач; блобы входа и выходы лежат в объектном хранилище. По умолчанию data_dir/jobs.",
     )
     max_artifact_bytes: int = Field(
         default=512 * 1024 * 1024, gt=0, description="Предел одного выхода задачи; больший отвергается при заявке."
