@@ -2053,7 +2053,7 @@ class UseCaseProvider(Provider):
     def get_clone_git_project_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         base_service: TemplateBaseService,
         clone_store: IGitCloneStore,
@@ -2069,7 +2069,7 @@ class UseCaseProvider(Provider):
     ) -> CloneProjectUC:
         return CloneProjectUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
             base_service=base_service,
             clone_store=clone_store,
@@ -2086,8 +2086,8 @@ class UseCaseProvider(Provider):
         )
 
     @provide
-    def get_git_clone_defaults_uc(self, project_index_repo: IProjectIndexRepository) -> GetCloneDefaultsUC:
-        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", project_index_repo)
+    def get_git_clone_defaults_uc(self, locator: IProjectLocator) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", locator)
 
     @provide
     def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:

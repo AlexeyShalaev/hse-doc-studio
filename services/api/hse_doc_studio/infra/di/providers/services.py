@@ -70,9 +70,9 @@ from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     ILocalSettingsReader,
-    IProjectIndexRepository,
     IProjectRepository,
     ISettingsRepository,
     ISignatureRepository,
@@ -820,10 +820,8 @@ class DomainServiceProvider(Provider):
         )
 
     @provide
-    def get_git_credential_usage(
-        self, project_index: IProjectIndexRepository, projects: IProjectRepository
-    ) -> IGitCredentialUsage:
-        return StoreConfigCredentialUsage(project_index, projects)
+    def get_git_credential_usage(self, locator: IProjectLocator, projects: IProjectRepository) -> IGitCredentialUsage:
+        return StoreConfigCredentialUsage(locator, projects)
 
     @provide
     def get_local_author_profile(self, settings_reader: ILocalSettingsReader) -> ILocalAuthorProfile:
@@ -895,8 +893,8 @@ class DomainServiceProvider(Provider):
         return InMemoryGitOperationRegistry()
 
     @provide
-    def get_git_remote_registry(self, project_index: IProjectIndexRepository) -> IGitRemoteRegistry:
-        return ConfigScanRemoteRegistry(project_index)
+    def get_git_remote_registry(self, locator: IProjectLocator) -> IGitRemoteRegistry:
+        return ConfigScanRemoteRegistry(locator)
 
     @provide
     def get_ref_status_memo(self) -> RefStatusMemo:

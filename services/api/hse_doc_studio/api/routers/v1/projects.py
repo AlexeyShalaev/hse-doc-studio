@@ -30,6 +30,7 @@ from hse_doc_studio.core.access.repositories import ProjectMembership
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
@@ -362,7 +363,16 @@ async def move_project(
 ) -> ProjectDetailResponse:
     if settings.mode is StudioMode.server and not ServerConfig.from_settings(settings).caps.move_project:
         # Переезд на другую папку хоста на общем сервере не существует: том выбирает сервер.
-        raise HTTPException(status_code=404, detail="Not Found")
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "not_available_in_server_mode",
+                "detail": localized_error(
+                    "На общем сервере проект нельзя перенести: папку выбирает сервер.",
+                    "A project cannot be moved on a shared server: the server chooses the folder.",
+                ),
+            },
+        )
     try:
         result = await uc.execute(MoveProjectInput(project_id=project_id, new_folder=Path(paths.accept(body.folder))))
     except NotFoundError as exc:

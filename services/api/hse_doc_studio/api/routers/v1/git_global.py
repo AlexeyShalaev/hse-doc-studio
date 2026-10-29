@@ -12,6 +12,7 @@ from uuid import UUID
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.git_mapping import map_operation, map_probe, map_provider_info, map_token_info
 from hse_doc_studio.api.schemas.git_sync import (
@@ -39,6 +40,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.secret import Secret
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.use_cases.git_sync.bundles import BundleScratch, CloneFromBundleInput, CloneFromBundleUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectInput, CloneProjectUC, GetCloneDefaultsUC
@@ -312,7 +314,9 @@ async def get_git_clone_defaults(
     name: str | None = Query(default=None, max_length=256),
 ) -> CloneDefaultsResponse:
     """Свободная папка под клон, в терминах хозяина машины: как её видит пользователь."""
-    return CloneDefaultsResponse(folder=paths.display(str(await uc.execute(name))))
+    folder = await uc.execute(name)
+    # Путь тома сервера клиенту не показывается: на сервере папку выбирает сам сервер.
+    return CloneDefaultsResponse(folder="" if settings.mode is StudioMode.server else paths.display(str(folder)))
 
 
 @router.get("/git/operations/{operation_id}", response_model=OperationResponse)

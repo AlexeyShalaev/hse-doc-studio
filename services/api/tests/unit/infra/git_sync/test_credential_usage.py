@@ -52,7 +52,7 @@ class _Index:
     def __init__(self, folders: list[Path]) -> None:
         self._folders = folders
 
-    def list_known(self) -> list[Path]:
+    async def list_all(self) -> list[Path]:
         return self._folders
 
 
@@ -81,7 +81,7 @@ def _store(folder: Path, credential: UUID | None) -> None:
     (git_dir / "config").write_text(body, encoding="utf-8")
 
 
-def test__by_credential__groups_projects_and_skips_unbound_and_broken(tmp_path: Path) -> None:
+async def test__by_credential__groups_projects_and_skips_unbound_and_broken(tmp_path: Path) -> None:
     first, second, unbound, broken = (tmp_path / n for n in ("first", "second", "unbound", "broken"))
     other = uuid4()
     for folder, credential in ((first, _ID), (second, _ID), (unbound, None), (broken, other)):
@@ -89,7 +89,7 @@ def test__by_credential__groups_projects_and_skips_unbound_and_broken(tmp_path: 
     projects = {first: _Project("Первый"), second: _Project("Второй"), unbound: _Project("Без доступа")}
     usage = StoreConfigCredentialUsage(_Index([first, second, unbound, broken]), _Projects(projects))  # type: ignore[arg-type]
 
-    result = usage.by_credential()
+    result = await usage.by_credential()
 
     assert set(result) == {_ID}
     assert [(u.project_id, u.name) for u in result[_ID]] == [
@@ -98,7 +98,7 @@ def test__by_credential__groups_projects_and_skips_unbound_and_broken(tmp_path: 
     ]
 
 
-def test__by_credential__folder_without_store__is_ignored(tmp_path: Path) -> None:
+async def test__by_credential__folder_without_store__is_ignored(tmp_path: Path) -> None:
     usage = StoreConfigCredentialUsage(_Index([tmp_path / "gone"]), _Projects({}))  # type: ignore[arg-type]
 
-    assert usage.by_credential() == {}
+    assert await usage.by_credential() == {}

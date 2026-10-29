@@ -13,15 +13,9 @@ class _Index:
         self.folders = folders
         self.calls = 0
 
-    def list_known(self) -> list[Path]:
+    async def list_all(self) -> list[Path]:
         self.calls += 1
         return list(self.folders)
-
-    def register(self, folder: Path) -> None:
-        self.folders.append(folder)
-
-    def unregister(self, folder: Path) -> None:
-        self.folders.remove(folder)
 
 
 def _store_config(folder: Path, text: str) -> Path:
@@ -47,45 +41,45 @@ def test__store_has_remote__detects_the_origin_section_in_the_text(tmp_path: Pat
     assert not store_has_remote(tmp_path / "missing")
 
 
-def test__list__first_use_scans_known_projects_once(tmp_path: Path) -> None:
+async def test__list__first_use_scans_known_projects_once(tmp_path: Path) -> None:
     connected = _store_config(tmp_path / "a", _WITH_REMOTE)
     plain = _store_config(tmp_path / "b", "[core]\n")
     index = _Index([connected, plain, tmp_path / "gone"])
     registry = ConfigScanRemoteRegistry(index)
 
-    assert registry.list() == [connected]
-    assert registry.list() == [connected]
+    assert await registry.list() == [connected]
+    assert await registry.list() == [connected]
     assert index.calls == 1
 
 
-def test__add_remove__keep_the_list_current_without_rescanning(tmp_path: Path) -> None:
+async def test__add_remove__keep_the_list_current_without_rescanning(tmp_path: Path) -> None:
     index = _Index([])
     registry = ConfigScanRemoteRegistry(index)
     folder = tmp_path / "p"
 
     registry.add(folder)
     registry.add(folder)
-    assert registry.list() == [folder]
+    assert await registry.list() == [folder]
     registry.remove(folder)
     registry.remove(folder)
 
-    assert registry.list() == []
+    assert await registry.list() == []
     assert index.calls == 1
 
 
-def test__scan__broken_index_does_not_break_registration(tmp_path: Path) -> None:
+async def test__scan__broken_index_does_not_break_registration(tmp_path: Path) -> None:
     class Broken(_Index):
-        def list_known(self) -> list[Path]:
-            raise RuntimeError("index.json is damaged")
+        async def list_all(self) -> list[Path]:
+            raise RuntimeError("каталог повреждён")
 
     registry = ConfigScanRemoteRegistry(Broken([]))
 
     registry.add(tmp_path)
 
-    assert registry.list() == [tmp_path]
+    assert await registry.list() == [tmp_path]
 
 
-def test__same_folder_through_a_symlink_is_one_entry(tmp_path: Path) -> None:
+async def test__same_folder_through_a_symlink_is_one_entry(tmp_path: Path) -> None:
     real = tmp_path / "real"
     real.mkdir()
     link = tmp_path / "link"
@@ -96,7 +90,7 @@ def test__same_folder_through_a_symlink_is_one_entry(tmp_path: Path) -> None:
     registry.add(link)
     registry.remove(link)
 
-    assert registry.list() == []
+    assert await registry.list() == []
 
 
 def test__subscribe__listeners_hear_every_add_but_not_remove(tmp_path: Path) -> None:
@@ -111,7 +105,7 @@ def test__subscribe__listeners_hear_every_add_but_not_remove(tmp_path: Path) -> 
     assert heard == [1, 1]
 
 
-def test__subscribe__a_failing_listener_does_not_break_adding_a_project(tmp_path: Path) -> None:
+async def test__subscribe__a_failing_listener_does_not_break_adding_a_project(tmp_path: Path) -> None:
     registry = ConfigScanRemoteRegistry(_Index([]))
     heard: list[int] = []
 
@@ -123,22 +117,22 @@ def test__subscribe__a_failing_listener_does_not_break_adding_a_project(tmp_path
 
     registry.add(tmp_path / "a")
 
-    assert registry.list() == [tmp_path / "a"]
+    assert await registry.list() == [tmp_path / "a"]
     assert heard == [1]
 
 
-def test__consider__folder_with_a_remote_added_after_the_scan__is_listed_and_wakes_the_listeners(
+async def test__consider__folder_with_a_remote_added_after_the_scan__is_listed_and_wakes_the_listeners(
     tmp_path: Path,
 ) -> None:
     registry = ConfigScanRemoteRegistry(_Index([]))
     woken: list[bool] = []
     registry.subscribe(lambda: woken.append(True))
-    assert registry.list() == []
+    assert await registry.list() == []
     copied = _store_config(tmp_path / "copied", _WITH_REMOTE)
     plain = _store_config(tmp_path / "plain", "[core]\n")
 
     registry.consider(copied)
     registry.consider(plain)
 
-    assert registry.list() == [copied]
+    assert await registry.list() == [copied]
     assert woken == [True]

@@ -62,7 +62,7 @@ class ListCredentialsUC:
         self._usage = usage
 
     async def execute(self) -> list[CredentialView]:
-        used = self._usage.by_credential()
+        used = await self._usage.by_credential()
         return [CredentialView(c, tuple(used.get(c.id, ()))) for c in self._repo.list()]
 
 
@@ -158,7 +158,7 @@ class UpdateCredentialUC:
             changes["expires_at"] = None
         updated = replace(current, **changes)  # type: ignore[arg-type]
         self._repo.update(updated, new_secret)
-        used = self._usage.by_credential().get(updated.id, ())
+        used = (await self._usage.by_credential()).get(updated.id, ())
         return CredentialView(self._repo.get(updated.id) or updated, tuple(used))
 
 
@@ -176,7 +176,7 @@ class DeleteCredentialUC:
     async def execute(self, inp: DeleteCredentialInput) -> None:
         if self._repo.get(inp.credential_id) is None:
             raise _not_found()
-        used = self._usage.by_credential().get(inp.credential_id, [])
+        used = (await self._usage.by_credential()).get(inp.credential_id, [])
         if used and not inp.force:
             raise GitSyncError(
                 GitErrorCode.credential_in_use,

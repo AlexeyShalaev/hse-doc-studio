@@ -60,6 +60,7 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
+from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
@@ -222,6 +223,10 @@ class ServerPersistenceProvider(Provider):
             keep_per_document=server_config.compile_records_per_document,
             log_limit_bytes=server_config.compile_log_limit_bytes,
         )
+
+    @provide(override=True)
+    def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(volume.root, locator, uuid_names=True)
 
     @provide
     def get_project_catalog_reconciler(
