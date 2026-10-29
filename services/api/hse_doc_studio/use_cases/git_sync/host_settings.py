@@ -52,7 +52,7 @@ class ListHostSettingsUC:
 
     async def execute(self) -> list[HostSettingsView]:
         items = {item.key: item for item in self._settings.list()}
-        for credential in self._credentials.list():
+        for credential in await self._credentials.list():
             items.setdefault(host_settings_key(credential.host, None), GitHostSettings(credential.host))
         return [HostSettingsView(item, self._resolver.known(item.host, item.port)) for item in items.values()]
 
@@ -146,7 +146,7 @@ class CheckCredentialUC:
         self._tokens = token_checker
 
     async def execute(self, credential_id: UUID) -> CredentialCheckView:
-        credential = self._credentials.get(credential_id)
+        credential = await self._credentials.get(credential_id)
         if credential is None:
             raise NotFoundError(localized_error("Доступ не найден", "Credential not found"))
         if credential.kind is not GitCredentialKind.pat:
@@ -160,7 +160,7 @@ class CheckCredentialUC:
             raise git_error(GitErrorCode.token_expired)
         if check is not None and check.state is TokenState.rejected:
             raise git_error(GitErrorCode.auth_failed)
-        refreshed = self._credentials.get(credential_id) or credential
+        refreshed = await self._credentials.get(credential_id) or credential
         used_by = tuple((await self._usage.by_credential()).get(credential_id, ()))
         return CredentialCheckView(CredentialView(refreshed, used_by), resolved.info, check)
 

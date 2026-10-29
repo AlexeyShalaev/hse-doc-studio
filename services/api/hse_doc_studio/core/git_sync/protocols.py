@@ -33,6 +33,7 @@ from hse_doc_studio.core.git_sync.entities import (
     OperationPhase,
     OperationStatus,
     PathStamp,
+    RemoteBinding,
     RemoteProbe,
     RemoteTarget,
     ScannedHostKey,
@@ -53,6 +54,7 @@ from hse_doc_studio.core.git_sync.merge.choices import FieldChoice
 from hse_doc_studio.core.git_sync.merge.jsonmerge import AutoField, FieldConflict
 from hse_doc_studio.core.git_sync.providers import ApiDetection, GitProvider
 from hse_doc_studio.core.git_sync.secret import CipherStatus, Secret
+from hse_doc_studio.core.git_sync.url import RemoteUrl
 from hse_doc_studio.core.template_update.protocols import IMergeEngine
 
 # Прогресс сетевой операции: доля 0..100 и последняя строка git.
@@ -84,32 +86,66 @@ class ISecretCipher(Protocol):
 
 
 class IGitCredentialRepository(Protocol):
-    """Хранилище учётных данных: метаданные открыты, секрет только шифртекстом."""
+    """Хранилище учётных данных: метаданные открыты, секрет только шифртекстом.
 
-    def list(self) -> list[GitCredential]:
+    В серверном режиме записи принадлежат пользователю из `current_actor()`: чужой доступ неотличим
+    от несуществующего. Использование чужого доступа проекта идёт через `ICredentialAccess`.
+    """
+
+    async def list(self) -> list[GitCredential]:
         """Без расшифровки. Запись с недоступным ключом приходит со статусом unreadable."""
         ...
 
-    def get(self, credential_id: UUID) -> GitCredential | None: ...
-    def add(self, credential: GitCredential, secret: Secret) -> None: ...
-    def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
+    async def get(self, credential_id: UUID) -> GitCredential | None: ...
+    async def add(self, credential: GitCredential, secret: Secret) -> None: ...
+    async def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
         """`secret=None` оставляет сохранённый секрет."""
         ...
 
-    def delete(self, credential_id: UUID) -> bool: ...
-    def get_secret(self, credential_id: UUID) -> Secret:
+    async def delete(self, credential_id: UUID) -> bool: ...
+    async def get_secret(self, credential_id: UUID) -> Secret:
         """Бросает NotFoundError, если записи нет, и GitSyncError(secrets_unavailable), если ключ не подходит."""
         ...
 
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+    async def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
         """Статус и время последнего использования без перезаписи секрета; неизвестная запись игнорируется."""
         ...
 
 
 class IGitCredentialUsage(Protocol):
-    """Какие проекты подключили удалённый репозиторий с этим доступом (из настроек хранилищ проектов)."""
+    """Какие проекты подключили удалённый репозиторий с этим доступом."""
 
     async def by_credential(self) -> dict[UUID, list[CredentialUsage]]: ...
+
+
+class IGitRemoteBindings(Protocol):
+    """Привязка доступа к удалённому репозиторию проекта: в серверном режиме запись в БД.
+
+    Привязка хранит схему, хост и порт адреса, для которых владелец разрешил доступ; смена адреса
+    это отключение и новое подключение, то есть новая привязка. В локальной установке привязка живёт
+    в настройках хранилища проекта, и эта реализация ничего не делает.
+    """
+
+    async def bind(self, project_id: UUID, credential_id: UUID, remote: RemoteUrl) -> None:
+        """Заменяет привязку проекта. Доступ должен принадлежать актору, иначе NotFoundError."""
+        ...
+
+    async def unbind(self, project_id: UUID) -> None: ...
+    async def get(self, project_id: UUID) -> RemoteBinding | None: ...
+
+
+class ICredentialAccess(Protocol):
+    """Единственный путь к секрету доступа при сетевой операции git.
+
+    Доступ годится владельцу и, если он привязан к проекту с тем же адресом, участнику проекта с ролью
+    Редактор и выше. Каждое использование секрета пишется в журнал аудита с актором. Отказ неотличим
+    от отсутствия доступа.
+    """
+
+    async def get(self, credential_id: UUID, *, project_id: UUID | None) -> GitCredential | None: ...
+    async def get_secret(self, credential_id: UUID, *, project_id: UUID | None, remote: RemoteUrl) -> Secret:
+        """NotFoundError, если доступа нет или он не разрешён; GitSyncError(secrets_unavailable): ключ не подходит."""
+        ...
 
 
 @dataclass(frozen=True)

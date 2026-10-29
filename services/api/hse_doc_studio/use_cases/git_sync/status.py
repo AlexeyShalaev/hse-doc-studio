@@ -18,6 +18,7 @@ import structlog
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.git_sync.entities import (
     CommitBrief,
+    GitCredential,
     GitCredentialKind,
     GitOperation,
     LastError,
@@ -38,7 +39,7 @@ from hse_doc_studio.core.git_sync.policy import (
     GitSyncPolicy,
 )
 from hse_doc_studio.core.git_sync.protocols import (
-    IGitCredentialRepository,
+    ICredentialAccess,
     IGitOperationRegistry,
     IGitRepoReader,
     IGitStoreGuard,
@@ -193,7 +194,7 @@ class GitStatusBuilder:
         reader: IGitRepoReader,
         operations: IGitOperationRegistry,
         profile: ILocalAuthorProfile,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         access: ProjectAccessService,
         guard: IGitStoreGuard,
         settings_repo: ISettingsRepository,
@@ -219,10 +220,19 @@ class GitStatusBuilder:
     async def view(self, project: Project) -> GitStatusView:
         """Настройки читаются здесь, а блокирующая часть с запусками git уходит в поток."""
         stored = await self._settings.get()
-        return await asyncio.to_thread(self.build, project, stored)
+        credential_id = await asyncio.to_thread(self._credential_id, project)
+        credential = await self._credentials.get(credential_id, project_id=project.id) if credential_id else None
+        return await asyncio.to_thread(self.build, project, stored, credential)
 
-    def build(self, project: Project, stored: dict[str, object]) -> GitStatusView:
-        """Блокирует на запусках git: вызывающий уводит вызов в поток."""
+    def _credential_id(self, project: Project) -> UUID | None:
+        config = self._remotes.read(project)
+        if config is None:
+            return None
+        state = self._states.get(project.folder)
+        return (state.credential_id if state else None) or config.credential_id
+
+    def build(self, project: Project, stored: dict[str, object], credential: GitCredential | None) -> GitStatusView:
+        """Блокирует на запусках git: вызывающий уводит вызов в поток. `credential`: доступ, подключённый к проекту."""
         profile_ok = self._profile.get() is not None
         config = self._remotes.read(project)
         if config is None:
@@ -248,7 +258,7 @@ class GitStatusBuilder:
         return GitStatusView(
             connected=True,
             ui_state=ui_state,
-            remote=self._remote_info(config, state),
+            remote=self._remote_info(config, state, credential),
             relation=comparison.relation,
             health=state.health,
             profile_ok=profile_ok,
@@ -377,14 +387,14 @@ class GitStatusBuilder:
             for b in briefs
         )
 
-    def _remote_info(self, config: StoreRemoteConfig, state: SyncState) -> RemoteInfoView | None:
+    def _remote_info(
+        self, config: StoreRemoteConfig, state: SyncState, credential: GitCredential | None
+    ) -> RemoteInfoView | None:
         try:
             url = parse_remote_url(config.url, allow_http=True, allow_local=True)
         except GitSyncError:
             # Адрес в config не разбирается: хранилище уже помечено недоверенным, показывать нечего.
             return None
-        credential_id = state.credential_id or config.credential_id
-        credential = self._credentials.get(credential_id) if credential_id else None
         provider = self._providers.known(url.host, url.port) if self._providers else detect_provider(url.host)
         return RemoteInfoView(
             display_url=url.display_url,

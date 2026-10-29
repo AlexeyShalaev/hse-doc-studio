@@ -48,10 +48,10 @@ class _Caps:
 
 
 class _Credentials:
-    def get(self, credential_id: object) -> None:
+    async def get(self, credential_id: object) -> None:
         return None
 
-    def mark(self, *args: object, **kwargs: object) -> None:
+    async def mark(self, *args: object, **kwargs: object) -> None:
         return None
 
 

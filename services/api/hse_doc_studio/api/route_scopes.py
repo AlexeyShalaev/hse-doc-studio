@@ -303,6 +303,10 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "/signing-identities/self-signed",
         "/signing-identities/import-pkcs12",
         "/signing-identities/{identity_id}",
+        # Git-доступы лежат в Postgres у владельца; проект пользуется ими по привязке.
+        "/git/credentials",
+        "/git/credentials/{credential_id}",
+        "/git/credentials/{credential_id}/check",
     }
 )
 

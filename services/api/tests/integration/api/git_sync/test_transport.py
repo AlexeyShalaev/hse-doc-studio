@@ -69,7 +69,7 @@ class Stack:
     runner: GitRemoteRunner
     transport: GitTransport
 
-    def add_pat(self, *, host: str = "127.0.0.1", token: str = _TOKEN, username: str | None = None) -> UUID:
+    async def add_pat(self, *, host: str = "127.0.0.1", token: str = _TOKEN, username: str | None = None) -> UUID:
         credential = GitCredential(
             id=uuid4(),
             kind=GitCredentialKind.pat,
@@ -80,7 +80,7 @@ class Stack:
             created_at=datetime(2026, 10, 26, tzinfo=timezone.utc),
             token_family="ghp",
         )
-        self.credentials.add(credential, Secret(token))
+        await self.credentials.add(credential, Secret(token))
         return credential.id
 
 
@@ -173,12 +173,12 @@ async def test__probe__over_http_with_pat__ok_and_credential_marked_used(
     stack: Stack, http_git_server: GitHttpServer
 ) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
 
     assert probe.ok is True
-    stored = stack.credentials.get(credential_id)
+    stored = await stack.credentials.get(credential_id)
     assert stored is not None
     assert stored.status is CredentialStatus.ok
     assert stored.last_used_at is not None
@@ -188,7 +188,7 @@ async def test__probe__wrong_token__auth_failed_and_credential_marked(
     stack: Stack, http_git_server: GitHttpServer
 ) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token="ghp_WRONGtokenValue1234567890abcdef")
+    credential_id = await stack.add_pat(token="ghp_WRONGtokenValue1234567890abcdef")
 
     probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
 
@@ -196,7 +196,7 @@ async def test__probe__wrong_token__auth_failed_and_credential_marked(
     assert probe.error is not None
     assert probe.error.code is GitErrorCode.auth_failed
     assert probe.reachable is True
-    stored = stack.credentials.get(credential_id)
+    stored = await stack.credentials.get(credential_id)
     assert stored is not None
     assert stored.status is CredentialStatus.auth_failed
 
@@ -230,7 +230,7 @@ async def test__probe__server_hangs__timeout_and_child_is_killed(
     stack = stack_factory(probe_timeout_s=1.0)
     http_git_server.create_repo("r.git")
     http_git_server.mode = "hang"
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     started = time.monotonic()
     probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
@@ -247,7 +247,7 @@ async def test__probe__server_hangs__timeout_and_child_is_killed(
 async def test__probe__drop_connection__offline(stack: Stack, http_git_server: GitHttpServer) -> None:
     http_git_server.create_repo("r.git")
     http_git_server.mode = "drop"
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
 
@@ -263,7 +263,7 @@ async def test__run__pat__token_absent_from_argv_and_present_only_in_env(
     stack: Stack, http_git_server: GitHttpServer
 ) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
 
@@ -280,7 +280,7 @@ async def test__run__pat__token_absent_from_argv_and_present_only_in_env(
 
 async def test__run__pat__token_never_reaches_logs_or_error_text(stack: Stack, http_git_server: GitHttpServer) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token=_TOKEN)
+    credential_id = await stack.add_pat(token=_TOKEN)
 
     with structlog.testing.capture_logs() as logs:
         probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
@@ -314,7 +314,7 @@ async def test__run__credential_for_another_host__refused_before_spawn(
     stack: Stack, http_git_server: GitHttpServer
 ) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(host="github.com")
+    credential_id = await stack.add_pat(host="github.com")
 
     probe = await stack.transport.probe(_http_target(http_git_server, "r.git", credential_id))
 
@@ -339,7 +339,7 @@ async def test__fetch__redirect_to_another_host__header_is_not_leaked(
     evil = http_git_server_factory(token=None)
     origin.create_repo("r.git")
     origin.redirect_to = evil.base_url
-    credential_id = stack.add_pat(token=origin.token or "")
+    credential_id = await stack.add_pat(token=origin.token or "")
 
     with pytest.raises(GitSyncError):
         await stack.transport.fetch(
@@ -360,7 +360,7 @@ async def test__fetch__redirect_to_server_with_same_repo__token_does_not_reach_i
     seed_remote(origin.create_repo("r.git"), {"a.txt": "a"})
     seed_remote(evil.create_repo("r.git"), {"a.txt": "a"})
     origin.redirect_to = evil.base_url
-    credential_id = stack.add_pat(token=origin.token or "")
+    credential_id = await stack.add_pat(token=origin.token or "")
 
     with pytest.raises(GitSyncError):
         await stack.transport.fetch(
@@ -579,7 +579,7 @@ async def test__push__over_http_with_pat__remote_receives_commit(
     stack: Stack, http_git_server: GitHttpServer, studio_pair: StudioPair
 ) -> None:
     remote = http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
     sha = studio_pair.first.head()
 
     await stack.transport.push(
@@ -597,7 +597,7 @@ async def test__push__server_answers_403__forbidden_write(
 ) -> None:
     http_git_server.create_repo("r.git")
     http_git_server.mode = "push_403"
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     with pytest.raises(GitSyncError) as raised:
         await stack.transport.push(
@@ -608,7 +608,7 @@ async def test__push__server_answers_403__forbidden_write(
         )
 
     assert raised.value.code is GitErrorCode.forbidden_write
-    stored = stack.credentials.get(credential_id)
+    stored = await stack.credentials.get(credential_id)
     assert stored is not None
     assert stored.status is not CredentialStatus.auth_failed
 
@@ -617,7 +617,7 @@ async def test__two_studios__push_then_fetch_over_http__second_sees_first(
     stack: Stack, http_git_server: GitHttpServer, studio_pair: StudioPair
 ) -> None:
     http_git_server.create_repo("r.git")
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
     target = _http_target(http_git_server, "r.git", credential_id)
     studio_pair.first.write("shared.txt", "from first")
     sha = studio_pair.first.commit("first edit")
@@ -635,7 +635,7 @@ async def test__fetch__cancelled_while_server_hangs__child_is_killed(
 ) -> None:
     http_git_server.create_repo("r.git")
     http_git_server.mode = "hang"
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
     task = asyncio.create_task(
         stack.transport.fetch(
             studio_pair.first.git_dir, _http_target(http_git_server, "r.git", credential_id), branch="main"
@@ -693,7 +693,7 @@ async def test__read_tip_file__over_http_with_pat__returns_project_json(
 ) -> None:
     remote = http_git_server.create_repo("r.git")
     seed_remote(remote, {".hse-studio/project.json": _PROJECT_JSON})
-    credential_id = stack.add_pat(token=http_git_server.token or "")
+    credential_id = await stack.add_pat(token=http_git_server.token or "")
 
     content = await stack.transport.read_tip_file(
         _http_target(http_git_server, "r.git", credential_id), branch="main", path=".hse-studio/project.json"

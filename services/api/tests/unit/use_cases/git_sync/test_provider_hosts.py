@@ -85,21 +85,21 @@ class _Credentials:
         self.items[credential.id] = credential
         return credential
 
-    def list(self) -> list[GitCredential]:
+    async def list(self) -> list[GitCredential]:
         return list(self.items.values())
 
-    def get(self, credential_id: UUID) -> GitCredential | None:
+    async def get(self, credential_id: UUID) -> GitCredential | None:
         return self.items.get(credential_id)
 
-    def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
+    async def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
         self.items[credential.id] = credential
 
-    def get_secret(self, credential_id: UUID) -> Secret:
+    async def get_secret(self, credential_id: UUID) -> Secret:
         if credential_id not in self.items:
             raise NotFoundError("credential")
         return Secret("glpat-CANARYtoken1234567890")
 
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+    async def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
         self.marks.append((credential_id, status))
         self.items[credential_id] = replace(self.items[credential_id], status=status)
 
@@ -483,7 +483,7 @@ async def test__check_credential__valid_gitlab_token__returns_assessment_and_rem
     assert view.token.info is not None
     assert (view.token.info.login, view.token.info.sufficiency) == ("anna", Sufficiency.sufficient)
     assert view.credential.credential.expires_at == expiry
-    assert credentials.get(credential.id).expires_at == expiry  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).expires_at == expiry  # type: ignore[union-attr]
     assert introspector.requests[0].api_base == _GITLAB_API
     assert introspector.requests[0].provider is GitProvider.gitlab
 
@@ -529,9 +529,9 @@ async def test__check_credential__expired__raises_token_expired_and_marks_the_cr
         await _check_uc(settings, credentials, checker).execute(credential.id)
 
     assert error.value.code is GitErrorCode.token_expired
-    assert credentials.get(credential.id).expires_at == expiry  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).expires_at == expiry  # type: ignore[union-attr]
     assert credentials.marks == [(credential.id, CredentialStatus.auth_failed)]
-    assert credentials.get(credential.id).status is CredentialStatus.auth_failed  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).status is CredentialStatus.auth_failed  # type: ignore[union-attr]
 
 
 async def test__check_credential__valid_token_after_a_failure__clears_auth_failed(

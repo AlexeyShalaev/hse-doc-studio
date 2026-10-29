@@ -63,7 +63,7 @@ class ListCredentialsUC:
 
     async def execute(self) -> list[CredentialView]:
         used = await self._usage.by_credential()
-        return [CredentialView(c, tuple(used.get(c.id, ()))) for c in self._repo.list()]
+        return [CredentialView(c, tuple(used.get(c.id, ()))) for c in await self._repo.list()]
 
 
 @dataclass
@@ -113,7 +113,7 @@ class CreateCredentialUC:
                 port=normalize_port(inp.port),
             )
             secret = generated.private_key
-        self._repo.add(credential, secret)
+        await self._repo.add(credential, secret)
         return CredentialView(credential)
 
 
@@ -133,7 +133,7 @@ class UpdateCredentialUC:
         self._usage = usage
 
     async def execute(self, inp: UpdateCredentialInput) -> CredentialView:
-        current = self._repo.get(inp.credential_id)
+        current = await self._repo.get(inp.credential_id)
         if current is None:
             raise _not_found()
         changes: dict[str, object] = {}
@@ -157,9 +157,9 @@ class UpdateCredentialUC:
             # Срок прежнего токена к новому не относится: его назовёт следующая проверка.
             changes["expires_at"] = None
         updated = replace(current, **changes)  # type: ignore[arg-type]
-        self._repo.update(updated, new_secret)
+        await self._repo.update(updated, new_secret)
         used = (await self._usage.by_credential()).get(updated.id, ())
-        return CredentialView(self._repo.get(updated.id) or updated, tuple(used))
+        return CredentialView(await self._repo.get(updated.id) or updated, tuple(used))
 
 
 @dataclass
@@ -174,7 +174,7 @@ class DeleteCredentialUC:
         self._usage = usage
 
     async def execute(self, inp: DeleteCredentialInput) -> None:
-        if self._repo.get(inp.credential_id) is None:
+        if await self._repo.get(inp.credential_id) is None:
             raise _not_found()
         used = (await self._usage.by_credential()).get(inp.credential_id, [])
         if used and not inp.force:
@@ -186,7 +186,7 @@ class DeleteCredentialUC:
                 ),
                 projects=[{"project_id": str(u.project_id), "name": u.name} for u in used],
             )
-        self._repo.delete(inp.credential_id)
+        await self._repo.delete(inp.credential_id)
 
 
 @dataclass(frozen=True)
@@ -214,7 +214,7 @@ class GetSecretsStatusUC:
 
     async def execute(self) -> SecretsStatus:
         status = self._cipher.status()
-        credentials = self._repo.list()
+        credentials = await self._repo.list()
         unreadable = sum(1 for c in credentials if c.status is CredentialStatus.unreadable)
         return SecretsStatus(
             ok=status.available and unreadable == 0,

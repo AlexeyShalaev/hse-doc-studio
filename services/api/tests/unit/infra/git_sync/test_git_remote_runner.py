@@ -63,16 +63,16 @@ class _Credentials:
     def add(self, credential: GitCredential, secret: Secret) -> None:
         self.items[credential.id] = (credential, secret)
 
-    def get(self, credential_id: UUID) -> GitCredential | None:
+    async def get(self, credential_id: UUID) -> GitCredential | None:
         item = self.items.get(credential_id)
         return item[0] if item else None
 
-    def get_secret(self, credential_id: UUID) -> Secret:
+    async def get_secret(self, credential_id: UUID) -> Secret:
         if credential_id not in self.items:
             raise NotFoundError("credential")
         return self.items[credential_id][1]
 
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+    async def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
         self.marks.append((credential_id, status))
 
 
@@ -325,7 +325,7 @@ async def test__run__git_binary_cannot_start__git_unavailable() -> None:
 
 async def test__run__unreadable_secret__secrets_unavailable_is_passed_through_before_spawn() -> None:
     class _Broken(_Credentials):
-        def get_secret(self, credential_id: UUID) -> Secret:
+        async def get_secret(self, credential_id: UUID) -> Secret:
             raise GitSyncError(GitErrorCode.secrets_unavailable)
 
     credential = _credential()
@@ -373,3 +373,61 @@ async def test__run_local__check_false__returns_the_failed_result() -> None:
     result = await runner.run_local(["cat-file", "-p", "x"], git_dir=_STORE, timeout_s=1, check=False)
 
     assert result.returncode == 128
+
+
+@dataclass
+class _SpyAccess:
+    """Доступ, который запоминает, у кого и ради какого проекта просили секрет."""
+
+    credential: GitCredential
+    asked: list[tuple[UUID, UUID | None]] = field(default_factory=list)
+
+    async def get(self, credential_id: UUID, *, project_id: UUID | None) -> GitCredential | None:
+        return self.credential
+
+    async def get_secret(self, credential_id: UUID, *, project_id: UUID | None, remote: object) -> Secret:
+        self.asked.append((credential_id, project_id))
+        return Secret(_TOKEN)
+
+
+async def test__run__credential_for_another_host__is_refused_before_the_secret_is_opened() -> None:
+    credential = _credential("gitlab.com")
+    access = _SpyAccess(credential)
+    runner = GitRemoteRunner(
+        GitConfig(),
+        _Credentials(),  # type: ignore[arg-type]
+        local_mode=True,
+        process=_Process(),
+        capabilities=_Caps(),  # type: ignore[arg-type]
+        access=access,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(GitSyncError) as raised:
+        await runner.run(
+            ["fetch"], op=GitOp.fetch, git_dir=_STORE, target=_target(credential_id=credential.id), timeout_s=1
+        )
+
+    assert raised.value.code is GitErrorCode.credential_host_mismatch
+    assert access.asked == []
+
+
+async def test__run__secret_is_requested_through_access_with_the_project_of_the_target() -> None:
+    credential = _credential()
+    access = _SpyAccess(credential)
+    process = _Process()
+    runner = GitRemoteRunner(
+        GitConfig(),
+        _Credentials(),  # type: ignore[arg-type]
+        local_mode=True,
+        process=process,
+        capabilities=_Caps(),  # type: ignore[arg-type]
+        access=access,  # type: ignore[arg-type]
+    )
+    project_id = uuid4()
+    target = RemoteTarget(
+        parse_remote_url("https://github.com/hse/course.git"), credential_id=credential.id, project_id=project_id
+    )
+
+    await runner.run(["fetch"], op=GitOp.fetch, git_dir=_STORE, target=target, timeout_s=1)
+
+    assert access.asked == [(credential.id, project_id)]

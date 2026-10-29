@@ -19,8 +19,16 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
-from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry, ISecretCipher
-from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository
+from hse_doc_studio.core.git_sync.protocols import (
+    ICredentialAccess,
+    IGitCredentialRepository,
+    IGitCredentialUsage,
+    IGitOperationRegistry,
+    IGitRemoteBindings,
+    IGitRemoteRegistry,
+    ISecretCipher,
+)
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -45,6 +53,12 @@ from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProvider
 from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
 from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
+from hse_doc_studio.infra.db.repositories.git_credentials import (
+    PostgresCredentialAccess,
+    PostgresCredentialUsage,
+    PostgresGitCredentialRepository,
+    PostgresGitRemoteBindings,
+)
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
@@ -255,6 +269,25 @@ class ServerPersistenceProvider(Provider):
         self, sessions: SessionProvider, cipher: ISecretCipher, policy: ISigningKeyPolicy
     ) -> ISigningIdentityRepository:
         return PostgresSigningIdentityRepository(sessions, cipher, policy)
+
+    @provide(override=True)
+    def get_git_credential_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IGitCredentialRepository:
+        return PostgresGitCredentialRepository(sessions, cipher)
+
+    @provide(override=True)
+    def get_git_credential_usage(self, sessions: SessionProvider) -> IGitCredentialUsage:
+        return PostgresCredentialUsage(sessions)
+
+    @provide(override=True)
+    def get_git_remote_bindings(self, sessions: SessionProvider, audit: IAuditLog) -> IGitRemoteBindings:
+        return PostgresGitRemoteBindings(sessions, audit)
+
+    @provide(override=True)
+    def get_git_credential_access(
+        self, sessions: SessionProvider, cipher: ISecretCipher, acl: PostgresProjectAclRepository, audit: IAuditLog
+    ) -> ICredentialAccess:
+        # Права не из кэша запроса: секрет просят и фоновые задачи, которые переживают запрос.
+        return PostgresCredentialAccess(sessions, cipher, acl, audit)
 
     @provide(override=True)
     def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:

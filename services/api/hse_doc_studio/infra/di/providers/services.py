@@ -34,6 +34,7 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
     ICiRenderer,
+    ICredentialAccess,
     IGitBundleService,
     IGitCloneStore,
     IGitCredentialRepository,
@@ -42,6 +43,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitMergeCommitter,
     IGitMergeEngine,
     IGitOperationRegistry,
+    IGitRemoteBindings,
     IGitRemoteRegistry,
     IGitRemoteRunner,
     IGitRepoReader,
@@ -139,6 +141,7 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.git_sync.bundle import GitBundleService
 from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
+from hse_doc_studio.infra.git_sync.credential_access import DirectCredentialAccess, LocalGitRemoteBindings
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
@@ -779,6 +782,14 @@ class DomainServiceProvider(Provider):
         return JsonGitCredentialRepository(settings.data_dir.expanduser(), cipher)
 
     @provide
+    def get_git_credential_access(self, credentials: IGitCredentialRepository) -> ICredentialAccess:
+        return DirectCredentialAccess(credentials)
+
+    @provide
+    def get_git_remote_bindings(self) -> IGitRemoteBindings:
+        return LocalGitRemoteBindings()
+
+    @provide
     def get_ssh_key_generator(self) -> ISshKeyGenerator:
         return Ed25519KeyGenerator()
 
@@ -866,6 +877,7 @@ class DomainServiceProvider(Provider):
     def get_git_remote_runner(
         self,
         credentials: IGitCredentialRepository,
+        access: ICredentialAccess,
         known_hosts: IKnownHostsStore,
         scanner: IHostKeyScanner,
         host_settings: IGitHostSettingsRepository,
@@ -881,6 +893,7 @@ class DomainServiceProvider(Provider):
             host_settings=host_settings,
             certificates=certificates,
             egress=_server_egress(egress),
+            access=access,
         )
 
     @provide

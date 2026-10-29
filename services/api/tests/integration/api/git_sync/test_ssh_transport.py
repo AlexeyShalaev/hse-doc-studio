@@ -57,7 +57,7 @@ class SshStack:
     ssh: FakeSsh
     config: GitConfig
 
-    def add_key(self, *, host: str = _HOST, port: int | None = None) -> UUID:
+    async def add_key(self, *, host: str = _HOST, port: int | None = None) -> UUID:
         generated = Ed25519KeyGenerator().generate("test")
         credential = GitCredential(
             id=uuid4(),
@@ -71,7 +71,7 @@ class SshStack:
             fingerprint_sha256=generated.fingerprint_sha256,
             port=port,
         )
-        self.credentials.add(credential, generated.private_key)
+        await self.credentials.add(credential, generated.private_key)
         return credential.id
 
     def trust(self, host: str = _HOST, port: int | None = None, blob: str = GITHUB_ED25519) -> None:
@@ -112,7 +112,7 @@ def _option(argv: list[str], name: str) -> str | None:
 
 
 async def test__probe__unknown_host__host_key_unknown_with_fingerprints_and_no_ssh(ssh_stack: SshStack) -> None:
-    probe = await ssh_stack.transport.probe(_target(ssh_stack.add_key()))
+    probe = await ssh_stack.transport.probe(_target(await ssh_stack.add_key()))
 
     assert probe.ok is False
     assert probe.error is not None
@@ -129,7 +129,7 @@ async def test__probe__trusted_host__ssh_gets_the_hardened_options_and_a_private
     ssh_stack.trust()
     ssh_stack.ssh.mode("auth_failed")
 
-    probe = await ssh_stack.transport.probe(_target(ssh_stack.add_key()))
+    probe = await ssh_stack.transport.probe(_target(await ssh_stack.add_key()))
 
     assert probe.error is not None
     assert probe.error.code is GitErrorCode.auth_failed
@@ -159,7 +159,7 @@ async def test__probe__trusted_host__ssh_gets_the_hardened_options_and_a_private
 
 async def test__probe__port_in_the_address__reaches_ssh_and_known_hosts_entry_is_per_port(ssh_stack: SshStack) -> None:
     ssh_stack.trust()
-    credential = ssh_stack.add_key(port=2222)
+    credential = await ssh_stack.add_key(port=2222)
     target = _target(credential, f"ssh://git@{_HOST}:2222/hse/course.git")
 
     first = await ssh_stack.transport.probe(target)
@@ -180,7 +180,7 @@ async def test__probe__host_key_changed_reported_by_ssh__both_fingerprints(ssh_s
     ssh_stack.scanner.keys = [ScannedHostKey("ssh-ed25519", _OTHER, key_fingerprint(_OTHER))]
     ssh_stack.ssh.mode("host_changed")
 
-    probe = await ssh_stack.transport.probe(_target(ssh_stack.add_key()))
+    probe = await ssh_stack.transport.probe(_target(await ssh_stack.add_key()))
 
     assert probe.error is not None
     assert probe.error.code is GitErrorCode.host_key_changed
@@ -188,7 +188,7 @@ async def test__probe__host_key_changed_reported_by_ssh__both_fingerprints(ssh_s
 
 
 async def test__probe__trust_then_ok_flow__unknown_then_trusted_then_reaches_the_server(ssh_stack: SshStack) -> None:
-    credential = ssh_stack.add_key()
+    credential = await ssh_stack.add_key()
     first = await ssh_stack.transport.probe(_target(credential))
     assert first.error is not None
     assert first.error.code is GitErrorCode.host_key_unknown
@@ -205,7 +205,7 @@ async def test__probe__trust_then_ok_flow__unknown_then_trusted_then_reaches_the
 async def test__probe__cancelled_while_ssh_hangs__key_file_removed_and_ssh_killed(ssh_stack: SshStack) -> None:
     ssh_stack.trust()
     ssh_stack.ssh.mode("hang")
-    task = asyncio.create_task(ssh_stack.transport.probe(_target(ssh_stack.add_key())))
+    task = asyncio.create_task(ssh_stack.transport.probe(_target(await ssh_stack.add_key())))
     call = await asyncio.to_thread(ssh_stack.ssh.wait_for_call)
     key = call["key"]
     assert isinstance(key, dict)
@@ -232,7 +232,7 @@ async def test__probe__hanging_ssh_hits_the_timeout__key_file_removed(ssh_stack:
     ssh_stack.trust()
     ssh_stack.ssh.mode("hang")
     ssh_stack.config.probe_timeout_s = 3
-    probe = await ssh_stack.transport.probe(_target(ssh_stack.add_key()))
+    probe = await ssh_stack.transport.probe(_target(await ssh_stack.add_key()))
 
     assert probe.error is not None
     assert probe.error.code is GitErrorCode.timeout

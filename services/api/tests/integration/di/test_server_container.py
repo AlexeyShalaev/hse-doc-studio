@@ -319,3 +319,63 @@ async def test__server_container__signing_identity_repo_is_postgres_with_default
     assert isinstance(local_repo, JsonSigningIdentityRepository)
     assert isinstance(server_repo, PostgresSigningIdentityRepository)
     assert isinstance(policy, InstanceSigningKeyPolicy)
+
+
+async def test__server_container__git_credentials_go_through_postgres_and_local_stays_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.git_sync.protocols import (  # noqa: PLC0415
+        ICredentialAccess,
+        IGitCredentialRepository,
+        IGitCredentialUsage,
+        IGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.db.repositories.git_credentials import (  # noqa: PLC0415
+        PostgresCredentialAccess,
+        PostgresCredentialUsage,
+        PostgresGitCredentialRepository,
+        PostgresGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.git_sync.credential_access import (  # noqa: PLC0415
+        DirectCredentialAccess,
+        LocalGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_got = [
+                await request.get(IGitCredentialRepository),
+                await request.get(ICredentialAccess),
+                await request.get(IGitRemoteBindings),
+            ]
+        async with server() as request:
+            server_got = [
+                await request.get(IGitCredentialRepository),
+                await request.get(ICredentialAccess),
+                await request.get(IGitRemoteBindings),
+                await request.get(IGitCredentialUsage),
+            ]
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert [type(item) for item in local_got] == [
+        JsonGitCredentialRepository,
+        DirectCredentialAccess,
+        LocalGitRemoteBindings,
+    ]
+    assert [type(item) for item in server_got] == [
+        PostgresGitCredentialRepository,
+        PostgresCredentialAccess,
+        PostgresGitRemoteBindings,
+        PostgresCredentialUsage,
+    ]
