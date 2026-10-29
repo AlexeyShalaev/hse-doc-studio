@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.auth_cookie import (
@@ -36,6 +37,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.oidc import OidcLoginError
 from hse_doc_studio.core.vcs.errors import ProfileInvalidError
+from hse_doc_studio.use_cases.admin.lifecycle import ExportMyDataUC
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.account_profile import (
     UNSET,
@@ -262,6 +264,19 @@ def _token_item(token: ApiTokenEntity) -> ApiToken:
         created_at=token.created_at,
         expires_at=token.expires_at,
         last_used_at=token.last_used_at,
+    )
+
+
+@router.get("/account/export")
+async def export_my_data(request: Request) -> JSONResponse:
+    """Всё, что установка хранит о человеке, одним JSON-файлом. Только своя выгрузка и только сессией."""
+    _session_user_id()
+    actor = current_actor()
+    assert actor is not None  # noqa: S101 — _session_user_id уже отказал бы без актора
+    data = await (await request.state.dishka_container.get(ExportMyDataUC)).execute(actor)
+    return JSONResponse(
+        content=jsonable_encoder(data),
+        headers={"Cache-Control": "no-store", "Content-Disposition": 'attachment; filename="my-data.json"'},
     )
 
 

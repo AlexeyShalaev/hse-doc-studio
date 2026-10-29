@@ -80,6 +80,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/sessions"): _A,
     ("DELETE", "/account/sessions"): _A,
     ("DELETE", "/account/sessions/{session_id}"): _A,
+    ("GET", "/account/export"): _A,
     ("GET", "/account/identities"): _A,
     ("GET", "/account/identities/{provider_id}/link"): _A,
     ("DELETE", "/account/identities/{provider_id}"): _A,
@@ -263,6 +264,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу
     ("DELETE", "/api/admin/invitations/{invite_id}"): _ADM,
+    ("DELETE", "/api/admin/users/{user_id}"): _ADM,
     ("DELETE", "/api/admin/oidc-providers/{provider_id}"): _ADM,
     ("GET", "/api/admin/approvals"): _ADM,
     ("GET", "/api/admin/audit"): _ADM,
@@ -271,6 +273,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/oidc-providers/{provider_id}"): _ADM,
     ("GET", "/api/admin/settings/auth"): _ADM,
     ("GET", "/api/admin/settings/registration"): _ADM,
+    ("GET", "/api/admin/settings/retention"): _ADM,
     ("GET", "/api/admin/settings/smtp"): _ADM,
     ("GET", "/api/admin/users"): _ADM,
     ("GET", "/api/admin/users/{user_id}"): _ADM,

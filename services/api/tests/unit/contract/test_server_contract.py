@@ -61,6 +61,7 @@ _SCHEMAS: dict[str, Any] = {
     "AdminResetLinkRequest": s.AdminResetLinkRequest,
     "AdminResetLink": s.AdminResetLink,
     "AdminSessionsRevoked": s.AdminSessionsRevoked,
+    "AdminRetentionSettings": s.AdminRetentionSettings,
     "AdminInvitation": s.AdminInvitation,
     "AdminInvitationList": s.AdminInvitationPage,
     "AdminAuditEvent": s.AdminAuditEvent,

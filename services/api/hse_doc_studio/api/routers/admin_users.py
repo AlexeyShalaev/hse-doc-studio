@@ -28,6 +28,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import is_valid_email
 from hse_doc_studio.core.identity.session_policy import utc_now
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
     DisableUserUC,
@@ -133,6 +134,13 @@ async def update_user(user_id: str, body: UpdateAdminUserRequest, request: Reque
 async def disable_user(user_id: str, request: Request) -> AdminUser:
     await (await _uc(request, DisableUserUC)).execute(_actor(), user_id)
     return await _changed(request, user_id)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: str, request: Request) -> Response:
+    """Окончательное удаление отключённой учётной записи: личные данные стираются, журнал обезличивается."""
+    await (await _uc(request, DeleteUserUC)).execute(_actor(), user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/users/{user_id}/enable", response_model=AdminUser)

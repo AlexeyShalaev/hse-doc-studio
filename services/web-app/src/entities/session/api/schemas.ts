@@ -322,6 +322,11 @@ export const AdminResetLinkSchema = z.strictObject({
 export const AdminSessionsRevokedSchema = z.strictObject({
   revoked: z.number().int(),
 });
+export const AdminRetentionSettingsSchema = z.strictObject({
+  audit_days: z.number().int(),
+  deleted_projects_days: z.number().int(),
+  unused_blobs_days: z.number().int(),
+});
 export const AdminInvitationSchema = z.strictObject({
   id: z.string(),
   email: z.string().nullable(),

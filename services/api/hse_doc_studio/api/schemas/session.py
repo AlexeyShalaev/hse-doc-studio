@@ -374,6 +374,14 @@ class AdminSessionsRevoked(StrictModel):
     revoked: int
 
 
+class AdminRetentionSettings(StrictModel):
+    """Сроки хранения в днях; задаются окружением, в интерфейсе только для чтения. `audit_days=0`: журнал вечно."""
+
+    audit_days: int
+    deleted_projects_days: int
+    unused_blobs_days: int
+
+
 AdminInvitationStatus = Literal["pending", "used", "expired"]
 
 

@@ -16,12 +16,14 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.admin import make_admin_router
 from hse_doc_studio.core.identity.entities import Session, User, UserStatus
+from hse_doc_studio.core.identity.lifecycle import RetentionPolicy
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC, GetRetentionUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
     DisableUserUC,
@@ -48,6 +50,7 @@ from tests.fakes.auth import (
     empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserDirectory, InMemoryUserRepository
+from tests.fakes.lifecycle import InMemoryUserLifecycle
 from tests.unit.use_cases.identity.conftest import FakeSender, FakeUow
 
 NOW = datetime.now(UTC)
@@ -65,6 +68,7 @@ class _Env:
         self.outbox = InMemoryMailOutboxRepository()
         self.sender = FakeSender()
         self.uow = FakeUow()
+        self.lifecycle = InMemoryUserLifecycle(self.store)
         self.make: Callable[[], AsyncClient]
 
     async def add(self, uid: str, *, admin: bool = False, status: UserStatus = UserStatus.active) -> dict[str, str]:
@@ -117,6 +121,14 @@ class _Provider(Provider):
     @provide
     def disable(self) -> DisableUserUC:
         return DisableUserUC(self.e.users, self.e.sessions, self.e.audit, self.e.uow)
+
+    @provide
+    def delete(self) -> DeleteUserUC:
+        return DeleteUserUC(self.e.users, self.e.lifecycle, self.e.audit, self.e.uow)
+
+    @provide
+    def retention(self) -> GetRetentionUC:
+        return GetRetentionUC(RetentionPolicy(audit_days=365, deleted_projects_days=30, unused_blobs_days=14))
 
     @provide
     def enable(self) -> EnableUserUC:
@@ -217,6 +229,8 @@ async def test__users__student_gets_404_everywhere(env: _Env) -> None:
         ("PATCH", "/api/admin/users/student"),
         ("POST", "/api/admin/users/student/disable"),
         ("GET", "/api/admin/approvals"),
+        ("DELETE", "/api/admin/users/student"),
+        ("GET", "/api/admin/settings/retention"),
         ("GET", "/api/admin/invitations"),
     ):
         response = await client.request(method, path, headers=student, json={} if method == "PATCH" else None)
@@ -352,3 +366,33 @@ async def test__invitations__expired_and_used_statuses(env: _Env) -> None:
     assert created["link"] is not None
     assert listed["items"][0]["status"] == "expired"
     assert used["items"][0]["status"] == "used"
+
+
+async def test__delete_user__only_disabled_and_not_sole_owner__then_gone(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    await env.add("anna")
+    client = env.make()
+
+    active = await client.delete("/api/admin/users/anna", headers=boss)
+    await client.post("/api/admin/users/anna/disable", headers=boss)
+    env.lifecycle.owned_projects["anna"] = 2
+    owner = await client.delete("/api/admin/users/anna", headers=boss)
+    env.lifecycle.owned_projects["anna"] = 0
+    done = await client.delete("/api/admin/users/anna", headers=boss)
+
+    assert (active.status_code, active.json()["code"]) == (409, "user_not_disabled")
+    assert (owner.status_code, owner.json()["code"]) == (409, "user_has_projects")
+    assert done.status_code == 204
+    assert (await client.get("/api/admin/users/anna", headers=boss)).status_code == 404
+    assert (await client.delete("/api/admin/users/boss", headers=boss)).status_code == 403
+
+
+async def test__retention__is_read_only_and_matches_the_contract(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    client = env.make()
+
+    response = await client.get("/api/admin/settings/retention", headers=boss)
+
+    assert response.status_code == 200
+    assert response.json() == {"audit_days": 365, "deleted_projects_days": 30, "unused_blobs_days": 14}
+    assert (await client.put("/api/admin/settings/retention", json={}, headers=boss)).status_code in (404, 405)

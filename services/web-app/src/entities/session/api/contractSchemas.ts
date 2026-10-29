@@ -45,6 +45,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminResetLinkRequest: s.AdminResetLinkRequestSchema,
   AdminResetLink: s.AdminResetLinkSchema,
   AdminSessionsRevoked: s.AdminSessionsRevokedSchema,
+  AdminRetentionSettings: s.AdminRetentionSettingsSchema,
   AdminInvitation: s.AdminInvitationSchema,
   AdminInvitationList: s.AdminInvitationPageSchema,
   AdminAuditEvent: s.AdminAuditEventSchema,

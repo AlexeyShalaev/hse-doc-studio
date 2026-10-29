@@ -56,6 +56,8 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.name_taken: _STATE,
     IdentityErrorCode.already_member: _STATE,
     IdentityErrorCode.user_not_found: _NOT_FOUND,
+    IdentityErrorCode.user_has_projects: _STATE,
+    IdentityErrorCode.user_not_disabled: _STATE,
 }
 
 

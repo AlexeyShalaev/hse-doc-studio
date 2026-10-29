@@ -16,6 +16,7 @@ from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile, ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.commit_identity import noreply_domain
+from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy
 from hse_doc_studio.core.identity.oidc import IOidcClient, IOidcProviderCatalog, IOidcStateCodec, OidcProviderConfig
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
@@ -59,6 +60,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlUserDirectory,
     SqlUserRepository,
 )
+from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
 from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -72,6 +74,7 @@ from hse_doc_studio.infra.identity.user_author_profile import UserAuthorProfile
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC, ExportMyDataUC, GetRetentionUC
 from hse_doc_studio.use_cases.admin.oidc import (
     CreateOidcProviderUC,
     DeleteOidcProviderUC,
@@ -649,6 +652,30 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_get_user_uc(self, directory: IUserDirectory) -> GetUserUC:
         return GetUserUC(directory)
+
+    @provide
+    def get_user_lifecycle(self, sessions: SessionProvider) -> IUserLifecycle:
+        return SqlUserLifecycle(sessions)
+
+    @provide
+    def get_delete_user_uc(
+        self, users: IUserRepository, lifecycle: IUserLifecycle, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DeleteUserUC:
+        return DeleteUserUC(users, lifecycle, audit, uow)
+
+    @provide
+    def get_export_my_data_uc(self, lifecycle: IUserLifecycle, audit: IAuditLog) -> ExportMyDataUC:
+        return ExportMyDataUC(lifecycle, audit)
+
+    @provide
+    def get_retention_uc(self) -> GetRetentionUC:
+        return GetRetentionUC(
+            RetentionPolicy(
+                audit_days=settings.server.audit_retention_days,
+                deleted_projects_days=settings.server.project_retention_days,
+                unused_blobs_days=round(settings.server.blob_gc_min_age_days),
+            )
+        )
 
     @provide
     def get_disable_user_uc(

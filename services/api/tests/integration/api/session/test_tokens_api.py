@@ -26,6 +26,7 @@ from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
+from hse_doc_studio.use_cases.admin.lifecycle import ExportMyDataUC
 from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
 from hse_doc_studio.use_cases.identity.sessions import ListSessionsUC, SessionService
 from hse_doc_studio.use_cases.server_setup.state import KEY_SETUP_COMPLETED
@@ -33,6 +34,7 @@ from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import InMemoryApiTokenRepository, InMemoryAuditLog, InMemorySessionRepository
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryInstanceSettingsRepository, InMemoryUserRepository
+from tests.fakes.lifecycle import InMemoryUserLifecycle
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "server" / "fixtures"
 NOW = datetime.now(UTC)
@@ -53,6 +55,7 @@ class _World:
         self.tokens = InMemoryApiTokenRepository()
         self.audit = InMemoryAuditLog()
         self.settings = InMemoryInstanceSettingsRepository()
+        self.lifecycle = InMemoryUserLifecycle(store)
 
     async def add_user(self, email: str = "anna@example.org") -> User:
         user = User(
@@ -109,6 +112,10 @@ class _Provider(Provider):
     def resolver(self) -> IActorResolver:
         w = self._w
         return ChainActorResolver([SessionCookieResolver(self._service), BearerActorResolver(w.tokens, w.users)])
+
+    @provide
+    def export_data(self) -> ExportMyDataUC:
+        return ExportMyDataUC(self._w.lifecycle, self._w.audit)
 
     @provide
     def list_sessions(self) -> ListSessionsUC:
@@ -329,3 +336,28 @@ async def test_tokens_do_not_leak_between_users(env: tuple[AsyncClient, _World])
     )
     assert foreign.status_code == 404
     assert len(await world.tokens.list_for_user(anna.id)) == 1
+
+
+async def test_export_is_an_uncached_attachment_with_own_data_and_audited(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    user = await world.add_user()
+    await world.add_session(user, "mine")
+
+    response = await client.get("/api/v1/account/export", headers=_cookie("mine"))
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "attachment" in response.headers["content-disposition"]
+    assert response.json()["profile"]["id"] == user.id
+    assert [e.actor_id for e in await world.audit.list(limit=50) if e.action == "account.data_exported"] == [user.id]
+
+
+async def test_export_by_token_or_anonymous_is_refused(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    user = await world.add_user()
+    await world.add_token(user, "hsd_pat_exporttoken0000000000000000000")
+
+    by_token = await client.get("/api/v1/account/export", headers=_bearer("hsd_pat_exporttoken0000000000000000000"))
+    anonymous = await client.get("/api/v1/account/export")
+
+    assert (by_token.status_code, anonymous.status_code) == (403, 401)

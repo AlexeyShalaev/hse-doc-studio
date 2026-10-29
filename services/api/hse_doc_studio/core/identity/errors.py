@@ -47,6 +47,8 @@ class IdentityErrorCode(StrEnum):
     name_taken = "name_taken"
     already_member = "already_member"
     user_not_found = "user_not_found"
+    user_has_projects = "user_has_projects"
+    user_not_disabled = "user_not_disabled"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -139,6 +141,14 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.user_not_found: (
         "Пользователь не найден.",
         "User not found.",
+    ),
+    IdentityErrorCode.user_has_projects: (
+        "У человека остались проекты или организации, где он единственный владелец: сначала удалите или передайте их.",
+        "This person is still the only owner of projects or organizations: delete or hand them over first.",
+    ),
+    IdentityErrorCode.user_not_disabled: (
+        "Сначала отключите учётную запись: удалить можно только отключённую.",
+        "Disable the account first: only a disabled account can be deleted.",
     ),
 }
 
