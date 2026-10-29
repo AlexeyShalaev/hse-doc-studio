@@ -17,6 +17,7 @@ from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
 from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -301,6 +302,10 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         @provide
         def get_pack_submission_repo(self) -> IPackSubmissionRepository:
             return JsonPackSubmissionRepository()
+
+        @provide
+        def get_project_quota(self) -> IProjectQuota:
+            return NoopProjectQuota()
 
         @provide
         def get_submission_archive(self) -> ISubmissionArchive:

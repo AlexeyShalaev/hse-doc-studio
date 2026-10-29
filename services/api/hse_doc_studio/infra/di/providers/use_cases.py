@@ -63,6 +63,7 @@ from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -743,6 +744,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> UploadCustomFileUC:
         return UploadCustomFileUC(
             project_repo=project_repo,
@@ -754,6 +756,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide
@@ -1337,6 +1340,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> PutFileUC:
         return PutFileUC(
             project_repo=project_repo,
@@ -1345,6 +1349,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide

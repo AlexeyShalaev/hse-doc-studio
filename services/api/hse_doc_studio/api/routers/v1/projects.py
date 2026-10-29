@@ -21,6 +21,7 @@ from hse_doc_studio.api.schemas.project import (
     ProjectAccessResponse,
     ProjectDetailResponse,
     ProjectListItemResponse,
+    ProjectStorageResponse,
     ProjectSuggestionsResponse,
     UpdateProjectRequest,
     UpdateTeamSetRequest,
@@ -33,6 +34,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
 from hse_doc_studio.use_cases.projects.connect_project import (
     ConnectProjectInput,
@@ -304,6 +306,7 @@ async def get_project(
     uc: FromDishka[GetProjectUC],
     paths: FromDishka[PathMapping],
     access_service: FromDishka[ProjectAccessService],
+    quota: FromDishka[IProjectQuota],
 ) -> ProjectDetailResponse:
     try:
         result = await uc.execute(GetProjectInput(project_id=project_id))
@@ -316,6 +319,15 @@ async def get_project(
     response.access = ProjectAccessResponse(
         mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio
     )
+    storage = await quota.status(project_id)
+    if storage is not None:
+        response.storage = ProjectStorageResponse(
+            used_bytes=storage.used_bytes,
+            limit_bytes=storage.limit_bytes,
+            warning=storage.warning,
+            exceeded=storage.exceeded,
+            measured_at=storage.measured_at,
+        )
     return response
 
 

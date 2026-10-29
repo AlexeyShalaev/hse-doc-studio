@@ -19,6 +19,7 @@ from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
+from hse_doc_studio.api.quota_errors import install_quota_error_handlers
 from hse_doc_studio.api.route_actions import RouteRule, rule_for, scope_for_rule
 from hse_doc_studio.api.route_scopes import (
     ADMIN_PREFIX,
@@ -270,5 +271,6 @@ def install_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProjectForbiddenError, _forbidden_handler)
     install_git_error_handlers(app)
     install_identity_error_handlers(app)
+    install_quota_error_handlers(app)
     install_runner_error_handlers(app)
     install_validation_error_handler(app)

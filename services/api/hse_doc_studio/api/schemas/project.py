@@ -53,6 +53,15 @@ class ProjectAccessResponse(BaseModel):
     required_studio: str | None = None
 
 
+class ProjectStorageResponse(BaseModel):
+    # Только на сервере: занятое место проекта и предупреждение с доли предела (по умолчанию 80%).
+    used_bytes: int
+    limit_bytes: int
+    warning: bool
+    exceeded: bool
+    measured_at: datetime
+
+
 class ProjectDetailResponse(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
@@ -76,6 +85,8 @@ class ProjectDetailResponse(BaseModel):
     checks_override: ChecksOverrideSchema
     # Что эта Студия может делать с проектом; заполняется в GET /projects/{id}.
     access: ProjectAccessResponse = ProjectAccessResponse()
+    # Заполняется в GET /projects/{id} на сервере; в локальном режиме None.
+    storage: ProjectStorageResponse | None = None
 
 
 class NdaStatusResponse(BaseModel):

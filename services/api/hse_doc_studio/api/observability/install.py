@@ -103,6 +103,25 @@ def install_blob_gc(app: FastAPI, container: AsyncContainer, cfg: Settings) -> N
     app.state.background.register(PeriodicTask(name="blob_gc", interval_s=cfg.server.blob_gc_interval_s, run=_gc))
 
 
+def install_project_usage(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическое измерение места проектов и сборка сирот (папки тома и префиксы S3 без записи в projects)."""
+    from hse_doc_studio.infra.projects.orphan_gc import OrphanGc  # noqa: PLC0415 — sqlalchemy только с extra server
+    from hse_doc_studio.infra.projects.usage_meter import ProjectUsageSweeper  # noqa: PLC0415
+
+    async def _measure() -> None:
+        await (await container.get(ProjectUsageSweeper)).run()
+
+    async def _orphans() -> None:
+        await (await container.get(OrphanGc)).run()
+
+    app.state.background.register(
+        PeriodicTask(name="project_usage", interval_s=cfg.server.project_usage_interval_s, run=_measure)
+    )
+    app.state.background.register(
+        PeriodicTask(name="orphan_gc", interval_s=cfg.server.orphan_gc_interval_s, run=_orphans)
+    )
+
+
 def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодическая чистка просроченных сессий, токенов, писем outbox и счётчиков входов."""
     from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService  # noqa: PLC0415

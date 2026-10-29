@@ -70,6 +70,24 @@ class HttpServerConfig(BaseModel):
         ge=1,
         description="Предел суммарного размера входа одной задачи; не зависит от квоты проекта.",
     )
+    project_quota_bytes: int = Field(
+        default=2 * 1024**3,
+        ge=0,
+        description="Предел размера проекта (дерево, git-стор, S3); запись сверх него отклоняется, 0 без предела.",
+    )
+    project_quota_warn_percent: int = Field(
+        default=80, ge=1, le=100, description="С какого процента предела статус проекта предупреждает о нехватке места."
+    )
+    project_usage_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер переизмеряет размер проектов (пачкой самых давних)."
+    )
+    project_usage_batch: int = Field(default=20, ge=1, description="Сколько проектов измеряется за один прогон.")
+    orphan_gc_interval_s: float = Field(
+        default=21600.0, gt=0, description="Как часто сервер ищет папки тома и префиксы S3 без записи в projects."
+    )
+    orphan_gc_min_age_hours: float = Field(
+        default=24.0, ge=1, description="Сколько часов сирота должен пролежать, прежде чем его удалят."
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

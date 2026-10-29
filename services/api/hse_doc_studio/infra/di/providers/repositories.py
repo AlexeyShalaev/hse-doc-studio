@@ -6,6 +6,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -119,6 +120,10 @@ class LocalPersistenceProvider(Provider):
     @provide
     def get_pack_submission_repo(self) -> IPackSubmissionRepository:
         return JsonPackSubmissionRepository()
+
+    @provide
+    def get_project_quota(self) -> IProjectQuota:
+        return NoopProjectQuota()
 
     @provide
     def get_submission_archive(self) -> ISubmissionArchive:
