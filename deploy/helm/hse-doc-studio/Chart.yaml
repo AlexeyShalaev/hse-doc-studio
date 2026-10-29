@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hse-doc-studio
+description: "Общий сервер HSE Doc Studio (mode=server): api, раннер задач, внешние Postgres и S3"
+type: application
+version: 0.1.0
+appVersion: "latest"

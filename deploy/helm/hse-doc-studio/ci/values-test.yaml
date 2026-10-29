@@ -1,0 +1,23 @@
+# Значения для helm lint и golden-теста: фиксированные, без секретов.
+publicUrl: https://studio.example.org
+trustedProxies: ["10.0.0.0/8"]
+database:
+  dsn: postgresql://studio:pw@db.example.org:5432/studio
+s3:
+  endpoint: https://s3.example.org
+  bucket: studio
+  accessKey: AKIATEST
+  secretKey: s3-test-secret
+secrets:
+  secretsKey: test-fernet-key
+  runnerBootstrapToken: test-runner-token
+ingress:
+  enabled: true
+  className: nginx
+  host: studio.example.org
+  tls:
+    enabled: true
+    secretName: studio-tls
+runner:
+  enabled: true
+  tags: tex

@@ -82,7 +82,8 @@ RUN set -eux; \
     rm -rf /tmp/docker /tmp/docker.tgz; \
     docker --version
 
-RUN addgroup --system app && adduser --system --ingroup app \
+# uid/gid закреплены числами: Kubernetes не проверяет runAsNonRoot для имени пользователя.
+RUN addgroup --system --gid 10001 app && adduser --system --uid 10001 --ingroup app \
     --no-create-home --disabled-password --shell /usr/sbin/nologin app
 
 # Каталог данных принадлежит app: именованный том (стенд server-lite) наследует владельца при создании.

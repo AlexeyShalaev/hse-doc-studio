@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["publicUrl", "database", "s3"],
+  "additionalProperties": false,
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "imagePullSecrets": {"type": "array"},
+    "publicUrl": {"type": "string", "pattern": "^https?://[^/\\s]+.*$"},
+    "trustedProxies": {"type": "array", "items": {"type": "string"}},
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "runAsUser": {"type": "integer", "minimum": 1},
+        "runAsGroup": {"type": "integer", "minimum": 1},
+        "fsGroup": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "api": {
+      "type": "object",
+      "properties": {
+        "resources": {"type": "object"},
+        "nodeSelector": {"type": "object"},
+        "tolerations": {"type": "array"},
+        "affinity": {"type": "object"},
+        "podAnnotations": {"type": "object"},
+        "extraEnv": {
+          "type": "object",
+          "propertyNames": {"pattern": "^HSE_STUDIO__[A-Z0-9_]+$"},
+          "additionalProperties": {"type": ["string", "number", "boolean"]}
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "existingClaim": {"type": "string"},
+        "storageClassName": {"type": "string"},
+        "accessModes": {"type": "array", "items": {"enum": ["ReadWriteOnce", "ReadWriteOncePod", "ReadWriteMany"]}, "minItems": 1},
+        "size": {"type": "string", "pattern": "^[0-9]+(Mi|Gi|Ti)$"},
+        "annotations": {"type": "object"}
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {"dsn": {"type": "string", "pattern": "^$|^postgres(ql)?(\\+[a-z0-9]+)?://.+"}},
+      "additionalProperties": false
+    },
+    "s3": {
+      "type": "object",
+      "required": ["bucket"],
+      "properties": {
+        "endpoint": {"type": "string"},
+        "bucket": {"type": "string", "minLength": 3},
+        "region": {"type": "string"},
+        "accessKey": {"type": "string"},
+        "secretKey": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "mail": {
+      "type": "object",
+      "properties": {
+        "host": {"type": "string"},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "username": {"type": "string"},
+        "password": {"type": "string"},
+        "fromAddress": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {"type": "string"},
+        "secretsKey": {"type": "string"},
+        "runnerBootstrapToken": {"type": "string"},
+        "healthToken": {"type": "string"},
+        "metricsToken": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "migrations": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "backoffLimit": {"type": "integer", "minimum": 0},
+        "activeDeadlineSeconds": {"type": "integer", "minimum": 30},
+        "resources": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "className": {"type": "string"},
+        "host": {"type": "string"},
+        "annotations": {"type": "object"},
+        "tls": {
+          "type": "object",
+          "properties": {"enabled": {"type": "boolean"}, "secretName": {"type": "string"}},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {"enum": ["ClusterIP", "NodePort", "LoadBalancer"]},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535}
+      },
+      "additionalProperties": false
+    },
+    "runner": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "replicas": {"type": "integer", "minimum": 0},
+        "concurrency": {"type": "integer", "minimum": 1, "maximum": 64},
+        "tags": {"type": "string"},
+        "officeUrl": {"type": "string"},
+        "dataDir": {"type": "string", "pattern": "^/.+"},
+        "dockerSocket": {"type": "string", "pattern": "^/.+"},
+        "dockerGid": {"type": "integer", "minimum": 0},
+        "resources": {"type": "object"},
+        "nodeSelector": {"type": "object"},
+        "tolerations": {"type": "array"},
+        "affinity": {"type": "object"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
