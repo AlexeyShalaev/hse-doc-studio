@@ -43,7 +43,7 @@ class ListChatSessionsUC:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
-        sessions = self._chat_repo.list_sessions(folder)
+        sessions = await self._chat_repo.list_sessions(folder)
         sessions.sort(key=lambda s: s.updated_at, reverse=True)
         active = {s.id for s in sessions if self._run_manager.active_run_for_session(s.id) is not None}
         return ListChatSessionsOutput(sessions=sessions, active_session_ids=active)

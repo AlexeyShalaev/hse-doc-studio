@@ -51,14 +51,14 @@ class RecoverStaleChatRunsUC:
         error_text = _SERVER_RESTARTED.get(lang, _SERVER_RESTARTED[Lang.ru])
         recovered = 0
         for folder in await self._locator.list_all():
-            for run_id in self._chat_repo.list_all_run_ids(folder):
-                run = self._chat_repo.get_run(folder, run_id)
+            for run_id in await self._chat_repo.list_all_run_ids(folder):
+                run = await self._chat_repo.get_run(folder, run_id)
                 if run is None or run.status not in _STALE:
                     continue
                 run.status = AgentRunStatus.interrupted
                 run.finished_at = now
                 run.error = error_text
-                self._chat_repo.save_run(run)
+                await self._chat_repo.save_run(run)
                 recovered += 1
         if recovered:
             logger.info("recovered stale agent runs", count=recovered)

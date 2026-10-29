@@ -56,12 +56,12 @@ async def created_session(
 
 
 @pytest.fixture
-def running_run(chat_repo: JsonChatRepository, tmp_path: Path) -> AgentRunRecord:
+async def running_run(chat_repo: JsonChatRepository, tmp_path: Path) -> AgentRunRecord:
     """A session with an in-progress AgentRunRecord, as if a turn were mid-flight."""
     session = ChatSession(
         id=uuid4(), project_folder=tmp_path, title="t", doc_id=None, created_at=_now(), updated_at=_now()
     )
-    chat_repo.save_session(session)
+    await chat_repo.save_session(session)
     run = AgentRunRecord(
         id=uuid4(),
         session_id=session.id,
@@ -72,5 +72,5 @@ def running_run(chat_repo: JsonChatRepository, tmp_path: Path) -> AgentRunRecord
         finished_at=None,
         trigger_seq=0,
     )
-    chat_repo.save_run(run)
+    await chat_repo.save_run(run)
     return run

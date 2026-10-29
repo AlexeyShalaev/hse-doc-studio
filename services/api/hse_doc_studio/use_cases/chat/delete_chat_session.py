@@ -44,5 +44,5 @@ class DeleteChatSessionUC:
         # out from under the running task. The API maps this to a 409.
         if self._run_manager.active_run_for_session(inp.session_id) is not None:
             raise PermissionError("a turn is currently running in this chat")
-        deleted = self._chat_repo.delete_session(folder, inp.session_id)
+        deleted = await self._chat_repo.delete_session(folder, inp.session_id)
         return DeleteChatSessionOutput(deleted=deleted)

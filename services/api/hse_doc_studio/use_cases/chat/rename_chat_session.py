@@ -44,7 +44,7 @@ class RenameChatSessionUC:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
-        session = self._chat_repo.get_session(folder, inp.session_id)
+        session = await self._chat_repo.get_session(folder, inp.session_id)
         if session is None:
             raise NotFoundError(
                 localized_error(
@@ -60,5 +60,5 @@ class RenameChatSessionUC:
             session.persona = inp.persona
             session.persona_instructions = inp.persona_instructions
         session.updated_at = datetime.now(timezone.utc)
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)
         return RenameChatSessionOutput(session=session)

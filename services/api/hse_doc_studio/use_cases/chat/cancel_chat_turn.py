@@ -57,7 +57,7 @@ class CancelChatTurnUC:
             return CancelChatTurnOutput(cancelled_task=True, record_finalized=False)
 
         # No live task: force-finalize a record stuck non-terminal (e.g. lost task).
-        run = self._chat_repo.get_run(folder, inp.run_id)
+        run = await self._chat_repo.get_run(folder, inp.run_id)
         if run is None:
             raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
         if run.status in _TERMINAL:
@@ -65,7 +65,7 @@ class CancelChatTurnUC:
         run.status = AgentRunStatus.cancelled
         run.finished_at = datetime.now(timezone.utc)
         run.error = _CANCELLED_NO_TASK.get(current_interface_language(), _CANCELLED_NO_TASK[Lang.ru])
-        self._chat_repo.save_run(run)
+        await self._chat_repo.save_run(run)
         self._bus.close(inp.run_id)
         self._bus.discard(inp.run_id)
         return CancelChatTurnOutput(cancelled_task=False, record_finalized=True)

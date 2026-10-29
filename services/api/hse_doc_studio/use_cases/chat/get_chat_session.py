@@ -43,13 +43,13 @@ class GetChatSessionUC:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
-        session = self._chat_repo.get_session(folder, inp.session_id)
+        session = await self._chat_repo.get_session(folder, inp.session_id)
         if session is None:
             raise NotFoundError(
                 localized_error(
                     f"Сессия чата {inp.session_id!r} не найдена", f"Chat session {inp.session_id!r} not found"
                 )
             )
-        messages = self._chat_repo.list_messages(folder, inp.session_id)
+        messages = await self._chat_repo.list_messages(folder, inp.session_id)
         active_run_id = self._run_manager.active_run_for_session(inp.session_id)
         return GetChatSessionOutput(session=session, messages=messages, active_run_id=active_run_id)

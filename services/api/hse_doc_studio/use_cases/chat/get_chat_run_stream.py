@@ -79,27 +79,27 @@ class GetChatRunStreamUC:
                     seen_live = True
                     yield event
 
-            run = chat_repo.get_run(folder, run_id)
+            run = await chat_repo.get_run(folder, run_id)
             if run is None:
                 if not seen_live:
                     yield AgentEvent(type=AgentEventType.error, data={"status": "failed", "message": "run not found"})
                 return
 
             if not seen_live:
-                for event in backfill(folder, session_id, run_id):
+                for event in await backfill(folder, session_id, run_id):
                     yield event
             yield terminal(run)
 
         return _gen()
 
-    def _backfill_messages(self, folder: Path, session_id: UUID, run_id: UUID) -> list[AgentEvent]:
+    async def _backfill_messages(self, folder: Path, session_id: UUID, run_id: UUID) -> list[AgentEvent]:
         # Replay a finished run's messages as `message` events for a late subscriber.
         return [
             AgentEvent(
                 type=AgentEventType.message,
                 data={"id": str(m.id), "seq": m.seq, "role": m.role.value},
             )
-            for m in self._chat_repo.list_messages(folder, session_id)
+            for m in await self._chat_repo.list_messages(folder, session_id)
             if m.run_id == run_id and m.role.value in ("assistant", "tool")
         ]
 
