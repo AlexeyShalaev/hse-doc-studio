@@ -90,6 +90,16 @@ def install_project_purge(app: FastAPI, container: AsyncContainer, cfg: Settings
     )
 
 
+def install_blob_gc(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическая сборка мусора блобов входа задач; регистрируется до старта раннера."""
+    from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC  # noqa: PLC0415
+
+    async def _gc() -> None:
+        await (await container.get(GcBlobsUC)).run()
+
+    app.state.background.register(PeriodicTask(name="blob_gc", interval_s=cfg.server.blob_gc_interval_s, run=_gc))
+
+
 def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодическая чистка просроченных сессий, токенов, писем outbox и счётчиков входов."""
     from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService  # noqa: PLC0415

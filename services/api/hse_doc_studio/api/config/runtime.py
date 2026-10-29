@@ -46,6 +46,24 @@ class HttpServerConfig(BaseModel):
         ge=1024,
         description="Предел размера лога в записи сборки; у более длинного лога теряется начало.",
     )
+    blob_gc_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер стирает блобы входа задач, на которые давно нет ссылок."
+    )
+    blob_gc_min_age_days: float = Field(
+        default=14.0,
+        ge=0,
+        description="Сколько суток блоб живёт без упоминаний в манифестах до удаления; 0 выключает сборку мусора.",
+    )
+    manifest_max_file_bytes: int = Field(
+        default=256 * 1024 * 1024,
+        ge=1,
+        description="Предел размера одного файла во входе задачи; больший файл даёт типизированный отказ.",
+    )
+    manifest_max_job_bytes: int = Field(
+        default=1024 * 1024 * 1024,
+        ge=1,
+        description="Предел суммарного размера входа одной задачи; не зависит от квоты проекта.",
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

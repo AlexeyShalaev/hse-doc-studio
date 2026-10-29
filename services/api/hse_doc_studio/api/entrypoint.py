@@ -18,6 +18,7 @@ from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
     install_auth_cleanup,
     install_background,
+    install_blob_gc,
     install_health,
     install_object_store_health,
     install_project_purge,
@@ -212,6 +213,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         )
         install_object_store_health(app, container, health_checks)
         install_project_purge(app, container, settings)
+        install_blob_gc(app, container, settings)
         install_auth_cleanup(app, container, settings)
 
         @app.on_event("shutdown")

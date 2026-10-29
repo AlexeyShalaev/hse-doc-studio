@@ -29,9 +29,11 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
+from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
+from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
@@ -51,13 +53,16 @@ from hse_doc_studio.infra.projects.purge import ProjectPurger
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
+from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
+from hse_doc_studio.infra.storage.live import NoLiveBlobs
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
+from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
 
@@ -112,6 +117,36 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_blob_store(self, store: IObjectStore) -> IBlobStore:
         return ObjectBlobStore(store)
+
+    @provide
+    def get_blob_registry(self, sessions: SessionProvider) -> IBlobRegistry:
+        return PostgresBlobRegistry(sessions)
+
+    @provide
+    def get_manifest_limits(self, server_config: ServerConfig) -> ManifestLimits:
+        return ManifestLimits(
+            max_file_bytes=server_config.manifest_max_file_bytes, max_job_bytes=server_config.manifest_max_job_bytes
+        )
+
+    @provide
+    def get_blob_uploader(self, volume: IProjectVolume, registry: IBlobRegistry, blobs: IBlobStore) -> IBlobUploader:
+        return ManifestBlobUploader(volume, registry, blobs)
+
+    @provide
+    def get_live_blobs(self) -> ILiveBlobSource:
+        """Пока в системе нет очереди задач, незавершённых задач с блобами тоже нет; срез очереди подменит источник."""
+        return NoLiveBlobs()
+
+    @provide
+    def get_gc_blobs_uc(
+        self,
+        registry: IBlobRegistry,
+        blobs: IBlobStore,
+        objects: IObjectStore,
+        live: ILiveBlobSource,
+        server_config: ServerConfig,
+    ) -> GcBlobsUC:
+        return GcBlobsUC(registry, blobs, objects, live, min_age=timedelta(days=server_config.blob_gc_min_age_days))
 
     @provide
     def get_project_catalog_mirror(self, sessions: SessionProvider) -> ProjectCatalogMirror:
