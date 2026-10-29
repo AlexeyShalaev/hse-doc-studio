@@ -206,3 +206,25 @@ async def test__server_container__artifact_store_is_s3_while_local_stays_on_disk
 
     assert isinstance(local_store, LocalDiskArtifactStore)
     assert isinstance(server_store, S3ArtifactStore)
+
+
+async def test__server_container__job_storage_and_live_blobs_use_the_object_store() -> None:
+    from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobOutputIngest
+    from hse_doc_studio.core.storage.manifest import ILiveBlobSource
+    from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
+    from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        blobs = await container.get(IJobBlobStore)
+        outputs = await container.get(IJobOutputIngest)
+        live = await container.get(ILiveBlobSource)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert isinstance(blobs, ObjectJobBlobStore)
+    assert isinstance(outputs, AnnouncedJobOutputIngest)
+    assert isinstance(live, QueueLiveBlobs)

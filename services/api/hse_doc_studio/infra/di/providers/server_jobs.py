@@ -1,4 +1,4 @@
-"""Провайдер очереди задач серверного режима: Postgres-очередь и сервис жизненного цикла."""
+"""Провайдер очереди задач серверного режима: Postgres-очередь, сервис жизненного цикла, хранилище входов и выходов."""
 
 from __future__ import annotations
 
@@ -17,12 +17,18 @@ from hse_doc_studio.core.jobs.runners import (
     JobTokenSigner,
 )
 from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest
+from hse_doc_studio.core.storage import IBlobStore, IObjectStore
+from hse_doc_studio.core.storage.ingest import OutputLimits
+from hse_doc_studio.core.storage.manifest import ILiveBlobSource
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
-from hse_doc_studio.infra.jobs.storage_fs import FsJobBlobStore, FsJobLogSink, FsJobOutputIngest
+from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
+from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
+from hse_doc_studio.infra.jobs.storage_fs import FsJobLogSink
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
+from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
@@ -87,15 +93,22 @@ class ServerJobsProvider(Provider):
 
     @provide
     def get_job_storage_root(self) -> JobStorageRoot:
+        """Каталог лога задач: блобы и выходы живут в объектном хранилище."""
         return JobStorageRoot(settings.jobs.storage_dir or settings.data_dir.expanduser() / "jobs")
 
     @provide
-    def get_job_blob_store(self, root: JobStorageRoot) -> IJobBlobStore:
-        return FsJobBlobStore(root)
+    def get_job_blob_store(self, blobs: IBlobStore) -> IJobBlobStore:
+        return ObjectJobBlobStore(blobs)
 
     @provide
-    def get_job_output_ingest(self, root: JobStorageRoot) -> IJobOutputIngest:
-        return FsJobOutputIngest(root, max_bytes=settings.jobs.max_artifact_bytes)
+    def get_job_output_ingest(self, queue: IJobQueue, store: IObjectStore) -> IJobOutputIngest:
+        limits = OutputLimits(max_file_bytes=settings.jobs.max_artifact_bytes)
+        return AnnouncedJobOutputIngest(queue, store, ObjectJobOutputIngest(store, limits=limits))
+
+    @provide(override=True)
+    def get_live_blobs(self, queue: IJobQueue) -> ILiveBlobSource:
+        """Блобы манифестов queued и running задач не собираются мусором, как бы давно на них ни ссылались."""
+        return QueueLiveBlobs(queue)
 
     @provide
     def get_job_log_sink(self, root: JobStorageRoot) -> IJobLogSink:
