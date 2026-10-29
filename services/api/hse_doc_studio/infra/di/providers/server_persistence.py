@@ -28,6 +28,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
@@ -50,6 +51,8 @@ from hse_doc_studio.infra.projects.purge import ProjectPurger
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
+from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
+from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
@@ -101,6 +104,14 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_project_volume(self, server_config: ServerConfig) -> IProjectVolume:
         return LocalDiskProjectVolume(server_config.projects_root)
+
+    @provide
+    def get_object_store(self, server_config: ServerConfig) -> IObjectStore:
+        return create_object_store(server_config.s3, settings.data_dir.expanduser())
+
+    @provide
+    def get_blob_store(self, store: IObjectStore) -> IBlobStore:
+        return ObjectBlobStore(store)
 
     @provide
     def get_project_catalog_mirror(self, sessions: SessionProvider) -> ProjectCatalogMirror:

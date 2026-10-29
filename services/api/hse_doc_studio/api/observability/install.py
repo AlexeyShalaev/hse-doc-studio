@@ -100,3 +100,14 @@ def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings)
     app.state.background.register(
         PeriodicTask(name="auth_cleanup", interval_s=cfg.server.auth_cleanup_interval_s, run=_cleanup)
     )
+
+
+def install_object_store_health(app: FastAPI, container: AsyncContainer, health: HealthRegistry) -> None:
+    """Проверка «s3» для /health/ready и экрана окружения мастера: бакет (или каталог) доступен."""
+    from hse_doc_studio.core.storage import IObjectStore  # noqa: PLC0415
+
+    async def _probe() -> str | None:
+        await (await container.get(IObjectStore)).check()
+        return None
+
+    health.register("s3", _probe)
