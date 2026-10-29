@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from hse_doc_studio.core.jobs.enums import JobPriorityClass
+
 
 @dataclass(frozen=True)
 class JobKindPolicy:
@@ -23,3 +25,15 @@ class JobKindPolicy:
     embedded_concurrency: int | None = None
     # Таймаут по умолчанию для диспетчера второго этапа; встроенный применяет только явный.
     default_timeout_s: float | None = None
+    # Класс очереди серверного диспетчера; встроенный порядок задач не меняет.
+    priority_class: JobPriorityClass = JobPriorityClass.checks
+    # Можно ли после потери раннера безопасно поставить задачу заново: выходы применяет только API после завершения.
+    retryable: bool = False
+    # Сколько попыток даёт серверная очередь (первая и повторы после потери раннера).
+    max_attempts: int = 1
+
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        if not self.retryable and self.max_attempts != 1:
+            raise ValueError("a non-retryable kind has exactly one attempt")

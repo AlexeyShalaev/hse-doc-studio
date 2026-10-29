@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 
 class JobKind(StrEnum):
@@ -25,3 +25,52 @@ class JobErrorCategory(StrEnum):
     not_found = "not_found"
     unavailable = "unavailable"
     internal = "internal"
+
+
+class JobState(StrEnum):
+    """Жизненный цикл записи очереди; `JobStatus` остаётся итогом результата и совпадает с терминальными значениями."""
+
+    queued = "queued"
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"
+    timed_out = "timed_out"
+
+    @property
+    def is_terminal(self) -> bool:
+        return self not in (JobState.queued, JobState.running)
+
+    @classmethod
+    def of_status(cls, status: JobStatus) -> JobState:
+        return cls(status.value)
+
+
+class JobPriorityClass(IntEnum):
+    """Класс очереди: меньшее число берут раньше; внутри класса порядок решает справедливая очередь."""
+
+    interactive = 0
+    checks = 1
+    batch = 2
+    # Задел под поведение сверх квоты на этапе 6.
+    low = 3
+
+
+class RunnerErrorCode(StrEnum):
+    """Закрытый список кодов ошибок протокола раннера и причин, по которым сборка не дошла до результата."""
+
+    runner_lost = "runner_lost"
+    superseded = "superseded"
+    superseded_by = "superseded_by"
+    no_runner = "no_runner"
+    quota = "quota"
+    stale_attempt = "stale_attempt"
+    job_not_found = "job_not_found"
+    job_not_running = "job_not_running"
+    blob_forbidden = "blob_forbidden"
+    blob_missing = "blob_missing"
+    artifact_invalid = "artifact_invalid"
+    runner_unauthorized = "runner_unauthorized"
+    runner_disabled = "runner_disabled"
+    job_token_invalid = "job_token_invalid"  # noqa: S105
+    runner_protocol_unsupported = "runner_protocol_unsupported"

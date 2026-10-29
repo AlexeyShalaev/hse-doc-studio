@@ -8,7 +8,7 @@ from hse_doc_studio.api.actor import resolve_actor
 from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.rate_limit import rate_limit_guard
-from hse_doc_studio.api.routers import admin_audit, admin_settings, admin_users
+from hse_doc_studio.api.routers import admin_audit, admin_runners, admin_settings, admin_users
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mode import StudioMode
@@ -31,4 +31,5 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_users.router)
     router.include_router(admin_audit.router)
     router.include_router(admin_settings.router)
+    router.include_router(admin_runners.router)
     return router

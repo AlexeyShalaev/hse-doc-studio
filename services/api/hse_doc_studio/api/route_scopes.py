@@ -226,6 +226,23 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/operations/{operation_id}"): _A,
     ("POST", "/git/operations/{operation_id}/cancel"): _A,
     ("GET", "/git/shared-folder"): _LOCAL,
+    # Протокол раннера и админка раннеров лежат вне /api/v1, ключ это полный путь маршрута
+    ("POST", "/api/runner/v1/register"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/poll"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/heartbeat"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/log"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/blobs/need"): RouteScope.job_token,
+    ("GET", "/api/runner/v1/jobs/{job_id}/blobs/{sha256}"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/artifacts"): RouteScope.job_token,
+    ("PUT", "/api/runner/v1/jobs/{job_id}/artifacts/{sha256}"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
+    ("POST", "/api/admin/runner-tokens"): _ADM,
+    ("GET", "/api/admin/runner-tokens"): _ADM,
+    ("DELETE", "/api/admin/runner-tokens/{token_id}"): _ADM,
+    ("GET", "/api/admin/runners"): _ADM,
+    ("PATCH", "/api/admin/runners/{runner_id}"): _ADM,
+    ("POST", "/api/admin/runners/{runner_id}/rotate-token"): _ADM,
+    ("DELETE", "/api/admin/runners/{runner_id}"): _ADM,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

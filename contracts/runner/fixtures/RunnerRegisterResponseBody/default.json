@@ -1,0 +1,7 @@
+{
+  "runner_id": "r-1",
+  "runner_token": "hsrn_example-token-not-a-secret",
+  "lease_s": 45,
+  "heartbeat_s": 10,
+  "max_poll_wait_s": 25
+}
