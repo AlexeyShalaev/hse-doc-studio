@@ -1,0 +1,190 @@
+# Общий сервер HSE Doc Studio: api (mode=server), раннер задач, Postgres, MinIO и сервисы проверки.
+# Запуск и первый вход описаны в deploy/server/README.md:
+#   cp .env.example .env   # заполнить секреты, см. комментарии в файле
+#   docker compose up -d                        # минимальный набор: api, runner, postgres, minio
+#   docker compose --profile services up -d     # + два LanguageTool и ONLYOFFICE
+#   docker compose --profile ai up -d           # + Ollama
+#   docker compose up -d --scale runner=3       # несколько раннеров
+#
+# docker.sock подключён ТОЛЬКО раннеру: у api доступа к докеру нет. Сокет эквивалентен root на хосте,
+# поэтому раннер-хост считается доверенной инфраструктурой (см. README, раздел «Безопасность раннера»).
+name: hse-doc-studio-server
+
+x-image: &image ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-latest}
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
+      POSTGRES_DB: studio
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d studio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?задайте S3_ACCESS_KEY в .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?задайте S3_SECRET_KEY в .env}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Одноразово создаёт закрытый бакет и завершается.
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-studio}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        mc alias set local http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" &&
+        mc mb --ignore-existing "local/$$S3_BUCKET" &&
+        mc anonymous set none "local/$$S3_BUCKET"
+    restart: "no"
+
+  api:
+    image: *image
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${PORT:-17240}:8000"
+    environment: &api-env
+      HSE_STUDIO__MODE: server
+      HSE_STUDIO__SERVER__HOST: "0.0.0.0"
+      HSE_STUDIO__SERVER__PORT: "8000"
+      HSE_STUDIO__DATA_DIR: /data
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+      HSE_STUDIO__DB__DSN: postgresql://studio:${POSTGRES_PASSWORD}@postgres:5432/studio
+      # В compose схему ведёт сам api под advisory-локом; в helm этим занят отдельный job.
+      HSE_STUDIO__DB__AUTO_MIGRATE: "true"
+      HSE_STUDIO__SECRETS__KEY: ${SECRETS_KEY:?задайте SECRETS_KEY в .env}
+      HSE_STUDIO__S3__ENDPOINT: http://minio:9000
+      HSE_STUDIO__S3__BUCKET: ${S3_BUCKET:-studio}
+      HSE_STUDIO__S3__ACCESS_KEY: ${S3_ACCESS_KEY}
+      HSE_STUDIO__S3__SECRET_KEY: ${S3_SECRET_KEY}
+      HSE_STUDIO__AUTH__PUBLIC_URL: ${PUBLIC_URL:?задайте PUBLIC_URL в .env}
+      HSE_STUDIO__AUTH__TRUSTED_PROXIES: ${TRUSTED_PROXIES:-[]}
+      HSE_STUDIO__JOBS__RUNNER_BOOTSTRAP_TOKEN: ${RUNNER_BOOTSTRAP_TOKEN:?задайте RUNNER_BOOTSTRAP_TOKEN в .env}
+      HSE_STUDIO__MAIL__HOST: ${SMTP_HOST:-}
+      HSE_STUDIO__MAIL__PORT: ${SMTP_PORT:-587}
+      HSE_STUDIO__MAIL__USERNAME: ${SMTP_USERNAME:-}
+      HSE_STUDIO__MAIL__PASSWORD: ${SMTP_PASSWORD:-}
+      HSE_STUDIO__MAIL__FROM_ADDRESS: ${SMTP_FROM:-no-reply@localhost}
+      HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN: ${HEALTH_TOKEN:-}
+      HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN: ${METRICS_TOKEN:-}
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+    restart: unless-stopped
+
+  # Раннер тянет задачи у api по HTTPS (долгий опрос) и запускает TeX и проверки в соседних контейнерах.
+  # Соседи видят пути ХОСТА, поэтому каталог данных монтируется по тому же пути, что и на хосте.
+  runner:
+    image: *image
+    command: ["hse-doc-studio", "runner"]
+    depends_on:
+      api:
+        condition: service_healthy
+    # Процесс идёт под непривилегированным app; без группы сокета docker отвечает permission denied.
+    # Linux: gid из `stat -c '%g' /var/run/docker.sock` в DOCKER_GID. Docker Desktop: достаточно 0.
+    group_add:
+      - "${DOCKER_GID:-0}"
+    environment:
+      HSE_RUNNER__API_URL: http://api:8000
+      # Нужен один раз: выданный раннеру токен сохраняется в его каталоге данных.
+      HSE_RUNNER__TOKEN: ${RUNNER_BOOTSTRAP_TOKEN}
+      HSE_RUNNER__DATA_DIR: ${RUNNER_DATA_DIR:-/var/lib/hse-runner}
+      HSE_RUNNER__CONCURRENCY: ${RUNNER_CONCURRENCY:-1}
+      HSE_RUNNER__OFFICE_URL: ${RUNNER_OFFICE_URL:-}
+    volumes:
+      - ${RUNNER_DATA_DIR:-/var/lib/hse-runner}:${RUNNER_DATA_DIR:-/var/lib/hse-runner}
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  languagetool-1:
+    profiles: [services]
+    image: erikvl87/languagetool:6.5
+    environment:
+      langtool_languageModel: /ngrams
+      Java_Xms: 512m
+      Java_Xmx: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/v2/languages"]
+      interval: 15s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+    restart: unless-stopped
+
+  languagetool-2:
+    profiles: [services]
+    image: erikvl87/languagetool:6.5
+    environment:
+      langtool_languageModel: /ngrams
+      Java_Xms: 512m
+      Java_Xmx: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/v2/languages"]
+      interval: 15s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+    restart: unless-stopped
+
+  onlyoffice:
+    profiles: [services]
+    image: onlyoffice/documentserver:8.3
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:?задайте ONLYOFFICE_JWT_SECRET в .env}
+    volumes:
+      - onlyoffice-data:/var/www/onlyoffice/Data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 20s
+      timeout: 5s
+      start_period: 120s
+      retries: 10
+    restart: unless-stopped
+
+  ollama:
+    profiles: [ai]
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  minio-data:
+  api-data:
+  onlyoffice-data:
+  ollama-models:

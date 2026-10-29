@@ -90,6 +90,15 @@ jobs:
                 -f deploy/all-in-one/compose.system-fonts.yml config -q 2>/dev/null); then
             echo "::error::compose.system-fonts.yml не требует SYSTEM_FONTS_PATH — guard сломан"; exit 1
           fi
+          # Серверный набор: обязательные значения подставляет .env.example с заглушками, затем все профили.
+          sed -E 's/^([A-Z0-9_]+)=$/\1=x/' deploy/server/.env.example > /tmp/server.env
+          docker compose --env-file /tmp/server.env -f deploy/server/docker-compose.yml config -q
+          docker compose --env-file /tmp/server.env -f deploy/server/docker-compose.yml \
+                         --profile services --profile ai config -q
+          # Без обязательных значений набор обязан падать с понятной ошибкой.
+          if docker compose --env-file /dev/null -f deploy/server/docker-compose.yml config -q 2>/dev/null; then
+            echo "::error::deploy/server не требует обязательных секретов"; exit 1
+          fi
           docker compose -p dev \
             -f scripts/dev/infra.compose.yml \
             -f scripts/dev/services/api.compose.yml \
