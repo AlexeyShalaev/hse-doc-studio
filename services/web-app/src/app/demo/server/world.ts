@@ -55,7 +55,7 @@ export const accountOf = (world: ServerDemoWorld): DemoAccount | null => {
   const user = world.bootstrap.user;
   if (!user) return null;
   if (world.account?.profile.id !== user.id) {
-    world.account = createDemoAccount(user);
+    world.account = createDemoAccount(user, world.bootstrap.auth);
   }
   return world.account;
 };

@@ -1,7 +1,8 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import { validateEmail } from "@entities/profile";
-import { effectiveOf } from "./accounts";
+import type { ApiToken, TokenScope } from "@entities/session";
+import { effectiveOf, withUnlinkFlags } from "./accounts";
 import { accountOf, signOut, type ServerDemoWorld } from "./world";
 
 // Демо аккаунта: профиль и подпись версий, смена пароля и почты, сессии.
@@ -11,7 +12,13 @@ import { accountOf, signOut, type ServerDemoWorld } from "./world";
 //  - текущий пароль, начинающийся с wrong, отвечает invalid_credentials;
 //  - новый пароль слабее политики (password..., qwerty..., короче минимума) отвечает password_policy;
 //  - адрес limited@example.org при смене почты отвечает rate_limited;
-//  - имя, состоящее из пробелов, отвечает 422 у поля name.
+//  - имя, состоящее из пробелов, отвечает 422 у поля name;
+//  - токен с названием на limit… отвечает rate_limited;
+//  - привязка провайдера в демо сразу считается завершённой (возврат на якорь карточки);
+//  - последний способ входа отвязать нельзя: 409 last_login_method.
+
+let tokenSeq = 0;
+const TOKEN_ALPHABET = "4KqVn8Zc1QwTy5LbKdPm2RxJ7sEa3HuF";
 
 const WEAK_PASSWORD = /^(password|qwerty|12345)/i;
 
@@ -190,6 +197,133 @@ export const createAccountRoutes = (
         return demoNoContent();
       }
       account.sessions = account.sessions.filter((s) => s.id !== target.id);
+      return demoNoContent();
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/account/tokens",
+    handler: () => {
+      const account = accountOf(getWorld());
+      return account ? demoJson(account.tokens) : unauth();
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/account/tokens",
+    handler: (req) => {
+      const account = accountOf(getWorld());
+      if (!account) return unauth();
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const name = str(body.name).replace(/\s+/g, " ").trim();
+      const scopes = Array.isArray(body.scopes)
+        ? body.scopes.filter((s): s is TokenScope =>
+            ["api", "git:read", "git:write"].includes(String(s)),
+          )
+        : [];
+      if (name === "") return invalid("name", "required", "Укажи название.");
+      if (scopes.length === 0) {
+        return invalid("scopes", "required", "Выбери хотя бы одно право.");
+      }
+      if (name.toLowerCase().startsWith("limit")) {
+        return demoError(429, "rate_limited", "Too many attempts", {
+          retry_after: 20,
+        });
+      }
+      tokenSeq += 1;
+      const secret = `hsd_pat_${TOKEN_ALPHABET.repeat(2).slice(tokenSeq, tokenSeq + 32)}`;
+      const now = Date.now();
+      const days =
+        typeof body.expires_in_days === "number" ? body.expires_in_days : null;
+      const item: ApiToken = {
+        id: `pat_demo_${String(tokenSeq)}`,
+        name,
+        prefix: secret.slice(0, 11),
+        scopes,
+        created_at: new Date(now).toISOString(),
+        expires_at:
+          days === null
+            ? null
+            : new Date(now + days * 86_400_000).toISOString(),
+        last_used_at: null,
+      };
+      account.tokens = [item, ...account.tokens];
+      return {
+        status: 201,
+        data: { token: secret, item },
+      } satisfies DemoResponse;
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: "/account/tokens/:id",
+    handler: (req) => {
+      const account = accountOf(getWorld());
+      if (!account) return unauth();
+      if (!account.tokens.some((t) => t.id === req.params.id)) {
+        return demoError(404, "not_found", "Not Found");
+      }
+      account.tokens = account.tokens.filter((t) => t.id !== req.params.id);
+      return demoNoContent();
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/account/identities",
+    handler: () => {
+      const account = accountOf(getWorld());
+      return account ? demoJson(account.identities) : unauth();
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/account/identities/link/start",
+    handler: (req) => {
+      const world = getWorld();
+      const account = accountOf(world);
+      if (!account) return unauth();
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const provider = world.bootstrap.auth.oidc_providers.find(
+        (p) => p.id === str(body.provider_id),
+      );
+      if (!provider) return demoError(404, "not_found", "Not Found");
+      if (!account.identities.some((i) => i.provider_id === provider.id)) {
+        // Настоящий вход идёт у провайдера; демо считает, что человек уже вернулся.
+        account.identities = withUnlinkFlags([
+          ...account.identities,
+          {
+            id: `idn_${provider.id}`,
+            kind: "oidc",
+            provider_id: provider.id,
+            provider_label: provider.label,
+            email: world.bootstrap.user?.email ?? null,
+            linked_at: new Date().toISOString(),
+            last_used_at: new Date().toISOString(),
+            can_unlink: true,
+          },
+        ]);
+      }
+      return demoJson({ redirect_url: "#account-identities" });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: "/account/identities/:id",
+    handler: (req) => {
+      const account = accountOf(getWorld());
+      if (!account) return unauth();
+      const target = account.identities.find((i) => i.id === req.params.id);
+      if (!target) return demoError(404, "not_found", "Not Found");
+      if (!target.can_unlink) {
+        return demoError(
+          409,
+          "last_login_method",
+          "Cannot remove the last sign-in method",
+        );
+      }
+      account.identities = withUnlinkFlags(
+        account.identities.filter((i) => i.id !== target.id),
+      );
       return demoNoContent();
     },
   },

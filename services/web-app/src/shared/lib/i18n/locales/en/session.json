@@ -80,6 +80,10 @@
       "student_sso": {
         "title": "Student, SSO sign-in",
         "hint": "A student is signed in and the account has no password."
+      },
+      "student_linked": {
+        "title": "Student, password and SSO",
+        "hint": "A student is signed in with a password and linked HSE SSO; Google can be linked."
       }
     }
   }

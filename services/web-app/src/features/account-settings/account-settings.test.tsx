@@ -7,7 +7,9 @@ import { patchFor, modeOf, previewOf } from "./lib/commitIdentity";
 import { CommitIdentityCard } from "./ui/CommitIdentityCard";
 import { PasswordCard } from "./ui/PasswordCard";
 import { ProfileCard } from "./ui/ProfileCard";
+import { IdentitiesCard } from "./ui/IdentitiesCard";
 import { SessionsCard } from "./ui/SessionsCard";
+import { TokensCard } from "./ui/TokensCard";
 
 const PROFILE: AccountProfile = {
   id: "u_1",
@@ -316,5 +318,151 @@ describe("профиль и смена почты", () => {
     );
     await user.click(screen.getByRole("button", { name: "Сменить адрес" }));
     expect(screen.getByTestId("link-delivery")).toBeInTheDocument();
+  });
+});
+
+describe("токены доступа", () => {
+  it("форма отправляет название, права и срок, затем закрывается", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn((_body: unknown, done: () => void) => {
+      done();
+    });
+    render(
+      <TokensCard
+        status="ready"
+        tokens={[]}
+        onCreate={onCreate}
+        onRevoke={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("tokens-empty")).toBeInTheDocument();
+    await user.click(screen.getByTestId("token-new"));
+    await user.type(screen.getByLabelText("Название"), "  CLI   дома ");
+    await user.click(screen.getByTestId("token-scope-gitRead"));
+    await user.click(screen.getByTestId("token-submit"));
+    expect(onCreate).toHaveBeenCalledWith(
+      { name: "CLI дома", scopes: ["api", "git:read"], expires_in_days: 90 },
+      expect.any(Function),
+    );
+    expect(screen.queryByTestId("token-form")).toBeNull();
+  });
+
+  it("значение показано только пока передано в created", () => {
+    const props = {
+      status: "ready" as const,
+      tokens: [],
+      onCreate: vi.fn(),
+      onRevoke: vi.fn(),
+    };
+    const { rerender } = render(
+      <TokensCard
+        {...props}
+        created={{ token: "hsd_pat_SECRET", name: "A" }}
+      />,
+    );
+    expect(screen.getByDisplayValue("hsd_pat_SECRET")).toBeInTheDocument();
+    rerender(<TokensCard {...props} created={null} />);
+    expect(screen.queryByDisplayValue("hsd_pat_SECRET")).toBeNull();
+  });
+
+  it("отзыв требует подтверждения", async () => {
+    const user = userEvent.setup();
+    const onRevoke = vi.fn();
+    render(
+      <TokensCard
+        status="ready"
+        tokens={[
+          {
+            id: "t1",
+            name: "CI",
+            prefix: "hsd_pat_9Zr",
+            scopes: ["git:read"],
+            created_at: "2026-09-01T09:00:00Z",
+            expires_at: null,
+            last_used_at: null,
+          },
+        ]}
+        onCreate={vi.fn()}
+        onRevoke={onRevoke}
+      />,
+    );
+    expect(screen.getByText(/Бессрочный/)).toBeInTheDocument();
+    await user.click(screen.getByTestId("token-revoke-t1"));
+    expect(onRevoke).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId("token-revoke-confirm-t1"));
+    expect(onRevoke).toHaveBeenCalledWith("t1");
+  });
+});
+
+describe("способы входа", () => {
+  const PASSWORD = {
+    id: "p",
+    kind: "password" as const,
+    provider_id: null,
+    provider_label: "",
+    email: "a@b.co",
+    linked_at: "2026-08-30T08:00:00Z",
+    last_used_at: null,
+    can_unlink: false,
+  };
+  const SSO = {
+    ...PASSWORD,
+    id: "s",
+    kind: "oidc" as const,
+    provider_id: "keycloak",
+    provider_label: "HSE SSO",
+  };
+
+  it("последний способ не отвязывается: вместо кнопки пояснение", () => {
+    render(
+      <IdentitiesCard
+        status="ready"
+        identities={[SSO]}
+        providers={[{ id: "keycloak", label: "HSE SSO" }]}
+        onLink={vi.fn()}
+        onUnlink={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Отвязать/ })).toBeNull();
+    expect(screen.getByTestId("identity-locked-s")).toBeInTheDocument();
+    expect(screen.getByTestId("identities-sole")).toBeInTheDocument();
+  });
+
+  it("отвязка идёт через подтверждение, привязка зовёт провайдера", async () => {
+    const user = userEvent.setup();
+    const onUnlink = vi.fn();
+    const onLink = vi.fn();
+    render(
+      <IdentitiesCard
+        status="ready"
+        identities={[PASSWORD, { ...SSO, can_unlink: true }]}
+        providers={[
+          { id: "keycloak", label: "HSE SSO" },
+          { id: "google", label: "Google" },
+        ]}
+        onLink={onLink}
+        onUnlink={onUnlink}
+      />,
+    );
+    await user.click(screen.getByTestId("identity-unlink-s"));
+    expect(onUnlink).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId("identity-unlink-confirm-s"));
+    expect(onUnlink).toHaveBeenCalledWith("s");
+    await user.click(screen.getByTestId("identity-link-google"));
+    expect(onLink).toHaveBeenCalledWith("google");
+    expect(screen.queryByTestId("identity-link-keycloak")).toBeNull();
+  });
+
+  it("отказ last_login_method объясняется", () => {
+    render(
+      <IdentitiesCard
+        status="ready"
+        identities={[PASSWORD, SSO]}
+        failure={{ code: "last_login_method" }}
+        onLink={vi.fn()}
+        onUnlink={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("единственный способ");
   });
 });

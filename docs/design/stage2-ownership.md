@@ -33,7 +33,7 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | мастер | `GET /api/v1/server-setup/status`, `POST .../admin`, `GET .../environment`, `GET .../settings` (действующие значения и `locked_by_env`), `POST .../settings`, `POST .../complete`; после завершения все 404 | есть |
 | аккаунт: сессии, пароль, e-mail | `/account/sessions`, `POST /account/password`, `POST /account/email` и `POST /account/email/confirm` (смена e-mail, `ChangeEmailRequest`/`ChangeEmailResponse`) | есть |
 | аккаунт: профиль, токены | `/account` (профиль), `/account/tokens` | есть |
-| аккаунт: identities | `/account/identities` | план |
+| аккаунт: identities | `/account/identities` (форма: `AccountIdentity`, `LinkIdentityRequest/Response`, SPA S2-45) | план (бэкенд) |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`) | есть |
 | участники проекта | `/projects/{id}/members` | план |
 | админка | `/api/admin/*`: `users`, `runners`, `runner-tokens`, `settings`, `audit` | есть; `orgs`, `overview` план. Формы экранов организаций (SPA, S2-52): `GET|POST /api/admin/orgs` (`AdminOrg` с `my_role`, `CreateAdminOrgRequest`), `GET|DELETE /orgs/{slug}`, `/orgs/{slug}/members[/{user_id}]` (`AdminOrgMember`, `AddAdminOrgMemberRequest`, `UpdateAdminOrgMemberRequest`), `/orgs/{slug}/groups[/{id}]` (`AdminGroup`, `CreateAdminGroupRequest`, `UpdateAdminGroupRequest`); новые коды `org_not_empty`, `already_member`, `slug_taken` |

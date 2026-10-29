@@ -1,12 +1,21 @@
 import { z } from "zod";
 import { ApiError, apiClient, parseResp } from "@shared/api";
 import {
+  AccountIdentitySchema,
   AccountProfileSchema,
   AccountSessionSchema,
+  ApiTokenSchema,
   ChangeEmailResponseSchema,
+  CreateApiTokenResponseSchema,
+  LinkIdentityResponseSchema,
+  type AccountIdentity,
   type AccountProfile,
   type AccountSession,
+  type ApiToken,
   type ChangeEmailResponse,
+  type CreateApiTokenRequest,
+  type CreateApiTokenResponse,
+  type LinkIdentityResponse,
 } from "@entities/session";
 
 // Ошибки формы показывает сама форма: тост не нужен.
@@ -97,4 +106,37 @@ export const accountApi = {
   revokeOtherSessions: async (): Promise<void> => {
     await apiClient.delete("/account/sessions", quiet);
   },
+
+  tokens: (): Promise<ApiToken[]> =>
+    apiClient.get("/account/tokens").then(parseResp(z.array(ApiTokenSchema))),
+
+  createToken: (body: CreateApiTokenRequest): Promise<CreateApiTokenResponse> =>
+    apiClient
+      .post("/account/tokens", body, quiet)
+      .then(parseResp(CreateApiTokenResponseSchema)),
+
+  revokeToken: async (id: string): Promise<void> => {
+    await apiClient.delete(`/account/tokens/${encodeURIComponent(id)}`, quiet);
+  },
+
+  identities: (): Promise<AccountIdentity[]> =>
+    apiClient
+      .get("/account/identities")
+      .then(parseResp(z.array(AccountIdentitySchema))),
+
+  unlinkIdentity: async (id: string): Promise<void> => {
+    await apiClient.delete(
+      `/account/identities/${encodeURIComponent(id)}`,
+      quiet,
+    );
+  },
+
+  startLink: (providerId: string): Promise<LinkIdentityResponse> =>
+    apiClient
+      .post(
+        "/account/identities/link/start",
+        { provider_id: providerId },
+        quiet,
+      )
+      .then(parseResp(LinkIdentityResponseSchema)),
 };

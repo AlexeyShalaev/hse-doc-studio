@@ -13,8 +13,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
 import { AccountSection } from "@features/account-settings";
 import {
+  AccountIdentitySchema,
   AccountProfileSchema,
   AccountSessionSchema,
+  ApiTokenSchema,
+  CreateApiTokenResponseSchema,
   ChangeEmailResponseSchema,
 } from "@entities/session";
 import { createDemoRouter } from "@shared/api/demo";
@@ -198,5 +201,135 @@ describe("демо: раздел «Аккаунт»", () => {
       expect(screen.queryByTestId("password-form")).toBeNull();
     });
     expect(screen.getByText(/единый вход/)).toBeInTheDocument();
+  });
+
+  it("токен: создание, значение видно один раз, отзыв", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByTestId("tokens-list");
+    await user.click(screen.getByTestId("token-new"));
+    await user.type(screen.getByLabelText("Название"), "Мой скрипт");
+    await user.click(screen.getByTestId("token-submit"));
+
+    const created = await screen.findByTestId("token-created");
+    const value = within(created).getByDisplayValue(/^hsd_pat_/);
+    const secret = (value as HTMLInputElement).value;
+    // Сервер вернул значение один раз; в списке остаётся только начало.
+    const listed = z
+      .array(ApiTokenSchema)
+      .parse((await call("GET", "/account/tokens")).data);
+    expect(JSON.stringify(listed)).not.toContain(secret);
+    const row = listed.find((t) => t.name === "Мой скрипт");
+    expect(row?.prefix).toBe(secret.slice(0, 11));
+
+    // Закрыть без копирования нельзя сразу: просим подтвердить.
+    await user.click(within(created).getByRole("button", { name: "Готово" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Закрыть без копирования" }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("token-created")).toBeNull();
+    });
+    expect(screen.queryByDisplayValue(secret)).toBeNull();
+    expect(screen.queryByText(secret)).toBeNull();
+
+    await user.click(screen.getByTestId(`token-revoke-${row?.id ?? ""}`));
+    await user.click(
+      screen.getByTestId(`token-revoke-confirm-${row?.id ?? ""}`),
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId(`token-${row?.id ?? ""}`)).toBeNull();
+    });
+  });
+
+  it("токен: без названия и без прав форма не уходит", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByTestId("tokens-list");
+    await user.click(screen.getByTestId("token-new"));
+    await user.click(screen.getByTestId("token-scope-api"));
+    await user.click(screen.getByTestId("token-submit"));
+    expect(screen.getByText("Укажите название.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Выберите хотя бы одно право."),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("token-created")).toBeNull();
+  });
+
+  it("токен: просроченный помечен, отказ сервера виден в форме", async () => {
+    const user = userEvent.setup();
+    mount();
+    const old = await screen.findByTestId("token-pat_01hx8z");
+    expect(within(old).getByText("Истёк")).toBeInTheDocument();
+    await user.click(screen.getByTestId("token-new"));
+    await user.type(screen.getByLabelText("Название"), "limit-test");
+    await user.click(screen.getByTestId("token-submit"));
+    expect(
+      await screen.findByText(/Слишком много попыток/),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("token-created")).toBeNull();
+  });
+
+  it("способы входа: без провайдеров карточки нет", async () => {
+    mount();
+    await screen.findByTestId("tokens-list");
+    expect(screen.queryByTestId("account-identities")).toBeNull();
+  });
+
+  it("способы входа: привязка и отвязка, последний способ защищён", async () => {
+    activateServerScenario("student_linked");
+    const user = userEvent.setup();
+    mount();
+    const list = await screen.findByTestId("identities-list");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    // Пароль не отвязывается отсюда, SSO отвязывается, пока есть пароль.
+    expect(screen.queryByTestId("identity-unlink-idn_password")).toBeNull();
+
+    await user.click(screen.getByTestId("identity-link-google"));
+    await waitFor(() => {
+      expect(screen.getByTestId("identity-idn_google")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("identity-link-google")).toBeNull();
+
+    await user.click(screen.getByTestId("identity-unlink-idn_google"));
+    await user.click(screen.getByTestId("identity-unlink-confirm-idn_google"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("identity-idn_google")).toBeNull();
+    });
+    await user.click(screen.getByTestId("identity-unlink-idn_keycloak"));
+    await user.click(
+      screen.getByTestId("identity-unlink-confirm-idn_keycloak"),
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("identity-idn_keycloak")).toBeNull();
+    });
+    // Остался один пароль: единственный способ, отвязывать больше нечего.
+    expect(screen.getByTestId("identities-sole")).toBeInTheDocument();
+    const left = z
+      .array(AccountIdentitySchema)
+      .parse((await call("GET", "/account/identities")).data);
+    expect(left.map((i) => i.kind)).toEqual(["password"]);
+  });
+
+  it("способы входа: единственный SSO без пароля не отвязывается", async () => {
+    activateServerScenario("student_sso");
+    mount();
+    const row = await screen.findByTestId("identity-idn_keycloak");
+    expect(within(row).queryByRole("button", { name: /Отвязать/ })).toBeNull();
+    expect(screen.getByTestId("identity-locked-idn_keycloak")).toBeVisible();
+    // Сервер тоже не даст, даже если запрос отправить в обход интерфейса.
+    const refused = await call("DELETE", "/account/identities/idn_keycloak");
+    expect(refused.status).toBe(409);
+    expect((refused.data as { code: string }).code).toBe("last_login_method");
+  });
+
+  it("ответы токенов проходят схемы контракта", async () => {
+    const made = await call("POST", "/account/tokens", {
+      name: "x",
+      scopes: ["api"],
+      expires_in_days: null,
+    });
+    expect(made.status).toBe(201);
+    CreateApiTokenResponseSchema.parse(made.data);
   });
 });

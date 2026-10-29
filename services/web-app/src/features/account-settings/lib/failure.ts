@@ -6,6 +6,7 @@ export const KNOWN_FAILURES = [
   "csrf_failed",
   "email_taken",
   "forbidden",
+  "last_login_method",
   "network",
 ] as const;
 

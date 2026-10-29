@@ -251,6 +251,32 @@ export const CreateApiTokenResponseSchema = z.strictObject({
   item: ApiTokenSchema,
 });
 
+export type ApiToken = z.infer<typeof ApiTokenSchema>;
+export type TokenScope = z.infer<typeof TokenScopeSchema>;
+export type CreateApiTokenRequest = z.infer<typeof CreateApiTokenRequestSchema>;
+export type CreateApiTokenResponse = z.infer<
+  typeof CreateApiTokenResponseSchema
+>;
+
+export const AccountIdentitySchema = z.strictObject({
+  id: z.string(),
+  kind: z.enum(["password", "oidc"]),
+  provider_id: z.string().nullable(),
+  provider_label: z.string(),
+  email: z.string().nullable(),
+  linked_at: iso,
+  last_used_at: iso.nullable(),
+  can_unlink: z.boolean(),
+});
+export type AccountIdentity = z.infer<typeof AccountIdentitySchema>;
+export const LinkIdentityRequestSchema = z.strictObject({
+  provider_id: z.string(),
+});
+export const LinkIdentityResponseSchema = z.strictObject({
+  redirect_url: z.string(),
+});
+export type LinkIdentityResponse = z.infer<typeof LinkIdentityResponseSchema>;
+
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),

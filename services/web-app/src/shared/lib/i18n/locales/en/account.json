@@ -111,6 +111,86 @@
     "email_taken": "This address cannot be used.",
     "forbidden": "You do not have permission for this action.",
     "network": "No connection to the server. Check your network and try again.",
-    "unknown": "Something went wrong. Try again later."
+    "unknown": "Something went wrong. Try again later.",
+    "last_login_method": "This is your only sign-in method."
+  },
+  "tokens": {
+    "title": "Access tokens",
+    "sub": "For the command line and scripts. A token acts as you, so keep it like a password.",
+    "loading": "Loading tokens…",
+    "loadFailed": "Could not load tokens.",
+    "retry": "Retry",
+    "empty": "No tokens yet. Create one when you need the CLI or a script.",
+    "new": "Create token",
+    "name": "Name",
+    "namePlaceholder": "For example, CLI on my laptop",
+    "nameHint": "So you can tell later where it is used.",
+    "nameRequired": "Enter a name.",
+    "scopesLegend": "Permissions",
+    "scopesRequired": "Choose at least one permission.",
+    "scopes": {
+      "api": {
+        "title": "API",
+        "hint": "Projects, versions and builds on your behalf."
+      },
+      "gitRead": {
+        "title": "Git: read",
+        "hint": "Clone and fetch over git."
+      },
+      "gitWrite": {
+        "title": "Git: write",
+        "hint": "Push changes over git."
+      }
+    },
+    "expiryLabel": "Expires",
+    "expiry": {
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "never": "Never",
+      "neverHint": "A token that never expires is riskier: revoke it once it is no longer needed."
+    },
+    "create": "Create",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "created": {
+      "label": "Token “{{name}}”",
+      "hint": "Paste it into the CLI or script settings."
+    },
+    "expired": "Expired",
+    "noExpiry": "Never expires",
+    "expiresOn": "Valid until {{date}}",
+    "expiredOn": "Expired {{date}}",
+    "neverUsed": "never used",
+    "lastUsed": "used {{date}}",
+    "revoke": "Revoke",
+    "revokeAria": "Revoke token {{name}}",
+    "confirmRevoke": "Revoke token “{{name}}”?",
+    "revokeYes": "Revoke",
+    "revokeNo": "Cancel",
+    "toastRevoked": "Token revoked"
+  },
+  "identities": {
+    "title": "Sign-in methods",
+    "sub": "How you sign in to the account. Link your organization's single sign-on to skip the password.",
+    "loading": "Loading sign-in methods…",
+    "loadFailed": "Could not load sign-in methods.",
+    "retry": "Retry",
+    "password": "Password",
+    "passwordHint": "changed in the Password card",
+    "noEmail": "no address provided",
+    "linkedOn": "added {{date}}",
+    "only": "Only one",
+    "lockedHint": "This is your only way to sign in, so it cannot be removed.",
+    "soleNote": "You have a single sign-in method. Add a second one before changing the first.",
+    "unlink": "Unlink",
+    "unlinkAria": "Unlink {{name}}",
+    "confirmUnlink": "Unlink {{name}}?",
+    "unlinkYes": "Unlink",
+    "unlinkNo": "Cancel",
+    "toastUnlinked": "Sign-in method unlinked",
+    "lastMethod": "This is your only way to sign in. Add another one first.",
+    "addTitle": "Add a sign-in method",
+    "link": "Link {{name}}",
+    "linkHint": "You will go to the provider and come back here with the link in place."
   }
 }

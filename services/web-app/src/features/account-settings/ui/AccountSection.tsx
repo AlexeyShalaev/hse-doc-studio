@@ -8,18 +8,27 @@ import { useBootstrap, type ChangeEmailResponse } from "@entities/session";
 import { AccountValidationFailed } from "../api/accountApi";
 import {
   useAccount,
+  useAccountIdentities,
   useAccountSessions,
+  useAccountTokens,
   useChangeEmail,
   useChangePassword,
+  useCreateToken,
   useRevokeOtherSessions,
   useRevokeSession,
+  useRevokeToken,
+  useStartLink,
+  useUnlinkIdentity,
   useUpdateAccount,
 } from "../api/accountQueries";
 import type { Failure } from "../lib/failure";
+import { isSafeRedirect } from "../lib/tokens";
+import { IdentitiesCard } from "./IdentitiesCard";
 import { CommitIdentityCard } from "./CommitIdentityCard";
 import { PasswordCard } from "./PasswordCard";
 import { ProfileCard } from "./ProfileCard";
 import { SessionsCard } from "./SessionsCard";
+import { TokensCard } from "./TokensCard";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
@@ -47,6 +56,20 @@ export const AccountSection = () => {
     null,
   );
   const [sessionFailure, setSessionFailure] = useState<Failure | null>(null);
+  const tokens = useAccountTokens();
+  const createToken = useCreateToken();
+  const revokeToken = useRevokeToken();
+  // Значение токена живёт только здесь: в кэш запросов оно не попадает.
+  const [created, setCreated] = useState<{
+    token: string;
+    name: string;
+  } | null>(null);
+  const [tokenFailure, setTokenFailure] = useState<Failure | null>(null);
+  const identities = useAccountIdentities();
+  const unlink = useUnlinkIdentity();
+  const startLink = useStartLink();
+  const [identityFailure, setIdentityFailure] = useState<Failure | null>(null);
+  const providers = bootstrap?.auth.oidc_providers ?? [];
 
   const profile = account.data;
   const issueOf = (error: unknown, field: string): string | undefined =>
@@ -194,6 +217,98 @@ export const AccountSection = () => {
             />
           </>
         )}
+
+        {(providers.length > 0 ||
+          (identities.data ?? []).some((i) => i.kind === "oidc")) && (
+          <IdentitiesCard
+            status={
+              identities.isError && !identities.data
+                ? "error"
+                : identities.data
+                  ? "ready"
+                  : "loading"
+            }
+            identities={identities.data ?? []}
+            providers={providers}
+            linkingId={startLink.isPending ? startLink.variables : null}
+            unlinkingId={unlink.isPending ? unlink.variables : null}
+            failure={identityFailure}
+            onRetry={() => {
+              void identities.refetch();
+            }}
+            onLink={(providerId) => {
+              setIdentityFailure(null);
+              startLink.mutate(providerId, {
+                onSuccess: ({ redirect_url }) => {
+                  if (isSafeRedirect(redirect_url)) {
+                    window.location.assign(redirect_url);
+                  } else {
+                    setIdentityFailure({ code: "unknown" });
+                  }
+                },
+                onError: (error) => {
+                  setIdentityFailure(asFailure(error));
+                },
+              });
+            }}
+            onUnlink={(id) => {
+              setIdentityFailure(null);
+              unlink.mutate(id, {
+                onSuccess: () => {
+                  toast.success(t("identities.toastUnlinked"));
+                },
+                onError: (error) => {
+                  setIdentityFailure(asFailure(error));
+                },
+              });
+            }}
+          />
+        )}
+
+        <TokensCard
+          status={
+            tokens.isError && !tokens.data
+              ? "error"
+              : tokens.data
+                ? "ready"
+                : "loading"
+          }
+          tokens={tokens.data ?? []}
+          created={created}
+          creating={createToken.isPending}
+          createFailure={
+            createToken.isError ? asFailure(createToken.error) : null
+          }
+          revokingId={revokeToken.isPending ? revokeToken.variables : null}
+          failure={tokenFailure}
+          onRetry={() => {
+            void tokens.refetch();
+          }}
+          onCreate={(body, done) => {
+            setTokenFailure(null);
+            createToken.mutate(body, {
+              onSuccess: (result) => {
+                setCreated({ token: result.token, name: result.item.name });
+                done();
+              },
+            });
+          }}
+          onRevoke={(id) => {
+            setTokenFailure(null);
+            revokeToken.mutate(id, {
+              onSuccess: () => {
+                toast.success(t("tokens.toastRevoked"));
+              },
+              onError: (error) => {
+                setTokenFailure(asFailure(error));
+              },
+            });
+          }}
+          onDismissCreated={() => {
+            setCreated(null);
+            createToken.reset();
+          }}
+        />
 
         <SessionsCard
           status={

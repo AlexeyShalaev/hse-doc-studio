@@ -1,0 +1,10 @@
+{
+  "id": "idn_01hx9d",
+  "kind": "oidc",
+  "provider_id": "keycloak",
+  "provider_label": "HSE SSO",
+  "email": "anna.petrova@hse.ru",
+  "linked_at": "2026-09-14T10:20:00Z",
+  "last_used_at": "2026-10-27T09:41:10Z",
+  "can_unlink": true
+}

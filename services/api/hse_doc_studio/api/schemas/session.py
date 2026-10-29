@@ -292,6 +292,28 @@ class CreateApiTokenResponse(StrictModel):
     item: ApiToken
 
 
+# Способ входа в аккаунт: пароль или привязка к внешнему провайдеру (OIDC).
+# can_unlink ложно у пароля (его меняет форма пароля) и у последнего способа входа (409 last_login_method).
+class AccountIdentity(StrictModel):
+    id: str
+    kind: Literal["password", "oidc"]
+    provider_id: str | None
+    provider_label: str
+    email: str | None
+    linked_at: datetime
+    last_used_at: datetime | None
+    can_unlink: bool
+
+
+class LinkIdentityRequest(StrictModel):
+    provider_id: str = Field(min_length=1, max_length=64)
+
+
+# Привязка идёт через вход у провайдера: ответ ведёт на его старт, вернуться можно только в ту же сессию.
+class LinkIdentityResponse(StrictModel):
+    redirect_url: str
+
+
 class ProjectOwner(StrictModel):
     kind: Literal["user", "org"]
     id: str
