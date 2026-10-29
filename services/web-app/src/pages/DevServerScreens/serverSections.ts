@@ -1,3 +1,4 @@
+import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
 import { getAccountMenuGallery } from "@features/account-menu";
@@ -33,6 +34,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "admin-settings",
     title: "Админка: настройки входа",
     groups: getAdminAuthSettingsGallery(),
+  },
+  {
+    id: "admin-orgs",
+    title: "Админка: организации",
+    groups: getAdminOrgsGallery(),
   },
   { id: "shell", title: "Оболочка", groups: getAccountMenuGallery() },
   { id: "admin-kit", title: "Примитивы админки", groups: getAdminKitGallery() },

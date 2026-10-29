@@ -104,6 +104,9 @@
     "slug_invalid": "Use lowercase Latin letters, digits and hyphens.",
     "setting_locked": "This value is set by the environment and cannot be changed here.",
     "last_login_method": "The last way to sign in cannot be turned off: nobody would be able to sign in.",
+    "org_not_empty": "The organization still has projects: move or delete them first.",
+    "already_member": "This person is already in the organization.",
+    "slug_taken": "This organization address is already taken.",
     "input_invalid": "Invalid input."
   }
 }

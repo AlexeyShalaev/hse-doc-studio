@@ -26,5 +26,8 @@
   "slug_invalid",
   "setting_locked",
   "last_login_method",
-  "input_invalid"
+  "input_invalid",
+  "org_not_empty",
+  "already_member",
+  "slug_taken"
 ]

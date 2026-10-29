@@ -49,6 +49,14 @@
         "title": "Admin, SSO only",
         "hint": "Password is off, two providers, no mail."
       },
+      "admin_no_orgs": {
+        "title": "Admin, no organizations",
+        "hint": "The organization list is empty: create the first one."
+      },
+      "org_admin": {
+        "title": "Organization admin",
+        "hint": "Not an installation admin: sees only their two organizations."
+      },
       "registration_open_nosmtp": {
         "title": "Open, no email",
         "hint": "Emails are not sent: links are shown on screen."

@@ -1,0 +1,157 @@
+{
+  "loading": "Loading…",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "save": "Save",
+  "role": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "failure": {
+    "last_owner": "The only owner cannot be demoted or removed. Assign another owner first.",
+    "already_member": "This person is already in the organization.",
+    "org_not_empty": "The organization still has projects. Move or delete them first.",
+    "slug_taken": "Another organization already uses this address.",
+    "slug_reserved": "This address is reserved. Choose another one.",
+    "slug_invalid": "Address: lowercase Latin letters, digits and hyphens, no hyphen at the ends.",
+    "not_found": "Not found or no access.",
+    "member_not_found": "There is no user with this email. They need to sign up first.",
+    "forbidden": "You do not have permission to do this.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "csrf_failed": "The session is out of date: reload the page and try again.",
+    "input_invalid": "Check the data you entered.",
+    "network": "Cannot reach the server. Try again later.",
+    "unknown": "Something went wrong. Try again later."
+  },
+  "list": {
+    "title": "Organizations",
+    "leadAdmin": "Every organization on this installation: members, roles and groups.",
+    "leadOrgAdmin": "Organizations you manage.",
+    "create": "Create organization",
+    "search": "Find an organization",
+    "caption": "Organizations",
+    "loadFailed": "Could not load the organizations.",
+    "instanceAdmin": "Installation admin",
+    "columns": {
+      "name": "Name",
+      "role": "Your role",
+      "members": "Members",
+      "projects": "Projects"
+    },
+    "empty": {
+      "title": "No organizations yet",
+      "bodyAdmin": "An organization groups people and their projects. Create the first one and assign an owner.",
+      "bodyOrgAdmin": "You do not manage any organization yet."
+    },
+    "noMatch": {
+      "title": "Nothing found",
+      "body": "Change the query or reset the search."
+    }
+  },
+  "create": {
+    "title": "New organization",
+    "lead": "You become the owner. Add other people on the organization page.",
+    "name": "Name",
+    "slug": "Address",
+    "slugHint": "Latin letters, digits and hyphens. Filled from the name, you can change it.",
+    "nameRequired": "Enter a name.",
+    "slugInvalid": "Enter an address: lowercase Latin letters, digits and hyphens.",
+    "submit": "Create"
+  },
+  "detail": {
+    "back": "Back to organizations",
+    "loadFailed": "Could not load the organization.",
+    "missing": {
+      "title": "Organization not found",
+      "body": "There is no such organization, or you have no access to it."
+    },
+    "stats": "Members: {{members}}, projects: {{projects}}",
+    "delete": {
+      "button": "Delete",
+      "title": "Delete the organization?",
+      "body": "Members and groups are deleted with the organization. This cannot be undone.",
+      "withProjects": "The organization has projects ({{count}}), so the server will refuse. Move or delete them first.",
+      "confirm": "Delete organization"
+    },
+    "tabs": {
+      "label": "Organization sections",
+      "members": "Members",
+      "groups": "Groups",
+      "projects": "Projects",
+      "quotas": "Quotas",
+      "soon": "Soon",
+      "soonHint": "Coming in one of the next updates"
+    }
+  },
+  "members": {
+    "columns": {
+      "person": "Person",
+      "role": "Role",
+      "joined": "In the organization since",
+      "actions": "Actions"
+    },
+    "you": "you",
+    "lastOwner": "The only owner: assign another one first",
+    "roleFor": "Role: {{name}}",
+    "add": {
+      "email": "Email",
+      "role": "Role",
+      "submit": "Add",
+      "emailInvalid": "Enter an email address."
+    },
+    "search": "Find a person",
+    "all": "All",
+    "caption": "Organization members",
+    "loadFailed": "Could not load the members.",
+    "empty": {
+      "title": "No members",
+      "body": "Add a person by email: they need to be registered."
+    },
+    "noMatch": "Nobody found",
+    "remove": {
+      "aria": "Remove {{name}}",
+      "title": "Remove from the organization?",
+      "body": "{{name}} loses access to the organization's projects and leaves its groups.",
+      "bodySelf": "You lose access to the organization and its projects. Only another admin can bring you back.",
+      "confirm": "Remove"
+    },
+    "count_one": "{{count}} member in total",
+    "count_other": "{{count}} members in total"
+  },
+  "groups": {
+    "lead": "A group collects people of the organization so access to projects can be given to all of them at once.",
+    "add": "Create group",
+    "loadFailed": "Could not load the groups.",
+    "caption": "Organization groups",
+    "empty": {
+      "title": "No groups yet",
+      "body": "Create a group, for example \"Project team\", and add people to it."
+    },
+    "noPeople": "Nobody yet",
+    "edit": {
+      "aria": "Edit group {{name}}"
+    },
+    "delete": {
+      "aria": "Delete group {{name}}",
+      "title": "Delete the group?",
+      "body": "The group \"{{name}}\" will be deleted. People stay in the organization.",
+      "confirm": "Delete"
+    },
+    "form": {
+      "createTitle": "New group",
+      "editTitle": "Edit group",
+      "name": "Name",
+      "nameRequired": "Enter a name.",
+      "search": "Find a person",
+      "noMatch": "Nobody found",
+      "noMembers": "The organization has no people yet: add them on the Members tab.",
+      "members_one": "Group members: {{count}}",
+      "members_other": "Group members: {{count}}"
+    },
+    "count_one": "{{count}} person",
+    "count_other": "{{count}} people",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count}} more"
+  }
+}

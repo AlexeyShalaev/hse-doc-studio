@@ -349,7 +349,50 @@ export const AdminOrgSchema = z.strictObject({
   name: z.string(),
   member_count: z.number().int(),
   project_count: z.number().int(),
+  my_role: OrgRoleNameSchema.nullable(),
 });
+export const AdminOrgMemberSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: OrgRoleNameSchema,
+  joined_at: iso,
+});
+export const AddAdminOrgMemberRequestSchema = z.strictObject({
+  email: z.string(),
+  role: OrgRoleNameSchema,
+});
+export const UpdateAdminOrgMemberRequestSchema = z.strictObject({
+  role: OrgRoleNameSchema,
+});
+export const CreateAdminOrgRequestSchema = z.strictObject({
+  name: z.string(),
+  slug: z.string(),
+});
+export const AdminGroupSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  member_ids: z.array(z.string()),
+});
+export const CreateAdminGroupRequestSchema = z.strictObject({
+  name: z.string(),
+  member_ids: z.array(z.string()),
+});
+export const UpdateAdminGroupRequestSchema = z.strictObject({
+  name: z.string().nullable(),
+  member_ids: z.array(z.string()).nullable(),
+});
+export type OrgRoleName = z.infer<typeof OrgRoleNameSchema>;
+export type AdminOrg = z.infer<typeof AdminOrgSchema>;
+export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;
+export type AdminGroup = z.infer<typeof AdminGroupSchema>;
+export type CreateAdminOrgRequest = z.infer<typeof CreateAdminOrgRequestSchema>;
+export type CreateAdminGroupRequest = z.infer<
+  typeof CreateAdminGroupRequestSchema
+>;
+export type UpdateAdminGroupRequest = z.infer<
+  typeof UpdateAdminGroupRequestSchema
+>;
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

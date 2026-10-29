@@ -6,6 +6,7 @@ import type {
   AdminSettingState,
   RegistrationMode,
 } from "@entities/session";
+import { createOrgRoutes } from "./orgRoutes";
 import { adminSettingsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: настройки входа (регистрация, пароль, почта, провайдеры OIDC).
@@ -116,6 +117,7 @@ export const createAdminRoutes = (
   };
 
   return [
+    ...createOrgRoutes(getWorld),
     {
       method: "GET",
       pattern: "/settings/registration",

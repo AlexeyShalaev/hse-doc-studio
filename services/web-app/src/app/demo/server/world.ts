@@ -4,6 +4,7 @@ import {
   createDemoAdminSettings,
   type DemoAdminSettings,
 } from "./adminSettings";
+import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
 import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
@@ -45,6 +46,8 @@ export type ServerDemoWorld = {
   account: DemoAccount | null;
   /** Настройки входа в админке; строятся при первом обращении. */
   adminSettings: DemoAdminSettings | null;
+  /** Организации, участники и группы в админке; строятся при первом обращении. */
+  adminOrgs: DemoAdminOrgs | null;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -89,6 +92,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     projects: seedProjects(),
     account: null,
     adminSettings: null,
+    adminOrgs: null,
   };
 };
 
@@ -96,6 +100,12 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
 export const adminSettingsOf = (world: ServerDemoWorld): DemoAdminSettings => {
   world.adminSettings ??= createDemoAdminSettings(world.scenario.adminSeed);
   return world.adminSettings;
+};
+
+/** Организации мира; для сценария берётся его набор. */
+export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
+  world.adminOrgs ??= createDemoAdminOrgs(world.scenario.orgSeed);
+  return world.adminOrgs;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

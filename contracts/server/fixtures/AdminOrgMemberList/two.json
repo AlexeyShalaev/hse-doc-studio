@@ -1,0 +1,16 @@
+[
+  {
+    "user_id": "u_01hx7k1a0b",
+    "name": "Иван Сидоров",
+    "email": "ivan.sidorov@example.org",
+    "role": "owner",
+    "joined_at": "2026-09-12T10:05:00Z"
+  },
+  {
+    "user_id": "u_01hx7k2m9c",
+    "name": "Анна Петрова",
+    "email": "anna.petrova@example.org",
+    "role": "member",
+    "joined_at": "2026-09-14T08:30:00Z"
+  }
+]

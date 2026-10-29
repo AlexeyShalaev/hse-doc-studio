@@ -414,6 +414,47 @@ class AdminOrg(StrictModel):
     name: str
     member_count: int
     project_count: int
+    # Роль смотрящего в организации; null у админа установки, который в ней не состоит.
+    my_role: OrgRoleName | None
+
+
+class AdminOrgMember(StrictModel):
+    user_id: str
+    name: str
+    email: str
+    role: OrgRoleName
+    joined_at: datetime
+
+
+class AddAdminOrgMemberRequest(StrictModel):
+    email: str
+    role: OrgRoleName
+
+
+class UpdateAdminOrgMemberRequest(StrictModel):
+    role: OrgRoleName
+
+
+class CreateAdminOrgRequest(StrictModel):
+    name: str
+    slug: str
+
+
+class AdminGroup(StrictModel):
+    id: str
+    name: str
+    member_ids: list[str]
+
+
+class CreateAdminGroupRequest(StrictModel):
+    name: str
+    member_ids: list[str]
+
+
+class UpdateAdminGroupRequest(StrictModel):
+    # null значит «не менять».
+    name: str | None
+    member_ids: list[str] | None
 
 
 class AdminRunner(StrictModel):

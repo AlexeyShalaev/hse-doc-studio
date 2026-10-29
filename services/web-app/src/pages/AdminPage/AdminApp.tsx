@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useParams } from "react-router";
 import { Spinner } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
 import { AdminLayout } from "./AdminLayout";
@@ -10,9 +10,20 @@ const AdminSettingsPage = lazy(() =>
   import("./AdminSettingsPage").then((m) => ({ default: m.AdminSettingsPage })),
 );
 
+// Организации, участники и группы тоже в своём чанке.
+const AdminOrgsPage = lazy(() =>
+  import("./AdminOrgsPage").then((m) => ({ default: m.AdminOrgsPage })),
+);
+
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
 // auth-чанках. Она лежит в коде чанка, а не в словарях.
 export const ADMIN_CHUNK_MARKER = "hse-admin-chunk-marker";
+
+/** Короткий адрес организации /admin/org/:slug ведёт на её страницу. */
+const OrgRedirect = () => {
+  const { slug = "" } = useParams<{ slug: string }>();
+  return <Navigate to={`/admin/orgs/${encodeURIComponent(slug)}`} replace />;
+};
 
 /**
  * Корень админки (маршрут /admin/*). Единственная точка входа lazy-чанка:
@@ -62,6 +73,21 @@ export const AdminApp = () => {
             </Suspense>
           }
         />
+        <Route
+          path="orgs/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center" role="status">
+                  <Spinner size="md" />
+                </div>
+              }
+            >
+              <AdminOrgsPage />
+            </Suspense>
+          }
+        />
+        <Route path="org/:slug" element={<OrgRedirect />} />
         <Route path=":section" element={<AdminSectionSoon />} />
       </Route>
     </Routes>

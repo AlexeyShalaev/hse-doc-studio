@@ -17,6 +17,8 @@ export type ServerDemoScenarioId =
   | "admin_ready"
   | "admin_env_locked"
   | "admin_sso"
+  | "admin_no_orgs"
+  | "org_admin"
   | "student_ready"
   | "registration_closed"
   | "sso_only"
@@ -62,6 +64,23 @@ export const DEMO_ADMIN: SessionUser = {
   locale: "en",
   org_roles: [{ slug: "msp-2025", name: "МСПИН 2025", role: "owner" }],
 };
+
+/** Админ организации: не админ установки, но управляет двумя организациями. */
+export const DEMO_ORG_ADMIN: SessionUser = {
+  id: "u_01hx7k3e5f",
+  name: "Елена Миронова",
+  email: "elena.mironova@example.org",
+  avatar_initials: "ЕМ",
+  is_instance_admin: false,
+  email_verified: true,
+  locale: "ru",
+  org_roles: [
+    { slug: "msp-2025", name: "МСПИН 2025", role: "admin" },
+    { slug: "ai-lab", name: "Лаборатория ИИ", role: "owner" },
+  ],
+};
+
+export const ORG_ADMIN_CSRF = "Zr4cNb8LkQ2wXs6YtVe0PdMh9aUfJg3o";
 
 /** Новичок: вошёл впервые, ни проектов, ни организаций. */
 export const DEMO_NEWCOMER: SessionUser = {
@@ -124,6 +143,8 @@ export type ServerDemoScenario = {
   setup?: Partial<ServerDemoSetup>;
   /** Настройки входа в админке: чем они заданы. По умолчанию всё редактируется. */
   adminSeed?: ServerDemoAdminSeed;
+  /** Организации в админке: набор по умолчанию или ни одной. */
+  orgSeed?: "default" | "empty";
 };
 
 /** default: всё редактируется; env_locked: регистрация и почта заданы окружением; sso: пароль выключен, провайдеры включены. */
@@ -250,6 +271,41 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
         user: DEMO_ADMIN,
         capabilities: { ...SERVER_CAPABILITIES, admin: true },
         csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_no_orgs",
+    tokenRequired: false,
+    orgSeed: "empty",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "org_admin",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ORG_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ORG_ADMIN_CSRF,
       }),
   },
   {
