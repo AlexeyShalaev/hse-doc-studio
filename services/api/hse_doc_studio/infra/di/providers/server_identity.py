@@ -348,8 +348,8 @@ class ServerIdentityProvider(Provider):
         return GetSmtpSettingsUC(service)
 
     @provide
-    def get_send_test_mail_uc(self, sender: IMailSender, audit: IAuditLog) -> SendTestMailUC:
-        return SendTestMailUC(sender, audit)
+    def get_send_test_mail_uc(self, sender: IMailSender, users: IUserRepository, audit: IAuditLog) -> SendTestMailUC:
+        return SendTestMailUC(sender, users, audit)
 
     @provide
     def get_auth_group_uc(self, service: AuthSettingsService, oidc: IOidcProviderRepository) -> GetAuthGroupUC:

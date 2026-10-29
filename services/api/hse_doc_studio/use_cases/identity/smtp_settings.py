@@ -13,7 +13,7 @@ from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.normalize import is_valid_email
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IMailSender
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IMailSender, IUserRepository
 from hse_doc_studio.core.identity.setting_source import SettingDescription, describe_setting
 from hse_doc_studio.core.identity.smtp_settings import (
     KEY_FROM_ADDRESS,
@@ -207,14 +207,17 @@ class SmtpTestResult:
 
 
 class SendTestMailUC:
-    def __init__(self, sender: IMailSender, audit: IAuditLog) -> None:
+    def __init__(self, sender: IMailSender, users: IUserRepository, audit: IAuditLog) -> None:
         self._sender = sender
+        self._users = users
         self._audit = audit
 
     async def execute(self, actor: Actor, to: str | None) -> SmtpTestResult:
         """Письмо уходит по сохранённым настройкам; сбой возвращается как результат, а не как ошибка запроса."""
         admin_id = require_admin(actor)
-        recipient = (to or actor.email or "").strip()
+        # Актор несёт подпись коммитов, а не почту аккаунта: по умолчанию пишем на адрес самого админа из аккаунта.
+        account = None if to else await self._users.get(admin_id)
+        recipient = (to or (account.email if account else "")).strip()
         if not is_valid_email(recipient):
             raise _invalid("Укажите адрес получателя.", "Enter a recipient address.")
         if not self._sender.enabled:

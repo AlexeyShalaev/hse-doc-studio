@@ -108,7 +108,7 @@ class _Provider(Provider):
             UpdateAuthMethodsUC: UpdateAuthMethodsUC(update, self.auth, env.oidc, group),
             GetSmtpSettingsUC: GetSmtpSettingsUC(smtp),
             UpdateSmtpSettingsUC: UpdateSmtpSettingsUC(smtp, env.settings, env.audit),
-            SendTestMailUC: SendTestMailUC(env.sender, env.audit),
+            SendTestMailUC: SendTestMailUC(env.sender, env.users, env.audit),
             ListOidcProvidersUC: ListOidcProvidersUC(env.oidc),
             GetOidcProviderUC: GetOidcProviderUC(env.oidc),
             CreateOidcProviderUC: CreateOidcProviderUC(env.oidc, env.cipher, env.audit),
