@@ -241,7 +241,7 @@ class StartChatTurnUC:
             raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
         if run.status != AgentRunStatus.awaiting_approval:
             raise ValueError(localized_error("Запуск не ожидает подтверждения", "Run is not awaiting approval"))
-        provider = self._ai_provider_repo.get(run.provider_id) if run.provider_id else None
+        provider = await self._ai_provider_repo.get(run.provider_id) if run.provider_id else None
         if provider is None:
             raise ValueError(
                 localized_error(
@@ -341,7 +341,7 @@ class StartChatTurnUC:
                     "No AI provider selected: configure a default provider or pass provider_id",
                 )
             )
-        provider = self._ai_provider_repo.get(provider_id)
+        provider = await self._ai_provider_repo.get(provider_id)
         if provider is None:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {provider_id!r} не найден", f"AI provider {provider_id!r} not found")

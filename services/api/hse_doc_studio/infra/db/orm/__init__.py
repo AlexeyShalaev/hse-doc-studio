@@ -1,5 +1,6 @@
 """ORM-модели. Каждая зона держит свои таблицы в своём модуле и импортирует их здесь для autogenerate."""
 
+from hse_doc_studio.infra.db.orm.ai_providers import AIProviderRow
 from hse_doc_studio.infra.db.orm.auth import (
     ApiTokenRow,
     AuditLogRow,
@@ -32,6 +33,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
+    "AIProviderRow",
     "AgentRunRow",
     "ApiTokenRow",
     "AuditLogRow",

@@ -10,6 +10,7 @@ from hse_doc_studio.core.agent.entities import TokenUsage
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem
 from hse_doc_studio.core.enums import (
     AgentRunStatus,
+    AIProviderOwnerKind,
     AIProviderType,
     ChangeLogKind,
     ChatContentKind,
@@ -160,6 +161,8 @@ class AIProvider:
     ssl_verify: bool = True
     connect_timeout_s: float = 10.0
     request_timeout_s: float = 60.0
+    # Локальный режим знает только личных провайдеров; общие создаёт сервер.
+    owner_kind: AIProviderOwnerKind = AIProviderOwnerKind.user
 
 
 @dataclass

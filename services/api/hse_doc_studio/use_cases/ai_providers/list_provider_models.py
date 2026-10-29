@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from hse_doc_studio.core.ai import IAIModelLister
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IAIProviderRepository
+from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
 
 
 @dataclass
@@ -20,15 +22,22 @@ class ListProviderModelsOutput:
 
 
 class ListProviderModelsUC:
-    def __init__(self, ai_provider_repo: IAIProviderRepository, model_lister: IAIModelLister) -> None:
+    def __init__(
+        self,
+        ai_provider_repo: IAIProviderRepository,
+        model_lister: IAIModelLister,
+        egress: IEgressPolicy | None = None,
+    ) -> None:
         self._repo = ai_provider_repo
+        self._egress = egress
         self._model_lister = model_lister
 
     async def execute(self, inp: ListProviderModelsInput) -> ListProviderModelsOutput:
-        provider = self._repo.get(inp.provider_id)
+        provider = await self._repo.get(inp.provider_id)
         if provider is None:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")
             )
+        await authorize_base_url(self._egress, provider.base_url, provider.owner_kind)
         models = await self._model_lister.list_models(provider)
         return ListProviderModelsOutput(models=models)

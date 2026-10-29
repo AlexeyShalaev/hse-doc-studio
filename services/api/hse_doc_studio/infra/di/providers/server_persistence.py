@@ -16,13 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.ai import IAIModelLister
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
-from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
+from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry, ISecretCipher
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
+    IAIProviderRepository,
     IChatRepository,
     ICompileRepository,
     IProjectIndexRepository,
@@ -35,6 +38,7 @@ from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, I
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
+from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
 from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
@@ -62,6 +66,9 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
+from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
+from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
@@ -229,6 +236,24 @@ class ServerPersistenceProvider(Provider):
     @provide(override=True)
     def get_chat_repo(self, sessions: SessionProvider, volume: IProjectVolume) -> IChatRepository:
         return PostgresChatRepository(sessions, volume, settings.data_dir.expanduser() / "system-chats")
+
+    @provide(override=True)
+    def get_ai_provider_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IAIProviderRepository:
+        return PostgresAIProviderRepository(sessions, cipher)
+
+    @provide(override=True)
+    def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:
+        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress)
+
+    @provide(override=True)
+    def get_update_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> UpdateAIProviderUC:
+        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress)
+
+    @provide(override=True)
+    def get_list_provider_models_uc(
+        self, repo: IAIProviderRepository, model_lister: IAIModelLister, egress: IEgressPolicy
+    ) -> ListProviderModelsUC:
+        return ListProviderModelsUC(ai_provider_repo=repo, model_lister=model_lister, egress=egress)
 
     @provide(override=True)
     def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:

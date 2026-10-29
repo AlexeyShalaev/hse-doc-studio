@@ -24,7 +24,7 @@ class GetAIProviderUC:
         self._repo = ai_provider_repo
 
     async def execute(self, inp: GetAIProviderInput) -> GetAIProviderOutput:
-        provider = self._repo.get(inp.provider_id)
+        provider = await self._repo.get(inp.provider_id)
         if provider is None:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")

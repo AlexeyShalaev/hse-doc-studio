@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from hse_doc_studio.core.enums import AIProviderType
+from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.export_import.encryption import encrypt_token
 from hse_doc_studio.core.export_import.serialization import persona_to_export_dict, provider_to_export_dict
 from hse_doc_studio.core.repositories import (
@@ -78,9 +78,10 @@ class ExportDataUC:
         providers: list[dict[str, Any]] = []
         encrypted_any = False
         if inp.include_ai_providers:
-            for provider in self._ai_provider_repo.list_all():
-                if provider.type == AIProviderType.ollama:
-                    continue  # auto-managed; recreated from the local runtime, not portable
+            for provider in await self._ai_provider_repo.list_all():
+                # Ollama ведёт локальный рантайм, общий провайдер установки не принадлежит пользователю.
+                if provider.type == AIProviderType.ollama or provider.owner_kind is not AIProviderOwnerKind.user:
+                    continue
                 record = provider_to_export_dict(provider)
                 if password and record["api_key"]:
                     record["api_key"] = encrypt_token(record["api_key"], password)

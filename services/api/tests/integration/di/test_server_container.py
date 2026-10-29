@@ -251,3 +251,37 @@ async def test__server_container__job_storage_and_live_blobs_use_the_object_stor
     assert isinstance(blobs, ObjectJobBlobStore)
     assert isinstance(outputs, AnnouncedJobOutputIngest)
     assert isinstance(live, QueueLiveBlobs)
+
+
+async def test__server_container__ai_provider_repo_is_postgres_while_local_stays_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.repositories import IAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(IAIProviderRepository)
+            local_create = await request.get(CreateAIProviderUC)
+        async with server() as request:
+            server_repo = await request.get(IAIProviderRepository)
+            server_create = await request.get(CreateAIProviderUC)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonAIProviderRepository)
+    assert isinstance(server_repo, PostgresAIProviderRepository)
+    # В local адрес провайдера не проверяется, в server проверяется политикой egress
+    assert local_create._egress is None  # noqa: SLF001
+    assert server_create._egress is not None  # noqa: SLF001

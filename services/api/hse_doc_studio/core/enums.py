@@ -277,6 +277,13 @@ class DetachedVerdict(StrEnum):
     unknown_key = "unknown_key"  # OpenPGP signature, public key not in the keyring yet
 
 
+class AIProviderOwnerKind(StrEnum):
+    # Чей это провайдер. user: личный, виден и меняется только владельцем. instance: общий для установки,
+    # его создаёт админ, пользователям он виден без ключа. Уровень организации добавит отдельный срез.
+    user = "user"
+    instance = "instance"
+
+
 class AIProviderType(StrEnum):
     # `claude` routes to the Anthropic SDK; `openai`, `openai_compat` and
     # `ollama` all route to the OpenAI SDK. `openai` hides base_url (defaults to
