@@ -14,6 +14,8 @@ import type { z } from "zod";
 import { documentApi, getDocMeta } from "@entities/document";
 import { useCancelDocCompile, useStartCompile } from "@entities/compile";
 import type { DocumentResponseSchema } from "@entities/document";
+import { CompileWaitNotice } from "@features/build-states";
+import type { CompileWait } from "@entities/session";
 import { apiClient } from "@shared/api";
 import { env } from "@shared/config";
 import { useWorkspaceStore } from "@shared/lib";
@@ -76,12 +78,15 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   // from the persisted compile record.
   const [diskLines, setDiskLines] = useState<string[]>([]);
   const [recordStatus, setRecordStatus] = useState<LocalStatus>("idle");
+  const [recordWait, setRecordWait] = useState<CompileWait | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   const liveOwnsPane = slot !== undefined;
   const logLines = liveOwnsPane ? slot.logLines : diskLines;
   const status: LocalStatus = liveOwnsPane ? slot.status : recordStatus;
   const doneInfo = liveOwnsPane ? slot.doneInfo : null;
+  // Серверный режим: очередь, нет раннера, заменена. В локальном всегда null.
+  const wait = liveOwnsPane ? slot.wait : recordWait;
 
   // Auto-scroll to bottom on new lines.
   useEffect(() => {
@@ -122,8 +127,11 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           setRecordStatus(
             terminalStatuses.includes(detail.status as LocalStatus)
               ? (detail.status as LocalStatus)
-              : "idle",
+              : detail.wait
+                ? "running"
+                : "idle",
           );
+          setRecordWait(detail.wait ?? null);
           setDiskLines((prev) => {
             if (prev.length > 0) return prev; // disk log won
             const log = detail.log ?? "";
@@ -231,12 +239,12 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           </strong>
           {isRunning && (
             <div className="flex items-center gap-2">
-              <span className="dot live" />
+              <span className={wait ? "dot pending" : "dot live"} />
               <span
                 className="mono"
                 style={{ fontSize: 11, color: "var(--c-info)" }}
               >
-                {t("compile.running")}
+                {wait ? t("compile.waiting") : t("compile.running")}
               </span>
             </div>
           )}
@@ -319,6 +327,15 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
         </div>
       </div>
 
+      {wait && (
+        <CompileWaitNotice
+          wait={wait}
+          finished={!isRunning}
+          onRetry={handleRebuild}
+          retryDisabled={isStarting}
+        />
+      )}
+
       {isStalled && (
         <div
           className="flex items-start gap-2"
@@ -359,7 +376,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           lineHeight: 1.6,
         }}
       >
-        {logLines.length === 0 && !isRunning && (
+        {logLines.length === 0 && !isRunning && !wait && (
           <div
             className="flex flex-col items-center justify-center"
             style={{ height: "100%", color: "var(--fg-3)", gap: 12 }}

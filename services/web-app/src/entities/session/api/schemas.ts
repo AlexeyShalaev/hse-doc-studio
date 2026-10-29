@@ -574,3 +574,26 @@ export type CreateAdminOidcProviderRequest = z.infer<
 export type UpdateAdminOidcProviderRequest = z.infer<
   typeof UpdateAdminOidcProviderRequestSchema
 >;
+
+export const COMPILE_WAIT_REASONS = [
+  "queued",
+  "no_runner",
+  "quota_wait",
+  "runner_lost",
+  "superseded",
+] as const;
+export const CompileWaitSchema = z.strictObject({
+  reason: z.enum(COMPILE_WAIT_REASONS),
+  queue_position: z.number().int().min(1).nullable(),
+  wait_hint_seconds: z.number().int().min(0).nullable(),
+  attempt: z.number().int().min(1).nullable(),
+  max_attempts: z.number().int().min(1).nullable(),
+});
+export type CompileWait = z.infer<typeof CompileWaitSchema>;
+export type CompileWaitReason = CompileWait["reason"];
+export const OfficeEditorBusySchema = z.strictObject({
+  state: z.literal("editor_busy"),
+  retry_after_seconds: z.number().int().min(1),
+  limit: z.number().int().min(1),
+});
+export type OfficeEditorBusy = z.infer<typeof OfficeEditorBusySchema>;

@@ -100,6 +100,8 @@ _SCHEMAS: dict[str, Any] = {
     "AdminOidcProviderList": list[s.AdminOidcProvider],
     "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
+    "CompileWait": s.CompileWait,
+    "OfficeEditorBusy": s.OfficeEditorBusy,
 }
 
 

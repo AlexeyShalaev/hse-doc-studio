@@ -1,0 +1,7 @@
+{
+  "reason": "runner_lost",
+  "queue_position": null,
+  "wait_hint_seconds": null,
+  "attempt": 2,
+  "max_attempts": 3
+}

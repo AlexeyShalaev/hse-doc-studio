@@ -84,4 +84,6 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminOidcProviderList: z.array(s.AdminOidcProviderSchema),
   CreateAdminOidcProviderRequest: s.CreateAdminOidcProviderRequestSchema,
   UpdateAdminOidcProviderRequest: s.UpdateAdminOidcProviderRequestSchema,
+  CompileWait: s.CompileWaitSchema,
+  OfficeEditorBusy: s.OfficeEditorBusySchema,
 };

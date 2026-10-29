@@ -649,3 +649,28 @@ class UpdateAdminOidcProviderRequest(StrictModel):
     scopes: str | None = Field(default=None, max_length=256)
     enabled: bool | None = None
     auto_provision: bool | None = None
+
+
+CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded"]
+
+
+class CompileWait(StrictModel):
+    """Почему сборка ещё не идёт (поле `wait` деталей сборки и события `wait` потока).
+
+    queued и quota_wait: сборка ждёт очереди (место и оценка ожидания); no_runner: свободных раннеров нет;
+    runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая.
+    """
+
+    reason: CompileWaitReason
+    queue_position: int | None = Field(ge=1)
+    wait_hint_seconds: int | None = Field(ge=0)
+    attempt: int | None = Field(ge=1)
+    max_attempts: int | None = Field(ge=1)
+
+
+class OfficeEditorBusy(StrictModel):
+    """Ответ редактора документов, когда исчерпан лимит сессий ONLYOFFICE (state=editor_busy)."""
+
+    state: Literal["editor_busy"]
+    retry_after_seconds: int = Field(ge=1)
+    limit: int = Field(ge=1)

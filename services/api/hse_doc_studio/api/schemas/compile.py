@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.api.schemas.session import CompileWait
+
 
 class TriggerCompileResponse(BaseModel):
     compile_id: str
@@ -47,3 +49,5 @@ class CompileDetailResponse(BaseModel):
     warnings: int
     errors: int
     check_results: list[dict[str, Any]]
+    # Только серверный режим: почему сборка не идёт (очередь, нет раннера, заменена). В локальном null.
+    wait: CompileWait | None = None

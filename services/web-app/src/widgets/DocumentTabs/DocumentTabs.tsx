@@ -376,6 +376,11 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       key={`${projectId}:${docId}`}
       projectId={projectId}
       docId={docId}
+      downloadHref={
+        doc?.output_file
+          ? customFileDownloadUrl(projectId, doc.output_file)
+          : null
+      }
     />
   ) : (
     <SourcePane projectId={projectId} doc={doc} />

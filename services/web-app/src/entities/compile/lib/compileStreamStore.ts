@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createSSEStream } from "@shared/lib/sse";
 import { env } from "@shared/config";
+import { CompileWaitSchema, type CompileWait } from "@entities/session";
 
 export type CompileStatus = "running" | "success" | "failure" | "cancelled";
 
@@ -9,6 +10,8 @@ export type CompileDoneInfo = {
   pages: number | null;
   warnings: number;
   errors: number;
+  /** Серверный режим: почему сборка не дошла до конца (заменена, нет раннера). */
+  wait?: CompileWait | null;
 };
 
 export type CompileStreamSlot = {
@@ -16,6 +19,11 @@ export type CompileStreamSlot = {
   logLines: string[];
   status: CompileStatus;
   doneInfo: CompileDoneInfo | null;
+  /**
+   * Серверный режим: сборка ждёт очереди или раннера (событие потока `wait`).
+   * null, пока сборка идёт или в локальном режиме.
+   */
+  wait: CompileWait | null;
   /** Wall-clock of the last log line, used by the idle watchdog. */
   lastEventAt: number;
   /** Watchdog flag: no log lines for STALE_THRESHOLD_MS while status=running. */
@@ -103,6 +111,7 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
               logLines: [],
               status: "running",
               doneInfo: null,
+              wait: null,
               lastEventAt: Date.now(),
               isStalled: false,
             },
@@ -129,12 +138,29 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
                   [k]: {
                     ...slot,
                     doneInfo: data,
+                    wait: data.wait ?? null,
                     status: data.status,
                     isStalled: false,
                     lastEventAt: Date.now(),
                   },
                 },
                 _closers: nextClosers,
+              };
+            }
+
+            if (event.type === "wait") {
+              const parsed = CompileWaitSchema.safeParse(event.data);
+              // Пустое или непонятное тело снимает ожидание: сборка пошла.
+              return {
+                streams: {
+                  ...s.streams,
+                  [k]: {
+                    ...slot,
+                    wait: parsed.success ? parsed.data : null,
+                    lastEventAt: Date.now(),
+                    isStalled: false,
+                  },
+                },
               };
             }
 
@@ -153,6 +179,8 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
                 [k]: {
                   ...slot,
                   logLines: [...slot.logLines, line],
+                  // Пошёл вывод раннера: сборка уже идёт, ожидание снято.
+                  wait: null,
                   lastEventAt: Date.now(),
                   isStalled: false,
                 },
@@ -209,7 +237,7 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
         return {
           streams: {
             ...s.streams,
-            [k]: { ...slot, status: "cancelled", isStalled: false },
+            [k]: { ...slot, status: "cancelled", wait: null, isStalled: false },
           },
           _closers: nextClosers,
           pending: nextPending,
@@ -224,6 +252,8 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
       const nextStreams = { ...state.streams };
       for (const [k, slot] of Object.entries(state.streams)) {
         if (slot.status !== "running") continue;
+        // Ожидание очереди молчит по делу: сервер сам присылает события `wait`.
+        if (slot.wait !== null) continue;
         const shouldBeStalled = now - slot.lastEventAt > STALE_THRESHOLD_MS;
         if (shouldBeStalled !== slot.isStalled) {
           nextStreams[k] = { ...slot, isStalled: shouldBeStalled };
