@@ -166,6 +166,7 @@
     "sectionDocFormats": "Document formats",
     "docFormatsHint": "The files of every variant stay in the project — switching deletes nothing. After changing the format, rebuild the document.",
     "docFormatsSharedGroup": "Shared documents",
+    "sectionAccess": "Access",
     "sectionAuthors": "Authors",
     "noAuthors": "No authors yet.",
     "addAuthor": "Add author",

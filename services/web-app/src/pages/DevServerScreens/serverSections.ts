@@ -1,6 +1,8 @@
 import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
+import { getMyOrganizationsGallery } from "@features/my-organizations";
+import { getProjectAccessGallery } from "@features/project-access";
 import { getAccountMenuGallery } from "@features/account-menu";
 import { getRecoveryGallery } from "@features/account-recovery";
 import { getServerSetupGallery } from "@features/server-setup";
@@ -39,6 +41,16 @@ export const buildServerSections = (): GallerySection[] => [
     id: "admin-orgs",
     title: "Админка: организации",
     groups: getAdminOrgsGallery(),
+  },
+  {
+    id: "my-orgs",
+    title: "Настройки: организации участника",
+    groups: getMyOrganizationsGallery(),
+  },
+  {
+    id: "project-access",
+    title: "Проект: доступ",
+    groups: getProjectAccessGallery(),
   },
   { id: "shell", title: "Оболочка", groups: getAccountMenuGallery() },
   { id: "admin-kit", title: "Примитивы админки", groups: getAdminKitGallery() },

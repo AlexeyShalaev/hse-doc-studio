@@ -457,6 +457,49 @@ class UpdateAdminGroupRequest(StrictModel):
     member_ids: list[str] | None
 
 
+class MyOrg(StrictModel):
+    """Организация глазами участника: «Настройки → Организации» (GET /api/v1/account/orgs)."""
+
+    slug: str
+    name: str
+    my_role: OrgRoleName
+    member_count: int
+    # Названия групп организации, в которых состоит человек.
+    groups: list[str]
+    # Человек единственный владелец: выйти нельзя, пока не назначен другой (409 last_owner).
+    sole_owner: bool
+
+
+class ProjectAccessEntry(StrictModel):
+    """Строка панели «Доступ» проекта (GET /api/v1/projects/{id}/members)."""
+
+    subject_kind: Literal["user", "group", "org"]
+    subject_id: str
+    name: str
+    # Почта человека или организация группы; у организации null.
+    detail: str | None
+    role: ProjectRoleName
+    # Строку нельзя менять здесь: владелец проекта и доступ через организацию-владельца.
+    locked: bool
+
+
+class ProjectAccessCandidate(StrictModel):
+    """Кого можно добавить (GET /api/v1/projects/{id}/members/candidates?q=)."""
+
+    subject_kind: Literal["user", "group"]
+    subject_id: str
+    name: str
+    detail: str | None
+
+
+class SetProjectAccessRequest(StrictModel):
+    """PUT /api/v1/projects/{id}/members: добавить или сменить роль, одна и та же ручка."""
+
+    subject_kind: Literal["user", "group"]
+    subject_id: str
+    role: ProjectRoleName
+
+
 class AdminRunner(StrictModel):
     id: str
     name: str

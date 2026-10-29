@@ -37,5 +37,56 @@
     "message": "The project may have been deleted, or it was never shared with you. If you are waiting for an invitation, contact the project owner.",
     "home": "To my projects",
     "back": "Back"
+  },
+  "panel": {
+    "title": "Access",
+    "lead": "Who works on the project and in which role. Everyone in a group gets the group's role.",
+    "loading": "Loading access…",
+    "loadFailed": "Could not load the access list.",
+    "retry": "Try again",
+    "readOnly": "Only the project owner can change access. Your role: {{role}}.",
+    "kind": {
+      "user": "Person",
+      "group": "Group",
+      "org": "Organization"
+    },
+    "orgRow": "Organization members can read the project",
+    "ownerRow": "Project owner",
+    "lockedHint": "This row is not changed here",
+    "you": "you",
+    "roleAria": "Role: {{name}}",
+    "remove": "Remove access",
+    "removeAria": "Remove access: {{name}}",
+    "roleHint": {
+      "reader": "Read only",
+      "reviewer": "Reads and leaves comments",
+      "editor": "Edits project documents",
+      "owner": "Full access"
+    },
+    "add": {
+      "title": "Add",
+      "search": "Name, e-mail or group name",
+      "searchLabel": "Who to add",
+      "role": "Role",
+      "button": "Add",
+      "hint": "You cannot name an owner from this panel.",
+      "loading": "Searching…",
+      "none": "No one found. A person must be a server user, a group must exist in an organization."
+    },
+    "toast": {
+      "added": "{{name}}: added as “{{role}}”",
+      "changed": "{{name}}: role is now “{{role}}”",
+      "removed": "{{name}}: access removed"
+    },
+    "failure": {
+      "last_owner": "The project owner is not changed here.",
+      "member_not_found": "This person or group is not available to the project.",
+      "not_found": "Project not found or you do not have access.",
+      "forbidden": "Not enough permissions for this action.",
+      "rate_limited": "Too many requests. Wait a moment and try again.",
+      "csrf_failed": "The session expired: refresh the page and try again.",
+      "network": "Cannot reach the server. Try again later.",
+      "unknown": "Something went wrong. Try again later."
+    }
   }
 }

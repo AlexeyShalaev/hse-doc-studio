@@ -453,6 +453,7 @@
     "gitAccessHosts": "Доверенные серверы",
     "gitAccessEncryption": "Шифрование токенов",
     "gitAccessFetch": "Фоновая проверка по умолчанию",
+    "organizations": "Организации и группы",
     "account": "Аккаунт",
     "accountEmail": "Почта аккаунта",
     "accountPassword": "Пароль",

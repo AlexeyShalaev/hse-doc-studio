@@ -29,5 +29,6 @@
   "input_invalid",
   "org_not_empty",
   "already_member",
-  "slug_taken"
+  "slug_taken",
+  "member_not_found"
 ]

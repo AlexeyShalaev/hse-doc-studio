@@ -107,6 +107,7 @@
     "org_not_empty": "The organization still has projects: move or delete them first.",
     "already_member": "This person is already in the organization.",
     "slug_taken": "This organization address is already taken.",
+    "member_not_found": "This person or group is not available to the project.",
     "input_invalid": "Invalid input."
   }
 }

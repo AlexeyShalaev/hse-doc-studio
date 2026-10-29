@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { i18n } from "@shared/lib";
 import {
   Bot,
+  Building2,
   Cpu,
   DatabaseBackup,
   Drama,
@@ -44,6 +45,7 @@ import { AccountSection } from "@features/account-settings";
 import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
+import { MyOrganizationsSection } from "@features/my-organizations";
 import {
   LOCAL_BOOTSTRAP,
   useBootstrap,
@@ -117,6 +119,14 @@ const SECTIONS: readonly SectionDef[] = [
     account: "with",
     labelKey: "settingsPage.sections.account",
     icon: UserCircle,
+  },
+  {
+    id: "organizations",
+    group: "general",
+    scope: "user",
+    account: "with",
+    labelKey: "settingsPage.sections.organizations",
+    icon: Building2,
   },
   {
     id: "profile",
@@ -232,6 +242,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <AppearanceSection />;
     case "account":
       return <AccountSection />;
+    case "organizations":
+      return <MyOrganizationsSection />;
     case "profile":
       return <AuthorProfileSection />;
     case "compiler":

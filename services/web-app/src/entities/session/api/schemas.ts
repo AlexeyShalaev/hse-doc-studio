@@ -393,6 +393,41 @@ export type CreateAdminGroupRequest = z.infer<
 export type UpdateAdminGroupRequest = z.infer<
   typeof UpdateAdminGroupRequestSchema
 >;
+export const MyOrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  my_role: OrgRoleNameSchema,
+  member_count: z.number().int(),
+  groups: z.array(z.string()),
+  sole_owner: z.boolean(),
+});
+export const ProjectAccessEntrySchema = z.strictObject({
+  subject_kind: z.enum(["user", "group", "org"]),
+  subject_id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+  role: ProjectRoleSchema,
+  locked: z.boolean(),
+});
+export const ProjectAccessCandidateSchema = z.strictObject({
+  subject_kind: z.enum(["user", "group"]),
+  subject_id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+});
+export const SetProjectAccessRequestSchema = z.strictObject({
+  subject_kind: z.enum(["user", "group"]),
+  subject_id: z.string(),
+  role: ProjectRoleSchema,
+});
+export type MyOrg = z.infer<typeof MyOrgSchema>;
+export type ProjectAccessEntry = z.infer<typeof ProjectAccessEntrySchema>;
+export type ProjectAccessCandidate = z.infer<
+  typeof ProjectAccessCandidateSchema
+>;
+export type SetProjectAccessRequest = z.infer<
+  typeof SetProjectAccessRequestSchema
+>;
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

@@ -16,6 +16,7 @@
 export type SettingsSectionId =
   | "appearance"
   | "account"
+  | "organizations"
   | "profile"
   | "compiler"
   | "fonts"
@@ -94,6 +95,24 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "language",
       "локализация",
       "перевод",
+    ],
+  },
+
+  // ── Организации (серверный режим) ────────────────────────────
+  {
+    sectionId: "organizations",
+    anchorId: "organizations",
+    labelKey: "search.organizations",
+    keywords: [
+      "организации",
+      "организация",
+      "группы",
+      "выйти из организации",
+      "роль",
+      "organizations",
+      "groups",
+      "leave",
+      "role",
     ],
   },
 

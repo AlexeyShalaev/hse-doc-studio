@@ -451,6 +451,7 @@
     "gitAccessHosts": "Trusted servers",
     "gitAccessEncryption": "Token encryption",
     "gitAccessFetch": "Default background check",
+    "organizations": "Organizations and groups",
     "account": "Account",
     "accountEmail": "Account email",
     "accountPassword": "Password",

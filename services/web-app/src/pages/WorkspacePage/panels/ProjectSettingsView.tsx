@@ -15,6 +15,7 @@ import { useCapabilities } from "@entities/session";
 import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
+import { ProjectAccessPanel } from "@features/project-access";
 import { TemplateVersionPanel } from "@features/template-update";
 import { i18n, pickLocalized, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
@@ -336,6 +337,7 @@ export const ProjectSettingsView = ({
     hasDocFormats: variantRows.length > 0,
     hasDocSetMeta: docSetCards.length > 0,
     hasMetaFields: metaFields.length > 0,
+    hasAccess: project.my_role !== undefined,
     ...syncContext,
   };
   const activeGroup = resolveProjectSettingsGroup(section, sectionCtx);
@@ -431,6 +433,13 @@ export const ProjectSettingsView = ({
                 enabled: !project.shared_enabled,
               });
             }}
+          />
+        );
+      case "access":
+        return (
+          <ProjectAccessPanel
+            projectId={project.id}
+            myRole={project.my_role ?? null}
           />
         );
       case "authors":

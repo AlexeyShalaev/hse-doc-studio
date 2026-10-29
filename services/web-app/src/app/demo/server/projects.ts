@@ -6,7 +6,10 @@ import { DEMO_ADMIN, DEMO_STUDENT } from "./scenarios";
 
 export type DemoProject = {
   summary: Omit<ProjectSummary, "my_role">;
+  /** Роли людей, выданные напрямую. Итоговую роль считает effectiveRole. */
   roles: Record<string, ProjectRole>;
+  /** Роли групп организаций: каждый участник группы получает эту роль. */
+  groupRoles?: Record<string, ProjectRole>;
 };
 
 const OWNER_PAVEL = {
@@ -50,6 +53,7 @@ export const seedProjects = (): DemoProject[] => [
       pinned: true,
     },
     roles: { [DEMO_STUDENT.id]: "owner", [DEMO_ADMIN.id]: "editor" },
+    groupRoles: { g_01hx7m4c2d: "editor" },
   },
   {
     summary: {
@@ -62,6 +66,7 @@ export const seedProjects = (): DemoProject[] => [
       updated_at: "2026-10-24T10:05:00Z",
     },
     roles: { [DEMO_STUDENT.id]: "reviewer", [DEMO_ADMIN.id]: "owner" },
+    groupRoles: { g_01hx7m5d3e: "reviewer" },
   },
   {
     summary: {

@@ -5,6 +5,8 @@ import { createAccountRoutes } from "./accountRoutes";
 import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
+import { createMemberOrgRoutes } from "./memberOrgRoutes";
+import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
@@ -139,6 +141,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createAccountRoutes(() => world),
   ...createSetupRoutes(() => world),
   ...createProjectRoutes(() => world),
+  ...createProjectAccessRoutes(() => world),
+  ...createMemberOrgRoutes(() => world),
   ...catalogRoutes,
 ].map((route) => ({
   ...route,
