@@ -27,6 +27,7 @@ from hse_doc_studio.api.routers.v1 import (
     languagetool,
     office_editor,
     office_services,
+    oidc,
     orgs,
     profile,
     project_members,
@@ -56,6 +57,7 @@ api_router = APIRouter(
 
 api_router.include_router(session.router, tags=["session"])
 api_router.include_router(auth.router, tags=["auth"])
+api_router.include_router(oidc.router, tags=["auth"])
 api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
 api_router.include_router(orgs.router, tags=["orgs"])

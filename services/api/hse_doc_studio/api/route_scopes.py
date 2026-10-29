@@ -53,6 +53,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/session/bootstrap"): _P,
     ("POST", "/auth/login"): _P,
     ("POST", "/auth/logout"): _P,
+    # Единый вход: страницы провайдера открывает браузер, личность подтверждает состояние в подписанной cookie
+    ("GET", "/auth/oidc/{provider_id}/start"): _P,
+    ("GET", "/auth/oidc/{provider_id}/callback"): _P,
     # Письма: подтверждение почты и сброс пароля; личность подтверждает одноразовый токен
     ("POST", "/auth/verify"): _P,
     ("POST", "/auth/verify/resend"): _P,

@@ -74,3 +74,30 @@ def clear_session_cookie(response: Response, *, secure: bool) -> None:
     response.delete_cookie(session_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax")
     if secure:
         response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, secure=False, samesite="lax")
+
+
+OIDC_STATE_COOKIE = "hse_oidc_state"
+OIDC_STATE_MAX_AGE_S = 600
+
+
+def oidc_state_cookie_name(*, secure: bool) -> str:
+    return f"__Host-{OIDC_STATE_COOKIE}" if secure else OIDC_STATE_COOKIE
+
+
+def set_oidc_state_cookie(response: Response, sealed: str, *, secure: bool) -> None:
+    """HttpOnly, SameSite=Lax (возврат от провайдера это переход верхнего уровня), живёт десять минут."""
+    response.set_cookie(
+        oidc_state_cookie_name(secure=secure),
+        sealed,
+        max_age=OIDC_STATE_MAX_AGE_S,
+        path="/",
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+    )
+
+
+def clear_oidc_state_cookie(response: Response, *, secure: bool) -> None:
+    response.delete_cookie(
+        oidc_state_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax"
+    )

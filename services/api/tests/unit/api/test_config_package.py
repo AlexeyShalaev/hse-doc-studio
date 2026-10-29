@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import pytest
 from hse_doc_studio.api import config
@@ -16,10 +17,12 @@ from hse_doc_studio.api.config import (
     StorageConfig,
     settings,
 )
+from hse_doc_studio.api.config.auth import OidcEnvConfig
+from pydantic import SecretStr
 
 pytestmark = pytest.mark.unit
 
-SERVER_ONLY_MODULES = ("sqlalchemy", "asyncpg", "alembic", "boto3", "botocore", "argon2", "aiosmtplib", "authlib")
+SERVER_ONLY_MODULES = ("sqlalchemy", "asyncpg", "alembic", "boto3", "botocore", "argon2", "aiosmtplib", "joserfc")
 
 
 def test__config_package__public_import__keeps_legacy_names() -> None:
@@ -68,3 +71,19 @@ def test__local_app__without_server_extra__imports_and_builds() -> None:
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False, timeout=25)
 
     assert result.returncode == 0, result.stderr
+
+
+def test__oidc_env_config__needs_issuer_client_and_secret() -> None:
+    assert not OidcEnvConfig().configured
+    assert not OidcEnvConfig(issuer="https://idp", client_id="c").configured
+    assert OidcEnvConfig(issuer="https://idp", client_id="c", client_secret=SecretStr("s")).configured
+
+
+def test__oidc_env_config__reads_the_secret_from_a_file(tmp_path: Path) -> None:
+    secret_file = tmp_path / "secret"
+    secret_file.write_text("from-file\n", encoding="utf-8")
+
+    config = OidcEnvConfig(issuer="https://idp", client_id="c", client_secret_file=secret_file)
+
+    assert config.configured
+    assert config.resolved_secret() == "from-file"

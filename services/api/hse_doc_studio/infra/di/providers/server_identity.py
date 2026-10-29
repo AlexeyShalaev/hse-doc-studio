@@ -6,14 +6,17 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import timedelta
 
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile, ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.commit_identity import noreply_domain
+from hse_doc_studio.core.identity.oidc import IOidcClient, IOidcProviderCatalog, IOidcStateCodec, OidcProviderConfig
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
     IApiTokenRepository,
@@ -61,8 +64,12 @@ from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsReposi
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
+from hse_doc_studio.infra.identity.oidc.catalog import OidcProviderCatalog
+from hse_doc_studio.infra.identity.oidc.client import OidcClient
+from hse_doc_studio.infra.identity.oidc.state import OIDC_STATE_KEY_PURPOSE, HmacOidcStateCodec
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.identity.user_author_profile import UserAuthorProfile
+from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.oidc import (
@@ -94,6 +101,7 @@ from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.oidc_login import CompleteOidcLoginUC, StartOidcLoginUC
 from hse_doc_studio.use_cases.identity.recovery import (
     ForgotPasswordUC,
     IssueResetLinkUC,
@@ -259,6 +267,55 @@ class ServerIdentityProvider(Provider):
         policy: SessionPolicy,
     ) -> LoginUC:
         return LoginUC(users, credentials, sessions, attempts, hasher, audit, uow, policy)
+
+    @provide
+    def get_oidc_provider_catalog(self, repo: IOidcProviderRepository, cipher: ISecretCipher) -> IOidcProviderCatalog:
+        env = settings.auth.oidc
+        from_env = (
+            OidcProviderConfig(
+                id=env.id,
+                label=env.label,
+                issuer=env.issuer or "",
+                client_id=env.client_id or "",
+                client_secret=env.resolved_secret(),
+                scopes=env.scopes,
+                auto_provision=env.auto_provision,
+            )
+            if env.configured
+            else None
+        )
+        return OidcProviderCatalog(repo, cipher, from_env)
+
+    @provide
+    async def get_oidc_client(self, egress: IEgressPolicy) -> AsyncIterator[IOidcClient]:
+        client = OidcClient(egress)
+        yield client
+        await client.aclose()
+
+    @provide
+    def get_oidc_state_codec(self, key_store: KeyFileStore) -> IOidcStateCodec:
+        """Ключи подписи производные от связки секретов: ротация ключа не рвёт входы, начатые до неё."""
+        return HmacOidcStateCodec(key_store.ensure_primary().derive_all(OIDC_STATE_KEY_PURPOSE))
+
+    @provide
+    def get_start_oidc_login_uc(
+        self, catalog: IOidcProviderCatalog, client: IOidcClient, codec: IOidcStateCodec
+    ) -> StartOidcLoginUC:
+        return StartOidcLoginUC(catalog, client, codec)
+
+    @provide
+    def get_complete_oidc_login_uc(
+        self,
+        catalog: IOidcProviderCatalog,
+        client: IOidcClient,
+        codec: IOidcStateCodec,
+        users: IUserRepository,
+        sessions: ISessionRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        policy: SessionPolicy,
+    ) -> CompleteOidcLoginUC:
+        return CompleteOidcLoginUC(catalog, client, codec, users, sessions, audit, uow, policy)
 
     @provide
     def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> LogoutUC:
@@ -617,8 +674,11 @@ class ServerIdentityProvider(Provider):
         auth_settings: AuthSettingsService,
         sessions: SessionService,
         sender: IMailSender,
+        oidc: IOidcProviderCatalog,
     ) -> BootstrapUC:
-        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled)
+        return BootstrapUC(
+            setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled, oidc_providers=oidc.list_enabled
+        )
 
     @provide
     def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:

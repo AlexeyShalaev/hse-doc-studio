@@ -11,6 +11,7 @@ from hse_doc_studio.api.schemas.session import (
     AuthOptions,
     BootstrapResponse,
     Capabilities,
+    OidcProviderOption,
     SessionUser,
 )
 from hse_doc_studio.core.identity.entities import User
@@ -82,8 +83,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         auth=AuthOptions(
             registration_mode=result.auth.registration_mode.value,
             password_enabled=result.auth.password_enabled,
-            # Провайдеры OIDC подключит их срез.
-            oidc_providers=[],
+            oidc_providers=[OidcProviderOption(id=pid, label=label) for pid, label in result.oidc_providers],
             smtp_enabled=result.smtp_enabled,
             password_min_length=result.password_min_length,
         ),
