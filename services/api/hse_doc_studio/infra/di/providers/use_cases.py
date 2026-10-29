@@ -100,6 +100,7 @@ from hse_doc_studio.core.signatures.ports import (
     IPublicKeyExporter,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -3156,6 +3157,7 @@ class UseCaseProvider(Provider):
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        archive: ISubmissionArchive,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -3171,6 +3173,7 @@ class UseCaseProvider(Provider):
             render_form_uc=render_form_uc,
             dispatcher=dispatcher,
             file_probes=file_probes,
+            archive=archive,
         )
 
     @provide
@@ -3180,12 +3183,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
         template_repo: ITemplateRepository,
+        archive: ISubmissionArchive,
     ) -> ListSubmissionsUC:
         return ListSubmissionsUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
             template_repo=template_repo,
+            archive=archive,
         )
 
     @provide
@@ -3194,11 +3199,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
+        archive: ISubmissionArchive,
+        audit: ISubmissionAudit,
     ) -> GetSubmissionFileUC:
         return GetSubmissionFileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
+            archive=archive,
+            audit=audit,
         )
 
     # ------------------------------------------------------------------ Chat (AI agent)

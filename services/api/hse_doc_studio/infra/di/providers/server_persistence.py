@@ -18,12 +18,14 @@ from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
+from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
+    IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ITemplateRepository,
@@ -31,6 +33,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
+from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
@@ -38,6 +41,7 @@ from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
+from hse_doc_studio.infra.db.repositories.submission import PostgresPackSubmissionRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
@@ -60,6 +64,7 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
+from hse_doc_studio.infra.submission.archive import AuditSubmissionDownloads, ObjectSubmissionArchive
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
@@ -223,6 +228,18 @@ class ServerPersistenceProvider(Provider):
             keep_per_document=server_config.compile_records_per_document,
             log_limit_bytes=server_config.compile_log_limit_bytes,
         )
+
+    @provide(override=True)
+    def get_pack_submission_repo(self, sessions: SessionProvider, volume: IProjectVolume) -> IPackSubmissionRepository:
+        return PostgresPackSubmissionRepository(sessions, volume)
+
+    @provide(override=True)
+    def get_submission_archive(self, store: IObjectStore) -> ISubmissionArchive:
+        return ObjectSubmissionArchive(store)
+
+    @provide(override=True)
+    def get_submission_audit(self, audit: IAuditLog) -> ISubmissionAudit:
+        return AuditSubmissionDownloads(audit)
 
     @provide(override=True)
     def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:

@@ -13,6 +13,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ITemplateRepository,
 )
+from hse_doc_studio.core.submission_archive import DisabledSubmissionArchive, ISubmissionArchive
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -60,8 +61,10 @@ class ListSubmissionsUC:
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
         template_repo: ITemplateRepository,
+        archive: ISubmissionArchive | None = None,
     ) -> None:
         self._submission_repo = submission_repo
+        self._archive = archive or DisabledSubmissionArchive()
         self._template_repo = template_repo
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -79,15 +82,23 @@ class ListSubmissionsUC:
             profile_names = {p.id: p.name for p in version.pack_submission.profiles}
 
         # list_for_project sorts oldest-first; the journal shows latest at top.
-        records = self._submission_repo.list_for_project(project.folder)
+        records = await self._submission_repo.list_for_project(project.folder)
         records.reverse()
 
         items = [
             SubmissionListItem(
                 record=record,
-                size_bytes=_safe_size(record.output_path),
+                size_bytes=await self._size(record),
                 profile_name=profile_names.get(record.profile_id),
             )
             for record in records
         ]
         return ListSubmissionsOutput(items=items)
+
+    async def _size(self, record: PackSubmissionRecord) -> int | None:
+        if record.artifact_key is not None and self._archive.enabled:
+            try:
+                return await self._archive.size(record.artifact_key)
+            except FileNotFoundError:
+                return None
+        return _safe_size(record.output_path)

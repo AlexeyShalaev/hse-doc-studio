@@ -29,6 +29,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRow,
 )
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
+from hse_doc_studio.infra.db.orm.submission import SubmissionRow
 
 __all__ = [
     "ApiTokenRow",
@@ -53,6 +54,7 @@ __all__ = [
     "RunnerRegistrationTokenRow",
     "RunnerRow",
     "SessionRow",
+    "SubmissionRow",
     "UserIdentityRow",
     "UserRow",
     "UserSettingRow",

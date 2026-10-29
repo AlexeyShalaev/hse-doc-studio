@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.access.context import set_current_actor
@@ -117,7 +117,7 @@ class Harness:
         profiles.get_profile.return_value = MagicMock(extra_items=[])
         profiles.build_item_list.return_value = self.items
         signatures = MagicMock()
-        self.submission_repo = MagicMock()
+        self.submission_repo = MagicMock(save=AsyncMock())
         self.submission_repo.save.side_effect = lambda *_: self.events.append("save")
         self.changelog_repo = MagicMock()
         self.changelog_repo.append.side_effect = lambda *_: self.events.append("changelog")

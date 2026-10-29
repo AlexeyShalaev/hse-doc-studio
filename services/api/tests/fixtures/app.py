@@ -45,6 +45,12 @@ from hse_doc_studio.core.setup import (
     MountProbeStatus,
     SetupEnvironment,
 )
+from hse_doc_studio.core.submission_archive import (
+    DisabledSubmissionArchive,
+    ISubmissionArchive,
+    ISubmissionAudit,
+    NoSubmissionAudit,
+)
 from hse_doc_studio.core.update.entities import UpdateFeedProbe
 from hse_doc_studio.core.update.repositories import (
     IReleaseNotesRepository,
@@ -295,6 +301,14 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         @provide
         def get_pack_submission_repo(self) -> IPackSubmissionRepository:
             return JsonPackSubmissionRepository()
+
+        @provide
+        def get_submission_archive(self) -> ISubmissionArchive:
+            return DisabledSubmissionArchive()
+
+        @provide
+        def get_submission_audit(self) -> ISubmissionAudit:
+            return NoSubmissionAudit()
 
         @provide
         def get_file_repo(self) -> IFileRepository:
