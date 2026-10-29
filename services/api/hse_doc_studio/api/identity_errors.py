@@ -51,6 +51,11 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.slug_reserved: _INPUT,
     IdentityErrorCode.slug_invalid: _INPUT,
     IdentityErrorCode.input_invalid: _INPUT,
+    IdentityErrorCode.slug_taken: _STATE,
+    IdentityErrorCode.org_has_projects: _STATE,
+    IdentityErrorCode.name_taken: _STATE,
+    IdentityErrorCode.already_member: _STATE,
+    IdentityErrorCode.user_not_found: _NOT_FOUND,
 }
 
 

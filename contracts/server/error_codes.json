@@ -26,5 +26,10 @@
   "slug_invalid",
   "setting_locked",
   "last_login_method",
-  "input_invalid"
+  "input_invalid",
+  "slug_taken",
+  "org_has_projects",
+  "name_taken",
+  "already_member",
+  "user_not_found"
 ]

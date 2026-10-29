@@ -416,6 +416,71 @@ class AdminOrg(StrictModel):
     project_count: int
 
 
+# Организации и группы: /orgs и /groups (серверный режим).
+class Org(StrictModel):
+    slug: str
+    name: str
+    my_role: OrgRoleName
+    member_count: int
+    group_count: int
+    project_count: int
+    created_at: datetime
+
+
+class CreateOrgRequest(StrictModel):
+    slug: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=256)
+    # Только админ установки: назначить владельцем другого человека. Без него владелец создатель.
+    owner_email: str | None = Field(max_length=EMAIL_MAX)
+
+
+class UpdateOrgRequest(StrictModel):
+    name: str = Field(min_length=1, max_length=256)
+
+
+class OrgMember(StrictModel):
+    user_id: str
+    name: str
+    email: str
+    role: OrgRoleName
+    joined_at: datetime
+
+
+class AddOrgMemberRequest(StrictModel):
+    email: str = Field(min_length=1, max_length=EMAIL_MAX)
+    role: OrgRoleName
+
+
+class ChangeOrgMemberRoleRequest(StrictModel):
+    role: OrgRoleName
+
+
+class Group(StrictModel):
+    id: str
+    name: str
+    member_count: int
+    created_at: datetime
+
+
+class CreateGroupRequest(StrictModel):
+    name: str = Field(min_length=1, max_length=256)
+
+
+class UpdateGroupRequest(StrictModel):
+    name: str = Field(min_length=1, max_length=256)
+
+
+class GroupMember(StrictModel):
+    user_id: str
+    name: str
+    email: str
+    added_at: datetime
+
+
+class AddGroupMemberRequest(StrictModel):
+    user_id: str = Field(min_length=1, max_length=64)
+
+
 class AdminRunner(StrictModel):
     id: str
     name: str

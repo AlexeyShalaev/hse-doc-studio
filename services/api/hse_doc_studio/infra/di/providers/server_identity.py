@@ -36,6 +36,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
+from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
@@ -55,6 +56,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlUserDirectory,
     SqlUserRepository,
 )
+from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
@@ -113,6 +115,23 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpSettingsService,
     UpdateSmtpSettingsUC,
 )
+from hse_doc_studio.use_cases.orgs.groups import (
+    AddGroupMemberUC,
+    CreateGroupUC,
+    DeleteGroupUC,
+    ListGroupMembersUC,
+    ListGroupsUC,
+    RemoveGroupMemberUC,
+    UpdateGroupUC,
+)
+from hse_doc_studio.use_cases.orgs.members import (
+    AddOrgMemberUC,
+    ChangeOrgRoleUC,
+    LeaveOrgUC,
+    ListOrgMembersUC,
+    RemoveOrgMemberUC,
+)
+from hse_doc_studio.use_cases.orgs.orgs import CreateOrgUC, DeleteOrgUC, GetOrgUC, ListMyOrgsUC, UpdateOrgUC
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.server_profile import ServerClearProfileUC, ServerUpdateProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -669,3 +688,104 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_complete_setup_uc(self, state: SetupStateService, audit: IAuditLog) -> CompleteSetupUC:
         return CompleteSetupUC(state, audit)
+
+    @provide
+    def get_org_repository(self, sessions: SessionProvider) -> IOrgRepository:
+        return SqlOrgRepository(sessions)
+
+    @provide
+    def get_group_repository(self, sessions: SessionProvider) -> IGroupRepository:
+        return SqlGroupRepository(sessions)
+
+    @provide
+    def get_list_my_orgs_uc(self, orgs: IOrgRepository) -> ListMyOrgsUC:
+        return ListMyOrgsUC(orgs)
+
+    @provide
+    def get_get_org_uc(self, orgs: IOrgRepository) -> GetOrgUC:
+        return GetOrgUC(orgs)
+
+    @provide
+    def get_create_org_uc(
+        self,
+        orgs: IOrgRepository,
+        users: IUserRepository,
+        settings_repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> CreateOrgUC:
+        return CreateOrgUC(orgs, users, settings_repo, audit, uow)
+
+    @provide
+    def get_update_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> UpdateOrgUC:
+        return UpdateOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_delete_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> DeleteOrgUC:
+        return DeleteOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_list_org_members_uc(self, orgs: IOrgRepository) -> ListOrgMembersUC:
+        return ListOrgMembersUC(orgs)
+
+    @provide
+    def get_add_org_member_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> AddOrgMemberUC:
+        return AddOrgMemberUC(orgs, users, audit, uow)
+
+    @provide
+    def get_change_org_role_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> ChangeOrgRoleUC:
+        return ChangeOrgRoleUC(orgs, users, audit, uow)
+
+    @provide
+    def get_remove_org_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveOrgMemberUC:
+        return RemoveOrgMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_leave_org_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> LeaveOrgUC:
+        return LeaveOrgUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_groups_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListGroupsUC:
+        return ListGroupsUC(orgs, groups)
+
+    @provide
+    def get_create_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> CreateGroupUC:
+        return CreateGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_update_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> UpdateGroupUC:
+        return UpdateGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_delete_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DeleteGroupUC:
+        return DeleteGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_group_members_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListGroupMembersUC:
+        return ListGroupMembersUC(orgs, groups)
+
+    @provide
+    def get_add_group_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> AddGroupMemberUC:
+        return AddGroupMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_remove_group_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveGroupMemberUC:
+        return RemoveGroupMemberUC(orgs, groups, audit, uow)

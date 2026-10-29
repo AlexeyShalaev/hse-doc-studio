@@ -349,6 +349,52 @@ export const AdminOrgSchema = z.strictObject({
   member_count: z.number().int(),
   project_count: z.number().int(),
 });
+export const OrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  my_role: OrgRoleNameSchema,
+  member_count: z.number().int(),
+  group_count: z.number().int(),
+  project_count: z.number().int(),
+  created_at: iso,
+});
+export const CreateOrgRequestSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  owner_email: z.string().nullable(),
+});
+export const UpdateOrgRequestSchema = z.strictObject({ name: z.string() });
+export const OrgMemberSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: OrgRoleNameSchema,
+  joined_at: iso,
+});
+export const AddOrgMemberRequestSchema = z.strictObject({
+  email: z.string(),
+  role: OrgRoleNameSchema,
+});
+export const ChangeOrgMemberRoleRequestSchema = z.strictObject({
+  role: OrgRoleNameSchema,
+});
+export const GroupSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  member_count: z.number().int(),
+  created_at: iso,
+});
+export const CreateGroupRequestSchema = z.strictObject({ name: z.string() });
+export const UpdateGroupRequestSchema = z.strictObject({ name: z.string() });
+export const GroupMemberSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  added_at: iso,
+});
+export const AddGroupMemberRequestSchema = z.strictObject({
+  user_id: z.string(),
+});
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

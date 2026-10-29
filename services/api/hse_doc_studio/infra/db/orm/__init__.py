@@ -28,6 +28,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRegistrationTokenRow,
     RunnerRow,
 )
+from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 
 __all__ = [
@@ -38,6 +39,8 @@ __all__ = [
     "CompileRecordRow",
     "FairShareRow",
     "FileHashCacheRow",
+    "GroupMemberRow",
+    "GroupRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
     "JobQueueStateRow",
@@ -46,6 +49,8 @@ __all__ = [
     "LoginAttemptRow",
     "MailOutboxRow",
     "OidcProviderRow",
+    "OrgMemberRow",
+    "OrgRow",
     "PasswordCredentialRow",
     "ProjectMemberRow",
     "ProjectRow",
