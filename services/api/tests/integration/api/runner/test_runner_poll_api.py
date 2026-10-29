@@ -320,3 +320,29 @@ async def test__heartbeat__unknown_job__404(env: _Env) -> None:
 
     assert response.status_code == 404
     assert response.json()["code"] == "job_not_found"
+
+
+async def test__runner_client__registers_and_polls_the_real_api(env: _Env) -> None:
+    from hse_doc_studio.core.jobs.wire import PollRequest, RunnerRegisterRequest
+    from hse_doc_studio.infra.runner.client import RunnerClient
+
+    created = await env.registry.create_registration_token(_ADMIN)
+    await env.enqueue()
+    client = RunnerClient("http://test", created.secret, version="1", transport=env.client._transport)  # noqa: SLF001
+    try:
+        registered = await client.register(
+            RunnerRegisterRequest(
+                name="r",
+                protocol=RUNNER_PROTOCOL_VERSION,
+                version="1",
+                tags=frozenset({"compile"}),
+                concurrency=1,
+            )
+        )
+        polled = await client.poll(PollRequest(wait_s=0, free_slots=1))
+    finally:
+        await client.aclose()
+
+    assert registered.runner_token.startswith("hsrn_")
+    assert polled.envelope is not None
+    assert polled.envelope.attempt == 1
