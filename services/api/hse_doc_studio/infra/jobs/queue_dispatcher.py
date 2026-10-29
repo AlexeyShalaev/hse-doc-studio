@@ -49,6 +49,7 @@ from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
+from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
 
 logger = structlog.get_logger()
@@ -97,6 +98,7 @@ class QueueJobDispatcher:
         ledger: IJobApplyLedger | None = None,
         hooks_factory: IJobHooksFactory | None = None,
         volume: IProjectVolume | None = None,
+        settings_repo: ISettingsRepository | None = None,
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
@@ -110,6 +112,7 @@ class QueueJobDispatcher:
         self._ledger = ledger
         self._hooks_factory = hooks_factory
         self._volume = volume
+        self._settings_repo = settings_repo
         self._interval = poll_interval_s
         self._live_window = timedelta(seconds=runner_live_window_s)
         self._clock = clock
@@ -394,6 +397,7 @@ class QueueJobDispatcher:
         policy = job_kind_spec(spec.kind).policy
         timeout = timeout_s or policy.default_timeout_s or DEFAULT_TIMEOUT_S
         role = await self._role_of(spec)
+        spec = await self._with_user_passes(spec)
         envelope = JobEnvelope(
             spec=_without_root(spec),
             manifest=tuple(manifest),
@@ -418,6 +422,18 @@ class QueueJobDispatcher:
             )
         )
         return outcome.job
+
+    async def _with_user_passes(self, spec: JobSpec) -> JobSpec:
+        """Настройка `latex_passes` пользователя важнее значения из шаблона; у раннера своих настроек нет."""
+        if self._settings_repo is None or spec.kind is not JobKind.compile:
+            return spec
+        payload = compile_payload_of(spec)
+        try:
+            stored = (await self._settings_repo.get()).get("latex_passes")
+            passes = int(stored) if stored is not None else payload.default_passes
+        except (TypeError, ValueError):
+            return spec
+        return replace(spec, payload=replace(payload, default_passes=passes))
 
     async def _role_of(self, spec: JobSpec) -> Role | None:
         if self._role_source is None:

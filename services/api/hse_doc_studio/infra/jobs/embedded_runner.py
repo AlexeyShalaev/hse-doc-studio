@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.compile.errors import DockerUnavailableError, ImageMissingError
@@ -12,7 +13,6 @@ from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import JobRunContext
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IOfficeConvertService
-from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
 from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
@@ -24,6 +24,10 @@ from hse_doc_studio.infra.jobs.compile_body import (
     run_checks,
     run_copy_only,
 )
+
+if TYPE_CHECKING:
+    # Только для аннотации: процесс раннера не тянет слой репозиториев.
+    from hse_doc_studio.core.repositories import ISettingsRepository
 
 # Нижняя граница $max_repeat latexmk: меньше не сойтись документу с hyperref,
 # оглавлением и перекрёстными ссылками (latexmk упрётся в предел до стабилизации ссылок).

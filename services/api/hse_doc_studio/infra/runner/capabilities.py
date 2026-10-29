@@ -10,12 +10,17 @@ from hse_doc_studio.infra.submission.pack_executor import is_archive_format_avai
 
 
 def detect_tags(
-    *, office_url: str | None, archive_available: Callable[[str], bool] = is_archive_format_available
+    *,
+    office_url: str | None,
+    tex_available: bool = False,
+    archive_available: Callable[[str], bool] = is_archive_format_available,
 ) -> frozenset[str]:
-    """`verify` и `pack` у раннера есть всегда (zip и tar.gz нативные), остальное по наличию окружения."""
+    """`verify` и `pack` есть всегда (zip и tar.gz нативные), остальное по окружению: docker даёт `tex`."""
     tags = {"verify", *pack_job_tags(ArchiveFormat.zip)}
     if office_url:
         tags.add("office")
+    if tex_available:
+        tags.add("tex")
     for fmt in (ArchiveFormat.sevenz, ArchiveFormat.rar):
         if archive_available(fmt.value):
             tags.update(pack_job_tags(fmt))

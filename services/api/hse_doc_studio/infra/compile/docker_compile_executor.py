@@ -7,6 +7,7 @@ import uuid
 from asyncio import subprocess as asubprocess
 from collections.abc import AsyncGenerator, Callable
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 import structlog
@@ -59,6 +60,36 @@ _ENGINE_FLAG = {
 ProcessCallback = Callable[[asubprocess.Process], None]
 
 
+@dataclass(frozen=True)
+class ExecutorLimits:
+    """Изоляция контейнера сборки на общем раннере; встроенный раннер работает без неё (None)."""
+
+    network_none: bool = True
+    read_only_rootfs: bool = True
+    tmpfs_tmp: str = "512m"
+    cpus: float | None = 2.0
+    memory: str | None = "4g"
+    pids_limit: int | None = 512
+    no_new_privileges: bool = True
+
+    def docker_args(self) -> list[str]:
+        """Флаги `docker run`; кэш в `/root` это том, поэтому read-only корень ему не мешает."""
+        args: list[str] = []
+        if self.network_none:
+            args += ["--network", "none"]
+        if self.read_only_rootfs:
+            args += ["--read-only", "--tmpfs", f"/tmp:rw,exec,nosuid,size={self.tmpfs_tmp}"]  # noqa: S108
+        if self.cpus is not None:
+            args += ["--cpus", f"{self.cpus:g}"]
+        if self.memory is not None:
+            args += ["--memory", self.memory]
+        if self.pids_limit is not None:
+            args += ["--pids-limit", str(self.pids_limit)]
+        if self.no_new_privileges:
+            args += ["--security-opt", "no-new-privileges"]
+        return args
+
+
 class DockerCompileExecutor:
     """Runs latexmk in a single ephemeral TeX Live container.
 
@@ -91,8 +122,10 @@ class DockerCompileExecutor:
         fonts_host_dir: str | None = None,
         fonts_mount_target: str = "/usr/local/share/fonts/hse",
         artifacts: IArtifactStore | None = None,
+        limits: ExecutorLimits | None = None,
     ) -> None:
         self._artifacts = artifacts or LocalDiskArtifactStore()
+        self._limits = limits
         self._resolver = host_path_resolver
         self._image = image
         self._cache_volume_name = cache_volume_name
@@ -104,6 +137,9 @@ class DockerCompileExecutor:
         self._fonts_dir = fonts_dir
         self._fonts_host_dir = fonts_host_dir
         self._fonts_mount_target = fonts_mount_target
+
+    def _isolation_args(self) -> list[str]:
+        return self._limits.docker_args() if self._limits is not None else []
 
     def _fonts_mount_args(self) -> list[str]:
         """`-v <host_fonts>:<target>:ro` when the managed folder has fonts, else []."""
@@ -193,6 +229,7 @@ class DockerCompileExecutor:
             docker_binary(),
             "run",
             "--rm",
+            *self._isolation_args(),
             "-e",
             "TEXINPUTS=/work:",
             "-e",
@@ -352,6 +389,7 @@ class DockerCompileExecutor:
             docker_binary(),
             "run",
             "--rm",
+            *self._isolation_args(),
             "-v",
             f"{host_project_path}:/work:z",
             "-v",

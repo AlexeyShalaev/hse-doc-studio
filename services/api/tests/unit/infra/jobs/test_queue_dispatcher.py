@@ -453,3 +453,43 @@ async def test__submit__actor_is_not_a_user__failed_record(rig: Rig) -> None:
     await _until(lambda: hooks.events == ["on_finished"])
 
     assert hooks.finished[0][0].status is JobStatus.failed
+
+
+async def test__submit__user_latex_passes_land_in_the_queued_payload(rig: Rig) -> None:
+    class _Settings:
+        async def get(self) -> dict[str, object]:
+            return {"latex_passes": 9}
+
+        async def save(self, settings: dict[str, object]) -> None: ...
+
+    dispatcher = QueueJobDispatcher(
+        rig.queue, rig.uploader, rig.runners, settings_repo=_Settings(), poll_interval_s=0.005
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = await rig.claim()
+    envelope = decode_envelope({**job.payload, "attempt": 1, "job_token": "t"})
+    assert envelope.spec.payload.default_passes == 9  # type: ignore[attr-defined]
+
+
+async def test__submit__no_user_latex_passes__template_value_stays(rig: Rig) -> None:
+    class _Settings:
+        async def get(self) -> dict[str, object]:
+            return {}
+
+        async def save(self, settings: dict[str, object]) -> None: ...
+
+    dispatcher = QueueJobDispatcher(
+        rig.queue, rig.uploader, rig.runners, settings_repo=_Settings(), poll_interval_s=0.005
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = await rig.claim()
+    envelope = decode_envelope({**job.payload, "attempt": 1, "job_token": "t"})
+    assert envelope.spec.payload.default_passes == 5  # type: ignore[attr-defined]

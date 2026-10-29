@@ -27,6 +27,7 @@ from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
     IProjectRepository,
+    ISettingsRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
@@ -185,6 +186,7 @@ class ServerJobsProvider(Provider):
         ledger: IJobApplyLedger,
         hooks_factory: IJobHooksFactory,
         volume: IProjectVolume,
+        settings_repo: ISettingsRepository,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -201,4 +203,5 @@ class ServerJobsProvider(Provider):
             ledger=ledger,
             hooks_factory=hooks_factory,
             volume=volume,
+            settings_repo=settings_repo,
         )
