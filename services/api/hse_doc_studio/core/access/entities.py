@@ -25,6 +25,8 @@ class ActorSource(StrEnum):
     pat = "pat"
     link = "link"
     local = "local"
+    # Фоновая задача от имени пользователя, поставившего её: применение результата и хуки после рестарта.
+    job = "job"
 
 
 class Role(StrEnum):

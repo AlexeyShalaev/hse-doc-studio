@@ -12,7 +12,7 @@ from hse_doc_studio.core.entities import ChangeLogEntry, CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, VcsCommitKind
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
-from hse_doc_studio.core.jobs.enums import JobStatus
+from hse_doc_studio.core.jobs.enums import JobStatus, RunnerErrorCode
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
@@ -79,7 +79,7 @@ class CompileJobHooks:
         )
         return True
 
-    async def on_finished(self, spec: JobSpec, result: JobResult, log: str) -> None:  # noqa: C901
+    async def on_finished(self, spec: JobSpec, result: JobResult, log: str) -> None:  # noqa: C901, PLR0912
         payload = compile_payload_of(spec)
         compile_id = spec.id
         doc_id = payload.doc_id
@@ -95,6 +95,7 @@ class CompileJobHooks:
         else:
             final_status = CompileStatus.failure
         success = final_status is CompileStatus.success
+        await self._restore_started_at(compile_id)
 
         has_errors = any(r.severity == CheckSeverity.err for r in check_results)
         has_warnings = any(r.severity == CheckSeverity.warn for r in check_results)
@@ -116,6 +117,10 @@ class CompileJobHooks:
                 chars=data.chars if data is not None else None,
             )
         )
+
+        if result.error is not None and result.error.code == RunnerErrorCode.superseded.value:
+            # Заменённую сборку закрываем одной записью: состояние документа уже принадлежит новой сборке.
+            return
 
         if final_status in (CompileStatus.cancelled, CompileStatus.failure) or has_errors:
             new_doc_status = DocumentStatus.err
@@ -181,6 +186,12 @@ class CompileJobHooks:
             status=final_status,
             doc_id=doc_id,
         )
+
+    async def _restore_started_at(self, compile_id: uuid.UUID) -> None:
+        """Хуки после рестарта не видели старт: время начала берём из записи сборки."""
+        if self._started_at is None:
+            existing = await self._compile_repo.get_for_project(self._project_folder, compile_id)
+            self._started_at = existing.started_at if existing is not None else None
 
     async def _vcs_commit_on_success(self, doc_id: str, pages: int | None) -> None:
         """Record a `compile` snapshot in the project's VCS store. Best-effort:

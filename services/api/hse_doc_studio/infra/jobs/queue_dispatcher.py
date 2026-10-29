@@ -5,6 +5,10 @@
 после неё, в рабочем потоке, и только потом задача попадает в очередь. Сбой на этом шаге даёт
 итоговую запись `failed` с типизированным кодом, а не вечное `pending`. Итог задачи приходит
 опросом очереди: выдача раннеру это `on_started`, завершение это `on_finished`, оба по одному разу.
+
+Выходы удачной задачи кладутся на том до хуков, а затем итог получает метку применённого. Упавший между
+этими шагами api довершает работу в `recover()` при старте: хуки пересобираются фабрикой по спецификации
+из записи очереди, актор берётся из снимка в конверте.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ import contextlib
 import os
 import stat
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -22,13 +26,20 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.access.context import ActorRequired
-from hse_doc_studio.core.access.entities import Actor, ActorKind, Role
+from hse_doc_studio.core.access.context import ActorRequired, set_current_actor
+from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource, Role
 from hse_doc_studio.core.i18n import set_interface_language
-from hse_doc_studio.core.jobs.codec import decode_result, encode_envelope
+from hse_doc_studio.core.jobs.applier import (
+    ApplyError,
+    IJobApplyLedger,
+    IJobHooksFactory,
+    IJobResultApplier,
+)
+from hse_doc_studio.core.jobs.codec import decode, decode_envelope, decode_result, encode_envelope
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobState, JobStatus, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import JobError, NoRunnerAvailableError, QueuedJobNotFoundError
+from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.jobs.protocols import IJobHooks, IJobObserver
@@ -37,6 +48,7 @@ from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
+from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
 
 logger = structlog.get_logger()
@@ -57,6 +69,15 @@ EXCLUDED_DIRS = frozenset({".git", ".hse-studio", ".build", "submissions", "node
 RoleSource = Callable[[Actor, UUID], Awaitable[Role | None]]
 
 
+@dataclass(frozen=True)
+class RecoveryReport:
+    """Что сделал `recover()`: довершено завершённых, подхвачено идущих, не вышло."""
+
+    finished: int = 0
+    adopted: int = 0
+    failed: int = 0
+
+
 def _utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -72,6 +93,10 @@ class QueueJobDispatcher:
         *,
         limits: ManifestLimits | None = None,
         role_source: RoleSource | None = None,
+        applier: IJobResultApplier | None = None,
+        ledger: IJobApplyLedger | None = None,
+        hooks_factory: IJobHooksFactory | None = None,
+        volume: IProjectVolume | None = None,
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
@@ -81,6 +106,10 @@ class QueueJobDispatcher:
         self._runners = runners
         self._limits = limits
         self._role_source = role_source
+        self._applier = applier
+        self._ledger = ledger
+        self._hooks_factory = hooks_factory
+        self._volume = volume
         self._interval = poll_interval_s
         self._live_window = timedelta(seconds=runner_live_window_s)
         self._clock = clock
@@ -134,6 +163,10 @@ class QueueJobDispatcher:
         if queued is None:
             await hooks.on_finished(spec, _unfinished(spec, JobStatus.cancelled, None), "[cancelled]")
             return
+        await self._follow_compile(spec, hooks)
+
+    async def _follow_compile(self, spec: JobSpec, hooks: IJobHooks) -> None:
+        """Ждёт задачу в очереди и закрывает её: выходы на том, хуки, метка применённого."""
         rejected = False
 
         async def claimed() -> bool:
@@ -147,7 +180,13 @@ class QueueJobDispatcher:
             # Записи сборки нет: задача прекращается, как и во встроенном диспетчере.
             await self._cancel_quietly(spec.id)
             return
-        await hooks.on_finished(spec, self._result_of(spec, job), "")
+        await self._finish(spec, job, hooks)
+
+    async def _finish(self, spec: JobSpec, job: QueuedJob | None, hooks: IJobHooks | None) -> None:
+        result = await self._applied_result(spec, job)
+        if hooks is not None:
+            await hooks.on_finished(spec, result, "")
+        await self._settle(spec, job)
 
     async def cancel(self, job_id: UUID) -> bool:
         tracked = job_id in self._in_flight
@@ -218,7 +257,9 @@ class QueueJobDispatcher:
             except asyncio.CancelledError:
                 await asyncio.shield(self._cancel_quietly(spec.id))
                 raise
-            return self._result_of(spec, job)
+            result = await self._applied_result(spec, job)
+            await self._settle(spec, job)
+            return result
         finally:
             self._in_flight.pop(spec.id, None)
             self._cancelled.discard(spec.id)
@@ -226,6 +267,103 @@ class QueueJobDispatcher:
     async def _cancel_quietly(self, job_id: UUID) -> None:
         with contextlib.suppress(QueuedJobNotFoundError):
             await self._queue.request_cancel(job_id)
+
+    # --- применение результата ---
+
+    async def _applied_result(self, spec: JobSpec, job: QueuedJob | None) -> JobResult:
+        """Итог задачи; выходы удачной задачи к этому моменту уже лежат на томе."""
+        result = self._result_of(spec, job)
+        if self._applier is None or job is None or result.status is not JobStatus.succeeded:
+            return result
+        artifacts = _artifacts_of(job)
+        try:
+            await self._applier.apply(spec, artifacts)
+        except ApplyError as exc:
+            logger.warning("job outputs not applied", job_id=str(spec.id), code=exc.code, detail=exc.detail)
+            return _apply_failure(spec, exc)
+        return result
+
+    async def _settle(self, spec: JobSpec, job: QueuedJob | None) -> None:
+        """Метка применённого, затем уборка принятых выходов: до метки они нужны для повторного применения."""
+        if job is None:
+            return
+        if self._ledger is not None and not await self._ledger.mark_applied(job.id):
+            logger.info("job result was already applied", job_id=str(job.id))
+        if self._applier is not None and job.result is not None and job.result.get("artifacts"):
+            await self._applier.discard(spec)
+
+    # --- восстановление после рестарта ---
+
+    async def recover(self) -> RecoveryReport:
+        """Довершает завершённые задачи без метки применённого и подхватывает идущие compile.
+
+        Вызывается один раз при старте api до приёма запросов: хуки в памяти прошлого процесса потеряны.
+        """
+        if self._ledger is None or self._volume is None:
+            return RecoveryReport()
+        finished = failed = 0
+        for job in await self._ledger.list_unapplied():
+            if job.id in self._in_flight:
+                continue
+            try:
+                await asyncio.create_task(self._recover_finished(job))
+                finished += 1
+            except Exception:
+                logger.exception("job recovery failed", job_id=str(job.id))
+                failed += 1
+        adopted, not_adopted = await self._adopt_running()
+        return RecoveryReport(finished=finished, adopted=adopted, failed=failed + not_adopted)
+
+    async def _adopt_running(self) -> tuple[int, int]:
+        adopted = failed = 0
+        for state in (JobState.queued, JobState.running):
+            for job in await self._queue.list(state=state):
+                if job.id in self._in_flight or job.kind is not JobKind.compile:
+                    continue
+                try:
+                    adopted += self._adopt(job)
+                except Exception:
+                    logger.exception("job adoption failed", job_id=str(job.id))
+                    failed += 1
+        return adopted, failed
+
+    def _recovered_spec(self, job: QueuedJob) -> JobSpec:
+        assert self._volume is not None  # noqa: S101
+        envelope = decode_envelope({**job.payload, "job_token": "-", "attempt": max(job.attempt, 1)})
+        spec = envelope.spec
+        actor = replace(spec.actor, source=ActorSource.job)
+        return replace(spec, actor=actor, local_root=self._volume.path_of(job.project_id))
+
+    def _enter_job_context(self, spec: JobSpec) -> None:
+        set_current_actor(spec.actor)
+        set_interface_language(spec.locale.value)
+
+    async def _recover_finished(self, job: QueuedJob) -> None:
+        spec = self._recovered_spec(job)
+        self._enter_job_context(spec)
+        hooks = self._hooks_factory.for_spec(spec) if self._hooks_factory is not None else None
+        await self._finish(spec, job, hooks)
+
+    def _adopt(self, job: QueuedJob) -> int:
+        spec = self._recovered_spec(job)
+        hooks = self._hooks_factory.for_spec(spec) if self._hooks_factory is not None else None
+        if hooks is None:
+            return 0
+        self._in_flight[spec.id] = spec
+        task = asyncio.create_task(self._drive_adopted(spec, hooks))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return 1
+
+    async def _drive_adopted(self, spec: JobSpec, hooks: IJobHooks) -> None:
+        self._enter_job_context(spec)
+        try:
+            await self._follow_compile(spec, hooks)
+        except Exception:
+            logger.exception("recovered compile failed", compile_id=str(spec.id))
+        finally:
+            self._in_flight.pop(spec.id, None)
+            self._cancelled.discard(spec.id)
 
     # --- activity ---
 
@@ -338,6 +476,17 @@ def _error_of(status: JobStatus, code: str | None) -> JobError | None:
         return None
     category = JobErrorCategory.unavailable if code == RunnerErrorCode.runner_lost.value else JobErrorCategory.internal
     return JobError(category, code or ERROR_CODE_CANCELLED)
+
+
+def _apply_failure(spec: JobSpec, exc: ApplyError) -> JobResult:
+    error = JobError(JobErrorCategory.internal, exc.code, exc.detail)
+    data = CompileResult(build_ok=False, finished_at=_utc_now()) if spec.kind is JobKind.compile else None
+    return JobResult(status=JobStatus.failed, data=data, error=error)
+
+
+def _artifacts_of(job: QueuedJob) -> tuple[ArtifactRef, ...]:
+    raw = (job.result or {}).get("artifacts") or ()
+    return decode(tuple[ArtifactRef, ...], raw)
 
 
 def _staging_failure(spec: JobSpec, exc: Exception) -> JobResult:
