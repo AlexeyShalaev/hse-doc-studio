@@ -12,6 +12,7 @@ from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.relay import ENDPOINT_NAME_RE, AiEndpointFlavor, RelayErrorCode
 from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner, RunnerOwnerKind
@@ -139,3 +140,19 @@ def _own(runner: Runner | None) -> Runner | None:
     if runner.owner_kind is not RunnerOwnerKind.user or runner.owner_id != actor.id:
         return None
     return runner
+
+
+async def audit_runner_provider(audit: IAuditLog | None, action: str, provider: AIProvider) -> None:
+    """Провайдер «через мой раннер» привязывает ретрансляцию к раннеру и адресу: это пишется в журнал.
+
+    Остальные виды провайдеров журнал не ведёт (как раньше); в локальном режиме журнала нет.
+    """
+    if audit is None or provider.type is not AIProviderType.runner:
+        return
+    actor = current_actor()
+    await audit.record(
+        action,
+        actor_id=actor.id if actor is not None else None,
+        target=str(provider.id),
+        details={"type": provider.type.value, "runner_id": provider.runner_id, "endpoint": provider.runner_endpoint},
+    )

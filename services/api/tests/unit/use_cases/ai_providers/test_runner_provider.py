@@ -12,12 +12,14 @@ import pytest
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
-from hse_doc_studio.core.jobs.relay import RelayErrorCode, RelayEventKind
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor, RelayErrorCode, RelayEventKind
 from hse_doc_studio.core.jobs.routing import PersonalRunnerSettings
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint
 from hse_doc_studio.core.jobs.wire import RelayEvent
 from hse_doc_studio.infra.ai.sdk_model_lister import SdkAIModelLister
 from hse_doc_studio.infra.jobs.relay_hub import RelayHub
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderInput, CreateAIProviderUC
+from hse_doc_studio.use_cases.ai_providers.delete_ai_provider import DeleteAIProviderInput, DeleteAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsInput, ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.relay_info import (
     AiProviderRunnerInvalidError,
@@ -32,9 +34,11 @@ from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
+from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.ops import InMemoryAIProviderRepository
 from tests.fakes.runners import InMemoryRunnerRepository
+from tests.fakes.settings import InMemorySettingsRepository
 from tests.fixtures.actors import as_actor
 from tests.unit.use_cases.ai_relay.helpers import NOW, OWNER_ID, make_personal_runner
 
@@ -273,3 +277,43 @@ async def test__list_models__runner_offline__relay_error_reaches_the_caller(
     error = relay_error_of(caught.value)
     assert isinstance(error, AiRelayError)
     assert error.code is RelayErrorCode.runner_offline
+
+
+async def test__runner_provider__create_rebind_and_delete_are_audited(runners: InMemoryRunnerRepository) -> None:
+    """Провайдер привязывает ретрансляцию к раннеру и адресу: создание, смена адреса и удаление в журнале."""
+    runner = await runners.get(_RUNNER)
+    assert runner is not None
+    await runners.add(
+        dataclasses.replace(
+            runner, ai_endpoints=(*runner.ai_endpoints, DeclaredAiEndpoint("vllm", AiEndpointFlavor.openai))
+        )
+    )
+    repo, audit = InMemoryAIProviderRepository(), InMemoryAuditLog()
+    relay = ProviderRelayDescriber(runners, clock=lambda: NOW)
+
+    with as_actor(_ANNA):
+        created = (await CreateAIProviderUC(repo, relay=relay, audit=audit).execute(_input())).provider
+        update = UpdateAIProviderUC(repo, relay=relay, audit=audit)
+        await update.execute(UpdateAIProviderInput(provider_id=created.id, name="Другое имя"))
+        await update.execute(UpdateAIProviderInput(provider_id=created.id, runner_endpoint="vllm"))
+        await DeleteAIProviderUC(repo, InMemorySettingsRepository(), audit=audit).execute(
+            DeleteAIProviderInput(provider_id=created.id)
+        )
+
+    entries = sorted(await audit.list(limit=10), key=lambda e: e.id)
+    assert [(e.action, e.actor_id, e.target, e.details["endpoint"]) for e in entries] == [
+        ("ai_provider.create", OWNER_ID, str(created.id), "ollama"),
+        ("ai_provider.update", OWNER_ID, str(created.id), "vllm"),
+        ("ai_provider.delete", OWNER_ID, str(created.id), "vllm"),
+    ]
+    assert all(e.details["runner_id"] == _RUNNER and e.details["type"] == "runner" for e in entries)
+
+
+async def test__direct_provider__not_audited() -> None:
+    audit = InMemoryAuditLog()
+    uc = CreateAIProviderUC(InMemoryAIProviderRepository(), audit=audit)
+
+    with as_actor(_ANNA):
+        await uc.execute(_input(type=AIProviderType.openai, api_key="sk-1", runner_id=None, runner_endpoint=None))
+
+    assert await audit.list(limit=10) == []

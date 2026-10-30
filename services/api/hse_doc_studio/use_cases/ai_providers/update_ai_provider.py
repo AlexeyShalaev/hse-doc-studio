@@ -8,9 +8,14 @@ from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
-from hse_doc_studio.use_cases.ai_providers.relay_info import AiProviderRunnerInvalidError, ProviderRelayDescriber
+from hse_doc_studio.use_cases.ai_providers.relay_info import (
+    AiProviderRunnerInvalidError,
+    ProviderRelayDescriber,
+    audit_runner_provider,
+)
 
 
 @dataclass
@@ -42,10 +47,12 @@ class UpdateAIProviderUC:
         ai_provider_repo: IAIProviderRepository,
         egress: IEgressPolicy | None = None,
         relay: ProviderRelayDescriber | None = None,
+        audit: IAuditLog | None = None,
     ) -> None:
         self._repo = ai_provider_repo
         self._egress = egress
         self._relay = relay or ProviderRelayDescriber()
+        self._audit = audit
 
     async def execute(self, inp: UpdateAIProviderInput) -> UpdateAIProviderOutput:
         existing = await self._repo.get(inp.provider_id)
@@ -92,7 +99,13 @@ class UpdateAIProviderUC:
             runner_endpoint=runner_endpoint,
         )
         await self._repo.update(updated)
+        await self._audit_rebind(existing, updated)
         return UpdateAIProviderOutput(provider=updated)
+
+    async def _audit_rebind(self, existing: AIProvider, updated: AIProvider) -> None:
+        """Журнал пишет только смену раннера или адреса: переименование ретрансляцию не перепривязывает."""
+        if (updated.runner_id, updated.runner_endpoint) != (existing.runner_id, existing.runner_endpoint):
+            await audit_runner_provider(self._audit, "ai_provider.update", updated)
 
     async def _runner_of(
         self, existing: AIProvider, inp: UpdateAIProviderInput, new_type: AIProviderType

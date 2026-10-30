@@ -8,9 +8,14 @@ from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
-from hse_doc_studio.use_cases.ai_providers.relay_info import AiProviderRunnerInvalidError, ProviderRelayDescriber
+from hse_doc_studio.use_cases.ai_providers.relay_info import (
+    AiProviderRunnerInvalidError,
+    ProviderRelayDescriber,
+    audit_runner_provider,
+)
 
 
 @dataclass
@@ -40,10 +45,12 @@ class CreateAIProviderUC:
         ai_provider_repo: IAIProviderRepository,
         egress: IEgressPolicy | None = None,
         relay: ProviderRelayDescriber | None = None,
+        audit: IAuditLog | None = None,
     ) -> None:
         self._repo = ai_provider_repo
         self._egress = egress
         self._relay = relay or ProviderRelayDescriber()
+        self._audit = audit
 
     async def execute(self, inp: CreateAIProviderInput) -> CreateAIProviderOutput:
         name = inp.name.strip()
@@ -96,4 +103,5 @@ class CreateAIProviderUC:
             runner_endpoint=endpoint,
         )
         await self._repo.create(provider)
+        await audit_runner_provider(self._audit, "ai_provider.create", provider)
         return CreateAIProviderOutput(provider=provider)

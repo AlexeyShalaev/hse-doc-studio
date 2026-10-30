@@ -118,6 +118,7 @@ from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
 from hse_doc_studio.infra.submission.archive import AuditSubmissionDownloads, ObjectSubmissionArchive
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
+from hse_doc_studio.use_cases.ai_providers.delete_ai_provider import DeleteAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
@@ -391,15 +392,21 @@ class ServerPersistenceProvider(Provider):
 
     @provide(override=True)
     def get_create_ai_provider_uc(
-        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber, audit: IAuditLog
     ) -> CreateAIProviderUC:
-        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay)
+        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay, audit=audit)
 
     @provide(override=True)
     def get_update_ai_provider_uc(
-        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber, audit: IAuditLog
     ) -> UpdateAIProviderUC:
-        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay)
+        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay, audit=audit)
+
+    @provide(override=True)
+    def get_delete_ai_provider_uc(
+        self, repo: IAIProviderRepository, settings_repo: ISettingsRepository, audit: IAuditLog
+    ) -> DeleteAIProviderUC:
+        return DeleteAIProviderUC(ai_provider_repo=repo, settings_repo=settings_repo, audit=audit)
 
     @provide(override=True)
     def get_list_provider_models_uc(

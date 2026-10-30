@@ -286,6 +286,15 @@ class RunnerRegistry:
         )
         if updated is None:
             raise RunnerAuthError(RunnerErrorCode.runner_unauthorized)
+        changes = _announcement_changes(runner, updated)
+        if changes:
+            # Украденный токен мог бы тихо объявить другие ИИ-адреса: смена того, что раннер умеет, в журнале.
+            await self._audit.record(
+                "runner.announce",
+                actor_id=runner.owner_id,
+                target=runner.id,
+                details={**_owner_details(runner), **changes},
+            )
         return RunnerAnnounceResponse(
             runner_id=updated.id,
             server_features=features,
@@ -541,6 +550,21 @@ class RunnerRegistry:
             )
         if paused:
             await self._after_runner_left(runner, cancel_relays=True)
+
+
+def _announcement_changes(before: Runner, after: Runner) -> dict[str, object]:
+    """Что `/announce` поменял в возможностях раннера: теги, возможности протокола, ИИ-адреса (было и стало)."""
+    changes: dict[str, object] = {}
+    if before.tags != after.tags:
+        changes["tags"] = {"from": sorted(before.tags), "to": sorted(after.tags)}
+    if before.features != after.features:
+        changes["features"] = {"from": sorted(before.features), "to": sorted(after.features)}
+    if before.ai_endpoints != after.ai_endpoints:
+        changes["ai_endpoints"] = {
+            "from": [f"{e.name}:{e.flavor.value}" for e in before.ai_endpoints],
+            "to": [f"{e.name}:{e.flavor.value}" for e in after.ai_endpoints],
+        }
+    return changes
 
 
 def _owner_details(runner: Runner) -> dict[str, object]:

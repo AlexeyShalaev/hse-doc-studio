@@ -5,7 +5,9 @@ from uuid import UUID
 
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.repositories import IAIProviderRepository, ISettingsRepository
+from hse_doc_studio.use_cases.ai_providers.relay_info import audit_runner_provider
 
 _DEFAULT_PROVIDER_KEY = "default_ai_provider_id"
 _DEFAULT_MODEL_KEY = "default_ai_model"
@@ -17,16 +19,26 @@ class DeleteAIProviderInput:
 
 
 class DeleteAIProviderUC:
-    def __init__(self, ai_provider_repo: IAIProviderRepository, settings_repo: ISettingsRepository) -> None:
+    def __init__(
+        self,
+        ai_provider_repo: IAIProviderRepository,
+        settings_repo: ISettingsRepository,
+        audit: IAuditLog | None = None,
+    ) -> None:
         self._repo = ai_provider_repo
         self._settings_repo = settings_repo
+        self._audit = audit
 
     async def execute(self, inp: DeleteAIProviderInput) -> None:
+        # Запись нужна до удаления: журнал называет раннер и адрес, к которым была привязана ретрансляция.
+        existing = await self._repo.get(inp.provider_id) if self._audit is not None else None
         deleted = await self._repo.delete(inp.provider_id)
         if not deleted:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")
             )
+        if existing is not None:
+            await audit_runner_provider(self._audit, "ai_provider.delete", existing)
         # Clear the global default if it pointed at the deleted provider, so the
         # stored settings never dangle on a non-existent provider.
         stored = await self._settings_repo.get()
