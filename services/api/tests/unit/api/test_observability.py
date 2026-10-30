@@ -93,6 +93,24 @@ async def test__ready__probe_raises__fails_without_leaking_text() -> None:
     assert "secret" not in response.text
 
 
+async def test__ready__optional_probe_down__stays_ready_but_is_listed() -> None:
+    app, health = _app()
+
+    async def db() -> str | None:
+        return None
+
+    async def lt() -> str | None:
+        return "no_healthy_replica"
+
+    health.register("database", db)
+    health.register("languagetool", lt, optional=True)
+    async with _client(app) as client:
+        response = await client.get("/health/ready", headers={"Authorization": "Bearer hl"})
+
+    assert response.status_code == 200
+    assert response.json()["checks"]["languagetool"] == {"ok": False, "reason": "no_healthy_replica"}
+
+
 async def test__live__always_ok() -> None:
     app, _ = _app()
     async with _client(app) as client:

@@ -22,12 +22,16 @@ class HealthRegistry:
     """Проверки готовности: имя -> корутина, возвращающая None (здорово) или причину."""
 
     probes: dict[str, HealthProbe] = field(default_factory=dict)
+    # Необязательные сервисы (LanguageTool, редактор): видны на экране админа, но готовность не краснят.
+    optional: set[str] = field(default_factory=set)
 
-    def register(self, name: str, probe: HealthProbe) -> None:
+    def register(self, name: str, probe: HealthProbe, *, optional: bool = False) -> None:
         if name in self.probes:
             msg = f"проверка здоровья {name} уже зарегистрирована"
             raise ValueError(msg)
         self.probes[name] = probe
+        if optional:
+            self.optional.add(name)
 
     async def run(self, only: Collection[str] | None = None) -> dict[str, str | None]:
         """Результаты всех проверок или только названных (незарегистрированные имена пропускаются)."""
@@ -77,7 +81,7 @@ def build_health_router(
     @router.get("/health/ready")
     async def ready(request: Request) -> JSONResponse:
         results = await registry.run()
-        ok = all(reason is None for reason in results.values())
+        ok = all(reason is None for name, reason in results.items() if name not in registry.optional)
         body: dict[str, object] = {"status": "ok" if ok else "fail"}
         if await privileged(request):
             body["checks"] = {name: {"ok": reason is None, "reason": reason} for name, reason in results.items()}

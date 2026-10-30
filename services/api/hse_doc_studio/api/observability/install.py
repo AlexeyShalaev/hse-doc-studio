@@ -176,6 +176,28 @@ def install_object_store_health(app: FastAPI, container: AsyncContainer, health:
     health.register("s3", _probe)
 
 
+def install_service_pool_health(app: FastAPI, container: AsyncContainer, health: HealthRegistry, cfg: Settings) -> None:
+    """Проверки «languagetool» и «onlyoffice» для экрана сервисов админа; регистрируются, только если реплики заданы."""
+    from hse_doc_studio.core.office import IOfficeEditorService  # noqa: PLC0415
+    from hse_doc_studio.infra.services.languagetool import LanguageToolProxy  # noqa: PLC0415
+
+    if cfg.languagetool.pool_replicas:
+
+        async def _languagetool() -> str | None:
+            proxy = await container.get(LanguageToolProxy)
+            return None if await proxy.probe() else "no_healthy_replica"
+
+        health.register("languagetool", _languagetool, optional=True)
+
+    if cfg.office_editor.pool_replicas:
+
+        async def _onlyoffice() -> str | None:
+            editor = await container.get(IOfficeEditorService)
+            return None if await editor.ensure_running() else "no_healthy_replica"
+
+        health.register("onlyoffice", _onlyoffice, optional=True)
+
+
 def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодический возврат задач с истёкшей арендой и контроль таймаутов; идёт только у лидера."""
     from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService  # noqa: PLC0415

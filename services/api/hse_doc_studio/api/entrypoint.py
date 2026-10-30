@@ -29,6 +29,7 @@ from hse_doc_studio.api.observability.install import (
     install_project_purge,
     install_project_usage,
     install_server_observability,
+    install_service_pool_health,
 )
 from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.server_routers import include_server_routers
@@ -226,6 +227,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
         )
         install_object_store_health(app, container, health_checks)
+        install_service_pool_health(app, container, health_checks, settings)
         install_bucket_cors(app, container, settings)
         install_project_purge(app, container, settings)
         install_blob_gc(app, container, settings)
