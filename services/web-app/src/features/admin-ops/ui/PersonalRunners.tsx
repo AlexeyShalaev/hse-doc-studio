@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { ConfirmByName } from "@shared/ui";
-import type { AdminRunner } from "@entities/session";
+import { useBootstrap, type AdminRunner } from "@entities/session";
 import {
   usePersonalRunners,
   usePersonalRunnersEnabled,
@@ -23,6 +23,7 @@ export const PersonalRunners = () => {
   const pause = useSetPaused();
   const revoke = useRevokeRunner();
   const now = useNow();
+  const serverVersion = useBootstrap().data?.version ?? "";
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Failure | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
@@ -36,6 +37,7 @@ export const PersonalRunners = () => {
         runners={runners.data ?? []}
         enabled={enabled.data}
         now={now}
+        serverVersion={serverVersion}
         busyId={busyId}
         onRetry={() => void runners.refetch()}
         onTogglePause={(runner) => {

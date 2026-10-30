@@ -7,6 +7,7 @@ import {
   Play,
   Terminal,
   Trash2,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { Link } from "react-router";
@@ -23,8 +24,10 @@ import {
   PersonCell,
   Section,
   StatusDot,
+  Tooltip,
   type StatusDotStatus,
 } from "@shared/ui";
+import { isRunnerOutdated } from "@entities/runner";
 import type { AdminRunner } from "@entities/session";
 import { personalStatus, type PersonalStatus } from "../lib/personalStatus";
 import type { ViewStatus } from "../lib/viewStatus";
@@ -63,6 +66,8 @@ export type PersonalRunnersViewProps = {
   /** Личные раннеры разрешены на установке; undefined: сервер не сказал. */
   enabled?: boolean | undefined;
   now: number;
+  /** Версия сервера: раннер старше неё помечается «Есть новее», как в «Моих раннерах». */
+  serverVersion?: string;
   busyId?: string | null;
   onRetry?: () => void;
   onTogglePause: (runner: AdminRunner) => void;
@@ -89,6 +94,7 @@ export const PersonalRunnersView = ({
   runners,
   enabled,
   now,
+  serverVersion = "",
   busyId = null,
   onRetry,
   onTogglePause,
@@ -141,8 +147,27 @@ export const PersonalRunnersView = ({
                   style={{ verticalAlign: -1, marginRight: 4 }}
                 />
                 {t(`personal.kind.${runner.host_kind ?? "cli"}`)}
-                {" · v"}
-                {runner.version}
+                {" · "}
+                {st !== "revoked" &&
+                isRunnerOutdated(runner.version, serverVersion) ? (
+                  <Tooltip
+                    content={t("runners.newerVersion", {
+                      version: serverVersion,
+                    })}
+                  >
+                    <span
+                      className="ops-version"
+                      data-outdated="true"
+                      tabIndex={0}
+                      data-testid={`runner-outdated-${runner.id}`}
+                    >
+                      <TriangleAlert size={11} aria-hidden="true" />v
+                      {runner.version}
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <span className="ops-version">v{runner.version}</span>
+                )}
               </span>
             </span>
           );
@@ -238,7 +263,7 @@ export const PersonalRunnersView = ({
         },
       },
     ],
-    [t],
+    [t, serverVersion],
   );
 
   const needle = q.trim().toLowerCase();

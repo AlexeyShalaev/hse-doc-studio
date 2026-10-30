@@ -369,6 +369,7 @@ const PERSONAL_RUNNERS: AdminRunner[] = [
     ["u_01hx7k8maria", "Мария Келлер", "maria.keller@example.org"],
     {
       host_kind: "cli",
+      version: "0.1.4",
       ai_endpoints: ["vllm", "ollama"],
       last_seen_at: new Date(NOW - 3 * 3600_000).toISOString(),
       last_seen_ip: null,
@@ -384,6 +385,7 @@ const personalView = (
     runners={PERSONAL_RUNNERS}
     enabled
     now={NOW}
+    serverVersion="0.3.0"
     onTogglePause={noop}
     onRevoke={noop}
     {...extra}

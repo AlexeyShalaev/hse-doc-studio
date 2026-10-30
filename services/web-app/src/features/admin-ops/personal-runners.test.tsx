@@ -146,6 +146,25 @@ describe("админка: личные раннеры", () => {
     ).toBeInTheDocument();
   });
 
+  it("вид: устаревшая версия помечена, как у раннеров установки", () => {
+    render(
+      wrap(
+        <PersonalRunnersView
+          status="ready"
+          runners={[{ ...PERSONAL, version: "0.1.4" }]}
+          enabled
+          now={NOW}
+          serverVersion="0.3.0"
+          onTogglePause={noop}
+          onRevoke={noop}
+        />,
+      ),
+    );
+    expect(
+      screen.getByTestId(`runner-outdated-${PERSONAL.id}`),
+    ).toHaveTextContent("v0.1.4");
+  });
+
   it("вид: пусто", () => {
     render(
       wrap(
