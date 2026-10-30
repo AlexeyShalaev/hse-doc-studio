@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, DataTable, FilterBar } from "@shared/ui";
+import { Badge, Button, DataTable, FilterBar, PageHeader } from "@shared/ui";
 import type { AdminOrg } from "@entities/session";
 import { RoleBadge } from "./parts";
 
@@ -120,17 +120,11 @@ export const OrgsListView = ({
 
   return (
     <div className="flex flex-col" style={{ gap: 14 }} data-testid="orgs-list">
-      <div className="flex items-start" style={{ gap: 12 }}>
-        <header className="flex flex-col" style={{ gap: 4, flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
-            {t("list.title")}
-          </h1>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>
-            {canCreate ? t("list.leadAdmin") : t("list.leadOrgAdmin")}
-          </p>
-        </header>
-        {status === "ready" && orgs.length > 0 && createButton}
-      </div>
+      <PageHeader
+        title={t("list.title")}
+        description={canCreate ? t("list.leadAdmin") : t("list.leadOrgAdmin")}
+        actions={status === "ready" && orgs.length > 0 ? createButton : null}
+      />
       {status === "ready" && orgs.length > 0 && (
         <FilterBar
           search={search}

@@ -1,9 +1,10 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useContext, type CSSProperties, type ReactNode } from "react";
 import { Inbox } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Spinner } from "@shared/ui";
+import { PageHeader as KitPageHeader, PageTabs, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { failureKey, type Failure } from "../lib/failure";
+import { HeaderTabsContext } from "../lib/headerTabs";
 import { CARD } from "../lib/styles";
 
 /** Отказ из каталога ошибок. */
@@ -92,7 +93,7 @@ export const EmptyBlock = ({
   </div>
 );
 
-/** Заголовок раздела. */
+/** Заголовок раздела: общий заголовок страницы админки. */
 export const PageHeader = ({
   title,
   lead,
@@ -102,13 +103,12 @@ export const PageHeader = ({
   lead: string;
   action?: ReactNode;
 }) => (
-  <div className="flex items-start" style={{ gap: 12 }}>
-    <header className="flex flex-col" style={{ gap: 4, flex: 1 }}>
-      <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{title}</h1>
-      <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>{lead}</p>
-    </header>
-    {action}
-  </div>
+  <KitPageHeader
+    title={title}
+    description={lead}
+    actions={action}
+    tabs={useContext(HeaderTabsContext)}
+  />
 );
 
 /** Карточка со своим заголовком. */
@@ -249,41 +249,10 @@ export const Tabs = <T extends string>({
   onChange: (id: T) => void;
   label: string;
 }) => (
-  <div
-    role="tablist"
-    aria-label={label}
-    className="flex"
-    style={{ gap: 4, borderBottom: "1px solid var(--border)" }}
-  >
-    {tabs.map((tab) => {
-      const active = tab.id === value;
-      return (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={active}
-          data-testid={`ops-tab-${tab.id}`}
-          className="row-btn"
-          onClick={() => {
-            onChange(tab.id);
-          }}
-          style={{
-            padding: "8px 12px",
-            borderRadius: "var(--r-2) var(--r-2) 0 0",
-            borderBottom: active
-              ? "2px solid var(--accent)"
-              : "2px solid transparent",
-            fontWeight: active ? 600 : 400,
-            gap: 6,
-          }}
-        >
-          {tab.label}
-          {tab.count !== undefined && (
-            <span className="chip subtle">{tab.count}</span>
-          )}
-        </button>
-      );
-    })}
-  </div>
+  <PageTabs
+    label={label}
+    value={value}
+    onChange={onChange}
+    tabs={tabs.map((tab) => ({ ...tab, testId: `ops-tab-${tab.id}` }))}
+  />
 );

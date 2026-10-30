@@ -28,7 +28,7 @@ const SigningBody = () => {
       data-testid="admin-signing-page"
     >
       <PageHead title={t("signing.page.title")} lead={t("signing.page.lead")} />
-      <div className="flex flex-col" style={{ gap: 14, maxWidth: 720 }}>
+      <div className="flex flex-col" style={{ gap: 14 }}>
         {!policy.data && (
           <LoadState
             failed={policy.isError}

@@ -125,7 +125,7 @@ export const AdminAuthSettings = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14, maxWidth: 720 }}
+      style={{ gap: 14 }}
       data-testid="admin-auth-settings"
     >
       {failed && !loadedMain && (

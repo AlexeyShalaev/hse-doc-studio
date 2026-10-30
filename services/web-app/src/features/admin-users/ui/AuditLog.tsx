@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, FilterBar, Spinner } from "@shared/ui";
+import { Button, FilterBar, PageHeader, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AdminAuditEvent } from "@entities/session";
 import { useAudit } from "../api/adminUsersQueries";
+import { useAuditActionLabel } from "../lib/auditLabel";
 import { detailText, formatDateTime } from "../lib/format";
 import { HINT } from "../lib/styles";
 
@@ -45,10 +46,7 @@ export const AuditLog = () => {
   const [group, setGroup] = useState("");
   const audit = useAudit(group);
   const [search, setSearch] = useState("");
-  const label = (action: string): string => {
-    const key = "audit.actions." + action.replaceAll(".", "_");
-    return i18n.exists(key, { ns: "adminUsers" }) ? t(key) : action;
-  };
+  const label = useAuditActionLabel();
   const all = useMemo<AdminAuditEvent[]>(
     () => audit.data?.pages.flatMap((p) => p.items) ?? [],
     [audit.data],
@@ -70,14 +68,7 @@ export const AuditLog = () => {
 
   return (
     <div className="flex flex-col" style={{ gap: 14 }} data-testid="audit-log">
-      <header className="flex flex-col" style={{ gap: 4 }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
-          {t("audit.title")}
-        </h1>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>
-          {t("audit.lead")}
-        </p>
-      </header>
+      <PageHeader title={t("audit.title")} description={t("audit.lead")} />
       <FilterBar
         search={search}
         onSearchChange={setSearch}

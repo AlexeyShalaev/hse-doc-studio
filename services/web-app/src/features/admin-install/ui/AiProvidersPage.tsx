@@ -72,7 +72,7 @@ const AiBody = ({
       data-testid="admin-ai-page"
     >
       <PageHead title={t("ai.page.title")} lead={t("ai.page.lead")} />
-      <div className="flex flex-col" style={{ gap: 14, maxWidth: 720 }}>
+      <div className="flex flex-col" style={{ gap: 14 }}>
         {!providers.data && (
           <LoadState
             failed={providers.isError}

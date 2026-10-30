@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Sign-in settings",
+    "title": "Sign-in and registration",
     "lead": "Who gets into the installation and how: registration, password, single sign-on and mail. Values set by the environment are read-only."
   },
   "loading": "Loading settings…",

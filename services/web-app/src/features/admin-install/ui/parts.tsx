@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@shared/ui";
+import { Badge, PageHeader } from "@shared/ui";
 
 /** Карточка раздела настроек: заголовок с пояснением, справа статус, внизу содержимое. */
 export const SettingsCard = ({
@@ -77,8 +77,5 @@ export const AllLockedNote = () => {
 
 /** Заголовок раздела админки. */
 export const PageHead = ({ title, lead }: { title: string; lead: string }) => (
-  <header className="flex flex-col" style={{ gap: 4, maxWidth: 720 }}>
-    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{title}</h1>
-    <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>{lead}</p>
-  </header>
+  <PageHeader title={title} description={lead} />
 );

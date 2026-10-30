@@ -45,7 +45,7 @@ const InstanceBody = () => {
         title={t("instance.page.title")}
         lead={t("instance.page.lead")}
       />
-      <div className="flex flex-col" style={{ gap: 14, maxWidth: 720 }}>
+      <div className="flex flex-col" style={{ gap: 14 }}>
         {!instance.data && (
           <LoadState
             failed={instance.isError}

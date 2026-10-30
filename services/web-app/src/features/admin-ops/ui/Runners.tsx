@@ -31,7 +31,12 @@ const statusOf = (q: { isError: boolean; isPending: boolean }) =>
   q.isError ? "error" : q.isPending ? "loading" : "ready";
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
-export const Runners = () => {
+export const Runners = ({
+  initialCreateToken = false,
+}: {
+  /** Открыть создание токена сразу (ссылка со сводки). */
+  initialCreateToken?: boolean;
+}) => {
   const { t } = useTranslation("adminOps");
   const runners = useRunners();
   const tokens = useTokens();
@@ -46,7 +51,7 @@ export const Runners = () => {
   const [rotating, setRotating] = useState<AdminRunner | null>(null);
   const [rotated, setRotated] = useState<AdminRunnerRotated | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(initialCreateToken);
   const [created, setCreated] = useState<AdminRunnerTokenCreated | null>(null);
   const [revokingToken, setRevokingToken] = useState<AdminRunnerToken | null>(
     null,

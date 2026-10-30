@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
+import { PageHeader } from "@shared/ui";
 import { AdminAuthSettings } from "@features/admin-auth-settings";
 
-/** Раздел «Настройки» админки: настройки входа и почты. */
+/** Раздел «Вход и регистрация» админки: настройки входа и почты. */
 export const AdminSettingsPage = () => {
   const { t } = useTranslation("adminSettings");
   return (
@@ -10,14 +11,7 @@ export const AdminSettingsPage = () => {
       style={{ gap: 20 }}
       data-testid="admin-settings"
     >
-      <header className="flex flex-col" style={{ gap: 4, maxWidth: 720 }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
-          {t("page.title")}
-        </h1>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>
-          {t("page.lead")}
-        </p>
-      </header>
+      <PageHeader title={t("page.title")} description={t("page.lead")} />
       <AdminAuthSettings />
     </div>
   );

@@ -8,7 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, ConfirmByName } from "@shared/ui";
+import { Badge, Button, ConfirmByName, PageHeader } from "@shared/ui";
 import type { AdminOrg } from "@entities/session";
 import type { Failure } from "../lib/failure";
 import { CARD } from "../lib/styles";
@@ -117,16 +117,11 @@ export const OrgDetailView = ({
 
   return (
     <div className="flex flex-col" style={{ gap: 16 }} data-testid="org-detail">
-      {back}
-      <header className="flex items-start" style={{ gap: 12 }}>
-        <div className="flex flex-col" style={{ gap: 6, flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
-            {org.name}
-          </h1>
-          <div
-            className="flex items-center"
-            style={{ gap: 8, flexWrap: "wrap" }}
-          >
+      <PageHeader
+        back={back}
+        title={org.name}
+        meta={
+          <>
             <span
               className="mono"
               style={{ fontSize: 12, color: "var(--fg-2)" }}
@@ -144,25 +139,27 @@ export const OrgDetailView = ({
                 projects: org.project_count,
               })}
             </span>
-          </div>
-        </div>
-        {canDelete && (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            style={{ gap: 6 }}
-            data-testid="org-delete"
-            onClick={() => {
-              onDeleteReset?.();
-              setConfirming(true);
-            }}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-            {t("detail.delete.button")}
-          </Button>
-        )}
-      </header>
+          </>
+        }
+        actions={
+          canDelete && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              style={{ gap: 6 }}
+              data-testid="org-delete"
+              onClick={() => {
+                onDeleteReset?.();
+                setConfirming(true);
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+              {t("detail.delete.button")}
+            </Button>
+          )
+        }
+      />
 
       <div
         role="tablist"
