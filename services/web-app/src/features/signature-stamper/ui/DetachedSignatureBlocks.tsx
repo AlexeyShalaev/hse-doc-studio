@@ -32,6 +32,7 @@ import {
   useTrustRoot,
   useUnfreezePdf,
 } from "@entities/signature";
+import { useBootstrap } from "@entities/session";
 import {
   useGenerateOpenPgpKey,
   useSigningIdentities,
@@ -661,6 +662,10 @@ export const SlotDetachedSignature = ({
   const remove = useDeleteDetachedSignature();
   const completeChain = useCompleteChain();
   const trustRoot = useTrustRoot();
+  const bootstrap = useBootstrap().data;
+  // Доверенные корни общие для сервера: добавлять их может только админ.
+  const canTrustRoot =
+    bootstrap?.mode !== "server" || bootstrap.capabilities.admin;
   const [signOpen, setSignOpen] = useState(false);
   const [cryptoProOpen, setCryptoProOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -921,35 +926,37 @@ export const SlotDetachedSignature = ({
           <div className="mono dim" style={{ wordBreak: "break-all" }}>
             SHA-256: {signature.root_fingerprint}
           </div>
-          <button
-            type="button"
-            className="btn xs"
-            style={{ marginTop: 4 }}
-            disabled={busy}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  t("detached.chain.trustConfirm", {
-                    subject: signature.root_subject,
-                    fingerprint: signature.root_fingerprint,
-                  }),
+          {canTrustRoot && (
+            <button
+              type="button"
+              className="btn xs"
+              style={{ marginTop: 4 }}
+              disabled={busy}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    t("detached.chain.trustConfirm", {
+                      subject: signature.root_subject,
+                      fingerprint: signature.root_fingerprint,
+                    }),
+                  )
                 )
-              )
-                return;
-              trustRoot.mutate(
-                {
-                  projectId,
-                  docId,
-                  slotId,
-                  fingerprint: signature.root_fingerprint,
-                },
-                { onError: (err) => toast.error(err.message) },
-              );
-            }}
-          >
-            <ShieldCheck size={10} />
-            {t("detached.chain.trust")}
-          </button>
+                  return;
+                trustRoot.mutate(
+                  {
+                    projectId,
+                    docId,
+                    slotId,
+                    fingerprint: signature.root_fingerprint,
+                  },
+                  { onError: (err) => toast.error(err.message) },
+                );
+              }}
+            >
+              <ShieldCheck size={10} />
+              {t("detached.chain.trust")}
+            </button>
+          )}
         </div>
       )}
 

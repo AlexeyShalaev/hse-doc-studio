@@ -457,6 +457,32 @@ async def test__environment__token_opens_it_before_the_admin_exists(world: _Worl
     assert with_admin.status_code == 200
 
 
+@pytest.mark.parametrize(
+    ("runner_reason", "status", "reason"),
+    [
+        (None, "ok", None),
+        ("no_runners", "not_configured", None),
+        ("no_online_runner", "fail", "no_online_runner"),
+    ],
+)
+async def test__environment__runner_probe_is_shown_as_status_without_failing_a_fresh_install(
+    world: _World, runner_reason: str | None, status: str, reason: str | None
+) -> None:
+    registry = HealthRegistry()
+
+    async def runners() -> str | None:
+        return runner_reason
+
+    registry.register("runners", runners, optional=True)
+    app, container = _build_app(world, gate=True)
+    app.state.health_registry = registry
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/server-setup/environment", headers={"X-Setup-Token": TOKEN})
+    await container.close()
+
+    assert {c["id"]: (c["status"], c["reason"]) for c in response.json()["checks"]}["runner"] == (status, reason)
+
+
 async def test__local_mode__the_wizard_does_not_exist(monkeypatch: pytest.MonkeyPatch, world: _World) -> None:
     monkeypatch.setattr(settings, "mode", StudioMode.local)
     async with _client(world) as client:

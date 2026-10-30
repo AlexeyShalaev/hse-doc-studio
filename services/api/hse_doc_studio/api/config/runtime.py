@@ -28,6 +28,14 @@ class HttpServerConfig(BaseModel):
         default=None,
         description="Корень томов проектов сервера (projects_root/<project_id>); по умолчанию data_dir/projects.",
     )
+    instance_name: str | None = Field(
+        default=None,
+        description="Название установки из окружения: заданное побеждает правку админа и не меняется в админке.",
+    )
+    docs_url: str | None = Field(
+        default=None,
+        description="Ссылка на документацию установки из окружения: заданная не меняется в админке.",
+    )
     project_retention_days: int = Field(
         default=30,
         ge=0,

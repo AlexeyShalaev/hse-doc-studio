@@ -35,6 +35,18 @@ class JobsConfig(BaseModel):
             "регистрации раннера уберите значение из окружения."
         ),
     )
+    build_timeout_s: int | None = Field(
+        default=None,
+        ge=30,
+        le=3600,
+        description="Предел длительности сборки из окружения: заданный побеждает правку админа.",
+    )
+    artifact_retention_days: int | None = Field(
+        default=None,
+        ge=1,
+        le=365,
+        description="Срок хранения результатов сборок из окружения: заданный побеждает правку админа.",
+    )
     storage_dir: Path | None = Field(
         default=None,
         description="Каталог лога задач; блобы входа и выходы лежат в объектном хранилище. По умолчанию data_dir/jobs.",

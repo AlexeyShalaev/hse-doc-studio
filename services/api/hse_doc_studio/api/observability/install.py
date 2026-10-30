@@ -198,6 +198,23 @@ def install_service_pool_health(app: FastAPI, container: AsyncContainer, health:
         health.register("onlyoffice", _onlyoffice, optional=True)
 
 
+def install_runner_health(app: FastAPI, container: AsyncContainer, health: HealthRegistry) -> None:
+    """Проверка «runners» для экрана окружения мастера: необязательная, на свежей установке без раннеров
+    `/health/ready` остаётся зелёным, а мастер показывает причину."""
+    from hse_doc_studio.core.identity.session_policy import utc_now  # noqa: PLC0415
+    from hse_doc_studio.core.jobs.admin import RunnerStatus, runner_status  # noqa: PLC0415
+    from hse_doc_studio.core.jobs.runners import IRunnerRepository  # noqa: PLC0415
+
+    async def _runners() -> str | None:
+        active = [r for r in await (await container.get(IRunnerRepository)).list() if r.revoked_at is None]
+        if not active:
+            return "no_runners"
+        now = utc_now()
+        return None if any(runner_status(r, now) is RunnerStatus.online for r in active) else "no_online_runner"
+
+    health.register("runners", _runners, optional=True)
+
+
 def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодический возврат задач с истёкшей арендой и контроль таймаутов; идёт только у лидера."""
     from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService  # noqa: PLC0415

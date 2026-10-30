@@ -25,8 +25,14 @@ _WRITE_ACTIONS = frozenset(
         Action.SUBMISSION_CREATE,
     }
 )
-# GET, который открывает сессию редактирования, поэтому требует записи.
-_GET_WITH_WRITE = frozenset({("GET", "/projects/{project_id}/documents/{doc_id}/office-editor")})
+# GET, который требует записи: открывает сессию редактирования или показывает владельцу то, что остальным закрыто
+# (подбор людей и групп для панели «Доступ» не должен подсказывать список людей читателю).
+_GET_WITH_WRITE = frozenset(
+    {
+        ("GET", "/projects/{project_id}/documents/{doc_id}/office-editor"),
+        ("GET", "/projects/{project_id}/members/candidates"),
+    }
+)
 
 
 @dataclass(frozen=True)

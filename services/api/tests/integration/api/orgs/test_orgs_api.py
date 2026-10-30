@@ -46,6 +46,7 @@ from hse_doc_studio.use_cases.orgs.orgs import (
     CreateOrgUC,
     DeleteOrgUC,
     GetOrgUC,
+    ListAccountOrgsUC,
     ListMyOrgsUC,
     UpdateOrgUC,
 )
@@ -60,6 +61,7 @@ OWN, ADM, MEM = OrgRole.owner, OrgRole.admin, OrgRole.member
 
 _USE_CASES: list[type] = [
     ListMyOrgsUC,
+    ListAccountOrgsUC,
     GetOrgUC,
     CreateOrgUC,
     UpdateOrgUC,
@@ -325,3 +327,30 @@ async def test__orgs__routes_do_not_exist_in_the_local_mode(
 
     assert (await client.get("/api/v1/orgs")).status_code == 404
     assert (await client.post("/api/v1/orgs", json={"slug": "a", "name": "A", "owner_email": None})).status_code == 404
+
+
+async def test__account_orgs__lists_only_own_with_contract_shape_and_leave_guards_sole_owner(
+    env: tuple[AsyncClient, _Env],
+) -> None:
+    client, e = env
+    anna = await e.login("anna")
+    await e.world.org("lab", anna=OWN, boris=MEM)
+    await e.world.org("other", carol=OWN)
+    group = await e.world.uc(CreateGroupUC).execute(Actor.user("anna"), "lab", name="Bertie")
+    await e.world.uc(AddGroupMemberUC).execute(Actor.user("anna"), group.group.id, user_id="boris")
+    boris = await e.login("boris")
+
+    mine = await client.get("/api/v1/account/orgs", headers=boris)
+    sole = await client.delete("/api/v1/account/orgs/lab/membership", headers=anna)
+    stranger = await client.delete("/api/v1/account/orgs/other/membership", headers=anna)
+    left = await client.delete("/api/v1/account/orgs/lab/membership", headers=boris)
+    after = await client.get("/api/v1/account/orgs", headers=boris)
+
+    assert set(mine.json()[0]) == set(_fixture("MyOrg", "one"))
+    assert [(x["slug"], x["my_role"], x["groups"], x["sole_owner"]) for x in mine.json()] == [
+        ("lab", "member", ["Bertie"], False)
+    ]
+    assert (sole.status_code, sole.json()["code"]) == (409, "last_owner")
+    assert (stranger.status_code, stranger.json()["code"]) == (404, "not_found")
+    assert (left.status_code, after.json()) == (204, [])
+    assert (await client.get("/api/v1/account/orgs")).status_code == 401

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -91,13 +93,30 @@ _SETTINGS_MUTATIONS = {
 }
 
 
-def _mutating_routes() -> set[tuple[str, str]]:
-    found: set[tuple[str, str]] = set()
-    for route in make_admin_router().routes:
+_SETTINGS_SAMPLE = {
+    "/api/admin/oidc-providers/{id}": "/api/admin/oidc-providers/x",
+}
+_USE_CASES = Path(__file__).resolve().parents[4] / "hse_doc_studio" / "use_cases"
+
+
+def _walk_routes(router: Any, prefix: str = "") -> list[tuple[str, str]]:
+    """Все (метод, путь) роутера, включая вложенные `include_router` (в FastAPI это `_IncludedRouter`)."""
+    found: list[tuple[str, str]] = []
+    for route in router.routes:
+        original = getattr(route, "original_router", None)
+        if original is not None:
+            context = getattr(route, "include_context", None)
+            found += _walk_routes(original, prefix + (getattr(context, "prefix", "") or ""))
+            continue
+        path = getattr(route, "path", None)
         for method in getattr(route, "methods", None) or ():
-            if method not in {"GET", "HEAD", "OPTIONS"}:
-                found.add((method, route.path))  # type: ignore[attr-defined]
+            if path is not None and method not in {"GET", "HEAD", "OPTIONS"}:
+                found.append((method, prefix + path))
     return found
+
+
+def _mutating_routes() -> set[tuple[str, str]]:
+    return set(_walk_routes(make_admin_router()))
 
 
 def _normalized(path: str) -> str:
@@ -163,13 +182,63 @@ async def test__audit__refused_mutations_write_nothing(env: _Env) -> None:
     assert await env.audit.list() == []
 
 
+# Ручки, события которых проверяют соседние файлы (ops и orgs). Действие здесь обязано существовать в коде.
+_AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
+    ("DELETE", "/api/admin/users/{id}"): "admin.user_deleted",
+    ("PUT", "/api/admin/settings/instance"): "settings.instance_update",
+    ("PUT", "/api/admin/settings/build"): "settings.build_update",
+    ("PUT", "/api/admin/settings/signing"): "settings.signing_policy_update",
+    ("PUT", "/api/admin/quotas"): "settings.quotas_update",
+    ("POST", "/api/admin/queue/{id}/cancel"): "queue.job_cancel",
+    ("POST", "/api/admin/runner-tokens"): "runner.registration_token_create",
+    ("DELETE", "/api/admin/runner-tokens/{id}"): "runner.registration_token_revoke",
+    ("PATCH", "/api/admin/runners/{id}"): "runner.pause",
+    ("DELETE", "/api/admin/runners/{id}"): "runner.revoke",
+    ("POST", "/api/admin/runners/{id}/rotate-token"): "runner.token_rotate",
+    ("POST", "/api/admin/ai-providers"): "settings.ai_provider_create",
+    ("PATCH", "/api/admin/ai-providers/{id}"): "settings.ai_provider_update",
+    ("DELETE", "/api/admin/ai-providers/{id}"): "settings.ai_provider_delete",
+    ("POST", "/api/admin/orgs"): "org.create",
+    ("DELETE", "/api/admin/orgs/{id}"): "org.delete",
+    ("POST", "/api/admin/orgs/{id}/members"): "org.member.add",
+    ("PATCH", "/api/admin/orgs/{id}/members/{id}"): "org.member.role",
+    ("DELETE", "/api/admin/orgs/{id}/members/{id}"): "org.member.remove",
+    ("POST", "/api/admin/orgs/{id}/groups"): "group.create",
+    ("PATCH", "/api/admin/orgs/{id}/groups/{id}"): "group.update",
+    ("DELETE", "/api/admin/orgs/{id}/groups/{id}"): "group.delete",
+}
+
+# Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
+_NOT_AUDITED = {("POST", "/api/admin/ai-providers/{id}/check")}
+
+
+def _matrix_covers(route: tuple[str, str], literal: set[tuple[str, str]]) -> bool:
+    method, template = route
+    pattern = re.compile("^" + re.sub(r"\{[^/]+\}", "[^/]+", template) + "$")
+    return any(m == method and pattern.match(path) for m, path in literal)
+
+
 def test__audit__every_mutating_admin_route_is_in_the_matrix() -> None:
-    covered = {(m, _normalized(p)) for m, p, _, _ in _MUTATIONS}
-    covered |= {("POST", "/api/admin/invitations/{id}/resend"), ("DELETE", "/api/admin/invitations/{id}")}
-    covered |= _SETTINGS_MUTATIONS
+    literal = {(m, p) for m, p, _, _ in _MUTATIONS}
+    literal |= {("POST", "/api/admin/invitations/x/resend"), ("DELETE", "/api/admin/invitations/x")}
+    literal |= {(m, _SETTINGS_SAMPLE.get(p, p)) for m, p in _SETTINGS_MUTATIONS}
     routes = {(m, _normalized(p)) for m, p in _mutating_routes()}
 
-    assert routes - covered == set(), "изменяющая ручка админки без проверки аудита"
+    uncovered = {
+        r for r in routes if not _matrix_covers(r, literal) and r not in _AUDITED_ELSEWHERE and r not in _NOT_AUDITED
+    }
+
+    assert len(routes) > 30, "обход не нашёл маршрутов админки"
+    assert uncovered == set(), "изменяющая ручка админки без проверки аудита"
+    assert not (set(_AUDITED_ELSEWHERE) | _NOT_AUDITED) - routes, "в списках исключений есть несуществующая ручка"
+
+
+def test__audit__elsewhere_actions_exist_in_code() -> None:
+    source = "".join(p.read_text() for p in _USE_CASES.rglob("*.py"))
+
+    missing = [a for a in _AUDITED_ELSEWHERE.values() if f'"{a}"' not in source]
+
+    assert missing == []
 
 
 def _assert_no_link_secrets(response: Any, events: list[Any]) -> None:

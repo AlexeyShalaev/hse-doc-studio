@@ -49,6 +49,7 @@ _DAY_S = 24 * 60 * 60
 
 # Проверка окружения для экрана мастера: имя в экране -> имя проверки в /health/ready.
 ENVIRONMENT_PROBES = {"database": "database", "storage": "s3", "runner": "runners"}
+NO_RUNNERS = "no_runners"
 
 
 async def require_setup_open(request: Request) -> None:
@@ -109,6 +110,14 @@ async def create_admin(body: ServerSetupAdminRequest, request: Request, response
     return LoginResponse(user=session_user(result.user), csrf_token=result.session.csrf_token)
 
 
+def _check(check_id: str, probe: str, results: dict[str, str | None]) -> ServerSetupCheck:
+    """Незарегистрированная проверка и установка совсем без раннеров это «не настроено», а не сбой."""
+    if probe not in results or results[probe] == NO_RUNNERS:
+        return ServerSetupCheck(id=check_id, status="not_configured", reason=None)
+    reason = results[probe]
+    return ServerSetupCheck(id=check_id, status="ok" if reason is None else "fail", reason=reason)
+
+
 @router.get("/environment", response_model=ServerSetupEnvironment)
 async def setup_environment(request: Request, response: Response) -> ServerSetupEnvironment:
     """Состояние базы, хранилища и раннеров для экрана мастера.
@@ -122,14 +131,7 @@ async def setup_environment(request: Request, response: Response) -> ServerSetup
         raise IdentityError(IdentityErrorCode.setup_token_invalid)
     registry: HealthRegistry = getattr(request.app.state, "health_registry", None) or HealthRegistry()
     results = await registry.run(ENVIRONMENT_PROBES.values())
-    checks = [
-        ServerSetupCheck(
-            id=check_id,
-            status="not_configured" if probe not in results else "ok" if results[probe] is None else "fail",
-            reason=results.get(probe),
-        )
-        for check_id, probe in ENVIRONMENT_PROBES.items()
-    ]
+    checks = [_check(check_id, probe, results) for check_id, probe in ENVIRONMENT_PROBES.items()]
     response.headers["Cache-Control"] = "no-store"
     return ServerSetupEnvironment(checks=checks)
 

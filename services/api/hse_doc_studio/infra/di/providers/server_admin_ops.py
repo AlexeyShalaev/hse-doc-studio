@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 
-from hse_doc_studio.api.config import ServerConfig
+from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
+from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.admin import IJobAdminReader
 from hse_doc_studio.core.jobs.queue import IJobQueue
@@ -29,6 +30,11 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     ListInstanceAiProvidersUC,
     UpdateInstanceAiProviderUC,
 )
+from hse_doc_studio.use_cases.admin.ops_install import (
+    GetInstanceSettingsUC,
+    UpdateBuildSettingsUC,
+    UpdateInstanceSettingsUC,
+)
 from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, QueueSummaryUC
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
@@ -40,6 +46,44 @@ from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 
 class ServerAdminOpsProvider(Provider):
     scope = Scope.APP
+
+    @provide
+    def get_instance_env_overrides(self) -> InstanceEnvOverrides:
+        return InstanceEnvOverrides(
+            name=settings.server.instance_name,
+            public_url=settings.auth.public_url,
+            docs_url=settings.server.docs_url,
+            build_timeout_s=settings.jobs.build_timeout_s,
+            artifact_retention_days=settings.jobs.artifact_retention_days,
+        )
+
+    @provide
+    def get_get_instance_settings_uc(
+        self, repo: IInstanceSettingsRepository, env: InstanceEnvOverrides
+    ) -> GetInstanceSettingsUC:
+        return GetInstanceSettingsUC(repo, env)
+
+    @provide
+    def get_update_instance_settings_uc(
+        self,
+        repo: IInstanceSettingsRepository,
+        env: InstanceEnvOverrides,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        read: GetInstanceSettingsUC,
+    ) -> UpdateInstanceSettingsUC:
+        return UpdateInstanceSettingsUC(repo, env, audit, uow, read)
+
+    @provide
+    def get_update_build_settings_uc(
+        self,
+        repo: IInstanceSettingsRepository,
+        env: InstanceEnvOverrides,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        read: GetInstanceSettingsUC,
+    ) -> UpdateBuildSettingsUC:
+        return UpdateBuildSettingsUC(repo, env, audit, uow, read)
 
     @provide
     def get_job_admin_reader(self, sessions: SessionProvider) -> IJobAdminReader:

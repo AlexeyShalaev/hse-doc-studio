@@ -13,7 +13,7 @@ tags:
 | Что | Как |
 |---|---|
 | база | `docker compose exec postgres pg_dump -U studio studio > studio.sql` |
-| исходники проектов | том `api-data` (`projects_root`) |
+| исходники проектов, роли агента и связка OpenPGP | том `api-data` целиком: `projects_root`, `users/**` (роли агента каждого человека, имя папки это хеш id) и `gnupg/` (связка ключей OpenPGP) |
 | блобы, входы и выходы задач | бакет S3 или том `minio-data` |
 | ONLYOFFICE | том `onlyoffice-data`, если сервис включён |
 | ключ `SECRETS_KEY` | **отдельно** от дампов, в менеджере секретов |

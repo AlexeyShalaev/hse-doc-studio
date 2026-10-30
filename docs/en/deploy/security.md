@@ -39,6 +39,7 @@ The runner drives sibling containers through `/var/run/docker.sock`. That equals
 - **User files** are served with `nosniff`, a type allowlist and a CSP sandbox.
 - **Secrets in the database** (git tokens, SMTP password, OIDC secret, AI keys) are encrypted and bound to their record; without `SECRETS_KEY` they cannot be read.
 - **The admin area** can be restricted by host name and network.
+- **The OpenPGP keyring is shared.** Secret keys and uploaded public keys live in one server keyring (`data_dir/gnupg`), not per person: key records are tied to their owner in the database, but the keyring itself is common and signature checks see everyone's keys. If you need separation, do not allow secret keys on the server (`settings/signing`). Agent personas, by contrast, are separate: `data_dir/users/<id hash>/`.
 
 ## Personal data
 

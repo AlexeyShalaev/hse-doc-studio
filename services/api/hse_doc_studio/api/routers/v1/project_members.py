@@ -4,14 +4,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from hse_doc_studio.api.actor import require_server_mode
-from hse_doc_studio.api.schemas.session import ProjectMember, SetProjectMemberRequest
+from hse_doc_studio.api.schemas.session import (
+    ProjectAccessCandidate,
+    ProjectAccessEntry,
+    ProjectMember,
+    SetProjectMemberRequest,
+)
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.access.repositories import ProjectMemberGrant
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
 from hse_doc_studio.use_cases.projects.members import RemoveProjectMemberUC, SetProjectMemberUC
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
@@ -32,6 +38,37 @@ def _principal(raw: str) -> tuple[str, str]:
     if kind not in _KINDS or not principal_id:
         raise IdentityError(IdentityErrorCode.input_invalid)
     return kind, principal_id
+
+
+@router.get("/projects/{project_id}/members", response_model=list[ProjectAccessEntry])
+async def list_project_access(project_id: UUID, request: Request, response: Response) -> list[ProjectAccessEntry]:
+    """Панель «Доступ»: видит любой участник проекта."""
+    response.headers["Cache-Control"] = "no-store"
+    rows = await (await request.state.dishka_container.get(ListProjectAccessUC)).execute(project_id)
+    return [
+        ProjectAccessEntry(
+            subject_kind=r.subject_kind,
+            subject_id=r.subject_id,
+            name=r.name,
+            detail=r.detail,
+            role=r.role.value,
+            locked=r.locked,
+        )
+        for r in rows
+    ]
+
+
+@router.get("/projects/{project_id}/members/candidates", response_model=list[ProjectAccessCandidate])
+async def list_access_candidates(
+    project_id: UUID, request: Request, response: Response, q: str = Query(default="", max_length=120)
+) -> list[ProjectAccessCandidate]:
+    """Кого можно добавить: только люди и группы из общих организаций, по всей установке не перебрать."""
+    response.headers["Cache-Control"] = "no-store"
+    found = await (await request.state.dishka_container.get(ListAccessCandidatesUC)).execute(_actor(), project_id, q)
+    return [
+        ProjectAccessCandidate(subject_kind=c.subject_kind, subject_id=c.subject_id, name=c.name, detail=c.detail)
+        for c in found
+    ]
 
 
 @router.put("/projects/{project_id}/members/{principal}", response_model=ProjectMember)

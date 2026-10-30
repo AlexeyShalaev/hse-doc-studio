@@ -86,3 +86,39 @@ class IProjectMemberRepository(Protocol):
     async def remove_member(self, project_id: UUID, principal_kind: str, principal_id: str) -> bool:
         """False, если такой записи не было. Доступ закрывается сразу: загрузчик прав кэша между запросами не держит."""
         ...
+
+
+@dataclass(frozen=True)
+class ProjectAccessRow:
+    """Строка панели «Доступ»: владелец, организация-владелец, человек или группа. `locked`: здесь не меняется."""
+
+    subject_kind: Literal["user", "group", "org"]
+    subject_id: str
+    name: str
+    detail: str | None
+    role: Role
+    locked: bool
+
+
+@dataclass(frozen=True)
+class ProjectCandidate:
+    """Кого можно добавить в проект: человек или группа, видимые смотрящему."""
+
+    subject_kind: Literal["user", "group"]
+    subject_id: str
+    name: str
+    detail: str | None
+
+
+class IProjectAccessDirectory(Protocol):
+    async def list_access(self, project_id: UUID) -> list[ProjectAccessRow]:
+        """Все, кому открыт проект, в порядке показа; пустой список, если проекта нет."""
+        ...
+
+    async def candidates(self, project_id: UUID, actor_id: str, query: str, limit: int) -> list[ProjectCandidate]:
+        """Группы, затем люди, которых смотрящий вправе увидеть и которых в проекте ещё нет.
+
+        Видимость: организации смотрящего (у проекта организации только она) и люди, которым смотрящий уже
+        открыл свои проекты. Чужих по всей установке не перебрать.
+        """
+        ...

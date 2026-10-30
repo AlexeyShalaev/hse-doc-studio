@@ -63,6 +63,26 @@ class OrgSummary:
 
 
 @dataclass(frozen=True)
+class AdminOrgSummary:
+    """Организация в админке установки: роль смотрящего пуста, если админ в ней не состоит."""
+
+    org: Org
+    my_role: OrgRole | None
+    member_count: int
+    group_count: int
+    project_count: int
+
+
+@dataclass(frozen=True)
+class MyOrgSummary:
+    """Организация в «Настройки / Организации»: названия групп человека и признак единственного владельца."""
+
+    summary: OrgSummary
+    groups: tuple[str, ...]
+    sole_owner: bool
+
+
+@dataclass(frozen=True)
 class Group:
     id: str
     org_id: str

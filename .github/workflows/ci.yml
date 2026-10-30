@@ -117,6 +117,9 @@ jobs:
           python-version: "3.14"
       - name: Sync
         run: uv sync --frozen --all-extras
+      # Миграции на настоящем Postgres 16: upgrade head с пустой базы, откат, дрейф схемы (alembic check).
+      - name: Migrations on Postgres 16
+        run: uv run pytest tests/integration/db/test_migrations.py tests/integration/db/test_upgrade_path.py --no-cov
       # Порог = текущий факт (замерено 80% на полном прогоне). Взят на 2 пункта ниже:
       # часть строк — платформенные ветки win32/darwin, на ubuntu они не исполняются.
       # Поднимать по мере добавления тестов, цель — 90.
