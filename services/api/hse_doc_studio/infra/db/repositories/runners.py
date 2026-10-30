@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
+from hse_doc_studio.core.jobs.runners import (
+    DeclaredAiEndpoint,
+    RegistrationToken,
+    RegistrationTokenPurpose,
+    Runner,
+    RunnerHostKind,
+    RunnerOwnerKind,
+)
 from hse_doc_studio.infra.db.orm.jobs import RunnerRegistrationTokenRow, RunnerRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -28,7 +37,32 @@ def _runner(row: RunnerRow) -> Runner:
         revoked_at=row.revoked_at,
         owner_kind=RunnerOwnerKind(row.owner_kind),
         owner_id=row.owner_id,
+        host_kind=RunnerHostKind(row.host_kind),
+        features=frozenset(row.features),
+        ai_endpoints=_endpoints(row.ai_endpoints),
+        ai_concurrency=row.ai_concurrency,
+        last_seen_ip=row.last_seen_ip,
+        offline_at=row.offline_at,
+        renamed_at=row.renamed_at,
     )
+
+
+def _endpoints(raw: list[Any]) -> tuple[DeclaredAiEndpoint, ...]:
+    # Запись пишет только `/announce` после проверки схемой; чужие ключи и виды тихо пропускаются.
+    found: list[DeclaredAiEndpoint] = []
+    for item in raw:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            continue
+        try:
+            flavor = AiEndpointFlavor(item.get("flavor", AiEndpointFlavor.openai.value))
+        except ValueError:
+            continue
+        found.append(DeclaredAiEndpoint(name=item["name"], flavor=flavor))
+    return tuple(found)
+
+
+def endpoints_json(endpoints: tuple[DeclaredAiEndpoint, ...]) -> list[Any]:
+    return [{"name": e.name, "flavor": e.flavor.value} for e in endpoints]
 
 
 def _token(row: RunnerRegistrationTokenRow) -> RegistrationToken:
@@ -44,6 +78,7 @@ def _token(row: RunnerRegistrationTokenRow) -> RegistrationToken:
         revoked_at=row.revoked_at,
         owner_kind=RunnerOwnerKind(row.owner_kind),
         owner_id=row.owner_id,
+        purpose=RegistrationTokenPurpose(row.purpose),
     )
 
 
@@ -69,6 +104,13 @@ class SqlRunnerRepository:
                     created_at=runner.created_at,
                     last_seen_at=runner.last_seen_at,
                     revoked_at=runner.revoked_at,
+                    host_kind=runner.host_kind.value,
+                    features=sorted(runner.features),
+                    ai_endpoints=endpoints_json(runner.ai_endpoints),
+                    ai_concurrency=runner.ai_concurrency,
+                    last_seen_ip=runner.last_seen_ip,
+                    offline_at=runner.offline_at,
+                    renamed_at=runner.renamed_at,
                 )
             )
             await db.flush()
@@ -187,4 +229,5 @@ def _values(token: RegistrationToken) -> dict[str, object]:
         created_at=token.created_at,
         expires_at=token.expires_at,
         revoked_at=token.revoked_at,
+        purpose=token.purpose.value,
     )

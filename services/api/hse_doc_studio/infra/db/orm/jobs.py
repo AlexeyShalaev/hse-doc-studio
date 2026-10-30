@@ -17,12 +17,14 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
+    Text,
     Uuid,
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from hse_doc_studio.core.secrets import EncryptedColumn, encrypted_columns
 from hse_doc_studio.infra.db.base import Base
 
 
@@ -52,6 +54,37 @@ class JobRow(Base):
             postgresql_where=text("applied_at IS NULL AND state IN ('succeeded', 'failed', 'cancelled', 'timed_out')"),
         ),
         CheckConstraint("attempt >= 0 AND max_attempts >= 1", name="attempts"),
+        # Маршрут: личные раннеры владельца сначала (окно ожидания) или один конкретный раннер (ретрансляция ИИ).
+        Index(
+            "ix_jobs_queued_personal",
+            "route_owner_id",
+            "priority_class",
+            "vtime",
+            "queued_at",
+            "seq",
+            postgresql_where=text("state = 'queued' AND route = 'personal_first'"),
+        ),
+        Index(
+            "ix_jobs_queued_pinned", "target_runner_id", postgresql_where=text("state = 'queued' AND route = 'pinned'")
+        ),
+        # Квоты установки считают только задачи на общих раннерах.
+        Index(
+            "ix_jobs_running_shared_user",
+            "user_id",
+            postgresql_where=text("state = 'running' AND runner_scope = 'shared'"),
+        ),
+        Index(
+            "ix_jobs_running_shared_org",
+            "org_id",
+            postgresql_where=text("state = 'running' AND runner_scope = 'shared'"),
+        ),
+        CheckConstraint("route IN ('shared', 'personal_first', 'pinned')", name="route"),
+        CheckConstraint("(route = 'pinned') = (target_runner_id IS NOT NULL)", name="route_pinned"),
+        CheckConstraint(
+            "(route = 'personal_first') = (route_owner_id IS NOT NULL AND personal_until IS NOT NULL)",
+            name="route_personal",
+        ),
+        CheckConstraint("runner_scope IS NULL OR runner_scope IN ('shared', 'personal')", name="runner_scope"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -80,6 +113,17 @@ class JobRow(Base):
     error_code: Mapped[str | None] = mapped_column(String(64))
     # Когда итог задачи применён к тому и записи сборки; пусто у терминальной задачи значит «довершить при старте».
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    route: Mapped[str] = mapped_column(String(16), nullable=False, server_default="shared")
+    # Хозяин личных раннеров для `personal_first`: владелец проекта на момент постановки.
+    route_owner_id: Mapped[str | None] = mapped_column(String(64))
+    personal_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    target_runner_id: Mapped[UUID | None] = mapped_column(Uuid)
+    # Кто взял текущую попытку (`shared`/`personal`): пишет сервер при выдаче, не раннер.
+    runner_scope: Mapped[str | None] = mapped_column(String(16))
+    route_reason: Mapped[str | None] = mapped_column(String(32))
+    # Сколько метки справедливости потратила постановка; возвращается при выдаче личному раннеру.
+    vcost: Mapped[float] = mapped_column(Double, nullable=False, server_default="1.0")
+    timeout_personal_s: Mapped[float | None] = mapped_column(Double)
 
 
 class FairShareRow(Base):
@@ -111,13 +155,19 @@ class JobRunnerPollRow(Base):
     concurrency: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+_OWNER_CHECK = "(owner_kind = 'instance' AND owner_id IS NULL) OR (owner_kind = 'user' AND owner_id IS NOT NULL)"
+
+
 class RunnerRow(Base):
-    """Раннер установки. Токен только хешем; создатель без внешнего ключа: запись переживает удаление человека."""
+    """Раннер установки или личный раннер человека. Токен только хешем; создатель и хозяин без внешнего ключа:
+    запись переживает удаление человека (его раннеры при удалении отзываются)."""
 
     __tablename__ = "runners"
     __table_args__ = (
         Index("ix_runners_owner", "owner_kind", "owner_id"),
         CheckConstraint("concurrency >= 1", name="runner_concurrency"),
+        CheckConstraint(_OWNER_CHECK, name="owner"),
+        CheckConstraint("ai_concurrency >= 0", name="ai_concurrency"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -134,10 +184,19 @@ class RunnerRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    host_kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="cli")
+    features: Mapped[list[str]] = mapped_column(ARRAY(String(32)), nullable=False, server_default="{}")
+    # Объявленные ИИ-адреса: `{"name", "flavor"}` без URL.
+    ai_endpoints: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    ai_concurrency: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_seen_ip: Mapped[str | None] = mapped_column(String(64))
+    offline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    renamed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RunnerRegistrationTokenRow(Base):
     __tablename__ = "runner_registration_tokens"
+    __table_args__ = (CheckConstraint(_OWNER_CHECK, name="owner"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     owner_kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="instance")
@@ -150,6 +209,32 @@ class RunnerRegistrationTokenRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False, server_default="manual")
+
+
+class RunnerPairingRow(Base):
+    """Сопряжение по коду устройства: код устройства только хешем, секрет выданного токена шифртекстом до выдачи."""
+
+    __tablename__ = "runner_pairings"
+    __table_args__ = (
+        Index("ix_runner_pairings_expires_at", "expires_at"),
+        CheckConstraint("status IN ('pending', 'approved', 'denied', 'delivered', 'expired')", name="status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    device_code_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    user_code: Mapped[str] = mapped_column(String(9), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    host_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    client_ip: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    user_id: Mapped[str | None] = mapped_column(String(64))
+    token_id: Mapped[str | None] = mapped_column(String(64))
+    # Привязка `column_aad("runner_pairings", "token_secret_enc", id)`; стирается при выдаче устройству.
+    token_secret_enc: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class QuotaRow(Base):
@@ -164,3 +249,6 @@ class QuotaRow(Base):
     period: Mapped[str] = mapped_column(String(16), primary_key=True, server_default="none")
     soft_limit: Mapped[int | None] = mapped_column(Integer)
     hard_limit: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+encrypted_columns.register(EncryptedColumn("runner_pairings", "token_secret_enc", pk="id"))

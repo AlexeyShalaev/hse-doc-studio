@@ -58,6 +58,29 @@ class ProjectBuildRunners(StrEnum):
     owner = "owner"
 
 
+@dataclass(frozen=True)
+class ProjectRouteInfo:
+    """Что о проекте нужно маршруту: владелец-человек, политика сборок соавторов и удалён ли он."""
+
+    project_id: UUID
+    owner_user_id: str | None
+    owner_org_id: str | None
+    build_runners: ProjectBuildRunners
+    deleted: bool = False
+
+    @property
+    def is_personal(self) -> bool:
+        return self.owner_user_id is not None
+
+
+class IProjectRoutePolicy(Protocol):
+    async def get(self, project_id: UUID) -> ProjectRouteInfo | None: ...
+
+    async def set_build_runners(self, project_id: UUID, policy: ProjectBuildRunners) -> bool:
+        """False, если проекта нет."""
+        ...
+
+
 PERSONAL_WAIT_MAX_S = 60
 PERSONAL_MAX_PER_USER_LIMIT = 20
 

@@ -27,6 +27,7 @@ from hse_doc_studio.core.jobs.queue import (
     QueuedJob,
     RunnerRef,
 )
+from hse_doc_studio.core.jobs.routing import JobRoute, RouteReason, RunnerScope
 from hse_doc_studio.core.jobs.scheduler import AFFINITY_WAIT, QueueQuota, assign_vtime, retry_available
 from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -66,6 +67,14 @@ def job_from_row(row: JobRow) -> QueuedJob:
         result=row.result,
         error_code=row.error_code,
         seq=row.seq,
+        route=JobRoute(row.route),
+        route_owner_id=row.route_owner_id,
+        personal_until=row.personal_until,
+        target_runner_id=row.target_runner_id,
+        runner_scope=RunnerScope(row.runner_scope) if row.runner_scope is not None else None,
+        route_reason=RouteReason(row.route_reason) if row.route_reason is not None else None,
+        vcost=row.vcost,
+        timeout_personal_s=row.timeout_personal_s,
     )
 
 
