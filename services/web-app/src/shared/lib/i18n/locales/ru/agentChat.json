@@ -139,7 +139,9 @@
       "runner_revoked": "раннер отозван",
       "endpoint_missing": "адрес пропал",
       "disabled": "выключено админом"
-    }
+    },
+    "providerUnavailable": "{{provider}} · {{reason}}",
+    "selectedUnavailable": "Модель недоступна: {{reason}}"
   },
   "persona": {
     "roleTitle": "Роль агента: {{name}}",

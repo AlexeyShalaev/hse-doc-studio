@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { StatusDot } from "@shared/ui";
 import type { AIProviderSource } from "@entities/ai-provider";
 
 export type ModelProviderGroup = {
@@ -111,6 +112,11 @@ export const ModelPicker = ({
     : null;
 
   const triggerLabel = selectedModel || t("model.trigger");
+  // Выбранная модель стала недоступна (раннер ушёл): сказать до отправки, а не ошибкой после.
+  const selectedUnavailable =
+    allRows.find(
+      (r) => r.providerId === selectedProviderId && r.model === selectedModel,
+    )?.unavailable ?? null;
   const activeProviderName =
     primaryAll[0]?.providerName ?? groups[0]?.providerName ?? "";
 
@@ -188,14 +194,33 @@ export const ModelPicker = ({
           handlePick(row);
         }}
       >
-        <Check
-          size={13}
-          className="combo-check"
-          style={{ opacity: isActive ? 1 : 0 }}
-        />
+        {isActive && row.unavailable ? (
+          <TriangleAlert
+            size={13}
+            className="combo-check"
+            style={{ color: "var(--c-warn)" }}
+            aria-hidden="true"
+          />
+        ) : (
+          <Check
+            size={13}
+            className="combo-check"
+            style={{ opacity: isActive ? 1 : 0 }}
+          />
+        )}
         <span className="modelpick-name truncate">{row.model}</span>
-        <span className="modelpick-provider truncate">
-          {row.unavailable ?? row.providerName}
+        {/* Чей провайдер и почему недоступен: имя не пропадает за причиной. */}
+        <span
+          className="modelpick-provider truncate"
+          style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          {row.unavailable && <StatusDot status="offline" hideLabel />}
+          {row.unavailable
+            ? t("model.providerUnavailable", {
+                provider: row.providerName,
+                reason: row.unavailable,
+              })
+            : row.providerName}
         </span>
       </button>
     );
@@ -203,6 +228,29 @@ export const ModelPicker = ({
 
   return (
     <>
+      {selectedUnavailable && (
+        <span
+          className="chip sans"
+          role="status"
+          data-testid="model-picker-unavailable"
+          style={{
+            fontSize: 11,
+            gap: 4,
+            display: "inline-flex",
+            alignItems: "center",
+            color: "var(--c-warn)",
+            maxWidth: 220,
+          }}
+          title={t("model.selectedUnavailable", {
+            reason: selectedUnavailable,
+          })}
+        >
+          <TriangleAlert size={11} aria-hidden="true" />
+          <span className="truncate">
+            {t("model.selectedUnavailable", { reason: selectedUnavailable })}
+          </span>
+        </span>
+      )}
       <button
         ref={triggerRef}
         type="button"

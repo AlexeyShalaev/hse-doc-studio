@@ -137,7 +137,9 @@
       "runner_revoked": "runner revoked",
       "endpoint_missing": "endpoint gone",
       "disabled": "turned off by admin"
-    }
+    },
+    "providerUnavailable": "{{provider}} · {{reason}}",
+    "selectedUnavailable": "Model unavailable: {{reason}}"
   },
   "persona": {
     "roleTitle": "Agent role: {{name}}",

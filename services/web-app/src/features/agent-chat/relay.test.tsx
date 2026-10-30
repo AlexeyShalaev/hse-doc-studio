@@ -110,6 +110,28 @@ describe("ИИ через раннер в чате", () => {
     );
   });
 
+  it("выбранная модель стала недоступна: предупреждение до отправки", () => {
+    render(
+      <ModelPicker
+        groups={[
+          {
+            providerId: "r",
+            providerName: "Ollama на ноутбуке",
+            models: ["qwen2.5:7b"],
+            source: "own",
+            unavailable: "раннер не в сети",
+          },
+        ]}
+        selectedProviderId="r"
+        selectedModel="qwen2.5:7b"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("model-picker-unavailable")).toHaveTextContent(
+      "Модель недоступна: раннер не в сети",
+    );
+  });
+
   it("выбор модели: группы по источнику, неготовые недоступны", async () => {
     const onSelect = vi.fn();
     const { rerender } = render(
@@ -143,6 +165,8 @@ describe("ИИ через раннер в чате", () => {
     expect(screen.queryByTestId("model-picker-group-org")).toBeNull();
     const offline = screen.getByRole("button", { name: /qwen2\.5:7b/ });
     expect(offline).toBeDisabled();
+    // Имя провайдера не пропадает за причиной.
+    expect(offline).toHaveTextContent("Ollama на ноутбуке · раннер не в сети");
     await userEvent.click(
       screen.getByRole("button", { name: /claude-sonnet-4-5/ }),
     );
