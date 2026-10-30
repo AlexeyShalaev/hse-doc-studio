@@ -86,6 +86,6 @@ api на старте под advisory-локом, совместимость в�
 
 Бэкап:
 
-- база: `docker compose exec postgres pg_dump -U studio studio > studio.sql`;
+- база: `docker compose exec -T postgres pg_dump -U studio studio > studio.sql`;
 - тома `minio-data` (блобы и выходы сборки), `api-data` (исходники проектов, `users/**` с ролями агента и `gnupg/` со связкой OpenPGP: копируйте том целиком) и `onlyoffice-data`;
 - `SECRETS_KEY` отдельно от дампов: без него секреты в базе не прочитать.

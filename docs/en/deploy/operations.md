@@ -12,7 +12,7 @@ tags:
 
 | What | How |
 |---|---|
-| database | `docker compose exec postgres pg_dump -U studio studio > studio.sql` |
+| database | `docker compose exec -T postgres pg_dump -U studio studio > studio.sql` |
 | project sources, agent personas and the OpenPGP keyring | the whole `api-data` volume: `projects_root`, `users/**` (each person's agent personas, the folder name is a hash of the id) and `gnupg/` (the OpenPGP keyring) |
 | blobs, job inputs and outputs | the S3 bucket or the `minio-data` volume |
 | ONLYOFFICE | the `onlyoffice-data` volume, if the service is on |
