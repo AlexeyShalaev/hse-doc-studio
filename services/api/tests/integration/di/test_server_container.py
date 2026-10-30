@@ -452,3 +452,44 @@ async def test__server_container__git_credentials_go_through_postgres_and_local_
         PostgresGitRemoteBindings,
         PostgresCredentialUsage,
     ]
+
+
+async def test__server_container__submissions_use_postgres_and_object_archive_while_local_stays_on_volume() -> None:
+    from hse_doc_studio.core.repositories import IPackSubmissionRepository  # noqa: PLC0415
+    from hse_doc_studio.core.submission_archive import (  # noqa: PLC0415
+        DisabledSubmissionArchive,
+        ISubmissionArchive,
+        ISubmissionAudit,
+        NoSubmissionAudit,
+    )
+    from hse_doc_studio.infra.db.repositories.submission import PostgresPackSubmissionRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.submission import JsonPackSubmissionRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.submission.archive import (  # noqa: PLC0415
+        AuditSubmissionDownloads,
+        ObjectSubmissionArchive,
+    )
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_got = [
+                await request.get(t) for t in (IPackSubmissionRepository, ISubmissionArchive, ISubmissionAudit)
+            ]
+        async with server() as request:
+            server_got = [
+                await request.get(t) for t in (IPackSubmissionRepository, ISubmissionArchive, ISubmissionAudit)
+            ]
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert [type(x) for x in local_got] == [JsonPackSubmissionRepository, DisabledSubmissionArchive, NoSubmissionAudit]
+    assert [type(x) for x in server_got] == [
+        PostgresPackSubmissionRepository,
+        ObjectSubmissionArchive,
+        AuditSubmissionDownloads,
+    ]

@@ -13,10 +13,12 @@ class OfficeEditorConfigResponse(BaseModel):
     state:
     - "ready" — контейнер здоров, `config` содержит подписанный токеном конфиг;
     - "image_missing" — образ DS не установлен (opt-in), `image` — что ставить;
-    - "unavailable" — docker недоступен / контейнер не поднялся (`detail`).
+    - "unavailable" — docker недоступен / контейнер не поднялся (`detail`);
+    - "editor_busy" — серверный лимит одновременных сессий исчерпан (`retry_after_s`).
     """
 
-    state: str = Field(description='"ready" | "image_missing" | "unavailable"')
+    state: str = Field(description='"ready" | "image_missing" | "unavailable" | "editor_busy"')
+    retry_after_s: int | None = None
     editor_base_url: str | None = None
     api_js_url: str | None = None
     config: dict[str, Any] | None = None

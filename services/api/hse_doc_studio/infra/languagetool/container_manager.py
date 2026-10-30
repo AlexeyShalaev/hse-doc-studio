@@ -4,6 +4,7 @@ import asyncio
 import socket
 import time
 from asyncio import subprocess as asubprocess
+from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -92,6 +93,9 @@ class LanguageToolContainerManager:
         return self._base_url
 
     # ── lazy lifecycle ─────────────────────────────────────────────────────
+
+    def auth_headers(self) -> Mapping[str, str]:
+        return {}
 
     async def ensure_running(self, image: str) -> str | None:
         """Ensure a healthy LanguageTool container for `image`; return its URL.

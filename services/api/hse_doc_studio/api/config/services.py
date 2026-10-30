@@ -62,6 +62,19 @@ class LanguageToolConfig(BaseModel):
         default=True,
         description="Stop the managed container when the backend shuts down (it auto-starts again on demand).",
     )
+    pool_replicas: list[str] = Field(
+        default_factory=list,
+        description="Серверный режим: URL реплик LanguageTool за общим пулом (…LANGUAGETOOL__POOL_REPLICAS).",
+    )
+    pool_max_inflight: int = Field(default=4, ge=1, description="Одновременных запросов на одну реплику пула.")
+    pool_user_rate_per_s: float = Field(
+        default=2.0, gt=0, description="Пополнение доли пользователя, запросов в секунду."
+    )
+    pool_user_burst: int = Field(default=20, ge=1, description="Запас запросов у пользователя.")
+    pool_circuit_failures: int = Field(default=3, ge=1, description="Подряд неудач реплики до размыкания цепи.")
+    pool_circuit_open_s: float = Field(default=30.0, gt=0, description="Сколько реплика исключена после размыкания.")
+    pool_cache_entries: int = Field(default=2048, ge=0, description="Размер LRU-кэша абзацев прокси, 0 выключает.")
+    pool_max_text_chars: int = Field(default=400_000, ge=1, description="Наибольший текст одного запроса к прокси.")
 
 
 class OfficeConvertConfig(BaseModel):
@@ -172,6 +185,38 @@ class OfficeEditorConfig(BaseModel):
             "host.docker.internal works natively via --add-host=host-gateway; compose deployments may "
             "override with the backend service name."
         ),
+    )
+    pool_replicas: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Server mode: base URLs of the Document Server replicas (empty means the editor is unavailable). "
+            "A document is pinned to one replica by rendezvous hashing of its key."
+        ),
+    )
+    pool_max_sessions: int = Field(
+        default=18,
+        ge=1,
+        description="Concurrent editing sessions across the installation (Community Edition allows about 20).",
+    )
+    pool_session_ttl_s: float = Field(
+        default=1800.0,
+        gt=0,
+        description="A session without a callback or keepalive for this long is released.",
+    )
+    pool_probe_interval_s: float = Field(default=15.0, gt=0, description="How often replica health is re-polled.")
+    pool_retry_after_s: int = Field(default=30, ge=1, description="Retry hint returned with the editor_busy state.")
+    jwt_secret: str = Field(
+        default="",
+        description="Server mode: JWT secret shared with all replicas; derived from the key ring if empty.",
+    )
+    backend_internal_url: str = Field(
+        default="",
+        description="Server mode: base URL of this API as the Document Server replicas see it (document and callback).",
+    )
+    token_ttl_s: int = Field(
+        default=43_200,
+        ge=60,
+        description="Lifetime of the signed document and callback tokens (a long editing session needs saves).",
     )
 
 

@@ -34,8 +34,10 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRow,
 )
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
+from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
+from hse_doc_studio.infra.db.orm.submission import SubmissionRow
 
 __all__ = [
     "AIProviderRow",
@@ -69,12 +71,14 @@ __all__ = [
     "PasswordCredentialRow",
     "ProjectMemberRow",
     "ProjectRow",
+    "ProjectUsageRow",
     "QuotaRow",
     "RegistrationInviteRow",
     "RunnerRegistrationTokenRow",
     "RunnerRow",
     "SessionRow",
     "SigningIdentityRow",
+    "SubmissionRow",
     "UserIdentityRow",
     "UserRow",
     "UserSettingRow",

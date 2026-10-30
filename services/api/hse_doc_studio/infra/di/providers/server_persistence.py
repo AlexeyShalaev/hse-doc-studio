@@ -36,11 +36,18 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import (
+    IProjectQuota,
+    IProjectUsageMeasurer,
+    IProjectUsageStore,
+    QuotaPolicy,
+)
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
     IAIProviderRepository,
     IChatRepository,
     ICompileRepository,
+    IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ISigningIdentityRepository,
@@ -50,6 +57,7 @@ from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
+from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
@@ -66,9 +74,11 @@ from hse_doc_studio.infra.db.repositories.git_credentials import (
 from hse_doc_studio.infra.db.repositories.git_trust import PostgresGitHostSettingsRepository, PostgresKnownHostsStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
+from hse_doc_studio.infra.db.repositories.project_usage import PostgresProjectUsageStore
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
 from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy
+from hse_doc_studio.infra.db.repositories.submission import PostgresPackSubmissionRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
@@ -83,7 +93,9 @@ from hse_doc_studio.infra.projects.catalog_sync import (
     ProjectCatalogMirror,
     ProjectCatalogReconciler,
 )
+from hse_doc_studio.infra.projects.orphan_gc import OrphanGc
 from hse_doc_studio.infra.projects.purge import ProjectPurger
+from hse_doc_studio.infra.projects.usage_meter import ProjectQuotaService, ProjectUsageSweeper, VolumeUsageMeasurer
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
@@ -91,6 +103,7 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
+from hse_doc_studio.infra.submission.archive import AuditSubmissionDownloads, ObjectSubmissionArchive
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
@@ -346,6 +359,18 @@ class ServerPersistenceProvider(Provider):
         return ListProviderModelsUC(ai_provider_repo=repo, model_lister=model_lister, egress=egress)
 
     @provide(override=True)
+    def get_pack_submission_repo(self, sessions: SessionProvider, volume: IProjectVolume) -> IPackSubmissionRepository:
+        return PostgresPackSubmissionRepository(sessions, volume)
+
+    @provide(override=True)
+    def get_submission_archive(self, store: IObjectStore) -> ISubmissionArchive:
+        return ObjectSubmissionArchive(store)
+
+    @provide(override=True)
+    def get_submission_audit(self, audit: IAuditLog) -> ISubmissionAudit:
+        return AuditSubmissionDownloads(audit)
+
+    @provide(override=True)
     def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:
         return GetCloneDefaultsUC(volume.root, locator, uuid_names=True)
 
@@ -360,6 +385,38 @@ class ServerPersistenceProvider(Provider):
         self, sessions: SessionProvider, volume: IProjectVolume, server_config: ServerConfig
     ) -> ProjectPurger:
         return ProjectPurger(sessions, volume, timedelta(days=server_config.project_retention_days))
+
+    @provide
+    def get_project_usage_store(self, sessions: SessionProvider) -> IProjectUsageStore:
+        return PostgresProjectUsageStore(sessions)
+
+    @provide
+    def get_project_usage_measurer(self, volume: IProjectVolume, store: IObjectStore) -> IProjectUsageMeasurer:
+        return VolumeUsageMeasurer(volume, store)
+
+    @provide(override=True)
+    def get_project_quota(
+        self, usage: IProjectUsageStore, measurer: IProjectUsageMeasurer, server_config: ServerConfig
+    ) -> IProjectQuota:
+        policy = QuotaPolicy(server_config.project_quota_bytes, server_config.project_quota_warn_percent / 100)
+        return ProjectQuotaService(usage, measurer, policy)
+
+    @provide
+    def get_project_usage_sweeper(
+        self, usage: IProjectUsageStore, measurer: IProjectUsageMeasurer, server_config: ServerConfig
+    ) -> ProjectUsageSweeper:
+        return ProjectUsageSweeper(
+            usage,
+            measurer,
+            max_age=timedelta(seconds=server_config.project_usage_interval_s),
+            batch_size=server_config.project_usage_batch,
+        )
+
+    @provide
+    def get_orphan_gc(
+        self, sessions: SessionProvider, volume: IProjectVolume, store: IObjectStore, server_config: ServerConfig
+    ) -> OrphanGc:
+        return OrphanGc(sessions, volume, store, timedelta(hours=server_config.orphan_gc_min_age_hours))
 
     @provide
     def get_server_project_storage(

@@ -478,7 +478,7 @@ def deserialize_changelog_entry(data: dict[str, Any]) -> ChangeLogEntry:
 
 
 def serialize_pack_submission_record(record: PackSubmissionRecord) -> dict[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "id": str(record.id),
         "profile_id": record.profile_id,
         "created_at": record.created_at.isoformat(),
@@ -495,6 +495,9 @@ def serialize_pack_submission_record(record: PackSubmissionRecord) -> dict[str, 
         ),
         "archive_format": record.archive_format,
     }
+    if record.artifact_key is not None:
+        data["artifact_key"] = record.artifact_key
+    return data
 
 
 def deserialize_pack_submission_record(data: dict[str, Any], project_folder: Path) -> PackSubmissionRecord:
@@ -525,6 +528,7 @@ def deserialize_pack_submission_record(data: dict[str, Any], project_folder: Pat
         output_path=output_path,
         output_dir=output_dir,
         archive_format=data.get("archive_format", "zip"),
+        artifact_key=data.get("artifact_key"),
     )
 
 

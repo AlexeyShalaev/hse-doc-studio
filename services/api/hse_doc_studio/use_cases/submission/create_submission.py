@@ -37,6 +37,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import SubmissionProfileService
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
+from hse_doc_studio.core.submission_archive import DisabledSubmissionArchive, ISubmissionArchive, archive_media_type
 from hse_doc_studio.core.team import (
     author_by_slug,
     base_dir_for_owner,
@@ -108,7 +109,9 @@ class CreateSubmissionUC:
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        archive: ISubmissionArchive | None = None,
     ) -> None:
+        self._archive = archive or DisabledSubmissionArchive()
         self._project_repo = project_repo
         self._locator = locator
         self._template_repo = template_repo
@@ -272,6 +275,7 @@ class CreateSubmissionUC:
             base_name=base_name,
             profile_id=inp.profile_id,
             archive_format=inp.archive_format,
+            keep_folder=not self._archive.enabled,
         )
         spec = JobSpec(
             id=submission_id,
@@ -286,10 +290,9 @@ class CreateSubmissionUC:
         job = await self._dispatcher.run(spec)
         job.raise_for_error()
         packed = job.data_as(PackResult)
-        # Папку пакета запись хранит рядом с архивом: keep_folder в нагрузке всегда включен.
-        assert packed.folder is not None  # noqa: S101
-        output_path = project_folder / packed.archive.path
-        output_dir = project_folder / packed.folder.path
+        output_path, output_dir, artifact_key = await self._place_archive(
+            project.id, submission_id, project_folder, packed
+        )
 
         if inp.custom_doc_decisions:
             self._remember_custom_doc_decisions(project_folder, inp.custom_doc_decisions)
@@ -304,8 +307,9 @@ class CreateSubmissionUC:
             output_path=output_path,
             output_dir=output_dir,
             archive_format=inp.archive_format,
+            artifact_key=artifact_key,
         )
-        self._submission_repo.save(record)
+        await self._submission_repo.save(record)
 
         entry = ChangeLogEntry(
             id=uuid.uuid4(),
@@ -324,6 +328,22 @@ class CreateSubmissionUC:
         )
 
         return CreateSubmissionOutput(submission=record)
+
+    async def _place_archive(
+        self, project_id: UUID, submission_id: UUID, project_folder: Path, packed: PackResult
+    ) -> tuple[Path, Path | None, str | None]:
+        """Путь архива, папка пакета и ключ в хранилище.
+
+        На сервере архив уходит в хранилище, а папка пакета не создаётся: просмотр идёт через архив.
+        Локально папку пакета запись хранит рядом с архивом: keep_folder в нагрузке включен.
+        """
+        output_path = project_folder / packed.archive.path
+        if self._archive.enabled:
+            key = await self._archive.put(project_id, submission_id, output_path, archive_media_type(output_path.name))
+            output_path.unlink(missing_ok=True)
+            return output_path, None, key
+        assert packed.folder is not None  # noqa: S101
+        return output_path, project_folder / packed.folder.path, None
 
     async def _convert_custom_docs(
         self,

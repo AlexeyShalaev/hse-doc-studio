@@ -27,6 +27,7 @@ from hse_doc_studio.api.observability.install import (
     install_job_reaper,
     install_object_store_health,
     install_project_purge,
+    install_project_usage,
     install_server_observability,
 )
 from hse_doc_studio.api.rate_limit import install_rate_limiter
@@ -228,6 +229,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_bucket_cors(app, container, settings)
         install_project_purge(app, container, settings)
         install_blob_gc(app, container, settings)
+        install_project_usage(app, container, settings)
         install_auth_cleanup(app, container, settings)
         install_audit_retention(app, container, settings)
         install_job_reaper(app, container, settings)

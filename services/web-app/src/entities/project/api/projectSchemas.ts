@@ -75,6 +75,16 @@ export const ProjectResponseSchema = z.object({
       required_studio: z.string().nullish(),
     })
     .optional(),
+  // Только на сервере (GET /projects/{id}): занятое место и предупреждение с 80% предела.
+  storage: z
+    .object({
+      used_bytes: z.number(),
+      limit_bytes: z.number(),
+      warning: z.boolean(),
+      exceeded: z.boolean(),
+      measured_at: z.string(),
+    })
+    .nullish(),
 });
 
 export const CreateProjectRequestSchema = z.object({

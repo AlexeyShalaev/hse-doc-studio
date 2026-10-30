@@ -8,7 +8,8 @@ import httpx
 import structlog
 
 from hse_doc_studio.core.catalog import CheckRule
-from hse_doc_studio.core.enums import CheckSeverity
+from hse_doc_studio.core.enums import CheckSeverity, Lang
+from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.value_objects import CheckLocation, CheckResult
 from hse_doc_studio.infra.checks.base import BaseCheckEngine
@@ -77,6 +78,26 @@ _GENERIC_CMD_RE = re.compile(r"\\[a-zA-Z@]+\*?(?:\[[^\]\n]*\])?")
 _MATH_RE = re.compile(r"\$[^$\n]*\$")
 _ESCAPED_SYMBOL_RE = re.compile(r"\\(?=[^a-zA-Z\n])")
 _REPEATED_DOTS_RE = re.compile(r"\.(?:[ \t]*\.)+")
+
+
+_DEGRADED_STATUSES = frozenset({429, 503})
+
+
+def _unavailable_result(severity: CheckSeverity, rel_file: str) -> CheckResult:
+    en = current_interface_language() is Lang.en
+    message = (
+        "Spelling and grammar check was skipped: the shared LanguageTool service is busy or unavailable. "
+        "Try again later."
+        if en
+        else "Проверка орфографии и грамматики пропущена: общий сервис LanguageTool занят или недоступен. "
+        "Повторите позже."
+    )
+    return CheckResult(
+        rule_id="lt:UNAVAILABLE",
+        severity=CheckSeverity.warn if severity is CheckSeverity.err else severity,
+        message=message,
+        location=CheckLocation(file=rel_file, line=None),
+    )
 
 
 def _drop(m: re.Match[str]) -> str:
@@ -226,7 +247,13 @@ class ExternalCheckEngine(BaseCheckEngine):
 
         url = f"{base_url.rstrip('/')}{_CHECK_PATH}"
         try:
-            response = self._client.post(url, data=self._build_data(prepared, rule.params or {}))
+            response = self._client.post(
+                url, data=self._build_data(prepared, rule.params or {}), headers=dict(self._manager.auth_headers())
+            )
+            if response.status_code in _DEGRADED_STATUSES:
+                # Общий LanguageTool сервера перегружен или недоступен: сборка не падает, автор видит предупреждение.
+                logger.warning("external_engine: languagetool degraded", url=url, status=response.status_code)
+                return [_unavailable_result(severity, self._rel(project_folder, source_path))]
             response.raise_for_status()
             payload = response.json()
         except Exception as exc:  # noqa: BLE001 — LanguageTool is optional; never fail the compile

@@ -24,6 +24,7 @@ from hse_doc_studio.core.jobs.office import (
 )
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, sibling_pdf_path
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
     IFileRepository,
     IProjectIndexRepository,
@@ -34,6 +35,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.value_objects import CustomFileOverride
 from hse_doc_studio.core.vcs.protocols import IVcsEditThrottle, IVcsFolderLocks, IVcsService
+from hse_doc_studio.use_cases.files._quota import reserve_write
 from hse_doc_studio.use_cases.files._vcs_edit import maybe_edit_commit
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -76,7 +78,9 @@ class UploadCustomFileUC:
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota | None = None,
     ) -> None:
+        self._quota: IProjectQuota = quota or NoopProjectQuota()
         self._template_repo = template_repo
         self._file_repo = file_repo
         self._signature_repo = signature_repo
@@ -124,9 +128,20 @@ class UploadCustomFileUC:
         stored_path = f"{upload_dir}/{safe_name}"
 
         async with self._vcs_locks.for_folder(project.folder):
-            if doc.custom_file is not None and doc.custom_file.stored_path != stored_path:
-                self._delete_stored_file(project.folder, doc.custom_file.stored_path)
+            stale_path = (
+                doc.custom_file.stored_path
+                if doc.custom_file is not None and doc.custom_file.stored_path != stored_path
+                else None
+            )
+            freed = self._stored_size(project.folder, stale_path) if stale_path is not None else 0
+            # Сначала проверка предела: отказ не должен стоить пользователю прежнего файла.
+            delta = await reserve_write(
+                self._quota, self._file_repo, project.id, project.folder, stored_path, inp.content, freed
+            )
+            if stale_path is not None:
+                self._delete_stored_file(project.folder, stale_path)
             self._file_repo.write(project.folder, stored_path, inp.content)
+            await self._quota.record_change(project.id, delta)
 
         ext = Path(safe_name).suffix.lower()
         custom_file = CustomFileOverride(
@@ -171,8 +186,21 @@ class UploadCustomFileUC:
 
         return UploadCustomFileOutput(document=updated_doc, preview_generated=preview_generated)
 
+    @staticmethod
+    def _with_preview(stored_path: str) -> tuple[str, str]:
+        return stored_path, str(Path(stored_path).with_suffix(".pdf")).replace("\\", "/")
+
+    def _stored_size(self, project_folder: Path, stored_path: str) -> int:
+        if not self._quota.enabled:
+            return 0
+        return sum(
+            len(self._file_repo.read(project_folder, p))
+            for p in self._with_preview(stored_path)
+            if self._file_repo.exists(project_folder, p)
+        )
+
     def _delete_stored_file(self, project_folder: Path, stored_path: str) -> None:
-        for candidate in (stored_path, str(Path(stored_path).with_suffix(".pdf")).replace("\\", "/")):
+        for candidate in self._with_preview(stored_path):
             try:
                 if self._file_repo.exists(project_folder, candidate):
                     self._file_repo.delete(project_folder, candidate)

@@ -18,6 +18,9 @@ class _FakeManager:
     def __init__(self, base_url: str | None) -> None:
         self.current_base_url = base_url
 
+    def auth_headers(self) -> dict[str, str]:
+        return {}
+
 
 def _engine(base_url: str | None, handler: Any) -> ExternalCheckEngine:
     client = httpx.Client(transport=httpx.MockTransport(handler))
@@ -202,3 +205,35 @@ def test__external_engine__resolves_source_in_doc_subdir(tmp_path: Path) -> None
     assert len(results) == 1
     assert results[0].location.file in ("vkr/vkr.tex", str(Path("vkr/vkr.tex")))
     assert results[0].location.line == 2
+
+
+# ── сервер: заголовки и деградация ─────────────────────────────────────────
+
+
+class _TokenManager(_FakeManager):
+    def auth_headers(self) -> dict[str, str]:
+        return {"X-Job-Token": "tok"}
+
+
+@pytest.mark.unit
+def test__external_engine__sends_manager_auth_headers(tmp_path: Path) -> None:
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    seen: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(request.headers)
+        return httpx.Response(200, json={"matches": []})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    engine = ExternalCheckEngine(container_manager=_TokenManager("http://lt"), client=client)
+    engine.run(_rule(), CheckSeverity.err, tmp_path, "main", "main.tex", None)
+    assert seen["x-job-token"] == "tok"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("status", [429, 503])
+def test__external_engine__shared_service_busy_degrades_to_warning(tmp_path: Path, status: int) -> None:
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    engine = _engine("http://lt", lambda _r: httpx.Response(status, headers={"Retry-After": "3"}))
+    results = engine.run(_rule(), CheckSeverity.err, tmp_path, "main", "main.tex", None)
+    assert [(r.rule_id, r.severity) for r in results] == [("lt:UNAVAILABLE", CheckSeverity.warn)]

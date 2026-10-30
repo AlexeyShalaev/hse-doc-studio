@@ -12,7 +12,7 @@ import httpx
 import structlog
 
 from hse_doc_studio.core import office_jwt
-from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.context import current_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
@@ -23,6 +23,7 @@ from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertReason
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, IOfficeEditorService, sibling_pdf_path
+from hse_doc_studio.core.office_tokens import OfficeTokenPurpose
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -31,6 +32,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.use_cases.files.put_file import PutFileInput, PutFileUC
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_editor.get_editor_config import callback_signature
 from hse_doc_studio.use_cases.office_editor.preview_observer import PreviewRefreshObserver
 from hse_doc_studio.use_cases.office_services.list_office_service_images import (
@@ -58,6 +60,7 @@ class OfficeEditorCallbackInput:
     sig: str
     body: dict[str, Any]
     authorization: str | None = None
+    office_token: str | None = None
 
 
 class OfficeEditorCallbackUC:
@@ -83,7 +86,9 @@ class OfficeEditorCallbackUC:
         dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
+        access: IOfficeAccess | None = None,
     ) -> None:
+        self._access = access or LocalOfficeAccess()
         self._template_repo = template_repo
         self._template_service = ProjectTemplateService()
         self._manager = manager
@@ -94,7 +99,18 @@ class OfficeEditorCallbackUC:
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: OfficeEditorCallbackInput) -> dict[str, int]:
-        self._verify_auth(inp)
+        actor = await self._verify_auth(inp)
+        if actor is None:
+            return await self._handle(inp)
+        previous = current_actor()
+        # Запись и фоновые задачи идут от имени владельца сессии, а не от пустого актора колбэка.
+        set_current_actor(actor)
+        try:
+            return await self._handle(inp)
+        finally:
+            set_current_actor(previous)
+
+    async def _handle(self, inp: OfficeEditorCallbackInput) -> dict[str, int]:
 
         status = inp.body.get("status")
         key = str(inp.body.get("key") or "")
@@ -117,16 +133,30 @@ class OfficeEditorCallbackUC:
 
     # ── auth ────────────────────────────────────────────────────────────────
 
-    def _verify_auth(self, inp: OfficeEditorCallbackInput) -> None:
+    async def _verify_auth(self, inp: OfficeEditorCallbackInput) -> Actor | None:
+        """Подлинность колбэка; в серверном режиме ещё и права владельца сессии на запись сейчас."""
         secret = self._manager.jwt_secret
-        expected = callback_signature(secret, inp.project_id, inp.doc_id)
-        if not hmac.compare_digest(inp.sig, expected):
-            raise PermissionError(
-                localized_error(
-                    "office-editor callback: неверная подпись",
-                    "office-editor callback: bad signature",
+        actor: Actor | None = None
+        if self._access.enforced:
+            if not inp.office_token:
+                raise PermissionError(
+                    localized_error(
+                        "office-editor callback: отсутствует токен сессии",
+                        "office-editor callback: missing session token",
+                    )
                 )
+            actor = await self._access.authorize(
+                inp.office_token, OfficeTokenPurpose.callback, inp.project_id, inp.doc_id
             )
+        else:
+            expected = callback_signature(secret, inp.project_id, inp.doc_id)
+            if not hmac.compare_digest(inp.sig, expected):
+                raise PermissionError(
+                    localized_error(
+                        "office-editor callback: неверная подпись",
+                        "office-editor callback: bad signature",
+                    )
+                )
         token = inp.body.get("token")
         if not token and inp.authorization:
             token = inp.authorization.removeprefix("Bearer ").strip()
@@ -146,6 +176,7 @@ class OfficeEditorCallbackUC:
                     f"office-editor callback: invalid JWT: {exc}",
                 )
             ) from exc
+        return actor
 
     # ── save (status 2 / 6) ─────────────────────────────────────────────────
 
@@ -184,7 +215,13 @@ class OfficeEditorCallbackUC:
         else:
             _source_file, output_file = self._template_service.resolve_instance_source(project, doc, version)
 
-        content = await asyncio.to_thread(self._download, self._rewrite_to_published(raw_url))
+        if self._access.enforced and inp.office_token:
+            # Путь сессии не должен разойтись с текущим: шаблон или вариант могли смениться за время правки.
+            await self._access.authorize(
+                inp.office_token, OfficeTokenPurpose.callback, inp.project_id, inp.doc_id, output_file
+            )
+
+        content = await asyncio.to_thread(self._download, self._rewrite_to_published(raw_url, key))
         await self._put_file_uc.execute(PutFileInput(project_id=inp.project_id, path=output_file, content=content))
         logger.info(
             "office-editor: document saved from DS",
@@ -229,10 +266,10 @@ class OfficeEditorCallbackUC:
         except Exception as exc:  # noqa: BLE001 — предпросмотр не важнее сохранения
             logger.warning("office-editor: preview refresh failed", path=output_file, exc=str(exc))
 
-    def _rewrite_to_published(self, raw_url: str) -> str:
+    def _rewrite_to_published(self, raw_url: str, key: str) -> str:
         """DS отдаёт self-ссылку со своим ВНУТРЕННИМ хостом — мы достаём его
-        контейнер только по опубликованному 127.0.0.1:<port>."""
-        base = self._manager.base_url
+        контейнер только по опубликованному 127.0.0.1:<port> (у пула по адресу реплики документа)."""
+        base = self._manager.base_url_for(key) or self._manager.base_url
         if base is None:
             return raw_url
         base_parts = urlsplit(base)

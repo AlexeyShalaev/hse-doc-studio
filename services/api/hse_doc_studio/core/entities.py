@@ -139,6 +139,8 @@ class PackSubmissionRecord:
     output_path: Path
     output_dir: Path | None = None
     archive_format: str = "zip"
+    # Ключ архива в объектном хранилище (серверный режим); тогда output_dir не создаётся.
+    artifact_key: str | None = None
 
 
 @dataclass

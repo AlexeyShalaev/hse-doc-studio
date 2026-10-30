@@ -141,6 +141,13 @@ class OfficeEditorManager:
 
     # ── editor sessions / keepalive ─────────────────────────────────────────
 
+    def base_url_for(self, key: str) -> str | None:  # noqa: ARG002 — один контейнер на все документы
+        return self._base_url
+
+    def try_open_session(self, key: str, doc_id: str | None = None) -> bool:  # noqa: ARG002
+        """Локальный контейнер сессии не считает: лимита нет."""
+        return True
+
     def mark_active(self, key: str) -> None:
         """DS reported an open editing session for this document key."""
         if key:
@@ -152,7 +159,7 @@ class OfficeEditorManager:
         self._active_keys.discard(key)
         self._last_used = time.monotonic()
 
-    def touch(self) -> None:
+    def touch(self, doc_id: str | None = None) -> None:  # noqa: ARG002
         """Keepalive from an open editor tab — postpone the idle reaper."""
         self._last_used = time.monotonic()
 

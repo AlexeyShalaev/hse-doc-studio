@@ -12,6 +12,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core import office_jwt
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.office import OFFICE_DOCUMENT_TYPES, IBackendReachability, IOfficeEditorService
@@ -23,6 +24,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_editor.ai_settings import build_ai_plugin_settings
 from hse_doc_studio.use_cases.office_services.list_office_service_images import (
     resolve_active_office_image,
@@ -52,7 +54,7 @@ class GetOfficeEditorConfigInput:
 
 @dataclass
 class GetOfficeEditorConfigOutput:
-    # "ready" | "image_missing" | "unavailable" — см. контракт office-editor.
+    # "ready" | "image_missing" | "unavailable" | "editor_busy" — см. контракт office-editor.
     state: str
     editor_base_url: str | None = None
     api_js_url: str | None = None
@@ -61,6 +63,8 @@ class GetOfficeEditorConfigOutput:
     detail: str | None = None
     # Константа: при image_missing фронт ведёт в эту секцию настроек.
     settings_section: str = _SETTINGS_SECTION
+    # При editor_busy: через сколько секунд повторить попытку.
+    retry_after_s: int | None = None
 
 
 def build_document_key(doc_id: str, mtime_ns: int, size: int) -> str:
@@ -101,7 +105,11 @@ class GetOfficeEditorConfigUC:
         reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository | None = None,
+        access: IOfficeAccess | None = None,
+        busy_retry_after_s: int = 30,
     ) -> None:
+        self._access = access or LocalOfficeAccess()
+        self._busy_retry_after_s = busy_retry_after_s
         self._template_repo = template_repo
         self._template_service = ProjectTemplateService()
         self._manager = manager
@@ -120,10 +128,7 @@ class GetOfficeEditorConfigUC:
         _source_file, output_file = self._template_service.resolve_instance_source(project, doc, version)
         return output_file
 
-    async def execute(self, inp: GetOfficeEditorConfigInput) -> GetOfficeEditorConfigOutput:
-        result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
-        project = result.project
-
+    def _locate(self, project: Any, inp: GetOfficeEditorConfigInput) -> tuple[Any, Any]:
         doc = next((d for d in project.documents if d.id == inp.doc_id), None)
         if doc is None:
             raise NotFoundError(
@@ -141,6 +146,13 @@ class GetOfficeEditorConfigUC:
                     f"Template version not found for project {inp.project_id}",
                 )
             )
+        return doc, version
+
+    async def execute(self, inp: GetOfficeEditorConfigInput) -> GetOfficeEditorConfigOutput:
+        result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
+        project = result.project
+
+        doc, version = self._locate(project, inp)
         doc_def = self._template_service.find_definition(version, doc)
         output_file = self._resolve_output_file(project, doc, version)
         doc_type = OFFICE_DOCUMENT_TYPES.get(PurePosixPath(output_file).suffix.lower())
@@ -175,31 +187,43 @@ class GetOfficeEditorConfigUC:
                 detail="Docker is unavailable or the Document Server container failed to start",
             )
 
-        await self._sync_ai_plugin(base)
-
         stat = artifact.stat()
         key = build_document_key(inp.doc_id, stat.st_mtime_ns, stat.st_size)
+        tokens = await self._access.issue(inp.project_id, inp.doc_id, output_file)
+        # Липкая реплика пула определяется ключом документа; у локального контейнера адрес один.
+        base = self._manager.base_url_for(key) or base
+        if not self._manager.try_open_session(key, inp.doc_id):
+            return GetOfficeEditorConfigOutput(state="editor_busy", retry_after_s=self._busy_retry_after_s)
+
+        await self._sync_ai_plugin(base)
+
         title = self._resolve_title(doc, doc_def, doc.chosen_variant, output_file)
         secret = self._manager.jwt_secret
         sig = callback_signature(secret, inp.project_id, inp.doc_id)
         backend_base = (await self._reachability.base_url()).rstrip("/")
+        document_url = f"{backend_base}/api/v1/projects/{inp.project_id}/files/{quote(output_file)}"
         callback_url = (
             f"{backend_base}/api/v1/office-editor/callback"
             f"?project_id={inp.project_id}&doc_id={quote(inp.doc_id)}&sig={sig}"
         )
+        if tokens is not None:
+            document_url = f"{document_url}?office_token={tokens.document}"
+            callback_url = f"{callback_url}&office_token={tokens.callback}"
+        actor = current_actor()
+        editor_user_id = actor.id if tokens is not None and actor is not None and actor.id else "hse-studio"
         config: dict[str, Any] = {
             "document": {
                 "fileType": file_type,
                 "key": key,
                 "title": title,
-                "url": f"{backend_base}/api/v1/projects/{inp.project_id}/files/{quote(output_file)}",
+                "url": document_url,
             },
             "documentType": document_type,
             "editorConfig": {
                 "mode": "edit",
                 "lang": current_interface_language().value,
                 "callbackUrl": callback_url,
-                "user": {"id": "hse-studio", "name": self._resolve_user_name(project, doc)},
+                "user": {"id": editor_user_id, "name": self._resolve_user_name(project, doc)},
                 "customization": {
                     "autosave": True,
                     "forcesave": True,

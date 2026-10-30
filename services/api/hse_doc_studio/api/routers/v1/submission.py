@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.catalog import (
@@ -20,6 +21,7 @@ from hse_doc_studio.api.schemas.submission import (
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, SubmissionProfile
 from hse_doc_studio.core.entities import PackSubmissionRecord
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.submission_archive import archive_media_type
 from hse_doc_studio.infra.submission.pack_executor import is_archive_format_available
 from hse_doc_studio.use_cases.submission.create_submission import (
     CreateSubmissionInput,
@@ -197,35 +199,27 @@ async def list_submissions(
     return [_map_record(item.record, item.size_bytes, item.profile_name) for item in result.items]
 
 
-_ARCHIVE_MEDIA_TYPES = (
-    (".zip", "application/zip"),
-    (".tar.gz", "application/gzip"),
-    (".7z", "application/x-7z-compressed"),
-    (".rar", "application/vnd.rar"),
-)
-
-
-def _archive_media_type(name: str) -> str:
-    for ext, media_type in _ARCHIVE_MEDIA_TYPES:
-        if name.endswith(ext):
-            return media_type
-    return "application/octet-stream"
-
-
 @router.get("/projects/{project_id}/submissions/{submission_id}/download")
 async def download_submission(
     project_id: UUID,
     submission_id: UUID,
     uc: FromDishka[GetSubmissionFileUC],
-) -> FileResponse:
+) -> Response:
     try:
         result = await uc.execute(GetSubmissionFileInput(project_id=project_id, submission_id=submission_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return FileResponse(
-        path=str(result.path),
-        media_type=_archive_media_type(result.download_name),
-        filename=result.download_name,
-    )
+    if result.redirect_url is not None:
+        # Временная ссылка на хранилище: тело отдаёт оно, права проверил гард, скачивание уже записано в аудит.
+        return RedirectResponse(result.redirect_url, status_code=307, headers={"Cache-Control": "no-store"})
+    media_type = archive_media_type(result.download_name)
+    if result.stream is not None:
+        disposition = {"Content-Disposition": _attachment(result.download_name), "Cache-Control": "no-store"}
+        return StreamingResponse(result.stream, media_type=media_type, headers=disposition)
+    return FileResponse(path=str(result.path), media_type=media_type, filename=result.download_name)
+
+
+def _attachment(name: str) -> str:
+    return f"attachment; filename*=UTF-8''{quote(name)}"

@@ -65,6 +65,7 @@ from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -102,6 +103,7 @@ from hse_doc_studio.core.signatures.ports import (
     IPublicKeyExporter,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -337,6 +339,7 @@ from hse_doc_studio.use_cases.languagetool.set_active_languagetool_image import 
 )
 
 # --- Office editor (ONLYOFFICE Document Server) ---
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess
 from hse_doc_studio.use_cases.office_editor.get_editor_config import GetOfficeEditorConfigUC
 from hse_doc_studio.use_cases.office_editor.handle_callback import OfficeEditorCallbackUC
 
@@ -743,6 +746,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> UploadCustomFileUC:
         return UploadCustomFileUC(
             project_repo=project_repo,
@@ -754,6 +758,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide
@@ -1337,6 +1342,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> PutFileUC:
         return PutFileUC(
             project_repo=project_repo,
@@ -1345,6 +1351,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide
@@ -2745,6 +2752,7 @@ class UseCaseProvider(Provider):
         reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository,
+        office_access: IOfficeAccess,
     ) -> GetOfficeEditorConfigUC:
         # reachability — как DS-контейнер достучится до нас: по общей сети или
         # через хостовый шлюз, выясняется в рантайме.
@@ -2758,6 +2766,8 @@ class UseCaseProvider(Provider):
             reachability=reachability,
             settings_repo=settings_repo,
             ai_provider_repo=ai_provider_repo,
+            access=office_access,
+            busy_retry_after_s=settings.office_editor.pool_retry_after_s,
         )
 
     @provide
@@ -2771,6 +2781,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
+        office_access: IOfficeAccess,
     ) -> OfficeEditorCallbackUC:
         # Запись сохранённого документа идёт через put-file: guard путей +
         # edit-коммит в ProjectVCS — как у любой другой правки файла.
@@ -2785,6 +2796,7 @@ class UseCaseProvider(Provider):
             dispatcher=dispatcher,
             settings_repo=settings_repo,
             client=client,
+            access=office_access,
         )
 
     # ------------------------------------------------------------------ Office services (images)
@@ -3156,6 +3168,7 @@ class UseCaseProvider(Provider):
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        archive: ISubmissionArchive,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -3171,6 +3184,7 @@ class UseCaseProvider(Provider):
             render_form_uc=render_form_uc,
             dispatcher=dispatcher,
             file_probes=file_probes,
+            archive=archive,
         )
 
     @provide
@@ -3180,12 +3194,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
         template_repo: ITemplateRepository,
+        archive: ISubmissionArchive,
     ) -> ListSubmissionsUC:
         return ListSubmissionsUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
             template_repo=template_repo,
+            archive=archive,
         )
 
     @provide
@@ -3194,11 +3210,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
+        archive: ISubmissionArchive,
+        audit: ISubmissionAudit,
     ) -> GetSubmissionFileUC:
         return GetSubmissionFileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
+            archive=archive,
+            audit=audit,
         )
 
     # ------------------------------------------------------------------ Chat (AI agent)
