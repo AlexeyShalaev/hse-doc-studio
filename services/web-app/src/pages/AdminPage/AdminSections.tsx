@@ -96,6 +96,10 @@ const useNumber = (): ((value: number) => string) => {
   return (value) => fmt.format(value);
 };
 
+// Ошибка только без данных: неудачный фоновый опрос не стирает прежнее значение плитки.
+const failedEmpty = (q: { data: unknown; isError: boolean }) =>
+  q.data === undefined && q.isError;
+
 const Kpis = () => {
   const { t } = useTranslation("adminShell");
   const num = useNumber();
@@ -144,7 +148,7 @@ const Kpis = () => {
         icon={<Users size={14} aria-hidden="true" />}
         label={t("overview.kpi.people")}
         loading={users.isPending && !users.isError}
-        error={users.isError ? failed : undefined}
+        error={failedEmpty(users) ? failed : undefined}
         value={num(users.data?.total ?? 0)}
         tone={waiting > 0 ? "warning" : "neutral"}
         secondary={
@@ -159,7 +163,7 @@ const Kpis = () => {
         icon={<Server size={14} aria-hidden="true" />}
         label={t("overview.kpi.runners")}
         loading={runners.isPending && !runners.isError}
-        error={runners.isError ? failed : undefined}
+        error={failedEmpty(runners) ? failed : undefined}
         value={num(online)}
         unit={
           live.length > 0
@@ -197,7 +201,7 @@ const Kpis = () => {
         icon={<HardDrive size={14} aria-hidden="true" />}
         label={t("overview.kpi.storage")}
         loading={storage.isPending && !storage.isError}
-        error={storage.isError ? failed : undefined}
+        error={failedEmpty(storage) ? failed : undefined}
         value={disk ? formatFileSize(usedBytes ?? disk.blob_bytes) : ""}
         progress={used}
         progressTone={storageTone}
@@ -219,7 +223,7 @@ const Kpis = () => {
         icon={<Activity size={14} aria-hidden="true" />}
         label={t("overview.kpi.services")}
         loading={services.isPending && !services.isError}
-        error={services.isError ? failed : undefined}
+        error={failedEmpty(services) ? failed : undefined}
         value={num(okServices)}
         unit={t("overview.kpi.servicesOf", {
           total: num((services.data?.length ?? 0) - offServices),
