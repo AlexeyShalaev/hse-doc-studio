@@ -377,6 +377,8 @@ export const AdminAuditEventSchema = z.strictObject({
 export const AdminAuditPageSchema = z.strictObject({
   items: z.array(AdminAuditEventSchema),
   next_cursor: z.string().nullable(),
+  // Оценка числа записей; только без фильтров, иначе null.
+  total_estimate: z.number().int().nullable().optional(),
 });
 export const CreateAdminInvitationRequestSchema = z.strictObject({
   email: z.string().nullable(),
@@ -656,6 +658,8 @@ export const AdminJobSchema = z.strictObject({
 export const AdminJobPageSchema = z.strictObject({
   items: z.array(AdminJobSchema),
   next_cursor: z.string().nullable(),
+  // Оценка числа задач; только без фильтров, иначе null.
+  total_estimate: z.number().int().nullable().optional(),
 });
 export const AdminQueueSummarySchema = z.strictObject({
   by_state: z.record(z.string(), z.number().int()),

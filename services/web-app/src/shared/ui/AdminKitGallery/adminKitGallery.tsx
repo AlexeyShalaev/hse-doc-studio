@@ -25,6 +25,7 @@ import { ListRow, Section, SectionList, SettingRow } from "../Section";
 import { StatusDot, type StatusDotStatus } from "../StatusDot";
 import { StickySaveBar } from "../StickySaveBar";
 import { TableSkeleton } from "../TableSkeleton";
+import { getServerListGallery } from "./serverListGallery";
 
 // Группа галереи /dev/server-screens: примитивы админских экранов во всех
 // состояниях. Данные демонстрационные.
@@ -583,6 +584,7 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
       },
     ],
   },
+  ...getServerListGallery(),
   {
     id: "admin-confirm-by-name",
     title: "Подтверждение вводом названия",

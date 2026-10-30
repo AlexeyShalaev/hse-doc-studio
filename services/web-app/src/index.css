@@ -4914,6 +4914,484 @@
   margin-right: 2px;
   white-space: nowrap;
 }
+.fbar-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding-top: 3px;
+}
+.fbar-active {
+  flex: 1 0 100%;
+}
+/* ── поле поиска серверного списка ── */
+.search-input {
+  position: relative;
+}
+.search-input > .input {
+  width: 100%;
+  padding-left: 30px;
+  padding-right: 52px;
+}
+.search-input > .input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-3);
+  pointer-events: none;
+}
+.search-input-end {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-2);
+}
+.search-input-clear {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-1);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.search-input-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.search-input-clear:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* ── фильтр-кнопка с выпадающим списком ── */
+.fmenu {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  font-size: 12px;
+  color: var(--fg-1);
+  max-width: 320px;
+}
+.fmenu.is-active {
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.fmenu-trigger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 10px;
+  cursor: pointer;
+  min-width: 0;
+  border-radius: var(--r-pill);
+}
+.fmenu.is-active .fmenu-trigger {
+  padding-right: 4px;
+}
+.fmenu-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.fmenu-label {
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.fmenu.is-active .fmenu-label {
+  color: var(--fg-1);
+}
+.fmenu-sep {
+  margin-left: -4px;
+  color: var(--fg-2);
+}
+.fmenu-value {
+  color: var(--accent);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.fmenu-clear {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 3px;
+  border-radius: 50%;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.fmenu-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.fmenu-clear:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.fmenu-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.fmenu-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-1);
+  font-size: 12.5px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.fmenu-item:hover,
+.fmenu-item:focus-visible {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.fmenu-box {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  color: var(--accent-ink);
+}
+.fmenu-box.is-radio {
+  border-radius: 50%;
+}
+.fmenu-box[data-on="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.fmenu-text {
+  flex: 1;
+  min-width: 0;
+}
+.fmenu-count {
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+.fmenu-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px;
+  border-top: 1px solid var(--border);
+}
+/* ── период в журналах ── */
+.drange-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 10px 4px;
+}
+.drange-presets > .chip {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.drange-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+/* ── выбранные условия под панелью фильтров ── */
+.factive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.factive-total {
+  color: var(--fg-2);
+  margin-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.factive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 4px 0 9px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  max-width: 280px;
+}
+.factive-name {
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.factive-value {
+  color: var(--fg-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.factive-chip > button {
+  all: unset;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.factive-chip > button:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.factive-chip > button:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* ── листание ── */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.pager-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.pager-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pager-icon {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+.pager-of {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Выше правила .ui-console .input: кнопки листания ниже обычных полей. */
+.pager .pager-input.input {
+  box-sizing: border-box;
+  height: 26px;
+  min-height: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pager .pager-size > .input.input {
+  box-sizing: border-box;
+  height: 26px;
+  min-height: 0;
+  padding-block: 0;
+  font-size: 12px;
+  min-width: 110px;
+}
+.pager-end {
+  color: var(--fg-3);
+}
+/* Подсказка о сортировке видна при наведении на заголовок. */
+.dt-sort-hint {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+th:hover .dt-sort-hint,
+th button:focus-visible .dt-sort-hint {
+  opacity: 0.6;
+}
+/* ── пикер: поиск на сервере ── */
+.picker-field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.picker-trigger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.picker-trigger-detail {
+  color: var(--fg-2);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.picker-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--fg-2);
+}
+.picker-field:has(.picker-clear) .picker-chevron {
+  margin-right: 22px;
+}
+.picker-clear {
+  all: unset;
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-1);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.picker-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.picker-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, var(--radix-popover-content-available-height, 420px));
+}
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-3);
+}
+.picker-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-0);
+  font-size: 12.5px;
+  outline: none;
+}
+.picker-input::placeholder {
+  color: var(--fg-3);
+}
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.picker-option.is-active {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.picker-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.picker-option-name,
+.picker-option-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-option-detail {
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+.picker-kind {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-1);
+  background: var(--bg-2);
+  color: var(--fg-2);
+}
+.picker-note {
+  padding: 14px 12px;
+  text-align: center;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.picker-note.is-error {
+  color: var(--c-err);
+}
+.picker-more {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
 /* ── секрет, показанный один раз ── */
 .secret-once {
   display: flex;

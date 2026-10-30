@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { X } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
-import { useDebouncedValue } from "../../lib/useDebouncedValue";
+import { localeTag } from "../../lib/i18n/localeTag";
+import { SearchInput } from "../SearchInput";
 import { Select } from "../Select";
+import { ActiveFilters, type ActiveFilter } from "./ActiveFilters";
 
 // Панель над таблицей: поиск с задержкой и группы фильтров-чипов. Каждая группа
-// выбирает одно значение; пустое значение значит «все».
+// выбирает одно значение; пустое значение значит «все». Остальные фильтры
+// (FilterMenu, DateRangeFilter, PickerFilter) встают в extra, а строка active
+// под панелью показывает выбранные условия с «Сбросить».
 
 export type FilterOption = { value: string; label: string; count?: number };
 
@@ -36,6 +40,17 @@ export type FilterBarProps = {
   filters?: FilterGroup[];
   /** Сбросить поиск и все фильтры. */
   onReset?: () => void;
+  /** Идёт запрос: в поле поиска крутилка. */
+  busy?: boolean;
+  /** Свои фильтры после выпадающих списков: FilterMenu, DateRangeFilter, PickerFilter. */
+  extra?: ReactNode;
+  /**
+   * Выбранные условия строкой под панелью. С ней «Сбросить» живёт там, а не
+   * в конце чипов.
+   */
+  active?: ActiveFilter[];
+  /** Сколько нашлось: пишется в строке выбранных условий. */
+  total?: number | null;
   className?: string;
 };
 
@@ -47,29 +62,14 @@ export const FilterBar = ({
   debounceMs = 300,
   filters = [],
   onReset,
+  busy = false,
+  extra,
+  active: summary,
+  total,
   className,
 }: FilterBarProps) => {
   const { t } = useTranslation("uiPrimitives");
-  const [text, setText] = useState(search);
-  const debounced = useDebouncedValue(text, debounceMs);
-  const last = useRef(search);
-
-  // Внешний сброс поиска возвращает поле в исходное состояние.
-  useEffect(() => {
-    if (search !== last.current) {
-      last.current = search;
-      setText(search);
-    }
-  }, [search]);
-
-  useEffect(() => {
-    if (debounced !== last.current) {
-      last.current = debounced;
-      onSearchChange(debounced);
-    }
-  }, [debounced, onSearchChange]);
-
-  const active = text !== "" || filters.some((f) => f.value !== "");
+  const active = search !== "" || filters.some((f) => f.value !== "");
   // Когда групп несколько, у каждой видна подпись: иначе непонятно, к чему
   // относится каждая кнопка «Все».
   const labelled = filters.length > 1;
@@ -81,15 +81,8 @@ export const FilterBar = ({
   // чип «Все», поиск очищает крестик в поле. Встаёт в конец последнего ряда
   // чипов, так что его появление ничего не двигает, кроме него самого.
   const reset =
-    onReset && active && filters.length > 1 ? (
-      <button
-        type="button"
-        className="btn ghost sm"
-        onClick={() => {
-          setText("");
-          onReset();
-        }}
-      >
+    onReset && active && filters.length > 1 && summary === undefined ? (
+      <button type="button" className="btn ghost sm" onClick={onReset}>
         <X size={12} aria-hidden="true" />
         {t("filterBar.reset")}
       </button>
@@ -98,31 +91,15 @@ export const FilterBar = ({
   return (
     <div role="search" className={clsx("fbar", className)}>
       {/* Ширина поиска постоянная: выбор фильтра не сдвигает ряд. */}
-      <div className="fbar-search">
-        <Search
-          size={14}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            left: 10,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--fg-3)",
-            pointerEvents: "none",
-          }}
-        />
-        <input
-          type="search"
-          className="input"
-          value={text}
-          onChange={(event) => {
-            setText(event.target.value);
-          }}
-          placeholder={searchPlaceholder ?? t("filterBar.searchPlaceholder")}
-          aria-label={searchLabel ?? t("filterBar.search")}
-          style={{ width: "100%", paddingLeft: 30 }}
-        />
-      </div>
+      <SearchInput
+        className="fbar-search"
+        value={search}
+        onChange={onSearchChange}
+        placeholder={searchPlaceholder}
+        label={searchLabel}
+        debounceMs={debounceMs}
+        busy={busy}
+      />
       {selects.map((group) => (
         <div key={group.id} className="fbar-group fbar-select">
           <span className="fbar-caption" aria-hidden="true">
@@ -139,7 +116,9 @@ export const FilterBar = ({
               ...group.options.map((o) => ({
                 value: o.value,
                 label:
-                  o.count != null ? `${o.label} · ${String(o.count)}` : o.label,
+                  o.count != null
+                    ? `${o.label} · ${o.count.toLocaleString(localeTag())}`
+                    : o.label,
               })),
             ]}
           />
@@ -182,7 +161,7 @@ export const FilterBar = ({
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {option.count}
+                  {option.count.toLocaleString(localeTag())}
                 </span>
               )}
             </Chip>
@@ -190,7 +169,13 @@ export const FilterBar = ({
           {index === chips.length - 1 && reset}
         </div>
       ))}
+      {extra && <div className="fbar-extra">{extra}</div>}
       {chips.length === 0 && reset}
+      {summary && summary.length > 0 && onReset && (
+        <div className="fbar-active">
+          <ActiveFilters items={summary} onReset={onReset} total={total} />
+        </div>
+      )}
     </div>
   );
 };

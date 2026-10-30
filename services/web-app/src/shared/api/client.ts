@@ -99,6 +99,9 @@ export const createApiClient = (options: ApiClientOptions): AxiosInstance => {
     baseURL: options.baseURL,
     headers: { "Content-Type": "application/json" },
     timeout: options.timeout ?? 30_000,
+    // Несколько значений фильтра уходят повтором параметра (status=a&status=b),
+    // как их ждёт FastAPI, а не в виде status[]=a.
+    paramsSerializer: { indexes: null },
     // Серверный режим держит сессию в HttpOnly-куке. В локальном режиме кук нет,
     // флаг ничего не меняет.
     withCredentials: true,
