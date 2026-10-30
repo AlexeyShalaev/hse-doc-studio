@@ -172,14 +172,14 @@ class AiRelayExecutor:
                 await timer
 
     async def _fetch_body(self, envelope: JobEnvelope, payload: AiRelayPayload) -> bytes:
-        if payload.method is RelayMethod.get:
-            return b""
+        # Забрать тело нужно и у GET: по этому вызову сервер узнаёт, что раннер взялся за запрос.
         try:
             body, sha = await self._client.relay_request(str(envelope.spec.id), envelope.job_token)
         except (RunnerApiError, RunnerUnreachable) as exc:
             raise _failure(RelayErrorCode.relay_unavailable, f"relay request body: {exc}") from exc
         digest = hashlib.sha256(body).hexdigest()
-        if len(body) != payload.body_size or digest != payload.body_sha256 or (sha is not None and sha != digest):
+        expected = payload.body_sha256 if payload.method is RelayMethod.post else hashlib.sha256(b"").hexdigest()
+        if len(body) != payload.body_size or digest != expected or (sha is not None and sha != digest):
             raise _failure(RelayErrorCode.relay_unavailable, "relay request body does not match its hash")
         return body
 
