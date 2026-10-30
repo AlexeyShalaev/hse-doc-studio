@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
+from hse_doc_studio.core.identity.entities import (
+    User,
+    UserFacets,
+    UserIdentity,
+    UserListing,
+    UserPickQuery,
+    UserQuery,
+    UserStatus,
+)
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
+from hse_doc_studio.core.listing import Found, Picked
+
+from tests.fakes.listing import matches, ordered, page, picked
 
 
 class InMemoryIdentityStore:
@@ -75,11 +86,20 @@ class InMemoryUserRepository:
 
 
 class InMemoryUserDirectory:
-    """Список пользователей над общим хранилищем; число проектов задаёт тест через `project_counts`."""
+    """Список пользователей над общим хранилищем; число проектов задаёт тест через `project_counts`,
+    членство в организациях (slug -> id людей) и группах (id -> id людей) через `org_members` и `group_members`."""
 
-    def __init__(self, store: InMemoryIdentityStore, project_counts: Mapping[str, int] | None = None) -> None:
+    def __init__(
+        self,
+        store: InMemoryIdentityStore,
+        project_counts: Mapping[str, int] | None = None,
+        org_members: Mapping[str, set[str]] | None = None,
+        group_members: Mapping[str, set[str]] | None = None,
+    ) -> None:
         self._store = store
         self.project_counts: dict[str, int] = dict(project_counts or {})
+        self.org_members: dict[str, set[str]] = dict(org_members or {})
+        self.group_members: dict[str, set[str]] = dict(group_members or {})
 
     def _listing(self, user: User) -> UserListing:
         return UserListing(user, self.project_counts.get(user.id, 0))
@@ -88,18 +108,45 @@ class InMemoryUserDirectory:
         user = self._store.users.get(user_id)
         return self._listing(user) if user else None
 
-    async def search(
-        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
-    ) -> tuple[list[UserListing], int]:
-        needle = (q or "").strip().lower()
+    def _found(self, q: str | None) -> list[User]:
+        return [u for u in self._store.users.values() if matches(q, u.name, u.email_normalized)]
+
+    async def search(self, query: UserQuery) -> Found[UserListing]:
         found = [
             u
-            for u in self._store.users.values()
-            if (status is None or u.status is status)
-            and (not needle or needle in u.name.lower() + " " + u.email_normalized)
+            for u in self._found(query.q)
+            if (not query.statuses or u.status in query.statuses)
+            and (query.is_admin is None or u.is_instance_admin is query.is_admin)
+            and (query.org_slug is None or u.id in self.org_members.get(query.org_slug, set()))
         ]
-        found.sort(key=lambda u: (-u.created_at.timestamp(), u.id))
-        return [self._listing(u) for u in found[offset : offset + limit]], len(found)
+        rows = ordered(found, query.sort, _USER_KEYS, lambda u: u.id)
+        return page([self._listing(u) for u in rows], query.window)
+
+    async def facets(self, q: str | None) -> UserFacets:
+        found = self._found(q)
+        return UserFacets(
+            status={s: sum(1 for u in found if u.status is s) for s in UserStatus},
+            admins=sum(1 for u in found if u.is_instance_admin),
+        )
+
+    async def pick(self, query: UserPickQuery) -> Picked[User]:
+        found = [
+            u
+            for u in self._found(query.q)
+            if (query.status is None or u.status is query.status)
+            and (query.not_in_org_slug is None or u.id not in self.org_members.get(query.not_in_org_slug, set()))
+            and (query.not_in_group_id is None or u.id not in self.group_members.get(query.not_in_group_id, set()))
+        ]
+        return picked(sorted(found, key=lambda u: (u.name.lower(), u.id)), query.limit)
+
+
+_USER_KEYS: dict[str, Callable[[User], object]] = {
+    "name": lambda u: u.name.lower(),
+    "email": lambda u: u.email_normalized,
+    "created_at": lambda u: u.created_at,
+    "last_login_at": lambda u: u.last_login_at,
+    "status": lambda u: u.status.value,
+}
 
 
 class InMemoryCredentialRepository:

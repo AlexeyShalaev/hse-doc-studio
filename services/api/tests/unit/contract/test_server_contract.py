@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import runner_admin as ra
@@ -57,10 +58,14 @@ _SCHEMAS: dict[str, Any] = {
     "CreateApiTokenResponse": s.CreateApiTokenResponse,
     "ProjectSummary": s.ProjectSummary,
     "ProjectSummaryList": list[s.ProjectSummary],
+    "ProjectSummaryPage": s.ProjectSummaryPage,
     "CreateServerProjectRequest": s.CreateServerProjectRequest,
     "ProjectImportResult": s.ProjectImportResult,
     "AdminUser": s.AdminUser,
     "AdminUserList": s.AdminUserPage,
+    "AdminUserFacets": s.AdminUserFacets,
+    "AdminUserOrgList": s.AdminUserOrgPage,
+    "AdminPickerList": adm.PickerList,
     "UpdateAdminUserRequest": s.UpdateAdminUserRequest,
     "AdminResetLinkRequest": s.AdminResetLinkRequest,
     "AdminResetLink": s.AdminResetLink,
@@ -72,22 +77,25 @@ _SCHEMAS: dict[str, Any] = {
     "AdminAuditList": s.AdminAuditPage,
     "CreateAdminInvitationRequest": s.CreateAdminInvitationRequest,
     "AdminInvitationCreated": s.AdminInvitationCreated,
-    "AdminOrgList": list[s.AdminOrg],
+    "AdminOrgList": s.AdminOrgPage,
     "AdminOrgMember": s.AdminOrgMember,
-    "AdminOrgMemberList": list[s.AdminOrgMember],
+    "AdminOrgMemberList": s.AdminOrgMemberPage,
+    "AdminOrgMemberFacets": s.AdminOrgMemberFacets,
     "AddAdminOrgMemberRequest": s.AddAdminOrgMemberRequest,
     "UpdateAdminOrgMemberRequest": s.UpdateAdminOrgMemberRequest,
     "CreateAdminOrgRequest": s.CreateAdminOrgRequest,
     "AdminGroup": s.AdminGroup,
-    "AdminGroupList": list[s.AdminGroup],
+    "AdminGroupList": s.AdminGroupPage,
+    "AdminGroupMemberList": s.AdminGroupMemberPage,
     "CreateAdminGroupRequest": s.CreateAdminGroupRequest,
     "UpdateAdminGroupRequest": s.UpdateAdminGroupRequest,
     "MyOrg": s.MyOrg,
     "MyOrgList": list[s.MyOrg],
     "ProjectAccessEntry": s.ProjectAccessEntry,
-    "ProjectAccessList": list[s.ProjectAccessEntry],
+    "ProjectAccessList": s.ProjectAccessPage,
     "ProjectAccessCandidate": s.ProjectAccessCandidate,
-    "ProjectAccessCandidateList": list[s.ProjectAccessCandidate],
+    "ProjectAccessCandidateList": s.ProjectAccessCandidateList,
+    "ProjectTransferCandidateList": adm.PickerList,
     "AdminRunnerList": list[ra.RunnerInfo],
     "AdminRunnerTokenList": list[ra.RegistrationTokenInfo],
     "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
@@ -134,7 +142,7 @@ _SCHEMAS: dict[str, Any] = {
     "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
     "AdminSmtpTestResult": s.AdminSmtpTestResult,
     "AdminOidcProvider": s.AdminOidcProvider,
-    "AdminOidcProviderList": list[s.AdminOidcProvider],
+    "AdminOidcProviderList": s.AdminOidcProviderPage,
     "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
     "CompileWait": s.CompileWait,
@@ -245,3 +253,11 @@ def test_setup_environment_covers_ok_fail_and_not_configured() -> None:
     envs = [_read(f) for d, _, f in _CASES if d == "ServerSetupEnvironment"]
     statuses = {c["status"] for e in envs for c in e["checks"]}
     assert statuses == {"ok", "fail", "not_configured"}
+
+
+def test_add_admin_org_member_needs_exactly_one_way() -> None:
+    body = _read(_FIXTURES / "AddAdminOrgMemberRequest" / "by_user.json")
+    body["email"] = "anna@example.org"
+
+    with pytest.raises(ValidationError):
+        s.AddAdminOrgMemberRequest.model_validate(body)

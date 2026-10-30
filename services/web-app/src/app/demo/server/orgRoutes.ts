@@ -2,11 +2,13 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type {
   AdminGroup,
+  AdminGroupMember,
   AdminOrg,
   AdminOrgMember,
+  AdminUserOrg,
   OrgRoleName,
 } from "@entities/session";
-import type { DemoOrg } from "./adminOrgs";
+import type { DemoGroup, DemoOrg } from "./adminOrgs";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: организации, участники и группы. Тела совпадают с contracts/server/fixtures.
@@ -31,6 +33,34 @@ const isRole = (value: unknown): value is OrgRoleName =>
   ROLES.includes(value as OrgRoleName);
 
 const notFound = () => demoError(404, "not_found", "Not Found");
+
+type DemoReq = Parameters<DemoRoute["handler"]>[0];
+const queryText = (value: string | string[] | undefined): string =>
+  (Array.isArray(value) ? value[0] : value) ?? "";
+const queryList = (value: string | string[] | undefined): string[] =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
+
+/** Страница списка, как у сервера: поиск подстроки без учёта регистра, limit (до 200) и offset. */
+const pageOf = <T>(
+  items: readonly T[],
+  req: DemoReq,
+  text: (item: T) => string,
+) => {
+  const q = queryText(req.query.q).trim().toLowerCase();
+  const found = q
+    ? items.filter((x) => text(x).toLowerCase().includes(q))
+    : [...items];
+  const limit = Math.min(Number(queryText(req.query.limit)) || 50, 200);
+  const offset = Number(queryText(req.query.offset)) || 0;
+  return {
+    items: found.slice(offset, offset + limit),
+    total: found.length,
+    limit,
+    offset,
+  };
+};
+
+const ROLE_ORDER: readonly OrgRoleName[] = ["owner", "admin", "member"];
 const forbidden = () => demoError(403, "forbidden", "Forbidden");
 const invalid = () => demoError(422, "input_invalid", "Invalid input");
 
@@ -55,8 +85,24 @@ export const createOrgRoutes = (
     name: org.name,
     member_count: org.members.length,
     project_count: org.project_count,
+    owner_count: org.members.filter((m) => m.role === "owner").length,
     my_role: roleIn(org),
   });
+
+  /** Группа наружу: число участников и первые пять по имени. */
+  const groupOf = (org: DemoOrg, group: DemoGroup): AdminGroup => {
+    const people = org.members
+      .filter((m) => group.member_ids.includes(m.user_id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      id: group.id,
+      name: group.name,
+      member_count: people.length,
+      preview: people
+        .slice(0, 5)
+        .map((m) => ({ user_id: m.user_id, name: m.name })),
+    };
+  };
 
   const guard = (): DemoResponse | null => {
     const user = viewer();
@@ -97,8 +143,17 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs",
-      handler: guarded(() =>
-        demoJson(state().orgs.filter(manages).map(summary)),
+      handler: guarded((req) =>
+        demoJson(
+          pageOf(
+            state()
+              .orgs.filter(manages)
+              .map(summary)
+              .sort((a, b) => a.name.localeCompare(b.name)),
+            req,
+            (o) => `${o.name} ${o.slug}`,
+          ),
+        ),
       ),
     },
     {
@@ -167,7 +222,27 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs/:slug/members",
-      handler: withOrg((org) => demoJson(org.members)),
+      handler: withOrg((org, req) => {
+        const roles = queryList(req.query.role);
+        const shown = roles.length
+          ? org.members.filter((m) => roles.includes(m.role))
+          : org.members;
+        return demoJson(pageOf(shown, req, (m) => `${m.name} ${m.email}`));
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/orgs/:slug/members/facets",
+      handler: withOrg((org, req) => {
+        const q = queryText(req.query.q).trim().toLowerCase();
+        const found = org.members.filter((m) =>
+          `${m.name} ${m.email}`.toLowerCase().includes(q),
+        );
+        const role = Object.fromEntries(
+          ROLE_ORDER.map((r) => [r, found.filter((m) => m.role === r).length]),
+        ) as Record<OrgRoleName, number>;
+        return demoJson({ role });
+      }),
     },
     {
       method: "POST",
@@ -175,9 +250,14 @@ export const createOrgRoutes = (
       handler: withOrg((org, req) => {
         const b = body(req);
         const email = str(b.email).trim().toLowerCase();
-        if (email === "" || !isRole(b.role)) return invalid();
+        const userId = str(b.user_id);
+        if ((email === "") === (userId === "") || !isRole(b.role)) {
+          return invalid();
+        }
         if (b.role === "owner" && !isFull(org)) return forbidden();
-        const person = state().directory.find((u) => u.email === email);
+        const person = state().directory.find((u) =>
+          userId ? u.id === userId : u.email === email,
+        );
         if (!person) return notFound();
         if (org.members.some((m) => m.user_id === person.id)) {
           return demoError(409, "already_member", "Already a member");
@@ -247,7 +327,17 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs/:slug/groups",
-      handler: withOrg((org) => demoJson(org.groups)),
+      handler: withOrg((org, req) =>
+        demoJson(
+          pageOf(
+            org.groups
+              .map((g) => groupOf(org, g))
+              .sort((a, b) => a.name.localeCompare(b.name)),
+            req,
+            (g) => g.name,
+          ),
+        ),
+      ),
     },
     {
       method: "POST",
@@ -264,13 +354,13 @@ export const createOrgRoutes = (
         ) {
           return invalid();
         }
-        const group: AdminGroup = {
+        const group: DemoGroup = {
           id: newId("g"),
           name,
           member_ids: memberIds,
         };
         org.groups = [...org.groups, group];
-        return demoJson(group, 201);
+        return demoJson(groupOf(org, group), 201);
       }),
     },
     {
@@ -295,7 +385,7 @@ export const createOrgRoutes = (
           next.member_ids = ids;
         }
         org.groups = org.groups.map((g) => (g === current ? next : g));
-        return demoJson(next);
+        return demoJson(groupOf(org, next));
       }),
     },
     {
@@ -305,6 +395,80 @@ export const createOrgRoutes = (
         if (!org.groups.some((g) => g.id === req.params.id)) return notFound();
         org.groups = org.groups.filter((g) => g.id !== req.params.id);
         return demoNoContent();
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/orgs/:slug/groups/:id/members",
+      handler: withOrg((org, req) => {
+        const group = org.groups.find((g) => g.id === req.params.id);
+        if (!group) return notFound();
+        const people: AdminGroupMember[] = org.members
+          .filter((m) => group.member_ids.includes(m.user_id))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((m) => ({
+            user_id: m.user_id,
+            name: m.name,
+            email: m.email,
+            added_at: m.joined_at,
+          }));
+        return demoJson(pageOf(people, req, (m) => `${m.name} ${m.email}`));
+      }),
+    },
+    {
+      method: "POST",
+      pattern: "/orgs/:slug/groups/:id/members/:userId",
+      handler: withOrg((org, req) => {
+        const group = org.groups.find((g) => g.id === req.params.id);
+        if (!group) return notFound();
+        const person = org.members.find((m) => m.user_id === req.params.userId);
+        if (!person) return invalid();
+        if (group.member_ids.includes(person.user_id)) {
+          return demoError(409, "already_member", "Already a member");
+        }
+        group.member_ids = [...group.member_ids, person.user_id];
+        const added: AdminGroupMember = {
+          user_id: person.user_id,
+          name: person.name,
+          email: person.email,
+          added_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+        };
+        return demoJson(added, 201);
+      }),
+    },
+    {
+      method: "DELETE",
+      pattern: "/orgs/:slug/groups/:id/members/:userId",
+      handler: withOrg((org, req) => {
+        const group = org.groups.find((g) => g.id === req.params.id);
+        if (!group?.member_ids.includes(req.params.userId ?? "")) {
+          return notFound();
+        }
+        group.member_ids = group.member_ids.filter(
+          (id) => id !== req.params.userId,
+        );
+        return demoNoContent();
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/users/:id/orgs",
+      handler: guarded((req) => {
+        const items: AdminUserOrg[] = state().orgs.flatMap((org) => {
+          const me = org.members.find((m) => m.user_id === req.params.id);
+          return me
+            ? [
+                {
+                  slug: org.slug,
+                  name: org.name,
+                  role: me.role,
+                  joined_at: me.joined_at,
+                },
+              ]
+            : [];
+        });
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        return demoJson(pageOf(items, req, (o) => `${o.name} ${o.slug}`));
       }),
     },
   ];

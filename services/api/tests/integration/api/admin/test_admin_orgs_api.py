@@ -15,8 +15,18 @@ from fastapi import FastAPI
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.admin import make_admin_router
+from hse_doc_studio.api.schemas.admin import PickerList
 from hse_doc_studio.api.schemas.admin_install import AdminBuildSettings, AdminInstanceSettings
-from hse_doc_studio.api.schemas.session import AdminGroup, AdminOrg, AdminOrgMember
+from hse_doc_studio.api.schemas.session import (
+    AdminGroup,
+    AdminGroupMemberPage,
+    AdminOrg,
+    AdminOrgMember,
+    AdminOrgMemberFacets,
+    AdminOrgMemberPage,
+    AdminOrgPage,
+    AdminUserOrgPage,
+)
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
@@ -27,19 +37,25 @@ from hse_doc_studio.use_cases.admin.ops_install import (
     UpdateInstanceSettingsUC,
 )
 from hse_doc_studio.use_cases.admin.orgs import (
+    AddAdminGroupMemberUC,
     AddAdminMemberUC,
+    AdminMemberFacetsUC,
     CreateAdminGroupUC,
     CreateAdminOrgUC,
     DeleteAdminGroupUC,
     DeleteAdminOrgUC,
     GetAdminOrgUC,
+    ListAdminGroupMembersUC,
     ListAdminGroupsUC,
     ListAdminMembersUC,
     ListAdminOrgsUC,
+    PickOrgsUC,
+    RemoveAdminGroupMemberUC,
     RemoveAdminMemberUC,
     SetAdminMemberRoleUC,
     UpdateAdminGroupUC,
 )
+from hse_doc_studio.use_cases.admin.users import ListUserOrgsUC, PickUsersUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 from httpx import ASGITransport, AsyncClient
 
@@ -89,6 +105,13 @@ class _Provider(Provider):
             CreateAdminGroupUC(o, g, a, w),
             UpdateAdminGroupUC(o, g, a, w),
             DeleteAdminGroupUC(o, g, a, w),
+            AdminMemberFacetsUC(o),
+            PickOrgsUC(o),
+            ListAdminGroupMembersUC(o, g),
+            AddAdminGroupMemberUC(o, g, u, a, w),
+            RemoveAdminGroupMemberUC(o, g, a, w),
+            ListUserOrgsUC(u, o),
+            PickUsersUC(s.users.directory),
             read,
             UpdateInstanceSettingsUC(s.settings, s.env, a, w, read),
             UpdateBuildSettingsUC(s.settings, s.env, a, w, read),
@@ -148,6 +171,13 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("POST", f"{_ORG}/lab/groups", {"name": "G", "member_ids": []}),
     ("PATCH", f"{_ORG}/lab/groups/g1", {"name": "G", "member_ids": None}),
     ("DELETE", f"{_ORG}/lab/groups/g1", None),
+    ("GET", f"{_ORG}/lab/members/facets", None),
+    ("GET", f"{_ORG}/lab/groups/g1/members", None),
+    ("POST", f"{_ORG}/lab/groups/g1/members/anna", None),
+    ("DELETE", f"{_ORG}/lab/groups/g1/members/anna", None),
+    ("GET", "/api/admin/users/anna/orgs", None),
+    ("GET", "/api/admin/pickers/users", None),
+    ("GET", "/api/admin/pickers/orgs", None),
     ("GET", "/api/admin/settings/instance", None),
     ("PUT", "/api/admin/settings/instance", {"name": "X", "public_url": None, "docs_url": None}),
     ("GET", "/api/admin/settings/build", None),
@@ -179,12 +209,18 @@ async def test__org_lifecycle__create_members_groups_delete_with_fixture_shapes(
 
     assert created.status_code == 201
     assert AdminOrg.model_validate(created.json()).my_role == "owner"
-    assert [AdminOrg.model_validate(x).slug for x in listed.json()] == ["msp-2026"]
+    page = AdminOrgPage.model_validate(listed.json())
+    assert ([x.slug for x in page.items], page.total, page.items[0].owner_count) == (["msp-2026"], 1, 1)
     assert AdminOrgMember.model_validate(added.json()).role == "member"
     assert promoted.json()["role"] == "admin"
-    assert AdminGroup.model_validate(group.json()).member_ids == ["anna"]
-    assert edited.json() == {"id": gid, "name": "Команда", "member_ids": ["anna"]}
-    assert (await c.get(f"{_ORG}/msp-2026/members", headers=boss)).json()[0]["role"] == "owner"
+    assert AdminGroup.model_validate(group.json()).member_count == 1
+    assert edited.json() == {
+        "id": gid,
+        "name": "Команда",
+        "member_count": 1,
+        "preview": [{"user_id": "anna", "name": "Anna"}],
+    }
+    assert (await c.get(f"{_ORG}/msp-2026/members", headers=boss)).json()["items"][0]["role"] == "owner"
     assert (await c.delete(f"{_ORG}/msp-2026/groups/{gid}", headers=boss)).status_code == 204
     assert (await c.delete(f"{_ORG}/msp-2026/members/anna", headers=boss)).status_code == 204
     assert (await c.delete(f"{_ORG}/msp-2026", headers=boss)).status_code == 204
@@ -292,3 +328,132 @@ async def test__build_settings__defaults_update_and_bounds(stack: _Stack) -> Non
     assert updated.json()["fields"]["build.timeout_s"] == {"source": "admin", "locked": False}
     assert (too_small.status_code, too_long.status_code) == (422, 422)
     assert [e.action for e in await stack.users.audit.list()] == ["settings.build_update"]
+
+
+async def _org_with(stack: _Stack, boss: dict[str, str], slug: str, *members: tuple[str, str]) -> None:
+    c = stack.client
+    assert (await c.post(_ORG, json={"name": slug.title(), "slug": slug}, headers=boss)).status_code == 201
+    for uid, role in members:
+        if await stack.users.users.get(uid) is None:
+            await stack.users.add(uid)
+        body = {"user_id": uid, "email": None, "role": role}
+        assert (await c.post(f"{_ORG}/{slug}/members", json=body, headers=boss)).status_code == 201
+
+
+async def test__orgs__page_search_mine_sort_and_bad_params(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    for slug in ("alpha", "beta", "gamma"):
+        await _org_with(stack, boss, slug)
+    await _org_with(stack, boss, "delta", ("anna", "member"), ("boris", "member"))
+    delta = await stack.orgs.get_by_slug("delta")
+    stack.orgs_store.members.pop((delta.id, "boss"))  # type: ignore[union-attr]
+
+    first = AdminOrgPage.model_validate((await c.get(f"{_ORG}?limit=2", headers=boss)).json())
+    second = AdminOrgPage.model_validate((await c.get(f"{_ORG}?limit=2&offset=2", headers=boss)).json())
+    found = (await c.get(f"{_ORG}?q=%20ELT%20", headers=boss)).json()
+    not_mine = (await c.get(f"{_ORG}?mine=false", headers=boss)).json()
+    by_members = (await c.get(f"{_ORG}?sort=-member_count", headers=boss)).json()
+
+    assert ([x.slug for x in first.items], first.total, first.limit) == (["alpha", "beta"], 4, 2)
+    assert [x.slug for x in second.items] == ["delta", "gamma"]
+    assert [x["slug"] for x in found["items"]] == ["delta"]
+    assert [x["slug"] for x in not_mine["items"]] == ["delta"]
+    assert by_members["items"][0]["slug"] == "delta"
+    for bad in ("sort=owner", "sort=--name", "limit=0", "limit=201", "offset=-1", "q=" + "x" * 201):
+        assert (await c.get(f"{_ORG}?{bad}", headers=boss)).status_code == 422, bad
+
+
+async def test__members__page_roles_sort_facets(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    await _org_with(stack, boss, "lab", ("anna", "admin"), ("boris", "member"), ("carol", "member"))
+
+    by_role = AdminOrgMemberPage.model_validate((await c.get(f"{_ORG}/lab/members?sort=role", headers=boss)).json())
+    plain = (await c.get(f"{_ORG}/lab/members?role=member&role=admin&sort=-name&limit=2", headers=boss)).json()
+    searched = (await c.get(f"{_ORG}/lab/members?q=CAROL@", headers=boss)).json()
+    facets = AdminOrgMemberFacets.model_validate((await c.get(f"{_ORG}/lab/members/facets?q=o", headers=boss)).json())
+    org = AdminOrg.model_validate((await c.get(f"{_ORG}/lab", headers=boss)).json())
+
+    assert [m.user_id for m in by_role.items] == ["boss", "anna", "boris", "carol"]
+    assert ([m["user_id"] for m in plain["items"]], plain["total"]) == (["carol", "boris"], 3)
+    assert [m["user_id"] for m in searched["items"]] == ["carol"]
+    # «o» есть в boss, boris, carol (и в адресах всех, поэтому считаются все).
+    assert facets.role == {"owner": 1, "admin": 1, "member": 2}
+    assert org.owner_count == 1
+    assert (await c.get(f"{_ORG}/lab/members?role=god", headers=boss)).status_code == 422
+    assert (await c.get(f"{_ORG}/ghost/members/facets", headers=boss)).status_code == 404
+
+
+async def test__groups__page_preview_and_point_membership(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    people = [(f"p{i:02d}", "member") for i in range(7)]
+    await _org_with(stack, boss, "lab", *people)
+    await stack.users.add("stranger")
+    big = (
+        await c.post(f"{_ORG}/lab/groups", json={"name": "Big", "member_ids": [p for p, _ in people]}, headers=boss)
+    ).json()
+    await c.post(f"{_ORG}/lab/groups", json={"name": "Alpha", "member_ids": []}, headers=boss)
+
+    listed = (await c.get(f"{_ORG}/lab/groups?sort=-member_count", headers=boss)).json()
+    searched = (await c.get(f"{_ORG}/lab/groups?q=alp", headers=boss)).json()
+    added = await c.post(f"{_ORG}/lab/groups/{big['id']}/members/boss", headers=boss)
+    again = await c.post(f"{_ORG}/lab/groups/{big['id']}/members/boss", headers=boss)
+    foreign = await c.post(f"{_ORG}/lab/groups/{big['id']}/members/stranger", headers=boss)
+    removed = await c.delete(f"{_ORG}/lab/groups/{big['id']}/members/p00", headers=boss)
+    missing = await c.delete(f"{_ORG}/lab/groups/{big['id']}/members/p00", headers=boss)
+    members = AdminGroupMemberPage.model_validate(
+        (await c.get(f"{_ORG}/lab/groups/{big['id']}/members?limit=3&sort=-name", headers=boss)).json()
+    )
+    other_org = await c.get(f"{_ORG}/ghost/groups/{big['id']}/members", headers=boss)
+
+    assert big["member_count"] == 7
+    assert [m["user_id"] for m in big["preview"]] == ["p00", "p01", "p02", "p03", "p04"]
+    assert [(g["name"], g["member_count"]) for g in listed["items"]] == [("Big", 7), ("Alpha", 0)]
+    assert [g["name"] for g in searched["items"]] == ["Alpha"]
+    assert (added.status_code, added.json()["user_id"]) == (201, "boss")
+    assert (again.status_code, foreign.status_code) == (409, 422)
+    assert (removed.status_code, missing.status_code) == (204, 404)
+    assert ([m.user_id for m in members.items], members.total) == (["p06", "p05", "p04"], 7)
+    assert other_org.status_code == 404
+    assert [e.action for e in await stack.users.audit.list()][:2] == ["group.member.remove", "group.member.add"]
+
+
+async def test__user_orgs__page_role_filter_and_unknown_user(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    await _org_with(stack, boss, "lab", ("anna", "admin"))
+    await _org_with(stack, boss, "beta", ("anna", "member"))
+    await _org_with(stack, boss, "zoo")
+
+    found = AdminUserOrgPage.model_validate((await c.get("/api/admin/users/anna/orgs", headers=boss)).json())
+    admins = (await c.get("/api/admin/users/anna/orgs?role=admin", headers=boss)).json()
+    searched = (await c.get("/api/admin/users/anna/orgs?q=BET&sort=-joined_at", headers=boss)).json()
+
+    assert ([(o.slug, o.role) for o in found.items], found.total) == ([("beta", "member"), ("lab", "admin")], 2)
+    assert [o["slug"] for o in admins["items"]] == ["lab"]
+    assert [o["slug"] for o in searched["items"]] == ["beta"]
+    assert (await c.get("/api/admin/users/ghost/orgs", headers=boss)).status_code == 404
+
+
+async def test__pickers__users_and_orgs_limit_has_more_and_exclusions(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    for uid in ("anna", "annabel", "annette"):
+        await stack.users.add(uid)
+    await _org_with(stack, boss, "lab", ("anna", "member"))
+    await _org_with(stack, boss, "lab-two")
+    stack.users.directory.org_members["lab"] = {"boss", "anna"}
+
+    first = PickerList.model_validate((await c.get("/api/admin/pickers/users?q=ANN&limit=2", headers=boss)).json())
+    outside = (await c.get("/api/admin/pickers/users?q=ann&not_in_org=lab", headers=boss)).json()
+    orgs = PickerList.model_validate((await c.get("/api/admin/pickers/orgs?q=lab&limit=1", headers=boss)).json())
+
+    assert ([(i.kind, i.id, i.detail) for i in first.items], first.has_more) == (
+        [("user", "anna", "anna@example.org"), ("user", "annabel", "annabel@example.org")],
+        True,
+    )
+    assert ([i["id"] for i in outside["items"]], outside["has_more"]) == (["annabel", "annette"], False)
+    assert ([(i.kind, i.id) for i in orgs.items], orgs.has_more) == ([("org", "lab")], True)
+    assert (await c.get("/api/admin/pickers/users?limit=21", headers=boss)).status_code == 422

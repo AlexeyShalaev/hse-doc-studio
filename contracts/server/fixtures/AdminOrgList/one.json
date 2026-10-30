@@ -1,9 +1,23 @@
-[
-  {
-    "slug": "msp-2025",
-    "name": "МСПИН 2025",
-    "member_count": 24,
-    "project_count": 31,
-    "my_role": "owner"
-  }
-]
+{
+  "items": [
+    {
+      "slug": "msp-2025",
+      "name": "МСПИН 2025",
+      "member_count": 24,
+      "project_count": 31,
+      "owner_count": 2,
+      "my_role": "owner"
+    },
+    {
+      "slug": "lab-ml",
+      "name": "Лаборатория ML",
+      "member_count": 3,
+      "project_count": 0,
+      "owner_count": 1,
+      "my_role": null
+    }
+  ],
+  "total": 2412,
+  "limit": 50,
+  "offset": 0
+}

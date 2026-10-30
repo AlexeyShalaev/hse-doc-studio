@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.infra.db.base import Base
@@ -17,7 +17,8 @@ class ProjectRow(Base):
     __tablename__ = "projects"
     __table_args__ = (
         Index("ix_projects_owner_user_id", "owner_user_id"),
-        Index("ix_projects_owner_org_id", "owner_org_id"),
+        Index("ix_projects_owner_org_updated", "owner_org_id", "updated_at"),
+        Index("ix_projects_name_lower", text("lower(name)")),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -36,6 +37,9 @@ class ProjectRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Копия полей project.json для списка проектов (поиск, фильтры); обновляется сценариями правки.
+    pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    supervisor_name: Mapped[str | None] = mapped_column(String(256))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Строка есть, а папки на томе нет: отмечает сверка на старте, проект при этом не пропадает из каталога.
     volume_missing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

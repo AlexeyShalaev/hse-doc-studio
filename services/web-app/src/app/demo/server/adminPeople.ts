@@ -6,10 +6,13 @@ import type {
 
 // Люди установки в демо: аккаунты, очередь одобрений, приглашения и журнал аудита.
 
+/** Событие журнала, как его хранит сервер; имя действовавшего и подпись цели демо-сервер добавляет при ответе. */
+export type DemoAuditEvent = Omit<AdminAuditEvent, "actor" | "target_label">;
+
 export type DemoAdminPeople = {
   users: AdminUser[];
   invitations: AdminInvitation[];
-  audit: AdminAuditEvent[];
+  audit: DemoAuditEvent[];
 };
 
 const day = 86_400_000;
@@ -22,7 +25,7 @@ const ahead = (days: number): string =>
 // установке. Цели записаны так же, как их пишет сервер: идентификаторы, а
 // понятные имена в details.
 const ADMIN = "u_01hx7k1a0b";
-const RECENT_AUDIT: (Omit<AdminAuditEvent, "id" | "at"> & {
+const RECENT_AUDIT: (Omit<DemoAuditEvent, "id" | "at"> & {
   minutesAgo: number;
 })[] = [
   {
@@ -144,7 +147,7 @@ const RECENT_AUDIT: (Omit<AdminAuditEvent, "id" | "at"> & {
 ];
 
 // Ровный фон старых записей: входы, одобрения, приглашения и доступы к проектам.
-const OLDER_AUDIT: Omit<AdminAuditEvent, "id" | "at">[] = [
+const OLDER_AUDIT: Omit<DemoAuditEvent, "id" | "at">[] = [
   {
     action: "auth.login",
     actor_id: ADMIN,
@@ -183,7 +186,7 @@ const OLDER_AUDIT: Omit<AdminAuditEvent, "id" | "at">[] = [
   },
 ];
 
-const olderAudit = (i: number): Omit<AdminAuditEvent, "id" | "at"> =>
+const olderAudit = (i: number): Omit<DemoAuditEvent, "id" | "at"> =>
   OLDER_AUDIT[i % OLDER_AUDIT.length] ?? {
     action: "auth.login",
     actor_id: ADMIN,

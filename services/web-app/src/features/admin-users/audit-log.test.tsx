@@ -139,7 +139,9 @@ describe("разбор журнала", () => {
     id: 1,
     action: "auth.login",
     actor_id: null,
+    actor: null,
     target: null,
+    target_label: null,
     details: {},
     ...patch,
   });

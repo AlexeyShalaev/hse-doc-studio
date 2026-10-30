@@ -41,7 +41,7 @@ async def test__list__walks_all_pages_without_gaps_or_repeats() -> None:
     pages = 0
     while True:
         page = await uc.execute(ADMIN, AuditQuery(limit=3, before_id=cursor))
-        seen += [e.id for e in page.items]
+        seen += [e.entry.id for e in page.items]
         pages += 1
         if page.next_before_id is None:
             break
@@ -59,7 +59,7 @@ async def test__list__new_events_during_paging_do_not_shift_the_next_page() -> N
     await audit.record("late", actor_id="boss")
     second = await uc.execute(ADMIN, AuditQuery(limit=3, before_id=first.next_before_id))
 
-    assert [e.id for e in second.items] == [3, 2, 1]
+    assert [e.entry.id for e in second.items] == [3, 2, 1]
 
 
 async def test__list__limit_is_clamped() -> None:
@@ -96,3 +96,11 @@ async def test__purge__zero_retention_keeps_everything() -> None:
 
     assert (await uc.execute()).purged == 0
     assert len(await audit.list()) == 2
+
+
+async def test__list__estimate_only_without_filters() -> None:
+    uc = ListAuditUC(await _log(4))
+
+    assert (await uc.execute(ADMIN, AuditQuery())).total_estimate == 4
+    assert (await uc.execute(ADMIN, AuditQuery(q="x"))).total_estimate is None
+    assert (await uc.execute(ADMIN, AuditQuery(categories=("admin",)))).total_estimate is None

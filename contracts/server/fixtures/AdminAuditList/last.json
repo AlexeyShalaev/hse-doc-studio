@@ -1,4 +1,5 @@
 {
   "items": [],
-  "next_cursor": null
+  "next_cursor": null,
+  "total_estimate": 0
 }

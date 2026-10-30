@@ -369,10 +369,34 @@ async def test__oidc__create_list_get_never_return_the_secret(env: _Env) -> None
         assert CLIENT_SECRET not in response.text
         assert "client_secret_enc" not in response.text
     assert created.json()["client_secret_set"] is True
-    assert [p["label"] for p in listed.json()] == ["HSE ID"]
+    assert [p["label"] for p in listed.json()["items"]] == ["HSE ID"]
     stored = (await env.oidc.list())[0]
     assert CLIENT_SECRET not in stored.client_secret_enc
     assert CLIENT_SECRET not in json.dumps([dict(e.details) for e in await env.audit.list()])
+
+
+async def test__oidc__list_pages_searches_filters_and_sorts(env: _Env) -> None:
+    client, boss = await _boss(env)
+    for label, issuer, enabled in (
+        ("Zeta SSO", "https://zeta.example.org", True),
+        ("Alpha ID", "https://login.alpha.example.org", False),
+        ("HSE ID", "https://id.hse.example.org", True),
+    ):
+        body = {**OIDC, "label": label, "issuer": issuer, "enabled": enabled}
+        assert (await client.post("/api/admin/oidc-providers", json=body, headers=boss)).status_code == 201
+
+    async def labels(query: str) -> list[str]:
+        response = await client.get(f"/api/admin/oidc-providers?{query}", headers=boss)
+        assert response.status_code == 200, response.text
+        return [p["label"] for p in response.json()["items"]]
+
+    first = (await client.get("/api/admin/oidc-providers?limit=1", headers=boss)).json()
+    assert (first["total"], first["limit"], first["offset"]) == (3, 1, 0)
+    assert await labels("sort=label") == ["Alpha ID", "HSE ID", "Zeta SSO"]
+    assert await labels("sort=-label&enabled=true") == ["Zeta SSO", "HSE ID"]
+    assert await labels("q=LOGIN.") == ["Alpha ID"]
+    assert await labels("q=hse") == ["HSE ID"]
+    assert (await client.get("/api/admin/oidc-providers?sort=issuer", headers=boss)).status_code == 422
 
 
 async def test__oidc__secret_is_replaced_only_by_a_new_value(env: _Env) -> None:

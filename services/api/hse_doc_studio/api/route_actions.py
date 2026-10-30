@@ -195,6 +195,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # Настройки проекта (владелец)
     ("PATCH", "/projects/{project_id}"): RouteRule(Action.PROJECT_SETTINGS),
     ("GET", "/projects/{project_id}/members/candidates"): RouteRule(Action.PROJECT_SETTINGS),
+    # Кому передать проект: только тот, кто вправе его передать
+    ("GET", "/projects/{project_id}/transfer-candidates"): RouteRule(Action.PROJECT_TRANSFER),
     ("PUT", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("DELETE", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/move"): RouteRule(Action.PROJECT_SETTINGS),

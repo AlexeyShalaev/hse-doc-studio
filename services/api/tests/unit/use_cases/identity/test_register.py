@@ -12,7 +12,7 @@ from hse_doc_studio.core.identity.auth_settings import (
     KEY_REQUIRE_APPROVAL,
     AuthEnvOverrides,
 )
-from hse_doc_studio.core.identity.entities import AuthTokenKind, MailKind, RegistrationMode, UserStatus
+from hse_doc_studio.core.identity.entities import AuthTokenKind, InviteQuery, MailKind, RegistrationMode, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.registration import RegistrationOutcome
@@ -232,13 +232,18 @@ async def test_invite_lifecycle_create_list_revoke(world: World) -> None:
     mailed = await world.create_invite_uc().execute(ADMIN, email="Bob@Example.org", ttl=timedelta(days=1))
     assert mailed.link is not None  # без SMTP ссылку пересылает админ
     assert [e.to_email for e in await world.outbox.list_active(world.clock.now)] == ["bob@example.org"]
-    assert {i.id for i in await world.list_invites_uc().execute(ADMIN)} == {plain.invite.id, mailed.invite.id}
+    assert {i.id for i in (await world.list_invites_uc().execute(ADMIN, InviteQuery(now=world.clock.now))).items} == {
+        plain.invite.id,
+        mailed.invite.id,
+    }
 
     info = await world.invitation_info_uc().execute(mailed.token)
     assert (info.email, info.invited_by) == ("bob@example.org", "Ann")
 
     await world.revoke_invite_uc().execute(ADMIN, plain.invite.id)
-    assert [i.id for i in await world.list_invites_uc().execute(ADMIN)] == [mailed.invite.id]
+    assert [i.id for i in (await world.list_invites_uc().execute(ADMIN, InviteQuery(now=world.clock.now))).items] == [
+        mailed.invite.id
+    ]
     with pytest.raises(IdentityError) as exc:
         await world.revoke_invite_uc().execute(ADMIN, plain.invite.id)
     assert exc.value.code is IdentityErrorCode.invitation_invalid
@@ -260,7 +265,7 @@ async def test_only_instance_admin_manages_invites(world: World) -> None:
     member = replace(ADMIN, is_instance_admin=False)
     for call in (
         world.create_invite_uc().execute(member),
-        world.list_invites_uc().execute(member),
+        world.list_invites_uc().execute(member, InviteQuery(now=world.clock.now)),
         world.revoke_invite_uc().execute(member, "x"),
     ):
         with pytest.raises(IdentityError) as exc:

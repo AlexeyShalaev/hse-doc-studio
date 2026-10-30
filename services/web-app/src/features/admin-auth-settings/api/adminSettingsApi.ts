@@ -1,7 +1,7 @@
-import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
 import {
   AdminAuthSettingsSchema,
+  AdminOidcProviderPageSchema,
   AdminOidcProviderSchema,
   AdminRegistrationSettingsSchema,
   AdminSmtpSettingsSchema,
@@ -54,10 +54,12 @@ export const adminSettingsApi = {
       .post("/settings/smtp/test", { to }, quiet)
       .then(parseResp(AdminSmtpTestResultSchema)),
 
+  // Провайдеров единицы: экран берёт одну страницу наибольшего размера.
   providers: (): Promise<AdminOidcProvider[]> =>
     adminClient
-      .get("/oidc-providers", quiet)
-      .then(parseResp(z.array(AdminOidcProviderSchema))),
+      .get("/oidc-providers", { ...quiet, params: { limit: 200 } })
+      .then(parseResp(AdminOidcProviderPageSchema))
+      .then((page) => page.items),
   createProvider: (
     body: CreateAdminOidcProviderRequest,
   ): Promise<AdminOidcProvider> =>

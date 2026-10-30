@@ -104,7 +104,9 @@ class World:
         return credential.id
 
     async def audit_actions(self) -> list[tuple[str, str | None]]:
-        return [(e.action, e.actor_id) for e in reversed(await self.audit.query(AuditQuery(limit=100)))]
+        return [
+            (e.action, e.actor_id) for e in reversed([v.entry for v in await self.audit.query(AuditQuery(limit=100))])
+        ]
 
 
 @pytest_asyncio.fixture
@@ -284,7 +286,7 @@ async def test__access__editor_of_the_bound_project__uses_the_secret_and_the_use
     with as_actor(_BORIS):
         found = await world.access.get(credential_id, project_id=project_id)
     assert found is not None
-    events = await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))
+    events = [v.entry for v in await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))]
     assert [(e.actor_id, e.target) for e in events] == [("boris", str(credential_id))]
     assert events[0].details["via"] == "binding"
     assert events[0].details["project_id"] == str(project_id)
@@ -295,7 +297,7 @@ async def test__access__owner__uses_his_own_credential_and_it_is_audited_too(wor
 
     assert await _secret(world, _ANNA, credential_id, None, _REMOTE) == _TOKEN
 
-    events = await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))
+    events = [v.entry for v in await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))]
     assert [(e.actor_id, e.details["via"]) for e in events] == [("anna", "owner")]
 
 
@@ -310,7 +312,7 @@ async def test__access__reader_of_the_bound_project__is_refused_without_an_audit
     with as_actor(_CAROL):
         assert await world.access.get(credential_id, project_id=project_id) is None
 
-    assert await world.audit.query(AuditQuery(action_prefix=AUDIT_USE)) == []
+    assert [v.entry for v in await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))] == []
 
 
 async def test__access__not_a_member_or_not_bound__is_refused(world: World) -> None:
@@ -345,7 +347,7 @@ async def test__access__another_host_port_or_scheme__is_refused_even_for_an_edit
     with pytest.raises(NotFoundError):
         await _secret(world, _BORIS, credential_id, project_id, remote)
 
-    assert await world.audit.query(AuditQuery(action_prefix=AUDIT_USE)) == []
+    assert [v.entry for v in await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))] == []
 
 
 async def test__access__after_unbind__the_editor_loses_the_credential(world: World) -> None:
@@ -370,7 +372,7 @@ async def test__access__background_without_actor__only_through_a_binding(world: 
     await _bind(world, project_id, credential_id)
     assert await _secret(world, None, credential_id, project_id, _REMOTE) == _TOKEN
 
-    events = await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))
+    events = [v.entry for v in await world.audit.query(AuditQuery(action_prefix=AUDIT_USE))]
     assert [e.actor_id for e in events] == [None]
 
 
@@ -395,7 +397,7 @@ async def test__access__the_token_never_reaches_the_audit_or_the_logs(world: Wor
             await world.repo.list()
             await world.repo.delete(credential_id)
 
-    events = await world.audit.query(AuditQuery(limit=100))
+    events = [v.entry for v in await world.audit.query(AuditQuery(limit=100))]
     assert events
     assert _TOKEN not in json.dumps([e.details for e in events], default=str)
     assert _TOKEN not in json.dumps(logs, default=str)

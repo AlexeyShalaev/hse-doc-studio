@@ -1,33 +1,25 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { adminOrgsApi } from "../api/adminOrgsApi";
-import { adminOrgsKeys, useOrgs } from "../api/adminOrgsQueries";
+import { adminOrgsKeys } from "../api/adminOrgsQueries";
 import { OrgMark } from "./parts";
 
 /**
- * В каких организациях состоит человек и с какой ролью. Отдельного запроса
- * «организации человека» у сервера нет: собираем по спискам участников, они
- * общие с разделом «Организации» и уже лежат в кэше, если его открывали.
+ * В каких организациях состоит человек и с какой ролью: один запрос
+ * `GET /api/admin/users/{id}/orgs`, а не составы всех организаций установки.
  */
 export const UserOrgs = ({ userId }: { userId: string }) => {
   const { t } = useTranslation("adminOrgs");
-  const orgs = useOrgs();
-  const members = useQueries({
-    queries: (orgs.data ?? []).map((org) => ({
-      queryKey: adminOrgsKeys.members(org.slug),
-      queryFn: () => adminOrgsApi.members(org.slug),
-      staleTime: 30_000,
-    })),
+  const orgs = useQuery({
+    queryKey: adminOrgsKeys.userOrgs(userId),
+    queryFn: () => adminOrgsApi.userOrgs(userId),
+    staleTime: 30_000,
   });
 
-  const loading =
-    orgs.isPending || members.some((q) => q.isPending && !q.isError);
-  const failed = orgs.isError || members.some((q) => q.isError);
-  const rows = (orgs.data ?? []).flatMap((org, i) => {
-    const me = members[i]?.data?.find((m) => m.user_id === userId);
-    return me ? [{ org, role: me.role }] : [];
-  });
+  const loading = orgs.isPending;
+  const failed = orgs.isError;
+  const rows = (orgs.data?.items ?? []).map((org) => ({ org, role: org.role }));
 
   if (loading) {
     return (

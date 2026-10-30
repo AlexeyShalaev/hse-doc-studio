@@ -6,9 +6,10 @@ from dataclasses import replace
 
 import pytest
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.entities import Session, UserStatus
+from hse_doc_studio.core.identity.entities import Session, UserQuery, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.core.listing import Window
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
@@ -50,11 +51,9 @@ async def test__list_users__search_and_status_filter_and_paging(world: World) ->
     directory = _directory(world)
     directory.project_counts["u1"] = 3
 
-    found = await ListUsersUC(directory).execute(ADMIN, q="ANNA", status=None, limit=50, offset=0)
-    pending = await ListUsersUC(directory).execute(
-        ADMIN, q=None, status=UserStatus.pending_approval, limit=50, offset=0
-    )
-    page = await ListUsersUC(directory).execute(ADMIN, q=None, status=None, limit=1, offset=1)
+    found = await ListUsersUC(directory).execute(ADMIN, UserQuery(q="ANNA"))
+    pending = await ListUsersUC(directory).execute(ADMIN, UserQuery(statuses=(UserStatus.pending_approval,)))
+    page = await ListUsersUC(directory).execute(ADMIN, UserQuery(window=Window(limit=1, offset=1)))
 
     assert [(x.user.id, x.project_count) for x in found.items] == [("u1", 3)]
     assert [x.user.id for x in pending.items] == ["u2"]
@@ -63,7 +62,7 @@ async def test__list_users__search_and_status_filter_and_paging(world: World) ->
 
 async def test__list_users__not_an_admin__refused(world: World) -> None:
     await _fails(
-        ListUsersUC(_directory(world)).execute(Actor.user("u1"), q=None, status=None, limit=1, offset=0),
+        ListUsersUC(_directory(world)).execute(Actor.user("u1"), UserQuery()),
         IdentityErrorCode.not_found,
     )
 
@@ -138,12 +137,12 @@ async def test__approve__moves_pending_approval_to_active(world: World) -> None:
     waiting = await world.add_user("w@example.org", user_id="u2", status=UserStatus.pending_approval)
     approve = ApproveUserUC(world.users, world.audit, world.uow)
 
-    queue = await ListApprovalsUC(_directory(world)).execute(ADMIN, limit=50, offset=0)
+    queue = await ListApprovalsUC(_directory(world)).execute(ADMIN, UserQuery())
     approved = await approve.execute(ADMIN, waiting.id)
 
     assert [x.user.id for x in queue.items] == [waiting.id]
     assert approved.status is UserStatus.active
-    assert (await ListApprovalsUC(_directory(world)).execute(ADMIN, limit=50, offset=0)).total == 0
+    assert (await ListApprovalsUC(_directory(world)).execute(ADMIN, UserQuery())).total == 0
     await _fails(approve.execute(ADMIN, waiting.id), IdentityErrorCode.not_found)
 
 

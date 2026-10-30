@@ -11,9 +11,12 @@ import pytest
 import pytest_asyncio
 from hse_doc_studio.core.identity.entities import (
     ApiToken,
+    AuditActor,
     AuditQuery,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
+    InviteState,
     MailKind,
     MailOutboxEntry,
     OidcProvider,
@@ -34,6 +37,7 @@ from hse_doc_studio.core.identity.protocols import (
     ISessionRepository,
     IUserRepository,
 )
+from hse_doc_studio.core.listing import Found, SortKey, Window
 from pytest_lazy_fixtures import lf
 
 from tests.contract.test_identity_contract import make_user
@@ -47,7 +51,7 @@ from tests.fakes.auth import (
     InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
 )
-from tests.fakes.identity import InMemoryUserRepository
+from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -75,8 +79,10 @@ class Repos:
 
 @pytest_asyncio.fixture
 async def memory_repos() -> Repos:
+    # Журнал знает людей того же хранилища: имена действовавших и подписи целей берутся оттуда.
+    people = InMemoryIdentityStore()
     return Repos(
-        InMemoryUserRepository(),
+        InMemoryUserRepository(people),
         InMemorySessionRepository(),
         InMemoryApiTokenRepository(),
         InMemoryAuthTokenRepository(),
@@ -84,7 +90,7 @@ async def memory_repos() -> Repos:
         InMemoryLoginAttemptRepository(),
         InMemoryMailOutboxRepository(),
         InMemoryOidcProviderRepository(),
-        InMemoryAuditLog(),  # type: ignore[arg-type]
+        InMemoryAuditLog(people),  # type: ignore[arg-type]
     )
 
 
@@ -267,13 +273,45 @@ async def test__invite__get_keeps_org_scope_and_defaults_id(repos: Repos, user: 
     assert await repos.invites.get("missing") is None
 
 
-async def test__invite__list_newest_first_and_filter(repos: Repos, user: str) -> None:
+async def test__invite__page_newest_first_and_filter(repos: Repos, user: str) -> None:
     await repos.invites.add(RegistrationInvite("h1", None, "u1", NOW + HOUR, id="i1"))
     await repos.invites.add(RegistrationInvite("h2", None, "u2", NOW + 3 * HOUR, id="i2"))
     await repos.invites.add(RegistrationInvite("h3", None, "u1", NOW + 2 * HOUR, id="i3"))
-    assert [i.id for i in await repos.invites.list()] == ["i2", "i3", "i1"]
-    assert [i.id for i in await repos.invites.list(created_by="u1")] == ["i3", "i1"]
-    assert [i.id for i in await repos.invites.list(limit=1)] == ["i2"]
+
+    def ids(found: Found[RegistrationInvite]) -> list[str]:
+        return [i.id for i in found.items]
+
+    everything = await repos.invites.page(InviteQuery(now=NOW))
+    mine = await repos.invites.page(InviteQuery(now=NOW, created_by="u1"))
+    first = await repos.invites.page(InviteQuery(now=NOW, window=Window(limit=1)))
+    second = await repos.invites.page(InviteQuery(now=NOW, window=Window(limit=1, offset=1)))
+    assert (ids(everything), everything.total) == (["i2", "i3", "i1"], 3)
+    assert ids(mine) == ["i3", "i1"]
+    assert (ids(first), first.total, ids(second)) == (["i2"], 3, ["i3"])
+    assert (await repos.invites.get_by_id("i3")) == await repos.invites.get("h3")
+    assert await repos.invites.get_by_id("ghost") is None
+
+
+async def test__invite__page_state_search_and_sort(repos: Repos, user: str) -> None:
+    await repos.invites.add(RegistrationInvite("h1", "zed.annax@example.test", "u1", NOW + HOUR, id="i1"))
+    await repos.invites.add(RegistrationInvite("h2", "Anna_X@example.test", "u1", NOW - HOUR, id="i2"))
+    await repos.invites.add(RegistrationInvite("h3", None, "u1", NOW + 2 * HOUR, id="i3"))
+    await repos.invites.add(RegistrationInvite("h4", "bella@example.test", "u1", NOW + HOUR, id="i4"))
+    assert await repos.invites.consume("h3", "x@example.test", NOW) is not None
+
+    def ids(found: Found[RegistrationInvite]) -> list[str]:
+        return [i.id for i in found.items]
+
+    pending = await repos.invites.page(InviteQuery(now=NOW, states=(InviteState.pending,)))
+    used_or_expired = await repos.invites.page(InviteQuery(now=NOW, states=(InviteState.used, InviteState.expired)))
+    literal = await repos.invites.page(InviteQuery(now=NOW, q="ANNA_"))
+    by_email = await repos.invites.page(InviteQuery(now=NOW, sort=SortKey("email")))
+    assert ids(pending) == ["i1", "i4"]
+    assert ids(used_or_expired) == ["i3", "i2"]
+    # `_` в поиске обычный символ: zed.annax@ не подходит под «anna_».
+    assert ids(literal) == ["i2"]
+    # Приглашение без адреса в конце при любом направлении.
+    assert ids(by_email) == ["i2", "i4", "i1", "i3"]
 
 
 async def test__invite__revoke_removes_only_unused(repos: Repos, user: str) -> None:
@@ -412,24 +450,61 @@ async def test__audit__query__filters_and_keyset_page(repos: Repos) -> None:
     await repos.audit.record("auth.login", actor_id="u1", target=None)
     await repos.audit.record("auth_x.login", actor_id="u1", target="u1")
 
-    everything = await repos.audit.query(AuditQuery(limit=10))
-    first = await repos.audit.query(AuditQuery(limit=2))
-    second = await repos.audit.query(AuditQuery(limit=2, before_id=first[-1].id))
+    async def actions(query: AuditQuery) -> list[str]:
+        return [v.entry.action for v in await repos.audit.query(query)]
+
+    everything = [v.entry for v in await repos.audit.query(AuditQuery(limit=10))]
+    first = [v.entry for v in await repos.audit.query(AuditQuery(limit=2))]
+    second = [v.entry for v in await repos.audit.query(AuditQuery(limit=2, before_id=first[-1].id))]
 
     assert [e.action for e in everything] == ["auth_x.login", "auth.login", "admin.user_enabled", "admin.user_disabled"]
     assert [e.id for e in first + second] == [e.id for e in everything]
-    assert [e.action for e in await repos.audit.query(AuditQuery(action_prefix="admin."))] == [
-        "admin.user_enabled",
-        "admin.user_disabled",
-    ]
-    assert [e.action for e in await repos.audit.query(AuditQuery(action_prefix="auth_"))] == ["auth_x.login"]
-    assert [e.action for e in await repos.audit.query(AuditQuery(target="u1"))] == [
-        "auth_x.login",
-        "admin.user_disabled",
-    ]
+    assert await actions(AuditQuery(action_prefix="admin.")) == ["admin.user_enabled", "admin.user_disabled"]
+    assert await actions(AuditQuery(action_prefix="auth_")) == ["auth_x.login"]
+    assert await actions(AuditQuery(target="u1")) == ["auth_x.login", "admin.user_disabled"]
     assert len(await repos.audit.query(AuditQuery(actor_id="boss", target="u2"))) == 1
     assert await repos.audit.query(AuditQuery(since=everything[0].at + HOUR)) == []
     assert len(await repos.audit.query(AuditQuery(until=everything[0].at + HOUR))) == 4
+
+
+async def test__audit__query__categories_actions_and_search(repos: Repos) -> None:
+    await repos.users.add(replace(make_user("u1"), name="Анна Петрова"))
+    await repos.audit.record("admin.user_disabled", actor_id="boss", target="u1")
+    await repos.audit.record("auth.login", actor_id="u1", target=None)
+    await repos.audit.record("auth_x.login", actor_id="boss", target="org_7")
+    await repos.audit.record("invite.create", actor_id="boss", target="inv_1", details={"email": "x@example.test"})
+
+    async def actions(query: AuditQuery) -> list[str]:
+        return [v.entry.action for v in await repos.audit.query(query)]
+
+    # Категория это префикс до точки: auth_x к auth не относится.
+    assert await actions(AuditQuery(categories=("auth",))) == ["auth.login"]
+    assert await actions(AuditQuery(categories=("auth",), actions=("invite.create",))) == [
+        "invite.create",
+        "auth.login",
+    ]
+    # Поиск: подстрока в действии и цели или имя и почта действовавшего.
+    assert await actions(AuditQuery(q="ПЕТРОВ")) == ["auth.login"]
+    assert await actions(AuditQuery(q="ORG_")) == ["auth_x.login"]
+    assert await actions(AuditQuery(q="%")) == []
+
+
+async def test__audit__query__actor_and_target_labels(repos: Repos) -> None:
+    await repos.users.add(replace(make_user("u1"), name="Анна Петрова"))
+    await repos.audit.record("admin.user_disabled", actor_id="u1", target="u1")
+    await repos.audit.record("invite.create", actor_id="deleted:abc", target="inv_1", details={"email": "x@ex.test"})
+    await repos.audit.record("admin.purged", actor_id=None, target="deleted:abc", details={"count": 1})
+    await repos.audit.record("group.create", actor_id="u1", target="grp_1", details={"name": "Team", "slug": "t"})
+
+    views = await repos.audit.query(AuditQuery())
+
+    labels = [(v.actor, v.target_label) for v in views]
+    assert labels == [
+        (AuditActor("u1", "Анна Петрова", "u1@example.test"), "Team"),
+        (None, "deleted:abc"),
+        (AuditActor("deleted:abc", "deleted:abc", None), "x@ex.test"),
+        (AuditActor("u1", "Анна Петрова", "u1@example.test"), "Анна Петрова"),
+    ]
 
 
 async def test__audit__purge_before__removes_only_old_events(repos: Repos) -> None:

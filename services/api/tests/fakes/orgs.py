@@ -2,22 +2,36 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.normalize import normalize_email
+from hse_doc_studio.core.listing import Found, Picked
 from hse_doc_studio.core.orgs.entities import (
+    GROUP_PREVIEW,
+    ROLE_ORDER,
     AdminOrgSummary,
     Group,
+    GroupMemberQuery,
     GroupMemberView,
+    GroupPreview,
+    GroupQuery,
     GroupSummary,
+    MemberQuery,
+    MemberRef,
     Org,
     OrgMember,
     OrgMemberView,
+    OrgQuery,
     OrgRole,
     OrgSummary,
+    UserOrgQuery,
+    UserOrgView,
 )
 
 from tests.fakes.identity import InMemoryIdentityStore
+from tests.fakes.listing import matches, ordered, page, picked
 
 
 @dataclass
@@ -87,14 +101,43 @@ class InMemoryOrgRepository:
 
     def _admin_summary(self, org: Org, role: OrgRole | None) -> AdminOrgSummary:
         base = self._summary(org, role or OrgRole.member)
-        return AdminOrgSummary(org, role, base.member_count, base.group_count, base.project_count)
+        owners = sum(1 for m in self._s.members.values() if m.org_id == org.id and m.role is OrgRole.owner)
+        return AdminOrgSummary(org, role, base.member_count, base.group_count, base.project_count, owners)
 
-    async def list_all(self, viewer_id: str) -> list[AdminOrgSummary]:
+    async def page_all(self, viewer_id: str, query: OrgQuery) -> Found[AdminOrgSummary]:
         found = [
             self._admin_summary(org, m.role if (m := self._s.members.get((org.id, viewer_id))) is not None else None)
             for org in self._s.orgs.values()
+            if matches(query.q, org.name, org.slug)
         ]
-        return sorted(found, key=lambda x: (x.org.name.lower(), x.org.slug))
+        if query.mine is not None:
+            found = [x for x in found if (x.my_role is not None) is query.mine]
+        keys: dict[str, Callable[[AdminOrgSummary], object]] = {
+            "name": lambda x: x.org.name.lower(),
+            "slug": lambda x: x.org.slug,
+            "member_count": lambda x: x.member_count,
+            "project_count": lambda x: x.project_count,
+        }
+        return page(ordered(found, query.sort, keys, lambda x: x.org.id), query.window)
+
+    async def pick(self, q: str | None, limit: int) -> Picked[Org]:
+        found = [o for o in self._s.orgs.values() if matches(q, o.name, o.slug)]
+        return picked(sorted(found, key=lambda o: (o.name.lower(), o.id)), limit)
+
+    async def page_for_user(self, user_id: str, query: UserOrgQuery) -> Found[UserOrgView]:
+        found = [
+            UserOrgView(self._s.orgs[m.org_id], m.role, m.created_at)
+            for m in self._s.members.values()
+            if m.user_id == user_id
+            and matches(query.q, self._s.orgs[m.org_id].name, self._s.orgs[m.org_id].slug)
+            and (not query.roles or m.role in query.roles)
+        ]
+        keys: dict[str, Callable[[UserOrgView], object]] = {
+            "name": lambda x: x.org.name.lower(),
+            "role": lambda x: ROLE_ORDER.index(x.role),
+            "joined_at": lambda x: x.joined_at,
+        }
+        return page(ordered(found, query.sort, keys, lambda x: x.org.id), query.window)
 
     async def summary_for_admin(self, org: Org, viewer_id: str) -> AdminOrgSummary:
         member = self._s.members.get((org.id, viewer_id))
@@ -118,6 +161,31 @@ class InMemoryOrgRepository:
 
     def _order(self, member: OrgMember) -> tuple[object, str]:
         return (member.created_at, member.user_id)
+
+    def _member_matches(self, member: OrgMember, q: str | None) -> bool:
+        user = self._s.users.users[member.user_id]
+        return matches(q, user.name, user.email_normalized)
+
+    async def page_members(self, org_id: str, query: MemberQuery) -> Found[OrgMemberView]:
+        found = [
+            OrgMemberView(m, self._s.users.users[m.user_id].name, self._s.users.users[m.user_id].email)
+            for m in self._s.members.values()
+            if m.org_id == org_id and self._member_matches(m, query.q) and (not query.roles or m.role in query.roles)
+        ]
+        keys: dict[str, Callable[[OrgMemberView], object]] = {
+            "name": lambda v: v.name.lower(),
+            "email": lambda v: v.email.lower(),
+            "role": lambda v: ROLE_ORDER.index(v.member.role),
+            "joined_at": lambda v: v.member.created_at,
+        }
+        return page(ordered(found, query.sort, keys, lambda v: v.member.user_id), query.window)
+
+    async def role_counts(self, org_id: str, q: str | None) -> dict[OrgRole, int]:
+        found = [m for m in self._s.members.values() if m.org_id == org_id and self._member_matches(m, q)]
+        return {role: sum(1 for m in found if m.role is role) for role in ROLE_ORDER}
+
+    async def members_among(self, org_id: str, user_ids: list[str]) -> set[str]:
+        return {uid for uid in user_ids if (org_id, uid) in self._s.members}
 
     async def add_member(self, member: OrgMember) -> None:
         if (member.org_id, member.user_id) in self._s.members:
@@ -158,6 +226,33 @@ class InMemoryGroupRepository:
             for g in sorted(found, key=lambda g: (g.name.lower(), g.id))
         ]
 
+    def _preview(self, group: Group) -> GroupPreview:
+        ids = [k[1] for k in self._s.group_members if k[0] == group.id]
+        users = sorted((self._s.users.users[uid] for uid in ids), key=lambda u: (u.name.lower(), u.id))
+        refs = tuple(MemberRef(u.id, u.name) for u in users[:GROUP_PREVIEW])
+        return GroupPreview(group, len(ids), refs)
+
+    async def page_for_org(self, org_id: str, query: GroupQuery) -> Found[GroupPreview]:
+        found = [self._preview(g) for g in self._s.groups.values() if g.org_id == org_id and matches(query.q, g.name)]
+        keys: dict[str, Callable[[GroupPreview], object]] = {
+            "name": lambda p: p.group.name.lower(),
+            "member_count": lambda p: p.member_count,
+        }
+        return page(ordered(found, query.sort, keys, lambda p: p.group.id), query.window)
+
+    async def previews(self, group_ids: list[str]) -> dict[str, GroupPreview]:
+        return {gid: self._preview(self._s.groups[gid]) for gid in group_ids if gid in self._s.groups}
+
+    async def page_members(self, group_id: str, query: GroupMemberQuery) -> Found[GroupMemberView]:
+        ticks = {k[1]: tick for k, tick in self._s.group_members.items() if k[0] == group_id}
+        found = [v for v in await self.list_members(group_id) if matches(query.q, v.name, normalize_email(v.email))]
+        keys: dict[str, Callable[[GroupMemberView], object]] = {
+            "name": lambda v: v.name.lower(),
+            "email": lambda v: v.email.lower(),
+            "added_at": lambda v: ticks[v.user_id],
+        }
+        return page(ordered(found, query.sort, keys, lambda v: v.user_id), query.window)
+
     async def update(self, group: Group) -> None:
         if self._name_taken(group.org_id, group.name, except_id=group.id):
             raise IdentityError(IdentityErrorCode.name_taken)
@@ -187,13 +282,6 @@ class InMemoryGroupRepository:
 
     async def remove_member(self, group_id: str, user_id: str) -> bool:
         return self._s.group_members.pop((group_id, user_id), None) is not None
-
-    async def member_ids_by_org(self, org_id: str) -> dict[str, list[str]]:
-        result: dict[str, list[str]] = {g.id: [] for g in self._s.groups.values() if g.org_id == org_id}
-        for (group_id, user_id), _ in sorted(self._s.group_members.items(), key=lambda kv: kv[1]):
-            if group_id in result:
-                result[group_id].append(user_id)
-        return result
 
     async def names_for_user(self, user_id: str) -> dict[str, list[str]]:
         result: dict[str, list[str]] = {}

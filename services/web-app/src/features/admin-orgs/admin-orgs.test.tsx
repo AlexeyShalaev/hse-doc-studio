@@ -22,8 +22,9 @@ import { i18n } from "@shared/lib";
 import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
 import {
-  AdminGroupSchema,
-  AdminOrgMemberSchema,
+  AdminGroupPageSchema,
+  AdminOrgMemberPageSchema,
+  AdminOrgPageSchema,
   AdminOrgSchema,
 } from "@entities/session";
 import { installServerDemo } from "@/app/demo";
@@ -90,21 +91,25 @@ describe("организации в админке: демо-API", () => {
   });
 
   it("ответы проходят схемы контракта", async () => {
-    const orgs = (await call("GET", "/orgs")).data as unknown[];
-    expect(orgs).toHaveLength(3);
-    for (const o of orgs) AdminOrgSchema.parse(o);
-    const members = (await call("GET", "/orgs/msp-2025/members"))
-      .data as unknown[];
-    for (const x of members) AdminOrgMemberSchema.parse(x);
-    const groups = (await call("GET", "/orgs/msp-2025/groups"))
-      .data as unknown[];
-    for (const g of groups) AdminGroupSchema.parse(g);
+    const orgs = AdminOrgPageSchema.parse((await call("GET", "/orgs")).data);
+    expect(orgs.items).toHaveLength(3);
+    expect(orgs.total).toBe(3);
+    AdminOrgMemberPageSchema.parse(
+      (await call("GET", "/orgs/msp-2025/members")).data,
+    );
+    const groups = AdminGroupPageSchema.parse(
+      (await call("GET", "/orgs/msp-2025/groups")).data,
+    );
+    expect(groups.items.length).toBeGreaterThan(0);
   });
 
   it("админ организации видит только свои, чужую организацию не открыть", async () => {
     activateServerScenario("org_admin");
-    const orgs = (await call("GET", "/orgs")).data as { slug: string }[];
-    expect(orgs.map((o) => o.slug).sort()).toEqual(["ai-lab", "msp-2025"]);
+    const orgs = AdminOrgPageSchema.parse((await call("GET", "/orgs")).data);
+    expect(orgs.items.map((o) => o.slug).sort()).toEqual([
+      "ai-lab",
+      "msp-2025",
+    ]);
     expect((await call("GET", "/orgs/pilot-2026")).status).toBe(404);
     expect((await call("GET", "/orgs/pilot-2026/members")).status).toBe(404);
     expect((await call("POST", "/orgs", { name: "X", slug: "x" })).status).toBe(
@@ -200,10 +205,12 @@ describe("организации в админке: демо-API", () => {
     });
     expect(bad.status).toBe(422);
     await call("DELETE", "/orgs/msp-2025/members/u_01hx7k2m9c");
-    const groups = (await call("GET", "/orgs/msp-2025/groups")).data as {
-      member_ids: string[];
-    }[];
-    expect(groups.flatMap((g) => g.member_ids)).not.toContain("u_01hx7k2m9c");
+    const groups = AdminGroupPageSchema.parse(
+      (await call("GET", "/orgs/msp-2025/groups")).data,
+    );
+    expect(
+      groups.items.flatMap((g) => g.preview.map((m) => m.user_id)),
+    ).not.toContain("u_01hx7k2m9c");
   });
 });
 

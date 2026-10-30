@@ -265,6 +265,14 @@ export type CreateApiTokenResponse = z.infer<
   typeof CreateApiTokenResponseSchema
 >;
 
+// Страница списка сервера: {items, total, limit, offset}.
+const pageOf = <T extends z.ZodType>(item: T) =>
+  z.strictObject({
+    items: z.array(item),
+    total: z.number().int(),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  });
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -283,6 +291,8 @@ export const ProjectSummarySchema = z.strictObject({
   archived: z.boolean(),
   shared_enabled: z.boolean(),
 });
+// Серверный режим отдаёт список проектов страницей; локальный по-прежнему массивом.
+export const ProjectSummaryPageSchema = pageOf(ProjectSummarySchema);
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
 export const CreateServerProjectRequestSchema = z.strictObject({
@@ -331,14 +341,31 @@ export const AdminUserSchema = z.strictObject({
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
 });
-const pageOf = <T extends z.ZodType>(item: T) =>
-  z.strictObject({
-    items: z.array(item),
-    total: z.number().int(),
-    limit: z.number().int(),
-    offset: z.number().int(),
-  });
 export const AdminUserPageSchema = pageOf(AdminUserSchema);
+// Счётчики на чипах списка людей под тем же поиском (GET /api/admin/users/facets).
+export const AdminUserFacetsSchema = z.strictObject({
+  status: z.record(AccountStatusSchema, z.number().int()),
+  admins: z.number().int(),
+});
+// Организация в карточке человека (GET /api/admin/users/{id}/orgs).
+export const AdminUserOrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  role: OrgRoleNameSchema,
+  joined_at: iso,
+});
+export const AdminUserOrgPageSchema = pageOf(AdminUserOrgSchema);
+// Пикер: первые подходящие; has_more значит «уточните поиск», пикер не листается.
+export const PickerItemSchema = z.strictObject({
+  kind: z.enum(["user", "org", "group", "project", "runner"]),
+  id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+});
+export const PickerListSchema = z.strictObject({
+  items: z.array(PickerItemSchema),
+  has_more: z.boolean(),
+});
 export const UpdateAdminUserRequestSchema = z.strictObject({
   is_instance_admin: z.boolean(),
 });
@@ -366,17 +393,28 @@ export const AdminInvitationSchema = z.strictObject({
   used_at: iso.nullable(),
 });
 export const AdminInvitationPageSchema = pageOf(AdminInvitationSchema);
+// Кто действовал; у удалённого человека имя это псевдоним из журнала, почты нет.
+export const AdminAuditActorSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().nullable(),
+});
 export const AdminAuditEventSchema = z.strictObject({
   id: z.number().int(),
   at: iso,
   action: z.string(),
   actor_id: z.string().nullable(),
+  // Имя действовавшего и подпись цели сервер подставляет сам: справочник людей на клиенте не нужен.
+  actor: AdminAuditActorSchema.nullable(),
   target: z.string().nullable(),
+  target_label: z.string().nullable(),
   details: z.record(z.string(), z.unknown()),
 });
+// Курсор непрозрачный; total_estimate есть только без фильтров, иначе «из N» не показывается.
 export const AdminAuditPageSchema = z.strictObject({
   items: z.array(AdminAuditEventSchema),
   next_cursor: z.string().nullable(),
+  total_estimate: z.number().int().nullable(),
 });
 export const CreateAdminInvitationRequestSchema = z.strictObject({
   email: z.string().nullable(),
@@ -391,8 +429,11 @@ export const AdminOrgSchema = z.strictObject({
   name: z.string(),
   member_count: z.number().int(),
   project_count: z.number().int(),
+  // Последнего владельца понизить или убрать нельзя (409 last_owner).
+  owner_count: z.number().int(),
   my_role: OrgRoleNameSchema.nullable(),
 });
+export const AdminOrgPageSchema = pageOf(AdminOrgSchema);
 export const OrgSchema = z.strictObject({
   slug: z.string(),
   name: z.string(),
@@ -458,10 +499,21 @@ export const SetProjectMemberRequestSchema = z.strictObject({
   can_edit_all: z.boolean(),
 });
 export const AdminOrgMemberSchema = OrgMemberSchema;
-export const AddAdminOrgMemberRequestSchema = z.strictObject({
-  email: z.string(),
-  role: OrgRoleNameSchema,
+export const AdminOrgMemberPageSchema = pageOf(AdminOrgMemberSchema);
+// Счётчики ролей на чипах под тем же поиском (GET /api/admin/orgs/{slug}/members/facets).
+export const AdminOrgMemberFacetsSchema = z.strictObject({
+  role: z.record(OrgRoleNameSchema, z.number().int()),
 });
+// Человека выбирают пикером (user_id); почта остаётся запасным путём. Задаётся ровно одно из двух.
+export const AddAdminOrgMemberRequestSchema = z
+  .strictObject({
+    user_id: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    role: OrgRoleNameSchema,
+  })
+  .refine((body) => (body.user_id == null) !== (body.email == null), {
+    message: "user_id или email",
+  });
 export const UpdateAdminOrgMemberRequestSchema = z.strictObject({
   role: OrgRoleNameSchema,
 });
@@ -469,11 +521,16 @@ export const CreateAdminOrgRequestSchema = z.strictObject({
   name: z.string(),
   slug: z.string(),
 });
+// Группа в админке: число участников и первые пять по имени; полный состав листается отдельно.
 export const AdminGroupSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
-  member_ids: z.array(z.string()),
+  member_count: z.number().int(),
+  preview: z.array(z.strictObject({ user_id: z.string(), name: z.string() })),
 });
+export const AdminGroupPageSchema = pageOf(AdminGroupSchema);
+export const AdminGroupMemberSchema = GroupMemberSchema;
+export const AdminGroupMemberPageSchema = pageOf(AdminGroupMemberSchema);
 export const CreateAdminGroupRequestSchema = z.strictObject({
   name: z.string(),
   member_ids: z.array(z.string()),
@@ -493,10 +550,22 @@ export type AdminInvitationCreated = z.infer<
   typeof AdminInvitationCreatedSchema
 >;
 export type AdminAuditEvent = z.infer<typeof AdminAuditEventSchema>;
+export type AdminAuditActor = z.infer<typeof AdminAuditActorSchema>;
 export type AdminAuditPage = z.infer<typeof AdminAuditPageSchema>;
 export type AdminOrg = z.infer<typeof AdminOrgSchema>;
 export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;
 export type AdminGroup = z.infer<typeof AdminGroupSchema>;
+export type AdminOrgPage = z.infer<typeof AdminOrgPageSchema>;
+export type AdminOrgMemberPage = z.infer<typeof AdminOrgMemberPageSchema>;
+export type AdminOrgMemberFacets = z.infer<typeof AdminOrgMemberFacetsSchema>;
+export type AdminGroupPage = z.infer<typeof AdminGroupPageSchema>;
+export type AdminGroupMember = z.infer<typeof AdminGroupMemberSchema>;
+export type AdminGroupMemberPage = z.infer<typeof AdminGroupMemberPageSchema>;
+export type AdminUserFacets = z.infer<typeof AdminUserFacetsSchema>;
+export type AdminUserOrg = z.infer<typeof AdminUserOrgSchema>;
+export type AdminUserOrgPage = z.infer<typeof AdminUserOrgPageSchema>;
+export type PickerItem = z.infer<typeof PickerItemSchema>;
+export type PickerList = z.infer<typeof PickerListSchema>;
 export type CreateAdminOrgRequest = z.infer<typeof CreateAdminOrgRequestSchema>;
 export type CreateAdminGroupRequest = z.infer<
   typeof CreateAdminGroupRequestSchema
@@ -520,11 +589,18 @@ export const ProjectAccessEntrySchema = z.strictObject({
   role: ProjectRoleSchema,
   locked: z.boolean(),
 });
+// Панель «Доступ» страницей: владелец и организация-владелец всегда первыми.
+export const ProjectAccessPageSchema = pageOf(ProjectAccessEntrySchema);
 export const ProjectAccessCandidateSchema = z.strictObject({
   subject_kind: z.enum(["user", "group"]),
   subject_id: z.string(),
   name: z.string(),
   detail: z.string().nullable(),
+});
+// Пикер «Добавить»: до 20 подходящих; has_more значит «уточните поиск».
+export const ProjectAccessCandidateListSchema = z.strictObject({
+  items: z.array(ProjectAccessCandidateSchema),
+  has_more: z.boolean(),
 });
 export type MyOrg = z.infer<typeof MyOrgSchema>;
 export type ProjectAccessEntry = z.infer<typeof ProjectAccessEntrySchema>;
@@ -603,6 +679,7 @@ export const AdminOidcProviderSchema = z.strictObject({
   auto_provision: z.boolean(),
   created_at: iso,
 });
+export const AdminOidcProviderPageSchema = pageOf(AdminOidcProviderSchema);
 export const CreateAdminOidcProviderRequestSchema = z.strictObject({
   label: z.string(),
   issuer: z.string(),

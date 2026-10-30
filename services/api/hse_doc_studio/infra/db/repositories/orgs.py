@@ -4,22 +4,34 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Delete, Select, and_, delete, func, select
+from sqlalchemy import ColumnElement, Delete, Select, and_, case, delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.listing import Found, Picked
 from hse_doc_studio.core.orgs.entities import (
+    GROUP_PREVIEW,
+    ROLE_ORDER,
     AdminOrgSummary,
     Group,
+    GroupMemberQuery,
     GroupMemberView,
+    GroupPreview,
+    GroupQuery,
     GroupSummary,
+    MemberQuery,
+    MemberRef,
     Org,
     OrgMember,
     OrgMemberView,
+    OrgQuery,
     OrgRole,
     OrgSummary,
+    UserOrgQuery,
+    UserOrgView,
 )
+from hse_doc_studio.infra.db.listing import Expr, contains, contains_lower, fetch_page, ordering
 from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
@@ -54,17 +66,21 @@ def _group_grants_of(group_ids: Select[Any]) -> Delete:
 
 async def _counts(
     session: AsyncSession, ids: list[str]
-) -> tuple[dict[str, int], dict[str, int], dict[str | None, int]]:
-    """Участники, группы и проекты по организациям: по одному запросу на вид, а не на организацию."""
-    members = dict(
-        (
-            await session.execute(
-                select(OrgMemberRow.org_id, func.count())
-                .where(OrgMemberRow.org_id.in_(ids))
-                .group_by(OrgMemberRow.org_id)
+) -> tuple[dict[str, int], dict[str, int], dict[str | None, int], dict[str, int]]:
+    """Участники, группы, проекты и владельцы по организациям: по одному запросу на вид, а не на организацию."""
+    found = (
+        await session.execute(
+            select(
+                OrgMemberRow.org_id,
+                func.count(),
+                func.count().filter(OrgMemberRow.role == OrgRole.owner.value),
             )
-        ).all()
-    )
+            .where(OrgMemberRow.org_id.in_(ids))
+            .group_by(OrgMemberRow.org_id)
+        )
+    ).all()
+    members = {org_id: n for org_id, n, _ in found}
+    owners = {org_id: n for org_id, _, n in found}
     groups = dict(
         (
             await session.execute(
@@ -81,14 +97,14 @@ async def _counts(
             )
         ).all()
     )
-    return members, groups, projects
+    return members, groups, projects, owners
 
 
 async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> list[OrgSummary]:
     """Счётчики одним запросом на вид: список «моих организаций» не растёт запросами вместе с числом организаций."""
     if not pairs:
         return []
-    members, groups, projects = await _counts(session, [org.id for org, _ in pairs])
+    members, groups, projects, _ = await _counts(session, [org.id for org, _ in pairs])
     return [
         OrgSummary(
             org=_org(org),
@@ -104,7 +120,7 @@ async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> 
 async def _admin_summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str | None]]) -> list[AdminOrgSummary]:
     if not pairs:
         return []
-    members, groups, projects = await _counts(session, [org.id for org, _ in pairs])
+    members, groups, projects, owners = await _counts(session, [org.id for org, _ in pairs])
     return [
         AdminOrgSummary(
             org=_org(org),
@@ -112,9 +128,100 @@ async def _admin_summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str 
             member_count=members.get(org.id, 0),
             group_count=groups.get(org.id, 0),
             project_count=projects.get(org.id, 0),
+            owner_count=owners.get(org.id, 0),
         )
         for org, role in pairs
     ]
+
+
+def _role_rank(role: Expr) -> ColumnElement[int]:
+    """Старшая роль первой при сортировке по роли."""
+    return case({r.value: i for i, r in enumerate(ROLE_ORDER)}, value=role, else_=len(ROLE_ORDER))
+
+
+def _person_search(q: str) -> ColumnElement[bool]:
+    # Те же выражения, что у списка людей: идут по индексам lower(name) и email_normalized.
+    return contains_lower(q, func.lower(UserRow.name), UserRow.email_normalized)
+
+
+# Счётчики для сортировки считаются подзапросом по строке организации, а не по всей установке.
+_MEMBER_COUNT = select(func.count()).where(OrgMemberRow.org_id == OrgRow.id).correlate(OrgRow).scalar_subquery()
+_PROJECT_COUNT = (
+    select(func.count())
+    .select_from(ProjectRow)
+    .where(ProjectRow.owner_org_id == OrgRow.id)
+    .correlate(OrgRow)
+    .scalar_subquery()
+)
+_ORG_SORT: dict[str, Expr] = {
+    "name": func.lower(OrgRow.name),
+    "slug": OrgRow.slug,
+    "member_count": _MEMBER_COUNT,
+    "project_count": _PROJECT_COUNT,
+}
+_MEMBER_SORT: dict[str, Expr] = {
+    "name": func.lower(UserRow.name),
+    "email": UserRow.email_normalized,
+    "role": _role_rank(OrgMemberRow.role),
+    "joined_at": OrgMemberRow.created_at,
+}
+_USER_ORG_SORT: dict[str, Expr] = {
+    "name": func.lower(OrgRow.name),
+    "role": _role_rank(OrgMemberRow.role),
+    "joined_at": OrgMemberRow.created_at,
+}
+_GROUP_MEMBER_COUNT = (
+    select(func.count()).where(GroupMemberRow.group_id == GroupRow.id).correlate(GroupRow).scalar_subquery()
+)
+_GROUP_SORT: dict[str, Expr] = {
+    "name": func.lower(GroupRow.name),
+    "member_count": _GROUP_MEMBER_COUNT,
+}
+_GROUP_MEMBER_SORT: dict[str, Expr] = {
+    "name": func.lower(UserRow.name),
+    "email": UserRow.email_normalized,
+    "added_at": GroupMemberRow.created_at,
+}
+
+
+async def _previews(session: AsyncSession, groups: list[GroupRow]) -> list[GroupPreview]:
+    """Число участников и первые `GROUP_PREVIEW` по имени: два запроса на страницу, а не на группу."""
+    ids = [g.id for g in groups]
+    if not ids:
+        return []
+    counts = dict(
+        (
+            await session.execute(
+                select(GroupMemberRow.group_id, func.count())
+                .where(GroupMemberRow.group_id.in_(ids))
+                .group_by(GroupMemberRow.group_id)
+            )
+        ).all()
+    )
+    ranked = (
+        select(
+            GroupMemberRow.group_id,
+            GroupMemberRow.user_id,
+            UserRow.name,
+            func.row_number()
+            .over(partition_by=GroupMemberRow.group_id, order_by=(func.lower(UserRow.name), GroupMemberRow.user_id))
+            .label("n"),
+        )
+        .join(UserRow, UserRow.id == GroupMemberRow.user_id)
+        .where(GroupMemberRow.group_id.in_(ids))
+        .subquery()
+    )
+    first = (
+        await session.execute(
+            select(ranked.c.group_id, ranked.c.user_id, ranked.c.name)
+            .where(ranked.c.n <= GROUP_PREVIEW)
+            .order_by(ranked.c.group_id, ranked.c.n)
+        )
+    ).all()
+    refs: dict[str, list[MemberRef]] = {}
+    for group_id, user_id, name in first:
+        refs.setdefault(group_id, []).append(MemberRef(user_id, name))
+    return [GroupPreview(_group(g), counts.get(g.id, 0), tuple(refs.get(g.id, ()))) for g in groups]
 
 
 class SqlOrgRepository:
@@ -192,16 +299,41 @@ class SqlOrgRepository:
             ).all()
             return await _summaries(session, [(org, role) for org, role in found])
 
-    async def list_all(self, viewer_id: str) -> list[AdminOrgSummary]:
+    async def page_all(self, viewer_id: str, query: OrgQuery) -> Found[AdminOrgSummary]:
+        stmt = select(OrgRow, OrgMemberRow.role).outerjoin(
+            OrgMemberRow, and_(OrgMemberRow.org_id == OrgRow.id, OrgMemberRow.user_id == viewer_id)
+        )
+        if query.q:
+            stmt = stmt.where(contains(query.q, OrgRow.name, OrgRow.slug))
+        if query.mine is not None:
+            stmt = stmt.where(OrgMemberRow.user_id.is_not(None) if query.mine else OrgMemberRow.user_id.is_(None))
+        stmt = stmt.order_by(*ordering(query.sort, _ORG_SORT, OrgRow.id))
         async with self._sessions.use() as session:
-            found = (
-                await session.execute(
-                    select(OrgRow, OrgMemberRow.role)
-                    .outerjoin(OrgMemberRow, and_(OrgMemberRow.org_id == OrgRow.id, OrgMemberRow.user_id == viewer_id))
-                    .order_by(func.lower(OrgRow.name), OrgRow.slug)
-                )
-            ).all()
-            return await _admin_summaries(session, [(org, role) for org, role in found])
+            rows, total = await fetch_page(session, stmt, query.window)
+            return Found(await _admin_summaries(session, [(org, role) for org, role in rows]), total)
+
+    async def pick(self, q: str | None, limit: int) -> Picked[Org]:
+        stmt = select(OrgRow)
+        if q:
+            stmt = stmt.where(contains(q, OrgRow.name, OrgRow.slug))
+        stmt = stmt.order_by(func.lower(OrgRow.name), OrgRow.id).limit(limit + 1)
+        async with self._sessions.use() as session:
+            return Picked.of([_org(row) for row in (await session.execute(stmt)).scalars()], limit)
+
+    async def page_for_user(self, user_id: str, query: UserOrgQuery) -> Found[UserOrgView]:
+        stmt = (
+            select(OrgRow, OrgMemberRow.role, OrgMemberRow.created_at)
+            .join(OrgMemberRow, OrgMemberRow.org_id == OrgRow.id)
+            .where(OrgMemberRow.user_id == user_id)
+        )
+        if query.q:
+            stmt = stmt.where(contains(query.q, OrgRow.name, OrgRow.slug))
+        if query.roles:
+            stmt = stmt.where(OrgMemberRow.role.in_([r.value for r in query.roles]))
+        stmt = stmt.order_by(*ordering(query.sort, _USER_ORG_SORT, OrgRow.id))
+        async with self._sessions.use() as session:
+            rows, total = await fetch_page(session, stmt, query.window)
+            return Found([UserOrgView(_org(org), OrgRole(role), joined) for org, role, joined in rows], total)
 
     async def summary_for_admin(self, org: Org, viewer_id: str) -> AdminOrgSummary:
         async with self._sessions.use() as session:
@@ -239,6 +371,43 @@ class SqlOrgRepository:
                 )
             ).all()
             return [OrgMemberView(_member(m), name, email) for m, name, email in found]
+
+    async def page_members(self, org_id: str, query: MemberQuery) -> Found[OrgMemberView]:
+        stmt = (
+            select(OrgMemberRow, UserRow.name, UserRow.email)
+            .join(UserRow, UserRow.id == OrgMemberRow.user_id)
+            .where(OrgMemberRow.org_id == org_id)
+        )
+        if query.q:
+            stmt = stmt.where(_person_search(query.q))
+        if query.roles:
+            stmt = stmt.where(OrgMemberRow.role.in_([r.value for r in query.roles]))
+        stmt = stmt.order_by(*ordering(query.sort, _MEMBER_SORT, OrgMemberRow.user_id))
+        async with self._sessions.use() as session:
+            rows, total = await fetch_page(session, stmt, query.window)
+            return Found([OrgMemberView(_member(m), name, email) for m, name, email in rows], total)
+
+    async def role_counts(self, org_id: str, q: str | None) -> dict[OrgRole, int]:
+        stmt = (
+            select(OrgMemberRow.role, func.count())
+            .join(UserRow, UserRow.id == OrgMemberRow.user_id)
+            .where(OrgMemberRow.org_id == org_id)
+            .group_by(OrgMemberRow.role)
+        )
+        if q:
+            stmt = stmt.where(_person_search(q))
+        async with self._sessions.use() as session:
+            found = {OrgRole(role): n for role, n in (await session.execute(stmt)).all()}
+        return {role: found.get(role, 0) for role in ROLE_ORDER}
+
+    async def members_among(self, org_id: str, user_ids: list[str]) -> set[str]:
+        if not user_ids:
+            return set()
+        async with self._sessions.use() as session:
+            found = await session.execute(
+                select(OrgMemberRow.user_id).where(OrgMemberRow.org_id == org_id, OrgMemberRow.user_id.in_(user_ids))
+            )
+            return set(found.scalars())
 
     async def add_member(self, member: OrgMember) -> None:
         stmt = (
@@ -317,6 +486,37 @@ class SqlGroupRepository:
             ).all()
             return [GroupSummary(_group(g), count) for g, count in found]
 
+    async def page_for_org(self, org_id: str, query: GroupQuery) -> Found[GroupPreview]:
+        stmt = select(GroupRow).where(GroupRow.org_id == org_id)
+        if query.q:
+            # lower(name) рядом с org_id: то же выражение, что у индекса ux_groups_org_name_lower.
+            stmt = stmt.where(contains(query.q, GroupRow.name))
+        stmt = stmt.order_by(*ordering(query.sort, _GROUP_SORT, GroupRow.id))
+        async with self._sessions.use() as session:
+            rows, total = await fetch_page(session, stmt, query.window)
+            groups = [row for (row,) in rows]
+            return Found(await _previews(session, groups), total)
+
+    async def previews(self, group_ids: list[str]) -> dict[str, GroupPreview]:
+        if not group_ids:
+            return {}
+        async with self._sessions.use() as session:
+            groups = (await session.execute(select(GroupRow).where(GroupRow.id.in_(group_ids)))).scalars().all()
+            return {p.group.id: p for p in await _previews(session, list(groups))}
+
+    async def page_members(self, group_id: str, query: GroupMemberQuery) -> Found[GroupMemberView]:
+        stmt = (
+            select(GroupMemberRow.user_id, UserRow.name, UserRow.email, GroupMemberRow.created_at)
+            .join(UserRow, UserRow.id == GroupMemberRow.user_id)
+            .where(GroupMemberRow.group_id == group_id)
+        )
+        if query.q:
+            stmt = stmt.where(_person_search(query.q))
+        stmt = stmt.order_by(*ordering(query.sort, _GROUP_MEMBER_SORT, GroupMemberRow.user_id))
+        async with self._sessions.use() as session:
+            rows, total = await fetch_page(session, stmt, query.window)
+            return Found([GroupMemberView(*row) for row in rows], total)
+
     async def update(self, group: Group) -> None:
         async with self._sessions.use() as session:
             clash = (
@@ -371,21 +571,6 @@ class SqlGroupRepository:
                 .returning(GroupMemberRow.user_id)
             )
             return result.first() is not None
-
-    async def member_ids_by_org(self, org_id: str) -> dict[str, list[str]]:
-        async with self._sessions.use() as session:
-            groups = (await session.execute(select(GroupRow.id).where(GroupRow.org_id == org_id))).scalars().all()
-            found = (
-                await session.execute(
-                    select(GroupMemberRow.group_id, GroupMemberRow.user_id)
-                    .where(GroupMemberRow.group_id.in_(select(GroupRow.id).where(GroupRow.org_id == org_id)))
-                    .order_by(GroupMemberRow.created_at, GroupMemberRow.user_id)
-                )
-            ).all()
-        result: dict[str, list[str]] = {group_id: [] for group_id in groups}
-        for group_id, user_id in found:
-            result[group_id].append(user_id)
-        return result
 
     async def names_for_user(self, user_id: str) -> dict[str, list[str]]:
         async with self._sessions.use() as session:

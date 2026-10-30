@@ -14,6 +14,7 @@ from hse_doc_studio.infra.db.base import Base
 
 class OrgRow(Base):
     __tablename__ = "orgs"
+    __table_args__ = (Index("ix_orgs_name_lower", text("lower(name)")),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     slug: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
@@ -29,6 +30,8 @@ class OrgMemberRow(Base):
     __table_args__ = (
         CheckConstraint("role IN ('member', 'admin', 'owner')", name="org_member_role"),
         Index("ix_org_members_user_id", "user_id"),
+        Index("ix_org_members_org_created", "org_id", "created_at"),
+        Index("ix_org_members_org_role", "org_id", "role"),
     )
 
     org_id: Mapped[str] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"), primary_key=True)
@@ -51,7 +54,10 @@ class GroupRow(Base):
 
 class GroupMemberRow(Base):
     __tablename__ = "group_members"
-    __table_args__ = (Index("ix_group_members_user_id", "user_id"),)
+    __table_args__ = (
+        Index("ix_group_members_user_id", "user_id"),
+        Index("ix_group_members_group_created", "group_id", "created_at"),
+    )
 
     group_id: Mapped[str] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

@@ -323,6 +323,15 @@ class ProjectSummary(StrictModel):
     shared_enabled: bool
 
 
+class ProjectSummaryPage(StrictModel):
+    """Список проектов серверного режима страницей (GET /api/v1/projects); в локальном режиме ответ массив."""
+
+    items: list[ProjectSummary]
+    total: int
+    limit: int
+    offset: int
+
+
 class ProjectImportWarning(StrictModel):
     code: Literal["remote_needs_access", "records_skipped", "store_hardened", "junk_skipped", "chats_unreadable"]
     # Число затронутых файлов или настроек; пусто, когда считать нечего.
@@ -367,6 +376,29 @@ class AdminUser(StrictModel):
 
 class AdminUserPage(StrictModel):
     items: list[AdminUser]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminUserFacets(StrictModel):
+    """Счётчики на чипах списка людей под тем же поиском `q` (GET /api/admin/users/facets)."""
+
+    status: dict[AccountStatus, int]
+    admins: int
+
+
+class AdminUserOrg(StrictModel):
+    """Организация в карточке человека (GET /api/admin/users/{id}/orgs)."""
+
+    slug: str
+    name: str
+    role: OrgRoleName
+    joined_at: datetime
+
+
+class AdminUserOrgPage(StrictModel):
+    items: list[AdminUserOrg]
     total: int
     limit: int
     offset: int
@@ -417,20 +449,36 @@ class AdminInvitationPage(StrictModel):
     offset: int
 
 
+class AdminAuditActor(StrictModel):
+    """Кто действовал; у удалённого человека имя это псевдоним из журнала, почты нет."""
+
+    id: str
+    name: str
+    email: str | None
+
+
 class AdminAuditEvent(StrictModel):
     id: int
     at: datetime
     action: str
     actor_id: str | None
+    # Имя и почта действовавшего: сервер подставляет их сам, клиент не собирает справочник людей.
+    actor: AdminAuditActor | None
     target: str | None
+    # Подпись цели: человек по id, организация, иначе name, label, email или slug из details.
+    target_label: str | None
     details: dict[str, Any]
 
 
 class AdminAuditPage(StrictModel):
-    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице."""
+    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице.
+
+    `total_estimate` оценка числа событий без фильтров; с фильтрами null, «из N» тогда не показывается.
+    """
 
     items: list[AdminAuditEvent]
     next_cursor: str | None
+    total_estimate: int | None
 
 
 class CreateAdminInvitationRequest(StrictModel):
@@ -472,8 +520,17 @@ class AdminOrg(StrictModel):
     name: str
     member_count: int
     project_count: int
+    # Число владельцев: последнего владельца понизить или убрать нельзя (409 last_owner).
+    owner_count: int
     # Роль смотрящего в организации; null у админа установки, который в ней не состоит.
     my_role: OrgRoleName | None
+
+
+class AdminOrgPage(StrictModel):
+    items: list[AdminOrg]
+    total: int
+    limit: int
+    offset: int
 
 
 # Организации и группы: /orgs и /groups (серверный режим).
@@ -545,9 +602,31 @@ class AdminOrgMember(OrgMember):
     """Участник организации в админке: та же форма, что у участника в /orgs."""
 
 
+class AdminOrgMemberPage(StrictModel):
+    items: list[AdminOrgMember]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminOrgMemberFacets(StrictModel):
+    """Счётчики ролей на чипах под тем же поиском `q` (GET /api/admin/orgs/{slug}/members/facets)."""
+
+    role: dict[OrgRoleName, int]
+
+
 class AddAdminOrgMemberRequest(StrictModel):
-    email: str
+    """Человека выбирают пикером (`user_id`); почта остаётся запасным путём. Задаётся ровно одно из двух."""
+
+    user_id: str | None = Field(default=None, max_length=64)
+    email: str | None = Field(default=None, max_length=EMAIL_MAX)
     role: OrgRoleName
+
+    @model_validator(mode="after")
+    def _one_way(self) -> AddAdminOrgMemberRequest:
+        if (self.user_id is None) == (self.email is None):
+            raise ValueError("задайте user_id или email")
+        return self
 
 
 class UpdateAdminOrgMemberRequest(StrictModel):
@@ -559,10 +638,36 @@ class CreateAdminOrgRequest(StrictModel):
     slug: str
 
 
+class AdminGroupMemberRef(StrictModel):
+    user_id: str
+    name: str
+
+
 class AdminGroup(StrictModel):
+    """Группа в админке: число участников и первые пять по имени. Полный состав листается отдельно."""
+
     id: str
     name: str
-    member_ids: list[str]
+    member_count: int
+    preview: list[AdminGroupMemberRef]
+
+
+class AdminGroupPage(StrictModel):
+    items: list[AdminGroup]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminGroupMember(GroupMember):
+    """Участник группы в админке (GET /api/admin/orgs/{slug}/groups/{id}/members)."""
+
+
+class AdminGroupMemberPage(StrictModel):
+    items: list[AdminGroupMember]
+    total: int
+    limit: int
+    offset: int
 
 
 class CreateAdminGroupRequest(StrictModel):
@@ -571,7 +676,8 @@ class CreateAdminGroupRequest(StrictModel):
 
 
 class UpdateAdminGroupRequest(StrictModel):
-    # null значит «не менять».
+    # null значит «не менять». Состав меняют точечно (POST и DELETE .../members/{user_id});
+    # полная замена `member_ids` оставлена старым клиентам.
     name: str | None
     member_ids: list[str] | None
 
@@ -602,6 +708,15 @@ class ProjectAccessEntry(StrictModel):
     locked: bool
 
 
+class ProjectAccessPage(StrictModel):
+    """Страница панели «Доступ»: закреплённые строки (владелец, организация-владелец) всегда первыми."""
+
+    items: list[ProjectAccessEntry]
+    total: int
+    limit: int
+    offset: int
+
+
 class ProjectAccessCandidate(StrictModel):
     """Кого можно добавить (GET /api/v1/projects/{id}/members/candidates?q=)."""
 
@@ -609,6 +724,13 @@ class ProjectAccessCandidate(StrictModel):
     subject_id: str
     name: str
     detail: str | None
+
+
+class ProjectAccessCandidateList(StrictModel):
+    """Пикер «Добавить»: первые подходящие (до 20); `has_more` значит «уточните поиск»."""
+
+    items: list[ProjectAccessCandidate]
+    has_more: bool
 
 
 class AdminSettings(StrictModel):
@@ -706,6 +828,13 @@ class AdminOidcProvider(StrictModel):
     enabled: bool
     auto_provision: bool
     created_at: datetime
+
+
+class AdminOidcProviderPage(StrictModel):
+    items: list[AdminOidcProvider]
+    total: int
+    limit: int
+    offset: int
 
 
 class CreateAdminOidcProviderRequest(StrictModel):

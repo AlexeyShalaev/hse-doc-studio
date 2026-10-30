@@ -5,11 +5,15 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response, status
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, Request, Response, status
+
+from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.session import (
     AdminAuthSettings,
     AdminOidcProvider,
+    AdminOidcProviderPage,
     AdminRegistrationSettings,
     AdminRetentionSettings,
     AdminSmtpSettings,
@@ -24,9 +28,10 @@ from hse_doc_studio.api.schemas.session import (
 )
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.entities import OidcProvider, RegistrationMode
+from hse_doc_studio.core.identity.entities import OIDC_SORTS, OidcProvider, OidcProviderQuery, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.setting_source import SettingDescription
+from hse_doc_studio.core.listing import SortKey
 from hse_doc_studio.use_cases.admin.lifecycle import GetRetentionUC
 from hse_doc_studio.use_cases.admin.oidc import (
     CreateOidcProviderUC,
@@ -181,10 +186,24 @@ async def post_smtp_test(body: AdminSmtpTestRequest, request: Request, response:
     return AdminSmtpTestResult(ok=result.ok, error=result.error)
 
 
-@router.get("/oidc-providers", response_model=list[AdminOidcProvider])
-async def list_oidc_providers(request: Request, response: Response) -> list[AdminOidcProvider]:
+_oidc_sort = sort_param(allowed=OIDC_SORTS, default="created_at")
+
+
+@router.get("/oidc-providers", response_model=AdminOidcProviderPage)
+async def list_oidc_providers(
+    request: Request,
+    response: Response,
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_oidc_sort)],
+    enabled: bool | None = None,
+) -> AdminOidcProviderPage:
     response.headers.update(_NO_STORE)
-    return [_provider(p) for p in await (await _uc(request, ListOidcProvidersUC)).execute(_actor())]
+    query = OidcProviderQuery(q=q, enabled=enabled, sort=sort, window=params.window)
+    found = await (await _uc(request, ListOidcProvidersUC)).execute(_actor(), query)
+    return AdminOidcProviderPage(
+        items=[_provider(p) for p in found.items], total=found.total, limit=params.limit, offset=params.offset
+    )
 
 
 @router.post("/oidc-providers", response_model=AdminOidcProvider, status_code=status.HTTP_201_CREATED)

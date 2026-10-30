@@ -1,8 +1,4 @@
-import type {
-  AdminGroup,
-  AdminOrgMember,
-  OrgRoleName,
-} from "@entities/session";
+import type { AdminOrgMember, OrgRoleName } from "@entities/session";
 
 // Организации в демо-мире админки: люди установки, организации, участники и группы.
 // Участники те же, что в разделе «Пользователи» (adminPeople): по именам и почтам.
@@ -10,13 +6,16 @@ import type {
 
 export type DemoDirectoryUser = { id: string; name: string; email: string };
 
+/** Группа в демо-мире хранит весь состав; наружу уходит число участников и первые по имени (AdminGroup). */
+export type DemoGroup = { id: string; name: string; member_ids: string[] };
+
 export type DemoOrg = {
   slug: string;
   name: string;
   /** Проекты организации: пока они есть, удалить её нельзя. */
   project_count: number;
   members: AdminOrgMember[];
-  groups: AdminGroup[];
+  groups: DemoGroup[];
 };
 
 export type DemoAdminOrgs = {

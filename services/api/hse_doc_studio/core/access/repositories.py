@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor, ProjectAcl, Role
+from hse_doc_studio.core.listing import Found, Picked, SortKey, Window
 
 
 class IProjectAclRepository(Protocol):
@@ -110,16 +111,60 @@ class ProjectCandidate:
     detail: str | None
 
 
+ACCESS_SORTS = ("name", "role")
+# Порядок ролей при сортировке по роли: старшая первой.
+ACCESS_ROLE_ORDER = (Role.owner, Role.editor, Role.reviewer, Role.reader)
+
+
+@dataclass(frozen=True)
+class AccessQuery:
+    """Список «Доступ»: закреплённые строки (владелец, организация-владелец, владельцы-участники) всегда первыми,
+    затем порядок `sort`. `kinds` и `roles` сочетаются по И, внутри каждого любое из значений."""
+
+    q: str | None = None
+    kinds: tuple[Literal["user", "group"], ...] = ()
+    roles: tuple[Role, ...] = ()
+    sort: SortKey = field(default_factory=lambda: SortKey("name"))
+    window: Window = field(default_factory=Window)
+
+
+@dataclass(frozen=True)
+class TransferCandidate:
+    """Кому можно передать проект: организация, где смотрящий владелец или админ, или человек общей организации.
+    У организации `id` это её адрес (slug)."""
+
+    kind: Literal["user", "org"]
+    id: str
+    name: str
+    detail: str | None
+
+
 class IProjectAccessDirectory(Protocol):
-    async def list_access(self, project_id: UUID) -> list[ProjectAccessRow]:
-        """Все, кому открыт проект, в порядке показа; пустой список, если проекта нет."""
+    async def page_access(self, project_id: UUID, query: AccessQuery) -> Found[ProjectAccessRow] | None:
+        """Страница тех, кому открыт проект; None, если проекта нет."""
         ...
 
-    async def candidates(self, project_id: UUID, actor_id: str, query: str, limit: int) -> list[ProjectCandidate]:
+    async def candidates(
+        self,
+        project_id: UUID,
+        actor_id: str,
+        query: str,
+        limit: int,
+        kind: Literal["user", "group"] | None = None,
+    ) -> Picked[ProjectCandidate]:
         """Группы, затем люди, которых смотрящий вправе увидеть и которых в проекте ещё нет.
 
         Видимость: организации смотрящего (у проекта организации только она) и люди, которым смотрящий уже
         открыл свои проекты. Чужих по всей установке не перебрать.
+        """
+        ...
+
+    async def transfer_candidates(
+        self, project_id: UUID, actor_id: str, query: str, limit: int, kind: Literal["user", "org"] | None = None
+    ) -> Picked[TransferCandidate]:
+        """Организации, где смотрящий владелец или админ, затем активные люди общих с ним организаций.
+
+        Нынешний владелец проекта и сам смотрящий в список не входят. Чужих по всей установке не перебрать.
         """
         ...
 

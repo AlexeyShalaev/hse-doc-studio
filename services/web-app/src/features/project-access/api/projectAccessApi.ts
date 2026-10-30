@@ -1,8 +1,7 @@
-import { z } from "zod";
 import { apiClient, parseResp } from "@shared/api";
 import {
-  ProjectAccessCandidateSchema,
-  ProjectAccessEntrySchema,
+  ProjectAccessCandidateListSchema,
+  ProjectAccessPageSchema,
   type ProjectAccessCandidate,
   type ProjectAccessEntry,
   type ProjectRole,
@@ -21,10 +20,12 @@ const base = (projectId: string) => `/projects/${enc(projectId)}/members`;
 // Запись идёт без молчания: отказ по роли показывает общий тост с названием роли.
 // Остальные отказы панель показывает сама.
 export const projectAccessApi = {
+  // Сервер листает список сам; панель пока берёт одну страницу наибольшего размера.
   list: (projectId: string): Promise<ProjectAccessEntry[]> =>
     apiClient
-      .get(base(projectId), { silentError: true })
-      .then(parseResp(z.array(ProjectAccessEntrySchema))),
+      .get(base(projectId), { params: { limit: 200 }, silentError: true })
+      .then(parseResp(ProjectAccessPageSchema))
+      .then((page) => page.items),
   candidates: (
     projectId: string,
     q: string,
@@ -34,7 +35,8 @@ export const projectAccessApi = {
         params: { q },
         silentError: true,
       })
-      .then(parseResp(z.array(ProjectAccessCandidateSchema))),
+      .then(parseResp(ProjectAccessCandidateListSchema))
+      .then((list) => list.items),
   // Запись идёт ручками бэкенда PUT|DELETE .../members/{user|group}:{id}; список панель
   // перечитывает сама, поэтому ответ не нужен.
   set: async (

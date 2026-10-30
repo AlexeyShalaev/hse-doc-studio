@@ -1,5 +1,15 @@
 {
   "id": "g_01hx7m4c2d",
   "name": "Команда Bertie",
-  "member_ids": ["u_01hx7k1a0b", "u_01hx7k2m9c"]
+  "member_count": 7,
+  "preview": [
+    {
+      "user_id": "u_01hx7k2m9c",
+      "name": "Анна Петрова"
+    },
+    {
+      "user_id": "u_01hx7k1a0b",
+      "name": "Иван Сидоров"
+    }
+  ]
 }

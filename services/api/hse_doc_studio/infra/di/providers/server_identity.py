@@ -85,15 +85,20 @@ from hse_doc_studio.use_cases.admin.oidc import (
     UpdateOidcProviderUC,
 )
 from hse_doc_studio.use_cases.admin.orgs import (
+    AddAdminGroupMemberUC,
     AddAdminMemberUC,
+    AdminMemberFacetsUC,
     CreateAdminGroupUC,
     CreateAdminOrgUC,
     DeleteAdminGroupUC,
     DeleteAdminOrgUC,
     GetAdminOrgUC,
+    ListAdminGroupMembersUC,
     ListAdminGroupsUC,
     ListAdminMembersUC,
     ListAdminOrgsUC,
+    PickOrgsUC,
+    RemoveAdminGroupMemberUC,
     RemoveAdminMemberUC,
     SetAdminMemberRoleUC,
     UpdateAdminGroupUC,
@@ -105,10 +110,13 @@ from hse_doc_studio.use_cases.admin.users import (
     EnableUserUC,
     GetUserUC,
     ListApprovalsUC,
+    ListUserOrgsUC,
     ListUsersUC,
+    PickUsersUC,
     RejectUserUC,
     RevokeUserSessionsUC,
     SetUserAdminUC,
+    UserFacetsUC,
 )
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.account_profile import GetAccountUC, UpdateAccountUC
@@ -705,6 +713,18 @@ class ServerIdentityProvider(Provider):
         return GetUserUC(directory)
 
     @provide
+    def get_user_facets_uc(self, directory: IUserDirectory) -> UserFacetsUC:
+        return UserFacetsUC(directory)
+
+    @provide
+    def get_pick_users_uc(self, directory: IUserDirectory) -> PickUsersUC:
+        return PickUsersUC(directory)
+
+    @provide
+    def get_list_user_orgs_uc(self, users: IUserRepository, orgs: IOrgRepository) -> ListUserOrgsUC:
+        return ListUserOrgsUC(users, orgs)
+
+    @provide
     def get_user_lifecycle(self, sessions: SessionProvider) -> IUserLifecycle:
         return SqlUserLifecycle(sessions, settings.data_dir.expanduser())
 
@@ -968,6 +988,37 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_list_admin_orgs_uc(self, orgs: IOrgRepository) -> ListAdminOrgsUC:
         return ListAdminOrgsUC(orgs)
+
+    @provide
+    def get_pick_orgs_uc(self, orgs: IOrgRepository) -> PickOrgsUC:
+        return PickOrgsUC(orgs)
+
+    @provide
+    def get_admin_member_facets_uc(self, orgs: IOrgRepository) -> AdminMemberFacetsUC:
+        return AdminMemberFacetsUC(orgs)
+
+    @provide
+    def get_list_admin_group_members_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository
+    ) -> ListAdminGroupMembersUC:
+        return ListAdminGroupMembersUC(orgs, groups)
+
+    @provide
+    def get_add_admin_group_member_uc(
+        self,
+        orgs: IOrgRepository,
+        groups: IGroupRepository,
+        users: IUserRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> AddAdminGroupMemberUC:
+        return AddAdminGroupMemberUC(orgs, groups, users, audit, uow)
+
+    @provide
+    def get_remove_admin_group_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveAdminGroupMemberUC:
+        return RemoveAdminGroupMemberUC(orgs, groups, audit, uow)
 
     @provide
     def get_get_admin_org_uc(self, orgs: IOrgRepository) -> GetAdminOrgUC:

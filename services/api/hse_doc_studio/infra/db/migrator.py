@@ -66,8 +66,21 @@ def _current(connection: Connection) -> str | None:
     return MigrationContext.configure(connection).get_current_revision()
 
 
+# Индексы, которых нет в моделях намеренно: триграммные индексы поиска появляются, только если в базе есть pg_trgm.
+_OPTIONAL_INDEX_PREFIX = "ix_trgm_"
+
+
+def _tracked(obj: object, name: str | None, type_: str, reflected: bool, compare_to: object) -> bool:
+    return not (
+        type_ == "index" and reflected and compare_to is None and (name or "").startswith(_OPTIONAL_INDEX_PREFIX)
+    )
+
+
 def _drift(connection: Connection) -> list[object]:
-    ctx = MigrationContext.configure(connection, opts={"compare_type": True, "compare_server_default": True})
+    ctx = MigrationContext.configure(
+        connection,
+        opts={"compare_type": True, "compare_server_default": True, "include_object": _tracked},
+    )
     return list(compare_metadata(ctx, Base.metadata))
 
 

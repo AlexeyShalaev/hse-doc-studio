@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { failureCode } from "@shared/api";
 import type {
   CreateAdminGroupRequest,
   CreateAdminOrgRequest,
@@ -13,6 +14,7 @@ export const adminOrgsKeys = {
   org: (slug: string) => [...adminOrgsKeys.all, slug] as const,
   members: (slug: string) => [...adminOrgsKeys.org(slug), "members"] as const,
   groups: (slug: string) => [...adminOrgsKeys.org(slug), "groups"] as const,
+  userOrgs: (userId: string) => ["admin", "user-orgs", userId] as const,
 };
 
 export const useOrgs = () =>
@@ -116,6 +118,38 @@ export const useUpdateGroup = (slug: string) => {
     mutationFn: (input: { id: string; body: UpdateAdminGroupRequest }) =>
       adminOrgsApi.updateGroup(slug, input.id, input.body),
     onSuccess: changed,
+  });
+};
+
+/**
+ * Правка состава группы точечными запросами: добавить выбранных, убрать снятых.
+ * Полный список участников не пересылается, поэтому участники за пределами
+ * показанных не теряются. Уже состоящий в группе (409) считается добавленным.
+ */
+export const useSyncGroupMembers = (slug: string) => {
+  const changed = useChanged(slug);
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      add: readonly string[];
+      remove: readonly string[];
+    }) => {
+      for (const userId of input.add) {
+        await adminOrgsApi
+          .addGroupMember(slug, input.id, userId)
+          .catch((error: unknown) => {
+            if (failureCode(error) !== "already_member") throw error;
+          });
+      }
+      for (const userId of input.remove) {
+        await adminOrgsApi.removeGroupMember(slug, input.id, userId);
+      }
+    },
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: adminOrgsKeys.groups(slug) });
+      changed();
+    },
   });
 };
 

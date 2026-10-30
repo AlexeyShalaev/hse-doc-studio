@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import { toast, useDebouncedValue } from "@shared/lib";
 import { useProjectRoleLabel } from "@entities/project";
 import {
   useBootstrap,
@@ -32,10 +32,12 @@ export const ProjectAccessPanel = ({
   const list = useProjectAccess(projectId);
   const [query, setQuery] = useState("");
   const canManage = myRole === "owner";
+  // Поиск уходит на сервер после паузы в наборе (300 мс, как у FilterBar), а не на каждое нажатие.
+  const needle = useDebouncedValue(query.trim(), 300);
   const candidates = useAccessCandidates(
     projectId,
-    query.trim(),
-    canManage && query.trim() !== "",
+    needle,
+    canManage && needle !== "",
   );
   const set = useSetAccess(projectId);
   const remove = useRemoveAccess(projectId);

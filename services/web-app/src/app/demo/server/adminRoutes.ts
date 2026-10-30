@@ -292,7 +292,14 @@ export const createAdminRoutes = (
     {
       method: "GET",
       pattern: "/oidc-providers",
-      handler: guarded(() => demoJson(state().providers)),
+      handler: guarded(() =>
+        demoJson({
+          items: state().providers,
+          total: state().providers.length,
+          limit: 50,
+          offset: 0,
+        }),
+      ),
     },
     {
       method: "POST",

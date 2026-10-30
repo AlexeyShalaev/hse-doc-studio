@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.entities import User, UserListing, UserStatus
+from hse_doc_studio.core.identity.entities import User, UserFacets, UserListing, UserPickQuery, UserQuery, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, ISessionRepository, IUserDirectory, IUserRepository
+from hse_doc_studio.core.listing import Found, Picked
+from hse_doc_studio.core.orgs.entities import UserOrgQuery, UserOrgView
+from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.last_admin import ensure_admin_remains
 
@@ -19,22 +22,49 @@ def require_admin(actor: Actor) -> str:
     return actor.id
 
 
-@dataclass(frozen=True)
-class UserPage:
-    items: list[UserListing]
-    total: int
-
-
 class ListUsersUC:
     def __init__(self, directory: IUserDirectory) -> None:
         self._directory = directory
 
-    async def execute(
-        self, actor: Actor, *, q: str | None, status: UserStatus | None, limit: int, offset: int
-    ) -> UserPage:
+    async def execute(self, actor: Actor, query: UserQuery) -> Found[UserListing]:
         require_admin(actor)
-        items, total = await self._directory.search(q=q, status=status, limit=limit, offset=offset)
-        return UserPage(items, total)
+        return await self._directory.search(query)
+
+
+class UserFacetsUC:
+    """Счётчики на чипах статусов одним запросом вместо страницы на каждый статус."""
+
+    def __init__(self, directory: IUserDirectory) -> None:
+        self._directory = directory
+
+    async def execute(self, actor: Actor, q: str | None) -> UserFacets:
+        require_admin(actor)
+        return await self._directory.facets(q)
+
+
+class PickUsersUC:
+    """Пикер людей для админа установки: он видит всех, поэтому охват не сужается."""
+
+    def __init__(self, directory: IUserDirectory) -> None:
+        self._directory = directory
+
+    async def execute(self, actor: Actor, query: UserPickQuery) -> Picked[User]:
+        require_admin(actor)
+        return await self._directory.pick(query)
+
+
+class ListUserOrgsUC:
+    """Организации человека в его карточке: одним запросом, а не составом каждой организации."""
+
+    def __init__(self, users: IUserRepository, orgs: IOrgRepository) -> None:
+        self._users = users
+        self._orgs = orgs
+
+    async def execute(self, actor: Actor, user_id: str, query: UserOrgQuery) -> Found[UserOrgView]:
+        require_admin(actor)
+        if await self._users.get(user_id) is None:
+            raise IdentityError(IdentityErrorCode.not_found)
+        return await self._orgs.page_for_user(user_id, query)
 
 
 class GetUserUC:
@@ -141,12 +171,10 @@ class ListApprovalsUC:
     def __init__(self, directory: IUserDirectory) -> None:
         self._directory = directory
 
-    async def execute(self, actor: Actor, *, limit: int, offset: int) -> UserPage:
+    async def execute(self, actor: Actor, query: UserQuery) -> Found[UserListing]:
+        """Фильтр статуса задаёт сама очередь: чужие статусы в ней не показываются."""
         require_admin(actor)
-        items, total = await self._directory.search(
-            q=None, status=UserStatus.pending_approval, limit=limit, offset=offset
-        )
-        return UserPage(items, total)
+        return await self._directory.search(replace(query, statuses=(UserStatus.pending_approval,)))
 
 
 class _Decision(_UserChange):

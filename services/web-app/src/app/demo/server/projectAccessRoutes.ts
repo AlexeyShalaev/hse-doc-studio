@@ -59,18 +59,26 @@ export const createProjectAccessRoutes = (
     {
       method: "GET",
       pattern: "/projects/:projectId/members",
-      handler: withProject(false, (project, _req, world) =>
-        demoJson(accessEntries(world, project)),
-      ),
+      handler: withProject(false, (project, _req, world) => {
+        const items = accessEntries(world, project);
+        return demoJson({ items, total: items.length, limit: 50, offset: 0 });
+      }),
     },
     {
       method: "GET",
       pattern: "/projects/:projectId/members/candidates",
       handler: withProject(true, (project, req, world) => {
         const q = req.query.q;
-        return demoJson(
-          accessCandidates(world, project, typeof q === "string" ? q : ""),
+        // Пикер, как у сервера: до 20 подходящих и признак «уточните поиск».
+        const found = accessCandidates(
+          world,
+          project,
+          typeof q === "string" ? q : "",
         );
+        return demoJson({
+          items: found.slice(0, 20),
+          has_more: found.length > 20,
+        });
       }),
     },
     {

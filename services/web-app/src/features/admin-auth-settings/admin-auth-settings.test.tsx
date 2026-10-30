@@ -15,7 +15,7 @@ import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
 import {
   AdminAuthSettingsSchema,
-  AdminOidcProviderSchema,
+  AdminOidcProviderPageSchema,
   AdminRegistrationSettingsSchema,
   AdminSmtpSettingsSchema,
 } from "@entities/session";
@@ -95,8 +95,9 @@ describe("настройки входа в админке", () => {
     const smtp = (await call("GET", "/settings/smtp")).data;
     AdminSmtpSettingsSchema.parse(smtp);
     expect(JSON.stringify(smtp)).not.toMatch(/secret|"password":/);
-    const providers = (await call("GET", "/oidc-providers")).data as unknown[];
-    for (const p of providers) AdminOidcProviderSchema.parse(p);
+    const providers = AdminOidcProviderPageSchema.parse(
+      (await call("GET", "/oidc-providers")).data,
+    );
     expect(JSON.stringify(providers)).not.toContain('"client_secret"');
   });
 

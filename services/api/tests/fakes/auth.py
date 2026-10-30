@@ -8,22 +8,31 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from hse_doc_studio.core.identity.entities import (
+    AUDIT_PEOPLE_LIMIT,
     ApiToken,
+    AuditActor,
     AuditEntry,
     AuditQuery,
+    AuditView,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
     LoginAttempt,
     MailOutboxEntry,
     OidcProvider,
+    OidcProviderQuery,
     RegistrationInvite,
     Session,
+    invite_state,
 )
+from hse_doc_studio.core.identity.lifecycle import DELETED_PREFIX
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.core.listing import Found
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver
 
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
+from tests.fakes.listing import matches, ordered, page
 
 
 class InMemorySessionRepository:
@@ -119,6 +128,8 @@ class InMemoryAuthTokenRepository:
 class InMemoryRegistrationInviteRepository:
     def __init__(self) -> None:
         self._items: dict[str, RegistrationInvite] = {}
+        # slug -> id организации для фильтра `org`; тест задаёт сам.
+        self.org_ids: dict[str, str] = {}
 
     async def add(self, invite: RegistrationInvite) -> None:
         email = normalize_email(invite.email) if invite.email else None
@@ -127,9 +138,21 @@ class InMemoryRegistrationInviteRepository:
     async def get(self, token_hash: str) -> RegistrationInvite | None:
         return self._items.get(token_hash)
 
-    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
-        found = [i for i in self._items.values() if created_by is None or i.created_by == created_by]
-        return sorted(found, key=lambda i: (-i.expires_at.timestamp(), i.id))[:limit]
+    async def get_by_id(self, invite_id: str) -> RegistrationInvite | None:
+        return next((i for i in self._items.values() if i.id == invite_id), None)
+
+    async def page(self, query: InviteQuery) -> Found[RegistrationInvite]:
+        org_id = self.org_ids.get(query.org_slug, "") if query.org_slug is not None else None
+        found = [
+            i
+            for i in self._items.values()
+            if matches(query.q, i.email)
+            and (not query.states or invite_state(i, query.now) in query.states)
+            and (org_id is None or i.org_id == org_id)
+            and (query.created_by is None or i.created_by == query.created_by)
+        ]
+        keys = {"expires_at": lambda i: i.expires_at, "email": lambda i: i.email.lower() if i.email else None}
+        return page(ordered(found, query.sort, keys, lambda i: i.id), query.window)
 
     async def revoke(self, invite_id: str) -> bool:
         for key, invite in self._items.items():
@@ -204,6 +227,15 @@ class InMemoryOidcProviderRepository:
         found = [p for p in self._items.values() if p.enabled or not only_enabled]
         return sorted(found, key=lambda p: (p.label, p.id))
 
+    async def page(self, query: OidcProviderQuery) -> Found[OidcProvider]:
+        found = [
+            p
+            for p in self._items.values()
+            if matches(query.q, p.label, p.issuer) and (query.enabled is None or p.enabled is query.enabled)
+        ]
+        keys = {"label": lambda p: p.label.lower(), "created_at": lambda p: p.created_at}
+        return page(ordered(found, query.sort, keys, lambda p: p.id), query.window)
+
     async def save(self, provider: OidcProvider) -> None:
         existing = self._items.get(provider.id)
         self._items[provider.id] = replace(provider, created_at=existing.created_at) if existing else provider
@@ -213,9 +245,14 @@ class InMemoryOidcProviderRepository:
 
 
 class InMemoryAuditLog:
-    def __init__(self) -> None:
+    """Журнал в памяти. Имена людей берутся из `people` (общее хранилище identity), названия организаций
+    из `org_names`; без них подписи пусты, как у события о несуществующей цели."""
+
+    def __init__(self, people: InMemoryIdentityStore | None = None) -> None:
         self._entries: list[AuditEntry] = []
         self._next_id = 1
+        self.people = people or InMemoryIdentityStore()
+        self.org_names: dict[str, str] = {}
 
     async def record(
         self,
@@ -246,18 +283,54 @@ class InMemoryAuditLog:
         ]
         return found[:limit]
 
-    async def query(self, query: AuditQuery) -> list[AuditEntry]:
-        found = [
-            e
-            for e in reversed(self._entries)
-            if (query.actor_id is None or e.actor_id == query.actor_id)
+    def _matches(self, e: AuditEntry, query: AuditQuery) -> bool:
+        kinds = [*(f"{c}." for c in query.categories)]
+        kind_ok = (not kinds and not query.actions) or any(e.action.startswith(k) for k in kinds)
+        kind_ok = kind_ok or e.action in query.actions
+        return (
+            (query.actor_id is None or e.actor_id == query.actor_id)
             and (not query.action_prefix or e.action.startswith(query.action_prefix))
+            and kind_ok
             and (query.target is None or e.target == query.target)
             and (query.since is None or e.at >= query.since)
             and (query.until is None or e.at < query.until)
             and (query.before_id is None or e.id < query.before_id)
-        ]
-        return found[: query.limit]
+            and self._searched(e, query.q)
+        )
+
+    def _searched(self, e: AuditEntry, q: str | None) -> bool:
+        if not q:
+            return True
+        people = sorted(u.id for u in self.people.users.values() if matches(q, u.name, u.email_normalized))
+        return matches(q, e.action, e.target) or e.actor_id in people[:AUDIT_PEOPLE_LIMIT]
+
+    def _view(self, e: AuditEntry) -> AuditView:
+        actor = None
+        if e.actor_id is not None:
+            user = self.people.users.get(e.actor_id)
+            actor = AuditActor(e.actor_id, user.name, user.email) if user else AuditActor(e.actor_id, e.actor_id, None)
+        return AuditView(e, actor, self._label(e))
+
+    def _label(self, e: AuditEntry) -> str | None:
+        if e.target is None:
+            return None
+        user = self.people.users.get(e.target)
+        if user is not None:
+            return user.name
+        if e.target in self.org_names:
+            return self.org_names[e.target]
+        for key in ("name", "label", "email", "slug"):
+            value = e.details.get(key)
+            if value is not None:
+                return str(value)
+        return e.target if e.target.startswith(DELETED_PREFIX) else None
+
+    async def query(self, query: AuditQuery) -> list[AuditView]:
+        found = [e for e in reversed(self._entries) if self._matches(e, query)]
+        return [self._view(e) for e in found[: query.limit]]
+
+    async def estimate_total(self) -> int | None:
+        return len(self._entries)
 
     async def purge_before(self, cutoff: datetime) -> int:
         kept = [e for e in self._entries if e.at >= cutoff]

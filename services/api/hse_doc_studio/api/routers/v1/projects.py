@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -26,16 +28,19 @@ from hse_doc_studio.api.schemas.project import (
     UpdateProjectRequest,
     UpdateTeamSetRequest,
 )
-from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectSummary
+from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectSummary, ProjectSummaryPage
 from hse_doc_studio.core.access.repositories import ProjectMembership
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.listing import SortKey
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.projects.browse import PROJECT_SORTS, ProjectBrowseQuery, ProjectCard, ProjectOwnerFilter
 from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
+from hse_doc_studio.use_cases.projects.browse_projects import BrowseProjectsUC
 from hse_doc_studio.use_cases.projects.connect_project import (
     ConnectProjectInput,
     ConnectProjectUC,
@@ -203,16 +208,58 @@ def _parse_person(schema: PersonSchema | None) -> Person | None:
     )
 
 
-@router.get("/projects", response_model=list[ProjectListItemResponse] | list[ProjectSummary])
-async def list_projects(
+def _map_project_card(card: ProjectCard) -> ProjectSummary:
+    owner = card.owner
+    return ProjectSummary(
+        id=str(card.id),
+        name=card.name,
+        kind=card.kind,
+        staffing=card.staffing,
+        lang=card.lang,
+        owner=ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug),
+        my_role=card.my_role.value,
+        updated_at=card.updated_at,
+        pinned=card.pinned,
+        archived=card.archived,
+        shared_enabled=card.shared_enabled,
+    )
+
+
+_project_sort = sort_param(allowed=PROJECT_SORTS, default="-updated_at")
+
+
+@router.get("/projects", response_model=list[ProjectListItemResponse] | ProjectSummaryPage)
+async def list_projects(  # noqa: PLR0913 — фильтры списка приходят отдельными параметрами запроса
+    request: Request,
     uc: FromDishka[ListProjectsUC],
     paths: FromDishka[PathMapping],
-) -> list[ProjectListItemResponse] | list[ProjectSummary]:
-    result = await uc.execute()
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_project_sort)],
+    archived: bool | None = None,
+    owner: ProjectOwnerFilter | None = None,
+    org: Annotated[str | None, Query(max_length=64, description="Проекты организации (slug)")] = None,
+    pinned: bool | None = None,
+) -> list[ProjectListItemResponse] | ProjectSummaryPage:
+    """Локальный режим: весь список папок массивом, как раньше (параметры не действуют).
+
+    Серверный режим: страница из каталога с поиском по названию, владельцу и руководителю; путь папки наружу
+    не отдаётся, вместо него владелец и роль человека.
+    """
     if settings.mode is StudioMode.local:
+        result = await uc.execute()
         return [_map_project_list_item(p, paths) for p in result.projects]
-    # На сервере путь папки наружу не отдаётся: вместо него владелец и роль человека.
-    return [_map_project_summary(p, result.memberships[p.id]) for p in result.projects]
+    browse = await request.state.dishka_container.get(BrowseProjectsUC)
+    query = ProjectBrowseQuery(
+        q=q, archived=archived, owner=owner, org_slug=org, pinned=pinned, sort=sort, window=params.window
+    )
+    found = await browse.execute(query)
+    return ProjectSummaryPage(
+        items=[_map_project_card(c) for c in found.items],
+        total=found.total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get("/projects/suggestions", response_model=ProjectSuggestionsResponse)

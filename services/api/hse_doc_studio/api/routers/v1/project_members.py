@@ -2,22 +2,42 @@
 
 from __future__ import annotations
 
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from hse_doc_studio.api.actor import require_server_mode
+from hse_doc_studio.api.schemas.admin import (
+    PageParams,
+    PickerItem,
+    PickerList,
+    PickerParams,
+    page_params,
+    picker_params,
+    search_param,
+    sort_param,
+)
 from hse_doc_studio.api.schemas.session import (
     ProjectAccessCandidate,
+    ProjectAccessCandidateList,
     ProjectAccessEntry,
+    ProjectAccessPage,
     ProjectMember,
+    ProjectMemberKind,
+    ProjectRoleName,
     SetProjectMemberRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor, Role
-from hse_doc_studio.core.access.repositories import ProjectMemberGrant
+from hse_doc_studio.core.access.repositories import ACCESS_SORTS, AccessQuery, ProjectMemberGrant
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
-from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
+from hse_doc_studio.core.listing import SortKey
+from hse_doc_studio.use_cases.projects.access_panel import (
+    ListAccessCandidatesUC,
+    ListProjectAccessUC,
+    ListTransferCandidatesUC,
+)
 from hse_doc_studio.use_cases.projects.members import RemoveProjectMemberUC, SetProjectMemberUC
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
@@ -40,35 +60,84 @@ def _principal(raw: str) -> tuple[str, str]:
     return kind, principal_id
 
 
-@router.get("/projects/{project_id}/members", response_model=list[ProjectAccessEntry])
-async def list_project_access(project_id: UUID, request: Request, response: Response) -> list[ProjectAccessEntry]:
-    """Панель «Доступ»: видит любой участник проекта."""
+_access_sort = sort_param(allowed=ACCESS_SORTS, default="name")
+
+
+@router.get("/projects/{project_id}/members", response_model=ProjectAccessPage)
+async def list_project_access(
+    project_id: UUID,
+    request: Request,
+    response: Response,
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_access_sort)],
+    kind: Annotated[list[ProjectMemberKind] | None, Query()] = None,
+    role: Annotated[list[ProjectRoleName] | None, Query()] = None,
+) -> ProjectAccessPage:
+    """Панель «Доступ»: видит любой участник проекта. Владелец и организация-владелец всегда первыми."""
     response.headers["Cache-Control"] = "no-store"
-    rows = await (await request.state.dishka_container.get(ListProjectAccessUC)).execute(project_id)
-    return [
-        ProjectAccessEntry(
-            subject_kind=r.subject_kind,
-            subject_id=r.subject_id,
-            name=r.name,
-            detail=r.detail,
-            role=r.role.value,
-            locked=r.locked,
-        )
-        for r in rows
-    ]
+    query = AccessQuery(
+        q=q, kinds=tuple(kind or ()), roles=tuple(Role(r) for r in role or ()), sort=sort, window=params.window
+    )
+    found = await (await request.state.dishka_container.get(ListProjectAccessUC)).execute(project_id, query)
+    return ProjectAccessPage(
+        items=[
+            ProjectAccessEntry(
+                subject_kind=r.subject_kind,
+                subject_id=r.subject_id,
+                name=r.name,
+                detail=r.detail,
+                role=r.role.value,
+                locked=r.locked,
+            )
+            for r in found.items
+        ],
+        total=found.total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
-@router.get("/projects/{project_id}/members/candidates", response_model=list[ProjectAccessCandidate])
+@router.get("/projects/{project_id}/members/candidates", response_model=ProjectAccessCandidateList)
 async def list_access_candidates(
-    project_id: UUID, request: Request, response: Response, q: str = Query(default="", max_length=120)
-) -> list[ProjectAccessCandidate]:
+    project_id: UUID,
+    request: Request,
+    response: Response,
+    params: Annotated[PickerParams, Depends(picker_params)],
+    kind: ProjectMemberKind | None = None,
+) -> ProjectAccessCandidateList:
     """Кого можно добавить: только люди и группы из общих организаций, по всей установке не перебрать."""
     response.headers["Cache-Control"] = "no-store"
-    found = await (await request.state.dishka_container.get(ListAccessCandidatesUC)).execute(_actor(), project_id, q)
-    return [
-        ProjectAccessCandidate(subject_kind=c.subject_kind, subject_id=c.subject_id, name=c.name, detail=c.detail)
-        for c in found
-    ]
+    uc = await request.state.dishka_container.get(ListAccessCandidatesUC)
+    found = await uc.execute(_actor(), project_id, params.q or "", limit=params.limit, kind=kind)
+    return ProjectAccessCandidateList(
+        items=[
+            ProjectAccessCandidate(subject_kind=c.subject_kind, subject_id=c.subject_id, name=c.name, detail=c.detail)
+            for c in found.items
+        ],
+        has_more=found.has_more,
+    )
+
+
+@router.get("/projects/{project_id}/transfer-candidates", response_model=PickerList)
+async def list_transfer_candidates(
+    project_id: UUID,
+    request: Request,
+    response: Response,
+    params: Annotated[PickerParams, Depends(picker_params)],
+    kind: Literal["user", "org"] | None = None,
+) -> PickerList:
+    """Кому передать проект: организации, где смотрящий владелец или админ, и люди общих организаций.
+
+    Организацию адресует slug. Чужих людей и организаций по всей установке не перебрать.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    uc = await request.state.dishka_container.get(ListTransferCandidatesUC)
+    found = await uc.execute(_actor(), project_id, params.q or "", limit=params.limit, kind=kind)
+    return PickerList(
+        items=[PickerItem(kind=c.kind, id=c.id, name=c.name, detail=c.detail) for c in found.items],
+        has_more=found.has_more,
+    )
 
 
 @router.put("/projects/{project_id}/members/{principal}", response_model=ProjectMember)

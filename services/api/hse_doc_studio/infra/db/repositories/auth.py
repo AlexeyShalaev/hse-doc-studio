@@ -5,25 +5,35 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, case, delete, func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.orm import aliased
 
 from hse_doc_studio.core.identity.entities import (
+    AUDIT_PEOPLE_LIMIT,
     ApiToken,
+    AuditActor,
     AuditEntry,
     AuditQuery,
+    AuditView,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
+    InviteState,
     LoginAttempt,
     MailKind,
     MailOutboxEntry,
     OidcProvider,
+    OidcProviderQuery,
     RegistrationInvite,
     Session,
     TokenScope,
 )
+from hse_doc_studio.core.identity.lifecycle import DELETED_PREFIX
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.core.listing import Found
+from hse_doc_studio.infra.db.listing import Expr, contains, contains_lower, fetch_page, ordering
 from hse_doc_studio.infra.db.orm.auth import (
     ApiTokenRow,
     AuditLogRow,
@@ -34,6 +44,8 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.identity import UserRow
+from hse_doc_studio.infra.db.orm.orgs import OrgRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 
@@ -247,6 +259,22 @@ def _invite(row: RegistrationInviteRow) -> RegistrationInvite:
     )
 
 
+_INVITE_SORT: dict[str, Expr] = {
+    "expires_at": RegistrationInviteRow.expires_at,
+    "email": func.lower(RegistrationInviteRow.email),
+}
+
+
+def _invite_in_state(state: InviteState, now: datetime) -> ColumnElement[bool]:
+    """Состояние приглашения в SQL: те же правила, что у `invite_state`."""
+    invite = RegistrationInviteRow
+    if state is InviteState.used:
+        return invite.used_at.is_not(None)
+    if state is InviteState.expired:
+        return and_(invite.used_at.is_(None), invite.expires_at <= now)
+    return and_(invite.used_at.is_(None), invite.expires_at > now)
+
+
 class SqlRegistrationInviteRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -272,12 +300,28 @@ class SqlRegistrationInviteRepository:
             row = await db.get(RegistrationInviteRow, token_hash)
             return _invite(row) if row else None
 
-    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
-        stmt = select(RegistrationInviteRow).order_by(RegistrationInviteRow.expires_at.desc(), RegistrationInviteRow.id)
-        if created_by is not None:
-            stmt = stmt.where(RegistrationInviteRow.created_by == created_by)
+    async def get_by_id(self, invite_id: str) -> RegistrationInvite | None:
         async with self._sessions.use() as db:
-            return [_invite(row) for row in (await db.execute(stmt.limit(limit))).scalars()]
+            row = (
+                await db.execute(select(RegistrationInviteRow).where(RegistrationInviteRow.id == invite_id))
+            ).scalar_one_or_none()
+            return _invite(row) if row else None
+
+    async def page(self, query: InviteQuery) -> Found[RegistrationInvite]:
+        invite = RegistrationInviteRow
+        stmt = select(invite)
+        if query.q:
+            stmt = stmt.where(contains(query.q, invite.email))
+        if query.states:
+            stmt = stmt.where(or_(*(_invite_in_state(state, query.now) for state in query.states)))
+        if query.org_slug is not None:
+            stmt = stmt.where(invite.org_id.in_(select(OrgRow.id).where(OrgRow.slug == query.org_slug)))
+        if query.created_by is not None:
+            stmt = stmt.where(invite.created_by == query.created_by)
+        stmt = stmt.order_by(*ordering(query.sort, _INVITE_SORT, invite.id))
+        async with self._sessions.use() as db:
+            rows, total = await fetch_page(db, stmt, query.window)
+            return Found([_invite(row) for (row,) in rows], total)
 
     async def revoke(self, invite_id: str) -> bool:
         stmt = delete(RegistrationInviteRow).where(
@@ -409,6 +453,12 @@ def _oidc(row: OidcProviderRow) -> OidcProvider:
     )
 
 
+_OIDC_SORT: dict[str, Expr] = {
+    "label": func.lower(OidcProviderRow.label),
+    "created_at": OidcProviderRow.created_at,
+}
+
+
 class SqlOidcProviderRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -424,6 +474,17 @@ class SqlOidcProviderRepository:
             stmt = stmt.where(OidcProviderRow.enabled.is_(True))
         async with self._sessions.use() as db:
             return [_oidc(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def page(self, query: OidcProviderQuery) -> Found[OidcProvider]:
+        stmt = select(OidcProviderRow)
+        if query.q:
+            stmt = stmt.where(contains(query.q, OidcProviderRow.label, OidcProviderRow.issuer))
+        if query.enabled is not None:
+            stmt = stmt.where(OidcProviderRow.enabled.is_(query.enabled))
+        stmt = stmt.order_by(*ordering(query.sort, _OIDC_SORT, OidcProviderRow.id))
+        async with self._sessions.use() as db:
+            rows, total = await fetch_page(db, stmt, query.window)
+            return Found([_oidc(row) for (row,) in rows], total)
 
     async def save(self, provider: OidcProvider) -> None:
         stmt = pg_insert(OidcProviderRow).values(
@@ -466,6 +527,65 @@ def _audit(row: AuditLogRow) -> AuditEntry:
     )
 
 
+def _audit_view(row: AuditLogRow, name: str | None, email: str | None, label: str | None) -> AuditView:
+    actor = None
+    if row.actor_id is not None:
+        # Человека уже нет (или это псевдоним удалённого): показываем то, что записано в журнале.
+        actor = (
+            AuditActor(row.actor_id, name, email) if name is not None else AuditActor(row.actor_id, row.actor_id, None)
+        )
+    return AuditView(_audit(row), actor, label)
+
+
+def _audit_conditions(query: AuditQuery) -> list[ColumnElement[bool]]:
+    return [*_audit_window(query), *_audit_kind(query), *_audit_search(query.q)]
+
+
+def _audit_window(query: AuditQuery) -> list[ColumnElement[bool]]:
+    """Кто, над чем и когда; ключ страницы `before_id`."""
+    log = AuditLogRow
+    conditions: list[ColumnElement[bool]] = []
+    if query.actor_id is not None:
+        conditions.append(log.actor_id == query.actor_id)
+    if query.target is not None:
+        conditions.append(log.target == query.target)
+    if query.since is not None:
+        conditions.append(log.at >= query.since)
+    if query.until is not None:
+        conditions.append(log.at < query.until)
+    if query.before_id is not None:
+        conditions.append(log.id < query.before_id)
+    return conditions
+
+
+def _audit_kind(query: AuditQuery) -> list[ColumnElement[bool]]:
+    """Что случилось: префикс действия, любая из категорий или любое из точных действий."""
+    log = AuditLogRow
+    conditions: list[ColumnElement[bool]] = []
+    if query.action_prefix:
+        conditions.append(log.action.startswith(query.action_prefix, autoescape=True))
+    kinds = [log.action.startswith(f"{c}.", autoescape=True) for c in query.categories]
+    if query.actions:
+        kinds.append(log.action.in_(query.actions))
+    if kinds:
+        conditions.append(or_(*kinds))
+    return conditions
+
+
+def _audit_search(q: str | None) -> list[ColumnElement[bool]]:
+    if not q:
+        return []
+    log = AuditLogRow
+    # Люди, подходящие под поиск, берутся ограниченным списком id: поиск не перебирает журнал по людям.
+    people = (
+        select(UserRow.id)
+        .where(contains_lower(q, func.lower(UserRow.name), UserRow.email_normalized))
+        .order_by(UserRow.id)
+        .limit(AUDIT_PEOPLE_LIMIT)
+    )
+    return [or_(contains(q, log.action, log.target), log.actor_id.in_(people))]
+
+
 class SqlAuditLog:
     """Только INSERT и SELECT: изменить или удалить событие нельзя ни из кода, ни из базы (триггер)."""
 
@@ -484,22 +604,40 @@ class SqlAuditLog:
             db.add(AuditLogRow(action=action, actor_id=actor_id, target=target, details=redact(details or {})))
             await db.flush()
 
-    async def query(self, query: AuditQuery) -> list[AuditEntry]:
-        stmt = select(AuditLogRow).order_by(AuditLogRow.id.desc()).limit(query.limit)
-        if query.actor_id is not None:
-            stmt = stmt.where(AuditLogRow.actor_id == query.actor_id)
-        if query.action_prefix:
-            stmt = stmt.where(AuditLogRow.action.startswith(query.action_prefix, autoescape=True))
-        if query.target is not None:
-            stmt = stmt.where(AuditLogRow.target == query.target)
-        if query.since is not None:
-            stmt = stmt.where(AuditLogRow.at >= query.since)
-        if query.until is not None:
-            stmt = stmt.where(AuditLogRow.at < query.until)
-        if query.before_id is not None:
-            stmt = stmt.where(AuditLogRow.id < query.before_id)
+    async def query(self, query: AuditQuery) -> list[AuditView]:
+        log = AuditLogRow
+        actor = aliased(UserRow, name="actor")
+        target_user = aliased(UserRow, name="target_user")
+        label = func.coalesce(
+            target_user.name,
+            OrgRow.name,
+            log.details["name"].astext,
+            log.details["label"].astext,
+            log.details["email"].astext,
+            log.details["slug"].astext,
+            # Удалённый человек остаётся в журнале псевдонимом: им и подписывается.
+            case((log.target.startswith(DELETED_PREFIX), log.target)),
+        )
+        stmt = (
+            select(log, actor.name, actor.email, label)
+            .outerjoin(actor, actor.id == log.actor_id)
+            .outerjoin(target_user, target_user.id == log.target)
+            .outerjoin(OrgRow, OrgRow.id == log.target)
+            .where(*_audit_conditions(query))
+            .order_by(log.id.desc())
+            .limit(query.limit)
+        )
         async with self._sessions.use() as db:
-            return [_audit(row) for row in (await db.execute(stmt)).scalars()]
+            rows = (await db.execute(stmt)).all()
+        return [_audit_view(row, name, email, target_label) for row, name, email, target_label in rows]
+
+    async def estimate_total(self) -> int | None:
+        async with self._sessions.use() as db:
+            found = (
+                await db.execute(text("SELECT reltuples::bigint FROM pg_class WHERE oid = 'audit_log'::regclass"))
+            ).scalar_one_or_none()
+        # -1: таблицу ещё не анализировали, оценки нет.
+        return int(found) if found is not None and found >= 0 else None
 
     async def list(
         self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None

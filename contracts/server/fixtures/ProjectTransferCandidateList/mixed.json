@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "kind": "org",
+      "id": "msp-2025",
+      "name": "МСПИН 2025",
+      "detail": "msp-2025"
+    },
+    {
+      "kind": "user",
+      "id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "detail": "anna.petrova@example.org"
+    }
+  ],
+  "has_more": true
+}

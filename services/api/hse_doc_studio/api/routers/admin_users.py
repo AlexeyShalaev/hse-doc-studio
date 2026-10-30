@@ -7,26 +7,43 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from hse_doc_studio.api.schemas.admin import PageParams, page_params
+from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.session import (
     AccountStatus,
     AdminInvitation,
     AdminInvitationCreated,
     AdminInvitationPage,
+    AdminInvitationStatus,
     AdminResetLink,
     AdminResetLinkRequest,
     AdminSessionsRevoked,
     AdminUser,
+    AdminUserFacets,
+    AdminUserOrg,
+    AdminUserOrgPage,
     AdminUserPage,
     CreateAdminInvitationRequest,
+    OrgRoleName,
     UpdateAdminUserRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.entities import RegistrationInvite, UserListing, UserStatus
+from hse_doc_studio.core.identity.entities import (
+    INVITE_SORTS,
+    USER_SORTS,
+    InviteQuery,
+    InviteState,
+    RegistrationInvite,
+    UserListing,
+    UserQuery,
+    UserStatus,
+    invite_state,
+)
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import is_valid_email
 from hse_doc_studio.core.identity.session_policy import utc_now
+from hse_doc_studio.core.listing import Found, SortKey
+from hse_doc_studio.core.orgs.entities import USER_ORG_SORTS, OrgRole, UserOrgQuery
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC
 from hse_doc_studio.use_cases.admin.users import (
@@ -35,10 +52,12 @@ from hse_doc_studio.use_cases.admin.users import (
     EnableUserUC,
     GetUserUC,
     ListApprovalsUC,
+    ListUserOrgsUC,
     ListUsersUC,
     RejectUserUC,
     RevokeUserSessionsUC,
     SetUserAdminUC,
+    UserFacetsUC,
 )
 from hse_doc_studio.use_cases.identity.invites import (
     DEFAULT_INVITE_TTL,
@@ -77,14 +96,12 @@ def _user(listing: UserListing) -> AdminUser:
 
 
 def _invitation(invite: RegistrationInvite) -> AdminInvitation:
-    if invite.used_at is not None:
-        state = "used"
-    elif invite.expires_at <= utc_now():
-        state = "expired"
-    else:
-        state = "pending"
     return AdminInvitation(
-        id=invite.id, email=invite.email, status=state, expires_at=invite.expires_at, used_at=invite.used_at
+        id=invite.id,
+        email=invite.email,
+        status=invite_state(invite, utc_now()).value,
+        expires_at=invite.expires_at,
+        used_at=invite.used_at,
     )
 
 
@@ -96,28 +113,80 @@ async def _uc[T](request: Request, kind: type[T]) -> T:
     return await request.state.dishka_container.get(kind)
 
 
+def _users_page(found: Found[UserListing], params: PageParams) -> AdminUserPage:
+    return AdminUserPage(
+        items=[_user(x) for x in found.items], total=found.total, limit=params.limit, offset=params.offset
+    )
+
+
+_user_sort = sort_param(allowed=USER_SORTS, default="-created_at")
+_approval_sort = sort_param(allowed=("created_at", "name", "email"), default="created_at")
+_invite_sort = sort_param(allowed=INVITE_SORTS, default="-expires_at")
+_user_org_sort = sort_param(allowed=USER_ORG_SORTS, default="name")
+
+
 @router.get("/users", response_model=AdminUserPage)
 async def list_users(
     request: Request,
+    response: Response,
     params: Annotated[PageParams, Depends(page_params)],
-    q: Annotated[str | None, Query(max_length=200)] = None,
-    account_status: Annotated[AccountStatus | None, Query(alias="status")] = None,
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_user_sort)],
+    account_status: Annotated[list[AccountStatus] | None, Query(alias="status")] = None,
+    is_admin: bool | None = None,
+    org: Annotated[str | None, Query(max_length=64, description="Состоит в организации (slug)")] = None,
 ) -> AdminUserPage:
-    page = await (await _uc(request, ListUsersUC)).execute(
-        _actor(),
+    response.headers.update(_NO_STORE)
+    query = UserQuery(
         q=q,
-        status=UserStatus(account_status) if account_status else None,
-        limit=params.limit,
-        offset=params.offset,
+        statuses=tuple(UserStatus(x) for x in account_status or ()),
+        is_admin=is_admin,
+        org_slug=org,
+        sort=sort,
+        window=params.window,
     )
-    return AdminUserPage(
-        items=[_user(x) for x in page.items], total=page.total, limit=params.limit, offset=params.offset
-    )
+    return _users_page(await (await _uc(request, ListUsersUC)).execute(_actor(), query), params)
+
+
+@router.get("/users/facets", response_model=AdminUserFacets)
+async def user_facets(
+    request: Request, response: Response, q: Annotated[str | None, Depends(search_param)]
+) -> AdminUserFacets:
+    """Счётчики на чипах статусов: один запрос вместо страницы на каждый статус."""
+    response.headers.update(_NO_STORE)
+    facets = await (await _uc(request, UserFacetsUC)).execute(_actor(), q)
+    return AdminUserFacets(status={s.value: n for s, n in facets.status.items()}, admins=facets.admins)
 
 
 @router.get("/users/{user_id}", response_model=AdminUser)
-async def get_user(user_id: str, request: Request) -> AdminUser:
+async def get_user(user_id: str, request: Request, response: Response) -> AdminUser:
+    response.headers.update(_NO_STORE)
     return _user(await (await _uc(request, GetUserUC)).execute(_actor(), user_id))
+
+
+@router.get("/users/{user_id}/orgs", response_model=AdminUserOrgPage)
+async def list_user_orgs(
+    user_id: str,
+    request: Request,
+    response: Response,
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_user_org_sort)],
+    role: Annotated[list[OrgRoleName] | None, Query()] = None,
+) -> AdminUserOrgPage:
+    """Организации человека одним запросом: карточка не перебирает составы всех организаций."""
+    response.headers.update(_NO_STORE)
+    query = UserOrgQuery(q=q, roles=tuple(OrgRole(r) for r in role or ()), sort=sort, window=params.window)
+    found = await (await _uc(request, ListUserOrgsUC)).execute(_actor(), user_id, query)
+    return AdminUserOrgPage(
+        items=[
+            AdminUserOrg(slug=x.org.slug, name=x.org.name, role=x.role.value, joined_at=x.joined_at)
+            for x in found.items
+        ],
+        total=found.total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 async def _changed(request: Request, user_id: str) -> AdminUser:
@@ -169,11 +238,17 @@ async def revoke_sessions(user_id: str, request: Request) -> AdminSessionsRevoke
 
 
 @router.get("/approvals", response_model=AdminUserPage)
-async def list_approvals(request: Request, params: Annotated[PageParams, Depends(page_params)]) -> AdminUserPage:
-    page = await (await _uc(request, ListApprovalsUC)).execute(_actor(), limit=params.limit, offset=params.offset)
-    return AdminUserPage(
-        items=[_user(x) for x in page.items], total=page.total, limit=params.limit, offset=params.offset
-    )
+async def list_approvals(
+    request: Request,
+    response: Response,
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_approval_sort)],
+) -> AdminUserPage:
+    """Очередь одобрения: по умолчанию старые заявки первыми, они ждут дольше всех."""
+    response.headers.update(_NO_STORE)
+    query = UserQuery(q=q, sort=sort, window=params.window)
+    return _users_page(await (await _uc(request, ListApprovalsUC)).execute(_actor(), query), params)
 
 
 @router.post("/approvals/{user_id}/approve", response_model=AdminUser)
@@ -190,12 +265,26 @@ async def reject(user_id: str, request: Request) -> AdminUser:
 
 @router.get("/invitations", response_model=AdminInvitationPage)
 async def list_invitations(
-    request: Request, params: Annotated[PageParams, Depends(page_params)]
+    request: Request,
+    response: Response,
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_invite_sort)],
+    invite_status: Annotated[list[AdminInvitationStatus] | None, Query(alias="status")] = None,
+    org: Annotated[str | None, Query(max_length=64, description="Приглашение в организацию (slug)")] = None,
 ) -> AdminInvitationPage:
-    invites = await (await _uc(request, ListInvitesUC)).execute(_actor())
-    window = invites[params.offset : params.offset + params.limit]
+    response.headers.update(_NO_STORE)
+    query = InviteQuery(
+        now=utc_now(),
+        q=q,
+        states=tuple(InviteState(x) for x in invite_status or ()),
+        org_slug=org,
+        sort=sort,
+        window=params.window,
+    )
+    found = await (await _uc(request, ListInvitesUC)).execute(_actor(), query)
     return AdminInvitationPage(
-        items=[_invitation(i) for i in window], total=len(invites), limit=params.limit, offset=params.offset
+        items=[_invitation(i) for i in found.items], total=found.total, limit=params.limit, offset=params.offset
     )
 
 

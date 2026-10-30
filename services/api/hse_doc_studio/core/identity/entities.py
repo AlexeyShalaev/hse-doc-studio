@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from hse_doc_studio.core.listing import PICKER_LIMIT, SortKey, Window
+
 
 class UserStatus(StrEnum):
     active = "active"
@@ -72,6 +74,40 @@ class UserListing:
 
     user: User
     project_count: int
+
+
+USER_SORTS = ("name", "email", "created_at", "last_login_at", "status")
+
+
+@dataclass(frozen=True)
+class UserQuery:
+    """Фильтры списка людей админки; всё сочетается по И. `org_slug`: человек состоит в этой организации."""
+
+    q: str | None = None
+    statuses: tuple[UserStatus, ...] = ()
+    is_admin: bool | None = None
+    org_slug: str | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("created_at", descending=True))
+    window: Window = field(default_factory=Window)
+
+
+@dataclass(frozen=True)
+class UserFacets:
+    """Счётчики на чипах списка людей под тем же поиском: по статусам и число админов установки."""
+
+    status: Mapping[UserStatus, int]
+    admins: int
+
+
+@dataclass(frozen=True)
+class UserPickQuery:
+    """Пикер людей: только админ установки, он видит всех. Исключения: уже состоящие в организации или группе."""
+
+    q: str | None = None
+    limit: int = PICKER_LIMIT
+    status: UserStatus | None = None
+    not_in_org_slug: str | None = None
+    not_in_group_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -138,6 +174,36 @@ class RegistrationInvite:
     org_role: str | None = None
 
 
+class InviteState(StrEnum):
+    """Состояние приглашения: от `used_at`, `expires_at` и текущего времени."""
+
+    pending = "pending"
+    used = "used"
+    expired = "expired"
+
+
+def invite_state(invite: RegistrationInvite, now: datetime) -> InviteState:
+    if invite.used_at is not None:
+        return InviteState.used
+    return InviteState.expired if invite.expires_at <= now else InviteState.pending
+
+
+INVITE_SORTS = ("expires_at", "email")
+
+
+@dataclass(frozen=True)
+class InviteQuery:
+    """Список приглашений админки. Состояние считается в запросе относительно `now`."""
+
+    now: datetime
+    q: str | None = None
+    states: tuple[InviteState, ...] = ()
+    org_slug: str | None = None
+    created_by: str | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("expires_at", descending=True))
+    window: Window = field(default_factory=Window)
+
+
 @dataclass(frozen=True)
 class LoginAttempt:
     """Счётчик неудачных входов по ключу (e-mail и IP или один IP); задержка растёт, постоянной блокировки нет."""
@@ -184,6 +250,19 @@ class OidcProvider:
     auto_provision: bool = False
 
 
+OIDC_SORTS = ("label", "created_at")
+
+
+@dataclass(frozen=True)
+class OidcProviderQuery:
+    """Провайдеры входа в админке: поиск по названию и издателю, фильтр включённых."""
+
+    q: str | None = None
+    enabled: bool | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("created_at"))
+    window: Window = field(default_factory=Window)
+
+
 @dataclass(frozen=True)
 class AuditEntry:
     id: int
@@ -196,21 +275,68 @@ class AuditEntry:
 
 @dataclass(frozen=True)
 class AuditQuery:
-    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного)."""
+    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного).
+
+    Все фильтры сочетаются по И. Внутри «что случилось» действие подходит, если оно из любой категории
+    `categories` (префикс до точки) или равно любому из `actions`. `q` ищет подстроку в действии и цели,
+    а также события людей, у которых она есть в имени или почте.
+    """
 
     actor_id: str | None = None
     action_prefix: str | None = None
+    categories: tuple[str, ...] = ()
+    actions: tuple[str, ...] = ()
     target: str | None = None
     since: datetime | None = None
     until: datetime | None = None
+    q: str | None = None
     before_id: int | None = None
     limit: int = 50
+
+    @property
+    def filtered(self) -> bool:
+        return any(
+            (
+                self.actor_id,
+                self.action_prefix,
+                self.categories,
+                self.actions,
+                self.target,
+                self.since,
+                self.until,
+                self.q,
+            )
+        )
+
+
+# Сколько людей, подходящих под поиск журнала, учитывается как «кто»: поиск не превращается в перебор установки.
+AUDIT_PEOPLE_LIMIT = 200
+
+
+@dataclass(frozen=True)
+class AuditActor:
+    """Кто действовал. У удалённого человека вместо имени псевдоним из журнала, почты нет."""
+
+    id: str
+    name: str
+    email: str | None
+
+
+@dataclass(frozen=True)
+class AuditView:
+    """Событие с подписями, которые сервер вычисляет сам: имя действовавшего и подпись цели."""
+
+    entry: AuditEntry
+    actor: AuditActor | None
+    target_label: str | None
 
 
 @dataclass(frozen=True)
 class AuditPage:
-    items: list[AuditEntry]
+    items: list[AuditView]
     next_before_id: int | None
+    # Оценка числа событий без фильтров (по статистике таблицы); с фильтрами не считается.
+    total_estimate: int | None = None
 
 
 @dataclass(frozen=True)

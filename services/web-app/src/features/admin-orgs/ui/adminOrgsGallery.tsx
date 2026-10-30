@@ -39,6 +39,7 @@ const ORGS: AdminOrg[] = [
     name: "МСПИН 2025",
     member_count: 6,
     project_count: 31,
+    owner_count: 1,
     my_role: "owner",
   },
   {
@@ -46,6 +47,7 @@ const ORGS: AdminOrg[] = [
     name: "Лаборатория ИИ",
     member_count: 3,
     project_count: 4,
+    owner_count: 1,
     my_role: "admin",
   },
   {
@@ -53,6 +55,7 @@ const ORGS: AdminOrg[] = [
     name: "Пилот 2026",
     member_count: 1,
     project_count: 0,
+    owner_count: 1,
     my_role: null,
   },
 ];
@@ -79,15 +82,37 @@ const MEMBERS: AdminOrgMember[] = [
   m("dmitry", "Дмитрий Кузнецов", "member", "2026-09-18T16:20:00Z"),
 ];
 
+// Группа в админке несёт число участников и первых по имени, как отдаёт сервер.
+const group = (
+  id: string,
+  name: string,
+  ids: readonly string[],
+): AdminGroup => {
+  const people = MEMBERS.filter((x) => ids.includes(x.user_id)).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  return {
+    id,
+    name,
+    member_count: people.length,
+    preview: people
+      .slice(0, 5)
+      .map((x) => ({ user_id: x.user_id, name: x.name })),
+  };
+};
+
 const GROUPS: AdminGroup[] = [
-  { id: "g1", name: "Команда Bertie", member_ids: ["anna", "petr", "olga"] },
-  { id: "g2", name: "Наставники", member_ids: ["elena"] },
-  {
-    id: "g3",
-    name: "Все студенты",
-    member_ids: ["anna", "petr", "olga", "dmitry", "elena", "ivan"],
-  },
-  { id: "g4", name: "Резерв", member_ids: [] },
+  group("g1", "Команда Bertie", ["anna", "petr", "olga"]),
+  group("g2", "Наставники", ["elena"]),
+  group("g3", "Все студенты", [
+    "anna",
+    "petr",
+    "olga",
+    "dmitry",
+    "elena",
+    "ivan",
+  ]),
+  group("g4", "Резерв", []),
 ];
 
 const FULL: Viewer = { instanceAdmin: true, role: null };

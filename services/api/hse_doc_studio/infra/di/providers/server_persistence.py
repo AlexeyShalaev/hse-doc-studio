@@ -39,6 +39,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
+from hse_doc_studio.core.projects.browse import IProjectBrowser
 from hse_doc_studio.core.projects.importer import ILocalHistoryReader, ImportLimits, IProjectArchive
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -81,6 +82,7 @@ from hse_doc_studio.infra.db.repositories.git_credentials import (
 )
 from hse_doc_studio.infra.db.repositories.git_trust import PostgresGitHostSettingsRepository, PostgresKnownHostsStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
+from hse_doc_studio.infra.db.repositories.project_browse import PostgresProjectBrowser
 from hse_doc_studio.infra.db.repositories.project_directory import PostgresProjectAccessDirectory
 from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
 from hse_doc_studio.infra.db.repositories.project_usage import PostgresProjectUsageStore
@@ -121,7 +123,12 @@ from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIPro
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
-from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
+from hse_doc_studio.use_cases.projects.access_panel import (
+    ListAccessCandidatesUC,
+    ListProjectAccessUC,
+    ListTransferCandidatesUC,
+)
+from hse_doc_studio.use_cases.projects.browse_projects import BrowseProjectsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
@@ -275,6 +282,10 @@ class ServerPersistenceProvider(Provider):
         return ListAccessCandidatesUC(directory)
 
     @provide
+    def get_list_transfer_candidates_uc(self, directory: IProjectAccessDirectory) -> ListTransferCandidatesUC:
+        return ListTransferCandidatesUC(directory)
+
+    @provide
     def get_set_project_member_uc(
         self,
         members: IProjectMemberRepository,
@@ -296,6 +307,14 @@ class ServerPersistenceProvider(Provider):
     @provide(override=True)
     def get_project_access_checker(self, acl: PostgresProjectAclRepository) -> IProjectAccessChecker:
         return ServerProjectAccessChecker(acl)
+
+    @provide
+    def get_project_browser(self, sessions: SessionProvider, acl: PostgresProjectAclRepository) -> IProjectBrowser:
+        return PostgresProjectBrowser(sessions, acl)
+
+    @provide
+    def get_browse_projects_uc(self, browser: IProjectBrowser) -> BrowseProjectsUC:
+        return BrowseProjectsUC(browser)
 
     @provide(override=True)
     def get_list_projects_uc(

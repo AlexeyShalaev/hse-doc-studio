@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
@@ -13,9 +14,10 @@ import pytest_asyncio
 from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.enums import Lang, ProjectKind
+from hse_doc_studio.core.enums import Lang, PersonRole, ProjectKind
 from hse_doc_studio.core.projects.locator import ProjectAlreadyRegisteredError
 from hse_doc_studio.core.projects.volume import UnsafePathError
+from hse_doc_studio.core.value_objects import Person
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
@@ -205,6 +207,28 @@ async def test__mirror__changed_name__row_updated_once(world: World) -> None:
 
     row = await _row(world, project.id)
     assert (row.name, row.lang, row.kind) == ("After", "en", "project")
+
+
+async def test__mirror__list_fields_pinned_archive_supervisor_and_edit_time(world: World) -> None:
+    project = await world.add("Alpha")
+    mirror = ProjectCatalogMirror(world.sessions)
+    edited = replace(
+        project,
+        pinned=True,
+        archived=True,
+        supervisor=Person(name="Сидоров И. И.", role=PersonRole.university),
+        updated_at=datetime(2026, 10, 30, 12, 0, tzinfo=UTC),
+    )
+
+    assert await mirror.mirror(project.id, edited)
+    archived = await _row(world, project.id)
+    assert await mirror.mirror(project.id, replace(edited, archived=False, supervisor=None))
+    restored = await _row(world, project.id)
+
+    assert (archived.pinned, archived.supervisor_name) == (True, "Сидоров И. И.")
+    assert archived.archived_at is not None
+    assert archived.updated_at == datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+    assert (restored.archived_at, restored.supervisor_name) == (None, None)
 
 
 async def test__mirror__unknown_project__false(world: World) -> None:
