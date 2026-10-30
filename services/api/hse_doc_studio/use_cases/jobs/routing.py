@@ -30,6 +30,18 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def _is_user(owner_id: str, user_id: UUID) -> bool:
+    """Владелец проекта хранится строкой `users.id` (uuid4 hex без дефисов), автор задачи приходит UUID.
+
+    Сравнение строк `str(user_id) == owner_id` никогда не совпадало бы: `str(UUID)` пишется с дефисами.
+    Не-UUID владелец (чужой формат id) автором задачи быть не может.
+    """
+    try:
+        return UUID(owner_id) == user_id
+    except ValueError:
+        return False
+
+
 class JobRouter:
     def __init__(
         self,
@@ -58,7 +70,7 @@ class JobRouter:
         if project is None or project.deleted or project.owner_user_id is None:
             return RouteDecision.shared(RouteReason.org_project)
         owner = project.owner_user_id
-        if str(user_id) != owner and project.build_runners is not ProjectBuildRunners.owner:
+        if not _is_user(owner, user_id) and project.build_runners is not ProjectBuildRunners.owner:
             return RouteDecision.shared(RouteReason.policy_shared)
         now = self._clock()
         candidates = await self.online_runners(owner, tags, now)

@@ -56,7 +56,8 @@ class _World:
         self.project = uuid4()
         self.projects.items[self.project] = ProjectRouteInfo(
             project_id=self.project,
-            owner_user_id=str(self.owner),
+            # Как в базе: users.id это uuid4 hex без дефисов, автор задачи приходит UUID.
+            owner_user_id=self.owner.hex,
             owner_org_id=None,
             build_runners=ProjectBuildRunners.shared,
         )
@@ -73,7 +74,7 @@ class _World:
             created_at=NOW,
             last_seen_at=NOW - timedelta(seconds=5),
             owner_kind=RunnerOwnerKind.user,
-            owner_id=str(self.owner),
+            owner_id=self.owner.hex,
         )
         runner = replace(runner, **changes)  # type: ignore[arg-type]
         await self.runners.add(runner)
@@ -97,9 +98,17 @@ async def test__decide__owner_with_online_runner__waits_for_it(world: _World) ->
     assert decision.route is JobRoute.personal_first
     assert (decision.reason, decision.route_owner_id, decision.personal_until) == (
         RouteReason.waiting_personal,
-        str(world.owner),
+        world.owner.hex,
         NOW + timedelta(seconds=5),
     )
+
+
+async def test__decide__owner_id_stored_as_hex__owner_recognised(world: _World) -> None:
+    """Владелец в проекте записан hex без дефисов: его собственная сборка не считается сборкой соавтора."""
+    await world.runner()
+    assert world.projects.items[world.project].owner_user_id == world.owner.hex
+    decision = await world.decide(user=UUID(world.owner.hex))
+    assert (decision.route, decision.reason) == (JobRoute.personal_first, RouteReason.waiting_personal)
 
 
 async def test__decide__disabled_installation_wide__shared(world: _World) -> None:
@@ -126,7 +135,7 @@ async def test__decide__coauthor__follows_policy(world: _World) -> None:
     assert (await world.decide(user=coauthor)).reason is RouteReason.policy_shared
     world.policy(ProjectBuildRunners.owner)
     decision = await world.decide(user=coauthor)
-    assert (decision.route, decision.route_owner_id) == (JobRoute.personal_first, str(world.owner))
+    assert (decision.route, decision.route_owner_id) == (JobRoute.personal_first, world.owner.hex)
 
 
 async def test__decide__coauthor_runner_never_builds_someone_elses_project(world: _World) -> None:
