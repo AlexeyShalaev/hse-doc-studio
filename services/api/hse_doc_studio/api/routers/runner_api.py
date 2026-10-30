@@ -169,7 +169,9 @@ async def poll_job(
     """Долгий опрос: ответ сразу, как появилась подходящая задача, иначе `envelope: null` через `wait_s`."""
     service = await request.state.dishka_container.get(RunnerJobService)
     response = await service.poll(
-        runner, PollRequest(wait_s=body.wait_s, free_slots=body.free_slots, free_ai_slots=body.free_ai_slots)
+        runner,
+        PollRequest(wait_s=body.wait_s, free_slots=body.free_slots, free_ai_slots=body.free_ai_slots),
+        gone=request.is_disconnected,
     )
     return encode_poll_response(response)
 

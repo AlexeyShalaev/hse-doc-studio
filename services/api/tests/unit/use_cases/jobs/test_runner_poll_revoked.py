@@ -104,3 +104,35 @@ async def test__poll__runner_went_offline_while_waiting__ends_without_touching_o
     assert current is not None
     assert current.last_seen_at is not None
     assert current.last_seen_at <= offline_at
+
+
+async def test__poll__client_disconnected__ends_without_claiming_or_touching() -> None:
+    """Раннер убит без `/offline`: опрос, чей клиент отключился, задачу не берёт (иначе она ждала бы аренду)."""
+    runner = _runner()
+    runners = InMemoryRunnerRepository()
+    await runners.add(runner)
+    queue = AsyncMock()
+    queue.claim.return_value = None
+    service = RunnerJobService(
+        queue,
+        MagicMock(),
+        runners,
+        MagicMock(),
+        _SleepingWakeup(),  # type: ignore[arg-type]
+        lease_s=45,
+        timeout_grace_s=10,
+        poll_interval_s=0.01,
+    )
+    disconnected = False
+
+    async def gone() -> bool:
+        return disconnected
+
+    polling = asyncio.create_task(service.poll(runner, PollRequest(wait_s=5), gone=gone))
+    await asyncio.sleep(0.1)
+    disconnected = True
+    claims = queue.claim.await_count
+    response = await asyncio.wait_for(polling, timeout=2)
+
+    assert response.envelope is None
+    assert queue.claim.await_count <= claims + 1

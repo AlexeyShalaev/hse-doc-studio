@@ -59,22 +59,20 @@ class RunnerJobService:
         self._clock = clock
         self._quota_source = quota_source
 
-    async def poll(self, runner: Runner, request: PollRequest) -> PollResponse:
+    async def poll(
+        self, runner: Runner, request: PollRequest, *, gone: Callable[[], Awaitable[bool]] | None = None
+    ) -> PollResponse:
         """Держит запрос до `wait_s`: отвечает, как только появилась подходящая задача, иначе пустым ответом.
 
         Раннер на паузе работы не получает, но опрос принимается: он остаётся живым для админки.
+        `gone` сообщает, что клиент опроса отключился (раннер убит без `/offline`): такой опрос заканчивается.
         """
         deadline = time.monotonic() + request.wait_s
         started = self._clock()
         while True:
             # Снимок раннера взят при входе, а опрос долгий: пауза, отзыв и выключение могли случиться за это время.
             current = await self._runners.get(runner.id)
-            if current is None or current.revoked_at is not None:
-                return PollResponse()
-            # Раннер сказал `/offline`, пока этот опрос ждал: клиент уже ушёл и ответа не прочтёт. Такой опрос
-            # не продлевает «был в сети» (иначе ушедший раннер ещё минуту числился бы в сети и сборки ждали бы
-            # его окно) и не берёт задачу, которую некому исполнить.
-            if current.offline_at is not None and current.offline_at >= started:
+            if current is None or await _poll_over(current, started, gone):
                 return PollResponse()
             await self._runners.touch(runner.id, self._clock())
             if not current.paused and await self._may_work(current):
@@ -136,3 +134,17 @@ class RunnerJobService:
             spec["actor"] = {**spec["actor"], "email": None, "link_id": None, "is_instance_admin": False}
             payload["spec"] = spec
         return decode_envelope({**payload, "attempt": job.attempt, "job_token": token})
+
+
+async def _poll_over(runner: Runner, started: datetime, gone: Callable[[], Awaitable[bool]] | None) -> bool:
+    """Опрос больше некому отвечать: раннер отозван, ушёл через `/offline` после начала опроса или убит.
+
+    Такой опрос не продлевает «был в сети» (иначе ушедший раннер ещё минуту числился бы в сети и сборки ждали
+    бы его окно) и не берёт задачу: выданная в закрытое соединение, она ждала бы конца аренды и повтора
+    (fallback_lost), а не окна ожидания.
+    """
+    if runner.revoked_at is not None:
+        return True
+    if runner.offline_at is not None and runner.offline_at >= started:
+        return True
+    return gone is not None and await gone()
