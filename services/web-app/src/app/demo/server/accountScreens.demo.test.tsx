@@ -308,7 +308,7 @@ describe("демо: раздел «Аккаунт»", () => {
     const left = z
       .array(AccountIdentitySchema)
       .parse((await call("GET", "/account/identities")).data);
-    expect(left.map((i) => i.kind)).toEqual(["password"]);
+    expect(left).toEqual([]);
   });
 
   it("способы входа: единственный SSO без пароля не отвязывается", async () => {
@@ -318,7 +318,7 @@ describe("демо: раздел «Аккаунт»", () => {
     expect(within(row).queryByRole("button", { name: /Отвязать/ })).toBeNull();
     expect(screen.getByTestId("identity-locked-idn_keycloak")).toBeVisible();
     // Сервер тоже не даст, даже если запрос отправить в обход интерфейса.
-    const refused = await call("DELETE", "/account/identities/idn_keycloak");
+    const refused = await call("DELETE", "/account/identities/keycloak");
     expect(refused.status).toBe(409);
     expect((refused.data as { code: string }).code).toBe("last_login_method");
   });

@@ -1,5 +1,4 @@
 import type {
-  AccountIdentity,
   AccountProfile,
   AccountSession,
   ApiToken,
@@ -9,6 +8,7 @@ import { CommitIdentityCard } from "./CommitIdentityCard";
 import { AccountSection } from "./AccountSection";
 import { PasswordCard } from "./PasswordCard";
 import { ProfileCard } from "./ProfileCard";
+import type { IdentityRow } from "../lib/identityRows";
 import { IdentitiesCard } from "./IdentitiesCard";
 import { SessionsCard } from "./SessionsCard";
 import { TokensCard } from "./TokensCard";
@@ -102,25 +102,23 @@ const TOKENS: ApiToken[] = [
   },
 ];
 
-const PASSWORD_IDENTITY: AccountIdentity = {
+const PASSWORD_IDENTITY: IdentityRow = {
   id: "idn_password",
   kind: "password",
   provider_id: null,
   provider_label: "",
   email: "anna.petrova@example.org",
-  linked_at: "2026-08-30T08:00:00Z",
-  last_used_at: null,
+  email_verified: null,
   can_unlink: false,
 };
 
-const SSO_IDENTITY: AccountIdentity = {
-  id: "idn_01hx9d",
+const SSO_IDENTITY: IdentityRow = {
+  id: "idn_keycloak",
   kind: "oidc",
   provider_id: "keycloak",
   provider_label: "HSE SSO",
   email: "anna.petrova@hse.ru",
-  linked_at: "2026-09-14T10:20:00Z",
-  last_used_at: "2026-10-27T09:41:10Z",
+  email_verified: true,
   can_unlink: true,
 };
 

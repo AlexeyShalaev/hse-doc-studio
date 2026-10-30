@@ -1,4 +1,4 @@
-export { installDemoAdapter } from "./adapter";
+export { installDemoAdapter, isDemoTransport } from "./adapter";
 export type { DemoAdapterOptions } from "./adapter";
 export {
   createDemoRouter,

@@ -104,11 +104,18 @@ const parseForwarded = (response: AxiosResponse): AxiosResponse => {
  * уходит настоящему бэкенду. Так демо-режим оживляет только то, чего ещё нет на
  * сервере, и не ломает остальное приложение.
  */
+const demoClients = new WeakSet<AxiosInstance>();
+
+/** Клиент подменён демо-транспортом: действия, которым нужен переход в браузере, делают запрос. */
+export const isDemoTransport = (client: AxiosInstance): boolean =>
+  demoClients.has(client);
+
 export const installDemoAdapter = (
   client: AxiosInstance,
   router: DemoRouter,
   options: DemoAdapterOptions = {},
 ): void => {
+  demoClients.add(client);
   const fallback = resolveFallback(client);
   const latency = options.latencyMs ?? 0;
   const uploadStep = options.uploadStepMs ?? latency;

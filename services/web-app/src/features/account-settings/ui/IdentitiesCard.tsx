@@ -3,17 +3,16 @@ import { KeyRound, Link2, Unlink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
-import type { AccountIdentity } from "@entities/session";
 import { failureKey, type Failure } from "../lib/failure";
 import { ACTIONS, HINT } from "../lib/styles";
-import { formatDay } from "../lib/tokens";
+import type { IdentityRow } from "../lib/identityRows";
 import { AccountCard } from "./parts";
 
 export type IdentityProvider = { id: string; label: string };
 
 export type IdentitiesCardProps = {
   status: "loading" | "error" | "ready";
-  identities?: AccountIdentity[];
+  identities?: IdentityRow[];
   /** Провайдеры, настроенные на установке: из них предлагаем привязать недостающие. */
   providers?: IdentityProvider[];
   /** Провайдер, к которому уходим сейчас. */
@@ -38,7 +37,7 @@ export const IdentitiesCard = ({
   onLink,
   onUnlink,
 }: IdentitiesCardProps) => {
-  const { t, i18n } = useTranslation("account");
+  const { t } = useTranslation("account");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const linked = new Set(identities.map((i) => i.provider_id));
   const free = providers.filter((p) => !linked.has(p.id));
@@ -129,10 +128,9 @@ export const IdentitiesCard = ({
                       {password
                         ? t("identities.passwordHint")
                         : (identity.email ?? t("identities.noEmail"))}
-                      {" · "}
-                      {t("identities.linkedOn", {
-                        date: formatDay(identity.linked_at, i18n.language),
-                      })}
+                      {!password && identity.email_verified === false && (
+                        <> · {t("identities.emailUnverified")}</>
+                      )}
                     </span>
                   </div>
                   {password ? null : identity.can_unlink ? (

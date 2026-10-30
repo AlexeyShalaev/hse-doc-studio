@@ -178,7 +178,7 @@
     "password": "Password",
     "passwordHint": "changed in the Password card",
     "noEmail": "no address provided",
-    "linkedOn": "added {{date}}",
+    "emailUnverified": "email not verified",
     "only": "Only one",
     "lockedHint": "This is your only way to sign in, so it cannot be removed.",
     "soleNote": "You have a single sign-in method. Add a second one before changing the first.",

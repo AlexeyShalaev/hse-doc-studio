@@ -401,8 +401,7 @@ describe("способы входа", () => {
     provider_id: null,
     provider_label: "",
     email: "a@b.co",
-    linked_at: "2026-08-30T08:00:00Z",
-    last_used_at: null,
+    email_verified: null,
     can_unlink: false,
   };
   const SSO = {

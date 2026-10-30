@@ -22,6 +22,7 @@ import {
   useUpdateAccount,
 } from "../api/accountQueries";
 import type { Failure } from "../lib/failure";
+import { identityRows } from "../lib/identityRows";
 import { isSafeRedirect } from "../lib/tokens";
 import { IdentitiesCard } from "./IdentitiesCard";
 import { CommitIdentityCard } from "./CommitIdentityCard";
@@ -70,6 +71,11 @@ export const AccountSection = () => {
   const startLink = useStartLink();
   const [identityFailure, setIdentityFailure] = useState<Failure | null>(null);
   const providers = bootstrap?.auth.oidc_providers ?? [];
+  const identityList = identityRows(
+    identities.data ?? [],
+    bootstrap?.auth.password_enabled ?? true,
+    account.data?.email ?? null,
+  );
 
   const profile = account.data;
   const issueOf = (error: unknown, field: string): string | undefined =>
@@ -218,8 +224,7 @@ export const AccountSection = () => {
           </>
         )}
 
-        {(providers.length > 0 ||
-          (identities.data ?? []).some((i) => i.kind === "oidc")) && (
+        {(providers.length > 0 || (identities.data ?? []).length > 0) && (
           <IdentitiesCard
             status={
               identities.isError && !identities.data
@@ -228,10 +233,10 @@ export const AccountSection = () => {
                   ? "ready"
                   : "loading"
             }
-            identities={identities.data ?? []}
+            identities={identityList}
             providers={providers}
             linkingId={startLink.isPending ? startLink.variables : null}
-            unlinkingId={unlink.isPending ? unlink.variables : null}
+            unlinkingId={unlink.isPending ? `idn_${unlink.variables}` : null}
             failure={identityFailure}
             onRetry={() => {
               void identities.refetch();
@@ -253,7 +258,11 @@ export const AccountSection = () => {
             }}
             onUnlink={(id) => {
               setIdentityFailure(null);
-              unlink.mutate(id, {
+              const providerId = identityList.find(
+                (i) => i.id === id,
+              )?.provider_id;
+              if (!providerId) return;
+              unlink.mutate(providerId, {
                 onSuccess: () => {
                   toast.success(t("identities.toastUnlinked"));
                 },

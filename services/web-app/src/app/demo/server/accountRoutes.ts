@@ -2,7 +2,7 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import { validateEmail } from "@entities/profile";
 import type { ApiToken, TokenScope } from "@entities/session";
-import { effectiveOf, withUnlinkFlags } from "./accounts";
+import { effectiveOf } from "./accounts";
 import { accountOf, signOut, type ServerDemoWorld } from "./world";
 
 // Демо аккаунта: профиль и подпись версий, смена пароля и почты, сессии.
@@ -276,54 +276,53 @@ export const createAccountRoutes = (
     },
   },
   {
-    method: "POST",
-    pattern: "/account/identities/link/start",
+    method: "GET",
+    pattern: "/account/identities/:provider/link",
     handler: (req) => {
       const world = getWorld();
       const account = accountOf(world);
       if (!account) return unauth();
-      const body = (req.body ?? {}) as Record<string, unknown>;
       const provider = world.bootstrap.auth.oidc_providers.find(
-        (p) => p.id === str(body.provider_id),
+        (p) => p.id === req.params.provider,
       );
       if (!provider) return demoError(404, "not_found", "Not Found");
-      if (!account.identities.some((i) => i.provider_id === provider.id)) {
+      if (!account.identities.some((i) => i.provider === provider.id)) {
         // Настоящий вход идёт у провайдера; демо считает, что человек уже вернулся.
-        account.identities = withUnlinkFlags([
+        account.identities = [
           ...account.identities,
           {
-            id: `idn_${provider.id}`,
-            kind: "oidc",
-            provider_id: provider.id,
-            provider_label: provider.label,
+            provider: provider.id,
+            label: provider.label,
             email: world.bootstrap.user?.email ?? null,
-            linked_at: new Date().toISOString(),
-            last_used_at: new Date().toISOString(),
-            can_unlink: true,
+            email_verified: true,
           },
-        ]);
+        ];
       }
       return demoJson({ redirect_url: "#account-identities" });
     },
   },
   {
     method: "DELETE",
-    pattern: "/account/identities/:id",
+    pattern: "/account/identities/:provider",
     handler: (req) => {
-      const account = accountOf(getWorld());
+      const world = getWorld();
+      const account = accountOf(world);
       if (!account) return unauth();
-      const target = account.identities.find((i) => i.id === req.params.id);
+      const target = account.identities.find(
+        (i) => i.provider === req.params.provider,
+      );
       if (!target) return demoError(404, "not_found", "Not Found");
-      if (!target.can_unlink) {
+      if (
+        !world.bootstrap.auth.password_enabled &&
+        account.identities.length <= 1
+      ) {
         return demoError(
           409,
           "last_login_method",
           "Cannot remove the last sign-in method",
         );
       }
-      account.identities = withUnlinkFlags(
-        account.identities.filter((i) => i.id !== target.id),
-      );
+      account.identities = account.identities.filter((i) => i !== target);
       return demoNoContent();
     },
   },

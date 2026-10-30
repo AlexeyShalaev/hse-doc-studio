@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError, apiClient, parseResp } from "@shared/api";
+import { isDemoTransport } from "@shared/api/demo";
 import {
   AccountIdentitySchema,
   AccountProfileSchema,
@@ -7,7 +8,6 @@ import {
   ApiTokenSchema,
   ChangeEmailResponseSchema,
   CreateApiTokenResponseSchema,
-  LinkIdentityResponseSchema,
   type AccountIdentity,
   type AccountProfile,
   type AccountSession,
@@ -15,7 +15,6 @@ import {
   type ChangeEmailResponse,
   type CreateApiTokenRequest,
   type CreateApiTokenResponse,
-  type LinkIdentityResponse,
 } from "@entities/session";
 
 // Ошибки формы показывает сама форма: тост не нужен.
@@ -124,19 +123,26 @@ export const accountApi = {
       .get("/account/identities")
       .then(parseResp(z.array(AccountIdentitySchema))),
 
-  unlinkIdentity: async (id: string): Promise<void> => {
+  unlinkIdentity: async (providerId: string): Promise<void> => {
     await apiClient.delete(
-      `/account/identities/${encodeURIComponent(id)}`,
+      `/account/identities/${encodeURIComponent(providerId)}`,
       quiet,
     );
   },
 
-  startLink: (providerId: string): Promise<LinkIdentityResponse> =>
-    apiClient
-      .post(
-        "/account/identities/link/start",
-        { provider_id: providerId },
-        quiet,
-      )
-      .then(parseResp(LinkIdentityResponseSchema)),
+  /**
+   * Привязка идёт переходом в браузере: сервер ведёт на страницу провайдера и возвращает в ту же
+   * сессию. Демо-мир переход не умеет и привязывает вход обычным запросом.
+   */
+  startLink: async (providerId: string): Promise<{ redirect_url: string }> => {
+    const path = `/account/identities/${encodeURIComponent(providerId)}/link`;
+    if (isDemoTransport(apiClient)) {
+      await apiClient.get(path, quiet);
+      return { redirect_url: "#account-identities" };
+    }
+    const base = apiClient.defaults.baseURL ?? "/api/v1";
+    return {
+      redirect_url: `${base}${path}?next=${encodeURIComponent(window.location.pathname)}`,
+    };
+  },
 };
