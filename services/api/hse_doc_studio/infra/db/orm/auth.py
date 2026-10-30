@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -56,6 +56,10 @@ class AuthTokenRow(Base):
 
 class RegistrationInviteRow(Base):
     __tablename__ = "registration_invites"
+    __table_args__ = (
+        Index("ix_registration_invites_expires_id", text("expires_at DESC"), "id"),
+        Index("ix_registration_invites_email_lower", text("lower(email)")),
+    )
 
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str | None] = mapped_column(String(320))
@@ -108,8 +112,12 @@ class AuditLogRow(Base):
     __tablename__ = "audit_log"
     __table_args__ = (
         Index("ix_audit_log_at", "at"),
-        Index("ix_audit_log_actor_id", "actor_id"),
-        Index("ix_audit_log_action", "action"),
+        # Журнал листается ключом id: фильтр по человеку, цели и префиксу действия идёт по индексу в порядке страницы.
+        Index("ix_audit_log_actor_id_desc", "actor_id", text("id DESC")),
+        Index("ix_audit_log_target_id_desc", "target", text("id DESC")),
+        Index(
+            "ix_audit_log_action_id_desc", "action", text("id DESC"), postgresql_ops={"action": "varchar_pattern_ops"}
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

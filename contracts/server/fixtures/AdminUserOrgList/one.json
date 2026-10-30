@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "slug": "msp-2025",
+      "name": "МСПИН 2025",
+      "role": "owner",
+      "joined_at": "2026-09-12T10:05:00Z"
+    },
+    {
+      "slug": "lab-ml",
+      "name": "Лаборатория ML",
+      "role": "member",
+      "joined_at": "2026-10-01T12:00:00Z"
+    }
+  ],
+  "total": 2,
+  "limit": 50,
+  "offset": 0
+}

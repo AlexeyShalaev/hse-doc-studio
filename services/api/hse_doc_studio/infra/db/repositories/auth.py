@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.identity.entities import (
@@ -14,6 +14,8 @@ from hse_doc_studio.core.identity.entities import (
     AuditQuery,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
+    InviteState,
     LoginAttempt,
     MailKind,
     MailOutboxEntry,
@@ -24,6 +26,8 @@ from hse_doc_studio.core.identity.entities import (
 )
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.core.listing import Found
+from hse_doc_studio.infra.db.listing import Expr, contains, fetch_page, ordering
 from hse_doc_studio.infra.db.orm.auth import (
     ApiTokenRow,
     AuditLogRow,
@@ -34,6 +38,7 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.orgs import OrgRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 
@@ -247,6 +252,22 @@ def _invite(row: RegistrationInviteRow) -> RegistrationInvite:
     )
 
 
+_INVITE_SORT: dict[str, Expr] = {
+    "expires_at": RegistrationInviteRow.expires_at,
+    "email": func.lower(RegistrationInviteRow.email),
+}
+
+
+def _invite_in_state(state: InviteState, now: datetime) -> ColumnElement[bool]:
+    """Состояние приглашения в SQL: те же правила, что у `invite_state`."""
+    invite = RegistrationInviteRow
+    if state is InviteState.used:
+        return invite.used_at.is_not(None)
+    if state is InviteState.expired:
+        return and_(invite.used_at.is_(None), invite.expires_at <= now)
+    return and_(invite.used_at.is_(None), invite.expires_at > now)
+
+
 class SqlRegistrationInviteRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -272,12 +293,28 @@ class SqlRegistrationInviteRepository:
             row = await db.get(RegistrationInviteRow, token_hash)
             return _invite(row) if row else None
 
-    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
-        stmt = select(RegistrationInviteRow).order_by(RegistrationInviteRow.expires_at.desc(), RegistrationInviteRow.id)
-        if created_by is not None:
-            stmt = stmt.where(RegistrationInviteRow.created_by == created_by)
+    async def get_by_id(self, invite_id: str) -> RegistrationInvite | None:
         async with self._sessions.use() as db:
-            return [_invite(row) for row in (await db.execute(stmt.limit(limit))).scalars()]
+            row = (
+                await db.execute(select(RegistrationInviteRow).where(RegistrationInviteRow.id == invite_id))
+            ).scalar_one_or_none()
+            return _invite(row) if row else None
+
+    async def page(self, query: InviteQuery) -> Found[RegistrationInvite]:
+        invite = RegistrationInviteRow
+        stmt = select(invite)
+        if query.q:
+            stmt = stmt.where(contains(query.q, invite.email))
+        if query.states:
+            stmt = stmt.where(or_(*(_invite_in_state(state, query.now) for state in query.states)))
+        if query.org_slug is not None:
+            stmt = stmt.where(invite.org_id.in_(select(OrgRow.id).where(OrgRow.slug == query.org_slug)))
+        if query.created_by is not None:
+            stmt = stmt.where(invite.created_by == query.created_by)
+        stmt = stmt.order_by(*ordering(query.sort, _INVITE_SORT, invite.id))
+        async with self._sessions.use() as db:
+            rows, total = await fetch_page(db, stmt, query.window)
+            return Found([_invite(row) for (row,) in rows], total)
 
     async def revoke(self, invite_id: str) -> bool:
         stmt = delete(RegistrationInviteRow).where(

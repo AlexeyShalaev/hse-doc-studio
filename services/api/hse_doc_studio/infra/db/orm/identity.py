@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,6 +15,13 @@ from hse_doc_studio.infra.db.base import Base
 
 class UserRow(Base):
     __tablename__ = "users"
+    # Список людей админки: новые первыми, фильтр статуса, поиск и сортировка по имени без учёта регистра.
+    # Триграммные индексы поиска создаёт миграция adm_identity_lists, если есть pg_trgm.
+    __table_args__ = (
+        Index("ix_users_created_at_id", text("created_at DESC"), "id"),
+        Index("ix_users_name_lower", text("lower(name)")),
+        Index("ix_users_status_created_at", "status", text("created_at DESC")),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False)

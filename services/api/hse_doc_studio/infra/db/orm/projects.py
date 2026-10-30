@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.infra.db.base import Base
@@ -17,7 +17,8 @@ class ProjectRow(Base):
     __tablename__ = "projects"
     __table_args__ = (
         Index("ix_projects_owner_user_id", "owner_user_id"),
-        Index("ix_projects_owner_org_id", "owner_org_id"),
+        Index("ix_projects_owner_org_updated", "owner_org_id", "updated_at"),
+        Index("ix_projects_name_lower", text("lower(name)")),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)

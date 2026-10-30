@@ -5,17 +5,23 @@ from __future__ import annotations
 import pytest
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
-from hse_doc_studio.core.orgs.entities import OrgRole
+from hse_doc_studio.core.listing import SortKey, Window
+from hse_doc_studio.core.orgs.entities import GroupMemberQuery, GroupQuery, MemberQuery, OrgQuery, OrgRole
 from hse_doc_studio.use_cases.admin.orgs import (
+    AddAdminGroupMemberUC,
     AddAdminMemberUC,
+    AdminMemberFacetsUC,
     CreateAdminGroupUC,
     CreateAdminOrgUC,
     DeleteAdminGroupUC,
     DeleteAdminOrgUC,
     GetAdminOrgUC,
+    ListAdminGroupMembersUC,
     ListAdminGroupsUC,
     ListAdminMembersUC,
     ListAdminOrgsUC,
+    PickOrgsUC,
+    RemoveAdminGroupMemberUC,
     RemoveAdminMemberUC,
     SetAdminMemberRoleUC,
     UpdateAdminGroupUC,
@@ -49,6 +55,11 @@ class _Admin:
         self.new_group = CreateAdminGroupUC(o, g, a, w, clock=lambda: T0)
         self.edit_group = UpdateAdminGroupUC(o, g, a, w)
         self.drop_group = DeleteAdminGroupUC(o, g, a, w)
+        self.facets = AdminMemberFacetsUC(o)
+        self.pick = PickOrgsUC(o)
+        self.group_members = ListAdminGroupMembersUC(o, g)
+        self.join_group = AddAdminGroupMemberUC(o, g, u, a, w, clock=lambda: T0)
+        self.leave_group = RemoveAdminGroupMemberUC(o, g, a, w)
 
 
 @pytest.fixture
@@ -62,7 +73,7 @@ async def test__list__admin_sees_every_org_with_own_role_or_none(world: OrgWorld
     await world.org("beta", anna=OWN)
     world.store.projects["org_beta"] = 3
 
-    found = {x.org.slug: x for x in await admin.list.execute(BOSS)}
+    found = {x.org.slug: x for x in (await admin.list.execute(BOSS, OrgQuery())).items}
 
     assert found["alpha"].my_role is ADM
     assert found["beta"].my_role is None
@@ -73,7 +84,7 @@ async def test__every_use_case__refuses_plain_user_as_not_found(world: OrgWorld,
     await world.org("lab", anna=OWN)
     anna = Actor.user("anna")
 
-    assert await _code(admin.list.execute(anna)) is IdentityErrorCode.not_found
+    assert await _code(admin.list.execute(anna, OrgQuery())) is IdentityErrorCode.not_found
     assert await _code(admin.get.execute(anna, "lab")) is IdentityErrorCode.not_found
     assert await _code(admin.delete.execute(anna, "lab")) is IdentityErrorCode.not_found
     assert await _code(admin.remove.execute(anna, "lab", "anna")) is IdentityErrorCode.not_found
@@ -112,7 +123,7 @@ async def test__delete__refuses_org_with_projects_then_deletes_empty(world: OrgW
 
 
 async def test__unknown_org__is_not_found(admin: _Admin) -> None:
-    assert await _code(admin.members.execute(BOSS, "nope")) is IdentityErrorCode.not_found
+    assert await _code(admin.members.execute(BOSS, "nope", MemberQuery())) is IdentityErrorCode.not_found
 
 
 async def test__add_member__by_email_any_role_incl_owner(world: OrgWorld, admin: _Admin) -> None:
@@ -149,7 +160,8 @@ async def test__remove_member__keeps_last_owner_and_clears_groups(world: OrgWorl
     await admin.remove.execute(BOSS, "lab", "boris")
 
     assert await world.orgs.get_member(org_id, "boris") is None
-    assert [x.member_ids for x in await admin.groups.execute(BOSS, "lab") if x.group.id == group.group.id] == [[]]
+    groups = (await admin.groups.execute(BOSS, "lab", GroupQuery())).items
+    assert [(x.member_count, x.preview) for x in groups if x.group.id == group.group.id] == [(0, ())]
 
 
 async def test__groups__create_update_delete_with_member_ids(world: OrgWorld, admin: _Admin) -> None:
@@ -159,11 +171,14 @@ async def test__groups__create_update_delete_with_member_ids(world: OrgWorld, ad
     renamed = await admin.edit_group.execute(BOSS, "lab", created.group.id, name="Команда", member_ids=None)
     resized = await admin.edit_group.execute(BOSS, "lab", created.group.id, name=None, member_ids=["anna", "boris"])
 
-    assert (created.group.name, created.member_ids) == ("Bertie", ["boris", "carol"])
-    assert (renamed.group.name, sorted(renamed.member_ids)) == ("Команда", ["boris", "carol"])
-    assert (resized.group.name, sorted(resized.member_ids)) == ("Команда", ["anna", "boris"])
+    def ids(view: object) -> list[str]:
+        return [m.user_id for m in view.preview]  # type: ignore[attr-defined]
+
+    assert (created.group.name, created.member_count, ids(created)) == ("Bertie", 2, ["boris", "carol"])
+    assert (renamed.group.name, ids(renamed)) == ("Команда", ["boris", "carol"])
+    assert (resized.group.name, ids(resized)) == ("Команда", ["anna", "boris"])
     await admin.drop_group.execute(BOSS, "lab", created.group.id)
-    assert await admin.groups.execute(BOSS, "lab") == []
+    assert (await admin.groups.execute(BOSS, "lab", GroupQuery())).total == 0
 
 
 async def test__groups__members_must_belong_to_org(world: OrgWorld, admin: _Admin) -> None:
@@ -188,3 +203,78 @@ async def test__groups__duplicate_name_conflicts_and_foreign_group_is_not_found(
         IdentityErrorCode.not_found
     )
     assert first.group.id != foreign.group.id
+
+
+async def test__list__pages_searches_filters_mine_and_sorts_by_counts(world: OrgWorld, admin: _Admin) -> None:
+    await world.org("alpha", boss=ADM, anna=OWN, boris=MEM)
+    await world.org("beta", anna=OWN)
+    await world.org("gamma", anna=OWN, boris=MEM, carol=MEM, dina=MEM)
+
+    by_members = await admin.list.execute(BOSS, OrgQuery(sort=SortKey("member_count", descending=True)))
+    mine = await admin.list.execute(BOSS, OrgQuery(mine=True))
+    others = await admin.list.execute(BOSS, OrgQuery(mine=False, window=Window(limit=1)))
+    found = await admin.list.execute(BOSS, OrgQuery(q="ET"))
+
+    assert [x.org.slug for x in by_members.items] == ["gamma", "alpha", "beta"]
+    assert [x.org.slug for x in mine.items] == ["alpha"]
+    assert ([x.org.slug for x in others.items], others.total) == (["beta"], 2)
+    assert [x.org.slug for x in found.items] == ["beta"]
+    assert by_members.items[1].owner_count == 1
+
+
+async def test__members__page_role_filter_sort_and_facets(world: OrgWorld, admin: _Admin) -> None:
+    await world.org("lab", anna=OWN, boris=ADM, carol=MEM, dina=MEM)
+
+    by_role = await admin.members.execute(BOSS, "lab", MemberQuery(sort=SortKey("role")))
+    plain = await admin.members.execute(BOSS, "lab", MemberQuery(roles=(MEM,), window=Window(limit=1, offset=1)))
+    facets = await admin.facets.execute(BOSS, "lab", "a")
+
+    assert [v.member.user_id for v in by_role.items] == ["anna", "boris", "carol", "dina"]
+    assert ([v.member.user_id for v in plain.items], plain.total) == (["dina"], 2)
+    # «a» есть в anna, carol, dina (и во всех адресах example.org), поэтому считаются все.
+    assert facets == {OWN: 1, ADM: 1, MEM: 2}
+    assert await admin.facets.execute(BOSS, "lab", "boris") == {OWN: 0, ADM: 1, MEM: 0}
+
+
+async def test__pick_orgs__first_by_name_and_has_more(world: OrgWorld, admin: _Admin) -> None:
+    for slug in ("lab-a", "lab-b", "lab-c", "zoo"):
+        await world.org(slug, anna=OWN)
+
+    found = await admin.pick.execute(BOSS, "lab", 2)
+
+    assert ([o.slug for o in found.items], found.has_more) == (["lab-a", "lab-b"], True)
+    assert await _code(admin.pick.execute(Actor.user("anna"), None, 2)) is IdentityErrorCode.not_found
+
+
+async def test__group_members__point_add_remove_and_page(world: OrgWorld, admin: _Admin) -> None:
+    await world.org("lab", anna=OWN, boris=MEM, carol=MEM)
+    await world.user("stranger")
+    group = await admin.new_group.execute(BOSS, "lab", name="Team", member_ids=["carol"])
+
+    added = await admin.join_group.execute(BOSS, "lab", group.group.id, "boris")
+    again = await _code(admin.join_group.execute(BOSS, "lab", group.group.id, "boris"))
+    foreign = await _code(admin.join_group.execute(BOSS, "lab", group.group.id, "stranger"))
+    listed = await admin.group_members.execute(BOSS, "lab", group.group.id, GroupMemberQuery(q="bor"))
+    await admin.leave_group.execute(BOSS, "lab", group.group.id, "carol")
+    gone = await _code(admin.leave_group.execute(BOSS, "lab", group.group.id, "carol"))
+    left = await admin.group_members.execute(BOSS, "lab", group.group.id, GroupMemberQuery())
+
+    assert (added.user_id, added.name) == ("boris", "Boris")
+    assert (again, foreign, gone) == (
+        IdentityErrorCode.already_member,
+        IdentityErrorCode.input_invalid,
+        IdentityErrorCode.not_found,
+    )
+    assert [m.user_id for m in listed.items] == ["boris"]
+    assert [m.user_id for m in left.items] == ["boris"]
+    assert {"group.member.add", "group.member.remove"} <= {e.action for e in await world.audit.list()}
+
+
+async def test__add_member__by_user_id(world: OrgWorld, admin: _Admin) -> None:
+    await world.org("lab", anna=OWN)
+    await world.user("newbie")
+
+    added = await admin.add.execute(BOSS, "lab", user_id="newbie", role=MEM)
+
+    assert (added.member.user_id, added.email) == ("newbie", "newbie@example.org")
+    assert await _code(admin.add.execute(BOSS, "lab", user_id="ghost", role=MEM)) is IdentityErrorCode.user_not_found

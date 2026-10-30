@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from hse_doc_studio.core.listing import PICKER_LIMIT, SortKey, Window
+
 
 class UserStatus(StrEnum):
     active = "active"
@@ -72,6 +74,40 @@ class UserListing:
 
     user: User
     project_count: int
+
+
+USER_SORTS = ("name", "email", "created_at", "last_login_at", "status")
+
+
+@dataclass(frozen=True)
+class UserQuery:
+    """Фильтры списка людей админки; всё сочетается по И. `org_slug`: человек состоит в этой организации."""
+
+    q: str | None = None
+    statuses: tuple[UserStatus, ...] = ()
+    is_admin: bool | None = None
+    org_slug: str | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("created_at", descending=True))
+    window: Window = field(default_factory=Window)
+
+
+@dataclass(frozen=True)
+class UserFacets:
+    """Счётчики на чипах списка людей под тем же поиском: по статусам и число админов установки."""
+
+    status: Mapping[UserStatus, int]
+    admins: int
+
+
+@dataclass(frozen=True)
+class UserPickQuery:
+    """Пикер людей: только админ установки, он видит всех. Исключения: уже состоящие в организации или группе."""
+
+    q: str | None = None
+    limit: int = PICKER_LIMIT
+    status: UserStatus | None = None
+    not_in_org_slug: str | None = None
+    not_in_group_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -136,6 +172,36 @@ class RegistrationInvite:
     # Членство, которое получит принявший приглашение; организации появятся в срезе орг.
     org_id: str | None = None
     org_role: str | None = None
+
+
+class InviteState(StrEnum):
+    """Состояние приглашения: от `used_at`, `expires_at` и текущего времени."""
+
+    pending = "pending"
+    used = "used"
+    expired = "expired"
+
+
+def invite_state(invite: RegistrationInvite, now: datetime) -> InviteState:
+    if invite.used_at is not None:
+        return InviteState.used
+    return InviteState.expired if invite.expires_at <= now else InviteState.pending
+
+
+INVITE_SORTS = ("expires_at", "email")
+
+
+@dataclass(frozen=True)
+class InviteQuery:
+    """Список приглашений админки. Состояние считается в запросе относительно `now`."""
+
+    now: datetime
+    q: str | None = None
+    states: tuple[InviteState, ...] = ()
+    org_slug: str | None = None
+    created_by: str | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("expires_at", descending=True))
+    window: Window = field(default_factory=Window)
 
 
 @dataclass(frozen=True)

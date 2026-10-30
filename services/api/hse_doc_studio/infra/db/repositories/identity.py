@@ -5,19 +5,30 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select, text
+from sqlalchemy import ColumnElement, delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hse_doc_studio.core.identity.entities import User, UserIdentity, UserListing, UserStatus
+from hse_doc_studio.core.identity.entities import (
+    User,
+    UserFacets,
+    UserIdentity,
+    UserListing,
+    UserPickQuery,
+    UserQuery,
+    UserStatus,
+)
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
+from hse_doc_studio.core.listing import Found, Picked
+from hse_doc_studio.infra.db.listing import Expr, contains_lower, fetch_page, ordering
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
     UserIdentityRow,
     UserRow,
 )
+from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -203,11 +214,6 @@ class SqlUserRepository:
             return [_identity(row) for row in rows]
 
 
-def _like_pattern(q: str) -> str:
-    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"%{escaped}%"
-
-
 async def _project_counts(session: AsyncSession, user_ids: list[str]) -> dict[str, int]:
     if not user_ids:
         return {}
@@ -217,6 +223,40 @@ async def _project_counts(session: AsyncSession, user_ids: list[str]) -> dict[st
         .group_by(ProjectRow.owner_user_id)
     )
     return {owner: n for owner, n in found.all() if owner is not None}
+
+
+# Поля сортировки списка людей; имя без учёта регистра, как его ищут.
+_USER_SORT: dict[str, Expr] = {
+    "name": func.lower(UserRow.name),
+    "email": UserRow.email_normalized,
+    "created_at": UserRow.created_at,
+    "last_login_at": UserRow.last_login_at,
+    "status": UserRow.status,
+}
+
+
+def _user_search(q: str) -> ColumnElement[bool]:
+    # Выражения совпадают с индексами lower(name) и email_normalized (в том числе триграммными).
+    return contains_lower(q, func.lower(UserRow.name), UserRow.email_normalized)
+
+
+def _in_org(slug: str) -> ColumnElement[bool]:
+    return UserRow.id.in_(
+        select(OrgMemberRow.user_id).join(OrgRow, OrgRow.id == OrgMemberRow.org_id).where(OrgRow.slug == slug)
+    )
+
+
+def _user_conditions(query: UserQuery) -> list[ColumnElement[bool]]:
+    conditions: list[ColumnElement[bool]] = []
+    if query.q:
+        conditions.append(_user_search(query.q))
+    if query.statuses:
+        conditions.append(UserRow.status.in_([s.value for s in query.statuses]))
+    if query.is_admin is not None:
+        conditions.append(UserRow.is_instance_admin.is_(query.is_admin))
+    if query.org_slug is not None:
+        conditions.append(_in_org(query.org_slug))
+    return conditions
 
 
 class SqlUserDirectory:
@@ -231,37 +271,47 @@ class SqlUserDirectory:
             counts = await _project_counts(session, [row.id])
             return UserListing(_user(row), counts.get(row.id, 0))
 
-    async def search(
-        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
-    ) -> tuple[list[UserListing], int]:
-        conditions = []
-        if q:
-            pattern = _like_pattern(q.strip().lower())
-            conditions.append(
-                or_(
-                    func.lower(UserRow.name).like(pattern, escape="\\"),
-                    UserRow.email_normalized.like(pattern, escape="\\"),
-                )
-            )
-        if status is not None:
-            conditions.append(UserRow.status == status.value)
+    async def search(self, query: UserQuery) -> Found[UserListing]:
+        stmt = select(UserRow).where(*_user_conditions(query)).order_by(*ordering(query.sort, _USER_SORT, UserRow.id))
         async with self._sessions.use() as session:
-            total = (await session.execute(select(func.count()).select_from(UserRow).where(*conditions))).scalar_one()
-            rows = (
-                (
-                    await session.execute(
-                        select(UserRow)
-                        .where(*conditions)
-                        .order_by(UserRow.created_at.desc(), UserRow.id)
-                        .limit(limit)
-                        .offset(offset)
-                    )
-                )
-                .scalars()
-                .all()
-            )
+            found, total = await fetch_page(session, stmt, query.window)
+            rows = [row for (row,) in found]
+            # Число проектов только для строк страницы, а не для всей установки.
             counts = await _project_counts(session, [r.id for r in rows])
-            return [UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total
+            return Found([UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total)
+
+    async def facets(self, q: str | None) -> UserFacets:
+        stmt = select(UserRow.status, func.count(), func.count().filter(UserRow.is_instance_admin.is_(True))).group_by(
+            UserRow.status
+        )
+        if q:
+            stmt = stmt.where(_user_search(q))
+        async with self._sessions.use() as session:
+            rows = (await session.execute(stmt)).all()
+        counts = {UserStatus(status): n for status, n, _ in rows}
+        return UserFacets(
+            status={status: counts.get(status, 0) for status in UserStatus},
+            admins=sum(admins for _, _, admins in rows),
+        )
+
+    async def pick(self, query: UserPickQuery) -> Picked[User]:
+        stmt = select(UserRow)
+        if query.q:
+            stmt = stmt.where(_user_search(query.q))
+        if query.status is not None:
+            stmt = stmt.where(UserRow.status == query.status.value)
+        if query.not_in_org_slug is not None:
+            stmt = stmt.where(~_in_org(query.not_in_org_slug))
+        if query.not_in_group_id is not None:
+            stmt = stmt.where(
+                UserRow.id.not_in(
+                    select(GroupMemberRow.user_id).where(GroupMemberRow.group_id == query.not_in_group_id)
+                )
+            )
+        stmt = stmt.order_by(func.lower(UserRow.name), UserRow.id).limit(query.limit + 1)
+        async with self._sessions.use() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+            return Picked.of([_user(r) for r in rows], query.limit)
 
 
 class SqlCredentialRepository:

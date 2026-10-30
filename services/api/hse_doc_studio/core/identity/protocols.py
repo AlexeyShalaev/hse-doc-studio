@@ -15,16 +15,20 @@ from hse_doc_studio.core.identity.entities import (
     AuditQuery,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
     LoginAttempt,
     MailOutboxEntry,
     OidcProvider,
     RegistrationInvite,
     Session,
     User,
+    UserFacets,
     UserIdentity,
     UserListing,
-    UserStatus,
+    UserPickQuery,
+    UserQuery,
 )
+from hse_doc_studio.core.listing import Found, Picked
 
 
 class IUserRepository(Protocol):
@@ -57,13 +61,19 @@ class IUserRepository(Protocol):
 
 class IUserDirectory(Protocol):
     async def get(self, user_id: str) -> UserListing | None: ...
-    async def search(
-        self, *, q: str | None, status: UserStatus | None, limit: int, offset: int
-    ) -> tuple[list[UserListing], int]:
-        """Страница пользователей (новые первыми) и общее число под тем же фильтром.
+    async def search(self, query: UserQuery) -> Found[UserListing]:
+        """Страница людей в порядке `query.sort` (вторичный ключ id) и общее число под тем же фильтром.
 
-        `q` ищет подстроку в имени и e-mail без учёта регистра.
+        `q` ищет подстроку в имени и e-mail без учёта регистра; `%` и `_` в нём обычные символы.
         """
+        ...
+
+    async def facets(self, q: str | None) -> UserFacets:
+        """Число людей каждого статуса и число админов установки под тем же поиском."""
+        ...
+
+    async def pick(self, query: UserPickQuery) -> Picked[User]:
+        """Первые по имени подходящие люди и признак, что есть ещё."""
         ...
 
 
@@ -118,8 +128,9 @@ class IRegistrationInviteRepository(Protocol):
         """Приглашение любого состояния; годность (срок, использование, адрес) решает вызывающий."""
         ...
 
-    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
-        """Приглашения любого состояния, новые по сроку первыми."""
+    async def get_by_id(self, invite_id: str) -> RegistrationInvite | None: ...
+    async def page(self, query: InviteQuery) -> Found[RegistrationInvite]:
+        """Страница приглашений в порядке `query.sort` (вторичный ключ id) и общее число под тем же фильтром."""
         ...
 
     async def revoke(self, invite_id: str) -> bool:

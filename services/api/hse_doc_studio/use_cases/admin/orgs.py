@@ -14,28 +14,27 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.listing import Found, Picked
 from hse_doc_studio.core.orgs.entities import (
     GROUP_NAME_MAX,
     ORG_NAME_MAX,
     AdminOrgSummary,
     Group,
+    GroupMemberQuery,
+    GroupMemberView,
+    GroupPreview,
+    GroupQuery,
+    MemberQuery,
     Org,
     OrgMember,
     OrgMemberView,
+    OrgQuery,
     OrgRole,
 )
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.orgs.orgs import check_slug, clean_name
-
-
-class AdminGroupView:
-    """Группа с id участников: так её отдаёт админка."""
-
-    def __init__(self, group: Group, member_ids: Sequence[str]) -> None:
-        self.group = group
-        self.member_ids = list(member_ids)
 
 
 class _AdminOrgs:
@@ -67,8 +66,19 @@ class ListAdminOrgsUC:
     def __init__(self, orgs: IOrgRepository) -> None:
         self._orgs = orgs
 
-    async def execute(self, actor: Actor) -> list[AdminOrgSummary]:
-        return await self._orgs.list_all(require_admin(actor))
+    async def execute(self, actor: Actor, query: OrgQuery) -> Found[AdminOrgSummary]:
+        return await self._orgs.page_all(require_admin(actor), query)
+
+
+class PickOrgsUC:
+    """Пикер организаций для админа установки: он видит все организации."""
+
+    def __init__(self, orgs: IOrgRepository) -> None:
+        self._orgs = orgs
+
+    async def execute(self, actor: Actor, q: str | None, limit: int) -> Picked[Org]:
+        require_admin(actor)
+        return await self._orgs.pick(q, limit)
 
 
 class GetAdminOrgUC(_AdminOrgs):
@@ -120,9 +130,17 @@ class DeleteAdminOrgUC(_AdminOrgs):
 
 
 class ListAdminMembersUC(_AdminOrgs):
-    async def execute(self, actor: Actor, slug: str) -> list[OrgMemberView]:
+    async def execute(self, actor: Actor, slug: str, query: MemberQuery) -> Found[OrgMemberView]:
         require_admin(actor)
-        return await self._orgs.list_members((await self.org(slug)).id)
+        return await self._orgs.page_members((await self.org(slug)).id, query)
+
+
+class AdminMemberFacetsUC(_AdminOrgs):
+    """Счётчики ролей на чипах под тем же поиском, без чтения всего состава."""
+
+    async def execute(self, actor: Actor, slug: str, q: str | None) -> dict[OrgRole, int]:
+        require_admin(actor)
+        return await self._orgs.role_counts((await self.org(slug)).id, q)
 
 
 class AddAdminMemberUC(_AdminOrgs):
@@ -135,10 +153,18 @@ class AddAdminMemberUC(_AdminOrgs):
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, actor: Actor, slug: str, *, email: str, role: OrgRole) -> OrgMemberView:
+    async def execute(
+        self, actor: Actor, slug: str, *, role: OrgRole, user_id: str | None = None, email: str | None = None
+    ) -> OrgMemberView:
+        """Человека выбирают пикером (`user_id`); почта остаётся запасным путём."""
         admin_id = require_admin(actor)
         org = await self.org(slug)
-        user = await self._users.get_by_email(normalize_email(email))
+        if user_id is not None:
+            user = await self._users.get(user_id)
+        elif email is not None:
+            user = await self._users.get_by_email(normalize_email(email))
+        else:
+            raise IdentityError(IdentityErrorCode.input_invalid)
         if user is None or not user.can_sign_in:
             raise IdentityError(IdentityErrorCode.user_not_found)
         member = OrgMember(org.id, user.id, role, self._clock())
@@ -216,10 +242,13 @@ class _AdminGroups(_AdminOrgs):
     async def valid_members(self, org: Org, member_ids: Sequence[str]) -> list[str]:
         """В группу входят только участники организации; повторы схлопываются."""
         unique = list(dict.fromkeys(member_ids))
-        known = {m.member.user_id for m in await self._orgs.list_members(org.id)}
-        if not set(unique) <= known:
+        if len(await self._orgs.members_among(org.id, unique)) != len(unique):
             raise IdentityError(IdentityErrorCode.input_invalid)
         return unique
+
+    async def preview(self, group: Group) -> GroupPreview:
+        found = await self._groups.previews([group.id])
+        return found.get(group.id) or GroupPreview(group, 0, ())
 
     async def sync_members(self, group: Group, wanted: Sequence[str]) -> None:
         current = {m.user_id for m in await self._groups.list_members(group.id)}
@@ -231,11 +260,71 @@ class _AdminGroups(_AdminOrgs):
 
 
 class ListAdminGroupsUC(_AdminGroups):
-    async def execute(self, actor: Actor, slug: str) -> list[AdminGroupView]:
+    async def execute(self, actor: Actor, slug: str, query: GroupQuery) -> Found[GroupPreview]:
         require_admin(actor)
+        return await self._groups.page_for_org((await self.org(slug)).id, query)
+
+
+class ListAdminGroupMembersUC(_AdminGroups):
+    async def execute(self, actor: Actor, slug: str, group_id: str, query: GroupMemberQuery) -> Found[GroupMemberView]:
+        require_admin(actor)
+        group = await self.group(await self.org(slug), group_id)
+        return await self._groups.page_members(group.id, query)
+
+
+class AddAdminGroupMemberUC(_AdminGroups):
+    """Точечное добавление в группу: состав не пересылается целиком."""
+
+    def __init__(
+        self,
+        orgs: IOrgRepository,
+        groups: IGroupRepository,
+        users: IUserRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        clock: Clock = utc_now,
+    ) -> None:
+        super().__init__(orgs, groups)
+        self._users = users
+        self._audit = audit
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, actor: Actor, slug: str, group_id: str, user_id: str) -> GroupMemberView:
+        admin_id = require_admin(actor)
         org = await self.org(slug)
-        members = await self._groups.member_ids_by_org(org.id)
-        return [AdminGroupView(g.group, members.get(g.group.id, [])) for g in await self._groups.list_for_org(org.id)]
+        group = await self.group(org, group_id)
+        await self.valid_members(org, [user_id])
+        user = await self._users.get(user_id)
+        if user is None:
+            raise IdentityError(IdentityErrorCode.input_invalid)
+        async with self._uow.begin():
+            await self._groups.add_member(group.id, user_id)
+            await self._audit.record(
+                "group.member.add", actor_id=admin_id, target=group.id, details={"org": org.slug, "user_id": user_id}
+            )
+        return GroupMemberView(user.id, user.name, user.email, self._clock())
+
+
+class RemoveAdminGroupMemberUC(_AdminGroups):
+    def __init__(self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork) -> None:
+        super().__init__(orgs, groups)
+        self._audit = audit
+        self._uow = uow
+
+    async def execute(self, actor: Actor, slug: str, group_id: str, user_id: str) -> None:
+        admin_id = require_admin(actor)
+        org = await self.org(slug)
+        group = await self.group(org, group_id)
+        async with self._uow.begin():
+            if not await self._groups.remove_member(group.id, user_id):
+                raise IdentityError(IdentityErrorCode.not_found)
+            await self._audit.record(
+                "group.member.remove",
+                actor_id=admin_id,
+                target=group.id,
+                details={"org": org.slug, "user_id": user_id},
+            )
 
 
 class CreateAdminGroupUC(_AdminGroups):
@@ -247,7 +336,7 @@ class CreateAdminGroupUC(_AdminGroups):
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, actor: Actor, slug: str, *, name: str, member_ids: Sequence[str]) -> AdminGroupView:
+    async def execute(self, actor: Actor, slug: str, *, name: str, member_ids: Sequence[str]) -> GroupPreview:
         admin_id = require_admin(actor)
         org = await self.org(slug)
         wanted = await self.valid_members(org, member_ids)
@@ -266,7 +355,7 @@ class CreateAdminGroupUC(_AdminGroups):
                 target=group.id,
                 details={"org": org.slug, "name": group.name, "members": len(wanted)},
             )
-        return AdminGroupView(group, wanted)
+        return await self.preview(group)
 
 
 class UpdateAdminGroupUC(_AdminGroups):
@@ -277,8 +366,9 @@ class UpdateAdminGroupUC(_AdminGroups):
 
     async def execute(
         self, actor: Actor, slug: str, group_id: str, *, name: str | None, member_ids: Sequence[str] | None
-    ) -> AdminGroupView:
-        """Меняется только заданное; состав заменяется целиком."""
+    ) -> GroupPreview:
+        """Меняется только заданное. Полная замена состава оставлена старым клиентам; новые меняют состав
+        точечно (`AddAdminGroupMemberUC`, `RemoveAdminGroupMemberUC`)."""
         admin_id = require_admin(actor)
         org = await self.org(slug)
         group = await self.group(org, group_id)
@@ -299,8 +389,7 @@ class UpdateAdminGroupUC(_AdminGroups):
                 target=group.id,
                 details={"name": renamed.name, "members": len(wanted) if wanted is not None else None},
             )
-        members = wanted if wanted is not None else [m.user_id for m in await self._groups.list_members(group.id)]
-        return AdminGroupView(renamed, members)
+        return await self.preview(renamed)
 
 
 class DeleteAdminGroupUC(_AdminGroups):

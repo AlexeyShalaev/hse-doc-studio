@@ -29,7 +29,7 @@ class ResendInviteUC:
     async def execute(self, actor: Actor, invite_id: str) -> CreatedInvite:
         """Принятое приглашение не повторить, просроченное можно. Секрет хранится хешем, поэтому ссылка новая."""
         admin_id = require_admin(actor)
-        old = next((i for i in await self._invites.list() if i.id == invite_id), None)
+        old = await self._invites.get_by_id(invite_id)
         if old is None or old.used_at is not None:
             raise IdentityError(IdentityErrorCode.not_found)
         async with self._uow.begin():

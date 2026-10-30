@@ -11,7 +11,7 @@ import pytest_asyncio
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.access.repositories import ProjectMemberGrant
 from hse_doc_studio.core.identity.entities import UserStatus
-from hse_doc_studio.core.orgs.entities import Group, Org, OrgMember, OrgRole
+from hse_doc_studio.core.orgs.entities import Group, GroupQuery, Org, OrgMember, OrgQuery, OrgRole
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.repositories.auth import SqlAuditLog
@@ -117,10 +117,10 @@ async def test__admin_list__counts_and_viewer_role_or_none(world: World) -> None
     await world.org("beta", anna=OWN)
     await world.project(org=alpha)
 
-    found = {x.org.slug: x for x in await ListAdminOrgsUC(world.orgs).execute(BOSS)}
+    found = {x.org.slug: x for x in (await ListAdminOrgsUC(world.orgs).execute(BOSS, OrgQuery())).items}
 
     assert (found["alpha"].my_role, found["alpha"].member_count, found["alpha"].group_count) == (ADM, 3, 1)
-    assert found["alpha"].project_count == 1
+    assert (found["alpha"].project_count, found["alpha"].owner_count) == (1, 1)
     assert (found["beta"].my_role, found["beta"].member_count, found["beta"].project_count) == (None, 1, 0)
 
 
@@ -148,9 +148,10 @@ async def test__admin_groups__sync_members_in_one_call_and_removal_clears_groups
     await RemoveAdminMemberUC(world.orgs, world.groups, world.audit, world.uow).execute(BOSS, "lab", "boris")
     empty = await make.execute(BOSS, "lab", name="Пустая", member_ids=[])
 
-    shown = {g.group.name: sorted(g.member_ids) for g in await listing.execute(BOSS, "lab")}
+    groups = (await listing.execute(BOSS, "lab", GroupQuery())).items
+    shown = {g.group.name: [m.user_id for m in g.preview] for g in groups}
     assert shown == {"Bertie": ["anna"], "Пустая": []}
-    assert empty.member_ids == []
+    assert (empty.member_count, empty.preview) == (0, ())
     assert await world.orgs.get_member(org_id, "boris") is None
     added = await AddAdminMemberUC(world.orgs, world.users, world.audit, world.uow).execute(
         BOSS, "lab", email="boris@example.test", role=MEM

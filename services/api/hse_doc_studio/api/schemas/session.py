@@ -372,6 +372,29 @@ class AdminUserPage(StrictModel):
     offset: int
 
 
+class AdminUserFacets(StrictModel):
+    """Счётчики на чипах списка людей под тем же поиском `q` (GET /api/admin/users/facets)."""
+
+    status: dict[AccountStatus, int]
+    admins: int
+
+
+class AdminUserOrg(StrictModel):
+    """Организация в карточке человека (GET /api/admin/users/{id}/orgs)."""
+
+    slug: str
+    name: str
+    role: OrgRoleName
+    joined_at: datetime
+
+
+class AdminUserOrgPage(StrictModel):
+    items: list[AdminUserOrg]
+    total: int
+    limit: int
+    offset: int
+
+
 class UpdateAdminUserRequest(StrictModel):
     is_instance_admin: bool
 
@@ -472,8 +495,17 @@ class AdminOrg(StrictModel):
     name: str
     member_count: int
     project_count: int
+    # Число владельцев: последнего владельца понизить или убрать нельзя (409 last_owner).
+    owner_count: int
     # Роль смотрящего в организации; null у админа установки, который в ней не состоит.
     my_role: OrgRoleName | None
+
+
+class AdminOrgPage(StrictModel):
+    items: list[AdminOrg]
+    total: int
+    limit: int
+    offset: int
 
 
 # Организации и группы: /orgs и /groups (серверный режим).
@@ -545,9 +577,31 @@ class AdminOrgMember(OrgMember):
     """Участник организации в админке: та же форма, что у участника в /orgs."""
 
 
+class AdminOrgMemberPage(StrictModel):
+    items: list[AdminOrgMember]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminOrgMemberFacets(StrictModel):
+    """Счётчики ролей на чипах под тем же поиском `q` (GET /api/admin/orgs/{slug}/members/facets)."""
+
+    role: dict[OrgRoleName, int]
+
+
 class AddAdminOrgMemberRequest(StrictModel):
-    email: str
+    """Человека выбирают пикером (`user_id`); почта остаётся запасным путём. Задаётся ровно одно из двух."""
+
+    user_id: str | None = Field(default=None, max_length=64)
+    email: str | None = Field(default=None, max_length=EMAIL_MAX)
     role: OrgRoleName
+
+    @model_validator(mode="after")
+    def _one_way(self) -> AddAdminOrgMemberRequest:
+        if (self.user_id is None) == (self.email is None):
+            raise ValueError("задайте user_id или email")
+        return self
 
 
 class UpdateAdminOrgMemberRequest(StrictModel):
@@ -559,10 +613,36 @@ class CreateAdminOrgRequest(StrictModel):
     slug: str
 
 
+class AdminGroupMemberRef(StrictModel):
+    user_id: str
+    name: str
+
+
 class AdminGroup(StrictModel):
+    """Группа в админке: число участников и первые пять по имени. Полный состав листается отдельно."""
+
     id: str
     name: str
-    member_ids: list[str]
+    member_count: int
+    preview: list[AdminGroupMemberRef]
+
+
+class AdminGroupPage(StrictModel):
+    items: list[AdminGroup]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminGroupMember(GroupMember):
+    """Участник группы в админке (GET /api/admin/orgs/{slug}/groups/{id}/members)."""
+
+
+class AdminGroupMemberPage(StrictModel):
+    items: list[AdminGroupMember]
+    total: int
+    limit: int
+    offset: int
 
 
 class CreateAdminGroupRequest(StrictModel):
@@ -571,7 +651,8 @@ class CreateAdminGroupRequest(StrictModel):
 
 
 class UpdateAdminGroupRequest(StrictModel):
-    # null значит «не менять».
+    # null значит «не менять». Состав меняют точечно (POST и DELETE .../members/{user_id});
+    # полная замена `member_ids` оставлена старым клиентам.
     name: str | None
     member_ids: list[str] | None
 

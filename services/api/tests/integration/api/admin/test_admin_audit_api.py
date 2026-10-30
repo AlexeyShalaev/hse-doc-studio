@@ -206,6 +206,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("POST", "/api/admin/orgs/{id}/groups"): "group.create",
     ("PATCH", "/api/admin/orgs/{id}/groups/{id}"): "group.update",
     ("DELETE", "/api/admin/orgs/{id}/groups/{id}"): "group.delete",
+    ("POST", "/api/admin/orgs/{id}/groups/{id}/members/{id}"): "group.member.add",
+    ("DELETE", "/api/admin/orgs/{id}/groups/{id}/members/{id}"): "group.member.remove",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.

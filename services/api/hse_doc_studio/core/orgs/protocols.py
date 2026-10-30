@@ -4,16 +4,24 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from hse_doc_studio.core.listing import Found, Picked
 from hse_doc_studio.core.orgs.entities import (
     AdminOrgSummary,
     Group,
+    GroupMemberQuery,
     GroupMemberView,
+    GroupPreview,
+    GroupQuery,
     GroupSummary,
+    MemberQuery,
     Org,
     OrgMember,
     OrgMemberView,
+    OrgQuery,
     OrgRole,
     OrgSummary,
+    UserOrgQuery,
+    UserOrgView,
 )
 
 
@@ -38,8 +46,19 @@ class IOrgRepository(Protocol):
         ...
 
     async def list_for_user(self, user_id: str) -> list[OrgSummary]: ...
-    async def list_all(self, viewer_id: str) -> list[AdminOrgSummary]:
-        """Все организации установки (для админа) с ролью смотрящего, если он состоит в организации."""
+    async def page_all(self, viewer_id: str, query: OrgQuery) -> Found[AdminOrgSummary]:
+        """Страница организаций установки (для админа) с ролью смотрящего, если он в ней состоит.
+
+        Счётчики считаются только для строк страницы; сортировка по счётчику считает их в самом запросе.
+        """
+        ...
+
+    async def pick(self, q: str | None, limit: int) -> Picked[Org]:
+        """Пикер админа: первые по названию организации, где `q` есть в названии или адресе."""
+        ...
+
+    async def page_for_user(self, user_id: str, query: UserOrgQuery) -> Found[UserOrgView]:
+        """Организации человека с его ролью: карточка человека в админке."""
         ...
 
     async def summary_for_admin(self, org: Org, viewer_id: str) -> AdminOrgSummary: ...
@@ -49,6 +68,15 @@ class IOrgRepository(Protocol):
 
     async def get_member(self, org_id: str, user_id: str) -> OrgMember | None: ...
     async def list_members(self, org_id: str) -> list[OrgMemberView]: ...
+    async def page_members(self, org_id: str, query: MemberQuery) -> Found[OrgMemberView]: ...
+    async def role_counts(self, org_id: str, q: str | None) -> dict[OrgRole, int]:
+        """Число участников каждой роли под тем же поиском; роль без участников даёт 0."""
+        ...
+
+    async def members_among(self, org_id: str, user_ids: list[str]) -> set[str]:
+        """Кто из `user_ids` состоит в организации: проверка состава группы без чтения всех участников."""
+        ...
+
     async def add_member(self, member: OrgMember) -> None:
         """Повтор даёт `IdentityError(already_member)`."""
         ...
@@ -68,6 +96,15 @@ class IGroupRepository(Protocol):
 
     async def get(self, group_id: str) -> Group | None: ...
     async def list_for_org(self, org_id: str) -> list[GroupSummary]: ...
+    async def page_for_org(self, org_id: str, query: GroupQuery) -> Found[GroupPreview]:
+        """Страница групп организации: у каждой число участников и первые `GROUP_PREVIEW` по имени."""
+        ...
+
+    async def previews(self, group_ids: list[str]) -> dict[str, GroupPreview]:
+        """То же для отдельных групп (ответ на создание и правку); неизвестные id пропускаются."""
+        ...
+
+    async def page_members(self, group_id: str, query: GroupMemberQuery) -> Found[GroupMemberView]: ...
     async def update(self, group: Group) -> None: ...
     async def delete(self, group_id: str) -> None: ...
     async def list_members(self, group_id: str) -> list[GroupMemberView]: ...
@@ -76,10 +113,6 @@ class IGroupRepository(Protocol):
         ...
 
     async def remove_member(self, group_id: str, user_id: str) -> bool: ...
-    async def member_ids_by_org(self, org_id: str) -> dict[str, list[str]]:
-        """Группа организации -> id её участников (порядок вступления); у пустой группы пустой список."""
-        ...
-
     async def names_for_user(self, user_id: str) -> dict[str, list[str]]:
         """Организация -> названия её групп, в которых состоит человек."""
         ...

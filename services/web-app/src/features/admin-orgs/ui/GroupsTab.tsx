@@ -5,6 +5,7 @@ import {
   useDeleteGroup,
   useGroups,
   useMembers,
+  useSyncGroupMembers,
   useUpdateGroup,
 } from "../api/adminOrgsQueries";
 import type { Failure } from "../lib/failure";
@@ -17,6 +18,7 @@ export const GroupsTab = ({ slug }: { slug: string }) => {
   const members = useMembers(slug);
   const create = useCreateGroup(slug);
   const update = useUpdateGroup(slug);
+  const sync = useSyncGroupMembers(slug);
   const remove = useDeleteGroup(slug);
   const [formFailure, setFormFailure] = useState<Failure | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
@@ -35,7 +37,7 @@ export const GroupsTab = ({ slug }: { slug: string }) => {
       members={members.data ?? []}
       formFailure={formFailure}
       failure={failure}
-      saving={create.isPending || update.isPending}
+      saving={create.isPending || update.isPending || sync.isPending}
       deleting={remove.isPending}
       onRetry={() => {
         void groups.refetch();
@@ -56,20 +58,29 @@ export const GroupsTab = ({ slug }: { slug: string }) => {
             },
           )
       }
-      onUpdate={(group, draft) =>
-        update
+      onUpdate={(group, draft) => {
+        // Форма знает только показанных участников (preview): меняем состав разницей, а не заменой.
+        const shown = group.preview.map((m) => m.user_id);
+        return update
           .mutateAsync({
             id: group.id,
-            body: { name: draft.name, member_ids: draft.memberIds },
+            body: { name: draft.name, member_ids: null },
           })
+          .then(() =>
+            sync.mutateAsync({
+              id: group.id,
+              add: draft.memberIds.filter((id) => !shown.includes(id)),
+              remove: shown.filter((id) => !draft.memberIds.includes(id)),
+            }),
+          )
           .then(
             () => true,
             (error: unknown) => {
               setFormFailure(asFailure(error));
               return false;
             },
-          )
-      }
+          );
+      }}
       onDelete={(group) =>
         remove.mutateAsync(group.id).then(
           () => true,

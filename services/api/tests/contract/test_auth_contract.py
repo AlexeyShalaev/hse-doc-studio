@@ -14,6 +14,8 @@ from hse_doc_studio.core.identity.entities import (
     AuditQuery,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
+    InviteState,
     MailKind,
     MailOutboxEntry,
     OidcProvider,
@@ -34,6 +36,7 @@ from hse_doc_studio.core.identity.protocols import (
     ISessionRepository,
     IUserRepository,
 )
+from hse_doc_studio.core.listing import Found, SortKey, Window
 from pytest_lazy_fixtures import lf
 
 from tests.contract.test_identity_contract import make_user
@@ -267,13 +270,45 @@ async def test__invite__get_keeps_org_scope_and_defaults_id(repos: Repos, user: 
     assert await repos.invites.get("missing") is None
 
 
-async def test__invite__list_newest_first_and_filter(repos: Repos, user: str) -> None:
+async def test__invite__page_newest_first_and_filter(repos: Repos, user: str) -> None:
     await repos.invites.add(RegistrationInvite("h1", None, "u1", NOW + HOUR, id="i1"))
     await repos.invites.add(RegistrationInvite("h2", None, "u2", NOW + 3 * HOUR, id="i2"))
     await repos.invites.add(RegistrationInvite("h3", None, "u1", NOW + 2 * HOUR, id="i3"))
-    assert [i.id for i in await repos.invites.list()] == ["i2", "i3", "i1"]
-    assert [i.id for i in await repos.invites.list(created_by="u1")] == ["i3", "i1"]
-    assert [i.id for i in await repos.invites.list(limit=1)] == ["i2"]
+
+    def ids(found: Found[RegistrationInvite]) -> list[str]:
+        return [i.id for i in found.items]
+
+    everything = await repos.invites.page(InviteQuery(now=NOW))
+    mine = await repos.invites.page(InviteQuery(now=NOW, created_by="u1"))
+    first = await repos.invites.page(InviteQuery(now=NOW, window=Window(limit=1)))
+    second = await repos.invites.page(InviteQuery(now=NOW, window=Window(limit=1, offset=1)))
+    assert (ids(everything), everything.total) == (["i2", "i3", "i1"], 3)
+    assert ids(mine) == ["i3", "i1"]
+    assert (ids(first), first.total, ids(second)) == (["i2"], 3, ["i3"])
+    assert (await repos.invites.get_by_id("i3")) == await repos.invites.get("h3")
+    assert await repos.invites.get_by_id("ghost") is None
+
+
+async def test__invite__page_state_search_and_sort(repos: Repos, user: str) -> None:
+    await repos.invites.add(RegistrationInvite("h1", "zed.annax@example.test", "u1", NOW + HOUR, id="i1"))
+    await repos.invites.add(RegistrationInvite("h2", "Anna_X@example.test", "u1", NOW - HOUR, id="i2"))
+    await repos.invites.add(RegistrationInvite("h3", None, "u1", NOW + 2 * HOUR, id="i3"))
+    await repos.invites.add(RegistrationInvite("h4", "bella@example.test", "u1", NOW + HOUR, id="i4"))
+    assert await repos.invites.consume("h3", "x@example.test", NOW) is not None
+
+    def ids(found: Found[RegistrationInvite]) -> list[str]:
+        return [i.id for i in found.items]
+
+    pending = await repos.invites.page(InviteQuery(now=NOW, states=(InviteState.pending,)))
+    used_or_expired = await repos.invites.page(InviteQuery(now=NOW, states=(InviteState.used, InviteState.expired)))
+    literal = await repos.invites.page(InviteQuery(now=NOW, q="ANNA_"))
+    by_email = await repos.invites.page(InviteQuery(now=NOW, sort=SortKey("email")))
+    assert ids(pending) == ["i1", "i4"]
+    assert ids(used_or_expired) == ["i3", "i2"]
+    # `_` в поиске обычный символ: zed.annax@ не подходит под «anna_».
+    assert ids(literal) == ["i2"]
+    # Приглашение без адреса в конце при любом направлении.
+    assert ids(by_email) == ["i2", "i4", "i1", "i3"]
 
 
 async def test__invite__revoke_removes_only_unused(repos: Repos, user: str) -> None:

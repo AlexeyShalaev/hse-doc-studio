@@ -13,17 +13,21 @@ from hse_doc_studio.core.identity.entities import (
     AuditQuery,
     AuthToken,
     AuthTokenKind,
+    InviteQuery,
     LoginAttempt,
     MailOutboxEntry,
     OidcProvider,
     RegistrationInvite,
     Session,
+    invite_state,
 )
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
+from hse_doc_studio.core.listing import Found
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver
 
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserRepository
+from tests.fakes.listing import matches, ordered, page
 
 
 class InMemorySessionRepository:
@@ -119,6 +123,8 @@ class InMemoryAuthTokenRepository:
 class InMemoryRegistrationInviteRepository:
     def __init__(self) -> None:
         self._items: dict[str, RegistrationInvite] = {}
+        # slug -> id организации для фильтра `org`; тест задаёт сам.
+        self.org_ids: dict[str, str] = {}
 
     async def add(self, invite: RegistrationInvite) -> None:
         email = normalize_email(invite.email) if invite.email else None
@@ -127,9 +133,21 @@ class InMemoryRegistrationInviteRepository:
     async def get(self, token_hash: str) -> RegistrationInvite | None:
         return self._items.get(token_hash)
 
-    async def list(self, *, created_by: str | None = None, limit: int = 200) -> list[RegistrationInvite]:
-        found = [i for i in self._items.values() if created_by is None or i.created_by == created_by]
-        return sorted(found, key=lambda i: (-i.expires_at.timestamp(), i.id))[:limit]
+    async def get_by_id(self, invite_id: str) -> RegistrationInvite | None:
+        return next((i for i in self._items.values() if i.id == invite_id), None)
+
+    async def page(self, query: InviteQuery) -> Found[RegistrationInvite]:
+        org_id = self.org_ids.get(query.org_slug, "") if query.org_slug is not None else None
+        found = [
+            i
+            for i in self._items.values()
+            if matches(query.q, i.email)
+            and (not query.states or invite_state(i, query.now) in query.states)
+            and (org_id is None or i.org_id == org_id)
+            and (query.created_by is None or i.created_by == query.created_by)
+        ]
+        keys = {"expires_at": lambda i: i.expires_at, "email": lambda i: i.email.lower() if i.email else None}
+        return page(ordered(found, query.sort, keys, lambda i: i.id), query.window)
 
     async def revoke(self, invite_id: str) -> bool:
         for key, invite in self._items.items():

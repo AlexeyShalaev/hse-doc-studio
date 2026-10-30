@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.identity.entities import MailKind, RegistrationInvite
+from hse_doc_studio.core.identity.entities import InviteQuery, MailKind, RegistrationInvite
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token, is_valid_email, new_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IAuditLog, IRegistrationInviteRepository, IUserRepository
 from hse_doc_studio.core.identity.registration import invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.listing import Found
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
 INVITE_PATH = "/invite"
@@ -97,9 +98,9 @@ class ListInvitesUC:
     def __init__(self, invites: IRegistrationInviteRepository) -> None:
         self._invites = invites
 
-    async def execute(self, actor: Actor) -> list[RegistrationInvite]:
+    async def execute(self, actor: Actor, query: InviteQuery) -> Found[RegistrationInvite]:
         _require_admin(actor)
-        return await self._invites.list()
+        return await self._invites.page(query)
 
 
 class RevokeInviteUC:

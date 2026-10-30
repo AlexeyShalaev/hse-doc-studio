@@ -65,7 +65,6 @@ export const GroupsView = ({
     onReset?.();
     setForm(next);
   };
-  const byId = new Map(members.map((m) => [m.user_id, m]));
 
   const addButton = (
     <Button
@@ -116,9 +115,8 @@ export const GroupsView = ({
       {status === "ready" && groups.length > 0 && (
         <ul aria-label={t("groups.caption")} className="org-groups">
           {groups.map((group) => {
-            const people = group.member_ids
-              .map((id) => byId.get(id))
-              .filter((m): m is AdminOrgMember => m !== undefined);
+            // Сервер отдаёт число участников и первых по имени, а не весь состав.
+            const people = group.preview;
             return (
               <li
                 key={group.id}
@@ -139,7 +137,7 @@ export const GroupsView = ({
                   >
                     <span className="org-group-name">{group.name}</span>
                     <span className="org-muted" style={{ fontSize: 12 }}>
-                      {t("groups.count", { count: people.length })}
+                      {t("groups.count", { count: group.member_count })}
                     </span>
                   </div>
                   <Button
@@ -184,9 +182,9 @@ export const GroupsView = ({
                       ))}
                     </span>
                     <span className="org-group-names">
-                      {people.length > SHOWN_AVATARS
+                      {group.member_count > people.length
                         ? t("groups.more", {
-                            count: people.length - SHOWN_AVATARS,
+                            count: group.member_count - people.length,
                           })
                         : people.map((m) => m.name).join(", ")}
                     </span>
@@ -293,7 +291,9 @@ const GroupForm = ({
 }) => {
   const { t } = useTranslation("adminOrgs");
   const [name, setName] = useState(initial?.name ?? "");
-  const [chosen, setChosen] = useState<string[]>(initial?.member_ids ?? []);
+  const [chosen, setChosen] = useState<string[]>(
+    initial?.preview.map((m) => m.user_id) ?? [],
+  );
   const [query, setQuery] = useState("");
   const [tried, setTried] = useState(false);
 

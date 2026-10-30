@@ -15,7 +15,7 @@ from hse_doc_studio.api.auth_cookie import SESSION_COOKIE
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.admin import make_admin_router
-from hse_doc_studio.core.identity.entities import Session, User, UserStatus
+from hse_doc_studio.core.identity.entities import RegistrationInvite, Session, User, UserStatus
 from hse_doc_studio.core.identity.lifecycle import RetentionPolicy
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
@@ -34,6 +34,7 @@ from hse_doc_studio.use_cases.admin.users import (
     RejectUserUC,
     RevokeUserSessionsUC,
     SetUserAdminUC,
+    UserFacetsUC,
 )
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
@@ -71,18 +72,28 @@ class _Env:
         self.lifecycle = InMemoryUserLifecycle(self.store)
         self.make: Callable[[], AsyncClient]
 
-    async def add(self, uid: str, *, admin: bool = False, status: UserStatus = UserStatus.active) -> dict[str, str]:
+    async def add(
+        self,
+        uid: str,
+        *,
+        admin: bool = False,
+        status: UserStatus = UserStatus.active,
+        name: str | None = None,
+        created_at: datetime = NOW,
+        last_login_at: datetime | None = None,
+    ) -> dict[str, str]:
         email = f"{uid}@example.org"
         await self.users.add(
             User(
                 id=uid,
                 email=email,
                 email_normalized=normalize_email(email),
-                name=uid.title(),
+                name=name or uid.title(),
                 status=status,
-                created_at=NOW,
+                created_at=created_at,
                 email_verified=True,
                 is_instance_admin=admin,
+                last_login_at=last_login_at,
             )
         )
         await self.sessions.add(
@@ -141,6 +152,10 @@ class _Provider(Provider):
     @provide
     def revoke(self) -> RevokeUserSessionsUC:
         return RevokeUserSessionsUC(self.e.users, self.e.sessions, self.e.audit, self.e.uow)
+
+    @provide
+    def facets(self) -> UserFacetsUC:
+        return UserFacetsUC(self.e.directory)
 
     @provide
     def approvals(self) -> ListApprovalsUC:
@@ -396,3 +411,97 @@ async def test__retention__is_read_only_and_matches_the_contract(env: _Env) -> N
     assert response.status_code == 200
     assert response.json() == {"audit_days": 365, "deleted_projects_days": 30, "unused_blobs_days": 14}
     assert (await client.put("/api/admin/settings/retention", json={}, headers=boss)).status_code in (404, 405)
+
+
+async def test__users__sort_multi_status_admin_and_org_filters(env: _Env) -> None:
+    boss = await env.add("boss", admin=True, name="Zed Boss", created_at=NOW - timedelta(days=3))
+    await env.add("anna", name="anna", created_at=NOW - timedelta(days=1), last_login_at=NOW)
+    await env.add("maria", status=UserStatus.pending_approval, created_at=NOW - timedelta(days=2))
+    await env.add("dora", status=UserStatus.disabled, created_at=NOW)
+    env.directory.org_members["lab"] = {"anna", "dora"}
+    client = env.make()
+
+    async def ids(query: str) -> list[str]:
+        response = await client.get(f"/api/admin/users?{query}", headers=boss)
+        assert response.status_code == 200, response.text
+        assert response.headers["cache-control"] == "no-store"
+        return [u["id"] for u in response.json()["items"]]
+
+    assert await ids("") == ["dora", "anna", "maria", "boss"]
+    assert await ids("sort=created_at") == ["boss", "maria", "anna", "dora"]
+    assert await ids("sort=name") == ["anna", "dora", "maria", "boss"]
+    # Без входа в конце при любом направлении.
+    assert (await ids("sort=-last_login_at"))[0] == "anna"
+    assert (await ids("sort=last_login_at"))[0] == "anna"
+    assert await ids("status=disabled&status=pending_approval&sort=email") == ["dora", "maria"]
+    assert await ids("is_admin=true") == ["boss"]
+    assert await ids("org=lab&sort=name") == ["anna", "dora"]
+    assert await ids("org=ghost") == []
+    assert await ids("q=%20%20&limit=1&offset=3") == ["boss"]
+    for bad in ("sort=password", "status=god", "limit=500", "is_admin=maybe"):
+        assert (await client.get(f"/api/admin/users?{bad}", headers=boss)).status_code == 422, bad
+
+
+async def test__users__facets_count_statuses_and_admins_under_search(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    await env.add("anna")
+    await env.add("annette", status=UserStatus.disabled)
+    await env.add("maria", status=UserStatus.pending_approval)
+    client = env.make()
+
+    everyone = (await client.get("/api/admin/users/facets", headers=boss)).json()
+    searched = (await client.get("/api/admin/users/facets?q=ANN", headers=boss)).json()
+
+    assert everyone == {
+        "status": {"active": 2, "pending_verification": 0, "pending_approval": 1, "disabled": 1},
+        "admins": 1,
+    }
+    assert searched["status"] == {"active": 1, "pending_verification": 0, "pending_approval": 0, "disabled": 1}
+    assert searched["admins"] == 0
+    student = await env.add("student")
+    assert (await client.get("/api/admin/users/facets", headers=student)).status_code == 404
+
+
+async def test__approvals__search_and_oldest_first_by_default(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    await env.add("new", status=UserStatus.pending_approval, created_at=NOW)
+    await env.add("old", status=UserStatus.pending_approval, created_at=NOW - timedelta(days=5))
+    await env.add("active")
+    client = env.make()
+
+    queue = (await client.get("/api/admin/approvals", headers=boss)).json()
+    newest = (await client.get("/api/admin/approvals?sort=-created_at", headers=boss)).json()
+    found = (await client.get("/api/admin/approvals?q=NEW@", headers=boss)).json()
+
+    assert ([u["id"] for u in queue["items"]], queue["total"]) == (["old", "new"], 2)
+    assert [u["id"] for u in newest["items"]] == ["new", "old"]
+    assert [u["id"] for u in found["items"]] == ["new"]
+    assert (await client.get("/api/admin/approvals?sort=status", headers=boss)).status_code == 422
+
+
+async def test__invitations__page_past_two_hundred_with_status_search_and_sort(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    for i in range(205):
+        await env.invites.add(
+            RegistrationInvite(
+                f"h{i}", f"user{i:03d}@example.org", "boss", NOW + timedelta(hours=i + 1), id=f"i{i:03d}"
+            )
+        )
+    await env.invites.add(RegistrationInvite("hx", "late@example.org", "boss", NOW - timedelta(hours=1), id="ix"))
+    env.invites.org_ids["lab"] = "org_lab"
+    await env.invites.add(
+        RegistrationInvite("ho", "org@example.org", "boss", NOW + timedelta(days=30), id="io", org_id="org_lab")
+    )
+    client = env.make()
+
+    last = (await client.get("/api/admin/invitations?limit=50&offset=200", headers=boss)).json()
+    expired = (await client.get("/api/admin/invitations?status=expired", headers=boss)).json()
+    found = (await client.get("/api/admin/invitations?q=USER20&sort=email", headers=boss)).json()
+    in_org = (await client.get("/api/admin/invitations?org=lab", headers=boss)).json()
+
+    assert (last["total"], len(last["items"])) == (207, 7)
+    assert last["items"][-1]["id"] == "ix"
+    assert ([x["id"] for x in expired["items"]], expired["items"][0]["status"]) == (["ix"], "expired")
+    assert [x["id"] for x in found["items"]] == [f"i{n}" for n in range(200, 205)]
+    assert [x["id"] for x in in_org["items"]] == ["io"]
+    assert (await client.get("/api/admin/invitations?status=lost", headers=boss)).status_code == 422

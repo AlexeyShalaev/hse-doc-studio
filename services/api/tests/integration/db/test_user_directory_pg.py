@@ -6,7 +6,7 @@ import uuid
 from dataclasses import replace
 
 import pytest
-from hse_doc_studio.core.identity.entities import UserStatus
+from hse_doc_studio.core.identity.entities import UserQuery, UserStatus
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.repositories.identity import SqlUserDirectory, SqlUserRepository
@@ -39,15 +39,15 @@ async def test__search__filters_pages_and_counts_live_projects(pg_migrated_engin
                 )
             )
 
-    found, total = await directory.search(q="ANNA.DIR", status=None, limit=10, offset=0)
-    pending, _ = await directory.search(q="dir-", status=UserStatus.pending_approval, limit=10, offset=0)
-    wildcard, wildcard_total = await directory.search(q="%", status=None, limit=10, offset=0)
+    found = await directory.search(UserQuery(q="ANNA.DIR"))
+    pending = await directory.search(UserQuery(q="dir-", statuses=(UserStatus.pending_approval,)))
+    wildcard = await directory.search(UserQuery(q="%"))
     one = await directory.get(anna.id)
 
-    assert [(x.user.id, x.project_count) for x in found] == [(anna.id, 1)]
-    assert total == 1
-    assert [x.user.id for x in pending] == [waiting.id]
-    assert (wildcard, wildcard_total) == ([], 0)
+    assert [(x.user.id, x.project_count) for x in found.items] == [(anna.id, 1)]
+    assert found.total == 1
+    assert [x.user.id for x in pending.items] == [waiting.id]
+    assert (wildcard.items, wildcard.total) == ([], 0)
     assert one is not None
     assert one.project_count == 1
     assert await directory.get("ghost") is None
