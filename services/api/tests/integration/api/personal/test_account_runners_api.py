@@ -213,3 +213,28 @@ async def test__bootstrap__personal_runners_capability_follows_the_setting(stand
     admin.put("/api/admin/settings/build", json={"personal_runners_enabled": False}).raise_for_status()
     off = admin.get("/api/v1/session/bootstrap").json()
     assert off["capabilities"]["personal_runners"] is False
+
+
+async def test__personal_runners_turned_off__refused_runner_is_offline_after_turning_back_on(stand: Stand) -> None:
+    """Раннер, получивший runner_disabled, завершается: после включения он «не в сети», а не «в сети» ещё минуту."""
+    anna = await stand.person("anna")
+    runner = stand.personal_runner(anna)
+    runner.pop("X-Runner-Id")
+    admin = stand.admin()
+
+    admin.put("/api/admin/settings/build", json={"personal_runners_enabled": False}).raise_for_status()
+    refused = stand.client.post("/api/runner/v1/poll", json={"wait_s": 0, "free_slots": 1}, headers=runner)
+    assert (refused.status_code, refused.json()["code"]) == (403, "runner_disabled")
+    admin.put("/api/admin/settings/build", json={"personal_runners_enabled": True}).raise_for_status()
+
+    (view,) = stand.client.get("/api/v1/account/runners", headers=anna.headers).json()
+    assert view["state"] == "offline"
+    # Вернувшийся раннер снова в сети с первого опроса.
+    assert stand.client.post(
+        "/api/runner/v1/poll", json={"wait_s": 0, "free_slots": 1}, headers=runner
+    ).status_code in (
+        200,
+        204,
+    )
+    (view,) = stand.client.get("/api/v1/account/runners", headers=anna.headers).json()
+    assert view["state"] == "online"

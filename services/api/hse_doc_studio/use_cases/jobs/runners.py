@@ -245,10 +245,22 @@ class RunnerRegistry:
             raise RunnerAuthError(RunnerErrorCode.runner_unauthorized)
         if runner.scope is RunnerScope.personal:
             if not (await self.personal_settings()).enabled:
+                await self._gone(runner)
                 raise RunnerAuthError(RunnerErrorCode.runner_disabled, "personal runners are turned off")
             if runner.owner_id is None or not await self._owner_active(runner.owner_id):
+                await self._gone(runner)
                 raise RunnerAuthError(RunnerErrorCode.runner_disabled, "the runner owner is disabled")
         return runner
+
+    async def _gone(self, runner: Runner) -> None:
+        """`runner_disabled` для раннера фатален: CLI-раннер завершается, Студия ждёт минуты.
+
+        Без пометки «ушёл» раннер после включения личных раннеров ещё минуту числился бы в сети по
+        последнему опросу, и сборки ждали бы мёртвый раннер окно ожидания, а не шли сразу на общие.
+        Следующий успешный опрос пометку снимает, как после `/offline`.
+        """
+        if runner.offline_at is None or (runner.last_seen_at is not None and runner.offline_at < runner.last_seen_at):
+            await self._runners.mark_offline(runner.id, self._clock())
 
     # --- протокол: согласование, уход, самоотзыв ---
 
