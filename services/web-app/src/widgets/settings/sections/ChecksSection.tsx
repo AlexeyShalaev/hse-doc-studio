@@ -1,10 +1,12 @@
 import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCapabilities } from "@entities/session";
 import { SettingHead } from "./Setting";
 import { LanguageToolImagesSection } from "./LanguageToolImagesSection";
 
 export const ChecksSection = () => {
   const { t } = useTranslation("settings");
+  const { lacks } = useCapabilities();
   return (
     <>
       <SettingHead
@@ -38,7 +40,7 @@ export const ChecksSection = () => {
         </div>
       </div>
 
-      <LanguageToolImagesSection />
+      {!lacks("docker_ui") && <LanguageToolImagesSection />}
     </>
   );
 };

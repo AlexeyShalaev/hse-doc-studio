@@ -63,6 +63,7 @@ const SERVER: Bootstrap = {
 const HIDDEN_HREFS = [
   "/settings/compiler",
   "/settings/fonts",
+  "/settings/presentations",
   "/settings/disk",
   "/settings/local-models",
   "/settings/data",
@@ -117,7 +118,6 @@ describe("SettingsPage: sections by capabilities", () => {
         "/settings/appearance",
         "/settings/profile",
         "/settings/checks",
-        "/settings/presentations",
         "/settings/signing",
         "/settings/providers",
         "/settings/agent-personas",

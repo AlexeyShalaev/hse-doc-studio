@@ -38,14 +38,17 @@ export const WizardPage = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") ?? "create";
   const { lacks } = useCapabilities();
-  // На сервере папок нет: клонирование без выбора папки, подключения папки нет.
+  // На сервере папок нет, подключения папки нет, и клонирования по git пока нет: маршрутов на сервере нет.
   const folderless = lacks("fs_browse");
   // The one unified agent, docked between the title and status bars. No project
   // exists yet here, so it runs with app/system tools (no project context).
   const systemChatOpen = useWorkspaceStore((state) => state.systemChatOpen);
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
 
-  if (mode === "connect" && lacks("connect_folder")) {
+  if (
+    (mode === "connect" && lacks("connect_folder")) ||
+    (mode === "clone" && folderless)
+  ) {
     return <Navigate to="/" replace />;
   }
 

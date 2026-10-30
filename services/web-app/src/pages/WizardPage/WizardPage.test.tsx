@@ -141,10 +141,11 @@ describe("страница мастеров: серверный режим бе�
     expect(screen.getByTestId("folderless")).toHaveTextContent("false");
   });
 
-  it("на сервере клонирование без выбора папки", () => {
+  it("на сервере клонирования по git нет: ссылка возвращает на главную", async () => {
     useServer();
     mount("/wizard?mode=clone");
-    expect(screen.getByTestId("folderless")).toHaveTextContent("true");
+    expect(screen.queryByTestId("folderless")).toBeNull();
+    expect((await screen.findByTestId("where")).textContent).toBe("/");
   });
 
   it("на сервере подключения папки нет: ссылка возвращает на главную", async () => {

@@ -163,6 +163,7 @@ const SECTIONS: readonly SectionDef[] = [
     id: "presentations",
     group: "documents",
     scope: "user",
+    requires: "docker_ui",
     labelKey: "settingsPage.sections.presentations",
     icon: Presentation,
   },

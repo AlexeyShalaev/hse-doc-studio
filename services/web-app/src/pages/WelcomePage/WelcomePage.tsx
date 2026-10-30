@@ -398,14 +398,16 @@ export const WelcomePage = () => {
                     {tImport("open")}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleCloneFromGit}
-                >
-                  <GitBranch size={13} />
-                  {t("header.cloneFromGit")}
-                </button>
+                {!isServerList && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleCloneFromGit}
+                  >
+                    <GitBranch size={13} />
+                    {t("header.cloneFromGit")}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn primary lg"
@@ -575,7 +577,7 @@ export const WelcomePage = () => {
             ) : filtered.length === 0 ? (
               <EmptyState
                 onCreate={handleCreateProject}
-                onClone={handleCloneFromGit}
+                onClone={isServerList ? undefined : handleCloneFromGit}
                 onImport={isServerList ? handleImportArchive : undefined}
                 query={query}
                 onResetQuery={handleResetQuery}
