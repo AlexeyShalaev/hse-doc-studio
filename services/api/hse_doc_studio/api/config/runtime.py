@@ -104,6 +104,23 @@ class HttpServerConfig(BaseModel):
     orphan_gc_min_age_hours: float = Field(
         default=24.0, ge=1, description="Сколько часов сирота должен пролежать, прежде чем его удалят."
     )
+    job_retention_days: int = Field(
+        default=30,
+        ge=0,
+        description="Через сколько суток после применения результата терминальная задача и её лог стираются; "
+        "0 выключает стирание.",
+    )
+    job_retention_interval_s: float = Field(
+        default=21600.0,
+        gt=0,
+        description="Как часто сервер убирает выходы задач без владельца и устаревшие записи задач.",
+    )
+    job_output_min_age_hours: float = Field(
+        default=24.0,
+        ge=1,
+        description="Сколько часов выходы терминальной или неизвестной задачи в S3 должны пролежать, "
+        "прежде чем их удалят.",
+    )
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,

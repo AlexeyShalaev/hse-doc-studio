@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 from typing import NewType
 from uuid import UUID
@@ -48,6 +49,7 @@ from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 from hse_doc_studio.infra.jobs.result_applier import VolumeJobResultApplier
+from hse_doc_studio.infra.jobs.retention import JobRetention
 from hse_doc_studio.infra.jobs.storage_fs import FsJobLogSink
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
@@ -133,6 +135,17 @@ class ServerJobsProvider(Provider):
     def get_job_storage_root(self) -> JobStorageRoot:
         """Каталог лога задач: блобы и выходы живут в объектном хранилище."""
         return JobStorageRoot(settings.jobs.storage_dir or settings.data_dir.expanduser() / "jobs")
+
+    @provide
+    def get_job_retention(self, sessions: SessionProvider, store: IObjectStore, root: JobStorageRoot) -> JobRetention:
+        days = settings.server.job_retention_days
+        return JobRetention(
+            sessions,
+            store,
+            root,
+            output_min_age=timedelta(hours=settings.server.job_output_min_age_hours),
+            retention=timedelta(days=days) if days > 0 else None,
+        )
 
     @provide
     def get_job_blob_store(self, blobs: IBlobStore, registry: IBlobRegistry) -> IJobBlobStore:

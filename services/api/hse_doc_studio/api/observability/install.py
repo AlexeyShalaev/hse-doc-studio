@@ -122,6 +122,18 @@ def install_project_usage(app: FastAPI, container: AsyncContainer, cfg: Settings
     )
 
 
+def install_job_retention(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическая уборка выходов задач без владельца и устаревших терминальных записей с логами."""
+    from hse_doc_studio.infra.jobs.retention import JobRetention  # noqa: PLC0415 — sqlalchemy только с extra server
+
+    async def _retain() -> None:
+        await (await container.get(JobRetention)).run()
+
+    app.state.background.register(
+        PeriodicTask(name="job_retention", interval_s=cfg.server.job_retention_interval_s, run=_retain)
+    )
+
+
 def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодическая чистка просроченных сессий, токенов, писем outbox и счётчиков входов."""
     from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService  # noqa: PLC0415
