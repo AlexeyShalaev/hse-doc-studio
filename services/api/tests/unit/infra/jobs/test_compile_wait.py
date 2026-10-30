@@ -336,3 +336,14 @@ async def test__placement__timeout_fallback_carries_the_window() -> None:
     assert await reader.placement_of(job, "anna") == CompilePlacementInfo(
         PlacementState.shared, fallback=PlacementFallback.timeout, wait_s=5
     )
+
+
+async def test__placement__disabled_note_only_for_runner_owner() -> None:
+    # Даже при политике `owner` соавтор не видит «администратор выключил личные раннеры»: это не его раннеры.
+    queue, _, project, reader = await _placement_world(ProjectBuildRunners.owner)
+    job = uuid4()
+    await queue.enqueue(_request(job, project_id=project, route_reason=RouteReason.disabled))
+    assert await reader.placement_of(job, "anna") == CompilePlacementInfo(
+        PlacementState.shared, fallback=PlacementFallback.disabled
+    )
+    assert await reader.placement_of(job, "boris") == CompilePlacementInfo(PlacementState.shared)

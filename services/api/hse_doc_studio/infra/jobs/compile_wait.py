@@ -95,6 +95,9 @@ class QueueCompileWaitReader:
         project = await self._projects.get(job.project_id)
         if project is None or project.owner_user_id is None:
             return False
+        if job.route_reason is RouteReason.disabled and viewer_id != project.owner_user_id:
+            # «Администратор выключил личные раннеры» касается только их владельца (спецификация 4.7).
+            return False
         if viewer_id != project.owner_user_id and project.build_runners is not ProjectBuildRunners.owner:
             return False
         return any(r.revoked_at is None for r in await self._runners.list_owned(project.owner_user_id))
