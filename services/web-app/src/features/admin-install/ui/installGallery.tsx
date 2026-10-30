@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ApiError } from "@shared/api";
 import type {
   AdminBuildSettings,
   AdminInstanceSettings,
@@ -8,16 +9,20 @@ import type {
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
 import type { AIProvider } from "@entities/ai-provider";
 import { AiProvidersPage } from "./AiProvidersPage";
-import { BuildCard } from "./BuildCard";
-import { InstanceCard } from "./InstanceCard";
+import { InstanceForm } from "./InstanceForm";
 import { InstancePage } from "./InstancePage";
 import { Ready } from "./Ready";
 import { SharedProviders } from "./SharedProviders";
-import { SigningPolicyCard } from "./SigningPolicyCard";
+import { SigningPolicyForm } from "./SigningPolicyForm";
 import { SigningPolicyPage } from "./SigningPolicyPage";
 
 const W = 640;
 const noop = () => undefined;
+const ok = () => Promise.resolve();
+// Отказ сервера в галерее: тот же ApiError, что приходит от клиента.
+const refuse = (code: string) => () =>
+  Promise.reject(new ApiError(code, code, 429));
+const pending = () => new Promise<never>(noop);
 
 const free: AdminSettingState = { source: "default", locked: false };
 const env: AdminSettingState = { source: "env", locked: true };
@@ -57,6 +62,14 @@ const BUILD: AdminBuildSettings = {
 const BUILD_ENV: AdminBuildSettings = {
   ...BUILD,
   fields: { ...BUILD.fields, "build.timeout_s": env },
+};
+
+const BUILD_ALL_ENV: AdminBuildSettings = {
+  ...BUILD,
+  fields: {
+    "build.timeout_s": env,
+    "build.artifact_retention_days": env,
+  },
 };
 
 const POLICY_FORBIDDEN: AdminSigningPolicy = {
@@ -121,52 +134,67 @@ const live = (scenario: string) => ({ scenario });
 export const getAdminInstallGallery = (): GalleryGroup[] => [
   {
     id: "admin-install-instance",
-    title: "Админка: название и адрес",
+    title: "Админка: установка",
+    description:
+      "Поменяйте любое поле: внизу появится панель сохранения со счётчиком правок.",
     entries: [
       entry("admin_instance", "Свободные поля", () => (
-        <InstanceCard settings={INSTANCE} onSave={noop} />
+        <InstanceForm
+          instance={INSTANCE}
+          build={BUILD}
+          saveInstance={ok}
+          saveBuild={ok}
+        />
       )),
       entry(
         "admin_instance_env",
-        "Адрес задан окружением",
-        () => <InstanceCard settings={INSTANCE_ENV} onSave={noop} />,
-        { note: "Поле только для чтения, остальные редактируются." },
+        "Адрес и предел сборки заданы окружением",
+        () => (
+          <InstanceForm
+            instance={INSTANCE_ENV}
+            build={BUILD_ENV}
+            saveInstance={ok}
+            saveBuild={ok}
+          />
+        ),
+        {
+          note: "Закрытые поля с замком и подсказкой, остальные редактируются.",
+        },
       ),
       entry("admin_instance_all_env", "Всё задано окружением", () => (
-        <InstanceCard settings={INSTANCE_ALL_ENV} onSave={noop} />
-      )),
-      entry("admin_instance_pending", "Сохраняется", () => (
-        <InstanceCard settings={INSTANCE} pending onSave={noop} />
-      )),
-      entry("admin_instance_failed", "Сервер отказал", () => (
-        <InstanceCard
-          settings={INSTANCE}
-          failure={{ code: "input_invalid" }}
-          onSave={noop}
+        <InstanceForm
+          instance={INSTANCE_ALL_ENV}
+          build={BUILD_ALL_ENV}
+          saveInstance={ok}
+          saveBuild={ok}
         />
       )),
-      entry("admin_instance_saved", "Сохранено", () => (
-        <InstanceCard settings={INSTANCE} saved onSave={noop} />
-      )),
-    ],
-  },
-  {
-    id: "admin-install-build",
-    title: "Админка: сборка",
-    entries: [
-      entry("admin_build", "Значения по умолчанию", () => (
-        <BuildCard settings={BUILD} onSave={noop} />
-      )),
-      entry("admin_build_env", "Предел задан окружением", () => (
-        <BuildCard settings={BUILD_ENV} onSave={noop} />
-      )),
-      entry("admin_build_failed", "Сервер отказал", () => (
-        <BuildCard
-          settings={BUILD}
-          failure={{ code: "rate_limited" }}
-          onSave={noop}
-        />
-      )),
+      entry(
+        "admin_instance_pending",
+        "Сохранение не отвечает",
+        () => (
+          <InstanceForm
+            instance={INSTANCE}
+            build={BUILD}
+            saveInstance={pending}
+            saveBuild={pending}
+          />
+        ),
+        { note: "Поменяйте поле и нажмите «Сохранить»." },
+      ),
+      entry(
+        "admin_instance_failed",
+        "Сервер отказал",
+        () => (
+          <InstanceForm
+            instance={INSTANCE}
+            build={BUILD}
+            saveInstance={refuse("rate_limited")}
+            saveBuild={refuse("rate_limited")}
+          />
+        ),
+        { note: "Поменяйте поле и нажмите «Сохранить»: ошибка в панели." },
+      ),
     ],
   },
   {
@@ -174,13 +202,13 @@ export const getAdminInstallGallery = (): GalleryGroup[] => [
     title: "Админка: ключи подписи",
     entries: [
       entry("admin_signing_forbidden", "Запрещено (по умолчанию)", () => (
-        <SigningPolicyCard policy={POLICY_FORBIDDEN} onSave={noop} />
+        <SigningPolicyForm policy={POLICY_FORBIDDEN} onSave={ok} />
       )),
       entry("admin_signing_blocked", "Запрещено, ключи заблокированы", () => (
-        <SigningPolicyCard policy={POLICY_BLOCKED} onSave={noop} />
+        <SigningPolicyForm policy={POLICY_BLOCKED} onSave={ok} />
       )),
       entry("admin_signing_allowed", "Разрешено", () => (
-        <SigningPolicyCard policy={POLICY_ALLOWED} onSave={noop} />
+        <SigningPolicyForm policy={POLICY_ALLOWED} onSave={ok} />
       )),
     ],
   },
@@ -194,6 +222,11 @@ export const getAdminInstallGallery = (): GalleryGroup[] => [
           onAdd={noop}
           onEdit={noop}
           onDelete={noop}
+          onCheck={(p) =>
+            p.has_api_key
+              ? Promise.resolve({ models: p.models })
+              : Promise.reject(new Error("ConnectError"))
+          }
         />
       )),
       entry("admin_ai_empty", "Провайдеров нет", () => (

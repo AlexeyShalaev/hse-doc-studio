@@ -1,17 +1,18 @@
 import { useState, type ReactNode } from "react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import { Button, Modal, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
+  aiProviderApiFor,
   useAIProviders,
   useDeleteAIProvider,
   type AIProvider,
 } from "@entities/ai-provider";
 import { failureKey } from "../lib/failure";
-import { LoadState } from "./LoadState";
-import { PageHead } from "./parts";
+import { LoadState, PageHead } from "./parts";
 import { Ready } from "./Ready";
 import { SharedProviders } from "./SharedProviders";
 
@@ -20,6 +21,8 @@ export type EditorSlotProps = {
   provider: AIProvider | null;
   onClose: () => void;
 };
+
+const instanceApi = aiProviderApiFor("instance");
 
 /**
  * Раздел «ИИ-провайдеры»: общие провайдеры установки. Форму провайдера рисует тот же
@@ -65,39 +68,56 @@ const AiBody = ({
     });
   };
 
+  const add = () => {
+    setEditing({ provider: null });
+  };
+
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20 }}
+      style={{ gap: 20, flex: 1 }}
       data-testid="admin-ai-page"
     >
-      <PageHead title={t("ai.page.title")} lead={t("ai.page.lead")} />
-      <div className="flex flex-col" style={{ gap: 14 }}>
-        {!providers.data && (
-          <LoadState
-            failed={providers.isError}
-            onRetry={() => {
-              void providers.refetch();
-            }}
-          />
-        )}
-        {providers.data && (
-          <SharedProviders
-            providers={providers.data}
-            deleting={remove.isPending}
-            onAdd={() => {
-              setEditing({ provider: null });
-            }}
-            onEdit={(provider) => {
-              setEditing({ provider });
-            }}
-            onDelete={(provider) => {
-              setFailure(null);
-              setDeleting(provider);
-            }}
-          />
-        )}
-      </div>
+      <PageHead
+        title={t("ai.page.title")}
+        lead={t("ai.page.lead")}
+        actions={
+          providers.data && providers.data.length > 0 ? (
+            <Button
+              size="sm"
+              type="button"
+              onClick={add}
+              data-testid="shared-provider-add"
+            >
+              <Plus size={14} aria-hidden="true" />
+              {t("ai.add")}
+            </Button>
+          ) : null
+        }
+      />
+      {providers.data ? (
+        <SharedProviders
+          providers={providers.data}
+          deleting={remove.isPending}
+          onAdd={add}
+          onEdit={(provider) => {
+            setEditing({ provider });
+          }}
+          onDelete={(provider) => {
+            setFailure(null);
+            setDeleting(provider);
+          }}
+          onCheck={(provider) => instanceApi.fetchModels(provider.id)}
+        />
+      ) : (
+        <LoadState
+          failed={providers.isError}
+          sections={1}
+          onRetry={() => {
+            void providers.refetch();
+          }}
+        />
+      )}
       {editing &&
         renderEditor({
           provider: editing.provider,

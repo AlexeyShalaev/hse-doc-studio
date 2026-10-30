@@ -1,15 +1,12 @@
 {
   "locked": {
-    "badge": "set by environment",
-    "note": "Every value in this card is set by the installation environment and cannot be changed here."
+    "note": "Every value in this section is set by the server environment and is read-only here."
   },
-  "save": "Save",
-  "saving": "Saving",
-  "saved": "Saved",
   "cancel": "Cancel",
-  "retry": "Retry",
-  "loading": "Loading settings",
-  "loadFailed": "Could not load the settings. Check your connection and retry.",
+  "loadFailed": "Could not load the settings",
+  "loadFailedBody": "Check the connection to the server and try again.",
+  "savedToast": "Settings saved",
+  "fixFields": "Fix the highlighted fields",
   "failure": {
     "setting_locked": "This value is set by the installation environment and cannot be changed here.",
     "not_found": "This entry no longer exists. Refresh the page.",
@@ -26,16 +23,15 @@
       "lead": "What the installation is called, where people open it and how long a build may run."
     },
     "title": "Name and address",
-    "sub": "Everyone sees the name in emails and the window title. The address is used by links in emails, invitations and single sign-on.",
+    "sub": "The name appears in emails and the window title. The address is used by links in emails, invitations and single sign-on.",
     "name": "Installation name",
     "nameHint": "For example, Department Studio or HSE Studio.",
     "publicUrl": "Public address",
-    "publicUrlHint": "The address people use to open Studio. No query string or fragment.",
+    "publicUrlHint": "Where people open Studio. No query string or fragment.",
     "docsUrl": "Documentation link",
     "docsUrlHint": "Optional. Shown in the help menu.",
     "insecure": "An http address sends passwords in clear text. Use https; http is acceptable only for localhost.",
-    "urlImpact": "After the address changes, links already sent in emails and invitations stop working, and the redirect URI must be updated in single sign-on providers.",
-    "toast": "Installation settings saved",
+    "urlImpact": "Links already sent in emails and invitations will stop working, and the redirect URI must be updated in single sign-on providers.",
     "issue": {
       "name_required": "Enter a name.",
       "url_invalid": "Use an address like https://studio.example.org, without parameters or a fragment.",
@@ -43,12 +39,14 @@
     }
   },
   "build": {
-    "title": "Build",
-    "sub": "Limits for every build on the installation's runners. Per-person and per-organization quotas are set in the Quotas section.",
-    "timeout": "Maximum duration of one build, minutes",
-    "timeoutHint": "From {{min}} to {{max}}. When it runs out the build stops and is marked as timed out.",
-    "retention": "Keep build results, days",
-    "retentionHint": "From {{min}} to {{max}}. The latest result of each document is kept as long as it is needed.",
+    "title": "Builds",
+    "sub": "Limits for every build on the installation's runners. Per-person and per-organization quotas live in Quotas.",
+    "timeout": "Build time limit",
+    "timeoutHint": "From {{min}} to {{max}} minutes. A build that runs over is stopped and marked as timed out.",
+    "minutesUnit": "min",
+    "retention": "Keep build results for",
+    "retentionHint": "From {{min}} to {{max}} days. The latest result of each document is kept as long as it is needed.",
+    "daysUnit": "days",
     "issue": {
       "range": "A whole number from {{min}} to {{max}}."
     }
@@ -58,7 +56,7 @@
       "title": "Signing keys",
       "lead": "Whether the server may store users' secret signing keys."
     },
-    "title": "Key storage policy",
+    "title": "Key storage on the server",
     "sub": "By default the server stores no secret keys: signing happens on the user's side.",
     "state": {
       "allowed": "Storage allowed",
@@ -66,16 +64,22 @@
     },
     "toggle": "Store secret keys on the server",
     "toggleHint": "Users will be able to create and upload keys in settings and sign documents on the server.",
-    "stored": "Secret keys on the server: {{count}}",
+    "storedLabel": "Keys on the server",
+    "storedHint": "Secret keys that users have already stored.",
+    "stored_zero": "No keys",
+    "stored_one": "{{count}} key",
+    "stored_other": "{{count}} keys",
+    "considerTitle": "Before you decide",
+    "considerSub": "Weigh the risks before allowing key storage.",
     "risksTitle": "Risks",
     "risks": "A secret key on the server is reachable by anyone with access to the storage and the secrets encryption key. A leaked database together with that key means leaked signatures. This is usually not enough for a legally binding signature.",
-    "altTitle": "Alternatives that keep no keys",
+    "altTitle": "Signing without stored keys",
     "alt": {
       "cryptopro": "Signing in the browser with CryptoPro: the key stays with the person.",
-      "upload": "Uploading a ready signature made outside Studio."
+      "upload": "Or uploading a ready signature made outside Studio."
     },
-    "warnOn": "After you turn this on, users will be able to store secret keys on the server. Make sure the storage and the secrets encryption key are protected.",
-    "warnOff": "After you turn this off, users cannot create or upload secret keys, and the Signing section of their settings shows an explanation.",
+    "warnOn": "After saving, users will be able to store secret keys on the server. Make sure the storage and the secrets encryption key are protected.",
+    "warnOff": "After saving, users cannot create or upload secret keys, and the Signing section of their settings shows an explanation.",
     "warnOffKeys_one": "The stored key ({{count}}) stays on the server but will not be used. The Signing section shows users an explanation.",
     "warnOffKeys_other": "The stored keys ({{count}}) stay on the server but will not be used. The Signing section shows users an explanation.",
     "blocked_one": "{{count}} key is blocked: turn storage on to bring it back.",
@@ -84,27 +88,37 @@
   "ai": {
     "page": {
       "title": "AI providers",
-      "lead": "Providers everyone can use. People keep their own personal providers too."
+      "lead": "Providers everyone can use. People keep their personal providers too."
     },
     "title": "Shared providers",
     "sub": "Connected once for the whole installation. Users see the provider and its models, but not the key.",
     "listLabel": "Shared AI providers",
-    "add": "Add",
+    "add": "Add provider",
+    "addFirst": "Add provider",
+    "actionsNamed": "Actions for provider {{name}}",
+    "check": "Test connection",
+    "checking": "Testing the connection…",
+    "checkOk_one": "Connection works, {{count}} model",
+    "checkOk_other": "Connection works, {{count}} models",
+    "checkFailed": "Cannot connect",
     "edit": "Edit",
-    "editNamed": "Edit provider {{name}}",
     "delete": "Delete",
-    "deleteNamed": "Delete provider {{name}}",
-    "shared": "shared",
-    "keySet": "key set",
-    "keyMissing": "no key",
+    "type": {
+      "claude": "Anthropic",
+      "openai": "OpenAI",
+      "openai_compat": "OpenAI-compatible",
+      "ollama": "Ollama"
+    },
+    "keySet": "Key set",
+    "keyMissing": "No key",
     "noTls": "TLS not verified",
     "modelCount_one": "{{count}} model",
     "modelCount_other": "{{count}} models",
-    "modelsNotLoaded": "Models not loaded",
+    "modelsNotLoaded": "models not loaded",
     "keyNote": "The key is write-only: after saving, the server shows it neither to administrators nor to users.",
     "empty": {
       "title": "No shared providers yet",
-      "body": "Until there are some, users connect only personal providers with their own keys."
+      "body": "Until there are some, people connect only personal providers with their own keys."
     },
     "deleteTitle": "Delete shared provider",
     "deleteBody": "Provider \"{{name}}\" disappears for every user. Agents that use it will ask to pick another one.",

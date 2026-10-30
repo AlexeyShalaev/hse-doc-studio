@@ -66,6 +66,17 @@ const call = async (
   });
 };
 
+const openMenu = async (
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) => {
+  await user.click(
+    await screen.findByRole("button", {
+      name: `Действия с провайдером ${name}`,
+    }),
+  );
+};
+
 describe("настройки входа в админке", () => {
   beforeAll(() => {
     installServerDemo();
@@ -104,15 +115,17 @@ describe("настройки входа в админке", () => {
       expect(radio).toBeDisabled();
     }
     expect(screen.getByTestId("registration-approval")).toBeDisabled();
-    expect(screen.getByTestId("locked-registration-mode")).toBeVisible();
+    expect(screen.getByTestId("registration-mode-locked")).toBeVisible();
     // Домены задал администратор: поле открыто.
     expect(screen.getByLabelText("Разрешённые домены")).not.toHaveAttribute(
       "readonly",
     );
-    // Почта целиком от окружения: поля только читаются, кнопки сохранения нет.
+    // Почта целиком от окружения: поля только читаются, замок один на раздел.
     expect(screen.getByLabelText("Сервер")).toHaveAttribute("readonly");
-    expect(screen.queryByTestId("smtp-save")).toBeNull();
-    expect(screen.getAllByTestId("all-locked-note").length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId("admin-smtp")).getByTestId("all-locked-note"),
+    ).toBeVisible();
+    expect(screen.queryByTestId("smtp-host-locked")).toBeNull();
     await user.click(screen.getByTestId("registration-mode-open"));
     expect(
       screen.getByTestId("registration-mode-domains").querySelector("input"),
@@ -128,11 +141,14 @@ describe("настройки входа в админке", () => {
     expect(screen.getByTestId("smtp-password-set")).toBeVisible();
 
     await user.type(password, "very-secret-pass");
-    await user.click(screen.getByTestId("smtp-save"));
-    await screen.findByTestId("smtp-saved");
+    await user.click(screen.getByTestId("save-bar-save"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("save-bar")).toBeNull();
+    });
     expect(screen.getByLabelText("Пароль")).toHaveValue("");
     expect(document.body.textContent).not.toContain("very-secret-pass");
 
+    await openMenu(user, "HSE SSO");
     await user.click(await screen.findByTestId("oidc-edit-keycloak"));
     const secret = await screen.findByLabelText("Секрет клиента");
     expect(secret).toHaveAttribute("type", "password");
@@ -151,8 +167,13 @@ describe("настройки входа в админке", () => {
     expect(screen.getByText(/Это не похоже на домен: hse/)).toBeInTheDocument();
     await user.clear(domains);
     await user.type(domains, "@HSE.ru edu.hse.ru");
-    await user.click(screen.getByTestId("registration-save"));
-    await screen.findByTestId("registration-saved");
+    expect(screen.getByTestId("save-bar")).toHaveTextContent(
+      "2 несохранённых изменения",
+    );
+    await user.click(screen.getByTestId("save-bar-save"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("save-bar")).toBeNull();
+    });
     expect(screen.getByLabelText("Разрешённые домены")).toHaveValue(
       "hse.ru, edu.hse.ru",
     );
@@ -164,6 +185,7 @@ describe("настройки входа в админке", () => {
     await screen.findByTestId("signin-form");
     // В admin_ready один включённый провайдер: пароль выключить можно.
     expect(screen.getByTestId("signin-password")).toBeEnabled();
+    await openMenu(user, "HSE SSO");
     await user.click(await screen.findByTestId("oidc-toggle-keycloak"));
     await waitFor(() => {
       expect(screen.getByTestId("signin-password")).toBeDisabled();
@@ -175,7 +197,14 @@ describe("настройки входа в админке", () => {
     activateServerScenario("admin_sso");
     const user = userEvent.setup();
     mount();
+    await openMenu(user, "HSE SSO");
     await user.click(await screen.findByTestId("oidc-toggle-keycloak"));
+    await waitFor(() => {
+      expect(screen.getByTestId("oidc-state-keycloak")).toHaveTextContent(
+        "Выключен",
+      );
+    });
+    await openMenu(user, "Google");
     await user.click(await screen.findByTestId("oidc-toggle-google"));
     expect(
       await screen.findAllByText(/Нельзя убрать последний способ входа/),
@@ -229,12 +258,47 @@ describe("настройки входа в админке", () => {
     const user = userEvent.setup();
     mount();
     await user.click(await screen.findByTestId("smtp-test-send"));
-    expect(await screen.findByTestId("smtp-test-ok")).toBeVisible();
+    expect(await screen.findByTestId("smtp-test-ok")).toHaveTextContent(
+      "Письмо отправлено на ivan.sidorov@example.org",
+    );
     await user.type(screen.getByLabelText("Кому"), "fail@example.org");
     await user.click(screen.getByTestId("smtp-test-send"));
     expect(await screen.findByTestId("smtp-test-failed")).toHaveTextContent(
       "SMTPConnectError",
     );
+  });
+
+  it("правки разных разделов сохраняет одна панель, «Отменить» сбрасывает", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByTestId("registration-form");
+    await user.click(screen.getByTestId("registration-mode-closed"));
+    await user.click(screen.getByTestId("signin-password"));
+    expect(screen.getByTestId("save-bar")).toHaveTextContent(
+      "2 несохранённых изменения",
+    );
+    // Пока есть правки почты, тест проверил бы старые настройки.
+    await user.clear(screen.getByLabelText("Имя отправителя"));
+    await user.type(screen.getByLabelText("Имя отправителя"), "Studio ВШЭ");
+    expect(screen.getByTestId("smtp-test-send")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(screen.getByTestId("save-bar-discard"));
+    expect(screen.queryByTestId("save-bar")).toBeNull();
+    expect(
+      screen.getByTestId("registration-mode-invite").querySelector("input"),
+    ).toBeChecked();
+    expect(screen.getByTestId("signin-password")).toBeChecked();
+    expect(screen.getByLabelText("Имя отправителя")).toHaveValue("Studio");
+  });
+
+  it("без прав страница показывает ошибку с повтором", async () => {
+    activateServerScenario("student_ready");
+    mount();
+    expect(
+      await screen.findByTestId("admin-settings-failed"),
+    ).toHaveTextContent("Не удалось загрузить настройки");
   });
 
   it("почта выключена: тест недоступен", async () => {
