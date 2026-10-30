@@ -151,6 +151,26 @@ async def test__ai_pool__relay_is_taken_while_a_build_holds_the_only_slot() -> N
     await rig.stop()
 
 
+async def test__long_poll_without_a_free_build_slot__is_renewed_when_the_build_finishes() -> None:
+    """Опрос ради ИИ при занятой сборке устаревает с её концом: следующая сборка берётся сразу, а не через wait_s."""
+    rig = Rig()
+    rig.executor.block = True
+    rig.state.hold_poll_s = 5.0
+    first = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: JOB_A in rig.executor.started)
+    await until(lambda: any(body["free_slots"] == 0 for body in rig.state.poll_bodies))
+    second = rig.state.enqueue(envelope_body("compile", job_id=JOB_B))
+    rig.executor.block = False
+    started = asyncio.get_running_loop().time()
+    rig.executor.gate.set()
+
+    await until(lambda: JOB_B in rig.executor.started)
+    assert asyncio.get_running_loop().time() - started < 2.0
+    await until(lambda: first.completed and second.completed)
+    await rig.stop()
+
+
 async def test__gate_closed__builds_wait_but_relay_runs() -> None:
     rig = Rig(gate=False)
     build = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))

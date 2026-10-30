@@ -128,6 +128,9 @@ class RunnerLoop:
         self._stop = asyncio.Event()
         self._force = asyncio.Event()
         self._slot_freed = asyncio.Event()
+        # Освободился слот сборки или ИИ: долгий опрос, открытый без свободного слота этого вида, устарел.
+        self._job_slot_freed = asyncio.Event()
+        self._ai_slot_freed = asyncio.Event()
         self._jobs: set[asyncio.Task[None]] = set()
         self._ai_jobs: set[asyncio.Task[None]] = set()
         self._registration: RunnerRegisterResponse | None = None
@@ -299,15 +302,32 @@ class RunnerLoop:
                 return
 
     async def _poll(self, free_jobs: int, free_ai: int) -> JobEnvelope | None:
+        """Долгий опрос со снимком свободных слотов; обрывается остановкой и устареванием снимка.
+
+        Опрос, открытый без свободного слота сборки (единственная сборка ещё шла, опрашиваем ради ИИ),
+        до конца wait_s не взял бы следующую сборку хозяина, и она ушла бы на общие по окну ожидания.
+        Поэтому освобождение слота того вида, которого в снимке не было, обрывает опрос: цикл тут же
+        опрашивает снова со свежими слотами. Сервер замечает отключение и задачу в оборванный опрос не выдаёт.
+        """
         request = PollRequest(wait_s=self._config.poll_wait_s, free_slots=free_jobs, free_ai_slots=free_ai)
+        # Снимок слотов только что взят, ожиданий между ним и сбросом нет: освобождение не потеряется.
+        stale: set[asyncio.Task[bool]] = set()
+        if free_jobs == 0:
+            self._job_slot_freed.clear()
+            stale.add(asyncio.create_task(self._job_slot_freed.wait()))
+        if free_ai == 0 and FEATURE_AI_SLOTS in self._client.features:
+            self._ai_slot_freed.clear()
+            stale.add(asyncio.create_task(self._ai_slot_freed.wait()))
         poll = asyncio.create_task(self._client.poll(request))
         stop = asyncio.create_task(self._stop.wait())
         try:
-            await asyncio.wait({poll, stop}, return_when=asyncio.FIRST_COMPLETED)
+            await asyncio.wait({poll, stop, *stale}, return_when=asyncio.FIRST_COMPLETED)
         finally:
             stop.cancel()
+            for waiter in stale:
+                waiter.cancel()
             if not poll.done():
-                # Запрос оборван при выключении; взятую сервером задачу вернёт reaper по аренде.
+                # Запрос оборван при выключении или устаревшем снимке; взятую сервером задачу вернёт reaper по аренде.
                 poll.cancel()
         if not poll.done() or poll.cancelled():
             with contextlib.suppress(asyncio.CancelledError):
@@ -342,6 +362,7 @@ class RunnerLoop:
         task.add_done_callback(self._on_job_done)
 
     def _on_job_done(self, task: asyncio.Task[None]) -> None:
+        (self._ai_slot_freed if task in self._ai_jobs else self._job_slot_freed).set()
         self._jobs.discard(task)
         self._ai_jobs.discard(task)
         self._slot_freed.set()

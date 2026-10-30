@@ -72,6 +72,8 @@ class FakeRunnerState:
         self.deregister_calls = 0
         self.pair_polls: list[str] = []
         self.pair_status = "pending"
+        # Сколько держать опрос без подходящей задачи, как долгий опрос настоящего сервера (0: ответить сразу).
+        self.hold_poll_s = 0.0
 
     def enqueue(self, envelope: dict[str, Any]) -> FakeJob:
         job = FakeJob(envelope)
@@ -171,7 +173,7 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
             if (relay and raw.get("free_ai_slots", 0) > 0) or (not relay and raw["free_slots"] > 0):
                 state.queue.remove(job)
                 return {"envelope": job.envelope}
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(max(state.hold_poll_s, 0.02))
         return {"envelope": None}
 
     def job_or_error(job_id: str, attempt: int) -> FakeJob | JSONResponse:
