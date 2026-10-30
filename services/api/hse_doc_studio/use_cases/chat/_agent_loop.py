@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.api.config import AgentConfig, settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.agent.edits import select_edit_format
 from hse_doc_studio.core.agent.entities import (
     AgentEvent,
@@ -35,6 +36,7 @@ from hse_doc_studio.core.enums import (
     StopReason,
     ToolKind,
 )
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.repositories import IChatRepository
 from hse_doc_studio.core.services import ChatContextService
@@ -42,6 +44,7 @@ from hse_doc_studio.infra.ai.agent.trace import install_tracer, open_tracer, tra
 from hse_doc_studio.use_cases.chat._budget import TokenBudget, truncate_tool_result
 from hse_doc_studio.use_cases.chat._prompt import chat_history_to_agent_messages
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
+from hse_doc_studio.use_cases.chat.tool_access import require_tool_access
 
 logger = structlog.get_logger()
 
@@ -134,10 +137,12 @@ class AgentLoop:
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
         config: AgentConfig,
+        access: IProjectAccessChecker,
         context_service: ChatContextService | None = None,
         summarizer: IChatSummarizer | None = None,
         allowed_tools: frozenset[str] | None = None,
     ) -> None:
+        self._access = access
         self._provider = provider
         self._ai_provider = ai_provider
         self._model = model
@@ -609,6 +614,20 @@ class AgentLoop:
         tool = self._registry.get(call.name)
         return tool is not None and tool.kind == ToolKind.ask
 
+    async def _authorize(self, ctx: AgentToolContext, call: ToolCall) -> ToolResult | None:
+        """Права актора на этот вызов; None, если вызов разрешён."""
+        try:
+            await require_tool_access(self._access, ctx.project_id, call.name, call.arguments)
+        except (ProjectForbiddenError, NotFoundError):
+            logger.warning("agent tool denied", tool=call.name)
+            self._diag({"kind": "tool", "name": call.name, "result": "forbidden"})
+            return ToolResult.error(
+                f"tool {call.name} is not allowed for your role in this project"
+                if _en()
+                else f"инструмент {call.name} недоступен вашей роли в этом проекте"
+            )
+        return None
+
     async def _execute_tool(self, ctx: AgentToolContext, call: ToolCall) -> ToolResult:
         tool = self._registry.get(call.name)
         if tool is None:
@@ -629,6 +648,8 @@ class AgentLoop:
                 if _en()
                 else f"инструмент {call.name} отключён в настройках"
             )
+        if tool.requires_project and (denied := await self._authorize(ctx, call)) is not None:
+            return denied
         # Approval gating already happened in _dispatch_tool_calls before we reach here.
         trace("tool_exec", name=call.name, arguments=call.arguments)
         started_at = time.monotonic()

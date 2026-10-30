@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.edits import select_edit_format
 from hse_doc_studio.core.agent.entities import AgentMessage
 from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
@@ -160,7 +161,9 @@ class StartChatTurnUC:
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
+        access: IProjectAccessChecker,
     ) -> None:
+        self._access = access
         self._locator = locator
         self._chat_repo = chat_repo
         self._ai_provider_repo = ai_provider_repo
@@ -383,6 +386,7 @@ class StartChatTurnUC:
             chat_repo=self._chat_repo,
             bus=self._bus,
             config=settings.agent,
+            access=self._access,
             context_service=self._context_service,
             summarizer=self._summarizer,
             allowed_tools=await self._enabled_tools(),

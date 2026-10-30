@@ -17,6 +17,9 @@ class Action(StrEnum):
     BUILD_RUN = "build.run"
     AGENT_USE = "agent.use"
     HISTORY_WRITE = "history.write"
+    # Операции, переписывающие всё рабочее дерево (восстановление, смена ветки, синхронизация, импорт).
+    # В team-проекте их делает только владелец и тот, у кого есть право правки везде.
+    HISTORY_REWRITE = "history.rewrite"
     SUBMISSION_READ = "submission.read"
     SUBMISSION_CREATE = "submission.create"
     SIGN = "sign"
@@ -42,6 +45,7 @@ _EDITOR = _REVIEWER | {
     Action.BUILD_RUN,
     Action.AGENT_USE,
     Action.HISTORY_WRITE,
+    Action.HISTORY_REWRITE,
     Action.SUBMISSION_READ,
     Action.SUBMISSION_CREATE,
     Action.SHARE,
@@ -72,6 +76,7 @@ GUEST_DENIED: frozenset[Action] = frozenset(
         Action.SUBMISSION_READ,
         Action.SUBMISSION_CREATE,
         Action.HISTORY_WRITE,
+        Action.HISTORY_REWRITE,
         Action.PROJECT_SETTINGS,
         Action.TEMPLATE_MANAGE,
         Action.PROJECT_DELETE,

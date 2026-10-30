@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from hse_doc_studio.api.config import AgentConfig, settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.entities import (
     AgentToolContext,
     NormalizedTurn,
@@ -28,6 +29,7 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.services import ChatContextService
 from hse_doc_studio.infra.ai.agent.approval import ConfigApprovalGate
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.chat import JsonChatRepository
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
@@ -118,6 +120,7 @@ def _make_loop(
     config: AgentConfig | None = None,
     context_service: ChatContextService | None = None,
     summarizer: Any = None,
+    access: IProjectAccessChecker | None = None,
 ) -> AgentLoop:
     return AgentLoop(
         provider=provider,
@@ -128,6 +131,7 @@ def _make_loop(
         chat_repo=repo,
         bus=bus or AgentRunBus(),
         config=config or settings.agent,
+        access=access or LocalProjectAccessChecker(),
         context_service=context_service,
         summarizer=summarizer,
     )

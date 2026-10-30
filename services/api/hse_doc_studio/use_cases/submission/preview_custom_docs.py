@@ -5,6 +5,8 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS
@@ -57,10 +59,16 @@ class PreviewSubmissionCustomDocsUC:
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         submission_profile_service: SubmissionProfileService,
+        access: IProjectAccessChecker,
     ) -> None:
+        self._access = access
         self._template_repo = template_repo
         self._submission_profile_service = submission_profile_service
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
+
+    async def _require_package_access(self, inp: PreviewSubmissionCustomDocsInput, *, team: bool) -> None:
+        if team:
+            await self._access.require(inp.project_id, Action.SUBMISSION_CREATE, inp.author_slug)
 
     async def execute(self, inp: PreviewSubmissionCustomDocsInput) -> PreviewSubmissionCustomDocsOutput:
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
@@ -96,6 +104,8 @@ class PreviewSubmissionCustomDocsUC:
                     "Team project: specify an existing author (author_slug) for the submission package",
                 )
             )
+
+        await self._require_package_access(inp, team=team)
 
         instances = self._submission_profile_service.resolve_profile_doc_instances(
             profile=profile,
