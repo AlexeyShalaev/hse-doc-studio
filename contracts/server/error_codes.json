@@ -33,8 +33,5 @@
   "already_member",
   "user_not_found",
   "user_has_projects",
-  "user_not_disabled",
-  "member_not_found",
-  "job_finished",
-  "runner_not_found"
+  "user_not_disabled"
 ]

@@ -173,7 +173,11 @@ def test__rename__mirrors_name_into_the_catalog_without_errors(
     assert "copy failed" not in capfd.readouterr().out
 
 
-def test__remote_registry_and_credential_usage__see_server_projects(stand: TestClient, tmp_path: Path) -> None:
+def test__remote_registry_sees_server_projects_and_credential_usage_ignores_the_project_config(
+    stand: TestClient, tmp_path: Path
+) -> None:
+    from hse_doc_studio.core.access.context import set_current_actor
+    from hse_doc_studio.core.access.entities import Actor
     from hse_doc_studio.core.git_sync.protocols import IGitCredentialUsage, IGitRemoteRegistry
     from hse_doc_studio.core.projects.locator import IProjectLocator
     from hse_doc_studio.infra.git_sync.remote_registry import store_has_remote
@@ -182,6 +186,7 @@ def test__remote_registry_and_credential_usage__see_server_projects(stand: TestC
     credential = uuid.uuid4()
     with owner as client:
         project_id = _create(client, owner.headers)
+        owner_id = client.get("/api/v1/session/bootstrap").json()["user"]["id"]
 
         async def _folder() -> Path:
             container = stand.app.state.dishka_container  # type: ignore[attr-defined]
@@ -202,11 +207,16 @@ def test__remote_registry_and_credential_usage__see_server_projects(stand: TestC
             container = stand.app.state.dishka_container  # type: ignore[attr-defined]
             registry = await container.get(IGitRemoteRegistry)
             usage = await container.get(IGitCredentialUsage)
-            return await registry.list(), await usage.by_credential()
+            set_current_actor(Actor.user(owner_id))
+            try:
+                return await registry.list(), await usage.by_credential()
+            finally:
+                set_current_actor(None)
 
         folders, used = _call(stand, _seen)
         assert [f.resolve() for f in folders] == [folder.resolve()]
-        assert [u.project_id for u in used[credential]] == [uuid.UUID(project_id)]
+        # Использование доступа берётся из привязок в базе, а не из конфига, который могла принести синхронизация.
+        assert used == {}
 
 
 def test__openapi__server__schema_builds_and_the_docs_urls_are_off(stand: TestClient) -> None:
