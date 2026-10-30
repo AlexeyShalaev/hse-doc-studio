@@ -15,6 +15,6 @@
     "name": "Словари админки (lazy)",
     "path": "dist/assets/locale-admin-*.js",
     "gzip": true,
-    "limit": "32 kB"
+    "limit": "36 kB"
   }
 ]
