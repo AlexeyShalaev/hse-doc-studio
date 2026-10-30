@@ -89,7 +89,7 @@ describe("журнал аудита", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     // Код события виден только в подробностях, моноширинным.
     expect(within(invite).getByText("invite.create")).toHaveClass("mono");
-    expect(invite).toHaveTextContent("Срок, дней7");
+    expect(invite).toHaveTextContent("Срок7 дней");
     await user.click(toggle);
     expect(within(invite).queryByText("invite.create")).toBeNull();
   });

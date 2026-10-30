@@ -83,7 +83,7 @@
     },
     "status": {
       "online": "Online",
-      "stale": "Quiet for a while",
+      "stale": "No signal",
       "offline": "Offline",
       "paused": "Paused",
       "revoked": "Revoked"
@@ -113,7 +113,8 @@
       "title": "Revoke runner",
       "body": "The runner loses access and stops taking jobs. Jobs it is running are handed to another runner.",
       "confirm": "Revoke"
-    }
+    },
+    "versionOf": "Runner version"
   },
   "tokens": {
     "title": "Registration tokens",
@@ -171,10 +172,9 @@
     "search": "Find by person, project or runner",
     "searchPlaceholder": "Person or project",
     "noProject": "No project",
-    "project": "project",
     "unknownPerson": "Deleted user",
     "notStarted": "not started",
-    "noRunner": "Not assigned",
+    "noRunner": "not assigned",
     "cancel": "Cancel",
     "cancelLabel": "Cancel the \"{{kind}}\" job",
     "count_one": "Showing {{count}} job",
@@ -207,20 +207,20 @@
       "title": "Waiting by priority:",
       "name": {
         "interactive": "urgent",
-        "checks": "checks",
+        "checks": "normal",
         "batch": "background"
       }
     },
     "filters": {
       "status": "State",
-      "kind": "Job kind"
+      "kind": "Type"
     },
     "columns": {
       "kind": "Job",
       "who": "Started by",
       "status": "State",
       "wait": "Wait",
-      "run": "Run time",
+      "run": "Running for",
       "runner": "Runner",
       "actions": "Actions"
     },
@@ -240,7 +240,7 @@
     },
     "priority": {
       "interactive": "Urgent",
-      "checks": "Check",
+      "checks": "Normal",
       "batch": "Background"
     },
     "errors": {
@@ -301,10 +301,11 @@
     },
     "duration": {
       "title": "Run time",
-      "lead": "Protects runners from stuck builds.",
-      "label": "Job time limit",
-      "hint": "From 0.5 to 1440 minutes. An empty field removes the limit.",
-      "invalid": "Minutes from 0.5 to 1440, or empty."
+      "lead": "Protects runners from stuck jobs.",
+      "label": "Any job time limit",
+      "hint": "From 0.5 to 1440 minutes; an empty field removes the limit. PDF builds also have their own limit in Installation: the smaller of the two applies.",
+      "invalid": "Minutes from 0.5 to 1440, or empty.",
+      "toInstance": "Open Installation"
     },
     "explain": {
       "title": "What happens when a limit is reached",
@@ -326,7 +327,7 @@
     "title": "Services",
     "lead": "Everything the Studio depends on. The state refreshes on its own.",
     "loadFailed": "Could not load the service state.",
-    "check": "Check now",
+    "check": "Check",
     "checked": "Checked {{when}}",
     "healthy": "Check passed",
     "online": "{{online}} of {{total}} online",
@@ -349,7 +350,8 @@
       "ok": "Working",
       "degraded": "Disrupted",
       "down": "Down",
-      "unconfigured": "Not connected"
+      "unconfigured": "Not connected",
+      "partial": "Partly offline"
     },
     "kind": {
       "database": "Database",
@@ -369,7 +371,7 @@
     },
     "reason": {
       "timeout": "Did not answer in time",
-      "no_healthy_replica": "No working replica",
+      "no_healthy_replica": "No working instance left",
       "no_online_runner": "No runner is online",
       "no_runners": "No runners connected",
       "unknown": "The check failed"

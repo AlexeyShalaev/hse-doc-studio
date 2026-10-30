@@ -71,6 +71,22 @@
 .ops-table td {
   height: 52px;
 }
+/* Строки без перехода по клику не подсвечиваются: подсветка обещает действие. */
+.ops-table.ops-static tbody tr:hover {
+  background: transparent;
+}
+.ops-version {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-1);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
 /* Таблица во всю ширину карточки раздела: без второй рамки. */
 .ops-flush-table > .card {
   border: 0;
@@ -129,6 +145,18 @@
   justify-content: flex-end;
   gap: 4px;
 }
+/* Отмена в очереди видна у строки под курсором или с фокусом: одинаковые
+   кнопки в каждой строке только шумят. На сенсорных экранах видна всегда. */
+@media (hover: hover) {
+  .ops-row-actions[data-reveal="hover"] {
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .ops-table tbody tr:hover .ops-row-actions[data-reveal="hover"],
+  .ops-table tbody tr:focus-within .ops-row-actions[data-reveal="hover"] {
+    opacity: 1;
+  }
+}
 .ops-dim-row {
   opacity: 0.6;
 }
@@ -183,6 +211,8 @@
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  /* Карточка без нижней строки не тянется до соседней: пустоты нет. */
+  align-items: start;
 }
 .ops-service {
   display: flex;
@@ -336,36 +366,6 @@
 .ops-bar [data-part="free"] {
   background: var(--bg-3);
 }
-.ops-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12.5px;
-  color: var(--fg-2);
-}
-.ops-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.ops-legend strong {
-  color: var(--fg-0);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-.ops-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-.ops-swatch[data-part="free"] {
-  background: var(--bg-3);
-  box-shadow: inset 0 0 0 1px var(--border-strong, var(--border));
-}
 
 /* Доля владельца: число справа и короткая полоса. */
 .ops-share {
@@ -378,11 +378,12 @@
   width: 120px;
   flex-shrink: 0;
 }
+/* Без tabular-nums: у Inter моноширинные цифры с «%» выглядят разреженными,
+   а выравнивание по правому краю и так держит столбец. */
 .ops-share-pct {
   width: 36px;
   text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg-2);
+  color: var(--fg-1);
   font-size: 12px;
 }
 .ops-rank {
@@ -399,7 +400,7 @@
   gap: 8px;
 }
 .ops-unit-field .input {
-  width: 120px;
+  width: var(--adm-num-width);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

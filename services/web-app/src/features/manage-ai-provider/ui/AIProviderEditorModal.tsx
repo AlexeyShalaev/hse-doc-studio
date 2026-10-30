@@ -14,6 +14,7 @@ import {
   type UpdateAIProviderInput,
 } from "@entities/ai-provider";
 import { Button } from "@shared/ui/Button";
+import { useUiVariant } from "@shared/ui/UiVariant";
 import { toast } from "@shared/lib";
 
 type AIProviderEditorModalProps = {
@@ -57,6 +58,7 @@ export const AIProviderEditorModal = ({
   owner = "user",
 }: AIProviderEditorModalProps) => {
   const { t } = useTranslation("aiProvider");
+  const variant = useUiVariant();
   const isEdit = Boolean(provider);
   const createProvider = useCreateAIProvider(owner);
   const updateProvider = useUpdateAIProvider(owner);
@@ -197,8 +199,15 @@ export const AIProviderEditorModal = ({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
-          className="modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 460, maxWidth: "calc(100vw - 32px)" }}
+          className={clsx(
+            "modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2",
+            variant === "console" && "ui-console",
+          )}
+          style={{
+            width: 460,
+            maxWidth: "calc(100vw - 32px)",
+            maxHeight: "calc(100vh - 64px)",
+          }}
         >
           <DialogPrimitive.Description className="sr-only">
             {t("modal.a11yDescription")}
@@ -226,12 +235,17 @@ export const AIProviderEditorModal = ({
             </button>
           </div>
 
-          <div style={{ padding: 18, overflowY: "auto" }}>
+          <div
+            style={{
+              padding: 18,
+              overflowY: "auto",
+              flex: "1 1 auto",
+              minHeight: 0,
+            }}
+          >
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-fg-1">
-                  {t("fields.name")}
-                </label>
+                <label className="form-label">{t("fields.name")}</label>
                 <input
                   className="input"
                   value={name}
@@ -243,10 +257,8 @@ export const AIProviderEditorModal = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-fg-1">
-                  {t("fields.type")}
-                </label>
-                <div className="seg">
+                <label className="form-label">{t("fields.type")}</label>
+                <div className="seg seg-fill">
                   {TYPE_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -263,9 +275,7 @@ export const AIProviderEditorModal = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-fg-1">
-                  {t("fields.apiKey")}
-                </label>
+                <label className="form-label">{t("fields.apiKey")}</label>
                 <input
                   className="input mono"
                   type="password"
@@ -277,16 +287,12 @@ export const AIProviderEditorModal = ({
                     setApiKey(e.target.value);
                   }}
                 />
-                <span className="text-2xs text-fg-3">
-                  {t("fields.apiKeyHint")}
-                </span>
+                <span className="form-hint">{t("fields.apiKeyHint")}</span>
               </div>
 
               {showBaseUrl && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-fg-1">
-                    {t("fields.baseUrl")}
-                  </label>
+                  <label className="form-label">{t("fields.baseUrl")}</label>
                   <input
                     className="input mono"
                     type="url"
@@ -301,9 +307,7 @@ export const AIProviderEditorModal = ({
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-fg-1">
-                    {t("fields.models")}
-                  </label>
+                  <label className="form-label">{t("fields.models")}</label>
                   {isEdit && (
                     <button
                       type="button"
@@ -324,7 +328,7 @@ export const AIProviderEditorModal = ({
                   )}
                 </div>
 
-                {models.length > 0 ? (
+                {models.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {models.map((model) => (
                       <span
@@ -339,22 +343,20 @@ export const AIProviderEditorModal = ({
                             removeModel(model);
                           }}
                           title={t("models.removeModel")}
+                          aria-label={`${t("models.removeModel")}: ${model}`}
                         >
                           <Trash2 size={11} />
                         </button>
                       </span>
                     ))}
                   </div>
-                ) : (
-                  <span className="text-2xs text-fg-3">
-                    {isEdit ? t("models.emptyEdit") : t("models.emptyCreate")}
-                  </span>
                 )}
 
                 <div className="flex items-center gap-2">
                   <input
-                    className="input mono"
+                    className="input"
                     value={newModel}
+                    aria-label={t("fields.models")}
                     placeholder={t("models.newModelPlaceholder")}
                     onChange={(e) => {
                       setNewModel(e.target.value);
@@ -366,24 +368,29 @@ export const AIProviderEditorModal = ({
                       }
                     }}
                   />
-                  <button
+                  <Button
                     type="button"
-                    className="btn xs"
+                    variant="secondary"
                     onClick={addModel}
                     disabled={!newModel.trim()}
+                    style={{ gap: 6, flexShrink: 0 }}
                   >
-                    <Plus size={11} />
-                  </button>
+                    <Plus size={13} aria-hidden="true" />
+                    {t("models.addModel")}
+                  </Button>
                 </div>
+                {models.length === 0 && (
+                  <span className="form-hint">
+                    {isEdit ? t("models.emptyEdit") : t("models.emptyCreate")}
+                  </span>
+                )}
                 {fetchState === "error" && fetchError && (
                   <span className="text-xs text-c-err">{fetchError}</span>
                 )}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-fg-1">
-                  {t("fields.tlsVerify")}
-                </label>
+                <label className="form-label">{t("fields.tlsVerify")}</label>
                 <div className="seg">
                   <button
                     type="button"
@@ -405,7 +412,10 @@ export const AIProviderEditorModal = ({
                   </button>
                 </div>
                 {!sslVerify && (
-                  <span className="text-2xs" style={{ color: "var(--c-warn)" }}>
+                  <span
+                    className="form-hint"
+                    style={{ color: "var(--c-warn)" }}
+                  >
                     {t("fields.tlsWarning")}
                   </span>
                 )}
@@ -416,7 +426,7 @@ export const AIProviderEditorModal = ({
                 style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}
               >
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-fg-1">
+                  <label className="form-label">
                     {t("fields.connectTimeout")}
                   </label>
                   <input
@@ -431,7 +441,7 @@ export const AIProviderEditorModal = ({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-fg-1">
+                  <label className="form-label">
                     {t("fields.requestTimeout")}
                   </label>
                   <input

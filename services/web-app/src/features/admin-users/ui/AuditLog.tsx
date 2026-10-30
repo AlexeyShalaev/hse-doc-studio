@@ -97,6 +97,12 @@ const useDetails = (): ((
         let value = detailText(raw);
         let machine = typeof raw === "object" && raw !== null;
         if (typeof raw === "boolean") value = t(raw ? "audit.yes" : "audit.no");
+        else if (
+          typeof raw === "number" &&
+          known(`audit.detailUnits.${key}_other`)
+        )
+          // Число с единицей по правилам языка: «7 дней», а не «дней: 7».
+          value = t(`audit.detailUnits.${key}`, { count: raw });
         else if (typeof raw === "number")
           value = raw.toLocaleString(localeTag());
         else if (typeof raw === "string" && known(`audit.values.${raw}`))

@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { useDraft } from "@shared/lib/useDraft";
 import { Input, Section, SettingRow, StickySaveBar } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
@@ -161,7 +162,7 @@ export const InstanceForm = ({
           <Input
             id={`${uid}-${key}`}
             value={inst.value[key]}
-            readOnly={lockInstance(key)}
+            locked={lockInstance(key)}
             autoComplete="off"
             spellCheck={false}
             onChange={(e) => {
@@ -231,10 +232,17 @@ export const InstanceForm = ({
         <div data-testid="build-form" style={{ display: "contents" }}>
           <SettingRow
             label={t("build.timeout")}
-            hint={t("build.timeoutHint", {
-              min: TIMEOUT_MIN,
-              max: TIMEOUT_MAX,
-            })}
+            hint={
+              <>
+                {t("build.timeoutHint", {
+                  min: TIMEOUT_MIN,
+                  max: TIMEOUT_MAX,
+                })}{" "}
+                <Link to="/admin/quotas" className="adm-hint-link">
+                  {t("build.toQuotas")}
+                </Link>
+              </>
+            }
             htmlFor={`${uid}-timeout`}
             locked={timeoutLocked}
             testId="build-timeout"
@@ -244,7 +252,7 @@ export const InstanceForm = ({
                 id={`${uid}-timeout`}
                 unit={t("build.minutesUnit")}
                 value={bld.value.minutes}
-                readOnly={timeoutLocked}
+                locked={timeoutLocked}
                 aria-invalid={minutesBad || undefined}
                 onChange={(e) => {
                   bld.set({ minutes: e.target.value });
@@ -275,7 +283,7 @@ export const InstanceForm = ({
                 id={`${uid}-days`}
                 unit={t("build.daysUnit")}
                 value={bld.value.days}
-                readOnly={daysLocked}
+                locked={daysLocked}
                 aria-invalid={daysBad || undefined}
                 onChange={(e) => {
                   bld.set({ days: e.target.value });
@@ -298,7 +306,8 @@ export const InstanceForm = ({
         dirtyCount={dirtyCount}
         busy={busy}
         saveDisabled={invalid}
-        error={failure ?? (invalid ? t("fixFields") : null)}
+        error={failure}
+        invalidHint={invalid ? t("fixFields") : null}
         onSave={() => {
           void save();
         }}

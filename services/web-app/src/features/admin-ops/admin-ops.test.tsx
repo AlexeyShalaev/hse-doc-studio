@@ -672,6 +672,10 @@ describe("операционные разделы: экраны", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByTestId("service-detail-database")).toBeNull();
     expect(screen.getByTestId("service-runners")).toHaveTextContent("2 из 5");
+    // Меньше половины раннеров в сети: карточка предупреждает.
+    expect(screen.getByTestId("service-runners")).toHaveTextContent(
+      "Часть не на связи",
+    );
     await user.click(screen.getByTestId("services-refresh"));
     expect(await screen.findByTestId("service-database")).toBeVisible();
   }, 20_000);
@@ -686,9 +690,10 @@ describe("операционные разделы: экраны", () => {
     expect(screen.getByTestId("service-detail-s3")).toHaveTextContent(
       "Не ответил вовремя",
     );
-    expect(screen.getByTestId("service-detail-s3")).toHaveTextContent(
-      "timeout",
-    );
+    // Код причины не на виду: он в подсказке у человеческой причины.
+    expect(
+      screen.getByTestId("service-detail-s3").querySelector("[data-code]"),
+    ).toHaveAttribute("data-code", "timeout");
     expect(screen.getByTestId("services-off")).toHaveTextContent("Почта");
     expect(screen.getByTestId("service-languagetool")).toHaveAttribute(
       "data-status",

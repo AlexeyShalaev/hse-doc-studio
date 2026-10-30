@@ -4,6 +4,7 @@ import { Lock, UserMinus, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatPastTime } from "@shared/lib";
 import {
+  ActionMenu,
   Badge,
   Button,
   DataTable,
@@ -11,7 +12,6 @@ import {
   Input,
   Modal,
   PersonCell,
-  Section,
   Select,
   Spinner,
   Tooltip,
@@ -76,6 +76,7 @@ export const MembersView = ({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<OrgRoleName>("member");
   const [tried, setTried] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [confirming, setConfirming] = useState<AdminOrgMember | null>(null);
 
   const roles = assignableRoles(viewer);
@@ -107,7 +108,17 @@ export const MembersView = ({
       setEmail("");
       setTried(false);
       setRole("member");
+      setAddOpen(false);
     }
+  };
+
+  const closeAdd = () => {
+    if (adding) return;
+    setAddOpen(false);
+    setEmail("");
+    setTried(false);
+    setRole("member");
+    onReset?.();
   };
 
   const columns: ColumnDef<AdminOrgMember>[] = [
@@ -193,29 +204,31 @@ export const MembersView = ({
       ),
       cell: ({ row }) => {
         const m = row.original;
-        const lastOwner = isLastOwner(members, m);
-        const blocked = lastOwner || !canEditMember(viewer, m.role);
+        // Единственного владельца и людей с ролью выше своей убрать нельзя:
+        // меню у такой строки нет, замок у роли объясняет почему.
+        if (isLastOwner(members, m) || !canEditMember(viewer, m.role)) {
+          return null;
+        }
         return (
           <div className="flex" style={{ justifyContent: "flex-end" }}>
-            <Button
-              size="xs"
-              variant="ghost"
-              type="button"
-              disabled={blocked || busyUserId === m.user_id}
-              title={
-                lastOwner
-                  ? t("members.lastOwner")
-                  : t("members.remove.aria", { name: m.name })
-              }
-              aria-label={t("members.remove.aria", { name: m.name })}
-              data-testid={`member-remove-${m.user_id}`}
-              onClick={() => {
-                onReset?.();
-                setConfirming(m);
-              }}
-            >
-              <UserMinus size={14} aria-hidden="true" />
-            </Button>
+            <ActionMenu
+              label={t("members.actions", { name: m.name })}
+              testId={`member-actions-${m.user_id}`}
+              items={[
+                {
+                  id: "remove",
+                  label: t("members.remove.item"),
+                  icon: <UserMinus size={14} aria-hidden="true" />,
+                  danger: true,
+                  disabled: busyUserId === m.user_id,
+                  testId: `member-remove-${m.user_id}`,
+                  onSelect: () => {
+                    onReset?.();
+                    setConfirming(m);
+                  },
+                },
+              ]}
+            />
           </div>
         );
       },
@@ -226,99 +239,46 @@ export const MembersView = ({
 
   return (
     <div className="org-stack" data-testid="members-tab">
-      <Section
-        title={t("members.add.title")}
-        description={t("members.add.lead")}
-      >
-        <form
-          className="org-add"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submitAdd();
-          }}
-          data-testid="member-add-form"
-        >
-          <div className="org-add-email">
-            <Input
-              label={t("members.add.email")}
-              type="email"
-              value={email}
-              autoComplete="off"
-              placeholder="name@example.org"
-              {...(emailError ? { error: emailError } : {})}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-              data-testid="member-add-email"
-            />
-          </div>
-          <div className="field org-add-role">
-            <label htmlFor="member-add-role">{t("members.add.role")}</label>
-            <Select
-              id="member-add-role"
-              value={role}
-              placeholder={t("members.add.role")}
-              options={roleOptions(roles)}
-              onValueChange={(next) => {
-                setRole(next as OrgRoleName);
-              }}
-            />
-          </div>
-          <div className="org-add-submit">
-            <Button
-              type="submit"
-              disabled={adding}
-              data-testid="member-add-submit"
-            >
-              {adding ? (
-                <Spinner size="sm" />
-              ) : (
-                <UserPlus size={14} aria-hidden="true" />
-              )}
-              {t("members.add.submit")}
-            </Button>
-          </div>
-        </form>
-        {addFailure && (
-          <div style={{ marginTop: 12 }}>
-            <FailureNotice
-              failure={
-                addFailure.code === "not_found" ||
-                addFailure.code === "user_not_found"
-                  ? { code: "member_not_found" }
-                  : addFailure
-              }
-            />
-          </div>
-        )}
-      </Section>
-
       {failure && <FailureNotice failure={failure} />}
 
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchLabel={t("members.search")}
-        searchPlaceholder={t("members.search")}
-        filters={[
-          {
-            id: "role",
-            label: t("members.columns.role"),
-            value: roleFilter,
-            onChange: setRoleFilter,
-            options: ROLES.map((r) => ({
-              value: r,
-              label: t(`role.${r}`),
-              ...(status === "ready" ? { count: counts(r) } : {}),
-            })),
-          },
-        ]}
-        onReset={() => {
-          setSearch("");
-          setRoleFilter("");
-        }}
-      />
+      <div className="org-toolbar">
+        <FilterBar
+          className="org-toolbar-filters"
+          search={search}
+          onSearchChange={setSearch}
+          searchLabel={t("members.search")}
+          searchPlaceholder={t("members.search")}
+          filters={[
+            {
+              id: "role",
+              label: t("members.columns.role"),
+              value: roleFilter,
+              onChange: setRoleFilter,
+              options: ROLES.map((r) => ({
+                value: r,
+                label: t(`role.${r}`),
+                ...(status === "ready" ? { count: counts(r) } : {}),
+              })),
+            },
+          ]}
+          onReset={() => {
+            setSearch("");
+            setRoleFilter("");
+          }}
+        />
+        <Button
+          size="sm"
+          type="button"
+          data-testid="member-add-open"
+          onClick={() => {
+            onReset?.();
+            setAddOpen(true);
+          }}
+        >
+          <UserPlus size={14} aria-hidden="true" />
+          {t("members.add.title")}
+        </Button>
+      </div>
       <DataTable
         className="org-table"
         caption={t("members.caption")}
@@ -333,6 +293,82 @@ export const MembersView = ({
         }
         {...(members.length > 0 ? {} : { emptyHint: t("members.empty.body") })}
       />
+
+      <Modal
+        isOpen={addOpen}
+        onClose={closeAdd}
+        width={440}
+        title={t("members.add.title")}
+        description={t("members.add.lead")}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              type="button"
+              disabled={adding}
+              onClick={closeAdd}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="member-add-form"
+              disabled={adding}
+              data-testid="member-add-submit"
+            >
+              {adding && <Spinner size="sm" />}
+              {t("members.add.submit")}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="member-add-form"
+          className="flex flex-col"
+          style={{ gap: 14 }}
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submitAdd();
+          }}
+          data-testid="member-add-form"
+        >
+          <Input
+            label={t("members.add.email")}
+            type="email"
+            value={email}
+            autoComplete="off"
+            placeholder="name@example.org"
+            {...(emailError ? { error: emailError } : {})}
+            onChange={(event) => {
+              setEmail(event.target.value);
+            }}
+            data-testid="member-add-email"
+          />
+          <div className="field">
+            <label htmlFor="member-add-role">{t("members.add.role")}</label>
+            <Select
+              id="member-add-role"
+              value={role}
+              placeholder={t("members.add.role")}
+              options={roleOptions(roles)}
+              onValueChange={(next) => {
+                setRole(next as OrgRoleName);
+              }}
+            />
+          </div>
+          {addFailure && (
+            <FailureNotice
+              failure={
+                addFailure.code === "not_found" ||
+                addFailure.code === "user_not_found"
+                  ? { code: "member_not_found" }
+                  : addFailure
+              }
+            />
+          )}
+        </form>
+      </Modal>
 
       <Modal
         isOpen={confirming !== null}

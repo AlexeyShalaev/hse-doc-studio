@@ -109,16 +109,21 @@
       "edit": "Edit",
       "name": "Name",
       "address": "Address",
-      "version": "Version",
       "registration": "Registration",
       "mail": "Mail",
-      "mailOn": "Configured",
       "mailOff": "Not configured",
       "modes": {
         "open": "Open to everyone",
         "domains": "By email domain",
         "invite": "By invitation",
         "closed": "Closed"
+      },
+      "mailFilled": "SMTP settings filled in",
+      "mailStatus": {
+        "ok": "Working",
+        "degraded": "Disruptions",
+        "down": "Down",
+        "unconfigured": "Not connected"
       }
     },
     "serviceKind": {

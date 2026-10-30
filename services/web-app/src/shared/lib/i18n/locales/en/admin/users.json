@@ -327,7 +327,7 @@
     "detailKeys": {
       "email": "Email",
       "method": "Method",
-      "slug": "Address",
+      "slug": "Short name",
       "label": "Name",
       "name": "Name",
       "title": "Name",
@@ -346,7 +346,7 @@
       "models": "Models",
       "type": "Type",
       "from": "Was",
-      "ttl_days": "Valid, days",
+      "ttl_days": "Valid for",
       "size": "Size"
     },
     "values": {
@@ -364,6 +364,10 @@
       "bad_password": "wrong password",
       "unknown_email": "unknown email",
       "disabled": "account disabled"
+    },
+    "detailUnits": {
+      "ttl_days_one": "{{count}} day",
+      "ttl_days_other": "{{count}} days"
     }
   },
   "failure": {
@@ -378,5 +382,6 @@
     "input_invalid": "Check the entered values.",
     "network": "The server is unreachable. Check the connection and try again.",
     "unknown": "The action failed. Try again later."
-  }
+  },
+  "linkOnce": "The link is shown once: after closing you cannot see it again."
 }

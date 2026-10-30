@@ -173,11 +173,18 @@ export const RunnersView = ({
             >
               <span className="ops-cell-title">{runner.name}</span>
               <span className="ops-cell-sub">
-                <span className="ops-code">v{runner.version}</span>
-                {" · "}
-                {t(`runners.class.${runner.resource_class}`, {
-                  defaultValue: runner.resource_class,
-                })}
+                <span className="ops-version" title={t("runners.versionOf")}>
+                  v{runner.version}
+                </span>
+                {/* Обычный класс ничего не говорит: подписан только особый. */}
+                {runner.resource_class !== "standard" && (
+                  <>
+                    {" · "}
+                    {t(`runners.class.${runner.resource_class}`, {
+                      defaultValue: runner.resource_class,
+                    })}
+                  </>
+                )}
               </span>
             </span>
           );
@@ -496,7 +503,7 @@ export const RunnersView = ({
       )}
       {status === "ready" && runners.length > 0 && (
         <DataTable
-          className="ops-table"
+          className="ops-table ops-static"
           caption={t("runners.caption")}
           columns={columns}
           data={rows}
@@ -530,9 +537,8 @@ export const RunnersView = ({
         {tokensStatus === "ready" && tokens.length === 0 && (
           <div style={{ padding: "0 20px 16px" }}>
             <EmptyState
-              compact
               testId="tokens-empty"
-              icon={<KeyRound size={15} />}
+              icon={<KeyRound size={18} />}
               title={t("tokens.empty.title")}
               description={t("tokens.empty.body")}
             />

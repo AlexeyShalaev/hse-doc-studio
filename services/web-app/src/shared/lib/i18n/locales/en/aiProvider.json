@@ -48,9 +48,10 @@
     "fetchFromApi": "Load from API",
     "fetchTitle": "Request the list of models from the provider",
     "removeModel": "Remove",
-    "emptyEdit": "The list is empty — add manually or load from API.",
-    "emptyCreate": "You can add manually; after saving — load from API.",
-    "newModelPlaceholder": "Model ID (e.g. gpt-4.1)"
+    "addModel": "Add",
+    "emptyEdit": "The list is empty. Add models manually or load them from the API.",
+    "emptyCreate": "Add manually or load the list from the API after saving.",
+    "newModelPlaceholder": "For example, gpt-4.1"
   },
   "actions": {
     "cancel": "Cancel",

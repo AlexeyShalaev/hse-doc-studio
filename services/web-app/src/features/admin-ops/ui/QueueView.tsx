@@ -29,12 +29,7 @@ import {
   isActive,
   runSeconds,
 } from "../lib/jobs";
-import {
-  personRef,
-  shortRef,
-  type OpsPerson,
-  type PersonRef,
-} from "../lib/people";
+import { personRef, type OpsPerson, type PersonRef } from "../lib/people";
 import { useDurationUnits } from "../lib/useDurationUnits";
 import type { ViewStatus } from "../lib/viewStatus";
 import { ViewState } from "./parts";
@@ -60,6 +55,13 @@ export type QueueViewProps = {
 };
 
 export const PAGE_STEP = 25;
+
+// Приоритеты по убыванию: срочные, обычные, фоновые; неизвестные в конце.
+const CLASS_ORDER = ["interactive", "checks", "batch"];
+const classRank = (name: string): number => {
+  const i = CLASS_ORDER.indexOf(name);
+  return i === -1 ? CLASS_ORDER.length : i;
+};
 
 const NO_PEOPLE: ReadonlyMap<string, OpsPerson> = new Map();
 const NO_RUNNERS: ReadonlyMap<string, string> = new Map();
@@ -119,19 +121,9 @@ export const QueueView = ({
                 {t(`queue.priority.${job.priority}`, {
                   defaultValue: job.priority,
                 })}
-                {job.project_id !== null && (
-                  <>
-                    {" · "}
-                    {job.project_name ?? (
-                      <>
-                        {t("queue.project")}{" "}
-                        <span className="ops-code" title={job.project_id}>
-                          {shortRef(job.project_id)}
-                        </span>
-                      </>
-                    )}
-                  </>
-                )}
+                {/* Имени проекта сервер не отдаёт: без него строка не показывает
+                    идентификатор, он есть в подробностях задачи. */}
+                {job.project_name !== null && ` · ${job.project_name}`}
               </span>
             </span>
           );
@@ -215,7 +207,7 @@ export const QueueView = ({
         enableSorting: false,
         cell: ({ row }) =>
           isActive(row.original.job) ? (
-            <span className="ops-row-actions">
+            <span className="ops-row-actions" data-reveal="hover">
               <Button
                 size="sm"
                 variant="ghost"
@@ -365,20 +357,22 @@ export const QueueView = ({
         <div className="ops-classes" data-testid="queue-classes">
           <Timer size={14} aria-hidden="true" />
           <span>{t("queue.classes.title")}</span>
-          {summary.classes.map((row) => (
-            <span
-              key={row.name}
-              className="ops-classes-item"
-              data-testid={`queue-class-${row.name}`}
-            >
-              {t(`queue.classes.name.${row.name}`, {
-                defaultValue: t(`queue.priority.${row.name}`, {
-                  defaultValue: row.name,
-                }),
-              })}
-              <strong>{row.queued}</strong>
-            </span>
-          ))}
+          {[...summary.classes]
+            .sort((a, b) => classRank(a.name) - classRank(b.name))
+            .map((row) => (
+              <span
+                key={row.name}
+                className="ops-classes-item"
+                data-testid={`queue-class-${row.name}`}
+              >
+                {t(`queue.classes.name.${row.name}`, {
+                  defaultValue: t(`queue.priority.${row.name}`, {
+                    defaultValue: row.name,
+                  }),
+                })}
+                <strong>{row.queued}</strong>
+              </span>
+            ))}
         </div>
       )}
 

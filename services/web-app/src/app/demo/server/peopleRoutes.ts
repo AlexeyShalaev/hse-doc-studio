@@ -1,7 +1,7 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type { AdminInvitation, AdminUser } from "@entities/session";
-import { adminPeopleOf, type ServerDemoWorld } from "./world";
+import { adminInstallOf, adminPeopleOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: люди, одобрения, приглашения и журнал. Тела совпадают с contracts/server/fixtures.
 //
@@ -38,7 +38,10 @@ export const createPeopleRoutes = (
       offset,
     };
   };
-  const linkOf = (id: string) => `${window.location.origin}/invite/demo-${id}`;
+  // Ссылки строятся от публичного адреса установки, как у настоящего сервера.
+  const publicUrl = () =>
+    adminInstallOf(getWorld()).instance.public_url.replace(/\/+$/, "");
+  const linkOf = (id: string) => `${publicUrl()}/invite/demo-${id}`;
   const record = (action: string, target: string | null) => {
     const events = state().audit;
     events.unshift({
@@ -152,7 +155,7 @@ export const createPeopleRoutes = (
           return demoError(403, "forbidden", "Confirmation is required");
         record("admin.reset_link_issued", user.id);
         return demoJson({
-          link: `${window.location.origin}/reset/demo-${user.id}`,
+          link: `${publicUrl()}/reset/demo-${user.id}`,
           expires_at: new Date(Date.now() + 3_600_000).toISOString(),
           user_notified: false,
         });

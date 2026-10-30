@@ -27,6 +27,7 @@ import {
   SectionList,
   StatusDot,
   TableSkeleton,
+  type StatusDotStatus,
 } from "@shared/ui";
 import {
   useBootstrap,
@@ -536,6 +537,47 @@ const hostOf = (url: string): string => {
   }
 };
 
+// Почта на сводке берётся из проверки сервисов, как на странице «Сервисы»:
+// настройки могут быть заполнены, а сервер почты не отвечать или не быть
+// подключён в окружении.
+const MAIL_DOT: Record<AdminService["status"], StatusDotStatus> = {
+  ok: "success",
+  degraded: "warning",
+  down: "danger",
+  unconfigured: "neutral",
+};
+
+const MailStatus = () => {
+  const { t } = useTranslation("adminShell");
+  const bootstrap = useBootstrap().data;
+  const services = useServices();
+  const smtp = services.data?.find((s) => s.kind === "smtp");
+  if (smtp) {
+    return (
+      <span data-testid="overview-mail" data-status={smtp.status}>
+        <StatusDot
+          status={MAIL_DOT[smtp.status]}
+          label={t(`overview.instance.mailStatus.${smtp.status}`)}
+        />
+      </span>
+    );
+  }
+  // Проверка сервисов не ответила: показываем только, заполнены ли настройки.
+  if (!bootstrap) return <>…</>;
+  return (
+    <span data-testid="overview-mail" data-status="settings">
+      <StatusDot
+        status={bootstrap.auth.smtp_enabled ? "neutral" : "warning"}
+        label={
+          bootstrap.auth.smtp_enabled
+            ? t("overview.instance.mailFilled")
+            : t("overview.instance.mailOff")
+        }
+      />
+    </span>
+  );
+};
+
 const InstanceBlock = () => {
   const { t } = useTranslation("adminShell");
   const bootstrap = useBootstrap().data;
@@ -567,29 +609,18 @@ const InstanceBlock = () => {
           </dd>
           {bootstrap && (
             <>
-              <dt>{t("overview.instance.version")}</dt>
-              <dd className="mono" style={{ fontSize: 12 }}>
-                {bootstrap.version}
-              </dd>
               <dt>{t("overview.instance.registration")}</dt>
               <dd>
                 {t(
                   `overview.instance.modes.${bootstrap.auth.registration_mode}`,
                 )}
               </dd>
-              <dt>{t("overview.instance.mail")}</dt>
-              <dd>
-                <StatusDot
-                  status={bootstrap.auth.smtp_enabled ? "success" : "warning"}
-                  label={
-                    bootstrap.auth.smtp_enabled
-                      ? t("overview.instance.mailOn")
-                      : t("overview.instance.mailOff")
-                  }
-                />
-              </dd>
             </>
           )}
+          <dt>{t("overview.instance.mail")}</dt>
+          <dd>
+            <MailStatus />
+          </dd>
         </dl>
       )}
     </Section>

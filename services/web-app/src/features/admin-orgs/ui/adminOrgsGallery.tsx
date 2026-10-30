@@ -221,12 +221,6 @@ export const getAdminOrgsGallery = (): GalleryGroup[] => [
       entry("admin_org_detail_groups", "Группы", () =>
         detail("groups", groups(), { groupCount: GROUPS.length }),
       ),
-      entry(
-        "admin_org_detail_projects",
-        "Проекты",
-        () => detail("projects", null),
-        { note: "Списка проектов пока нет: число и что появится дальше." },
-      ),
       entry("admin_org_detail_settings", "Настройки и опасная зона", () =>
         detail("settings", null),
       ),

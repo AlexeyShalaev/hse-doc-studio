@@ -127,16 +127,21 @@
       "edit": "Изменить",
       "name": "Название",
       "address": "Адрес",
-      "version": "Версия",
       "registration": "Регистрация",
       "mail": "Почта",
-      "mailOn": "Настроена",
       "mailOff": "Не настроена",
       "modes": {
         "open": "Открыта для всех",
         "domains": "По доменам почты",
         "invite": "По приглашениям",
         "closed": "Закрыта"
+      },
+      "mailFilled": "Настройки SMTP заполнены",
+      "mailStatus": {
+        "ok": "Работает",
+        "degraded": "Перебои",
+        "down": "Не работает",
+        "unconfigured": "Не подключена"
       }
     },
     "serviceKind": {

@@ -132,10 +132,17 @@ export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
   return world.adminInstall;
 };
 
-/** Люди установки мира; на свежей установке журнал пуст. */
+/**
+ * Люди установки мира; на свежей установке журнал пуст, а без раннеров в нём
+ * нет записей о раннерах.
+ */
 export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
   world.adminPeople ??= createDemoAdminPeople(
-    world.scenario.installSeed === "fresh" ? "fresh" : "default",
+    world.scenario.installSeed === "fresh"
+      ? "fresh"
+      : world.scenario.opsSeed === "fresh"
+        ? "no_runners"
+        : "default",
   );
   return world.adminPeople;
 };

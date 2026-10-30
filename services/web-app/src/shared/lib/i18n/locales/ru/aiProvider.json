@@ -1,6 +1,6 @@
 {
   "type": {
-    "openaiCompat": "OpenAI-совмест."
+    "openaiCompat": "OpenAI-совместимый"
   },
   "keyPlaceholder": {
     "openaiCompat": "ключ эндпоинта"
@@ -48,9 +48,10 @@
     "fetchFromApi": "Загрузить из API",
     "fetchTitle": "Запросить список моделей у провайдера",
     "removeModel": "Убрать",
-    "emptyEdit": "Список пуст — добавьте вручную или загрузите из API.",
-    "emptyCreate": "Можно добавить вручную; после сохранения — загрузить из API.",
-    "newModelPlaceholder": "ID модели (напр. gpt-4.1)"
+    "addModel": "Добавить",
+    "emptyEdit": "Список пуст. Добавьте модели вручную или загрузите их из API.",
+    "emptyCreate": "Добавьте вручную или загрузите список из API после сохранения.",
+    "newModelPlaceholder": "Например, gpt-4.1"
   },
   "actions": {
     "cancel": "Отмена",

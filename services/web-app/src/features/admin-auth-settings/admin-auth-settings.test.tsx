@@ -120,12 +120,15 @@ describe("настройки входа в админке", () => {
     expect(screen.getByLabelText("Разрешённые домены")).not.toHaveAttribute(
       "readonly",
     );
-    // Почта целиком от окружения: поля только читаются, замок один на раздел.
-    expect(screen.getByLabelText("Сервер")).toHaveAttribute("readonly");
+    // Почта целиком от окружения: поля только читаются, замок в каждой строке
+    // и внутри поля, плюс пометка внизу раздела.
+    const host = screen.getByTestId("smtp-host");
+    expect(within(host).getAllByRole("textbox")[0]).toHaveAttribute("readonly");
+    expect(within(host).getAllByTestId("input-locked")[0]).toBeVisible();
+    expect(screen.getByTestId("smtp-host-locked")).toBeVisible();
     expect(
       within(screen.getByTestId("admin-smtp")).getByTestId("all-locked-note"),
     ).toBeVisible();
-    expect(screen.queryByTestId("smtp-host-locked")).toBeNull();
     await user.click(screen.getByTestId("registration-mode-open"));
     expect(
       screen.getByTestId("registration-mode-domains").querySelector("input"),

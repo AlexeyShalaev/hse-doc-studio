@@ -25,8 +25,12 @@ import { OidcSection } from "./OidcSection";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
-const baseUrlOf = (): string =>
-  typeof window === "undefined" ? "" : window.location.origin;
+/** Адрес для redirect URI: публичный адрес установки, иначе адрес вкладки. */
+const baseUrlOf = (publicUrl: string | undefined): string => {
+  const configured = publicUrl?.trim().replace(/\/+$/, "") ?? "";
+  if (configured !== "") return configured;
+  return typeof window === "undefined" ? "" : window.location.origin;
+};
 
 const input = (draft: OidcDraft) => ({
   label: draft.label,
@@ -61,7 +65,12 @@ const SettingsSkeleton = () => (
  * почта. Значения, заданные окружением, показаны только для чтения; секреты
  * принимаются на запись и не показываются.
  */
-export const AdminAuthSettings = () => {
+export const AdminAuthSettings = ({
+  publicUrl,
+}: {
+  /** Публичный адрес из раздела «Установка»: от него строится redirect URI. */
+  publicUrl?: string | undefined;
+} = {}) => {
   const { t } = useTranslation("adminSettings");
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -138,7 +147,7 @@ export const AdminAuthSettings = () => {
         providers.data ? "ready" : providers.isError ? "error" : "loading"
       }
       providers={providers.data ?? []}
-      baseUrl={baseUrlOf()}
+      baseUrl={baseUrlOf(publicUrl)}
       saving={create.isPending || update.isPending}
       formFailure={oidcFailure}
       failure={oidcFailure}

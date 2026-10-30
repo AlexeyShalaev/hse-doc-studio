@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Hourglass, ListOrdered, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import {
   Input,
   PageHeader,
@@ -205,7 +206,14 @@ const LimitsForm = ({
       >
         <SettingRow
           label={t("quotas.duration.label")}
-          hint={t("quotas.duration.hint")}
+          hint={
+            <>
+              {t("quotas.duration.hint")}{" "}
+              <Link to="/admin/instance" className="adm-hint-link">
+                {t("quotas.duration.toInstance")}
+              </Link>
+            </>
+          }
           htmlFor="quota-duration"
         >
           <UnitField

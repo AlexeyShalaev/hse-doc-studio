@@ -286,10 +286,9 @@ describe("организации в админке: экраны", () => {
     await waitFor(() => {
       expect(screen.getByTestId("org-tab-groups")).toHaveTextContent("2");
     });
-    await user.click(screen.getByTestId("org-tab-projects"));
-    expect(await screen.findByTestId("org-projects")).toHaveTextContent(
-      "В организации 31 проект",
-    );
+    // Проектов во вкладках нет: число стоит в шапке.
+    expect(screen.queryByTestId("org-tab-projects")).toBeNull();
+    expect(screen.getByTestId("org-projects")).toHaveTextContent("31 проект");
     await user.click(screen.getByTestId("org-tab-settings"));
     const settings = await screen.findByTestId("org-settings");
     expect(within(settings).getByDisplayValue("msp-2025")).toBeVisible();
@@ -318,9 +317,11 @@ describe("организации в админке: экраны", () => {
     expect(
       await screen.findByTestId("member-last-owner-u_01hx7k1a0b"),
     ).toBeVisible();
-    expect(screen.getByTestId("member-remove-u_01hx7k1a0b")).toBeDisabled();
+    // У единственного владельца нет меню действий: убрать его нельзя.
+    expect(screen.queryByTestId("member-actions-u_01hx7k1a0b")).toBeNull();
     expect(screen.queryByTestId("member-role-u_01hx7k1a0b")).toBeNull();
 
+    await user.click(screen.getByTestId("member-add-open"));
     await user.type(
       screen.getByTestId("member-add-email"),
       "nobody@example.org",
@@ -337,6 +338,11 @@ describe("организации в админке: экраны", () => {
     );
     await user.click(screen.getByTestId("member-add-submit"));
     expect(await screen.findByText("Мария Келлер")).toBeVisible();
+    // После добавления окно закрывается, при следующем открытии поле пустое.
+    await waitFor(() => {
+      expect(screen.queryByTestId("member-add-email")).toBeNull();
+    });
+    await user.click(screen.getByTestId("member-add-open"));
     expect(screen.getByTestId("member-add-email")).toHaveValue("");
 
     await user.type(
@@ -368,6 +374,7 @@ describe("организации в админке: экраны", () => {
   it("участники: удаление требует подтверждения", async () => {
     const user = userEvent.setup();
     render(wrap(<Detail slug="msp-2025" />));
+    await user.click(await screen.findByTestId("member-actions-u_01hx7k6r8j"));
     await user.click(await screen.findByTestId("member-remove-u_01hx7k6r8j"));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/потеряет доступ/)).toBeVisible();
@@ -399,20 +406,12 @@ describe("организации в админке: экраны", () => {
     expect(await screen.findByTestId("groups-empty")).toBeVisible();
   }, 20_000);
 
-  it("удаление организации: с проектами отказ, без проектов уходит", async () => {
+  it("удаление организации: с проектами кнопка выключена, без проектов уходит", async () => {
     const user = userEvent.setup();
     const first = render(wrap(<Detail slug="msp-2025" />));
     await user.click(await screen.findByTestId("org-tab-settings"));
-    await user.click(await screen.findByTestId("org-delete"));
-    expect(
-      within(await screen.findByRole("dialog")).getByText(/сервер откажет/),
-    ).toBeVisible();
-    const input = screen.getByRole("textbox", { name: /МСПИН 2025/ });
-    await user.type(input, "МСПИН 2025");
-    await user.click(
-      screen.getByRole("button", { name: "Удалить организацию" }),
-    );
-    expect(await screen.findByText(/В организации есть проекты/)).toBeVisible();
+    expect(await screen.findByTestId("org-delete")).toBeDisabled();
+    expect(screen.getByText(/с проектами сервер откажет/)).toBeVisible();
     first.unmount();
 
     const onDeleted = vi.fn();

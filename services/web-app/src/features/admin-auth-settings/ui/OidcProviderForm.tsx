@@ -19,7 +19,6 @@ import {
   validateOidc,
   type OidcDraft,
 } from "../lib/validate";
-import { HINT } from "../lib/styles";
 
 /** Выключатель с подписью и пояснением внутри формы. */
 const SwitchLine = ({
@@ -42,10 +41,10 @@ const SwitchLine = ({
     style={{ gap: 16, padding: "8px 0" }}
   >
     <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-      <label htmlFor={id} style={{ fontSize: 13, fontWeight: 500 }}>
+      <label htmlFor={id} className="form-label">
         {label}
       </label>
-      <span id={`${id}-hint`} style={HINT}>
+      <span id={`${id}-hint`} className="form-hint" style={{ marginTop: 0 }}>
         {hint}
       </span>
     </span>
@@ -242,9 +241,7 @@ export const OidcProviderForm = ({
           style={{ gap: 6 }}
           data-testid="oidc-redirect"
         >
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>
-            {t("oidc.form.redirect")}
-          </span>
+          <span className="form-label">{t("oidc.form.redirect")}</span>
           {baseUrl === "" ? (
             <Notice tone="warn" text={t("oidc.form.noBaseUrl")} />
           ) : (
@@ -253,7 +250,7 @@ export const OidcProviderForm = ({
                 value={redirectUri(baseUrl, provider?.id ?? "{id}")}
                 label={t("oidc.form.redirect")}
               />
-              <p style={HINT}>
+              <p className="form-hint">
                 {creating
                   ? t("oidc.form.redirectNew")
                   : t("oidc.form.redirectHint")}

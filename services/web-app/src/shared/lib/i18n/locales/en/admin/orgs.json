@@ -5,7 +5,7 @@
   "save": "Save",
   "role": {
     "owner": "Owner",
-    "admin": "Admin",
+    "admin": "Administrator",
     "member": "Member"
   },
   "failure": {
@@ -32,7 +32,7 @@
     "search": "Find an organization",
     "caption": "Organizations",
     "loadFailed": "Could not load the organizations.",
-    "instanceAdmin": "Installation admin",
+    "instanceAdmin": "Installation administrator",
     "columns": {
       "name": "Name",
       "role": "Your role",
@@ -48,7 +48,15 @@
       "title": "Nothing found",
       "body": "Change the query or reset the search."
     },
-    "open": "Open organization"
+    "open": "Open organization",
+    "summary": {
+      "orgs_one": "{{count}} organization",
+      "orgs_other": "{{count}} organizations",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects"
+    }
   },
   "create": {
     "title": "New organization",
@@ -77,20 +85,20 @@
       "title": "Delete the organization?",
       "body": "Members and groups are deleted with the organization. This cannot be undone.",
       "withProjects": "The organization has projects ({{count}}), so the server will refuse. Move or delete them first.",
-      "confirm": "Delete organization"
+      "confirm": "Delete organization",
+      "blocked": "Only an empty organization can be deleted. Transfer or delete its projects first."
     },
     "tabs": {
       "label": "Organization sections",
       "members": "Members",
       "groups": "Groups",
-      "projects": "Projects",
       "settings": "Settings"
     },
     "projects": {
-      "title_one": "The organization has {{count}} project",
-      "title_other": "The organization has {{count}} projects",
-      "none": "The organization has no projects yet",
-      "body": "A list of projects with owners and moving projects between organizations are coming in one of the next updates. Projects themselves open in the Studio."
+      "none": "No projects",
+      "count_one": "{{count}} project",
+      "count_other": "{{count}} projects",
+      "hint": "Projects open in the Studio. This shows how many the organization has."
     },
     "settings": {
       "title": "Organization",
@@ -99,6 +107,10 @@
       "slug": "Address",
       "slugHint": "Used in links. It cannot be changed after creation.",
       "role": "Your role"
+    },
+    "members": {
+      "count_one": "{{count}} member",
+      "count_other": "{{count}} members"
     }
   },
   "members": {
@@ -131,9 +143,11 @@
       "aria": "Remove {{name}}",
       "title": "Remove from the organization?",
       "body": "{{name}} loses access to the organization's projects and leaves its groups.",
-      "bodySelf": "You lose access to the organization and its projects. Only another admin can bring you back.",
-      "confirm": "Remove"
-    }
+      "bodySelf": "You lose access to the organization and its projects. Only another administrator can bring you back.",
+      "confirm": "Remove",
+      "item": "Remove from organization"
+    },
+    "actions": "Actions: {{name}}"
   },
   "groups": {
     "lead": "A group collects people of the organization so access to projects can be given to all of them at once.",

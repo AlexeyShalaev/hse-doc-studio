@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, FolderKanban, SearchX, Trash2 } from "lucide-react";
+import { ArrowLeft, SearchX, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -12,14 +12,17 @@ import {
   Section,
   SettingRow,
   TableSkeleton,
+  Tooltip,
 } from "@shared/ui";
 import type { AdminOrg } from "@entities/session";
 import type { Failure } from "../lib/failure";
 import { OrgMark, RoleBadge } from "./parts";
 
-export type OrgTab = "members" | "groups" | "projects" | "settings";
+export type OrgTab = "members" | "groups" | "settings";
 
-const TABS: readonly OrgTab[] = ["members", "groups", "projects", "settings"];
+// Проектов во вкладках нет: списка проектов организации в API нет, их число
+// стоит в шапке, а сами проекты открываются в Studio.
+const TABS: readonly OrgTab[] = ["members", "groups", "settings"];
 
 export type OrgDetailViewProps = {
   status: "loading" | "error" | "missing" | "ready";
@@ -40,7 +43,7 @@ export type OrgDetailViewProps = {
   children?: ReactNode;
 };
 
-/** Страница организации: шапка, вкладки «Участники», «Группы», «Проекты», «Настройки». */
+/** Страница организации: шапка с числами, вкладки «Участники», «Группы», «Настройки». */
 export const OrgDetailView = ({
   status,
   org,
@@ -117,7 +120,6 @@ export const OrgDetailView = ({
   const count = (id: OrgTab): number | undefined => {
     if (id === "members") return org.member_count;
     if (id === "groups") return groupCount ?? undefined;
-    if (id === "projects") return org.project_count;
     return undefined;
   };
 
@@ -132,16 +134,27 @@ export const OrgDetailView = ({
           </span>
         }
         meta={
-          <>
+          <span className="org-meta" data-testid="org-meta">
             <span className="org-slug">{org.slug}</span>
-            {org.my_role ? (
-              <RoleBadge role={org.my_role} />
-            ) : (
-              <span className="org-muted" style={{ fontSize: 12 }}>
-                {t("list.instanceAdmin")}
+            <span className="adm-dotsep" />
+            <span>
+              {t("detail.members.count", { count: org.member_count })}
+            </span>
+            <span className="adm-dotsep" />
+            <Tooltip content={t("detail.projects.hint")}>
+              <span tabIndex={0} data-testid="org-projects">
+                {org.project_count > 0
+                  ? t("detail.projects.count", { count: org.project_count })
+                  : t("detail.projects.none")}
               </span>
+            </Tooltip>
+            {org.my_role && (
+              <>
+                <span className="adm-dotsep" />
+                <RoleBadge role={org.my_role} />
+              </>
             )}
-          </>
+          </span>
         }
         tabs={
           <PageTabs
@@ -168,19 +181,6 @@ export const OrgDetailView = ({
         aria-labelledby={`org-tab-${tab}`}
         data-testid={`org-panel-${tab}`}
       >
-        {tab === "projects" && (
-          <EmptyState
-            framed
-            testId="org-projects"
-            icon={<FolderKanban size={18} />}
-            title={
-              org.project_count > 0
-                ? t("detail.projects.title", { count: org.project_count })
-                : t("detail.projects.none")
-            }
-            description={t("detail.projects.body")}
-          />
-        )}
         {tab === "settings" && (
           <div className="org-stack org-settings" data-testid="org-settings">
             <Section
@@ -199,15 +199,11 @@ export const OrgDetailView = ({
               >
                 <CopyField value={org.slug} label={t("detail.settings.slug")} />
               </SettingRow>
-              <SettingRow label={t("detail.settings.role")}>
-                {org.my_role ? (
+              {org.my_role && (
+                <SettingRow label={t("detail.settings.role")}>
                   <RoleBadge role={org.my_role} />
-                ) : (
-                  <span className="org-muted" style={{ fontSize: 13 }}>
-                    {t("list.instanceAdmin")}
-                  </span>
-                )}
-              </SettingRow>
+                </SettingRow>
+              )}
             </Section>
             {canDelete && (
               <Section
@@ -225,19 +221,39 @@ export const OrgDetailView = ({
                       : t("detail.delete.hint")
                   }
                 >
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    type="button"
-                    data-testid="org-delete"
-                    onClick={() => {
-                      onDeleteReset?.();
-                      setConfirming(true);
-                    }}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                    {t("detail.delete.button")}
-                  </Button>
+                  {org.project_count > 0 ? (
+                    // Сервер всё равно откажет: кнопка выключена, подсказка
+                    // объясняет почему.
+                    <Tooltip content={t("detail.delete.blocked")}>
+                      <span tabIndex={0} style={{ display: "inline-flex" }}>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          type="button"
+                          disabled
+                          data-testid="org-delete"
+                          style={{ pointerEvents: "none" }}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                          {t("detail.delete.button")}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      type="button"
+                      data-testid="org-delete"
+                      onClick={() => {
+                        onDeleteReset?.();
+                        setConfirming(true);
+                      }}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                      {t("detail.delete.button")}
+                    </Button>
+                  )}
                 </SettingRow>
               </Section>
             )}

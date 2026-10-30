@@ -18,6 +18,7 @@ import {
   Section,
   Spinner,
   StatusDot,
+  Tooltip,
   type StatusDotStatus,
 } from "@shared/ui";
 import type { AdminService, ServiceStatus } from "@entities/session";
@@ -62,9 +63,28 @@ const KNOWN_REASONS = [
 const isBad = (s: AdminService): boolean =>
   s.status === "down" || s.status === "degraded";
 
+/**
+ * Что показать на карточке: сервер считает раннеры рабочими, пока на связи
+ * хоть один, но меньше половины в сети уже повод посмотреть.
+ */
+const shownStatus = (
+  s: AdminService,
+): { dot: StatusDotStatus; key: string } => {
+  const few =
+    s.kind === "runners" &&
+    s.status === "ok" &&
+    s.total !== null &&
+    s.online !== null &&
+    s.online * 2 < s.total;
+  return few
+    ? { dot: "warning", key: "services.status.partial" }
+    : { dot: DOT[s.status], key: `services.status.${s.status}` };
+};
+
 const ServiceCard = ({ service }: { service: AdminService }) => {
   const { t } = useTranslation("adminOps");
   const Icon = ICON[service.kind];
+  const shown = shownStatus(service);
   const counted = service.total !== null && service.online !== null;
   let foot: ReactNode = null;
   if (service.status === "unconfigured") {
@@ -78,22 +98,28 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
           className="ops-service-line"
           data-testid={`service-detail-${service.id}`}
         >
-          <span
-            style={{
-              color:
-                service.status === "down" ? "var(--c-err)" : "var(--c-warn)",
-              fontWeight: 500,
-            }}
+          {/* Код причины нужен для журнала сервера, а не для чтения: он в подсказке. */}
+          <Tooltip
+            content={
+              service.detail
+                ? `${t("services.reasonCode")}: ${service.detail}`
+                : t("services.reason.unknown")
+            }
           >
-            {service.detail && KNOWN_REASONS.includes(service.detail)
-              ? t(`services.reason.${service.detail}`)
-              : t("services.reason.unknown")}
-          </span>
-          {service.detail && (
-            <span className="ops-code" title={t("services.reasonCode")}>
-              {service.detail}
+            <span
+              tabIndex={0}
+              data-code={service.detail ?? undefined}
+              style={{
+                color:
+                  service.status === "down" ? "var(--c-err)" : "var(--c-warn)",
+                fontWeight: 500,
+              }}
+            >
+              {service.detail && KNOWN_REASONS.includes(service.detail)
+                ? t(`services.reason.${service.detail}`)
+                : t("services.reason.unknown")}
             </span>
-          )}
+          </Tooltip>
         </span>
         <p className="ops-service-impact">
           {t(`services.impact.${service.kind}`)}
@@ -115,10 +141,7 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
           <h3 className="ops-service-name">
             {t(`services.kind.${service.kind}`)}
           </h3>
-          <StatusDot
-            status={DOT[service.status]}
-            label={t(`services.status.${service.status}`)}
-          />
+          <StatusDot status={shown.dot} label={t(shown.key)} />
         </div>
       </div>
       <p className="ops-service-role">{t(`services.role.${service.kind}`)}</p>
@@ -143,9 +166,11 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
                 tone={
                   service.online === 0
                     ? "danger"
-                    : (service.online ?? 0) < (service.total ?? 0)
+                    : shown.dot === "warning"
                       ? "warning"
-                      : "success"
+                      : (service.online ?? 0) < (service.total ?? 0)
+                        ? "neutral"
+                        : "success"
                 }
                 label={t("services.onlineLabel")}
               />

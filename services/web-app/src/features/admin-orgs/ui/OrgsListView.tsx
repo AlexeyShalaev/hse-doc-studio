@@ -77,17 +77,23 @@ export const OrgsListView = ({
           </span>
         ),
       },
-      {
-        id: "role",
-        header: t("list.columns.role"),
-        enableSorting: false,
-        cell: ({ row }) =>
-          row.original.my_role ? (
-            <RoleBadge role={row.original.my_role} />
-          ) : (
-            <span className="org-muted">{t("list.instanceAdmin")}</span>
-          ),
-      },
+      // Своя роль важна админу организации; админу установки она ничего не
+      // говорит, ему колонка не нужна.
+      ...(canCreate
+        ? []
+        : [
+            {
+              id: "role",
+              header: t("list.columns.role"),
+              enableSorting: false,
+              cell: ({ row }) =>
+                row.original.my_role ? (
+                  <RoleBadge role={row.original.my_role} />
+                ) : (
+                  <span className="org-muted">{t("list.instanceAdmin")}</span>
+                ),
+            } satisfies ColumnDef<AdminOrg>,
+          ]),
       {
         id: "members",
         header: () => (
@@ -123,7 +129,15 @@ export const OrgsListView = ({
         ),
       },
     ],
-    [t],
+    [t, canCreate],
+  );
+
+  const totals = useMemo(
+    () => ({
+      members: orgs.reduce((sum, o) => sum + o.member_count, 0),
+      projects: orgs.reduce((sum, o) => sum + o.project_count, 0),
+    }),
+    [orgs],
   );
 
   const createButton = canCreate ? (
@@ -185,6 +199,13 @@ export const OrgsListView = ({
               onOpen(o.slug);
             }}
           />
+          <p className="org-summary" data-testid="orgs-summary">
+            {t("list.summary.orgs", { count: orgs.length })}
+            <span className="adm-dotsep" />
+            {t("list.summary.members", { count: totals.members })}
+            <span className="adm-dotsep" />
+            {t("list.summary.projects", { count: totals.projects })}
+          </p>
         </div>
       )}
     </div>

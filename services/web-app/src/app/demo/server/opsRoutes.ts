@@ -107,10 +107,9 @@ export const createOpsRoutes = (
   const summary = () => {
     const jobs = state().jobs;
     const queued = jobs.filter((j) => j.status === "queued");
-    const waits = jobs
-      .filter((j) => j.status !== "queued")
-      .map((j) => j.wait_s)
-      .sort((a, b) => a - b);
+    // Ожидание считается и по тем, кто ещё в очереди: иначе 95-й процентиль
+    // оказывается меньше ожиданий, видных в таблице.
+    const waits = jobs.map((j) => j.wait_s).sort((a, b) => a - b);
     const at = (p: number): number | null =>
       waits.length === 0
         ? null

@@ -57,21 +57,25 @@ export const AdminUsers = ({
         title={t("title")}
         description={t("lead")}
         actions={
-          <Button
-            size="sm"
-            type="button"
-            data-testid="users-invite"
-            onClick={() => {
-              setTab("invitations");
-              // Вкладка отрисуется в этом же кадре: фокус в поле почты после неё.
-              requestAnimationFrame(() => {
-                emailRef.current?.focus();
-              });
-            }}
-          >
-            <UserPlus size={14} aria-hidden="true" />
-            {t("invite")}
-          </Button>
+          // На вкладке приглашений форма уже на экране: вторая яркая кнопка
+          // с тем же действием не нужна.
+          tab === "invitations" ? null : (
+            <Button
+              size="sm"
+              type="button"
+              data-testid="users-invite"
+              onClick={() => {
+                setTab("invitations");
+                // Вкладка отрисуется в этом же кадре: фокус в поле почты после неё.
+                requestAnimationFrame(() => {
+                  emailRef.current?.focus();
+                });
+              }}
+            >
+              <UserPlus size={14} aria-hidden="true" />
+              {t("invite")}
+            </Button>
+          )
         }
         tabs={
           <PageTabs

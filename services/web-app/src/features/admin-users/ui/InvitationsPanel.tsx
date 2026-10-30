@@ -282,6 +282,7 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
               <div data-testid="link-delivery">
                 <SecretOnce
                   label={t("invitations.linkLabel")}
+                  warning={t("linkOnce")}
                   value={shown.url}
                   hint={
                     shown.email

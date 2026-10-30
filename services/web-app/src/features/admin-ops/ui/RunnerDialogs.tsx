@@ -97,25 +97,37 @@ export const SecretWithCommand = ({
   onClose: () => void;
 }) => {
   const { t } = useTranslation("adminOps");
+  // Команда тоже содержит секрет и нужна один раз: она внутри той же панели,
+  // а «Готово» стоит последним, под ней.
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: 12 }}
-      data-testid="secret-once"
-    >
+    <div data-testid="secret-once">
       <SecretOnce
         label={label}
         value={secret}
         hint={t("secret.hint")}
         onClose={onClose}
+        extra={
+          <div
+            className="flex flex-col"
+            style={{
+              gap: 6,
+              paddingTop: 12,
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <span className="form-label">{t("secret.commandTitle")}</span>
+            <CopyField
+              value={command}
+              label={t("secret.commandLabel")}
+              multiline
+              wrap="spaces"
+            />
+            <p className="form-hint" style={{ margin: 0 }}>
+              {t("secret.commandHint")}
+            </p>
+          </div>
+        }
       />
-      <div className="flex flex-col" style={{ gap: 6 }}>
-        <strong style={{ fontSize: 12.5 }}>{t("secret.commandTitle")}</strong>
-        <CopyField value={command} label={t("secret.commandLabel")} multiline />
-        <p style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}>
-          {t("secret.commandHint")}
-        </p>
-      </div>
     </div>
   );
 };

@@ -108,27 +108,6 @@ const DiskUsage = ({
           <span data-part="free" style={{ flex: 1 }} />
         </Tooltip>
       </div>
-      <ul className="ops-legend">
-        <li>
-          <span
-            className="ops-swatch"
-            style={{
-              background:
-                tone === "danger"
-                  ? "var(--c-err)"
-                  : tone === "warning"
-                    ? "var(--c-warn)"
-                    : "var(--accent)",
-            }}
-            aria-hidden="true"
-          />
-          {t("storage.disk.used")} <strong>{formatFileSize(used)}</strong>
-        </li>
-        <li>
-          <span className="ops-swatch" data-part="free" aria-hidden="true" />
-          {t("storage.disk.free")} <strong>{formatFileSize(free)}</strong>
-        </li>
-      </ul>
     </div>
   );
 };
@@ -307,25 +286,24 @@ export const StorageView = ({
             <DiskUsage storage={storage} tone={diskTone} />
           </Section>
 
+          {/* Таблицы админки одного вида: заголовок над ней, таблица в своей рамке. */}
           <Section
+            variant="plain"
             title={t("storage.owners.title")}
             description={t("storage.owners.lead")}
-            flush
             testId="storage-owners"
           >
             {rows.length === 0 ? (
-              <div style={{ padding: "0 20px 16px" }}>
-                <EmptyState
-                  compact
-                  testId="storage-empty"
-                  icon={<FolderOpen size={15} />}
-                  title={t("storage.empty.title")}
-                  description={t("storage.empty.body")}
-                />
-              </div>
+              <EmptyState
+                framed
+                testId="storage-empty"
+                icon={<FolderOpen size={18} />}
+                title={t("storage.empty.title")}
+                description={t("storage.empty.body")}
+              />
             ) : (
               <DataTable
-                className="ops-table ops-flush-table"
+                className="ops-table ops-static"
                 caption={t("storage.owners.title")}
                 columns={columns}
                 data={rows}

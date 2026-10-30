@@ -55,7 +55,7 @@ const RECENT_AUDIT: (Omit<AdminAuditEvent, "id" | "at"> & {
     action: "runner.pause",
     actor_id: ADMIN,
     target: "rn_01hxb4",
-    details: { name: "runner-305" },
+    details: { name: "runner-4" },
   },
   {
     minutesAgo: 95,
@@ -191,8 +191,14 @@ const olderAudit = (i: number): Omit<AdminAuditEvent, "id" | "at"> =>
     details: {},
   };
 
-/** fresh: свежая установка, журнал пуст. */
-export type ServerDemoPeopleSeed = "default" | "fresh";
+/**
+ * fresh: свежая установка, журнал пуст. no_runners: раннеров ещё не
+ * подключали, в журнале нет записей о раннерах и их токенах.
+ */
+export type ServerDemoPeopleSeed = "default" | "fresh" | "no_runners";
+
+const aboutRunners = (e: { action: string }): boolean =>
+  e.action.startsWith("runner.");
 
 export const createDemoAdminPeople = (
   seed: ServerDemoPeopleSeed = "default",
@@ -365,7 +371,9 @@ export const createDemoAdminPeople = (
     seed === "fresh"
       ? []
       : [
-          ...RECENT_AUDIT.map(({ minutesAgo, ...e }, i) => ({
+          ...RECENT_AUDIT.filter(
+            (e) => seed !== "no_runners" || !aboutRunners(e),
+          ).map(({ minutesAgo, ...e }, i) => ({
             ...e,
             id: 60 + RECENT_AUDIT.length - i,
             at: new Date(Date.now() - minutesAgo * 60_000).toISOString(),

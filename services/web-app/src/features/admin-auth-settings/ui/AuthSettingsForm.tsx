@@ -195,7 +195,8 @@ export const AuthSettingsForm = ({
         dirtyCount={dirtyCount}
         busy={busy}
         saveDisabled={invalid}
-        error={failure ?? (invalid ? t("fixFields") : null)}
+        error={failure}
+        invalidHint={invalid ? t("fixFields") : null}
         onSave={() => {
           void save();
         }}

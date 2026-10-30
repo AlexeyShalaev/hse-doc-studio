@@ -58,8 +58,6 @@ export const SmtpSection = ({
   const lock = (key: keyof SmtpDraft) =>
     isLocked(settings.fields, `smtp.${key}`);
   const allLocked = SMTP_KEYS.every(lock);
-  // Когда закрыто всё, замок один на раздел, а не в каждой строке.
-  const rowLock = (key: keyof SmtpDraft) => !allLocked && lock(key);
   const value = draft.value;
   const issue = (key: keyof SmtpIssues): { error?: string } => {
     const code = issues[key];
@@ -70,7 +68,7 @@ export const SmtpSection = ({
     <Input
       id={`${uid}-${key}`}
       value={value[key]}
-      readOnly={lock(key)}
+      locked={lock(key)}
       autoComplete="off"
       spellCheck={false}
       onChange={(e) => {
@@ -90,7 +88,7 @@ export const SmtpSection = ({
       label={label}
       hint={hint}
       htmlFor={`${uid}-${key}`}
-      locked={rowLock(key)}
+      locked={lock(key)}
       align="stretch"
       testId={`smtp-${key}`}
     >

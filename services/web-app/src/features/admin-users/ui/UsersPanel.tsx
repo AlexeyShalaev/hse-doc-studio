@@ -372,6 +372,7 @@ export const UsersPanel = () => {
           <div data-testid="link-delivery">
             <SecretOnce
               label={t("resetLink.label")}
+              warning={t("linkOnce")}
               value={link.url}
               hint={
                 link.notified ? t("resetLink.notified") : t("resetLink.manual")

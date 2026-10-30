@@ -40,16 +40,17 @@
   },
   "build": {
     "title": "Builds",
-    "sub": "Limits for every build on the installation's runners. Per-person and per-organization quotas live in Quotas.",
-    "timeout": "Build time limit",
-    "timeoutHint": "From {{min}} to {{max}} minutes. A build that runs over is stopped and marked as timed out.",
+    "sub": "Building documents into PDF and keeping the results. General limits for any job are set in Quotas.",
+    "timeout": "PDF build time limit",
+    "timeoutHint": "From {{min}} to {{max}} minutes. Applies only to building a document into PDF. Every job also has a general limit in Quotas: the smaller of the two applies.",
     "minutesUnit": "min",
     "retention": "Keep build results for",
     "retentionHint": "From {{min}} to {{max}} days. The latest result of each document is kept as long as it is needed.",
     "daysUnit": "days",
     "issue": {
       "range": "A whole number from {{min}} to {{max}}."
-    }
+    },
+    "toQuotas": "Open Quotas"
   },
   "signing": {
     "page": {
@@ -88,7 +89,7 @@
   "ai": {
     "page": {
       "title": "AI providers",
-      "lead": "Providers everyone can use. People keep their personal providers too."
+      "lead": "Shared providers for everyone on the installation."
     },
     "title": "Shared providers",
     "sub": "Connected once for the whole installation. Users see the provider and its models, but not the key.",

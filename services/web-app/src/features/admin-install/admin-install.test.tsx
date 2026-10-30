@@ -207,7 +207,7 @@ describe("настройки установки в админке", () => {
       const user = userEvent.setup();
       mount(<InstancePage />);
       const form = await screen.findByTestId("build-form");
-      const timeout = within(form).getByLabelText(/Предел длительности/);
+      const timeout = within(form).getByLabelText(/Сборка PDF: предел времени/);
       await user.clear(timeout);
       await user.type(timeout, "99");
       expect(within(form).getByText(/Целое число от 1 до 60/)).toBeVisible();
@@ -229,7 +229,7 @@ describe("настройки установки в админке", () => {
       mount(<InstancePage />);
       const form = await screen.findByTestId("build-form");
       expect(
-        within(form).getByLabelText(/Предел длительности/),
+        within(form).getByLabelText(/Сборка PDF: предел времени/),
       ).toHaveAttribute("readonly");
       expect(screen.getByTestId("build-timeout-locked")).toBeVisible();
     });
