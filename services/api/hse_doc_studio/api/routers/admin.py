@@ -18,6 +18,7 @@ from hse_doc_studio.api.routers import (
     admin_users,
 )
 from hse_doc_studio.core.access.context import set_current_actor
+from hse_doc_studio.core.access.entities import ActorSource
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mode import StudioMode
 
@@ -29,7 +30,8 @@ async def admin_guard(request: Request) -> None:
     if settings.mode is StudioMode.local or not admin_request_allowed(request):
         raise IdentityError(IdentityErrorCode.not_found)
     actor = await resolve_actor(request)
-    if not actor.is_instance_admin:
+    # Токен доступа (PAT) админа админку не открывает: утёкший токен дал бы сброс паролей и секреты OIDC без CSRF.
+    if not actor.is_instance_admin or actor.source is not ActorSource.session:
         raise IdentityError(IdentityErrorCode.not_found)
     set_current_actor(actor)
 
