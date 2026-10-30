@@ -207,6 +207,9 @@ tags:
 | `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES` | int | `67108864` | оба | Предел ответа модели через личный раннер; больший обрывается. |
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER` | int | `8` | оба | Одновременных ретрансляций ИИ на человека (в очереди и идущих). |
 | `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S` | float | `900.0` | оба | Потолок длительности одной ретрансляции ИИ. |
+| `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` | int | `16777216` | оба | Сумма тел запросов к моделям одного человека в памяти api. |
+| `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` | int | `32` | оба | Одновременных ретрансляций ИИ на весь процесс api (все люди). |
+| `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` | int | `134217728` | оба | Сумма тел запросов к моделям в памяти api (все люди). |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |

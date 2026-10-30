@@ -60,6 +60,11 @@ class RelayLimits:
     max_response_bytes: int = 64 * 1024 * 1024
     max_pending_per_user: int = 8
     max_duration_s: float = 900.0
+    # Тела и буферы каналов живут в памяти api, а личные раннеры есть у каждого: предел на человека в штуках
+    # не держит память процесса. Поэтому ещё байты тел на человека и общий бюджет процесса.
+    max_pending_bytes_per_user: int = 16 * 1024 * 1024
+    max_pending_total: int = 32
+    max_pending_bytes_total: int = 128 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -202,8 +207,25 @@ class AiRelayClient:
             raise AiRelayError(RelayErrorCode.path_forbidden, runner_name=runner_name)
         if len(request.body) > self._limits.max_request_bytes:
             raise AiRelayError(RelayErrorCode.relay_too_large, runner_name=runner_name)
-        if actor.id is not None and self._store.pending_for(actor.id) >= self._limits.max_pending_per_user:
+        if actor.id is not None and self._user_busy(actor.id, len(request.body)):
             raise AiRelayError(RelayErrorCode.relay_busy, runner_name=runner_name)
+        if self._process_busy(len(request.body)):
+            raise AiRelayError(RelayErrorCode.relay_busy, runner_name=runner_name)
+
+    def _user_busy(self, user_id: str, size: int) -> bool:
+        limits = self._limits
+        return (
+            self._store.pending_for(user_id) >= limits.max_pending_per_user
+            or self._store.bytes_for(user_id) + size > limits.max_pending_bytes_per_user
+        )
+
+    def _process_busy(self, size: int) -> bool:
+        """Бюджет всего процесса: много аккаунтов вместе не выедают память api телами и буферами каналов."""
+        limits = self._limits
+        return (
+            self._store.pending_total() >= limits.max_pending_total
+            or self._store.bytes_total() + size > limits.max_pending_bytes_total
+        )
 
     async def _await_head(
         self, channel: IRelayChannel, request: RelayRequest, runner_name: str

@@ -6,7 +6,7 @@ import asyncio
 import base64
 import dataclasses
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -330,3 +330,42 @@ def test__relay_error_of__finds_the_error_through_the_cause_chain() -> None:
 
     assert relay_error_of(outer) is inner
     assert relay_error_of(ValueError("x")) is None
+
+
+def _with_limits(env: _Env, limits: RelayLimits) -> AiRelayClient:
+    return AiRelayClient(
+        env.queue,
+        env.service,
+        env.runners,
+        env.hub,
+        env.store,
+        JobWakeup(),
+        env.settings,
+        limits=limits,
+        clock=lambda: NOW,
+    )
+
+
+@pytest.mark.parametrize(
+    "limits",
+    [
+        # Бюджет процесса в штуках: чужие ретрансляции заняли все каналы.
+        RelayLimits(max_pending_total=2),
+        # Бюджет процесса в байтах тел.
+        RelayLimits(max_pending_bytes_total=2 * 100 + 10),
+        # Байты тел одного человека: считаются байты, а не только число запросов.
+        RelayLimits(max_pending_bytes_per_user=10),
+    ],
+)
+async def test__open__over_the_memory_budget__relay_busy_before_anything_is_queued(
+    env: _Env, limits: RelayLimits
+) -> None:
+    for _ in range(2):
+        env.store.put(uuid4(), b"x" * 100, user_id="someone-else", runner_id="other")
+
+    with pytest.raises(AiRelayError) as caught:
+        await _with_limits(env, limits).open(_ANNA, _request())
+
+    assert caught.value.code is RelayErrorCode.relay_busy
+    assert not await env.queue.list()
+    assert env.store.pending_total() == 2

@@ -62,7 +62,7 @@ tags:
 - Раннер ходит только на объявленные адреса и только по путям `models`, `chat/completions`, `completions`, `embeddings`; заголовки сервера не пересылаются, редиректы не следуются.
 - Ретрансляцией пользуется только хозяин раннера. Без объявленных адресов раннер ретрансляцию не берёт.
 
-Пределы на стороне api: `HSE_STUDIO__JOBS__RELAY_PICKUP_S` (сколько ждать, пока раннер возьмёт запрос), `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER`, `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S`. Раннер, который не ответил, в чате видно сообщением «Раннер «…» не ответил» с выбором другой модели.
+Пределы на стороне api: `HSE_STUDIO__JOBS__RELAY_PICKUP_S` (сколько ждать, пока раннер возьмёт запрос), `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER`, `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S` и бюджет памяти api под тела запросов: `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` (на человека), `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` и `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` (на весь процесс). Сверх бюджета чат получает `relay_busy`. Раннер, который не ответил, в чате видно сообщением «Раннер «…» не ответил» с выбором другой модели.
 
 ## Масштабирование
 

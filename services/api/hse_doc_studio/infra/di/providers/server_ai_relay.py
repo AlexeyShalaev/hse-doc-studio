@@ -32,6 +32,9 @@ def relay_limits() -> RelayLimits:
         max_response_bytes=jobs.relay_max_response_bytes,
         max_pending_per_user=jobs.relay_max_pending_per_user,
         max_duration_s=jobs.relay_max_duration_s,
+        max_pending_bytes_per_user=jobs.relay_max_pending_bytes_per_user,
+        max_pending_total=jobs.relay_max_pending_total,
+        max_pending_bytes_total=jobs.relay_max_pending_bytes_total,
     )
 
 

@@ -88,3 +88,12 @@ class JobsConfig(BaseModel):
     relay_max_duration_s: float = Field(
         default=900.0, ge=30, le=3600, description="Потолок длительности одной ретрансляции ИИ."
     )
+    relay_max_pending_bytes_per_user: int = Field(
+        default=16 * 1024 * 1024, gt=0, description="Сумма тел запросов к моделям одного человека в памяти api."
+    )
+    relay_max_pending_total: int = Field(
+        default=32, ge=1, le=1024, description="Одновременных ретрансляций ИИ на весь процесс api (все люди)."
+    )
+    relay_max_pending_bytes_total: int = Field(
+        default=128 * 1024 * 1024, gt=0, description="Сумма тел запросов к моделям в памяти api (все люди)."
+    )

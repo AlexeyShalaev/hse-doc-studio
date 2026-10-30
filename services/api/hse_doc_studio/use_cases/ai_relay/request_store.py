@@ -44,6 +44,16 @@ class RelayRequestStore:
     def pending_for(self, user_id: str) -> int:
         return sum(1 for stored in self._requests.values() if stored.user_id == user_id)
 
+    def bytes_for(self, user_id: str) -> int:
+        return sum(len(stored.body) for stored in self._requests.values() if stored.user_id == user_id)
+
+    def pending_total(self) -> int:
+        """Сколько ретрансляций живёт в процессе: у каждой свой канал с буфером порций."""
+        return len(self._requests)
+
+    def bytes_total(self) -> int:
+        return sum(len(stored.body) for stored in self._requests.values())
+
 
 class RelayTerminalCleanup:
     """Слушатель терминального состояния: тело и канал уходят из памяти, даже если потребитель не закрыл поток.
