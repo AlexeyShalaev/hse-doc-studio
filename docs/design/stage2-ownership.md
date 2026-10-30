@@ -82,6 +82,7 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__EGRESS__ALLOWLIST` | внутренние узлы (имя, `*.суффикс`, IP, CIDR), к которым разрешено ходить по адресам пользователей; метаданные облака и link-local закрыты всегда |
 | `HSE_STUDIO__RUNNER__BOOTSTRAP_TOKEN` | токен регистрации раннеров |
 | `HSE_STUDIO__QUOTAS__*` | значения квот по умолчанию (раздел 6) |
+| `HSE_STUDIO__JOBS__RELAY_PICKUP_S`, `__RELAY_MAX_REQUEST_BYTES`, `__RELAY_MAX_RESPONSE_BYTES`, `__RELAY_MAX_PENDING_PER_USER`, `__RELAY_MAX_DURATION_S` | ретрансляция ИИ через личный раннер: ожидание раннера, пределы запроса и ответа, одновременных на человека, потолок длительности |
 
 ## 6. Ключи квот
 
