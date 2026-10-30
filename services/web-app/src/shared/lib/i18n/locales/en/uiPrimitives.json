@@ -188,5 +188,9 @@
     "refine": "Showing the first {{limit}}. Refine the search to find the rest.",
     "clear": "Clear selection",
     "selectedOne": "selected"
+  },
+  "sortSelect": {
+    "label": "Order",
+    "column": "By column"
   }
 }

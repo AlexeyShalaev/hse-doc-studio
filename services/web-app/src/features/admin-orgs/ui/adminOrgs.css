@@ -364,3 +364,69 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── форма участника и группы: пикер, выбранные люди, состав ── */
+.org-link-button {
+  all: unset;
+  align-self: flex-start;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.org-link-button:hover {
+  text-decoration: underline;
+}
+.org-link-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.org-legend {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.org-chosen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.org-chosen > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--bg-2);
+}
+.org-chosen-remove {
+  all: unset;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.org-chosen-remove:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.org-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+}
+/* Числовые столбцы сортируются щелчком по заголовку: кнопка заголовка встаёт
+   по правому краю, как и числа под ней (у th выравнивание задано в строке). */
+.org-table th:has(.org-num) {
+  text-align: right !important;
+}

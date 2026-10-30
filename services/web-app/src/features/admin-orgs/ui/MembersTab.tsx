@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { failureCode } from "@shared/api";
-import type { OrgRoleName } from "@entities/session";
+import { useListQueryState, useServerList } from "@shared/lib";
+import { adminPickers } from "@entities/session";
+import { adminOrgsApi } from "../api/adminOrgsApi";
 import {
+  adminOrgsKeys,
   useAddMember,
-  useMembers,
+  useMemberFacets,
+  useOrg,
   useRemoveMember,
   useSetRole,
 } from "../api/adminOrgsQueries";
 import type { Failure } from "../lib/failure";
+import { MEMBERS_LIST } from "../lib/listState";
 import type { Viewer } from "../lib/permissions";
 import { MembersView } from "./MembersView";
 
@@ -22,19 +27,34 @@ export const MembersTab = ({
   viewer: Viewer;
   selfId: string | null;
 }) => {
-  const members = useMembers(slug);
+  const state = useListQueryState(MEMBERS_LIST);
+  const members = useServerList({
+    state,
+    queryKey: adminOrgsKeys.members(slug),
+    fetchPage: (params, signal) => adminOrgsApi.members(slug, params, signal),
+  });
+  const facets = useMemberFacets(slug, state.q).data;
+  const ownerCount = useOrg(slug).data?.owner_count ?? null;
   const add = useAddMember(slug);
   const setRole = useSetRole(slug);
   const remove = useRemoveMember(slug);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [addFailure, setAddFailure] = useState<Failure | null>(null);
+  // Людей установки ищет только её админ: админу организации остаётся почта.
+  const peopleSource = useMemo(
+    () =>
+      viewer.instanceAdmin
+        ? adminPickers.users({ status: "active", notInOrg: slug })
+        : null,
+    [viewer.instanceAdmin, slug],
+  );
 
   const status =
-    members.data !== undefined
-      ? "ready"
-      : members.isError
-        ? "error"
-        : "loading";
+    members.isError && members.items.length === 0
+      ? "error"
+      : members.isLoading
+        ? "loading"
+        : "ready";
   const busyUserId = setRole.isPending
     ? setRole.variables.userId
     : remove.isPending
@@ -44,7 +64,13 @@ export const MembersTab = ({
   return (
     <MembersView
       status={status}
-      members={members.data ?? []}
+      members={members.items}
+      total={members.isLoading ? null : members.total}
+      pagination={members.pagination}
+      fetching={members.isFetching}
+      roleCounts={facets?.role ?? null}
+      ownerCount={ownerCount}
+      peopleSource={peopleSource}
       viewer={viewer}
       selfId={selfId}
       failure={failure}
@@ -59,8 +85,8 @@ export const MembersTab = ({
         setFailure(null);
         setAddFailure(null);
       }}
-      onAdd={(email: string, role: OrgRoleName) =>
-        add.mutateAsync({ email, role }).then(
+      onAdd={(input) =>
+        add.mutateAsync(input).then(
           () => true,
           (error: unknown) => {
             setAddFailure(asFailure(error));

@@ -1,33 +1,46 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { SearchX, Users } from "lucide-react";
+import { Building2, Users } from "lucide-react";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import {
+  toast,
+  useListQueryState,
+  useServerList,
+  type ListStateOptions,
+} from "@shared/lib";
 import {
   ActionMenu,
   Badge,
   Button,
   DataTable,
   FilterBar,
+  FilterMenu,
   Modal,
   PersonCell,
+  PickerFilter,
   SecretOnce,
+  SortSelect,
   Spinner,
+  usePickedItem,
+  type ActiveFilter,
 } from "@shared/ui";
 import {
+  adminPickers,
   useBootstrap,
   type AccountStatus,
   type AdminUser,
 } from "@entities/session";
-import { PAGE_SIZE } from "../api/adminUsersApi";
+import { adminUsersApi } from "../api/adminUsersApi";
 import {
   ACCOUNT_STATUSES,
+  adminUsersKeys,
   useIssueResetLink,
   useRevokeSessions,
-  useStatusCounts,
+  useUser,
   useUserAction,
-  useUsers,
+  useUserFacets,
 } from "../api/adminUsersQueries";
 import type { Failure } from "../lib/failure";
 import { formatFull } from "../lib/format";
@@ -39,12 +52,35 @@ type Confirm = { user: AdminUser; kind: UserActionKind };
 
 // Колонки не прыгают, когда поиск ничего не нашёл.
 const COLUMN_WIDTHS = {
-  status: 200,
-  role: 170,
-  projects: 96,
-  lastLogin: 170,
+  status: 190,
+  role: 160,
+  projects: 92,
+  last_login_at: 160,
   actions: 52,
 };
+
+const SORT_FIELDS = [
+  "name",
+  "email",
+  "created_at",
+  "last_login_at",
+  "status",
+] as const;
+type UserSort = (typeof SORT_FIELDS)[number];
+type UserFilter = "status" | "is_admin" | "org";
+
+// Сортируют сервер и заголовки столбцов; дата регистрации и почта столбцов
+// не имеют, их порядок выбирается списком «Порядок».
+const LIST: ListStateOptions<UserFilter, UserSort> = {
+  filters: {
+    status: { multi: true, values: ACCOUNT_STATUSES },
+    is_admin: { values: ["true", "false"] },
+    org: {},
+  },
+  sort: { fields: SORT_FIELDS, default: "-created_at" },
+};
+const SORTABLE: readonly UserSort[] = ["name", "status", "last_login_at"];
+const ORGS = adminPickers.orgs();
 
 // Testid пунктов меню строки: их ждут тесты.
 const MENU_TESTID: Record<UserActionKind, string> = {
@@ -67,12 +103,14 @@ export const UsersPanel = ({
 }) => {
   const { t, i18n } = useTranslation("adminUsers");
   const selfId = useBootstrap().data?.user?.id ?? "";
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<AccountStatus | "">("");
-  const [page, setPage] = useState(0);
-  const query = search.trim();
-  const users = useUsers({ q: query, status, page });
-  const counts = useStatusCounts(query);
+  const list = useListQueryState(LIST);
+  const users = useServerList({
+    state: list,
+    queryKey: adminUsersKeys.usersList(),
+    fetchPage: adminUsersApi.usersPage,
+  });
+  const facets = useUserFacets(list.q).data;
+  const org = usePickedItem(ORGS, list.filter("org") || null, null);
   const act = useUserAction();
   const issue = useIssueResetLink();
   const revoke = useRevokeSessions();
@@ -84,23 +122,35 @@ export const UsersPanel = ({
     notified: boolean;
     expires: string;
   } | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Открытая карточка живёт в адресе (?user=…): ссылка открывает её снова.
+  const [params, setParams] = useSearchParams();
+  const openId = params.get("user");
+  const setOpenId = useCallback(
+    (id: string | null) => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (id) next.set("user", id);
+          else next.delete("user");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const busy = act.isPending || issue.isPending || revoke.isPending;
-  const total = users.data?.total ?? 0;
-  const rows = useMemo(() => users.data?.items ?? [], [users.data]);
-  // Карточка берёт свежую запись из списка: после действия видно новое состояние.
-  const opened = rows.find((u) => u.id === openId) ?? null;
+  const rows = users.items;
+  const row = rows.find((u) => u.id === openId) ?? null;
+  // Карточка читает человека с сервера: после действия видно новое состояние,
+  // даже если человек ушёл с текущей страницы.
+  const person = useUser(openId, row);
+  const opened = openId ? (person.data ?? row) : null;
 
   const pick = (user: AdminUser, kind: UserActionKind) => {
     setFailure(null);
     setConfirm({ user, kind });
-  };
-
-  const resetFilters = () => {
-    setSearch("");
-    setStatus("");
-    setPage(0);
   };
 
   const run = () => {
@@ -150,7 +200,7 @@ export const UsersPanel = ({
   const columns = useMemo<ColumnDef<AdminUser>[]>(
     () => [
       {
-        id: "person",
+        id: "name",
         header: t("users.columns.person"),
         cell: ({ row }) => (
           <PersonCell
@@ -193,7 +243,8 @@ export const UsersPanel = ({
         ),
       },
       {
-        id: "lastLogin",
+        id: "last_login_at",
+        sortDescFirst: true,
         header: t("users.columns.lastLogin"),
         cell: ({ row }) => (
           <span className="ppl-muted">
@@ -242,36 +293,143 @@ export const UsersPanel = ({
     [t, selfId, busy],
   );
 
-  const filtering = query !== "" || status !== "";
   const danger = confirm?.kind === "remove" || confirm?.kind === "disable";
+  const statuses = list.filters.status as readonly AccountStatus[];
+  const role = list.filter("is_admin");
+  const statusTotal = facets
+    ? ACCOUNT_STATUSES.reduce((sum, s) => sum + (facets.status[s] ?? 0), 0)
+    : null;
+
+  const active: ActiveFilter[] = [
+    ...(list.q
+      ? [
+          {
+            id: "q",
+            label: t("filters.search"),
+            value: list.q,
+            onRemove: () => {
+              list.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(statuses.length > 0
+      ? [
+          {
+            id: "status",
+            label: t("users.columns.status"),
+            value: statuses.map((s) => t(`status.${s}`)).join(", "),
+            onRemove: () => {
+              list.setFilter("status", null);
+            },
+          },
+        ]
+      : []),
+    ...(role
+      ? [
+          {
+            id: "is_admin",
+            label: t("users.columns.role"),
+            value: t(role === "true" ? "filters.admins" : "filters.members"),
+            onRemove: () => {
+              list.setFilter("is_admin", null);
+            },
+          },
+        ]
+      : []),
+    ...(list.filter("org")
+      ? [
+          {
+            id: "org",
+            label: t("filters.org"),
+            value: org?.name ?? list.filter("org"),
+            onRemove: () => {
+              list.setFilter("org", null);
+            },
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="ppl-stack" data-testid="users-panel">
       <FilterBar
-        search={search}
-        onSearchChange={(value) => {
-          setSearch(value);
-          setPage(0);
-        }}
+        search={list.q}
+        onSearchChange={list.setQ}
         searchLabel={t("users.search")}
         searchPlaceholder={t("users.search")}
-        filters={[
-          {
-            id: "status",
-            label: t("users.columns.status"),
-            value: status,
-            onChange: (value) => {
-              setStatus(value as AccountStatus | "");
-              setPage(0);
-            },
-            options: ACCOUNT_STATUSES.map((s) => ({
-              value: s,
-              label: t(`status.${s}`),
-              ...(counts[s] !== undefined ? { count: counts[s] } : {}),
-            })),
-          },
-        ]}
-        onReset={resetFilters}
+        busy={users.isFetching}
+        onReset={list.reset}
+        active={active}
+        total={users.isLoading ? null : users.total}
+        extra={
+          <>
+            <FilterMenu
+              label={t("users.columns.status")}
+              testId="users-filter-status"
+              values={statuses}
+              onChange={(values) => {
+                list.setFilter("status", values);
+              }}
+              options={ACCOUNT_STATUSES.map((s) => ({
+                value: s,
+                label: t(`status.${s}`),
+                ...(facets ? { count: facets.status[s] ?? 0 } : {}),
+              }))}
+            />
+            <FilterMenu
+              label={t("users.columns.role")}
+              testId="users-filter-role"
+              single
+              values={role ? [role] : []}
+              onChange={(values) => {
+                list.setFilter("is_admin", values[0] ?? null);
+              }}
+              options={[
+                {
+                  value: "true",
+                  label: t("filters.admins"),
+                  ...(facets ? { count: facets.admins } : {}),
+                },
+                {
+                  value: "false",
+                  label: t("filters.members"),
+                  ...(facets && statusTotal !== null
+                    ? { count: Math.max(0, statusTotal - facets.admins) }
+                    : {}),
+                },
+              ]}
+            />
+            <PickerFilter
+              label={t("filters.org")}
+              source={ORGS}
+              icon={<Building2 size={13} aria-hidden="true" />}
+              testId="users-filter-org"
+              searchPlaceholder={t("filters.orgSearch")}
+              value={list.filter("org") || null}
+              onChange={(item) => {
+                list.setFilter("org", item?.id ?? null);
+              }}
+            />
+            <SortSelect
+              sort={list.sort}
+              onChange={list.setSort}
+              testId="users-sort"
+              label={t("sort.label")}
+              options={[
+                { field: "created_at", desc: true, label: t("sort.newest") },
+                { field: "created_at", desc: false, label: t("sort.oldest") },
+                { field: "name", desc: false, label: t("sort.name") },
+                { field: "email", desc: false, label: t("sort.email") },
+                {
+                  field: "last_login_at",
+                  desc: true,
+                  label: t("sort.lastLogin"),
+                },
+              ]}
+            />
+          </>
+        }
       />
       {failure && <FailureNotice failure={failure} />}
       <DataTable
@@ -280,43 +438,26 @@ export const UsersPanel = ({
         columns={columns}
         data={rows}
         getRowId={(u) => u.id}
-        loading={users.isPending}
+        loading={users.isFetching}
         error={users.isError ? t("users.loadFailed") : null}
         onRetry={() => {
           void users.refetch();
         }}
-        emptyTitle={
-          filtering ? t("users.noMatch.title") : t("users.empty.title")
-        }
-        emptyHint={filtering ? t("users.noMatch.body") : t("users.empty.body")}
-        emptyIcon={filtering ? <SearchX size={18} /> : <Users size={18} />}
+        sorting={list.sorting}
+        onSortingChange={list.onSortingChange}
+        sortable={SORTABLE}
+        pagination={users.pagination}
+        filtered={list.isFiltered}
+        searchQuery={list.q}
+        onResetFilters={list.reset}
+        emptyTitle={t("users.empty.title")}
+        emptyHint={t("users.empty.body")}
+        emptyIcon={<Users size={18} />}
         columnWidths={COLUMN_WIDTHS}
-        emptyAction={
-          filtering ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              type="button"
-              onClick={resetFilters}
-            >
-              {t("users.noMatch.reset")}
-            </Button>
-          ) : null
-        }
         selectedRowId={openId}
         onRowClick={(u) => {
           setOpenId(u.id);
         }}
-        {...(total > PAGE_SIZE
-          ? {
-              pagination: {
-                page,
-                pageSize: PAGE_SIZE,
-                total,
-                onPageChange: setPage,
-              },
-            }
-          : {})}
       />
 
       <PersonDrawer

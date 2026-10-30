@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { Building2, Lock, Plus, UserRound, Users, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, Input, Select, Spinner } from "@shared/ui";
+import { PICKER_LIMIT } from "@shared/lib";
+import {
+  Badge,
+  Button,
+  Input,
+  Pagination,
+  SearchInput,
+  Select,
+  Spinner,
+} from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type {
   ProjectAccessCandidate,
@@ -13,7 +22,16 @@ import { failureKey, type Failure } from "../lib/failure";
 
 export type AccessViewProps = {
   status: "loading" | "error" | "ready";
+  /** Строки текущей страницы; закреплённые (владелец, организация) сервер ставит первыми. */
   entries?: ProjectAccessEntry[];
+  /** Сколько строк при текущем поиске; больше страницы, появляются поиск и листание. */
+  total?: number;
+  listQuery?: string;
+  onListQuery?: (q: string) => void;
+  listBusy?: boolean;
+  page?: number;
+  pageSize?: number;
+  onPage?: (page: number) => void;
   /** Роль смотрящего: не владелец видит список без управления. */
   myRole: ProjectRole | null;
   failure?: Failure | null;
@@ -22,6 +40,8 @@ export type AccessViewProps = {
   query: string;
   onQuery: (q: string) => void;
   candidates?: ProjectAccessCandidate[];
+  /** Сервер нашёл больше, чем показал: просим уточнить поиск. */
+  candidatesMore?: boolean;
   candidatesLoading?: boolean;
   /** Поиск кандидатов не удался: это не то же самое, что «никого нет». */
   candidatesError?: boolean;
@@ -57,12 +77,20 @@ const CARD = {
 export const AccessView = ({
   status,
   entries = [],
+  total,
+  listQuery = "",
+  onListQuery,
+  listBusy = false,
+  page = 0,
+  pageSize = 25,
+  onPage,
   myRole,
   failure = null,
   busyKey = null,
   query,
   onQuery,
   candidates = [],
+  candidatesMore = false,
   candidatesLoading = false,
   candidatesError = false,
   onRetryCandidates,
@@ -128,9 +156,36 @@ export const AccessView = ({
         <Notice tone="err" role="alert" text={t(failureKey(failure.code))} />
       )}
 
+      {status === "ready" &&
+        onListQuery &&
+        (listQuery !== "" || (total ?? 0) > pageSize) && (
+          <SearchInput
+            value={listQuery}
+            onChange={onListQuery}
+            busy={listBusy}
+            label={t("panel.listSearch")}
+            placeholder={t("panel.listSearch")}
+            testId="access-list-search"
+          />
+        )}
+
+      {status === "ready" && listQuery !== "" && entries.length === 0 && (
+        <p
+          style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+          data-testid="access-list-none"
+        >
+          {t("panel.listNone")}
+        </p>
+      )}
+
       {status === "ready" && (
         <ul
-          style={{ listStyle: "none", margin: 0, padding: 0 }}
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            opacity: listBusy ? 0.6 : 1,
+          }}
           className="flex flex-col"
           data-testid="access-list"
         >
@@ -259,6 +314,16 @@ export const AccessView = ({
         </ul>
       )}
 
+      {status === "ready" && onPage && (total ?? 0) > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total ?? 0}
+          onPageChange={onPage}
+          busy={listBusy}
+        />
+      )}
+
       {status === "ready" && canManage && (
         <div
           className="flex flex-col"
@@ -382,6 +447,14 @@ export const AccessView = ({
                 );
               })}
             </ul>
+          )}
+          {candidatesMore && !candidatesLoading && (
+            <p
+              style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}
+              data-testid="access-more"
+            >
+              {t("panel.add.more", { limit: PICKER_LIMIT })}
+            </p>
           )}
         </div>
       )}

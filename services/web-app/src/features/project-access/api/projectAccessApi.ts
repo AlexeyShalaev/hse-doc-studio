@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { apiClient, parseResp } from "@shared/api";
+import { apiClient, listPageOf, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   ProjectAccessCandidateSchema,
   ProjectAccessEntrySchema,
@@ -18,23 +19,57 @@ export type SetProjectAccessRequest = {
 };
 const base = (projectId: string) => `/projects/${enc(projectId)}/members`;
 
+// Список доступа по контракту: страница с total; прежний сервер отдаёт массив,
+// он показывается одной страницей.
+const AccessPageSchema = z.union([
+  listPageOf(ProjectAccessEntrySchema),
+  z.array(ProjectAccessEntrySchema).transform((items) => ({
+    items,
+    total: items.length,
+    limit: items.length,
+    offset: 0,
+  })),
+]);
+// Кандидаты по контракту пикера: до 20 и признак «уточните поиск».
+const CandidatesSchema = z.union([
+  z.strictObject({
+    items: z.array(ProjectAccessCandidateSchema),
+    has_more: z.boolean(),
+  }),
+  z
+    .array(ProjectAccessCandidateSchema)
+    .transform((items) => ({ items, has_more: false })),
+]);
+
+export type CandidatePage = {
+  items: ProjectAccessCandidate[];
+  has_more: boolean;
+};
+
 // Запись идёт без молчания: отказ по роли показывает общий тост с названием роли.
 // Остальные отказы панель показывает сама.
 export const projectAccessApi = {
-  list: (projectId: string): Promise<ProjectAccessEntry[]> =>
+  list: (
+    projectId: string,
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<ProjectAccessEntry>> =>
     apiClient
-      .get(base(projectId), { silentError: true })
-      .then(parseResp(z.array(ProjectAccessEntrySchema))),
+      .get(base(projectId), { silentError: true, signal, params })
+      .then(parseResp(AccessPageSchema)),
   candidates: (
     projectId: string,
     q: string,
-  ): Promise<ProjectAccessCandidate[]> =>
+    limit: number,
+    signal: AbortSignal,
+  ): Promise<CandidatePage> =>
     apiClient
       .get(`${base(projectId)}/candidates`, {
-        params: { q },
+        params: { q, limit },
         silentError: true,
+        signal,
       })
-      .then(parseResp(z.array(ProjectAccessCandidateSchema))),
+      .then(parseResp(CandidatesSchema)),
   // Запись идёт ручками бэкенда PUT|DELETE .../members/{user|group}:{id}; список панель
   // перечитывает сама, поэтому ответ не нужен.
   set: async (

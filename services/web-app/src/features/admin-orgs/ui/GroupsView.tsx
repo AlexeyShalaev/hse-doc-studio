@@ -1,26 +1,41 @@
 import { useState } from "react";
 import { Pencil, Plus, Trash2, UsersRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useListQueryState } from "@shared/lib";
 import {
   Avatar,
   Button,
   EmptyState,
   ErrorState,
-  Input,
+  FilterBar,
   Modal,
+  NoResults,
+  Pagination,
+  SortSelect,
   Spinner,
   TableSkeleton,
+  type DataTablePagination,
+  type PickerSource,
 } from "@shared/ui";
-import type { AdminGroup, AdminOrgMember } from "@entities/session";
+import type { AdminGroup } from "@entities/session";
 import type { Failure } from "../lib/failure";
+import { GROUPS_LIST } from "../lib/listState";
+import { GroupForm, type GroupDraft } from "./GroupForm";
 import { FailureNotice } from "./parts";
 
-export type GroupDraft = { name: string; memberIds: string[] };
+export type { GroupDraft } from "./GroupForm";
 
 export type GroupsViewProps = {
   status: "loading" | "error" | "ready";
+  /** Группы текущей страницы: поиск и порядок задал сервер. */
   groups: readonly AdminGroup[];
-  members: readonly AdminOrgMember[];
+  /** Организация: по ней форма листает состав группы. */
+  slug?: string | null;
+  /** Поиск участников организации для формы; без него выбирать некого. */
+  memberSource?: PickerSource | null;
+  total?: number | null;
+  pagination?: DataTablePagination;
+  fetching?: boolean;
   /** Отказ последнего сохранения формы. */
   formFailure?: Failure | null;
   /** Отказ удаления. */
@@ -30,32 +45,37 @@ export type GroupsViewProps = {
   onRetry?: () => void;
   /** Результат true закрывает форму; при отказе она остаётся открытой. */
   onCreate: (draft: GroupDraft) => Promise<boolean> | undefined;
-  onUpdate: (
-    group: AdminGroup,
-    draft: GroupDraft,
-  ) => Promise<boolean> | undefined;
+  /** Новое название; состав форма меняет сама, по одному человеку. */
+  onRename: (group: AdminGroup, name: string) => Promise<boolean> | undefined;
   onDelete: (group: AdminGroup) => Promise<boolean> | undefined;
   onReset?: () => void;
 };
 
-const SHOWN_AVATARS = 6;
+/** Число участников: из ответа по контракту, у прежнего ответа по member_ids. */
+const countOf = (group: AdminGroup): number =>
+  group.member_count ?? group.member_ids?.length ?? 0;
 
-/** Вкладка «Группы»: карточки групп, создание, правка состава, удаление. */
+/** Вкладка «Группы»: карточки групп, поиск, порядок, страницы, правка и удаление. */
 export const GroupsView = ({
   status,
   groups,
-  members,
+  slug = null,
+  memberSource = null,
+  total = null,
+  pagination,
+  fetching = false,
   formFailure = null,
   failure = null,
   saving = false,
   deleting = false,
   onRetry,
   onCreate,
-  onUpdate,
+  onRename,
   onDelete,
   onReset,
 }: GroupsViewProps) => {
   const { t } = useTranslation("adminOrgs");
+  const list = useListQueryState(GROUPS_LIST);
   const [form, setForm] = useState<
     { mode: "create" } | { mode: "edit"; group: AdminGroup } | null
   >(null);
@@ -65,7 +85,6 @@ export const GroupsView = ({
     onReset?.();
     setForm(next);
   };
-  const byId = new Map(members.map((m) => [m.user_id, m]));
 
   const addButton = (
     <Button
@@ -81,20 +100,54 @@ export const GroupsView = ({
     </Button>
   );
 
+  const empty = status === "ready" && groups.length === 0 && !list.isFiltered;
+  const shown = status === "ready" && !empty;
+
   return (
     <div className="org-stack" data-testid="groups-tab">
-      {status === "ready" && groups.length > 0 && (
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              className="org-muted"
-              style={{ margin: 0, fontSize: 12.5, maxWidth: 620 }}
-            >
-              {t("groups.lead")}
-            </p>
+      {shown && (
+        <>
+          <div className="flex items-center" style={{ gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                className="org-muted"
+                style={{ margin: 0, fontSize: 12.5, maxWidth: 620 }}
+              >
+                {t("groups.lead")}
+              </p>
+            </div>
+            {addButton}
           </div>
-          {addButton}
-        </div>
+          <FilterBar
+            search={list.q}
+            onSearchChange={list.setQ}
+            searchLabel={t("groups.search")}
+            searchPlaceholder={t("groups.search")}
+            busy={fetching}
+            onReset={list.reset}
+            extra={
+              <SortSelect
+                sort={list.sort}
+                onChange={list.setSort}
+                label={t("groups.sort.label")}
+                testId="groups-sort"
+                options={[
+                  { field: "name", desc: false, label: t("groups.sort.name") },
+                  {
+                    field: "member_count",
+                    desc: true,
+                    label: t("groups.sort.biggest"),
+                  },
+                  {
+                    field: "member_count",
+                    desc: false,
+                    label: t("groups.sort.smallest"),
+                  },
+                ]}
+              />
+            }
+          />
+        </>
       )}
       {failure && <FailureNotice failure={failure} />}
       {status === "loading" && (
@@ -103,7 +156,7 @@ export const GroupsView = ({
       {status === "error" && (
         <ErrorState framed title={t("groups.loadFailed")} onRetry={onRetry} />
       )}
-      {status === "ready" && groups.length === 0 && (
+      {empty && (
         <EmptyState
           framed
           testId="groups-empty"
@@ -113,12 +166,19 @@ export const GroupsView = ({
           action={addButton}
         />
       )}
-      {status === "ready" && groups.length > 0 && (
-        <ul aria-label={t("groups.caption")} className="org-groups">
+      {shown && groups.length === 0 && (
+        <NoResults framed query={list.q} onReset={list.reset} />
+      )}
+      {shown && groups.length > 0 && (
+        <ul
+          aria-label={t("groups.caption")}
+          aria-busy={fetching}
+          className="org-groups"
+          style={{ opacity: fetching ? 0.6 : 1, transition: "opacity 0.12s" }}
+        >
           {groups.map((group) => {
-            const people = group.member_ids
-              .map((id) => byId.get(id))
-              .filter((m): m is AdminOrgMember => m !== undefined);
+            const count = countOf(group);
+            const preview = group.preview ?? [];
             return (
               <li
                 key={group.id}
@@ -139,7 +199,7 @@ export const GroupsView = ({
                   >
                     <span className="org-group-name">{group.name}</span>
                     <span className="org-muted" style={{ fontSize: 12 }}>
-                      {t("groups.count", { count: people.length })}
+                      {t("groups.count", { count })}
                     </span>
                   </div>
                   <Button
@@ -170,32 +230,33 @@ export const GroupsView = ({
                     <Trash2 size={13} aria-hidden="true" />
                   </Button>
                 </div>
-                {people.length === 0 ? (
+                {count === 0 ? (
                   <span className="org-faint" style={{ fontSize: 12 }}>
                     {t("groups.noPeople")}
                   </span>
-                ) : (
+                ) : preview.length > 0 ? (
                   <div className="flex items-center" style={{ gap: 10 }}>
                     <span className="org-stack-avatars">
-                      {people.slice(0, SHOWN_AVATARS).map((m) => (
+                      {preview.map((m) => (
                         <span key={m.user_id} title={m.name}>
                           <Avatar name={m.name} seed={m.user_id} size={26} />
                         </span>
                       ))}
                     </span>
                     <span className="org-group-names">
-                      {people.length > SHOWN_AVATARS
-                        ? t("groups.more", {
-                            count: people.length - SHOWN_AVATARS,
-                          })
-                        : people.map((m) => m.name).join(", ")}
+                      {count > preview.length
+                        ? t("groups.more", { count: count - preview.length })
+                        : preview.map((m) => m.name).join(", ")}
                     </span>
                   </div>
-                )}
+                ) : null}
               </li>
             );
           })}
         </ul>
+      )}
+      {shown && pagination && total !== null && total > 0 && (
+        <Pagination {...pagination} />
       )}
 
       <Modal
@@ -213,7 +274,8 @@ export const GroupsView = ({
         {form && (
           <GroupForm
             key={form.mode === "edit" ? form.group.id : "new"}
-            members={members}
+            slug={slug}
+            source={memberSource}
             initial={form.mode === "edit" ? form.group : null}
             saving={saving}
             failure={formFailure}
@@ -223,7 +285,7 @@ export const GroupsView = ({
             onSubmit={async (draft) => {
               const ok =
                 form.mode === "edit"
-                  ? await onUpdate(form.group, draft)
+                  ? await onRename(form.group, draft.name)
                   : await onCreate(draft);
               if (ok) setForm(null);
             }}
@@ -273,145 +335,5 @@ export const GroupsView = ({
         }
       />
     </div>
-  );
-};
-
-const GroupForm = ({
-  members,
-  initial,
-  saving,
-  failure,
-  onCancel,
-  onSubmit,
-}: {
-  members: readonly AdminOrgMember[];
-  initial: AdminGroup | null;
-  saving: boolean;
-  failure: Failure | null;
-  onCancel: () => void;
-  onSubmit: (draft: GroupDraft) => Promise<void>;
-}) => {
-  const { t } = useTranslation("adminOrgs");
-  const [name, setName] = useState(initial?.name ?? "");
-  const [chosen, setChosen] = useState<string[]>(initial?.member_ids ?? []);
-  const [query, setQuery] = useState("");
-  const [tried, setTried] = useState(false);
-
-  const needle = query.trim().toLowerCase();
-  const shown = members.filter(
-    (m) =>
-      needle === "" ||
-      m.name.toLowerCase().includes(needle) ||
-      m.email.toLowerCase().includes(needle),
-  );
-  const toggle = (id: string) => {
-    setChosen((list) =>
-      list.includes(id) ? list.filter((x) => x !== id) : [...list, id],
-    );
-  };
-
-  return (
-    <form
-      className="flex flex-col"
-      style={{ gap: 14 }}
-      noValidate
-      data-testid="group-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        setTried(true);
-        if (name.trim() === "") return;
-        void onSubmit({ name: name.trim(), memberIds: chosen });
-      }}
-    >
-      <Input
-        label={t("groups.form.name")}
-        value={name}
-        maxLength={80}
-        autoFocus
-        autoComplete="off"
-        {...(tried && name.trim() === ""
-          ? { error: t("groups.form.nameRequired") }
-          : {})}
-        onChange={(event) => {
-          setName(event.target.value);
-        }}
-        data-testid="group-name"
-      />
-      <fieldset
-        className="flex flex-col"
-        style={{ gap: 8, border: 0, margin: 0, padding: 0, minWidth: 0 }}
-      >
-        <legend
-          style={{ fontSize: 12, fontWeight: 500, padding: 0, marginBottom: 6 }}
-        >
-          {t("groups.form.members", { count: chosen.length })}
-        </legend>
-        {members.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}>
-            {t("groups.form.noMembers")}
-          </p>
-        ) : (
-          <>
-            <input
-              className="input"
-              type="search"
-              value={query}
-              placeholder={t("groups.form.search")}
-              aria-label={t("groups.form.search")}
-              onChange={(event) => {
-                setQuery(event.target.value);
-              }}
-            />
-            <ul className="org-picker">
-              {shown.length === 0 && (
-                <li style={{ padding: 8, fontSize: 12, color: "var(--fg-2)" }}>
-                  {t("groups.form.noMatch")}
-                </li>
-              )}
-              {shown.map((m) => (
-                <li key={m.user_id}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      className="org-check"
-                      checked={chosen.includes(m.user_id)}
-                      onChange={() => {
-                        toggle(m.user_id);
-                      }}
-                      data-testid={`group-member-${m.user_id}`}
-                    />
-                    <Avatar name={m.name} seed={m.user_id} size={24} />
-                    <span className="flex flex-col" style={{ minWidth: 0 }}>
-                      <span style={{ fontSize: 12.5 }}>{m.name}</span>
-                      <span style={{ fontSize: 11, color: "var(--fg-2)" }}>
-                        {m.email}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </fieldset>
-      {failure && <FailureNotice failure={failure} />}
-      <div
-        className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={saving}
-        >
-          {t("cancel")}
-        </Button>
-        <Button type="submit" disabled={saving} data-testid="group-save">
-          {saving && <Spinner size="sm" />}
-          {t("save")}
-        </Button>
-      </div>
-    </form>
   );
 };

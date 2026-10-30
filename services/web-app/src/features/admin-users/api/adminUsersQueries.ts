@@ -2,11 +2,10 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { AccountStatus } from "@entities/session";
+import type { AccountStatus, AdminUser } from "@entities/session";
 import { adminUsersApi, type UsersQuery } from "./adminUsersApi";
 
 export const adminUsersKeys = {
@@ -14,8 +13,12 @@ export const adminUsersKeys = {
   users: (q: UsersQuery) => [...adminUsersKeys.all, "users", q] as const,
   approvals: (page: number) =>
     [...adminUsersKeys.all, "approvals", page] as const,
-  invitations: (page: number) =>
-    [...adminUsersKeys.all, "invitations", page] as const,
+  // Начала ключей серверных списков: параметры useServerList добавляет сам.
+  usersList: () => [...adminUsersKeys.all, "users-list"] as const,
+  facets: (q: string) => [...adminUsersKeys.all, "facets", q] as const,
+  user: (id: string) => [...adminUsersKeys.all, "user", id] as const,
+  approvalsList: () => [...adminUsersKeys.all, "approvals-list"] as const,
+  invitationsList: () => [...adminUsersKeys.all, "invitations-list"] as const,
   audit: (action: string) => ["admin", "audit", action] as const,
 };
 
@@ -34,45 +37,33 @@ export const ACCOUNT_STATUSES: readonly AccountStatus[] = [
   "disabled",
 ];
 
+/** Числа на чипах состояний и роли при текущем поиске: один запрос. */
+export const useUserFacets = (q: string) =>
+  useQuery({
+    queryKey: adminUsersKeys.facets(q),
+    queryFn: ({ signal }) => adminUsersApi.facets(q, signal),
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+  });
+
 /**
- * Сколько людей в каждом состоянии при текущем поиске: числа на чипах фильтра.
- * Ключи те же, что у первой страницы списка, так что выбранный чип берёт
- * ответ из кеша.
+ * Человек для карточки: свежая запись с сервера. Строка страницы служит
+ * начальным значением, а карточка не закрывается, когда после действия
+ * человек ушёл со страницы (например, отключённый при фильтре «Активные»).
  */
-export const useStatusCounts = (
-  q: string,
-): Partial<Record<AccountStatus, number>> =>
-  useQueries({
-    queries: ACCOUNT_STATUSES.map((status) => {
-      const query: UsersQuery = { q, status, page: 0 };
-      return {
-        queryKey: adminUsersKeys.users(query),
-        queryFn: () => adminUsersApi.users(query),
-        placeholderData: keepPreviousData,
-        staleTime: 0,
-      };
-    }),
-    combine: (results) =>
-      Object.fromEntries(
-        ACCOUNT_STATUSES.flatMap((status, i) => {
-          const total = results[i]?.data?.total;
-          return total === undefined ? [] : [[status, total]];
-        }),
-      ) as Partial<Record<AccountStatus, number>>,
+export const useUser = (id: string | null, row: AdminUser | null) =>
+  useQuery({
+    queryKey: adminUsersKeys.user(id ?? ""),
+    queryFn: ({ signal }) => adminUsersApi.user(id ?? "", signal),
+    enabled: id !== null,
+    staleTime: 0,
+    ...(row !== null && row.id === id ? { placeholderData: row } : {}),
   });
 
 export const useApprovals = (page: number) =>
   useQuery({
     queryKey: adminUsersKeys.approvals(page),
     queryFn: () => adminUsersApi.approvals(page),
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-  });
-
-export const useInvitations = (page: number) =>
-  useQuery({
-    queryKey: adminUsersKeys.invitations(page),
-    queryFn: () => adminUsersApi.invitations(page),
     placeholderData: keepPreviousData,
     staleTime: 0,
   });

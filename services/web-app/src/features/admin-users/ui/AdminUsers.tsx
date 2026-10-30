@@ -1,5 +1,6 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Lock, UserPlus } from "lucide-react";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@shared/api";
 import { Button, EmptyState, PageHeader, PageTabs } from "@shared/ui";
@@ -13,6 +14,9 @@ export type UsersTab = "users" | "invitations" | "approvals";
 
 const TABS: readonly UsersTab[] = ["users", "invitations", "approvals"];
 
+const isTab = (value: string | null): value is UsersTab =>
+  TABS.includes(value as UsersTab);
+
 /** Раздел «Пользователи»: люди, приглашения и очередь одобрений. */
 export const AdminUsers = ({
   initialTab = "users",
@@ -23,7 +27,16 @@ export const AdminUsers = ({
   renderOrgs?: ((user: AdminUser) => ReactNode) | undefined;
 }) => {
   const { t } = useTranslation("adminUsers");
-  const [tab, setTab] = useState<UsersTab>(initialTab);
+  // Вкладка в адресе (?tab=…), как и поиск с фильтрами её списка: ссылка
+  // открывает тот же вид. Смена вкладки сбрасывает условия прежнего списка,
+  // у вкладок свои фильтры с теми же именами (status).
+  const [params, setParams] = useSearchParams();
+  const fromUrl = params.get("tab");
+  const tab: UsersTab = isTab(fromUrl) ? fromUrl : initialTab;
+  const setTab = (next: UsersTab) => {
+    if (next === tab) return;
+    setParams(next === "users" ? {} : { tab: next });
+  };
   // Те же ключи, что у первой страницы вкладок: лишних запросов нет.
   const list = useUsers({ q: "", status: "", page: 0 });
   const people = list.data?.total;

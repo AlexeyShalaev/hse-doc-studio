@@ -23,14 +23,18 @@ export const assignableRoles = (viewer: Viewer): readonly OrgRoleName[] =>
 export const canEditMember = (viewer: Viewer, target: OrgRoleName): boolean =>
   isFull(viewer) || target !== "owner";
 
-export const ownerCount = (members: readonly AdminOrgMember[]): number =>
-  members.filter((m) => m.role === "owner").length;
-
-/** Единственный владелец: его нельзя ни понизить, ни убрать. */
+/**
+ * Единственный владелец: его нельзя ни понизить, ни убрать. Весь состав
+ * клиенту не виден, поэтому признак берётся из строки (is_last_owner), а у
+ * прежнего ответа из числа владельцев организации (owner_count). Без того и
+ * другого замка нет: последнего владельца всё равно защищает сервер (409).
+ */
 export const isLastOwner = (
-  members: readonly AdminOrgMember[],
   member: AdminOrgMember,
-): boolean => member.role === "owner" && ownerCount(members) === 1;
+  ownerCount: number | null = null,
+): boolean =>
+  member.is_last_owner ??
+  (member.role === "owner" && ownerCount !== null && ownerCount <= 1);
 
 /** Организации создаёт и удаляет только админ установки. */
 export const canCreateOrg = (viewer: Pick<Viewer, "instanceAdmin">): boolean =>

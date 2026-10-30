@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import { toast, useDebouncedValue, SEARCH_DEBOUNCE_MS } from "@shared/lib";
 import { useProjectRoleLabel } from "@entities/project";
 import {
   useBootstrap,
@@ -18,6 +18,10 @@ import {
 import type { Failure } from "../lib/failure";
 import { AccessView } from "./AccessView";
 
+// Обычно доступ у нескольких человек, но гранты многим не ограничены:
+// список приходит страницами, закреплённые строки всегда на первой.
+const ACCESS_PAGE = 25;
+
 /** Панель «Доступ» в настройках проекта: список, добавление человека или группы, смена роли. */
 export const ProjectAccessPanel = ({
   projectId,
@@ -29,14 +33,24 @@ export const ProjectAccessPanel = ({
   const { t } = useTranslation("projectAccess");
   const roleLabel = useProjectRoleLabel();
   const selfId = useBootstrap().data?.user?.id ?? null;
-  const list = useProjectAccess(projectId);
+  // Список доступа листается на сервере: поиск и страница живут в панели.
+  const [listQuery, setListQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const list = useProjectAccess(projectId, {
+    limit: ACCESS_PAGE,
+    offset: page * ACCESS_PAGE,
+    ...(listQuery ? { q: listQuery } : {}),
+  });
   const [query, setQuery] = useState("");
   const canManage = myRole === "owner";
+  // Запрос кандидатов уходит после паузы в наборе, а не на каждую букву.
+  const needle = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const candidates = useAccessCandidates(
     projectId,
-    query.trim(),
-    canManage && query.trim() !== "",
+    needle,
+    canManage && needle !== "",
   );
+  const typing = query.trim() !== needle;
   const set = useSetAccess(projectId);
   const remove = useRemoveAccess(projectId);
   const [failure, setFailure] = useState<Failure | null>(null);
@@ -80,14 +94,27 @@ export const ProjectAccessPanel = ({
   return (
     <AccessView
       status={list.data ? "ready" : list.isError ? "error" : "loading"}
-      entries={list.data ?? []}
+      entries={list.data?.items ?? []}
+      total={list.data?.total ?? 0}
+      listQuery={listQuery}
+      onListQuery={(next) => {
+        setListQuery(next);
+        setPage(0);
+      }}
+      listBusy={list.isFetching}
+      page={page}
+      pageSize={ACCESS_PAGE}
+      onPage={setPage}
       myRole={myRole}
       failure={failure}
       busyKey={busyKey}
       query={query}
       onQuery={setQuery}
-      candidates={candidates.data ?? []}
-      candidatesLoading={candidates.isFetching && query.trim() !== ""}
+      candidates={query.trim() === "" ? [] : (candidates.data?.items ?? [])}
+      candidatesMore={query.trim() !== "" && candidates.data?.has_more === true}
+      candidatesLoading={
+        query.trim() !== "" && (typing || candidates.isFetching)
+      }
       candidatesError={candidates.isError && query.trim() !== ""}
       onRetryCandidates={() => {
         void candidates.refetch();

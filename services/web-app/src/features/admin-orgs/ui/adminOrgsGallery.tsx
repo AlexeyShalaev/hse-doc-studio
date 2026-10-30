@@ -77,17 +77,32 @@ const MEMBERS: AdminOrgMember[] = [
   m("petr", "Пётр Орлов", "member", "2026-09-14T08:41:00Z"),
   m("olga", "Ольга Белова", "member", "2026-09-15T12:10:00Z"),
   m("dmitry", "Дмитрий Кузнецов", "member", "2026-09-18T16:20:00Z"),
-];
+].map((x) => ({ ...x, is_last_owner: x.user_id === "ivan" }));
+
+const group = (id: string, name: string, ids: string[]): AdminGroup => {
+  const people = MEMBERS.filter((x) => ids.includes(x.user_id));
+  return {
+    id,
+    name,
+    member_count: people.length,
+    preview: people
+      .slice(0, 5)
+      .map((x) => ({ user_id: x.user_id, name: x.name })),
+  };
+};
 
 const GROUPS: AdminGroup[] = [
-  { id: "g1", name: "Команда Bertie", member_ids: ["anna", "petr", "olga"] },
-  { id: "g2", name: "Наставники", member_ids: ["elena"] },
-  {
-    id: "g3",
-    name: "Все студенты",
-    member_ids: ["anna", "petr", "olga", "dmitry", "elena", "ivan"],
-  },
-  { id: "g4", name: "Резерв", member_ids: [] },
+  group("g1", "Команда Bertie", ["anna", "petr", "olga"]),
+  group("g2", "Наставники", ["elena"]),
+  group("g3", "Все студенты", [
+    "anna",
+    "petr",
+    "olga",
+    "dmitry",
+    "elena",
+    "ivan",
+  ]),
+  group("g4", "Резерв", []),
 ];
 
 const FULL: Viewer = { instanceAdmin: true, role: null };
@@ -125,6 +140,8 @@ const members = (extra: Partial<MembersViewProps> = {}) => (
     members={MEMBERS}
     viewer={FULL}
     selfId="ivan"
+    total={MEMBERS.length}
+    roleCounts={{ owner: 1, admin: 1, member: 4 }}
     onAdd={() => undefined}
     onSetRole={noop}
     onRemove={() => undefined}
@@ -136,9 +153,9 @@ const groups = (extra: Partial<GroupsViewProps> = {}) => (
   <GroupsView
     status="ready"
     groups={GROUPS}
-    members={MEMBERS}
+    total={GROUPS.length}
     onCreate={() => undefined}
-    onUpdate={() => undefined}
+    onRename={() => undefined}
     onDelete={() => undefined}
     {...extra}
   />
@@ -312,7 +329,7 @@ export const getAdminOrgsGallery = (): GalleryGroup[] => [
       entry(
         "admin_groups_nomembers",
         "В организации нет людей",
-        () => groups({ groups: [], members: [] }),
+        () => groups({ groups: [], memberSource: null }),
         { note: "В форме создания группы выбирать некого." },
       ),
     ],

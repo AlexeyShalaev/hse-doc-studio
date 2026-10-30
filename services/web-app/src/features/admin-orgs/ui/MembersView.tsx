@@ -1,24 +1,35 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Lock, UserMinus, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatPastTime } from "@shared/lib";
+import {
+  formatPastTime,
+  useListQueryState,
+  type PickerItem,
+} from "@shared/lib";
 import {
   ActionMenu,
   Badge,
   Button,
   DataTable,
   FilterBar,
+  FilterMenu,
   Input,
   Modal,
   PersonCell,
+  Picker,
   Select,
   Spinner,
   Tooltip,
+  type ActiveFilter,
+  type DataTablePagination,
+  type PickerSource,
 } from "@shared/ui";
 import type { AdminOrgMember, OrgRoleName } from "@entities/session";
+import type { AddMemberInput } from "../api/adminOrgsApi";
 import type { Failure } from "../lib/failure";
 import { formatDate } from "../lib/format";
+import { MEMBERS_LIST, MEMBERS_SORTABLE } from "../lib/listState";
 import {
   assignableRoles,
   canEditMember,
@@ -30,10 +41,24 @@ import { FailureNotice } from "./parts";
 
 export type MembersViewProps = {
   status: "loading" | "error" | "ready";
+  /** Строки текущей страницы: поиск, фильтр и порядок задал сервер. */
   members: readonly AdminOrgMember[];
   viewer: Viewer;
   /** Идентификатор смотрящего: его строка помечается. */
   selfId: string | null;
+  /** Сколько нашлось при текущих условиях. */
+  total?: number | null;
+  pagination?: DataTablePagination;
+  fetching?: boolean;
+  /** Числа на чипах ролей при том же поиске. */
+  roleCounts?: Partial<Record<OrgRoleName, number>> | null;
+  /** Владельцев в организации: замок у единственного, если строка его не несёт. */
+  ownerCount?: number | null;
+  /**
+   * Поиск людей установки для формы добавления. Есть только у админа
+   * установки; админ организации добавляет по почте.
+   */
+  peopleSource?: PickerSource | null;
   /** Отказ смены роли или удаления. */
   failure?: Failure | null;
   /** Отказ добавления. */
@@ -44,7 +69,7 @@ export type MembersViewProps = {
   removing?: boolean;
   onRetry?: () => void;
   /** Результат true очищает форму; при отказе она остаётся как есть. */
-  onAdd: (email: string, role: OrgRoleName) => Promise<boolean> | undefined;
+  onAdd: (input: AddMemberInput) => Promise<boolean> | undefined;
   onSetRole: (member: AdminOrgMember, role: OrgRoleName) => void;
   onRemove: (member: AdminOrgMember) => Promise<boolean> | undefined;
   /** Сбросить отказы при новом действии. */
@@ -53,12 +78,18 @@ export type MembersViewProps = {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Вкладка «Участники»: добавление по почте, смена роли, удаление, защита последнего владельца. */
+/** Вкладка «Участники»: поиск и фильтр на сервере, добавление, смена роли, защита последнего владельца. */
 export const MembersView = ({
   status,
   members,
   viewer,
   selfId,
+  total = null,
+  pagination,
+  fetching = false,
+  roleCounts = null,
+  ownerCount = null,
+  peopleSource = null,
   failure = null,
   addFailure = null,
   adding = false,
@@ -71,8 +102,11 @@ export const MembersView = ({
   onReset,
 }: MembersViewProps) => {
   const { t, i18n } = useTranslation("adminOrgs");
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
+  const list = useListQueryState(MEMBERS_LIST);
+  const roleFilter = list.filters.role as readonly OrgRoleName[];
+  const [picked, setPicked] = useState<PickerItem | null>(null);
+  // Без пикера (админ организации) остаётся только почта.
+  const [byEmail, setByEmail] = useState(peopleSource === null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<OrgRoleName>("member");
   const [tried, setTried] = useState(false);
@@ -83,31 +117,36 @@ export const MembersView = ({
   const roleOptions = (list: readonly OrgRoleName[]) =>
     list.map((r) => ({ value: r, label: t(`role.${r}`) }));
 
-  const rows = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return members.filter(
-      (m) =>
-        (roleFilter === "" || m.role === roleFilter) &&
-        (needle === "" ||
-          m.name.toLowerCase().includes(needle) ||
-          m.email.toLowerCase().includes(needle)),
-    );
-  }, [members, search, roleFilter]);
+  const lastOwner = (m: AdminOrgMember) => isLastOwner(m, ownerCount);
 
   const emailError =
-    tried && !EMAIL.test(email.trim())
+    tried && byEmail && !EMAIL.test(email.trim())
       ? t("members.add.emailInvalid")
       : undefined;
+  const pickError =
+    tried && !byEmail && picked === null
+      ? t("members.add.personRequired")
+      : undefined;
+
+  const clearForm = () => {
+    setEmail("");
+    setPicked(null);
+    setTried(false);
+    setRole("member");
+    setByEmail(peopleSource === null);
+  };
 
   const submitAdd = async () => {
     setTried(true);
     onReset?.();
-    if (!EMAIL.test(email.trim())) return;
-    const ok = await onAdd(email.trim(), role);
+    if (byEmail ? !EMAIL.test(email.trim()) : picked === null) return;
+    const ok = await onAdd(
+      byEmail || picked === null
+        ? { email: email.trim(), role }
+        : { userId: picked.id, role },
+    );
     if (ok) {
-      setEmail("");
-      setTried(false);
-      setRole("member");
+      clearForm();
       setAddOpen(false);
     }
   };
@@ -115,15 +154,13 @@ export const MembersView = ({
   const closeAdd = () => {
     if (adding) return;
     setAddOpen(false);
-    setEmail("");
-    setTried(false);
-    setRole("member");
+    clearForm();
     onReset?.();
   };
 
   const columns: ColumnDef<AdminOrgMember>[] = [
     {
-      id: "person",
+      id: "name",
       header: t("members.columns.person"),
       cell: ({ row }) => (
         <PersonCell
@@ -145,7 +182,7 @@ export const MembersView = ({
       header: t("members.columns.role"),
       cell: ({ row }) => {
         const m = row.original;
-        if (isLastOwner(members, m)) {
+        if (lastOwner(m)) {
           return (
             <Tooltip content={t("members.lastOwner")}>
               <span
@@ -191,7 +228,8 @@ export const MembersView = ({
       },
     },
     {
-      id: "joined",
+      id: "joined_at",
+      sortDescFirst: true,
       header: t("members.columns.joined"),
       cell: ({ row }) => (
         <time
@@ -213,7 +251,7 @@ export const MembersView = ({
         const m = row.original;
         // Единственного владельца и людей с ролью выше своей убрать нельзя:
         // меню у такой строки нет, замок у роли объясняет почему.
-        if (isLastOwner(members, m) || !canEditMember(viewer, m.role)) {
+        if (lastOwner(m) || !canEditMember(viewer, m.role)) {
           return null;
         }
         return (
@@ -242,7 +280,33 @@ export const MembersView = ({
     },
   ];
 
-  const counts = (r: OrgRoleName) => members.filter((m) => m.role === r).length;
+  const active: ActiveFilter[] = [
+    ...(list.q
+      ? [
+          {
+            id: "q",
+            label: t("members.filters.search"),
+            value: list.q,
+            onRemove: () => {
+              list.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(roleFilter.length > 0
+      ? [
+          {
+            id: "role",
+            label: t("members.columns.role"),
+            value: roleFilter.map((r) => t(`role.${r}`)).join(", "),
+            onRemove: () => {
+              list.setFilter("role", null);
+            },
+          },
+        ]
+      : []),
+  ];
+  const empty = status === "ready" && members.length === 0 && !list.isFiltered;
 
   return (
     <div className="org-stack" data-testid="members-tab">
@@ -251,27 +315,29 @@ export const MembersView = ({
       <div className="org-toolbar">
         <FilterBar
           className="org-toolbar-filters"
-          search={search}
-          onSearchChange={setSearch}
+          search={list.q}
+          onSearchChange={list.setQ}
           searchLabel={t("members.search")}
           searchPlaceholder={t("members.search")}
-          filters={[
-            {
-              id: "role",
-              label: t("members.columns.role"),
-              value: roleFilter,
-              onChange: setRoleFilter,
-              options: ROLES.map((r) => ({
+          busy={fetching}
+          onReset={list.reset}
+          active={active}
+          total={total}
+          extra={
+            <FilterMenu
+              label={t("members.columns.role")}
+              testId="members-filter-role"
+              values={roleFilter}
+              onChange={(values) => {
+                list.setFilter("role", values);
+              }}
+              options={ROLES.map((r) => ({
                 value: r,
                 label: t(`role.${r}`),
-                ...(status === "ready" ? { count: counts(r) } : {}),
-              })),
-            },
-          ]}
-          onReset={() => {
-            setSearch("");
-            setRoleFilter("");
-          }}
+                ...(roleCounts ? { count: roleCounts[r] ?? 0 } : {}),
+              }))}
+            />
+          }
         />
         <Button
           type="button"
@@ -289,15 +355,20 @@ export const MembersView = ({
         className="org-table"
         caption={t("members.caption")}
         columns={columns}
-        data={rows}
+        data={[...members]}
         getRowId={(m) => m.user_id}
-        loading={status === "loading"}
+        loading={status === "loading" || fetching}
         error={status === "error" ? t("members.loadFailed") : null}
         {...(onRetry ? { onRetry } : {})}
-        emptyTitle={
-          members.length > 0 ? t("members.noMatch") : t("members.empty.title")
-        }
-        {...(members.length > 0 ? {} : { emptyHint: t("members.empty.body") })}
+        sorting={list.sorting}
+        onSortingChange={list.onSortingChange}
+        sortable={MEMBERS_SORTABLE}
+        filtered={list.isFiltered && !empty}
+        searchQuery={list.q}
+        onResetFilters={list.reset}
+        {...(pagination ? { pagination } : {})}
+        emptyTitle={t("members.empty.title")}
+        emptyHint={t("members.empty.body")}
       />
 
       <Modal
@@ -339,18 +410,57 @@ export const MembersView = ({
           }}
           data-testid="member-add-form"
         >
-          <Input
-            label={t("members.add.email")}
-            type="email"
-            value={email}
-            autoComplete="off"
-            placeholder="name@example.org"
-            {...(emailError ? { error: emailError } : {})}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-            data-testid="member-add-email"
-          />
+          {byEmail || peopleSource === null ? (
+            <Input
+              label={t("members.add.email")}
+              type="email"
+              value={email}
+              autoComplete="off"
+              placeholder="name@example.org"
+              {...(emailError ? { error: emailError } : {})}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+              data-testid="member-add-email"
+            />
+          ) : (
+            <div className="field">
+              <label htmlFor="member-add-person">
+                {t("members.add.person")}
+              </label>
+              <Picker
+                id="member-add-person"
+                source={peopleSource}
+                value={picked}
+                onChange={setPicked}
+                label={t("members.add.person")}
+                placeholder={t("members.add.personPlaceholder")}
+                searchPlaceholder={t("members.add.personSearch")}
+                emptyText={t("members.add.personNone")}
+                clearable
+                testId="member-add-person"
+              />
+              {pickError && (
+                <p className="text-xs text-c-err" role="alert">
+                  {pickError}
+                </p>
+              )}
+            </div>
+          )}
+          {peopleSource !== null && (
+            <button
+              type="button"
+              className="org-link-button"
+              data-testid="member-add-mode"
+              onClick={() => {
+                setByEmail((v) => !v);
+                setTried(false);
+                onReset?.();
+              }}
+            >
+              {byEmail ? t("members.add.byPicker") : t("members.add.byEmail")}
+            </button>
+          )}
           <div className="field">
             <label htmlFor="member-add-role">{t("members.add.role")}</label>
             <Select

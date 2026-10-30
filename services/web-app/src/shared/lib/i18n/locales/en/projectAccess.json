@@ -72,7 +72,8 @@
       "hint": "You cannot name an owner from this panel.",
       "error": "Search failed. Check your connection and try again.",
       "loading": "Searching…",
-      "none": "No one found. A person must be a server user, a group must exist in an organization."
+      "none": "No one found. A person must be a server user, a group must exist in an organization.",
+      "more": "Showing the first {{limit}}. Refine the search to find the rest."
     },
     "toast": {
       "added": "{{name}}: added as “{{role}}”",
@@ -88,6 +89,8 @@
       "csrf_failed": "The session expired: refresh the page and try again.",
       "network": "Cannot reach the server. Try again later.",
       "unknown": "Something went wrong. Try again later."
-    }
+    },
+    "listSearch": "Find in the access list",
+    "listNone": "No one in the access list matches."
   }
 }

@@ -394,6 +394,8 @@ export const AdminOrgSchema = z.strictObject({
   member_count: z.number().int(),
   project_count: z.number().int(),
   my_role: OrgRoleNameSchema.nullable(),
+  // Сколько владельцев: «последнего владельца» клиент не считает по списку.
+  owner_count: z.number().int().optional(),
 });
 export const OrgSchema = z.strictObject({
   slug: z.string(),
@@ -459,10 +461,20 @@ export const SetProjectMemberRequestSchema = z.strictObject({
   show_sources: z.boolean(),
   can_edit_all: z.boolean(),
 });
-export const AdminOrgMemberSchema = OrgMemberSchema;
+// Строка списка участников несёт признак единственного владельца: клиент не
+// видит весь состав и сам его не посчитает.
+export const AdminOrgMemberSchema = OrgMemberSchema.extend({
+  is_last_owner: z.boolean().optional(),
+});
+// Добавление по найденному в пикере человеку (user_id) или по почте.
 export const AddAdminOrgMemberRequestSchema = z.strictObject({
-  email: z.string(),
+  email: z.string().nullable().optional(),
+  user_id: z.string().nullable().optional(),
   role: OrgRoleNameSchema,
+});
+/** Числа на чипах ролей при том же поиске. */
+export const AdminOrgMemberFacetsSchema = z.strictObject({
+  role: z.partialRecord(OrgRoleNameSchema, z.number().int()),
 });
 export const UpdateAdminOrgMemberRequestSchema = z.strictObject({
   role: OrgRoleNameSchema,
@@ -471,10 +483,32 @@ export const CreateAdminOrgRequestSchema = z.strictObject({
   name: z.string(),
   slug: z.string(),
 });
+// Группа в списке: число участников и до пяти первых для аватаров. Полный
+// состав листается отдельно (.../groups/{id}/members); member_ids остался
+// только у прежнего ответа.
+export const AdminGroupPreviewSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+});
 export const AdminGroupSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
-  member_ids: z.array(z.string()),
+  member_ids: z.array(z.string()).optional(),
+  member_count: z.number().int().optional(),
+  preview: z.array(AdminGroupPreviewSchema).optional(),
+});
+export const AdminGroupMemberSchema = GroupMemberSchema;
+/** Организация в карточке человека: его роль и когда вступил. */
+export const AdminUserOrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  role: OrgRoleNameSchema,
+  joined_at: iso,
+});
+/** Числа на чипах раздела «Люди» при том же поиске. */
+export const AdminUserFacetsSchema = z.strictObject({
+  status: z.partialRecord(AccountStatusSchema, z.number().int()),
+  admins: z.number().int(),
 });
 export const CreateAdminGroupRequestSchema = z.strictObject({
   name: z.string(),
@@ -499,6 +533,10 @@ export type AdminAuditPage = z.infer<typeof AdminAuditPageSchema>;
 export type AdminOrg = z.infer<typeof AdminOrgSchema>;
 export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;
 export type AdminGroup = z.infer<typeof AdminGroupSchema>;
+export type AdminGroupMember = z.infer<typeof AdminGroupMemberSchema>;
+export type AdminUserOrg = z.infer<typeof AdminUserOrgSchema>;
+export type AdminUserFacets = z.infer<typeof AdminUserFacetsSchema>;
+export type AdminOrgMemberFacets = z.infer<typeof AdminOrgMemberFacetsSchema>;
 export type CreateAdminOrgRequest = z.infer<typeof CreateAdminOrgRequestSchema>;
 export type CreateAdminGroupRequest = z.infer<
   typeof CreateAdminGroupRequestSchema

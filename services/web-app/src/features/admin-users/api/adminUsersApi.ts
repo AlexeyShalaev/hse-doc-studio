@@ -1,6 +1,8 @@
 import { adminClient, parseResp } from "@shared/api";
+import type { ListRequestParams } from "@shared/lib";
 import {
   AdminAuditPageSchema,
+  AdminUserFacetsSchema,
   AdminInvitationCreatedSchema,
   AdminInvitationPageSchema,
   AdminResetLinkSchema,
@@ -13,6 +15,7 @@ import {
   type AdminInvitationPage,
   type AdminResetLink,
   type AdminUser,
+  type AdminUserFacets,
   type AdminUserPage,
 } from "@entities/session";
 
@@ -20,6 +23,7 @@ import {
 const quiet = { silentError: true } as const;
 const enc = encodeURIComponent;
 
+/** Размер страницы прежних запросов (useUsers, useApprovals) для сводки админки. */
 export const PAGE_SIZE = 25;
 
 export type UsersQuery = {
@@ -30,7 +34,39 @@ export type UsersQuery = {
 
 export type AuditQuery = { action: string; cursor: string | null };
 
+// Списки вкладок идут по единому контракту: поиск, фильтры, сортировка и
+// окно считает сервер, экран получает одну страницу.
+const page = (
+  path: string,
+  params: ListRequestParams,
+  signal: AbortSignal,
+): Promise<AdminUserPage> =>
+  adminClient
+    .get(path, { ...quiet, signal, params })
+    .then(parseResp(AdminUserPageSchema));
+
 export const adminUsersApi = {
+  usersPage: (params: ListRequestParams, signal: AbortSignal) =>
+    page("/users", params, signal),
+  /** Числа на чипах при том же поиске: один запрос вместо запроса на чип. */
+  facets: (q: string, signal: AbortSignal): Promise<AdminUserFacets> =>
+    adminClient
+      .get("/users/facets", { ...quiet, signal, params: q ? { q } : {} })
+      .then(parseResp(AdminUserFacetsSchema)),
+  user: (id: string, signal: AbortSignal): Promise<AdminUser> =>
+    adminClient
+      .get(`/users/${enc(id)}`, { ...quiet, signal })
+      .then(parseResp(AdminUserSchema)),
+  approvalsPage: (params: ListRequestParams, signal: AbortSignal) =>
+    page("/approvals", params, signal),
+  invitationsPage: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<AdminInvitationPage> =>
+    adminClient
+      .get("/invitations", { ...quiet, signal, params })
+      .then(parseResp(AdminInvitationPageSchema)),
+
   users: ({ q, status, page }: UsersQuery): Promise<AdminUserPage> =>
     adminClient
       .get("/users", {
@@ -84,13 +120,6 @@ export const adminUsersApi = {
       .post(`/approvals/${enc(id)}/reject`, undefined, quiet)
       .then(parseResp(AdminUserSchema)),
 
-  invitations: (page: number): Promise<AdminInvitationPage> =>
-    adminClient
-      .get("/invitations", {
-        ...quiet,
-        params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
-      })
-      .then(parseResp(AdminInvitationPageSchema)),
   invite: (body: {
     email: string | null;
     ttl_days: number | null;
