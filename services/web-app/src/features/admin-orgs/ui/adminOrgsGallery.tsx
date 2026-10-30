@@ -218,11 +218,17 @@ export const getAdminOrgsGallery = (): GalleryGroup[] => [
       entry("admin_org_detail", "Участники, админ установки", () =>
         detail("members", members()),
       ),
+      entry("admin_org_detail_groups", "Группы", () =>
+        detail("groups", groups(), { groupCount: GROUPS.length }),
+      ),
       entry(
-        "admin_org_detail_soon",
-        "Вкладки следующих этапов",
-        () => detail("members", members({ members: MEMBERS.slice(0, 2) })),
-        { note: "Проекты и Квоты неактивны, данных у них нет." },
+        "admin_org_detail_projects",
+        "Проекты",
+        () => detail("projects", null),
+        { note: "Списка проектов пока нет: число и что появится дальше." },
+      ),
+      entry("admin_org_detail_settings", "Настройки и опасная зона", () =>
+        detail("settings", null),
       ),
       entry("admin_org_detail_loading", "Загрузка", () =>
         detail("members", null, { status: "loading", org: null }),
@@ -242,10 +248,12 @@ export const getAdminOrgsGallery = (): GalleryGroup[] => [
           org: ORGS[1] ?? null,
         }),
       ),
-      entry("admin_org_delete_failed", "Удаление: есть проекты", () =>
-        detail("members", members(), {
-          deleteFailure: { code: "org_has_projects" },
-        }),
+      entry(
+        "admin_org_settings_orgadmin",
+        "Настройки: админ организации",
+        () =>
+          detail("settings", null, { canDelete: false, org: ORGS[1] ?? null }),
+        { note: "Удалять организацию может только админ установки." },
       ),
     ],
   },

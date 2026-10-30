@@ -277,20 +277,32 @@ describe("организации в админке: экраны", () => {
     expect(screen.getByText(/Введите адрес/)).toBeVisible();
   });
 
-  it("вкладки этапов 3 и 4 неактивны и не показывают данных", async () => {
+  it("вкладки: числа, проекты и настройки организации", async () => {
     const user = userEvent.setup();
     render(wrap(<Detail slug="msp-2025" />));
     const members = await screen.findByTestId("org-tab-members");
     expect(members).toHaveAttribute("aria-selected", "true");
-    for (const id of ["projects", "quotas"]) {
-      const tab = screen.getByTestId(`org-tab-${id}`);
-      expect(tab).toHaveAttribute("aria-disabled", "true");
-      await user.click(tab);
-      expect(tab).toHaveAttribute("aria-selected", "false");
-      expect(screen.queryByTestId(`org-panel-${id}`)).toBeNull();
-    }
-    // Открыта по-прежнему вкладка участников.
-    expect(screen.getByTestId("org-panel-members")).toBeVisible();
+    expect(members).toHaveTextContent("6");
+    await waitFor(() => {
+      expect(screen.getByTestId("org-tab-groups")).toHaveTextContent("2");
+    });
+    await user.click(screen.getByTestId("org-tab-projects"));
+    expect(await screen.findByTestId("org-projects")).toHaveTextContent(
+      "В организации 31 проект",
+    );
+    await user.click(screen.getByTestId("org-tab-settings"));
+    const settings = await screen.findByTestId("org-settings");
+    expect(within(settings).getByDisplayValue("msp-2025")).toBeVisible();
+    expect(within(settings).getByTestId("org-danger")).toBeVisible();
+  });
+
+  it("админ организации не видит опасной зоны", async () => {
+    const user = userEvent.setup();
+    activateServerScenario("org_admin");
+    render(wrap(<Detail slug="msp-2025" />));
+    await user.click(await screen.findByTestId("org-tab-settings"));
+    expect(await screen.findByTestId("org-settings")).toBeVisible();
+    expect(screen.queryByTestId("org-delete")).toBeNull();
   });
 
   it("чужая организация выглядит как несуществующая", async () => {
@@ -390,8 +402,11 @@ describe("организации в админке: экраны", () => {
   it("удаление организации: с проектами отказ, без проектов уходит", async () => {
     const user = userEvent.setup();
     const first = render(wrap(<Detail slug="msp-2025" />));
+    await user.click(await screen.findByTestId("org-tab-settings"));
     await user.click(await screen.findByTestId("org-delete"));
-    expect(await screen.findByText(/сервер откажет/)).toBeVisible();
+    expect(
+      within(await screen.findByRole("dialog")).getByText(/сервер откажет/),
+    ).toBeVisible();
     const input = screen.getByRole("textbox", { name: /МСПИН 2025/ });
     await user.type(input, "МСПИН 2025");
     await user.click(
@@ -402,6 +417,7 @@ describe("организации в админке: экраны", () => {
 
     const onDeleted = vi.fn();
     render(wrap(<Detail slug="pilot-2026" onDeleted={onDeleted} />));
+    await user.click(await screen.findByTestId("org-tab-settings"));
     await user.click(await screen.findByTestId("org-delete"));
     await user.type(
       screen.getByRole("textbox", { name: /Пилот 2026/ }),

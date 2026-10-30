@@ -1,10 +1,18 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
+import { Building2, ChevronRight, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, DataTable, FilterBar, PageHeader } from "@shared/ui";
+import {
+  Button,
+  DataTable,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  PageHeader,
+  TableSkeleton,
+} from "@shared/ui";
 import type { AdminOrg } from "@entities/session";
-import { RoleBadge } from "./parts";
+import { OrgMark, RoleBadge } from "./parts";
 
 export type OrgsListViewProps = {
   status: "loading" | "error" | "ready";
@@ -58,22 +66,13 @@ export const OrgsListView = ({
         header: t("list.columns.name"),
         cell: ({ row }) => (
           <span
+            className="org-name"
             data-testid={`org-open-${row.original.slug}`}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 1,
-              minWidth: 0,
-            }}
           >
-            <span style={{ fontWeight: 600, fontSize: 13 }}>
-              {row.original.name}
-            </span>
-            <span
-              className="mono"
-              style={{ fontSize: 11, color: "var(--fg-2)" }}
-            >
-              {row.original.slug}
+            <OrgMark name={row.original.name} slug={row.original.slug} />
+            <span className="org-name-text">
+              <span>{row.original.name}</span>
+              <span className="org-slug">{row.original.slug}</span>
             </span>
           </span>
         ),
@@ -86,79 +85,108 @@ export const OrgsListView = ({
           row.original.my_role ? (
             <RoleBadge role={row.original.my_role} />
           ) : (
-            <Badge variant="subtle">{t("list.instanceAdmin")}</Badge>
+            <span className="org-muted">{t("list.instanceAdmin")}</span>
           ),
       },
       {
         id: "members",
-        header: t("list.columns.members"),
-        cell: ({ row }) => row.original.member_count,
+        header: () => (
+          <span className="org-num">{t("list.columns.members")}</span>
+        ),
+        cell: ({ row }) => (
+          <span className="org-num">{row.original.member_count}</span>
+        ),
       },
       {
         id: "projects",
-        header: t("list.columns.projects"),
-        cell: ({ row }) => row.original.project_count,
+        header: () => (
+          <span className="org-num">{t("list.columns.projects")}</span>
+        ),
+        cell: ({ row }) => (
+          <span
+            className={
+              row.original.project_count === 0 ? "org-num org-faint" : "org-num"
+            }
+          >
+            {row.original.project_count}
+          </span>
+        ),
+      },
+      {
+        id: "open",
+        enableSorting: false,
+        header: () => <span className="sr-only">{t("list.open")}</span>,
+        cell: () => (
+          <span className="org-chevron">
+            <ChevronRight size={16} aria-hidden="true" />
+          </span>
+        ),
       },
     ],
     [t],
   );
 
   const createButton = canCreate ? (
-    <Button
-      size="sm"
-      type="button"
-      onClick={onCreate}
-      style={{ gap: 6 }}
-      data-testid="org-create"
-    >
+    <Button size="sm" type="button" onClick={onCreate} data-testid="org-create">
       <Plus size={14} aria-hidden="true" />
       {t("list.create")}
     </Button>
   ) : null;
 
-  const searching = search.trim() !== "";
+  const empty = status === "ready" && orgs.length === 0;
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }} data-testid="orgs-list">
+    <div className="org-page" data-testid="orgs-list">
       <PageHeader
         title={t("list.title")}
         description={canCreate ? t("list.leadAdmin") : t("list.leadOrgAdmin")}
         actions={status === "ready" && orgs.length > 0 ? createButton : null}
       />
-      {status === "ready" && orgs.length > 0 && (
-        <FilterBar
-          search={search}
-          onSearchChange={setSearch}
-          searchLabel={t("list.search")}
-          searchPlaceholder={t("list.search")}
-          onReset={() => {
-            setSearch("");
-          }}
+      {status === "loading" && (
+        <TableSkeleton rows={4} columns={4} withAvatar testId="orgs-loading" />
+      )}
+      {status === "error" && (
+        <ErrorState framed title={t("list.loadFailed")} onRetry={onRetry} />
+      )}
+      {empty && (
+        <EmptyState
+          framed
+          testId="orgs-empty"
+          icon={<Building2 size={18} />}
+          title={t("list.empty.title")}
+          description={
+            canCreate ? t("list.empty.bodyAdmin") : t("list.empty.bodyOrgAdmin")
+          }
+          action={createButton}
         />
       )}
-      <DataTable
-        caption={t("list.caption")}
-        columns={columns}
-        data={rows}
-        getRowId={(o) => o.slug}
-        loading={status === "loading"}
-        error={status === "error" ? t("list.loadFailed") : null}
-        {...(onRetry ? { onRetry } : {})}
-        emptyTitle={searching ? t("list.noMatch.title") : t("list.empty.title")}
-        emptyHint={
-          searching
-            ? t("list.noMatch.body")
-            : canCreate
-              ? t("list.empty.bodyAdmin")
-              : t("list.empty.bodyOrgAdmin")
-        }
-        emptyAction={searching ? null : createButton}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        onRowClick={(o) => {
-          onOpen(o.slug);
-        }}
-      />
+      {status === "ready" && orgs.length > 0 && (
+        <div className="org-stack">
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            searchLabel={t("list.search")}
+            searchPlaceholder={t("list.search")}
+            onReset={() => {
+              setSearch("");
+            }}
+          />
+          <DataTable
+            className="org-table"
+            caption={t("list.caption")}
+            columns={columns}
+            data={rows}
+            getRowId={(o) => o.slug}
+            emptyTitle={t("list.noMatch.title")}
+            emptyHint={t("list.noMatch.body")}
+            sorting={sorting}
+            onSortingChange={setSorting}
+            onRowClick={(o) => {
+              onOpen(o.slug);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

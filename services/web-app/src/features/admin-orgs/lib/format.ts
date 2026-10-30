@@ -9,9 +9,13 @@ export const formatDate = (iso: string, lng: string): string => {
   }).format(date);
 };
 
-/** Инициалы для аватара: первые буквы первых двух слов. */
-export const initialsOf = (name: string): string => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.slice(0, 2).map((p) => Array.from(p)[0] ?? "");
-  return letters.join("").toUpperCase() || "?";
+/** Две буквы знака организации: первые буквы двух слов, а у «МСПИН 2025» две первые буквы. */
+export const orgInitials = (name: string): string => {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /^\p{L}/u.test(w));
+  const first = Array.from(words[0] ?? name.trim());
+  const second = words[1] ? Array.from(words[1])[0] : first[1];
+  return `${first[0] ?? "?"}${second ?? ""}`.toUpperCase();
 };
