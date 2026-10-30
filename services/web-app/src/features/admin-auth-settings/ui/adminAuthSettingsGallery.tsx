@@ -6,16 +6,22 @@ import type {
   AdminSettingState,
   AdminSmtpSettings,
 } from "@entities/session";
+import { ApiError } from "@shared/api";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
 import { ensureAdminSettingsLocales } from "../lib/locales";
 import { AdminAuthSettings } from "./AdminAuthSettings";
-import { OidcCard } from "./OidcCard";
-import { RegistrationCard } from "./RegistrationCard";
-import { SignInMethodsCard } from "./SignInMethodsCard";
-import { SmtpCard } from "./SmtpCard";
+import {
+  AuthSettingsForm,
+  type AuthSettingsFormProps,
+} from "./AuthSettingsForm";
+import { OidcSection, type OidcSectionProps } from "./OidcSection";
 
 const W = 640;
 const noop = () => undefined;
+const ok = () => Promise.resolve();
+// Отказ сервера в галерее: тот же ApiError, что приходит от клиента.
+const refuse = (code: string) => () =>
+  Promise.reject(new ApiError(code, code, 409));
 
 /** Словарь настроек грузится вместе с чанком админки; галерея ждёт его сама. */
 const Ready = ({ children }: { children: ReactNode }) => {
@@ -154,20 +160,8 @@ const entry = (
   ...extra,
 });
 
-const registration = (
-  settings: AdminRegistrationSettings,
-  extra: Partial<Parameters<typeof RegistrationCard>[0]> = {},
-) => (
-  <RegistrationCard settings={settings} smtpEnabled onSave={noop} {...extra} />
-);
-
-const signin = (
-  settings: AuthSettings,
-  extra: Partial<Parameters<typeof SignInMethodsCard>[0]> = {},
-) => <SignInMethodsCard settings={settings} onSave={noop} {...extra} />;
-
-const oidc = (extra: Partial<Parameters<typeof OidcCard>[0]> = {}) => (
-  <OidcCard
+const oidc = (extra: Partial<OidcSectionProps> = {}) => (
+  <OidcSection
     status="ready"
     providers={PROVIDERS}
     baseUrl="https://studio.example.org"
@@ -179,69 +173,74 @@ const oidc = (extra: Partial<Parameters<typeof OidcCard>[0]> = {}) => (
   />
 );
 
-const smtp = (
-  settings: AdminSmtpSettings,
-  extra: Partial<Parameters<typeof SmtpCard>[0]> = {},
-) => (
-  <SmtpCard
-    settings={settings}
-    onSave={noop}
+const form = (extra: Partial<AuthSettingsFormProps> = {}) => (
+  <AuthSettingsForm
+    registration={REGISTRATION}
+    auth={{ ...AUTH, oidc_enabled_count: 1 }}
+    smtp={SMTP_ON}
+    oidc={oidc()}
+    saveRegistration={ok}
+    saveAuth={ok}
+    saveSmtp={ok}
     test={{ onSend: noop, defaultTo: "ivan.sidorov@example.org" }}
     {...extra}
   />
 );
 
-/** Настройки входа в админке: каждая карточка в своих состояниях и живой раздел на демо-мире. */
+/** Настройки входа в админке: страница в своих состояниях и живой раздел на демо-мире. */
 export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
   {
     id: "admin-registration",
-    title: "Админка: регистрация",
+    title: "Админка: вход и регистрация",
+    description:
+      "Поменяйте любое значение: внизу появится панель сохранения со счётчиком правок.",
     entries: [
-      entry("admin_reg_invite", "По приглашению", () =>
-        registration(REGISTRATION),
-      ),
+      entry("admin_reg_invite", "По приглашению", () => form()),
       entry("admin_reg_domains", "Для доменов, с одобрением", () =>
-        registration(DOMAINS),
+        form({ registration: DOMAINS }),
       ),
       entry(
         "admin_reg_domains_nosmtp",
         "Домены без почты",
-        () => registration(DOMAINS, { smtpEnabled: false }),
+        () => form({ registration: DOMAINS, smtp: SMTP_OFF }),
         { note: "Предупреждение: аккаунты будут ждать одобрения." },
       ),
       entry(
         "admin_reg_open",
         "Открытая без одобрения",
         () =>
-          registration({
-            ...REGISTRATION,
-            registration_mode: "open",
+          form({
+            registration: { ...REGISTRATION, registration_mode: "open" },
           }),
         { note: "Предупреждение об открытой регистрации." },
       ),
       entry("admin_reg_closed", "Закрытая", () =>
-        registration({ ...REGISTRATION, registration_mode: "closed" }),
+        form({
+          registration: { ...REGISTRATION, registration_mode: "closed" },
+        }),
       ),
       entry(
         "admin_reg_env",
         "Режим и одобрение заданы окружением",
-        () => registration(REG_ENV),
-        { note: "Домены ещё можно править, остальное только читается." },
+        () => form({ registration: REG_ENV }),
+        { note: "Домены ещё можно править, остальное с замком." },
       ),
       entry(
         "admin_reg_all_env",
         "Всё задано окружением",
-        () => registration(REG_ALL_ENV),
-        { note: "Кнопки «Сохранить» нет, вместо неё пояснение." },
+        () => form({ registration: REG_ALL_ENV, smtp: SMTP_ENV }),
+        { note: "Почта целиком от окружения: один замок на раздел." },
       ),
-      entry("admin_reg_saving", "Сохраняется", () =>
-        registration(DOMAINS, { pending: true }),
-      ),
-      entry("admin_reg_saved", "Сохранено", () =>
-        registration(DOMAINS, { saved: true }),
-      ),
-      entry("admin_reg_failed", "Сохранить не вышло", () =>
-        registration(DOMAINS, { failure: { code: "network" } }),
+      entry(
+        "admin_settings_failed",
+        "Сохранить не вышло",
+        () =>
+          form({
+            saveRegistration: refuse("network"),
+            saveAuth: refuse("last_login_method"),
+            saveSmtp: refuse("network"),
+          }),
+        { note: "Поменяйте значение и нажмите «Сохранить»: ошибка в панели." },
       ),
     ],
   },
@@ -252,30 +251,22 @@ export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
       entry(
         "admin_signin_only",
         "Единственный способ входа",
-        () => signin(AUTH),
+        () => form({ auth: AUTH }),
         { note: "Пароль отключить нельзя, пока нет провайдера." },
       ),
-      entry("admin_signin_sso", "Пароль и два провайдера", () =>
-        signin({ ...AUTH, oidc_enabled_count: 2 }),
-      ),
       entry("admin_signin_off", "Пароль выключен", () =>
-        signin({ ...AUTH, password_enabled: false, oidc_enabled_count: 1 }),
-      ),
-      entry("admin_signin_locked", "Задано окружением", () =>
-        signin({
-          ...AUTH,
-          oidc_enabled_count: 1,
-          fields: { "auth.password_enabled": env },
+        form({
+          auth: { ...AUTH, password_enabled: false, oidc_enabled_count: 1 },
         }),
       ),
-      entry("admin_signin_last", "Отказ: последний способ входа", () =>
-        signin(
-          { ...AUTH, oidc_enabled_count: 1 },
-          { failure: { code: "last_login_method" } },
-        ),
-      ),
-      entry("admin_signin_saving", "Сохраняется", () =>
-        signin({ ...AUTH, oidc_enabled_count: 1 }, { pending: true }),
+      entry("admin_signin_locked", "Задано окружением", () =>
+        form({
+          auth: {
+            ...AUTH,
+            oidc_enabled_count: 1,
+            fields: { "auth.password_enabled": env },
+          },
+        }),
       ),
     ],
   },
@@ -302,29 +293,19 @@ export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
     id: "admin-smtp",
     title: "Админка: почта",
     entries: [
-      entry("admin_smtp_on", "Почта настроена, пароль задан", () =>
-        smtp(SMTP_ON),
-      ),
-      entry("admin_smtp_off", "Почта не настроена", () => smtp(SMTP_OFF)),
-      entry("admin_smtp_env", "Всё задано окружением", () => smtp(SMTP_ENV), {
-        note: "Поля только читаются, пароль не показывается.",
-      }),
-      entry("admin_smtp_saving", "Сохраняется", () =>
-        smtp(SMTP_ON, { pending: true }),
-      ),
-      entry("admin_smtp_failed", "Сохранить не вышло", () =>
-        smtp(SMTP_ON, { failure: { code: "network" } }),
+      entry("admin_smtp_off", "Почта не настроена", () =>
+        form({ smtp: SMTP_OFF }),
       ),
       entry("admin_smtp_test_pending", "Тест идёт", () =>
-        smtp(SMTP_ON, { test: { pending: true, onSend: noop } }),
+        form({ test: { pending: true, onSend: noop } }),
       ),
       entry("admin_smtp_test_ok", "Тестовое письмо ушло", () =>
-        smtp(SMTP_ON, {
+        form({
           test: { result: { ok: true, error: null }, onSend: noop },
         }),
       ),
       entry("admin_smtp_test_failed", "Тестовое письмо не ушло", () =>
-        smtp(SMTP_ON, {
+        form({
           test: {
             result: {
               ok: false,

@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
-import { Spinner } from "@shared/ui";
-import { Notice } from "@shared/ui/ConflictKit";
+import { ErrorState, Section, Spinner, TableSkeleton } from "@shared/ui";
 import { useBootstrap, type AdminOidcProvider } from "@entities/session";
 import {
   useAuthSettings,
@@ -21,15 +20,41 @@ import {
 import type { Failure } from "../lib/failure";
 import { ensureAdminSettingsLocales } from "../lib/locales";
 import type { OidcDraft } from "../lib/validate";
-import { OidcCard } from "./OidcCard";
-import { RegistrationCard } from "./RegistrationCard";
-import { SignInMethodsCard } from "./SignInMethodsCard";
-import { SmtpCard } from "./SmtpCard";
+import { AuthSettingsForm } from "./AuthSettingsForm";
+import { OidcSection } from "./OidcSection";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
 const baseUrlOf = (): string =>
   typeof window === "undefined" ? "" : window.location.origin;
+
+const input = (draft: OidcDraft) => ({
+  label: draft.label,
+  issuer: draft.issuer,
+  client_id: draft.client_id,
+  scopes: draft.scopes,
+  enabled: draft.enabled,
+  auto_provision: draft.auto_provision,
+});
+
+/** Скелет страницы на время первой загрузки: разделы той же высоты, что и настоящие. */
+const SettingsSkeleton = () => (
+  <div
+    className="flex flex-col"
+    style={{ gap: 16 }}
+    role="status"
+    data-testid="admin-settings-loading"
+  >
+    {[3, 1, 2].map((rows, i) => (
+      <Section
+        key={i}
+        title={<span className="adm-skel" style={{ width: 160 }} />}
+      >
+        <TableSkeleton rows={rows} columns={2} framed={false} />
+      </Section>
+    ))}
+  </div>
+);
 
 /**
  * Настройки входа в админке: регистрация, способы входа, провайдеры OIDC и
@@ -62,17 +87,6 @@ export const AdminAuthSettings = () => {
   const update = useUpdateProvider();
   const remove = useDeleteProvider();
   const [oidcFailure, setOidcFailure] = useState<Failure | null>(null);
-  const [saved, setSaved] = useState({
-    registration: false,
-    auth: false,
-    smtp: false,
-  });
-  // Каждое сохранение пересоздаёт форму: введённые секреты и черновик сбрасываются.
-  const [rounds, setRounds] = useState({ registration: 0, auth: 0, smtp: 0 });
-  const markSaved = (key: keyof typeof saved, value: boolean) => {
-    setSaved((s) => ({ ...s, [key]: value }));
-    if (value) setRounds((r) => ({ ...r, [key]: r[key] + 1 }));
-  };
 
   if (!ready) {
     return (
@@ -81,18 +95,6 @@ export const AdminAuthSettings = () => {
       </div>
     );
   }
-
-  const failed = registration.isError || auth.isError || smtp.isError;
-  const loadedMain = registration.data && auth.data && smtp.data;
-
-  const input = (draft: OidcDraft) => ({
-    label: draft.label,
-    issuer: draft.issuer,
-    client_id: draft.client_id,
-    scopes: draft.scopes,
-    enabled: draft.enabled,
-    auto_provision: draft.auto_provision,
-  });
 
   const run = async (action: () => Promise<unknown>): Promise<boolean> => {
     setOidcFailure(null);
@@ -119,156 +121,92 @@ export const AdminAuthSettings = () => {
           auto_provision: null,
         },
       }),
-    );
+    ).then((ok) => {
+      if (ok) {
+        toast.success(
+          t(provider.enabled ? "oidc.disabledToast" : "oidc.enabledToast", {
+            name: provider.label,
+          }),
+        );
+      }
+    });
   };
+
+  const oidc = (
+    <OidcSection
+      status={
+        providers.data ? "ready" : providers.isError ? "error" : "loading"
+      }
+      providers={providers.data ?? []}
+      baseUrl={baseUrlOf()}
+      saving={create.isPending || update.isPending}
+      formFailure={oidcFailure}
+      failure={oidcFailure}
+      deleting={remove.isPending}
+      onRetry={() => {
+        void providers.refetch();
+      }}
+      onReset={() => {
+        setOidcFailure(null);
+      }}
+      onCreate={(draft) =>
+        run(() =>
+          create.mutateAsync({
+            ...input(draft),
+            client_secret: draft.client_secret,
+          }),
+        )
+      }
+      onUpdate={(provider, draft) =>
+        run(() =>
+          update.mutateAsync({
+            id: provider.id,
+            body: {
+              label: draft.label !== provider.label ? draft.label : null,
+              issuer: draft.issuer !== provider.issuer ? draft.issuer : null,
+              client_id:
+                draft.client_id !== provider.client_id ? draft.client_id : null,
+              // Секрет уходит, только если его ввели заново.
+              client_secret:
+                draft.client_secret !== "" ? draft.client_secret : null,
+              scopes: draft.scopes !== provider.scopes ? draft.scopes : null,
+              enabled:
+                draft.enabled !== provider.enabled ? draft.enabled : null,
+              auto_provision:
+                draft.auto_provision !== provider.auto_provision
+                  ? draft.auto_provision
+                  : null,
+            },
+          }),
+        )
+      }
+      onToggle={toggleProvider}
+      onDelete={(provider) => run(() => remove.mutateAsync(provider.id))}
+    />
+  );
+
+  const failed = registration.isError || auth.isError || smtp.isError;
 
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: 16, flex: 1 }}
       data-testid="admin-auth-settings"
     >
-      {failed && !loadedMain && (
-        <Notice
-          tone="err"
-          role="alert"
-          text={t("loadFailed")}
-          action={
-            <button
-              type="button"
-              className="btn xs"
-              onClick={() => {
-                void registration.refetch();
-                void auth.refetch();
-                void smtp.refetch();
-              }}
-            >
-              {t("retry")}
-            </button>
-          }
-        />
-      )}
-      {!loadedMain && !failed && (
-        <div
-          className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
-          data-testid="admin-settings-loading"
-        >
-          <Spinner size="sm" />
-          <span className="dim">{t("loading")}</span>
-        </div>
-      )}
-
-      {registration.data && (
-        <RegistrationCard
-          key={`${JSON.stringify(registration.data)}:${String(rounds.registration)}`}
-          settings={registration.data}
-          smtpEnabled={
-            smtp.data?.enabled ?? bootstrap?.auth.smtp_enabled ?? false
-          }
-          pending={saveRegistration.isPending}
-          failure={
-            saveRegistration.isError ? asFailure(saveRegistration.error) : null
-          }
-          saved={saved.registration}
-          onSave={(patch) => {
-            markSaved("registration", false);
-            saveRegistration.mutate(patch, {
-              onSuccess: () => {
-                markSaved("registration", true);
-                toast.success(t("registration.toast"));
-              },
-            });
-          }}
-        />
-      )}
-
-      {auth.data && (
-        <SignInMethodsCard
-          key={`${JSON.stringify(auth.data)}:${String(rounds.auth)}`}
-          settings={auth.data}
-          pending={saveAuth.isPending}
-          failure={saveAuth.isError ? asFailure(saveAuth.error) : null}
-          saved={saved.auth}
-          onSave={(passwordEnabled) => {
-            markSaved("auth", false);
-            saveAuth.mutate(passwordEnabled, {
-              onSuccess: () => {
-                markSaved("auth", true);
-              },
-            });
-          }}
-        />
-      )}
-
-      <OidcCard
-        status={
-          providers.data ? "ready" : providers.isError ? "error" : "loading"
-        }
-        providers={providers.data ?? []}
-        baseUrl={baseUrlOf()}
-        saving={create.isPending || update.isPending}
-        formFailure={oidcFailure}
-        failure={oidcFailure}
-        deleting={remove.isPending}
-        onRetry={() => {
-          void providers.refetch();
-        }}
-        onReset={() => {
-          setOidcFailure(null);
-        }}
-        onCreate={(draft) =>
-          run(() =>
-            create.mutateAsync({
-              ...input(draft),
-              client_secret: draft.client_secret,
-            }),
-          )
-        }
-        onUpdate={(provider, draft) =>
-          run(() =>
-            update.mutateAsync({
-              id: provider.id,
-              body: {
-                label: draft.label !== provider.label ? draft.label : null,
-                issuer: draft.issuer !== provider.issuer ? draft.issuer : null,
-                client_id:
-                  draft.client_id !== provider.client_id
-                    ? draft.client_id
-                    : null,
-                // Секрет уходит, только если его ввели заново.
-                client_secret:
-                  draft.client_secret !== "" ? draft.client_secret : null,
-                scopes: draft.scopes !== provider.scopes ? draft.scopes : null,
-                enabled:
-                  draft.enabled !== provider.enabled ? draft.enabled : null,
-                auto_provision:
-                  draft.auto_provision !== provider.auto_provision
-                    ? draft.auto_provision
-                    : null,
-              },
-            }),
-          )
-        }
-        onToggle={toggleProvider}
-        onDelete={(provider) => run(() => remove.mutateAsync(provider.id))}
-      />
-
-      {smtp.data && (
-        <SmtpCard
-          key={`${JSON.stringify(smtp.data)}:${String(rounds.smtp)}`}
-          settings={smtp.data}
-          pending={saveSmtp.isPending}
-          failure={saveSmtp.isError ? asFailure(saveSmtp.error) : null}
-          saved={saved.smtp}
-          onSave={(patch) => {
-            markSaved("smtp", false);
+      {registration.data && auth.data && smtp.data ? (
+        <AuthSettingsForm
+          registration={registration.data}
+          auth={auth.data}
+          smtp={smtp.data}
+          oidc={oidc}
+          saveRegistration={(patch) => saveRegistration.mutateAsync(patch)}
+          saveAuth={(passwordEnabled) => saveAuth.mutateAsync(passwordEnabled)}
+          saveSmtp={(patch) => {
             testSmtp.reset();
-            saveSmtp.mutate(patch, {
-              onSuccess: () => {
-                markSaved("smtp", true);
-              },
-            });
+            return saveSmtp.mutateAsync(patch);
+          }}
+          onSaved={() => {
+            toast.success(t("savedToast"));
           }}
           test={{
             pending: testSmtp.isPending,
@@ -280,6 +218,20 @@ export const AdminAuthSettings = () => {
             },
           }}
         />
+      ) : failed ? (
+        <ErrorState
+          framed
+          title={t("loadFailed")}
+          description={t("loadFailedBody")}
+          testId="admin-settings-failed"
+          onRetry={() => {
+            if (registration.isError) void registration.refetch();
+            if (auth.isError) void auth.refetch();
+            if (smtp.isError) void smtp.refetch();
+          }}
+        />
+      ) : (
+        <SettingsSkeleton />
       )}
     </div>
   );

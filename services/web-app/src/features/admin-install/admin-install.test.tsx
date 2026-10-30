@@ -121,16 +121,23 @@ describe("настройки установки в админке", () => {
       const user = userEvent.setup();
       mount(<InstancePage />);
       const form = await screen.findByTestId("instance-form");
-      expect(within(form).getByLabelText("Публичный адрес")).toHaveAttribute(
+      expect(within(form).getByLabelText(/Публичный адрес/)).toHaveAttribute(
         "readonly",
       );
-      expect(screen.getByTestId("locked-instance-public_url")).toBeVisible();
+      expect(screen.getByTestId("instance-public_url-locked")).toBeVisible();
       const name = within(form).getByLabelText("Название установки");
       expect(name).not.toHaveAttribute("readonly");
+      // Панель сохранения появляется только с правками.
+      expect(screen.queryByTestId("save-bar")).toBeNull();
       await user.clear(name);
       await user.type(name, "Studio кафедры");
-      await user.click(screen.getByTestId("instance-save"));
-      expect(await screen.findByTestId("instance-saved")).toBeVisible();
+      expect(screen.getByTestId("save-bar")).toHaveTextContent(
+        "1 несохранённое изменение",
+      );
+      await user.click(screen.getByTestId("save-bar-save"));
+      await waitFor(() => {
+        expect(screen.queryByTestId("save-bar")).toBeNull();
+      });
       const saved = (await call("GET", "/settings/instance")).data as {
         name: string;
         public_url: string;
@@ -139,14 +146,17 @@ describe("настройки установки в админке", () => {
       expect(saved.public_url).toBe("https://studio.hse.example");
     });
 
-    it("неверный адрес показывает ошибку и ничего не отправляет", async () => {
+    it("неверный адрес показывает ошибку и не даёт сохранить", async () => {
       const user = userEvent.setup();
       mount(<InstancePage />);
       const url = await screen.findByLabelText("Публичный адрес");
       await user.clear(url);
       await user.type(url, "http://studio.example.org");
-      await user.click(screen.getByTestId("instance-save"));
-      expect(await screen.findByText(/Нужен адрес вида https/)).toBeVisible();
+      expect(screen.getByText(/Нужен адрес вида https/)).toBeVisible();
+      expect(screen.getByTestId("save-bar-save")).toBeDisabled();
+      expect(screen.getByTestId("save-bar")).toHaveTextContent(
+        "Исправьте поля с ошибками",
+      );
       expect(
         (
           (await call("GET", "/settings/instance")).data as {
@@ -156,13 +166,29 @@ describe("настройки установки в админке", () => {
       ).toBe("https://studio.example.org");
     });
 
-    it("смена адреса предупреждает о ссылках", async () => {
+    it("смена адреса предупреждает о ссылках, «Отменить» возвращает значение", async () => {
       const user = userEvent.setup();
       mount(<InstancePage />);
       const url = await screen.findByLabelText("Публичный адрес");
       await user.clear(url);
       await user.type(url, "https://new.example.org");
       expect(screen.getByTestId("instance-url-impact")).toBeVisible();
+      await user.click(screen.getByTestId("save-bar-discard"));
+      expect(screen.getByLabelText("Публичный адрес")).toHaveValue(
+        "https://studio.example.org",
+      );
+      expect(screen.queryByTestId("instance-url-impact")).toBeNull();
+      expect(screen.queryByTestId("save-bar")).toBeNull();
+    });
+
+    it("без прав страница показывает ошибку с повтором", async () => {
+      activateServerScenario("student_ready");
+      mount(<InstancePage />);
+      const failed = await screen.findByTestId("install-load-failed");
+      expect(failed).toHaveTextContent("Не удалось загрузить настройки");
+      expect(
+        within(failed).getByRole("button", { name: "Повторить" }),
+      ).toBeVisible();
     });
 
     it("сервер отвечает 409 на закрытое окружением поле", async () => {
@@ -177,21 +203,21 @@ describe("настройки установки в админке", () => {
   });
 
   describe("сборка", () => {
-    it("предел вне диапазона не отправляется, верный уходит в секундах", async () => {
+    it("предел вне диапазона не сохраняется, верный уходит в секундах", async () => {
       const user = userEvent.setup();
       mount(<InstancePage />);
       const form = await screen.findByTestId("build-form");
       const timeout = within(form).getByLabelText(/Предел длительности/);
       await user.clear(timeout);
       await user.type(timeout, "99");
-      await user.click(screen.getByTestId("build-save"));
-      expect(
-        await within(form).findAllByText(/Целое число от 1 до 60/),
-      ).not.toHaveLength(0);
+      expect(within(form).getByText(/Целое число от 1 до 60/)).toBeVisible();
+      expect(screen.getByTestId("save-bar-save")).toBeDisabled();
       await user.clear(timeout);
       await user.type(timeout, "10");
-      await user.click(screen.getByTestId("build-save"));
-      expect(await screen.findByTestId("build-saved")).toBeVisible();
+      await user.click(screen.getByTestId("save-bar-save"));
+      await waitFor(() => {
+        expect(screen.queryByTestId("save-bar")).toBeNull();
+      });
       expect(
         ((await call("GET", "/settings/build")).data as { timeout_s: number })
           .timeout_s,
@@ -205,7 +231,7 @@ describe("настройки установки в админке", () => {
       expect(
         within(form).getByLabelText(/Предел длительности/),
       ).toHaveAttribute("readonly");
-      expect(screen.getByTestId("locked-build-timeout")).toBeVisible();
+      expect(screen.getByTestId("build-timeout-locked")).toBeVisible();
     });
   });
 
@@ -226,11 +252,13 @@ describe("настройки установки в админке", () => {
       expect(
         getServerWorld().bootstrap.capabilities.personal_signing_keys,
       ).toBe(true);
-      await user.click(screen.getByTestId("signing-save"));
-      expect(await screen.findByTestId("signing-saved")).toBeVisible();
-      expect(screen.getByTestId("signing-state")).toHaveTextContent(
-        "Хранение запрещено",
-      );
+      await user.click(screen.getByTestId("save-bar-save"));
+      await waitFor(() => {
+        expect(screen.getByTestId("signing-state")).toHaveTextContent(
+          "Хранение запрещено",
+        );
+      });
+      expect(screen.queryByTestId("save-bar")).toBeNull();
       expect(screen.getByTestId("signing-blocked")).toBeVisible();
       expect(
         getServerWorld().bootstrap.capabilities.personal_signing_keys,
@@ -311,11 +339,29 @@ describe("настройки установки в админке", () => {
     it("список: провайдер без ключа помечен, с ключом не показывает его", async () => {
       mount(<AiProvidersPage renderEditor={noEditor} />);
       const withKey = await screen.findByTestId("shared-provider-aip_shared1");
-      expect(within(withKey).getByTestId("provider-key-set")).toBeVisible();
-      expect(withKey).toHaveTextContent("общий");
+      expect(within(withKey).getByTestId("provider-key-set")).toHaveTextContent(
+        "Ключ задан",
+      );
+      expect(withKey).toHaveTextContent("Anthropic");
       const noKey = screen.getByTestId("shared-provider-aip_shared2");
       expect(within(noKey).getByTestId("provider-key-missing")).toBeVisible();
       expect(document.body.textContent).not.toMatch(/sk-/);
+    });
+
+    it("проверка подключения показывает результат в строке", async () => {
+      const user = userEvent.setup();
+      mount(<AiProvidersPage renderEditor={noEditor} />);
+      await user.click(
+        await screen.findByRole("button", {
+          name: "Действия с провайдером Общий Claude",
+        }),
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: "Проверить подключение" }),
+      );
+      expect(
+        await screen.findByText("Подключение работает, 2 модели"),
+      ).toBeVisible();
     });
 
     it("пустой список объясняет, что делать", async () => {
@@ -337,7 +383,12 @@ describe("настройки установки в админке", () => {
       expect(screen.getByTestId("editor-slot")).toHaveTextContent("новый");
 
       await user.click(
-        screen.getByRole("button", { name: "Удалить провайдера Общий Claude" }),
+        screen.getByRole("button", {
+          name: "Действия с провайдером Общий Claude",
+        }),
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: "Удалить" }),
       );
       expect(screen.getByTestId("shared-provider-delete")).toHaveTextContent(
         "Общий Claude",

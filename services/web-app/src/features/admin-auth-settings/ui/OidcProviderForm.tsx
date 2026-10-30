@@ -1,7 +1,15 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CopyField, Input, Modal, Spinner } from "@shared/ui";
+import {
+  Button,
+  CopyField,
+  Input,
+  Modal,
+  Spinner,
+  StatusDot,
+} from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import { Switch } from "@shared/ui/Switch";
 import type { AdminOidcProvider } from "@entities/session";
 import { failureKey, type Failure } from "../lib/failure";
 import {
@@ -12,6 +20,44 @@ import {
   type OidcDraft,
 } from "../lib/validate";
 import { HINT } from "../lib/styles";
+
+/** Выключатель с подписью и пояснением внутри формы. */
+const SwitchLine = ({
+  id,
+  label,
+  hint,
+  checked,
+  onChange,
+  testId,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  testId: string;
+}) => (
+  <div
+    className="flex items-center justify-between"
+    style={{ gap: 16, padding: "8px 0" }}
+  >
+    <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
+      <label htmlFor={id} style={{ fontSize: 13, fontWeight: 500 }}>
+        {label}
+      </label>
+      <span id={`${id}-hint`} style={HINT}>
+        {hint}
+      </span>
+    </span>
+    <Switch
+      id={id}
+      checked={checked}
+      onChange={onChange}
+      describedBy={`${id}-hint`}
+      testId={testId}
+    />
+  </div>
+);
 
 export type OidcProviderFormProps = {
   /** null: новый провайдер. */
@@ -150,12 +196,8 @@ export const OidcProviderForm = ({
               : { hint: t("oidc.form.secretHint") })}
           />
           {provider?.client_secret_set && (
-            <span
-              className="chip subtle"
-              style={{ alignSelf: "flex-start" }}
-              data-testid="oidc-secret-set"
-            >
-              {t("oidc.form.secretSet")}
+            <span className="adm-field-note" data-testid="oidc-secret-set">
+              <StatusDot status="success" label={t("oidc.form.secretSet")} />
             </span>
           )}
         </div>
@@ -172,40 +214,28 @@ export const OidcProviderForm = ({
             : { hint: t("oidc.form.scopesHint") })}
         />
 
-        <label className="flex" style={{ gap: 10, alignItems: "flex-start" }}>
-          <input
-            type="checkbox"
+        <div className="flex flex-col" style={{ gap: 2 }}>
+          <SwitchLine
+            id={`${uid}-enabled`}
+            label={t("oidc.form.enabled")}
+            hint={t("oidc.form.enabledHint")}
             checked={draft.enabled}
-            onChange={(e) => {
-              set({ enabled: e.target.checked });
+            onChange={(enabled) => {
+              set({ enabled });
             }}
-            style={{ marginTop: 3 }}
-            data-testid="oidc-form-enabled"
+            testId="oidc-form-enabled"
           />
-          <span className="flex flex-col" style={{ gap: 2 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>
-              {t("oidc.form.enabled")}
-            </span>
-            <span style={HINT}>{t("oidc.form.enabledHint")}</span>
-          </span>
-        </label>
-        <label className="flex" style={{ gap: 10, alignItems: "flex-start" }}>
-          <input
-            type="checkbox"
+          <SwitchLine
+            id={`${uid}-provision`}
+            label={t("oidc.form.provision")}
+            hint={t("oidc.form.provisionHint")}
             checked={draft.auto_provision}
-            onChange={(e) => {
-              set({ auto_provision: e.target.checked });
+            onChange={(auto_provision) => {
+              set({ auto_provision });
             }}
-            style={{ marginTop: 3 }}
-            data-testid="oidc-form-provision"
+            testId="oidc-form-provision"
           />
-          <span className="flex flex-col" style={{ gap: 2 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>
-              {t("oidc.form.provision")}
-            </span>
-            <span style={HINT}>{t("oidc.form.provisionHint")}</span>
-          </span>
-        </label>
+        </div>
 
         <div
           className="flex flex-col"

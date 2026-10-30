@@ -18,56 +18,185 @@ const ago = (days: number): string =>
 const ahead = (days: number): string =>
   new Date(Date.now() + days * day).toISOString();
 
-// Свежие записи журнала: разные действия и люди, как в живой установке. Цели
-// записаны так же, как их пишет сервер: идентификаторы, подробности в details.
+// Записи журнала за последние дни: разные действия и люди, как в живой
+// установке. Цели записаны так же, как их пишет сервер: идентификаторы, а
+// понятные имена в details.
+const ADMIN = "u_01hx7k1a0b";
 const RECENT_AUDIT: (Omit<AdminAuditEvent, "id" | "at"> & {
   minutesAgo: number;
 })[] = [
   {
     minutesAgo: 6,
     action: "invite.create",
-    actor_id: "u_01hx7k1a0b",
+    actor_id: ADMIN,
     target: "inv_01",
-    details: { email: "new.student@example.org" },
+    details: { email: "new.student@example.org", ttl_days: 7 },
   },
   {
     minutesAgo: 24,
     action: "auth.login",
     actor_id: "u_01hx7k2c1d",
     target: null,
-    details: { method: "password" },
+    details: { method: "password", ip: "10.12.4.31" },
+  },
+  {
+    minutesAgo: 38,
+    action: "auth.login_failed",
+    actor_id: null,
+    target: null,
+    details: {
+      email: "petr.orlov@example.org",
+      reason: "bad_password",
+      ip: "185.12.40.7",
+    },
   },
   {
     minutesAgo: 52,
     action: "runner.pause",
-    actor_id: "u_01hx7k1a0b",
+    actor_id: ADMIN,
     target: "rn_01hxb4",
-    details: {},
+    details: { name: "runner-305" },
   },
   {
     minutesAgo: 95,
     action: "settings.quotas_update",
-    actor_id: "u_01hx7k1a0b",
+    actor_id: ADMIN,
     target: null,
     details: { user_concurrent: 2, org_concurrent: 6 },
   },
   {
     minutesAgo: 150,
     action: "runner.registration_token_create",
-    actor_id: "u_01hx7k1a0b",
+    actor_id: ADMIN,
     target: "rt_01hxc1",
     details: { label: "Сервер в аудитории 305" },
   },
   {
     minutesAgo: 200,
     action: "org.create",
-    actor_id: "u_01hx7k1a0b",
+    actor_id: ADMIN,
     target: "org_01hxp3",
-    details: { slug: "pilot-2026" },
+    details: { name: "Пилот 2026", slug: "pilot-2026" },
+  },
+  {
+    minutesAgo: 260,
+    action: "admin.user_approved",
+    actor_id: ADMIN,
+    target: "u_01hx7k2c1d",
+    details: {},
+  },
+  {
+    minutesAgo: 330,
+    action: "settings.smtp_test",
+    actor_id: ADMIN,
+    target: null,
+    details: { to: "ivan.sidorov@example.org" },
+  },
+  {
+    minutesAgo: 26 * 60,
+    action: "project.transfer",
+    actor_id: "u_01hx7k2c1d",
+    target: "prj_01hxq8",
+    details: { title: "Курсовая работа: анализ рынка", to: "Пётр Орлов" },
+  },
+  {
+    minutesAgo: 28 * 60,
+    action: "group.member_add",
+    actor_id: ADMIN,
+    target: "grp_01hxm2",
+    details: { name: "БПИ-231", email: "petr.orlov@example.org" },
+  },
+  {
+    minutesAgo: 30 * 60,
+    action: "settings.signing_policy_update",
+    actor_id: ADMIN,
+    target: null,
+    details: { server_keys: "allowed" },
+  },
+  {
+    minutesAgo: 31 * 60,
+    action: "auth.oidc_provision",
+    actor_id: "u_01hx7k3e2f",
+    target: "u_01hx7k3e2f",
+    details: { provider: "HSE SSO" },
+  },
+  {
+    minutesAgo: 33 * 60,
+    action: "admin.user_disabled",
+    actor_id: ADMIN,
+    target: "u_01hx7k6k5l",
+    details: { reason: "Выпускница, доступ больше не нужен" },
+  },
+  {
+    minutesAgo: 40 * 60,
+    action: "oidc.delete",
+    actor_id: ADMIN,
+    target: "oidc_01hxk1",
+    details: { label: "GitLab ВШЭ" },
+  },
+  {
+    minutesAgo: 46 * 60,
+    action: "admin.admin_granted",
+    actor_id: ADMIN,
+    target: "u_01hx7k2c1d",
+    details: {},
   },
 ];
 
-export const createDemoAdminPeople = (): DemoAdminPeople => ({
+// Ровный фон старых записей: входы, одобрения, приглашения и доступы к проектам.
+const OLDER_AUDIT: Omit<AdminAuditEvent, "id" | "at">[] = [
+  {
+    action: "auth.login",
+    actor_id: ADMIN,
+    target: null,
+    details: { method: "password" },
+  },
+  {
+    action: "admin.user_approved",
+    actor_id: ADMIN,
+    target: "u_01hx7k2c1d",
+    details: {},
+  },
+  {
+    action: "auth.login",
+    actor_id: "u_01hx7k2c1d",
+    target: null,
+    details: { method: "oidc", provider: "HSE SSO" },
+  },
+  {
+    action: "project.member_set",
+    actor_id: "u_01hx7k2c1d",
+    target: "prj_01hxq8",
+    details: { title: "Курсовая работа: анализ рынка", role: "member" },
+  },
+  {
+    action: "invite.create",
+    actor_id: ADMIN,
+    target: "inv_00",
+    details: { email: "student@example.org" },
+  },
+  {
+    action: "auth.logout",
+    actor_id: "u_01hx7k3e2f",
+    target: null,
+    details: {},
+  },
+];
+
+const olderAudit = (i: number): Omit<AdminAuditEvent, "id" | "at"> =>
+  OLDER_AUDIT[i % OLDER_AUDIT.length] ?? {
+    action: "auth.login",
+    actor_id: ADMIN,
+    target: null,
+    details: {},
+  };
+
+/** fresh: свежая установка, журнал пуст. */
+export type ServerDemoPeopleSeed = "default" | "fresh";
+
+export const createDemoAdminPeople = (
+  seed: ServerDemoPeopleSeed = "default",
+): DemoAdminPeople => ({
   users: [
     {
       id: "u_01hx7k1a0b",
@@ -232,22 +361,19 @@ export const createDemoAdminPeople = (): DemoAdminPeople => ({
       used_at: null,
     },
   ],
-  audit: [
-    ...RECENT_AUDIT.map(({ minutesAgo, ...e }, i) => ({
-      ...e,
-      id: 60 + RECENT_AUDIT.length - i,
-      at: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
-    })),
-    ...Array.from({ length: 60 }, (_, i) => {
-      const admin = i % 3 === 0;
-      return {
-        id: 60 - i,
-        at: new Date(Date.now() - (i * 5 + 4) * 3_600_000).toISOString(),
-        action: admin ? "admin.user_approved" : "auth.login",
-        actor_id: "u_01hx7k1a0b",
-        target: admin ? "u_01hx7k2c1d" : null,
-        details: admin ? {} : { method: "password" },
-      };
-    }),
-  ],
+  audit:
+    seed === "fresh"
+      ? []
+      : [
+          ...RECENT_AUDIT.map(({ minutesAgo, ...e }, i) => ({
+            ...e,
+            id: 60 + RECENT_AUDIT.length - i,
+            at: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+          })),
+          ...Array.from({ length: 60 }, (_, i) => ({
+            ...olderAudit(i),
+            id: 60 - i,
+            at: new Date(Date.now() - (i * 5 + 50) * 3_600_000).toISOString(),
+          })),
+        ],
 });
