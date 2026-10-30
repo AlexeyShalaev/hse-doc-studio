@@ -32,11 +32,11 @@ One api replica runs at a time, so an update briefly interrupts access.
 
 ## Version compatibility and rollback
 
-Migrations follow expand/contract: release N only adds (tables, columns with a default, indexes), and removal or tightening waits for release N+1. So the N-1 image keeps working on a database already upgraded to N. Tests enforce it: an N-1 to N migration on a populated database and a ban on destructive steps in `upgrade()`.
+Migrations follow expand/contract: release N only adds (tables, columns with a default, indexes), and removal or tightening waits for release N+1. So data written by release N does not break the schema for N-1 code. Tests enforce it: an N-1 to N migration on a populated database and a ban on destructive steps in `upgrade()`. The N-1 image itself still does not start on database N: it does not know the new revision and refuses to run (see `db_ahead` below).
 
 - **Runner and api.** A runner announces its protocol version at registration; a mismatch is rejected with `runner_protocol_unsupported`. Update the api first, then the runners of the same release.
-- **Image rollback.** Restore the previous `TAG` (or `helm rollback`). Do not roll the schema back: image N-1 works with database N. If a release changed data irreversibly, restore the backup taken before the update (see below).
-- **Database newer than the image.** An older image that sees a revision it does not know refuses to start with `db_ahead`. This is a guard: start an image of the same or a newer release.
+- **Image rollback.** If the release added no migrations, restoring the previous `TAG` (or `helm rollback`) is enough. If it did, the N-1 image refuses to start on database N (`db_ahead`, whether auto-migrate is on or off), so a rollback means restoring the backup taken before the update together with the previous `TAG` (see below). Take a backup before every update.
+- **Database newer than the image.** An older image that sees a revision it does not know refuses to start with `db_ahead`, whether auto-migrate is on or off. This is a guard: start an image of the same or a newer release, or restore a backup.
 - **Database older than the image.** A backup from an earlier release started with a newer image is caught up by migrations at startup.
 
 ## Restoring from a backup
@@ -57,7 +57,7 @@ Checks after the restore:
 - sign in as an administrator, open a project, build a PDF: the build reads blobs from S3 and confirms their hashes;
 - if the database is newer than the bucket (blobs in the registry are missing from S3), the first build that needs a missing file fails with `blob_missing`, and the blob's registry entry is dropped at that moment. Run the build again: the file is uploaded to the bucket anew. Extra blobs in the bucket are harmless: cleanup removes them.
 
-If the database is newer than the projects volume, open the affected projects and re-save the files from users' working copies; if the volume is newer than the database, new projects are missing from the database and must be imported again.
+If the database is newer than the projects volume, open the affected projects and re-save the files from users' working copies; if the volume is newer than the database, new projects are missing from the database. Do not start the api until you have dealt with them: orphan garbage collection (`orphan_gc`) deletes such folders once they are older than `ORPHAN_GC_MIN_AGE_HOURS` (24 hours by default), and folders from a snapshot already are. Before starting the api, import each such folder with `hse-doc-studio server import-project <folder> --user <email>`, and leave unwanted folders to be deleted. Or temporarily set `HSE_STUDIO__SERVER__ORPHAN_GC_INTERVAL_S` to a very large value until the restore is verified.
 
 ## Key loss
 
