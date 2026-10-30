@@ -237,7 +237,7 @@ class StartChatTurnUC:
 
     async def _resume(self, inp: StartChatTurnInput, folder: Path, project: Project) -> StartChatTurnOutput:
         run = await self._chat_repo.get_run(folder, inp.run_id) if inp.run_id else None
-        if run is None:
+        if run is None or run.session_id != inp.session_id:
             raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
         if run.status != AgentRunStatus.awaiting_approval:
             raise ValueError(localized_error("Запуск не ожидает подтверждения", "Run is not awaiting approval"))

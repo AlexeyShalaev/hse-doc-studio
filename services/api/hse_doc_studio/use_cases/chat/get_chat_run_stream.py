@@ -56,6 +56,10 @@ class GetChatRunStreamUC:
         folder = await self._locator.folder_of(inp.project_id)
         if folder is None:
             return self._error_stream("project not found")
+        # Чужой запуск (другая сессия или проект) не должен ни подписываться на шину, ни показывать события.
+        owned = await self._chat_repo.get_run(folder, inp.run_id)
+        if owned is None or owned.session_id != inp.session_id:
+            return self._error_stream("run not found")
         return self._stream(folder, inp.session_id, inp.run_id)
 
     def _error_stream(self, message: str) -> AsyncGenerator[AgentEvent, None]:

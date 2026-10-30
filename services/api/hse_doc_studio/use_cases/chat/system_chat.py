@@ -154,13 +154,13 @@ class SystemCancelChatTurnUC:
         self._bus = bus
         self._run_manager = run_manager
 
-    async def execute(self, run_id: UUID) -> CancelChatTurnOutput:
+    async def execute(self, session_id: UUID, run_id: UUID) -> CancelChatTurnOutput:
+        run = await self._chat_repo.get_run(self._folder, run_id)
+        if run is None or run.session_id != session_id:
+            raise NotFoundError(localized_error(f"Запуск {run_id!r} не найден", f"Run {run_id!r} not found"))
         if self._run_manager.is_running(run_id):
             await self._run_manager.cancel(run_id)
             return CancelChatTurnOutput(cancelled_task=True, record_finalized=False)
-        run = await self._chat_repo.get_run(self._folder, run_id)
-        if run is None:
-            raise NotFoundError(localized_error(f"Запуск {run_id!r} не найден", f"Run {run_id!r} not found"))
         if run.status in _TERMINAL:
             return CancelChatTurnOutput(cancelled_task=False, record_finalized=False)
         run.status = AgentRunStatus.cancelled

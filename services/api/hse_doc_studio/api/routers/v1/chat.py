@@ -529,7 +529,7 @@ async def cancel_system_run(
     uc: FromDishka[SystemCancelChatTurnUC],
 ) -> CancelTurnResponse:
     try:
-        result = await uc.execute(run_id)
+        result = await uc.execute(session_id, run_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return CancelTurnResponse(cancelled_task=result.cancelled_task, record_finalized=result.record_finalized)

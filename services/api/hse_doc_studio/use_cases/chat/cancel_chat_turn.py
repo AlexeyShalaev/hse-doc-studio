@@ -51,15 +51,17 @@ class CancelChatTurnUC:
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
 
+        # Запуск должен принадлежать этой сессии проекта: чужой run_id отменять нельзя.
+        run = await self._chat_repo.get_run(folder, inp.run_id)
+        if run is None or run.session_id != inp.session_id:
+            raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
+
         # Live task: cancel it; the run task itself finalizes the record + bus.
         if self._run_manager.is_running(inp.run_id):
             await self._run_manager.cancel(inp.run_id)
             return CancelChatTurnOutput(cancelled_task=True, record_finalized=False)
 
         # No live task: force-finalize a record stuck non-terminal (e.g. lost task).
-        run = await self._chat_repo.get_run(folder, inp.run_id)
-        if run is None:
-            raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
         if run.status in _TERMINAL:
             return CancelChatTurnOutput(cancelled_task=False, record_finalized=False)
         run.status = AgentRunStatus.cancelled

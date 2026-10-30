@@ -29,7 +29,18 @@ class SystemGetChatRunStreamUC:
         self._bus = bus
 
     async def execute(self, session_id: UUID, run_id: UUID) -> AsyncGenerator[AgentEvent, None]:
+        # Чужой запуск (другая сессия) не должен ни подписываться на шину, ни показывать события.
+        owned = await self._chat_repo.get_run(self._folder, run_id)
+        if owned is None or owned.session_id != session_id:
+            return self._error_stream()
         return self._stream(session_id, run_id)
+
+    @staticmethod
+    def _error_stream() -> AsyncGenerator[AgentEvent, None]:
+        async def _gen() -> AsyncGenerator[AgentEvent, None]:
+            yield AgentEvent(type=AgentEventType.error, data={"status": "failed", "message": "run not found"})
+
+        return _gen()
 
     def _stream(  # noqa: C901 — live-then-backfill stream state machine, like GetChatRunStreamUC
         self, session_id: UUID, run_id: UUID
