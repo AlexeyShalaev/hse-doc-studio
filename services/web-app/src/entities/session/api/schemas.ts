@@ -784,6 +784,8 @@ export const COMPILE_WAIT_REASONS = [
   "quota_wait",
   "runner_lost",
   "superseded",
+  // Задача ждёт личный раннер владельца в окне ожидания, потом пойдёт на общие.
+  "personal_runner",
 ] as const;
 export const CompileWaitSchema = z.strictObject({
   reason: z.enum(COMPILE_WAIT_REASONS),

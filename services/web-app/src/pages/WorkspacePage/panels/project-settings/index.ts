@@ -1,5 +1,7 @@
 export { AuthorsSection } from "./AuthorsSection";
 export type { AuthorsSectionProps } from "./AuthorsSection";
+export { BuildsSection } from "./BuildsSection";
+export type { BuildsSectionProps } from "./BuildsSection";
 export { ConfidentialitySection } from "./ConfidentialitySection";
 export type { ConfidentialitySectionProps } from "./ConfidentialitySection";
 export { DangerZoneSection } from "./DangerZoneSection";

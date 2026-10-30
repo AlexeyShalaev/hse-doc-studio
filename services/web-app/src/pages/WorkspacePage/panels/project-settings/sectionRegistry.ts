@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   ArrowLeftRight,
+  Cpu,
   CloudUpload,
   Files,
   FolderSync,
@@ -28,6 +29,7 @@ export type ProjectSettingsSectionId =
   | "general"
   | "template"
   | "confidentiality"
+  | "builds"
   | "doc-set"
   | "doc-formats"
   | "shared-docs"
@@ -95,6 +97,14 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     id: "confidentiality",
     labelKey: "projectSettings.sectionConfidentiality",
     icon: Lock,
+  },
+  // Где идут сборки серверного проекта: личные раннеры владельца или общие.
+  // Видна всем участникам, править может только владелец.
+  {
+    id: "builds",
+    labelKey: "projectSettings.sectionBuilds",
+    icon: Cpu,
+    isAvailable: (ctx) => ctx.hasAccess === true,
   },
   // Состав комплекта идёт ПЕРЕД форматами: сначала решают, какие документы
   // вообще входят в комплект, и только потом — в каком виде их собирать.
@@ -224,7 +234,13 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     id: "project",
     labelKey: "projectSettingsNav.groupProject",
     icon: Info,
-    sections: ["general", "template", "confidentiality", "danger-zone"],
+    sections: [
+      "general",
+      "template",
+      "confidentiality",
+      "builds",
+      "danger-zone",
+    ],
   },
   {
     id: "people",
@@ -272,7 +288,7 @@ const PROJECT_SETTINGS_PROJECT_GROUP: ProjectSettingsGroupDef = {
   id: "project",
   labelKey: "projectSettingsNav.groupProject",
   icon: Info,
-  sections: ["general", "template", "confidentiality", "danger-zone"],
+  sections: ["general", "template", "confidentiality", "builds", "danger-zone"],
 };
 
 /** Группа видна, пока хоть один её раздел доступен в этом проекте. */

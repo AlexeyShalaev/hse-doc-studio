@@ -170,7 +170,34 @@
       "hintSeconds": "Expected wait about {{value}} s",
       "hintMinutes": "Expected wait about {{value}} min",
       "retry": "Retry build",
-      "rebuildSuperseded": "Build again"
+      "rebuildSuperseded": "Build again",
+      "personalRunner": "Waiting for a personal runner",
+      "personalRunnerBody": "The build goes to a personal runner. If it doesn't take it within a few seconds, it goes to the installation's shared runners."
+    },
+    "placement": {
+      "waitingMe": "Waiting for your runner \"{{name}}\"… (up to {{seconds}} s)",
+      "waitingMeNoName": "Waiting for your runner… (up to {{seconds}} s)",
+      "waitingOwner": "Waiting for the owner's runner \"{{name}}\"…",
+      "waitingOwnerNoName": "Waiting for the owner's runner…",
+      "personalMe": "On your runner \"{{name}}\"",
+      "personalMeNoName": "On your runner",
+      "personalOwner": "On the owner's runner \"{{name}}\"",
+      "personalOwnerNoName": "On the owner's runner",
+      "shared": "On a shared runner",
+      "fallbackMe": {
+        "offline": "Your runner is offline, built on a shared runner",
+        "busy": "Your runner is busy, built on a shared runner",
+        "timeout": "Your runner didn't pick the build within {{seconds}} s, built on a shared runner",
+        "lost": "Your runner dropped mid-build, retried on a shared runner",
+        "disabled": "Personal runners are off, built on a shared runner"
+      },
+      "fallbackOwner": {
+        "offline": "The owner's runner is offline, built on a shared runner",
+        "busy": "The owner's runner is busy, built on a shared runner",
+        "timeout": "The owner's runner didn't pick the build within {{seconds}} s, built on a shared runner",
+        "lost": "The owner's runner dropped mid-build, retried on a shared runner",
+        "disabled": "Personal runners are off, built on a shared runner"
+      }
     }
   },
   "preview": {

@@ -14,7 +14,9 @@ import type { z } from "zod";
 import { documentApi, getDocMeta } from "@entities/document";
 import { useCancelDocCompile, useStartCompile } from "@entities/compile";
 import type { DocumentResponseSchema } from "@entities/document";
-import { CompileWaitNotice } from "@features/build-states";
+import { BuildPlacementChip, CompileWaitNotice } from "@features/build-states";
+import { useProject } from "@entities/project";
+import type { CompilePlacement } from "@entities/runner";
 import type { CompileWait } from "@entities/session";
 import { apiClient } from "@shared/api";
 import { env } from "@shared/config";
@@ -79,6 +81,8 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const [diskLines, setDiskLines] = useState<string[]>([]);
   const [recordStatus, setRecordStatus] = useState<LocalStatus>("idle");
   const [recordWait, setRecordWait] = useState<CompileWait | null>(null);
+  const [recordPlacement, setRecordPlacement] =
+    useState<CompilePlacement | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   const liveOwnsPane = slot !== undefined;
@@ -87,6 +91,13 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const doneInfo = liveOwnsPane ? slot.doneInfo : null;
   // Серверный режим: очередь, нет раннера, заменена. В локальном всегда null.
   const wait = liveOwnsPane ? slot.wait : recordWait;
+  // Серверный режим: на чьём раннере идёт сборка. Соавтор видит «раннер владельца».
+  const placement = liveOwnsPane ? slot.placement : recordPlacement;
+  const myRole = useProject(projectId).data?.my_role;
+  const perspective =
+    myRole === undefined || myRole === null || myRole === "owner"
+      ? "me"
+      : "owner";
 
   // Auto-scroll to bottom on new lines.
   useEffect(() => {
@@ -132,6 +143,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                 : "idle",
           );
           setRecordWait(detail.wait ?? null);
+          setRecordPlacement(detail.placement ?? null);
           setDiskLines((prev) => {
             if (prev.length > 0) return prev; // disk log won
             const log = detail.log ?? "";
@@ -247,6 +259,12 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                 {wait ? t("compile.waiting") : t("compile.running")}
               </span>
             </div>
+          )}
+          {placement && (
+            <BuildPlacementChip
+              placement={placement}
+              perspective={perspective}
+            />
           )}
           {isDone && (
             <span className="sev ok">
