@@ -50,6 +50,9 @@ export const CapabilitiesSchema = z.strictObject({
   local_services_ui: z.boolean(),
   admin: z.boolean(),
   personal_signing_keys: z.boolean(),
+  // Сервер: человек может подключать свои раннеры; локально: Студия умеет быть личным раннером.
+  personal_runners: z.boolean(),
+  remote_runner: z.boolean(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 
@@ -708,6 +711,7 @@ export const AdminJobSchema = z.strictObject({
     "office.convert",
     "signature.verify_detached",
     "pack.submission",
+    "ai.relay",
   ]),
   state: JobStateSchema,
   project_id: z.string(),
@@ -729,6 +733,23 @@ export const AdminJobSchema = z.strictObject({
   org_name: z.string().nullable(),
   project_name: z.string().nullable(),
   runner_name: z.string().nullable(),
+  route: z.enum(["shared", "personal_first", "pinned"]),
+  runner_scope: z.enum(["shared", "personal"]).nullable(),
+  route_reason: z
+    .enum([
+      "waiting_personal",
+      "personal",
+      "policy_shared",
+      "org_project",
+      "kind_not_allowed",
+      "disabled",
+      "fallback_offline",
+      "fallback_busy",
+      "fallback_timeout",
+      "fallback_lost",
+      "pinned",
+    ])
+    .nullable(),
 });
 /** Журнал очереди: курсор непрозрачный, null на последней странице; оценка только без фильтров. */
 export const AdminJobPageSchema = cursorPageOf(AdminJobSchema);
@@ -865,6 +886,7 @@ export const COMPILE_WAIT_REASONS = [
   "quota_wait",
   "runner_lost",
   "superseded",
+  "personal_runner",
 ] as const;
 export const CompileWaitSchema = z.strictObject({
   reason: z.enum(COMPILE_WAIT_REASONS),

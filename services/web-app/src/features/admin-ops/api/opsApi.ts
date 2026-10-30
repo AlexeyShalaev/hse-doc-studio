@@ -2,6 +2,7 @@ import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
 import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
+  AdminBuildSettingsSchema,
   AdminJobPageSchema,
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
@@ -14,6 +15,8 @@ import {
   AdminServiceHealthSchema,
   AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
+  AdminUserSchema,
+  type AdminBuildSettings,
   type AdminJob,
   type AdminJobPage,
   type AdminQueueSummary,
@@ -44,6 +47,7 @@ const enc = encodeURIComponent;
 
 // Списки ищут, фильтруют, сортируют и листают на сервере (единый контракт
 // списков): params собирает состояние списка в адресе, сюда они идут как есть.
+// Фильтр по владельцу раннера (runner_scope) собирается туда же вызывающей стороной.
 const list = (params: ListRequestParams, signal?: AbortSignal) => ({
   ...quiet,
   params,
@@ -152,6 +156,18 @@ export const opsApi = {
     )
       .map(serviceFromWire)
       .filter((service): service is AdminService => service !== null),
+
+  /** Человек по идентификатору: имя и почта для очереди и списка владельцев. */
+  person: (id: string): Promise<AdminUser> =>
+    adminClient
+      .get(`/users/${enc(id)}`, quiet)
+      .then(parseResp(AdminUserSchema)),
+
+  /** Настройки сборки установки: здесь нужен только флаг личных раннеров. */
+  buildSettings: (): Promise<AdminBuildSettings> =>
+    adminClient
+      .get("/settings/build", quiet)
+      .then(parseResp(AdminBuildSettingsSchema)),
 
   storage: async (): Promise<AdminStorage> =>
     storageFromWire(

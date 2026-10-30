@@ -24,6 +24,10 @@ class AIProviderRow(Base):
             name="ck_ai_providers_owner",
         ),
         Index("ix_ai_providers_owner", "owner_kind", "owner_id", "created_at"),
+        CheckConstraint(
+            "(type = 'runner') = (runner_id IS NOT NULL AND runner_endpoint IS NOT NULL)", name="ck_ai_providers_runner"
+        ),
+        CheckConstraint("type <> 'runner' OR owner_kind = 'user'", name="ck_ai_providers_runner_owner"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -39,6 +43,9 @@ class AIProviderRow(Base):
     connect_timeout_s: Mapped[float] = mapped_column(Float, nullable=False, server_default="10")
     request_timeout_s: Mapped[float] = mapped_column(Float, nullable=False, server_default="60")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Провайдер «через мой раннер»: раннер-ретранслятор и имя объявленного им ИИ-адреса.
+    runner_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("runners.id", ondelete="CASCADE"))
+    runner_endpoint: Mapped[str | None] = mapped_column(String(32))
 
 
 encrypted_columns.register(EncryptedColumn("ai_providers", "api_key_enc", pk="id"))

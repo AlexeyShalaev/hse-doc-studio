@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -10,6 +11,7 @@ import pytest
 from hse_doc_studio.core.jobs.admin import JobAdminFilter
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, RunnerRef
+from hse_doc_studio.core.jobs.routing import JobRoute, RunnerScope
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.blobs import BlobRow
 from hse_doc_studio.infra.db.orm.identity import UserRow
@@ -19,6 +21,8 @@ from hse_doc_studio.infra.db.repositories.jobs_admin import SqlJobAdminReader
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from tests.factories.pg_projects import seed_project, seed_user
 
 pytestmark = pytest.mark.pg
 
@@ -133,3 +137,31 @@ async def test__storage_usage__no_volume__none(pg_migrated_engine: AsyncEngine) 
 
     assert (usage.blob_count, usage.blob_bytes, usage.projects) == (0, 0, 0)
     assert (usage.volume_total_bytes, usage.volume_free_bytes) == (None, None)
+
+
+async def test__personal_routes__filter_by_scope_and_not_counted_as_waiting(pg_migrated_engine: AsyncEngine) -> None:
+    sessions = SessionProvider(create_sessionmaker(pg_migrated_engine))
+    queue = PostgresJobQueue(sessions)
+    reader = SqlJobAdminReader(sessions)
+    now = datetime.now(UTC)
+    owner = UUID(await seed_user(sessions))
+    project = await seed_project(sessions, owner_user_id=str(owner))
+    relay = _request(owner, route=JobRoute.pinned, target_runner_id=uuid4(), fair_share=False)
+    await queue.enqueue(replace(relay, kind=JobKind.ai_relay, tags=frozenset({"ai"})))
+    waiting = _request(
+        owner, route=JobRoute.personal_first, route_owner_id=str(owner), personal_until=now + timedelta(minutes=5)
+    )
+    await queue.enqueue(replace(waiting, project_id=project))
+    await queue.enqueue(_request(uuid4()))
+    shared_runner = RunnerRef(id=uuid4(), tags=frozenset({"tex"}))
+    personal_runner = RunnerRef(id=uuid4(), tags=frozenset({"tex"}), scope=RunnerScope.personal, owner_id=str(owner))
+
+    stats = await reader.stats(now)
+    assert sum(stats.queued_by_class.values()) == 1
+
+    assert await queue.claim(personal_runner, lease_s=45) is not None
+    assert await queue.claim(shared_runner, lease_s=45) is not None
+    personal = await reader.list_jobs(JobAdminFilter(runner_scope=RunnerScope.personal), before_seq=None, limit=10)
+    shared = await reader.list_jobs(JobAdminFilter(runner_scope=RunnerScope.shared), before_seq=None, limit=10)
+    assert [j.runner_scope for j in personal.items] == [RunnerScope.personal]
+    assert [j.runner_scope for j in shared.items] == [RunnerScope.shared]

@@ -42,6 +42,7 @@ from hse_doc_studio.api.schemas.admin_ops import (
     CreateAdminAiProviderRequest,
     JobKindName,
     JobStateName,
+    RunnerScopeName,
     UpdateAdminAiProviderRequest,
     UpdateAdminQuotasRequest,
     UpdateAdminSigningPolicyRequest,
@@ -54,6 +55,7 @@ from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobListing
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.quotas import QuotaSettings, org_key
+from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.listing import SortKey
 from hse_doc_studio.core.repositories import INSTANCE_AI_PROVIDER_SORT_FIELDS, InstanceAiProviderQuery
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy
@@ -122,6 +124,9 @@ def _job(listing: JobListing) -> AdminJob:
         org_name=listing.org_name,
         project_name=listing.project_name,
         runner_name=listing.runner_name,
+        route=job.route.value,
+        runner_scope=job.runner_scope.value if job.runner_scope is not None else None,
+        route_reason=job.route_reason.value if job.route_reason is not None else None,
     )
 
 
@@ -137,6 +142,7 @@ async def list_queue(
     org_id: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
     project_id: Annotated[UUID | None, Query()] = None,
     runner_id: Annotated[UUID | None, Query()] = None,
+    runner_scope: Annotated[RunnerScopeName | None, Query()] = None,
     queued_from: Annotated[AwareDatetime | None, Query(alias="from")] = None,
     queued_to: Annotated[AwareDatetime | None, Query(alias="to")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
@@ -152,6 +158,7 @@ async def list_queue(
             org_id=org_key(org_id) if org_id else None,
             project_id=project_id,
             runner_id=runner_id,
+            runner_scope=RunnerScope(runner_scope) if runner_scope else None,
             queued_from=queued_from,
             queued_to=queued_to,
             q=q,

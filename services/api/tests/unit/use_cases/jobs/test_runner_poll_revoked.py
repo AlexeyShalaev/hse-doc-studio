@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
@@ -60,3 +62,77 @@ async def test__poll__runner_paused_after_authentication__claims_nothing() -> No
 
     assert response.envelope is None
     queue.claim.assert_not_called()
+
+
+class _SleepingWakeup:
+    """Будильник, который действительно уступает цикл: долгий опрос ждёт, а тест успевает вмешаться."""
+
+    async def wait(self, timeout_s: float) -> None:
+        await asyncio.sleep(min(timeout_s, 0.01))
+
+
+async def test__poll__runner_went_offline_while_waiting__ends_without_touching_or_claiming() -> None:
+    """Мягкая остановка посреди долгого опроса: брошенный опрос не воскрешает раннер и не берёт задачу."""
+    runner = _runner()
+    runners = InMemoryRunnerRepository()
+    await runners.add(runner)
+    queue = AsyncMock()
+    queue.claim.return_value = None
+    service = RunnerJobService(
+        queue,
+        MagicMock(),
+        runners,
+        MagicMock(),
+        _SleepingWakeup(),  # type: ignore[arg-type]
+        lease_s=45,
+        timeout_grace_s=10,
+        poll_interval_s=0.01,
+    )
+
+    started = time.monotonic()
+    polling = asyncio.create_task(service.poll(runner, PollRequest(wait_s=5)))
+    await asyncio.sleep(0.1)
+    offline_at = datetime.now(UTC)
+    await runners.mark_offline(runner.id, offline_at)
+    claims = queue.claim.await_count
+    response = await asyncio.wait_for(polling, timeout=2)
+
+    assert response.envelope is None
+    assert time.monotonic() - started < 2
+    assert queue.claim.await_count <= claims + 1
+    current = await runners.get(runner.id)
+    assert current is not None
+    assert current.last_seen_at is not None
+    assert current.last_seen_at <= offline_at
+
+
+async def test__poll__client_disconnected__ends_without_claiming_or_touching() -> None:
+    """Раннер убит без `/offline`: опрос, чей клиент отключился, задачу не берёт (иначе она ждала бы аренду)."""
+    runner = _runner()
+    runners = InMemoryRunnerRepository()
+    await runners.add(runner)
+    queue = AsyncMock()
+    queue.claim.return_value = None
+    service = RunnerJobService(
+        queue,
+        MagicMock(),
+        runners,
+        MagicMock(),
+        _SleepingWakeup(),  # type: ignore[arg-type]
+        lease_s=45,
+        timeout_grace_s=10,
+        poll_interval_s=0.01,
+    )
+    disconnected = False
+
+    async def gone() -> bool:
+        return disconnected
+
+    polling = asyncio.create_task(service.poll(runner, PollRequest(wait_s=5), gone=gone))
+    await asyncio.sleep(0.1)
+    disconnected = True
+    claims = queue.claim.await_count
+    response = await asyncio.wait_for(polling, timeout=2)
+
+    assert response.envelope is None
+    assert queue.claim.await_count <= claims + 1

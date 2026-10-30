@@ -20,6 +20,9 @@ from tests.unit.core.jobs.samples import (
     make_pack_payload,
     make_pack_result,
     make_pack_spec,
+    make_relay_payload,
+    make_relay_result,
+    make_relay_spec,
     make_verify_payload,
     make_verify_result,
     make_verify_spec,
@@ -31,18 +34,21 @@ _SAMPLE_SPECS = {
     JobKind.office_convert: make_office_spec,
     JobKind.verify_detached: make_verify_spec,
     JobKind.pack_submission: make_pack_spec,
+    JobKind.ai_relay: make_relay_spec,
 }
 _SAMPLE_RESULTS = {
     JobKind.compile: make_compile_result,
     JobKind.office_convert: make_office_result,
     JobKind.verify_detached: make_verify_result,
     JobKind.pack_submission: make_pack_result,
+    JobKind.ai_relay: make_relay_result,
 }
 _SAMPLE_PAYLOADS = {
     JobKind.compile: make_compile_payload,
     JobKind.office_convert: make_office_payload,
     JobKind.verify_detached: make_verify_payload,
     JobKind.pack_submission: make_pack_payload,
+    JobKind.ai_relay: make_relay_payload,
 }
 
 
@@ -108,3 +114,24 @@ def test__registry__unregistered_kind__rejected() -> None:
 
 def test__job_status__values_are_the_four_terminal_outcomes() -> None:
     assert {s.value for s in JobStatus} == {"succeeded", "failed", "cancelled", "timed_out"}
+
+
+def test__registry__personal_runners_get_builds_but_never_signature_checks_or_relays() -> None:
+    allowed = {spec.kind for spec in build_job_kinds() if spec.policy.personal_runner_allowed}
+
+    assert allowed == {JobKind.compile, JobKind.office_convert, JobKind.pack_submission}
+
+
+def test__registry__ai_relay_is_interactive_and_never_retried() -> None:
+    policy = job_kind_spec(JobKind.ai_relay).policy
+
+    assert (policy.retryable, policy.max_attempts, policy.default_timeout_s) == (False, 1, 900.0)
+
+
+def test__registry__ai_relay_is_a_single_interactive_attempt_never_personal_first() -> None:
+    policy = job_kind_spec(JobKind.ai_relay).policy
+
+    assert (policy.retryable, policy.max_attempts, policy.personal_runner_allowed) == (False, 1, False)
+    assert policy.default_timeout_s == 900.0
+    assert not job_kind_spec(JobKind.verify_detached).policy.personal_runner_allowed
+    assert job_kind_spec(JobKind.compile).policy.personal_runner_allowed

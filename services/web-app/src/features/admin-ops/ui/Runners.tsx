@@ -34,6 +34,7 @@ import {
   RotatedDialog,
 } from "./RunnerDialogs";
 import { FailureNotice } from "./parts";
+import { PersonalRunners } from "./PersonalRunners";
 import { RunnersView } from "./RunnersView";
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
@@ -59,9 +60,13 @@ export const Runners = ({
     queryKey: opsKeys.runners,
     // Без фильтра состояния удалённые раннеры не показываются: таблица
     // сходится с числом на вкладке и в сводке. Их открывает фильтр «Удалён».
+    // Личные раннеры людей здесь не показываются: у них свой раздел ниже.
     fetchPage: (params, signal) =>
       opsApi.runners(
-        params.status ? params : { ...params, status: LIVE_STATUSES },
+        {
+          ...(params.status ? params : { ...params, status: LIVE_STATUSES }),
+          owner_kind: "instance",
+        },
         signal,
       ),
     refetchInterval: POLL_MS * 3,
@@ -157,6 +162,9 @@ export const Runners = ({
           setRevokingToken(token);
         }}
       />
+      <div style={{ marginTop: 20 }}>
+        <PersonalRunners />
+      </div>
       <ConfirmDialog
         isOpen={rotating !== null}
         title={t("runners.rotateDialog.title", { name: rotating?.name ?? "" })}

@@ -1,0 +1,12 @@
+{
+  "runner_id": "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "server_features": [
+    "ai_relay",
+    "ai_slots",
+    "announce",
+    "offline"
+  ],
+  "owner_kind": "user",
+  "paused": false,
+  "relay_keepalive_s": 2
+}

@@ -17,7 +17,13 @@ from hse_doc_studio.core.jobs.admin import (
     runner_status,
     version_key,
 )
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.jobs.runners import (
+    RegistrationToken,
+    Runner,
+    RunnerAnnouncement,
+    RunnerOwnerKind,
+    RunnerPausedBy,
+)
 from hse_doc_studio.core.listing import Found, Picked, PickerItem, Window
 
 
@@ -47,14 +53,49 @@ class InMemoryRunnerRepository:
     async def set_token_hash(self, runner_id: str, token_hash: str) -> bool:
         return self._replace(runner_id, only_active=True, token_hash=token_hash)
 
-    async def set_paused(self, runner_id: str, paused: bool) -> bool:
-        return self._replace(runner_id, only_active=True, paused=paused)
+    async def set_paused(self, runner_id: str, paused: bool, by: RunnerPausedBy | None = None) -> bool:
+        return self._replace(runner_id, only_active=True, paused=paused, paused_by=by if paused else None)
 
     async def revoke(self, runner_id: str, now: datetime) -> bool:
         return self._replace(runner_id, revoked_at=now)
 
     async def touch(self, runner_id: str, now: datetime, version: str | None = None) -> None:
         self._replace(runner_id, last_seen_at=now, **({"version": version} if version else {}))
+
+    async def list_owned(self, owner_id: str) -> list[Runner]:
+        return [r for r in await self.list() if r.owner_kind is RunnerOwnerKind.user and r.owner_id == owner_id]
+
+    async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
+        return self._replace(runner_id, only_active=True, name=name, renamed_at=now)
+
+    async def apply_announcement(
+        self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
+    ) -> Runner | None:
+        runner = self._items.get(runner_id)
+        if runner is None or runner.revoked_at is not None:
+            return None
+        updated = replace(
+            runner,
+            version=info.version,
+            tags=info.tags,
+            concurrency=info.concurrency,
+            ai_concurrency=info.ai_concurrency,
+            host_kind=info.host_kind,
+            features=info.features,
+            ai_endpoints=info.ai_endpoints,
+            last_seen_at=now,
+            last_seen_ip=ip,
+            offline_at=None,
+            name=info.name if info.name is not None and runner.renamed_at is None else runner.name,
+        )
+        self._items[runner_id] = updated
+        return updated
+
+    async def mark_offline(self, runner_id: str, now: datetime) -> None:
+        self._replace(runner_id, offline_at=now)
+
+    async def count_active_owned(self, owner_id: str) -> int:
+        return sum(1 for r in await self.list_owned(owner_id) if r.revoked_at is None)
 
 
 class InMemoryRegistrationTokenRepository:
@@ -85,6 +126,17 @@ class InMemoryRegistrationTokenRepository:
         self._items[token.id] = used
         return used
 
+    async def list_owned(self, owner_id: str) -> list[RegistrationToken]:
+        return [t for t in await self.list() if t.owner_kind is RunnerOwnerKind.user and t.owner_id == owner_id]
+
+    async def revoke_owned(self, owner_id: str, now: datetime) -> int:
+        count = 0
+        for token in await self.list_owned(owner_id):
+            if token.revoked_at is None:
+                self._items[token.id] = replace(token, revoked_at=now)
+                count += 1
+        return count
+
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         current = self._items.get(token.id)
         if current is None or current.token_hash != token.token_hash:
@@ -103,7 +155,12 @@ class InMemoryRunnerAdminReader:
         self._tokens = tokens
 
     async def _newest(self) -> Runner | None:
-        live = [r for r in await self._runners.list() if r.revoked_at is None]
+        # Устарел ли раннер считается от флота установки: версии личных раннеров не в счёт.
+        live = [
+            r
+            for r in await self._runners.list()
+            if r.revoked_at is None and r.owner_kind is RunnerOwnerKind.instance
+        ]
         return max(live, key=lambda r: version_key(r.version), default=None)
 
     async def list_runners(self, query: RunnerQuery, now: datetime) -> Found[Runner]:
@@ -121,6 +178,7 @@ class InMemoryRunnerAdminReader:
             and (query.tag is None or query.tag in r.tags)
             and (query.resource_class is None or r.resource_class == query.resource_class)
             and (query.outdated is None or outdated(r) == query.outdated)
+            and (query.owner_kind is None or r.owner_kind is query.owner_kind)
         ]
         keys: dict[str, Callable[[Runner], Any]] = {
             "name": lambda r: r.name.lower(),
@@ -128,13 +186,15 @@ class InMemoryRunnerAdminReader:
             "last_seen_at": lambda r: r.last_seen_at or datetime.min.replace(tzinfo=UTC),
             "created_at": lambda r: r.created_at,
             "version": lambda r: version_key(r.version),
+            "owner_kind": lambda r: (r.owner_kind.value, r.name.lower()),
         }
         found.sort(key=lambda r: r.id)
         found.sort(key=keys[query.sort.field], reverse=query.sort.descending)
         return _window(found, query.window)
 
     async def summary(self, now: datetime) -> RunnerSummary:
-        runners = await self._runners.list()
+        # Сводка только по раннерам установки: у личных раннеров людей своя сводка на экране.
+        runners = [r for r in await self._runners.list() if r.owner_kind is RunnerOwnerKind.instance]
         newest = await self._newest()
         counts = {s: sum(1 for r in runners if runner_status(r, now) is s) for s in RunnerStatus}
         outdated = sum(

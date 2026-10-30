@@ -44,6 +44,7 @@ import {
   JOB_TONE,
   LONG_WAIT_S,
   isActive,
+  jobWhere,
   runSeconds,
 } from "../lib/jobs";
 import type { QueueFilter } from "../lib/lists";
@@ -66,6 +67,8 @@ export type QueueViewProps = {
   state: ListQueryState<QueueFilter, never>;
   /** «Показать ещё» по курсору сервера. */
   pagination: CursorPaginationState;
+  /** Сколько задач сейчас идёт на личных раннерах; undefined: личные раннеры отключены на установке. */
+  personalRunning?: number | null | undefined;
   now: number;
   onOpen: (job: AdminJob) => void;
   onCancel: (job: AdminJob) => void;
@@ -119,6 +122,7 @@ export const QueueView = ({
   failed = false,
   state,
   pagination,
+  personalRunning,
   now,
   onOpen,
   onCancel,
@@ -231,6 +235,27 @@ export const QueueView = ({
         ),
       },
       {
+        id: "where",
+        header: t("queue.columns.where"),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const where = jobWhere(row.original.job);
+          if (where === null) {
+            return <span className="ops-muted">{t("queue.where.none")}</span>;
+          }
+          return (
+            <span
+              className="chip sans"
+              data-testid={`queue-where-${row.original.job.id}`}
+              data-where={where}
+              style={{ fontSize: 11 }}
+            >
+              {t(`queue.where.${where}`)}
+            </span>
+          );
+        },
+      },
+      {
         id: "runner",
         header: t("queue.columns.runner"),
         enableSorting: false,
@@ -302,6 +327,7 @@ export const QueueView = ({
   const orgId = state.filter("org_id");
   const projectId = state.filter("project_id");
   const runnerId = state.filter("runner_id");
+  const runnerScope = state.filter("runner_scope");
   const knownUser = knownFrom(jobs, userId, (j) =>
     j.user_name
       ? {
@@ -411,6 +437,18 @@ export const QueueView = ({
           },
         ]
       : []),
+    ...(runnerScope
+      ? [
+          {
+            id: "runner_scope",
+            label: t("queue.filters.where"),
+            value: t(`queue.where.${runnerScope}`),
+            onRemove: () => {
+              state.setFilter("runner_scope", null);
+            },
+          },
+        ]
+      : []),
     ...picked("user_id", t("queue.filters.user"), userId, user),
     ...picked("org_id", t("queue.filters.org"), orgId, org),
     ...picked("project_id", t("queue.filters.project"), projectId, project),
@@ -492,7 +530,16 @@ export const QueueView = ({
           value={(summary?.running ?? 0).toLocaleString(localeTag())}
           loading={kpiLoading}
           error={kpiError}
-          secondary={t("queue.stats.runningHint")}
+          secondary={
+            // Сервер с личными раннерами: сколько из идущих задач на них.
+            personalRunning === undefined ? (
+              t("queue.stats.runningHint")
+            ) : (
+              <span data-testid="queue-stat-personal">
+                {t("queue.stats.personal", { count: personalRunning ?? 0 })}
+              </span>
+            )
+          }
         />
         <KpiTile
           testId="queue-stat-wait"
@@ -586,6 +633,18 @@ export const QueueView = ({
             options={JOB_KINDS.map((k) => ({
               value: k,
               label: t(`queue.kind.${k}`),
+            }))}
+          />
+          <FilterMenu
+            label={t("queue.filters.where")}
+            testId="queue-filter-where"
+            values={runnerScope ? [runnerScope] : []}
+            onChange={(values) => {
+              state.setFilter("runner_scope", values[0] ?? null);
+            }}
+            options={(["shared", "personal"] as const).map((scope) => ({
+              value: scope,
+              label: t(`queue.where.${scope}`),
             }))}
           />
           {pickerFilter(

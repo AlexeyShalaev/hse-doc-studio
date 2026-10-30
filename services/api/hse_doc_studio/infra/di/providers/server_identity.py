@@ -41,6 +41,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
+from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy, server_key_policy_from
@@ -151,6 +152,7 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpSettingsService,
     UpdateSmtpSettingsUC,
 )
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.orgs.groups import (
     AddGroupMemberUC,
     CreateGroupUC,
@@ -730,9 +732,14 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_delete_user_uc(
-        self, users: IUserRepository, lifecycle: IUserLifecycle, audit: IAuditLog, uow: IUnitOfWork
+        self,
+        users: IUserRepository,
+        lifecycle: IUserLifecycle,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        runners: RunnerRegistry,
     ) -> DeleteUserUC:
-        return DeleteUserUC(users, lifecycle, audit, uow)
+        return DeleteUserUC(users, lifecycle, audit, uow, runners)
 
     @provide
     def get_export_my_data_uc(self, lifecycle: IUserLifecycle, audit: IAuditLog) -> ExportMyDataUC:
@@ -795,7 +802,11 @@ class ServerIdentityProvider(Provider):
         sender: IMailSender,
         oidc: IOidcProviderCatalog,
         settings_repo: IInstanceSettingsRepository,
+        personal: IPersonalRunnerSettings,
     ) -> BootstrapUC:
+        async def personal_runners_allowed() -> bool:
+            return (await personal.current()).enabled
+
         async def signing_keys_allowed() -> bool:
             return server_key_policy_from(await settings_repo.get_all()) is ServerKeyPolicy.allowed
 
@@ -806,6 +817,7 @@ class ServerIdentityProvider(Provider):
             smtp_enabled=lambda: sender.enabled,
             oidc_providers=oidc.list_enabled,
             signing_keys_allowed=signing_keys_allowed,
+            personal_runners_allowed=personal_runners_allowed,
         )
 
     @provide

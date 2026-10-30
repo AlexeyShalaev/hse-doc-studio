@@ -28,6 +28,9 @@ export const LOCAL_BOOTSTRAP: Bootstrap = {
     local_services_ui: true,
     admin: false,
     personal_signing_keys: false,
+    // Бэкенд без bootstrap не знает ни личных раннеров, ни облачных сборок.
+    personal_runners: false,
+    remote_runner: false,
   },
   csrf_token: null,
 };

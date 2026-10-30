@@ -23,7 +23,10 @@
       "user_email": "anna.petrova@example.org",
       "org_name": "Кафедра ИИ",
       "project_name": "Диплом",
-      "runner_name": "runner-1"
+      "runner_name": "runner-1",
+      "route": "shared",
+      "runner_scope": "shared",
+      "route_reason": null
     }
   ],
   "next_cursor": null,

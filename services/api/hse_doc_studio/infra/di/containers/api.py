@@ -6,6 +6,7 @@ from dishka import AsyncContainer, Provider, make_async_container
 from dishka.integrations.fastapi import FastapiProvider
 
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
 from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     # Лениво: серверные модули тянут sqlalchemy, а локальная сборка живёт без extra server.
     from hse_doc_studio.infra.di.providers.server_admin_ops import ServerAdminOpsProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_ai_relay import ServerAiRelayProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_identity import ServerIdentityProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_jobs import ServerJobsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_persistence import ServerPersistenceProvider  # noqa: PLC0415
@@ -28,6 +30,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerJobsProvider(),
         ServerAdminOpsProvider(),
         ServerServicesProvider(),
+        ServerAiRelayProvider(),
     ]
 
 
@@ -36,5 +39,8 @@ def create_container(mode: StudioMode = StudioMode.local, *, engine: AsyncEngine
     providers: list[Provider] = [LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider()]
     if mode is StudioMode.server:
         providers.extend(_server_providers(engine))
+    else:
+        # Облачные сборки на этой машине: локальная Студия как личный раннер сервера.
+        providers.append(LocalRemoteRunnerProvider())
     providers.append(FastapiProvider())
     return make_async_container(*providers)

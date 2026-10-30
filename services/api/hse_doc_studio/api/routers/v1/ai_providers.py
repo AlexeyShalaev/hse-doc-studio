@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.ai_providers import (
+    AiProviderRelay,
     AIProviderResponse,
     CreateAIProviderRequest,
     ProviderModelsResponse,
@@ -31,16 +32,39 @@ from hse_doc_studio.use_cases.ai_providers.list_provider_models import (
     ListProviderModelsInput,
     ListProviderModelsUC,
 )
+from hse_doc_studio.use_cases.ai_providers.relay_info import (
+    AiProviderRelayInfo,
+    AiProviderRunnerInvalidError,
+    ProviderRelayDescriber,
+    source_of,
+)
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import (
     UpdateAIProviderInput,
     UpdateAIProviderUC,
 )
+from hse_doc_studio.use_cases.ai_relay.client import relay_error_of
 
 router = APIRouter(route_class=SafeDishkaRoute)
 logger = structlog.get_logger()
 
 
-def _map_provider(provider: AIProvider) -> AIProviderResponse:
+def _relay_body(info: AiProviderRelayInfo | None) -> AiProviderRelay | None:
+    if info is None:
+        return None
+    return AiProviderRelay(
+        runner_id=info.runner_id,
+        runner_name=info.runner_name,
+        endpoint=info.endpoint,
+        flavor=info.flavor.value,
+        state=info.state.value,
+    )
+
+
+async def _describe(describer: ProviderRelayDescriber, provider: AIProvider) -> AIProviderResponse:
+    return _map_provider(provider, (await describer.describe([provider])).get(provider.id))
+
+
+def _map_provider(provider: AIProvider, relay: AiProviderRelayInfo | None = None) -> AIProviderResponse:
     return AIProviderResponse(
         id=provider.id,
         name=provider.name,
@@ -53,19 +77,25 @@ def _map_provider(provider: AIProvider) -> AIProviderResponse:
         connect_timeout_s=provider.connect_timeout_s,
         request_timeout_s=provider.request_timeout_s,
         shared=provider.owner_kind is AIProviderOwnerKind.instance,
+        source=source_of(provider).value,
+        relay=_relay_body(relay),
     )
 
 
 @router.get("/ai-providers", response_model=list[AIProviderResponse])
-async def list_ai_providers(uc: FromDishka[ListAIProvidersUC]) -> list[AIProviderResponse]:
+async def list_ai_providers(
+    uc: FromDishka[ListAIProvidersUC], describer: FromDishka[ProviderRelayDescriber]
+) -> list[AIProviderResponse]:
     result = await uc.execute()
-    return [_map_provider(p) for p in result.providers]
+    relays = await describer.describe(result.providers)
+    return [_map_provider(p, relays.get(p.id)) for p in result.providers]
 
 
 @router.post("/ai-providers", response_model=AIProviderResponse, status_code=status.HTTP_201_CREATED)
 async def create_ai_provider(
     body: CreateAIProviderRequest,
     uc: FromDishka[CreateAIProviderUC],
+    describer: FromDishka[ProviderRelayDescriber],
 ) -> AIProviderResponse:
     try:
         result = await uc.execute(
@@ -78,23 +108,28 @@ async def create_ai_provider(
                 ssl_verify=body.ssl_verify,
                 connect_timeout_s=body.connect_timeout_s,
                 request_timeout_s=body.request_timeout_s,
+                runner_id=body.runner_id,
+                runner_endpoint=body.runner_endpoint,
             )
         )
+    except AiProviderRunnerInvalidError:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_provider(result.provider)
+    return await _describe(describer, result.provider)
 
 
 @router.get("/ai-providers/{provider_id}", response_model=AIProviderResponse)
 async def get_ai_provider(
     provider_id: UUID,
     uc: FromDishka[GetAIProviderUC],
+    describer: FromDishka[ProviderRelayDescriber],
 ) -> AIProviderResponse:
     try:
         result = await uc.execute(GetAIProviderInput(provider_id=provider_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return _map_provider(result.provider)
+    return await _describe(describer, result.provider)
 
 
 @router.patch("/ai-providers/{provider_id}", response_model=AIProviderResponse)
@@ -102,6 +137,7 @@ async def update_ai_provider(
     provider_id: UUID,
     body: UpdateAIProviderRequest,
     uc: FromDishka[UpdateAIProviderUC],
+    describer: FromDishka[ProviderRelayDescriber],
 ) -> AIProviderResponse:
     try:
         result = await uc.execute(
@@ -115,13 +151,17 @@ async def update_ai_provider(
                 ssl_verify=body.ssl_verify,
                 connect_timeout_s=body.connect_timeout_s,
                 request_timeout_s=body.request_timeout_s,
+                runner_id=body.runner_id,
+                runner_endpoint=body.runner_endpoint,
             )
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except AiProviderRunnerInvalidError:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_provider(result.provider)
+    return await _describe(describer, result.provider)
 
 
 @router.delete("/ai-providers/{provider_id}", status_code=204)
@@ -145,6 +185,10 @@ async def list_provider_models(
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
+        # Провайдер через раннер: недоступность раннера это 503 `relay_unavailable` с понятным текстом.
+        relay_error = relay_error_of(exc)
+        if relay_error is not None:
+            raise relay_error from exc
         # Auth/connection errors bubble up from the openai/anthropic SDK. The
         # exception object can embed the outgoing request (incl. the
         # Authorization header / api_key), so NEVER echo it to the client or

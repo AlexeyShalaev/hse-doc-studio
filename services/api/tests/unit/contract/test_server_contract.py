@@ -14,6 +14,9 @@ import pytest
 from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import ai_providers as aip
+from hse_doc_studio.api.schemas import personal_runners as pr
+from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
 from pydantic import TypeAdapter, ValidationError
@@ -117,6 +120,9 @@ _SCHEMAS: dict[str, Any] = {
     "CreateAdminAiProviderRequest": ops.CreateAdminAiProviderRequest,
     "UpdateAdminAiProviderRequest": ops.UpdateAdminAiProviderRequest,
     "AdminAiProviderCheck": ops.AdminAiProviderCheck,
+    "AiProvider": aip.AIProviderResponse,
+    "AiProviderList": list[aip.AIProviderResponse],
+    "CreateAiProviderRequest": aip.CreateAIProviderRequest,
     "Org": s.Org,
     "CreateOrgRequest": s.CreateOrgRequest,
     "UpdateOrgRequest": s.UpdateOrgRequest,
@@ -149,6 +155,22 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
     "CompileWait": s.CompileWait,
     "OfficeEditorBusy": s.OfficeEditorBusy,
+    "MyRunner": pr.MyRunner,
+    "MyRunnerList": list[pr.MyRunner],
+    "UpdateMyRunnerRequest": pr.UpdateMyRunnerRequest,
+    "MyRunnerRotated": pr.MyRunnerRotated,
+    "MyRunnerTokenList": list[pr.MyRunnerToken],
+    "CreateMyRunnerTokenRequest": pr.CreateMyRunnerTokenRequest,
+    "MyRunnerTokenCreated": pr.MyRunnerTokenCreated,
+    "RunnerPairingInfo": pr.RunnerPairingInfo,
+    "RunnerPairingDecisionRequest": pr.RunnerPairingDecisionRequest,
+    "ProjectBuildRunners": pr.ProjectBuildRunners,
+    "UpdateProjectBuildRunnersRequest": pr.UpdateProjectBuildRunnersRequest,
+    "CompilePlacement": pr.CompilePlacement,
+    "RemoteRunnerStatus": rr.RemoteRunnerStatus,
+    "UpdateRemoteRunnerRequest": rr.UpdateRemoteRunnerRequest,
+    "RemoteRunnerPairRequest": rr.RemoteRunnerPairRequest,
+    "RemoteRunnerTokenRequest": rr.RemoteRunnerTokenRequest,
 }
 
 
@@ -263,3 +285,15 @@ def test_add_admin_org_member_needs_exactly_one_way() -> None:
 
     with pytest.raises(ValidationError):
         s.AddAdminOrgMemberRequest.model_validate(body)
+
+
+def test_bootstrap_capabilities_offer_personal_runners_only_to_signed_in_server_users() -> None:
+    boots = {name: _read(f)["capabilities"] for d, name, f in _CASES if d == "Bootstrap"}
+    assert {name for name, caps in boots.items() if caps["personal_runners"]} == {"server_user", "server_admin"}
+    assert {name for name, caps in boots.items() if caps["remote_runner"]} == {"local"}
+
+
+def test_owner_runner_chips_carry_only_name_and_state() -> None:
+    # Соавтор не видит у раннера владельца ничего, кроме имени и состояния.
+    assert set(pr.OwnerRunnerChip.model_fields) == {"name", "state"}
+    assert set(pr.CompilePlacement.model_fields) == {"state", "runner_name", "runner_owner", "fallback", "wait_s"}

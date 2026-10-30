@@ -17,10 +17,12 @@ import {
   searchOf,
   timeParam,
 } from "./demoList";
+import { runnerState, type DemoPersonalRunner } from "./personalRunners";
 import {
   adminOpsOf,
   adminOrgsOf,
   adminPeopleOf,
+  personalOf,
   type ServerDemoWorld,
 } from "./world";
 
@@ -54,6 +56,7 @@ const JOB_STATES = [
   "cancelled",
   "timed_out",
 ] as const;
+const RUNNER_SCOPES = ["shared", "personal"] as const;
 
 /** Версии раннеров сравниваются по числам: 0.10.0 новее 0.9.9. */
 const versionKey = (v: string): string =>
@@ -145,6 +148,37 @@ export const createOpsRoutes = (
   const wireRunner = (r: AdminRunner): AdminRunner => ({
     ...r,
     status: runnerStatusOf(r),
+    owner_kind: "instance",
+    owner: null,
+    host_kind: "cli",
+    ai_endpoints: [],
+    last_seen_ip: null,
+  });
+
+  // Личные раннеры людей: админ видит владельца и состояние, может приостановить
+  // и отозвать, но не сменить токен (403 forbidden).
+  const personalRunners = () => personalOf(getWorld());
+  const personalOfId = (
+    id: string | undefined,
+  ): DemoPersonalRunner | undefined =>
+    personalRunners().runners.find((r) => r.id === id && r.revoked_at === null);
+  const wirePersonal = (r: DemoPersonalRunner): AdminRunner => ({
+    id: r.id,
+    name: r.name,
+    status: runnerState(r, personalRunners().enabled),
+    tags: r.tags,
+    concurrency: r.concurrency,
+    resource_class: "standard",
+    version: r.version,
+    created_at: r.created_at,
+    last_seen_at: r.last_seen_at,
+    paused: r.paused,
+    revoked: r.revoked_at !== null,
+    owner_kind: "user",
+    owner: { ...r.owner },
+    host_kind: r.host_kind,
+    ai_endpoints: r.ai_endpoints.map((e) => e.name),
+    last_seen_ip: r.last_seen_ip,
   });
 
   /** Новейшая версия среди неотозванных раннеров: от неё считаются устаревшие. */
@@ -193,10 +227,19 @@ export const createOpsRoutes = (
     org_name: state().jobOrgs?.get(j.id)?.name ?? null,
     project_name: j.project_name,
     runner_name: runnerNameOf(j),
+    route: j.route ?? "shared",
+    runner_scope: j.runner_scope ?? (j.started_at === null ? null : "shared"),
+    route_reason: j.route_reason ?? null,
   });
 
   const summary = () => {
-    const jobs = state().jobs;
+    // Как у сервера: задача в окне ожидания личного раннера и ИИ через раннер
+    // общих раннеров не ждут и в «ждут раннера» не считаются.
+    const jobs = state().jobs.filter(
+      (j) =>
+        j.status !== "queued" ||
+        (j.route !== "personal_first" && j.route !== "pinned"),
+    );
     const queued = jobs.filter((j) => j.status === "queued");
     // Ожидание считается и по тем, кто ещё в очереди: иначе 95-й процентиль
     // оказывается меньше ожиданий, видных в таблице.
@@ -249,23 +292,36 @@ export const createOpsRoutes = (
       handler: guarded((req) => {
         const statuses = enumParam(req, "status", RUNNER_STATUSES);
         const outdated = boolParam(req, "outdated");
-        if (statuses === null || outdated === "bad") return invalidQuery();
+        const owner = queryOne(req, "owner_kind");
+        if (
+          statuses === null ||
+          outdated === "bad" ||
+          (owner !== null && owner !== "instance" && owner !== "user")
+        ) {
+          return invalidQuery();
+        }
         const tags = queryAll(req, "tag");
         const classes = queryAll(req, "resource_class");
         const newest = newestVersion();
-        const rank = (r: AdminRunner) => RUNNER_STATUSES.indexOf(r.status);
-        const rows = state()
-          .runners.map(wireRunner)
-          .filter(
-            (r) =>
-              (statuses.length === 0 || statuses.includes(r.status)) &&
-              (tags.length === 0 || tags.some((t) => r.tags.includes(t))) &&
-              (classes.length === 0 || classes.includes(r.resource_class)) &&
-              (outdated === null ||
-                (!r.revoked &&
-                  newest !== null &&
-                  versionKey(r.version) < versionKey(newest)) === outdated),
-          );
+        const rank = (r: AdminRunner) => {
+          const i = RUNNER_STATUSES.indexOf(r.status);
+          return i === -1 ? RUNNER_STATUSES.length : i;
+        };
+        const rows = [
+          ...(owner === "user" ? [] : state().runners.map(wireRunner)),
+          ...(owner === "instance"
+            ? []
+            : personalRunners().runners.map(wirePersonal)),
+        ].filter(
+          (r) =>
+            (statuses.length === 0 || statuses.includes(r.status)) &&
+            (tags.length === 0 || tags.some((t) => r.tags.includes(t))) &&
+            (classes.length === 0 || classes.includes(r.resource_class)) &&
+            (outdated === null ||
+              (!r.revoked &&
+                newest !== null &&
+                versionKey(r.version) < versionKey(newest)) === outdated),
+        );
         return offsetList(req, rows, {
           sort: {
             name: (r: AdminRunner) => r.name,
@@ -273,6 +329,7 @@ export const createOpsRoutes = (
             last_seen_at: (r: AdminRunner) => r.last_seen_at,
             created_at: (r: AdminRunner) => r.created_at,
             version: (r: AdminRunner) => versionKey(r.version),
+            owner_kind: (r: AdminRunner) => r.owner_kind,
           },
           defaultSort: "status",
           search: (r) => [r.name, r.version, ...r.tags],
@@ -281,7 +338,8 @@ export const createOpsRoutes = (
       }),
     },
     {
-      // Счётчики для KPI на «Раннерах» и в «Обзоре» без чтения списка.
+      // Счётчики для KPI на «Раннерах» и в «Обзоре»: только раннеры установки,
+      // у личных раннеров людей своя сводка на экране.
       method: "GET",
       pattern: "/runners/summary",
       handler: guarded(() => {
@@ -309,10 +367,16 @@ export const createOpsRoutes = (
       method: "PATCH",
       pattern: "/runners/:id",
       handler: guarded((req) => {
-        const found = runnerOf(req.params.id);
-        if (!found) return notFound();
         const paused = body(req).paused;
         if (typeof paused !== "boolean") return invalid();
+        const personal = personalOfId(req.params.id);
+        if (personal) {
+          personal.paused = paused;
+          personal.paused_by = paused ? "admin" : null;
+          return demoNoContent();
+        }
+        const found = runnerOf(req.params.id);
+        if (!found) return notFound();
         found.paused = paused;
         return demoNoContent();
       }),
@@ -321,6 +385,13 @@ export const createOpsRoutes = (
       method: "POST",
       pattern: "/runners/:id/rotate-token",
       handler: guarded((req) => {
+        if (personalOfId(req.params.id)) {
+          return demoError(
+            403,
+            "forbidden",
+            "Only the owner can rotate a personal runner token",
+          );
+        }
         const found = runnerOf(req.params.id);
         if (!found) return notFound();
         const value = secret("hse_rn");
@@ -335,6 +406,13 @@ export const createOpsRoutes = (
       method: "DELETE",
       pattern: "/runners/:id",
       handler: guarded((req) => {
+        const personal = personalOfId(req.params.id);
+        if (personal) {
+          personal.revoked_at = new Date().toISOString();
+          personal.alive = false;
+          personal.running_jobs = 0;
+          return demoNoContent();
+        }
         const found = runnerOf(req.params.id);
         if (!found) return notFound();
         found.revoked = true;
@@ -423,10 +501,17 @@ export const createOpsRoutes = (
       pattern: "/queue",
       handler: guarded((req) => {
         const states = enumParam(req, "state", JOB_STATES);
+        const scopes = enumParam(req, "runner_scope", RUNNER_SCOPES);
         const from = timeParam(req, "from");
         const to = timeParam(req, "to");
         const q = searchOf(req);
-        if (states === null || from === "bad" || to === "bad" || q === null) {
+        if (
+          states === null ||
+          scopes === null ||
+          from === "bad" ||
+          to === "bad" ||
+          q === null
+        ) {
           return invalidQuery();
         }
         // Как у сервера: id задачи целиком (с дефисами или без) или подстрока
@@ -450,6 +535,7 @@ export const createOpsRoutes = (
         const filtered =
           states.length > 0 ||
           kinds.length > 0 ||
+          scopes.length > 0 ||
           [user, org, project, runner].some((v) => v !== null) ||
           from !== null ||
           to !== null ||
@@ -457,9 +543,13 @@ export const createOpsRoutes = (
         return cursorList(req, ordered, key, {
           accept: (j) => {
             const at = Date.parse(j.created_at);
+            const wire = wireJob(j);
             return (
               (states.length === 0 || states.includes(j.status)) &&
               (kinds.length === 0 || kinds.includes(j.kind)) &&
+              (scopes.length === 0 ||
+                (wire.runner_scope !== null &&
+                  scopes.includes(wire.runner_scope))) &&
               (user === null || j.user_id === user) &&
               // Организацию дают и id, и адрес из пикера организаций.
               (org === null ||

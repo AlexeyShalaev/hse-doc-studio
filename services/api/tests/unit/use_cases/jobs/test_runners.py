@@ -9,8 +9,9 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError, RunnerNotFoundError
-from hse_doc_studio.core.jobs.runners import hash_runner_secret
-from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION, RunnerRegisterRequest
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind, hash_runner_secret
+from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION, RunnerAnnounceRequest, RunnerRegisterRequest
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 from tests.fakes.auth import InMemoryAuditLog
@@ -222,3 +223,38 @@ async def test__secrets__never_reach_logs_or_audit(world: World, caplog: pytest.
         "runner.token_rotate",
         "runner.revoke",
     } <= actions
+
+
+def _announcement(**kwargs: object) -> RunnerAnnounceRequest:
+    values: dict[str, object] = {
+        "name": None,
+        "version": "0.3.0",
+        "tags": frozenset({"office"}),
+        "concurrency": 2,
+        "ai_concurrency": 0,
+        "host_kind": RunnerHostKind.cli,
+        "features": frozenset({"announce"}),
+    }
+    return RunnerAnnounceRequest(**{**values, **kwargs})  # type: ignore[arg-type]
+
+
+async def test__announce__changed_capabilities_are_audited_once(world: World) -> None:
+    """Украденный токен мог бы тихо объявить другие ИИ-адреса: смена возможностей в журнале, повтор без шума."""
+    created = await world.registry.create_registration_token(ADMIN)
+    registered = await world.registry.register(created.secret, _request())
+    first = _announcement()
+    widened = _announcement(
+        tags=frozenset({"office", "ai"}),
+        features=frozenset({"announce", "ai_relay"}),
+        ai_endpoints=(DeclaredAiEndpoint("ollama", AiEndpointFlavor.ollama),),
+    )
+
+    for request in (first, first, widened, widened):
+        runner = await world.registry.authenticate(registered.secret)
+        await world.registry.announce(runner, request, ip=None)
+
+    announced = [e for e in await world.audit.list(limit=100) if e.action == "runner.announce"]
+    assert len(announced) == 2
+    latest = max(announced, key=lambda e: e.id)
+    assert latest.details["ai_endpoints"] == {"from": [], "to": ["ollama:ollama"]}
+    assert latest.details["tags"] == {"from": ["office"], "to": ["ai", "office"]}

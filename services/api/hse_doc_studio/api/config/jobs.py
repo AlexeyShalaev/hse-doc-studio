@@ -47,6 +47,22 @@ class JobsConfig(BaseModel):
         le=365,
         description="Срок хранения результатов сборок из окружения: заданный побеждает правку админа.",
     )
+    personal_runners_enabled: bool | None = Field(
+        default=None,
+        description="Разрешены ли личные раннеры людей; заданное окружением побеждает правку админа (по умолчанию да).",
+    )
+    personal_runner_wait_s: int | None = Field(
+        default=None,
+        ge=0,
+        le=60,
+        description="Сколько секунд сборка ждёт личный раннер, прежде чем её возьмёт общий (по умолчанию 5).",
+    )
+    personal_runners_max_per_user: int | None = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Сколько неотозванных личных раннеров может быть у человека (по умолчанию 5).",
+    )
     storage_dir: Path | None = Field(
         default=None,
         description="Каталог лога задач; блобы входа и выходы лежат в объектном хранилище. По умолчанию data_dir/jobs.",
@@ -56,4 +72,28 @@ class JobsConfig(BaseModel):
     )
     max_log_bytes: int = Field(
         default=8 * 1024 * 1024, gt=0, description="Предел лога одной попытки; остальное отбрасывается."
+    )
+    relay_pickup_s: float = Field(
+        default=10.0, gt=0, le=120, description="Сколько ждать, пока личный раннер заберёт тело запроса к модели."
+    )
+    relay_max_request_bytes: int = Field(
+        default=8 * 1024 * 1024, gt=0, description="Предел тела запроса к модели через личный раннер."
+    )
+    relay_max_response_bytes: int = Field(
+        default=64 * 1024 * 1024, gt=0, description="Предел ответа модели через личный раннер; больший обрывается."
+    )
+    relay_max_pending_per_user: int = Field(
+        default=8, ge=1, le=64, description="Одновременных ретрансляций ИИ на человека (в очереди и идущих)."
+    )
+    relay_max_duration_s: float = Field(
+        default=900.0, ge=30, le=3600, description="Потолок длительности одной ретрансляции ИИ."
+    )
+    relay_max_pending_bytes_per_user: int = Field(
+        default=16 * 1024 * 1024, gt=0, description="Сумма тел запросов к моделям одного человека в памяти api."
+    )
+    relay_max_pending_total: int = Field(
+        default=32, ge=1, le=1024, description="Одновременных ретрансляций ИИ на весь процесс api (все люди)."
+    )
+    relay_max_pending_bytes_total: int = Field(
+        default=128 * 1024 * 1024, gt=0, description="Сумма тел запросов к моделям в памяти api (все люди)."
     )

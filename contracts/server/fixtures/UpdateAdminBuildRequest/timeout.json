@@ -1,4 +1,7 @@
 {
   "timeout_s": 600,
-  "artifact_retention_days": null
+  "artifact_retention_days": null,
+  "personal_runners_enabled": null,
+  "personal_runner_wait_s": null,
+  "personal_runners_max_per_user": null
 }

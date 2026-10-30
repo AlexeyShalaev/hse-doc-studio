@@ -49,6 +49,22 @@ class IdentityErrorCode(StrEnum):
     user_not_found = "user_not_found"
     user_has_projects = "user_has_projects"
     user_not_disabled = "user_not_disabled"
+    # Личные раннеры: выключены в установке, предел, отозван, проект без личного владельца, сопряжение.
+    personal_runners_disabled = "personal_runners_disabled"
+    personal_runner_limit = "personal_runner_limit"
+    runner_revoked = "runner_revoked"
+    runner_paused_by_admin = "runner_paused_by_admin"
+    project_not_personal = "project_not_personal"
+    runner_pairing_invalid = "runner_pairing_invalid"
+    runner_pairing_expired = "runner_pairing_expired"
+    runner_pairing_used = "runner_pairing_used"
+    # ИИ через свой раннер и локальная Студия как раннер.
+    relay_unavailable = "relay_unavailable"
+    relay_busy = "relay_busy"
+    ai_provider_runner_invalid = "ai_provider_runner_invalid"
+    remote_runner_url_invalid = "remote_runner_url_invalid"
+    remote_runner_unreachable = "remote_runner_unreachable"
+    remote_runner_disabled = "remote_runner_disabled"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -149,6 +165,56 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.user_not_disabled: (
         "Сначала отключите учётную запись: удалить можно только отключённую.",
         "Disable the account first: only a disabled account can be deleted.",
+    ),
+    IdentityErrorCode.personal_runners_disabled: (
+        "Администратор выключил личные раннеры.",
+        "The administrator turned personal runners off.",
+    ),
+    IdentityErrorCode.personal_runner_limit: (
+        "Достигнут предел личных раннеров или токенов. Отзовите ненужный.",
+        "You've reached the limit of personal runners or tokens. Revoke one you no longer need.",
+    ),
+    IdentityErrorCode.runner_revoked: ("Раннер отозван.", "The runner has been revoked."),
+    IdentityErrorCode.runner_paused_by_admin: (
+        "Раннер приостановил администратор: снять паузу может только он.",
+        "An administrator paused this runner: only an administrator can resume it.",
+    ),
+    IdentityErrorCode.project_not_personal: (
+        "Это проект организации: сборки идут на общих раннерах.",
+        "This is an organization project: builds use shared runners.",
+    ),
+    IdentityErrorCode.runner_pairing_invalid: (
+        "Код не найден. Проверьте его в Студии.",
+        "Code not found. Check it in the Studio.",
+    ),
+    IdentityErrorCode.runner_pairing_expired: (
+        "Код истёк. Начните подключение в Студии заново.",
+        "The code has expired. Start connecting from the Studio again.",
+    ),
+    IdentityErrorCode.runner_pairing_used: ("Код уже использован.", "The code has already been used."),
+    IdentityErrorCode.relay_unavailable: (
+        "Раннер не ответил. Запустите его или выберите другую модель.",
+        "The runner didn't respond. Start it or choose another model.",
+    ),
+    IdentityErrorCode.relay_busy: (
+        "Слишком много запросов к раннеру одновременно, попробуйте через минуту.",
+        "Too many requests to the runner at once, try again in a minute.",
+    ),
+    IdentityErrorCode.ai_provider_runner_invalid: (
+        "Выберите свой раннер и объявленный им ИИ-адрес.",
+        "Choose your own runner and an AI endpoint it declares.",
+    ),
+    IdentityErrorCode.remote_runner_url_invalid: (
+        "Адрес сервера должен начинаться с https:// (http только для localhost).",
+        "The server address must start with https:// (http only for localhost).",
+    ),
+    IdentityErrorCode.remote_runner_unreachable: (
+        "Сервер не отвечает. Проверьте адрес и сеть.",
+        "The server isn't responding. Check the address and the network.",
+    ),
+    IdentityErrorCode.remote_runner_disabled: (
+        "На сервере выключены личные раннеры.",
+        "Personal runners are turned off on the server.",
     ),
 }
 

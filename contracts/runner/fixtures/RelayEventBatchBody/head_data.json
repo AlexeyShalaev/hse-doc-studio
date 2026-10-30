@@ -1,0 +1,20 @@
+{
+  "attempt": 1,
+  "seq": 0,
+  "events": [
+    {
+      "kind": "head",
+      "status": 200,
+      "content_type": "text/event-stream",
+      "data": null,
+      "code": null
+    },
+    {
+      "kind": "data",
+      "status": null,
+      "content_type": null,
+      "data": "ZGF0YTogeyJjaG9pY2VzIjpbXX0KCg==",
+      "code": null
+    }
+  ]
+}

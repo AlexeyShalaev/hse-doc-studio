@@ -1,0 +1,7 @@
+{
+  "timeout_s": null,
+  "artifact_retention_days": null,
+  "personal_runners_enabled": false,
+  "personal_runner_wait_s": null,
+  "personal_runners_max_per_user": null
+}

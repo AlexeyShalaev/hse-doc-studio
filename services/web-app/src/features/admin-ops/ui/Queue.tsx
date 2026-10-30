@@ -8,6 +8,8 @@ import {
   opsKeys,
   POLL_MS,
   useCancelJob,
+  usePersonalRunnersEnabled,
+  usePersonalRunningJobs,
   useQueueSummary,
 } from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
@@ -39,6 +41,10 @@ export const Queue = () => {
   const summary = useQueueSummary();
   const cancel = useCancelJob();
   const now = useNow(5000);
+  // Сколько задач сейчас на личных раннерах: отдельной сводки сервер не отдаёт.
+  // Плитку не показываем, пока личные раннеры выключены на установке.
+  const personalEnabled = usePersonalRunnersEnabled();
+  const personalRunning = usePersonalRunningJobs();
 
   const [opened, setOpened] = useState<AdminJob | null>(null);
   const [cancelling, setCancelling] = useState<AdminJob | null>(null);
@@ -63,6 +69,9 @@ export const Queue = () => {
         failed={jobs.isError}
         state={state}
         pagination={jobs.pagination}
+        personalRunning={
+          personalEnabled.data ? personalRunning.data : undefined
+        }
         now={now}
         onOpen={setOpened}
         onCancel={(job) => {

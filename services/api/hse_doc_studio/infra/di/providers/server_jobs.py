@@ -12,13 +12,20 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaOverrideRepository
+from hse_doc_studio.core.jobs.routing import (
+    IJobRouter,
+    IPersonalRunnerLoad,
+    IPersonalRunnerSettings,
+    IProjectRoutePolicy,
+)
 from hse_doc_studio.core.jobs.runners import (
     JOB_TOKEN_KEY_PURPOSE,
     IRegistrationTokenRepository,
@@ -43,6 +50,8 @@ from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader,
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.repositories.jobs_applied import SqlJobApplyLedger
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
+from hse_doc_studio.infra.db.repositories.project_route_policy import SqlProjectRoutePolicyRepository
+from hse_doc_studio.infra.db.repositories.runner_pairings import SqlRunnerPairingRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
@@ -56,10 +65,15 @@ from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.compile.compile_hooks_factory import CompileJobHooksFactory
+from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
+from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
+from hse_doc_studio.use_cases.jobs.project_build_runners import ProjectBuildRunnersService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+from hse_doc_studio.use_cases.jobs.routing import JobRouter
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 JobStorageRoot = NewType("JobStorageRoot", Path)
@@ -69,18 +83,70 @@ class ServerJobsProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def get_job_queue(self, sessions: SessionProvider) -> IJobQueue:
+    def get_postgres_job_queue(self, sessions: SessionProvider) -> PostgresJobQueue:
         return PostgresJobQueue(sessions)
 
     @provide
-    def get_job_queue_service(self, queue: IJobQueue, wakeup: JobWakeup) -> JobQueueService:
+    def get_job_queue(self, queue: PostgresJobQueue) -> IJobQueue:
+        return queue
+
+    @provide
+    def get_personal_runner_load(self, queue: PostgresJobQueue) -> IPersonalRunnerLoad:
+        return queue
+
+    @provide
+    def get_job_terminal_broadcaster(self) -> JobTerminalBroadcaster:
+        return JobTerminalBroadcaster()
+
+    @provide
+    def get_job_queue_service(
+        self, queue: IJobQueue, wakeup: JobWakeup, terminal: JobTerminalBroadcaster
+    ) -> JobQueueService:
         return JobQueueService(
-            queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s, wakeup=wakeup
+            queue,
+            lease_s=settings.jobs.lease_s,
+            timeout_grace_s=settings.jobs.timeout_grace_s,
+            wakeup=wakeup,
+            terminal=terminal,
         )
 
+    @provide
+    def get_personal_runner_settings(
+        self, repo: IInstanceSettingsRepository, env: InstanceEnvOverrides
+    ) -> InstancePersonalRunnerSettings:
+        return InstancePersonalRunnerSettings(repo, env)
+
+    @provide
+    def get_personal_runner_settings_port(self, value: InstancePersonalRunnerSettings) -> IPersonalRunnerSettings:
+        return value
+
+    @provide
+    def get_project_route_policy(self, sessions: SessionProvider) -> IProjectRoutePolicy:
+        return SqlProjectRoutePolicyRepository(sessions)
+
+    @provide
+    def get_job_router(
+        self,
+        personal: IPersonalRunnerSettings,
+        projects: IProjectRoutePolicy,
+        runners: IRunnerRepository,
+        load: IPersonalRunnerLoad,
+    ) -> JobRouter:
+        return JobRouter(personal, projects, runners, load)
+
+    @provide
+    def get_job_router_port(self, router: JobRouter) -> IJobRouter:
+        return router
+
     @provide(override=True)
-    def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
-        return QueueCompileWaitReader(queue, runners)
+    def get_compile_wait_reader(
+        self,
+        queue: IJobQueue,
+        runners: IRunnerRepository,
+        projects: IProjectRoutePolicy,
+        personal: IPersonalRunnerSettings,
+    ) -> ICompileWaitReader:
+        return QueueCompileWaitReader(queue, runners, projects=projects, personal=personal)
 
     @provide
     def get_runner_repository(self, sessions: SessionProvider) -> IRunnerRepository:
@@ -99,10 +165,43 @@ class ServerJobsProvider(Provider):
         return SqlProjectOrgReader(sessions)
 
     @provide
-    def get_runner_registry(
-        self, runners: IRunnerRepository, tokens: IRegistrationTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    def get_runner_registry(  # noqa: PLR0913
+        self,
+        runners: IRunnerRepository,
+        tokens: IRegistrationTokenRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        personal: IPersonalRunnerSettings,
+        users: IUserRepository,
+        queue_service: JobQueueService,
+        queue: IJobQueue,
     ) -> RunnerRegistry:
-        return RunnerRegistry(runners, tokens, audit, uow)
+        return RunnerRegistry(
+            runners, tokens, audit, uow, personal=personal, users=users, queue=queue_service, jobs=queue
+        )
+
+    @provide
+    def get_project_build_runners_service(  # noqa: PLR0913
+        self,
+        projects: IProjectRoutePolicy,
+        runners: IRunnerRepository,
+        personal: IPersonalRunnerSettings,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        queue: JobQueueService,
+    ) -> ProjectBuildRunnersService:
+        return ProjectBuildRunnersService(projects, runners, personal, audit, uow, queue)
+
+    @provide
+    def get_runner_pairing_service(
+        self,
+        sessions: SessionProvider,
+        registry: RunnerRegistry,
+        cipher: ISecretCipher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> RunnerPairingService:
+        return RunnerPairingService(SqlRunnerPairingRepository(sessions), registry, cipher, audit, uow)
 
     @provide
     def get_job_token_signer(self, key_store: KeyFileStore) -> JobTokenSigner:
@@ -122,6 +221,8 @@ class ServerJobsProvider(Provider):
         signer: JobTokenSigner,
         wakeup: JobWakeup,
         quotas: QuotaService,
+        personal: IPersonalRunnerSettings,
+        users: IUserRepository,
     ) -> RunnerJobService:
         return RunnerJobService(
             queue,
@@ -132,6 +233,8 @@ class ServerJobsProvider(Provider):
             lease_s=settings.jobs.lease_s,
             timeout_grace_s=settings.jobs.timeout_grace_s,
             quota_source=quotas.current,
+            personal_settings=personal,
+            users=users,
         )
 
     @provide
@@ -224,6 +327,7 @@ class ServerJobsProvider(Provider):
         instance_settings: IInstanceSettingsRepository,
         env: InstanceEnvOverrides,
         wakeup: JobWakeup,
+        router: IJobRouter,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -248,4 +352,5 @@ class ServerJobsProvider(Provider):
             project_orgs=project_orgs,
             build_timeout_source=build_timeout_s,
             wakeup=wakeup,
+            router=router,
         )

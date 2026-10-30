@@ -54,10 +54,34 @@ const INSTANCE_ALL_ENV: AdminInstanceSettings = {
 const BUILD: AdminBuildSettings = {
   timeout_s: 300,
   artifact_retention_days: 30,
+  personal_runners_enabled: true,
+  personal_runner_wait_s: 5,
+  personal_runners_max_per_user: 5,
   fields: {
     "build.timeout_s": free,
     "build.artifact_retention_days": free,
+    "runners.personal_enabled": free,
+    "runners.personal_wait_s": free,
+    "runners.personal_max_per_user": free,
   },
+};
+// Сервер с личными раннерами: три поля и ключи runners.* в fields.
+const BUILD_PERSONAL: AdminBuildSettings = {
+  ...BUILD,
+  personal_runners_enabled: true,
+  personal_runner_wait_s: 5,
+  personal_runners_max_per_user: 5,
+  fields: {
+    ...BUILD.fields,
+    "runners.personal_enabled": free,
+    "runners.personal_wait_s": free,
+    "runners.personal_max_per_user": free,
+  },
+};
+const BUILD_PERSONAL_ENV: AdminBuildSettings = {
+  ...BUILD_PERSONAL,
+  personal_runners_enabled: false,
+  fields: { ...BUILD_PERSONAL.fields, "runners.personal_enabled": env },
 };
 const BUILD_ENV: AdminBuildSettings = {
   ...BUILD,
@@ -169,6 +193,33 @@ export const getAdminInstallGallery = (): GalleryGroup[] => [
           saveBuild={ok}
         />
       )),
+      entry(
+        "admin_instance_personal",
+        "Личные раннеры: разрешены",
+        () => (
+          <InstanceForm
+            instance={INSTANCE}
+            build={BUILD_PERSONAL}
+            saveInstance={ok}
+            saveBuild={ok}
+          />
+        ),
+        {
+          note: "Выключите переключатель и сохраните: появится подтверждение.",
+        },
+      ),
+      entry(
+        "admin_instance_personal_env",
+        "Личные раннеры выключены окружением",
+        () => (
+          <InstanceForm
+            instance={INSTANCE}
+            build={BUILD_PERSONAL_ENV}
+            saveInstance={ok}
+            saveBuild={ok}
+          />
+        ),
+      ),
       entry(
         "admin_instance_pending",
         "Сохранение не отвечает",

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createSSEStream } from "@shared/lib/sse";
 import { env } from "@shared/config";
 import { CompileWaitSchema, type CompileWait } from "@entities/session";
+import { parsePlacement, type CompilePlacement } from "@entities/runner";
 
 export type CompileStatus = "running" | "success" | "failure" | "cancelled";
 
@@ -24,6 +25,11 @@ export type CompileStreamSlot = {
    * null, пока сборка идёт или в локальном режиме.
    */
   wait: CompileWait | null;
+  /**
+   * Серверный режим: где идёт сборка (событие потока `placement`): ждёт личный
+   * раннер, на личном, на общем или на общем после фолбэка. null в локальном.
+   */
+  placement: CompilePlacement | null;
   /** Wall-clock of the last log line, used by the idle watchdog. */
   lastEventAt: number;
   /** Watchdog flag: no log lines for STALE_THRESHOLD_MS while status=running. */
@@ -112,6 +118,7 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
               status: "running",
               doneInfo: null,
               wait: null,
+              placement: null,
               lastEventAt: Date.now(),
               isStalled: false,
             },
@@ -145,6 +152,16 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
                   },
                 },
                 _closers: nextClosers,
+              };
+            }
+
+            if (event.type === "placement") {
+              // Место сборки не значит вывод: сторож тишины не сбрасывается.
+              return {
+                streams: {
+                  ...s.streams,
+                  [k]: { ...slot, placement: parsePlacement(event.data) },
+                },
               };
             }
 

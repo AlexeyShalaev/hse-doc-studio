@@ -36,8 +36,16 @@ class CreatedRegistrationTokenResponse(StrictModel):
     command: str
 
 
-RunnerStatusName = Literal["online", "stale", "offline", "paused", "revoked"]
+RunnerStatusName = Literal["online", "stale", "offline", "paused", "revoked", "disabled"]
 RegistrationTokenStatusName = Literal["active", "expired", "exhausted", "revoked"]
+
+
+class RunnerOwner(StrictModel):
+    """Хозяин личного раннера: админу видны имя и почта, чтобы связаться с человеком."""
+
+    id: str
+    name: str
+    email: str
 
 
 class RunnerInfo(StrictModel):
@@ -52,6 +60,12 @@ class RunnerInfo(StrictModel):
     last_seen_at: datetime | None
     paused: bool
     revoked: bool
+    owner_kind: Literal["instance", "user"] = "instance"
+    owner: RunnerOwner | None = None
+    host_kind: Literal["cli", "desktop"] = "cli"
+    # Имена объявленных раннером ИИ-адресов, без URL.
+    ai_endpoints: list[str] = Field(default_factory=list)
+    last_seen_ip: str | None = None
 
 
 class UpdateRunnerRequest(StrictModel):

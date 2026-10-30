@@ -917,6 +917,7 @@ def serialize_agent_run(record: AgentRunRecord) -> dict[str, Any]:
         "iterations": record.iterations,
         "usage": _serialize_token_usage(record.usage),
         "error": record.error,
+        "error_code": record.error_code,
         "diagnostics": record.diagnostics,
     }
 
@@ -938,6 +939,7 @@ def deserialize_agent_run(data: dict[str, Any], project_folder: Path) -> AgentRu
         iterations=int(data.get("iterations", 0)),
         usage=_deserialize_token_usage(data.get("usage")),
         error=data.get("error"),
+        error_code=data.get("error_code"),
         diagnostics=data.get("diagnostics") or [],
     )
 

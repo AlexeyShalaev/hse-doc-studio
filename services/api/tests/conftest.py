@@ -66,3 +66,16 @@ if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto")
         "contract/test_object_store_s3_contract.py",
         "integration/storage/*",
     ]
+
+
+@pytest.fixture(autouse=True)
+def _reset_docker_binary() -> object:
+    """Путь к докеру глобален в процессе: create_app фиксирует его из настроек, которые тест подменил.
+
+    Без сброса тест с `docker_binary = .../no-docker` оставлял путь следующим, и те видели чужой
+    исполняемый файл в зависимости от порядка прогона.
+    """
+    yield
+    from hse_doc_studio.infra.docker.cli import configure_docker_binary  # noqa: PLC0415
+
+    configure_docker_binary(None)

@@ -23,7 +23,10 @@
       "user_email": "anna.petrova@example.org",
       "org_name": null,
       "project_name": "Диплом",
-      "runner_name": null
+      "runner_name": null,
+      "route": "shared",
+      "runner_scope": null,
+      "route_reason": null
     },
     {
       "id": "8d7c6b5a-4f3e-4d2c-9b1a-0f9e8d7c6b5a",
@@ -48,7 +51,10 @@
       "user_email": "anna.petrova@example.org",
       "org_name": null,
       "project_name": "Диплом",
-      "runner_name": "runner-1"
+      "runner_name": "runner-1",
+      "route": "shared",
+      "runner_scope": "shared",
+      "route_reason": null
     },
     {
       "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
@@ -73,7 +79,38 @@
       "user_email": null,
       "org_name": null,
       "project_name": null,
-      "runner_name": "runner-1"
+      "runner_name": "runner-1",
+      "route": "shared",
+      "runner_scope": "shared",
+      "route_reason": null
+    },
+    {
+      "id": "6e5d4c3b-2a19-4807-a6f5-e4d3c2b1a090",
+      "kind": "compile",
+      "state": "running",
+      "project_id": "5f0b3f6e-6f43-4c0a-9d3e-0d8d3a3c1e11",
+      "user_id": "7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "org_id": null,
+      "tags": [
+        "tex"
+      ],
+      "priority_class": "interactive",
+      "queued_at": "2026-10-27T09:30:00Z",
+      "started_at": "2026-10-27T09:31:00Z",
+      "finished_at": null,
+      "attempt": 1,
+      "max_attempts": 3,
+      "runner_id": "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+      "cancel_requested": false,
+      "error_code": null,
+      "user_name": "Анна Петрова",
+      "user_email": "anna.petrova@example.org",
+      "org_name": null,
+      "project_name": "Диплом",
+      "runner_name": "MacBook Анны",
+      "route": "personal_first",
+      "runner_scope": "personal",
+      "route_reason": "personal"
     }
   ],
   "next_cursor": "azoxMDQy",

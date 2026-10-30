@@ -15,7 +15,22 @@ from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.core.jobs.quotas import MAX_CONCURRENT, MAX_DURATION_S, MIN_DURATION_S
 
 JobStateName = Literal["queued", "running", "succeeded", "failed", "cancelled", "timed_out"]
-JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission"]
+JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission", "ai.relay"]
+JobRouteName = Literal["shared", "personal_first", "pinned"]
+RunnerScopeName = Literal["shared", "personal"]
+RouteReasonName = Literal[
+    "waiting_personal",
+    "personal",
+    "policy_shared",
+    "org_project",
+    "kind_not_allowed",
+    "disabled",
+    "fallback_offline",
+    "fallback_busy",
+    "fallback_timeout",
+    "fallback_lost",
+    "pinned",
+]
 ServiceStateName = Literal["ok", "down", "degraded", "not_configured"]
 AiProviderTypeName = Literal["claude", "openai", "openai_compat", "ollama"]
 
@@ -43,6 +58,10 @@ class AdminJob(StrictModel):
     org_name: str | None
     project_name: str | None
     runner_name: str | None
+    # Где идёт задача: маршрут постановки, кто взял текущую попытку и почему.
+    route: JobRouteName = "shared"
+    runner_scope: RunnerScopeName | None = None
+    route_reason: RouteReasonName | None = None
 
 
 class AdminJobPage(StrictModel):

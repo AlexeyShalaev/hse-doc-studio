@@ -27,13 +27,20 @@ from hse_doc_studio.core.jobs.wire import (
     RunnerRegisterRequest,
 )
 
-from tests.unit.core.jobs.samples import make_compile_spec, make_office_spec, make_pack_spec, make_verify_spec
+from tests.unit.core.jobs.samples import (
+    make_compile_spec,
+    make_office_spec,
+    make_pack_spec,
+    make_relay_spec,
+    make_verify_spec,
+)
 
 _SPECS = {
     JobKind.compile: make_compile_spec,
     JobKind.office_convert: make_office_spec,
     JobKind.verify_detached: make_verify_spec,
     JobKind.pack_submission: make_pack_spec,
+    JobKind.ai_relay: make_relay_spec,
 }
 _MANIFEST = (ManifestFile("tz/main.tex", "a" * 64, 10), ManifestFile("common/meta.tex", "b" * 64, 3))
 
@@ -139,11 +146,13 @@ def test__job_state__terminal_states_mirror_job_status() -> None:
 
 
 def test__registry__every_kind_has_a_server_queue_policy() -> None:
-    for spec in build_job_kinds():
+    # Ретрансляция ИИ не повторяется: часть ответа модели уже ушла клиенту.
+    for spec in (spec for spec in build_job_kinds() if spec.kind is not JobKind.ai_relay):
         policy = spec.policy
         assert isinstance(policy.priority_class, JobPriorityClass)
-        assert policy.retryable
-        assert policy.max_attempts == 2
+        # Ретрансляция ИИ не повторяется: ответ модели уже ушёл потребителю.
+        assert policy.retryable is (spec.kind is not JobKind.ai_relay)
+        assert policy.max_attempts == (1 if spec.kind is JobKind.ai_relay else 2)
         assert policy.default_timeout_s is not None
         assert policy.default_timeout_s > 0
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 from typing import Any
 
@@ -32,7 +33,17 @@ from hse_doc_studio.core.jobs.admin import (
     RunnerStatus,
     RunnerSummary,
 )
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
+from hse_doc_studio.core.jobs.runners import (
+    DeclaredAiEndpoint,
+    RegistrationToken,
+    RegistrationTokenPurpose,
+    Runner,
+    RunnerAnnouncement,
+    RunnerHostKind,
+    RunnerOwnerKind,
+    RunnerPausedBy,
+)
 from hse_doc_studio.core.listing import Found, Picked, PickerItem
 from hse_doc_studio.infra.db.orm.jobs import RunnerRegistrationTokenRow, RunnerRow
 from hse_doc_studio.infra.db.search import matches_any, ordered
@@ -55,7 +66,33 @@ def _runner(row: RunnerRow) -> Runner:
         revoked_at=row.revoked_at,
         owner_kind=RunnerOwnerKind(row.owner_kind),
         owner_id=row.owner_id,
+        host_kind=RunnerHostKind(row.host_kind),
+        features=frozenset(row.features),
+        ai_endpoints=_endpoints(row.ai_endpoints),
+        ai_concurrency=row.ai_concurrency,
+        last_seen_ip=row.last_seen_ip,
+        offline_at=row.offline_at,
+        renamed_at=row.renamed_at,
+        paused_by=RunnerPausedBy(row.paused_by) if row.paused_by else None,
     )
+
+
+def _endpoints(raw: list[Any]) -> tuple[DeclaredAiEndpoint, ...]:
+    # Запись пишет только `/announce` после проверки схемой; чужие ключи и виды тихо пропускаются.
+    found: list[DeclaredAiEndpoint] = []
+    for item in raw:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            continue
+        try:
+            flavor = AiEndpointFlavor(item.get("flavor", AiEndpointFlavor.openai.value))
+        except ValueError:
+            continue
+        found.append(DeclaredAiEndpoint(name=item["name"], flavor=flavor))
+    return tuple(found)
+
+
+def endpoints_json(endpoints: tuple[DeclaredAiEndpoint, ...]) -> list[Any]:
+    return [{"name": e.name, "flavor": e.flavor.value} for e in endpoints]
 
 
 def _token(row: RunnerRegistrationTokenRow) -> RegistrationToken:
@@ -71,6 +108,7 @@ def _token(row: RunnerRegistrationTokenRow) -> RegistrationToken:
         revoked_at=row.revoked_at,
         owner_kind=RunnerOwnerKind(row.owner_kind),
         owner_id=row.owner_id,
+        purpose=RegistrationTokenPurpose(row.purpose),
     )
 
 
@@ -96,6 +134,13 @@ class SqlRunnerRepository:
                     created_at=runner.created_at,
                     last_seen_at=runner.last_seen_at,
                     revoked_at=runner.revoked_at,
+                    host_kind=runner.host_kind.value,
+                    features=sorted(runner.features),
+                    ai_endpoints=endpoints_json(runner.ai_endpoints),
+                    ai_concurrency=runner.ai_concurrency,
+                    last_seen_ip=runner.last_seen_ip,
+                    offline_at=runner.offline_at,
+                    renamed_at=runner.renamed_at,
                 )
             )
             await db.flush()
@@ -125,8 +170,9 @@ class SqlRunnerRepository:
     async def set_token_hash(self, runner_id: str, token_hash: str) -> bool:
         return await self._update(runner_id, {"token_hash": token_hash}, only_active=True)
 
-    async def set_paused(self, runner_id: str, paused: bool) -> bool:
-        return await self._update(runner_id, {"paused": paused}, only_active=True)
+    async def set_paused(self, runner_id: str, paused: bool, by: RunnerPausedBy | None = None) -> bool:
+        paused_by = by.value if paused and by is not None else None
+        return await self._update(runner_id, {"paused": paused, "paused_by": paused_by}, only_active=True)
 
     async def revoke(self, runner_id: str, now: datetime) -> bool:
         return await self._update(runner_id, {"revoked_at": now})
@@ -136,6 +182,57 @@ class SqlRunnerRepository:
         if version is not None:
             values["version"] = version
         await self._update(runner_id, values)
+
+    async def list_owned(self, owner_id: str) -> builtins.list[Runner]:
+        stmt = (
+            select(RunnerRow)
+            .where(RunnerRow.owner_kind == RunnerOwnerKind.user.value, RunnerRow.owner_id == owner_id)
+            .order_by(RunnerRow.created_at, RunnerRow.id)
+        )
+        async with self._sessions.use() as db:
+            return [_runner(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
+        return await self._update(runner_id, {"name": name, "renamed_at": now}, only_active=True)
+
+    async def apply_announcement(
+        self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
+    ) -> Runner | None:
+        values: dict[str, object] = {
+            "version": info.version,
+            "tags": sorted(info.tags),
+            "concurrency": info.concurrency,
+            "ai_concurrency": info.ai_concurrency,
+            "host_kind": info.host_kind.value,
+            "features": sorted(info.features),
+            "ai_endpoints": endpoints_json(info.ai_endpoints),
+            "last_seen_at": now,
+            "last_seen_ip": ip,
+            "offline_at": None,
+        }
+        async with self._sessions.use() as db:
+            row = await db.get(RunnerRow, runner_id, with_for_update=True, populate_existing=True)
+            if row is None or row.revoked_at is not None:
+                return None
+            for key, value in values.items():
+                setattr(row, key, value)
+            # Имя, заданное хозяином или админом в интерфейсе, `/announce` не перетирает.
+            if info.name is not None and row.renamed_at is None:
+                row.name = info.name
+            await db.flush()
+            return _runner(row)
+
+    async def mark_offline(self, runner_id: str, now: datetime) -> None:
+        await self._update(runner_id, {"offline_at": now})
+
+    async def count_active_owned(self, owner_id: str) -> int:
+        stmt = select(func.count()).where(
+            RunnerRow.owner_kind == RunnerOwnerKind.user.value,
+            RunnerRow.owner_id == owner_id,
+            RunnerRow.revoked_at.is_(None),
+        )
+        async with self._sessions.use() as db:
+            return int((await db.execute(stmt)).scalar_one())
 
 
 class SqlRegistrationTokenRepository:
@@ -187,6 +284,28 @@ class SqlRegistrationTokenRepository:
             row = (await db.execute(stmt)).scalar_one_or_none()
             return _token(row) if row else None
 
+    async def list_owned(self, owner_id: str) -> builtins.list[RegistrationToken]:
+        row_t = RunnerRegistrationTokenRow
+        stmt = (
+            select(row_t)
+            .where(row_t.owner_kind == RunnerOwnerKind.user.value, row_t.owner_id == owner_id)
+            .order_by(row_t.created_at.desc(), row_t.id)
+        )
+        async with self._sessions.use() as db:
+            return [_token(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def revoke_owned(self, owner_id: str, now: datetime) -> int:
+        row_t = RunnerRegistrationTokenRow
+        stmt = (
+            update(row_t)
+            .where(
+                row_t.owner_kind == RunnerOwnerKind.user.value, row_t.owner_id == owner_id, row_t.revoked_at.is_(None)
+            )
+            .values(revoked_at=now)
+        )
+        async with self._sessions.use() as db:
+            return int((await db.execute(stmt)).rowcount)  # type: ignore[attr-defined]
+
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         async with self._sessions.use() as db:
             # Вставка без гонки между воркерами; смена хеша сбрасывает счётчик одним UPDATE.
@@ -214,6 +333,7 @@ def _values(token: RegistrationToken) -> dict[str, object]:
         created_at=token.created_at,
         expires_at=token.expires_at,
         revoked_at=token.revoked_at,
+        purpose=token.purpose.value,
     )
 
 
@@ -269,7 +389,9 @@ class SqlRunnerAdminReader:
         parts = _version_parts()
         stmt = (
             select(RunnerRow.version, *parts)
-            .where(RunnerRow.revoked_at.is_(None))
+            # Устарел ли раннер считается от флота установки: версии личных раннеров людей
+            # не сбивают эту оценку.
+            .where(RunnerRow.revoked_at.is_(None), RunnerRow.owner_kind == RunnerOwnerKind.instance.value)
             .order_by(*(p.desc() for p in parts), RunnerRow.id)
             .limit(1)
         )
@@ -299,12 +421,15 @@ class SqlRunnerAdminReader:
         if query.outdated is not None:
             outdated = self._outdated(await self._newest())
             conditions.append(outdated if query.outdated else ~outdated)
+        if query.owner_kind is not None:
+            conditions.append(RunnerRow.owner_kind == query.owner_kind.value)
         keys: dict[str, list[Any]] = {
             "name": [func.lower(RunnerRow.name)],
             "status": [_status_rank(status), func.lower(RunnerRow.name)],
             "last_seen_at": [RunnerRow.last_seen_at],
             "created_at": [RunnerRow.created_at],
             "version": list(_version_parts()),
+            "owner_kind": [RunnerRow.owner_kind, func.lower(RunnerRow.name)],
         }
         stmt = (
             select(RunnerRow)
@@ -319,14 +444,21 @@ class SqlRunnerAdminReader:
         return Found(items=[_runner(row) for row in rows], total=int(total))
 
     async def summary(self, now: datetime) -> RunnerSummary:
+        # Сводка только по раннерам установки: у личных раннеров людей своя сводка на экране.
+        instance_only = RunnerRow.owner_kind == RunnerOwnerKind.instance.value
         status = _runner_status(now).label("status")
         newest = await self._newest()
         async with self._sessions.use() as session:
             counts = {
-                str(s): int(n) for s, n in (await session.execute(select(status, func.count()).group_by(status))).all()
+                str(s): int(n)
+                for s, n in (
+                    await session.execute(select(status, func.count()).where(instance_only).group_by(status))
+                ).all()
             }
             outdated = (
-                await session.execute(select(func.count()).select_from(RunnerRow).where(self._outdated(newest)))
+                await session.execute(
+                    select(func.count()).select_from(RunnerRow).where(self._outdated(newest), instance_only)
+                )
             ).scalar_one()
         return RunnerSummary(
             online=counts.get(RunnerStatus.online.value, 0),

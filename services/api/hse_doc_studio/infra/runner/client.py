@@ -9,6 +9,7 @@ import httpx
 
 from hse_doc_studio.core.jobs.codec import decode, decode_poll_response, encode
 from hse_doc_studio.core.jobs.wire import (
+    FEATURE_AI_SLOTS,
     RUNNER_API_PREFIX,
     ArtifactUploadRequest,
     ArtifactUploadResponse,
@@ -21,6 +22,14 @@ from hse_doc_studio.core.jobs.wire import (
     LogBatch,
     PollRequest,
     PollResponse,
+    RelayEventAck,
+    RelayEventBatch,
+    RunnerAnnounceRequest,
+    RunnerAnnounceResponse,
+    RunnerPairPollRequest,
+    RunnerPairPollResponse,
+    RunnerPairStartRequest,
+    RunnerPairStartResponse,
     RunnerRegisterRequest,
     RunnerRegisterResponse,
 )
@@ -33,6 +42,7 @@ logger = logging.getLogger(__name__)
 JOB_TOKEN_HEADER = "X-Job-Token"  # noqa: S105
 RUNNER_VERSION_HEADER = "X-Runner-Version"
 RUNNER_ID_HEADER = "X-Runner-Id"
+RELAY_SHA256_HEADER = "X-Relay-Sha256"
 
 _RETRY_STATUSES = frozenset({429, 502, 503, 504})
 
@@ -77,6 +87,7 @@ class RunnerClient:
         self._backoff_factory = backoff_factory
         self._timeout_s = timeout_s
         self._runner_id: str | None = None
+        self._features: frozenset[str] = frozenset()
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=timeout_s)
 
     async def aclose(self) -> None:
@@ -95,9 +106,11 @@ class RunnerClient:
         self._token = runner_token
         self._runner_id = runner_id
 
-    def _headers(self, job_token: str | None) -> dict[str, str]:
-        headers = {"Authorization": f"Bearer {self._token}", RUNNER_VERSION_HEADER: self._version}
-        if self._runner_id is not None:
+    def _headers(self, job_token: str | None, *, authorized: bool = True) -> dict[str, str]:
+        headers = {RUNNER_VERSION_HEADER: self._version}
+        if authorized:
+            headers["Authorization"] = f"Bearer {self._token}"
+        if self._runner_id:
             headers[RUNNER_ID_HEADER] = self._runner_id
         if job_token is not None:
             headers[JOB_TOKEN_HEADER] = job_token
@@ -113,6 +126,7 @@ class RunnerClient:
         content: bytes | None = None,
         retries: int | None = None,
         timeout_s: float | None = None,
+        authorized: bool = True,
     ) -> httpx.Response:
         url = f"{RUNNER_API_PREFIX}{path}"
         attempts = (self._retries if retries is None else retries) + 1
@@ -122,7 +136,7 @@ class RunnerClient:
                 response = await self._http.request(
                     method,
                     url,
-                    headers=self._headers(job_token),
+                    headers=self._headers(job_token, authorized=authorized),
                     json=json,
                     content=content,
                     timeout=httpx.USE_CLIENT_DEFAULT if timeout_s is None else timeout_s,
@@ -149,12 +163,58 @@ class RunnerClient:
             self._on_registered(registered)
         return registered
 
+    @property
+    def features(self) -> frozenset[str]:
+        """Согласованные с сервером возможности; пусто, пока `/announce` не прошёл или сервер старый."""
+        return self._features
+
+    async def announce(self, request: RunnerAnnounceRequest) -> RunnerAnnounceResponse | None:
+        """Согласовать возможности; старый сервер отвечает 404, и раннер работает по-старому (`None`)."""
+        try:
+            response = await self._send("POST", "/announce", json=encode(request))
+        except RunnerApiError as exc:
+            if exc.status in (404, 405):
+                self._features = frozenset()
+                return None
+            raise
+        announced = decode(RunnerAnnounceResponse, _json_object(response))
+        self._features = announced.server_features & request.features
+        return announced
+
     async def poll(self, request: PollRequest) -> PollResponse:
         # Долгий опрос не повторяем здесь: паузой и перерегистрацией управляет цикл.
-        response = await self._send(
-            "POST", "/poll", json=encode(request), retries=0, timeout_s=request.wait_s + self._timeout_s
-        )
+        body = encode(request)
+        if FEATURE_AI_SLOTS not in self._features and isinstance(body, dict):
+            # Старый сервер строг к полям: поле слотов ИИ уходит только после согласования.
+            body.pop("free_ai_slots", None)
+        response = await self._send("POST", "/poll", json=body, retries=0, timeout_s=request.wait_s + self._timeout_s)
         return decode_poll_response(_json_object(response))
+
+    async def offline(self) -> None:
+        """Мягкая остановка: сервер сразу уводит сборки хозяина на общие раннеры."""
+        await self._send("POST", "/offline", retries=0, timeout_s=5.0)
+
+    async def deregister(self) -> None:
+        """Раннер отзывает сам себя; дальше его токен не годится."""
+        await self._send("POST", "/deregister", retries=1)
+
+    async def pair_start(self, request: RunnerPairStartRequest) -> RunnerPairStartResponse:
+        response = await self._send("POST", "/pair/start", json=encode(request), authorized=False)
+        return decode(RunnerPairStartResponse, _json_object(response))
+
+    async def pair_poll(self, request: RunnerPairPollRequest) -> RunnerPairPollResponse:
+        response = await self._send("POST", "/pair/poll", json=encode(request), retries=0, authorized=False)
+        return decode(RunnerPairPollResponse, _json_object(response))
+
+    async def relay_request(self, job_id: str, job_token: str) -> tuple[bytes, str | None]:
+        """Тело запроса к модели и его sha256 из заголовка."""
+        response = await self._send("GET", f"/jobs/{job_id}/relay/request", job_token=job_token, retries=1)
+        return response.content, response.headers.get(RELAY_SHA256_HEADER)
+
+    async def relay_events(self, job_id: str, job_token: str, batch: RelayEventBatch) -> RelayEventAck:
+        # Повтор той же порции безвреден: сервер принимает её один раз.
+        response = await self._send("POST", f"/jobs/{job_id}/relay/events", job_token=job_token, json=encode(batch))
+        return decode(RelayEventAck, _json_object(response))
 
     async def heartbeat(self, job_id: str, job_token: str, request: HeartbeatRequest) -> HeartbeatResponse:
         response = await self._send(

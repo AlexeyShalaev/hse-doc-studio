@@ -32,15 +32,20 @@ class OpenAICompatClient:
         ssl_verify: bool = True,
         connect_timeout_s: float = _DEFAULT_CONNECT_TIMEOUT_S,
         request_timeout_s: float = _DEFAULT_REQUEST_TIMEOUT_S,
+        *,
+        transport: httpx2.AsyncBaseTransport | None = None,
+        max_retries: int = openai.DEFAULT_MAX_RETRIES,
     ) -> None:
         # Pass the timeout to BOTH the SDK (governs per-request) and the httpx
-        # client (governs the connect/TLS handshake).
+        # client (governs the connect/TLS handshake). `transport` replaces the
+        # network for a runner provider (the request is relayed by the runner).
         timeout = httpx2.Timeout(request_timeout_s, connect=connect_timeout_s)
         self._client = openai.AsyncOpenAI(
             api_key=api_key,
             base_url=base_url or None,
             timeout=timeout,
-            http_client=httpx2.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout),
+            max_retries=max_retries,
+            http_client=httpx2.AsyncClient(verify=_verify_arg(ssl_verify), timeout=timeout, transport=transport),
         )
 
     async def list_models(self) -> list[str]:

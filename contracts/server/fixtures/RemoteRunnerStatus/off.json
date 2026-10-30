@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "server_url": "https://studio.example.org",
+  "paired": false,
+  "runner_id": null,
+  "runner_name": null,
+  "state": "off",
+  "detail_code": null,
+  "running_jobs": 0,
+  "concurrency": 1,
+  "yield_to_local": true,
+  "docker": "ok",
+  "tex_image": "ready",
+  "ai_endpoints": [],
+  "pairing": null
+}

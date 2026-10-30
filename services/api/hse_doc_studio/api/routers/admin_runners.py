@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.runner_commands import registration_command, studio_base_url
 from hse_doc_studio.api.schemas.admin import (
     Page,
     PageParams,
@@ -26,6 +26,7 @@ from hse_doc_studio.api.schemas.runner_admin import (
     RegistrationTokenStatusName,
     RotatedRunnerTokenResponse,
     RunnerInfo,
+    RunnerOwner,
     RunnerStatusName,
     RunnerSummaryInfo,
     UpdateRunnerRequest,
@@ -41,7 +42,7 @@ from hse_doc_studio.core.jobs.admin import (
     runner_status,
 )
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 from hse_doc_studio.core.listing import SortKey
 from hse_doc_studio.use_cases.admin.ops_runners import (
     ListRegistrationTokensUC,
@@ -70,11 +71,18 @@ def _token_info(token: RegistrationToken) -> RegistrationTokenInfo:
     )
 
 
-def _runner_info(runner: Runner, now: datetime | None = None) -> RunnerInfo:
+def _runner_info(
+    runner: Runner,
+    now: datetime | None = None,
+    *,
+    personal_enabled: bool = True,
+    owners: dict[str, tuple[str, str]] | None = None,
+) -> RunnerInfo:
+    owner = (owners or {}).get(runner.owner_id) if runner.owner_id is not None else None
     return RunnerInfo(
         id=runner.id,
         name=runner.name,
-        status=runner_status(runner, now or datetime.now(UTC)).value,
+        status=runner_status(runner, now or datetime.now(UTC), personal_enabled=personal_enabled).value,
         tags=sorted(runner.tags),
         concurrency=runner.concurrency,
         resource_class=runner.resource_class,
@@ -83,13 +91,19 @@ def _runner_info(runner: Runner, now: datetime | None = None) -> RunnerInfo:
         last_seen_at=runner.last_seen_at,
         paused=runner.paused,
         revoked=runner.revoked_at is not None,
+        owner_kind=runner.owner_kind.value,
+        owner=RunnerOwner(id=runner.owner_id, name=owner[0], email=owner[1])
+        if owner is not None and runner.owner_id is not None
+        else None,
+        host_kind=runner.host_kind.value,
+        ai_endpoints=[endpoint.name for endpoint in runner.ai_endpoints],
+        last_seen_ip=runner.last_seen_ip,
     )
 
 
 def _command(request: Request, secret: str) -> str:
     """Команда запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа."""
-    base = (settings.auth.public_url or str(request.base_url)).rstrip("/")
-    return f"HSE_RUNNER__API_URL={base} HSE_RUNNER__TOKEN={secret} hse-doc-studio runner"
+    return registration_command(studio_base_url(request), secret)
 
 
 async def _registry(request: Request) -> RunnerRegistry:
@@ -160,8 +174,11 @@ async def list_runners(
     tag: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
     resource_class: Annotated[str | None, Query(min_length=1, max_length=32)] = None,
     outdated: Annotated[bool | None, Query()] = None,
+    owner_kind: Annotated[Literal["instance", "user"] | None, Query()] = None,
 ) -> Page[RunnerInfo]:
+    """Раннеры установки и личные раннеры людей (с хозяином); `owner_kind` оставляет один вид."""
     response.headers.update(_NO_STORE)
+    registry = await _registry(request)
     found = await (await _uc(request, ListRunnersUC)).execute(
         require_actor(),
         RunnerQuery(
@@ -170,11 +187,17 @@ async def list_runners(
             tag=tag,
             resource_class=resource_class,
             outdated=outdated,
+            owner_kind=RunnerOwnerKind(owner_kind) if owner_kind else None,
             sort=sort,
             window=params.window,
         ),
     )
-    return params.page([_runner_info(r, found.as_of) for r in found.page.items], found.page.total)
+    owners = await registry.owners_of(found.page.items)
+    personal_enabled = (await registry.personal_settings()).enabled
+    return params.page(
+        [_runner_info(r, found.as_of, personal_enabled=personal_enabled, owners=owners) for r in found.page.items],
+        found.page.total,
+    )
 
 
 @router.get("/runners/summary", response_model=RunnerSummaryInfo)

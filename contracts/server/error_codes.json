@@ -33,5 +33,19 @@
   "already_member",
   "user_not_found",
   "user_has_projects",
-  "user_not_disabled"
+  "user_not_disabled",
+  "personal_runners_disabled",
+  "personal_runner_limit",
+  "runner_revoked",
+  "runner_paused_by_admin",
+  "project_not_personal",
+  "runner_pairing_invalid",
+  "runner_pairing_expired",
+  "runner_pairing_used",
+  "relay_unavailable",
+  "relay_busy",
+  "ai_provider_runner_invalid",
+  "remote_runner_url_invalid",
+  "remote_runner_unreachable",
+  "remote_runner_disabled"
 ]

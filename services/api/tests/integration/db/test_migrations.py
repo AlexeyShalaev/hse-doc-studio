@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from uuid import uuid4
 
 import pytest
 from hse_doc_studio.infra.db import migrator
 from hse_doc_studio.infra.db.errors import DbAheadError, DbOutdatedError, MigrationLockTimeoutError
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 pytestmark = pytest.mark.pg
@@ -120,3 +122,36 @@ async def test__ensure_db_current__db_ahead_of_code__db_ahead_error_and_schema_u
     assert exc.value.code == "db_ahead"
     assert "9999_future" in str(exc.value)
     assert await migrator.current_revision(pg_engine) == "9999_future"
+
+
+_JOB = (
+    "INSERT INTO jobs (id, kind, state, project_id, user_id, tags, priority_class, vtime, queued_at,"
+    " max_attempts, timeout_s, payload, runner_id) VALUES (:id, 'compile', :state, :p, :u, '{tex}', 0, 1,"
+    " now(), 1, 600, '{}', :runner)"
+)
+
+
+async def test__personal_runners__upgrade_backfills_scope_and_rejects_broken_routes(pg_engine: AsyncEngine) -> None:
+    await migrator.upgrade(pg_engine, "s2_68_project_usage")
+    running, queued = uuid4(), uuid4()
+    async with pg_engine.begin() as conn:
+        await conn.execute(
+            text(_JOB), {"id": running, "state": "running", "p": uuid4(), "u": uuid4(), "runner": uuid4()}
+        )
+        await conn.execute(text(_JOB), {"id": queued, "state": "queued", "p": uuid4(), "u": uuid4(), "runner": None})
+
+    await migrator.upgrade(pg_engine, "pr_02_runner_pairing_relay")
+
+    async with pg_engine.connect() as conn:
+        rows = dict((await conn.execute(text("SELECT id, runner_scope FROM jobs"))).all())
+    assert rows == {running: "shared", queued: None}
+    with pytest.raises(IntegrityError):
+        async with pg_engine.begin() as conn:
+            await conn.execute(text("UPDATE jobs SET route = 'pinned' WHERE id = :id"), {"id": queued})
+    with pytest.raises(IntegrityError):
+        async with pg_engine.begin() as conn:
+            await conn.execute(text("UPDATE jobs SET route = 'personal_first' WHERE id = :id"), {"id": queued})
+
+    await migrator.downgrade(pg_engine, "s2_68_project_usage")
+    await migrator.upgrade(pg_engine)
+    assert await migrator.check_drift(pg_engine) == []

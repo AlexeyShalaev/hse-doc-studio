@@ -61,6 +61,9 @@ def _build(view: BuildView) -> AdminBuildSettings:
     return AdminBuildSettings(
         timeout_s=view.settings.timeout_s,
         artifact_retention_days=view.settings.artifact_retention_days,
+        personal_runners_enabled=view.personal.enabled,
+        personal_runner_wait_s=view.personal.wait_s,
+        personal_runners_max_per_user=view.personal.max_per_user,
         fields=_fields(view.descriptions),
     )
 

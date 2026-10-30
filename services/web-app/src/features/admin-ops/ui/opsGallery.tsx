@@ -38,6 +38,7 @@ import {
 import { Runners } from "./Runners";
 import { RunnersPage } from "./RunnersPage";
 import { RunnersView, type RunnersViewProps } from "./RunnersView";
+import { PersonalRunnersView } from "./PersonalRunnersView";
 import { Services } from "./Services";
 import { ServicesView } from "./ServicesView";
 import { Storage } from "./Storage";
@@ -96,6 +97,11 @@ const runner = (
     last_seen_at: seen === null ? null : ago(seen),
     paused: false,
     revoked: false,
+    owner_kind: "instance",
+    owner: null,
+    host_kind: "cli",
+    ai_endpoints: [],
+    last_seen_ip: null,
     ...extra,
   };
   // Состояние строки считает сервер; здесь по тем же правилам.
@@ -482,7 +488,111 @@ const StorageDemo = ({
 const live = (scenario: string) => ({ scenario });
 
 /** Операционные экраны админки: раннеры, очередь, квоты, сервисы, хранилище; живые разделы на демо-мире. */
+const personalRunner = (
+  id: string,
+  name: string,
+  owner: [string, string, string],
+  extra: Partial<AdminRunner> = {},
+): AdminRunner => ({
+  id,
+  name,
+  status: "online",
+  tags: ["pack", "tex"],
+  concurrency: 1,
+  resource_class: "standard",
+  version: "0.3.0",
+  created_at: new Date(NOW - 3 * 86400_000).toISOString(),
+  last_seen_at: new Date(NOW - 8000).toISOString(),
+  paused: false,
+  revoked: false,
+  owner_kind: "user",
+  owner: { id: owner[0], name: owner[1], email: owner[2] },
+  host_kind: "desktop",
+  ai_endpoints: [],
+  last_seen_ip: "203.0.113.7",
+  ...extra,
+});
+
+const ANNA_P: [string, string, string] = [
+  "u_01hx7k2m9c",
+  "Анна Петрова",
+  "anna.petrova@example.org",
+];
+const PERSONAL_RUNNERS: AdminRunner[] = [
+  personalRunner("pr1", "MacBook Анны", ANNA_P, { ai_endpoints: ["ollama"] }),
+  personalRunner("pr2", "Домашний сервер", ANNA_P, {
+    host_kind: "cli",
+    paused: true,
+    ai_endpoints: ["vllm"],
+  }),
+  personalRunner(
+    "pr3",
+    "gpu-box",
+    ["u_01hx7k8maria", "Мария Келлер", "maria.keller@example.org"],
+    {
+      host_kind: "cli",
+      version: "0.1.4",
+      ai_endpoints: ["vllm", "ollama"],
+      last_seen_at: new Date(NOW - 3 * 3600_000).toISOString(),
+      last_seen_ip: null,
+    },
+  ),
+];
+
+const personalView = (
+  extra: Partial<Parameters<typeof PersonalRunnersView>[0]> = {},
+) => (
+  <PersonalRunnersView
+    status="ready"
+    runners={PERSONAL_RUNNERS}
+    enabled
+    now={NOW}
+    serverVersion="0.3.0"
+    onTogglePause={noop}
+    onRevoke={noop}
+    {...extra}
+  />
+);
+
 export const getAdminOpsGallery = (): GalleryGroup[] => [
+  {
+    id: "admin-ops-personal",
+    title: "Админка: личные раннеры",
+    description:
+      "Машины людей: владелец, состояние, ИИ-адреса; пауза и отзыв без смены токена.",
+    entries: [
+      entry("admin_personal_list", "Личные раннеры в разных состояниях", () =>
+        personalView(),
+      ),
+      entry("admin_personal_disabled", "Выключены в настройках сборки", () =>
+        personalView({
+          enabled: false,
+          runners: PERSONAL_RUNNERS.map((r) => ({ ...r, status: "disabled" })),
+        }),
+      ),
+      entry("admin_personal_empty", "Личных раннеров нет", () =>
+        personalView({ runners: [] }),
+      ),
+      entry("admin_personal_loading", "Загрузка", () =>
+        personalView({ status: "loading" }),
+      ),
+      entry("admin_personal_error", "Не загрузилось", () =>
+        personalView({ status: "error", onRetry: noop }),
+      ),
+      entry(
+        "admin_personal_live",
+        "Живой раздел: раннеры и очередь с личными задачами",
+        () => <RunnersPage />,
+        live("admin_personal_runners"),
+      ),
+      entry(
+        "admin_personal_live_off",
+        "Живой раздел: личные раннеры выключены",
+        () => <RunnersPage />,
+        live("admin_runners_disabled"),
+      ),
+    ],
+  },
   {
     id: "admin-ops-runners",
     title: "Админка: раннеры",

@@ -10,15 +10,18 @@ from urllib.parse import parse_qsl
 from uuid import UUID
 
 import httpx
+from dishka import AsyncContainer
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import require_server_mode, resolve_actor
 from hse_doc_studio.api.runner_auth import JOB_TOKEN_HEADER
-from hse_doc_studio.core.jobs.enums import JobState, RunnerErrorCode
+from hse_doc_studio.core.identity.protocols import IUserRepository
+from hse_doc_studio.core.jobs.enums import JobKind, JobState, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError
 from hse_doc_studio.core.jobs.queue import IJobQueue
-from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner
+from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings, RunnerScope
+from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner, Runner
 from hse_doc_studio.core.service_pool import ServiceBusyError, ServicePoolError
 from hse_doc_studio.infra.services.languagetool import LanguageToolProxy, TextTooLargeError
 
@@ -28,8 +31,17 @@ _MAX_BODY_BYTES = 2_000_000
 router = APIRouter(prefix=SERVICES_API_PREFIX, tags=["services"], dependencies=[Depends(require_server_mode)])
 
 
+# Виды задач, которым нужен LanguageTool: проверки орфографии идут только внутри сборки. Токен ретрансляции ИИ
+# (её хозяин ставит сколько угодно) и прочих видов прокси не открывает.
+_LANGUAGETOOL_KINDS = frozenset({JobKind.compile})
+
+
 async def _subject(request: Request) -> str:
-    """Ключ доли: токен задачи даёт задачу, иначе вошедший пользователь (401 для анонима)."""
+    """Ключ доли: токен задачи даёт задачу, иначе вошедший пользователь (401 для анонима).
+
+    Задача личного раннера делит долю со своим автором (`user:`): иначе каждая новая задача открывала бы
+    хозяину раннера свежую долю мощностей установки в обход лимитов на человека.
+    """
     token = request.headers.get(JOB_TOKEN_HEADER)
     container = request.state.dishka_container
     if token:
@@ -42,14 +54,27 @@ async def _subject(request: Request) -> str:
         if (
             job is None
             or job.state is not JobState.running
+            or job.kind not in _LANGUAGETOOL_KINDS
             or job.runner_id is None
             or job.runner_id.hex != UUID(claims.runner_id).hex
             or runner is None
             or runner.revoked_at is not None
         ):
             raise RunnerAuthError(RunnerErrorCode.job_token_invalid)
+        if runner.scope is RunnerScope.personal:
+            await _check_personal(container, runner)
+            return f"user:{job.user_id}"
         return f"job:{claims.job_id}"
     return f"user:{(await resolve_actor(request)).id}"
+
+
+async def _check_personal(container: AsyncContainer, runner: Runner) -> None:
+    """Личный раннер ходит в сервисы установки, только пока личные раннеры включены и его хозяин может входить."""
+    if not (await (await container.get(IPersonalRunnerSettings)).current()).enabled:
+        raise RunnerAuthError(RunnerErrorCode.runner_disabled, "personal runners are turned off")
+    owner = await (await container.get(IUserRepository)).get(runner.owner_id) if runner.owner_id else None
+    if owner is None or not owner.can_sign_in:
+        raise RunnerAuthError(RunnerErrorCode.runner_disabled, "the runner owner is disabled")
 
 
 def _error(status: int, code: str, detail: str, retry_after_s: int | None = None) -> JSONResponse:

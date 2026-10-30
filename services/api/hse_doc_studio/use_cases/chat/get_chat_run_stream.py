@@ -15,6 +15,7 @@ from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChatRepository,
 )
+from hse_doc_studio.use_cases.chat.run_channel import CHANNEL_WAIT_S, await_run_channel
 
 logger = structlog.get_logger()
 
@@ -47,10 +48,13 @@ class GetChatRunStreamUC:
         locator: IProjectLocator,
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
+        *,
+        channel_wait_s: float = CHANNEL_WAIT_S,
     ) -> None:
         self._locator = locator
         self._chat_repo = chat_repo
         self._bus = bus
+        self._channel_wait_s = channel_wait_s
 
     async def execute(self, inp: GetChatRunStreamInput) -> AsyncGenerator[AgentEvent, None]:
         folder = await self._locator.folder_of(inp.project_id)
@@ -75,9 +79,12 @@ class GetChatRunStreamUC:
         chat_repo = self._chat_repo
         backfill = self._backfill_messages
         terminal = self._terminal_event
+        wait_s = self._channel_wait_s
 
         async def _gen() -> AsyncGenerator[AgentEvent, None]:
             seen_live = False
+            # Запуск мог быть принят только что: канал шины откроет его фоновая задача.
+            await await_run_channel(bus, chat_repo, folder, run_id, timeout_s=wait_s)
             if bus.has(run_id):
                 async for event in bus.subscribe(run_id):
                     seen_live = True
@@ -113,6 +120,8 @@ class GetChatRunStreamUC:
         data: dict[str, object] = {"status": status, "run_id": str(run.id)}
         if run.error:
             data["message"] = run.error
+        if run.error_code:
+            data["code"] = run.error_code
         if run.usage is not None:
             data["usage"] = {
                 "input_tokens": run.usage.input_tokens,

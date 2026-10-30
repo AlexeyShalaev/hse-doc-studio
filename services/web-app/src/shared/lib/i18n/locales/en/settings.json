@@ -217,11 +217,12 @@
   "providers": {
     "title": "Providers",
     "subtitle": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored locally and never passed to the browser. Local models are on the adjacent tab.",
-    "subtitleServer": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser.",
+    "subtitleServer": "AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser. A \"via my runner\" provider stores no key: your runner relays requests to your model.",
     "typeClaude": "Anthropic",
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-compat.",
     "typeOllama": "Local",
+    "typeRunner": "Via runner",
     "modelCount_one": "{{count}} model",
     "modelCount_other": "{{count}} models",
     "modelsNotLoaded": "Models not loaded",
@@ -248,7 +249,28 @@
     "ollamaDetectedToast": "Local Ollama provider connected",
     "shared": "shared",
     "sharedTitle": "Shared installation provider: the administrator set it up and you cannot see its key",
-    "sharedKey": "key hidden"
+    "sharedKey": "key hidden",
+    "source": {
+      "own": "Mine",
+      "org": "Organization",
+      "instance": "Installation"
+    },
+    "sourceTitle": {
+      "own": "Your provider with your own key or runner",
+      "org": "Your organization's provider",
+      "instance": "Installation-wide provider: the administrator set the key"
+    },
+    "runnerGone": "a removed runner",
+    "via": "via \"{{runner}}\", endpoint {{endpoint}}",
+    "relayState": {
+      "ready": "Ready",
+      "runner_offline": "Runner offline",
+      "runner_paused": "Runner paused",
+      "runner_revoked": "Runner revoked",
+      "endpoint_missing": "Endpoint gone",
+      "disabled": "Turned off by admin"
+    },
+    "order": "Without an explicit choice, agents take the first ready one: yours, then the organization's, then the installation's."
   },
   "agentPersonas": {
     "title": "Agent roles",
@@ -467,6 +489,8 @@
     "accountEmail": "Account email",
     "accountPassword": "Password",
     "accountCommit": "Version signature",
-    "accountSessions": "Sessions"
+    "accountSessions": "Sessions",
+    "runners": "My runners: build on your own machine",
+    "remoteRunner": "Cloud builds on this machine"
   }
 }

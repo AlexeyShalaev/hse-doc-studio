@@ -109,6 +109,42 @@
       "student_linked": {
         "title": "Student, password and SSO",
         "hint": "A student is signed in with a password and linked HSE SSO; Google can be linked."
+      },
+      "runners_ready": {
+        "title": "Personal runners: all states",
+        "hint": "Anna: runners online, paused, stale, offline and revoked; a token, a runner-relayed provider, pairing codes."
+      },
+      "runners_none": {
+        "title": "Personal runners: none yet",
+        "hint": "Anna hasn't connected any runner yet."
+      },
+      "runners_offline": {
+        "title": "Personal runners: runner offline",
+        "hint": "Anna's only runner is off: builds use shared runners, AI via the runner is unavailable."
+      },
+      "runners_disabled": {
+        "title": "Personal runners: turned off by admin",
+        "hint": "The administrator turned personal runners off installation-wide."
+      },
+      "admin_runners_disabled": {
+        "title": "Admin: personal runners off",
+        "hint": "Instance admin: personal runners are turned off in build settings."
+      },
+      "local_remote_off": {
+        "title": "Studio: cloud builds off",
+        "hint": "Local Studio, the cloud builds switch is not on yet."
+      },
+      "local_remote_online": {
+        "title": "Studio: cloud builds online",
+        "hint": "Local Studio is connected to the server and builds cloud projects."
+      },
+      "local_remote_problems": {
+        "title": "Studio: no Docker or image",
+        "hint": "The Studio is connected, but Docker is unavailable and the TeX image is missing."
+      },
+      "admin_personal_runners": {
+        "title": "Admin: personal runners",
+        "hint": "Instance admin: people's personal runners, their jobs and AI via a runner in the queue."
       }
     }
   }

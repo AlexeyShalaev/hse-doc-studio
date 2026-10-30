@@ -41,5 +41,9 @@ COMPILE = RateRule("compile", limit=20, window_s=60)
 UPLOAD = RateRule("upload", limit=120, window_s=60)
 AGENT = RateRule("agent", limit=30, window_s=60)
 GIT_SYNC = RateRule("git_sync", limit=20, window_s=60)
+# Поиск кода сопряжения раннера на сайте: и неверные коды тоже считаются (по человеку и по IP).
+RUNNER_PAIRING = RateRule("runner_pairing", limit=10, window_s=60)
 
-RULES: dict[str, RateRule] = {rule.name: rule for rule in (AUTH_IP, AUTH_EMAIL, COMPILE, UPLOAD, AGENT, GIT_SYNC)}
+RULES: dict[str, RateRule] = {
+    rule.name: rule for rule in (AUTH_IP, AUTH_EMAIL, COMPILE, UPLOAD, AGENT, GIT_SYNC, RUNNER_PAIRING)
+}

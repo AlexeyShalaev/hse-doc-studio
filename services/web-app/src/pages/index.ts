@@ -13,3 +13,4 @@ export * from "./VerifyPage";
 export * from "./FirstRunPage";
 export * from "./AuthErrorPage";
 export * from "./ProjectUnavailablePage";
+export * from "./RunnerPairPage";

@@ -362,6 +362,10 @@ async def get_project(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     response = _map_project_detail(result.project, paths)
+    if result.membership is not None:
+        owner = result.membership.owner
+        response.owner = ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug)
+        response.my_role = result.membership.my_role.value
     access = access_service.evaluate(result.project)
     response.access = ProjectAccessResponse(
         mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio

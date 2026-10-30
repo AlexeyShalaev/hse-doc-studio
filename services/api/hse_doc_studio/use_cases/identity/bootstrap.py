@@ -27,6 +27,8 @@ class BootstrapResult:
     oidc_providers: tuple[tuple[str, str], ...] = ()
     # Разрешил ли админ установки хранить на сервере личные закрытые ключи подписи.
     personal_signing_keys: bool = True
+    # Разрешены ли в установке личные раннеры (свои машины для сборки своих проектов).
+    personal_runners: bool = False
 
 
 class BootstrapUC:
@@ -39,7 +41,9 @@ class BootstrapUC:
         smtp_enabled: bool | Callable[[], bool] = False,
         oidc_providers: Callable[[], Awaitable[list[tuple[str, str]]]] | None = None,
         signing_keys_allowed: Callable[[], Awaitable[bool]] | None = None,
+        personal_runners_allowed: Callable[[], Awaitable[bool]] | None = None,
     ) -> None:
+        self._personal_runners_allowed = personal_runners_allowed
         self._setup = setup
         self._settings = settings
         self._sessions = sessions
@@ -63,4 +67,5 @@ class BootstrapUC:
             session=resolved.session if resolved else None,
             oidc_providers=tuple(await self._oidc_providers()) if self._oidc_providers else (),
             personal_signing_keys=await self._signing_keys_allowed() if self._signing_keys_allowed else True,
+            personal_runners=await self._personal_runners_allowed() if self._personal_runners_allowed else False,
         )

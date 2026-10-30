@@ -14,7 +14,8 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import QueuedJob
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.jobs.routing import RunnerScope
+from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 from hse_doc_studio.core.listing import Found, Picked, PickerItem, SortKey, Window
 
 # Долгий опрос раннера длится до 25 с: молчание дольше минуты уже подозрительно, дольше пяти минут означает потерю.
@@ -28,14 +29,25 @@ class RunnerStatus(StrEnum):
     offline = "offline"
     paused = "paused"
     revoked = "revoked"
+    # Личный раннер, когда личные раннеры выключены в установке.
+    disabled = "disabled"
 
 
-def runner_status(runner: Runner, now: datetime) -> RunnerStatus:
-    """Отзыв и пауза важнее давности опроса: на паузе раннер опрашивает, но работу не получает."""
+def runner_status(  # noqa: PLR0911 — порядок проверок закреплён спецификацией
+    runner: Runner, now: datetime, *, personal_enabled: bool = True
+) -> RunnerStatus:
+    """Отзыв, выключение и пауза важнее давности опроса: на паузе раннер опрашивает, но работу не получает.
+
+    Мягкий уход (`POST /offline`) делает раннер не в сети сразу, пока он снова не опросит сервер.
+    """
     if runner.revoked_at is not None:
         return RunnerStatus.revoked
+    if runner.scope is RunnerScope.personal and not personal_enabled:
+        return RunnerStatus.disabled
     if runner.paused:
         return RunnerStatus.paused
+    if runner.offline_at is not None and (runner.last_seen_at is None or runner.offline_at >= runner.last_seen_at):
+        return RunnerStatus.offline
     if runner.last_seen_at is None:
         return RunnerStatus.offline
     silence = now - runner.last_seen_at
@@ -52,7 +64,7 @@ RUNNER_STATUS_ORDER: tuple[RunnerStatus, ...] = (
     RunnerStatus.paused,
     RunnerStatus.revoked,
 )
-RUNNER_SORT_FIELDS = ("name", "status", "last_seen_at", "created_at", "version")
+RUNNER_SORT_FIELDS = ("name", "status", "last_seen_at", "created_at", "version", "owner_kind")
 REGISTRATION_TOKEN_SORT_FIELDS = ("created_at", "expires_at", "label")
 # Частей версии в сравнении; в каждой берутся ведущие цифры, как parseInt в интерфейсе.
 VERSION_PARTS = 4
@@ -95,6 +107,8 @@ class RunnerQuery:
     resource_class: str | None = None
     # Отстаёт от новейшей версии среди неотозванных раннеров.
     outdated: bool | None = None
+    # Раннеры установки или личные раннеры людей; без фильтра видно оба вида.
+    owner_kind: RunnerOwnerKind | None = None
     sort: SortKey = SortKey("status")
     window: Window = Window()
 
@@ -144,6 +158,8 @@ class JobAdminFilter:
     org_id: UUID | None = None
     project_id: UUID | None = None
     runner_id: UUID | None = None
+    # Кто взял задачу: общие или личные раннеры.
+    runner_scope: RunnerScope | None = None
     # Время постановки: `queued_from` включительно, `queued_to` не включая.
     queued_from: datetime | None = None
     queued_to: datetime | None = None

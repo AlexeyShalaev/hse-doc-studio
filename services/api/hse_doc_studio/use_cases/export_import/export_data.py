@@ -80,7 +80,9 @@ class ExportDataUC:
         if inp.include_ai_providers:
             for provider in await self._ai_provider_repo.list_all():
                 # Ollama ведёт локальный рантайм, общий провайдер установки не принадлежит пользователю.
-                if provider.type == AIProviderType.ollama or provider.owner_kind is not AIProviderOwnerKind.user:
+                if provider.type in (AIProviderType.ollama, AIProviderType.runner) or (
+                    provider.owner_kind is not AIProviderOwnerKind.user
+                ):
                     continue
                 record = provider_to_export_dict(provider)
                 if password and record["api_key"]:

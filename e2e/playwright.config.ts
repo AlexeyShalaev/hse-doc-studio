@@ -42,5 +42,27 @@ export default defineConfig({
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },
+    {
+      // Личные раннеры на том же стенде с оверлеем compose.personal.yml; идёт после полного смоука.
+      name: "personal",
+      testMatch: /personal\.spec\.ts/,
+      timeout: 20 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Личные раннеры, самостоятельный прогон на своём стенде (stack.sh up, затем этот проект).
+      name: "personal-runners",
+      testMatch: /personal-runners\.spec\.ts/,
+      timeout: 30 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        // Сценарий длинный (сборки TeX), но щелчок по пропавшему элементу не должен ждать до конца теста.
+        actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
   ],
 });

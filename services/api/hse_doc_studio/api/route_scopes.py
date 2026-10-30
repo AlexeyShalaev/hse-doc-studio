@@ -256,6 +256,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/operations/{operation_id}"): _A,
     ("POST", "/git/operations/{operation_id}/cancel"): _A,
     ("GET", "/git/shared-folder"): _LOCAL,
+    # Облачные сборки локальной Студии: её личный раннер на сервере
+    ("GET", "/remote-runner"): _LOCAL,
+    ("PUT", "/remote-runner"): _LOCAL,
+    ("POST", "/remote-runner/pair"): _LOCAL,
+    ("POST", "/remote-runner/token"): _LOCAL,
+    ("DELETE", "/remote-runner/pairing"): _LOCAL,
+    ("DELETE", "/remote-runner"): _LOCAL,
     # Протокол раннера и админка лежат вне /api/v1, ключ это полный путь маршрута
     ("POST", "/api/runner/v1/register"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/poll"): RouteScope.runner_token,
@@ -266,6 +273,23 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/runner/v1/jobs/{job_id}/artifacts"): RouteScope.job_token,
     ("PUT", "/api/runner/v1/jobs/{job_id}/artifacts/{sha256}"): RouteScope.job_token,
     ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
+    # Личные раннеры (трек core): аккаунт и протокол раннера
+    ("GET", "/account/runners"): _A,
+    ("PATCH", "/account/runners/{runner_id}"): _A,
+    ("POST", "/account/runners/{runner_id}/rotate-token"): _A,
+    ("DELETE", "/account/runners/{runner_id}"): _A,
+    ("GET", "/account/runner-tokens"): _A,
+    ("POST", "/account/runner-tokens"): _A,
+    ("DELETE", "/account/runner-tokens/{token_id}"): _A,
+    ("POST", "/api/runner/v1/announce"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/offline"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/deregister"): RouteScope.runner_token,
+    ("GET", "/account/runner-pairings/{user_code}"): _A,
+    ("POST", "/account/runner-pairings/{user_code}"): _A,
+    ("POST", "/api/runner/v1/pair/start"): _P,
+    ("POST", "/api/runner/v1/pair/poll"): _P,
+    ("GET", "/api/runner/v1/jobs/{job_id}/relay/request"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/relay/events"): RouteScope.job_token,
     # Прокси к общим сервисам: токен задачи или вход проверяет сам маршрут
     ("POST", "/api/services/languagetool/v2/check"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу

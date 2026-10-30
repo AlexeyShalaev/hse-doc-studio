@@ -8,6 +8,11 @@ import { createDemoAdminInstall, type DemoAdminInstall } from "./adminInstall";
 import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
 import { createDemoAdminPeople, type DemoAdminPeople } from "./adminPeople";
 import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
+import {
+  createDemoPersonal,
+  touchRunners,
+  type DemoPersonal,
+} from "./personalRunners";
 import { seedProjects, type DemoProject } from "./projects";
 import { createScaleWorld, type DemoScaleWorld } from "./scaleWorld";
 import {
@@ -60,6 +65,8 @@ export type ServerDemoWorld = {
   adminPeople: DemoAdminPeople | null;
   /** Большой мир сценария admin_scale: люди, организации и очередь вместе. */
   scale: DemoScaleWorld | null;
+  /** Личные раннеры, сопряжение, политика сборок и личные провайдеры; строятся при первом обращении. */
+  personal: DemoPersonal | null;
 };
 
 /** Большой мир; строится один раз при первом обращении. */
@@ -115,6 +122,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminInstall: null,
     adminPeople: null,
     scale: null,
+    personal: null,
   };
 };
 
@@ -136,7 +144,11 @@ export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
 export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
   world.adminOps ??= world.scenario.scale
     ? scaleOf(world).ops
-    : createDemoAdminOps(world.scenario.opsSeed);
+    : createDemoAdminOps(
+        world.scenario.opsSeed,
+        Date.now(),
+        world.scenario.personalSeed !== undefined,
+      );
   return world.adminOps;
 };
 
@@ -169,6 +181,19 @@ export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
     },
   );
   return world.adminPeople;
+};
+
+/**
+ * Личные раннеры мира. Живые раннеры при каждом обращении будто только что
+ * опросили сервер: состояние «в сети» не тает, пока открыта вкладка.
+ */
+export const personalOf = (world: ServerDemoWorld): DemoPersonal => {
+  world.personal ??= createDemoPersonal(
+    world.scenario.personalSeed,
+    world.scenario.remoteSeed,
+  );
+  touchRunners(world.personal);
+  return world.personal;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

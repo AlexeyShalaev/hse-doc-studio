@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import {
   expect,
   type APIRequestContext,
@@ -84,6 +85,12 @@ export class Client {
     return body.user as Json;
   }
 
+  /** Сессия уже открыта другой ручкой (мастер создал админа и вошёл им): берём её токен CSRF. */
+  adopt(login: Json): Json {
+    this.csrf = String(login.csrf_token);
+    return login.user as Json;
+  }
+
   /** После перезапуска api сессия живёт в базе: токен CSRF берётся заново из bootstrap. */
   async refreshCsrf(): Promise<Json | null> {
     const res = await this.request.get("/api/v1/session/bootstrap");
@@ -93,8 +100,17 @@ export class Client {
     return (body.user as Json | null) ?? null;
   }
 
-  get(url: string): Promise<APIResponse> {
-    return this.request.get(url);
+  /**
+   * GET с одним повтором: api закрывает простаивающее keep-alive соединение через 5 с, и запрос,
+   * ушедший в это же мгновение, получает ECONNRESET. Браузер такой GET повторяет сам, контекст запросов нет.
+   */
+  async get(url: string): Promise<APIResponse> {
+    try {
+      return await this.request.get(url);
+    } catch (err) {
+      if (!/ECONNRESET|socket hang up/.test(String(err))) throw err;
+      return this.request.get(url);
+    }
   }
 
   post(url: string, data?: unknown): Promise<APIResponse> {
@@ -107,6 +123,10 @@ export class Client {
 
   patch(url: string, data?: unknown): Promise<APIResponse> {
     return this.request.patch(url, { data, headers: this.headers() });
+  }
+
+  delete(url: string): Promise<APIResponse> {
+    return this.request.delete(url, { headers: this.headers() });
   }
 
   async json<T = Json>(res: APIResponse, status: number): Promise<T> {
@@ -200,4 +220,72 @@ export const waitCompile = async (
     )
     .toBe(true);
   return last!;
+};
+
+/** scripts/dev/server-stack/stack.sh с окружением теста (STACK_PROJECT, STACK_PORT, TAG); тесты идут из e2e/. */
+export const stackSh = (...args: string[]): string =>
+  execFileSync(
+    "bash",
+    [resolve(process.cwd(), "..", "scripts", "dev", "server-stack", "stack.sh"), ...args],
+    { encoding: "utf8", timeout: 300_000 },
+  );
+
+/**
+ * Администратор установки на свежем или уже настроенном стенде: пока мастер открыт, создаёт админа
+ * токеном из журнала api и завершает мастер (регистрация остаётся по приглашению), иначе просто входит.
+ */
+export const ensureAdmin = async (
+  admin: Client,
+  who: { name: string; email: string },
+): Promise<void> => {
+  const status = await admin.get("/api/v1/server-setup/status");
+  const steps =
+    status.status() === 200
+      ? (((await status.json()) as Json).steps_done as string[])
+      : null;
+  if (steps === null || steps.includes("admin")) {
+    await admin.login(who.email, stackPassword());
+    if (steps !== null) await admin.json(await admin.post("/api/v1/server-setup/complete"), 200);
+    return;
+  }
+  admin.adopt(
+    await admin.json(
+      await admin.post("/api/v1/server-setup/admin", {
+        setup_token: setupTokenFromLogs(),
+        name: who.name,
+        email: who.email,
+        password: stackPassword(),
+      }),
+      200,
+    ),
+  );
+  await admin.json(await admin.post("/api/v1/server-setup/complete"), 200);
+};
+
+export type AdminJob = {
+  id: string;
+  kind: string;
+  state: string;
+  queued_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  runner_id: string | null;
+  route: string;
+  runner_scope: string | null;
+  route_reason: string | null;
+};
+
+/** Запись очереди по id задачи (id сборки совпадает с id задачи) глазами админа. */
+export const adminJob = async (
+  admin: Client,
+  projectId: string,
+  jobId: string,
+): Promise<AdminJob> => {
+  const page = await admin.json<{ items: AdminJob[] }>(
+    await admin.get(`/api/admin/queue?project_id=${projectId}&limit=100`),
+    200,
+  );
+  const job = page.items.find((j) => j.id === jobId);
+  if (!job) throw new Error(`задачи ${jobId} нет в очереди админа`);
+  return job;
 };

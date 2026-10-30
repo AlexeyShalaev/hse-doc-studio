@@ -14,6 +14,7 @@ export const RunnerStatusSchema = z.enum([
   "offline",
   "paused",
   "revoked",
+  "disabled",
 ]);
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
@@ -27,6 +28,13 @@ export const AdminRunnerSchema = z.strictObject({
   last_seen_at: iso.nullable(),
   paused: z.boolean(),
   revoked: z.boolean(),
+  owner_kind: z.enum(["instance", "user"]),
+  owner: z
+    .strictObject({ id: z.string(), name: z.string(), email: z.string() })
+    .nullable(),
+  host_kind: z.enum(["cli", "desktop"]),
+  ai_endpoints: z.array(z.string()),
+  last_seen_ip: z.string().nullable(),
 });
 export const AdminRunnerTokenSchema = z.strictObject({
   id: z.string(),
@@ -97,6 +105,11 @@ export type AdminJob = {
   finished_at: string | null;
   wait_s: number;
   error: string | null;
+  /** Маршрут задачи: shared, personal_first, pinned (ИИ через раннер). */
+  route?: string | null;
+  /** Кто взял попытку: общий раннер или личный. */
+  runner_scope?: "shared" | "personal" | null;
+  route_reason?: string | null;
 };
 /** Страница очереди: курсор непрозрачный, null на последней; оценка числа только без фильтров. */
 export type AdminJobPage = {

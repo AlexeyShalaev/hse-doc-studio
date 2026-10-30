@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import resolve_actor
+from hse_doc_studio.api.ai_relay_errors import install_ai_relay_error_handlers
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
@@ -278,4 +279,5 @@ def install_exception_handlers(app: FastAPI) -> None:
     install_quota_error_handlers(app)
     install_project_import_error_handlers(app)
     install_runner_error_handlers(app)
+    install_ai_relay_error_handlers(app)
     install_validation_error_handler(app)

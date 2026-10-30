@@ -8,6 +8,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy, pseudonym_for
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
+from hse_doc_studio.core.jobs.runners import IUserRunnerRevoker
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.last_admin import ensure_admin_remains
 from hse_doc_studio.use_cases.admin.users import require_admin
@@ -19,11 +20,19 @@ class DeleteUserUC:
     Пока человек единственный владелец проекта или организации, удалить его нельзя. Журнал не стирается:
     id человека в событиях заменяется псевдонимом, личные поля из деталей убираются."""
 
-    def __init__(self, users: IUserRepository, lifecycle: IUserLifecycle, audit: IAuditLog, uow: IUnitOfWork) -> None:
+    def __init__(
+        self,
+        users: IUserRepository,
+        lifecycle: IUserLifecycle,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        runners: IUserRunnerRevoker | None = None,
+    ) -> None:
         self._users = users
         self._lifecycle = lifecycle
         self._audit = audit
         self._uow = uow
+        self._runners = runners
 
     async def execute(self, actor: Actor, user_id: str) -> None:
         admin_id = require_admin(actor)
@@ -39,6 +48,8 @@ class DeleteUserUC:
                 raise IdentityError(IdentityErrorCode.user_has_projects)
             await ensure_admin_remains(self._users, user, None)
             pseudonym = pseudonym_for(user_id)
+            # Личные раннеры человека переживают его как записи журнала, но работать больше не могут.
+            runners = await self._runners.revoke_all_of_user(user_id) if self._runners is not None else 0
             report = await self._lifecycle.erase(user_id, pseudonym)
             await self._audit.record(
                 "admin.user_deleted",
@@ -49,6 +60,7 @@ class DeleteUserUC:
                     "api_tokens": report.api_tokens,
                     "sessions": report.sessions,
                     "settings": report.settings,
+                    "runners": runners,
                 },
             )
 

@@ -16,6 +16,7 @@ from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
     install_audit_retention,
@@ -30,6 +31,7 @@ from hse_doc_studio.api.observability.install import (
     install_project_purge,
     install_project_usage,
     install_runner_health,
+    install_runner_pairings_purge,
     install_server_observability,
     install_service_pool_health,
 )
@@ -41,7 +43,6 @@ from hse_doc_studio.api.server_setup import prepare_server_setup
 from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
-from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.readiness import (
@@ -50,6 +51,7 @@ from hse_doc_studio.core.readiness import (
     ServerReadinessRegistry,
     server_readiness,
 )
+from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -160,13 +162,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         expose_headers=CORS_EXPOSE_HEADERS,
     )
 
-    @app.middleware("http")
-    async def _interface_language_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
-        # Bind the UI language for this request (and any background task spawned
-        # within it, e.g. an agent run, which inherits the context). Absent header
-        # → None, so downstream code falls back to settings.interface_language.
-        set_interface_language(request.headers.get("X-Interface-Language"))
-        return await call_next(request)
+    app.add_middleware(InterfaceLanguageMiddleware)
 
     app.include_router(api_router)
     include_server_routers(app)
@@ -217,6 +213,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_auth_cleanup(app, container, settings)
         install_audit_retention(app, container, settings)
         install_job_reaper(app, container, settings)
+        install_runner_pairings_purge(app, container)
         install_job_retention(app, container, settings)
 
         @app.on_event("startup")
@@ -617,6 +614,23 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             await runtime.stop()
         except Exception:
             logger.exception("ollama shutdown stop failed")
+
+    if settings.mode is StudioMode.local:
+
+        @app.on_event("startup")
+        async def _remote_runner_startup() -> None:
+            # Облачные сборки на этой машине: с выключенным переключателем супервизор только читает настройки.
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).start()
+            except Exception:
+                logger.exception("remote runner startup failed")
+
+        @app.on_event("shutdown")
+        async def _remote_runner_shutdown() -> None:
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).stop()
+            except Exception:
+                logger.exception("remote runner shutdown failed")
 
     if settings.static_dir is not None:
         _mount_spa(app, settings)

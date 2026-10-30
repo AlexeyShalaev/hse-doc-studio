@@ -43,10 +43,14 @@ const InstancePageSchema = z.union([
   })),
 ]);
 
-const fromInstance = (wire: z.infer<typeof InstanceProviderSchema>) =>
+// Схема провайдера строгая, поэтому `key_set` админки переносим в `has_api_key`, а не тащим как есть.
+const fromInstance = ({
+  key_set,
+  ...wire
+}: z.infer<typeof InstanceProviderSchema>) =>
   AIProviderSchema.parse({
     ...wire,
-    has_api_key: wire.key_set,
+    has_api_key: key_set,
     shared: true,
   });
 

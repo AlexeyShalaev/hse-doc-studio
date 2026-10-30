@@ -18,12 +18,14 @@ from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.core.identity.errors import IdentityError
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.core.repositories import InstanceAiProviderQuery
 from hse_doc_studio.core.secrets import encrypted_columns
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.ai_providers import AIProviderRow
 from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
+from hse_doc_studio.infra.db.repositories.runners import SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
@@ -301,3 +303,39 @@ async def _as_instance(provider: AIProvider):  # noqa: ANN202
         created_at=provider.created_at,
         key_set=False,
     )
+
+
+async def test__runner_provider__keeps_runner_and_endpoint_through_create_update_and_read(world: World) -> None:
+    """Провайдер «через мой раннер» без раннера в строке нарушает ck_ai_providers_runner: поля обязаны доехать."""
+    runner_id = uuid4().hex
+    await SqlRunnerRepository(world.sessions).add(
+        Runner(
+            id=runner_id,
+            name="MacBook Анны",
+            token_hash=uuid4().hex,
+            tags=frozenset({"ai", "tex"}),
+            concurrency=1,
+            resource_class="standard",
+            version="0.3.0",
+            created_at=_T0,
+            owner_kind=RunnerOwnerKind.user,
+            owner_id="anna",
+        )
+    )
+    provider = make_provider(
+        "Модель за раннером",
+        type=AIProviderType.runner,
+        api_key="",
+        base_url="",
+        models=[],
+        ssl_verify=True,
+        owner_kind=AIProviderOwnerKind.user,
+        runner_id=runner_id,
+        runner_endpoint="ollama",
+    )
+    with as_actor(_ANNA):
+        await world.repo.create(provider)
+        assert await world.repo.get(provider.id) == provider
+        renamed = replace(provider, name="Ollama дома", runner_endpoint="vllm", models=["qwen"])
+        await world.repo.update(renamed)
+        assert await world.repo.list_all() == [renamed]

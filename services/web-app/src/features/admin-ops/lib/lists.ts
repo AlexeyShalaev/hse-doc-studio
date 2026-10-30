@@ -58,6 +58,8 @@ const TOKEN_LIST = {
 export const useTokenListState = (): ListQueryState<TokenFilter, TokenSort> =>
   useListQueryState<TokenFilter, TokenSort>(TOKEN_LIST);
 
+export const RUNNER_SCOPES = ["shared", "personal"] as const;
+
 export type QueueFilter =
   | "state"
   | "kind"
@@ -65,6 +67,7 @@ export type QueueFilter =
   | "org_id"
   | "project_id"
   | "runner_id"
+  | "runner_scope"
   | "from"
   | "to";
 
@@ -77,6 +80,7 @@ const QUEUE_LIST = {
     org_id: {},
     project_id: {},
     runner_id: {},
+    runner_scope: { values: RUNNER_SCOPES },
     from: { date: "from" },
     to: { date: "to" },
   },

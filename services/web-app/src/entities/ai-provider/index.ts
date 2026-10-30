@@ -4,6 +4,10 @@ export {
   ProviderModelsSchema,
   CreateAIProviderSchema,
   UpdateAIProviderSchema,
+  CreateAIProviderRequestSchema,
+  AIProviderSourceSchema,
+  AIProviderRelaySchema,
+  RelayStateSchema,
 } from "./model/aiProvider.schema";
 export type {
   AIProviderType,
@@ -11,7 +15,17 @@ export type {
   ProviderModels,
   CreateAIProviderInput,
   UpdateAIProviderInput,
+  CreateAIProviderRequest,
+  AIProviderSource,
+  AIProviderRelay,
+  RelayState,
 } from "./model/aiProvider.schema";
+export {
+  defaultProvider,
+  isProviderReady,
+  orderProviders,
+  providerSource,
+} from "./lib/providerOrder";
 export {
   aiProviderApi,
   aiProviderApiFor,

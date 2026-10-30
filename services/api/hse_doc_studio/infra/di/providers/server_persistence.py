@@ -120,7 +120,9 @@ from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
 from hse_doc_studio.infra.submission.archive import AuditSubmissionDownloads, ObjectSubmissionArchive
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
+from hse_doc_studio.use_cases.ai_providers.delete_ai_provider import DeleteAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.access_panel import (
@@ -130,6 +132,7 @@ from hse_doc_studio.use_cases.projects.access_panel import (
 )
 from hse_doc_studio.use_cases.projects.browse_projects import BrowseProjectsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
+from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
@@ -323,6 +326,15 @@ class ServerPersistenceProvider(Provider):
         return ListProjectsUC(project_repo=project_repo, locator=locator, memberships=acl)
 
     @provide(override=True)
+    def get_get_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        acl: PostgresProjectAclRepository,
+    ) -> GetProjectUC:
+        return GetProjectUC(project_repo=project_repo, project_index_repo=project_index_repo, memberships=acl)
+
+    @provide(override=True)
     def get_project_suggestions_uc(self, list_projects: ListProjectsUC) -> GetProjectSuggestionsUC:
         return GetProjectSuggestionsUC(
             list_projects=list_projects,
@@ -398,12 +410,22 @@ class ServerPersistenceProvider(Provider):
         return PostgresKnownHostsStore(sessions, _git_runtime_dir())
 
     @provide(override=True)
-    def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:
-        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress)
+    def get_create_ai_provider_uc(
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber, audit: IAuditLog
+    ) -> CreateAIProviderUC:
+        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay, audit=audit)
 
     @provide(override=True)
-    def get_update_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> UpdateAIProviderUC:
-        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress)
+    def get_update_ai_provider_uc(
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber, audit: IAuditLog
+    ) -> UpdateAIProviderUC:
+        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay, audit=audit)
+
+    @provide(override=True)
+    def get_delete_ai_provider_uc(
+        self, repo: IAIProviderRepository, settings_repo: ISettingsRepository, audit: IAuditLog
+    ) -> DeleteAIProviderUC:
+        return DeleteAIProviderUC(ai_provider_repo=repo, settings_repo=settings_repo, audit=audit)
 
     @provide(override=True)
     def get_list_provider_models_uc(

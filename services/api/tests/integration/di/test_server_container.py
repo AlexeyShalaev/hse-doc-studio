@@ -493,3 +493,24 @@ async def test__server_container__submissions_use_postgres_and_object_archive_wh
         ObjectSubmissionArchive,
         AuditSubmissionDownloads,
     ]
+
+
+async def test__server_container__relay_client_and_describer_read_personal_runner_settings() -> None:
+    """Выключение личных раннеров в установке видят и ретрансляция ИИ, и состояние провайдера «через раннер»."""
+    from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings  # noqa: PLC0415
+    from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber  # noqa: PLC0415
+    from hse_doc_studio.use_cases.ai_relay.client import AiRelayClient  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        personal = await container.get(IPersonalRunnerSettings)
+        client = await container.get(AiRelayClient)
+        describer = await container.get(ProviderRelayDescriber)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert client._settings is personal
+    assert describer._settings is personal

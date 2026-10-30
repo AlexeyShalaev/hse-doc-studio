@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
+from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectRoleName
 
 
 class ProjectListItemResponse(BaseModel):
@@ -87,6 +88,9 @@ class ProjectDetailResponse(BaseModel):
     access: ProjectAccessResponse = ProjectAccessResponse()
     # Заполняется в GET /projects/{id} на сервере; в локальном режиме None.
     storage: ProjectStorageResponse | None = None
+    # Только на сервере (GET /projects/{id}): чей проект и роль смотрящего, как в списке проектов.
+    owner: ProjectOwner | None = None
+    my_role: ProjectRoleName | None = None
 
 
 class NdaStatusResponse(BaseModel):
