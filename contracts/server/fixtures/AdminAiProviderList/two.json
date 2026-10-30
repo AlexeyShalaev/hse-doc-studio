@@ -1,0 +1,28 @@
+[
+  {
+    "id": "aip_shared1",
+    "name": "Общий Claude",
+    "type": "claude",
+    "base_url": "",
+    "models": ["claude-sonnet-4-5"],
+    "has_api_key": true,
+    "created_at": "2026-10-29T10:00:00Z",
+    "ssl_verify": true,
+    "connect_timeout_s": 10,
+    "request_timeout_s": 60,
+    "shared": true
+  },
+  {
+    "id": "aip_shared2",
+    "name": "Кафедральный vLLM",
+    "type": "openai_compat",
+    "base_url": "http://llm.dept.internal:8000/v1",
+    "models": [],
+    "has_api_key": false,
+    "created_at": "2026-10-29T10:05:00Z",
+    "ssl_verify": false,
+    "connect_timeout_s": 10,
+    "request_timeout_s": 120,
+    "shared": true
+  }
+]

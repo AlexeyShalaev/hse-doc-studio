@@ -4,6 +4,7 @@ import {
   createDemoAdminSettings,
   type DemoAdminSettings,
 } from "./adminSettings";
+import { createDemoAdminInstall, type DemoAdminInstall } from "./adminInstall";
 import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
 import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
 import { seedProjects, type DemoProject } from "./projects";
@@ -51,6 +52,8 @@ export type ServerDemoWorld = {
   adminOrgs: DemoAdminOrgs | null;
   /** Раннеры, очередь, квоты, сервисы и место в админке; строятся при первом обращении. */
   adminOps: DemoAdminOps | null;
+  /** Название, сборка, политика ключей и общие провайдеры; строятся при первом обращении. */
+  adminInstall: DemoAdminInstall | null;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -97,6 +100,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminSettings: null,
     adminOrgs: null,
     adminOps: null,
+    adminInstall: null,
   };
 };
 
@@ -116,6 +120,12 @@ export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
 export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
   world.adminOps ??= createDemoAdminOps(world.scenario.opsSeed);
   return world.adminOps;
+};
+
+/** Настройки установки мира; для сценария берутся его заготовки. */
+export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
+  world.adminInstall ??= createDemoAdminInstall(world.scenario.installSeed);
+  return world.adminInstall;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

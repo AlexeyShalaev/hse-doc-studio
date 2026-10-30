@@ -65,6 +65,14 @@
         "title": "Admin, fresh install",
         "hint": "No runners, no jobs, services not connected."
       },
+      "install_env_locked": {
+        "title": "Admin, environment-set settings",
+        "hint": "Address, build limit and key policy are set by the environment."
+      },
+      "install_fresh": {
+        "title": "Admin, factory settings",
+        "hint": "Factory values, key storage forbidden, no shared providers."
+      },
       "org_admin": {
         "title": "Organization admin",
         "hint": "Not an installation admin: sees only their two organizations."

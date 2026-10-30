@@ -1,4 +1,5 @@
 import { getBuildStatesGallery } from "@features/build-states";
+import { getAdminInstallGallery } from "@features/admin-install";
 import { getAdminOpsGallery } from "@features/admin-ops";
 import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
@@ -63,6 +64,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "admin-ops",
     title: "Админка: раннеры, очередь, квоты, сервисы",
     groups: getAdminOpsGallery(),
+  },
+  {
+    id: "admin-install",
+    title: "Админка: установка, ключи подписи, общие провайдеры",
+    groups: getAdminInstallGallery(),
   },
   { id: "shell", title: "Оболочка", groups: getAccountMenuGallery() },
   { id: "admin-kit", title: "Примитивы админки", groups: getAdminKitGallery() },

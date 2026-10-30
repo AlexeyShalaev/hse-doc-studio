@@ -1,6 +1,7 @@
 import type { ZodType } from "zod";
 import { z } from "zod";
 
+import * as inst from "./installSchemas";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 
@@ -97,6 +98,14 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminOidcProviderList: z.array(s.AdminOidcProviderSchema),
   CreateAdminOidcProviderRequest: s.CreateAdminOidcProviderRequestSchema,
   UpdateAdminOidcProviderRequest: s.UpdateAdminOidcProviderRequestSchema,
+  AdminInstanceSettings: inst.AdminInstanceSettingsSchema,
+  UpdateAdminInstanceRequest: inst.UpdateAdminInstanceRequestSchema,
+  AdminBuildSettings: inst.AdminBuildSettingsSchema,
+  UpdateAdminBuildRequest: inst.UpdateAdminBuildRequestSchema,
+  AdminSigningPolicy: inst.AdminSigningPolicySchema,
+  UpdateAdminSigningPolicyRequest: inst.UpdateAdminSigningPolicyRequestSchema,
+  AdminAiProvider: inst.AdminAiProviderSchema,
+  AdminAiProviderList: z.array(inst.AdminAiProviderSchema),
   CompileWait: s.CompileWaitSchema,
   OfficeEditorBusy: s.OfficeEditorBusySchema,
 };

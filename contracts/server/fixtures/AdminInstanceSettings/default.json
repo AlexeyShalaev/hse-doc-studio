@@ -1,0 +1,10 @@
+{
+  "name": "HSE Doc Studio",
+  "public_url": "https://studio.example.org",
+  "docs_url": null,
+  "fields": {
+    "instance.name": {"source": "default", "locked": false},
+    "instance.public_url": {"source": "admin", "locked": false},
+    "instance.docs_url": {"source": "default", "locked": false}
+  }
+}

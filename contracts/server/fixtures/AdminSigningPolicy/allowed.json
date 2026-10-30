@@ -1,0 +1,7 @@
+{
+  "server_keys": "allowed",
+  "stored_keys": 3,
+  "fields": {
+    "signing.server_keys": {"source": "env", "locked": true}
+  }
+}

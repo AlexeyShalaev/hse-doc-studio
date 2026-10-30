@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiClient, parseResp } from "@shared/api";
+import { adminClient, apiClient, parseResp } from "@shared/api";
 import {
   AIProviderSchema,
   ProviderModelsSchema,
@@ -9,24 +9,34 @@ import {
 
 const AIProviderListSchema = z.array(AIProviderSchema);
 
-export const aiProviderApi = {
-  list: () =>
-    apiClient.get(`/ai-providers`).then(parseResp(AIProviderListSchema)),
+/** Чей это провайдер: личный (по умолчанию) или общий провайдер установки (админка). */
+export type AIProviderOwner = "user" | "instance";
 
-  create: (body: CreateAIProviderInput) =>
-    apiClient.post(`/ai-providers`, body).then(parseResp(AIProviderSchema)),
+export const aiProviderApiFor = (owner: AIProviderOwner = "user") => {
+  const client = owner === "instance" ? adminClient : apiClient;
+  // У общих провайдеров отказ показывает сама страница админки, а не общий тост.
+  const quiet = owner === "instance" ? { silentError: true } : undefined;
+  return {
+    list: () =>
+      client.get(`/ai-providers`).then(parseResp(AIProviderListSchema)),
 
-  update: (id: string, body: UpdateAIProviderInput) =>
-    apiClient
-      .patch(`/ai-providers/${id}`, body)
-      .then(parseResp(AIProviderSchema)),
+    create: (body: CreateAIProviderInput) =>
+      client.post(`/ai-providers`, body).then(parseResp(AIProviderSchema)),
 
-  remove: (id: string) =>
-    apiClient.delete(`/ai-providers/${id}`).then(() => id),
+    update: (id: string, body: UpdateAIProviderInput) =>
+      client
+        .patch(`/ai-providers/${id}`, body)
+        .then(parseResp(AIProviderSchema)),
 
-  // Live model listing — doubles as a connection/credentials check.
-  fetchModels: (id: string) =>
-    apiClient
-      .get(`/ai-providers/${id}/models`)
-      .then(parseResp(ProviderModelsSchema)),
+    remove: (id: string) =>
+      client.delete(`/ai-providers/${id}`, quiet).then(() => id),
+
+    // Live model listing — doubles as a connection/credentials check.
+    fetchModels: (id: string) =>
+      client
+        .get(`/ai-providers/${id}/models`)
+        .then(parseResp(ProviderModelsSchema)),
+  };
 };
+
+export const aiProviderApi = aiProviderApiFor("user");

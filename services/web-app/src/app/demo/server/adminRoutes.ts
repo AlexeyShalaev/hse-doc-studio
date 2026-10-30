@@ -6,6 +6,7 @@ import type {
   AdminSettingState,
   RegistrationMode,
 } from "@entities/session";
+import { createInstallRoutes } from "./installRoutes";
 import { createOpsRoutes } from "./opsRoutes";
 import { createOrgRoutes } from "./orgRoutes";
 import { adminSettingsOf, type ServerDemoWorld } from "./world";
@@ -120,6 +121,7 @@ export const createAdminRoutes = (
   return [
     ...createOrgRoutes(getWorld),
     ...createOpsRoutes(getWorld),
+    ...createInstallRoutes(getWorld),
     {
       method: "GET",
       pattern: "/settings/registration",

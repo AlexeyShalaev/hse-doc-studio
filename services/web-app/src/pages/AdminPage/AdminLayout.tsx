@@ -1,11 +1,14 @@
 import {
   Activity,
+  Bot,
   ClipboardList,
   Gauge,
   HardDrive,
+  KeyRound,
   LayoutDashboard,
   Building2,
   Server,
+  Settings2,
   SlidersHorizontal,
   Users,
   type LucideIcon,
@@ -23,7 +26,10 @@ export type AdminSection =
   | "quotas"
   | "services"
   | "storage"
+  | "instance"
   | "settings"
+  | "signing"
+  | "aiProviders"
   | "audit";
 
 export const ADMIN_SECTIONS: readonly {
@@ -38,7 +44,10 @@ export const ADMIN_SECTIONS: readonly {
   { id: "quotas", to: "/admin/quotas", icon: Gauge },
   { id: "services", to: "/admin/services", icon: Activity },
   { id: "storage", to: "/admin/storage", icon: HardDrive },
+  { id: "instance", to: "/admin/instance", icon: Settings2 },
   { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
+  { id: "signing", to: "/admin/signing", icon: KeyRound },
+  { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
   { id: "audit", to: "/admin/audit", icon: ClipboardList },
 ];
 

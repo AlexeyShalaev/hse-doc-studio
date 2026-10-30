@@ -1,3 +1,4 @@
+import type { ServerDemoInstallSeed } from "./adminInstall";
 import type {
   Bootstrap,
   Capabilities,
@@ -21,6 +22,8 @@ export type ServerDemoScenarioId =
   | "ops_runners_offline"
   | "ops_services_degraded"
   | "ops_fresh"
+  | "install_env_locked"
+  | "install_fresh"
   | "org_admin"
   | "student_ready"
   | "registration_closed"
@@ -151,6 +154,8 @@ export type ServerDemoScenario = {
   orgSeed?: "default" | "empty";
   /** Раннеры, очередь, сервисы и место в админке: набор по умолчанию или вариант состояния. */
   opsSeed?: ServerDemoOpsSeed;
+  /** Название, сборка, политика ключей и общие провайдеры: набор по умолчанию или вариант состояния. */
+  installSeed?: ServerDemoInstallSeed;
 };
 
 /** default: рабочая установка; runners_offline: раннеров в сети нет; services_degraded: сервисы падают, места мало; fresh: ничего не подключено. */
@@ -352,6 +357,50 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
         },
         user: DEMO_ADMIN,
         capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "install_env_locked",
+    tokenRequired: false,
+    installSeed: "env_locked",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_signing_keys: false,
+        },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "install_fresh",
+    tokenRequired: false,
+    installSeed: "fresh",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_signing_keys: false,
+        },
         csrf_token: ADMIN_CSRF,
       }),
   },

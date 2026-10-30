@@ -73,6 +73,16 @@ const ProviderRow = ({
           >
             {t(TYPE_LABEL[provider.type])}
           </span>
+          {provider.shared === true && (
+            <span
+              className="chip info"
+              style={{ fontSize: 10 }}
+              title={t("providers.sharedTitle")}
+              data-testid="provider-shared"
+            >
+              {t("providers.shared")}
+            </span>
+          )}
           {isDefault && (
             <span
               className="mono"
@@ -93,27 +103,37 @@ const ProviderRow = ({
         </div>
       </div>
       <div className="flex items-center" style={{ gap: 6 }}>
-        {!managed && (
-          <button
-            type="button"
-            className="btn xs"
-            onClick={onEdit}
-            title={t("providers.edit")}
-          >
-            <Pencil size={11} />
-          </button>
+        {provider.shared === true ? (
+          <span className="dim" style={{ fontSize: 11 }}>
+            {t("providers.sharedKey")}
+          </span>
+        ) : (
+          <>
+            {!managed && (
+              <button
+                type="button"
+                className="btn xs"
+                onClick={onEdit}
+                title={t("providers.edit")}
+              >
+                <Pencil size={11} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn xs"
+              onClick={onDelete}
+              disabled={pending}
+              title={
+                managed
+                  ? t("providers.deleteManagedTitle")
+                  : t("providers.delete")
+              }
+            >
+              <Trash2 size={11} />
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className="btn xs"
-          onClick={onDelete}
-          disabled={pending}
-          title={
-            managed ? t("providers.deleteManagedTitle") : t("providers.delete")
-          }
-        >
-          <Trash2 size={11} />
-        </button>
       </div>
     </div>
   );

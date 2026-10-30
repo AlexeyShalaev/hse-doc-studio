@@ -4,7 +4,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { clsx } from "clsx";
 import { Download, Loader2, Plus, Trash2, X } from "lucide-react";
 import {
-  aiProviderApi,
+  aiProviderApiFor,
+  type AIProviderOwner,
   CreateAIProviderSchema,
   useCreateAIProvider,
   useUpdateAIProvider,
@@ -20,6 +21,8 @@ type AIProviderEditorModalProps = {
   onClose: () => void;
   // null/undefined → create a new provider; a provider → edit it.
   provider?: AIProvider | null;
+  // Whose provider this is: personal (default) or the installation-wide one (admin).
+  owner?: AIProviderOwner;
 };
 
 // `ollama` providers are auto-managed by the local runtime and never created or
@@ -51,11 +54,12 @@ export const AIProviderEditorModal = ({
   isOpen,
   onClose,
   provider,
+  owner = "user",
 }: AIProviderEditorModalProps) => {
   const { t } = useTranslation("aiProvider");
   const isEdit = Boolean(provider);
-  const createProvider = useCreateAIProvider();
-  const updateProvider = useUpdateAIProvider();
+  const createProvider = useCreateAIProvider(owner);
+  const updateProvider = useUpdateAIProvider(owner);
 
   // Initialised straight from props: the caller mounts this modal fresh per
   // open (and keys it by provider), so there is no stale state to reset.
@@ -110,7 +114,9 @@ export const AIProviderEditorModal = ({
     setFetchState("loading");
     setFetchError(null);
     try {
-      const { models: fetched } = await aiProviderApi.fetchModels(provider.id);
+      const { models: fetched } = await aiProviderApiFor(owner).fetchModels(
+        provider.id,
+      );
       if (fetched.length === 0) throw new Error(t("fetch.emptyModels"));
       setModels(fetched);
       setFetchState("idle");

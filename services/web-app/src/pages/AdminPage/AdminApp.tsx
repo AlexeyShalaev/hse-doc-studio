@@ -20,6 +20,13 @@ const AdminOpsPage = lazy(() =>
   import("./AdminOpsPage").then((m) => ({ default: m.AdminOpsPage })),
 );
 
+// Настройки установки: название и сборка, ключи подписи, общие ИИ-провайдеры.
+const AdminInstallPage = lazy(() =>
+  import("./AdminInstallPage").then((m) => ({ default: m.AdminInstallPage })),
+);
+
+const INSTALL_PARTS = ["instance", "signing", "ai-providers"] as const;
+
 const OPS_PARTS = ["runners", "quotas", "services", "storage"] as const;
 
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
@@ -110,6 +117,26 @@ export const AdminApp = () => {
                 }
               >
                 <AdminOpsPage part={part} />
+              </Suspense>
+            }
+          />
+        ))}
+        {INSTALL_PARTS.map((part) => (
+          <Route
+            key={part}
+            path={part}
+            element={
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center"
+                    role="status"
+                  >
+                    <Spinner size="md" />
+                  </div>
+                }
+              >
+                <AdminInstallPage part={part} />
               </Suspense>
             }
           />

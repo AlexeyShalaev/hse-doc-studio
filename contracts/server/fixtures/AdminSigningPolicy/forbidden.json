@@ -1,0 +1,7 @@
+{
+  "server_keys": "forbidden",
+  "stored_keys": 0,
+  "fields": {
+    "signing.server_keys": {"source": "default", "locked": false}
+  }
+}

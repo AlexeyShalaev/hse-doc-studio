@@ -244,7 +244,10 @@
     "ollamaDetectedTitle": "Local Ollama detected",
     "ollamaDetectedText": "It is already running, but there is no provider for it — without one the agent cannot see local models. Connecting requires no keys.",
     "ollamaDetectedAdd": "Connect",
-    "ollamaDetectedToast": "Local Ollama provider connected"
+    "ollamaDetectedToast": "Local Ollama provider connected",
+    "shared": "shared",
+    "sharedTitle": "Shared installation provider: the administrator set it up and you cannot see its key",
+    "sharedKey": "key hidden"
   },
   "agentPersonas": {
     "title": "Agent roles",
@@ -317,7 +320,13 @@
       "hint": "CryptoARM and CryptoPro signatures are shown as «trusted chain» only when the CA root certificate is added here (for example the Минцифры root from the official site). Without it the signer and file integrity are still checked.",
       "add": "Add a certificate (.cer, .crt, .pem)",
       "addedToast": "Certificate added"
-    }
+    },
+    "forbiddenTitle": "The server does not store secret keys",
+    "forbiddenBody": "The installation administrator has forbidden storing secret signing keys on the server, so you cannot create or upload a key here. Keys that were already stored stay blocked until the policy changes.",
+    "forbiddenAltTitle": "How to sign a document",
+    "forbiddenAlt1": "Sign in the browser with CryptoPro: the key stays with you.",
+    "forbiddenAlt2": "Upload a ready signature made outside Studio.",
+    "forbiddenAsk": "Need to keep a key on the server? Ask the administrator to change the policy."
   },
   "disk": {
     "title": "Disk",

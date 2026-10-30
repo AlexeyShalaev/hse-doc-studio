@@ -25,6 +25,8 @@ export const AIProviderSchema = z.object({
   ssl_verify: z.boolean(),
   connect_timeout_s: z.number(),
   request_timeout_s: z.number(),
+  // Общий провайдер установки (серверный режим): ключ задал админ и пользователю он не виден.
+  shared: z.boolean().optional(),
 });
 export type AIProvider = z.infer<typeof AIProviderSchema>;
 

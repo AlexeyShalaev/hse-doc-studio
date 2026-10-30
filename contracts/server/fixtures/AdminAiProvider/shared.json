@@ -1,0 +1,13 @@
+{
+  "id": "aip_shared1",
+  "name": "Общий Claude",
+  "type": "claude",
+  "base_url": "",
+  "models": ["claude-sonnet-4-5"],
+  "has_api_key": true,
+  "created_at": "2026-10-29T10:00:00Z",
+  "ssl_verify": true,
+  "connect_timeout_s": 10,
+  "request_timeout_s": 60,
+  "shared": true
+}

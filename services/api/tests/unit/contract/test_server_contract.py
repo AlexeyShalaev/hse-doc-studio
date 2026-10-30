@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
@@ -107,6 +108,14 @@ _SCHEMAS: dict[str, Any] = {
     "AdminAuthSettings": s.AdminAuthSettings,
     "UpdateAdminAuthRequest": s.UpdateAdminAuthRequest,
     "AdminSmtpSettings": s.AdminSmtpSettings,
+    "AdminInstanceSettings": inst.AdminInstanceSettings,
+    "UpdateAdminInstanceRequest": inst.UpdateAdminInstanceRequest,
+    "AdminBuildSettings": inst.AdminBuildSettings,
+    "UpdateAdminBuildRequest": inst.UpdateAdminBuildRequest,
+    "AdminSigningPolicy": inst.AdminSigningPolicy,
+    "UpdateAdminSigningPolicyRequest": inst.UpdateAdminSigningPolicyRequest,
+    "AdminAiProvider": inst.AdminAiProvider,
+    "AdminAiProviderList": list[inst.AdminAiProvider],
     "UpdateAdminSmtpRequest": s.UpdateAdminSmtpRequest,
     "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
     "AdminSmtpTestResult": s.AdminSmtpTestResult,
