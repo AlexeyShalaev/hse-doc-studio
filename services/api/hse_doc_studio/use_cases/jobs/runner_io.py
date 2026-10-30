@@ -125,7 +125,7 @@ class RunnerJobIoService:
     async def _authorize(
         self, runner: Runner, job_id: UUID, job_token: str, attempt: int | None = None, *, require_running: bool = True
     ) -> QueuedJob:
-        self._signer.verify(job_token, self._clock(), job_id=str(job_id), runner_id=runner.id)
+        claims = self._signer.verify(job_token, self._clock(), job_id=str(job_id), runner_id=runner.id)
         job = await self._queue.get(job_id)
         if job is None:
             raise QueuedJobNotFoundError(f"job {job_id} not found")
@@ -133,6 +133,8 @@ class RunnerJobIoService:
             raise StaleAttemptError(f"job {job_id} is not leased to this runner")
         if attempt is not None and attempt != job.attempt:
             raise StaleAttemptError(f"job {job_id} is on attempt {job.attempt}, not {attempt}")
+        if claims.attempt is not None and claims.attempt != job.attempt:
+            raise StaleAttemptError(f"job token of job {job_id} belongs to attempt {claims.attempt}, not {job.attempt}")
         if require_running and job.state is not JobState.running:
             raise JobNotRunningError(f"job {job_id} is {job.state.value}")
         await self._runners.touch(runner.id, self._clock())

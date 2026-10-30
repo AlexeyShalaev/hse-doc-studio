@@ -86,5 +86,5 @@ class RunnerJobService:
     def _envelope(self, job: QueuedJob, runner: Runner) -> JobEnvelope:
         """Конверт из снимка постановки: к нему добавляются номер попытки и токен задачи для этого раннера."""
         expires_at = self._clock() + timedelta(seconds=job.timeout_s + self._grace_s + self._lease_s)
-        token = self._signer.sign(str(job.id), runner.id, expires_at)
+        token = self._signer.sign(str(job.id), runner.id, expires_at, job.attempt)
         return decode_envelope({**job.payload, "attempt": job.attempt, "job_token": token})

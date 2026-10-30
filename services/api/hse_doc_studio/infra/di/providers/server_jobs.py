@@ -73,8 +73,10 @@ class ServerJobsProvider(Provider):
         return PostgresJobQueue(sessions)
 
     @provide
-    def get_job_queue_service(self, queue: IJobQueue) -> JobQueueService:
-        return JobQueueService(queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s)
+    def get_job_queue_service(self, queue: IJobQueue, wakeup: JobWakeup) -> JobQueueService:
+        return JobQueueService(
+            queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s, wakeup=wakeup
+        )
 
     @provide(override=True)
     def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
@@ -221,6 +223,7 @@ class ServerJobsProvider(Provider):
         project_orgs: IProjectOrgReader,
         instance_settings: IInstanceSettingsRepository,
         env: InstanceEnvOverrides,
+        wakeup: JobWakeup,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -244,4 +247,5 @@ class ServerJobsProvider(Provider):
             quotas=quotas,
             project_orgs=project_orgs,
             build_timeout_source=build_timeout_s,
+            wakeup=wakeup,
         )

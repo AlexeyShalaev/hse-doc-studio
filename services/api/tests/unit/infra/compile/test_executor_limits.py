@@ -35,7 +35,7 @@ async def _compile(limits: ExecutorLimits | None, tmp_path: Path) -> list[str]:
 
 
 def test__docker_args__hardened_profile__lists_every_flag() -> None:
-    args = ExecutorLimits(cpus=1.5, memory="2g", pids_limit=100, tmpfs_tmp="64m").docker_args()
+    args = ExecutorLimits(cpus=1.5, memory="2g", pids_limit=100, tmpfs_tmp="64m", user="1000:1000").docker_args()
 
     assert args == [
         "--network",
@@ -51,13 +51,17 @@ def test__docker_args__hardened_profile__lists_every_flag() -> None:
         "100",
         "--security-opt",
         "no-new-privileges",
+        "--cap-drop",
+        "ALL",
+        "--user",
+        "1000:1000",
     ]
 
 
 def test__docker_args__optional_limits_off__only_switches_remain() -> None:
     limits = ExecutorLimits(cpus=None, memory=None, pids_limit=None, read_only_rootfs=False)
 
-    assert limits.docker_args() == ["--network", "none", "--security-opt", "no-new-privileges"]
+    assert limits.docker_args() == ["--network", "none", "--security-opt", "no-new-privileges", "--cap-drop", "ALL"]
 
 
 async def test__run__embedded_profile__argv_has_no_isolation_flags(tmp_path: Path, docker_log: Path) -> None:

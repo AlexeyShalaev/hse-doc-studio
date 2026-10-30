@@ -73,6 +73,8 @@ class ExecutorLimits:
     memory: str | None = "4g"
     pids_limit: int | None = 512
     no_new_privileges: bool = True
+    cap_drop_all: bool = True
+    user: str | None = None
 
     def docker_args(self) -> list[str]:
         """Флаги `docker run`; кэш в `/root` это том, поэтому read-only корень ему не мешает."""
@@ -89,7 +91,11 @@ class ExecutorLimits:
             args += ["--pids-limit", str(self.pids_limit)]
         if self.no_new_privileges:
             args += ["--security-opt", "no-new-privileges"]
-        return args
+        return args + self._identity_args()
+
+    def _identity_args(self) -> list[str]:
+        args = ["--cap-drop", "ALL"] if self.cap_drop_all else []
+        return args + ["--user", self.user] if self.user is not None else args
 
 
 class DockerCompileExecutor:

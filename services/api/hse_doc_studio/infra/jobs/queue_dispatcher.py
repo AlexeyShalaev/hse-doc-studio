@@ -52,6 +52,7 @@ from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
+from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger()
 
@@ -106,7 +107,9 @@ class QueueJobDispatcher:
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
+        wakeup: JobWakeup | None = None,
     ) -> None:
+        self._wakeup = wakeup
         self._queue = queue
         self._uploader = uploader
         self._runners = runners
@@ -304,7 +307,8 @@ class QueueJobDispatcher:
             return
         if self._ledger is not None and not await self._ledger.mark_applied(job.id):
             logger.info("job result was already applied", job_id=str(job.id))
-        if self._applier is not None and job.result is not None and job.result.get("artifacts"):
+        if self._applier is not None:
+            # И у неудачной, отменённой или потерявшей аренду задачи раннер мог успеть залить выходы и заявки.
             await self._applier.discard(spec)
 
     # --- восстановление после рестарта ---
@@ -441,6 +445,8 @@ class QueueJobDispatcher:
                 timeout_s=timeout,
             )
         )
+        if self._wakeup is not None:
+            self._wakeup.notify()
         if spec.id in self._cancelled:
             # Отмена пришла, пока шли обращения к базе после проверки выше: задача уже в очереди.
             await self._cancel_quietly(spec.id)

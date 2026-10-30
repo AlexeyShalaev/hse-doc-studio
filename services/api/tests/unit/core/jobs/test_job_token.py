@@ -101,3 +101,12 @@ def test__derive__purposes_give_independent_keys() -> None:
 
     assert ring.derive("job-token") != ring.derive("setup-token")
     assert ring.derive("job-token") != ring.primary
+
+
+def test__verify__attempt_claim__roundtrips() -> None:
+    signer = _signer(_ring(Fernet.generate_key()))
+
+    bound = signer.verify(signer.sign("job-1", "runner-1", NOW + timedelta(minutes=5), 2), NOW)
+    unbound = signer.verify(signer.sign("job-1", "runner-1", NOW + timedelta(minutes=5)), NOW)
+
+    assert (bound.attempt, unbound.attempt) == (2, None)
