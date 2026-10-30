@@ -17,6 +17,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.compile.wait import ICompileWaitReader, NoCompileWait
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
@@ -2610,6 +2611,10 @@ class UseCaseProvider(Provider):
             compile_repo=compile_repo,
             log_stream=log_stream,
         )
+
+    @provide
+    def get_compile_wait_reader(self) -> ICompileWaitReader:
+        return NoCompileWait()
 
     @provide
     def get_get_compile_uc(

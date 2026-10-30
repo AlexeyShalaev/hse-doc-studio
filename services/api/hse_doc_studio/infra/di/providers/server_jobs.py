@@ -10,6 +10,7 @@ from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
+from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
@@ -42,6 +43,7 @@ from hse_doc_studio.infra.db.repositories.jobs_applied import SqlJobApplyLedger
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
 from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
@@ -70,6 +72,10 @@ class ServerJobsProvider(Provider):
     @provide
     def get_job_queue_service(self, queue: IJobQueue) -> JobQueueService:
         return JobQueueService(queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s)
+
+    @provide(override=True)
+    def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
+        return QueueCompileWaitReader(queue, runners)
 
     @provide
     def get_runner_repository(self, sessions: SessionProvider) -> IRunnerRepository:

@@ -8,6 +8,7 @@ from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 
+from hse_doc_studio.api.compile_stream import merged_events, wait_schema
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
     CheckResultsResponse,
@@ -22,6 +23,7 @@ from hse_doc_studio.api.schemas.compile import (
     TriggerCompileResponse,
 )
 from hse_doc_studio.core.compile.errors import CompileSetupError
+from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CheckSeverity
 from hse_doc_studio.core.errors import NotFoundError
@@ -138,10 +140,12 @@ async def get_compile(
     doc_id: str,
     compile_id: UUID,
     uc: FromDishka[GetCompileUC],
+    waits: FromDishka[ICompileWaitReader],
 ) -> CompileDetailResponse:
     record = await uc.execute(GetCompileInput(project_id=project_id, compile_id=compile_id))
     if record is None:
         raise HTTPException(status_code=404, detail=f"Compile record not found: {compile_id}")
+    waiting = await waits.of(record.id)
     warnings, errors = _severity_counts(record.check_results)
     return CompileDetailResponse(
         id=str(record.id),
@@ -157,6 +161,7 @@ async def get_compile(
         warnings=warnings,
         errors=errors,
         check_results=[_map_check_result(r).model_dump() for r in record.check_results],
+        wait=wait_schema(waiting),
     )
 
 
@@ -167,6 +172,7 @@ async def get_compile_stream(
     project_id: UUID,
     compile_id: UUID,
     uc: FromDishka[GetCompileStreamUC],
+    waits: FromDishka[ICompileWaitReader],
 ) -> StreamingResponse:
     # GetCompileStreamUC needs doc_id — use a placeholder since the route doesn't include it.
     # The real lookup is by compile_id within the project, doc_id is used only for searching.
@@ -184,12 +190,15 @@ async def get_compile_stream(
             "warnings": 0,
             "errors": 0,
         }
-        async for line in stream:
-            if line.startswith("__STATUS__:"):
-                done_payload["status"] = line.split(":", 1)[1] or "success"
+        async for kind, value in merged_events(stream, waits, compile_id):
+            if kind == "wait":
+                yield f"event: wait\ndata: {value}\n\n"
+                continue
+            if value.startswith("__STATUS__:"):
+                done_payload["status"] = value.split(":", 1)[1] or "success"
                 continue
             # JSON-encode so the client can do JSON.parse on event.data.
-            yield f"event: log\ndata: {json.dumps(line, ensure_ascii=False)}\n\n"
+            yield f"event: log\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
         yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
 
     return StreamingResponse(
