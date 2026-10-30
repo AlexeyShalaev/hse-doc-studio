@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from urllib.parse import parse_qsl
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, Request
@@ -14,7 +15,10 @@ from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.actor import require_server_mode, resolve_actor
 from hse_doc_studio.api.runner_auth import JOB_TOKEN_HEADER
-from hse_doc_studio.core.jobs.runners import JobTokenSigner
+from hse_doc_studio.core.jobs.enums import JobState, RunnerErrorCode
+from hse_doc_studio.core.jobs.errors import RunnerAuthError
+from hse_doc_studio.core.jobs.queue import IJobQueue
+from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner
 from hse_doc_studio.core.service_pool import ServiceBusyError, ServicePoolError
 from hse_doc_studio.infra.services.languagetool import LanguageToolProxy, TextTooLargeError
 
@@ -29,7 +33,21 @@ async def _subject(request: Request) -> str:
     token = request.headers.get(JOB_TOKEN_HEADER)
     container = request.state.dishka_container
     if token:
-        claims = (await container.get(JobTokenSigner)).verify(token, datetime.now(UTC))
+        now = datetime.now(UTC)
+        claims = (await container.get(JobTokenSigner)).verify(token, now)
+        # Подпись и срок ещё не значат, что задача идёт: токен отозванного раннера, завершённой или
+        # перехваченной другой попыткой задачи не должен открывать прокси до истечения срока.
+        job = await (await container.get(IJobQueue)).get(UUID(claims.job_id))
+        runner = await (await container.get(IRunnerRepository)).get(claims.runner_id)
+        if (
+            job is None
+            or job.state is not JobState.running
+            or job.runner_id is None
+            or job.runner_id.hex != UUID(claims.runner_id).hex
+            or runner is None
+            or runner.revoked_at is not None
+        ):
+            raise RunnerAuthError(RunnerErrorCode.job_token_invalid)
         return f"job:{claims.job_id}"
     return f"user:{(await resolve_actor(request)).id}"
 
