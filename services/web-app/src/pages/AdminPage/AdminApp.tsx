@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router";
-import { Spinner } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
+import { AdminChunkError } from "./AdminChunkError";
+import { AdminChunkLoading } from "./AdminChunkLoading";
 import { AdminLayout } from "./AdminLayout";
 import { AdminOverview } from "./AdminSections";
 
@@ -53,28 +54,36 @@ const OrgRedirect = () => {
  */
 export const AdminApp = () => {
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
-    void loadAdminLocales().then(() => {
-      if (live) setReady(true);
-    });
+    loadAdminLocales().then(
+      () => {
+        if (live) setReady(true);
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
-  if (!ready) {
+  if (failed) {
     return (
-      <div
-        className="flex flex-1 items-center justify-center"
-        data-testid={ADMIN_CHUNK_MARKER}
-        role="status"
-        aria-label="admin"
-      >
-        <Spinner size="lg" />
-      </div>
+      <AdminChunkError
+        onRetry={() => {
+          setFailed(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
     );
+  }
+  if (!ready) {
+    return <AdminChunkLoading size="lg" testId={ADMIN_CHUNK_MARKER} />;
   }
   return (
     <Routes>
@@ -83,13 +92,7 @@ export const AdminApp = () => {
         <Route
           path="settings"
           element={
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center" role="status">
-                  <Spinner size="md" />
-                </div>
-              }
-            >
+            <Suspense fallback={<AdminChunkLoading />}>
               <AdminSettingsPage />
             </Suspense>
           }
@@ -97,13 +100,7 @@ export const AdminApp = () => {
         <Route
           path="orgs/*"
           element={
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center" role="status">
-                  <Spinner size="md" />
-                </div>
-              }
-            >
+            <Suspense fallback={<AdminChunkLoading />}>
               <AdminOrgsPage />
             </Suspense>
           }
@@ -113,16 +110,7 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Suspense
-                fallback={
-                  <div
-                    className="flex items-center justify-center"
-                    role="status"
-                  >
-                    <Spinner size="md" />
-                  </div>
-                }
-              >
+              <Suspense fallback={<AdminChunkLoading />}>
                 <AdminOpsPage part={part} />
               </Suspense>
             }
@@ -133,16 +121,7 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Suspense
-                fallback={
-                  <div
-                    className="flex items-center justify-center"
-                    role="status"
-                  >
-                    <Spinner size="md" />
-                  </div>
-                }
-              >
+              <Suspense fallback={<AdminChunkLoading />}>
                 <AdminPeoplePage part={part} />
               </Suspense>
             }
@@ -153,16 +132,7 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Suspense
-                fallback={
-                  <div
-                    className="flex items-center justify-center"
-                    role="status"
-                  >
-                    <Spinner size="md" />
-                  </div>
-                }
-              >
+              <Suspense fallback={<AdminChunkLoading />}>
                 <AdminInstallPage part={part} />
               </Suspense>
             }

@@ -96,5 +96,9 @@
     "offline": "Offline",
     "paused": "Paused",
     "degraded": "Degraded"
+  },
+  "chunkError": {
+    "title": "Could not load this section",
+    "text": "Check your connection and try again. If the app was updated, reload the page."
   }
 }

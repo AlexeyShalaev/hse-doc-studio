@@ -21,6 +21,7 @@ import {
 import type { Failure } from "../lib/failure";
 import { ensureAdminSettingsLocales } from "../lib/locales";
 import type { OidcDraft } from "../lib/validate";
+import { LocalesFailed } from "./LocalesFailed";
 import { OidcCard } from "./OidcCard";
 import { RegistrationCard } from "./RegistrationCard";
 import { SignInMethodsCard } from "./SignInMethodsCard";
@@ -39,15 +40,22 @@ const baseUrlOf = (): string =>
 export const AdminAuthSettings = () => {
   const { t } = useTranslation("adminSettings");
   const [ready, setReady] = useState(false);
+  const [localesFailed, setLocalesFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
-    void ensureAdminSettingsLocales().then(() => {
-      if (live) setReady(true);
-    });
+    ensureAdminSettingsLocales().then(
+      () => {
+        if (live) setReady(true);
+      },
+      () => {
+        if (live) setLocalesFailed(true);
+      },
+    );
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const bootstrap = useBootstrap().data;
   const registration = useRegistrationSettings();
@@ -74,6 +82,16 @@ export const AdminAuthSettings = () => {
     if (value) setRounds((r) => ({ ...r, [key]: r[key] + 1 }));
   };
 
+  if (localesFailed) {
+    return (
+      <LocalesFailed
+        onRetry={() => {
+          setLocalesFailed(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
+  }
   if (!ready) {
     return (
       <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>

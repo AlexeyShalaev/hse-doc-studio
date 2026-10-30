@@ -23,6 +23,13 @@ export const loadAdminLocales = (): Promise<void> => {
       const ns = `admin${name.charAt(0).toUpperCase()}${name.slice(1)}`;
       i18n.addResourceBundle(lng, ns, mod.default, true, true);
     }),
-  ).then(() => undefined);
+  ).then(
+    () => undefined,
+    (error: unknown) => {
+      // Провал загрузки не кэшируем: повтор должен пробовать заново.
+      pending = null;
+      throw error;
+    },
+  );
   return pending;
 };
