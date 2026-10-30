@@ -198,6 +198,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("PUT", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("DELETE", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/move"): RouteRule(Action.PROJECT_SETTINGS),
+    # Где идут сборки: видят все участники, политику сборок соавторов меняет владелец
+    ("GET", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_VIEW),
+    ("PUT", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/team/sets"): RouteRule(Action.PROJECT_SETTINGS),
     ("PATCH", "/projects/{project_id}/vcs/settings"): RouteRule(Action.PROJECT_SETTINGS),
     ("PUT", "/projects/{project_id}/git/remote"): RouteRule(Action.PROJECT_SETTINGS),

@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 
 from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, QueueStats
 from hse_doc_studio.core.jobs.enums import JobState
+from hse_doc_studio.core.jobs.routing import JobRoute
 from hse_doc_studio.infra.db.orm.jobs import JobRow
 from hse_doc_studio.infra.db.repositories.jobs import job_from_row
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -29,6 +30,8 @@ class SqlJobAdminReader:
             stmt = stmt.where(JobRow.user_id == flt.user_id)
         if flt.project_id is not None:
             stmt = stmt.where(JobRow.project_id == flt.project_id)
+        if flt.runner_scope is not None:
+            stmt = stmt.where(JobRow.runner_scope == flt.runner_scope.value)
         if before_seq is not None:
             stmt = stmt.where(JobRow.seq < before_seq)
         async with self._sessions.use() as session:
@@ -42,6 +45,12 @@ class SqlJobAdminReader:
 
     async def stats(self, now: datetime) -> QueueStats:
         wait = func.extract("epoch", JobRow.started_at - JobRow.queued_at)
+        # «Ждут раннера» без ретрансляций ИИ и без сборок, которые пока ждут личный раннер владельца в окне.
+        waiting_runner = and_(
+            JobRow.state == JobState.queued.value,
+            JobRow.route != JobRoute.pinned.value,
+            or_(JobRow.route != JobRoute.personal_first.value, JobRow.personal_until <= now),
+        )
         async with self._sessions.use() as session:
             by_state = {
                 JobState(state): count
@@ -54,14 +63,12 @@ class SqlJobAdminReader:
                 for cls, count in (
                     await session.execute(
                         select(JobRow.priority_class, func.count())
-                        .where(JobRow.state == JobState.queued.value)
+                        .where(waiting_runner)
                         .group_by(JobRow.priority_class)
                     )
                 ).all()
             }
-            oldest = (
-                await session.execute(select(func.min(JobRow.queued_at)).where(JobRow.state == JobState.queued.value))
-            ).scalar_one()
+            oldest = (await session.execute(select(func.min(JobRow.queued_at)).where(waiting_runner))).scalar_one()
             p50, p95 = (
                 await session.execute(
                     select(

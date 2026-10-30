@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.api.schemas.personal_runners import CompilePlacement
 from hse_doc_studio.api.schemas.session import CompileWait
 
 
@@ -51,3 +52,5 @@ class CompileDetailResponse(BaseModel):
     check_results: list[dict[str, Any]]
     # Только серверный режим: почему сборка не идёт (очередь, нет раннера, заменена). В локальном null.
     wait: CompileWait | None = None
+    # Только серверный режим: где идёт сборка (общий раннер, свой раннер или раннер владельца). В локальном null.
+    placement: CompilePlacement | None = None

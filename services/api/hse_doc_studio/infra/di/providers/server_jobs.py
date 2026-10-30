@@ -67,6 +67,7 @@ from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.compile.compile_hooks_factory import CompileJobHooksFactory
 from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
+from hse_doc_studio.use_cases.jobs.project_build_runners import ProjectBuildRunnersService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.routing import JobRouter
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
@@ -138,8 +139,14 @@ class ServerJobsProvider(Provider):
         return router
 
     @provide(override=True)
-    def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
-        return QueueCompileWaitReader(queue, runners)
+    def get_compile_wait_reader(
+        self,
+        queue: IJobQueue,
+        runners: IRunnerRepository,
+        projects: IProjectRoutePolicy,
+        personal: IPersonalRunnerSettings,
+    ) -> ICompileWaitReader:
+        return QueueCompileWaitReader(queue, runners, projects=projects, personal=personal)
 
     @provide
     def get_runner_repository(self, sessions: SessionProvider) -> IRunnerRepository:
@@ -172,6 +179,18 @@ class ServerJobsProvider(Provider):
         return RunnerRegistry(
             runners, tokens, audit, uow, personal=personal, users=users, queue=queue_service, jobs=queue
         )
+
+    @provide
+    def get_project_build_runners_service(  # noqa: PLR0913
+        self,
+        projects: IProjectRoutePolicy,
+        runners: IRunnerRepository,
+        personal: IPersonalRunnerSettings,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        queue: JobQueueService,
+    ) -> ProjectBuildRunnersService:
+        return ProjectBuildRunnersService(projects, runners, personal, audit, uow, queue)
 
     @provide
     def get_runner_pairing_service(

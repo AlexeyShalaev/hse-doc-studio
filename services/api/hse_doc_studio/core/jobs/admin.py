@@ -60,6 +60,8 @@ class JobAdminFilter:
     kind: JobKind | None = None
     user_id: UUID | None = None
     project_id: UUID | None = None
+    # Кто взял задачу: общие или личные раннеры.
+    runner_scope: RunnerScope | None = None
 
 
 @dataclass(frozen=True)

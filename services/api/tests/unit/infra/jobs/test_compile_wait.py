@@ -8,10 +8,18 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from hse_doc_studio.api import compile_stream
-from hse_doc_studio.core.compile.wait import CompileWaitInfo, CompileWaitReason, NoCompileWait
+from hse_doc_studio.core.compile.wait import (
+    CompilePlacementInfo,
+    CompileWaitInfo,
+    CompileWaitReason,
+    NoCompileWait,
+    PlacementFallback,
+    PlacementOwner,
+    PlacementState,
+)
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, RunnerRef
-from hse_doc_studio.core.jobs.routing import JobRoute
+from hse_doc_studio.core.jobs.routing import JobRoute, ProjectBuildRunners, ProjectRouteInfo, RouteReason, RunnerScope
 from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
 
@@ -25,7 +33,7 @@ def _request(job_id: UUID | None = None, user_id: UUID | None = None, **kwargs: 
     return EnqueueRequest(
         job_id=job_id or uuid4(),
         kind=JobKind.compile,
-        project_id=uuid4(),
+        project_id=kwargs.pop("project_id", uuid4()),  # type: ignore[arg-type]
         user_id=user_id or uuid4(),
         tags=frozenset({"tex"}),
         payload={},
@@ -148,11 +156,19 @@ async def test__running_job__no_wait() -> None:
 class _ScriptedWaits:
     enabled = True
 
-    def __init__(self, script: list[CompileWaitInfo | None]) -> None:
+    def __init__(
+        self, script: list[CompileWaitInfo | None], placements: list[CompilePlacementInfo | None] | None = None
+    ) -> None:
         self._script = script
+        self._placements = placements or [None]
+        self.viewers: list[str | None] = []
 
     async def of(self, compile_id: UUID) -> CompileWaitInfo | None:  # noqa: ARG002
         return self._script.pop(0) if len(self._script) > 1 else self._script[0]
+
+    async def placement_of(self, compile_id: UUID, viewer_id: str | None) -> CompilePlacementInfo | None:  # noqa: ARG002
+        self.viewers.append(viewer_id)
+        return self._placements.pop(0) if len(self._placements) > 1 else self._placements[0]
 
 
 async def _lines(*lines: str, delay: float = 0.0) -> AsyncIterator[str]:
@@ -179,6 +195,24 @@ async def test__merged_events__wait_changes_are_emitted_once_and_cleared(monkeyp
     assert '"reason":"queued"' in waits_only[0]
     assert waits_only[1] == "null"
     assert [v for k, v in events if k == "log"] == ["a", "b"]
+
+
+async def test__merged_events__placement_changes_are_emitted_for_the_viewer(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setattr(compile_stream, "_WAIT_POLL_S", 0.01)
+    waiting = CompilePlacementInfo(PlacementState.waiting_personal, "MacBook", PlacementOwner.me, wait_s=5)
+    taken = CompilePlacementInfo(PlacementState.personal, "MacBook", PlacementOwner.me)
+    waits = _ScriptedWaits([None], [waiting, waiting, taken])
+
+    events = [
+        e
+        async for e in compile_stream.merged_events(_lines("a", delay=0.1), waits, uuid4(), "anna")  # type: ignore[arg-type]
+    ]
+
+    placements = [value for kind, value in events if kind == "placement"]
+    assert len(placements) == 2
+    assert '"state":"waiting_personal"' in placements[0]
+    assert '"state":"personal"' in placements[1]
+    assert set(waits.viewers) == {"anna"}
 
 
 async def test__merged_events__without_a_queue_only_logs() -> None:
@@ -223,3 +257,82 @@ async def test__after_window_only_shared_runners_count() -> None:
 
     assert info is not None
     assert info.reason is CompileWaitReason.no_runner
+
+
+class _Projects:
+    def __init__(self, info: ProjectRouteInfo) -> None:
+        self.info = info
+
+    async def get(self, project_id: UUID) -> ProjectRouteInfo | None:
+        return self.info if project_id == self.info.project_id else None
+
+    async def set_build_runners(self, project_id: UUID, policy: ProjectBuildRunners) -> bool:
+        return False
+
+
+async def _placement_world(policy: ProjectBuildRunners = ProjectBuildRunners.shared):
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    runner = Runner(
+        id=uuid4().hex,
+        name="MacBook",
+        token_hash="h",
+        tags=frozenset({"tex"}),
+        concurrency=1,
+        resource_class="standard",
+        version="1",
+        created_at=NOW,
+        last_seen_at=NOW,
+        owner_kind=RunnerOwnerKind.user,
+        owner_id="anna",
+    )
+    await runners.add(runner)
+    project = uuid4()
+    reader = QueueCompileWaitReader(
+        queue, runners, clock=lambda: NOW, projects=_Projects(ProjectRouteInfo(project, "anna", None, policy))
+    )
+    return queue, runner, project, reader
+
+
+async def test__placement__waiting_then_personal_names_the_runner_for_owner_and_coauthor() -> None:
+    queue, runner, project, reader = await _placement_world(ProjectBuildRunners.owner)
+    job = uuid4()
+    await queue.enqueue(
+        _request(
+            job,
+            project_id=project,
+            route=JobRoute.personal_first,
+            route_owner_id="anna",
+            personal_until=NOW + timedelta(seconds=5),
+        )
+    )
+    waiting = await reader.placement_of(job, "anna")
+    assert waiting == CompilePlacementInfo(PlacementState.waiting_personal, "MacBook", PlacementOwner.me, wait_s=5)
+    queue.set_project(ProjectRouteInfo(project, "anna", None, ProjectBuildRunners.owner))
+    await queue.claim(
+        RunnerRef(id=UUID(runner.id), tags=runner.tags, scope=RunnerScope.personal, owner_id="anna"), lease_s=45
+    )
+    assert await reader.placement_of(job, "boris") == CompilePlacementInfo(
+        PlacementState.personal, "MacBook", PlacementOwner.owner
+    )
+
+
+async def test__placement__fallback_only_for_viewers_who_could_go_personal() -> None:
+    queue, _, project, reader = await _placement_world()
+    job = uuid4()
+    await queue.enqueue(_request(job, project_id=project, route_reason=RouteReason.fallback_offline))
+    assert await reader.placement_of(job, "anna") == CompilePlacementInfo(
+        PlacementState.shared, fallback=PlacementFallback.offline
+    )
+    assert await reader.placement_of(job, "boris") == CompilePlacementInfo(PlacementState.shared)
+
+
+async def test__placement__timeout_fallback_carries_the_window() -> None:
+    queue, _, project, reader = await _placement_world()
+    job = uuid4()
+    await queue.enqueue(
+        _request(job, project_id=project, route=JobRoute.personal_first, route_owner_id="anna", personal_until=NOW)
+    )
+    await queue.claim(RunnerRef(id=uuid4(), tags=frozenset({"tex"})), lease_s=45)
+    assert await reader.placement_of(job, "anna") == CompilePlacementInfo(
+        PlacementState.shared, fallback=PlacementFallback.timeout, wait_s=5
+    )

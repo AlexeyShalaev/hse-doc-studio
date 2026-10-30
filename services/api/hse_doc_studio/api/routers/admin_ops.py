@@ -25,6 +25,7 @@ from hse_doc_studio.api.schemas.admin_ops import (
     CreateAdminAiProviderRequest,
     JobKindName,
     JobStateName,
+    RunnerScopeName,
     UpdateAdminAiProviderRequest,
     UpdateAdminQuotasRequest,
     UpdateAdminSigningPolicyRequest,
@@ -38,6 +39,7 @@ from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.queue import QueuedJob
 from hse_doc_studio.core.jobs.quotas import QuotaSettings
+from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy
 from hse_doc_studio.core.storage.usage import StorageUsage
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
@@ -91,6 +93,9 @@ def _job(job: QueuedJob) -> AdminJob:
         runner_id=job.runner_id.hex if job.runner_id else None,
         cancel_requested=job.cancel_requested,
         error_code=job.error_code,
+        route=job.route.value,
+        runner_scope=job.runner_scope.value if job.runner_scope is not None else None,
+        route_reason=job.route_reason.value if job.route_reason is not None else None,
     )
 
 
@@ -102,6 +107,7 @@ async def list_queue(
     kind: Annotated[JobKindName | None, Query()] = None,
     user_id: Annotated[UUID | None, Query()] = None,
     project_id: Annotated[UUID | None, Query()] = None,
+    runner_scope: Annotated[RunnerScopeName | None, Query()] = None,
     cursor: Annotated[str | None, Query(pattern=r"^[0-9]{1,18}$")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> AdminJobPage:
@@ -113,6 +119,7 @@ async def list_queue(
             kind=JobKind(kind) if kind else None,
             user_id=user_id,
             project_id=project_id,
+            runner_scope=RunnerScope(runner_scope) if runner_scope else None,
         ),
         before_seq=int(cursor) if cursor else None,
         limit=limit,

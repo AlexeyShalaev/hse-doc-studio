@@ -166,3 +166,27 @@ async def stand(
     monkeypatch.setattr(settings.auth, "admin_password", SecretStr(PASSWORD))
     with TestClient(create_app(), base_url=ORIGIN) as client:
         yield Stand(client, SessionProvider(create_sessionmaker(pg_migrated_engine)), pg_migrated_engine)
+
+
+async def seed_shared_project(stand: Stand, owner: Person, *coauthors: tuple[Person, str]) -> str:
+    """Личный проект владельца с участниками; папку на томе маршрутам настроек сборок не нужно."""
+    from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow  # noqa: PLC0415
+
+    project_id = uuid4()
+    async with stand.sessions.use() as db:
+        db.add(
+            ProjectRow(
+                id=project_id,
+                name="Диплом",
+                owner_user_id=owner.id,
+                workspace_path=str(project_id),
+                kind="thesis",
+                lang="ru",
+            )
+        )
+        await db.flush()
+        db.add(ProjectMemberRow(project_id=project_id, principal_kind="user", principal_id=owner.id, role="owner"))
+        for person, role in coauthors:
+            db.add(ProjectMemberRow(project_id=project_id, principal_kind="user", principal_id=person.id, role=role))
+        await db.flush()
+    return str(project_id)
