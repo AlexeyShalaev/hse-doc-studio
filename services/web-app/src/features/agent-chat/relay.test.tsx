@@ -8,6 +8,7 @@ import {
   type AIProvider,
 } from "@entities/ai-provider";
 import { reduceEvent, type AgentStreamState } from "./lib/useAgentRunStream";
+import { toModelGroups } from "./lib/modelGroups";
 import { ModelPicker } from "./ui/ModelPicker";
 import { RelayErrorBlock } from "./ui/RelayErrorBlock";
 
@@ -166,5 +167,44 @@ describe("ИИ через раннер в чате", () => {
     expect(
       await screen.findByTestId("model-picker-group-instance"),
     ).toBeInTheDocument();
+  });
+
+  it("локальный режим: source от бэкенда не включает группы", async () => {
+    // Локальный бэкенд тоже присылает source: "own" у каждого провайдера.
+    const local = [
+      provider({
+        id: "a",
+        name: "Anthropic",
+        models: ["claude-sonnet-4-5"],
+        source: "own",
+      }),
+      provider({
+        id: "b",
+        name: "OpenAI",
+        models: ["gpt-5"],
+        source: "own",
+        created_at: "2026-10-02T00:00:00Z",
+      }),
+    ];
+    const groups = toModelGroups(local, false, () => "");
+    expect(groups.every((g) => g.source === undefined)).toBe(true);
+    render(
+      <ModelPicker
+        groups={groups}
+        selectedProviderId="a"
+        selectedModel="claude-sonnet-4-5"
+        onSelect={vi.fn()}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /claude-sonnet-4-5/ }),
+    );
+    // Прежний вид: активный провайдер сверху, остальные под «Другие модели».
+    expect(screen.queryByTestId("model-picker-default-order")).toBeNull();
+    expect(screen.queryByTestId("model-picker-group-own")).toBeNull();
+    expect(screen.getByText("Другие модели")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /gpt-5/ })).toBeNull();
+    // На сервере те же провайдеры идут группами по источнику.
+    expect(toModelGroups(local, true, () => "")[0]?.source).toBe("own");
   });
 });

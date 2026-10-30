@@ -69,7 +69,7 @@
     "connect": "Connect a runner",
     "noEndpoints": "Runner \"{{name}}\" has declared no AI endpoints. In the Studio turn on \"Models for the cloud\"; on a server set HSE_RUNNER__AI_ENDPOINTS.",
     "required": "Pick a runner and an AI endpoint.",
-    "modelsAfter": "Models are loaded through the runner right after you add it.",
+    "modelsAfter": "Models are loaded through the runner right after you add it. If the runner is offline, type a model in by hand.",
     "modelsLoaded_one": "Loaded {{count}} model",
     "modelsLoaded_other": "Loaded {{count}} models",
     "modelsFailed": "Models didn't load: {{reason}}"

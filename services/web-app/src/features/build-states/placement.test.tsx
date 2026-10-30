@@ -153,6 +153,23 @@ describe("настройки проекта: сборки", () => {
     ).toHaveTextContent("MacBook Анны");
   });
 
+  it("два раннера с одним именем: оба видны, без повторных ключей", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mount({
+      owner_runners: [
+        { name: "MacBook", state: "online" },
+        { name: "MacBook", state: "offline" },
+      ],
+    });
+    expect(
+      screen.getByTestId("project-builds-owner-runners").querySelectorAll("li"),
+    ).toHaveLength(2);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it("без своих раннеров ведёт к подключению", () => {
     mount({ owner_runners: [] });
     expect(screen.getByTestId("project-builds-connect")).toHaveAttribute(

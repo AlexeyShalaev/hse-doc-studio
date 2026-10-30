@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import {
@@ -323,5 +329,56 @@ describe("ИИ через свой раннер на демо-мире", () => {
     expect(
       await screen.findByTestId("ai-provider-no-runners"),
     ).toHaveTextContent("Сначала подключите раннер.");
+  });
+
+  it("окно добавления: модель, вписанная вручную, сохраняется", async () => {
+    // Radix Select в jsdom ждёт методов, которых там нет.
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    proto.hasPointerCapture ??= () => false;
+    proto.setPointerCapture ??= () => undefined;
+    proto.releasePointerCapture ??= () => undefined;
+    proto.scrollIntoView ??= () => undefined;
+    activateServerScenario("runners_offline");
+    const user = userEvent.setup();
+    const before = z
+      .array(AIProviderSchema)
+      .parse((await callUser("GET", "/ai-providers")).data);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <AIProviderEditorModal isOpen onClose={() => undefined} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await user.click(await screen.findByTestId("ai-provider-kind-runner"));
+    await user.click(
+      within(await screen.findByTestId("ai-provider-runner-select")).getByRole(
+        "combobox",
+      ),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /MacBook Анны/ }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Модели" }),
+      "qwen2.5:14b{Enter}",
+    );
+    // «Добавить» есть и у модели, и у окна: окно внизу, последняя кнопка.
+    const submit = screen.getAllByRole("button", { name: "Добавить" }).at(-1);
+    if (!submit) throw new Error("no submit");
+    await user.click(submit);
+    await waitFor(async () => {
+      const after = z
+        .array(AIProviderSchema)
+        .parse((await callUser("GET", "/ai-providers")).data);
+      expect(after.length).toBe(before.length + 1);
+      const created = after.find((p) => !before.some((b) => b.id === p.id));
+      expect(created?.type).toBe("runner");
+      expect(created?.models).toEqual(["qwen2.5:14b"]);
+    });
   });
 });

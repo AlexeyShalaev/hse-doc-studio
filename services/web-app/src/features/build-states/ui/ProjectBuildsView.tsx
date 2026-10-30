@@ -39,9 +39,11 @@ const RunnerChips = ({
         padding: 0,
       }}
     >
-      {runners.map((runner) => (
+      {/* У раннера в списке нет id, а имена у одного владельца могут
+          совпадать (два «MacBook» после переподключения). */}
+      {runners.map((runner, index) => (
         <li
-          key={runner.name}
+          key={`${String(index)}-${runner.name}`}
           className="chip sans"
           style={{ display: "inline-flex", gap: 6, alignItems: "center" }}
         >

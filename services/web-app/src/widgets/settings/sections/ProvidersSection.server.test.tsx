@@ -16,11 +16,26 @@ const SERVER: Bootstrap = {
   capabilities: { ...LOCAL_BOOTSTRAP.capabilities, local_services_ui: false },
 };
 
-const mockGet = () => {
+const OWN_PROVIDER = {
+  id: "p1",
+  name: "Anthropic",
+  type: "claude",
+  base_url: "",
+  models: ["claude-sonnet-4-5"],
+  has_api_key: true,
+  created_at: "2026-10-01T00:00:00Z",
+  ssl_verify: true,
+  connect_timeout_s: 10,
+  request_timeout_s: 60,
+  // Локальный бэкенд тоже присылает источник у каждого провайдера.
+  source: "own",
+};
+
+const mockGet = (providers: unknown[] = []) => {
   const calls: string[] = [];
   vi.spyOn(apiClient, "get").mockImplementation((url) => {
     calls.push(url);
-    const data = url === "/ai-providers" ? [] : {};
+    const data = url === "/ai-providers" ? providers : {};
     return Promise.resolve({ data, config: { url } });
   });
   return calls;
@@ -64,5 +79,22 @@ describe("ProvidersSection: локальный рантайм", () => {
     await waitFor(() => {
       expect(calls).toContain("/ai-runtime/status");
     });
+  });
+
+  it("local: source: own не добавляет метку источника и строку порядка", async () => {
+    mockGet([OWN_PROVIDER]);
+    mount(LOCAL_BOOTSTRAP);
+    expect((await screen.findAllByText("Anthropic")).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("ai-provider-source-p1")).toBeNull();
+    expect(screen.queryByText(/yours, then the organization/)).toBeNull();
+  });
+
+  it("server: метка источника и порядок по умолчанию", async () => {
+    mockGet([OWN_PROVIDER]);
+    mount(SERVER);
+    expect(await screen.findByTestId("ai-provider-source-p1")).toHaveAttribute(
+      "data-source",
+      "own",
+    );
   });
 });

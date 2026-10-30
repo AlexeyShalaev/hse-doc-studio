@@ -8,7 +8,10 @@ export type ModelProviderGroup = {
   providerId: string;
   providerName: string;
   models: string[];
-  /** Откуда провайдер; без него список без групп, как раньше (локальный режим). */
+  /**
+   * Откуда провайдер; только в серверном режиме (см. toModelGroups). Без него
+   * список без групп, как раньше (локальный режим).
+   */
   source?: AIProviderSource | undefined;
   /** Почему модели недоступны (раннер не в сети, на паузе); null: доступны. */
   unavailable?: string | null | undefined;

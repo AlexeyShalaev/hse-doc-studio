@@ -354,6 +354,9 @@ const PairForm = ({
           label={t("remote.token")}
           hint={t("remote.tokenHint")}
           value={token}
+          // Токен секретный, как ключ ИИ-провайдера: не виден на экране и в
+          // демонстрации экрана, пока его вводят.
+          type="password"
           isMono
           autoComplete="off"
           spellCheck={false}

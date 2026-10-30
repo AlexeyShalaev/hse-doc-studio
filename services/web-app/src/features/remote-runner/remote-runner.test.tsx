@@ -189,6 +189,11 @@ describe("облачные сборки: вид", () => {
       "https://studio.example.org",
     );
     await userEvent.click(screen.getByTestId("remote-runner-have-token"));
+    // Токен секретный: поле скрывает ввод, как ключ ИИ-провайдера.
+    expect(screen.getByTestId("remote-runner-token-input")).toHaveAttribute(
+      "type",
+      "password",
+    );
     await userEvent.type(
       screen.getByTestId("remote-runner-token-input"),
       "abc",

@@ -200,7 +200,7 @@ export const AIProviderEditorModal = ({
         type: "runner",
         api_key: "",
         base_url: "",
-        models: [],
+        models,
         ssl_verify: true,
         connect_timeout_s: DEFAULT_CONNECT_TIMEOUT_S,
         request_timeout_s: requestTimeoutS,
@@ -211,6 +211,9 @@ export const AIProviderEditorModal = ({
         onSuccess: (created) => {
           toast.success(t("toast.added", { name: created.name }));
           onClose();
+          // Модели вписаны вручную (раннер не в сети, адрес без списка
+          // моделей): сохраняем их как есть, без запроса через раннер.
+          if (created.models.length > 0) return;
           // Модели знает только модель за раннером: просим список через него же.
           const api = aiProviderApiFor(owner);
           void api

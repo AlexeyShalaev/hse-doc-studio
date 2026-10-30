@@ -13,7 +13,7 @@ import {
 } from "@entities/ai-provider";
 import { useOllamaRuntimeStatus, useSyncProvider } from "@entities/ai-runtime";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
-import { useCapabilities } from "@entities/session";
+import { useBootstrap, useCapabilities } from "@entities/session";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
 import { StatusDot, type StatusDotStatus } from "@shared/ui/StatusDot";
@@ -44,6 +44,8 @@ const RELAY_DOT: Record<
 
 type ProviderRowProps = {
   provider: AIProvider;
+  /** Серверный режим: метка источника («Мой», «Организация», «Установка»). */
+  showSource: boolean;
   isDefault: boolean;
   pending: boolean;
   managed: boolean;
@@ -53,6 +55,7 @@ type ProviderRowProps = {
 
 const ProviderRow = ({
   provider,
+  showSource,
   isDefault,
   pending,
   managed,
@@ -91,7 +94,7 @@ const ProviderRow = ({
           >
             {t(TYPE_LABEL[provider.type])}
           </span>
-          {provider.source !== undefined ? (
+          {showSource ? (
             <span
               className={
                 providerSource(provider) === "own" ? "chip" : "chip info"
@@ -202,6 +205,7 @@ export const ProvidersSection = () => {
   // так что баннер — страховка для «Ollama появилась позже», не основной путь.
   // На общем сервере локальной Ollama нет: ручка рантайма там не существует.
   const { lacks } = useCapabilities();
+  const bootstrap = useBootstrap();
   const localServices = !lacks("local_services_ui");
   const runtimeStatus = useOllamaRuntimeStatus({ enabled: localServices });
   const syncProvider = useSyncProvider();
@@ -226,7 +230,9 @@ export const ProvidersSection = () => {
 
   // Свои сначала, затем организации и установки: тот же порядок, что у агентов.
   const providers = orderProviders(providersQuery.data ?? []);
-  const showOrder = providers.some((p) => p.source !== undefined);
+  // Источник и порядок «свои, организации, установки» только на общем сервере:
+  // локальный бэкенд тоже присылает source: "own", но список там прежний.
+  const serverMode = bootstrap.data?.mode === "server";
   const defaultProviderId = settings.data?.default_ai_provider_id ?? "";
   const defaultModel = settings.data?.default_ai_model ?? "";
   const selectedProvider = providers.find((p) => p.id === defaultProviderId);
@@ -336,6 +342,7 @@ export const ProvidersSection = () => {
               <ProviderRow
                 key={provider.id}
                 provider={provider}
+                showSource={serverMode}
                 isDefault={provider.id === defaultProviderId}
                 pending={deleteProvider.isPending}
                 managed={provider.type === "ollama"}
@@ -357,7 +364,7 @@ export const ProvidersSection = () => {
           </button>
         </div>
 
-        {showOrder && (
+        {serverMode && (
           <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
             {t("providers.order")}
           </p>
