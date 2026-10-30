@@ -160,6 +160,14 @@ async def test__reject__disables_and_only_for_pending(world: World) -> None:
     assert world.store.users[active.id].status is UserStatus.active
 
 
+async def test__create_invite__invite_and_audit_written_in_one_transaction(world: World) -> None:
+    await _admin(world)
+
+    await world.create_invite_uc().execute(ADMIN, email="new@example.org")
+
+    assert world.uow.begins == 1
+
+
 async def test__resend_invite__old_link_dies_new_one_has_same_address(world: World) -> None:
     await _admin(world)
     created = await world.create_invite_uc().execute(ADMIN, email="new@example.org")

@@ -15,6 +15,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, IOidcProviderRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.secrets import column_aad
+from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.settings import ensure_login_method_remains
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
@@ -105,11 +106,17 @@ class GetOidcProviderUC:
 
 class CreateOidcProviderUC:
     def __init__(
-        self, repo: IOidcProviderRepository, cipher: ISecretCipher, audit: IAuditLog, clock: Clock = utc_now
+        self,
+        repo: IOidcProviderRepository,
+        cipher: ISecretCipher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        clock: Clock = utc_now,
     ) -> None:
         self._repo = repo
         self._cipher = cipher
         self._audit = audit
+        self._uow = uow
         self._clock = clock
 
     async def execute(self, actor: Actor, data: OidcProviderInput) -> OidcProvider:
@@ -129,13 +136,14 @@ class CreateOidcProviderUC:
             enabled=data.enabled,
             auto_provision=data.auto_provision,
         )
-        await self._repo.save(provider)
-        await self._audit.record(
-            "oidc.create",
-            actor_id=admin_id,
-            target=provider_id,
-            details={"label": provider.label, "issuer": provider.issuer},
-        )
+        async with self._uow.begin():
+            await self._repo.save(provider)
+            await self._audit.record(
+                "oidc.create",
+                actor_id=admin_id,
+                target=provider_id,
+                details={"label": provider.label, "issuer": provider.issuer},
+            )
         return provider
 
 
@@ -146,14 +154,20 @@ class UpdateOidcProviderUC:
         cipher: ISecretCipher,
         settings: AuthSettingsService,
         audit: IAuditLog,
+        uow: IUnitOfWork,
     ) -> None:
         self._repo = repo
         self._cipher = cipher
         self._settings = settings
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, actor: Actor, provider_id: str, patch: OidcProviderPatch) -> OidcProvider:
         admin_id = require_admin(actor)
+        async with self._uow.begin():
+            return await self._update(admin_id, provider_id, patch)
+
+    async def _update(self, admin_id: str, provider_id: str, patch: OidcProviderPatch) -> OidcProvider:
         current = await self._repo.get(provider_id)
         if current is None:
             raise IdentityError(IdentityErrorCode.not_found)
@@ -195,18 +209,24 @@ class UpdateOidcProviderUC:
 
 
 class DeleteOidcProviderUC:
-    def __init__(self, repo: IOidcProviderRepository, settings: AuthSettingsService, audit: IAuditLog) -> None:
+    def __init__(
+        self, repo: IOidcProviderRepository, settings: AuthSettingsService, audit: IAuditLog, uow: IUnitOfWork
+    ) -> None:
         self._repo = repo
         self._settings = settings
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, actor: Actor, provider_id: str) -> None:
         admin_id = require_admin(actor)
-        current = await self._repo.get(provider_id)
-        if current is None:
-            raise IdentityError(IdentityErrorCode.not_found)
-        if current.enabled:
-            others = [p for p in await self._repo.list(only_enabled=True) if p.id != provider_id]
-            await ensure_login_method_remains(self._settings, others)
-        await self._repo.delete(provider_id)
-        await self._audit.record("oidc.delete", actor_id=admin_id, target=provider_id, details={"label": current.label})
+        async with self._uow.begin():
+            current = await self._repo.get(provider_id)
+            if current is None:
+                raise IdentityError(IdentityErrorCode.not_found)
+            if current.enabled:
+                others = [p for p in await self._repo.list(only_enabled=True) if p.id != provider_id]
+                await ensure_login_method_remains(self._settings, others)
+            await self._repo.delete(provider_id)
+            await self._audit.record(
+                "oidc.delete", actor_id=admin_id, target=provider_id, details={"label": current.label}
+            )
