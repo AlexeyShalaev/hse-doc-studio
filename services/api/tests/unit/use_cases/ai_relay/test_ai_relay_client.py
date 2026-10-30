@@ -159,6 +159,9 @@ async def test__open__personal_runners_disabled__disabled(env: _Env) -> None:
         await env.client.open(_ANNA, _request())
 
     assert caught.value.code is RelayErrorCode.disabled
+    # Отказ сразу: задача не ставится, тело не держится в памяти, человек не ждёт окна забора.
+    assert not await env.queue.list()
+    assert env.store.pending_for(OWNER_ID) == 0
 
 
 async def test__open__body_over_the_limit__relay_too_large(env: _Env) -> None:

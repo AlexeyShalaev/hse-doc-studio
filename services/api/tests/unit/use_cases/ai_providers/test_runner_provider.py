@@ -13,6 +13,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.jobs.relay import RelayErrorCode, RelayEventKind
+from hse_doc_studio.core.jobs.routing import PersonalRunnerSettings
 from hse_doc_studio.core.jobs.wire import RelayEvent
 from hse_doc_studio.infra.ai.sdk_model_lister import SdkAIModelLister
 from hse_doc_studio.infra.jobs.relay_hub import RelayHub
@@ -158,6 +159,25 @@ async def test__describe__relay_state_follows_the_runner(
 
     assert info.state is state
     assert info.endpoint == "ollama"
+
+
+class _DisabledSettings:
+    async def current(self) -> PersonalRunnerSettings:
+        return PersonalRunnerSettings(enabled=False)
+
+
+async def test__describe__personal_runners_disabled__state_disabled(runners: InMemoryRunnerRepository) -> None:
+    describer = ProviderRelayDescriber(runners, clock=lambda: NOW)
+    with as_actor(_ANNA):
+        provider = (
+            await CreateAIProviderUC(InMemoryAIProviderRepository(), relay=describer).execute(_input())
+        ).provider
+
+    disabled = ProviderRelayDescriber(runners, _DisabledSettings(), clock=lambda: NOW)
+    with as_actor(_ANNA):
+        info = (await disabled.describe([provider]))[provider.id]
+
+    assert info.state is RelayState.disabled
 
 
 async def test__describe__direct_providers_have_no_relay_and_a_source() -> None:

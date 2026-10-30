@@ -9,6 +9,7 @@ from hse_doc_studio.core.agent.protocols import IAgentProvider
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.relay import IRelayHub
+from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.infra.ai.agent.sdk_agent_provider import SdkAgentProvider
 from hse_doc_studio.infra.ai.sdk_model_lister import SdkAIModelLister
@@ -63,12 +64,16 @@ class ServerAiRelayProvider(Provider):
         hub: IRelayHub,
         store: RelayRequestStore,
         wakeup: JobWakeup,
+        personal: IPersonalRunnerSettings,
     ) -> AiRelayClient:
-        return AiRelayClient(queue, queue_service, runners, hub, store, wakeup, limits=relay_limits())
+        # Личные раннеры выключены админом: ретрансляция отказывает сразу с `disabled`, задачу не ставит.
+        return AiRelayClient(queue, queue_service, runners, hub, store, wakeup, personal, limits=relay_limits())
 
     @provide(override=True)
-    def get_provider_relay_describer(self, runners: IRunnerRepository) -> ProviderRelayDescriber:
-        return ProviderRelayDescriber(runners)
+    def get_provider_relay_describer(
+        self, runners: IRunnerRepository, personal: IPersonalRunnerSettings
+    ) -> ProviderRelayDescriber:
+        return ProviderRelayDescriber(runners, personal)
 
     @provide(override=True)
     def get_ai_model_lister(self, relay: AiRelayClient) -> IAIModelLister:

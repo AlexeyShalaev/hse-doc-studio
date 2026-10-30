@@ -19,6 +19,7 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaOverrideRepository
+from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings, PersonalRunnerSettings
 from hse_doc_studio.core.jobs.runners import (
     JOB_TOKEN_KEY_PURPOSE,
     IRegistrationTokenRepository,
@@ -66,6 +67,17 @@ from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 JobStorageRoot = NewType("JobStorageRoot", Path)
 
 
+class _DefaultPersonalRunnerSettings:
+    """Значение установки по умолчанию (личные раннеры включены), пока в ветке нет их настроек в админке.
+
+    Трек core заменяет этот провайдер на `InstancePersonalRunnerSettings` (ключи `runners.*` и окружение):
+    при слиянии остаётся его `get_personal_runner_settings_port`, а этот класс удаляется.
+    """
+
+    async def current(self) -> PersonalRunnerSettings:
+        return PersonalRunnerSettings()
+
+
 class ServerJobsProvider(Provider):
     scope = Scope.APP
 
@@ -88,6 +100,10 @@ class ServerJobsProvider(Provider):
             wakeup=wakeup,
             terminal=terminal,
         )
+
+    @provide
+    def get_personal_runner_settings_port(self) -> IPersonalRunnerSettings:
+        return _DefaultPersonalRunnerSettings()
 
     @provide(override=True)
     def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
