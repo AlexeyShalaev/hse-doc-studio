@@ -109,6 +109,10 @@ export class Client {
     return this.request.patch(url, { data, headers: this.headers() });
   }
 
+  delete(url: string): Promise<APIResponse> {
+    return this.request.delete(url, { headers: this.headers() });
+  }
+
   async json<T = Json>(res: APIResponse, status: number): Promise<T> {
     expect(res.status(), await res.text()).toBe(status);
     return (await res.json()) as T;

@@ -1,0 +1,47 @@
+# Оверлей личного раннера для живого стенда (e2e/tests/personal.spec.ts): к compose.smoke.yml добавляет
+# личный раннер Анны и поддельный OpenAI-совместимый сервер в отдельной сети, которую api не видит.
+# Для боевого развёртывания не нужен. Запуск: scripts/dev/server-stack/stack.sh personal-up TOKEN.
+services:
+  runner-personal:
+    profiles: [personal]
+    image: ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-ci}
+    command: ["hse-doc-studio", "runner"]
+    depends_on:
+      api:
+        condition: service_healthy
+    group_add:
+      - "${DOCKER_GID:-0}"
+    environment:
+      HSE_RUNNER__API_URL: http://api:8000
+      HSE_RUNNER__TOKEN: ${PERSONAL_RUNNER_TOKEN:-}
+      HSE_RUNNER__DATA_DIR: ${PERSONAL_RUNNER_DATA_DIR:-/var/lib/hse-runner-personal}
+      HSE_RUNNER__NAME: personal-e2e
+      HSE_RUNNER__CONCURRENCY: "1"
+      # Адрес модели знает только раннер: сервер ссылается на него по имени `fake`.
+      HSE_RUNNER__AI_ENDPOINTS: '[{"name":"fake","url":"http://fake-openai:8080/v1"}]'
+      HSE_RUNNER__AI_CONCURRENCY: "2"
+    volumes:
+      - ${PERSONAL_RUNNER_DATA_DIR:-/var/lib/hse-runner-personal}:${PERSONAL_RUNNER_DATA_DIR:-/var/lib/hse-runner-personal}
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [default, personal-net]
+    # Без перезапуска: stack.sh personal-stop и personal-kill проверяют уход раннера.
+    restart: "no"
+
+  fake-openai:
+    profiles: [personal]
+    image: python:3.13-alpine
+    command: ["python", "/app/server.py"]
+    environment:
+      FAKE_OPENAI_PORT: "8080"
+    volumes:
+      - ../../e2e/fake_openai:/app:ro
+    networks: [personal-net]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/stats')"]
+      interval: 5s
+      retries: 12
+
+networks:
+  # Сеть «дома у Анны»: api в ней нет, поэтому до модели сервер дойти не может, только раннер.
+  personal-net:
+    internal: true

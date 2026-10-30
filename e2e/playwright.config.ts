@@ -42,5 +42,15 @@ export default defineConfig({
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },
+    {
+      // Личные раннеры на том же стенде с оверлеем compose.personal.yml; идёт после полного смоука.
+      name: "personal",
+      testMatch: /personal\.spec\.ts/,
+      timeout: 20 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
   ],
 });
