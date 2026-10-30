@@ -18,7 +18,12 @@
       "max_attempts": 3,
       "runner_id": null,
       "cancel_requested": false,
-      "error_code": null
+      "error_code": null,
+      "user_name": "Анна Петрова",
+      "user_email": "anna.petrova@example.org",
+      "org_name": null,
+      "project_name": "Диплом",
+      "runner_name": null
     },
     {
       "id": "8d7c6b5a-4f3e-4d2c-9b1a-0f9e8d7c6b5a",
@@ -38,7 +43,12 @@
       "max_attempts": 3,
       "runner_id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
       "cancel_requested": false,
-      "error_code": null
+      "error_code": null,
+      "user_name": "Анна Петрова",
+      "user_email": "anna.petrova@example.org",
+      "org_name": null,
+      "project_name": "Диплом",
+      "runner_name": "runner-1"
     },
     {
       "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
@@ -58,8 +68,14 @@
       "max_attempts": 3,
       "runner_id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
       "cancel_requested": false,
-      "error_code": "runner_lost"
+      "error_code": "runner_lost",
+      "user_name": null,
+      "user_email": null,
+      "org_name": null,
+      "project_name": null,
+      "runner_name": "runner-1"
     }
   ],
-  "next_cursor": "1042"
+  "next_cursor": "MTA0Mg",
+  "total_estimate": 15230
 }

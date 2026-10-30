@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -13,7 +14,8 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import QueuedJob
-from hse_doc_studio.core.jobs.runners import Runner
+from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.listing import Paged, PickerResult, SortOrder, Window
 
 # Долгий опрос раннера длится до 25 с: молчание дольше минуты уже подозрительно, дольше пяти минут означает потерю.
 RUNNER_ONLINE_WITHIN = timedelta(seconds=60)
@@ -42,19 +44,131 @@ def runner_status(runner: Runner, now: datetime) -> RunnerStatus:
     return RunnerStatus.stale if silence <= RUNNER_STALE_WITHIN else RunnerStatus.offline
 
 
+# Порядок статусов в списке раннеров: работающие сверху, отозванные внизу.
+RUNNER_STATUS_ORDER: tuple[RunnerStatus, ...] = (
+    RunnerStatus.online,
+    RunnerStatus.stale,
+    RunnerStatus.offline,
+    RunnerStatus.paused,
+    RunnerStatus.revoked,
+)
+RUNNER_SORT_FIELDS = ("name", "status", "last_seen_at", "created_at", "version")
+REGISTRATION_TOKEN_SORT_FIELDS = ("created_at", "expires_at", "label")
+# Частей версии в сравнении; в каждой берутся ведущие цифры, как parseInt в интерфейсе.
+VERSION_PARTS = 4
+_VERSION_DIGITS = re.compile(r"^[0-9]{1,9}")
+
+
+def version_key(version: str) -> tuple[int, ...]:
+    """Ключ сравнения версий вида 0.3.0: по числам, а не по строкам; недостающие части равны нулю."""
+    parts = version.split(".")
+    key: list[int] = []
+    for i in range(VERSION_PARTS):
+        found = _VERSION_DIGITS.match(parts[i]) if i < len(parts) else None
+        key.append(int(found.group()) if found else 0)
+    return tuple(key)
+
+
+class RegistrationTokenStatus(StrEnum):
+    active = "active"
+    expired = "expired"
+    exhausted = "exhausted"
+    revoked = "revoked"
+
+
+def registration_token_status(token: RegistrationToken, now: datetime) -> RegistrationTokenStatus:
+    """Отзыв важнее исчерпания, исчерпание важнее срока: так же считает интерфейс."""
+    if token.revoked_at is not None:
+        return RegistrationTokenStatus.revoked
+    if token.uses >= token.max_uses:
+        return RegistrationTokenStatus.exhausted
+    if token.expires_at is not None and token.expires_at <= now:
+        return RegistrationTokenStatus.expired
+    return RegistrationTokenStatus.active
+
+
+@dataclass(frozen=True)
+class RunnerQuery:
+    q: str | None = None
+    statuses: frozenset[RunnerStatus] = frozenset()
+    tag: str | None = None
+    resource_class: str | None = None
+    # Отстаёт от новейшей версии среди неотозванных раннеров.
+    outdated: bool | None = None
+    sort: SortOrder = SortOrder("status")
+    window: Window = Window()
+
+
+@dataclass(frozen=True)
+class RegistrationTokenQuery:
+    q: str | None = None
+    statuses: frozenset[RegistrationTokenStatus] = frozenset()
+    sort: SortOrder = SortOrder("created_at", descending=True)
+    window: Window = Window()
+
+
+@dataclass(frozen=True)
+class RunnerSummary:
+    online: int = 0
+    paused: int = 0
+    stale: int = 0
+    offline: int = 0
+    revoked: int = 0
+    outdated: int = 0
+    newest_version: str | None = None
+
+
+class IRunnerAdminReader(Protocol):
+    """Списки раннеров и токенов для админки: поиск, фильтры, порядок и окно применяет хранилище."""
+
+    async def list_runners(self, query: RunnerQuery, now: datetime) -> Paged[Runner]: ...
+
+    async def summary(self, now: datetime) -> RunnerSummary: ...
+
+    async def list_tokens(self, query: RegistrationTokenQuery, now: datetime) -> Paged[RegistrationToken]: ...
+
+    async def pick(self, q: str | None, limit: int) -> PickerResult:
+        """Раннеры для фильтра очереди: по имени, отозванные тоже (у них остались задачи)."""
+        ...
+
+
 @dataclass(frozen=True)
 class JobAdminFilter:
-    state: JobState | None = None
-    kind: JobKind | None = None
+    states: frozenset[JobState] = frozenset()
+    kinds: frozenset[JobKind] = frozenset()
     user_id: UUID | None = None
+    # Ключ организации в очереди (`org_key`), а не id строки организации.
+    org_id: UUID | None = None
     project_id: UUID | None = None
+    runner_id: UUID | None = None
+    # Время постановки: `queued_from` включительно, `queued_to` не включая.
+    queued_from: datetime | None = None
+    queued_to: datetime | None = None
+
+    @property
+    def empty(self) -> bool:
+        return self == JobAdminFilter()
+
+
+@dataclass(frozen=True)
+class JobListing:
+    """Задача с подписями для экрана: имена берутся соединением, у удалённых записей они `None`."""
+
+    job: QueuedJob
+    user_name: str | None = None
+    user_email: str | None = None
+    org_name: str | None = None
+    project_name: str | None = None
+    runner_name: str | None = None
 
 
 @dataclass(frozen=True)
 class JobAdminPage:
-    items: tuple[QueuedJob, ...]
+    items: tuple[JobListing, ...]
     # Курсор следующей страницы: `seq` последней записи, пока есть ещё.
     next_before_seq: int | None = None
+    # Оценка числа задач по статистике таблицы; только без фильтров.
+    total_estimate: int | None = None
 
 
 @dataclass(frozen=True)
@@ -72,4 +186,12 @@ class IJobAdminReader(Protocol):
         """Новые записи первыми; `before_seq` продолжает список с места, где остановилась прошлая страница."""
         ...
 
+    async def get(self, job_id: UUID) -> JobListing | None: ...
+
     async def stats(self, now: datetime) -> QueueStats: ...
+
+
+class IAdminProjectPicker(Protocol):
+    async def pick(self, q: str | None, limit: int) -> PickerResult:
+        """Проекты установки для фильтра очереди: по имени, без удалённых."""
+        ...

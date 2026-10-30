@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
+from hse_doc_studio.core.jobs.admin import (
+    RUNNER_STATUS_ORDER,
+    RegistrationTokenQuery,
+    RunnerQuery,
+    RunnerStatus,
+    RunnerSummary,
+    registration_token_status,
+    runner_status,
+    version_key,
+)
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.listing import Paged, PickerItem, PickerResult, Window
 
 
 class InMemoryRunnerRepository:
@@ -76,3 +89,92 @@ class InMemoryRegistrationTokenRepository:
         current = self._items.get(token.id)
         if current is None or current.token_hash != token.token_hash:
             self._items[token.id] = token
+
+
+def _window[T](items: list[T], window: Window) -> Paged[T]:
+    return Paged(items=tuple(items[window.offset : window.offset + window.limit]), total=len(items))
+
+
+class InMemoryRunnerAdminReader:
+    """IRunnerAdminReader поверх in-memory репозиториев: те же статусы, порядок упрощён до поля и id."""
+
+    def __init__(self, runners: InMemoryRunnerRepository, tokens: InMemoryRegistrationTokenRepository) -> None:
+        self._runners = runners
+        self._tokens = tokens
+
+    async def _newest(self) -> Runner | None:
+        live = [r for r in await self._runners.list() if r.revoked_at is None]
+        return max(live, key=lambda r: version_key(r.version), default=None)
+
+    async def list_runners(self, query: RunnerQuery, now: datetime) -> Paged[Runner]:
+        newest = await self._newest()
+
+        def outdated(r: Runner) -> bool:
+            return newest is not None and r.revoked_at is None and version_key(r.version) < version_key(newest.version)
+
+        needle = (query.q or "").lower()
+        found = [
+            r
+            for r in await self._runners.list()
+            if (not needle or needle in f"{r.name} {r.version} {' '.join(sorted(r.tags))}".lower())
+            and (not query.statuses or runner_status(r, now) in query.statuses)
+            and (query.tag is None or query.tag in r.tags)
+            and (query.resource_class is None or r.resource_class == query.resource_class)
+            and (query.outdated is None or outdated(r) == query.outdated)
+        ]
+        keys: dict[str, Callable[[Runner], Any]] = {
+            "name": lambda r: r.name.lower(),
+            "status": lambda r: (RUNNER_STATUS_ORDER.index(runner_status(r, now)), r.name.lower()),
+            "last_seen_at": lambda r: r.last_seen_at or datetime.min.replace(tzinfo=UTC),
+            "created_at": lambda r: r.created_at,
+            "version": lambda r: version_key(r.version),
+        }
+        found.sort(key=lambda r: r.id)
+        found.sort(key=keys[query.sort.field], reverse=query.sort.descending)
+        return _window(found, query.window)
+
+    async def summary(self, now: datetime) -> RunnerSummary:
+        runners = await self._runners.list()
+        newest = await self._newest()
+        counts = {s: sum(1 for r in runners if runner_status(r, now) is s) for s in RunnerStatus}
+        outdated = sum(
+            1
+            for r in runners
+            if newest is not None and r.revoked_at is None and version_key(r.version) < version_key(newest.version)
+        )
+        return RunnerSummary(
+            online=counts[RunnerStatus.online],
+            paused=counts[RunnerStatus.paused],
+            stale=counts[RunnerStatus.stale],
+            offline=counts[RunnerStatus.offline],
+            revoked=counts[RunnerStatus.revoked],
+            outdated=outdated,
+            newest_version=newest.version if newest else None,
+        )
+
+    async def list_tokens(self, query: RegistrationTokenQuery, now: datetime) -> Paged[RegistrationToken]:
+        needle = (query.q or "").lower()
+        found = [
+            t
+            for t in await self._tokens.list()
+            if (not needle or needle in t.label.lower())
+            and (not query.statuses or registration_token_status(t, now) in query.statuses)
+        ]
+        keys: dict[str, Callable[[RegistrationToken], Any]] = {
+            "created_at": lambda t: t.created_at,
+            "expires_at": lambda t: t.expires_at or datetime.max.replace(tzinfo=UTC),
+            "label": lambda t: t.label.lower(),
+        }
+        found.sort(key=lambda t: t.id)
+        found.sort(key=keys[query.sort.field], reverse=query.sort.descending)
+        return _window(found, query.window)
+
+    async def pick(self, q: str | None, limit: int) -> PickerResult:
+        needle = (q or "").lower()
+        found = [r for r in await self._runners.list() if needle in r.name.lower()]
+        found.sort(key=lambda r: (r.name.lower(), r.id))
+        items = tuple(
+            PickerItem(kind="runner", id=r.id, name=r.name, detail=", ".join(sorted(r.tags)) or None)
+            for r in found[:limit]
+        )
+        return PickerResult(items=items, has_more=len(found) > limit)

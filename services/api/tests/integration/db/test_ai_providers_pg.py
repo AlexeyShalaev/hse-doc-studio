@@ -18,6 +18,7 @@ from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.core.identity.errors import IdentityError
+from hse_doc_studio.core.repositories import InstanceAiProviderQuery
 from hse_doc_studio.core.secrets import encrypted_columns
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.ai_providers import AIProviderRow
@@ -274,7 +275,8 @@ async def test__admin_store__shared_provider_is_visible_to_users_without_the_key
             await _as_instance(shared),
             api_key=_KEY,
         )
-        assert [p.name for p in await store.list()] == ["Общий Claude"]
+        listed = await world.repo.list_instance(InstanceAiProviderQuery())
+        assert [(p.name, p.api_key) for p in listed.items] == [("Общий Claude", _KEY)]
         assert await store.reveal_key(shared.id) == _KEY
         await store.save(await _as_instance(shared), clear_key=True)
         assert await store.reveal_key(shared.id) == ""

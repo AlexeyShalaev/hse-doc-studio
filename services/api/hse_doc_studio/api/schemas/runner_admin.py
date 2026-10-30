@@ -36,10 +36,14 @@ class CreatedRegistrationTokenResponse(StrictModel):
     command: str
 
 
+RunnerStatusName = Literal["online", "stale", "offline", "paused", "revoked"]
+RegistrationTokenStatusName = Literal["active", "expired", "exhausted", "revoked"]
+
+
 class RunnerInfo(StrictModel):
     id: str
     name: str
-    status: Literal["online", "stale", "offline", "paused", "revoked"]
+    status: RunnerStatusName
     tags: list[str]
     concurrency: int
     resource_class: str
@@ -58,3 +62,15 @@ class RotatedRunnerTokenResponse(StrictModel):
     runner: RunnerInfo
     runner_token: str
     command: str
+
+
+class RunnerSummaryInfo(StrictModel):
+    """Счётчики раннеров по статусам для KPI; `outdated` и `newest_version` только среди неотозванных."""
+
+    online: int
+    paused: int
+    stale: int
+    offline: int
+    revoked: int
+    outdated: int
+    newest_version: str | None

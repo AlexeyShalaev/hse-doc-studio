@@ -49,13 +49,13 @@ async def test__list_jobs__filters_and_keyset_pages_newest_first(pg_migrated_eng
     only_anna = await reader.list_jobs(JobAdminFilter(user_id=anna), before_seq=None, limit=2)
     rest = await reader.list_jobs(JobAdminFilter(user_id=anna), before_seq=only_anna.next_before_seq, limit=2)
     everything = await reader.list_jobs(JobAdminFilter(), before_seq=None, limit=50)
-    running = await reader.list_jobs(JobAdminFilter(state=JobState.running), before_seq=None, limit=50)
+    running = await reader.list_jobs(JobAdminFilter(states=frozenset({JobState.running})), before_seq=None, limit=50)
 
-    assert [j.user_id for j in only_anna.items] == [anna, anna]
+    assert [j.job.user_id for j in only_anna.items] == [anna, anna]
     assert only_anna.next_before_seq is not None
     assert len(rest.items) == 1
     assert rest.next_before_seq is None
-    seqs = [j.seq for j in everything.items]
+    seqs = [j.job.seq for j in everything.items]
     assert seqs == sorted(seqs, reverse=True)
     assert len(everything.items) == 5
     assert running.items == ()

@@ -15,7 +15,9 @@ from hse_doc_studio.core.jobs.admin import JobAdminFilter
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
 from hse_doc_studio.core.jobs.quotas import QuotaOverride, QuotaOwnerKind, QuotaResource, QuotaSettings
+from hse_doc_studio.core.repositories import InstanceAiProviderQuery
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy
+from hse_doc_studio.core.storage.usage import StorageOwnerQuery
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -29,7 +31,7 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
 from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, SigningPolicy, UpdateSigningPolicyUC
-from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
+from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListStorageOwnersUC
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 
 from tests.fakes.auth import InMemoryAuditLog
@@ -151,7 +153,8 @@ async def test__ops_use_cases__not_admin__not_found() -> None:
         ),
         GetStorageUsageUC(CountingStorageReader()).execute(STUDENT),
         ListQueueUC(InMemoryJobAdminReader(queue)).execute(STUDENT, JobAdminFilter()),
-        ListInstanceAiProvidersUC(InstanceAiProviderStore(InMemoryAIProviderRepository())).execute(STUDENT),
+        ListInstanceAiProvidersUC(InMemoryAIProviderRepository()).execute(STUDENT, InstanceAiProviderQuery()),
+        ListStorageOwnersUC(CountingStorageReader()).execute(STUDENT, StorageOwnerQuery()),
     ]
     for call in calls:
         with pytest.raises(IdentityError) as exc:
@@ -185,21 +188,21 @@ async def test__queue__filters_and_pages_newest_first() -> None:
     assert only_anna.next_before_seq is not None
     assert len(rest.items) == 1
     assert rest.next_before_seq is None
-    assert all(j.user_id == anna for j in (*only_anna.items, *rest.items))
-    assert (await uc.execute(ADMIN, JobAdminFilter(state=JobState.running))).items == ()
+    assert all(j.job.user_id == anna for j in (*only_anna.items, *rest.items))
+    assert (await uc.execute(ADMIN, JobAdminFilter(states=frozenset({JobState.running})))).items == ()
 
 
 async def test__cancel_job__queued__cancelled_and_audited_terminal__left_alone() -> None:
     queue = InMemoryJobQueue()
     audit = InMemoryAuditLog()
-    uc = CancelJobUC(queue, JobQueueService(queue), audit, NoopUow())
+    uc = CancelJobUC(queue, JobQueueService(queue), audit, NoopUow(), InMemoryJobAdminReader(queue))
     job = (await queue.enqueue(_enqueue_request(uuid4()))).job
 
     cancelled = await uc.execute(ADMIN, job.id)
     again = await uc.execute(ADMIN, job.id)
 
-    assert cancelled.state is JobState.cancelled
-    assert again.state is JobState.cancelled
+    assert cancelled.job.state is JobState.cancelled
+    assert again.job.state is JobState.cancelled
     assert await _audit_actions(audit) == ["queue.job_cancel"]
 
 
@@ -207,7 +210,7 @@ async def test__cancel_job__unknown__not_found_and_not_admin_hidden() -> None:
     from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError  # noqa: PLC0415
 
     queue = InMemoryJobQueue()
-    uc = CancelJobUC(queue, JobQueueService(queue), InMemoryAuditLog(), NoopUow())
+    uc = CancelJobUC(queue, JobQueueService(queue), InMemoryAuditLog(), NoopUow(), InMemoryJobAdminReader(queue))
 
     with pytest.raises(QueuedJobNotFoundError):
         await uc.execute(ADMIN, uuid4())
@@ -256,8 +259,9 @@ async def test__ai_providers__create__key_stored_encrypted_and_never_listed() ->
     assert created.name == "Ollama"
     assert created.key_set is True
     assert [p.owner_kind for p in await repo.list_all()] == [AIProviderOwnerKind.instance]
-    listed = await ListInstanceAiProvidersUC(store).execute(ADMIN)
-    assert [p.id for p in listed] == [created.id]
+    listed = await ListInstanceAiProvidersUC(repo).execute(ADMIN, InstanceAiProviderQuery())
+    assert [p.id for p in listed.items] == [created.id]
+    assert listed.total == 1
     assert "sk-live-123" not in repr(listed)
     assert await _audit_actions(audit) == ["settings.ai_provider_create"]
     assert "sk-live-123" not in str([e.details for e in await audit.list()])

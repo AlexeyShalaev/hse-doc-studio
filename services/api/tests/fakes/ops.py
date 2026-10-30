@@ -9,30 +9,57 @@ from datetime import datetime
 from uuid import UUID
 
 from hse_doc_studio.core.entities import AIProvider
+from hse_doc_studio.core.enums import AIProviderOwnerKind
 from hse_doc_studio.core.git_sync.secret import Secret
-from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, QueueStats
+from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, JobListing, QueueStats
 from hse_doc_studio.core.jobs.enums import JobState
-from hse_doc_studio.core.storage.usage import StorageUsage
+from hse_doc_studio.core.jobs.queue import QueuedJob
+from hse_doc_studio.core.listing import Paged, PickerItem, PickerResult
+from hse_doc_studio.core.repositories import InstanceAiProviderQuery
+from hse_doc_studio.core.storage.usage import StorageOwner, StorageOwnerQuery, StorageUsage
 
 from tests.fakes.job_queue import InMemoryJobQueue
 
 
+def _matches(job: QueuedJob, flt: JobAdminFilter) -> bool:
+    return (
+        (not flt.states or job.state in flt.states)
+        and (not flt.kinds or job.kind in flt.kinds)
+        and (flt.user_id is None or job.user_id == flt.user_id)
+        and (flt.org_id is None or job.org_id == flt.org_id)
+        and (flt.project_id is None or job.project_id == flt.project_id)
+        and (flt.runner_id is None or job.runner_id == flt.runner_id)
+        and (flt.queued_from is None or job.queued_at >= flt.queued_from)
+        and (flt.queued_to is None or job.queued_at < flt.queued_to)
+    )
+
+
 class InMemoryJobAdminReader:
-    def __init__(self, queue: InMemoryJobQueue) -> None:
+    """Читатель очереди без подписей: имён людей и проектов фейк не знает, кроме заданных в `names`."""
+
+    def __init__(self, queue: InMemoryJobQueue, names: dict[UUID, str] | None = None) -> None:
         self._queue = queue
+        self._names = names or {}
+
+    def _listing(self, job: QueuedJob) -> JobListing:
+        return JobListing(job=job, user_name=self._names.get(job.user_id))
 
     async def list_jobs(self, flt: JobAdminFilter, *, before_seq: int | None, limit: int) -> JobAdminPage:
         jobs = [
             j
             for j in reversed(await self._queue.list())
-            if (flt.state is None or j.state is flt.state)
-            and (flt.kind is None or j.kind is flt.kind)
-            and (flt.user_id is None or j.user_id == flt.user_id)
-            and (flt.project_id is None or j.project_id == flt.project_id)
-            and (before_seq is None or j.seq < before_seq)
+            if _matches(j, flt) and (before_seq is None or j.seq < before_seq)
         ]
         page = jobs[:limit]
-        return JobAdminPage(items=tuple(page), next_before_seq=page[-1].seq if len(jobs) > limit and page else None)
+        return JobAdminPage(
+            items=tuple(self._listing(j) for j in page),
+            next_before_seq=page[-1].seq if len(jobs) > limit and page else None,
+            total_estimate=len(await self._queue.list()) if flt.empty else None,
+        )
+
+    async def get(self, job_id: UUID) -> JobListing | None:
+        found = await self._queue.get(job_id)
+        return None if found is None else self._listing(found)
 
     async def stats(self, now: datetime) -> QueueStats:
         jobs = await self._queue.list()
@@ -47,9 +74,25 @@ class InMemoryJobAdminReader:
         )
 
 
+class FixedProjectPicker:
+    def __init__(self, names: dict[str, str] | None = None) -> None:
+        self._names = names or {}
+
+    async def pick(self, q: str | None, limit: int) -> PickerResult:
+        found = sorted((n, i) for i, n in self._names.items() if (q or "").lower() in n.lower())
+        items = tuple(PickerItem(kind="project", id=i, name=n) for n, i in found[:limit])
+        return PickerResult(items=items, has_more=len(found) > limit)
+
+
 class CountingStorageReader:
-    def __init__(self) -> None:
+    def __init__(self, owners: list[StorageOwner] | None = None) -> None:
         self.reads = 0
+        self.owners = owners or []
+
+    async def list_owners(self, query: StorageOwnerQuery) -> Paged[StorageOwner]:
+        found = [o for o in self.owners if not query.kinds or o.kind in query.kinds]
+        w = query.window
+        return Paged(items=tuple(found[w.offset : w.offset + w.limit]), total=len(found))
 
     async def read(self, now: datetime) -> StorageUsage:
         self.reads += 1
@@ -92,6 +135,18 @@ class InMemoryAIProviderRepository:
 
     async def list_all(self) -> list[AIProvider]:
         return sorted(self._items.values(), key=lambda p: p.created_at)
+
+    async def list_instance(self, query: InstanceAiProviderQuery) -> Paged[AIProvider]:
+        needle = (query.q or "").lower()
+        found = [
+            p
+            for p in await self.list_all()
+            if p.owner_kind is AIProviderOwnerKind.instance
+            and (not needle or needle in f"{p.name} {p.base_url}".lower())
+            and (not query.types or p.type in query.types)
+        ]
+        w = query.window
+        return Paged(items=tuple(found[w.offset : w.offset + w.limit]), total=len(found))
 
     async def get(self, provider_id: UUID) -> AIProvider | None:
         return self._items.get(provider_id)

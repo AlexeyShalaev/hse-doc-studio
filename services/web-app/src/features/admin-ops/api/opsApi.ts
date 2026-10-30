@@ -5,10 +5,10 @@ import {
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
+  AdminRunnerPageSchema,
   AdminRunnerRotatedSchema,
-  AdminRunnerSchema,
   AdminRunnerTokenCreatedSchema,
-  AdminRunnerTokenSchema,
+  AdminRunnerTokenPageSchema,
   AdminServiceHealthSchema,
   AdminStorageUsageSchema,
   AdminUserSchema,
@@ -49,10 +49,12 @@ export type QueueQuery = {
 };
 
 export const opsApi = {
+  // Сервер отдаёт страницу; до серверных фильтров на экране берётся первое окно.
   runners: (): Promise<AdminRunner[]> =>
     adminClient
-      .get("/runners", quiet)
-      .then(parseResp(z.array(AdminRunnerSchema))),
+      .get("/runners", { ...quiet, params: { limit: 200 } })
+      .then(parseResp(AdminRunnerPageSchema))
+      .then((page) => page.items),
   setPaused: async (id: string, paused: boolean): Promise<void> => {
     await adminClient.patch(`/runners/${enc(id)}`, { paused }, quiet);
   },
@@ -66,8 +68,9 @@ export const opsApi = {
 
   tokens: (): Promise<AdminRunnerToken[]> =>
     adminClient
-      .get("/runner-tokens", quiet)
-      .then(parseResp(z.array(AdminRunnerTokenSchema))),
+      .get("/runner-tokens", { ...quiet, params: { limit: 200 } })
+      .then(parseResp(AdminRunnerTokenPageSchema))
+      .then((page) => page.items),
   createToken: (
     body: CreateAdminRunnerTokenRequest,
   ): Promise<AdminRunnerTokenCreated> =>

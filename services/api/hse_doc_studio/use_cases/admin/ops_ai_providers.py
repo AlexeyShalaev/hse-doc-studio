@@ -19,7 +19,12 @@ from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog
-from hse_doc_studio.core.repositories import IAIProviderRepository
+from hse_doc_studio.core.listing import Paged, Window, clamp_limit
+from hse_doc_studio.core.repositories import (
+    IAIProviderRepository,
+    IInstanceAiProviderDirectory,
+    InstanceAiProviderQuery,
+)
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
@@ -113,10 +118,6 @@ class InstanceAiProviderStore:
         found = await self._repo.get(provider_id)
         return found if found is not None and found.owner_kind is AIProviderOwnerKind.instance else None
 
-    async def list(self) -> list[InstanceAiProvider]:
-        found = [p for p in await self._repo.list_all() if p.owner_kind is AIProviderOwnerKind.instance]
-        return [_instance_provider(p) for p in sorted(found, key=lambda p: (p.created_at, str(p.id)))]
-
     async def get(self, provider_id: UUID) -> InstanceAiProvider | None:
         found = await self._shared(provider_id)
         return None if found is None else _instance_provider(found)
@@ -188,12 +189,16 @@ def _checked_timeouts(connect_s: float, request_s: float) -> None:
 
 
 class ListInstanceAiProvidersUC:
-    def __init__(self, store: InstanceAiProviderStore) -> None:
-        self._store = store
+    """Страница общих провайдеров: отбор `owner_kind=instance`, поиск и порядок делает хранилище."""
 
-    async def execute(self, actor: Actor) -> list[InstanceAiProvider]:
+    def __init__(self, directory: IInstanceAiProviderDirectory) -> None:
+        self._directory = directory
+
+    async def execute(self, actor: Actor, query: InstanceAiProviderQuery) -> Paged[InstanceAiProvider]:
         require_admin(actor)
-        return await self._store.list()
+        window = Window(limit=clamp_limit(query.window.limit), offset=max(0, query.window.offset))
+        found = await self._directory.list_instance(replace(query, window=window))
+        return Paged(items=tuple(_instance_provider(p) for p in found.items), total=found.total)
 
 
 class GetInstanceAiProviderUC:

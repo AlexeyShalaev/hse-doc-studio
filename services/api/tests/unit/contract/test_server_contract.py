@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import runner_admin as ra
@@ -88,8 +89,10 @@ _SCHEMAS: dict[str, Any] = {
     "ProjectAccessList": list[s.ProjectAccessEntry],
     "ProjectAccessCandidate": s.ProjectAccessCandidate,
     "ProjectAccessCandidateList": list[s.ProjectAccessCandidate],
-    "AdminRunnerList": list[ra.RunnerInfo],
-    "AdminRunnerTokenList": list[ra.RegistrationTokenInfo],
+    "AdminRunnerList": adm.Page[ra.RunnerInfo],
+    "AdminRunnerSummary": ra.RunnerSummaryInfo,
+    "AdminRunnerTokenList": adm.Page[ra.RegistrationTokenInfo],
+    "AdminPickerList": adm.PickerPage,
     "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
     "AdminRunnerTokenCreated": ra.CreatedRegistrationTokenResponse,
     "AdminRunnerRotated": ra.RotatedRunnerTokenResponse,
@@ -100,10 +103,11 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminQuotasRequest": ops.UpdateAdminQuotasRequest,
     "AdminServiceHealthList": list[ops.AdminServiceHealth],
     "AdminStorageUsage": ops.AdminStorageUsage,
+    "AdminStorageOwnerList": adm.Page[ops.AdminStorageOwnerRow],
     "AdminSigningPolicy": ops.AdminSigningPolicy,
     "UpdateAdminSigningPolicyRequest": ops.UpdateAdminSigningPolicyRequest,
     "AdminAiProvider": ops.AdminAiProvider,
-    "AdminAiProviderList": list[ops.AdminAiProvider],
+    "AdminAiProviderList": adm.Page[ops.AdminAiProvider],
     "CreateAdminAiProviderRequest": ops.CreateAdminAiProviderRequest,
     "UpdateAdminAiProviderRequest": ops.UpdateAdminAiProviderRequest,
     "AdminAiProviderCheck": ops.AdminAiProviderCheck,

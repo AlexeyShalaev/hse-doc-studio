@@ -85,6 +85,7 @@ class _Env:
     registry: RunnerRegistry
     blobs: FsJobBlobStore
     root: Path
+    runners: InMemoryRunnerRepository
 
     async def register(self) -> dict[str, str]:
         created = await self.registry.create_registration_token(_ADMIN)
@@ -210,7 +211,7 @@ async def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> AsyncIterator[
     container = make_async_container(_Provider(), FastapiProvider())
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield _Env(client, queue, clock, registry, blobs, tmp_path)
+        yield _Env(client, queue, clock, registry, blobs, tmp_path, runners)
     await container.close()
 
 
@@ -438,7 +439,7 @@ async def test__io__foreign_job_token_and_unknown_job(env: _Env) -> None:
         headers={**other.headers, "X-Job-Token": other.job_token},
     )
     ghost = uuid4()
-    runner = (await env.registry.list_runners(_ADMIN))[0]
+    runner = (await env.runners.list())[0]
     token = JobTokenSigner([b"k" * 32]).sign(str(ghost), runner.id, env.clock.now + timedelta(hours=1))
     unknown = await env.client.post(
         f"/api/runner/v1/jobs/{ghost}/complete",

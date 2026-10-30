@@ -45,7 +45,13 @@ class JobRow(Base):
         Index("ix_jobs_running_runner", "runner_id", postgresql_where=text("state = 'running'")),
         Index("ix_jobs_running_lease", "lease_until", postgresql_where=text("state = 'running'")),
         Index("ix_jobs_queued_coalesce", "coalesce_key", postgresql_where=text("state = 'queued'")),
-        Index("ix_jobs_project_id", "project_id"),
+        # Журнал очереди в админке: курсор по seq (новые первыми) с фильтром по одному столбцу.
+        Index("ix_jobs_state_seq", "state", text("seq DESC")),
+        Index("ix_jobs_user_id_seq", "user_id", text("seq DESC")),
+        Index("ix_jobs_org_id_seq", "org_id", text("seq DESC")),
+        Index("ix_jobs_runner_id_seq", "runner_id", text("seq DESC")),
+        Index("ix_jobs_project_id_seq", "project_id", text("seq DESC")),
+        Index("ix_jobs_queued_at", "queued_at"),
         Index(
             "ix_jobs_unapplied",
             "seq",
@@ -138,6 +144,7 @@ class RunnerRow(Base):
 
 class RunnerRegistrationTokenRow(Base):
     __tablename__ = "runner_registration_tokens"
+    __table_args__ = (Index("ix_runner_registration_tokens_created_at", text("created_at DESC")),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     owner_kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="instance")

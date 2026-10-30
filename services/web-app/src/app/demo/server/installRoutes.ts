@@ -209,7 +209,16 @@ export const createInstallRoutes = (
     {
       method: "GET",
       pattern: "/ai-providers",
-      handler: guarded(() => demoJson(state().providers)),
+      // Форма Page сервера; общих провайдеров немного, окно здесь всегда первое.
+      handler: guarded(() => {
+        const items = state().providers;
+        return demoJson({
+          items,
+          total: items.length,
+          limit: 50,
+          offset: 0,
+        });
+      }),
     },
     {
       method: "POST",
