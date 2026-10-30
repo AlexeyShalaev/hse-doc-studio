@@ -41,6 +41,9 @@ vi.mock("@features/author-profile", () => ({
   AuthorProfileSection: () => null,
 }));
 vi.mock("@features/git-remote", () => ({ GitAccessSection: () => null }));
+vi.mock("@features/my-runners", () => ({
+  MyRunnersSection: () => <div data-testid="my-runners-section" />,
+}));
 
 import { SettingsPage } from "./SettingsPage";
 
@@ -183,5 +186,32 @@ describe("SettingsPage: sections by capabilities", () => {
     const get = vi.spyOn(apiClient, "get");
     mount("/settings/appearance", SERVER);
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it("«Мои раннеры»: виден вошедшему, если сервер знает личные раннеры, даже выключенные", () => {
+    const user: Bootstrap["user"] = {
+      id: "u_1",
+      name: "Анна Петрова",
+      email: "anna@example.org",
+      avatar_initials: "АП",
+      is_instance_admin: false,
+      email_verified: true,
+      locale: "ru",
+      org_roles: [],
+    };
+    mount("/settings/runners", {
+      ...SERVER,
+      user,
+      capabilities: { ...SERVER.capabilities, personal_runners: false },
+    });
+    expect(navHrefs()).toContain("/settings/runners");
+    expect(screen.getByTestId("my-runners-section")).toBeInTheDocument();
+    cleanup();
+    // Старый сервер без поля: раздела нет, прямая ссылка ведёт на первый доступный.
+    mount("/settings/runners", { ...SERVER, user });
+    expect(navHrefs()).not.toContain("/settings/runners");
+    expect(screen.getByTestId("where")).not.toHaveTextContent(
+      "/settings/runners",
+    );
   });
 });

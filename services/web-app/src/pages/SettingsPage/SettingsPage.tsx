@@ -13,6 +13,7 @@ import {
   KeyRound,
   ListChecks,
   Presentation,
+  Server,
   Search,
   ShieldCheck,
   Sliders,
@@ -46,6 +47,7 @@ import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
 import { MyOrganizationsSection } from "@features/my-organizations";
+import { MyRunnersSection } from "@features/my-runners";
 import {
   LOCAL_BOOTSTRAP,
   useBootstrap,
@@ -74,6 +76,12 @@ type SectionDef = {
   /** Раздел виден, только если у клиента есть эта возможность. */
   requires?: keyof Capabilities;
   /**
+   * Раздел виден, если сервер вообще знает эту возможность (поле есть в
+   * bootstrap), даже когда она выключена: «Мои раннеры» при выключенных
+   * администратором личных раннерах показывают, что сборки идут на общих.
+   */
+  known?: keyof Capabilities;
+  /**
    * Раздел зависит от того, есть ли у клиента аккаунт (вошедший пользователь):
    * "with" только с ним, "without" только без него. Подпись версий на сервере
    * живёт в аккаунте, поэтому второго профиля автора рядом нет.
@@ -83,11 +91,13 @@ type SectionDef = {
 
 /** Раздел доступен при данных возможностях: личные всегда, остальные по requires. */
 const isSectionAvailable = (
-  def: Pick<SectionDef, "scope" | "requires" | "account">,
+  def: Pick<SectionDef, "scope" | "requires" | "account" | "known">,
   has: (name: keyof Capabilities) => boolean,
   hasAccount: boolean,
+  knows: (name: keyof Capabilities) => boolean = () => true,
 ): boolean =>
   (def.requires === undefined || has(def.requires)) &&
+  (def.known === undefined || knows(def.known)) &&
   (def.account === undefined || (def.account === "with") === hasAccount);
 
 /**
@@ -213,6 +223,15 @@ const SECTIONS: readonly SectionDef[] = [
     icon: DatabaseBackup,
   },
   {
+    id: "runners",
+    group: "system",
+    scope: "user",
+    account: "with",
+    known: "personal_runners",
+    labelKey: "settingsPage.sections.runners",
+    icon: Server,
+  },
+  {
     id: "git-access",
     group: "system",
     scope: "user",
@@ -274,6 +293,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <ExportImportSection />;
     case "git-access":
       return <GitAccessSection />;
+    case "runners":
+      return <MyRunnersSection />;
     case "about":
       return <AboutSection />;
   }
@@ -314,7 +335,12 @@ export const SettingsPage = () => {
   const caps = capabilities ?? LOCAL_BOOTSTRAP.capabilities;
   const hasAccount = useBootstrap().data?.user != null;
   const visibleSections = SECTIONS.filter((s) =>
-    isSectionAvailable(s, (name) => caps[name] === true, hasAccount),
+    isSectionAvailable(
+      s,
+      (name) => caps[name] === true,
+      hasAccount,
+      (name) => caps[name] !== undefined,
+    ),
   );
   const visibleIds = new Set<SettingsSectionId>(
     visibleSections.map((s) => s.id),

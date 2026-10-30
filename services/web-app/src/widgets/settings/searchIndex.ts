@@ -29,6 +29,7 @@ export type SettingsSectionId =
   | "disk"
   | "data"
   | "git-access"
+  | "runners"
   | "about";
 
 export type SettingSearchEntry = {
@@ -522,6 +523,27 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
 
   // ── Доступ к репозиториям ────────────────────────────────────
+  // ── Мои раннеры (серверный режим) ────────────────────────────
+  {
+    sectionId: "runners",
+    anchorId: "runners",
+    labelKey: "search.runners",
+    keywords: [
+      "раннер",
+      "раннеры",
+      "мои раннеры",
+      "сборка на своём компьютере",
+      "сборка на своем компьютере",
+      "свой компьютер",
+      "токен раннера",
+      "runner",
+      "runners",
+      "my runners",
+      "self-hosted",
+      "build on my machine",
+    ],
+  },
+
   {
     sectionId: "git-access",
     anchorId: "git-access",

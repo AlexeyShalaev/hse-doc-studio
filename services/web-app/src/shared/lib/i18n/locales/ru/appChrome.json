@@ -121,7 +121,8 @@
       "about": "О программе",
       "gitAccess": "Доступ к репозиториям",
       "organizations": "Организации",
-      "account": "Аккаунт"
+      "account": "Аккаунт",
+      "runners": "Мои раннеры"
     },
     "title": "Настройки",
     "searchPlaceholder": "Поиск по настройкам",

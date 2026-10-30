@@ -469,6 +469,7 @@
     "accountEmail": "Почта аккаунта",
     "accountPassword": "Пароль",
     "accountCommit": "Подпись версий",
-    "accountSessions": "Сессии"
+    "accountSessions": "Сессии",
+    "runners": "Мои раннеры: сборка на своём компьютере"
   }
 }

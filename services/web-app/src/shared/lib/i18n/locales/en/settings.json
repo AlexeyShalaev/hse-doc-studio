@@ -467,6 +467,7 @@
     "accountEmail": "Account email",
     "accountPassword": "Password",
     "accountCommit": "Version signature",
-    "accountSessions": "Sessions"
+    "accountSessions": "Sessions",
+    "runners": "My runners: build on your own machine"
   }
 }

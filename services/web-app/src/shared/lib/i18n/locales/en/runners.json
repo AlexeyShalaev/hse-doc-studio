@@ -1,0 +1,162 @@
+{
+  "mine": {
+    "title": "My runners",
+    "sub": "Your computers and servers that build your projects. Builds on them don't use installation quotas.",
+    "connect": "Connect a runner",
+    "loading": "Loading runners…",
+    "loadFailed": "Couldn't load runners.",
+    "disabled": {
+      "title": "The administrator turned personal runners off.",
+      "body": "Builds use shared runners. You can't connect a new runner right now."
+    },
+    "how": {
+      "title": "How it works",
+      "own": "Your own builds of your projects go to your runner when it's online.",
+      "coauthors": "Co-authors' builds go to your runner only if you turned that on in the project settings.",
+      "fallback": "If the runner is offline or doesn't take a build within {{seconds}} s, the build goes to shared runners.",
+      "trust": "The runner gets a copy of the project for the build. Connect only your own machines."
+    },
+    "empty": {
+      "title": "No runners yet",
+      "body": "Connect the Studio on your computer or start a runner on a server from the console: your projects will build on it."
+    },
+    "caption": "My runners",
+    "columns": {
+      "runner": "Runner",
+      "state": "State",
+      "load": "Load",
+      "actions": "Actions"
+    },
+    "kind": {
+      "desktop": "Studio on a computer",
+      "cli": "Console runner"
+    },
+    "state": {
+      "online": "Online",
+      "stale": "Not responding",
+      "offline": "Offline",
+      "paused": "Paused",
+      "revoked": "Revoked",
+      "disabled": "Turned off by admin"
+    },
+    "stateHint": {
+      "offline": "Builds use shared runners.",
+      "paused": "Doesn't take new builds.",
+      "stale": "If it doesn't respond, builds go to shared runners.",
+      "disabled": "Builds use shared runners."
+    },
+    "seen": "seen {{ago}}",
+    "seenIp": "seen {{ago}}, IP {{ip}}",
+    "neverSeen": "never connected",
+    "version": "v{{version}}",
+    "outdated": "Outdated",
+    "outdatedHint": "The server is newer ({{version}}): update the runner.",
+    "slots": "{{jobs}} · {{ai}} AI",
+    "slotsTitle": "At once: {{jobs}} builds, {{ai}} AI requests",
+    "running_one": "{{count}} build running",
+    "running_other": "{{count}} builds running",
+    "idle": "Idle",
+    "aiEndpoints": "AI endpoints",
+    "actionsLabel": "Actions for runner \"{{name}}\"",
+    "rename": "Rename",
+    "pause": "Pause",
+    "resume": "Resume",
+    "rotate": "Rotate token",
+    "reconnect": "Reconnect",
+    "revoke": "Revoke",
+    "showRevoked": "Show revoked ({{count}})",
+    "hideRevoked": "Hide revoked",
+    "paused": "Runner \"{{name}}\" is paused",
+    "resumed": "Runner \"{{name}}\" takes builds again",
+    "renamed": "Runner renamed",
+    "revoked": "Runner \"{{name}}\" revoked",
+    "connected": "Runner \"{{name}}\" connected",
+    "jobs_one": "{{count}} build",
+    "jobs_other": "{{count}} builds",
+    "ipOnly": "IP {{ip}}",
+    "onlineNow": "responding now"
+  },
+  "rename": {
+    "title": "Rename runner",
+    "label": "Name",
+    "hint": "Co-authors see it when their builds run on your runners.",
+    "save": "Save",
+    "required": "Enter a name."
+  },
+  "revoke": {
+    "title": "Revoke runner",
+    "body": "The runner stops getting builds right away. This can't be undone: to build on that machine again, connect it again.",
+    "confirm": "Revoke"
+  },
+  "rotate": {
+    "confirmTitle": "Rotate the token of \"{{name}}\"?",
+    "confirmBody": "The old token stops working right away. You'll need to restart the runner with the new one.",
+    "confirm": "Rotate token",
+    "title": "New token for runner \"{{name}}\"",
+    "lead": "The old token no longer works. Restart the runner with the new one.",
+    "label": "Runner token",
+    "commandTitle": "Start command",
+    "commandLabel": "Runner start command"
+  },
+  "reconnect": {
+    "title": "Reconnect \"{{name}}\"",
+    "body": "This is the Studio on a computer: it keeps its token itself. In the Studio open Settings, Cloud builds, click \"Disconnect from server\" and connect again with a code.",
+    "done": "Got it"
+  },
+  "connectDialog": {
+    "title": "Connect a runner",
+    "lead": "A runner builds your projects on your machine. Choose what to connect.",
+    "tabsLabel": "What to connect",
+    "tabStudio": "Studio on a computer",
+    "tabServer": "Server or console",
+    "studio": {
+      "step1": "Open the Studio, then Settings, Cloud builds.",
+      "step2": "Turn the switch on and click \"Connect\".",
+      "step3": "Enter the code the Studio shows and confirm the connection.",
+      "codeLabel": "Code from the Studio",
+      "codeHint": "Eight characters like BCDF-2345.",
+      "codeInvalid": "The code is eight letters and digits, for example BCDF-2345.",
+      "continue": "Continue"
+    },
+    "server": {
+      "lead": "Create a one-time token and start the runner with a command on your server. The token is shown once.",
+      "label": "Label",
+      "labelHint": "To tell the token apart in the list, for example \"Home server\".",
+      "ttl": "Valid for",
+      "ttlOption": {
+        "1": "1 hour",
+        "24": "24 hours",
+        "168": "7 days"
+      },
+      "submit": "Create token",
+      "secretLabel": "Registration token",
+      "secretHint": "After registering, the runner gets its own permanent token.",
+      "commandTab": "Command",
+      "dockerTab": "Docker",
+      "commandLabel": "Runner start command",
+      "dockerLabel": "Docker start command",
+      "commandHint": "Needs the hse-doc-studio package installed.",
+      "dockerHint": "The data directory is mounted at the same path inside and outside the container.",
+      "aiHint": "To use your own model through the runner, set HSE_RUNNER__AI_ENDPOINTS, for example [{\"name\":\"ollama\",\"url\":\"http://localhost:11434/v1\"}].",
+      "waiting": "Waiting for the runner to connect…"
+    }
+  },
+  "tokens": {
+    "title": "Unused tokens",
+    "lead": "Tokens no runner has connected with yet.",
+    "noLabel": "No label",
+    "expires": "expires {{when}}",
+    "expired": "expired {{when}}",
+    "revoke": "Revoke",
+    "actionsLabel": "Actions for token \"{{label}}\"",
+    "revoked": "Token revoked",
+    "revokeTitle": "Revoke the token?",
+    "revokeBody": "No runner will be able to connect with \"{{label}}\"."
+  },
+  "failure": {
+    "unknown": "Couldn't complete the action. Try again.",
+    "network": "The server is unreachable. Check your connection."
+  },
+  "cancel": "Cancel",
+  "retry": "Retry"
+}
