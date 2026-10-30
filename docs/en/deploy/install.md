@@ -25,6 +25,7 @@ The files are in the repository under `deploy/server`.
 cd deploy/server
 cp .env.example .env              # fill in the required values, hints are inside the file
 sudo mkdir -p /var/lib/hse-runner # runner data directory
+sudo chown 10001:10001 /var/lib/hse-runner # owner: the image user app
 docker compose up -d
 docker compose --profile services up -d   # add LanguageTool and ONLYOFFICE
 ```
@@ -46,7 +47,9 @@ The runner directory (`RUNNER_DATA_DIR`) is mounted at the same path on the host
 
 ### Reverse proxy
 
-The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off;`.
+The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. The body limit must cover file uploads (up to 256 MiB) as well as project import.
+
+The api is published on `127.0.0.1` by default (`BIND_ADDRESS` in `.env`): the proxy must run on the same host, otherwise set the address explicitly. Run one runner per host and data directory; `--scale runner=N` is not supported because the registration token is single-use.
 
 Project upload is a large request body. Set `client_max_body_size` to at least `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` plus about 1 MB (by default `client_max_body_size 501m;`). The api itself rejects an oversized body with 413 before anything is written to a temporary file.
 

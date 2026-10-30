@@ -96,6 +96,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
         fsGroup: 10001
       containers:
         - name: api
@@ -103,6 +104,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - {name: http, containerPort: 8000}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             - {name: HSE_STUDIO__MODE, value: server}
             - {name: HSE_STUDIO__SERVER__HOST, value: "0.0.0.0"}
@@ -235,7 +239,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: hse-doc-studio-0.1.0
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 64m
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "75"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "75"
@@ -285,11 +289,15 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
       containers:
         - name: migrate
           image: ghcr.io/alexeyshalaev/hse-doc-studio:latest
           imagePullPolicy: IfNotPresent
           command: ["hse-doc-studio", "db", "upgrade"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             - {name: HSE_STUDIO__MODE, value: server}
             - {name: HSE_STUDIO__SERVER__HOST, value: "0.0.0.0"}

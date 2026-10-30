@@ -4,7 +4,7 @@
 #   docker compose up -d                        # минимальный набор: api, runner, postgres, minio
 #   docker compose --profile services up -d     # + два LanguageTool и ONLYOFFICE
 #   docker compose --profile ai up -d           # + Ollama
-#   docker compose up -d --scale runner=3       # несколько раннеров
+#   один раннер на хост и каталог данных: --scale не поддерживается (токен регистрации одноразовый)
 #
 # docker.sock подключён ТОЛЬКО раннеру: у api доступа к докеру нет. Сокет эквивалентен root на хосте,
 # поэтому раннер-хост считается доверенной инфраструктурой (см. README, раздел «Безопасность раннера»).
@@ -70,7 +70,7 @@ services:
       minio-init:
         condition: service_completed_successfully
     ports:
-      - "${PORT:-17240}:8000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-17240}:8000"
     environment: &api-env
       HSE_STUDIO__MODE: server
       HSE_STUDIO__SERVER__HOST: "0.0.0.0"
@@ -182,7 +182,7 @@ services:
 
   ollama:
     profiles: [ai]
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.12.6
     volumes:
       - ollama-models:/root/.ollama
     restart: unless-stopped

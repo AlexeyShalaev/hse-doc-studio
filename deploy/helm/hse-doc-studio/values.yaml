@@ -97,7 +97,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "75"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "75"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-body-size: 64m
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
   tls:
     enabled: false
     secretName: ""
@@ -110,6 +110,7 @@ service:
 # сокет эквивалентен root на узле, включайте только на выделенных узлах (nodeSelector).
 runner:
   enabled: false
+  # Не больше 1: все поды узла делят hostPath и одноразовый токен регистрации.
   replicas: 1
   concurrency: 1
   tags: ""

@@ -28,11 +28,15 @@ spec:
         runAsNonRoot: true
         runAsUser: {{ .Values.podSecurityContext.runAsUser }}
         runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        seccompProfile: {type: RuntimeDefault}
       containers:
         - name: migrate
           image: {{ include "hds.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["hse-doc-studio", "db", "upgrade"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             {{- include "hds.env" . | nindent 12 }}
           resources:

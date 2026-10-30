@@ -35,6 +35,8 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 
 Все поды работают от числового uid/gid из `podSecurityContext` (10001, как пользователь `app` в образе). Каталог `runner.dataDir` на узле создаётся от root, поэтому initContainer `fix-data-dir` выдаёт его этому пользователю.
 
+Раннер всегда в одной реплике (`runner.replicas` не больше 1): hostPath и токен регистрации одноразовые общие. Из-за `docker.sock` и `chown` в initContainer его под не проходит Pod Security Standard restricted, api и migrate проходят.
+
 `runner.enabled=true` запускает раннер с `hostPath` на `docker.sock` узла. Сокет эквивалентен root
 на узле: используйте выделенные узлы (`runner.nodeSelector`, `runner.tolerations`). Раннер-под на задачу
 относится к следующим этапам.

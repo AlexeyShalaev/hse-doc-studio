@@ -33,6 +33,7 @@ spec:
         runAsNonRoot: true
         runAsUser: {{ .Values.podSecurityContext.runAsUser }}
         runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        seccompProfile: {type: RuntimeDefault}
         fsGroup: {{ .Values.podSecurityContext.fsGroup }}
       containers:
         - name: api
@@ -40,6 +41,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - {name: http, containerPort: 8000}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             {{- include "hds.env" . | nindent 12 }}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
