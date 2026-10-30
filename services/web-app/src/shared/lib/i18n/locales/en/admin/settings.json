@@ -72,8 +72,10 @@
       "state": "State"
     },
     "sort": {
-      "created": "Date added",
-      "label": "Name"
+      "caption": "Order",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "label": "By name"
     },
     "loadFailed": "Could not load the providers",
     "empty": {

@@ -23,7 +23,12 @@ export const GroupsTab = ({ slug }: { slug: string }) => {
     fetchPage: (params, signal) => adminOrgsApi.groups(slug, params, signal),
   });
   // Участников группы ищут среди участников организации на сервере.
-  const memberSource = useMemo(() => adminPickers.orgMembers(slug), [slug]);
+  // Для существующей группы пикер не предлагает тех, кто в ней уже есть.
+  const memberSource = useMemo(
+    () => (groupId: string | null) =>
+      adminPickers.orgMembers(slug, groupId ?? undefined),
+    [slug],
+  );
   const create = useCreateGroup(slug);
   const rename = useRenameGroup(slug);
   const remove = useDeleteGroup(slug);

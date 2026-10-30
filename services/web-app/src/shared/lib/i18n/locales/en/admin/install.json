@@ -101,9 +101,11 @@
       "type": "Type"
     },
     "sort": {
-      "created": "Date added",
-      "name": "Name",
-      "type": "Type"
+      "caption": "Order",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "name": "By name",
+      "type": "By type"
     },
     "add": "Add provider",
     "addFirst": "Add provider",

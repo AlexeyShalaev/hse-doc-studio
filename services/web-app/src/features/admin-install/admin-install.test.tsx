@@ -418,7 +418,7 @@ describe("настройки установки в админке", () => {
     it("тип и порядок из адреса", async () => {
       mount(
         <AiProvidersPage renderEditor={noEditor} />,
-        "/admin/ai-providers?type=claude&sort=-name",
+        "/admin/ai-providers?type=claude&sort=name",
       );
       await screen.findByTestId("shared-provider-aip_shared1");
       expect(screen.queryByTestId("shared-provider-aip_shared2")).toBeNull();
@@ -426,7 +426,7 @@ describe("настройки установки в админке", () => {
         screen.getByTestId("shared-provider-filter-type"),
       ).toHaveTextContent("Anthropic");
       expect(screen.getByTestId("shared-provider-sort")).toHaveTextContent(
-        "Название",
+        "По названию",
       );
     });
 

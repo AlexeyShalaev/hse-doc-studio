@@ -100,6 +100,25 @@ describe("DataTable", () => {
         data={ROWS}
         getRowId={(r) => r.id}
         pagination={{
+          page: 1,
+          pageSize: 2,
+          total: 4,
+          onPageChange: () => undefined,
+        }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Назад/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Вперёд/ })).toBeDisabled();
+  });
+
+  it("hides paging while one page holds everything", () => {
+    render(
+      <DataTable
+        caption="Люди"
+        columns={COLS}
+        data={ROWS}
+        getRowId={(r) => r.id}
+        pagination={{
           page: 0,
           pageSize: 2,
           total: 2,
@@ -107,8 +126,7 @@ describe("DataTable", () => {
         }}
       />,
     );
-    expect(screen.getByRole("button", { name: /Назад/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Вперёд/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Назад/ })).toBeNull();
   });
 
   it("shows the empty state with its action", () => {

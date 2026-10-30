@@ -368,6 +368,22 @@ describe("операционные разделы: демо-API", () => {
     expect(named.items.some((j) => j.user_name === "Мария Келлер")).toBe(true);
   });
 
+  it("пикеры проектов и раннеров находят запись по id для фильтра из ссылки", async () => {
+    type Picked = { items: { id: string; name: string }[] };
+    for (const path of ["/pickers/projects", "/pickers/runners"]) {
+      const first = (
+        (await call("GET", path, undefined, { limit: "20" })).data as Picked
+      ).items[0];
+      expect(first).toBeDefined();
+      const one = (await call("GET", path, undefined, { id: first?.id ?? "" }))
+        .data as Picked;
+      expect(one.items).toEqual([first]);
+      const none = (await call("GET", path, undefined, { id: "nope" }))
+        .data as Picked;
+      expect(none.items).toEqual([]);
+    }
+  });
+
   it("раннеры: фильтр, поиск, сортировка и окно на сервере", async () => {
     const online = (
       await call("GET", "/runners", undefined, {

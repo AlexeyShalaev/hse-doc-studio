@@ -30,6 +30,7 @@ import {
   Meter,
   NoResults,
   Pagination,
+  offsetPagerShown,
   Section,
   SectionList,
   Select,
@@ -866,7 +867,7 @@ const TokensSection = ({
           </SectionList>
         </div>
       )}
-      {tokens.status === "ready" && tokens.total > 0 && (
+      {tokens.status === "ready" && offsetPagerShown(tokens.pagination) && (
         <div className="ops-section-pager">
           <Pagination {...tokens.pagination} />
         </div>

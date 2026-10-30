@@ -14,6 +14,7 @@ import {
   hit,
   invalidQuery,
   offsetList,
+  queryOne,
   searchOf,
 } from "./demoList";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
@@ -231,11 +232,20 @@ export const createOrgRoutes = (
         const roles = enumParam(req, "role", ROLES);
         if (roles === null) return invalidQuery();
         const rank = (m: AdminOrgMember) => ROLES.indexOf(m.role);
+        // Пикер группы: без тех, кто в ней уже есть.
+        const notInGroup = queryOne(req, "not_in_group");
+        const inGroup = new Set(
+          notInGroup
+            ? (org.groups.find((g) => g.id === notInGroup)?.member_ids ?? [])
+            : [],
+        );
         return offsetList(
           req,
-          roles.length
-            ? org.members.filter((m) => roles.includes(m.role))
-            : org.members,
+          org.members.filter(
+            (m) =>
+              (roles.length === 0 || roles.includes(m.role)) &&
+              !inGroup.has(m.user_id),
+          ),
           {
             sort: {
               name: (m: AdminOrgMember) => m.name,

@@ -53,6 +53,15 @@ const resolveOrg = (slug: string, signal: AbortSignal) =>
       detail: o.slug,
     }));
 
+/** Одна запись пикера по id (`?id=`): имя для фильтра, открытого по ссылке. */
+const resolveById =
+  (path: string) =>
+  (id: string, signal: AbortSignal): Promise<PickerItem | null> =>
+    adminClient
+      .get(path, { ...quiet, signal, params: { id } })
+      .then(parseResp(PickerPageSchema))
+      .then((page) => page.items[0] ?? null);
+
 export type UserPickerFilters = {
   /** Только активные аккаунты: для добавления в организацию и передачи. */
   status?: "active";
@@ -83,20 +92,31 @@ export const adminPickers = {
   projects: (): PickerSource => ({
     key: ["admin", "pickers", "projects"],
     search: adminPicker("/pickers/projects"),
+    resolve: resolveById("/pickers/projects"),
   }),
   runners: (): PickerSource => ({
     key: ["admin", "pickers", "runners"],
     search: adminPicker("/pickers/runners"),
+    resolve: resolveById("/pickers/runners"),
   }),
-  /** Участники организации: из них собирают группы. */
-  orgMembers: (slug: string): PickerSource => ({
-    key: ["admin", "pickers", "org-members", slug],
+  /**
+   * Участники организации: из них собирают группы. `notInGroup` убирает
+   * тех, кто в группе уже есть, на сервере.
+   */
+  orgMembers: (slug: string, notInGroup?: string): PickerSource => ({
+    key: ["admin", "pickers", "org-members", slug, notInGroup ?? null],
     search: (q, { limit, signal }) =>
       adminClient
         .get(`/orgs/${enc(slug)}/members`, {
           ...quiet,
           signal,
-          params: { ...(q ? { q } : {}), limit, offset: 0, sort: "name" },
+          params: {
+            ...(q ? { q } : {}),
+            limit,
+            offset: 0,
+            sort: "name",
+            ...(notInGroup ? { not_in_group: notInGroup } : {}),
+          },
         })
         .then(parseResp(AdminOrgMemberPageSchema))
         .then((page): PickerPage => ({

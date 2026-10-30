@@ -192,7 +192,7 @@ export type {
 } from "./FilterBar";
 
 // Серверные списки: листание, поиск и пикеры (галерея «Примитивы админки»).
-export { Pagination } from "./Pagination";
+export { Pagination, offsetPagerShown } from "./Pagination";
 export type {
   CursorPaginationProps,
   OffsetPaginationProps,

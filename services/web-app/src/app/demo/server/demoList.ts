@@ -272,9 +272,13 @@ export const pickerList = <T>(
   const q = searchOf(req);
   const limit = limitOf(req, PICKER_MAX, PICKER_MAX);
   if (q === null || limit === null) return invalidQuery();
+  // `?id=` находит одну запись: имя для фильтра, открытого по ссылке.
+  const id = queryOne(req, "id");
   const found: DemoPickerItem[] = [];
   for (const row of rows) {
-    if (hit(q, ...search(row))) found.push(toItem(row));
+    if (!hit(q, ...search(row))) continue;
+    const item = toItem(row);
+    if (id === null || item.id === id) found.push(item);
   }
   found.sort(
     (a, b) => collator.compare(a.name, b.name) || (a.id < b.id ? -1 : 1),

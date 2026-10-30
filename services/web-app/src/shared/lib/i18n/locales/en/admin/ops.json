@@ -465,7 +465,7 @@
       "rank": "Rank",
       "who": "Owner",
       "projectsCol": "Projects",
-      "shareCol": "Share of all",
+      "shareCol": "Share of projects",
       "share": "Share of projects: {{name}}",
       "search": "Find an owner",
       "searchPlaceholder": "Name or email",

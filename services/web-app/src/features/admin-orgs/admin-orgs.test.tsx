@@ -253,6 +253,25 @@ describe("организации в админке: демо-API", () => {
     expect((await call("DELETE", path)).status).toBe(204);
     expect((await call("DELETE", path)).status).toBe(404);
   });
+
+  it("кандидаты в группу: участники организации без тех, кто в ней уже есть", async () => {
+    const group = (
+      (await call("GET", "/orgs/msp-2025/groups")).data as {
+        items: { id: string }[];
+      }
+    ).items[0];
+    const id = group?.id ?? "";
+    await call("POST", `/orgs/msp-2025/groups/${id}/members/u_01hx7k6r8j`);
+    const ids = async (query: Record<string, string>) =>
+      (
+        (await call("GET", "/orgs/msp-2025/members", undefined, query))
+          .data as { items: { user_id: string }[] }
+      ).items.map((m) => m.user_id);
+    expect(await ids({ limit: "200" })).toContain("u_01hx7k6r8j");
+    expect(await ids({ limit: "200", not_in_group: id })).not.toContain(
+      "u_01hx7k6r8j",
+    );
+  });
 });
 
 describe("организации в админке: экраны", () => {

@@ -15,6 +15,7 @@ import {
   FilterBar,
   NoResults,
   Pagination,
+  offsetPagerShown,
   PersonCell,
   Section,
   SortSelect,
@@ -54,6 +55,17 @@ export const ApprovalsPanel = () => {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   // Строка, по которой идёт запрос; при пачке все отмеченные.
   const [working, setWorking] = useState<ReadonlySet<string>>(new Set());
+  // Ход пачки: заявки решаются по одной, кнопка показывает, сколько готово.
+  const [progress, setProgress] = useState<number | null>(null);
+
+  // Выбор живёт в пределах одной страницы: на другой странице, поиске или
+  // порядке отмеченные строки не видны, и пачка не должна их задевать.
+  const view = JSON.stringify(state.params);
+  const [selectedIn, setSelectedIn] = useState(view);
+  if (selectedIn !== view) {
+    setSelectedIn(view);
+    setSelected(new Set());
+  }
 
   const items = list.items;
   const total = list.total;
@@ -94,17 +106,20 @@ export const ApprovalsPanel = () => {
   const approveMany = async (people: readonly AdminUser[]) => {
     setFailure(null);
     setWorking(new Set(people.map((u) => u.id)));
+    setProgress(0);
     let done = 0;
     try {
       // По одному: сервер решает каждую заявку отдельно, отказ одной не трогает остальные.
       for (const user of people) {
         await decideOne(user, true);
         done += 1;
+        setProgress(done);
       }
     } catch (error: unknown) {
       setFailure({ code: failureCode(error) });
     } finally {
       setWorking(new Set());
+      setProgress(null);
       if (done > 0) toast.success(t("approvals.approvedMany", { count: done }));
     }
   };
@@ -201,11 +216,16 @@ export const ApprovalsPanel = () => {
             ) : (
               <CheckCheck size={14} aria-hidden="true" />
             )}
-            {chosen.length > 0
-              ? t("approvals.approveSelected", { count: chosen.length })
-              : partial
-                ? t("approvals.approveShown", { count: items.length })
-                : t("approvals.approveAll", { count: items.length })}
+            {progress !== null && working.size > 1
+              ? t("approvals.approving", {
+                  done: progress,
+                  total: working.size,
+                })
+              : chosen.length > 0
+                ? t("approvals.approveSelected", { count: chosen.length })
+                : partial
+                  ? t("approvals.approveShown", { count: items.length })
+                  : t("approvals.approveAll", { count: items.length })}
           </Button>
         }
       >
@@ -306,7 +326,7 @@ export const ApprovalsPanel = () => {
             );
           })}
         </ul>
-        {total > 0 && (
+        {offsetPagerShown(list.pagination) && (
           <div className="adm-section-foot">
             <Pagination {...list.pagination} />
           </div>

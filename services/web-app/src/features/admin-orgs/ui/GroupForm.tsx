@@ -173,6 +173,8 @@ const GroupMembers = ({
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // Размер группы для подписи: поиск сужает total, а состав от него не меняется.
+  const [size, setSize] = useState(group.member_count);
   const params = {
     limit: PAGE,
     offset: page * PAGE,
@@ -190,12 +192,34 @@ const GroupMembers = ({
   const total = members.data?.total ?? 0;
   const rows = members.data?.items ?? [];
   const busyId = change.isPending ? change.variables.userId : null;
+  const data = members.data;
+  const settled = data !== undefined && !members.isPlaceholderData;
+  const groupSize = q === "" && settled ? total : size;
+
+  // Страница за концом состава (убрали последнего на странице): на последнюю,
+  // как в useServerList. Иначе окно показывает «Пока никого» при живой группе.
+  // Поправка идёт прямо при отрисовке: пока грузится новая страница, данные
+  // помечены как заглушка, так что повторного перехода нет.
+  if (
+    data !== undefined &&
+    !members.isPlaceholderData &&
+    data.items.length === 0 &&
+    data.total > 0 &&
+    page > 0
+  ) {
+    setPage(Math.max(0, Math.ceil(data.total / PAGE) - 1));
+  }
+  // Без поиска total и есть размер группы: запоминаем его на время поиска.
+  if (q === "" && settled && size !== total) setSize(total);
 
   const apply = (userId: string, add: boolean) => {
     setFailure(null);
     change.mutate(
       { userId, add },
       {
+        onSuccess: () => {
+          setSize((n) => Math.max(0, n + (add ? 1 : -1)));
+        },
         onError: (error) => {
           setFailure({ code: failureCode(error) });
         },
@@ -210,7 +234,7 @@ const GroupMembers = ({
       data-testid="group-members"
     >
       <legend className="org-legend">
-        {t("groups.form.members", { count: total })}
+        {t("groups.form.members", { count: groupSize })}
       </legend>
       {source && (
         <Picker
@@ -289,7 +313,7 @@ const GroupMembers = ({
           ))}
         </ul>
       )}
-      {total > PAGE && (
+      {(page > 0 || total > PAGE) && (
         <Pagination
           page={page}
           pageSize={PAGE}

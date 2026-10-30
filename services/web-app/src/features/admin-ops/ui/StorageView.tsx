@@ -200,22 +200,12 @@ export const StorageView = ({
         ),
       },
       {
-        id: "bytes",
-        header: () => (
-          <span className="ops-num">{t("storage.owners.bytesCol")}</span>
-        ),
-        sortDescFirst: true,
-        cell: ({ row }) => (
-          <span className="ops-num">
-            {formatFileSize(row.original.owner.bytes)}
-          </span>
-        ),
-      },
-      {
         id: "share",
         header: () => (
           <span className="ops-num">{t("storage.owners.shareCol")}</span>
         ),
+        // Доля считается от числа проектов, а не от места: поэтому столбец
+        // стоит рядом с проектами, а не рядом с размером.
         enableSorting: false,
         cell: ({ row }) => (
           <span className="ops-share">
@@ -226,6 +216,18 @@ export const StorageView = ({
               })}
             />
             <span className="ops-share-pct">{row.original.share}%</span>
+          </span>
+        ),
+      },
+      {
+        id: "bytes",
+        header: () => (
+          <span className="ops-num">{t("storage.owners.bytesCol")}</span>
+        ),
+        sortDescFirst: true,
+        cell: ({ row }) => (
+          <span className="ops-num">
+            {formatFileSize(row.original.owner.bytes)}
           </span>
         ),
       },

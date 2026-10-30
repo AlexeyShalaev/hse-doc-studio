@@ -70,19 +70,25 @@ const tokenStatus = (t: AdminRunnerToken): (typeof TOKEN_STATUSES)[number] =>
         : "active";
 
 // Порядковый номер задачи (seq): ключ курсора очереди. Считается по времени
-// постановки, пересчитывается, когда меняется массив задач.
-const seqCache = new WeakMap<AdminJob[], Map<string, number>>();
-const seqOf = (jobs: AdminJob[]): Map<string, number> => {
-  const cached = seqCache.get(jobs);
-  if (cached?.size === jobs.length) return cached;
+// постановки, пересчитывается, когда меняется массив задач. Вместе с ним
+// кэшируется порядок «новые первыми»: в большом мире 40 000 задач, и
+// сортировать их на каждый запрос с фильтром долго.
+type QueueOrder = { seq: Map<string, number>; newest: AdminJob[] };
+const orderCache = new WeakMap<AdminJob[], QueueOrder>();
+const orderOf = (jobs: AdminJob[]): QueueOrder => {
+  const cached = orderCache.get(jobs);
+  if (cached?.seq.size === jobs.length) return cached;
+  const at = new Map(jobs.map((j) => [j.id, Date.parse(j.created_at)]));
   const ordered = [...jobs].sort(
     (a, b) =>
-      Date.parse(a.created_at) - Date.parse(b.created_at) ||
-      (a.id < b.id ? -1 : 1),
+      (at.get(a.id) ?? 0) - (at.get(b.id) ?? 0) || (a.id < b.id ? -1 : 1),
   );
-  const map = new Map(ordered.map((j, i) => [j.id, i + 1]));
-  seqCache.set(jobs, map);
-  return map;
+  const order = {
+    seq: new Map(ordered.map((j, i) => [j.id, i + 1])),
+    newest: ordered.reverse(),
+  };
+  orderCache.set(jobs, order);
+  return order;
 };
 
 const str = (value: unknown): string =>
@@ -426,9 +432,8 @@ export const createOpsRoutes = (
         const project = queryOne(req, "project_id");
         const runner = queryOne(req, "runner_id");
         const jobs = state().jobs;
-        const seq = seqOf(jobs);
+        const { seq, newest: ordered } = orderOf(jobs);
         const key = (j: AdminJob) => seq.get(j.id) ?? 0;
-        const ordered = [...jobs].sort((a, b) => key(b) - key(a));
         const orgOf = state().jobOrgs;
         const filtered =
           states.length > 0 ||

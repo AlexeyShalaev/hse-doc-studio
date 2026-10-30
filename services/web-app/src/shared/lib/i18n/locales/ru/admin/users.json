@@ -211,7 +211,8 @@
     "approveShown_one": "Одобрить {{count}} на странице",
     "approveShown_few": "Одобрить {{count}} на странице",
     "approveShown_many": "Одобрить {{count}} на странице",
-    "approveShown_other": "Одобрить {{count}} на странице"
+    "approveShown_other": "Одобрить {{count}} на странице",
+    "approving": "Одобрено {{done}} из {{total}}"
   },
   "audit": {
     "title": "Аудит",

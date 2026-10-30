@@ -199,7 +199,8 @@
     "approvedMany_one": "{{count}} request approved.",
     "approvedMany_other": "{{count}} requests approved.",
     "approveShown_one": "Approve {{count}} on this page",
-    "approveShown_other": "Approve {{count}} on this page"
+    "approveShown_other": "Approve {{count}} on this page",
+    "approving": "Approved {{done}} of {{total}}"
   },
   "audit": {
     "title": "Audit",

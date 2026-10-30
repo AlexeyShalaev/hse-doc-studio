@@ -52,6 +52,24 @@ export type PaginationProps = OffsetPaginationProps | CursorPaginationProps;
 
 const fmt = (n: number): string => n.toLocaleString(localeTag());
 
+/**
+ * Покажет ли листание по страницам что-нибудь. Листать некуда, пока всё
+ * помещается на первую страницу самого малого размера: «По 50», серые
+ * «Назад/Вперёд» и «Страница 1 из 1» только шумят (то же правило, что
+ * needsPager у коротких списков). Пустой список тоже. Обёртки с рамкой или
+ * отступом спрашивают это, чтобы не оставлять пустую полосу.
+ */
+export const offsetPagerShown = ({
+  page,
+  pageSize,
+  total,
+  pageSizes,
+}: Pick<
+  OffsetPaginationProps,
+  "page" | "pageSize" | "total" | "pageSizes"
+>): boolean =>
+  total > 0 && (page > 0 || total > Math.min(pageSize, ...(pageSizes ?? [])));
+
 export const Pagination = (props: PaginationProps) =>
   props.mode === "cursor" ? (
     <CursorPager {...props} />
@@ -98,8 +116,7 @@ const OffsetPager = ({
 }: OffsetPaginationProps) => {
   const { t } = useTranslation("uiPrimitives");
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  // Пустой список листать некуда: «0–0 из 0» только шумит под пустым состоянием.
-  if (total === 0) return null;
+  if (!offsetPagerShown({ page, pageSize, total, pageSizes })) return null;
   const from = total === 0 ? 0 : page * pageSize + 1;
   const to = Math.min(total, (page + 1) * pageSize);
   const atStart = page <= 0;

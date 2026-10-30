@@ -13,7 +13,7 @@ import {
   FilterMenu,
   Pagination,
   Section,
-  SortMenu,
+  SortSelect,
   Spinner,
   TableSkeleton,
   type ActiveFilter,
@@ -250,13 +250,23 @@ export const AdminAuthSettings = ({
                 label: enabledLabel(value),
               }))}
             />
-            <SortMenu
+            <SortSelect
               testId="oidc-sort"
-              value={oidcState.sort}
+              sort={oidcState.sort}
               onChange={oidcState.setSort}
+              label={t("oidc.sort.caption")}
               options={[
-                { field: "created_at", label: t("oidc.sort.created") },
-                { field: "label", label: t("oidc.sort.label") },
+                {
+                  field: "created_at",
+                  desc: true,
+                  label: t("oidc.sort.newest"),
+                },
+                {
+                  field: "created_at",
+                  desc: false,
+                  label: t("oidc.sort.oldest"),
+                },
+                { field: "label", desc: false, label: t("oidc.sort.label") },
               ]}
             />
           </>

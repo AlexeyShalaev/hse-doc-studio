@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -129,6 +129,27 @@ export const useCursorList = <T>({
     return out;
   }, [query.data, getId]);
 
+  // «Обновить» перечитывает только первую страницу и вклеивает её, как опрос:
+  // refetch бесконечного запроса прошёл бы заново все подгруженные страницы.
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = async () => {
+    if (!query.data || query.isError) {
+      await query.refetch();
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const fresh = await client.fetchQuery({
+        queryKey: [...queryKey, "log", state.params, "refresh"],
+        queryFn: ({ signal }) => fetchPage(state.params, signal),
+        staleTime: 0,
+      });
+      client.setQueryData<Pages<T>>(key, (old) => mergeHead(old, fresh, getId));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const totalEstimate = query.data?.pages[0]?.total_estimate ?? null;
   const loadMore = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
@@ -152,10 +173,12 @@ export const useCursorList = <T>({
     loadMore,
     isLoadingMore: query.isFetchingNextPage,
     isLoading: query.isPending,
-    isFetching: query.isFetching,
+    isFetching: query.isFetching || refreshing,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,
+    /** Свежая первая страница поверх загруженных (кнопка «Обновить»). */
+    refresh,
     totalEstimate,
     pagination,
   };

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import {
   formatPastTime,
   localeTag,
+  toast,
   useCursorList,
   useListQueryState,
 } from "@shared/lib";
@@ -454,7 +455,9 @@ export const AuditLog = () => {
             type="button"
             disabled={log.isFetching}
             onClick={() => {
-              void log.refetch();
+              log.refresh().catch(() => {
+                toast.error(t("audit.loadFailed"));
+              });
             }}
             data-testid="audit-refresh"
           >

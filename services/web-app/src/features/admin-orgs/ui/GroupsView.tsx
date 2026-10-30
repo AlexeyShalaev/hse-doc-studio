@@ -31,8 +31,11 @@ export type GroupsViewProps = {
   groups: readonly AdminGroup[];
   /** Организация: по ней форма листает состав группы. */
   slug?: string | null;
-  /** Поиск участников организации для формы; без него выбирать некого. */
-  memberSource?: PickerSource | null;
+  /**
+   * Поиск участников организации для формы (по id группы: без её участников);
+   * без него выбирать некого.
+   */
+  memberSource?: ((groupId: string | null) => PickerSource) | null;
   total?: number | null;
   pagination?: DataTablePagination;
   fetching?: boolean;
@@ -271,7 +274,10 @@ export const GroupsView = ({
           <GroupForm
             key={form.mode === "edit" ? form.group.id : "new"}
             slug={slug}
-            source={memberSource}
+            source={
+              memberSource?.(form.mode === "edit" ? form.group.id : null) ??
+              null
+            }
             initial={form.mode === "edit" ? form.group : null}
             saving={saving}
             failure={formFailure}

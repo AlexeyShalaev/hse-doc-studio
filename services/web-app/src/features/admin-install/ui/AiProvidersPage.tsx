@@ -14,7 +14,7 @@ import {
   FilterMenu,
   Modal,
   Pagination,
-  SortMenu,
+  SortSelect,
   Spinner,
   type ActiveFilter,
 } from "@shared/ui";
@@ -186,17 +186,24 @@ const AiBody = ({
                   label: typeLabel(type),
                 }))}
               />
-              <SortMenu
+              <SortSelect
                 testId="shared-provider-sort"
-                value={state.sort}
+                sort={state.sort}
                 onChange={state.setSort}
+                label={t("ai.sort.caption")}
                 options={[
                   {
                     field: "created_at",
-                    label: t("ai.sort.created"),
+                    desc: true,
+                    label: t("ai.sort.newest"),
                   },
-                  { field: "name", label: t("ai.sort.name") },
-                  { field: "type", label: t("ai.sort.type") },
+                  {
+                    field: "created_at",
+                    desc: false,
+                    label: t("ai.sort.oldest"),
+                  },
+                  { field: "name", desc: false, label: t("ai.sort.name") },
+                  { field: "type", desc: false, label: t("ai.sort.type") },
                 ]}
               />
             </>
