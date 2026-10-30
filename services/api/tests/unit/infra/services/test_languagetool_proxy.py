@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from uuid import UUID
 
 import httpx
 import pytest
@@ -11,7 +13,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.routers import services_api
-from hse_doc_studio.core.jobs.runners import JobTokenSigner
+from hse_doc_studio.core.jobs.enums import JobState
+from hse_doc_studio.core.jobs.queue import IJobQueue
+from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner
 from hse_doc_studio.infra.services.languagetool import (
     LanguageToolProxy,
     PooledLanguageCheckService,
@@ -22,6 +26,8 @@ from hse_doc_studio.infra.services.languagetool import (
 from hse_doc_studio.infra.services.pool import PoolLimits, ServicePool
 
 _TEXT = "Первый абзац.\n\nВторой абзац.\n"
+_JOB_ID = UUID("00000000-0000-0000-0000-0000000000a1")
+_RUNNER_ID = UUID("00000000-0000-0000-0000-0000000000b1")
 
 
 def _replica(calls: list[str], status: int = 200) -> Callable[[httpx.Request], httpx.Response]:
@@ -113,6 +119,18 @@ def test__remote_service__sends_job_token_headers() -> None:
 # ── маршрут ────────────────────────────────────────────────────────────────
 
 
+async def _running_job(_job_id: object) -> object:
+    return SimpleNamespace(state=JobState.running, runner_id=_RUNNER_ID)
+
+
+async def _live_runner(_runner_id: str) -> object:
+    return SimpleNamespace(revoked_at=None)
+
+
+_RUNNING_JOB = SimpleNamespace(get=_running_job)
+_LIVE_RUNNER = SimpleNamespace(get=_live_runner)
+
+
 def _client(proxy: LanguageToolProxy, signer: JobTokenSigner) -> TestClient:
     from dishka import Provider, Scope, provide
 
@@ -126,6 +144,14 @@ def _client(proxy: LanguageToolProxy, signer: JobTokenSigner) -> TestClient:
         @provide
         def signer_(self) -> JobTokenSigner:
             return signer
+
+        @provide
+        def queue_(self) -> IJobQueue:
+            return _RUNNING_JOB  # type: ignore[return-value]
+
+        @provide
+        def runners_(self) -> IRunnerRepository:
+            return _LIVE_RUNNER  # type: ignore[return-value]
 
     container = make_async_container(_P())
     app = FastAPI()
@@ -141,7 +167,7 @@ def _client(proxy: LanguageToolProxy, signer: JobTokenSigner) -> TestClient:
 
 
 def _token(signer: JobTokenSigner, *, ttl: int = 60) -> str:
-    return signer.sign("job-1", "runner-1", datetime.now(UTC) + timedelta(seconds=ttl))
+    return signer.sign(str(_JOB_ID), str(_RUNNER_ID), datetime.now(UTC) + timedelta(seconds=ttl))
 
 
 @pytest.mark.unit
