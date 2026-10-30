@@ -18,6 +18,9 @@ ingress:
   tls:
     enabled: true
     secretName: studio-tls
+services:
+  languagetoolReplicas: ["http://languagetool-0.lt:8010", "http://languagetool-1.lt:8010"]
+  officeEditorReplicas: ["http://onlyoffice.example.org"]
 runner:
   enabled: true
   tags: tex

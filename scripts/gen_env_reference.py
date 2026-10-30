@@ -33,7 +33,7 @@ API_ROOT = ROOT / "services" / "api"
 # Группы, которые имеют смысл только на общем сервере; остальное работает в обоих режимах.
 SERVER_GROUPS = frozenset({"db", "s3", "auth", "mail", "admin", "egress", "rate_limit", "observability"})
 # Секреты, не оформленные как SecretStr (в значении может быть пароль).
-EXTRA_SECRETS = frozenset({"DB__DSN"})
+EXTRA_SECRETS = frozenset({"DB__DSN", "OFFICE_EDITOR__JWT_SECRET"})
 # Значения по умолчанию, зависящие от места запуска: в справочнике они должны быть одинаковыми везде.
 DEFAULT_OVERRIDES = {
     "DATA_DIR": "`~/.config/hse-studio`",

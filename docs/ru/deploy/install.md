@@ -29,6 +29,8 @@ docker compose up -d
 docker compose --profile services up -d   # добавить LanguageTool и ONLYOFFICE
 ```
 
+Профиль `services` поднимает реплики, но подключает их к api только `LANGUAGETOOL_REPLICAS` и `OFFICE_EDITOR_REPLICAS` в `.env` (готовые значения в комментариях `.env.example`). Пока списки пусты, проверка текста и редактор офисных файлов недоступны. В Helm адреса задаются в `services.languagetoolReplicas` и `services.officeEditorReplicas`.
+
 Обязательные значения в `.env`:
 
 | Переменная | Зачем |

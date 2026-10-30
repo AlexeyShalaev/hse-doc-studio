@@ -50,6 +50,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__MAIL__PORT, value: {{ .Values.mail.port | quote }}}
 - {name: HSE_STUDIO__MAIL__USERNAME, value: {{ .Values.mail.username | quote }}}
 - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: {{ .Values.mail.fromAddress | quote }}}
+- {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: {{ .Values.services.languagetoolReplicas | toJson | quote }}}
+- {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: {{ .Values.services.officeEditorReplicas | toJson | quote }}}
+- {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: {{ default (printf "http://%s:%v" (include "hds.fullname" .) .Values.service.port) .Values.services.backendInternalUrl | quote }}}
 {{- range $key, $value := .Values.api.extraEnv }}
 - {name: {{ $key }}, value: {{ $value | quote }}}
 {{- end }}
@@ -62,4 +65,5 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__MAIL__PASSWORD, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: smtp-password, optional: true}}}
 - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: health-token, optional: true}}}
 - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: metrics-token, optional: true}}}
+- {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: office-jwt-secret, optional: true}}}
 {{- end -}}

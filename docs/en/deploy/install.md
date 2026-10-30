@@ -40,6 +40,8 @@ Required values in `.env`:
 | `RUNNER_BOOTSTRAP_TOKEN` | one-time registration token for the first runner |
 | `TRUSTED_PROXIES` | your reverse proxy addresses as a JSON list, used to determine the client address |
 
+The `services` profile starts the replicas, but only `LANGUAGETOOL_REPLICAS` and `OFFICE_EDITOR_REPLICAS` in `.env` connect them to the api (ready values are in the comments of `.env.example`). While the lists are empty, text checking and the office editor are unavailable. In Helm the addresses go to `services.languagetoolReplicas` and `services.officeEditorReplicas`.
+
 The runner directory (`RUNNER_DATA_DIR`) is mounted at the same path on the host and in the container so sibling build containers see the files. Its owner is the image user `app` (uid 10001).
 
 ### Reverse proxy

@@ -35,6 +35,12 @@ tags:
 | `HSE_STUDIO__SERVER__BLOB_GC_MIN_AGE_DAYS` | float | `14.0` | оба | Сколько суток блоб живёт без упоминаний в манифестах до удаления; 0 выключает сборку мусора. |
 | `HSE_STUDIO__SERVER__MANIFEST_MAX_FILE_BYTES` | int | `268435456` | оба | Предел размера одного файла во входе задачи; больший файл даёт типизированный отказ. |
 | `HSE_STUDIO__SERVER__MANIFEST_MAX_JOB_BYTES` | int | `1073741824` | оба | Предел суммарного размера входа одной задачи; не зависит от квоты проекта. |
+| `HSE_STUDIO__SERVER__PROJECT_QUOTA_BYTES` | int | `2147483648` | оба | Предел размера проекта (дерево, git-стор, S3); запись сверх него отклоняется, 0 без предела. |
+| `HSE_STUDIO__SERVER__PROJECT_QUOTA_WARN_PERCENT` | int | `80` | оба | С какого процента предела статус проекта предупреждает о нехватке места. |
+| `HSE_STUDIO__SERVER__PROJECT_USAGE_INTERVAL_S` | float | `3600.0` | оба | Как часто сервер переизмеряет размер проектов (пачкой самых давних). |
+| `HSE_STUDIO__SERVER__PROJECT_USAGE_BATCH` | int | `20` | оба | Сколько проектов измеряется за один прогон. |
+| `HSE_STUDIO__SERVER__ORPHAN_GC_INTERVAL_S` | float | `21600.0` | оба | Как часто сервер ищет папки тома и префиксы S3 без записи в projects. |
+| `HSE_STUDIO__SERVER__ORPHAN_GC_MIN_AGE_HOURS` | float | `24.0` | оба | Сколько часов сирота должен пролежать, прежде чем его удалят. |
 | `HSE_STUDIO__SERVER__AUTH_CLEANUP_INTERVAL_S` | float | `3600.0` | оба | Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов. |
 | `HSE_STUDIO__CORS__ALLOW_ORIGINS` | `list[str]` | `http://localhost:3000`, `http://localhost:5173`, `http://localhost:17240` | оба | Allowed origins |
 | `HSE_STUDIO__CORS__ALLOW_CREDENTIALS` | bool | `true` | оба | Отдавать Access-Control-Allow-Credentials (cookie и заголовки авторизации). |
@@ -75,6 +81,14 @@ tags:
 | `HSE_STUDIO__LANGUAGETOOL__STARTUP_TIMEOUT_S` | float | `90.0` | оба | How long to wait for the container to become healthy after start. |
 | `HSE_STUDIO__LANGUAGETOOL__IDLE_TIMEOUT_S` | float | `600.0` | оба | Stop the auto-started container after this many seconds with no checks (frees RAM). |
 | `HSE_STUDIO__LANGUAGETOOL__STOP_ON_SHUTDOWN` | bool | `true` | оба | Stop the managed container when the backend shuts down (it auto-starts again on demand). |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS` | `list[str]` | пусто | оба | Серверный режим: URL реплик LanguageTool за общим пулом (…LANGUAGETOOL__POOL_REPLICAS). |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_MAX_INFLIGHT` | int | `4` | оба | Одновременных запросов на одну реплику пула. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_USER_RATE_PER_S` | float | `2.0` | оба | Пополнение доли пользователя, запросов в секунду. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_USER_BURST` | int | `20` | оба | Запас запросов у пользователя. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_CIRCUIT_FAILURES` | int | `3` | оба | Подряд неудач реплики до размыкания цепи. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_CIRCUIT_OPEN_S` | float | `30.0` | оба | Сколько реплика исключена после размыкания. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_CACHE_ENTRIES` | int | `2048` | оба | Размер LRU-кэша абзацев прокси, 0 выключает. |
+| `HSE_STUDIO__LANGUAGETOOL__POOL_MAX_TEXT_CHARS` | int | `400000` | оба | Наибольший текст одного запроса к прокси. |
 | `HSE_STUDIO__OFFICE_CONVERT__IMAGE` | str | `gotenberg/gotenberg:8` | оба | Default Gotenberg image when the user hasn't picked one in Settings (office→PDF conversion). |
 | `HSE_STUDIO__OFFICE_CONVERT__ALLOWED_REPOS` | `list[str]` | `gotenberg/gotenberg` | оба | Docker Hub repos the UI may list/pull/run for the convert service (allowlist, as LanguageTool). |
 | `HSE_STUDIO__OFFICE_CONVERT__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch Gotenberg tag lists. |
@@ -95,6 +109,14 @@ tags:
 | `HSE_STUDIO__OFFICE_EDITOR__HEALTH_TIMEOUT_S` | float | `5.0` | оба | Timeout for a single container health probe. |
 | `HSE_STUDIO__OFFICE_EDITOR__IDLE_TIMEOUT_S` | float | `1800.0` | оба | Stop the auto-started container after this many seconds without editor activity (frees RAM). |
 | `HSE_STUDIO__OFFICE_EDITOR__BACKEND_HOST_FOR_CONTAINER` | str | `host.docker.internal` | оба | How the Document Server container reaches THIS backend (document download + save callback). host.docker.internal works natively via --add-host=host-gateway; compose deployments may override with the backend service name. |
+| `HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS` | `list[str]` | пусто | оба | Server mode: base URLs of the Document Server replicas (empty means the editor is unavailable). A document is pinned to one replica by rendezvous hashing of its key. |
+| `HSE_STUDIO__OFFICE_EDITOR__POOL_MAX_SESSIONS` | int | `18` | оба | Concurrent editing sessions across the installation (Community Edition allows about 20). |
+| `HSE_STUDIO__OFFICE_EDITOR__POOL_SESSION_TTL_S` | float | `1800.0` | оба | A session without a callback or keepalive for this long is released. |
+| `HSE_STUDIO__OFFICE_EDITOR__POOL_PROBE_INTERVAL_S` | float | `15.0` | оба | How often replica health is re-polled. |
+| `HSE_STUDIO__OFFICE_EDITOR__POOL_RETRY_AFTER_S` | int | `30` | оба | Retry hint returned with the editor_busy state. |
+| `HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET` 🔒 | str | секрет, не печатается | оба | Server mode: JWT secret shared with all replicas; derived from the key ring if empty. |
+| `HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL` | str | пусто | оба | Server mode: base URL of this API as the Document Server replicas see it (document and callback). |
+| `HSE_STUDIO__OFFICE_EDITOR__TOKEN_TTL_S` | int | `43200` | оба | Lifetime of the signed document and callback tokens (a long editing session needs saves). |
 | `HSE_STUDIO__OLLAMA__IMAGE` | str | `ollama/ollama:latest` | оба | Docker image used for the managed (fallback) Ollama container. |
 | `HSE_STUDIO__OLLAMA__CONTAINER_NAME` | str | `hse-ollama` | оба | Stable name of the managed Ollama container (adopt/reconcile across restarts). |
 | `HSE_STUDIO__OLLAMA__CONTAINER_PORT` | int | `11434` | оба | Port Ollama listens on inside the container. |
@@ -177,6 +199,14 @@ tags:
 | `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | `list[str]` | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__REQUIRE_APPROVAL` | bool | не задано | server | Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSWORD_ENABLED` | bool | не задано | server | Вход по паролю; заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__OIDC__ID` | str | `sso` | server | Идентификатор в адресах входа. |
+| `HSE_STUDIO__AUTH__OIDC__LABEL` | str | `SSO` | server | Название на кнопке входа. |
+| `HSE_STUDIO__AUTH__OIDC__ISSUER` | str | не задано | server | Адрес издателя (discovery лежит под ним). |
+| `HSE_STUDIO__AUTH__OIDC__CLIENT_ID` | str | не задано | server | Идентификатор клиента у провайдера. |
+| `HSE_STUDIO__AUTH__OIDC__CLIENT_SECRET` 🔒 | str | секрет, не печатается | server | Секрет клиента. |
+| `HSE_STUDIO__AUTH__OIDC__CLIENT_SECRET_FILE` | Path | не задано | server | Файл с секретом клиента (docker secret). |
+| `HSE_STUDIO__AUTH__OIDC__SCOPES` | str | `openid email profile` | server | Запрашиваемые области. |
+| `HSE_STUDIO__AUTH__OIDC__AUTO_PROVISION` | bool | `false` | server | Создавать аккаунт при первом входе в обход политики регистрации. |
 | `HSE_STUDIO__AUTH__ADMIN_EMAIL` | str | не задано | server | Первый администратор из окружения: вместе с паролем создаётся при старте, если админа ещё нет (идемпотентно, пароль существующего не трогается). Рекомендуемый путь для compose и helm. |
 | `HSE_STUDIO__AUTH__ADMIN_NAME` | str | не задано | server | Имя первого администратора из окружения. |
 | `HSE_STUDIO__AUTH__ADMIN_PASSWORD` 🔒 | str | секрет, не печатается | server | Пароль первого администратора из окружения. |

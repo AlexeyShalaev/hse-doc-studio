@@ -86,7 +86,17 @@
         "secretsKey": {"type": "string"},
         "runnerBootstrapToken": {"type": "string"},
         "healthToken": {"type": "string"},
-        "metricsToken": {"type": "string"}
+        "metricsToken": {"type": "string"},
+        "officeJwtSecret": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "services": {
+      "type": "object",
+      "properties": {
+        "languagetoolReplicas": {"type": "array", "items": {"type": "string", "pattern": "^https?://.+"}},
+        "officeEditorReplicas": {"type": "array", "items": {"type": "string", "pattern": "^https?://.+"}},
+        "backendInternalUrl": {"type": "string", "pattern": "^$|^https?://.+"}
       },
       "additionalProperties": false
     },

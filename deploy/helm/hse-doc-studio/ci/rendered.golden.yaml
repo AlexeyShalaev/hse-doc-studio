@@ -19,6 +19,7 @@ stringData:
   smtp-password: ""
   health-token: ""
   metrics-token: ""
+  office-jwt-secret: ""
 
 ---
 # Source: hse-doc-studio/templates/pvc.yaml
@@ -89,7 +90,7 @@ spec:
         app.kubernetes.io/instance: rel
         app.kubernetes.io/component: api
       annotations:
-        checksum/secret: 292850a40d4eb0636215a8f0e3666a6cb797534805520f8625062305b0b9ebbc
+        checksum/secret: 722c37bc0a56dfd9694eb023e4d8ceddf564839691f38233cef8f9f74243d6f4
     spec:
       securityContext:
         runAsNonRoot: true
@@ -117,6 +118,9 @@ spec:
             - {name: HSE_STUDIO__MAIL__PORT, value: "587"}
             - {name: HSE_STUDIO__MAIL__USERNAME, value: ""}
             - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: "no-reply@localhost"}
+            - {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: "[\"http://languagetool-0.lt:8010\",\"http://languagetool-1.lt:8010\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: "[\"http://onlyoffice.example.org\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: "http://rel-hse-doc-studio:8000"}
             - {name: HSE_STUDIO__DB__DSN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: dsn}}}
             - {name: HSE_STUDIO__SECRETS__KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: secrets-key}}}
             - {name: HSE_STUDIO__S3__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-access-key}}}
@@ -125,6 +129,7 @@ spec:
             - {name: HSE_STUDIO__MAIL__PASSWORD, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: smtp-password, optional: true}}}
             - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: health-token, optional: true}}}
             - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: metrics-token, optional: true}}}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: office-jwt-secret, optional: true}}}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
           volumeMounts:
@@ -300,6 +305,9 @@ spec:
             - {name: HSE_STUDIO__MAIL__PORT, value: "587"}
             - {name: HSE_STUDIO__MAIL__USERNAME, value: ""}
             - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: "no-reply@localhost"}
+            - {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: "[\"http://languagetool-0.lt:8010\",\"http://languagetool-1.lt:8010\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: "[\"http://onlyoffice.example.org\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: "http://rel-hse-doc-studio:8000"}
             - {name: HSE_STUDIO__DB__DSN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: dsn}}}
             - {name: HSE_STUDIO__SECRETS__KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: secrets-key}}}
             - {name: HSE_STUDIO__S3__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-access-key}}}
@@ -308,6 +316,7 @@ spec:
             - {name: HSE_STUDIO__MAIL__PASSWORD, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: smtp-password, optional: true}}}
             - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: health-token, optional: true}}}
             - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: metrics-token, optional: true}}}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: office-jwt-secret, optional: true}}}
           resources:
             {}
 

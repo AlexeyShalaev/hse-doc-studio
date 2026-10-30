@@ -29,6 +29,9 @@ docker compose --profile services up -d      # добавить LanguageTool и 
 docker compose up -d --scale runner=3        # три раннера
 ```
 
+Реплики из профиля `services` подключаются к api переменными `LANGUAGETOOL_REPLICAS` и `OFFICE_EDITOR_REPLICAS`
+в `.env` (значения в комментариях `.env.example`); пока списки пусты, проверка текста и редактор недоступны.
+
 Каталог раннера принадлежит пользователю `app` внутри образа. Узнать его uid и gid:
 `docker run --rm --entrypoint id ghcr.io/alexeyshalaev/hse-doc-studio app`.
 При нескольких репликах `--scale runner=N` у каждой должен быть свой каталог данных: используйте

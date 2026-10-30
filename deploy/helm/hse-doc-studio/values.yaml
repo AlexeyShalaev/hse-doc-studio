@@ -60,7 +60,7 @@ mail:
 
 # Секреты. Либо существующий Secret с ключами из списка ниже, либо чарт создаст свой из значений.
 # Ключи: dsn, secrets-key, s3-access-key, s3-secret-key, runner-bootstrap-token,
-# а также необязательные smtp-password, health-token, metrics-token.
+# а также необязательные smtp-password, health-token, metrics-token, office-jwt-secret.
 secrets:
   existingSecret: ""
   # Ключ шифрования секретов в базе (Fernet). Потеря делает сохранённые секреты нечитаемыми.
@@ -68,6 +68,17 @@ secrets:
   runnerBootstrapToken: ""
   healthToken: ""
   metricsToken: ""
+  # Общий секрет JWT реплик ONLYOFFICE; пусто значит секрет выводится из ключа шифрования.
+  officeJwtSecret: ""
+
+# Внешние реплики сервисов (в чарт не входят). Пустой список значит, что сервис недоступен.
+services:
+  # Адреса реплик LanguageTool, например ["http://languagetool-0.lt:8010"].
+  languagetoolReplicas: []
+  # Адреса реплик ONLYOFFICE Document Server.
+  officeEditorReplicas: []
+  # Адрес api глазами реплик ONLYOFFICE (документ и обратный вызов); пусто значит имя Service чарта.
+  backendInternalUrl: ""
 
 # Миграции схемы выполняет отдельный Job перед обновлением (helm pre-upgrade).
 # На первой установке схему ведёт сам api под advisory-локом.
