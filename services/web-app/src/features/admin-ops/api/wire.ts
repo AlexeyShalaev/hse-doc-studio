@@ -32,10 +32,13 @@ export const jobFromWire = (job: WireJob, now: number): AdminJob => ({
   status: job.state,
   priority: job.priority_class,
   project_id: job.project_id,
-  // Подписи сервер берёт соединением; null значит, что записи уже нет.
+  // Подписи сервер берёт соединением (JOIN); null значит, что записи уже нет.
   project_name: job.project_name,
   user_id: job.user_id,
   user_name: job.user_name ?? "",
+  user_email: job.user_email,
+  org_id: job.org_id,
+  org_name: job.org_name,
   tags: job.tags,
   runner_id: job.runner_id,
   runner_name: job.runner_name,
@@ -53,7 +56,8 @@ export const jobPageFromWire = (
   now: number,
 ): AdminJobPage => ({
   items: page.items.map((job) => jobFromWire(job, now)),
-  hasMore: page.next_cursor !== null,
+  next_cursor: page.next_cursor,
+  total_estimate: page.total_estimate,
 });
 
 export const summaryFromWire = (
@@ -120,6 +124,7 @@ export const storageFromWire = (storage: WireStorage): AdminStorage => ({
   free_bytes: storage.volume_free_bytes,
   volume_total_bytes: storage.volume_total_bytes,
   computed_at: storage.computed_at,
+  // Пятёрка крупнейших для сводки; вся таблица владельцев идёт отдельным списком.
   owners: storage.top_owners.map((owner) => ({
     id: owner.owner_id,
     name: owner.owner_name,

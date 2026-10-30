@@ -5,17 +5,30 @@ import type {
   AdminQuotas,
   AdminRunner,
   AdminRunnerRotated,
+  AdminRunnerSummary,
   AdminRunnerToken,
   AdminRunnerTokenCreated,
   AdminService,
   AdminStorage,
+  AdminStorageOwnerRow,
 } from "@entities/session";
+import type { ListQueryState } from "@shared/lib";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
+import {
+  useOwnerListState,
+  useQueueListState,
+  useRunnerListState,
+  useTokenListState,
+  type ListView,
+} from "../lib/lists";
 import { ensureAdminOpsLocales } from "../lib/locales";
+import { runnerStatus } from "../lib/runnerStatus";
+import type { ViewStatus } from "../lib/viewStatus";
 import { Quotas } from "./Quotas";
 import { QuotasView } from "./QuotasView";
 import { Queue } from "./Queue";
 import { QueueView, type QueueViewProps } from "./QueueView";
+import type { QueueFilter as QueueFilterName } from "../lib/lists";
 import {
   CreateTokenDialog,
   CreateTokenForm,
@@ -70,20 +83,24 @@ const runner = (
   name: string,
   seen: number | null,
   extra: Partial<AdminRunner> = {},
-): AdminRunner => ({
-  id,
-  name,
-  status: "offline",
-  tags: ["compile", "office"],
-  concurrency: 2,
-  resource_class: "standard",
-  version: "0.3.0",
-  created_at: ago(86400 * 6),
-  last_seen_at: seen === null ? null : ago(seen),
-  paused: false,
-  revoked: false,
-  ...extra,
-});
+): AdminRunner => {
+  const base: AdminRunner = {
+    id,
+    name,
+    status: "offline",
+    tags: ["compile", "office"],
+    concurrency: 2,
+    resource_class: "standard",
+    version: "0.3.0",
+    created_at: ago(86400 * 6),
+    last_seen_at: seen === null ? null : ago(seen),
+    paused: false,
+    revoked: false,
+    ...extra,
+  };
+  // Состояние строки считает сервер; здесь по тем же правилам.
+  return { ...base, status: runnerStatus(base, NOW) };
+};
 
 const RUNNER_1 = runner("rn1", "runner-1", 6);
 const RUNNERS: AdminRunner[] = [
@@ -139,20 +156,93 @@ const ROTATED: AdminRunnerRotated = {
   ),
 };
 
-const runnersView = (extra: Partial<RunnersViewProps> = {}) => (
-  <RunnersView
-    status="ready"
-    runners={RUNNERS}
-    tokensStatus="ready"
-    tokens={TOKENS}
-    now={NOW}
-    onTogglePause={noop}
-    onRotate={noop}
-    onRevoke={noop}
-    onCreateToken={noop}
-    onRevokeToken={noop}
-    {...extra}
-  />
+/** Окно статического списка галереи: страницы есть, фильтров сервера нет. */
+const staticList = <T, F extends string, S extends string>(
+  state: ListQueryState<F, S>,
+  items: readonly T[],
+  extra: { status?: ViewStatus; failed?: boolean; total?: number } = {},
+): ListView<T, F, S> => {
+  const total = extra.total ?? items.length;
+  return {
+    status: extra.status ?? "ready",
+    items: items.slice(state.offset, state.offset + state.pageSize),
+    total,
+    fetching: false,
+    failed: extra.failed ?? false,
+    state,
+    pagination: {
+      page: state.page,
+      pageSize: state.pageSize,
+      total,
+      onPageChange: state.setPage,
+      pageSizes: state.pageSizes,
+      onPageSizeChange: state.setPageSize,
+    },
+    onRetry: noop,
+  };
+};
+
+/** Счётчики раннеров, как их считает сервер. */
+const countsOf = (runners: readonly AdminRunner[]): AdminRunnerSummary => {
+  const by = (st: AdminRunner["status"]) =>
+    runners.filter((r) => r.status === st).length;
+  const versions = runners.filter((r) => !r.revoked).map((r) => r.version);
+  const newest = [...versions].sort().reverse()[0] ?? null;
+  return {
+    online: by("online"),
+    paused: by("paused"),
+    stale: by("stale"),
+    offline: by("offline"),
+    revoked: by("revoked"),
+    outdated: versions.filter((v) => newest !== null && v !== newest).length,
+    newest_version: newest,
+  };
+};
+
+type RunnersDemoProps = {
+  runners?: AdminRunner[];
+  tokens?: AdminRunnerToken[];
+  status?: ViewStatus;
+  tokensStatus?: ViewStatus;
+  extra?: Partial<RunnersViewProps>;
+};
+
+const RunnersDemo = ({
+  runners = RUNNERS,
+  tokens = TOKENS,
+  status = "ready",
+  tokensStatus = "ready",
+  extra = {},
+}: RunnersDemoProps) => {
+  const runnerState = useRunnerListState();
+  const tokenState = useTokenListState();
+  return (
+    <RunnersView
+      runners={staticList(runnerState, runners, {
+        status,
+        failed: status === "error",
+      })}
+      tokens={staticList(tokenState, tokens, {
+        status: tokensStatus,
+        failed: tokensStatus === "error",
+      })}
+      counts={status === "ready" ? countsOf(runners) : null}
+      countsStatus={status}
+      summary={status === "ready" ? SUMMARY : null}
+      summaryStatus={status}
+      now={NOW}
+      onTogglePause={noop}
+      onRotate={noop}
+      onRevoke={noop}
+      onCreateToken={noop}
+      onRevokeToken={noop}
+      {...extra}
+    />
+  );
+};
+
+const runnersView = (props: RunnersDemoProps = {}) => (
+  <RunnersDemo {...props} />
 );
 
 const job = (
@@ -238,24 +328,53 @@ const SUMMARY: AdminQueueSummary = {
   ],
 };
 
-const QUERY = { status: "", kind: "", q: "", limit: 25 } as const;
+type QueueDemoProps = Partial<Omit<QueueViewProps, "state" | "pagination">> & {
+  hasMore?: boolean;
+  /** Показать вид «по фильтру ничего не нашлось». */
+  filteredBy?: readonly string[];
+};
 
-const queueView = (extra: Partial<QueueViewProps> = {}) => (
-  <QueueView
-    summaryStatus="ready"
-    summary={SUMMARY}
-    status="ready"
-    jobs={JOBS}
-    hasMore={false}
-    query={QUERY}
-    now={NOW}
-    onQueryChange={noop}
-    onLoadMore={noop}
-    onOpen={noop}
-    onCancel={noop}
-    {...extra}
-  />
-);
+const QueueDemo = ({
+  hasMore = false,
+  filteredBy,
+  jobs = JOBS,
+  ...extra
+}: QueueDemoProps) => {
+  const listState = useQueueListState();
+  const state: ListQueryState<QueueFilterName, never> = filteredBy
+    ? {
+        ...listState,
+        filters: { ...listState.filters, state: filteredBy },
+        filter: (name) =>
+          name === "state" ? (filteredBy[0] ?? "") : listState.filter(name),
+        isFiltered: true,
+        activeFilterCount: 1,
+      }
+    : listState;
+  return (
+    <QueueView
+      summaryStatus="ready"
+      summary={SUMMARY}
+      status="ready"
+      jobs={jobs}
+      state={state}
+      pagination={{
+        mode: "cursor",
+        shown: jobs.length,
+        hasMore,
+        onLoadMore: noop,
+        loading: false,
+        totalEstimate: hasMore ? 15_230 : null,
+      }}
+      now={NOW}
+      onOpen={noop}
+      onCancel={noop}
+      {...extra}
+    />
+  );
+};
+
+const queueView = (props: QueueDemoProps = {}) => <QueueDemo {...props} />;
 
 const QUOTAS: AdminQuotas = {
   user_concurrent: 2,
@@ -317,6 +436,48 @@ const STORAGE: AdminStorage = {
   ],
 };
 
+const OWNERS: AdminStorageOwnerRow[] = [
+  {
+    kind: "org",
+    id: "kafedra-ii",
+    name: "Кафедра ИИ",
+    email: null,
+    projects: 14,
+    bytes: Math.round(1.2 * GIB),
+  },
+  ...STORAGE.owners.map((o, i): AdminStorageOwnerRow => ({
+    kind: "user",
+    id: o.id,
+    name: o.name,
+    email: `${["maria.keller", "ivan.sidorov", "petr.orlov", "anna.petrova"][i] ?? "user"}@example.org`,
+    projects: o.projects,
+    bytes: o.projects * 48 * 1024 ** 2,
+  })),
+];
+
+const StorageDemo = ({
+  status = "ready",
+  storage = STORAGE,
+  owners = OWNERS,
+  onRetry,
+}: {
+  status?: ViewStatus;
+  storage?: AdminStorage | null;
+  owners?: AdminStorageOwnerRow[];
+  onRetry?: () => void;
+}) => {
+  const state = useOwnerListState();
+  return (
+    <StorageView
+      status={status}
+      storage={storage}
+      owners={staticList(state, owners)}
+      now={NOW}
+      {...(onRetry ? { onRetry } : {})}
+    />
+  );
+};
+
 const live = (scenario: string) => ({ scenario });
 
 /** Операционные экраны админки: раннеры, очередь, квоты, сервисы, хранилище; живые разделы на демо-мире. */
@@ -353,12 +514,10 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           runners: [],
           tokensStatus: "error",
           tokens: [],
-          onRetry: noop,
-          onRetryTokens: noop,
         }),
       ),
       entry("admin_runners_busy", "Меняется раннер", () =>
-        runnersView({ busyId: "rn1" }),
+        runnersView({ extra: { busyId: "rn1" } }),
       ),
       entry("admin_runners_forbidden", "Нет прав", () =>
         runnersView({
@@ -468,8 +627,7 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       entry("admin_queue_nomatch", "Фильтр ничего не нашёл", () =>
         queueView({
           jobs: [],
-          hasMore: false,
-          query: { ...QUERY, status: "failed", q: "иванов" },
+          filteredBy: ["failed"],
         }),
       ),
       entry("admin_queue_more", "Есть ещё страницы", () =>
@@ -560,26 +718,18 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
     id: "admin-ops-storage",
     title: "Админка: хранилище",
     entries: [
-      entry("admin_storage", "Место занято", () => (
-        <StorageView status="ready" storage={STORAGE} now={NOW} />
-      )),
+      entry("admin_storage", "Место занято", () => <StorageDemo />),
       entry("admin_storage_low", "Свободного места мало", () => (
-        <StorageView
-          status="ready"
+        <StorageDemo
           storage={{ ...STORAGE, free_bytes: Math.round(2.4 * GIB) }}
-          now={NOW}
         />
       )),
       entry("admin_storage_unknown", "Свободное место неизвестно", () => (
-        <StorageView
-          status="ready"
-          storage={{ ...STORAGE, free_bytes: null }}
-          now={NOW}
-        />
+        <StorageDemo storage={{ ...STORAGE, free_bytes: null }} />
       )),
       entry("admin_storage_empty", "Проектов нет", () => (
-        <StorageView
-          status="ready"
+        <StorageDemo
+          owners={[]}
           storage={{
             ...STORAGE,
             blob_count: 0,
@@ -588,17 +738,16 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
             deleted_projects: 0,
             owners: [],
           }}
-          now={NOW}
         />
       )),
       entry("admin_storage_loading", "Загрузка", () => (
-        <StorageView status="loading" storage={null} now={NOW} />
+        <StorageDemo status="loading" storage={null} />
       )),
       entry("admin_storage_error", "Не загрузилось", () => (
-        <StorageView status="error" storage={null} now={NOW} onRetry={noop} />
+        <StorageDemo status="error" storage={null} onRetry={noop} />
       )),
       entry("admin_storage_forbidden", "Нет прав", () => (
-        <StorageView status="forbidden" storage={null} now={NOW} />
+        <StorageDemo status="forbidden" storage={null} />
       )),
     ],
   },

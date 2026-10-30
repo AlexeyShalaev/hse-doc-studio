@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
-  Cpu,
   KeyRound,
   ListOrdered,
+  LoaderCircle,
   Pause,
   Play,
   Plus,
@@ -15,43 +15,65 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatPastTime, formatRelativeTime } from "@shared/lib";
+import { formatPastTime, formatRelativeTime, localeTag } from "@shared/lib";
 import {
   ActionMenu,
   Badge,
   Button,
   DataTable,
   EmptyState,
+  FilterBar,
+  FilterMenu,
   KpiGrid,
   KpiTile,
   ListRow,
   Meter,
+  NoResults,
+  Pagination,
   Section,
   SectionList,
+  Select,
   StatusDot,
   Tooltip,
+  type ActiveFilter,
   type KpiTone,
   type StatusDotStatus,
 } from "@shared/ui";
 import type {
   AdminQueueSummary,
   AdminRunner,
+  AdminRunnerSummary,
   AdminRunnerToken,
 } from "@entities/session";
 import { formatDuration } from "../lib/format";
 import { LONG_WAIT_S } from "../lib/jobs";
-import { runnerStatus, type RunnerStatus } from "../lib/runnerStatus";
+import {
+  RUNNER_SORT,
+  TOKEN_STATUSES,
+  type ListView,
+  type RunnerFilter,
+  type RunnerSort,
+  type TokenFilter,
+  type TokenSort,
+} from "../lib/lists";
+import {
+  RUNNER_STATUSES,
+  liveRunners,
+  quietRunners,
+  type RunnerStatus,
+} from "../lib/runnerStatus";
 import { tokenStatus, type TokenStatus } from "../lib/tokenStatus";
 import { useDurationUnits } from "../lib/useDurationUnits";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
 
 export type RunnersViewProps = {
-  status: ViewStatus;
-  runners: readonly AdminRunner[];
-  tokensStatus: ViewStatus;
-  tokens: readonly AdminRunnerToken[];
-  /** Сводка очереди: сколько задач ждёт раннера. */
+  runners: ListView<AdminRunner, RunnerFilter, RunnerSort>;
+  tokens: ListView<AdminRunnerToken, TokenFilter, TokenSort>;
+  /** Счётчики раннеров от сервера: плитки и числа у фильтра состояний. */
+  counts: AdminRunnerSummary | null;
+  countsStatus?: ViewStatus;
+  /** Сводка очереди: сколько задач ждёт раннера и сколько выполняется. */
   summary?: AdminQueueSummary | null;
   summaryStatus?: ViewStatus;
   /** Занятые места по раннерам; null, пока не известно. */
@@ -59,8 +81,6 @@ export type RunnersViewProps = {
   now: number;
   /** Идентификатор раннера, над которым идёт действие. */
   busyId?: string | null;
-  onRetry?: () => void;
-  onRetryTokens?: () => void;
   onTogglePause: (runner: AdminRunner) => void;
   onRotate: (runner: AdminRunner) => void;
   onRevoke: (runner: AdminRunner) => void;
@@ -79,6 +99,9 @@ type Row = {
   pause: () => void;
   rotate: () => void;
   revoke: () => void;
+  /** Показать раннеры с этим тегом или классом. */
+  pickTag: (tag: string) => void;
+  pickClass: (name: string) => void;
   /** Есть раннер новее: версия, до которой стоит обновить. */
   newer: string | null;
 };
@@ -98,15 +121,6 @@ const TOKEN_DOT: Record<TokenStatus, StatusDotStatus> = {
   revoked: "neutral",
 };
 
-// Отозванные внизу: они только для истории.
-const ORDER: Record<RunnerStatus, number> = {
-  online: 0,
-  stale: 1,
-  paused: 2,
-  offline: 3,
-  revoked: 4,
-};
-
 /** Сравнение версий вида 0.3.0: по числам, а не по строкам. */
 const compareVersions = (a: string, b: string): number => {
   const pa = a.split(".").map((x) => Number.parseInt(x, 10) || 0);
@@ -118,19 +132,23 @@ const compareVersions = (a: string, b: string): number => {
   return 0;
 };
 
+const TOKEN_ORDER: Record<string, TokenSort | `-${TokenSort}`> = {
+  newest: "-created_at",
+  expiring: "expires_at",
+  label: "label",
+};
+
 /** Раннеры установки и токены регистрации. */
 export const RunnersView = ({
-  status,
-  runners,
-  tokensStatus,
+  runners: list,
   tokens,
+  counts,
+  countsStatus = "ready",
   summary = null,
   summaryStatus = "ready",
   slots = null,
   now,
   busyId = null,
-  onRetry,
-  onRetryTokens,
   onTogglePause,
   onRotate,
   onRevoke,
@@ -140,78 +158,66 @@ export const RunnersView = ({
 }: RunnersViewProps) => {
   const { t } = useTranslation("adminOps");
   const units = useDurationUnits();
+  const num = (value: number) => value.toLocaleString(localeTag());
+  const { state } = list;
 
-  const live = runners.filter((r) => !r.revoked);
-  const statuses = live.map((r) => runnerStatus(r, now));
-  const online = statuses.filter((s) => s === "online").length;
-  const paused = statuses.filter((s) => s === "paused").length;
-  const silent = statuses.filter(
-    (s) => s === "stale" || s === "offline",
-  ).length;
-  const onlineRunners = live.filter((r) => runnerStatus(r, now) === "online");
-  const capacity = onlineRunners.reduce((sum, r) => sum + r.concurrency, 0);
-  const used = slots
-    ? onlineRunners.reduce((sum, r) => sum + (slots.get(r.id) ?? 0), 0)
-    : null;
-  const newest = useMemo(
-    () =>
-      runners
-        .filter((r) => !r.revoked)
-        .map((r) => r.version)
-        .reduce<string | null>(
-          (best, v) =>
-            best === null || compareVersions(v, best) > 0 ? v : best,
-          null,
-        ),
-    [runners],
-  );
-  const outdatedOf = (r: AdminRunner): boolean =>
-    newest !== null && !r.revoked && compareVersions(r.version, newest) < 0;
-  const outdated = live.filter(outdatedOf).length;
+  const live = counts ? liveRunners(counts) : 0;
+  const quiet = counts ? quietRunners(counts) : 0;
+  const newest = counts?.newest_version ?? null;
 
   const columns = useMemo<ColumnDef<Row>[]>(
     () => [
       {
         id: "name",
         header: t("runners.columns.name"),
-        enableSorting: false,
         cell: ({ row }) => {
-          const { runner, status: st, newer } = row.original;
+          const { runner, status: st, pickClass } = row.original;
           return (
             <span
               className={st === "revoked" ? "ops-cell ops-dim-row" : "ops-cell"}
             >
               <span className="ops-cell-title">{runner.name}</span>
-              <span className="ops-cell-sub">
-                {newer !== null ? (
-                  <Tooltip
-                    content={t("runners.newerVersion", { version: newer })}
+              {/* Обычный класс ничего не говорит: подписан только особый. */}
+              {runner.resource_class !== "standard" && (
+                <span className="ops-cell-sub">
+                  <button
+                    type="button"
+                    className="ops-link"
+                    title={t("runners.classFilter")}
+                    onClick={() => {
+                      pickClass(runner.resource_class);
+                    }}
                   >
-                    <span
-                      className="ops-version"
-                      data-outdated="true"
-                      tabIndex={0}
-                      data-testid={`runner-outdated-${runner.id}`}
-                    >
-                      <TriangleAlert size={11} aria-hidden="true" />v
-                      {runner.version}
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <span className="ops-version" title={t("runners.versionOf")}>
-                    v{runner.version}
-                  </span>
-                )}
-                {/* Обычный класс ничего не говорит: подписан только особый. */}
-                {runner.resource_class !== "standard" && (
-                  <>
-                    {" · "}
                     {t(`runners.class.${runner.resource_class}`, {
                       defaultValue: runner.resource_class,
                     })}
-                  </>
-                )}
+                  </button>
+                </span>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        id: "version",
+        header: t("runners.columns.version"),
+        sortDescFirst: true,
+        cell: ({ row }) => {
+          const { runner, newer } = row.original;
+          return newer !== null ? (
+            <Tooltip content={t("runners.newerVersion", { version: newer })}>
+              <span
+                className="ops-version"
+                data-outdated="true"
+                tabIndex={0}
+                data-testid={`runner-outdated-${runner.id}`}
+              >
+                <TriangleAlert size={11} aria-hidden="true" />v{runner.version}
               </span>
+            </Tooltip>
+          ) : (
+            <span className="ops-version" title={t("runners.versionOf")}>
+              v{runner.version}
             </span>
           );
         },
@@ -219,7 +225,6 @@ export const RunnersView = ({
       {
         id: "status",
         header: t("runners.columns.status"),
-        enableSorting: false,
         cell: ({ row }) => {
           const { runner, status: st, seen } = row.original;
           return (
@@ -249,9 +254,17 @@ export const RunnersView = ({
             }
           >
             {row.original.runner.tags.map((tag) => (
-              <Badge key={tag} variant="subtle">
-                {tag}
-              </Badge>
+              <button
+                key={tag}
+                type="button"
+                className="ops-tag-btn"
+                title={t("runners.tagFilter", { tag })}
+                onClick={() => {
+                  row.original.pickTag(tag);
+                }}
+              >
+                <Badge variant="subtle">{tag}</Badge>
+              </button>
             ))}
           </span>
         ),
@@ -336,59 +349,155 @@ export const RunnersView = ({
     [t],
   );
 
+  const { setFilter } = state;
+  // Порядок строк задаёт сервер (sort): здесь только подписи к каждой.
   const rows = useMemo<Row[]>(
     () =>
-      runners
-        .map((runner) => {
-          const st = runnerStatus(runner, now);
-          return {
-            runner,
-            status: st,
-            seen:
-              runner.last_seen_at === null
-                ? t("runners.neverSeen")
-                : t("runners.seenAgo", {
-                    ago: formatPastTime(runner.last_seen_at, now),
-                  }),
-            used: slots ? (slots.get(runner.id) ?? 0) : null,
-            busy: busyId === runner.id,
-            pause: () => {
-              onTogglePause(runner);
-            },
-            rotate: () => {
-              onRotate(runner);
-            },
-            revoke: () => {
-              onRevoke(runner);
-            },
-            newer:
-              newest !== null &&
-              !runner.revoked &&
-              compareVersions(runner.version, newest) < 0
-                ? newest
-                : null,
-          };
-        })
-        .sort((a, b) => ORDER[a.status] - ORDER[b.status]),
-    [runners, now, t, slots, busyId, newest, onTogglePause, onRotate, onRevoke],
+      list.items.map((runner) => ({
+        runner,
+        status: runner.status,
+        seen:
+          runner.last_seen_at === null
+            ? t("runners.neverSeen")
+            : t("runners.seenAgo", {
+                ago: formatPastTime(runner.last_seen_at, now),
+              }),
+        used: slots ? (slots.get(runner.id) ?? 0) : null,
+        busy: busyId === runner.id,
+        pause: () => {
+          onTogglePause(runner);
+        },
+        rotate: () => {
+          onRotate(runner);
+        },
+        revoke: () => {
+          onRevoke(runner);
+        },
+        pickTag: (tag: string) => {
+          setFilter("tag", tag);
+        },
+        pickClass: (name: string) => {
+          setFilter("resource_class", name);
+        },
+        newer:
+          newest !== null &&
+          !runner.revoked &&
+          compareVersions(runner.version, newest) < 0
+            ? newest
+            : null,
+      })),
+    [
+      list.items,
+      now,
+      t,
+      slots,
+      busyId,
+      newest,
+      onTogglePause,
+      onRotate,
+      onRevoke,
+      setFilter,
+    ],
   );
 
-  const noneOnline = status === "ready" && live.length > 0 && online === 0;
+  const noneOnline = counts !== null && live > 0 && counts.online === 0;
   const waiting = summary?.queued ?? null;
   const oldest = summary?.oldest_queued_age_s ?? null;
   const onlineTone: KpiTone =
-    online === 0 ? "danger" : silent > 0 ? "warning" : "success";
+    counts === null || counts.online === 0
+      ? "danger"
+      : quiet > 0
+        ? "warning"
+        : "success";
 
-  const sortedTokens = [...tokens].sort(
-    (a, b) =>
-      Number(tokenStatus(a, now) !== "active") -
-      Number(tokenStatus(b, now) !== "active"),
+  const statusLabels = state.filters.status.map((s) =>
+    t(`runners.status.${s}`),
   );
+  const outdatedValue = state.filter("outdated");
+  const active: ActiveFilter[] = [
+    ...(state.q
+      ? [
+          {
+            id: "q",
+            label: t("filters.search"),
+            value: state.q,
+            onRemove: () => {
+              state.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(statusLabels.length > 0
+      ? [
+          {
+            id: "status",
+            label: t("runners.filters.status"),
+            value: statusLabels.join(", "),
+            onRemove: () => {
+              state.setFilter("status", null);
+            },
+          },
+        ]
+      : []),
+    ...(outdatedValue
+      ? [
+          {
+            id: "outdated",
+            label: t("runners.filters.version"),
+            value:
+              outdatedValue === "true"
+                ? t("runners.version.outdated")
+                : t("runners.version.current"),
+            onRemove: () => {
+              state.setFilter("outdated", null);
+            },
+          },
+        ]
+      : []),
+    ...(state.filter("tag")
+      ? [
+          {
+            id: "tag",
+            label: t("runners.filters.tag"),
+            value: state.filter("tag"),
+            onRemove: () => {
+              state.setFilter("tag", null);
+            },
+          },
+        ]
+      : []),
+    ...(state.filter("resource_class")
+      ? [
+          {
+            id: "resource_class",
+            label: t("runners.filters.class"),
+            value: t(`runners.class.${state.filter("resource_class")}`, {
+              defaultValue: state.filter("resource_class"),
+            }),
+            onRemove: () => {
+              state.setFilter("resource_class", null);
+            },
+          },
+        ]
+      : []),
+  ];
 
-  if (status === "forbidden") {
+  // Пусто без всяких условий: раннеров нет вовсе, ведём к созданию токена.
+  const noRunners =
+    list.status === "ready" &&
+    !list.failed &&
+    !state.isFiltered &&
+    list.total === 0;
+  const noTokens =
+    tokens.status === "ready" &&
+    !tokens.failed &&
+    !tokens.state.isFiltered &&
+    tokens.total === 0;
+
+  if (list.status === "forbidden") {
     return (
       <div className="ops-stack" data-testid="runners-view">
-        <ViewState status={status} errorText="" testId="runners" />
+        <ViewState status="forbidden" errorText="" testId="runners" />
       </div>
     );
   }
@@ -419,61 +528,51 @@ export const RunnersView = ({
         </Banner>
       )}
 
-      {status === "ready" && live.length > 0 && (
+      {(countsStatus === "loading" || (counts !== null && live > 0)) && (
         <KpiGrid>
           <KpiTile
             testId="runners-stat-online"
             icon={<Server size={14} aria-hidden="true" />}
             label={t("runners.stats.online")}
-            value={online}
-            unit={t("runners.stats.of", { total: live.length })}
+            value={num(counts?.online ?? 0)}
+            loading={countsStatus === "loading"}
+            unit={t("runners.stats.of", { total: num(live) })}
             tone={onlineTone}
             secondary={
-              silent === 0 && paused === 0
-                ? t("runners.stats.allOnline")
-                : [
-                    silent > 0
-                      ? t("runners.stats.silent", { count: silent })
-                      : null,
-                    paused > 0
-                      ? t("runners.stats.paused", { count: paused })
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")
+              counts === null
+                ? null
+                : quiet === 0 && counts.paused === 0
+                  ? t("runners.stats.allOnline")
+                  : [
+                      quiet > 0
+                        ? t("runners.stats.silent", { count: quiet })
+                        : null,
+                      counts.paused > 0
+                        ? t("runners.stats.paused", { count: counts.paused })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
             }
           />
           <KpiTile
-            testId="runners-stat-capacity"
-            icon={<Cpu size={14} aria-hidden="true" />}
-            label={t("runners.stats.capacity")}
-            value={used ?? capacity}
-            unit={
-              used === null
-                ? undefined
-                : t("runners.stats.of", { total: capacity })
+            testId="runners-stat-running"
+            icon={<LoaderCircle size={14} aria-hidden="true" />}
+            label={t("runners.stats.running")}
+            value={num(summary?.running ?? 0)}
+            loading={summaryStatus === "loading"}
+            error={
+              summaryStatus === "error" || summaryStatus === "forbidden"
+                ? t("runners.stats.waitingFailed")
+                : undefined
             }
-            progress={
-              used === null || capacity === 0 ? null : (used / capacity) * 100
-            }
-            progressTone={
-              used !== null && used >= capacity ? "warning" : "neutral"
-            }
-            secondary={
-              capacity === 0
-                ? t("runners.stats.noCapacity")
-                : used === null
-                  ? t("runners.stats.capacityHint")
-                  : t("runners.stats.free", {
-                      count: Math.max(0, capacity - used),
-                    })
-            }
+            secondary={t("runners.stats.runningHint")}
           />
           <KpiTile
             testId="runners-stat-waiting"
             icon={<ListOrdered size={14} aria-hidden="true" />}
             label={t("runners.stats.waiting")}
-            value={waiting ?? 0}
+            value={num(waiting ?? 0)}
             loading={summaryStatus === "loading"}
             error={
               summaryStatus === "error" || summaryStatus === "forbidden"
@@ -496,23 +595,18 @@ export const RunnersView = ({
             icon={<Tag size={14} aria-hidden="true" />}
             label={t("runners.stats.version")}
             value={newest ?? ""}
-            tone={outdated > 0 ? "warning" : "neutral"}
+            loading={countsStatus === "loading"}
+            tone={(counts?.outdated ?? 0) > 0 ? "warning" : "neutral"}
             secondary={
-              outdated > 0
-                ? t("runners.stats.outdated", { count: outdated })
+              (counts?.outdated ?? 0) > 0
+                ? t("runners.stats.outdated", { count: counts?.outdated ?? 0 })
                 : t("runners.stats.sameVersion")
             }
           />
         </KpiGrid>
       )}
 
-      <ViewState
-        status={status}
-        errorText={t("runners.loadFailed")}
-        onRetry={onRetry}
-        testId="runners"
-      />
-      {status === "ready" && runners.length === 0 && (
+      {noRunners ? (
         <EmptyState
           framed
           testId="runners-empty"
@@ -532,138 +626,323 @@ export const RunnersView = ({
             </Button>
           }
         />
-      )}
-      {status === "ready" && runners.length > 0 && (
-        <DataTable
-          className="ops-table ops-static"
-          caption={t("runners.caption")}
-          columns={columns}
-          data={rows}
-          getRowId={(r) => r.runner.id}
-        />
+      ) : (
+        <>
+          <FilterBar
+            search={state.q}
+            onSearchChange={state.setQ}
+            searchLabel={t("runners.search")}
+            searchPlaceholder={t("runners.searchPlaceholder")}
+            busy={list.fetching}
+            onReset={state.reset}
+            total={list.status === "ready" ? list.total : null}
+            active={active}
+            extra={
+              <>
+                <FilterMenu
+                  label={t("runners.filters.status")}
+                  testId="runners-filter-status"
+                  values={state.filters.status}
+                  onChange={(values) => {
+                    state.setFilter("status", values);
+                  }}
+                  options={RUNNER_STATUSES.map((s) => ({
+                    value: s,
+                    label: t(`runners.status.${s}`),
+                    ...(counts ? { count: counts[s] } : {}),
+                  }))}
+                />
+                <FilterMenu
+                  label={t("runners.filters.version")}
+                  testId="runners-filter-version"
+                  single
+                  values={outdatedValue ? [outdatedValue] : []}
+                  onChange={(values) => {
+                    state.setFilter("outdated", values[0] ?? null);
+                  }}
+                  options={[
+                    {
+                      value: "true",
+                      label: t("runners.version.outdated"),
+                      ...(counts ? { count: counts.outdated } : {}),
+                    },
+                    {
+                      value: "false",
+                      label: t("runners.version.current"),
+                      ...(counts
+                        ? { count: Math.max(0, live - counts.outdated) }
+                        : {}),
+                    },
+                  ]}
+                />
+              </>
+            }
+          />
+          <DataTable
+            className="ops-table ops-static"
+            caption={t("runners.caption")}
+            columns={columns}
+            data={rows}
+            getRowId={(r) => r.runner.id}
+            loading={list.fetching}
+            error={list.failed ? t("runners.loadFailed") : null}
+            {...(list.onRetry ? { onRetry: list.onRetry } : {})}
+            sorting={state.sorting}
+            onSortingChange={state.onSortingChange}
+            sortable={RUNNER_SORT}
+            pagination={list.pagination}
+            filtered={state.isFiltered}
+            searchQuery={state.q}
+            onResetFilters={state.reset}
+            columnWidths={{
+              version: 96,
+              status: 210,
+              load: 120,
+              actions: 56,
+            }}
+          />
+        </>
       )}
 
       {/* Ни раннеров, ни токенов: пустое состояние выше уже ведёт к созданию
           токена, второй пустой блок с тем же советом не нужен. */}
-      {!(
-        status === "ready" &&
-        runners.length === 0 &&
-        tokensStatus === "ready" &&
-        tokens.length === 0
-      ) && (
-        <Section
-          title={t("tokens.title")}
-          description={t("tokens.lead")}
-          flush
-          testId="runner-tokens"
-          footer={
-            <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
-              {t("tokens.howTo")}
-            </span>
-          }
-        >
-          {tokensStatus !== "ready" && (
-            <div style={{ padding: "0 20px 16px" }}>
-              <ViewState
-                status={tokensStatus}
-                errorText={t("tokens.loadFailed")}
-                onRetry={onRetryTokens}
-                testId="tokens"
-                compact
-                skeleton={<TokensSkeleton />}
-              />
-            </div>
-          )}
-          {tokensStatus === "ready" && tokens.length === 0 && (
-            <div style={{ padding: "0 20px 16px" }}>
-              <EmptyState
-                testId="tokens-empty"
-                icon={<KeyRound size={18} />}
-                title={t("tokens.empty.title")}
-                description={t("tokens.empty.body")}
-              />
-            </div>
-          )}
-          {tokensStatus === "ready" && tokens.length > 0 && (
-            <SectionList label={t("tokens.title")}>
-              {sortedTokens.map((token) => {
-                const st = tokenStatus(token, now);
-                const active = st === "active";
-                return (
-                  <div
-                    key={token.id}
-                    data-testid={`token-${token.id}`}
-                    data-status={st}
-                    className={active ? undefined : "ops-dim-row"}
-                  >
-                    <ListRow
-                      icon={<KeyRound size={15} />}
-                      tone={active ? "accent" : "neutral"}
-                      title={
-                        token.label === "" ? t("tokens.noLabel") : token.label
-                      }
-                      description={[
-                        t("tokens.uses", {
-                          uses: token.uses,
-                          max: token.max_uses,
-                        }),
-                        active && token.expires_at
-                          ? t("tokens.expires", {
-                              when: formatRelativeTime(token.expires_at, now),
-                            })
-                          : st === "expired" && token.expires_at
-                            ? t("tokens.expired", {
-                                when: formatPastTime(token.expires_at, now),
-                              })
-                            : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                      meta={
-                        <>
-                          <StatusDot
-                            status={TOKEN_DOT[st]}
-                            label={t(`tokens.status.${st}`)}
-                          />
-                          {/* Слот действий одной ширины у всех строк: состояния
-                            стоят ровной колонкой, как в таблицах. */}
-                          <span className="ops-token-actions">
-                            {active && (
-                              <ActionMenu
-                                label={t("tokens.actionsLabel", {
-                                  label:
-                                    token.label === ""
-                                      ? t("tokens.noLabel")
-                                      : token.label,
-                                })}
-                                testId={`token-actions-${token.id}`}
-                                items={[
-                                  {
-                                    id: "revoke",
-                                    label: t("tokens.revoke"),
-                                    icon: (
-                                      <Trash2 size={14} aria-hidden="true" />
-                                    ),
-                                    danger: true,
-                                    testId: `token-revoke-${token.id}`,
-                                    onSelect: () => {
-                                      onRevokeToken(token);
-                                    },
-                                  },
-                                ]}
-                              />
-                            )}
-                          </span>
-                        </>
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </SectionList>
-          )}
-        </Section>
+      {!(noRunners && noTokens) && (
+        <TokensSection
+          tokens={tokens}
+          now={now}
+          onRevokeToken={onRevokeToken}
+        />
       )}
+    </div>
+  );
+};
+
+/** Токены регистрации: свой поиск, фильтр состояния, порядок и страницы. */
+const TokensSection = ({
+  tokens,
+  now,
+  onRevokeToken,
+}: {
+  tokens: RunnersViewProps["tokens"];
+  now: number;
+  onRevokeToken: (token: AdminRunnerToken) => void;
+}) => {
+  const { t } = useTranslation("adminOps");
+  const { state } = tokens;
+  const order =
+    Object.entries(TOKEN_ORDER).find(
+      ([, value]) =>
+        state.sort !== null &&
+        value === (state.sort.desc ? `-${state.sort.field}` : state.sort.field),
+    )?.[0] ?? "newest";
+  const empty =
+    tokens.status === "ready" &&
+    !tokens.failed &&
+    !state.isFiltered &&
+    tokens.total === 0;
+
+  return (
+    <Section
+      title={t("tokens.title")}
+      description={t("tokens.lead")}
+      flush
+      testId="runner-tokens"
+      footer={
+        <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+          {t("tokens.howTo")}
+        </span>
+      }
+    >
+      {!empty && tokens.status !== "forbidden" && (
+        <div className="ops-section-bar">
+          <FilterBar
+            search={state.q}
+            onSearchChange={state.setQ}
+            searchLabel={t("tokens.search")}
+            searchPlaceholder={t("tokens.searchPlaceholder")}
+            busy={tokens.fetching}
+            onReset={state.reset}
+            filters={[
+              {
+                id: "status",
+                label: t("tokens.filters.status"),
+                value: state.filter("status"),
+                onChange: (value) => {
+                  state.setFilter("status", value === "" ? null : value);
+                },
+                options: TOKEN_STATUSES.map((s) => ({
+                  value: s,
+                  label: t(`tokens.status.${s}`),
+                })),
+              },
+            ]}
+            extra={
+              <span className="ops-sort">
+                <Select
+                  value={order}
+                  ariaLabel={t("tokens.sort.label")}
+                  onValueChange={(value) => {
+                    const param = TOKEN_ORDER[value] ?? "-created_at";
+                    const desc = param.startsWith("-");
+                    state.setSort({
+                      field: (desc ? param.slice(1) : param) as TokenSort,
+                      desc,
+                    });
+                  }}
+                  options={[
+                    { value: "newest", label: t("tokens.sort.newest") },
+                    { value: "expiring", label: t("tokens.sort.expiring") },
+                    { value: "label", label: t("tokens.sort.byLabel") },
+                  ]}
+                />
+              </span>
+            }
+          />
+        </div>
+      )}
+      {tokens.status !== "ready" && (
+        <div style={{ padding: "0 20px 16px" }}>
+          <ViewState
+            status={tokens.status}
+            errorText={t("tokens.loadFailed")}
+            onRetry={tokens.onRetry}
+            testId="tokens"
+            compact
+            skeleton={<TokensSkeleton />}
+          />
+        </div>
+      )}
+      {tokens.status === "ready" && empty && (
+        <div style={{ padding: "0 20px 16px" }}>
+          <EmptyState
+            testId="tokens-empty"
+            icon={<KeyRound size={18} />}
+            title={t("tokens.empty.title")}
+            description={t("tokens.empty.body")}
+          />
+        </div>
+      )}
+      {tokens.status === "ready" &&
+        !empty &&
+        tokens.items.length === 0 &&
+        !tokens.failed && (
+          <div style={{ padding: "0 20px 16px" }}>
+            <NoResults
+              compact
+              query={state.q}
+              onReset={state.reset}
+              testId="tokens-no-results"
+            />
+          </div>
+        )}
+      {tokens.status === "ready" && tokens.failed && (
+        <div style={{ padding: "0 20px 16px" }}>
+          <ViewState
+            status="error"
+            errorText={t("tokens.loadFailed")}
+            onRetry={tokens.onRetry}
+            testId="tokens"
+            compact
+          />
+        </div>
+      )}
+      {tokens.status === "ready" && tokens.items.length > 0 && (
+        <div
+          style={{
+            opacity: tokens.fetching ? 0.6 : 1,
+            transition: "opacity 0.12s",
+          }}
+          aria-busy={tokens.fetching}
+        >
+          <SectionList label={t("tokens.title")}>
+            {tokens.items.map((token) => (
+              <TokenRow
+                key={token.id}
+                token={token}
+                now={now}
+                onRevoke={onRevokeToken}
+              />
+            ))}
+          </SectionList>
+        </div>
+      )}
+      {tokens.status === "ready" && tokens.total > 0 && (
+        <div className="ops-section-pager">
+          <Pagination {...tokens.pagination} />
+        </div>
+      )}
+    </Section>
+  );
+};
+
+const TokenRow = ({
+  token,
+  now,
+  onRevoke,
+}: {
+  token: AdminRunnerToken;
+  now: number;
+  onRevoke: (token: AdminRunnerToken) => void;
+}) => {
+  const { t } = useTranslation("adminOps");
+  const st = tokenStatus(token, now);
+  const active = st === "active";
+  const label = token.label === "" ? t("tokens.noLabel") : token.label;
+  return (
+    <div
+      data-testid={`token-${token.id}`}
+      data-status={st}
+      className={active ? undefined : "ops-dim-row"}
+    >
+      <ListRow
+        icon={<KeyRound size={15} />}
+        tone={active ? "accent" : "neutral"}
+        title={label}
+        description={[
+          t("tokens.uses", { uses: token.uses, max: token.max_uses }),
+          active && token.expires_at
+            ? t("tokens.expires", {
+                when: formatRelativeTime(token.expires_at, now),
+              })
+            : st === "expired" && token.expires_at
+              ? t("tokens.expired", {
+                  when: formatPastTime(token.expires_at, now),
+                })
+              : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        meta={
+          <>
+            <StatusDot
+              status={TOKEN_DOT[st]}
+              label={t(`tokens.status.${st}`)}
+            />
+            {/* Слот действий одной ширины у всех строк: состояния
+              стоят ровной колонкой, как в таблицах. */}
+            <span className="ops-token-actions">
+              {active && (
+                <ActionMenu
+                  label={t("tokens.actionsLabel", { label })}
+                  testId={`token-actions-${token.id}`}
+                  items={[
+                    {
+                      id: "revoke",
+                      label: t("tokens.revoke"),
+                      icon: <Trash2 size={14} aria-hidden="true" />,
+                      danger: true,
+                      testId: `token-revoke-${token.id}`,
+                      onSelect: () => {
+                        onRevoke(token);
+                      },
+                    },
+                  ]}
+                />
+              )}
+            </span>
+          </>
+        }
+      />
     </div>
   );
 };

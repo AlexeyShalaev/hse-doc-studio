@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
+import { useServerList } from "@shared/lib";
 import { ConfirmByName } from "@shared/ui";
 import type {
   AdminRunner,
@@ -8,31 +9,31 @@ import type {
   AdminRunnerToken,
   AdminRunnerTokenCreated,
 } from "@entities/session";
+import { opsApi } from "../api/opsApi";
 import {
+  opsKeys,
+  POLL_MS,
   useCreateToken,
-  useQueue,
   useQueueSummary,
   useRevokeRunner,
   useRevokeToken,
   useRotateToken,
-  useRunners,
+  useRunnerSummary,
+  useRunningJobs,
   useSetPaused,
-  useTokens,
 } from "../api/opsQueries";
 import { failureKey, type Failure } from "../lib/failure";
 import { busySlots } from "../lib/jobs";
+import { listView, useRunnerListState, useTokenListState } from "../lib/lists";
 import { useNow } from "../lib/useNow";
+import { statusOf } from "../lib/viewStatus";
 import {
   ConfirmDialog,
   CreateTokenDialog,
   RotatedDialog,
 } from "./RunnerDialogs";
-import { statusOf } from "../lib/viewStatus";
 import { FailureNotice } from "./parts";
 import { RunnersView } from "./RunnersView";
-
-// Все выполняющиеся задачи одним запросом: из них считается занятость каждого раннера.
-const RUNNING = { status: "running", kind: "", q: "", limit: 200 } as const;
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
 export const Runners = ({
@@ -46,11 +47,29 @@ export const Runners = ({
   onOpenQueue?: () => void;
 }) => {
   const { t } = useTranslation("adminOps");
-  const runners = useRunners();
-  const tokens = useTokens();
+  const runnerState = useRunnerListState();
+  const tokenState = useTokenListState();
+  // Раннеры, токены и счётчики читаются с сервера страницей: поиск, фильтры
+  // и порядок считает сервер, на клиент приходит только видимое окно.
+  const runners = useServerList({
+    state: runnerState,
+    queryKey: opsKeys.runners,
+    fetchPage: (params, signal) => opsApi.runners(params, signal),
+    refetchInterval: POLL_MS * 3,
+  });
+  const tokens = useServerList({
+    state: tokenState,
+    queryKey: opsKeys.tokens,
+    fetchPage: (params, signal) => opsApi.tokens(params, signal),
+  });
+  const counts = useRunnerSummary();
   const summary = useQueueSummary();
-  const running = useQueue(RUNNING);
+  const running = useRunningJobs();
   const now = useNow();
+  const slots = useMemo(
+    () => (running.data ? busySlots(running.data) : null),
+    [running.data],
+  );
 
   const pause = useSetPaused();
   const rotate = useRotateToken();
@@ -87,17 +106,15 @@ export const Runners = ({
         </div>
       )}
       <RunnersView
-        status={statusOf(runners)}
-        runners={runners.data ?? []}
-        tokensStatus={statusOf(tokens)}
-        tokens={tokens.data ?? []}
+        runners={listView(runners, runnerState)}
+        tokens={listView(tokens, tokenState)}
+        counts={counts.data ?? null}
+        countsStatus={statusOf(counts)}
         summary={summary.data ?? null}
         summaryStatus={statusOf(summary)}
-        slots={running.data ? busySlots(running.data.items) : null}
+        slots={slots}
         now={now}
         busyId={busyId}
-        onRetry={() => void runners.refetch()}
-        onRetryTokens={() => void tokens.refetch()}
         onTogglePause={(runner) => {
           setBusyId(runner.id);
           setNotice(null);

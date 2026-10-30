@@ -5,7 +5,6 @@ import type {
   AdminGroupMember,
   AdminOrg,
   AdminOrgMember,
-  AdminUserOrg,
   OrgRoleName,
 } from "@entities/session";
 import type { DemoGroup, DemoOrg } from "./adminOrgs";
@@ -479,42 +478,6 @@ export const createOrgRoutes = (
           (id) => id !== req.params.userId,
         );
         return demoNoContent();
-      }),
-    },
-    {
-      method: "GET",
-      pattern: "/users/:id/orgs",
-      handler: guarded((req) => {
-        const roles = enumParam(req, "role", ROLES);
-        if (roles === null) return invalidQuery();
-        const items: AdminUserOrg[] = state().orgs.flatMap((org) => {
-          const me = org.members.find((m) => m.user_id === req.params.id);
-          return me
-            ? [
-                {
-                  slug: org.slug,
-                  name: org.name,
-                  role: me.role,
-                  joined_at: me.joined_at,
-                },
-              ]
-            : [];
-        });
-        const rank = (o: AdminUserOrg) => ROLES.indexOf(o.role);
-        return offsetList(
-          req,
-          items.filter((o) => roles.length === 0 || roles.includes(o.role)),
-          {
-            sort: {
-              name: (o: AdminUserOrg) => o.name,
-              role: rank,
-              joined_at: (o: AdminUserOrg) => o.joined_at,
-            },
-            defaultSort: "name",
-            search: (o) => [o.name, o.slug],
-            id: (o) => o.slug,
-          },
-        );
       }),
     },
   ];

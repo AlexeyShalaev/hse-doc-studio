@@ -10,16 +10,31 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
+  localeTag,
+  type CursorPaginationState,
+  type ListQueryState,
+  type PickerItem,
+} from "@shared/lib";
+import {
+  ActiveFilters,
   Button,
   DataTable,
-  FilterBar,
+  DateRangeFilter,
+  FilterMenu,
   KpiGrid,
   KpiTile,
   PersonCell,
+  PickerFilter,
   StatusDot,
+  usePickedItem,
+  type ActiveFilter,
+  type PickerSource,
 } from "@shared/ui";
-import type { AdminJob, AdminQueueSummary, JobState } from "@entities/session";
-import type { QueueQuery } from "../api/opsApi";
+import {
+  adminPickers,
+  type AdminJob,
+  type AdminQueueSummary,
+} from "@entities/session";
 import { formatDuration } from "../lib/format";
 import {
   JOB_KINDS,
@@ -29,7 +44,8 @@ import {
   isActive,
   runSeconds,
 } from "../lib/jobs";
-import { personRef, type OpsPerson, type PersonRef } from "../lib/people";
+import type { QueueFilter } from "../lib/lists";
+import { personRef, shortRef, type PersonRef } from "../lib/people";
 import { useDurationUnits } from "../lib/useDurationUnits";
 import type { ViewStatus } from "../lib/viewStatus";
 import { ViewState } from "./parts";
@@ -37,24 +53,22 @@ import { ViewState } from "./parts";
 export type QueueViewProps = {
   summaryStatus: ViewStatus;
   summary: AdminQueueSummary | null;
+  /** Первая страница: ready, когда пришла. */
   status: ViewStatus;
+  /** Загруженные страницы подряд, новые первыми. */
   jobs: readonly AdminJob[];
-  /** Есть ещё задачи сверх показанных. */
-  hasMore: boolean;
-  /** Имена и почты людей по идентификатору. */
-  people?: ReadonlyMap<string, OpsPerson>;
-  /** Имена раннеров по идентификатору. */
-  runnerNames?: ReadonlyMap<string, string>;
-  query: QueueQuery;
+  /** Идёт запрос: на экране прежние строки. */
+  fetching?: boolean;
+  /** Последний запрос не удался. */
+  failed?: boolean;
+  state: ListQueryState<QueueFilter, never>;
+  /** «Показать ещё» по курсору сервера. */
+  pagination: CursorPaginationState;
   now: number;
-  onQueryChange: (patch: Partial<QueueQuery>) => void;
-  onLoadMore: () => void;
   onOpen: (job: AdminJob) => void;
   onCancel: (job: AdminJob) => void;
   onRetry?: () => void;
 };
-
-export const PAGE_STEP = 25;
 
 // Приоритеты по убыванию: срочные, обычные, фоновые; неизвестные в конце.
 const CLASS_ORDER = ["interactive", "checks", "batch"];
@@ -63,9 +77,6 @@ const classRank = (name: string): number => {
   return i === -1 ? CLASS_ORDER.length : i;
 };
 
-const NO_PEOPLE: ReadonlyMap<string, OpsPerson> = new Map();
-const NO_RUNNERS: ReadonlyMap<string, string> = new Map();
-
 /**
  * Строка таблицы. Всё меняющееся лежит в данных строки, а не в замыканиях колонок:
  * TanStack Table рисует ячейки как компоненты, и новая функция ячейки пересоздаёт её DOM.
@@ -73,26 +84,49 @@ const NO_RUNNERS: ReadonlyMap<string, string> = new Map();
 type Row = {
   job: AdminJob;
   person: PersonRef;
-  runner: string | null;
   wait: string;
   run: string | null;
   stuck: boolean;
   cancel: () => void;
 };
 
-/** Очередь задач: сводка по состояниям, фильтры, таблица с отменой. */
+/**
+ * Имя выбранного в фильтре по строкам на экране: при фильтре по человеку,
+ * проекту или раннеру каждая строка о нём, и имя приходит в ней от сервера.
+ */
+const knownFrom = (
+  jobs: readonly AdminJob[],
+  id: string,
+  pick: (job: AdminJob) => PickerItem | null,
+): PickerItem | null => {
+  if (id === "") return null;
+  for (const job of jobs) {
+    const item = pick(job);
+    if (item?.id === id) return item;
+  }
+  return null;
+};
+
+/** День из адреса (ГГГГ-ММ-ДД) коротко по языку интерфейса: «3 окт.». */
+const dayLabel = (day: string): string => {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
+    localeTag(),
+    { day: "numeric", month: "short" },
+  );
+};
+
+/** Очередь задач: сводка по состояниям, фильтры на сервере, таблица с отменой. */
 export const QueueView = ({
   summaryStatus,
   summary,
   status,
   jobs,
-  hasMore,
-  people = NO_PEOPLE,
-  runnerNames = NO_RUNNERS,
-  query,
+  fetching = false,
+  failed = false,
+  state,
+  pagination,
   now,
-  onQueryChange,
-  onLoadMore,
   onOpen,
   onCancel,
   onRetry,
@@ -104,6 +138,18 @@ export const QueueView = ({
     [units],
   );
 
+  // Пикеры ищут на сервере: человека, организацию, проект и раннер не
+  // нужно знать заранее, сколько бы их ни было.
+  const sources = useMemo(
+    () => ({
+      user: adminPickers.users(),
+      org: adminPickers.orgs(),
+      project: adminPickers.projects(),
+      runner: adminPickers.runners(),
+    }),
+    [],
+  );
+
   const columns = useMemo<ColumnDef<Row>[]>(
     () => [
       {
@@ -112,8 +158,9 @@ export const QueueView = ({
         enableSorting: false,
         cell: ({ row }) => {
           const { job } = row.original;
+          // Название проекта бывает длинным: строка режется, таблица не уезжает вбок.
           return (
-            <span className="ops-cell">
+            <span className="ops-cell" style={{ maxWidth: 280 }}>
               <span className="ops-cell-title">
                 {t(`queue.kind.${job.kind}`, { defaultValue: job.kind })}
               </span>
@@ -121,9 +168,9 @@ export const QueueView = ({
                 {t(`queue.priority.${job.priority}`, {
                   defaultValue: job.priority,
                 })}
-                {/* Имени проекта сервер не отдаёт: без него строка не показывает
-                    идентификатор, он есть в подробностях задачи. */}
-                {job.project_name !== null && ` · ${job.project_name}`}
+                {/* Без имени проекта строка не показывает идентификатор:
+                    он есть в подробностях задачи. */}
+                {job.project_name != null && ` · ${job.project_name}`}
               </span>
             </span>
           );
@@ -195,8 +242,16 @@ export const QueueView = ({
         header: t("queue.columns.runner"),
         enableSorting: false,
         cell: ({ row }) =>
-          row.original.runner ?? (
+          row.original.job.runner_id === null ? (
             <span className="ops-muted">{t("queue.noRunner")}</span>
+          ) : row.original.job.runner_name !== null ? (
+            <span className="ops-ellipsis" title={row.original.job.runner_name}>
+              {row.original.job.runner_name}
+            </span>
+          ) : (
+            <span className="ops-code" title={row.original.job.runner_id}>
+              {shortRef(row.original.job.runner_id)}
+            </span>
           ),
       },
       {
@@ -234,43 +289,60 @@ export const QueueView = ({
     [t],
   );
 
-  const needle = query.q.trim().toLowerCase();
+  // Строки приходят с сервера уже отобранными и по порядку: здесь только подписи.
   const rows = useMemo<Row[]>(
     () =>
-      jobs
-        .map((job) => {
-          const person = personRef(job.user_id, job.user_name, people);
-          const runner = job.runner_id
-            ? (runnerNames.get(job.runner_id) ?? job.runner_name)
-            : null;
-          return {
-            job,
-            person,
-            runner,
-            wait: dur(job.wait_s) ?? "",
-            run: dur(runSeconds(job, now)),
-            stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
-            cancel: () => {
-              onCancel(job);
-            },
-          };
-        })
-        .filter(
-          ({ job, person, runner }) =>
-            needle === "" ||
-            [
-              person.name,
-              person.email,
-              job.project_name,
-              job.project_id,
-              runner,
-              t(`queue.kind.${job.kind}`, { defaultValue: job.kind }),
-            ].some((v) => v?.toLowerCase().includes(needle)),
-        ),
-    [jobs, people, runnerNames, needle, now, dur, onCancel, t],
+      jobs.map((job) => ({
+        job,
+        person: personRef(job.user_id, job.user_name, job.user_email),
+        wait: dur(job.wait_s) ?? "",
+        run: dur(runSeconds(job, now)),
+        stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
+        cancel: () => {
+          onCancel(job);
+        },
+      })),
+    [jobs, now, dur, onCancel],
   );
 
-  const filtered = query.status !== "" || query.kind !== "" || query.q !== "";
+  const userId = state.filter("user_id");
+  const orgId = state.filter("org_id");
+  const projectId = state.filter("project_id");
+  const runnerId = state.filter("runner_id");
+  const knownUser = knownFrom(jobs, userId, (j) =>
+    j.user_name
+      ? {
+          kind: "user",
+          id: j.user_id,
+          name: j.user_name,
+          detail: j.user_email ?? null,
+        }
+      : null,
+  );
+  const knownProject = knownFrom(jobs, projectId, (j) =>
+    j.project_id && j.project_name
+      ? {
+          kind: "project",
+          id: j.project_id,
+          name: j.project_name,
+          detail: null,
+        }
+      : null,
+  );
+  const knownRunner = knownFrom(jobs, runnerId, (j) =>
+    j.runner_id && j.runner_name
+      ? { kind: "runner", id: j.runner_id, name: j.runner_name, detail: null }
+      : null,
+  );
+  const user = usePickedItem(sources.user, userId || null, knownUser);
+  const org = usePickedItem(sources.org, orgId || null, null);
+  const project = usePickedItem(
+    sources.project,
+    projectId || null,
+    knownProject,
+  );
+  const runner = usePickedItem(sources.runner, runnerId || null, knownRunner);
+
   const counts = summary?.by_state;
   const done = counts
     ? counts.succeeded + counts.failed + counts.cancelled + counts.timed_out
@@ -282,6 +354,81 @@ export const QueueView = ({
     summaryStatus === "error" || summaryStatus === "forbidden"
       ? t("queue.summaryFailed")
       : undefined;
+
+  const picked = (
+    id: QueueFilter,
+    label: string,
+    value: string,
+    item: PickerItem | null,
+  ): ActiveFilter[] =>
+    value
+      ? [
+          {
+            id,
+            label,
+            value: item?.name ?? shortRef(value),
+            onRemove: () => {
+              state.setFilter(id, null);
+            },
+          },
+        ]
+      : [];
+  const states = state.filters.state;
+  const kinds = state.filters.kind;
+  const from = state.filter("from");
+  const to = state.filter("to");
+  const active: ActiveFilter[] = [
+    ...(states.length > 0
+      ? [
+          {
+            id: "state",
+            label: t("queue.filters.status"),
+            value: states.map((s) => t(`queue.status.${s}`)).join(", "),
+            onRemove: () => {
+              state.setFilter("state", null);
+            },
+          },
+        ]
+      : []),
+    ...(kinds.length > 0
+      ? [
+          {
+            id: "kind",
+            label: t("queue.filters.kind"),
+            value: kinds
+              .map((k) => t(`queue.kind.${k}`, { defaultValue: k }))
+              .join(", "),
+            onRemove: () => {
+              state.setFilter("kind", null);
+            },
+          },
+        ]
+      : []),
+    ...picked("user_id", t("queue.filters.user"), userId, user),
+    ...picked("org_id", t("queue.filters.org"), orgId, org),
+    ...picked("project_id", t("queue.filters.project"), projectId, project),
+    ...picked("runner_id", t("queue.filters.runner"), runnerId, runner),
+    ...(from || to
+      ? [
+          {
+            id: "period",
+            label: t("queue.filters.period"),
+            value:
+              from && to
+                ? t("queue.filters.periodRange", {
+                    from: dayLabel(from),
+                    to: dayLabel(to),
+                  })
+                : from
+                  ? t("queue.filters.periodFrom", { from: dayLabel(from) })
+                  : t("queue.filters.periodTo", { to: dayLabel(to) }),
+            onRemove: () => {
+              state.setFilters({ from: null, to: null });
+            },
+          },
+        ]
+      : []),
+  ];
 
   // Нет прав или не загрузилось ничего: одно состояние вместо пустых плиток и таблицы.
   if (
@@ -300,6 +447,26 @@ export const QueueView = ({
     );
   }
 
+  const pickerFilter = (
+    id: "user_id" | "org_id" | "project_id" | "runner_id",
+    label: string,
+    source: PickerSource,
+    known: PickerItem | null,
+    placeholder: string,
+  ) => (
+    <PickerFilter
+      label={label}
+      source={source}
+      value={state.filter(id) || null}
+      known={known}
+      searchPlaceholder={placeholder}
+      testId={`queue-filter-${id.replace("_id", "")}`}
+      onChange={(item) => {
+        state.setFilter(id, item?.id ?? null);
+      }}
+    />
+  );
+
   return (
     <div className="ops-stack" data-testid="queue-view">
       <KpiGrid>
@@ -307,7 +474,7 @@ export const QueueView = ({
           testId="queue-stat-queued"
           icon={<ListOrdered size={14} aria-hidden="true" />}
           label={t("queue.stats.queued")}
-          value={summary?.queued ?? 0}
+          value={(summary?.queued ?? 0).toLocaleString(localeTag())}
           loading={kpiLoading}
           error={kpiError}
           tone={
@@ -323,7 +490,7 @@ export const QueueView = ({
           testId="queue-stat-running"
           icon={<LoaderCircle size={14} aria-hidden="true" />}
           label={t("queue.stats.running")}
-          value={summary?.running ?? 0}
+          value={(summary?.running ?? 0).toLocaleString(localeTag())}
           loading={kpiLoading}
           error={kpiError}
           secondary={t("queue.stats.runningHint")}
@@ -345,11 +512,14 @@ export const QueueView = ({
           testId="queue-stat-failed"
           icon={<CircleAlert size={14} aria-hidden="true" />}
           label={t("queue.stats.failed")}
-          value={broken}
+          value={broken.toLocaleString(localeTag())}
           loading={kpiLoading}
           error={kpiError}
           tone={broken > 0 ? "danger" : "neutral"}
-          secondary={t("queue.stats.failedHint", { count: done })}
+          secondary={t("queue.stats.failedHint", {
+            count: done,
+            n: done.toLocaleString(localeTag()),
+          })}
         />
       </KpiGrid>
 
@@ -376,96 +546,101 @@ export const QueueView = ({
         </div>
       )}
 
-      <FilterBar
-        search={query.q}
-        onSearchChange={(q) => {
-          onQueryChange({ q });
-        }}
-        searchLabel={t("queue.search")}
-        searchPlaceholder={t("queue.searchPlaceholder")}
-        filters={[
-          {
-            id: "status",
-            label: t("queue.filters.status"),
-            value: query.status,
-            onChange: (value) => {
-              onQueryChange({ status: value as JobState | "" });
-            },
-            options: JOB_STATES.map((s) => ({
+      {/* Поиска по тексту у очереди нет: вместо него пикеры, которые ищут
+          человека, организацию, проект и раннер на сервере. */}
+      <div
+        role="search"
+        aria-label={t("queue.filters.label")}
+        className="fbar"
+        data-testid="queue-filters"
+      >
+        <div className="fbar-extra">
+          <FilterMenu
+            label={t("queue.filters.status")}
+            testId="queue-filter-state"
+            values={states}
+            onChange={(values) => {
+              state.setFilter("state", values);
+            }}
+            options={JOB_STATES.map((s) => ({
               value: s,
               label: t(`queue.status.${s}`),
               ...(counts ? { count: counts[s] } : {}),
-            })),
-          },
-          {
-            id: "kind",
-            label: t("queue.filters.kind"),
-            display: "select",
-            value: query.kind,
-            onChange: (kind) => {
-              onQueryChange({ kind });
-            },
-            options: JOB_KINDS.map((k) => ({
+            }))}
+          />
+          <FilterMenu
+            label={t("queue.filters.kind")}
+            testId="queue-filter-kind"
+            values={kinds}
+            onChange={(values) => {
+              state.setFilter("kind", values);
+            }}
+            options={JOB_KINDS.map((k) => ({
               value: k,
               label: t(`queue.kind.${k}`),
-            })),
-          },
-        ]}
-        onReset={() => {
-          onQueryChange({ q: "", status: "", kind: "" });
-        }}
-      />
+            }))}
+          />
+          {pickerFilter(
+            "user_id",
+            t("queue.filters.user"),
+            sources.user,
+            knownUser,
+            t("queue.filters.userPlaceholder"),
+          )}
+          {pickerFilter(
+            "org_id",
+            t("queue.filters.org"),
+            sources.org,
+            null,
+            t("queue.filters.orgPlaceholder"),
+          )}
+          {pickerFilter(
+            "project_id",
+            t("queue.filters.project"),
+            sources.project,
+            knownProject,
+            t("queue.filters.projectPlaceholder"),
+          )}
+          {pickerFilter(
+            "runner_id",
+            t("queue.filters.runner"),
+            sources.runner,
+            knownRunner,
+            t("queue.filters.runnerPlaceholder"),
+          )}
+          <DateRangeFilter
+            label={t("queue.filters.period")}
+            testId="queue-filter-period"
+            value={{ from: from || null, to: to || null }}
+            onChange={(range) => {
+              state.setFilters({ from: range.from, to: range.to });
+            }}
+          />
+        </div>
+        {active.length > 0 && (
+          <div className="fbar-active">
+            <ActiveFilters items={active} onReset={state.reset} />
+          </div>
+        )}
+      </div>
       <DataTable
         className="ops-table"
         caption={t("queue.caption")}
         columns={columns}
         data={rows}
         getRowId={(r) => r.job.id}
-        loading={status === "loading"}
-        error={status === "error" ? t("queue.loadFailed") : null}
+        loading={status === "loading" || fetching}
+        error={failed || status === "error" ? t("queue.loadFailed") : null}
         {...(onRetry ? { onRetry } : {})}
-        emptyTitle={
-          filtered ? t("queue.noMatch.title") : t("queue.empty.title")
-        }
-        emptyHint={filtered ? t("queue.noMatch.body") : t("queue.empty.body")}
-        {...(filtered
-          ? {
-              emptyAction: (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    onQueryChange({ q: "", status: "", kind: "" });
-                  }}
-                >
-                  {t("queue.noMatch.reset")}
-                </Button>
-              ),
-            }
-          : {})}
+        emptyTitle={t("queue.empty.title")}
+        emptyHint={t("queue.empty.body")}
+        filtered={state.isFiltered}
+        onResetFilters={state.reset}
+        pagination={pagination}
         onRowClick={(r) => {
           onOpen(r.job);
         }}
       />
-      {status === "ready" && jobs.length > 0 && (
-        <div className="ops-foot">
-          <span data-testid="queue-count">
-            {t("queue.count", { count: jobs.length })}
-          </span>
-          {hasMore && (
-            <Button
-              size="sm"
-              variant="secondary"
-              type="button"
-              onClick={onLoadMore}
-              data-testid="queue-more"
-            >
-              {t("queue.more")}
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 };

@@ -83,6 +83,10 @@ export type AdminJob = {
   project_name: string | null;
   user_id: string;
   user_name: string;
+  /** Почта того, кто запустил; null, если человека уже нет. */
+  user_email?: string | null;
+  org_id?: string | null;
+  org_name?: string | null;
   tags: string[];
   runner_id: string | null;
   runner_name: string | null;
@@ -94,7 +98,12 @@ export type AdminJob = {
   wait_s: number;
   error: string | null;
 };
-export type AdminJobPage = { items: AdminJob[]; hasMore: boolean };
+/** Страница очереди: курсор непрозрачный, null на последней; оценка числа только без фильтров. */
+export type AdminJobPage = {
+  items: AdminJob[];
+  next_cursor: string | null;
+  total_estimate: number | null;
+};
 export type AdminQueueSummary = {
   queued: number;
   running: number;

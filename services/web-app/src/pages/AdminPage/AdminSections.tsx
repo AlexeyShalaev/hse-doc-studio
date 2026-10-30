@@ -40,11 +40,12 @@ import { useInstanceSettings } from "@features/admin-install";
 import {
   diskTone,
   isLowSpace,
-  runnerStatus,
+  liveRunners,
+  quietRunners,
   summarizeHealth,
   useNow,
   useQueueSummary,
-  useRunners,
+  useRunnerSummary,
   useServices,
   useStorage,
 } from "@features/admin-ops";
@@ -105,20 +106,17 @@ const Kpis = () => {
   const num = useNumber();
   const users = useUsers(ALL_USERS);
   const approvals = useApprovals(0);
-  const runners = useRunners();
+  const runners = useRunnerSummary();
   const summary = useQueueSummary();
   const services = useServices();
   const storage = useStorage();
-  const now = useNow();
 
   const waiting = approvals.data?.total ?? 0;
-  const live = (runners.data ?? []).filter((r) => !r.revoked);
-  const online = live.filter((r) => runnerStatus(r, now) === "online").length;
+  const counts = runners.data;
+  const live = counts ? liveRunners(counts) : 0;
+  const online = counts?.online ?? 0;
   // Как в «Требует внимания»: приостановленные молчат намеренно.
-  const quiet = live.filter((r) => {
-    const status = runnerStatus(r, now);
-    return status === "stale" || status === "offline";
-  }).length;
+  const quiet = counts ? quietRunners(counts) : 0;
   // То же правило, что на странице «Сервисы»: мало раннеров в сети уже перебои.
   // Неподключённый сервис не сломан: его не считаем ни в норме, ни в сбое.
   const health = summarizeHealth(services.data ?? []);
@@ -166,12 +164,12 @@ const Kpis = () => {
         error={failedEmpty(runners) ? failed : undefined}
         value={num(online)}
         unit={
-          live.length > 0
-            ? t("overview.kpi.runnersOf", { total: num(live.length) })
+          live > 0
+            ? t("overview.kpi.runnersOf", { total: num(live) })
             : undefined
         }
         tone={
-          live.length === 0
+          live === 0
             ? "neutral"
             : online === 0
               ? "danger"
@@ -180,7 +178,7 @@ const Kpis = () => {
                 : "success"
         }
         secondary={
-          live.length === 0
+          live === 0
             ? t("overview.kpi.runnersNone")
             : quiet > 0
               ? t("overview.kpi.runnersQuiet", {
@@ -254,11 +252,10 @@ const Kpis = () => {
 const AttentionBlock = () => {
   const { t } = useTranslation("adminShell");
   const approvals = useApprovals(0);
-  const runners = useRunners();
+  const runners = useRunnerSummary();
   const services = useServices();
   const storage = useStorage();
   const auth = useBootstrap().data?.auth;
-  const now = useNow();
 
   const items: Attention[] = [];
   const waiting = approvals.data?.total ?? 0;
@@ -288,11 +285,12 @@ const AttentionBlock = () => {
       to: "/admin/settings",
     });
   }
-  const live = (runners.data ?? []).filter((r) => !r.revoked && !r.paused);
-  const statuses = live.map((r) => runnerStatus(r, now));
-  const online = statuses.filter((s) => s === "online").length;
-  const quiet = statuses.filter((s) => s === "stale" || s === "offline").length;
-  if (runners.data?.every((r) => r.revoked)) {
+  // Счётчики раннеров от сервера; приостановленные молчат намеренно.
+  const counts = runners.data;
+  const online = counts?.online ?? 0;
+  const quiet = counts ? quietRunners(counts) : 0;
+  const working = online + quiet;
+  if (counts && liveRunners(counts) === 0) {
     items.push({
       id: "runners-missing",
       tone: "warning",
@@ -300,7 +298,7 @@ const AttentionBlock = () => {
       body: t("overview.attention.runnersMissingBody"),
       to: "/admin/runners?create=token",
     });
-  } else if (live.length > 0 && online === 0) {
+  } else if (working > 0 && online === 0) {
     items.push({
       id: "runners-none",
       tone: "danger",

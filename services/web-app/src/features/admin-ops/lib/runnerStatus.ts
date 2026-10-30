@@ -1,6 +1,7 @@
-import type { AdminRunner } from "@entities/session";
+import type { AdminRunner, AdminRunnerSummary } from "@entities/session";
 
-// Состояние раннера считается на клиенте по last_seen_at: раннер опрашивает сервер
+// Состояние раннера считает сервер по last_seen_at (по нему же фильтр и порядок
+// списка); здесь то же правило для галереи и проверок. Раннер опрашивает сервер
 // долгим запросом до 25 с, так что тишина дольше минуты уже подозрительна.
 export const ONLINE_WITHIN_S = 60;
 export const STALE_WITHIN_S = 300;
@@ -34,3 +35,20 @@ export const runnerStatus = (
 /** Раннеры, которые могут взять задачу прямо сейчас. */
 export const countOnline = (runners: readonly AdminRunner[], now: number) =>
   runners.filter((r) => runnerStatus(r, now) === "online").length;
+
+/** Неотозванные раннеры по сводке сервера: в сети, затихшие, не в сети и на паузе. */
+export const liveRunners = (s: AdminRunnerSummary): number =>
+  s.online + s.paused + s.stale + s.offline;
+
+/** Молчат без паузы: затихли или не в сети. */
+export const quietRunners = (s: AdminRunnerSummary): number =>
+  s.stale + s.offline;
+
+/** Порядок состояний, как у сортировки сервера по status. */
+export const RUNNER_STATUSES: readonly RunnerStatus[] = [
+  "online",
+  "stale",
+  "offline",
+  "paused",
+  "revoked",
+];

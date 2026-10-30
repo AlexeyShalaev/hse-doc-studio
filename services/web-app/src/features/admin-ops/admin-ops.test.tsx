@@ -19,9 +19,11 @@ import {
   AdminQuotasSchema,
   AdminRunnerPageSchema,
   AdminRunnerSchema,
+  AdminRunnerSummarySchema,
   AdminRunnerTokenCreatedSchema,
   AdminRunnerTokenPageSchema,
   AdminServiceHealthSchema,
+  AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
   type AdminRunner,
   type AdminRunnerToken,
@@ -50,7 +52,7 @@ import { QuotasPage, RunnersPage, ServicesPage, StoragePage } from "./index";
 // Операционные экраны поверх демо-транспорта: те же запросы, что уйдут настоящему бэкенду,
 // и ответы, проходящие те же схемы.
 
-const wrap = (node: React.ReactNode) => (
+const wrap = (node: React.ReactNode, url = "/") => (
   <I18nextProvider i18n={i18n}>
     <QueryClientProvider
       client={
@@ -62,7 +64,7 @@ const wrap = (node: React.ReactNode) => (
         })
       }
     >
-      <MemoryRouter>{node}</MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>{node}</MemoryRouter>
     </QueryClientProvider>
   </I18nextProvider>
 );
@@ -167,16 +169,13 @@ describe("операционные разделы: чистая логика", (
     expect(statusOf(stale(403, "forbidden"))).toBe("ready");
   });
 
-  it("люди по идентификатору: имя из справочника, без имени нейтрально", () => {
-    const people = new Map([
-      ["u1", { name: "Мария Келлер", email: "maria@example.org" }],
-    ]);
-    expect(personRef("u1", "", people)).toEqual({
+  it("люди из строки ответа: имя и почта от сервера, без имени нейтрально", () => {
+    expect(personRef("u1", "Мария Келлер", "maria@example.org")).toEqual({
       id: "u1",
       name: "Мария Келлер",
       email: "maria@example.org",
     });
-    expect(personRef("u2", "  ", people)).toEqual({
+    expect(personRef("u2", "  ", null)).toEqual({
       id: "u2",
       name: null,
       email: null,
@@ -252,9 +251,18 @@ describe("операционные разделы: демо-API", () => {
   });
 
   it("ответы проходят схемы контракта", async () => {
-    AdminRunnerPageSchema.parse((await call("GET", "/runners")).data);
+    const page = { limit: "50" };
+    AdminRunnerPageSchema.parse(
+      (await call("GET", "/runners", undefined, page)).data,
+    );
+    AdminRunnerSummarySchema.parse(
+      (await call("GET", "/runners/summary")).data,
+    );
     AdminRunnerTokenPageSchema.parse(
-      (await call("GET", "/runner-tokens")).data,
+      (await call("GET", "/runner-tokens", undefined, page)).data,
+    );
+    AdminStorageOwnerPageSchema.parse(
+      (await call("GET", "/storage/owners", undefined, page)).data,
     );
     AdminJobPageSchema.parse((await call("GET", "/queue")).data);
     AdminQueueSummarySchema.parse((await call("GET", "/queue/summary")).data);
@@ -302,7 +310,8 @@ describe("операционные разделы: демо-API", () => {
     expect(limited.status).toBe(429);
     expect((await call("DELETE", "/runner-tokens/rt_01hxc1")).status).toBe(204);
     const tokens = (
-      (await call("GET", "/runner-tokens")).data as {
+      (await call("GET", "/runner-tokens", undefined, { limit: "50" }))
+        .data as {
         items: AdminRunnerToken[];
       }
     ).items;
@@ -341,6 +350,56 @@ describe("операционные разделы: демо-API", () => {
       .data as { items: unknown[]; next_cursor: string | null };
     expect(page.items).toHaveLength(3);
     expect(page.next_cursor).not.toBeNull();
+    // Следующая страница по курсору продолжает, а не повторяет первую.
+    const next = (
+      await call("GET", "/queue", undefined, {
+        limit: "3",
+        cursor: page.next_cursor ?? "",
+      })
+    ).data as { items: { id: string }[] };
+    const first = (page.items as { id: string }[]).map((j) => j.id);
+    expect(next.items.some((j) => first.includes(j.id))).toBe(false);
+    // Имена людей, проекта и раннера приходят в строке, как JOIN сервера.
+    const named = (await call("GET", "/queue", undefined, { state: "running" }))
+      .data as {
+      items: { user_name: string | null; runner_name: string | null }[];
+    };
+    expect(named.items.every((j) => j.runner_name !== null)).toBe(true);
+    expect(named.items.some((j) => j.user_name === "Мария Келлер")).toBe(true);
+  });
+
+  it("раннеры: фильтр, поиск, сортировка и окно на сервере", async () => {
+    const online = (
+      await call("GET", "/runners", undefined, {
+        limit: "50",
+        status: ["online", "stale"],
+      })
+    ).data as { items: { status: string }[]; total: number };
+    expect(online.total).toBe(online.items.length);
+    expect(
+      online.items.every((r) => ["online", "stale"].includes(r.status)),
+    ).toBe(true);
+    const window = (
+      await call("GET", "/runners", undefined, {
+        limit: "2",
+        offset: "1",
+        sort: "-name",
+      })
+    ).data as { items: { name: string }[]; total: number; offset: number };
+    expect(window.items).toHaveLength(2);
+    expect(window.offset).toBe(1);
+    expect(window.total).toBeGreaterThan(2);
+    expect(
+      (await call("GET", "/runners", undefined, { limit: "5", sort: "zzz" }))
+        .status,
+    ).toBe(422);
+    const owners = (
+      await call("GET", "/storage/owners", undefined, {
+        limit: "50",
+        q: "КЕЛЛЕР",
+      })
+    ).data as { items: { name: string }[] };
+    expect(owners.items.map((o) => o.name)).toEqual(["Мария Келлер"]);
   });
 
   it("отмена: очередь и работа отменяются, завершённая задача остаётся как есть", async () => {
@@ -612,27 +671,62 @@ describe("операционные разделы: экраны", () => {
     ).not.toHaveLength(0);
     expect(await screen.findByText("Удалённый пользователь")).toBeVisible();
     expect(screen.queryByText(/u_01hx/)).toBeNull();
-    // Счётчики состояний у фильтров приходят из сводки.
+    // Счётчики состояний у фильтра приходят из сводки.
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("queue-filter-state"));
     expect(
-      screen.getByRole("button", { name: /Выполняется\s*3/ }),
+      await screen.findByRole("checkbox", { name: /Выполняется\s*3/ }),
     ).toBeVisible();
   }, 20_000);
 
-  it("очередь: поиск по человеку", async () => {
-    const user = userEvent.setup();
-    render(wrap(<RunnersPage initialTab="queue" />));
-    await screen.findByTestId("job-status-j_01hxd1");
-    await screen.findAllByText("Дарья Лис");
-    await user.type(
-      screen.getByRole("searchbox", {
-        name: "Найти по человеку, проекту или раннеру",
-      }),
-      "Лис",
-    );
+  it("очередь: фильтр из адреса уходит серверу, строки не отбираются на клиенте", async () => {
+    render(wrap(<RunnersPage />, "/?tab=queue&state=failed"));
+    expect(await screen.findByTestId("job-status-j_01hxd9")).toBeVisible();
     await waitFor(() => {
       expect(screen.queryByTestId("job-status-j_01hxd1")).toBeNull();
     });
-    expect(screen.getByTestId("job-status-j_01hxd3")).toBeVisible();
+    for (const cell of screen.getAllByTestId(/^job-status-/)) {
+      expect(cell).toHaveTextContent("Ошибка");
+    }
+    expect(screen.getByTestId("queue-filters")).toHaveTextContent("Состояние:");
+  }, 20_000);
+
+  it("раннеры: поиск и фильтр состояния уходят серверу", async () => {
+    const user = userEvent.setup();
+    render(wrap(<RunnersPage />, "/?status=paused"));
+    expect(await screen.findByTestId("runner-status-rn_01hxb4")).toBeVisible();
+    await waitFor(() => {
+      expect(screen.queryByTestId("runner-status-rn_01hxb1")).toBeNull();
+    });
+    await user.click(screen.getByRole("button", { name: "Сбросить" }));
+    expect(await screen.findByTestId("runner-status-rn_01hxb1")).toBeVisible();
+    await user.type(
+      screen.getByRole("searchbox", { name: "Найти раннер" }),
+      "nothing-like-this",
+    );
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("runner-status-rn_01hxb1")).toBeNull();
+      },
+      { timeout: 4000 },
+    );
+    expect(screen.getByTestId("runners-view")).toHaveTextContent(
+      "Ничего не найдено",
+    );
+  }, 20_000);
+
+  it("хранилище: поиск владельца на сервере", async () => {
+    const user = userEvent.setup();
+    render(wrap(<StoragePage />));
+    await screen.findByTestId("owner-u_01hx7k2c1d");
+    await user.type(
+      screen.getByRole("searchbox", { name: "Найти владельца" }),
+      "zzzz",
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("owner-u_01hx7k2c1d")).toBeNull();
+    });
+    expect(screen.getByText("Ничего не найдено")).toBeVisible();
   }, 20_000);
 
   it("квоты: сохранение, проверка границ", async () => {

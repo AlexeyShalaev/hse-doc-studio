@@ -1,11 +1,18 @@
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Archive, FolderOpen, HardDrive, Package } from "lucide-react";
+import {
+  Archive,
+  Building2,
+  FolderOpen,
+  HardDrive,
+  Package,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatFileSize, formatPastTime, localeTag } from "@shared/lib";
 import {
   DataTable,
   EmptyState,
+  FilterBar,
   KpiGrid,
   KpiTile,
   Meter,
@@ -15,9 +22,15 @@ import {
   Tooltip,
   type KpiTone,
 } from "@shared/ui";
-import type { AdminStorage } from "@entities/session";
+import type { AdminStorage, AdminStorageOwnerRow } from "@entities/session";
 import { percent } from "../lib/format";
-import { personRef, type OpsPerson, type PersonRef } from "../lib/people";
+import {
+  OWNER_KINDS,
+  OWNER_SORT,
+  type ListView,
+  type OwnerFilter,
+  type OwnerSort,
+} from "../lib/lists";
 import { diskTone as toneOf, isLowSpace } from "../lib/storage";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
@@ -25,18 +38,16 @@ import { Banner, ViewState } from "./parts";
 export type StorageViewProps = {
   status: ViewStatus;
   storage: AdminStorage | null;
-  /** Почты владельцев по идентификатору. */
-  people?: ReadonlyMap<string, OpsPerson>;
+  /** Владельцы места страницей с сервера: люди и организации. */
+  owners: ListView<AdminStorageOwnerRow, OwnerFilter, OwnerSort>;
   now: number;
   onRetry?: () => void;
 };
 
-const NO_PEOPLE: ReadonlyMap<string, OpsPerson> = new Map();
-
 type OwnerRow = {
+  /** Место в текущем порядке с учётом страницы. */
   rank: number;
-  person: PersonRef;
-  projects: number;
+  owner: AdminStorageOwnerRow;
   share: number;
 };
 
@@ -113,26 +124,27 @@ const DiskUsage = ({
 export const StorageView = ({
   status,
   storage,
-  people = NO_PEOPLE,
+  owners,
   now,
   onRetry,
 }: StorageViewProps) => {
   const { t } = useTranslation("adminOps");
+  const { state } = owners;
 
   const low = storage ? isLowSpace(storage) : false;
   const total = storage?.volume_total_bytes ?? null;
   const free = storage?.free_bytes ?? null;
   const diskTone: KpiTone = storage ? toneOf(storage) : "neutral";
 
+  const allProjects = storage?.projects ?? 0;
   const rows = useMemo<OwnerRow[]>(
     () =>
-      (storage?.owners ?? []).map((o, i) => ({
-        rank: i + 1,
-        person: personRef(o.id, o.name, people),
-        projects: o.projects,
-        share: percent(o.projects, storage?.projects ?? 0),
+      owners.items.map((owner, i) => ({
+        rank: state.offset + i + 1,
+        owner,
+        share: percent(owner.projects, allProjects),
       })),
-    [storage, people],
+    [owners.items, state.offset, allProjects],
   );
 
   const columns = useMemo<ColumnDef<OwnerRow>[]>(
@@ -144,32 +156,58 @@ export const StorageView = ({
         ),
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="ops-rank">{row.original.rank}</span>
+          <span className="ops-rank">
+            {row.original.rank.toLocaleString(localeTag())}
+          </span>
         ),
       },
       {
-        id: "who",
+        id: "name",
         header: t("storage.owners.who"),
-        enableSorting: false,
-        cell: ({ row }) => (
-          <span data-testid={`owner-${row.original.person.id}`}>
-            <PersonCell
-              id={row.original.person.id}
-              name={row.original.person.name}
-              email={row.original.person.email}
-            />
-          </span>
-        ),
+        cell: ({ row }) => {
+          const { owner } = row.original;
+          return (
+            <span data-testid={`owner-${owner.id}`}>
+              <PersonCell
+                id={owner.id}
+                name={owner.name}
+                email={owner.email}
+                {...(owner.kind === "org"
+                  ? {
+                      subtitle: (
+                        <span className="ops-owner-org">
+                          <Building2 size={11} aria-hidden="true" />
+                          {t("storage.owners.org")}
+                        </span>
+                      ),
+                    }
+                  : {})}
+              />
+            </span>
+          );
+        },
       },
       {
         id: "projects",
         header: () => (
           <span className="ops-num">{t("storage.owners.projectsCol")}</span>
         ),
-        enableSorting: false,
+        sortDescFirst: true,
         cell: ({ row }) => (
           <span className="ops-num">
-            {row.original.projects.toLocaleString(localeTag())}
+            {row.original.owner.projects.toLocaleString(localeTag())}
+          </span>
+        ),
+      },
+      {
+        id: "bytes",
+        header: () => (
+          <span className="ops-num">{t("storage.owners.bytesCol")}</span>
+        ),
+        sortDescFirst: true,
+        cell: ({ row }) => (
+          <span className="ops-num">
+            {formatFileSize(row.original.owner.bytes)}
           </span>
         ),
       },
@@ -184,7 +222,7 @@ export const StorageView = ({
             <Meter
               value={row.original.share}
               label={t("storage.owners.share", {
-                name: row.original.person.name ?? "",
+                name: row.original.owner.name,
               })}
             />
             <span className="ops-share-pct">{row.original.share}%</span>
@@ -194,6 +232,13 @@ export const StorageView = ({
     ],
     [t],
   );
+
+  // Пусто без условий: проектов ещё нет ни у кого.
+  const noOwners =
+    owners.status === "ready" &&
+    !owners.failed &&
+    !state.isFiltered &&
+    owners.total === 0;
 
   return (
     <div className="ops-stack" data-testid="storage-view">
@@ -229,11 +274,12 @@ export const StorageView = ({
               testId="storage-total"
               icon={<FolderOpen size={14} aria-hidden="true" />}
               label={t("storage.stats.projects")}
-              value={storage.projects}
+              value={storage.projects.toLocaleString(localeTag())}
               secondary={
                 storage.deleted_projects > 0
                   ? t("storage.stats.projectsHint", {
                       count: storage.deleted_projects,
+                      n: storage.deleted_projects.toLocaleString(localeTag()),
                     })
                   : t("storage.stats.noDeleted")
               }
@@ -245,6 +291,7 @@ export const StorageView = ({
               value={formatFileSize(storage.blob_bytes)}
               secondary={t("storage.stats.objectsHint", {
                 count: storage.blob_count,
+                n: storage.blob_count.toLocaleString(localeTag()),
               })}
             />
             <KpiTile
@@ -282,7 +329,7 @@ export const StorageView = ({
             description={t("storage.owners.lead")}
             testId="storage-owners"
           >
-            {rows.length === 0 ? (
+            {noOwners ? (
               <EmptyState
                 framed
                 testId="storage-empty"
@@ -291,13 +338,53 @@ export const StorageView = ({
                 description={t("storage.empty.body")}
               />
             ) : (
-              <DataTable
-                className="ops-table ops-static"
-                caption={t("storage.owners.title")}
-                columns={columns}
-                data={rows}
-                getRowId={(r) => r.person.id}
-              />
+              <div className="ops-stack" style={{ gap: 12 }}>
+                <FilterBar
+                  search={state.q}
+                  onSearchChange={state.setQ}
+                  searchLabel={t("storage.owners.search")}
+                  searchPlaceholder={t("storage.owners.searchPlaceholder")}
+                  busy={owners.fetching}
+                  onReset={state.reset}
+                  filters={[
+                    {
+                      id: "kind",
+                      label: t("storage.owners.kind"),
+                      value: state.filter("kind"),
+                      onChange: (value) => {
+                        state.setFilter("kind", value === "" ? null : value);
+                      },
+                      options: OWNER_KINDS.map((kind) => ({
+                        value: kind,
+                        label: t(`storage.owners.kinds.${kind}`),
+                      })),
+                    },
+                  ]}
+                />
+                <DataTable
+                  className="ops-table ops-static"
+                  caption={t("storage.owners.title")}
+                  columns={columns}
+                  data={rows}
+                  getRowId={(r) => `${r.owner.kind}:${r.owner.id}`}
+                  loading={owners.fetching}
+                  error={owners.failed ? t("storage.owners.loadFailed") : null}
+                  {...(owners.onRetry ? { onRetry: owners.onRetry } : {})}
+                  sorting={state.sorting}
+                  onSortingChange={state.onSortingChange}
+                  sortable={OWNER_SORT}
+                  pagination={owners.pagination}
+                  filtered={state.isFiltered}
+                  searchQuery={state.q}
+                  onResetFilters={state.reset}
+                  columnWidths={{
+                    rank: 56,
+                    projects: 110,
+                    bytes: 110,
+                    share: 170,
+                  }}
+                />
+              </div>
             )}
           </Section>
 

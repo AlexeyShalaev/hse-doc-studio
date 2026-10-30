@@ -730,7 +730,6 @@ export const AdminJobSchema = z.strictObject({
   runner_name: z.string().nullable(),
 });
 /** Журнал очереди: курсор непрозрачный, null на последней странице; оценка только без фильтров. */
-// Оценка числа задач; только без фильтров, иначе null.
 export const AdminJobPageSchema = cursorPageOf(AdminJobSchema);
 export const AdminQueueSummarySchema = z.strictObject({
   by_state: z.record(z.string(), z.number().int()),

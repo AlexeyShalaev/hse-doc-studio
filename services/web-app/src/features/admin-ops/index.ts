@@ -5,13 +5,14 @@ export { Storage as StoragePage } from "./ui/Storage";
 export { getAdminOpsGallery } from "./ui/opsGallery";
 export { opsKeys } from "./api/opsQueries";
 // Для сводки и счётчиков оболочки админки: те же запросы, что у разделов.
+// Раннеры там только счётчиками сервера: список целиком не читается нигде.
 export {
   useQueueSummary,
-  useRunners,
+  useRunnerSummary,
   useServices,
   useStorage,
 } from "./api/opsQueries";
-export { countOnline, runnerStatus } from "./lib/runnerStatus";
+export { liveRunners, quietRunners } from "./lib/runnerStatus";
 export type { RunnerStatus } from "./lib/runnerStatus";
 export { diskTone, isLowSpace } from "./lib/storage";
 export {
