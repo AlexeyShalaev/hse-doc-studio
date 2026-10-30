@@ -74,6 +74,8 @@ class RunnerPairingService:
         self._clock = clock
         self._monotonic = monotonic
         # Последний опрос устройства: одна реплика api, памяти процесса достаточно (как у ограничителя частоты).
+        # Записи старше срока жизни сопряжения вытесняются: `pair/start` открыт всем, брошенные, истёкшие и
+        # отклонённые сопряжения иначе копились бы в памяти до рестарта.
         self._last_poll: dict[str, float] = {}
 
     async def start(self, name: str, host_kind: RunnerHostKind, client_ip: str | None) -> PairingStarted:
@@ -123,6 +125,7 @@ class RunnerPairingService:
 
     def _check_interval(self, pairing_id: str) -> None:
         tick = self._monotonic()
+        self._evict_polls(tick)
         last = self._last_poll.get(pairing_id)
         if last is not None and tick - last < PAIRING_INTERVAL_S - _POLL_SLACK_S:
             raise RunnerAuthError(RunnerErrorCode.slow_down, f"poll at most every {PAIRING_INTERVAL_S} s")
@@ -181,7 +184,14 @@ class RunnerPairingService:
             )
         return self._view(await self._find(user_code))
 
+    def _evict_polls(self, tick: float) -> None:
+        """Опрос старше срока жизни сопряжения ничего не ограничивает: само сопряжение уже истекло."""
+        horizon = tick - PAIRING_TTL.total_seconds()
+        for pairing_id in [key for key, last in self._last_poll.items() if last < horizon]:
+            del self._last_poll[pairing_id]
+
     async def purge(self) -> int:
+        self._evict_polls(self._monotonic())
         return await self._pairings.purge(self._clock() - PAIRING_KEEP)
 
     @staticmethod
