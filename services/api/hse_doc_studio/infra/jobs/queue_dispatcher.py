@@ -42,8 +42,9 @@ from hse_doc_studio.core.jobs.errors import JobError, NoRunnerAvailableError, Qu
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
+from hse_doc_studio.core.jobs.policy import JobKindPolicy
 from hse_doc_studio.core.jobs.protocols import IJobHooks, IJobObserver
-from hse_doc_studio.core.jobs.queue import EnqueueRequest, IJobQueue, QueuedJob
+from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, IJobQueue, QueuedJob
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision, RunnerScope
@@ -113,6 +114,10 @@ class QueueJobDispatcher:
     ) -> None:
         self._wakeup = wakeup
         self._router = router
+        # Решение о маршруте считает нагрузку личных раннеров по очереди, а постановка её меняет:
+        # без замка две сборки разом («Собрать всё») видят пустую очередь и обе ждут один слот
+        # личного раннера, вместо того чтобы вторая сразу шла на общие. Одна реплика api (S6).
+        self._route_lock = asyncio.Lock()
         self._queue = queue
         self._uploader = uploader
         self._runners = runners
@@ -435,8 +440,6 @@ class QueueJobDispatcher:
             cap = await self._quotas.max_duration_s(user_id, org_id)
             if cap is not None:
                 timeout = min(timeout, cap)
-        decision = await self._route(spec, user_id)
-        personal = decision is not None and decision.route is JobRoute.personal_first
         role = await self._role_of(spec)
         spec = await self._with_user_passes(spec)
         envelope = JobEnvelope(
@@ -450,7 +453,29 @@ class QueueJobDispatcher:
         payload = {k: v for k, v in encode_envelope(envelope).items() if k not in {"job_token", "attempt"}}
         if spec.id in self._cancelled:
             return None
-        outcome = await self._queue.enqueue(
+        async with self._route_lock:
+            outcome = await self._enqueue_routed(spec, user_id, org_id, payload, policy, timeout, unquoted_timeout)
+        if self._wakeup is not None:
+            self._wakeup.notify()
+        if spec.id in self._cancelled:
+            # Отмена пришла, пока шли обращения к базе после проверки выше: задача уже в очереди.
+            await self._cancel_quietly(spec.id)
+        return outcome.job
+
+    async def _enqueue_routed(  # noqa: PLR0913
+        self,
+        spec: JobSpec,
+        user_id: UUID,
+        org_id: UUID | None,
+        payload: dict[str, Any],
+        policy: JobKindPolicy,
+        timeout: float,
+        unquoted_timeout: float,
+    ) -> EnqueueOutcome:
+        """Маршрут и постановка под одним замком: следующая постановка видит эту задачу в нагрузке."""
+        decision = await self._route(spec, user_id)
+        personal = decision is not None and decision.route is JobRoute.personal_first
+        return await self._queue.enqueue(
             EnqueueRequest(
                 job_id=spec.id,
                 kind=spec.kind,
@@ -470,12 +495,6 @@ class QueueJobDispatcher:
                 timeout_personal_s=unquoted_timeout if personal and unquoted_timeout != timeout else None,
             )
         )
-        if self._wakeup is not None:
-            self._wakeup.notify()
-        if spec.id in self._cancelled:
-            # Отмена пришла, пока шли обращения к базе после проверки выше: задача уже в очереди.
-            await self._cancel_quietly(spec.id)
-        return outcome.job
 
     async def _route(self, spec: JobSpec, user_id: UUID) -> RouteDecision | None:
         """Без маршрутизатора (тесты, старые сборки контейнера) всё идёт на общие раннеры, как до личных."""

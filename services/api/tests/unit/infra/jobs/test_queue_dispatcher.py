@@ -18,6 +18,7 @@ from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobState, 
 from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, QueuedJob, RunnerRef
+from hse_doc_studio.core.jobs.routing import JobRoute, RouteDecision, RouteReason
 from hse_doc_studio.core.jobs.runners import Runner
 from hse_doc_studio.core.storage.manifest import ManifestFileTooLargeError, ManifestLimits
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
@@ -592,3 +593,52 @@ async def test__submit__record_rejected__result_is_marked_applied(rig: Rig) -> N
     await _until(lambda: not dispatcher.is_active(spec.id))
 
     assert await ledger.list_unapplied() == ()
+
+
+class _OneSlotRouter:
+    """Маршрутизатор с одним слотом личного раннера: нагрузка это ждущие его задачи очереди.
+
+    Между чтением нагрузки и ответом уступает цикл событий, как настоящий запрос к базе.
+    """
+
+    def __init__(self, queue: InMemoryJobQueue) -> None:
+        self.queue = queue
+
+    async def decide(self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID) -> RouteDecision:
+        load = sum(
+            1
+            for job in self.queue._jobs.values()
+            if job.state is JobState.queued and job.route is JobRoute.personal_first
+        )
+        await asyncio.sleep(0.01)
+        if load >= 1:
+            return RouteDecision.shared(RouteReason.fallback_busy)
+        return RouteDecision(
+            route=JobRoute.personal_first,
+            reason=RouteReason.waiting_personal,
+            route_owner_id=_USER.hex,
+            personal_until=datetime.now(UTC) + timedelta(seconds=5),
+        )
+
+
+async def test__submit__two_builds_at_once__second_sees_the_first_in_personal_load(rig: Rig) -> None:
+    """«Собрать всё»: одна сборка ждёт единственный слот личного раннера, вторая сразу идёт на общие."""
+    dispatcher = QueueJobDispatcher(
+        rig.queue,
+        rig.uploader,
+        rig.runners,
+        poll_interval_s=0.005,
+        router=_OneSlotRouter(rig.queue),
+    )
+    first = rig.spec()
+    # Другой документ: новая сборка того же документа заменила бы прежнюю.
+    second = rig.spec(replace(first, payload=replace(first.payload, doc_id="report")))
+
+    dispatcher.submit(first, Hooks())
+    dispatcher.submit(second, Hooks())
+    await _until(lambda: first.id in rig.queue._jobs and second.id in rig.queue._jobs)
+
+    routes = sorted((rig.queue._jobs[s.id].route, rig.queue._jobs[s.id].route_reason) for s in (first, second))
+    assert routes == sorted(
+        [(JobRoute.personal_first, RouteReason.waiting_personal), (JobRoute.shared, RouteReason.fallback_busy)]
+    )
