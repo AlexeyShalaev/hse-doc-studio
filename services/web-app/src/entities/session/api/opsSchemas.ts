@@ -87,6 +87,11 @@ export type AdminJob = {
   finished_at: string | null;
   wait_s: number;
   error: string | null;
+  /** Маршрут задачи: shared, personal_first, pinned (ИИ через раннер). */
+  route?: string | null;
+  /** Кто взял попытку: общий раннер или личный. */
+  runner_scope?: "shared" | "personal" | null;
+  route_reason?: string | null;
 };
 export type AdminJobPage = { items: AdminJob[]; hasMore: boolean };
 export type AdminQueueSummary = {

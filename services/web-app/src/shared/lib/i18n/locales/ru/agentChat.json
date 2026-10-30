@@ -124,7 +124,22 @@
     "otherModels": "Другие модели",
     "selectModel": "Выбрать модель",
     "fallbackLabel": "Модель",
-    "titleWithProvider": "{{model}} · {{provider}}"
+    "titleWithProvider": "{{model}} · {{provider}}",
+    "group": {
+      "own": "Мои",
+      "org": "Организации",
+      "instance": "Установки"
+    },
+    "defaultOrder": "По умолчанию: мои, затем организации, затем установки",
+    "unavailable": "Недоступна: {{reason}}",
+    "relayState": {
+      "ready": "готов",
+      "runner_offline": "раннер не в сети",
+      "runner_paused": "раннер на паузе",
+      "runner_revoked": "раннер отозван",
+      "endpoint_missing": "адрес пропал",
+      "disabled": "выключено админом"
+    }
   },
   "persona": {
     "roleTitle": "Роль агента: {{name}}",
@@ -136,5 +151,11 @@
     "chooserTitle": "Каким будет ваш агент?",
     "chooserSubtitle": "Выберите роль — она задаёт тон и фокус ассистента. Можно сменить в любой момент.",
     "applyRole": "Применить роль"
+  },
+  "relayError": {
+    "unavailable": "Раннер «{{name}}» не ответил. Запустите его или выберите другую модель.",
+    "unavailableNoName": "Раннер не ответил. Запустите его или выберите другую модель.",
+    "busy": "Слишком много запросов к раннеру одновременно, попробуйте через минуту.",
+    "pick": "Выбрать модель"
   }
 }

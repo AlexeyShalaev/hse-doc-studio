@@ -224,7 +224,43 @@
     "sectionSyncOptions": "Background check",
     "sectionSyncSharedFolder": "Folder on a cloud drive",
     "sectionSyncExchange": "File exchange",
-    "sectionSyncCi": "Automatic builds (CI)"
+    "sectionSyncCi": "Automatic builds (CI)",
+    "builds": {
+      "loading": "Loading where builds run…",
+      "loadFailed": "Couldn't find out where this project builds.",
+      "retry": "Retry",
+      "disabled": "The administrator turned personal runners off: all builds use the installation's shared runners.",
+      "org": "This is an organization project: builds use shared runners.",
+      "coauthorsLabel": "Co-author builds",
+      "coauthorsHint": "Where builds started by this project's co-authors run.",
+      "policy": {
+        "shared": {
+          "title": "On shared runners (default)",
+          "hint": "They use installation quotas."
+        },
+        "owner": {
+          "title": "On my runners",
+          "hint": "Co-authors will see your runner's name. If it's offline, the build goes to shared runners."
+        }
+      },
+      "ownBuilds": "Your own builds of this project go to your runner when it's online. If it doesn't take a build within {{seconds}} s, it goes to shared runners.",
+      "myRunners": "My runners",
+      "noRunners": "You have no runners of your own.",
+      "connect": "Connect",
+      "ownerRunners": "Owner's runners",
+      "coauthorOwner": "Builds run on the owner's runner \"{{name}}\" when it's online; otherwise on shared runners.",
+      "coauthorOwnerNoName": "Builds run on the owner's runners when they're online; otherwise on shared runners.",
+      "coauthorShared": "Builds run on the installation's shared runners.",
+      "saved": "Saved",
+      "state": {
+        "online": "Online",
+        "stale": "Not responding",
+        "offline": "Offline",
+        "paused": "Paused",
+        "disabled": "Turned off"
+      }
+    },
+    "sectionBuilds": "Builds"
   },
   "files": {
     "editorTitle": "File editor",

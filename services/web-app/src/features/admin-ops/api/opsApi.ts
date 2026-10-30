@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
 import {
+  AdminBuildSettingsSchema,
   AdminJobPageSchema,
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
@@ -12,6 +13,7 @@ import {
   AdminServiceHealthSchema,
   AdminStorageUsageSchema,
   AdminUserSchema,
+  type AdminBuildSettings,
   type AdminJob,
   type AdminJobPage,
   type AdminQueueSummary,
@@ -46,6 +48,8 @@ export type QueueQuery = {
   /** Поиск по уже загруженным задачам: сервер его не знает. */
   q: string;
   limit: number;
+  /** Где исполняется: на общих или на личных раннерах (runner_scope). */
+  scope?: "" | "shared" | "personal";
 };
 
 export const opsApi = {
@@ -85,6 +89,7 @@ export const opsApi = {
         params: {
           ...(query.status ? { state: query.status } : {}),
           ...(query.kind ? { kind: query.kind } : {}),
+          ...(query.scope ? { runner_scope: query.scope } : {}),
           limit: query.limit,
         },
       })
@@ -148,6 +153,12 @@ export const opsApi = {
     adminClient
       .get(`/users/${enc(id)}`, quiet)
       .then(parseResp(AdminUserSchema)),
+
+  /** Настройки сборки установки: здесь нужен только флаг личных раннеров. */
+  buildSettings: (): Promise<AdminBuildSettings> =>
+    adminClient
+      .get("/settings/build", quiet)
+      .then(parseResp(AdminBuildSettingsSchema)),
 
   storage: async (): Promise<AdminStorage> =>
     storageFromWire(

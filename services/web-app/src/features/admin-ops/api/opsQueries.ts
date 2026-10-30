@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type {
+  AdminRunner,
   AdminUser,
   CreateAdminRunnerTokenRequest,
   UpdateAdminQuotasRequest,
@@ -24,17 +25,48 @@ export const opsKeys = {
   services: ["admin", "ops", "services"] as const,
   storage: ["admin", "ops", "storage"] as const,
   person: (id: string) => ["admin", "ops", "person", id] as const,
+  buildSettings: ["admin", "ops", "build-settings"] as const,
 };
+
+/** Раннер установки, а не личный: старый сервер без owner_kind отдаёт только такие. */
+export const isInstanceRunner = (runner: AdminRunner): boolean =>
+  runner.owner_kind !== "user";
+
+const instanceOnly = (runners: AdminRunner[]): AdminRunner[] =>
+  runners.filter(isInstanceRunner);
+const personalOnly = (runners: AdminRunner[]): AdminRunner[] =>
+  runners.filter((runner) => !isInstanceRunner(runner));
 
 /** Опрос идёт только пока вкладка видна: react-query не тикает в фоне без явного флага. */
 const POLL_MS = 5000;
 
+// Сервер отдаёт все раннеры одним списком; разделы и сводка берут свою часть
+// из одного запроса: раннеры установки и личные раннеры людей отдельно.
 export const useRunners = () =>
   useQuery({
     queryKey: opsKeys.runners,
     queryFn: () => opsApi.runners(),
     staleTime: 0,
     refetchInterval: POLL_MS * 3,
+    select: instanceOnly,
+  });
+
+export const usePersonalRunners = () =>
+  useQuery({
+    queryKey: opsKeys.runners,
+    queryFn: () => opsApi.runners(),
+    staleTime: 0,
+    refetchInterval: POLL_MS * 3,
+    select: personalOnly,
+  });
+
+/** Разрешены ли личные раннеры на установке: из настроек сборки. */
+export const usePersonalRunnersEnabled = () =>
+  useQuery({
+    queryKey: opsKeys.buildSettings,
+    queryFn: () => opsApi.buildSettings(),
+    staleTime: 30_000,
+    select: (settings) => settings.personal_runners_enabled,
   });
 
 export const useTokens = () =>

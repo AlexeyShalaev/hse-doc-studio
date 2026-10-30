@@ -1,6 +1,7 @@
 {
   "type": {
-    "openaiCompat": "OpenAI-compatible"
+    "openaiCompat": "OpenAI-compatible",
+    "runner": "Via my runner"
   },
   "keyPlaceholder": {
     "openaiCompat": "endpoint key"
@@ -57,5 +58,28 @@
     "cancel": "Cancel",
     "save": "Save",
     "add": "Add"
+  },
+  "runner": {
+    "runner": "Runner",
+    "runnerPlaceholder": "Pick a runner",
+    "endpoint": "Runner AI endpoint",
+    "endpointPlaceholder": "Pick an endpoint",
+    "hint": "The server never reaches into your network: your runner relays the requests.",
+    "noRunners": "Connect a runner first.",
+    "connect": "Connect a runner",
+    "noEndpoints": "Runner \"{{name}}\" has declared no AI endpoints. In the Studio turn on \"Models for the cloud\"; on a server set HSE_RUNNER__AI_ENDPOINTS.",
+    "required": "Pick a runner and an AI endpoint.",
+    "modelsAfter": "Models are loaded through the runner right after you add it. If the runner is offline, type a model in by hand.",
+    "modelsLoaded_one": "Loaded {{count}} model",
+    "modelsLoaded_other": "Loaded {{count}} models",
+    "modelsFailed": "Models didn't load: {{reason}}"
+  },
+  "relayState": {
+    "ready": "ready",
+    "runner_offline": "runner offline",
+    "runner_paused": "runner paused",
+    "runner_revoked": "runner revoked",
+    "endpoint_missing": "endpoint gone",
+    "disabled": "turned off by admin"
   }
 }

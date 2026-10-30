@@ -80,6 +80,9 @@ export const CreateAIProviderSchema = z.object({
   request_timeout_s: z.number().positive({
     error: () => i18n.t("entitiesMisc:aiProviderValidation.timeoutPositive"),
   }),
+  // Только у вида runner: свой раннер и имя адреса, который он объявил.
+  runner_id: z.string().optional(),
+  runner_endpoint: z.string().optional(),
 });
 export type CreateAIProviderInput = z.infer<typeof CreateAIProviderSchema>;
 

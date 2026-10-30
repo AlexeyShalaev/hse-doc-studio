@@ -130,7 +130,11 @@ export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
 
 /** Операционные данные мира; для сценария берётся его набор. */
 export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
-  world.adminOps ??= createDemoAdminOps(world.scenario.opsSeed);
+  world.adminOps ??= createDemoAdminOps(
+    world.scenario.opsSeed,
+    Date.now(),
+    world.scenario.personalSeed !== undefined,
+  );
   return world.adminOps;
 };
 

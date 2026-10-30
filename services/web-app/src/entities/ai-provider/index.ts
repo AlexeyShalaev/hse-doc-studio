@@ -21,6 +21,12 @@ export type {
   RelayState,
 } from "./model/aiProvider.schema";
 export {
+  defaultProvider,
+  isProviderReady,
+  orderProviders,
+  providerSource,
+} from "./lib/providerOrder";
+export {
   aiProviderApi,
   aiProviderApiFor,
   type AIProviderOwner,

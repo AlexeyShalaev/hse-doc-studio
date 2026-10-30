@@ -137,6 +137,10 @@
       "local_remote_problems": {
         "title": "Studio: no Docker or image",
         "hint": "The Studio is connected, but Docker is unavailable and the TeX image is missing."
+      },
+      "admin_personal_runners": {
+        "title": "Admin: personal runners",
+        "hint": "Instance admin: people's personal runners, their jobs and AI via a runner in the queue."
       }
     }
   }

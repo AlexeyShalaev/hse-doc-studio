@@ -128,7 +128,7 @@ export const CompileDetailSchema = CompileListItemSchema.extend({
   check_results: z.array(CheckResultSchema).optional(),
   // Серверный режим: очередь, нет раннера, заменена. Локальный бэкенд поля не шлёт.
   wait: CompileWaitSchema.nullish(),
-  // Серверный режим: где идёт сборка (личный раннер или общий, пометка фолбэка).
+  // Где шла сборка: личный раннер, общий или фолбэк. null в локальном режиме.
   placement: CompilePlacementSchema.nullish(),
 });
 

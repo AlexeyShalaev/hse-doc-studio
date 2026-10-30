@@ -8,6 +8,7 @@ import {
   usePeople,
   useQueue,
   useQueueSummary,
+  usePersonalRunners,
   useRunners,
 } from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
@@ -17,6 +18,14 @@ import { JobDetail } from "./JobDetail";
 import { statusOf } from "../lib/viewStatus";
 import { PAGE_STEP, QueueView } from "./QueueView";
 import { ConfirmDialog } from "./RunnerDialogs";
+
+const PERSONAL_RUNNING = {
+  status: "running",
+  kind: "",
+  q: "",
+  limit: 200,
+  scope: "personal",
+} as const;
 
 /** Очередь: опрос раз в несколько секунд, отмена с подтверждением, подробности задачи. */
 export const Queue = () => {
@@ -30,6 +39,9 @@ export const Queue = () => {
   const jobs = useQueue(query);
   const summary = useQueueSummary();
   const runners = useRunners();
+  const personalRunners = usePersonalRunners();
+  // Сколько задач сейчас на личных раннерах: отдельной сводки сервер не отдаёт.
+  const personal = useQueue(PERSONAL_RUNNING);
   const cancel = useCancelJob();
   const now = useNow(5000);
 
@@ -37,9 +49,17 @@ export const Queue = () => {
   const ids = useMemo(() => (items ?? []).map((j) => j.user_id), [items]);
   const people = usePeople(ids);
   const runnerNames = useMemo(
-    () => new Map((runners.data ?? []).map((r) => [r.id, r.name])),
-    [runners.data],
+    () =>
+      new Map(
+        [...(runners.data ?? []), ...(personalRunners.data ?? [])].map((r) => [
+          r.id,
+          r.name,
+        ]),
+      ),
+    [runners.data, personalRunners.data],
   );
+  // Сервер без личных раннеров не знает runner_scope: плитку не показываем.
+  const knowsScope = (items ?? []).some((j) => j.runner_scope !== undefined);
 
   const [opened, setOpened] = useState<AdminJob | null>(null);
   const [cancelling, setCancelling] = useState<AdminJob | null>(null);
@@ -63,6 +83,9 @@ export const Queue = () => {
         hasMore={jobs.data?.hasMore ?? false}
         people={people}
         runnerNames={runnerNames}
+        personalRunning={
+          knowsScope ? (personal.data?.items.length ?? null) : undefined
+        }
         query={query}
         now={now}
         onQueryChange={(patch) => {

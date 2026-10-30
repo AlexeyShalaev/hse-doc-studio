@@ -5,3 +5,5 @@ export type {
   AgentRunStatus,
   PendingApproval,
 } from "./lib/useAgentRunStream";
+export { getRelayGallery } from "./ui/relayGallery";
+export { RelayErrorBlock } from "./ui/RelayErrorBlock";

@@ -47,6 +47,10 @@ export const jobFromWire = (job: WireJob, now: number): AdminJob => ({
   finished_at: job.finished_at,
   wait_s: seconds(job.queued_at, Date.parse(job.started_at ?? "") || now),
   error: job.error_code,
+  // Старый сервер полей маршрута не шлёт: их отсутствие видно экрану.
+  ...(job.route !== undefined ? { route: job.route } : {}),
+  ...(job.runner_scope !== undefined ? { runner_scope: job.runner_scope } : {}),
+  ...(job.route_reason !== undefined ? { route_reason: job.route_reason } : {}),
 });
 
 export const jobPageFromWire = (

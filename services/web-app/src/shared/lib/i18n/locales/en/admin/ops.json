@@ -203,7 +203,9 @@
       "p95": "95% of jobs wait under {{value}}",
       "failed": "Finished with an error",
       "failedHint_one": "Of {{count}} finished",
-      "failedHint_other": "Of {{count}} finished"
+      "failedHint_other": "Of {{count}} finished",
+      "personal_one": "{{count}} of them on personal runners",
+      "personal_other": "{{count}} of them on personal runners"
     },
     "classes": {
       "title": "Waiting by priority:",
@@ -215,7 +217,8 @@
     },
     "filters": {
       "status": "State",
-      "kind": "Type"
+      "kind": "Type",
+      "where": "Where"
     },
     "columns": {
       "kind": "Job",
@@ -224,7 +227,8 @@
       "wait": "Wait",
       "run": "Duration",
       "runner": "Runner",
-      "actions": "Actions"
+      "actions": "Actions",
+      "where": "Where"
     },
     "status": {
       "queued": "Queued",
@@ -239,7 +243,7 @@
       "office.convert": "Document conversion",
       "signature.verify_detached": "Signature check",
       "pack.submission": "Submission packing",
-      "ai.relay": "AI via runner"
+      "ai.relay": "AI via a runner"
     },
     "priority": {
       "interactive": "Urgent",
@@ -279,6 +283,13 @@
       "body": "The \"{{kind}}\" job of {{user}} will be stopped.",
       "running": "It is already running: the runner will interrupt it and the result will not be saved.",
       "confirm": "Cancel job"
+    },
+    "where": {
+      "shared": "Shared",
+      "personal": "Personal",
+      "ai": "AI",
+      "waiting": "Waits for personal",
+      "none": "not taken"
     }
   },
   "quotas": {
@@ -443,5 +454,60 @@
     },
     "note": "Counted from database records, without scanning the storage. Updated {{when}}.",
     "noteNever": "Counted from database records, without scanning the storage. Not counted yet."
+  },
+  "personal": {
+    "title": "Personal runners",
+    "lead": "People's machines that build their own projects. Jobs on them don't use installation quotas; only the runner's owner can rotate its token.",
+    "online": "Online",
+    "onlineOf": "of {{total}}",
+    "onlineHint": "Personal runners taking jobs right now.",
+    "search": "Search by owner or runner name",
+    "searchPlaceholder": "Owner or runner",
+    "filterState": "State",
+    "caption": "Personal runners",
+    "columns": {
+      "owner": "Owner",
+      "runner": "Runner",
+      "state": "State",
+      "version": "Version",
+      "ai": "AI endpoints",
+      "actions": "Actions"
+    },
+    "kind": {
+      "desktop": "Studio on a computer",
+      "cli": "Console runner"
+    },
+    "status": {
+      "online": "Online",
+      "stale": "Not responding",
+      "offline": "Offline",
+      "paused": "Paused",
+      "revoked": "Revoked",
+      "disabled": "Turned off"
+    },
+    "seenIp": "{{ago}}, IP {{ip}}",
+    "noAi": "none",
+    "empty": {
+      "title": "No personal runners",
+      "body": "People connect them in their account settings: the Studio on a computer or a console runner."
+    },
+    "noMatch": "Nothing found. Change the search or filter.",
+    "disabled": {
+      "title": "Personal runners are off",
+      "body": "People's builds use shared runners and quotas, AI via runners doesn't work.",
+      "action": "Build settings"
+    },
+    "actionsLabel": "Actions for runner \"{{name}}\" ({{owner}})",
+    "pause": "Pause",
+    "resume": "Resume",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke personal runner",
+    "revokeBody": "Runner \"{{name}}\" of {{owner}} stops getting jobs right away. This can't be undone: the owner will have to connect the machine again.",
+    "revokeConfirm": "Revoke",
+    "unknownOwner": "Deleted user",
+    "ownersLabel": "Owners",
+    "pausedLabel": "Paused",
+    "pausedHint": "Paused: the runner polls but takes no jobs.",
+    "ownersHint": "People who have a runner of their own"
   }
 }

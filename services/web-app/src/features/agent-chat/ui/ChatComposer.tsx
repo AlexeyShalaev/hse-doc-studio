@@ -20,6 +20,8 @@ type ChatComposerProps = {
   modelGroups: ModelProviderGroup[];
   selectedProviderId: string;
   selectedModel: string;
+  /** Увеличить, чтобы открыть выбор модели (из блока ошибки ретрансляции). */
+  modelPickerRequest?: number;
   autoApprove: boolean;
   controlsDisabled: boolean;
   tools: AgentTool[];
@@ -46,6 +48,7 @@ export const ChatComposer = ({
   modelGroups,
   selectedProviderId,
   selectedModel,
+  modelPickerRequest = 0,
   autoApprove,
   controlsDisabled,
   tools,
@@ -135,6 +138,7 @@ export const ChatComposer = ({
             selectedProviderId={selectedProviderId}
             selectedModel={selectedModel}
             disabled={controlsDisabled || modelGroups.length === 0}
+            openRequest={modelPickerRequest}
             onSelect={onModelSelect}
           />
 

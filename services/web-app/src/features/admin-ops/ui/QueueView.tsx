@@ -27,6 +27,7 @@ import {
   JOB_TONE,
   LONG_WAIT_S,
   isActive,
+  jobWhere,
   runSeconds,
 } from "../lib/jobs";
 import { personRef, type OpsPerson, type PersonRef } from "../lib/people";
@@ -45,6 +46,8 @@ export type QueueViewProps = {
   people?: ReadonlyMap<string, OpsPerson>;
   /** Имена раннеров по идентификатору. */
   runnerNames?: ReadonlyMap<string, string>;
+  /** Сколько задач сейчас идёт на личных раннерах; undefined: сервер без личных раннеров. */
+  personalRunning?: number | null | undefined;
   query: QueueQuery;
   now: number;
   onQueryChange: (patch: Partial<QueueQuery>) => void;
@@ -89,6 +92,7 @@ export const QueueView = ({
   hasMore,
   people = NO_PEOPLE,
   runnerNames = NO_RUNNERS,
+  personalRunning,
   query,
   now,
   onQueryChange,
@@ -189,6 +193,27 @@ export const QueueView = ({
             )}
           </span>
         ),
+      },
+      {
+        id: "where",
+        header: t("queue.columns.where"),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const where = jobWhere(row.original.job);
+          if (where === null) {
+            return <span className="ops-muted">{t("queue.where.none")}</span>;
+          }
+          return (
+            <span
+              className="chip sans"
+              data-testid={`queue-where-${row.original.job.id}`}
+              data-where={where}
+              style={{ fontSize: 11 }}
+            >
+              {t(`queue.where.${where}`)}
+            </span>
+          );
+        },
       },
       {
         id: "runner",
@@ -326,7 +351,16 @@ export const QueueView = ({
           value={summary?.running ?? 0}
           loading={kpiLoading}
           error={kpiError}
-          secondary={t("queue.stats.runningHint")}
+          secondary={
+            // Сервер с личными раннерами: сколько из идущих задач на них.
+            personalRunning === undefined ? (
+              t("queue.stats.runningHint")
+            ) : (
+              <span data-testid="queue-stat-personal">
+                {t("queue.stats.personal", { count: personalRunning ?? 0 })}
+              </span>
+            )
+          }
         />
         <KpiTile
           testId="queue-stat-wait"
@@ -410,9 +444,21 @@ export const QueueView = ({
               label: t(`queue.kind.${k}`),
             })),
           },
+          {
+            id: "where",
+            label: t("queue.filters.where"),
+            value: query.scope ?? "",
+            onChange: (scope) => {
+              onQueryChange({ scope: scope as "" | "shared" | "personal" });
+            },
+            options: (["shared", "personal"] as const).map((scope) => ({
+              value: scope,
+              label: t(`queue.where.${scope}`),
+            })),
+          },
         ]}
         onReset={() => {
-          onQueryChange({ q: "", status: "", kind: "" });
+          onQueryChange({ q: "", status: "", kind: "", scope: "" });
         }}
       />
       <DataTable

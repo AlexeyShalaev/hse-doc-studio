@@ -121,7 +121,9 @@
       "about": "About",
       "gitAccess": "Repository access",
       "organizations": "Organizations",
-      "account": "Account"
+      "account": "Account",
+      "runners": "My runners",
+      "remoteRunner": "Cloud builds"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",

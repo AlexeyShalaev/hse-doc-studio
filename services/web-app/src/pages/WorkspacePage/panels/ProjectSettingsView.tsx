@@ -25,6 +25,7 @@ import { ProjectChecksSection } from "./ProjectChecksSection";
 import { useProjectAutosave } from "./useProjectAutosave";
 import {
   AuthorsSection,
+  BuildsSection,
   buildMetaBlocks,
   buildMetaGroupCards,
   collectManagedTeamAuthors,
@@ -376,6 +377,8 @@ export const ProjectSettingsView = ({
         return (
           <ConfidentialitySection isNda={isNda} onToggle={handleToggleNda} />
         );
+      case "builds":
+        return <BuildsSection projectId={project.id} />;
       case "doc-set":
         // Пак-driven карточки: по одной на уведённую сюда группу. Переключатель
         // блоков рисует только первая — состав у ведомых авторов свой, но два

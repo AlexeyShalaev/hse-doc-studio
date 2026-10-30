@@ -2,7 +2,8 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type { AdminSettingState } from "@entities/session";
 import type { DemoSharedProvider } from "./adminInstall";
-import { adminInstallOf, type ServerDemoWorld } from "./world";
+import { ownProviderView } from "./personalRunners";
+import { adminInstallOf, personalOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
 // Тела совпадают с contracts/server/fixtures. Правила как у настоящего API: только админ
@@ -55,6 +56,44 @@ export const createInstallRoutes = (
     (req) =>
       guard() ?? handler(req);
   const state = () => adminInstallOf(getWorld());
+
+  // Значения runners.* по умолчанию; в env_locked флаг задан окружением, как у настоящего сервера.
+  // Правка админом записывается в s.build.fields и перекрывает умолчание.
+  const personalFields = (): Record<string, AdminSettingState> => {
+    const env = getWorld().scenario.installSeed === "env_locked";
+    const source: AdminSettingState = env
+      ? { source: "env", locked: true }
+      : { source: "default", locked: false };
+    return {
+      "runners.personal_enabled": source,
+      "runners.personal_wait_s": { source: "default", locked: false },
+      "runners.personal_max_per_user": { source: "default", locked: false },
+    };
+  };
+
+  const buildView = () => {
+    const personal = personalOf(getWorld());
+    const s = state();
+    return {
+      ...s.build,
+      personal_runners_enabled: personal.enabled,
+      personal_runner_wait_s: personal.waitS,
+      personal_runners_max_per_user: personal.maxPerUser,
+      fields: { ...personalFields(), ...s.build.fields },
+    };
+  };
+
+  /** Выключение личных раннеров видно людям в bootstrap, как на сервере. */
+  const syncPersonalBootstrap = (enabled: boolean) => {
+    const world = getWorld();
+    world.bootstrap = {
+      ...world.bootstrap,
+      capabilities: {
+        ...world.bootstrap.capabilities,
+        personal_runners: enabled,
+      },
+    };
+  };
 
   /** Пользователь узнаёт политику из bootstrap: держим его в согласии с админкой. */
   const syncBootstrap = () => {
@@ -141,7 +180,7 @@ export const createInstallRoutes = (
     {
       method: "GET",
       pattern: "/settings/build",
-      handler: guarded(() => demoJson(state().build)),
+      handler: guarded(() => demoJson(buildView())),
     },
     {
       method: "PUT",
@@ -180,8 +219,37 @@ export const createInstallRoutes = (
           next.artifact_retention_days = days;
           fields["build.artifact_retention_days"] = admin();
         }
+        // Личные раннеры живут в своём мире: их флаг видят и люди, и админка.
+        const personal = personalOf(getWorld());
+        const pf = personalFields();
+        if (
+          (body.personal_runners_enabled != null &&
+            pf["runners.personal_enabled"]?.locked) ||
+          (body.personal_runner_wait_s != null &&
+            pf["runners.personal_wait_s"]?.locked)
+        ) {
+          return locked();
+        }
+        if (typeof body.personal_runners_enabled === "boolean") {
+          personal.enabled = body.personal_runners_enabled;
+          fields["runners.personal_enabled"] = admin();
+          syncPersonalBootstrap(personal.enabled);
+        }
+        if (typeof body.personal_runner_wait_s === "number") {
+          const wait = body.personal_runner_wait_s;
+          if (!Number.isInteger(wait) || wait < 0 || wait > 60)
+            return invalid();
+          personal.waitS = wait;
+          fields["runners.personal_wait_s"] = admin();
+        }
+        if (typeof body.personal_runners_max_per_user === "number") {
+          const max = body.personal_runners_max_per_user;
+          if (!Number.isInteger(max) || max < 1 || max > 20) return invalid();
+          personal.maxPerUser = max;
+          fields["runners.personal_max_per_user"] = admin();
+        }
         s.build = { ...next, fields };
-        return demoJson(s.build);
+        return demoJson(buildView());
       }),
     },
     {
@@ -302,19 +370,46 @@ export const createSharedProviderUserRoutes = (
     pattern: "/ai-providers",
     handler: () => {
       const world = getWorld();
+      // Локальная Студия (сценарии local_remote_*): локальные провайдеры машины.
+      if (world.bootstrap.mode === "local") {
+        return demoJson(
+          personalOf(world).localProviders.map((p) => ({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            base_url: p.base_url,
+            models: p.type === "ollama" ? ["qwen2.5:7b"] : [],
+            has_api_key: p.type === "claude",
+            created_at: "2026-10-20T08:00:00Z",
+            ssl_verify: true,
+            connect_timeout_s: 10,
+            request_timeout_s: 60,
+          })),
+        );
+      }
       if (world.bootstrap.user === null) {
         return demoError(401, "auth_required", "Authentication required");
       }
-      return demoJson(
-        adminInstallOf(world).providers.map(
+      // Миры с личными раннерами знают источник: свои провайдеры впереди.
+      const withSources = world.scenario.personalSeed !== undefined;
+      const personal = withSources ? personalOf(world) : null;
+      const own = personal
+        ? personal.providers
+            .filter((p) => p.owner_id === world.bootstrap.user?.id)
+            .map((p) => ownProviderView(personal, p))
+        : [];
+      return demoJson([
+        ...own,
+        ...adminInstallOf(world).providers.map(
           ({ key_set: _keySet, ...rest }) => ({
             ...rest,
             // Ключа пользователь не видит, но запись общая.
             has_api_key: true,
             shared: true,
+            ...(withSources ? { source: "instance", relay: null } : {}),
           }),
         ),
-      );
+      ]);
     },
   },
 ];

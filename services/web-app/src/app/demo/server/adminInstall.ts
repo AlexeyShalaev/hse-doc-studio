@@ -93,9 +93,6 @@ export const createDemoAdminInstall = (
         fields: {
           "build.timeout_s": state("env"),
           "build.artifact_retention_days": state("admin"),
-          "runners.personal_enabled": state(),
-          "runners.personal_wait_s": state(),
-          "runners.personal_max_per_user": state(),
         },
       },
       signing: {
@@ -126,9 +123,6 @@ export const createDemoAdminInstall = (
         fields: {
           "build.timeout_s": state(),
           "build.artifact_retention_days": state(),
-          "runners.personal_enabled": state(),
-          "runners.personal_wait_s": state(),
-          "runners.personal_max_per_user": state(),
         },
       },
       signing: {
@@ -158,9 +152,6 @@ export const createDemoAdminInstall = (
       fields: {
         "build.timeout_s": state(),
         "build.artifact_retention_days": state("admin"),
-        "runners.personal_enabled": state(),
-        "runners.personal_wait_s": state(),
-        "runners.personal_max_per_user": state(),
       },
     },
     signing: {

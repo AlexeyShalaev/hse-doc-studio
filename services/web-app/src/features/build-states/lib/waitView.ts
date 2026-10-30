@@ -38,17 +38,17 @@ const VIEWS: Record<CompileWait["reason"], WaitView> = {
     tone: "warn",
     live: true,
   },
-  superseded: {
-    titleKey: "superseded",
-    bodyKey: "supersededBody",
-    tone: "neutral",
-    live: false,
-  },
   personal_runner: {
     titleKey: "personalRunner",
     bodyKey: "personalRunnerBody",
     tone: "info",
     live: true,
+  },
+  superseded: {
+    titleKey: "superseded",
+    bodyKey: "supersededBody",
+    tone: "neutral",
+    live: false,
   },
 };
 

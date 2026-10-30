@@ -10,7 +10,9 @@ import {
 } from "@entities/runner";
 import {
   DEMO_SERVER_URL,
+  ownProviderView,
   registeredRunner,
+  relayState,
   runnerState,
   toMyRunner,
   type DemoPairing,
@@ -244,7 +246,144 @@ export const createPersonalRoutes = (
     return null;
   };
 
+  // Свои провайдеры живут в демо только в мирах с личными раннерами; в
+  // остальных сценариях запрос уходит дальше, как до этого среза.
+  const inPersonalWorld =
+    (handler: DemoRoute["handler"]): DemoRoute["handler"] =>
+    (req) =>
+      getWorld().scenario.personalSeed === undefined
+        ? req.forward().then((res) => ({
+            status: res.status,
+            data: res.data as unknown,
+          }))
+        : handler(req);
+
+  const ownProvider = (owner: DemoRunnerOwner, id: string | undefined) =>
+    state().providers.find((p) => p.id === id && p.owner_id === owner.id);
+
   return [
+    // Свои ИИ-провайдеры: прямые со своим ключом и «через мой раннер».
+    // Провайдера на чужой раннер или на адрес, которого раннер не объявил,
+    // создать нельзя (422 ai_provider_runner_invalid).
+    {
+      method: "POST",
+      pattern: "/ai-providers",
+      handler: inPersonalWorld(
+        signedIn((owner, req) => {
+          const s = state();
+          const b = body(req);
+          const type = str(b.type);
+          const name = str(b.name).trim();
+          if (name === "") return invalid();
+          if (!["claude", "openai", "openai_compat", "runner"].includes(type)) {
+            return invalid();
+          }
+          let runnerId: string | null = null;
+          let endpoint: string | null = null;
+          if (type === "runner") {
+            const runner = myRunner(owner, str(b.runner_id));
+            endpoint = str(b.runner_endpoint);
+            if (
+              runner?.revoked_at !== null ||
+              !runner.ai_endpoints.some((e) => e.name === endpoint)
+            ) {
+              return demoError(
+                422,
+                "ai_provider_runner_invalid",
+                "Pick your own runner and an endpoint it declared",
+              );
+            }
+            runnerId = runner.id;
+          } else if (str(b.api_key) === "") {
+            return invalid();
+          }
+          s.counter += 1;
+          const provider = {
+            id: `7c6b5a49-3e2d-4c1b-8a09-${String(s.counter).padStart(12, "0")}`,
+            owner_id: owner.id,
+            name,
+            type: type as "claude" | "openai" | "openai_compat" | "runner",
+            base_url: type === "runner" ? "" : str(b.base_url),
+            models: Array.isArray(b.models) ? (b.models as string[]) : [],
+            has_api_key: type !== "runner",
+            created_at: new Date().toISOString(),
+            ssl_verify: b.ssl_verify !== false,
+            connect_timeout_s:
+              typeof b.connect_timeout_s === "number"
+                ? b.connect_timeout_s
+                : 10,
+            request_timeout_s:
+              typeof b.request_timeout_s === "number"
+                ? b.request_timeout_s
+                : 60,
+            runner_id: runnerId,
+            runner_endpoint: endpoint,
+          };
+          s.providers.unshift(provider);
+          return demoJson(ownProviderView(s, provider), 201);
+        }),
+      ),
+    },
+    {
+      method: "PATCH",
+      pattern: "/ai-providers/:id",
+      handler: inPersonalWorld(
+        signedIn((owner, req) => {
+          const provider = ownProvider(owner, req.params.id);
+          if (!provider) return notFound();
+          const b = body(req);
+          if (typeof b.name === "string" && b.name.trim() !== "") {
+            provider.name = b.name.trim();
+          }
+          if (Array.isArray(b.models)) provider.models = b.models as string[];
+          if (typeof b.request_timeout_s === "number") {
+            provider.request_timeout_s = b.request_timeout_s;
+          }
+          if (typeof b.base_url === "string" && provider.type !== "runner") {
+            provider.base_url = b.base_url;
+          }
+          return demoJson(ownProviderView(state(), provider));
+        }),
+      ),
+    },
+    {
+      method: "DELETE",
+      pattern: "/ai-providers/:id",
+      handler: inPersonalWorld(
+        signedIn((owner, req) => {
+          const s = state();
+          const provider = ownProvider(owner, req.params.id);
+          if (!provider) return notFound();
+          s.providers = s.providers.filter((p) => p !== provider);
+          return demoNoContent();
+        }),
+      ),
+    },
+    {
+      method: "GET",
+      pattern: "/ai-providers/:id/models",
+      handler: inPersonalWorld(
+        signedIn((owner, req) => {
+          const s = state();
+          const provider = ownProvider(owner, req.params.id);
+          if (!provider) return notFound();
+          if (provider.type !== "runner") {
+            return demoJson({ models: provider.models });
+          }
+          // Модели знает только модель за раннером: без готового раннера 503.
+          if (relayState(s, provider) !== "ready") {
+            return demoError(
+              503,
+              "relay_unavailable",
+              "The runner did not respond",
+            );
+          }
+          return demoJson({
+            models: ["qwen2.5:7b", "llama3.1:8b", "mistral-nemo:12b"],
+          });
+        }),
+      ),
+    },
     {
       method: "GET",
       pattern: "/account/runners",

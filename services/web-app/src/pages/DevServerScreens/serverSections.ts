@@ -5,6 +5,10 @@ import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
 import { getMyOrganizationsGallery } from "@features/my-organizations";
+import { getMyRunnersGallery } from "@features/my-runners";
+import { getRemoteRunnerGallery } from "@features/remote-runner";
+import { getRelayGallery } from "@features/agent-chat";
+import { getAiProviderRelayGallery } from "@features/manage-ai-provider";
 import { getProjectAccessGallery } from "@features/project-access";
 import { getProjectImportGallery } from "@features/project-import";
 import { getAccountMenuGallery } from "@features/account-menu";
@@ -50,6 +54,21 @@ export const buildServerSections = (): GallerySection[] => [
     id: "my-orgs",
     title: "Настройки: организации участника",
     groups: getMyOrganizationsGallery(),
+  },
+  {
+    id: "my-runners",
+    title: "Настройки: мои раннеры",
+    groups: getMyRunnersGallery(),
+  },
+  {
+    id: "remote-runner",
+    title: "Локальная Студия: облачные сборки",
+    groups: getRemoteRunnerGallery(),
+  },
+  {
+    id: "ai-relay",
+    title: "ИИ через свой раннер",
+    groups: [...getRelayGallery(), ...getAiProviderRelayGallery()],
   },
   {
     id: "project-access",
