@@ -23,10 +23,22 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
+      // Приёмка M1 на лёгком стенде server-lite.
+      name: "m1",
+      testMatch: /m1\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         // Локально можно взять установленный Chrome: E2E_CHANNEL=chrome.
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Полный смоук на стенде deploy/server (make server-stack-up, make e2e-full).
+      name: "full",
+      testMatch: /full\.spec\.ts/,
+      timeout: 15 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },

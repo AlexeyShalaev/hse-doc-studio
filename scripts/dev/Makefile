@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
@@ -40,6 +40,10 @@ dev-help:
 	@echo   make server-lite-reset - Stop the stand and erase its data (DESTRUCTIVE)
 	@echo   make e2e-install       - Install Playwright and Chromium for the stand acceptance tests
 	@echo   make e2e-m1            - Run the M1 acceptance e2e against a seeded stand (screenshots in e2e/screenshots)
+	@echo   make server-stack-build - Build the image with the server extra for the full stack
+	@echo   make server-stack-up   - Full server stack (deploy/server: api, runner, Postgres, MinIO) on 127.0.0.1:17251
+	@echo   make e2e-full          - Run the full smoke e2e against that stack (wizard, builds, queue, runner loss)
+	@echo   make server-stack-down - Stop the full stack and erase its data
 	@echo.
 	@echo Note: the frontend has no dev container - a container would serve a production
 	@echo       build without HMR. Use 'make dev' (Vite) while working on the UI.
@@ -150,4 +154,20 @@ e2e-install:
 e2e-m1: $(SERVER_LITE_ENV)
 	@. $(SERVER_LITE_ENV); cd e2e && \
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
-	  pnpm exec playwright test
+	  pnpm exec playwright test --project=m1
+
+# ---- Полный смоук на стенде deploy/server (api, раннер, Postgres, MinIO) ----
+# Образ с extra server собирает make server-stack-build (тег ci), затем server-stack-up и e2e-full.
+SERVER_STACK = $(DEV_SCRIPTS_DIR)/server-stack/stack.sh
+
+server-stack-build:
+	$(SERVER_STACK) build
+
+server-stack-up:
+	$(SERVER_STACK) up
+
+server-stack-down:
+	$(SERVER_STACK) down
+
+e2e-full:
+	@eval "$$($(SERVER_STACK) env)"; cd e2e && pnpm exec playwright test --project=full
