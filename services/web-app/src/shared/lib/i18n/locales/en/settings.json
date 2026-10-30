@@ -217,12 +217,12 @@
   "providers": {
     "title": "Providers",
     "subtitle": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored locally and never passed to the browser. Local models are on the adjacent tab.",
-    "subtitleServer": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser.",
+    "subtitleServer": "AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser. A \"via my runner\" provider stores no key: your runner relays requests to your model.",
     "typeClaude": "Anthropic",
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-compat.",
     "typeOllama": "Local",
-    "typeRunner": "Via my runner",
+    "typeRunner": "Via runner",
     "modelCount_one": "{{count}} model",
     "modelCount_other": "{{count}} models",
     "modelsNotLoaded": "Models not loaded",
@@ -250,7 +250,6 @@
     "shared": "shared",
     "sharedTitle": "Shared installation provider: the administrator set it up and you cannot see its key",
     "sharedKey": "key hidden",
-    "typeRunner": "Via runner",
     "source": {
       "own": "Mine",
       "org": "Organization",
@@ -264,12 +263,12 @@
     "runnerGone": "a removed runner",
     "via": "via \"{{runner}}\", endpoint {{endpoint}}",
     "relayState": {
-      "ready": "ready",
-      "runner_offline": "runner offline",
-      "runner_paused": "runner paused",
-      "runner_revoked": "runner revoked",
-      "endpoint_missing": "endpoint gone",
-      "disabled": "turned off by admin"
+      "ready": "Ready",
+      "runner_offline": "Runner offline",
+      "runner_paused": "Runner paused",
+      "runner_revoked": "Runner revoked",
+      "endpoint_missing": "Endpoint gone",
+      "disabled": "Turned off by admin"
     },
     "order": "Without an explicit choice, agents take the first ready one: yours, then the organization's, then the installation's."
   },
