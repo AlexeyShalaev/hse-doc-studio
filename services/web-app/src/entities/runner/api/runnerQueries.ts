@@ -28,11 +28,14 @@ export const runnerKeys = {
 export const CONNECT_POLL_MS = 5_000;
 const LIST_POLL_MS = 30_000;
 
-export const useMyRunners = (options: { fastPoll?: boolean } = {}) =>
+export const useMyRunners = (
+  options: { fastPoll?: boolean; enabled?: boolean } = {},
+) =>
   useQuery({
     queryKey: runnerKeys.mine(),
     queryFn: () => myRunnersApi.list(),
     staleTime: 10_000,
+    enabled: options.enabled ?? true,
     refetchInterval: options.fastPoll ? CONNECT_POLL_MS : LIST_POLL_MS,
   });
 

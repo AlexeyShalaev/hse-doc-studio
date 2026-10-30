@@ -13,6 +13,12 @@ import {
 } from "vitest";
 import { i18n } from "@shared/lib";
 import { MyRunnersSection } from "@features/my-runners";
+import { AIProviderEditorModal } from "@features/manage-ai-provider";
+import { AIProviderSchema } from "@entities/ai-provider";
+import { createDemoRouter } from "@shared/api/demo";
+import type { DemoRequest } from "@shared/api/demo";
+import { z } from "zod";
+import { serverDemoRoutes } from "./routes";
 import { RunnerPairPage } from "@pages/RunnerPairPage";
 import { installServerDemo } from "../index";
 import { activateServerScenario } from "./index";
@@ -211,5 +217,111 @@ describe("подтверждение сопряжения на демо-мире
       "data-state",
       "denied",
     );
+  });
+});
+
+const userRouter = createDemoRouter(serverDemoRoutes);
+const callUser = async (
+  method: DemoRequest["method"],
+  path: string,
+  body?: unknown,
+) => {
+  const found = userRouter.match(method, path);
+  if (!found) throw new Error(`no demo route ${method} ${path}`);
+  return found.handler({
+    method,
+    path,
+    params: found.params,
+    query: {},
+    body,
+    forward: () => Promise.reject(new Error("forward")),
+  });
+};
+
+describe("ИИ через свой раннер на демо-мире", () => {
+  beforeAll(() => {
+    installServerDemo();
+  });
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+    activateServerScenario("runners_ready");
+  });
+  afterEach(cleanup);
+
+  it("список: свои впереди, у провайдера через раннер состояние и раннер", async () => {
+    const list = z
+      .array(AIProviderSchema)
+      .parse((await callUser("GET", "/ai-providers")).data);
+    expect(list[0]?.source).toBe("own");
+    const relay = list.find((p) => p.type === "runner");
+    expect(relay?.relay).toMatchObject({
+      runner_name: "MacBook Анны",
+      endpoint: "ollama",
+      state: "ready",
+    });
+    expect(list.filter((p) => p.source === "instance").length).toBe(2);
+  });
+
+  it("раннер не в сети: состояние runner_offline и 503 на модели", async () => {
+    activateServerScenario("runners_offline");
+    const list = z
+      .array(AIProviderSchema)
+      .parse((await callUser("GET", "/ai-providers")).data);
+    const relay = list.find((p) => p.type === "runner");
+    expect(relay?.relay?.state).toBe("runner_offline");
+    const models = await callUser(
+      "GET",
+      `/ai-providers/${relay?.id ?? ""}/models`,
+    );
+    expect(models.status).toBe(503);
+    expect((models.data as { code: string }).code).toBe("relay_unavailable");
+  });
+
+  it("провайдер на чужой раннер или без адреса: 422", async () => {
+    const base = {
+      name: "x",
+      type: "runner",
+      api_key: "",
+      base_url: "",
+      models: [],
+      ssl_verify: true,
+      connect_timeout_s: 10,
+      request_timeout_s: 120,
+    };
+    const foreign = await callUser("POST", "/ai-providers", {
+      ...base,
+      runner_id: "6a7b8c9d0e1f42a3b4c5d6e7f8a9b0c1",
+      runner_endpoint: "ollama",
+    });
+    expect((foreign.data as { code: string }).code).toBe(
+      "ai_provider_runner_invalid",
+    );
+    const created = await callUser("POST", "/ai-providers", {
+      ...base,
+      runner_id: "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+      runner_endpoint: "ollama",
+    });
+    expect(created.status).toBe(201);
+    expect(AIProviderSchema.parse(created.data).relay?.state).toBe("ready");
+  });
+
+  it("окно добавления: вид «Через мой раннер», без раннеров ведёт к подключению", async () => {
+    activateServerScenario("runners_none");
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <AIProviderEditorModal isOpen onClose={() => undefined} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await user.click(await screen.findByTestId("ai-provider-kind-runner"));
+    expect(
+      await screen.findByTestId("ai-provider-no-runners"),
+    ).toHaveTextContent("Сначала подключите раннер.");
   });
 });

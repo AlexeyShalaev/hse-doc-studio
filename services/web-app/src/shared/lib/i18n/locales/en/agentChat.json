@@ -122,7 +122,22 @@
     "otherModels": "Other models",
     "selectModel": "Select a model",
     "fallbackLabel": "Model",
-    "titleWithProvider": "{{model}} · {{provider}}"
+    "titleWithProvider": "{{model}} · {{provider}}",
+    "group": {
+      "own": "Mine",
+      "org": "Organization",
+      "instance": "Installation"
+    },
+    "defaultOrder": "Default: mine, then organization, then installation",
+    "unavailable": "Unavailable: {{reason}}",
+    "relayState": {
+      "ready": "ready",
+      "runner_offline": "runner offline",
+      "runner_paused": "runner paused",
+      "runner_revoked": "runner revoked",
+      "endpoint_missing": "endpoint gone",
+      "disabled": "turned off by admin"
+    }
   },
   "persona": {
     "roleTitle": "Agent role: {{name}}",
@@ -134,5 +149,11 @@
     "chooserTitle": "What will your agent be like?",
     "chooserSubtitle": "Pick a role — it sets the assistant's tone and focus. You can change it at any time.",
     "applyRole": "Apply role"
+  },
+  "relayError": {
+    "unavailable": "Runner \"{{name}}\" didn't respond. Start it or pick another model.",
+    "unavailableNoName": "The runner didn't respond. Start it or pick another model.",
+    "busy": "Too many requests to the runner at once, try again in a minute.",
+    "pick": "Pick a model"
   }
 }

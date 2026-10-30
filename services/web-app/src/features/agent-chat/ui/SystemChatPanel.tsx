@@ -14,7 +14,13 @@ import {
   X,
 } from "lucide-react";
 import { useAgentTools } from "@entities/agent-chat";
-import { useAIProviders } from "@entities/ai-provider";
+import {
+  defaultProvider,
+  isProviderReady,
+  orderProviders,
+  useAIProviders,
+} from "@entities/ai-provider";
+import { RelayErrorBlock } from "./RelayErrorBlock";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { requirementsKeys } from "@entities/requirements";
 import {
@@ -140,7 +146,8 @@ export const SystemChatPanel = ({
   const activeRunId = detailQuery.data?.active_run_id ?? null;
   const messages = detailQuery.data?.messages ?? [];
 
-  const providers = providersQuery.data ?? [];
+  // Свои, затем организации, затем установки: тот же порядок, что у сервера.
+  const providers = orderProviders(providersQuery.data ?? []);
   const sessionProviderId = detailQuery.data?.default_provider_id ?? null;
   const settingsProviderId = settingsQuery.data?.default_ai_provider_id ?? null;
   const preferredProviderId =
@@ -152,6 +159,7 @@ export const SystemChatPanel = ({
   const selectedProvider =
     providers.find((provider) => provider.id === preferredProviderId) ??
     settingsProvider ??
+    defaultProvider(providers) ??
     providers[0] ??
     null;
   const selectedProviderId = selectedProvider?.id ?? "";
@@ -173,8 +181,16 @@ export const SystemChatPanel = ({
       providerId: provider.id,
       providerName: provider.name,
       models: provider.models,
+      source: provider.source,
+      // Провайдер через раннер недоступен, пока раннер не готов: модели видны,
+      // но выбрать их нельзя, а причина стоит вместо имени провайдера.
+      unavailable:
+        provider.relay && !isProviderReady(provider)
+          ? t(`model.relayState.${provider.relay.state}`)
+          : null,
     }))
     .filter((group) => group.models.length > 0);
+  const [pickerRequest, setPickerRequest] = useState(0);
   const autoApprove =
     composerAutoApprove ??
     settingsQuery.data?.agent_auto_approve_writes ??
@@ -724,17 +740,28 @@ export const SystemChatPanel = ({
               projectId={projectId ?? ""}
             />
           )}
-          {stream.state.error && (
-            <div
-              style={{
-                padding: "6px 12px",
-                fontSize: 11.5,
-                color: "var(--c-err)",
+          {(stream.state.errorCode === "relay_unavailable" ||
+            stream.state.errorCode === "relay_busy") && (
+            <RelayErrorBlock
+              code={stream.state.errorCode}
+              runnerName={selectedProvider?.relay?.runner_name ?? null}
+              onPickModel={() => {
+                setPickerRequest((n) => n + 1);
               }}
-            >
-              {stream.state.error}
-            </div>
+            />
           )}
+          {stream.state.error &&
+            !stream.state.errorCode?.startsWith("relay_") && (
+              <div
+                style={{
+                  padding: "6px 12px",
+                  fontSize: 11.5,
+                  color: "var(--c-err)",
+                }}
+              >
+                {stream.state.error}
+              </div>
+            )}
           {pendingQuestion ? (
             <ChatQuestionForm
               pending={pendingQuestion}
@@ -767,6 +794,7 @@ export const SystemChatPanel = ({
             providerReady={providerReady}
             running={running}
             modelGroups={modelGroups}
+            modelPickerRequest={pickerRequest}
             selectedProviderId={selectedProviderId}
             selectedModel={selectedModel}
             autoApprove={autoApprove}

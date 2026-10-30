@@ -1,6 +1,7 @@
 {
   "type": {
-    "openaiCompat": "OpenAI-совместимый"
+    "openaiCompat": "OpenAI-совместимый",
+    "runner": "Через мой раннер"
   },
   "keyPlaceholder": {
     "openaiCompat": "ключ эндпоинта"
@@ -57,5 +58,30 @@
     "cancel": "Отмена",
     "save": "Сохранить",
     "add": "Добавить"
+  },
+  "runner": {
+    "runner": "Раннер",
+    "runnerPlaceholder": "Выберите раннер",
+    "endpoint": "ИИ-адрес раннера",
+    "endpointPlaceholder": "Выберите адрес",
+    "hint": "Сервер не ходит в вашу сеть: запросы передаёт ваш раннер.",
+    "noRunners": "Сначала подключите раннер.",
+    "connect": "Подключить раннер",
+    "noEndpoints": "Раннер «{{name}}» не объявил ИИ-адресов. В Студии включите «Модели для облака», на сервере задайте HSE_RUNNER__AI_ENDPOINTS.",
+    "required": "Выберите раннер и ИИ-адрес.",
+    "modelsAfter": "Модели загрузятся через раннер сразу после добавления.",
+    "modelsLoaded_one": "Загружена {{count}} модель",
+    "modelsLoaded_few": "Загружено {{count}} модели",
+    "modelsLoaded_many": "Загружено {{count}} моделей",
+    "modelsLoaded_other": "Загружено {{count}} модели",
+    "modelsFailed": "Модели не загрузились: {{reason}}"
+  },
+  "relayState": {
+    "ready": "готов",
+    "runner_offline": "раннер не в сети",
+    "runner_paused": "раннер на паузе",
+    "runner_revoked": "раннер отозван",
+    "endpoint_missing": "адрес пропал",
+    "disabled": "выключено админом"
   }
 }

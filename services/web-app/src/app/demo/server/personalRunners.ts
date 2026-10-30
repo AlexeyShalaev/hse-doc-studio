@@ -539,3 +539,55 @@ export const registeredRunner = (
       hostKind === "desktop" ? [{ name: "ollama", flavor: "ollama" }] : [],
   });
 };
+
+/** Состояние провайдера через раннер по состоянию его раннера (раздел 9.6 спецификации). */
+export const relayState = (
+  state: DemoPersonal,
+  provider: DemoOwnProvider,
+):
+  | "ready"
+  | "runner_offline"
+  | "runner_paused"
+  | "runner_revoked"
+  | "endpoint_missing"
+  | "disabled" => {
+  if (!state.enabled) return "disabled";
+  const r = state.runners.find((x) => x.id === provider.runner_id);
+  if (r?.revoked_at !== null) return "runner_revoked";
+  if (r.paused) return "runner_paused";
+  if (!r.ai_endpoints.some((e) => e.name === provider.runner_endpoint)) {
+    return "endpoint_missing";
+  }
+  return runnerState(r, true) === "online" ? "ready" : "runner_offline";
+};
+
+/** Свой провайдер в форме ответа /api/v1/ai-providers: источник и ретрансляция. */
+export const ownProviderView = (
+  state: DemoPersonal,
+  provider: DemoOwnProvider,
+) => {
+  const {
+    owner_id: _owner,
+    runner_id: runnerId,
+    runner_endpoint: endpoint,
+    ...rest
+  } = provider;
+  const runner = state.runners.find((r) => r.id === runnerId);
+  return {
+    ...rest,
+    shared: false,
+    source: "own" as const,
+    relay:
+      runnerId === null || endpoint === null
+        ? null
+        : {
+            runner_id: runnerId,
+            runner_name: runner?.name ?? "",
+            endpoint,
+            flavor:
+              runner?.ai_endpoints.find((e) => e.name === endpoint)?.flavor ??
+              ("openai" as const),
+            state: relayState(state, provider),
+          },
+  };
+};

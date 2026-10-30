@@ -248,7 +248,28 @@
     "ollamaDetectedToast": "Local Ollama provider connected",
     "shared": "shared",
     "sharedTitle": "Shared installation provider: the administrator set it up and you cannot see its key",
-    "sharedKey": "key hidden"
+    "sharedKey": "key hidden",
+    "typeRunner": "Via runner",
+    "source": {
+      "own": "Mine",
+      "org": "Organization",
+      "instance": "Installation"
+    },
+    "sourceTitle": {
+      "own": "Your provider with your own key or runner",
+      "org": "Your organization's provider",
+      "instance": "Installation-wide provider: the administrator set the key"
+    },
+    "via": "via \"{{runner}}\", endpoint {{endpoint}}",
+    "relayState": {
+      "ready": "ready",
+      "runner_offline": "runner offline",
+      "runner_paused": "runner paused",
+      "runner_revoked": "runner revoked",
+      "endpoint_missing": "endpoint gone",
+      "disabled": "turned off by admin"
+    },
+    "order": "Without an explicit choice, agents take the first ready one: yours, then the organization's, then the installation's."
   },
   "agentPersonas": {
     "title": "Agent roles",

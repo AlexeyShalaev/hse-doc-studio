@@ -2,6 +2,7 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type { AdminSettingState } from "@entities/session";
 import type { DemoSharedProvider } from "./adminInstall";
+import { ownProviderView } from "./personalRunners";
 import { adminInstallOf, personalOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
@@ -365,19 +366,46 @@ export const createSharedProviderUserRoutes = (
     pattern: "/ai-providers",
     handler: () => {
       const world = getWorld();
+      // Локальная Студия (сценарии local_remote_*): локальные провайдеры машины.
+      if (world.bootstrap.mode === "local") {
+        return demoJson(
+          personalOf(world).localProviders.map((p) => ({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            base_url: p.base_url,
+            models: p.type === "ollama" ? ["qwen2.5:7b"] : [],
+            has_api_key: p.type === "claude",
+            created_at: "2026-10-20T08:00:00Z",
+            ssl_verify: true,
+            connect_timeout_s: 10,
+            request_timeout_s: 60,
+          })),
+        );
+      }
       if (world.bootstrap.user === null) {
         return demoError(401, "auth_required", "Authentication required");
       }
-      return demoJson(
-        adminInstallOf(world).providers.map(
+      // Миры с личными раннерами знают источник: свои провайдеры впереди.
+      const withSources = world.scenario.personalSeed !== undefined;
+      const personal = withSources ? personalOf(world) : null;
+      const own = personal
+        ? personal.providers
+            .filter((p) => p.owner_id === world.bootstrap.user?.id)
+            .map((p) => ownProviderView(personal, p))
+        : [];
+      return demoJson([
+        ...own,
+        ...adminInstallOf(world).providers.map(
           ({ key_set: _keySet, ...rest }) => ({
             ...rest,
             // Ключа пользователь не видит, но запись общая.
             has_api_key: true,
             shared: true,
+            ...(withSources ? { source: "instance", relay: null } : {}),
           }),
         ),
-      );
+      ]);
     },
   },
 ];

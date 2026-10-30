@@ -51,6 +51,9 @@ export type AgentStreamState = {
   usage: { input: number; output: number; total: number } | null;
   doneStatus: string | null;
   error: string | null;
+  // Код ошибки рана от сервера (relay_unavailable, relay_busy...): по нему
+  // экран показывает особый блок, а не только текст.
+  errorCode: string | null;
   // Diagnostics: raw event timeline + when the last event arrived (for the
   // "agent is silent for Ns" hang detector).
   debug: AgentDebugEntry[];
@@ -65,6 +68,7 @@ const INITIAL_STATE: AgentStreamState = {
   usage: null,
   doneStatus: null,
   error: null,
+  errorCode: null,
   debug: [],
   lastEventAt: null,
 };
@@ -297,7 +301,8 @@ export const useAgentRunStream = (
   return { state, start, reset };
 };
 
-function reduceEvent(
+// Экспорт для тестов: разбор событий потока без EventSource.
+export function reduceEvent(
   prev: AgentStreamState,
   type: string,
   data: Record<string, unknown>,
@@ -360,6 +365,7 @@ function reduceEvent(
         error: failed
           ? asString(data.message) || i18n.t("agentChat:stream.error")
           : prev.error,
+        errorCode: failed ? asString(data.code) || null : prev.errorCode,
       };
     }
     case "error":
@@ -367,6 +373,7 @@ function reduceEvent(
         ...prev,
         status: "error",
         error: asString(data.message) || i18n.t("agentChat:stream.error"),
+        errorCode: asString(data.code) || null,
       };
     default:
       return prev;

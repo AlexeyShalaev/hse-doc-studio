@@ -2,18 +2,27 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { AIProviderSource } from "@entities/ai-provider";
 
 export type ModelProviderGroup = {
   providerId: string;
   providerName: string;
   models: string[];
+  /** Откуда провайдер; без него список без групп, как раньше (локальный режим). */
+  source?: AIProviderSource | undefined;
+  /** Почему модели недоступны (раннер не в сети, на паузе); null: доступны. */
+  unavailable?: string | null | undefined;
 };
+
+const SOURCES: readonly AIProviderSource[] = ["own", "org", "instance"];
 
 type ModelPickerProps = {
   groups: ModelProviderGroup[];
   selectedProviderId: string;
   selectedModel: string;
   disabled?: boolean;
+  /** Увеличьте число, чтобы открыть выбор снаружи (кнопка «Выбрать модель» у ошибки). */
+  openRequest?: number;
   onSelect: (providerId: string, model: string) => void;
 };
 
@@ -21,6 +30,7 @@ type ModelRow = {
   providerId: string;
   providerName: string;
   model: string;
+  unavailable: string | null;
 };
 
 type Rect = {
@@ -44,6 +54,7 @@ export const ModelPicker = ({
   selectedProviderId,
   selectedModel,
   disabled = false,
+  openRequest = 0,
   onSelect,
 }: ModelPickerProps) => {
   const { t } = useTranslation("agentChat");
@@ -59,8 +70,18 @@ export const ModelPicker = ({
       providerId: group.providerId,
       providerName: group.providerName,
       model,
+      unavailable: group.unavailable ?? null,
     })),
   );
+  // Серверный режим: модели по источникам «мои, организации, установки».
+  const grouped = groups.some((group) => group.source !== undefined);
+
+  // Запрос открыть выбор снаружи: новое число, ещё не обработанное.
+  const [handledRequest, setHandledRequest] = useState(0);
+  if (openRequest !== handledRequest) {
+    setHandledRequest(openRequest);
+    if (openRequest > 0 && !disabled) setOpen(true);
+  }
 
   // Primary = the active provider's models (capped); everything else collapses.
   const primaryProviderId =
@@ -136,6 +157,7 @@ export const ModelPicker = ({
   }, [open]);
 
   const handlePick = (row: ModelRow) => {
+    if (row.unavailable) return;
     onSelect(row.providerId, row.model);
     setOpen(false);
     setQuery("");
@@ -149,6 +171,16 @@ export const ModelPicker = ({
         key={`${row.providerId}:::${row.model}`}
         type="button"
         className="modelpick-item"
+        disabled={row.unavailable !== null}
+        aria-disabled={row.unavailable !== null}
+        title={
+          row.unavailable
+            ? t("model.unavailable", { reason: row.unavailable })
+            : undefined
+        }
+        style={
+          row.unavailable ? { opacity: 0.55, cursor: "not-allowed" } : undefined
+        }
         onClick={() => {
           handlePick(row);
         }}
@@ -159,7 +191,9 @@ export const ModelPicker = ({
           style={{ opacity: isActive ? 1 : 0 }}
         />
         <span className="modelpick-name truncate">{row.model}</span>
-        <span className="modelpick-provider truncate">{row.providerName}</span>
+        <span className="modelpick-provider truncate">
+          {row.unavailable ? row.unavailable : row.providerName}
+        </span>
       </button>
     );
   };
@@ -223,6 +257,46 @@ export const ModelPicker = ({
                 ) : (
                   filtered.map(renderRow)
                 )
+              ) : grouped ? (
+                <>
+                  <div
+                    className="combo-empty"
+                    style={{ textAlign: "left", fontSize: 11 }}
+                    data-testid="model-picker-default-order"
+                  >
+                    {t("model.defaultOrder")}
+                  </div>
+                  {SOURCES.map((source) => {
+                    const rows = groups
+                      .filter((g) => g.source === source)
+                      .flatMap((g) =>
+                        allRows.filter((r) => r.providerId === g.providerId),
+                      );
+                    // Пустая группа (организаций пока нет) не показывается.
+                    if (rows.length === 0) return null;
+                    return (
+                      <div
+                        key={source}
+                        role="group"
+                        aria-label={t(`model.group.${source}`)}
+                        data-testid={`model-picker-group-${source}`}
+                      >
+                        <div
+                          className="dim"
+                          style={{
+                            padding: "6px 10px 2px",
+                            fontSize: 10.5,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.4,
+                          }}
+                        >
+                          {t(`model.group.${source}`)}
+                        </div>
+                        {rows.map(renderRow)}
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 <>
                   {primaryRows.length === 0 && (

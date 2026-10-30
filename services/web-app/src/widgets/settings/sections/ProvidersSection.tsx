@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   aiProviderKeys,
+  orderProviders,
+  providerSource,
   useAIProviders,
   useDeleteAIProvider,
   type AIProvider,
@@ -14,6 +16,7 @@ import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { useCapabilities } from "@entities/session";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
+import { StatusDot, type StatusDotStatus } from "@shared/ui/StatusDot";
 import { Spinner } from "@shared/ui/Spinner";
 import { toast } from "@shared/lib";
 import { SettingHead } from "./Setting";
@@ -23,6 +26,20 @@ const TYPE_LABEL: Record<AIProviderType, string> = {
   openai: "settings:providers.typeOpenai",
   openai_compat: "settings:providers.typeOpenaiCompat",
   ollama: "settings:providers.typeOllama",
+  runner: "settings:providers.typeRunner",
+};
+
+/** Точка состояния провайдера через раннер. */
+const RELAY_DOT: Record<
+  NonNullable<AIProvider["relay"]>["state"],
+  StatusDotStatus
+> = {
+  ready: "online",
+  runner_offline: "offline",
+  runner_paused: "paused",
+  runner_revoked: "neutral",
+  endpoint_missing: "warning",
+  disabled: "neutral",
 };
 
 type ProviderRowProps = {
@@ -74,15 +91,29 @@ const ProviderRow = ({
           >
             {t(TYPE_LABEL[provider.type])}
           </span>
-          {provider.shared === true && (
+          {provider.source !== undefined ? (
             <span
-              className="chip info"
+              className={
+                providerSource(provider) === "own" ? "chip" : "chip info"
+              }
               style={{ fontSize: 10 }}
-              title={t("providers.sharedTitle")}
-              data-testid="provider-shared"
+              title={t(`providers.sourceTitle.${providerSource(provider)}`)}
+              data-testid={`ai-provider-source-${provider.id}`}
+              data-source={providerSource(provider)}
             >
-              {t("providers.shared")}
+              {t(`providers.source.${providerSource(provider)}`)}
             </span>
+          ) : (
+            provider.shared === true && (
+              <span
+                className="chip info"
+                style={{ fontSize: 10 }}
+                title={t("providers.sharedTitle")}
+                data-testid="provider-shared"
+              >
+                {t("providers.shared")}
+              </span>
+            )
           )}
           {isDefault && (
             <span
@@ -93,6 +124,25 @@ const ProviderRow = ({
             </span>
           )}
         </div>
+        {provider.relay && (
+          <div
+            className="flex items-center"
+            style={{ gap: 8, fontSize: 11, flexWrap: "wrap" }}
+            data-testid={`ai-provider-relay-${provider.id}`}
+            data-state={provider.relay.state}
+          >
+            <StatusDot
+              status={RELAY_DOT[provider.relay.state]}
+              label={t(`providers.relayState.${provider.relay.state}`)}
+            />
+            <span className="dim">
+              {t("providers.via", {
+                runner: provider.relay.runner_name,
+                endpoint: provider.relay.endpoint,
+              })}
+            </span>
+          </div>
+        )}
         <div className="dim" style={{ fontSize: 11 }}>
           {provider.models.length > 0
             ? t("providers.modelCount", { count: provider.models.length })
@@ -174,7 +224,9 @@ export const ProvidersSection = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AIProvider | null>(null);
 
-  const providers = providersQuery.data ?? [];
+  // Свои сначала, затем организации и установки: тот же порядок, что у агентов.
+  const providers = orderProviders(providersQuery.data ?? []);
+  const showOrder = providers.some((p) => p.source !== undefined);
   const defaultProviderId = settings.data?.default_ai_provider_id ?? "";
   const defaultModel = settings.data?.default_ai_model ?? "";
   const selectedProvider = providers.find((p) => p.id === defaultProviderId);
@@ -304,6 +356,12 @@ export const ProvidersSection = () => {
             {t("providers.add")}
           </button>
         </div>
+
+        {showOrder && (
+          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+            {t("providers.order")}
+          </p>
+        )}
 
         {providers.length > 0 && (
           <div
