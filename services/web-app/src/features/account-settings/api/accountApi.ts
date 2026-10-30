@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { ApiError, apiClient, parseResp } from "@shared/api";
-import { isDemoTransport } from "@shared/api/demo";
+import { ApiError, apiClient, parseResp, startRedirectFlow } from "@shared/api";
 import {
   AccountIdentitySchema,
   AccountProfileSchema,
@@ -130,19 +129,10 @@ export const accountApi = {
     );
   },
 
-  /**
-   * Привязка идёт переходом в браузере: сервер ведёт на страницу провайдера и возвращает в ту же
-   * сессию. Демо-мир переход не умеет и привязывает вход обычным запросом.
-   */
-  startLink: async (providerId: string): Promise<{ redirect_url: string }> => {
-    const path = `/account/identities/${encodeURIComponent(providerId)}/link`;
-    if (isDemoTransport(apiClient)) {
-      await apiClient.get(path, quiet);
-      return { redirect_url: "#account-identities" };
-    }
-    const base = apiClient.defaults.baseURL ?? "/api/v1";
-    return {
-      redirect_url: `${base}${path}?next=${encodeURIComponent(window.location.pathname)}`,
-    };
-  },
+  /** Привязка идёт переходом в браузере: сервер ведёт на страницу провайдера и возвращает в ту же сессию. */
+  startLink: (providerId: string): Promise<{ redirect_url: string }> =>
+    startRedirectFlow(
+      `/account/identities/${encodeURIComponent(providerId)}/link`,
+      quiet,
+    ),
 };

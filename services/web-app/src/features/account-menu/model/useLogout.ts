@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
+import { ApiError } from "@shared/api";
 import { i18n, toast } from "@shared/lib";
 import {
   clearSessionEnded,
@@ -17,7 +18,7 @@ import {
  * CSRF-токен. Иначе следующий человек в той же вкладке увидел бы чужие проекты,
  * пока запросы не перезагрузятся.
  *
- * Если сервер выход не подтвердил, ничего не чистим: сессия жива, а пустой кэш при
+ * Если сервер выход не подтвердил (сеть, 5xx), ничего не чистим: сессия жива, а пустой кэш при
  * живой сессии только мигал бы спиннерами.
  */
 export const useLogout = () => {
@@ -30,10 +31,13 @@ export const useLogout = () => {
     setPending(true);
     try {
       await sessionApi.logout();
-    } catch {
-      toast.error(i18n.t("appChrome:accountMenu.logoutFailed"));
-      setPending(false);
-      return;
+    } catch (error) {
+      // 401: сессия уже закончилась, человек и так вышел, остаётся убрать кэш и уйти на /login.
+      if (!(error instanceof ApiError && error.status === 401)) {
+        toast.error(i18n.t("appChrome:accountMenu.logoutFailed"));
+        setPending(false);
+        return;
+      }
     }
     clearSessionEnded();
     await clearUserScopedCache(client);

@@ -199,6 +199,8 @@ export const ProjectCard = ({
                 type="button"
                 onClick={onTogglePin}
                 data-testid="project-pin"
+                aria-label={project.pinned ? t("card.unpin") : t("card.pin")}
+                aria-pressed={project.pinned}
                 className={clsx("icon-btn sm tt", project.pinned && "active")}
                 data-tt={project.pinned ? t("card.unpin") : t("card.pin")}
                 style={project.pinned ? { color: "var(--accent)" } : undefined}
@@ -209,6 +211,9 @@ export const ProjectCard = ({
                 type="button"
                 onClick={onToggleArchive}
                 data-testid="project-archive"
+                aria-label={
+                  project.archived ? t("card.unarchive") : t("card.archive")
+                }
                 className="icon-btn sm tt"
                 data-tt={
                   project.archived ? t("card.unarchive") : t("card.archive")
