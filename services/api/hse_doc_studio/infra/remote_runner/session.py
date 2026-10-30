@@ -68,7 +68,7 @@ class RunnerSessionSpec:
     tex_image: str
     # Без Docker или без образа тег tex не объявляется: сборки LaTeX тогда идут на общие раннеры.
     tex_available: bool
-    # False: сейчас сборки не брать (идёт локальная сборка или нет Docker).
+    # False: сейчас сборки не брать (идёт локальная сборка, а включено «уступать локальным»).
     gate: Callable[[], bool] = field(default=lambda: True, compare=False)
     ai_endpoints: tuple[LocalAiEndpoint, ...] = ()
 

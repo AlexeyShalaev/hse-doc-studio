@@ -9,6 +9,7 @@ from hse_doc_studio.core.remote_runner import (
     RemoteRunnerError,
     RemoteRunnerErrorCode,
     RemoteRunnerSettings,
+    RemoteRunnerSettingsPatch,
     RemoteRunnerState,
 )
 from hse_doc_studio.infra.remote_runner.session import RunnerSessionFatal, SessionFatalCode, SessionState
@@ -120,6 +121,63 @@ async def test__pairing__slow_down__backs_off_and_keeps_waiting(harness: Harness
     await harness.supervisor.stop()
 
 
+async def test__start_pairing__stale_identity__forgotten_so_approved_token_registers(tmp_path: Path) -> None:
+    harness = Harness(tmp_path, RemoteRunnerSettings(enabled=False, server_url=_URL))
+    save_identity(harness.runner_dir, _URL)
+    harness.server.statuses = ["pending", "approved"]
+    await harness.supervisor.start()
+
+    await harness.supervisor.start_pairing(_URL, "MacBook")
+
+    # Прежняя личность съела бы подтверждённый токен: цикл восстановился бы по ней и не зарегистрировался.
+    assert RunnerIdentityStore(harness.runner_dir).load(_URL) is None
+    assert harness.supervisor.status().paired is False
+    await eventually(lambda: harness.state is RemoteRunnerState.online)
+    assert harness.sessions.specs[0].registration_token == PAIRED_TOKEN
+    await harness.supervisor.stop()
+
+
+async def test__apply__server_url_changed_during_pairing__cancels_pairing(harness: Harness) -> None:
+    harness.server.statuses = ["pending"]
+    await harness.supervisor.start()
+    await harness.supervisor.start_pairing(_URL, "MacBook")
+
+    await harness.supervisor.apply(replace(harness.store.settings, server_url="https://other.example.org"))
+
+    status = harness.supervisor.status()
+    assert (status.pairing, status.state) == (None, RemoteRunnerState.unpaired)
+    polls = harness.server.polls
+    await asyncio.sleep(0.05)
+    assert harness.server.polls == polls
+    assert harness.sessions.specs == []
+
+
+async def test__apply_patch__merges_over_settings_set_by_pairing(harness: Harness) -> None:
+    harness.server.statuses = ["pending"]
+    await harness.supervisor.start()
+    await harness.supervisor.start_pairing(_URL, "MacBook Анны")
+
+    await harness.supervisor.apply_patch(RemoteRunnerSettingsPatch(concurrency=2))
+
+    settings = harness.store.settings
+    assert (settings.enabled, settings.server_url, settings.name, settings.concurrency) == (
+        True,
+        _URL,
+        "MacBook Анны",
+        2,
+    )
+    assert harness.supervisor.status().pairing is not None
+    await harness.supervisor.cancel_pairing()
+
+
+@pytest.mark.parametrize("concurrency", [0, 5])
+async def test__apply_patch__concurrency_out_of_range__rejected(harness: Harness, concurrency: int) -> None:
+    await harness.supervisor.start()
+
+    with pytest.raises(ValueError, match="concurrency"):
+        await harness.supervisor.apply_patch(RemoteRunnerSettingsPatch(concurrency=concurrency))
+
+
 async def test__start_pairing__server_disabled_personal_runners__raises_disabled(harness: Harness) -> None:
     harness.server.start_error = (403, "runner_disabled")
     await harness.supervisor.start()
@@ -167,6 +225,28 @@ async def test__use_token__registers_and_forgets_token_after_registration(harnes
     await eventually(lambda: len(harness.sessions.specs) == 2)
     assert harness.sessions.specs[1].registration_token is None
     await harness.supervisor.stop()
+
+
+async def test__registered_without_successful_poll__settings_change_reopens_and_unpair_deregisters(
+    harness: Harness,
+) -> None:
+    # Регистрация прошла, а первый опрос до сервера не дошёл: личность на диске, токен уже истрачен.
+    harness.sessions.state_after_start = SessionState.connecting
+    await harness.supervisor.start()
+    await harness.supervisor.use_token(_URL, "hsrt_pasted")
+    await eventually(lambda: RunnerIdentityStore(harness.runner_dir).load(_URL) is not None)
+
+    await harness.supervisor.apply(replace(harness.store.settings, concurrency=2))
+
+    await eventually(lambda: len(harness.sessions.specs) == 2)
+    assert harness.sessions.specs[1].registration_token is None
+    status = harness.supervisor.status()
+    assert (status.state, status.paired) == (RemoteRunnerState.connecting, True)
+
+    await harness.supervisor.unpair()
+
+    assert harness.server.deregistered == [(RUNNER_ID, RUNNER_TOKEN)]
+    assert RunnerIdentityStore(harness.runner_dir).load(_URL) is None
 
 
 async def test__start__saved_identity__opens_session_without_token(tmp_path: Path) -> None:

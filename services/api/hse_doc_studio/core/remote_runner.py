@@ -96,6 +96,29 @@ class RemoteRunnerSettings:
 
 
 @dataclass(frozen=True)
+class RemoteRunnerSettingsPatch:
+    """Частичная правка настроек: None значит «не менять». Накладывается под замком супервизора,
+    чтобы параллельное сопряжение или другой запрос не перетёрлись устаревшей копией."""
+
+    enabled: bool | None = None
+    server_url: str | None = None
+    name: str | None = None
+    concurrency: int | None = None
+    yield_to_local: bool | None = None
+    ai_endpoints: tuple[RemoteAiEndpointChoice, ...] | None = None
+
+    def merged(self, current: RemoteRunnerSettings) -> RemoteRunnerSettings:
+        return RemoteRunnerSettings(
+            enabled=current.enabled if self.enabled is None else self.enabled,
+            server_url=current.server_url if self.server_url is None else self.server_url,
+            name=current.name if self.name is None else self.name,
+            concurrency=current.concurrency if self.concurrency is None else self.concurrency,
+            yield_to_local=current.yield_to_local if self.yield_to_local is None else self.yield_to_local,
+            ai_endpoints=current.ai_endpoints if self.ai_endpoints is None else self.ai_endpoints,
+        )
+
+
+@dataclass(frozen=True)
 class RemoteRunnerPairing:
     """Идущее сопряжение: код, который человек подтверждает на сайте."""
 
@@ -139,6 +162,7 @@ class IRemoteRunnerSupervisor(Protocol):
 
     def status(self) -> RemoteRunnerStatusInfo: ...
     async def apply(self, settings: RemoteRunnerSettings) -> None: ...
+    async def apply_patch(self, patch: RemoteRunnerSettingsPatch) -> None: ...
     async def start_pairing(self, server_url: str, name: str) -> None: ...
     async def cancel_pairing(self) -> None: ...
     async def use_token(self, server_url: str, token: str) -> None: ...

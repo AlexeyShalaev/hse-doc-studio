@@ -56,17 +56,29 @@ async def test__docker_and_image_ready__declares_tex_and_gate_open(tmp_path: Pat
     await supervisor.stop()
 
 
-async def test__docker_missing__no_tex_and_gate_closed(tmp_path: Path) -> None:
+async def test__docker_missing__no_tex_but_gate_open_and_online(tmp_path: Path) -> None:
     sessions = FakeSessions()
     supervisor = _supervisor(tmp_path, FakeEnvironment(docker=False, image=False), sessions)
 
     await supervisor.start()
 
-    await eventually(lambda: len(sessions.specs) == 1)
+    # Без Docker раннер остаётся в сети с pack и verify: сборки LaTeX уходят на общие раннеры по тегам.
+    await eventually(lambda: supervisor.status().state is RemoteRunnerState.online)
     assert sessions.specs[0].tex_available is False
-    assert sessions.specs[0].gate() is False
+    assert sessions.specs[0].gate() is True
     status = supervisor.status()
     assert (status.docker.value, status.tex_image.value) == ("missing", "missing")
+    await supervisor.stop()
+
+
+async def test__docker_missing__yield_to_local_still_closes_gate_while_local_build(tmp_path: Path) -> None:
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, FakeEnvironment(docker=False, image=False, busy=True), sessions)
+
+    await supervisor.start()
+
+    await eventually(lambda: len(sessions.specs) == 1)
+    assert sessions.specs[0].gate() is False
     await supervisor.stop()
 
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from hse_doc_studio.core.remote_runner import (
     IRemoteRunnerSupervisor,
     RemoteAiEndpointChoice,
+    RemoteRunnerSettingsPatch,
     RemoteRunnerStatusInfo,
     cloud_flavor,
 )
@@ -31,22 +32,23 @@ class UpdateRemoteRunnerUC:
         self._providers = providers
 
     async def execute(self, data: UpdateRemoteRunnerInput) -> RemoteRunnerStatusInfo:
-        current = self._supervisor.status().settings
         names = [choice.name for choice in data.ai_endpoints or ()]
         if len(set(names)) != len(names):
             raise ValueError("AI endpoint names must be unique")
         if data.ai_endpoints:
             await self._check_providers(data.ai_endpoints)
-        updated = replace(
-            current,
-            enabled=current.enabled if data.enabled is None else data.enabled,
-            server_url=current.server_url if data.server_url is None else data.server_url,
-            name=current.name if data.name is None else data.name,
-            concurrency=current.concurrency if data.concurrency is None else data.concurrency,
-            yield_to_local=current.yield_to_local if data.yield_to_local is None else data.yield_to_local,
-            ai_endpoints=current.ai_endpoints if data.ai_endpoints is None else data.ai_endpoints,
+        # Слияние с текущими настройками делает супервизор под своим замком: пока здесь шла проверка
+        # провайдеров, сопряжение или другой запрос могли их поменять.
+        await self._supervisor.apply_patch(
+            RemoteRunnerSettingsPatch(
+                enabled=data.enabled,
+                server_url=data.server_url,
+                name=data.name,
+                concurrency=data.concurrency,
+                yield_to_local=data.yield_to_local,
+                ai_endpoints=data.ai_endpoints,
+            )
         )
-        await self._supervisor.apply(updated)
         return self._supervisor.status()
 
     async def _check_providers(self, choices: tuple[RemoteAiEndpointChoice, ...]) -> None:

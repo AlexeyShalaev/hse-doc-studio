@@ -28,6 +28,7 @@ from hse_doc_studio.core.remote_runner import (
     RemoteRunnerErrorCode,
     RemoteRunnerPairing,
     RemoteRunnerSettings,
+    RemoteRunnerSettingsPatch,
     RemoteRunnerState,
     RemoteRunnerStatusInfo,
     RemoteRunnerTexImage,
@@ -184,26 +185,37 @@ class RemoteRunnerSupervisor:
     async def apply(self, settings: RemoteRunnerSettings) -> None:
         _validate(settings)
         async with self._lock:
-            previous = self._settings
-            if settings.server_url is not None:
-                settings = replace(settings, server_url=normalize_server_url(settings.server_url))
-            await self._store.save(settings)
-            self._settings = settings
-            if not settings.enabled:
-                await self._cancel_pairing()
-                self._clear_outcome()
-            if settings.server_url != previous.server_url:
-                # Личность выдана другим сервером: здесь она не годится, повторно подключаться надо заново.
-                self._registration_token = None
-                self._reload_identity()
-            if settings.ai_endpoints != previous.ai_endpoints:
-                await self._refresh_endpoints()
-            if _session_inputs(settings) != _session_inputs(previous):
-                self._clear_outcome()
-                await self._restart_session()
-            elif settings.ai_endpoints != previous.ai_endpoints and self._session is not None:
-                # Список моделей для облака меняется без перезапуска: идущие сборки не прерываются.
-                await self._session.reannounce(self._endpoints)
+            await self._apply(settings)
+
+    async def apply_patch(self, patch: RemoteRunnerSettingsPatch) -> None:
+        """Правка поверх текущих настроек, прочитанных под замком: параллельное сопряжение не теряется."""
+        async with self._lock:
+            settings = patch.merged(self._settings)
+            _validate(settings)
+            await self._apply(settings)
+
+    async def _apply(self, settings: RemoteRunnerSettings) -> None:
+        previous = self._settings
+        settings = _normalized(settings)
+        await self._store.save(settings)
+        self._settings = settings
+        # Сопряжение с прежним сервером больше не нужно: его токен подошёл бы только старому адресу.
+        if not settings.enabled or settings.server_url != previous.server_url:
+            await self._cancel_pairing()
+        if not settings.enabled:
+            self._clear_outcome()
+        if settings.server_url != previous.server_url:
+            # Личность выдана другим сервером: здесь она не годится, повторно подключаться надо заново.
+            self._registration_token = None
+            self._reload_identity()
+        if settings.ai_endpoints != previous.ai_endpoints:
+            await self._refresh_endpoints()
+        if _session_inputs(settings) != _session_inputs(previous):
+            self._clear_outcome()
+            await self._restart_session()
+        elif settings.ai_endpoints != previous.ai_endpoints and self._session is not None:
+            # Список моделей для облака меняется без перезапуска: идущие сборки не прерываются.
+            await self._session.reannounce(self._endpoints)
 
     async def start_pairing(self, server_url: str, name: str) -> None:
         url = normalize_server_url(server_url)
@@ -224,8 +236,11 @@ class RemoteRunnerSupervisor:
             await self._stop_session()
             self._settings = replace(self._settings, enabled=True, server_url=url, name=name)
             await self._store.save(self._settings)
+            # Как и вставка токена: подтверждённый код даст новый раннер, прежняя личность ему помешала бы
+            # (восстановленная, она съела бы токен регистрации, а отозванная сбросила бы и его).
+            self._identities.forget()
+            self._identity = None
             self._registration_token = None
-            self._reload_identity()
             self._clear_outcome()
             self._pairing = RemoteRunnerPairing(
                 user_code=started.user_code,
@@ -256,6 +271,8 @@ class RemoteRunnerSupervisor:
         async with self._lock:
             await self._cancel_pairing()
             await self._stop_session()
+            # Личность могла появиться на диске после регистрации, а первый опрос не дойти до сервера.
+            self._reload_identity()
             identity = self._identity
             if identity is not None:
                 await self._deregister(identity)
@@ -342,6 +359,9 @@ class RemoteRunnerSupervisor:
 
     async def _restart_session(self) -> None:
         await self._stop_session()
+        # Регистрация пишет личность на диск раньше первого успешного опроса: без перечитывания
+        # токен регистрации уже истрачен, а личность ещё не подхвачена, и новая сессия не открылась бы.
+        self._reload_identity()
         settings = self._settings
         if not settings.enabled or settings.server_url is None:
             return
@@ -439,11 +459,13 @@ class RemoteRunnerSupervisor:
         return image, present
 
     def _gate(self) -> bool:
-        """Брать ли сборки сейчас: без Docker нет; при «уступать локальным» нет, пока идёт локальная сборка."""
+        """Брать ли сборки сейчас: при «уступать локальным» нет, пока идёт локальная сборка.
+
+        Без Docker шлюз открыт: тега tex тогда нет, сервер выдаёт только pack и verify, а раннер
+        остаётся в сети. Закрытый шлюз не пускает опрос до сервера, и Студия висела бы в «подключении».
+        """
         env = self._environment
-        if env is None or self._docker is RemoteRunnerDocker.missing:
-            return False
-        return not (self._settings.yield_to_local and env.local_busy())
+        return env is None or not (self._settings.yield_to_local and env.local_busy())
 
     async def _sleep_or_stop(self, stop: asyncio.Event, delay_s: float) -> None:
         sleeper = asyncio.create_task(self._sleep(delay_s))
@@ -522,6 +544,12 @@ class RemoteRunnerSupervisor:
 def _session_inputs(settings: RemoteRunnerSettings) -> tuple[object, ...]:
     """Поля, смена которых требует нового цикла; `yield_to_local` читается шлюзом на лету."""
     return (settings.enabled, settings.server_url, settings.name, settings.concurrency)
+
+
+def _normalized(settings: RemoteRunnerSettings) -> RemoteRunnerSettings:
+    if settings.server_url is None:
+        return settings
+    return replace(settings, server_url=normalize_server_url(settings.server_url))
 
 
 def _clean_name(name: str) -> str:
