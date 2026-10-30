@@ -351,6 +351,23 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "/git/credentials",
         "/git/credentials/{credential_id}",
         "/git/credentials/{credential_id}/check",
+        # Доверие к git-серверам и их настройки лежат в Postgres у владельца.
+        "/git/hosts",
+        "/git/host-settings",
+        # Чаты агента лежат в Postgres у владельца.
+        "/agent/chats",
+        "/agent/chats/{session_id}",
+        "/agent/chats/{session_id}/turns",
+        "/agent/chats/{session_id}/runs/{run_id}/approve",
+        "/agent/chats/{session_id}/runs/{run_id}/answer",
+        "/agent/chats/{session_id}/runs/{run_id}/cancel",
+        "/agent/chats/{session_id}/runs/{run_id}/stream",
+        # Профиль автора в сервере это имя и почта аккаунта; список проектов строится по ACL человека.
+        "/profile",
+        "/projects",
+        "/projects/suggestions",
+        # Открытый ключ читается из идентичности подписи владельца.
+        "/signing-identities/{identity_id}/public-key",
     }
 )
 
