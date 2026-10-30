@@ -6,12 +6,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
+
+from hse_doc_studio.core.remote_runner import RemoteAiEndpointChoice
 
 
 class SessionState(StrEnum):
@@ -42,6 +44,20 @@ class RunnerSessionFatal(Exception):  # noqa: N818 — исход сессии, 
 
 
 @dataclass(frozen=True)
+class LocalAiEndpoint:
+    """ИИ-адрес для облака: имя и вид уходят на сервер, адрес и ключ остаются в процессе Студии."""
+
+    name: str
+    provider_id: str
+    # Адрес для запроса из этого процесса (в контейнере loopback переписан на шлюз хоста).
+    base_url: str
+    # Адрес, как его ввёл человек: его и показываем.
+    display_url: str
+    flavor: str
+    api_key: Callable[[], str | None] = field(default=lambda: None, compare=False)
+
+
+@dataclass(frozen=True)
 class RunnerSessionSpec:
     server_url: str
     # Токен регистрации, пока личности нет; после регистрации личность лежит в data_dir/identity.json.
@@ -54,6 +70,7 @@ class RunnerSessionSpec:
     tex_available: bool
     # False: сейчас сборки не брать (идёт локальная сборка или нет Docker).
     gate: Callable[[], bool] = field(default=lambda: True, compare=False)
+    ai_endpoints: tuple[LocalAiEndpoint, ...] = ()
 
 
 class IRunnerEnvironment(Protocol):
@@ -80,6 +97,12 @@ class IRunnerSession(Protocol):
 
     def request_stop(self) -> None: ...
 
+    async def reannounce(self, ai_endpoints: tuple[LocalAiEndpoint, ...]) -> None:
+        """Сообщить серверу новый список ИИ-адресов без перезапуска цикла."""
+        ...
+
+
+AiEndpointResolver = Callable[[tuple[RemoteAiEndpointChoice, ...]], Awaitable[tuple[LocalAiEndpoint, ...]]]
 
 RunnerSessionFactory = Callable[
     [RunnerSessionSpec, IRunnerSessionListener], AbstractAsyncContextManager[IRunnerSession]

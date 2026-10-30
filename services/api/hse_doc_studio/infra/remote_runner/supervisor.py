@@ -21,6 +21,7 @@ from hse_doc_studio.core.remote_runner import (
     REMOTE_RUNNER_MAX_CONCURRENCY,
     REMOTE_RUNNER_NAME_MAX,
     IRemoteRunnerSettingsStore,
+    RemoteAiEndpointInfo,
     RemoteRunnerDetail,
     RemoteRunnerDocker,
     RemoteRunnerError,
@@ -33,8 +34,10 @@ from hse_doc_studio.core.remote_runner import (
     normalize_server_url,
 )
 from hse_doc_studio.infra.remote_runner.session import (
+    AiEndpointResolver,
     IRunnerEnvironment,
     IRunnerSession,
+    LocalAiEndpoint,
     RunnerSessionFactory,
     RunnerSessionFatal,
     RunnerSessionSpec,
@@ -87,6 +90,7 @@ class RemoteRunnerSupervisor:
         pairing_client: PairingClientFactory,
         session_factory: RunnerSessionFactory | None,
         environment: IRunnerEnvironment | None = None,
+        ai_endpoints: AiEndpointResolver | None = None,
         env_check_s: float = ENV_CHECK_S,
         min_pairing_interval_s: float = 1.0,
         disabled_retry_s: float = DISABLED_RETRY_S,
@@ -100,6 +104,8 @@ class RemoteRunnerSupervisor:
         self._pairing_client = pairing_client
         self._session_factory = session_factory
         self._environment = environment
+        self._resolve_endpoints = ai_endpoints
+        self._endpoints: tuple[LocalAiEndpoint, ...] = ()
         self._env_check_s = env_check_s
         self._min_pairing_interval_s = min_pairing_interval_s
         self._disabled_retry_s = disabled_retry_s
@@ -138,6 +144,10 @@ class RemoteRunnerSupervisor:
             running_jobs=self._session.running_jobs if self._session else 0,
             docker=self._docker,
             tex_image=self._tex,
+            ai_endpoints=tuple(
+                RemoteAiEndpointInfo(name=e.name, provider_id=e.provider_id, flavor=e.flavor, url=e.display_url)
+                for e in self._endpoints
+            ),
             pairing=self._pairing,
         )
 
@@ -161,6 +171,7 @@ class RemoteRunnerSupervisor:
         async with self._lock:
             self._settings = await self._store.load()
             self._reload_identity()
+            await self._refresh_endpoints()
             await self._restart_session()
 
     async def stop(self) -> None:
@@ -185,9 +196,14 @@ class RemoteRunnerSupervisor:
                 # Личность выдана другим сервером: здесь она не годится, повторно подключаться надо заново.
                 self._registration_token = None
                 self._reload_identity()
+            if settings.ai_endpoints != previous.ai_endpoints:
+                await self._refresh_endpoints()
             if _session_inputs(settings) != _session_inputs(previous):
                 self._clear_outcome()
                 await self._restart_session()
+            elif settings.ai_endpoints != previous.ai_endpoints and self._session is not None:
+                # Список моделей для облака меняется без перезапуска: идущие сборки не прерываются.
+                await self._session.reannounce(self._endpoints)
 
     async def start_pairing(self, server_url: str, name: str) -> None:
         url = normalize_server_url(server_url)
@@ -462,6 +478,7 @@ class RemoteRunnerSupervisor:
             tex_image=image,
             tex_available=tex_available,
             gate=self._gate,
+            ai_endpoints=self._endpoints,
         )
 
     # IRunnerSessionListener: зовётся из задачи цикла, в том же потоке событий.
@@ -478,6 +495,10 @@ class RemoteRunnerSupervisor:
         logger.info("remote runner registered")
 
     # --- служебное -----------------------------------------------------------------------------
+
+    async def _refresh_endpoints(self) -> None:
+        resolve = self._resolve_endpoints
+        self._endpoints = await resolve(self._settings.ai_endpoints) if resolve else ()
 
     def _reload_identity(self) -> None:
         url = self._settings.server_url

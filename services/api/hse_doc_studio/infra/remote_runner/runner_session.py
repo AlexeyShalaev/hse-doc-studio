@@ -22,6 +22,7 @@ from hse_doc_studio.infra.di.containers.runner import create_runner_container
 from hse_doc_studio.infra.remote_runner.session import (
     IRunnerSession,
     IRunnerSessionListener,
+    LocalAiEndpoint,
     RunnerSessionFactory,
     RunnerSessionFatal,
     RunnerSessionSpec,
@@ -101,6 +102,14 @@ class LoopSession:
 
     def request_stop(self) -> None:
         self._loop.request_stop()
+
+    async def reannounce(self, ai_endpoints: tuple[LocalAiEndpoint, ...]) -> None:
+        """ИИ-адреса доходят до сервера только через /announce протокола 1.1 (срез R2 трека ретрансляции).
+
+        Цикл этой ветки /announce не знает: список хранится в спецификации сессии и уйдёт на сервер,
+        как только цикл научится объявлять возможности. Сборки при этом не прерываются.
+        """
+        logger.info("remote runner ai endpoints updated", names=[e.name for e in ai_endpoints])
 
     async def run(self) -> None:
         try:

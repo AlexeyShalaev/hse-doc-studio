@@ -189,9 +189,15 @@ def is_local_network_url(url: str) -> bool:
     return address.is_loopback or address.is_private
 
 
-def cloud_flavor(provider_type: str) -> str | None:
-    """Вид ИИ-адреса для облака по виду локального провайдера; None, если провайдер облаку не открывается."""
-    return _CLOUD_FLAVORS.get(provider_type)
+def cloud_flavor(provider_type: str, base_url: str) -> str | None:
+    """Вид ИИ-адреса для облака по локальному провайдеру; None, если провайдер облаку не открывается.
+
+    Управляемая Ollama открывается всегда, OpenAI-совместимый адрес только в своей сети.
+    """
+    flavor = _CLOUD_FLAVORS.get(provider_type)
+    if flavor is None or (provider_type != "ollama" and not is_local_network_url(base_url)):
+        return None
+    return flavor
 
 
 def _is_loopback(host: str) -> bool:

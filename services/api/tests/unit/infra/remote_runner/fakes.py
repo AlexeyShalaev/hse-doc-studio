@@ -13,6 +13,7 @@ from hse_doc_studio.core.remote_runner import RemoteRunnerSettings
 from hse_doc_studio.infra.remote_runner.session import (
     IRunnerSession,
     IRunnerSessionListener,
+    LocalAiEndpoint,
     RunnerSessionFatal,
     RunnerSessionSpec,
     SessionState,
@@ -44,6 +45,7 @@ class FakeSession:
         self._stop = asyncio.Event()
         self.running_jobs = 0
         self.stopped = False
+        self.announced: list[tuple[str, ...]] = []
 
     async def run(self) -> None:
         if self._owner.fatal:
@@ -58,6 +60,9 @@ class FakeSession:
 
     def request_stop(self) -> None:
         self._stop.set()
+
+    async def reannounce(self, ai_endpoints: tuple[LocalAiEndpoint, ...]) -> None:
+        self.announced.append(tuple(e.name for e in ai_endpoints))
 
 
 class FakeSessions:
