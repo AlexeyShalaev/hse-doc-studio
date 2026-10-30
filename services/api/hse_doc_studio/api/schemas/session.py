@@ -41,6 +41,8 @@ class Capabilities(StrictModel):
     # Считается на запрос: админ установки, прошедший ограничение по хосту/IP.
     admin: bool
     personal_signing_keys: bool
+    # Облачные сборки на этой машине (локальная Студия как личный раннер сервера): только локальный режим.
+    remote_runner: bool = False
 
 
 class OidcProviderOption(StrictModel):

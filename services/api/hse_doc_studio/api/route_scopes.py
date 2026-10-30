@@ -256,6 +256,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/operations/{operation_id}"): _A,
     ("POST", "/git/operations/{operation_id}/cancel"): _A,
     ("GET", "/git/shared-folder"): _LOCAL,
+    # Облачные сборки локальной Студии: её личный раннер на сервере
+    ("GET", "/remote-runner"): _LOCAL,
+    ("PUT", "/remote-runner"): _LOCAL,
+    ("POST", "/remote-runner/pair"): _LOCAL,
+    ("POST", "/remote-runner/token"): _LOCAL,
+    ("DELETE", "/remote-runner/pairing"): _LOCAL,
+    ("DELETE", "/remote-runner"): _LOCAL,
     # Протокол раннера и админка лежат вне /api/v1, ключ это полный путь маршрута
     ("POST", "/api/runner/v1/register"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/poll"): RouteScope.runner_token,

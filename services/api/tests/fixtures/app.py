@@ -18,6 +18,7 @@ from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
+from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -59,6 +60,7 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateCheckRepository,
     IUpdateFeedGateway,
 )
+from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
@@ -239,6 +241,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     setup_applier: ISetupApplier | None = None,
     packs_dir: Path | None = None,
     host_key_scanner: IHostKeyScanner | None = None,
+    remote_runner: IRemoteRunnerSupervisor | None = None,
 ) -> AsyncContainer:
     # A handful of providers (font store, office-editor JWT secret, compile host
     # mounts, the agent loop's rules file) read the module-level `settings.data_dir`
@@ -395,6 +398,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         TestRepositoryProvider(data_dir),
         DomainServiceProvider(),
         UseCaseProvider(),
+        LocalRemoteRunnerProvider(),
         FastapiProvider(),
     ]
     if agent_provider is not None:
@@ -460,6 +464,17 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
                 return host_key_scanner
 
         providers.append(_HostKeyScannerOverride())
+
+    if remote_runner is not None:
+        # Настоящий супервизор ходит на сервер и запускает цикл раннера: тесты облачных сборок подставляют свой.
+        class _RemoteRunnerOverride(Provider):
+            scope = Scope.APP
+
+            @provide(override=True)
+            def get_remote_runner(self) -> IRemoteRunnerSupervisor:
+                return remote_runner
+
+        providers.append(_RemoteRunnerOverride())
 
     return make_async_container(*providers)
 

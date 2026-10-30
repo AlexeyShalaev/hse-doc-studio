@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
 from pydantic import TypeAdapter, ValidationError
@@ -139,6 +140,10 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
     "CompileWait": s.CompileWait,
     "OfficeEditorBusy": s.OfficeEditorBusy,
+    "RemoteRunnerStatus": rr.RemoteRunnerStatus,
+    "UpdateRemoteRunnerRequest": rr.UpdateRemoteRunnerRequest,
+    "RemoteRunnerPairRequest": rr.RemoteRunnerPairRequest,
+    "RemoteRunnerTokenRequest": rr.RemoteRunnerTokenRequest,
 }
 
 

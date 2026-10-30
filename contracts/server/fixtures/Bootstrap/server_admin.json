@@ -34,7 +34,8 @@
     "self_update": false,
     "local_services_ui": false,
     "admin": true,
-    "personal_signing_keys": true
+    "personal_signing_keys": true,
+    "remote_runner": false
   },
   "csrf_token": "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i"
 }

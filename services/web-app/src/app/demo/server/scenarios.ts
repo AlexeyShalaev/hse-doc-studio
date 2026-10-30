@@ -60,6 +60,8 @@ const SERVER_CAPABILITIES: Capabilities = {
   local_services_ui: false,
   admin: false,
   personal_signing_keys: true,
+  // Сервер отдаёт возможность явно (эталоны Bootstrap): облачных сборок на сервере нет.
+  remote_runner: false,
 };
 
 export const DEMO_STUDENT: SessionUser = {

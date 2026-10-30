@@ -33,5 +33,8 @@
   "already_member",
   "user_not_found",
   "user_has_projects",
-  "user_not_disabled"
+  "user_not_disabled",
+  "remote_runner_url_invalid",
+  "remote_runner_unreachable",
+  "remote_runner_disabled"
 ]
