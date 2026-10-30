@@ -194,6 +194,21 @@ export const getSignUpGallery = (): GalleryGroup[] => [
         ),
       },
       {
+        id: "result_invited",
+        title: "По приглашению на адрес",
+        note: "Приглашение само подтвердило почту: письма ждать не надо.",
+        frame: "window",
+        width: W,
+        render: () => (
+          <RegisterResultCard
+            status="check_email"
+            link={null}
+            email="maria.keller@example.org"
+            invited
+          />
+        ),
+      },
+      {
         id: "result_pending_approval",
         title: "Ждёт одобрения",
         frame: "window",

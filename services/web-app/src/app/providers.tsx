@@ -6,6 +6,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
+import { isAxiosError } from "axios";
 import { ZodError, type ZodIssue } from "zod";
 import {
   markSessionEnded,
@@ -108,6 +109,9 @@ const queryScope = (q: AnyQuery | undefined): string =>
 
 const reportError = (error: unknown, source: string): void => {
   if (error instanceof ApiError) return; // already toasted by axios interceptor
+
+  // Опрос в обход общего клиента получил 401: сессия кончилась, это покажет экран входа, а не тост.
+  if (isAxiosError(error) && error.response?.status === 401) return;
 
   if (error instanceof SchemaParseError) {
     const report = formatSchemaReport(error);

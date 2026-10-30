@@ -228,6 +228,22 @@ describe("sign-up", () => {
     expect(screen.queryByTestId("link-delivery")).toBeNull();
   });
 
+  it("по приглашению на адрес письма не ждут: аккаунт готов к входу", () => {
+    render(
+      wrap(
+        <RegisterResultCard
+          status="check_email"
+          link={null}
+          email="a@b.org"
+          invited
+        />,
+      ),
+    );
+    const result = screen.getByTestId("register-result");
+    expect(result).toHaveTextContent("Аккаунт создан");
+    expect(result).not.toHaveTextContent("Проверьте почту");
+  });
+
   it("ждёт одобрения: свой итог без ссылки", () => {
     render(
       wrap(

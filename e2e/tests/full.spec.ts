@@ -116,7 +116,7 @@ test.describe("Полный смоук сервера", () => {
     expect(again.status()).toBeGreaterThanOrEqual(400);
   });
 
-  test("регистрация: нейтральный ответ, ссылка подтверждения, вход", async ({
+  test("регистрация по приглашению админа: ссылка в ответ не попадает, вход", async ({
     browser,
   }) => {
     for (const lang of LANGS) {
@@ -135,22 +135,26 @@ test.describe("Полный смоук сервера", () => {
     ];
     for (const { who, keep } of users) {
       const client = await newClient();
+      // Ссылку подтверждения анониму ответ не отдаёт: без SMTP почту подтверждает приглашение админа.
+      const invitation = await admin.json<{ link: string | null }>(
+        await admin.post("/api/admin/invitations", {
+          email: who.email,
+          ttl_days: null,
+        }),
+        201,
+      );
+      expect(invitation.link).toMatch(/\/invite\/\S+$/);
+      const invitationToken = invitation.link!.split("/invite/")[1]!;
       const res = await client.json<{ status: string; link: string | null }>(
         await client.post("/api/v1/auth/register", {
           email: who.email,
           name: who.name,
           password: stackPassword(),
-          invitation_token: null,
+          invitation_token: invitationToken,
         }),
         200,
       );
-      expect(res.status).toBe("check_email");
-      // Без SMTP ссылку подтверждения показывает сам ответ.
-      expect(res.link).toContain("/verify/");
-      const token = res.link!.split("/verify/")[1]!.split(/[?#]/)[0]!;
-      expect(
-        (await client.post("/api/v1/auth/verify", { token })).status(),
-      ).toBe(204);
+      expect(res.link).toBeNull();
       const user = await client.login(who.email, stackPassword());
       keep(client, String(user.id));
     }

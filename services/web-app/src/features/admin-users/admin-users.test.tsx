@@ -21,6 +21,7 @@ import {
 import { installServerDemo } from "@/app/demo";
 import { activateServerScenario } from "@/app/demo/server";
 import { serverAdminDemoRoutes } from "@/app/demo/server/routes";
+import { detailText } from "./lib/format";
 import { ensureAdminUsersLocales } from "./lib/locales";
 import { AdminUsers, AuditLog } from "./index";
 
@@ -236,5 +237,16 @@ describe("люди в админке: экраны", () => {
     render(wrap(<AdminUsers />));
     expect(await screen.findByText("Awaiting approval")).toBeVisible();
     await i18n.changeLanguage("ru");
+  });
+});
+
+describe("подробности журнала", () => {
+  it("вложенные значения читаются как ключ=значение, а не как JSON", () => {
+    expect(detailText({ user_concurrent: 1, max_duration_s: null })).toBe(
+      "user_concurrent=1, max_duration_s=∅",
+    );
+    expect(detailText(["a", "b"])).toBe("a, b");
+    expect(detailText("plain")).toBe("plain");
+    expect(detailText(null)).toBe("");
   });
 });

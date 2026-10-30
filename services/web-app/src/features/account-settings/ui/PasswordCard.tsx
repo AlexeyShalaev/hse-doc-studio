@@ -29,7 +29,7 @@ export const PasswordCard = ({
   minLength,
   passwordEnabled = true,
   pending = false,
-  failure = null,
+  failure: serverFailure = null,
   done = false,
   onSubmit,
 }: PasswordCardProps) => {
@@ -40,6 +40,13 @@ export const PasswordCard = ({
   const [confirm, setConfirm] = useState("");
   const [signOutOthers, setSignOutOthers] = useState(true);
   const [touched, setTouched] = useState(false);
+  // Отказ сервера относится к введённым значениям: пока их правят, он устарел.
+  const [edited, setEdited] = useState(false);
+  const failure = edited ? null : serverFailure;
+  const edit = (apply: () => void) => {
+    apply();
+    setEdited(true);
+  };
 
   if (!passwordEnabled) {
     return (
@@ -66,6 +73,7 @@ export const PasswordCard = ({
     event.preventDefault();
     setTouched(true);
     if (pending || !valid) return;
+    setEdited(false);
     onSubmit({ current, next, signOutOthers });
   };
 
@@ -90,7 +98,9 @@ export const PasswordCard = ({
           autoComplete="current-password"
           value={current}
           onChange={(e) => {
-            setCurrent(e.target.value);
+            edit(() => {
+              setCurrent(e.target.value);
+            });
           }}
           readOnly={pending}
           {...errorProp(
@@ -107,7 +117,9 @@ export const PasswordCard = ({
           autoComplete="new-password"
           value={next}
           onChange={(e) => {
-            setNext(e.target.value);
+            edit(() => {
+              setNext(e.target.value);
+            });
           }}
           readOnly={pending}
           hint={t("password.hint", { count: minLength })}
@@ -129,7 +141,9 @@ export const PasswordCard = ({
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => {
-            setConfirm(e.target.value);
+            edit(() => {
+              setConfirm(e.target.value);
+            });
           }}
           readOnly={pending}
           {...errorProp(mismatch ? t("password.mismatch") : undefined)}
