@@ -5337,6 +5337,167 @@
   }
 }
 
+/* ── журнал аудита: дни, строки событий, подробности ── */
+.adm-audit {
+  container-type: inline-size;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+  min-width: 0;
+}
+.adm-audit-day + .adm-audit-day {
+  border-top: 1px solid var(--border);
+}
+.adm-audit-dayhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.adm-audit-day:first-child .adm-audit-dayhead {
+  border-radius: var(--r-3) var(--r-3) 0 0;
+}
+.adm-audit-dayhead > span:last-child {
+  font-weight: 400;
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.adm-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adm-audit-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.adm-audit-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 190px) 92px 16px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px 10px 20px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+.adm-audit-row:hover {
+  background: var(--bg-hover);
+}
+.adm-audit-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.adm-audit-row[aria-expanded="true"] {
+  background: var(--bg-elev);
+}
+.adm-audit-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+.adm-audit-icon[data-tone="danger"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.adm-audit-icon[data-tone="warning"] {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.adm-audit-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.adm-audit-title {
+  font-size: 13px;
+  color: var(--fg-0);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-audit-target {
+  color: var(--fg-2);
+}
+.adm-audit-sub {
+  font-size: 12px;
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-audit-sub[data-mobile] {
+  display: none;
+}
+.adm-audit-time {
+  font-size: 12px;
+  color: var(--fg-2);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.adm-audit-chevron {
+  color: var(--fg-3);
+  transition: transform 0.12s var(--ease);
+}
+.adm-audit-row[aria-expanded="true"] .adm-audit-chevron {
+  transform: rotate(90deg);
+  color: var(--fg-1);
+}
+.adm-audit-details {
+  padding: 4px 20px 14px 60px;
+  background: var(--bg-elev);
+}
+.adm-audit-details .adm-kv {
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+  gap: 6px 20px;
+  max-width: 560px;
+}
+.adm-audit-details .adm-kv dd {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.adm-audit-foot {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+@container (max-width: 620px) {
+  .adm-audit-row {
+    grid-template-columns: 28px minmax(0, 1fr) 84px 16px;
+  }
+  .adm-audit-row > .adm-person {
+    display: none;
+  }
+  .adm-audit-sub[data-mobile] {
+    display: block;
+  }
+  .adm-audit-details {
+    padding-left: 20px;
+  }
+}
+
 /* ── сводные плитки ── */
 .adm-kpi-grid {
   display: grid;

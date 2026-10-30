@@ -143,7 +143,7 @@
   },
   "audit": {
     "title": "Audit",
-    "lead": "The log of sign-ins and administrator actions. Newest first.",
+    "lead": "Sign-ins, administrator actions and settings changes.",
     "group": "Event type",
     "groups": {
       "auth": "Sign-ins and accounts",
@@ -156,14 +156,13 @@
       "project": "Projects"
     },
     "caption": "Event log",
-    "loadFailed": "Could not load the log.",
+    "loadFailed": "Could not load the log",
     "more": "Show more",
     "empty": {
       "title": "No entries yet",
       "body": "Sign-ins and administrator actions appear here."
     },
-    "by": "by: {{id}}",
-    "system": "system",
+    "system": "System",
     "actions": {
       "auth_login": "Sign-in",
       "auth_login_failed": "Failed sign-in attempt",
@@ -249,6 +248,63 @@
     "noMatch": {
       "title": "Nothing found",
       "body": "Change the search or the event type. Search covers only the loaded entries."
+    },
+    "loadFailedBody": "Check the connection to the server and try again.",
+    "refresh": "Refresh",
+    "resetFilters": "Reset filters",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "dayCount_one": "{{count}} event",
+    "dayCount_other": "{{count}} events",
+    "unknownActor": "Deleted user",
+    "yes": "yes",
+    "no": "no",
+    "detail": {
+      "when": "When",
+      "actor": "Who",
+      "code": "Event code",
+      "target": "Object"
+    },
+    "detailKeys": {
+      "email": "Email",
+      "method": "Method",
+      "slug": "Address",
+      "label": "Name",
+      "name": "Name",
+      "title": "Name",
+      "ip": "IP address",
+      "user_agent": "Browser",
+      "reason": "Reason",
+      "role": "Role",
+      "user_concurrent": "Builds per person",
+      "org_concurrent": "Builds per organization",
+      "provider": "Provider",
+      "mode": "Mode",
+      "domains": "Domains",
+      "enabled": "Enabled",
+      "server_keys": "Keys on the server",
+      "to": "To",
+      "models": "Models",
+      "type": "Type",
+      "from": "Was",
+      "ttl_days": "Valid, days",
+      "size": "Size"
+    },
+    "values": {
+      "password": "password",
+      "oidc": "single sign-on",
+      "invite": "by invitation",
+      "domains": "by domain",
+      "open": "open",
+      "closed": "closed",
+      "allowed": "allowed",
+      "forbidden": "forbidden",
+      "owner": "owner",
+      "admin": "administrator",
+      "member": "member",
+      "bad_password": "wrong password",
+      "unknown_email": "unknown email",
+      "disabled": "account disabled"
     }
   },
   "failure": {

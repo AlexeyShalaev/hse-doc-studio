@@ -132,9 +132,11 @@ export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
   return world.adminInstall;
 };
 
-/** Люди установки мира. */
+/** Люди установки мира; на свежей установке журнал пуст. */
 export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
-  world.adminPeople ??= createDemoAdminPeople();
+  world.adminPeople ??= createDemoAdminPeople(
+    world.scenario.installSeed === "fresh" ? "fresh" : "default",
+  );
   return world.adminPeople;
 };
 
