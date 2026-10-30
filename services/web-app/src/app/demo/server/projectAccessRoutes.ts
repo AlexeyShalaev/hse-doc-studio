@@ -7,6 +7,7 @@ import {
   effectiveRole,
   findGroup,
 } from "./projectAccess";
+import { PICKER_MAX, invalidQuery, limitOf, queryOne } from "./demoList";
 import type { DemoProject } from "./projects";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
@@ -69,15 +70,26 @@ export const createProjectAccessRoutes = (
       pattern: "/projects/:projectId/members/candidates",
       handler: withProject(true, (project, req, world) => {
         const q = req.query.q;
-        // Пикер, как у сервера: до 20 подходящих и признак «уточните поиск».
         const found = accessCandidates(
           world,
           project,
           typeof q === "string" ? q : "",
         );
+        // Пикер, как у сервера: до 20 подходящих, kind и признак «уточните поиск».
+        const limit = limitOf(req, PICKER_MAX, PICKER_MAX);
+        const kind = queryOne(req, "kind");
+        if (
+          limit === null ||
+          (kind !== null && kind !== "user" && kind !== "group")
+        ) {
+          return invalidQuery();
+        }
+        const shown = kind
+          ? found.filter((c) => c.subject_kind === kind)
+          : found;
         return demoJson({
-          items: found.slice(0, 20),
-          has_more: found.length > 20,
+          items: shown.slice(0, limit),
+          has_more: shown.length > limit,
         });
       }),
     },

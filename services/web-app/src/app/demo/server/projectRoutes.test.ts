@@ -3,11 +3,10 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest, DemoResponse } from "@shared/api/demo";
-import { z } from "zod";
 import {
   CreateServerProjectRequestSchema,
   ProjectImportResultSchema,
-  ProjectSummarySchema,
+  ProjectSummaryPageSchema,
 } from "@entities/session";
 import { ProjectResponseSchema } from "@entities/project";
 import { activateServerScenario } from "./index";
@@ -45,8 +44,9 @@ const call = async (
   });
 };
 
+// Серверный режим отдаёт страницу каталога, как настоящий API.
 const list = async () =>
-  z.array(ProjectSummarySchema).parse((await call("GET", "/projects")).data);
+  ProjectSummaryPageSchema.parse((await call("GET", "/projects")).data).items;
 
 describe("демо проектов сервера", () => {
   beforeEach(() => {
@@ -66,7 +66,9 @@ describe("демо проектов сервера", () => {
   });
 
   it("форма элемента совпадает с эталоном ProjectSummary", async () => {
-    const [first] = (await call("GET", "/projects")).data as unknown[];
+    const [first] = (
+      (await call("GET", "/projects")).data as { items: unknown[] }
+    ).items;
     const expected = (
       fixture("ProjectSummaryList", "two") as Record<string, unknown>[]
     )[0];

@@ -2,6 +2,9 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type { AdminSettingState } from "@entities/session";
 import type { DemoSharedProvider } from "./adminInstall";
+import { enumParam, invalidQuery, offsetList } from "./demoList";
+
+const PROVIDER_TYPES = ["claude", "openai", "openai_compat", "ollama"] as const;
 import { adminInstallOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
@@ -209,15 +212,25 @@ export const createInstallRoutes = (
     {
       method: "GET",
       pattern: "/ai-providers",
-      // Форма Page сервера; общих провайдеров немного, окно здесь всегда первое.
-      handler: guarded(() => {
-        const items = state().providers;
-        return demoJson({
-          items,
-          total: items.length,
-          limit: 50,
-          offset: 0,
-        });
+      handler: guarded((req) => {
+        const types = enumParam(req, "type", PROVIDER_TYPES);
+        if (types === null) return invalidQuery();
+        return offsetList(
+          req,
+          state().providers.filter(
+            (p) => types.length === 0 || types.includes(p.type),
+          ),
+          {
+            sort: {
+              name: (p: DemoSharedProvider) => p.name,
+              type: (p: DemoSharedProvider) => p.type,
+              created_at: (p: DemoSharedProvider) => p.created_at,
+            },
+            defaultSort: "created_at",
+            search: (p) => [p.name, p.base_url],
+            id: (p) => p.id,
+          },
+        );
       }),
     },
     {

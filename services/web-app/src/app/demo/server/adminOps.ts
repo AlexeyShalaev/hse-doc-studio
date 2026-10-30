@@ -22,6 +22,8 @@ export type DemoAdminOps = {
   storage: AdminStorage;
   /** Сколько токенов и раннеров выдано: для новых идентификаторов. */
   counter: number;
+  /** Организация задачи (большой мир): фильтр очереди по org_id и подпись. */
+  jobOrgs?: Map<string, { id: string; name: string }>;
 };
 
 const ago = (seconds: number, now: number): string =>

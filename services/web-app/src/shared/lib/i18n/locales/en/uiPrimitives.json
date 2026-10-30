@@ -125,5 +125,68 @@
   "chunkError": {
     "title": "Could not load this section",
     "text": "Check your connection and try again. If the app was updated, reload the page."
+  },
+  "pagination": {
+    "pageSize": "Rows per page",
+    "perPage": "{{n}} per page",
+    "first": "First page",
+    "last": "Last page",
+    "page": "Page",
+    "of": "of {{pages}}",
+    "jump": "Page number, {{pages}} in total",
+    "shown_one": "Showing {{n}} entry",
+    "shown_other": "Showing {{n}} entries",
+    "shownOf_one": "Showing {{n}} of {{total}}",
+    "shownOf_other": "Showing {{n}} of {{total}}",
+    "more": "Show more",
+    "end": "No more entries"
+  },
+  "searchInput": {
+    "clear": "Clear search"
+  },
+  "noResults": {
+    "title": "Nothing found",
+    "hint": "Try changing the conditions or reset the filters.",
+    "withQuery": "Nothing matches “{{query}}”. Check the spelling or reset the filters.",
+    "reset": "Reset filters"
+  },
+  "filterMenu": {
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "clear": "Clear",
+    "clearOne": "Remove the “{{label}}” filter",
+    "narrow": "Find in list"
+  },
+  "dateRange": {
+    "label": "Period",
+    "presets": "Quick periods",
+    "from": "From",
+    "to": "To",
+    "between": "{{from}}–{{to}}",
+    "since": "since {{day}}",
+    "until": "until {{day}}",
+    "preset": {
+      "today": "Today",
+      "week": "7 days",
+      "month": "30 days",
+      "quarter": "90 days"
+    }
+  },
+  "activeFilters": {
+    "label": "Active conditions",
+    "remove": "Remove condition {{label}}: {{value}}",
+    "found_one": "{{n}} entry found",
+    "found_other": "{{n}} entries found"
+  },
+  "picker": {
+    "placeholder": "Choose",
+    "searchPlaceholder": "Start typing a name",
+    "loading": "Loading",
+    "error": "Could not load the list",
+    "noMatches": "No matches",
+    "nothing": "Nothing to choose yet",
+    "refine": "Showing the first {{limit}}. Refine the search to find the rest.",
+    "clear": "Clear selection",
+    "selectedOne": "selected"
   }
 }

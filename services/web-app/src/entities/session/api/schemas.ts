@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  PickerItemSchema,
+  PickerPageSchema,
+  cursorPageOf,
+  listPageOf,
+} from "@shared/api";
 
 // Зеркало services/api/hse_doc_studio/api/schemas/session.py. Эталоны лежат в contracts/server;
 // strictObject повторяет extra=forbid на стороне бэкенда: лишнее поле значит расхождение сторон.
@@ -266,13 +272,7 @@ export type CreateApiTokenResponse = z.infer<
 >;
 
 // Страница списка сервера: {items, total, limit, offset} под теми же фильтрами.
-export const pageOf = <T extends z.ZodType>(item: T) =>
-  z.strictObject({
-    items: z.array(item),
-    total: z.number().int(),
-    limit: z.number().int(),
-    offset: z.number().int(),
-  });
+export const pageOf = listPageOf;
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -356,16 +356,8 @@ export const AdminUserOrgSchema = z.strictObject({
 });
 export const AdminUserOrgPageSchema = pageOf(AdminUserOrgSchema);
 // Пикер: первые подходящие; has_more значит «уточните поиск», пикер не листается.
-export const PickerItemSchema = z.strictObject({
-  kind: z.enum(["user", "org", "group", "project", "runner"]),
-  id: z.string(),
-  name: z.string(),
-  detail: z.string().nullable(),
-});
-export const PickerListSchema = z.strictObject({
-  items: z.array(PickerItemSchema),
-  has_more: z.boolean(),
-});
+export { PickerItemSchema };
+export const PickerListSchema = PickerPageSchema;
 export const UpdateAdminUserRequestSchema = z.strictObject({
   is_instance_admin: z.boolean(),
 });
@@ -411,11 +403,8 @@ export const AdminAuditEventSchema = z.strictObject({
   details: z.record(z.string(), z.unknown()),
 });
 // Курсор непрозрачный; total_estimate есть только без фильтров, иначе «из N» не показывается.
-export const AdminAuditPageSchema = z.strictObject({
-  items: z.array(AdminAuditEventSchema),
-  next_cursor: z.string().nullable(),
-  total_estimate: z.number().int().nullable(),
-});
+// Оценка числа записей; только без фильтров, иначе null.
+export const AdminAuditPageSchema = cursorPageOf(AdminAuditEventSchema);
 export const CreateAdminInvitationRequestSchema = z.strictObject({
   email: z.string().nullable(),
   ttl_days: z.number().int().nullable(),
@@ -737,11 +726,8 @@ export const AdminJobSchema = z.strictObject({
   runner_name: z.string().nullable(),
 });
 /** Журнал очереди: курсор непрозрачный, null на последней странице; оценка только без фильтров. */
-export const AdminJobPageSchema = z.strictObject({
-  items: z.array(AdminJobSchema),
-  next_cursor: z.string().nullable(),
-  total_estimate: z.number().int().nullable(),
-});
+// Оценка числа задач; только без фильтров, иначе null.
+export const AdminJobPageSchema = cursorPageOf(AdminJobSchema);
 export const AdminQueueSummarySchema = z.strictObject({
   by_state: z.record(z.string(), z.number().int()),
   queued_by_class: z.record(z.string(), z.number().int()),

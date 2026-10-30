@@ -9,6 +9,14 @@ import type {
   OrgRoleName,
 } from "@entities/session";
 import type { DemoGroup, DemoOrg } from "./adminOrgs";
+import {
+  enumParam,
+  boolParam,
+  invalidQuery,
+  offsetList,
+  searchOf,
+  hit,
+} from "./demoList";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: организации, участники и группы. Тела совпадают с contracts/server/fixtures.
@@ -22,6 +30,9 @@ import { adminOrgsOf, type ServerDemoWorld } from "./world";
 //
 // Особые значения: адрес участника, которого нет среди людей установки, даёт 404;
 // адрес организации admin, api, auth, account зарезервирован.
+//
+// Списки идут по единому контракту (demoList.ts): поиск, фильтры, сортировка и
+// страницы.
 
 const ROLES: readonly OrgRoleName[] = ["owner", "admin", "member"];
 const RESERVED = ["admin", "api", "auth", "account", "orgs", "new"];
@@ -34,33 +45,6 @@ const isRole = (value: unknown): value is OrgRoleName =>
 
 const notFound = () => demoError(404, "not_found", "Not Found");
 
-type DemoReq = Parameters<DemoRoute["handler"]>[0];
-const queryText = (value: string | string[] | undefined): string =>
-  (Array.isArray(value) ? value[0] : value) ?? "";
-const queryList = (value: string | string[] | undefined): string[] =>
-  value === undefined ? [] : Array.isArray(value) ? value : [value];
-
-/** Страница списка, как у сервера: поиск подстроки без учёта регистра, limit (до 200) и offset. */
-const pageOf = <T>(
-  items: readonly T[],
-  req: DemoReq,
-  text: (item: T) => string,
-) => {
-  const q = queryText(req.query.q).trim().toLowerCase();
-  const found = q
-    ? items.filter((x) => text(x).toLowerCase().includes(q))
-    : [...items];
-  const limit = Math.min(Number(queryText(req.query.limit)) || 50, 200);
-  const offset = Number(queryText(req.query.offset)) || 0;
-  return {
-    items: found.slice(offset, offset + limit),
-    total: found.length,
-    limit,
-    offset,
-  };
-};
-
-const ROLE_ORDER: readonly OrgRoleName[] = ["owner", "admin", "member"];
 const forbidden = () => demoError(403, "forbidden", "Forbidden");
 const invalid = () => demoError(422, "input_invalid", "Invalid input");
 
@@ -143,18 +127,25 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs",
-      handler: guarded((req) =>
-        demoJson(
-          pageOf(
-            state()
-              .orgs.filter(manages)
-              .map(summary)
-              .sort((a, b) => a.name.localeCompare(b.name)),
-            req,
-            (o) => `${o.name} ${o.slug}`,
-          ),
-        ),
-      ),
+      handler: guarded((req) => {
+        const mine = boolParam(req, "mine");
+        if (mine === "bad") return invalidQuery();
+        const rows = state()
+          .orgs.filter(manages)
+          .filter((o) => mine === null || (roleIn(o) !== null) === mine)
+          .map(summary);
+        return offsetList(req, rows, {
+          sort: {
+            name: (o: AdminOrg) => o.name,
+            slug: (o: AdminOrg) => o.slug,
+            member_count: (o: AdminOrg) => o.member_count,
+            project_count: (o: AdminOrg) => o.project_count,
+          },
+          defaultSort: "name",
+          search: (o) => [o.name, o.slug],
+          id: (o) => o.slug,
+        });
+      }),
     },
     {
       method: "POST",
@@ -223,23 +214,37 @@ export const createOrgRoutes = (
       method: "GET",
       pattern: "/orgs/:slug/members",
       handler: withOrg((org, req) => {
-        const roles = queryList(req.query.role);
-        const shown = roles.length
-          ? org.members.filter((m) => roles.includes(m.role))
-          : org.members;
-        return demoJson(pageOf(shown, req, (m) => `${m.name} ${m.email}`));
+        const roles = enumParam(req, "role", ROLES);
+        if (roles === null) return invalidQuery();
+        const rank = (m: AdminOrgMember) => ROLES.indexOf(m.role);
+        return offsetList(
+          req,
+          roles.length
+            ? org.members.filter((m) => roles.includes(m.role))
+            : org.members,
+          {
+            sort: {
+              name: (m: AdminOrgMember) => m.name,
+              email: (m: AdminOrgMember) => m.email,
+              role: rank,
+              joined_at: (m: AdminOrgMember) => m.joined_at,
+            },
+            defaultSort: "joined_at",
+            search: (m) => [m.name, m.email],
+            id: (m) => m.user_id,
+          },
+        );
       }),
     },
     {
       method: "GET",
       pattern: "/orgs/:slug/members/facets",
       handler: withOrg((org, req) => {
-        const q = queryText(req.query.q).trim().toLowerCase();
-        const found = org.members.filter((m) =>
-          `${m.name} ${m.email}`.toLowerCase().includes(q),
-        );
+        const q = searchOf(req);
+        if (q === null) return invalidQuery();
+        const found = org.members.filter((m) => hit(q, m.name, m.email));
         const role = Object.fromEntries(
-          ROLE_ORDER.map((r) => [r, found.filter((m) => m.role === r).length]),
+          ROLES.map((r) => [r, found.filter((m) => m.role === r).length]),
         ) as Record<OrgRoleName, number>;
         return demoJson({ role });
       }),
@@ -328,14 +333,19 @@ export const createOrgRoutes = (
       method: "GET",
       pattern: "/orgs/:slug/groups",
       handler: withOrg((org, req) =>
-        demoJson(
-          pageOf(
-            org.groups
-              .map((g) => groupOf(org, g))
-              .sort((a, b) => a.name.localeCompare(b.name)),
-            req,
-            (g) => g.name,
-          ),
+        offsetList(
+          req,
+          org.groups,
+          {
+            sort: {
+              name: (g: DemoGroup) => g.name,
+              member_count: (g: DemoGroup) => g.member_ids.length,
+            },
+            defaultSort: "name",
+            search: (g) => [g.name],
+            id: (g) => g.id,
+          },
+          { view: (g) => groupOf(org, g) },
         ),
       ),
     },
@@ -403,16 +413,25 @@ export const createOrgRoutes = (
       handler: withOrg((org, req) => {
         const group = org.groups.find((g) => g.id === req.params.id);
         if (!group) return notFound();
+        const ids = new Set(group.member_ids);
         const people: AdminGroupMember[] = org.members
-          .filter((m) => group.member_ids.includes(m.user_id))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .filter((m) => ids.has(m.user_id))
           .map((m) => ({
             user_id: m.user_id,
             name: m.name,
             email: m.email,
             added_at: m.joined_at,
           }));
-        return demoJson(pageOf(people, req, (m) => `${m.name} ${m.email}`));
+        return offsetList(req, people, {
+          sort: {
+            name: (m: AdminGroupMember) => m.name,
+            email: (m: AdminGroupMember) => m.email,
+            added_at: (m: AdminGroupMember) => m.added_at,
+          },
+          defaultSort: "name",
+          search: (m) => [m.name, m.email],
+          id: (m) => m.user_id,
+        });
       }),
     },
     {
@@ -454,6 +473,8 @@ export const createOrgRoutes = (
       method: "GET",
       pattern: "/users/:id/orgs",
       handler: guarded((req) => {
+        const roles = enumParam(req, "role", ROLES);
+        if (roles === null) return invalidQuery();
         const items: AdminUserOrg[] = state().orgs.flatMap((org) => {
           const me = org.members.find((m) => m.user_id === req.params.id);
           return me
@@ -467,8 +488,21 @@ export const createOrgRoutes = (
               ]
             : [];
         });
-        items.sort((a, b) => a.name.localeCompare(b.name));
-        return demoJson(pageOf(items, req, (o) => `${o.name} ${o.slug}`));
+        const rank = (o: AdminUserOrg) => ROLES.indexOf(o.role);
+        return offsetList(
+          req,
+          items.filter((o) => roles.length === 0 || roles.includes(o.role)),
+          {
+            sort: {
+              name: (o: AdminUserOrg) => o.name,
+              role: rank,
+              joined_at: (o: AdminUserOrg) => o.joined_at,
+            },
+            defaultSort: "name",
+            search: (o) => [o.name, o.slug],
+            id: (o) => o.slug,
+          },
+        );
       }),
     },
   ];

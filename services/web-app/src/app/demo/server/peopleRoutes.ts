@@ -1,12 +1,31 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type {
+  AccountStatus,
   AdminAuditEvent,
   AdminInvitation,
   AdminUser,
 } from "@entities/session";
-import type { DemoAuditEvent } from "./adminPeople";
-import { adminInstallOf, adminPeopleOf, type ServerDemoWorld } from "./world";
+import type { DemoAdminPeople, DemoAuditEvent } from "./adminPeople";
+import {
+  boolParam,
+  cursorList,
+  enumParam,
+  hit,
+  invalidQuery,
+  offsetList,
+  queryAll,
+  queryOne,
+  searchOf,
+  timeParam,
+  type DemoReq,
+} from "./demoList";
+import {
+  adminInstallOf,
+  adminOrgsOf,
+  adminPeopleOf,
+  type ServerDemoWorld,
+} from "./world";
 
 // Демо админки: люди, одобрения, приглашения и журнал. Тела совпадают с contracts/server/fixtures.
 //
@@ -14,35 +33,89 @@ import { adminInstallOf, adminPeopleOf, type ServerDemoWorld } from "./world";
 //  - последнего администратора нельзя понизить или отключить (409 last_admin);
 //  - удалить можно только отключённый аккаунт без проектов (409 user_not_disabled, user_has_projects);
 //  - приглашение на неверный адрес даёт 422 input_invalid, ссылку отдаёт только создание и «новая ссылка».
+//
+// Списки идут по единому контракту (demoList.ts): поиск, фильтры и сортировка
+// на «сервере», журнал листается курсором.
 
-const PAGE = 25;
+const STATUSES: readonly AccountStatus[] = [
+  "active",
+  "pending_verification",
+  "pending_approval",
+  "disabled",
+];
+const INVITE_STATUSES = ["pending", "used", "expired"] as const;
+type AuditRow = DemoAdminPeople["audit"][number];
+
+/** Журнал сверху вниз: свежие записи, затем архив большого мира по id. */
+function* auditRows(people: DemoAdminPeople): Generator<AuditRow> {
+  yield* [...people.audit].sort((a, b) => b.id - a.id);
+  const archive = people.archive;
+  if (!archive) return;
+  for (let id = archive.count; id >= 1; id -= 1) yield archive.at(id);
+}
+
+/** Состояние приглашения сейчас: просроченное ожидание уже просрочено. */
+const inviteStatus = (i: AdminInvitation): AdminInvitation["status"] =>
+  i.status === "pending" && Date.parse(i.expires_at) <= Date.now()
+    ? "expired"
+    : i.status;
+
 const body = (req: { body?: unknown }): Record<string, unknown> =>
   (req.body ?? {}) as Record<string, unknown>;
 const notFound = () => demoError(404, "not_found", "Not Found");
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const queryText = (value: string | string[] | undefined): string =>
-  (Array.isArray(value) ? value[0] : value) ?? "";
-
 export const createPeopleRoutes = (
   getWorld: () => ServerDemoWorld,
 ): DemoRoute[] => {
   const state = () => adminPeopleOf(getWorld());
-  const userOf = (id: string | undefined): AdminUser | undefined =>
-    state().users.find((u) => u.id === id);
+  // Указатель по id: в большом мире людей двенадцать тысяч, а журнал ищет
+  // имя на каждую строку. Пересобирается, когда меняется массив.
+  let index: { users: AdminUser[]; byId: Map<string, AdminUser> } | null = null;
+  const userOf = (id: string | undefined | null): AdminUser | undefined => {
+    const users = state().users;
+    if (index?.users !== users || index.byId.size !== users.length) {
+      index = { users, byId: new Map(users.map((u) => [u.id, u])) };
+    }
+    return id ? index.byId.get(id) : undefined;
+  };
+  /** Люди с фильтрами списка «Люди»; null при неверном параметре. */
+  const filteredUsers = (
+    req: DemoReq,
+    { withStatus = true } = {},
+  ): AdminUser[] | null => {
+    const statuses = enumParam(req, "status", STATUSES);
+    const isAdmin = boolParam(req, "is_admin");
+    const org = queryOne(req, "org");
+    if (statuses === null || isAdmin === "bad") return null;
+    const members = org
+      ? new Set(
+          adminOrgsOf(getWorld())
+            .orgs.find((o) => o.slug === org)
+            ?.members.map((m) => m.user_id) ?? [],
+        )
+      : null;
+    return state().users.filter(
+      (u) =>
+        (!withStatus || statuses.length === 0 || statuses.includes(u.status)) &&
+        (isAdmin === null || u.is_instance_admin === isAdmin) &&
+        (members === null || members.has(u.id)),
+    );
+  };
+  const USER_SPEC = {
+    sort: {
+      name: (u: AdminUser) => u.name,
+      email: (u: AdminUser) => u.email,
+      created_at: (u: AdminUser) => u.created_at,
+      last_login_at: (u: AdminUser) => u.last_login_at,
+      status: (u: AdminUser) => u.status,
+    },
+    search: (u: AdminUser) => [u.name, u.email],
+    id: (u: AdminUser) => u.id,
+  };
   const admins = () =>
     state().users.filter((u) => u.is_instance_admin && u.status === "active")
       .length;
-  const page = <T>(items: T[], req: Parameters<DemoRoute["handler"]>[0]) => {
-    const limit = Number(queryText(req.query.limit)) || PAGE;
-    const offset = Number(queryText(req.query.offset)) || 0;
-    return {
-      items: items.slice(offset, offset + limit),
-      total: items.length,
-      limit,
-      offset,
-    };
-  };
   // Ссылки строятся от публичного адреса установки, как у настоящего сервера.
   const publicUrl = () =>
     adminInstallOf(getWorld()).instance.public_url.replace(/\/+$/, "");
@@ -96,16 +169,33 @@ export const createPeopleRoutes = (
       method: "GET",
       pattern: "/users",
       handler: (req) => {
-        const q = queryText(req.query.q).trim().toLowerCase();
-        const status = queryText(req.query.status);
-        const found = state().users.filter(
-          (u) =>
-            (status === "" || u.status === status) &&
-            (q === "" ||
-              u.name.toLowerCase().includes(q) ||
-              u.email.toLowerCase().includes(q)),
+        const rows = filteredUsers(req);
+        if (rows === null) return invalidQuery();
+        return offsetList(req, rows, {
+          ...USER_SPEC,
+          defaultSort: "-created_at",
+        });
+      },
+    },
+    {
+      // Числа на чипах под тем же поиском: вместо запроса на каждое состояние.
+      method: "GET",
+      pattern: "/users/facets",
+      handler: (req) => {
+        const q = searchOf(req);
+        const rows = filteredUsers(req, { withStatus: false });
+        if (q === null || rows === null) return invalidQuery();
+        const found = rows.filter((u) => hit(q, u.name, u.email));
+        const status = Object.fromEntries(
+          STATUSES.map((st) => [
+            st,
+            found.filter((u) => u.status === st).length,
+          ]),
         );
-        return demoJson(page(found, req));
+        return demoJson({
+          status,
+          admins: found.filter((u) => u.is_instance_admin).length,
+        });
       },
     },
     {
@@ -197,11 +287,20 @@ export const createPeopleRoutes = (
       method: "GET",
       pattern: "/approvals",
       handler: (req) =>
-        demoJson(
-          page(
-            state().users.filter((u) => u.status === "pending_approval"),
-            req,
-          ),
+        offsetList(
+          req,
+          state().users.filter((u) => u.status === "pending_approval"),
+          {
+            sort: {
+              created_at: USER_SPEC.sort.created_at,
+              name: USER_SPEC.sort.name,
+              email: USER_SPEC.sort.email,
+            },
+            // Старые заявки первыми: они ждут дольше всех.
+            defaultSort: "created_at",
+            search: USER_SPEC.search,
+            id: USER_SPEC.id,
+          },
         ),
     },
     {
@@ -223,7 +322,28 @@ export const createPeopleRoutes = (
     {
       method: "GET",
       pattern: "/invitations",
-      handler: (req) => demoJson(page(state().invitations, req)),
+      handler: (req) => {
+        const statuses = enumParam(req, "status", INVITE_STATUSES);
+        if (statuses === null) return invalidQuery();
+        const org = queryOne(req, "org");
+        const orgOf = state().invitationOrgs;
+        const rows = state()
+          .invitations.map((i) => ({ ...i, status: inviteStatus(i) }))
+          .filter(
+            (i) =>
+              (statuses.length === 0 || statuses.includes(i.status)) &&
+              (org === null || orgOf?.get(i.id) === org),
+          );
+        return offsetList(req, rows, {
+          sort: {
+            expires_at: (i: AdminInvitation) => i.expires_at,
+            email: (i: AdminInvitation) => i.email,
+          },
+          defaultSort: "-expires_at",
+          search: (i) => [i.email],
+          id: (i) => i.id,
+        });
+      },
     },
     {
       method: "POST",
@@ -280,19 +400,58 @@ export const createPeopleRoutes = (
       method: "GET",
       pattern: "/audit",
       handler: (req) => {
-        const prefix = queryText(req.query.action);
-        const before = Number(queryText(req.query.cursor)) || Infinity;
-        const limit = Number(queryText(req.query.limit)) || PAGE;
-        const found = state().audit.filter(
-          (e) =>
-            e.id < before && (prefix === "" || e.action.startsWith(prefix)),
-        );
-        const items = found.slice(0, limit).map(auditView);
-        const last = items[items.length - 1];
-        return demoJson({
-          items,
-          next_cursor: found.length > limit && last ? String(last.id) : null,
-          total_estimate: prefix === "" ? state().audit.length : null,
+        const q = searchOf(req);
+        const from = timeParam(req, "from", "since");
+        const to = timeParam(req, "to", "until");
+        if (q === null || from === "bad" || to === "bad") return invalidQuery();
+        const categories = queryAll(req, "category").map((c) => `${c}.`);
+        // Прежний клиент слал префикс в action («auth.»): он тоже категория.
+        const actions = queryAll(req, "action");
+        const prefixes = [
+          ...categories,
+          ...actions.filter((a) => a.endsWith(".")),
+        ];
+        const exact = actions.filter((a) => !a.endsWith("."));
+        const actor = queryOne(req, "actor_id");
+        const target = queryOne(req, "target");
+        // Поиск по людям: не больше 200 подходящих по имени или почте.
+        const actors = q
+          ? new Set(
+              state()
+                .users.filter((u) => hit(q, u.name, u.email))
+                .slice(0, 200)
+                .map((u) => u.id),
+            )
+          : null;
+        const filtered =
+          q !== "" ||
+          from !== null ||
+          to !== null ||
+          prefixes.length > 0 ||
+          exact.length > 0 ||
+          actor !== null ||
+          target !== null;
+        const people = state();
+        return cursorList(req, auditRows(people), (e) => e.id, {
+          accept: (e) => {
+            const at = Date.parse(e.at);
+            return (
+              (from === null || at >= from) &&
+              (to === null || at < to) &&
+              (prefixes.length === 0 ||
+                prefixes.some((p) => e.action.startsWith(p))) &&
+              (exact.length === 0 || exact.includes(e.action)) &&
+              (actor === null || e.actor_id === actor) &&
+              (target === null || e.target === target) &&
+              (q === "" ||
+                hit(q, e.action, e.target) ||
+                (e.actor_id !== null && (actors?.has(e.actor_id) ?? false)))
+            );
+          },
+          view: auditView,
+          totalEstimate: filtered
+            ? null
+            : people.audit.length + (people.archive?.count ?? 0),
         });
       },
     },

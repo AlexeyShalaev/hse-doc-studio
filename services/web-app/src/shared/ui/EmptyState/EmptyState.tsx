@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CircleAlert, Inbox } from "lucide-react";
+import { CircleAlert, Inbox, SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 // Пустое состояние и ошибка загрузки: значок, заголовок, одна фраза, действие.
@@ -42,6 +42,54 @@ export const EmptyState = ({
     {action && <div className="adm-state-action">{action}</div>}
   </div>
 );
+
+export type NoResultsProps = {
+  /** Поиск, по которому ничего нет: попадает в пояснение. */
+  query?: string | undefined;
+  /** Сбросить поиск и фильтры; без него кнопки нет. */
+  onReset?: (() => void) | undefined;
+  /** Своё пояснение вместо общего. */
+  description?: ReactNode | undefined;
+  compact?: boolean | undefined;
+  framed?: boolean | undefined;
+  testId?: string | undefined;
+};
+
+/**
+ * «Ничего не найдено»: поиск или фильтры отсекли всё. Отличается от «пока
+ * пусто» значком и действием: здесь сбрасывают условия, а не создают первое.
+ */
+export const NoResults = ({
+  query,
+  onReset,
+  description,
+  compact = false,
+  framed = false,
+  testId,
+}: NoResultsProps) => {
+  const { t } = useTranslation("uiPrimitives");
+  const text = query?.trim() ?? "";
+  return (
+    <EmptyState
+      icon={<SearchX size={compact ? 15 : 18} />}
+      title={t("noResults.title")}
+      description={
+        description ??
+        (text ? t("noResults.withQuery", { query: text }) : t("noResults.hint"))
+      }
+      action={
+        onReset ? (
+          <button type="button" className="btn sm" onClick={onReset}>
+            {t("noResults.reset")}
+          </button>
+        ) : undefined
+      }
+      compact={compact}
+      framed={framed}
+      testId={testId}
+    />
+  );
+};
 
 export type ErrorStateProps = {
   /** По умолчанию «Не удалось загрузить данные». */
@@ -98,4 +146,5 @@ export const ErrorState = ({
 };
 
 EmptyState.displayName = "EmptyState";
+NoResults.displayName = "NoResults";
 ErrorState.displayName = "ErrorState";

@@ -18,6 +18,10 @@
         "title": "Administrator",
         "hint": "The instance administrator is signed in, admin area is available."
       },
+      "admin_scale": {
+        "title": "Large installation",
+        "hint": "Administrator with 12,000 people, 800 organizations and 250,000 audit entries: search, filters and paging."
+      },
       "student_ready": {
         "title": "Student",
         "hint": "A regular organisation member is signed in."

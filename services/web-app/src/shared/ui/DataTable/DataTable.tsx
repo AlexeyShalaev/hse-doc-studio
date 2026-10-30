@@ -5,20 +5,27 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
-import { EmptyState, ErrorState } from "../EmptyState";
+import { EmptyState, ErrorState, NoResults } from "../EmptyState";
+import { Pagination, type CursorPaginationProps } from "../Pagination";
 
 // Таблица админских экранов. Сортировка и страницы серверные: таблица только
 // показывает состояние и сообщает о намерении (onSortingChange, onPageChange).
+// Сортируются только столбцы из sortable (поля, которые разрешил сервер);
+// щелчок по заголовку меняет порядок по возрастанию и убыванию.
 
 export type DataTablePagination = {
+  mode?: "offset";
   /** Номер страницы с нуля. */
   page: number;
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  pageSizes?: readonly number[] | undefined;
+  onPageSizeChange?: ((size: number) => void) | undefined;
+  busy?: boolean | undefined;
 };
 
 export type DataTableProps<T> = {
@@ -43,7 +50,21 @@ export type DataTableProps<T> = {
   columnWidths?: Partial<Record<string, number | string>>;
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
-  pagination?: DataTablePagination;
+  /**
+   * id столбцов, которые сортирует сервер. Без списка сортируются все
+   * столбцы с accessor, кроме enableSorting: false.
+   */
+  sortable?: readonly string[];
+  /** Страницы (offset) или «Показать ещё» (cursor). */
+  pagination?: DataTablePagination | CursorPaginationProps;
+  /**
+   * Поиск или фильтры заданы: пустой ответ значит «ничего не найдено», а не
+   * «пока пусто», и вместо действия создания кнопка сброса.
+   */
+  filtered?: boolean;
+  onResetFilters?: () => void;
+  /** Текущий поиск: попадает в пояснение «ничего не найдено». */
+  searchQuery?: string;
   selectedRowId?: string | null;
   onRowClick?: (row: T) => void;
   /** Сколько строк-скелетов при загрузке. */
@@ -68,7 +89,11 @@ export const DataTable = <T,>({
   columnWidths,
   sorting = [],
   onSortingChange,
+  sortable,
   pagination,
+  filtered = false,
+  onResetFilters,
+  searchQuery,
   selectedRowId = null,
   onRowClick,
   skeletonRows = 5,
@@ -83,7 +108,9 @@ export const DataTable = <T,>({
     state: { sorting },
     manualSorting: true,
     manualPagination: true,
-    enableSortingRemoval: true,
+    // Сервер всегда сортирует хоть как-то: снять сортировку нельзя, только
+    // поменять направление.
+    enableSortingRemoval: false,
     onSortingChange: (updater) => {
       const next = typeof updater === "function" ? updater(sorting) : updater;
       onSortingChange?.(next);
@@ -141,9 +168,31 @@ export const DataTable = <T,>({
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
                 {group.headers.map((header) => {
-                  const sortable =
-                    header.column.getCanSort() && onSortingChange != null;
-                  const dir = header.column.getIsSorted();
+                  // С allowlist сортировку решает он: столбцу с одним cell
+                  // (без accessor) TanStack сортировать не даёт, а серверу всё
+                  // равно, как столбец нарисован.
+                  const canSort =
+                    onSortingChange != null &&
+                    (sortable === undefined
+                      ? header.column.getCanSort()
+                      : sortable.includes(header.column.id) &&
+                        header.column.columnDef.enableSorting !== false);
+                  const current = sorting.find(
+                    (item) => item.id === header.column.id,
+                  );
+                  const dir = current ? (current.desc ? "desc" : "asc") : false;
+                  // Щелчок меняет направление; новый столбец начинает с
+                  // sortDescFirst (даты и числа удобнее с новых).
+                  const toggle = () => {
+                    onSortingChange?.([
+                      {
+                        id: header.column.id,
+                        desc: current
+                          ? !current.desc
+                          : header.column.columnDef.sortDescFirst === true,
+                      },
+                    ]);
+                  };
                   return (
                     <th
                       key={header.id}
@@ -153,7 +202,7 @@ export const DataTable = <T,>({
                           ? "ascending"
                           : dir === "desc"
                             ? "descending"
-                            : sortable
+                            : canSort
                               ? "none"
                               : undefined
                       }
@@ -171,10 +220,10 @@ export const DataTable = <T,>({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {header.isPlaceholder ? null : sortable ? (
+                      {header.isPlaceholder ? null : canSort ? (
                         <button
                           type="button"
-                          onClick={header.column.getToggleSortingHandler()}
+                          onClick={toggle}
                           style={{
                             all: "unset",
                             cursor: "pointer",
@@ -192,7 +241,13 @@ export const DataTable = <T,>({
                             <ArrowUp size={12} aria-hidden="true" />
                           ) : dir === "desc" ? (
                             <ArrowDown size={12} aria-hidden="true" />
-                          ) : null}
+                          ) : (
+                            <ArrowUpDown
+                              size={12}
+                              aria-hidden="true"
+                              className="dt-sort-hint"
+                            />
+                          )}
                           <span className="sr-only">
                             {dir === "asc"
                               ? t("dataTable.sortedAsc")
@@ -299,70 +354,26 @@ export const DataTable = <T,>({
               <tr>
                 <td colSpan={colCount} style={{ padding: 0 }}>
                   {/* Тот же вид, что у пустых состояний вне таблиц. */}
-                  <EmptyState
-                    icon={emptyIcon}
-                    title={emptyTitle ?? t("dataTable.emptyTitle")}
-                    description={emptyHint}
-                    action={emptyAction ?? undefined}
-                  />
+                  {filtered ? (
+                    <NoResults query={searchQuery} onReset={onResetFilters} />
+                  ) : (
+                    <EmptyState
+                      icon={emptyIcon}
+                      title={emptyTitle ?? t("dataTable.emptyTitle")}
+                      description={emptyHint}
+                      action={emptyAction ?? undefined}
+                    />
+                  )}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      {pagination && !showError && <Pager pagination={pagination} />}
+      {pagination && !showError && !showSkeleton && (
+        <Pagination {...pagination} />
+      )}
     </div>
-  );
-};
-
-const Pager = ({ pagination }: { pagination: DataTablePagination }) => {
-  const { t } = useTranslation("uiPrimitives");
-  const { page, pageSize, total, onPageChange } = pagination;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const from = total === 0 ? 0 : page * pageSize + 1;
-  const to = Math.min(total, (page + 1) * pageSize);
-  return (
-    <nav
-      aria-label={t("dataTable.pagination")}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 10,
-        fontSize: 12.5,
-        color: "var(--fg-2)",
-      }}
-    >
-      <span aria-live="polite">
-        {t("dataTable.range", { from, to, total })}
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <button
-          type="button"
-          className="btn sm"
-          disabled={page <= 0}
-          onClick={() => {
-            onPageChange(page - 1);
-          }}
-        >
-          <ChevronLeft size={13} aria-hidden="true" />
-          {t("dataTable.prev")}
-        </button>
-        <span>{t("dataTable.pageOf", { page: page + 1, pages })}</span>
-        <button
-          type="button"
-          className="btn sm"
-          disabled={page + 1 >= pages}
-          onClick={() => {
-            onPageChange(page + 1);
-          }}
-        >
-          {t("dataTable.next")}
-          <ChevronRight size={13} aria-hidden="true" />
-        </button>
-      </span>
-    </nav>
   );
 };
 

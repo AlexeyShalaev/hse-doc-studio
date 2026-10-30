@@ -13,6 +13,19 @@ export type DemoAdminPeople = {
   users: AdminUser[];
   invitations: AdminInvitation[];
   audit: DemoAuditEvent[];
+  /** Старая часть журнала большого мира (admin_scale): строится по запросу. */
+  archive?: DemoAuditArchive;
+  /** Приглашения в организацию: id приглашения и адрес организации. */
+  invitationOrgs?: Map<string, string>;
+};
+
+/**
+ * Журнал на сотни тысяч записей не хранится: запись с id от 1 до count
+ * строится по id, всегда одна и та же. Все они старше записей в audit.
+ */
+export type DemoAuditArchive = {
+  count: number;
+  at: (id: number) => DemoAdminPeople["audit"][number];
 };
 
 const day = 86_400_000;
@@ -25,7 +38,7 @@ const ahead = (days: number): string =>
 // установке. Цели записаны так же, как их пишет сервер: идентификаторы, а
 // понятные имена в details.
 const ADMIN = "u_01hx7k1a0b";
-const RECENT_AUDIT: (Omit<DemoAuditEvent, "id" | "at"> & {
+export const RECENT_AUDIT: (Omit<DemoAuditEvent, "id" | "at"> & {
   minutesAgo: number;
 })[] = [
   {
@@ -232,7 +245,7 @@ const recentAudit = (
       (pausedRunner || e.action !== "runner.pause"),
   );
 
-const allUsers = (): AdminUser[] => [
+export const allUsers = (): AdminUser[] => [
   {
     id: "u_01hx7k1a0b",
     name: "Иван Сидоров",
