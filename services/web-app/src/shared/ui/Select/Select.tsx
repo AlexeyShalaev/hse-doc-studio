@@ -17,6 +17,8 @@ export type SelectProps = {
   isDisabled?: boolean;
   className?: string;
   id?: string;
+  /** Доступное имя триггера; по умолчанию берётся placeholder. */
+  ariaLabel?: string;
   /**
    * Radix refocuses the trigger when the popup closes; callers embedding the
    * select in an editor toolbar can preventDefault here and refocus the
@@ -36,6 +38,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
       isDisabled = false,
       className,
       id,
+      ariaLabel,
       onCloseAutoFocus,
     },
     ref,
@@ -57,7 +60,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className,
           )}
-          aria-label={placeholder}
+          aria-label={ariaLabel ?? placeholder}
         >
           <span className="truncate min-w-0 flex-1 text-left">
             <SelectPrimitive.Value placeholder={placeholder} />

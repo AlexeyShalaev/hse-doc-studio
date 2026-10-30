@@ -96,6 +96,9 @@ export const getProjectAccessGallery = (): GalleryGroup[] => [
       entry("access_searching", "Идёт поиск", () =>
         view({ query: "ел", candidatesLoading: true }),
       ),
+      entry("access_search_failed", "Поиск не удался", () =>
+        view({ query: "ел", candidatesError: true }),
+      ),
       entry("access_org", "Проект организации", () =>
         view({ entries: [ORG_ROW, ...ENTRIES.slice(1)] }),
       ),
