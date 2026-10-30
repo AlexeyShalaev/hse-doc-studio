@@ -9,7 +9,7 @@ import pytest
 from hse_doc_studio.core.access.entities import Actor, ActorKind
 from hse_doc_studio.core.egress import EgressBlockedError, EgressBlockReason, EgressPurpose, EgressTarget
 from hse_doc_studio.core.entities import AIProvider
-from hse_doc_studio.core.enums import AIProviderType
+from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.jobs.admin import JobAdminFilter
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
@@ -36,7 +36,13 @@ from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.job_quotas import InMemoryQuotaOverrides
-from tests.fakes.ops import CountingStorageReader, InMemoryJobAdminReader, NoopUow, ReversingCipher
+from tests.fakes.ops import (
+    CountingStorageReader,
+    InMemoryAIProviderRepository,
+    InMemoryJobAdminReader,
+    NoopUow,
+    ReversingCipher,
+)
 
 ADMIN = Actor(kind=ActorKind.user, id="boss", is_instance_admin=True)
 STUDENT = Actor(kind=ActorKind.user, id="anna")
@@ -140,7 +146,7 @@ async def test__ops_use_cases__not_admin__not_found() -> None:
         UpdateSigningPolicyUC(repo, InMemoryAuditLog(), NoopUow()).execute(STUDENT, ServerKeyPolicy.allowed),
         GetStorageUsageUC(CountingStorageReader()).execute(STUDENT),
         ListQueueUC(InMemoryJobAdminReader(queue)).execute(STUDENT, JobAdminFilter()),
-        ListInstanceAiProvidersUC(InstanceAiProviderStore(repo, ReversingCipher())).execute(STUDENT),
+        ListInstanceAiProvidersUC(InstanceAiProviderStore(InMemoryAIProviderRepository())).execute(STUDENT),
     ]
     for call in calls:
         with pytest.raises(IdentityError) as exc:
@@ -229,9 +235,9 @@ class _Lister:
         return ["m1", "m2"]
 
 
-def _providers() -> tuple[InstanceAiProviderStore, InMemoryInstanceSettingsRepository, InMemoryAuditLog, _Egress]:
-    repo = InMemoryInstanceSettingsRepository()
-    return InstanceAiProviderStore(repo, ReversingCipher()), repo, InMemoryAuditLog(), _Egress()
+def _providers() -> tuple[InstanceAiProviderStore, InMemoryAIProviderRepository, InMemoryAuditLog, _Egress]:
+    repo = InMemoryAIProviderRepository()
+    return InstanceAiProviderStore(repo), repo, InMemoryAuditLog(), _Egress()
 
 
 async def test__ai_providers__create__key_stored_encrypted_and_never_listed() -> None:
@@ -244,8 +250,7 @@ async def test__ai_providers__create__key_stored_encrypted_and_never_listed() ->
 
     assert created.name == "Ollama"
     assert created.key_set is True
-    assert "sk-live-123" not in str(await repo.get_all())
-    assert "sk-live-123" not in (await repo.get_secret(f"ai_provider_key/{created.id}") or "")
+    assert [p.owner_kind for p in await repo.list_all()] == [AIProviderOwnerKind.instance]
     listed = await ListInstanceAiProvidersUC(store).execute(ADMIN)
     assert [p.id for p in listed] == [created.id]
     assert "sk-live-123" not in repr(listed)
@@ -271,7 +276,7 @@ async def test__ai_providers__bad_input__rejected_without_writes() -> None:
             await create.execute(ADMIN, case)
         assert exc.value.code is IdentityErrorCode.input_invalid
 
-    assert await repo.get_all() == {}
+    assert await repo.list_all() == []
     assert await audit.list() == []
 
 
@@ -304,7 +309,7 @@ async def test__ai_providers__update__blank_key_keeps_and_clear_removes() -> Non
 
     cleared = await update.execute(ADMIN, created.id, InstanceAiProviderPatch(clear_key=True))
     assert cleared.key_set is False
-    assert await repo.get_secret(f"ai_provider_key/{created.id}") is None
+    assert await store.reveal_key(created.id) == ""
     assert (await store.get(created.id)).key_set is False  # type: ignore[union-attr]
 
 
@@ -317,7 +322,7 @@ async def test__ai_providers__delete_and_missing() -> None:
 
     await delete.execute(ADMIN, created.id)
 
-    assert await repo.get_all() == {}
+    assert await repo.list_all() == []
     with pytest.raises(IdentityError) as exc:
         await delete.execute(ADMIN, created.id)
     assert _not_found(exc)

@@ -1,42 +1,29 @@
 """Общие ИИ-провайдеры установки: их настраивает админ, пользователи видят их без ключа.
 
-Запись провайдера лежит в `instance_settings` под `ai_provider/<id>`, ключ отдельной зашифрованной
-строкой `ai_provider_key/<id>`. Ключ наружу не отдаётся никогда, только признак `key_set`.
-Личные провайдеры пользователей живут отдельно и сюда не попадают.
+Общий провайдер это запись `ai_providers` с владельцем `instance`, ключ лежит шифртекстом.
+Ключ наружу не отдаётся никогда, только признак `key_set`. Личные провайдеры пользователей сюда не попадают.
 """
 
 from __future__ import annotations
 
-import logging
-from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.ai import IAIModelLister
-from hse_doc_studio.core.egress import EgressBlockedError, EgressPurpose, IEgressPolicy
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import AIProvider
-from hse_doc_studio.core.enums import AIProviderType
-from hse_doc_studio.core.git_sync.errors import GitSyncError
-from hse_doc_studio.core.git_sync.protocols import ISecretCipher
-from hse_doc_studio.core.git_sync.secret import Secret
+from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
-from hse_doc_studio.core.secrets import column_aad
+from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
-from hse_doc_studio.use_cases.identity.auth_settings import SOURCE_ADMIN
+from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
 
-_log = logging.getLogger(__name__)
-
-META_PREFIX = "ai_provider/"
-KEY_PREFIX = "ai_provider_key/"
-SECRET_TABLE = "instance_settings"  # noqa: S105 — имя таблицы, не пароль
-SECRET_COLUMN = "secret_enc"  # noqa: S105 — имя колонки, не пароль
 MAX_NAME = 128
 MAX_MODELS = 200
 MAX_MODEL_LEN = 200
@@ -98,82 +85,72 @@ def _not_found() -> IdentityError:
     return IdentityError(IdentityErrorCode.not_found)
 
 
-def _meta(provider: InstanceAiProvider) -> dict[str, Any]:
-    return {
-        "name": provider.name,
-        "type": provider.type.value,
-        "base_url": provider.base_url,
-        "models": list(provider.models),
-        "ssl_verify": provider.ssl_verify,
-        "connect_timeout_s": provider.connect_timeout_s,
-        "request_timeout_s": provider.request_timeout_s,
-        "created_at": provider.created_at.isoformat(),
-    }
-
-
-def _provider_of(provider_id: str, raw: object, values: Mapping[str, object]) -> InstanceAiProvider | None:
-    if not isinstance(raw, dict):
-        return None
-    try:
-        return InstanceAiProvider(
-            id=UUID(provider_id),
-            name=str(raw["name"]),
-            type=AIProviderType(raw["type"]),
-            base_url=str(raw.get("base_url", "")),
-            models=tuple(str(m) for m in raw.get("models", [])),
-            ssl_verify=bool(raw.get("ssl_verify", True)),
-            connect_timeout_s=float(raw.get("connect_timeout_s", 10.0)),
-            request_timeout_s=float(raw.get("request_timeout_s", 60.0)),
-            created_at=datetime.fromisoformat(str(raw["created_at"])),
-            key_set=f"{KEY_PREFIX}{provider_id}" in values,
-        )
-    except (KeyError, ValueError, TypeError):
-        return None
+def _instance_provider(provider: AIProvider) -> InstanceAiProvider:
+    return InstanceAiProvider(
+        id=provider.id,
+        name=provider.name,
+        type=provider.type,
+        base_url=provider.base_url,
+        models=tuple(provider.models),
+        ssl_verify=provider.ssl_verify,
+        connect_timeout_s=provider.connect_timeout_s,
+        request_timeout_s=provider.request_timeout_s,
+        created_at=provider.created_at,
+        key_set=bool(provider.api_key),
+    )
 
 
 class InstanceAiProviderStore:
-    """Чтение и запись общих провайдеров поверх настроек установки."""
+    """Общие провайдеры установки поверх того же хранилища, что и личные: записи с владельцем `instance`.
 
-    def __init__(self, repo: IInstanceSettingsRepository, cipher: ISecretCipher) -> None:
+    Пользователи видят их в своём списке без ключа, ключ отдаёт только репозиторий админу установки.
+    """
+
+    def __init__(self, repo: IAIProviderRepository) -> None:
         self._repo = repo
-        self._cipher = cipher
+
+    async def _shared(self, provider_id: UUID) -> AIProvider | None:
+        found = await self._repo.get(provider_id)
+        return found if found is not None and found.owner_kind is AIProviderOwnerKind.instance else None
 
     async def list(self) -> list[InstanceAiProvider]:
-        values = await self._repo.get_all()
-        found = (
-            _provider_of(key.removeprefix(META_PREFIX), raw, values)
-            for key, raw in values.items()
-            if key.startswith(META_PREFIX)
-        )
-        return sorted((p for p in found if p is not None), key=lambda p: (p.created_at, str(p.id)))
+        found = [p for p in await self._repo.list_all() if p.owner_kind is AIProviderOwnerKind.instance]
+        return [_instance_provider(p) for p in sorted(found, key=lambda p: (p.created_at, str(p.id)))]
 
     async def get(self, provider_id: UUID) -> InstanceAiProvider | None:
-        values = await self._repo.get_all()
-        return _provider_of(str(provider_id), values.get(f"{META_PREFIX}{provider_id}"), values)
+        found = await self._shared(provider_id)
+        return None if found is None else _instance_provider(found)
 
     async def save(self, provider: InstanceAiProvider, *, api_key: str | None = None, clear_key: bool = False) -> None:
-        await self._repo.set(f"{META_PREFIX}{provider.id}", _meta(provider), source=SOURCE_ADMIN)
-        key_name = f"{KEY_PREFIX}{provider.id}"
-        if clear_key:
-            await self._repo.delete(key_name)
-        elif api_key:
-            token = self._cipher.encrypt(Secret(api_key), aad=column_aad(SECRET_TABLE, SECRET_COLUMN, key_name))
-            await self._repo.set_secret(key_name, token, source=SOURCE_ADMIN)
+        existing = await self._shared(provider.id)
+        entity = AIProvider(
+            id=provider.id,
+            name=provider.name,
+            type=provider.type,
+            api_key=api_key or "",
+            base_url=provider.base_url,
+            models=list(provider.models),
+            created_at=provider.created_at,
+            ssl_verify=provider.ssl_verify,
+            connect_timeout_s=provider.connect_timeout_s,
+            request_timeout_s=provider.request_timeout_s,
+            owner_kind=AIProviderOwnerKind.instance,
+        )
+        if existing is None:
+            await self._repo.create(entity)
+        elif clear_key:
+            # Пустой ключ при обновлении «оставить как есть», поэтому стирание идёт пересозданием записи.
+            await self._repo.delete(provider.id)
+            await self._repo.create(entity)
+        else:
+            await self._repo.update(entity)
 
     async def delete(self, provider_id: UUID) -> None:
-        await self._repo.delete(f"{META_PREFIX}{provider_id}")
-        await self._repo.delete(f"{KEY_PREFIX}{provider_id}")
+        await self._repo.delete(provider_id)
 
     async def reveal_key(self, provider_id: UUID) -> str:
-        key_name = f"{KEY_PREFIX}{provider_id}"
-        token = await self._repo.get_secret(key_name)
-        if token is None:
-            return ""
-        try:
-            return self._cipher.decrypt(token, aad=column_aad(SECRET_TABLE, SECRET_COLUMN, key_name)).reveal()
-        except GitSyncError:
-            _log.warning("instance ai provider key cannot be decrypted")
-            return ""
+        found = await self._shared(provider_id)
+        return "" if found is None else found.api_key
 
 
 async def validate_base_url(base_url: str, egress: IEgressPolicy | None) -> str:
@@ -182,17 +159,12 @@ async def validate_base_url(base_url: str, egress: IEgressPolicy | None) -> str:
     if not value:
         return ""
     parts = urlsplit(value)
-    if parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.password:
+    if parts.username or parts.password:
         raise _invalid("Адрес провайдера задан неверно.", "The provider address is not valid.")
-    if egress is not None:
-        try:
-            await egress.authorize(parts.hostname, parts.port, purpose=EgressPurpose.admin)
-        except EgressBlockedError as exc:
-            raise _invalid(
-                "Этот адрес закрыт для запросов сервера.", "This address is blocked for server requests."
-            ) from exc
-        except OSError:
-            raise _invalid("Адрес провайдера не разрешается.", "The provider address does not resolve.") from None
+    try:
+        await authorize_base_url(egress, value, AIProviderOwnerKind.instance)
+    except ValueError as exc:
+        raise IdentityError(IdentityErrorCode.input_invalid, str(exc)) from exc
     return value
 
 

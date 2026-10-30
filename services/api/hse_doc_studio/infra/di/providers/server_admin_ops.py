@@ -7,12 +7,12 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import ServerConfig
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
-from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.admin import IJobAdminReader
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlJobAdminReader
@@ -94,10 +94,8 @@ class ServerAdminOpsProvider(Provider):
         return UpdateSigningPolicyUC(repo, audit, uow)
 
     @provide
-    def get_instance_ai_provider_store(
-        self, repo: IInstanceSettingsRepository, cipher: ISecretCipher
-    ) -> InstanceAiProviderStore:
-        return InstanceAiProviderStore(repo, cipher)
+    def get_instance_ai_provider_store(self, repo: IAIProviderRepository) -> InstanceAiProviderStore:
+        return InstanceAiProviderStore(repo)
 
     @provide
     def get_list_instance_ai_providers_uc(self, store: InstanceAiProviderStore) -> ListInstanceAiProvidersUC:

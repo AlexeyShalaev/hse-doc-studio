@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from datetime import datetime
+from uuid import UUID
 
+from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, QueueStats
 from hse_doc_studio.core.jobs.enums import JobState
@@ -71,3 +74,26 @@ class NoopUow:
     @asynccontextmanager
     async def begin(self) -> AsyncIterator[None]:
         yield
+
+
+class InMemoryAIProviderRepository:
+    """IAIProviderRepository без шифрования: как у сервера, пустой ключ при обновлении оставляет прежний."""
+
+    def __init__(self) -> None:
+        self._items: dict[UUID, AIProvider] = {}
+
+    async def list_all(self) -> list[AIProvider]:
+        return sorted(self._items.values(), key=lambda p: p.created_at)
+
+    async def get(self, provider_id: UUID) -> AIProvider | None:
+        return self._items.get(provider_id)
+
+    async def create(self, provider: AIProvider) -> None:
+        self._items[provider.id] = provider
+
+    async def update(self, provider: AIProvider) -> None:
+        old = self._items[provider.id]
+        self._items[provider.id] = replace(provider, api_key=provider.api_key or old.api_key)
+
+    async def delete(self, provider_id: UUID) -> bool:
+        return self._items.pop(provider_id, None) is not None

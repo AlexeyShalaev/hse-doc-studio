@@ -43,7 +43,13 @@ from httpx import ASGITransport, AsyncClient
 from tests.fakes.auth import empty_bearer_resolver
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
-from tests.fakes.ops import CountingStorageReader, InMemoryJobAdminReader, NoopUow, ReversingCipher
+from tests.fakes.ops import (
+    CountingStorageReader,
+    InMemoryAIProviderRepository,
+    InMemoryJobAdminReader,
+    NoopUow,
+    ReversingCipher,
+)
 from tests.fakes.runners import InMemoryRegistrationTokenRepository, InMemoryRunnerRepository
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
 
@@ -71,7 +77,7 @@ class _Stack:
         self.runners = InMemoryRunnerRepository()
         self.health = HealthRegistry()
         self.quotas = QuotaService(self.settings, ttl_s=0)
-        self.store = InstanceAiProviderStore(self.settings, ReversingCipher())
+        self.store = InstanceAiProviderStore(InMemoryAIProviderRepository())
         self.registry = RunnerRegistry(self.runners, InMemoryRegistrationTokenRepository(), users.audit, NoopUow())
         self.smtp = SmtpSettingsService(self.settings, ReversingCipher())  # type: ignore[arg-type]
         self.client: AsyncClient
