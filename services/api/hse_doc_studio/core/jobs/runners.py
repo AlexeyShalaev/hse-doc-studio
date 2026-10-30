@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import base64
+import builtins
 import hashlib
 import hmac
 import json
@@ -151,6 +152,11 @@ class IRunnerRepository(Protocol):
         ...
 
     async def touch(self, runner_id: str, now: datetime, version: str | None = None) -> None: ...
+    async def list_owned(self, owner_id: str) -> builtins.list[Runner]:
+        """Личные раннеры человека, включая отозванные."""
+        ...
+
+    async def count_active_owned(self, owner_id: str) -> int: ...
 
 
 class IRegistrationTokenRepository(Protocol):

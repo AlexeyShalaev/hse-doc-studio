@@ -122,6 +122,12 @@ class RouteDecision:
         return cls(route=JobRoute.shared, reason=reason)
 
 
+class IPersonalRunnerLoad(Protocol):
+    async def personal_load(self, owner_id: str, runner_ids: frozenset[UUID], now: datetime) -> int:
+        """Сколько сборок уже занимают личные раннеры хозяина: идут на них и ждут их в окне ожидания."""
+        ...
+
+
 class IJobRouter(Protocol):
     async def decide(
         self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID

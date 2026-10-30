@@ -260,6 +260,26 @@ class InMemoryJobQueue:
                 count += 1
         return count
 
+    async def personal_load(self, owner_id: str, runner_ids: frozenset[UUID], now: datetime) -> int:
+        busy = sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.running
+            and j.runner_scope is RunnerScope.personal
+            and j.kind is not JobKind.ai_relay
+            and j.runner_id in runner_ids
+        )
+        waiting = sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.queued
+            and j.route is JobRoute.personal_first
+            and j.route_owner_id == owner_id
+            and j.personal_until is not None
+            and j.personal_until > now
+        )
+        return busy + waiting
+
     async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
         now = self._clock()
         done: list[QueuedJob] = []

@@ -55,6 +55,9 @@ class ServerAdminOpsProvider(Provider):
             docs_url=settings.server.docs_url,
             build_timeout_s=settings.jobs.build_timeout_s,
             artifact_retention_days=settings.jobs.artifact_retention_days,
+            personal_runners_enabled=settings.jobs.personal_runners_enabled,
+            personal_runner_wait_s=settings.jobs.personal_runner_wait_s,
+            personal_runners_max_per_user=settings.jobs.personal_runners_max_per_user,
         )
 
     @provide

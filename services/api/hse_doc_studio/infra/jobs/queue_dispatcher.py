@@ -46,6 +46,7 @@ from hse_doc_studio.core.jobs.protocols import IJobHooks, IJobObserver
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, IJobQueue, QueuedJob
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
+from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision, RunnerScope
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
@@ -108,8 +109,10 @@ class QueueJobDispatcher:
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
         wakeup: JobWakeup | None = None,
+        router: IJobRouter | None = None,
     ) -> None:
         self._wakeup = wakeup
+        self._router = router
         self._queue = queue
         self._uploader = uploader
         self._runners = runners
@@ -135,14 +138,23 @@ class QueueJobDispatcher:
     # --- preflight ---
 
     async def preflight(self, spec: JobSpec) -> None:
-        """Нужен живой раннер с нужными тегами; иначе `NoRunnerAvailableError`."""
+        """Нужен живой общий раннер с нужными тегами или личный раннер владельца; иначе `NoRunnerAvailableError`."""
         now = self._clock()
         for runner in await self._runners.list():
             if self._serves(runner, spec.tags, now):
                 return
+        if self._router is not None and spec.actor.id is not None:
+            decision = await self._router.decide(
+                kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=_user_id(spec.actor)
+            )
+            if decision.route is JobRoute.personal_first:
+                return
         raise NoRunnerAvailableError(spec.tags)
 
     def _serves(self, runner: Runner, tags: frozenset[str], now: datetime) -> bool:
+        # Чужой личный раннер сборку не возьмёт: о нём здесь не спрашиваем, свой раннер решает маршрут.
+        if runner.scope is not RunnerScope.shared:
+            return False
         if runner.revoked_at is not None or runner.paused or runner.last_seen_at is None:
             return False
         return now - runner.last_seen_at <= self._live_window and tags <= runner.tags
@@ -412,11 +424,15 @@ class QueueJobDispatcher:
             return None
         policy = job_kind_spec(spec.kind).policy
         timeout = timeout_s or await self._default_timeout(spec, policy.default_timeout_s)
+        # Предел без квоты установки: действует, если задачу возьмёт личный раннер.
+        unquoted_timeout = timeout
         org_id = await self._project_orgs.org_of(spec.project_id) if self._project_orgs is not None else None
         if self._quotas is not None:
             cap = await self._quotas.max_duration_s(user_id, org_id)
             if cap is not None:
                 timeout = min(timeout, cap)
+        decision = await self._route(spec, user_id)
+        personal = decision is not None and decision.route is JobRoute.personal_first
         role = await self._role_of(spec)
         spec = await self._with_user_passes(spec)
         envelope = JobEnvelope(
@@ -443,6 +459,11 @@ class QueueJobDispatcher:
                 coalesce_key=_coalesce_key(spec),
                 max_attempts=policy.max_attempts,
                 timeout_s=timeout,
+                route=decision.route if decision is not None else JobRoute.shared,
+                route_owner_id=decision.route_owner_id if decision is not None else None,
+                personal_until=decision.personal_until if decision is not None else None,
+                route_reason=decision.reason if decision is not None else None,
+                timeout_personal_s=unquoted_timeout if personal and unquoted_timeout != timeout else None,
             )
         )
         if self._wakeup is not None:
@@ -451,6 +472,12 @@ class QueueJobDispatcher:
             # Отмена пришла, пока шли обращения к базе после проверки выше: задача уже в очереди.
             await self._cancel_quietly(spec.id)
         return outcome.job
+
+    async def _route(self, spec: JobSpec, user_id: UUID) -> RouteDecision | None:
+        """Без маршрутизатора (тесты, старые сборки контейнера) всё идёт на общие раннеры, как до личных."""
+        if self._router is None:
+            return None
+        return await self._router.decide(kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=user_id)
 
     async def _default_timeout(self, spec: JobSpec, policy_default: float | None) -> float:
         """Срок сборки задаёт настройка установки; у остальных видов он из политики вида."""

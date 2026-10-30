@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 
 
 class InMemoryRunnerRepository:
@@ -42,6 +42,12 @@ class InMemoryRunnerRepository:
 
     async def touch(self, runner_id: str, now: datetime, version: str | None = None) -> None:
         self._replace(runner_id, last_seen_at=now, **({"version": version} if version else {}))
+
+    async def list_owned(self, owner_id: str) -> list[Runner]:
+        return [r for r in await self.list() if r.owner_kind is RunnerOwnerKind.user and r.owner_id == owner_id]
+
+    async def count_active_owned(self, owner_id: str) -> int:
+        return sum(1 for r in await self.list_owned(owner_id) if r.revoked_at is None)
 
 
 class InMemoryRegistrationTokenRepository:

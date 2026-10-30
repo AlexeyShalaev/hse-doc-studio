@@ -14,6 +14,8 @@ class CompileWaitReason(StrEnum):
     no_runner = "no_runner"
     runner_lost = "runner_lost"
     superseded = "superseded"
+    # Сборка ждёт личный раннер владельца проекта (окно ожидания, потом общие раннеры).
+    personal_runner = "personal_runner"
 
 
 @dataclass(frozen=True)

@@ -274,6 +274,23 @@ class PostgresJobQueue:
             result = await session.execute(stmt.values(personal_until=now, route_reason=reason.value))
             return int(result.rowcount)  # type: ignore[attr-defined]
 
+    async def personal_load(self, owner_id: str, runner_ids: frozenset[UUID], now: datetime) -> int:
+        running = select(func.count()).where(
+            JobRow.state == JobState.running.value,
+            JobRow.runner_scope == RunnerScope.personal.value,
+            JobRow.kind != JobKind.ai_relay.value,
+            JobRow.runner_id.in_(sorted(runner_ids)),
+        )
+        waiting = select(func.count()).where(
+            JobRow.state == JobState.queued.value,
+            JobRow.route == JobRoute.personal_first.value,
+            JobRow.route_owner_id == owner_id,
+            JobRow.personal_until > now,
+        )
+        async with self._sessions.use() as session:
+            busy = (await session.execute(running)).scalar_one() if runner_ids else 0
+            return int(busy) + int((await session.execute(waiting)).scalar_one())
+
     async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
         stmt = update(JobRow).where(JobRow.state == JobState.queued.value, JobRow.route == JobRoute.pinned.value)
         if runner_id is not None:

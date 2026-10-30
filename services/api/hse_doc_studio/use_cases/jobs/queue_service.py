@@ -18,6 +18,8 @@ import structlog
 from hse_doc_studio.core.jobs.enums import JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import ExpiredOutcome, Heartbeat, IJobQueue, QueuedJob
+from hse_doc_studio.core.jobs.routing import RouteReason
+from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger(__name__)
@@ -49,8 +51,10 @@ class JobQueueService:
         timeout_grace_s: float = TIMEOUT_GRACE_S,
         clock: Callable[[], datetime] = _utc_now,
         wakeup: JobWakeup | None = None,
+        terminal: JobTerminalBroadcaster | None = None,
     ) -> None:
         self._wakeup = wakeup
+        self._terminal = terminal or JobTerminalBroadcaster()
         self._queue = queue
         self._lease_s = lease_s
         self._grace = timedelta(seconds=timeout_grace_s)
@@ -84,11 +88,34 @@ class JobQueueService:
             raise QueuedJobNotFoundError(f"job {job_id} not found")
         if status is JobStatus.cancelled and job.state is JobState.running and self._overdue(job):
             status = JobStatus.timed_out
-        return await self._queue.complete(job_id, attempt, status, result=result, error_code=error_code)
+        done = await self._queue.complete(job_id, attempt, status, result=result, error_code=error_code)
+        await self._terminal.emit(done)
+        return done
 
     async def cancel(self, job_id: UUID) -> QueuedJob:
         """Не начатая задача отменяется сразу, идущая получает флаг для heartbeat."""
-        return await self._queue.request_cancel(job_id)
+        job = await self._queue.request_cancel(job_id)
+        await self._terminal.emit(job)
+        return job
+
+    async def expire_personal_wait(
+        self,
+        *,
+        owner_id: str | None = None,
+        project_id: UUID | None = None,
+        reason: RouteReason = RouteReason.fallback_offline,
+    ) -> int:
+        """Ждущие личный раннер сборки сразу становятся доступны общим раннерам; общие будятся."""
+        count = await self._queue.expire_personal_wait(owner_id=owner_id, project_id=project_id, reason=reason)
+        if count and self._wakeup is not None:
+            self._wakeup.notify()
+        return count
+
+    async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
+        """Ждущие ретрансляции раннера (или все) отменяются; слушатели закрывают каналы."""
+        cancelled = await self._queue.cancel_pinned(runner_id=runner_id, error_code=error_code)
+        await self._terminal.emit_all(cancelled)
+        return cancelled
 
     async def reap(self) -> tuple[ExpiredOutcome, ...]:
         """Возвращает в очередь задачи с истёкшей арендой, пока остались попытки, иначе `runner_lost`."""
@@ -103,6 +130,7 @@ class JobQueueService:
             )
         if self._wakeup is not None and any(outcome.requeued for outcome in outcomes):
             self._wakeup.notify()
+        await self._terminal.emit_all([outcome.job for outcome in outcomes if not outcome.requeued])
         return outcomes
 
     async def enforce_timeouts(self) -> TimeoutSweep:
@@ -121,6 +149,7 @@ class JobQueueService:
                     cancelled.append(await self._queue.request_cancel(job.id))
             except StaleAttemptError:
                 continue
+        await self._terminal.emit_all(timed_out)
         if cancelled or timed_out:
             logger.warning(
                 "job_timeouts", cancelled=[str(j.id) for j in cancelled], timed_out=[str(j.id) for j in timed_out]

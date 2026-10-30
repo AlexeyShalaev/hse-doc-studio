@@ -47,6 +47,22 @@ class JobsConfig(BaseModel):
         le=365,
         description="Срок хранения результатов сборок из окружения: заданный побеждает правку админа.",
     )
+    personal_runners_enabled: bool | None = Field(
+        default=None,
+        description="Разрешены ли личные раннеры людей; заданное окружением побеждает правку админа (по умолчанию да).",
+    )
+    personal_runner_wait_s: int | None = Field(
+        default=None,
+        ge=0,
+        le=60,
+        description="Сколько секунд сборка ждёт личный раннер, прежде чем её возьмёт общий (по умолчанию 5).",
+    )
+    personal_runners_max_per_user: int | None = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Сколько неотозванных личных раннеров может быть у человека (по умолчанию 5).",
+    )
     storage_dir: Path | None = Field(
         default=None,
         description="Каталог лога задач; блобы входа и выходы лежат в объектном хранилище. По умолчанию data_dir/jobs.",

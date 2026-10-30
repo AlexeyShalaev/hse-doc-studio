@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
@@ -151,6 +152,24 @@ class SqlRunnerRepository:
         if version is not None:
             values["version"] = version
         await self._update(runner_id, values)
+
+    async def list_owned(self, owner_id: str) -> builtins.list[Runner]:
+        stmt = (
+            select(RunnerRow)
+            .where(RunnerRow.owner_kind == RunnerOwnerKind.user.value, RunnerRow.owner_id == owner_id)
+            .order_by(RunnerRow.created_at, RunnerRow.id)
+        )
+        async with self._sessions.use() as db:
+            return [_runner(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def count_active_owned(self, owner_id: str) -> int:
+        stmt = select(func.count()).where(
+            RunnerRow.owner_kind == RunnerOwnerKind.user.value,
+            RunnerRow.owner_id == owner_id,
+            RunnerRow.revoked_at.is_(None),
+        )
+        async with self._sessions.use() as db:
+            return int((await db.execute(stmt)).scalar_one())
 
 
 class SqlRegistrationTokenRepository:

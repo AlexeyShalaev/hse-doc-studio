@@ -11,7 +11,8 @@ from hse_doc_studio.api import compile_stream
 from hse_doc_studio.core.compile.wait import CompileWaitInfo, CompileWaitReason, NoCompileWait
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, RunnerRef
-from hse_doc_studio.core.jobs.runners import Runner
+from hse_doc_studio.core.jobs.routing import JobRoute
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
 
 from tests.fakes.job_queue import InMemoryJobQueue
@@ -184,3 +185,41 @@ async def test__merged_events__without_a_queue_only_logs() -> None:
     events = [e async for e in compile_stream.merged_events(_lines("x"), NoCompileWait(), uuid4())]
 
     assert events == [("log", "x")]
+
+
+async def test__personal_first_in_window__waits_for_personal_runner() -> None:
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    job = uuid4()
+    await queue.enqueue(
+        _request(job, route=JobRoute.personal_first, route_owner_id="u1", personal_until=NOW + timedelta(seconds=4.2))
+    )
+
+    info = await _reader(queue, runners).of(job)
+
+    assert info == CompileWaitInfo(CompileWaitReason.personal_runner, None, 5)
+
+
+async def test__after_window_only_shared_runners_count() -> None:
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    await runners.add(
+        Runner(
+            id=uuid4().hex,
+            name="mine",
+            token_hash="h",
+            tags=frozenset({"tex"}),
+            concurrency=1,
+            resource_class="standard",
+            version="1",
+            created_at=NOW,
+            last_seen_at=NOW,
+            owner_kind=RunnerOwnerKind.user,
+            owner_id="u1",
+        )
+    )
+    job = uuid4()
+    await queue.enqueue(_request(job, route=JobRoute.personal_first, route_owner_id="u1", personal_until=NOW))
+
+    info = await _reader(queue, runners).of(job)
+
+    assert info is not None
+    assert info.reason is CompileWaitReason.no_runner
