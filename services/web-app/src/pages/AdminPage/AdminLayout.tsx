@@ -98,6 +98,7 @@ export const AdminLayout = () => {
               style={{
                 width: "100%",
                 justifyContent: "flex-start",
+                textDecoration: "none",
                 padding: "7px 10px",
                 gap: 8,
               }}
