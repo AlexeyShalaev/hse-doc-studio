@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.infra.remote_runner.runner_session import runner_session_factory
+from hse_doc_studio.infra.remote_runner.runner_session import cloud_cache_volume, runner_session_factory
 from hse_doc_studio.infra.remote_runner.session import (
     RunnerSessionFatal,
     RunnerSessionSpec,
@@ -116,3 +116,8 @@ async def test__session__revoked_token__raises_unauthorized(tmp_path: Path) -> N
             await asyncio.wait_for(session.run(), 5)
 
     assert caught.value.code is SessionFatalCode.unauthorized
+
+
+def test__cloud_cache_volume__differs_from_the_local_one() -> None:
+    """Облачные сборки (в том числе соавторов хозяина) не делят записываемый HOME с локальными проектами."""
+    assert cloud_cache_volume("hse-studio-texmf") == "hse-studio-texmf-cloud"

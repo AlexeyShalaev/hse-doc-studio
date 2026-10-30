@@ -156,6 +156,17 @@ def fatal_of(exc: RunnerFatalError) -> RunnerSessionFatal:
     return RunnerSessionFatal(SessionFatalCode.refused, code or "runner_refused")
 
 
+# Облачные сборки идут со своим томом кэша TeX: том смонтирован на запись как HOME контейнера (кэши luaotfload,
+# поиск latexmkrc), и общий с локальными сборками том дал бы документам соавторов (политика owner) путь
+# испортить кэш частных локальных проектов хозяина.
+CLOUD_CACHE_SUFFIX = "-cloud"
+
+
+def cloud_cache_volume(local_volume: str) -> str:
+    """Том кэша TeX облачных сборок Студии: отдельный от тома локальных сборок."""
+    return local_volume + CLOUD_CACHE_SUFFIX
+
+
 def runner_session_factory(
     *,
     cache_volume: str,
