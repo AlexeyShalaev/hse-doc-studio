@@ -7,6 +7,7 @@ import type {
   OrgRoleName,
 } from "@entities/session";
 import type { DemoOrg } from "./adminOrgs";
+import { boolParam, enumParam, invalidQuery, offsetList } from "./demoList";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: организации, участники и группы. Тела совпадают с contracts/server/fixtures.
@@ -20,6 +21,9 @@ import { adminOrgsOf, type ServerDemoWorld } from "./world";
 //
 // Особые значения: адрес участника, которого нет среди людей установки, даёт 404;
 // адрес организации admin, api, auth, account зарезервирован.
+//
+// Списки идут по единому контракту (demoList.ts): поиск, фильтры, сортировка и
+// страницы; без limit в запросе прежний массив.
 
 const ROLES: readonly OrgRoleName[] = ["owner", "admin", "member"];
 const RESERVED = ["admin", "api", "auth", "account", "orgs", "new"];
@@ -97,9 +101,30 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs",
-      handler: guarded(() =>
-        demoJson(state().orgs.filter(manages).map(summary)),
-      ),
+      handler: guarded((req) => {
+        const mine = boolParam(req, "mine");
+        if (mine === "bad") return invalidQuery();
+        const rows = state()
+          .orgs.filter(manages)
+          .filter((o) => mine === null || (roleIn(o) !== null) === mine)
+          .map(summary);
+        return offsetList(
+          req,
+          rows,
+          {
+            sort: {
+              name: (o: AdminOrg) => o.name,
+              slug: (o: AdminOrg) => o.slug,
+              member_count: (o: AdminOrg) => o.member_count,
+              project_count: (o: AdminOrg) => o.project_count,
+            },
+            defaultSort: "name",
+            search: (o) => [o.name, o.slug],
+            id: (o) => o.slug,
+          },
+          { legacyArray: true },
+        );
+      }),
     },
     {
       method: "POST",
@@ -167,7 +192,29 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs/:slug/members",
-      handler: withOrg((org) => demoJson(org.members)),
+      handler: withOrg((org, req) => {
+        const roles = enumParam(req, "role", ROLES);
+        if (roles === null) return invalidQuery();
+        const rank = (m: AdminOrgMember) => ROLES.indexOf(m.role);
+        return offsetList(
+          req,
+          roles.length
+            ? org.members.filter((m) => roles.includes(m.role))
+            : org.members,
+          {
+            sort: {
+              name: (m: AdminOrgMember) => m.name,
+              email: (m: AdminOrgMember) => m.email,
+              role: rank,
+              joined_at: (m: AdminOrgMember) => m.joined_at,
+            },
+            defaultSort: "joined_at",
+            search: (m) => [m.name, m.email],
+            id: (m) => m.user_id,
+          },
+          { legacyArray: true },
+        );
+      }),
     },
     {
       method: "POST",
@@ -247,7 +294,22 @@ export const createOrgRoutes = (
     {
       method: "GET",
       pattern: "/orgs/:slug/groups",
-      handler: withOrg((org) => demoJson(org.groups)),
+      handler: withOrg((org, req) =>
+        offsetList(
+          req,
+          org.groups,
+          {
+            sort: {
+              name: (g: AdminGroup) => g.name,
+              member_count: (g: AdminGroup) => g.member_ids.length,
+            },
+            defaultSort: "name",
+            search: (g) => [g.name],
+            id: (g) => g.id,
+          },
+          { legacyArray: true },
+        ),
+      ),
     },
     {
       method: "POST",

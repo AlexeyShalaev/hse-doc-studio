@@ -6,7 +6,9 @@ import type {
   AdminSettingState,
   RegistrationMode,
 } from "@entities/session";
+import { boolParam, invalidQuery, offsetList } from "./demoList";
 import { createInstallRoutes } from "./installRoutes";
+import { createPickerRoutes } from "./pickerRoutes";
 import { createOpsRoutes } from "./opsRoutes";
 import { createOrgRoutes } from "./orgRoutes";
 import { createPeopleRoutes } from "./peopleRoutes";
@@ -126,6 +128,10 @@ export const createAdminRoutes = (
       handler: guarded(route.handler),
     })),
     ...createOpsRoutes(getWorld),
+    ...createPickerRoutes(getWorld).map((route) => ({
+      ...route,
+      handler: guarded(route.handler),
+    })),
     ...createInstallRoutes(getWorld),
     {
       method: "GET",
@@ -292,7 +298,26 @@ export const createAdminRoutes = (
     {
       method: "GET",
       pattern: "/oidc-providers",
-      handler: guarded(() => demoJson(state().providers)),
+      handler: guarded((req) => {
+        const enabled = boolParam(req, "enabled");
+        if (enabled === "bad") return invalidQuery();
+        return offsetList(
+          req,
+          state().providers.filter(
+            (p) => enabled === null || p.enabled === enabled,
+          ),
+          {
+            sort: {
+              label: (p: AdminOidcProvider) => p.label,
+              created_at: (p: AdminOidcProvider) => p.created_at,
+            },
+            defaultSort: "created_at",
+            search: (p) => [p.label, p.issuer],
+            id: (p) => p.id,
+          },
+          { legacyArray: true },
+        );
+      }),
     },
     {
       method: "POST",

@@ -9,6 +9,7 @@ import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
 import { createDemoAdminPeople, type DemoAdminPeople } from "./adminPeople";
 import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
 import { seedProjects, type DemoProject } from "./projects";
+import { createScaleWorld, type DemoScaleWorld } from "./scaleWorld";
 import {
   ADMIN_CSRF,
   DEFAULT_DEMO_SETUP,
@@ -57,6 +58,14 @@ export type ServerDemoWorld = {
   adminInstall: DemoAdminInstall | null;
   /** Люди установки: аккаунты, приглашения и журнал; строятся при первом обращении. */
   adminPeople: DemoAdminPeople | null;
+  /** Большой мир сценария admin_scale: люди, организации и очередь вместе. */
+  scale: DemoScaleWorld | null;
+};
+
+/** Большой мир; строится один раз при первом обращении. */
+export const scaleOf = (world: ServerDemoWorld): DemoScaleWorld => {
+  world.scale ??= createScaleWorld();
+  return world.scale;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -105,6 +114,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminOps: null,
     adminInstall: null,
     adminPeople: null,
+    scale: null,
   };
 };
 
@@ -116,13 +126,17 @@ export const adminSettingsOf = (world: ServerDemoWorld): DemoAdminSettings => {
 
 /** Организации мира; для сценария берётся его набор. */
 export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
-  world.adminOrgs ??= createDemoAdminOrgs(world.scenario.orgSeed);
+  world.adminOrgs ??= world.scenario.scale
+    ? scaleOf(world).orgs
+    : createDemoAdminOrgs(world.scenario.orgSeed);
   return world.adminOrgs;
 };
 
 /** Операционные данные мира; для сценария берётся его набор. */
 export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
-  world.adminOps ??= createDemoAdminOps(world.scenario.opsSeed);
+  world.adminOps ??= world.scenario.scale
+    ? scaleOf(world).ops
+    : createDemoAdminOps(world.scenario.opsSeed);
   return world.adminOps;
 };
 
@@ -137,6 +151,10 @@ export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
  * поднятой людей несколько и журнал короткий.
  */
 export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
+  if (world.scenario.scale) {
+    world.adminPeople ??= scaleOf(world).people;
+    return world.adminPeople;
+  }
   world.adminPeople ??= createDemoAdminPeople(
     world.scenario.installSeed === "fresh"
       ? "fresh"

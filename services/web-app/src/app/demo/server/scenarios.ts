@@ -16,6 +16,7 @@ export type ServerDemoScenarioId =
   | "fresh_install_raced"
   | "fresh_install_broken"
   | "admin_ready"
+  | "admin_scale"
   | "admin_env_locked"
   | "admin_sso"
   | "admin_no_orgs"
@@ -156,6 +157,11 @@ export type ServerDemoScenario = {
   opsSeed?: ServerDemoOpsSeed;
   /** Название, сборка, политика ключей и общие провайдеры: набор по умолчанию или вариант состояния. */
   installSeed?: ServerDemoInstallSeed;
+  /**
+   * Большой мир: десятки тысяч людей, тысячи организаций, задач и записей
+   * журнала (scaleWorld.ts). Чтобы оценить поиск, фильтры и листание.
+   */
+  scale?: boolean;
 };
 
 /** default: рабочая установка; runners_offline: раннеров в сети нет; services_degraded: сервисы падают, места мало; fresh: ничего не подключено. */
@@ -237,6 +243,24 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
   {
     id: "admin_ready",
     tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_scale",
+    tokenRequired: false,
+    scale: true,
     bootstrap: () =>
       base({
         auth: {

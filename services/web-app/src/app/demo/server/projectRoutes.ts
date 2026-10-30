@@ -1,6 +1,13 @@
 import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type { ProjectRole } from "@entities/session";
+import {
+  boolParam,
+  invalidQuery,
+  offsetList,
+  queryOne,
+  wantsPage,
+} from "./demoList";
 import { effectiveRole } from "./projectAccess";
 import type { DemoProject } from "./projects";
 import type { ServerDemoWorld } from "./world";
@@ -74,7 +81,7 @@ export const createProjectRoutes = (
   {
     method: "GET",
     pattern: "/projects",
-    handler: () => {
+    handler: (req) => {
       const world = getWorld();
       const user = world.bootstrap.user;
       if (!user) {
@@ -84,7 +91,42 @@ export const createProjectRoutes = (
         const role = roleOf(world, project, user.id);
         return role ? [{ ...project.summary, my_role: role }] : [];
       });
-      return demoJson(items);
+      // Новый клиент (с limit) получает страницу по контракту; прежний массив.
+      if (!wantsPage(req)) return demoJson(items);
+      type Row = (typeof items)[number];
+      const archived = boolParam(req, "archived");
+      const pinned = boolParam(req, "pinned");
+      const owner = queryOne(req, "owner");
+      const org = queryOne(req, "org");
+      if (
+        archived === "bad" ||
+        pinned === "bad" ||
+        (owner !== null && !["me", "org", "shared"].includes(owner))
+      ) {
+        return invalidQuery();
+      }
+      const rows = items.filter(
+        (p) =>
+          (archived === null || p.archived === archived) &&
+          (pinned === null || p.pinned === pinned) &&
+          (org === null || p.owner.slug === org) &&
+          (owner === null ||
+            (owner === "me"
+              ? p.owner.kind === "user" && p.owner.id === user.id
+              : owner === "org"
+                ? p.owner.kind === "org"
+                : p.my_role !== "owner")),
+      );
+      return offsetList(req, rows, {
+        sort: {
+          name: (p: Row) => p.name,
+          updated_at: (p: Row) => p.updated_at,
+          created_at: (p: Row) => p.updated_at,
+        },
+        defaultSort: "-updated_at",
+        search: (p) => [p.name, p.owner.name],
+        id: (p) => p.id,
+      });
     },
   },
   {
