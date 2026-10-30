@@ -149,12 +149,14 @@ class SqlAdminProjectPicker:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
 
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
+    async def pick(self, q: str | None, limit: int, *, item_id: UUID | None = None) -> Picked[PickerItem]:
+        # По id ищут проект фильтра из ссылки: удалённый тоже, его задачи остались в очереди.
+        alive = ProjectRow.id == item_id if item_id is not None else ProjectRow.deleted_at.is_(None)
         stmt = (
             select(ProjectRow.id, ProjectRow.name, func.coalesce(OrgRow.name, UserRow.name))
             .outerjoin(UserRow, UserRow.id == ProjectRow.owner_user_id)
             .outerjoin(OrgRow, OrgRow.id == ProjectRow.owner_org_id)
-            .where(ProjectRow.deleted_at.is_(None), matches_any(q, [ProjectRow.name]) if q else true())
+            .where(alive, matches_any(q, [ProjectRow.name]) if q else true())
             .order_by(func.lower(ProjectRow.name), ProjectRow.id)
             .limit(limit + 1)
         )

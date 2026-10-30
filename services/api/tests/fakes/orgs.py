@@ -170,7 +170,10 @@ class InMemoryOrgRepository:
         found = [
             OrgMemberView(m, self._s.users.users[m.user_id].name, self._s.users.users[m.user_id].email)
             for m in self._s.members.values()
-            if m.org_id == org_id and self._member_matches(m, query.q) and (not query.roles or m.role in query.roles)
+            if m.org_id == org_id
+            and self._member_matches(m, query.q)
+            and (not query.roles or m.role in query.roles)
+            and (query.not_in_group is None or (query.not_in_group, m.user_id) not in self._s.group_members)
         ]
         keys: dict[str, Callable[[OrgMemberView], object]] = {
             "name": lambda v: v.name.lower(),

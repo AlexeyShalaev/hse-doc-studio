@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -351,6 +351,7 @@ async def test__lists__anonymous_401_not_admin_404(world: World) -> None:
         ("/api/admin/ai-providers", {"type": "gemini"}),
         ("/api/admin/ai-providers", {"sort": "base_url"}),
         ("/api/admin/pickers/runners", {"limit": 21}),
+        ("/api/admin/pickers/projects", {"id": "not-a-uuid"}),
     ],
 )
 async def test__lists__bad_params__422(world: World, path: str, params: dict[str, Any]) -> None:
@@ -550,6 +551,19 @@ async def test__project_picker__escapes_like_and_skips_deleted(world: World) -> 
     assert literal["items"][0]["detail"] == "Кафедра 06"
     assert [p["name"] for p in wildcard["items"]] == ["Диплом 100%_ready"]
     assert deleted == {"items": [], "has_more": False}
+
+
+async def test__pickers__by_id_find_one_even_deleted_project(world: World) -> None:
+    gpu = await world.get("/api/admin/pickers/runners", id=world.runners[11])
+    project = await world.get("/api/admin/pickers/projects", id=str(world.projects[5]))
+    # Удалённый проект поиск не находит, а по id находит: у него остались задачи в очереди.
+    deleted = await world.get("/api/admin/pickers/projects", id=str(world.projects[49]))
+    unknown = await world.get("/api/admin/pickers/projects", id=str(uuid4()))
+
+    assert [r["name"] for r in gpu["items"]] == ["gpu_box"]
+    assert [p["id"] for p in project["items"]] == [str(world.projects[5])]
+    assert [p["name"] for p in deleted["items"]] == ["Проект 00049"]
+    assert unknown == {"items": [], "has_more": False}
 
 
 async def test__storage_owners__kinds_search_sort_and_total(world: World) -> None:

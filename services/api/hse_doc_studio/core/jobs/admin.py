@@ -127,8 +127,11 @@ class IRunnerAdminReader(Protocol):
 
     async def list_tokens(self, query: RegistrationTokenQuery, now: datetime) -> Found[RegistrationToken]: ...
 
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
-        """Раннеры для фильтра очереди: по имени, отозванные тоже (у них остались задачи)."""
+    async def pick(self, q: str | None, limit: int, *, item_id: str | None = None) -> Picked[PickerItem]:
+        """Раннеры для фильтра очереди: по имени, отозванные тоже (у них остались задачи).
+
+        `item_id` находит один раннер по id: так фильтр из ссылки показывает имя.
+        """
         ...
 
 
@@ -192,6 +195,9 @@ class IJobAdminReader(Protocol):
 
 
 class IAdminProjectPicker(Protocol):
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
-        """Проекты установки для фильтра очереди: по имени, без удалённых."""
+    async def pick(self, q: str | None, limit: int, *, item_id: UUID | None = None) -> Picked[PickerItem]:
+        """Проекты установки для фильтра очереди: по имени, без удалённых.
+
+        `item_id` находит один проект по id, и удалённый тоже: у него остались задачи в очереди.
+        """
         ...

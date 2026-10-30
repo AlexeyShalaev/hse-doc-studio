@@ -60,6 +60,8 @@ class PickRunnersUC:
     def __init__(self, reader: IRunnerAdminReader) -> None:
         self._reader = reader
 
-    async def execute(self, actor: Actor, q: str | None, limit: int = PICKER_LIMIT) -> Picked[PickerItem]:
+    async def execute(
+        self, actor: Actor, q: str | None, limit: int = PICKER_LIMIT, *, item_id: str | None = None
+    ) -> Picked[PickerItem]:
         require_admin(actor)
-        return await self._reader.pick(q, clamp_limit(limit, PICKER_LIMIT))
+        return await self._reader.pick(q, clamp_limit(limit, PICKER_LIMIT), item_id=item_id)

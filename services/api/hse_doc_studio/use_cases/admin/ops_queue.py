@@ -87,6 +87,8 @@ class PickProjectsUC:
     def __init__(self, picker: IAdminProjectPicker) -> None:
         self._picker = picker
 
-    async def execute(self, actor: Actor, q: str | None, limit: int = PICKER_LIMIT) -> Picked[PickerItem]:
+    async def execute(
+        self, actor: Actor, q: str | None, limit: int = PICKER_LIMIT, *, item_id: UUID | None = None
+    ) -> Picked[PickerItem]:
         require_admin(actor)
-        return await self._picker.pick(q, clamp_limit(limit, PICKER_LIMIT))
+        return await self._picker.pick(q, clamp_limit(limit, PICKER_LIMIT), item_id=item_id)

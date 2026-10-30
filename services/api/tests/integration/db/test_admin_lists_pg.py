@@ -210,6 +210,7 @@ async def test__members__role_filter_facets_and_user_orgs(world: World) -> None:
     by_role = await world.orgs.page_members("org0000", MemberQuery(sort=SortKey("role")))
     counts = await world.orgs.role_counts("org0000", None)
     theirs = await world.orgs.page_for_user("u00001", UserOrgQuery())
+    outside = await world.orgs.page_members("org0000", MemberQuery(not_in_group="g000", window=Window(200)))
 
     assert {m.member.role for m in owners.items} == {OrgRole.owner}
     assert [m.member.role for m in by_role.items][0] is OrgRole.owner
@@ -217,6 +218,9 @@ async def test__members__role_filter_facets_and_user_orgs(world: World) -> None:
     assert counts[OrgRole.owner] == owners.total
     assert [(x.org.slug, x.role) for x in theirs.items] == [("org-0001", OrgRole.member)]
     assert await world.orgs.members_among("org0000", ["u00000", "u00001", "ghost"]) == {"u00000"}
+    # Участник g000 (u00000) не попадает в кандидаты этой группы, остальные на месте.
+    assert outside.total == by_role.total - 1
+    assert "u00000" not in {m.member.user_id for m in outside.items}
 
 
 async def test__groups__preview_and_count_without_loading_members(world: World) -> None:

@@ -197,9 +197,12 @@ async def pick_runners(
     request: Request,
     response: Response,
     params: Annotated[PickerParams, Depends(picker_params)],
+    # Один раннер по id: имя для фильтра очереди, открытого по ссылке.
+    item_id: Annotated[str | None, Query(alias="id", min_length=1, max_length=64)] = None,
 ) -> PickerList:
     response.headers.update(_NO_STORE)
-    return picker_list(await (await _uc(request, PickRunnersUC)).execute(require_actor(), params.q, params.limit))
+    uc = await _uc(request, PickRunnersUC)
+    return picker_list(await uc.execute(require_actor(), params.q, params.limit, item_id=item_id))
 
 
 @router.patch("/runners/{runner_id}", status_code=status.HTTP_204_NO_CONTENT)

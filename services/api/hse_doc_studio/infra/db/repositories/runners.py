@@ -362,9 +362,10 @@ class SqlRunnerAdminReader:
             rows = (await session.execute(stmt)).scalars().all()
         return Found(items=[_token(row) for row in rows], total=int(total))
 
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
+    async def pick(self, q: str | None, limit: int, *, item_id: str | None = None) -> Picked[PickerItem]:
         stmt = select(RunnerRow.id, RunnerRow.name, RunnerRow.tags).where(
-            matches_any(q, [RunnerRow.name]) if q else true()
+            matches_any(q, [RunnerRow.name]) if q else true(),
+            RunnerRow.id == item_id if item_id is not None else true(),
         )
         stmt = stmt.order_by(func.lower(RunnerRow.name), RunnerRow.id).limit(limit + 1)
         async with self._sessions.use() as session:

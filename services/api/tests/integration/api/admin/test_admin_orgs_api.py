@@ -407,6 +407,8 @@ async def test__groups__page_preview_and_point_membership(stack: _Stack) -> None
         (await c.get(f"{_ORG}/lab/groups/{big['id']}/members?limit=3&sort=-name", headers=boss)).json()
     )
     other_org = await c.get(f"{_ORG}/ghost/groups/{big['id']}/members", headers=boss)
+    # Пикер «добавить в группу» не предлагает тех, кто в ней уже есть.
+    outside = (await c.get(f"{_ORG}/lab/members?not_in_group={big['id']}&sort=name", headers=boss)).json()
 
     assert big["member_count"] == 7
     assert [m["user_id"] for m in big["preview"]] == ["p00", "p01", "p02", "p03", "p04"]
@@ -417,6 +419,7 @@ async def test__groups__page_preview_and_point_membership(stack: _Stack) -> None
     assert (removed.status_code, missing.status_code) == (204, 404)
     assert ([m.user_id for m in members.items], members.total) == (["p06", "p05", "p04"], 7)
     assert other_org.status_code == 404
+    assert [m["user_id"] for m in outside["items"]] == ["p00"]
     assert [e.action for e in await stack.users.audit.list()][:2] == ["group.member.remove", "group.member.add"]
 
 

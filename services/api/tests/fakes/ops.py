@@ -78,8 +78,12 @@ class FixedProjectPicker:
     def __init__(self, names: dict[str, str] | None = None) -> None:
         self._names = names or {}
 
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
-        found = sorted((n, i) for i, n in self._names.items() if (q or "").lower() in n.lower())
+    async def pick(self, q: str | None, limit: int, *, item_id: UUID | None = None) -> Picked[PickerItem]:
+        found = sorted(
+            (n, i)
+            for i, n in self._names.items()
+            if (q or "").lower() in n.lower() and (item_id is None or i == str(item_id))
+        )
         items = [PickerItem(kind="project", id=i, name=n) for n, i in found[:limit]]
         return Picked(items=items, has_more=len(found) > limit)
 

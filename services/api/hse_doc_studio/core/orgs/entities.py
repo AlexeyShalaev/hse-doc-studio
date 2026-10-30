@@ -138,6 +138,8 @@ class MemberQuery:
 
     q: str | None = None
     roles: tuple[OrgRole, ...] = ()
+    # Исключить участников группы (id): пикер «добавить в группу» не предлагает тех, кто уже в ней.
+    not_in_group: str | None = None
     sort: SortKey = field(default_factory=lambda: SortKey("joined_at"))
     window: Window = field(default_factory=Window)
 

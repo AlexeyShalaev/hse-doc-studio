@@ -169,9 +169,11 @@ class InMemoryRunnerAdminReader:
         found.sort(key=keys[query.sort.field], reverse=query.sort.descending)
         return _window(found, query.window)
 
-    async def pick(self, q: str | None, limit: int) -> Picked[PickerItem]:
+    async def pick(self, q: str | None, limit: int, *, item_id: str | None = None) -> Picked[PickerItem]:
         needle = (q or "").lower()
-        found = [r for r in await self._runners.list() if needle in r.name.lower()]
+        found = [
+            r for r in await self._runners.list() if needle in r.name.lower() and (item_id is None or r.id == item_id)
+        ]
         found.sort(key=lambda r: (r.name.lower(), r.id))
         items = [
             PickerItem(kind="runner", id=r.id, name=r.name, detail=", ".join(sorted(r.tags)) or None)

@@ -382,6 +382,12 @@ class SqlOrgRepository:
             stmt = stmt.where(_person_search(query.q))
         if query.roles:
             stmt = stmt.where(OrgMemberRow.role.in_([r.value for r in query.roles]))
+        if query.not_in_group is not None:
+            stmt = stmt.where(
+                OrgMemberRow.user_id.not_in(
+                    select(GroupMemberRow.user_id).where(GroupMemberRow.group_id == query.not_in_group)
+                )
+            )
         stmt = stmt.order_by(*ordering(query.sort, _MEMBER_SORT, OrgMemberRow.user_id))
         async with self._sessions.use() as session:
             rows, total = await fetch_page(session, stmt, query.window)

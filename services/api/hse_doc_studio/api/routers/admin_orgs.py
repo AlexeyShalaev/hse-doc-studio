@@ -168,10 +168,17 @@ async def list_members(
     q: Annotated[str | None, Depends(search_param)],
     sort: Annotated[SortKey, Depends(_member_sort)],
     role: Annotated[list[OrgRoleName] | None, Query()] = None,
+    not_in_group: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
 ) -> AdminOrgMemberPage:
-    """Тот же список служит пикером участников группы: `?q=&limit=20`."""
+    """Тот же список служит пикером участников группы: `?q=&limit=20&not_in_group=<id>`."""
     response.headers.update(_NO_STORE)
-    query = MemberQuery(q=q, roles=tuple(OrgRole(r) for r in role or ()), sort=sort, window=params.window)
+    query = MemberQuery(
+        q=q,
+        roles=tuple(OrgRole(r) for r in role or ()),
+        not_in_group=not_in_group,
+        sort=sort,
+        window=params.window,
+    )
     found = await (await _uc(request, ListAdminMembersUC)).execute(_actor(), slug, query)
     return AdminOrgMemberPage(
         items=[_member(x) for x in found.items], total=found.total, limit=params.limit, offset=params.offset

@@ -169,9 +169,12 @@ async def pick_projects(
     request: Request,
     response: Response,
     params: Annotated[PickerParams, Depends(picker_params)],
+    # Один проект по id: имя для фильтра очереди, открытого по ссылке.
+    item_id: Annotated[UUID | None, Query(alias="id")] = None,
 ) -> PickerList:
     response.headers.update(_NO_STORE)
-    return picker_list(await (await _uc(request, PickProjectsUC)).execute(_actor(), params.q, params.limit))
+    uc = await _uc(request, PickProjectsUC)
+    return picker_list(await uc.execute(_actor(), params.q, params.limit, item_id=item_id))
 
 
 @router.get("/queue/summary", response_model=AdminQueueSummary)
