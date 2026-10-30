@@ -37,8 +37,10 @@ class QueueCompileWaitReader:
         return CompileWaitInfo(reason, await self._position(job))
 
     async def _position(self, job: QueuedJob) -> int:
+        # Порядок выдачи тот же, что у раннера: класс, виртуальное время справедливой очереди, постановка.
         queued = await self._queue.list(state=JobState.queued)
-        ahead = sum(1 for other in queued if (other.priority_class, other.seq) < (job.priority_class, job.seq))
+        key = (job.priority_class, job.vtime, job.queued_at, job.seq)
+        ahead = sum(1 for other in queued if (other.priority_class, other.vtime, other.queued_at, other.seq) < key)
         return ahead + 1
 
     async def _has_runner(self, job: QueuedJob) -> bool:

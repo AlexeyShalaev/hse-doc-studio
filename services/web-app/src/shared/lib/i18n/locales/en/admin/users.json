@@ -1,0 +1,267 @@
+{
+  "title": "Users",
+  "lead": "People with accounts, invitations and the approval queue. Project contents are not visible here.",
+  "close": "Close",
+  "cancel": "Cancel",
+  "retry": "Retry",
+  "loading": "Loading…",
+  "tabs": {
+    "label": "People sections",
+    "users": "People",
+    "invitations": "Invitations",
+    "approvals": "Approvals"
+  },
+  "status": {
+    "active": "Active",
+    "pending_verification": "Awaiting email confirmation",
+    "pending_approval": "Awaiting approval",
+    "disabled": "Disabled"
+  },
+  "users": {
+    "columns": {
+      "person": "Person",
+      "status": "Status",
+      "role": "Role",
+      "projects": "Projects",
+      "lastLogin": "Last sign-in",
+      "actions": "Actions"
+    },
+    "you": "you",
+    "admin": "Administrator",
+    "member": "User",
+    "never": "never signed in",
+    "search": "Search by name or email",
+    "caption": "People of this installation",
+    "loadFailed": "Could not load the list of people.",
+    "noMatch": {
+      "title": "Nobody found",
+      "body": "Change the search or reset the filters."
+    },
+    "empty": {
+      "title": "No people yet",
+      "body": "Accounts appear after registration or by invitation."
+    },
+    "actions": {
+      "open": "Actions: {{name}}",
+      "menu": "Actions for the account of {{name}}",
+      "enable": "Enable",
+      "disable": "Disable",
+      "grantAdmin": "Make administrator",
+      "revokeAdmin": "Remove administrator rights",
+      "resetLink": "Password reset link",
+      "revokeSessions": "End all sign-ins",
+      "remove": "Delete permanently",
+      "selfHint": "You cannot do this to your own account."
+    }
+  },
+  "confirm": {
+    "disable": {
+      "title": "Disable the account?",
+      "body": "{{name}} will not be able to sign in, and current sign-ins end. Projects and data are kept.",
+      "action": "Disable"
+    },
+    "enable": {
+      "title": "Enable the account?",
+      "body": "{{name}} will be able to sign in again.",
+      "action": "Enable"
+    },
+    "grantAdmin": {
+      "title": "Make administrator?",
+      "body": "{{name}} will get access to every admin section except project contents.",
+      "action": "Make administrator"
+    },
+    "revokeAdmin": {
+      "title": "Remove administrator rights?",
+      "body": "{{name}} will lose access to the admin area. The last administrator cannot be removed.",
+      "action": "Remove rights"
+    },
+    "resetLink": {
+      "title": "Issue a password reset link?",
+      "body": "The link lets someone set a new password for {{name}}. The action is logged and the person is notified.",
+      "action": "Issue link"
+    },
+    "revokeSessions": {
+      "title": "End all sign-ins?",
+      "body": "{{name}} will be signed out on every device and will have to sign in again.",
+      "action": "End sign-ins"
+    },
+    "remove": {
+      "title": "Delete the account permanently?",
+      "body": "Personal data of {{name}} will be erased and log entries anonymized. This cannot be undone.",
+      "action": "Delete permanently"
+    }
+  },
+  "notice": {
+    "sessions_one": "{{name}}: {{count}} sign-in ended.",
+    "sessions_other": "{{name}}: {{count}} sign-ins ended."
+  },
+  "invitations": {
+    "email": "Invitee email",
+    "emailHint": "Optional. If set, only this address can use the link.",
+    "emailInvalid": "Enter an email address.",
+    "ttl": "Valid for",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "create": "Create invitation",
+    "caption": "Invitations",
+    "loadFailed": "Could not load invitations.",
+    "columns": {
+      "email": "For",
+      "status": "Status",
+      "expires": "Valid until",
+      "actions": "Actions"
+    },
+    "anyone": "anyone with the link",
+    "status": {
+      "pending": "Pending",
+      "used": "Used",
+      "expired": "Expired"
+    },
+    "usedAt": "used {{date}}",
+    "resend": "New link",
+    "revoke": "Revoke",
+    "empty": {
+      "title": "No invitations yet",
+      "body": "Create an invitation and send the link to a person: they register with it."
+    },
+    "note": "The link is shown once. If email is not configured, pass it to the person yourself."
+  },
+  "approvals": {
+    "columns": {
+      "created": "Registered"
+    },
+    "caption": "Awaiting approval",
+    "loadFailed": "Could not load the approval queue.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveAria": "Approve {{name}}",
+    "rejectAria": "Reject {{name}}",
+    "empty": {
+      "title": "The queue is empty",
+      "body": "New registrations that need an administrator's decision appear here."
+    }
+  },
+  "audit": {
+    "title": "Audit",
+    "lead": "The log of sign-ins and administrator actions. Newest first.",
+    "group": "Event type",
+    "groups": {
+      "auth": "Sign-ins and accounts",
+      "admin": "People",
+      "invite": "Invitations",
+      "org": "Organizations",
+      "group": "Groups",
+      "settings": "Settings",
+      "runner": "Runners",
+      "project": "Projects"
+    },
+    "caption": "Event log",
+    "loadFailed": "Could not load the log.",
+    "more": "Show more",
+    "empty": {
+      "title": "No entries yet",
+      "body": "Sign-ins and administrator actions appear here."
+    },
+    "by": "by: {{id}}",
+    "system": "system",
+    "actions": {
+      "auth_login": "Sign-in",
+      "auth_login_failed": "Failed sign-in attempt",
+      "auth_login_denied": "Sign-in denied",
+      "auth_logout": "Sign-out",
+      "auth_register": "Registration",
+      "auth_password_changed": "Password changed",
+      "auth_password_reset": "Password reset",
+      "auth_password_reset_requested": "Password reset requested",
+      "auth_email_verified": "Email confirmed",
+      "auth_session_revoked": "Sign-in ended",
+      "auth_sessions_revoked": "Sign-ins ended",
+      "admin_user_approved": "Account approved",
+      "admin_user_rejected": "Account rejected",
+      "admin_user_disabled": "Account disabled",
+      "admin_user_enabled": "Account enabled",
+      "admin_user_deleted": "Account deleted",
+      "admin_admin_granted": "Administrator rights granted",
+      "admin_admin_revoked": "Administrator rights removed",
+      "admin_reset_link_issued": "Password reset link issued",
+      "admin_sessions_revoked": "Person's sign-ins ended",
+      "admin_invite_resent": "Invitation re-sent",
+      "account_data_exported": "Account data exported",
+      "account_profile_updated": "Profile updated",
+      "auth_email_change_failed": "Email change failed",
+      "auth_email_change_rejected": "Email change rejected",
+      "auth_email_change_requested": "Email change requested",
+      "auth_email_changed": "Email changed",
+      "auth_oidc_denied": "Single sign-on denied",
+      "auth_oidc_link": "Single sign-on linked",
+      "auth_oidc_unlink": "Single sign-on unlinked",
+      "auth_oidc_provision": "Account created through single sign-on",
+      "auth_password_enabled": "Password sign-in enabled",
+      "auth_password_change_failed": "Password change failed",
+      "auth_register_duplicate": "Repeated registration",
+      "auth_registration_domains": "Registration domains changed",
+      "auth_registration_mode": "Registration mode changed",
+      "auth_require_approval": "Approval requirement changed",
+      "auth_verification_resent": "Confirmation email re-sent",
+      "group_create": "Group created",
+      "group_delete": "Group deleted",
+      "group_update": "Group changed",
+      "group_member_add": "Person added to a group",
+      "group_member_remove": "Person removed from a group",
+      "invite_create": "Invitation created",
+      "invite_revoke": "Invitation revoked",
+      "oidc_delete": "Single sign-on provider deleted",
+      "org_create": "Organization created",
+      "org_delete": "Organization deleted",
+      "org_update": "Organization changed",
+      "org_member_add": "Person added to an organization",
+      "org_member_leave": "Person left an organization",
+      "org_member_remove": "Person removed from an organization",
+      "org_member_role": "Organization role changed",
+      "pat_revoke": "Access token revoked",
+      "project_delete": "Project deleted",
+      "project_member_remove": "Project access revoked",
+      "project_member_set": "Project access granted",
+      "project_settings": "Project settings changed",
+      "project_transfer": "Project transferred",
+      "runner_pause": "Runner paused",
+      "runner_register": "Runner registered",
+      "runner_registration_token_create": "Runner registration token created",
+      "runner_registration_token_revoke": "Runner registration token revoked",
+      "runner_resume": "Runner resumed",
+      "runner_revoke": "Runner removed",
+      "runner_token_rotate": "Runner token rotated",
+      "settings_ai_provider_create": "Shared AI provider added",
+      "settings_ai_provider_delete": "Shared AI provider deleted",
+      "settings_ai_provider_update": "Shared AI provider changed",
+      "settings_auth_update": "Sign-in settings changed",
+      "settings_quotas_update": "Quotas changed",
+      "settings_signing_policy_update": "Signing key policy changed",
+      "settings_smtp_test": "Email check",
+      "settings_smtp_update": "Email settings changed",
+      "setup_admin_created": "First administrator created",
+      "setup_admin_bootstrapped": "First administrator created",
+      "setup_completed": "First run completed",
+      "setup_settings_done": "First-run settings saved",
+      "signing_server_key_storage": "Signing key storage changed"
+    },
+    "search": "Search the loaded entries",
+    "noMatch": {
+      "title": "Nothing found",
+      "body": "Change the search or the event type. Search covers only the loaded entries."
+    }
+  },
+  "failure": {
+    "last_admin": "This is the last administrator: appoint another one first.",
+    "user_has_projects": "The person owns projects: transfer or delete them first.",
+    "user_not_disabled": "Only a disabled account can be deleted.",
+    "not_found": "The record was not found: it may have been changed already.",
+    "forbidden": "You do not have enough rights for this action.",
+    "invitation_invalid": "The invitation is no longer valid.",
+    "rate_limited": "Too many attempts. Wait a moment and try again.",
+    "csrf_failed": "The session is out of date. Reload the page and try again.",
+    "input_invalid": "Check the entered values.",
+    "network": "The server is unreachable. Check the connection and try again.",
+    "unknown": "The action failed. Try again later."
+  }
+}

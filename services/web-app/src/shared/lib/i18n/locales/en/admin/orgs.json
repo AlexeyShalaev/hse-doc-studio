@@ -101,7 +101,6 @@
       "emailInvalid": "Enter an email address."
     },
     "search": "Find a person",
-    "all": "All",
     "caption": "Organization members",
     "loadFailed": "Could not load the members.",
     "empty": {

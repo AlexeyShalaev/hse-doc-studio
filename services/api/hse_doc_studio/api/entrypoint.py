@@ -37,6 +37,7 @@ from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.api.server_setup import prepare_server_setup
+from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.i18n import set_interface_language
@@ -426,6 +427,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 result = await uc.execute()
                 if result.recovered_runs:
                     logger.info("startup chat recovery", recovered_runs=result.recovered_runs)
+        except ActorRequired:
+            # На сервере чаты принадлежат пользователям, а системного актора у старта нет: восстановление пропущено.
+            logger.info("startup chat recovery skipped: server mode has no startup actor")
         except Exception:
             logger.exception("startup chat recovery failed")
 

@@ -217,6 +217,7 @@
   "providers": {
     "title": "Providers",
     "subtitle": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored locally and never passed to the browser. Local models are on the adjacent tab.",
+    "subtitleServer": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser.",
     "typeClaude": "Anthropic",
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-compat.",

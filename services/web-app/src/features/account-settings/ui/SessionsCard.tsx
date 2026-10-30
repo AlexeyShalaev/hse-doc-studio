@@ -6,6 +6,7 @@ import { Badge, Button, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AccountSession } from "@entities/session";
 import { failureKey, type Failure } from "../lib/failure";
+import { describeAgent } from "../lib/device";
 import { ACTIONS } from "../lib/styles";
 import { AccountCard } from "./parts";
 
@@ -115,8 +116,13 @@ export const SessionsCard = ({
                         flexWrap: "wrap",
                       }}
                     >
-                      <span style={{ overflowWrap: "anywhere" }}>
-                        {session.user_agent || t("sessions.unknownDevice")}
+                      <span
+                        style={{ overflowWrap: "anywhere" }}
+                        title={session.user_agent || undefined}
+                      >
+                        {describeAgent(session.user_agent) ||
+                          session.user_agent ||
+                          t("sessions.unknownDevice")}
                       </span>
                       {session.current && (
                         <Badge variant="success">{t("sessions.current")}</Badge>

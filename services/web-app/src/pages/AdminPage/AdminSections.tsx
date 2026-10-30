@@ -1,5 +1,4 @@
-import { Hammer } from "lucide-react";
-import { Link, Navigate, useParams } from "react-router";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { ADMIN_SECTIONS, type AdminSection } from "./AdminLayout";
 
@@ -71,42 +70,5 @@ export const AdminOverview = () => {
         )}
       </ul>
     </div>
-  );
-};
-
-/** Раздел, которого ещё нет: честная заглушка вместо пустой страницы. */
-export const AdminSectionSoon = () => {
-  const { t } = useTranslation("adminShell");
-  const { section = "" } = useParams<{ section: string }>();
-  const known = ADMIN_SECTIONS.find(
-    (s) => s.id === section && s.id !== "overview",
-  );
-  if (!known) return <Navigate to="/admin" replace />;
-  const Icon = known.icon;
-  return (
-    <section
-      className="flex flex-col"
-      style={{ ...card, gap: 12, padding: 24, maxWidth: 520 }}
-      data-testid="admin-section-soon"
-    >
-      <div className="flex items-center" style={{ gap: 10 }}>
-        <Icon size={18} />
-        <h1 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
-          {t(`nav.${known.id}`)}
-        </h1>
-      </div>
-      <div className="flex items-start" style={{ gap: 10 }}>
-        <Hammer size={16} style={{ marginTop: 2, color: "var(--fg-3)" }} />
-        <div className="flex flex-col" style={{ gap: 4 }}>
-          <strong style={{ fontSize: 13 }}>{t("soon.title")}</strong>
-          <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
-            {t("soon.message")}
-          </span>
-        </div>
-      </div>
-      <Link to="/admin" className="row-btn" style={{ alignSelf: "flex-start" }}>
-        {t("soon.back")}
-      </Link>
-    </section>
   );
 };

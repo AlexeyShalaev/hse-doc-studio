@@ -18,9 +18,9 @@
   },
   "overview": {
     "title": "Installation overview",
-    "lead": "The installation status and quick links to sections will gather here.",
+    "lead": "Administration sections of this installation: people, organizations, runners, quotas, services and settings.",
     "cardsLabel": "Sections",
-    "open": "Soon"
+    "open": "Open"
   },
   "sections": {
     "users": "People with accounts, their roles, blocks and invitations.",
@@ -34,11 +34,6 @@
     "instance": "Name, public address, build limits.",
     "signing": "Whether the server may store secret signing keys.",
     "aiProviders": "Shared AI providers for every user."
-  },
-  "soon": {
-    "title": "Section in development",
-    "message": "This section will arrive in one of the next updates. The other sections are already available.",
-    "back": "Back to overview"
   },
   "loading": "Loading administration"
 }

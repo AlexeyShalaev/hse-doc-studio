@@ -183,11 +183,17 @@ export const OrgDetailView = ({
             aria-selected={tab === id}
             aria-controls={`${panelId}-panel`}
             data-testid={`org-tab-${id}`}
-            className={`row-btn${tab === id ? " active" : ""}`}
+            className="row-btn"
             style={{
+              width: "auto",
               padding: "8px 12px",
               gap: 6,
               borderRadius: "var(--r-2) var(--r-2) 0 0",
+              borderBottom:
+                tab === id
+                  ? "2px solid var(--accent)"
+                  : "2px solid transparent",
+              fontWeight: tab === id ? 600 : 400,
             }}
             onClick={() => {
               onTab(id);
@@ -214,6 +220,7 @@ export const OrgDetailView = ({
             title={t("detail.tabs.soonHint")}
             className="row-btn"
             style={{
+              width: "auto",
               padding: "8px 12px",
               gap: 6,
               opacity: 0.55,

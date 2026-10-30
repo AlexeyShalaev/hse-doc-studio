@@ -20,12 +20,12 @@ from tests.fakes.runners import InMemoryRunnerRepository
 NOW = datetime(2026, 10, 27, 12, 0, tzinfo=UTC)
 
 
-def _request(job_id: UUID | None = None, **kwargs: object) -> EnqueueRequest:
+def _request(job_id: UUID | None = None, user_id: UUID | None = None, **kwargs: object) -> EnqueueRequest:
     return EnqueueRequest(
         job_id=job_id or uuid4(),
         kind=JobKind.compile,
         project_id=uuid4(),
-        user_id=uuid4(),
+        user_id=user_id or uuid4(),
         tags=frozenset({"tex"}),
         payload={},
         **kwargs,  # type: ignore[arg-type]
@@ -66,6 +66,21 @@ async def test__queued_with_online_runner__position_counts_jobs_ahead() -> None:
     info = await _reader(queue, runners).of(second)
 
     assert info == CompileWaitInfo(CompileWaitReason.queued, queue_position=2)
+
+
+async def test__queued_newcomer_after_a_flood__position_follows_fair_share_not_arrival() -> None:
+    queue, runners = InMemoryJobQueue(), InMemoryRunnerRepository()
+    await _runner(runners, seen=NOW, tags={"tex"})
+    flooder, newcomer = uuid4(), uuid4()
+    for _ in range(5):
+        await queue.enqueue(_request(user_id=flooder))
+    job_id = uuid4()
+    await queue.enqueue(_request(job_id, user_id=newcomer))
+
+    info = await _reader(queue, runners).of(job_id)
+
+    assert info is not None
+    assert info.queue_position <= 2
 
 
 async def test__queued_without_a_suitable_runner__no_runner() -> None:
