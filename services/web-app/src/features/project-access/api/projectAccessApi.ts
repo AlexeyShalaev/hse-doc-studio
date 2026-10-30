@@ -5,10 +5,17 @@ import {
   ProjectAccessEntrySchema,
   type ProjectAccessCandidate,
   type ProjectAccessEntry,
-  type SetProjectAccessRequest,
+  type ProjectRole,
 } from "@entities/session";
 
 const enc = encodeURIComponent;
+
+/** Кому и какую роль выдать: тело вызова панели, на сервер уходит в `PUT .../members/{kind}:{id}`. */
+export type SetProjectAccessRequest = {
+  subject_kind: "user" | "group";
+  subject_id: string;
+  role: ProjectRole;
+};
 const base = (projectId: string) => `/projects/${enc(projectId)}/members`;
 
 // Запись идёт без молчания: отказ по роли показывает общий тост с названием роли.
@@ -28,18 +35,28 @@ export const projectAccessApi = {
         silentError: true,
       })
       .then(parseResp(z.array(ProjectAccessCandidateSchema))),
-  set: (
+  // Запись идёт ручками бэкенда PUT|DELETE .../members/{user|group}:{id}; список панель
+  // перечитывает сама, поэтому ответ не нужен.
+  set: async (
     projectId: string,
     body: SetProjectAccessRequest,
-  ): Promise<ProjectAccessEntry> =>
-    apiClient
-      .put(base(projectId), body)
-      .then(parseResp(ProjectAccessEntrySchema)),
+  ): Promise<void> => {
+    await apiClient.put(
+      `${base(projectId)}/${body.subject_kind}:${enc(body.subject_id)}`,
+      {
+        role: body.role,
+        persona: null,
+        can_share: false,
+        show_sources: false,
+        can_edit_all: false,
+      },
+    );
+  },
   remove: async (
     projectId: string,
     kind: "user" | "group",
     subjectId: string,
   ): Promise<void> => {
-    await apiClient.delete(`${base(projectId)}/${kind}/${enc(subjectId)}`);
+    await apiClient.delete(`${base(projectId)}/${kind}:${enc(subjectId)}`);
   },
 };

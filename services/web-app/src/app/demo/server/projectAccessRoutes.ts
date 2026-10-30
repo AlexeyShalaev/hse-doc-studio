@@ -19,9 +19,6 @@ import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
 const ROLES: readonly ProjectRole[] = ["reader", "reviewer", "editor", "owner"];
 
-const str = (value: unknown): string =>
-  typeof value === "string" ? value : "";
-
 const notFound = () => demoError(404, "not_found", "Not Found");
 const unknownSubject = () =>
   demoError(404, "member_not_found", "Subject not found");
@@ -78,11 +75,11 @@ export const createProjectAccessRoutes = (
     },
     {
       method: "PUT",
-      pattern: "/projects/:projectId/members",
+      pattern: "/projects/:projectId/members/:principal",
       handler: withProject(true, (project, req, world) => {
         const body = (req.body ?? {}) as Record<string, unknown>;
-        const kind = str(body.subject_kind);
-        const id = str(body.subject_id);
+        const [kind = "", ...rest] = (req.params.principal ?? "").split(":");
+        const id = rest.join(":");
         const role = body.role as ProjectRole;
         if (
           (kind !== "user" && kind !== "group") ||
@@ -109,15 +106,25 @@ export const createProjectAccessRoutes = (
         const entry = accessEntries(world, project).find(
           (e) => e.subject_kind === kind && e.subject_id === id,
         );
-        return entry ? demoJson(entry) : unknownSubject();
+        if (!entry) return unknownSubject();
+        return demoJson({
+          kind: entry.subject_kind,
+          principal_id: entry.subject_id,
+          name: entry.name,
+          role,
+          persona: null,
+          can_share: false,
+          show_sources: false,
+          can_edit_all: false,
+        });
       }),
     },
     {
       method: "DELETE",
-      pattern: "/projects/:projectId/members/:kind/:subjectId",
+      pattern: "/projects/:projectId/members/:principal",
       handler: withProject(true, (project, req) => {
-        const kind = req.params.kind;
-        const subjectId = req.params.subjectId ?? "";
+        const [kind = "", ...rest] = (req.params.principal ?? "").split(":");
+        const subjectId = rest.join(":");
         if (kind === "user") {
           const owner = project.summary.owner;
           if (

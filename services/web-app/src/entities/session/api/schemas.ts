@@ -492,18 +492,10 @@ export const ProjectAccessCandidateSchema = z.strictObject({
   name: z.string(),
   detail: z.string().nullable(),
 });
-export const SetProjectAccessRequestSchema = z.strictObject({
-  subject_kind: z.enum(["user", "group"]),
-  subject_id: z.string(),
-  role: ProjectRoleSchema,
-});
 export type MyOrg = z.infer<typeof MyOrgSchema>;
 export type ProjectAccessEntry = z.infer<typeof ProjectAccessEntrySchema>;
 export type ProjectAccessCandidate = z.infer<
   typeof ProjectAccessCandidateSchema
->;
-export type SetProjectAccessRequest = z.infer<
-  typeof SetProjectAccessRequestSchema
 >;
 export const AdminSettingsSchema = z.strictObject({
   registration_mode: RegistrationModeSchema,

@@ -8,9 +8,12 @@ export const KNOWN_FAILURES = [
   "network",
 ] as const;
 
-export const failureKey = (code: string): string =>
-  (KNOWN_FAILURES as readonly string[]).includes(code)
-    ? `panel.failure.${code}`
+// Бэкенд отвечает на неизвестного человека кодом user_not_found: для панели это тот же отказ.
+export const failureKey = (code: string): string => {
+  const known = code === "user_not_found" ? "member_not_found" : code;
+  return (KNOWN_FAILURES as readonly string[]).includes(known)
+    ? `panel.failure.${known}`
     : "panel.failure.unknown";
+};
 
 export type Failure = { code: string };

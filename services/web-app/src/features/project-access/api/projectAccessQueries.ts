@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SetProjectAccessRequest } from "@entities/session";
-import { projectAccessApi } from "./projectAccessApi";
+import {
+  projectAccessApi,
+  type SetProjectAccessRequest,
+} from "./projectAccessApi";
 
 export const projectAccessKeys = {
   all: ["project-access"] as const,

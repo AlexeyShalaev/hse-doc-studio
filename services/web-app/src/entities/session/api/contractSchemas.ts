@@ -96,7 +96,6 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ProjectAccessList: z.array(s.ProjectAccessEntrySchema),
   ProjectAccessCandidate: s.ProjectAccessCandidateSchema,
   ProjectAccessCandidateList: z.array(s.ProjectAccessCandidateSchema),
-  SetProjectAccessRequest: s.SetProjectAccessRequestSchema,
   AdminRunnerList: z.array(ops.AdminRunnerSchema),
   AdminRunnerTokenList: z.array(ops.AdminRunnerTokenSchema),
   CreateAdminRunnerTokenRequest: ops.CreateAdminRunnerTokenRequestSchema,

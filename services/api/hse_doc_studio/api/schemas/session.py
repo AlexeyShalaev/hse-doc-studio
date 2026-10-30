@@ -594,14 +594,6 @@ class ProjectAccessCandidate(StrictModel):
     detail: str | None
 
 
-class SetProjectAccessRequest(StrictModel):
-    """PUT /api/v1/projects/{id}/members: добавить или сменить роль, одна и та же ручка."""
-
-    subject_kind: Literal["user", "group"]
-    subject_id: str
-    role: ProjectRoleName
-
-
 class AdminSettings(StrictModel):
     registration_mode: RegistrationMode
     require_approval: bool

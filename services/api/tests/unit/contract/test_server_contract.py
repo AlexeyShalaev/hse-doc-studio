@@ -87,7 +87,6 @@ _SCHEMAS: dict[str, Any] = {
     "ProjectAccessList": list[s.ProjectAccessEntry],
     "ProjectAccessCandidate": s.ProjectAccessCandidate,
     "ProjectAccessCandidateList": list[s.ProjectAccessCandidate],
-    "SetProjectAccessRequest": s.SetProjectAccessRequest,
     "AdminRunnerList": list[ra.RunnerInfo],
     "AdminRunnerTokenList": list[ra.RegistrationTokenInfo],
     "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
