@@ -1,11 +1,17 @@
-import { useContext, type CSSProperties, type ReactNode } from "react";
-import { Inbox } from "lucide-react";
+import type { ReactNode } from "react";
+import { CircleAlert, Info, Lock, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { PageHeader as KitPageHeader, PageTabs, Spinner } from "@shared/ui";
+import {
+  EmptyState,
+  ErrorState,
+  PageTabs,
+  TableSkeleton,
+  type PageTab,
+} from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { failureKey, type Failure } from "../lib/failure";
-import { HeaderTabsContext } from "../lib/headerTabs";
-import { CARD } from "../lib/styles";
+import type { ViewStatus } from "../lib/viewStatus";
+import "./ops.css";
 
 /** Отказ из каталога ошибок. */
 export const FailureNotice = ({ failure }: { failure: Failure }) => {
@@ -17,234 +23,106 @@ export const FailureNotice = ({ failure }: { failure: Failure }) => {
   );
 };
 
-export const LoadingRow = ({ testId }: { testId?: string }) => {
-  const { t } = useTranslation("adminOps");
-  return (
-    <div
-      className="flex items-center"
-      style={{ gap: 8, fontSize: 12 }}
-      data-testid={testId ?? "ops-loading"}
-      role="status"
-    >
-      <Spinner size="sm" />
-      <span className="dim">{t("loading")}</span>
-    </div>
-  );
+export type BannerTone = "danger" | "warning" | "info";
+
+const BANNER_ICON: Record<BannerTone, ReactNode> = {
+  danger: <CircleAlert size={16} aria-hidden="true" />,
+  warning: <TriangleAlert size={16} aria-hidden="true" />,
+  info: <Info size={16} aria-hidden="true" />,
 };
 
-export const LoadFailed = ({
-  text,
-  onRetry,
+/** Заметная строка над содержимым: что сломано и что из этого следует. */
+export const Banner = ({
+  tone,
+  title,
+  children,
+  action,
+  testId,
 }: {
-  text: string;
+  tone: BannerTone;
+  title: ReactNode;
+  children?: ReactNode;
+  action?: ReactNode;
+  testId?: string;
+}) => (
+  <div
+    className="ops-banner"
+    data-tone={tone}
+    role={tone === "info" ? "status" : "alert"}
+    data-testid={testId}
+  >
+    <span className="ops-banner-icon">{BANNER_ICON[tone]}</span>
+    <div className="ops-banner-text">
+      <p className="ops-banner-title">{title}</p>
+      {children && <p className="ops-banner-body">{children}</p>}
+    </div>
+    {action && <div className="ops-banner-action">{action}</div>}
+  </div>
+);
+
+/**
+ * Вид, пока данных нет: скелет, ошибка с повтором или нет прав.
+ * Когда данные готовы, ничего не рисует.
+ */
+export const ViewState = ({
+  status,
+  errorText,
+  onRetry,
+  skeleton,
+  compact = false,
+  testId,
+}: {
+  status: ViewStatus;
+  errorText: string;
   onRetry?: (() => void) | undefined;
+  /** Что показать при загрузке; по умолчанию скелет таблицы. */
+  skeleton?: ReactNode;
+  /** Одна строка: для блока внутри карточки. */
+  compact?: boolean;
+  testId?: string;
 }) => {
   const { t } = useTranslation("adminOps");
-  return (
-    <Notice
-      tone="err"
-      role="alert"
-      text={text}
-      action={
-        onRetry && (
-          <button type="button" className="btn xs" onClick={onRetry}>
-            {t("retry")}
-          </button>
-        )
-      }
-    />
-  );
+  if (status === "loading") {
+    return (
+      <div data-testid={testId ? `${testId}-loading` : undefined}>
+        {skeleton ?? <TableSkeleton rows={4} columns={4} />}
+      </div>
+    );
+  }
+  if (status === "forbidden") {
+    return (
+      <EmptyState
+        framed={!compact}
+        compact={compact}
+        icon={<Lock size={compact ? 15 : 18} />}
+        title={t("forbidden.title")}
+        description={t("forbidden.body")}
+        testId={testId ? `${testId}-forbidden` : "ops-forbidden"}
+      />
+    );
+  }
+  if (status === "error") {
+    return (
+      <ErrorState
+        framed={!compact}
+        compact={compact}
+        description={errorText}
+        onRetry={onRetry}
+        testId={testId ? `${testId}-error` : undefined}
+      />
+    );
+  }
+  return null;
 };
 
-/** Пустое состояние: значок, заголовок, пояснение и действие. */
-export const EmptyBlock = ({
-  icon,
-  title,
-  body,
-  action,
-  testId,
-}: {
-  icon?: ReactNode;
-  title: string;
-  body?: string;
-  action?: ReactNode;
-  testId?: string;
-}) => (
-  <div
-    className="flex flex-col items-start"
-    style={{
-      gap: 8,
-      padding: 20,
-      border: "1px dashed var(--border)",
-      borderRadius: "var(--r-2)",
-    }}
-    data-testid={testId}
-  >
-    <span style={{ color: "var(--fg-3)" }}>
-      {icon ?? <Inbox size={18} aria-hidden="true" />}
-    </span>
-    <strong style={{ fontSize: 13 }}>{title}</strong>
-    {body && (
-      <span style={{ fontSize: 12, color: "var(--fg-2)", maxWidth: 480 }}>
-        {body}
-      </span>
-    )}
-    {action}
-  </div>
-);
-
-/** Заголовок раздела: общий заголовок страницы админки. */
-export const PageHeader = ({
-  title,
-  lead,
-  action,
-}: {
-  title: string;
-  lead: string;
-  action?: ReactNode;
-}) => (
-  <KitPageHeader
-    title={title}
-    description={lead}
-    actions={action}
-    tabs={useContext(HeaderTabsContext)}
-  />
-);
-
-/** Карточка со своим заголовком. */
-export const Card = ({
-  title,
-  lead,
-  action,
-  children,
-  testId,
-  style,
-}: {
-  title: string;
-  lead?: string;
-  action?: ReactNode;
-  children: ReactNode;
-  testId?: string;
-  style?: CSSProperties;
-}) => (
-  <section
-    className="flex flex-col"
-    style={{ ...CARD, gap: 12, padding: 16, ...style }}
-    data-testid={testId}
-  >
-    <div className="flex items-start" style={{ gap: 12 }}>
-      <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h2>
-        {lead && (
-          <p style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}>
-            {lead}
-          </p>
-        )}
-      </div>
-      {action}
-    </div>
-    {children}
-  </section>
-);
-
-/** Цифра с подписью для сводок. */
-export const Stat = ({
-  label,
-  value,
-  hint,
-  tone,
-  testId,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "warn" | "err" | undefined;
-  testId?: string;
-}) => (
-  <div
-    className="flex flex-col"
-    style={{ ...CARD, gap: 2, padding: "10px 14px", minWidth: 0 }}
-    data-testid={testId}
-  >
-    <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>{label}</span>
-    <span
-      style={{
-        fontSize: 20,
-        fontWeight: 600,
-        fontVariantNumeric: "tabular-nums",
-        color:
-          tone === "err"
-            ? "var(--c-err)"
-            : tone === "warn"
-              ? "var(--c-warn)"
-              : "var(--fg-0)",
-      }}
-    >
-      {value}
-    </span>
-    {hint && <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{hint}</span>}
-  </div>
-);
-
-export const StatRow = ({ children }: { children: ReactNode }) => (
-  <div
-    style={{
-      display: "grid",
-      gap: 10,
-      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-    }}
-  >
-    {children}
-  </div>
-);
-
-/** Горизонтальная полоса заполнения. */
-export const Meter = ({
-  value,
-  label,
-  tone = "accent",
-}: {
-  value: number;
-  label: string;
-  tone?: "accent" | "warn" | "err";
-}) => (
-  <div
-    role="progressbar"
-    aria-label={label}
-    aria-valuemin={0}
-    aria-valuemax={100}
-    aria-valuenow={value}
-    style={{
-      height: 6,
-      borderRadius: 3,
-      background: "var(--bg-3)",
-      overflow: "hidden",
-      minWidth: 60,
-    }}
-  >
-    <div
-      style={{
-        width: `${String(value)}%`,
-        height: "100%",
-        background:
-          tone === "err"
-            ? "var(--c-err)"
-            : tone === "warn"
-              ? "var(--c-warn)"
-              : "var(--accent)",
-      }}
-    />
-  </div>
-);
-
-/** Переключатель вкладок раздела. */
+/** Вкладки раздела: общие вкладки админки с testid ops-tab-<id>. */
 export const Tabs = <T extends string>({
   tabs,
   value,
   onChange,
   label,
 }: {
-  tabs: readonly { id: T; label: string; count?: number }[];
+  tabs: readonly PageTab<T>[];
   value: T;
   onChange: (id: T) => void;
   label: string;
@@ -253,6 +131,8 @@ export const Tabs = <T extends string>({
     label={label}
     value={value}
     onChange={onChange}
+    idPrefix="ops-tab"
+    panelId="ops-tab-panel"
     tabs={tabs.map((tab) => ({ ...tab, testId: `ops-tab-${tab.id}` }))}
   />
 );

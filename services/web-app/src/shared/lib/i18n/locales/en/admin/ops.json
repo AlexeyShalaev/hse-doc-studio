@@ -17,6 +17,14 @@
     "network": "No connection to the server. Try again later.",
     "unknown": "Something went wrong. Try again later."
   },
+  "forbidden": {
+    "title": "No access",
+    "body": "Only instance administrators can see this section. If you were just granted the rights, reload the page."
+  },
+  "page": {
+    "title": "Runners and queue",
+    "lead": "Machines that run builds and checks, and the jobs waiting for them."
+  },
   "tabs": {
     "label": "Runners and queue",
     "runners": "Runners",
@@ -29,23 +37,49 @@
     "commandHint": "Run it on the runner machine. The Studio address and the secret are already filled in; after the first start the runner stores its own token and the value can be removed from the environment."
   },
   "runners": {
-    "title": "Runners",
-    "lead": "Machines that run builds and checks. The state is derived from the time of the last signal.",
     "caption": "Runners",
     "loadFailed": "Could not load runners.",
-    "noneOnline": "No runner is online: builds and checks will wait in the queue until a runner connects.",
     "neverSeen": "Never connected",
-    "seenAgo": "{{ago}} ago",
-    "slots": "up to {{count}} jobs",
+    "seenAgo": "Signal {{ago}}",
+    "slots_one": "up to {{count}} job",
+    "slots_other": "up to {{count}} jobs",
+    "load": "{{used}} of {{total}}",
+    "loadLabel": "Busy slots of {{name}}",
     "pause": "Pause",
     "resume": "Resume",
-    "rotate": "New token",
-    "revokeLabel": "Revoke runner {{name}}",
+    "rotate": "Issue a new token",
+    "revokeAction": "Revoke runner",
+    "actionsLabel": "Actions for runner {{name}}",
+    "class": {
+      "standard": "standard"
+    },
+    "noneOnline": {
+      "title": "No runner is online",
+      "body": "Builds and checks wait in the queue until a runner connects. Check that the runner machines are up and can reach the server.",
+      "queue_one": "{{count}} job waiting",
+      "queue_other": "{{count}} jobs waiting"
+    },
     "stats": {
       "online": "Online",
-      "paused": "Paused",
-      "capacity": "Job slots",
-      "capacityHint": "total across online runners"
+      "of": "of {{total}}",
+      "allOnline": "All runners are connected",
+      "silent_one": "{{count}} not connected",
+      "silent_other": "{{count}} not connected",
+      "paused_one": "{{count}} paused",
+      "paused_other": "{{count}} paused",
+      "capacity": "Busy slots",
+      "capacityHint": "Slots of online runners",
+      "noCapacity": "No runner can take a job",
+      "free_one": "{{count}} slot free",
+      "free_other": "{{count}} slots free",
+      "waiting": "Waiting for a runner",
+      "waitingFailed": "Could not load",
+      "nobodyWaits": "The queue is empty",
+      "oldest": "Oldest has waited {{ago}}",
+      "version": "Runner version",
+      "outdated_one": "{{count}} runner on an older version",
+      "outdated_other": "{{count}} runners on an older version",
+      "sameVersion": "All on the same version"
     },
     "status": {
       "online": "Online",
@@ -58,12 +92,12 @@
       "name": "Runner",
       "status": "State",
       "tags": "Tags",
-      "concurrency": "Capacity",
+      "load": "Load",
       "actions": "Actions"
     },
     "empty": {
       "title": "No runners yet",
-      "body": "Create a registration token and start a runner with it. Without runners no builds are executed."
+      "body": "Without runners nothing gets built. Create a registration token and start a runner with it on any machine."
     },
     "rotateDialog": {
       "title": "New token for {{name}}",
@@ -83,11 +117,15 @@
   },
   "tokens": {
     "title": "Registration tokens",
-    "lead": "A one-time secret a new runner exchanges for its own token.",
+    "lead": "A one-time secret a new runner uses to obtain its own token.",
     "create": "Create token",
     "noLabel": "Untitled",
-    "uses": "Used {{uses}} of {{max}}",
+    "uses": "{{uses}} of {{max}} connected",
+    "expires": "expires {{when}}",
+    "expired": "expired {{when}}",
     "revoke": "Revoke",
+    "revokeLabel": "Revoke token \"{{label}}\"",
+    "howTo": "To connect a runner: create a token, run the command shown on the runner machine, and it appears in the table above within seconds.",
     "loadFailed": "Could not load tokens.",
     "empty": {
       "title": "No tokens",
@@ -127,15 +165,20 @@
     }
   },
   "queue": {
-    "title": "Job queue",
-    "lead": "What is waiting for a runner and what is running now. Updates by itself.",
     "caption": "Job queue",
     "loadFailed": "Could not load the queue.",
-    "summaryFailed": "Could not load the queue summary.",
-    "search": "Search by person or project",
+    "summaryFailed": "Could not load",
+    "search": "Find by person, project or runner",
+    "searchPlaceholder": "Person or project",
     "noProject": "No project",
+    "project": "project",
+    "unknownPerson": "Deleted user",
+    "notStarted": "not started",
+    "noRunner": "Not assigned",
     "cancel": "Cancel",
-    "count": "Jobs shown: {{shown}}",
+    "cancelLabel": "Cancel the \"{{kind}}\" job",
+    "count_one": "Showing {{count}} job",
+    "count_other": "Showing {{count}} jobs",
     "more": "Show more",
     "empty": {
       "title": "The queue is empty",
@@ -143,23 +186,39 @@
     },
     "noMatch": {
       "title": "Nothing found",
-      "body": "Change the filters or reset them."
+      "body": "No jobs match these filters.",
+      "reset": "Reset filters"
     },
     "stats": {
       "queued": "Queued",
+      "nobodyWaits": "Nobody is waiting",
+      "oldest": "Oldest has waited {{ago}}",
       "running": "Running",
-      "oldest": "Oldest in queue",
-      "wait": "Wait: median and 95th",
-      "waitHint": "over recent jobs"
+      "runningHint": "On runners right now",
+      "wait": "Median wait",
+      "noData": "no data",
+      "waitHint": "Over recent jobs",
+      "p95": "95% of jobs wait under {{value}}",
+      "failed": "Finished with an error",
+      "failedHint_one": "Of {{count}} finished",
+      "failedHint_other": "Of {{count}} finished"
+    },
+    "classes": {
+      "title": "Waiting by priority:",
+      "name": {
+        "interactive": "urgent",
+        "checks": "checks",
+        "batch": "background"
+      }
     },
     "filters": {
-      "status": "Status",
-      "kind": "Kind"
+      "status": "State",
+      "kind": "Job kind"
     },
     "columns": {
-      "kind": "Kind",
-      "who": "Who and where",
-      "status": "Status",
+      "kind": "Job",
+      "who": "Started by",
+      "status": "State",
       "wait": "Wait",
       "run": "Run time",
       "runner": "Runner",
@@ -180,14 +239,28 @@
       "pack.submission": "Submission packing"
     },
     "priority": {
-      "interactive": "urgent",
-      "checks": "check",
-      "batch": "background"
+      "interactive": "Urgent",
+      "checks": "Check",
+      "batch": "Background"
+    },
+    "errors": {
+      "runner_lost": "The runner disappeared mid-job",
+      "job_timeout": "The job time limit was exceeded",
+      "timed_out": "The job time limit was exceeded",
+      "artifact_invalid": "The runner returned a damaged result",
+      "blob_missing": "A project file was not found",
+      "output_missing": "The build produced no result",
+      "superseded": "Replaced by a newer job",
+      "no_runner": "No suitable runner",
+      "quota": "The job limit was reached",
+      "unknown": "The job finished with an error"
     },
     "detail": {
-      "status": "Status",
-      "user": "Person",
+      "lead": "Created {{when}}",
+      "status": "State",
+      "user": "Started by",
       "project": "Project",
+      "priority": "Priority",
       "runner": "Runner",
       "noRunner": "Not assigned yet",
       "attempts": "Attempts",
@@ -203,61 +276,80 @@
       "body": "The \"{{kind}}\" job of {{user}} will be stopped.",
       "running": "It is already running: the runner will interrupt it and the result will not be saved.",
       "confirm": "Cancel job"
-    },
-    "classes": {
-      "title": "Waiting by class",
-      "name": "Class",
-      "queued": "Queued"
     }
   },
   "quotas": {
     "title": "Quotas",
-    "lead": "How many jobs a person can run at once and how long a job may take.",
+    "lead": "How many jobs can run at once and how long a single job may take.",
     "loadFailed": "Could not load quotas.",
-    "minutes": "{{value}} min",
-    "save": "Save",
+    "unlimited": "No limit",
+    "tasks_one": "job",
+    "tasks_other": "jobs",
     "saved": "Saved",
-    "note": "Limits for individual organizations and people cannot be set from the interface yet.",
+    "concurrentInvalid": "A whole number from 1 to 1000, or empty.",
     "concurrent": {
-      "label": "Concurrent jobs per person",
-      "short": "Jobs",
-      "invalid": "Enter a whole number from 1 to 1000."
-    },
-    "duration": {
-      "label": "Job time limit, min",
-      "short": "Time",
-      "hint": "From 0.5 to 1440 minutes. Empty means no limit; a longer job is stopped.",
-      "invalid": "Enter minutes from 0.5 to 1440."
-    },
-    "defaults": {
-      "title": "Installation limits",
-      "lead": "They apply to everyone. When a limit is used up, a new job waits in the queue instead of being rejected."
+      "title": "Concurrent jobs",
+      "lead": "Builds and checks running at the same time. An empty field removes the limit."
     },
     "userConcurrent": {
-      "label": "Concurrent jobs per person",
-      "hint": "From 1 to 1000. Empty means no limit."
+      "label": "Per person",
+      "hint": "The rest of the person's jobs wait in the queue."
     },
     "orgConcurrent": {
-      "label": "Concurrent jobs per organization",
-      "hint": "From 1 to 1000. Empty means no limit."
+      "label": "Per organization",
+      "hint": "A shared limit for all members of one organization."
+    },
+    "duration": {
+      "title": "Run time",
+      "lead": "Protects runners from stuck builds.",
+      "label": "Job time limit",
+      "hint": "From 0.5 to 1440 minutes. An empty field removes the limit.",
+      "invalid": "Minutes from 0.5 to 1440, or empty."
+    },
+    "explain": {
+      "title": "What happens when a limit is reached",
+      "queue": {
+        "title": "The job waits instead of being rejected",
+        "body": "A new job joins the queue and starts as soon as the person or organization has a free slot."
+      },
+      "timeout": {
+        "title": "A long job is stopped",
+        "body": "A job running past the limit is interrupted with the \"Timed out\" state. The person can start it again."
+      },
+      "scope": {
+        "title": "Limits apply to everyone",
+        "body": "Separate limits for organizations and people cannot be set from the interface yet."
+      }
     }
   },
   "services": {
     "title": "Services",
-    "lead": "Everything Studio depends on. The state refreshes by itself and the button runs a check right away.",
-    "loadFailed": "Could not load service health.",
-    "check": "Check",
-    "unconfigured": "Not connected",
+    "lead": "Everything the Studio depends on. The state refreshes on its own.",
+    "loadFailed": "Could not load the service state.",
+    "check": "Check now",
+    "checked": "Checked {{when}}",
+    "healthy": "Check passed",
+    "online": "{{online}} of {{total}} online",
+    "onlineLabel": "Runners online",
+    "connected": "Connected services",
+    "offTitle": "Not connected",
+    "offLead": "These services are not configured in the server environment. The Studio works without them, but some features are unavailable.",
+    "reasonCode": "Reason code for the server log",
     "summary": {
-      "ok": "All services are working.",
-      "degraded": "Services with problems: {{count}}.",
-      "down": "Services down: {{count}}."
+      "ok": "All connected services are working",
+      "none": "No connected services",
+      "down_one": "{{count}} service is down",
+      "down_other": "{{count}} services are down",
+      "downBody": "{{names}}. The cards below say what is affected.",
+      "degraded_one": "{{count}} service has disruptions",
+      "degraded_other": "{{count}} services have disruptions",
+      "degradedBody": "{{names}}. The Studio works, but slower than usual."
     },
     "status": {
       "ok": "Working",
-      "degraded": "Degraded",
+      "degraded": "Disrupted",
       "down": "Down",
-      "unconfigured": "Not configured"
+      "unconfigured": "Not connected"
     },
     "kind": {
       "database": "Database",
@@ -267,37 +359,86 @@
       "runners": "Runners",
       "smtp": "Mail"
     },
-    "online": "{{online}} of {{total}} online"
+    "role": {
+      "database": "Accounts, projects and the job queue.",
+      "storage": "Project files, build results and attachments.",
+      "languagetool": "Spelling and grammar checks in the editor.",
+      "onlyoffice": "Editing Word, Excel and PowerPoint documents.",
+      "runners": "Machines that run builds and checks.",
+      "smtp": "Invitations, email confirmation and password reset."
+    },
+    "reason": {
+      "timeout": "Did not answer in time",
+      "no_healthy_replica": "No working replica",
+      "no_online_runner": "No runner is online",
+      "no_runners": "No runners connected",
+      "unknown": "The check failed"
+    },
+    "impact": {
+      "database": "People cannot sign in or open projects.",
+      "storage": "Project files and build results do not open.",
+      "languagetool": "Spell checking in the editor is unavailable.",
+      "onlyoffice": "Office documents cannot be opened for editing.",
+      "runners": "Builds and checks wait in the queue.",
+      "smtp": "Invitation and password reset emails are not sent."
+    },
+    "off": {
+      "database": "The Studio does not work without a database.",
+      "storage": "Project files and builds have nowhere to be stored.",
+      "languagetool": "Spell checking in the editor is off.",
+      "onlyoffice": "Office documents cannot be edited in the Studio.",
+      "runners": "There are no runners, so nothing gets built.",
+      "smtp": "No emails are sent; invitations are shared as links."
+    }
   },
   "storage": {
     "title": "Storage",
-    "lead": "How much space projects take and who takes it.",
-    "loadFailed": "Could not load storage usage.",
-    "unknown": "unknown",
-    "low": "Free space is running low: {{free}}. Free some space or extend the disk, otherwise saving files will stop working.",
+    "lead": "How much space is used, how much is left and who has the most projects.",
+    "loadFailed": "Could not load storage information.",
+    "unknown": "Unknown",
+    "lowTitle": "Free space is running low: {{free}}",
+    "lowBody": "Free up space or extend the disk, otherwise saving files will stop working.",
     "stats": {
       "projects": "Projects",
-      "projectsHint_one": "{{count}} more deleted, waiting to be erased",
-      "projectsHint_other": "{{count}} more deleted, waiting to be erased",
-      "objects": "Object storage",
-      "objectsHint_one": "{{count}} build or attachment file",
-      "objectsHint_other": "{{count}} build and attachment files",
-      "volume": "Projects volume",
-      "volumeHint": "total on disk",
-      "free": "Free on disk",
-      "freeHint": "on the projects volume"
+      "projectsHint_one": "{{count}} more deleted, awaiting erasure",
+      "projectsHint_other": "{{count}} more deleted, awaiting erasure",
+      "noDeleted": "None deleted",
+      "objects": "Builds and attachments",
+      "objectsHint_one": "{{count}} file in object storage",
+      "objectsHint_other": "{{count}} files in object storage",
+      "diskUnknown": "Disk size unknown",
+      "free": "Free",
+      "freeLow": "Time to free up space",
+      "freeOf": "Of {{total}} on the project disk"
+    },
+    "disk": {
+      "title": "Project disk",
+      "lead": "The volume holding the working copies of projects.",
+      "unknown": "Disk size unknown",
+      "unknownBody": "The server could not read the project volume details.",
+      "usedOf": "{{used}} of {{total}} used",
+      "aria": "{{used}} used, {{free}} free of {{total}}",
+      "usedTip": "Used {{value}} ({{pct}})",
+      "freeTip": "Free {{value}} ({{pct}})",
+      "used": "Used",
+      "free": "Free"
     },
     "owners": {
-      "title": "Who owns the projects",
-      "lead": "Organizations and people with personal projects, by project count.",
+      "title": "Who has the most projects",
+      "lead": "People with personal projects, by number of projects.",
+      "rank": "Rank",
+      "who": "Owner",
+      "projectsCol": "Projects",
+      "shareCol": "Share of all",
       "projects_one": "{{count}} project",
       "projects_other": "{{count}} projects",
-      "share": "Share of space: {{name}}"
+      "share": "Share of projects: {{name}}"
     },
     "empty": {
       "title": "No projects yet",
       "body": "Data appears when people start creating projects."
     },
-    "note": "Counted from database records, without walking the storage. Data was updated {{ago}} ago."
+    "note": "Counted from database records, without scanning the storage. Updated {{when}}.",
+    "noteNever": "Counted from database records, without scanning the storage. Not counted yet."
   }
 }

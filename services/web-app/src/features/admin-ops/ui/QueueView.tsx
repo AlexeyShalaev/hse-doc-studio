@@ -1,40 +1,57 @@
 import { useCallback, useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Inbox, XCircle } from "lucide-react";
+import {
+  CircleAlert,
+  Clock,
+  ListOrdered,
+  LoaderCircle,
+  Timer,
+  XCircle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, DataTable, FilterBar } from "@shared/ui";
+import {
+  Button,
+  DataTable,
+  FilterBar,
+  KpiGrid,
+  KpiTile,
+  PersonCell,
+  StatusDot,
+} from "@shared/ui";
 import type { AdminJob, AdminQueueSummary, JobState } from "@entities/session";
 import type { QueueQuery } from "../api/opsApi";
 import { formatDuration } from "../lib/format";
 import {
-  JOB_BADGE,
   JOB_KINDS,
   JOB_STATES,
+  JOB_TONE,
   LONG_WAIT_S,
   isActive,
   runSeconds,
 } from "../lib/jobs";
-import { useDurationUnits } from "../lib/useDurationUnits";
 import {
-  Card,
-  LoadFailed,
-  LoadingRow,
-  PageHeader,
-  Stat,
-  StatRow,
-} from "./parts";
+  personRef,
+  shortRef,
+  type OpsPerson,
+  type PersonRef,
+} from "../lib/people";
+import { useDurationUnits } from "../lib/useDurationUnits";
+import type { ViewStatus } from "../lib/viewStatus";
+import { ViewState } from "./parts";
 
 export type QueueViewProps = {
-  summaryStatus: "loading" | "error" | "ready";
+  summaryStatus: ViewStatus;
   summary: AdminQueueSummary | null;
-  status: "loading" | "error" | "ready";
+  status: ViewStatus;
   jobs: readonly AdminJob[];
   /** Есть ещё задачи сверх показанных. */
   hasMore: boolean;
+  /** Имена и почты людей по идентификатору. */
+  people?: ReadonlyMap<string, OpsPerson>;
+  /** Имена раннеров по идентификатору. */
+  runnerNames?: ReadonlyMap<string, string>;
   query: QueueQuery;
   now: number;
-  /** Количество запросов меняется фильтром, пока старая страница ещё на экране. */
-  refreshing?: boolean;
   onQueryChange: (patch: Partial<QueueQuery>) => void;
   onLoadMore: () => void;
   onOpen: (job: AdminJob) => void;
@@ -44,25 +61,32 @@ export type QueueViewProps = {
 
 export const PAGE_STEP = 25;
 
+const NO_PEOPLE: ReadonlyMap<string, OpsPerson> = new Map();
+const NO_RUNNERS: ReadonlyMap<string, string> = new Map();
+
 /**
  * Строка таблицы. Всё меняющееся лежит в данных строки, а не в замыканиях колонок:
  * TanStack Table рисует ячейки как компоненты, и новая функция ячейки пересоздаёт её DOM.
  */
 type Row = {
   job: AdminJob;
+  person: PersonRef;
+  runner: string | null;
   wait: string;
-  run: string;
+  run: string | null;
   stuck: boolean;
   cancel: () => void;
 };
 
-/** Очередь задач: сводка по тегам, фильтры, таблица с отменой. */
+/** Очередь задач: сводка по состояниям, фильтры, таблица с отменой. */
 export const QueueView = ({
   summaryStatus,
   summary,
   status,
   jobs,
   hasMore,
+  people = NO_PEOPLE,
+  runnerNames = NO_RUNNERS,
   query,
   now,
   onQueryChange,
@@ -74,7 +98,7 @@ export const QueueView = ({
   const { t } = useTranslation("adminOps");
   const units = useDurationUnits();
   const dur = useCallback(
-    (s: number | null) => (s === null ? "-" : formatDuration(s, units)),
+    (s: number | null) => (s === null ? null : formatDuration(s, units)),
     [units],
   );
 
@@ -84,59 +108,78 @@ export const QueueView = ({
         id: "kind",
         header: t("queue.columns.kind"),
         enableSorting: false,
-        cell: ({ row }) => (
-          <span className="flex flex-col" style={{ gap: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>
-              {t(`queue.kind.${row.original.job.kind}`, {
-                defaultValue: row.original.job.kind,
-              })}
+        cell: ({ row }) => {
+          const { job } = row.original;
+          return (
+            <span className="ops-cell">
+              <span className="ops-cell-title">
+                {t(`queue.kind.${job.kind}`, { defaultValue: job.kind })}
+              </span>
+              <span className="ops-cell-sub">
+                {t(`queue.priority.${job.priority}`, {
+                  defaultValue: job.priority,
+                })}
+                {job.project_id !== null && (
+                  <>
+                    {" · "}
+                    {job.project_name ?? (
+                      <>
+                        {t("queue.project")}{" "}
+                        <span className="ops-code" title={job.project_id}>
+                          {shortRef(job.project_id)}
+                        </span>
+                      </>
+                    )}
+                  </>
+                )}
+              </span>
             </span>
-            <span
-              className="mono"
-              style={{ fontSize: 11, color: "var(--fg-2)" }}
-            >
-              {t(`queue.priority.${row.original.job.priority}`)}
-            </span>
-          </span>
-        ),
+          );
+        },
       },
       {
         id: "who",
         header: t("queue.columns.who"),
         enableSorting: false,
-        cell: ({ row }) => (
-          <span className="flex flex-col" style={{ gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 13 }}>{row.original.job.user_name}</span>
-            <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
-              {row.original.job.project_name ?? t("queue.noProject")}
-            </span>
-          </span>
-        ),
+        cell: ({ row }) => {
+          const { person } = row.original;
+          return (
+            <PersonCell
+              id={person.id}
+              name={person.name}
+              email={person.email}
+              fallback={t("queue.unknownPerson")}
+            />
+          );
+        },
       },
       {
         id: "status",
         header: t("queue.columns.status"),
         enableSorting: false,
         cell: ({ row }) => (
-          <Badge
-            variant={JOB_BADGE[row.original.job.status]}
-            data-testid={`job-status-${row.original.job.id}`}
-          >
-            {t(`queue.status.${row.original.job.status}`)}
-          </Badge>
+          <span data-testid={`job-status-${row.original.job.id}`}>
+            <StatusDot
+              status={JOB_TONE[row.original.job.status]}
+              label={t(`queue.status.${row.original.job.status}`)}
+            />
+          </span>
         ),
       },
       {
         id: "wait",
-        header: t("queue.columns.wait"),
+        header: () => (
+          <span className="ops-num">{t("queue.columns.wait")}</span>
+        ),
         enableSorting: false,
         cell: ({ row }) => (
           <span
-            style={{
-              fontVariantNumeric: "tabular-nums",
-              color: row.original.stuck ? "var(--c-warn)" : undefined,
-              fontWeight: row.original.stuck ? 600 : undefined,
-            }}
+            className="ops-num"
+            style={
+              row.original.stuck
+                ? { color: "var(--c-warn)", fontWeight: 600 }
+                : undefined
+            }
             data-testid={`job-wait-${row.original.job.id}`}
           >
             {row.original.wait}
@@ -145,15 +188,24 @@ export const QueueView = ({
       },
       {
         id: "run",
-        header: t("queue.columns.run"),
+        header: () => <span className="ops-num">{t("queue.columns.run")}</span>,
         enableSorting: false,
-        cell: ({ row }) => row.original.run,
+        cell: ({ row }) => (
+          <span className="ops-num">
+            {row.original.run ?? (
+              <span className="ops-muted">{t("queue.notStarted")}</span>
+            )}
+          </span>
+        ),
       },
       {
         id: "runner",
         header: t("queue.columns.runner"),
         enableSorting: false,
-        cell: ({ row }) => row.original.job.runner_name ?? "-",
+        cell: ({ row }) =>
+          row.original.runner ?? (
+            <span className="ops-muted">{t("queue.noRunner")}</span>
+          ),
       },
       {
         id: "actions",
@@ -163,20 +215,27 @@ export const QueueView = ({
         enableSorting: false,
         cell: ({ row }) =>
           isActive(row.original.job) ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              type="button"
-              style={{ gap: 5 }}
-              data-testid={`job-cancel-${row.original.job.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                row.original.cancel();
-              }}
-            >
-              <XCircle size={13} aria-hidden="true" />
-              {t("queue.cancel")}
-            </Button>
+            <span className="ops-row-actions">
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
+                style={{ gap: 5 }}
+                aria-label={t("queue.cancelLabel", {
+                  kind: t(`queue.kind.${row.original.job.kind}`, {
+                    defaultValue: row.original.job.kind,
+                  }),
+                })}
+                data-testid={`job-cancel-${row.original.job.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  row.original.cancel();
+                }}
+              >
+                <XCircle size={13} aria-hidden="true" />
+                {t("queue.cancel")}
+              </Button>
+            </span>
           ) : null,
       },
     ],
@@ -187,107 +246,140 @@ export const QueueView = ({
   const rows = useMemo<Row[]>(
     () =>
       jobs
+        .map((job) => {
+          const person = personRef(job.user_id, job.user_name, people);
+          const runner = job.runner_id
+            ? (runnerNames.get(job.runner_id) ?? job.runner_name)
+            : null;
+          return {
+            job,
+            person,
+            runner,
+            wait: dur(job.wait_s) ?? "",
+            run: dur(runSeconds(job, now)),
+            stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
+            cancel: () => {
+              onCancel(job);
+            },
+          };
+        })
         .filter(
-          (job) =>
+          ({ job, person, runner }) =>
             needle === "" ||
-            job.user_name.toLowerCase().includes(needle) ||
-            (job.project_name ?? "").toLowerCase().includes(needle),
-        )
-        .map((job) => ({
-          job,
-          wait: dur(job.wait_s),
-          run: dur(runSeconds(job, now)),
-          stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
-          cancel: () => {
-            onCancel(job);
-          },
-        })),
-    [jobs, needle, now, dur, onCancel],
+            [
+              person.name,
+              person.email,
+              job.project_name,
+              job.project_id,
+              runner,
+              t(`queue.kind.${job.kind}`, { defaultValue: job.kind }),
+            ].some((v) => v?.toLowerCase().includes(needle)),
+        ),
+    [jobs, people, runnerNames, needle, now, dur, onCancel, t],
   );
 
   const filtered = query.status !== "" || query.kind !== "" || query.q !== "";
+  const counts = summary?.by_state;
+  const done = counts
+    ? counts.succeeded + counts.failed + counts.cancelled + counts.timed_out
+    : 0;
+  const broken = counts ? counts.failed + counts.timed_out : 0;
+  const oldest = summary?.oldest_queued_age_s ?? null;
+  const kpiLoading = summaryStatus === "loading";
+  const kpiError =
+    summaryStatus === "error" || summaryStatus === "forbidden"
+      ? t("queue.summaryFailed")
+      : undefined;
+
+  // Нет прав или не загрузилось ничего: одно состояние вместо пустых плиток и таблицы.
+  if (
+    status === "forbidden" ||
+    (status === "error" && summaryStatus !== "ready")
+  ) {
+    return (
+      <div className="ops-stack" data-testid="queue-view">
+        <ViewState
+          status={status}
+          errorText={t("queue.loadFailed")}
+          onRetry={onRetry}
+          testId="queue"
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col" style={{ gap: 16 }} data-testid="queue-view">
-      <PageHeader title={t("queue.title")} lead={t("queue.lead")} />
+    <div className="ops-stack" data-testid="queue-view">
+      <KpiGrid>
+        <KpiTile
+          testId="queue-stat-queued"
+          icon={<ListOrdered size={14} aria-hidden="true" />}
+          label={t("queue.stats.queued")}
+          value={summary?.queued ?? 0}
+          loading={kpiLoading}
+          error={kpiError}
+          tone={
+            oldest !== null && oldest >= LONG_WAIT_S ? "warning" : "neutral"
+          }
+          secondary={
+            oldest === null
+              ? t("queue.stats.nobodyWaits")
+              : t("queue.stats.oldest", { ago: dur(oldest) })
+          }
+        />
+        <KpiTile
+          testId="queue-stat-running"
+          icon={<LoaderCircle size={14} aria-hidden="true" />}
+          label={t("queue.stats.running")}
+          value={summary?.running ?? 0}
+          loading={kpiLoading}
+          error={kpiError}
+          secondary={t("queue.stats.runningHint")}
+        />
+        <KpiTile
+          testId="queue-stat-wait"
+          icon={<Clock size={14} aria-hidden="true" />}
+          label={t("queue.stats.wait")}
+          value={dur(summary?.wait_p50_s ?? null) ?? t("queue.stats.noData")}
+          loading={kpiLoading}
+          error={kpiError}
+          secondary={
+            summary?.wait_p95_s == null
+              ? t("queue.stats.waitHint")
+              : t("queue.stats.p95", { value: dur(summary.wait_p95_s) })
+          }
+        />
+        <KpiTile
+          testId="queue-stat-failed"
+          icon={<CircleAlert size={14} aria-hidden="true" />}
+          label={t("queue.stats.failed")}
+          value={broken}
+          loading={kpiLoading}
+          error={kpiError}
+          tone={broken > 0 ? "danger" : "neutral"}
+          secondary={t("queue.stats.failedHint", { count: done })}
+        />
+      </KpiGrid>
 
-      {summaryStatus === "loading" && (
-        <LoadingRow testId="queue-summary-loading" />
-      )}
-      {summaryStatus === "error" && (
-        <LoadFailed text={t("queue.summaryFailed")} />
-      )}
-      {summaryStatus === "ready" && summary && (
-        <>
-          <StatRow>
-            <Stat
-              label={t("queue.stats.queued")}
-              value={String(summary.queued)}
-              testId="queue-stat-queued"
-            />
-            <Stat
-              label={t("queue.stats.running")}
-              value={String(summary.running)}
-              testId="queue-stat-running"
-            />
-            <Stat
-              label={t("queue.stats.oldest")}
-              value={dur(summary.oldest_queued_age_s)}
-              {...(summary.oldest_queued_age_s !== null &&
-              summary.oldest_queued_age_s >= LONG_WAIT_S
-                ? { tone: "warn" as const }
-                : {})}
-            />
-            <Stat
-              label={t("queue.stats.wait")}
-              value={`${dur(summary.wait_p50_s)} / ${dur(summary.wait_p95_s)}`}
-              hint={t("queue.stats.waitHint")}
-            />
-          </StatRow>
-          {summary.classes.length > 0 && (
-            <Card title={t("queue.classes.title")} testId="queue-classes">
-              <table
-                style={{
-                  width: "100%",
-                  fontSize: 12.5,
-                  borderCollapse: "collapse",
-                }}
-              >
-                <thead>
-                  <tr style={{ color: "var(--fg-2)", textAlign: "left" }}>
-                    <th
-                      scope="col"
-                      style={{ padding: "4px 0", fontWeight: 500 }}
-                    >
-                      {t("queue.classes.name")}
-                    </th>
-                    <th scope="col" style={{ fontWeight: 500 }}>
-                      {t("queue.classes.queued")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.classes.map((row) => (
-                    <tr
-                      key={row.name}
-                      data-testid={`queue-class-${row.name}`}
-                      style={{ borderTop: "1px solid var(--border)" }}
-                    >
-                      <td style={{ padding: "6px 0" }}>
-                        <Badge variant="subtle">
-                          {t(`queue.priority.${row.name}`, {
-                            defaultValue: row.name,
-                          })}
-                        </Badge>
-                      </td>
-                      <td>{row.queued}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          )}
-        </>
+      {summary && summary.classes.length > 0 && (
+        <div className="ops-classes" data-testid="queue-classes">
+          <Timer size={14} aria-hidden="true" />
+          <span>{t("queue.classes.title")}</span>
+          {summary.classes.map((row) => (
+            <span
+              key={row.name}
+              className="ops-classes-item"
+              data-testid={`queue-class-${row.name}`}
+            >
+              {t(`queue.classes.name.${row.name}`, {
+                defaultValue: t(`queue.priority.${row.name}`, {
+                  defaultValue: row.name,
+                }),
+              })}
+              <strong>{row.queued}</strong>
+            </span>
+          ))}
+        </div>
       )}
 
       <FilterBar
@@ -296,7 +388,7 @@ export const QueueView = ({
           onQueryChange({ q });
         }}
         searchLabel={t("queue.search")}
-        searchPlaceholder={t("queue.search")}
+        searchPlaceholder={t("queue.searchPlaceholder")}
         filters={[
           {
             id: "status",
@@ -308,6 +400,7 @@ export const QueueView = ({
             options: JOB_STATES.map((s) => ({
               value: s,
               label: t(`queue.status.${s}`),
+              ...(counts ? { count: counts[s] } : {}),
             })),
           },
           {
@@ -328,6 +421,7 @@ export const QueueView = ({
         }}
       />
       <DataTable
+        className="ops-table"
         caption={t("queue.caption")}
         columns={columns}
         data={rows}
@@ -339,27 +433,39 @@ export const QueueView = ({
           filtered ? t("queue.noMatch.title") : t("queue.empty.title")
         }
         emptyHint={filtered ? t("queue.noMatch.body") : t("queue.empty.body")}
+        {...(filtered
+          ? {
+              emptyAction: (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    onQueryChange({ q: "", status: "", kind: "" });
+                  }}
+                >
+                  {t("queue.noMatch.reset")}
+                </Button>
+              ),
+            }
+          : {})}
         onRowClick={(r) => {
           onOpen(r.job);
         }}
       />
       {status === "ready" && jobs.length > 0 && (
-        <div
-          className="flex items-center"
-          style={{ gap: 12, fontSize: 12, color: "var(--fg-2)" }}
-        >
+        <div className="ops-foot">
           <span data-testid="queue-count">
-            {t("queue.count", { shown: jobs.length })}
+            {t("queue.count", { count: jobs.length })}
           </span>
           {hasMore && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               type="button"
               onClick={onLoadMore}
               data-testid="queue-more"
             >
-              <Inbox size={13} aria-hidden="true" />
               {t("queue.more")}
             </Button>
           )}

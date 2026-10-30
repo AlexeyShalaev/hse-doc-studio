@@ -1,17 +1,22 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import type { AdminJob } from "@entities/session";
 import type { QueueQuery } from "../api/opsApi";
-import { useCancelJob, useQueue, useQueueSummary } from "../api/opsQueries";
+import {
+  useCancelJob,
+  usePeople,
+  useQueue,
+  useQueueSummary,
+  useRunners,
+} from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
+import { personRef } from "../lib/people";
 import { useNow } from "../lib/useNow";
 import { JobDetail } from "./JobDetail";
+import { statusOf } from "../lib/viewStatus";
 import { PAGE_STEP, QueueView } from "./QueueView";
 import { ConfirmDialog } from "./RunnerDialogs";
-
-const statusOf = (q: { isError: boolean; isPending: boolean }) =>
-  q.isError ? "error" : q.isPending ? "loading" : "ready";
 
 /** Очередь: опрос раз в несколько секунд, отмена с подтверждением, подробности задачи. */
 export const Queue = () => {
@@ -24,8 +29,17 @@ export const Queue = () => {
   });
   const jobs = useQueue(query);
   const summary = useQueueSummary();
+  const runners = useRunners();
   const cancel = useCancelJob();
   const now = useNow(5000);
+
+  const items = jobs.data?.items;
+  const ids = useMemo(() => (items ?? []).map((j) => j.user_id), [items]);
+  const people = usePeople(ids);
+  const runnerNames = useMemo(
+    () => new Map((runners.data ?? []).map((r) => [r.id, r.name])),
+    [runners.data],
+  );
 
   const [opened, setOpened] = useState<AdminJob | null>(null);
   const [cancelling, setCancelling] = useState<AdminJob | null>(null);
@@ -33,7 +47,10 @@ export const Queue = () => {
 
   // Открытую задачу берём из свежего ответа, чтобы статус в панели не отставал.
   const fresh = opened
-    ? (jobs.data?.items.find((j) => j.id === opened.id) ?? opened)
+    ? (items?.find((j) => j.id === opened.id) ?? opened)
+    : null;
+  const cancellingWho = cancelling
+    ? personRef(cancelling.user_id, cancelling.user_name, people)
     : null;
 
   return (
@@ -42,8 +59,10 @@ export const Queue = () => {
         summaryStatus={statusOf(summary)}
         summary={summary.data ?? null}
         status={statusOf(jobs)}
-        jobs={jobs.data?.items ?? []}
+        jobs={items ?? []}
         hasMore={jobs.data?.hasMore ?? false}
+        people={people}
+        runnerNames={runnerNames}
         query={query}
         now={now}
         onQueryChange={(patch) => {
@@ -61,6 +80,14 @@ export const Queue = () => {
       />
       <JobDetail
         job={fresh}
+        person={
+          fresh ? personRef(fresh.user_id, fresh.user_name, people) : null
+        }
+        runnerName={
+          fresh?.runner_id
+            ? (runnerNames.get(fresh.runner_id) ?? fresh.runner_name)
+            : null
+        }
         now={now}
         onClose={() => {
           setOpened(null);
@@ -73,7 +100,7 @@ export const Queue = () => {
           <>
             <p style={{ margin: 0 }}>
               {t("queue.cancelDialog.body", {
-                user: cancelling?.user_name ?? "",
+                user: cancellingWho?.name ?? t("queue.unknownPerson"),
                 kind: cancelling
                   ? t(`queue.kind.${cancelling.kind}`, {
                       defaultValue: cancelling.kind,

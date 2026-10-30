@@ -118,11 +118,16 @@ const job = (seed: JobSeed, now: number): AdminJob => {
   };
 };
 
-const ANNA: [string, string] = ["u_01hx7k2m9c", "Анна Петрова"];
-const PETR: [string, string] = ["u_01hx7k4p6g", "Пётр Орлов"];
-const OLGA: [string, string] = ["u_01hx7k5q7h", "Ольга Белова"];
+// Люди те же, что в демо-мире пользователей: очередь находит их имена по идентификатору.
+// Последний удалён из установки, его задачи остаются в истории без имени.
+const IVAN: [string, string] = ["u_01hx7k1a0b", "Иван Сидоров"];
+const MARIA: [string, string] = ["u_01hx7k2c1d", "Мария Келлер"];
+const PETR: [string, string] = ["u_01hx7k3e2f", "Пётр Орлов"];
+const DARYA: [string, string] = ["u_01hx7k6k5l", "Дарья Лис"];
+const GONE: [string, string] = ["u_01hx7k9x8w", ""];
 const BERTIE: [string, string] = ["p_01hxa1c4de", "Bertie: курсовая"];
 const LAB: [string, string] = ["p_01hxa2f8gh", "Лаборатория: отчёт"];
+const THESIS: [string, string] = ["p_01hxa3k2mn", "ВКР: глава 2"];
 const R1: [string, string] = ["rn_01hxb1", "runner-1"];
 const R2: [string, string] = ["rn_01hxb2", "runner-2"];
 
@@ -136,7 +141,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
         status: "queued",
         waited: 1260,
         age: 1260,
-        user: ANNA,
+        user: MARIA,
         project: BERTIE,
       },
       {
@@ -154,8 +159,8 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
         status: "queued",
         waited: 640,
         age: 640,
-        user: OLGA,
-        project: BERTIE,
+        user: DARYA,
+        project: THESIS,
       },
       {
         id: "j_01hxe4",
@@ -163,7 +168,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
         status: "queued",
         waited: 300,
         age: 300,
-        user: ANNA,
+        user: IVAN,
         project: BERTIE,
         priority: "batch",
       },
@@ -173,12 +178,12 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
         status: "failed",
         waited: 20,
         age: 3300,
-        user: ANNA,
+        user: MARIA,
         project: BERTIE,
         runner: R1,
         attempt: 3,
         duration: 90,
-        error: "Раннер потерян: нет сигнала жизни",
+        error: "runner_lost",
       },
     ];
     return rows.map((r) => job(r, now));
@@ -190,7 +195,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "running",
       waited: 4,
       age: 38,
-      user: ANNA,
+      user: MARIA,
       project: BERTIE,
       runner: R1,
     },
@@ -210,8 +215,8 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "running",
       waited: 2,
       age: 25,
-      user: OLGA,
-      project: BERTIE,
+      user: DARYA,
+      project: THESIS,
       runner: R1,
     },
     {
@@ -220,7 +225,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "queued",
       waited: 21,
       age: 21,
-      user: ANNA,
+      user: IVAN,
       project: BERTIE,
     },
     {
@@ -229,7 +234,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "queued",
       waited: 14,
       age: 14,
-      user: OLGA,
+      user: DARYA,
       project: LAB,
     },
     {
@@ -248,8 +253,8 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "queued",
       waited: 3,
       age: 3,
-      user: ANNA,
-      project: BERTIE,
+      user: MARIA,
+      project: THESIS,
     },
     {
       id: "j_01hxd8",
@@ -257,7 +262,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "succeeded",
       waited: 3,
       age: 400,
-      user: ANNA,
+      user: MARIA,
       project: BERTIE,
       runner: R1,
       duration: 41,
@@ -272,7 +277,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       project: LAB,
       runner: R2,
       duration: 18,
-      error: "Сборка завершилась с ошибкой LaTeX: undefined control sequence",
+      error: "artifact_invalid",
     },
     {
       id: "j_01hxda",
@@ -280,8 +285,8 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "succeeded",
       waited: 6,
       age: 900,
-      user: OLGA,
-      project: BERTIE,
+      user: DARYA,
+      project: THESIS,
       runner: R1,
       duration: 33,
       priority: "batch",
@@ -292,12 +297,12 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "timed_out",
       waited: 8,
       age: 1500,
-      user: OLGA,
+      user: GONE,
       project: BERTIE,
       runner: R2,
       attempt: 2,
       duration: 180,
-      error: "Превышено время выполнения: 180 с",
+      error: "job_timeout",
     },
     {
       id: "j_01hxdc",
@@ -305,7 +310,7 @@ const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
       status: "cancelled",
       waited: 2,
       age: 2100,
-      user: ANNA,
+      user: IVAN,
       project: BERTIE,
       duration: 4,
     },
@@ -433,11 +438,14 @@ const storageFor = (seed: ServerDemoOpsSeed, now: number): AdminStorage => {
     free_bytes: seed === "services_degraded" ? g(2.4) : g(86),
     volume_total_bytes: seed === "services_degraded" ? g(40) : g(200),
     computed_at: ago(40, now),
+    // Владельцы — люди с личными проектами (как у сервера), по убыванию числа проектов.
     owners: [
-      { id: "msp-2025", name: "МСПИН 2025", projects: 31 },
-      { id: "u_01hx7k2m9c", name: "Анна Петрова", projects: 2 },
-      { id: "ai-lab", name: "Лаборатория ИИ", projects: 4 },
-      { id: "u_01hx7k4p6g", name: "Пётр Орлов", projects: 1 },
+      { id: MARIA[0], name: MARIA[1], projects: 12 },
+      { id: IVAN[0], name: IVAN[1], projects: 9 },
+      { id: PETR[0], name: PETR[1], projects: 6 },
+      { id: "u_01hx7kaa01", name: "Екатерина Смирнова", projects: 4 },
+      { id: DARYA[0], name: DARYA[1], projects: 3 },
+      { id: "u_01hx7kbb02", name: "Алексей Ковалёв", projects: 2 },
     ],
   };
 };

@@ -1,13 +1,17 @@
+import { useCallback, useMemo } from "react";
 import {
   keepPreviousData,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import type {
+  AdminUser,
   CreateAdminRunnerTokenRequest,
   UpdateAdminQuotasRequest,
 } from "@entities/session";
+import type { OpsPerson } from "../lib/people";
 import { opsApi, type QueueQuery } from "./opsApi";
 
 export const opsKeys = {
@@ -19,6 +23,7 @@ export const opsKeys = {
   quotas: ["admin", "ops", "quotas"] as const,
   services: ["admin", "ops", "services"] as const,
   storage: ["admin", "ops", "storage"] as const,
+  person: (id: string) => ["admin", "ops", "person", id] as const,
 };
 
 /** Опрос идёт только пока вкладка видна: react-query не тикает в фоне без явного флага. */
@@ -77,6 +82,38 @@ export const useStorage = () =>
     queryFn: () => opsApi.storage(),
     staleTime: 0,
   });
+
+/** Имена и почты людей по идентификаторам; кого не нашли, в ответе нет. Люди меняются редко. */
+export const usePeople = (
+  ids: readonly string[],
+): ReadonlyMap<string, OpsPerson> => {
+  const unique = useMemo(
+    () => [...new Set(ids.filter((id) => id !== ""))].sort(),
+    [ids],
+  );
+  const combine = useCallback(
+    (results: { data?: AdminUser | undefined }[]) => {
+      const map = new Map<string, OpsPerson>();
+      results.forEach((r, i) => {
+        const id = unique[i];
+        if (id !== undefined && r.data) {
+          map.set(id, { name: r.data.name, email: r.data.email });
+        }
+      });
+      return map;
+    },
+    [unique],
+  );
+  return useQueries({
+    queries: unique.map((id) => ({
+      queryKey: opsKeys.person(id),
+      queryFn: () => opsApi.person(id),
+      staleTime: 5 * 60_000,
+      retry: false,
+    })),
+    combine,
+  });
+};
 
 const useInvalidate = () => {
   const client = useQueryClient();
