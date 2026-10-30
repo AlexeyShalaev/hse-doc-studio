@@ -224,4 +224,36 @@ describe("«Подключить раннер»: диалог", () => {
       ttl_hours: 168,
     });
   });
+
+  it("готовый токен: пример ИИ-адресов копируется, рядом ссылка на документацию", () => {
+    render(
+      <ConnectRunnerDialog
+        isOpen
+        onClose={noop}
+        onPairCode={noop}
+        onCreateToken={noop}
+        created={{
+          token: {
+            id: "t1",
+            label: "",
+            created_at: "2026-10-30T08:00:00Z",
+            expires_at: "2026-10-31T08:00:00Z",
+            used: false,
+            revoked: false,
+          },
+          secret: "hsrt_x",
+          command: "HSE_RUNNER__TOKEN=hsrt_x hse-doc-studio runner",
+          docker_command: "docker run hse",
+        }}
+      />,
+    );
+    const example = within(
+      screen.getByTestId("runner-token-ai-example"),
+    ).getByRole<HTMLInputElement>("textbox");
+    expect(example.value).toContain("HSE_RUNNER__AI_ENDPOINTS=");
+    expect(screen.getByTestId("runner-token-ai-docs")).toHaveAttribute(
+      "href",
+      expect.stringContaining("docs/ru/deploy/runners.md"),
+    );
+  });
 });

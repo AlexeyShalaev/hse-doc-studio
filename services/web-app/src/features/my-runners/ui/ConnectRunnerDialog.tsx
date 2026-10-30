@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { Laptop, Loader2, Terminal } from "lucide-react";
+import { ExternalLink, Laptop, Loader2, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -37,6 +37,16 @@ export type ConnectRunnerDialogProps = {
 };
 
 const DEFAULT_TTL = 24;
+// Пример переменной окружения раннера: копируется целиком, вставляется в env.
+const AI_ENDPOINTS_EXAMPLE =
+  'HSE_RUNNER__AI_ENDPOINTS=\'[{"name":"ollama","url":"http://localhost:11434/v1","flavor":"ollama"}]\'';
+const DOCS_BASE =
+  "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs";
+/** Раздел «ИИ через свой раннер» документации на языке интерфейса. */
+const aiDocsUrl = (lang: string): string =>
+  lang.startsWith("en")
+    ? `${DOCS_BASE}/en/deploy/runners.md#ai-through-your-own-runner`
+    : `${DOCS_BASE}/ru/deploy/runners.md#ии-через-свой-раннер`;
 const LABEL_MAX = 128;
 
 /**
@@ -278,7 +288,7 @@ const TokenResult = ({
   created: MyRunnerTokenCreated;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation("runners");
+  const { t, i18n } = useTranslation("runners");
   const [how, setHow] = useState<"command" | "docker">("command");
   return (
     <div data-testid="runner-token-secret">
@@ -342,6 +352,23 @@ const TokenResult = ({
             <p className="form-hint" style={{ margin: 0 }}>
               {t("connectDialog.server.aiHint")}
             </p>
+            <div data-testid="runner-token-ai-example">
+              <CopyField
+                value={AI_ENDPOINTS_EXAMPLE}
+                label={t("connectDialog.server.aiExampleLabel")}
+              />
+            </div>
+            <a
+              href={aiDocsUrl(i18n.language)}
+              target="_blank"
+              rel="noreferrer"
+              className="form-hint"
+              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+              data-testid="runner-token-ai-docs"
+            >
+              <ExternalLink size={12} aria-hidden="true" />
+              {t("connectDialog.server.aiDocs")}
+            </a>
             <span className="myr-waiting" role="status">
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />
               {t("connectDialog.server.waiting")}

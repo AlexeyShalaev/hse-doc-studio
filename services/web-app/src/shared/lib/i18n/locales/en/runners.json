@@ -142,8 +142,10 @@
       "dockerLabel": "Docker start command",
       "commandHint": "Needs the hse-doc-studio package installed.",
       "dockerHint": "The data directory is mounted at the same path inside and outside the container.",
-      "aiHint": "To use your own model through the runner, set HSE_RUNNER__AI_ENDPOINTS, for example [{\"name\":\"ollama\",\"url\":\"http://localhost:11434/v1\"}].",
-      "waiting": "Waiting for the runner to connect…"
+      "aiHint": "To use your own model through the runner, set HSE_RUNNER__AI_ENDPOINTS for the runner:",
+      "waiting": "Waiting for the runner to connect…",
+      "aiExampleLabel": "Example for Ollama",
+      "aiDocs": "Docs: AI through your own runner"
     }
   },
   "tokens": {
