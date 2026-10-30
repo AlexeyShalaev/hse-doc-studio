@@ -48,6 +48,8 @@ docker compose --profile services up -d   # добавить LanguageTool и ONL
 
 Раннер держит запрос опроса до 25 секунд. Задайте read-timeout не меньше 60 секунд и отключите буферизацию ответов. Для nginx: `proxy_read_timeout 75s; proxy_buffering off;`.
 
+Загрузка проекта идёт большим телом. Задайте `client_max_body_size` не меньше `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` плюс около 1 МБ (по умолчанию `client_max_body_size 501m;`). Само api обрывает слишком большое тело ответом 413 до записи во временный файл.
+
 ## Kubernetes
 
 Чарт лежит в `deploy/helm/hse-doc-studio`: api (одна реплика, стратегия Recreate), Job миграций перед обновлением, раннер, ingress, Secret, PVC. Postgres и S3 подключаются внешние. Секреты лучше держать в своём Secret (`secrets.existingSecret`), а не в values. Подробности и ограничения: README чарта.

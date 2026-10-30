@@ -48,6 +48,8 @@ The runner directory (`RUNNER_DATA_DIR`) is mounted at the same path on the host
 
 The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off;`.
 
+Project upload is a large request body. Set `client_max_body_size` to at least `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` plus about 1 MB (by default `client_max_body_size 501m;`). The api itself rejects an oversized body with 413 before anything is written to a temporary file.
+
 ## Kubernetes
 
 The chart is in `deploy/helm/hse-doc-studio`: the api (one replica, Recreate strategy), a migrations Job before upgrade, a runner, ingress, Secret and PVC. Postgres and S3 are external. Prefer your own Secret (`secrets.existingSecret`) over values. Details and limits are in the chart README.

@@ -75,6 +75,10 @@ api стартует в `server`, только когда реестр гото�
 отключите буферизацию ответов (nginx: `proxy_read_timeout 75s; proxy_buffering off;`).
 Не забудьте указать адрес прокси в `TRUSTED_PROXIES`.
 
+Загрузка проекта (`POST /projects/import`) идёт большим телом. Поднимите `client_max_body_size` до значения
+`HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` плюс запас около 1 МБ (по умолчанию `client_max_body_size 501m;`).
+Само api обрывает слишком большое тело с 413 ещё до записи во временный файл.
+
 ## Обновление и бэкап
 
 Обновление: смените `TAG`, затем `docker compose pull && docker compose up -d`. Миграции базы выполняет
