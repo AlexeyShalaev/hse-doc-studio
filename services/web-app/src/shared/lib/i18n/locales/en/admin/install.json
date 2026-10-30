@@ -94,6 +94,17 @@
     "title": "Shared providers",
     "sub": "Connected once for the whole installation. Users see the provider and its models, but not the key.",
     "listLabel": "Shared AI providers",
+    "search": "Search providers",
+    "searchPlaceholder": "Name or address",
+    "filters": {
+      "search": "Search",
+      "type": "Type"
+    },
+    "sort": {
+      "created": "Date added",
+      "name": "Name",
+      "type": "Type"
+    },
     "add": "Add provider",
     "addFirst": "Add provider",
     "actionsNamed": "Actions for provider {{name}}",

@@ -1,7 +1,6 @@
 import { adminClient, parseResp } from "@shared/api";
 import type { ListRequestParams } from "@shared/lib";
 import {
-  AdminAuditPageSchema,
   AdminUserFacetsSchema,
   AdminInvitationCreatedSchema,
   AdminInvitationPageSchema,
@@ -10,7 +9,6 @@ import {
   AdminUserPageSchema,
   AdminUserSchema,
   type AccountStatus,
-  type AdminAuditPage,
   type AdminInvitationCreated,
   type AdminInvitationPage,
   type AdminResetLink,
@@ -31,8 +29,6 @@ export type UsersQuery = {
   status: AccountStatus | "";
   page: number;
 };
-
-export type AuditQuery = { action: string; cursor: string | null };
 
 // Списки вкладок идут по единому контракту: поиск, фильтры, сортировка и
 // окно считает сервер, экран получает одну страницу.
@@ -134,16 +130,4 @@ export const adminUsersApi = {
   revokeInvite: async (id: string): Promise<void> => {
     await adminClient.delete(`/invitations/${enc(id)}`, quiet);
   },
-
-  audit: ({ action, cursor }: AuditQuery): Promise<AdminAuditPage> =>
-    adminClient
-      .get("/audit", {
-        ...quiet,
-        params: {
-          limit: PAGE_SIZE,
-          ...(action ? { action } : {}),
-          ...(cursor ? { cursor } : {}),
-        },
-      })
-      .then(parseResp(AdminAuditPageSchema)),
 };

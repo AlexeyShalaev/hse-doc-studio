@@ -28,7 +28,7 @@ import { validateOidc, emptyOidcDraft, parseDomains } from "./lib/validate";
 // Настройки входа поверх демо-транспорта: те же запросы, что уйдут настоящему
 // бэкенду, и ответы, проходящие те же схемы.
 
-const mount = () =>
+const mount = (entry = "/admin/settings") =>
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider
@@ -41,7 +41,7 @@ const mount = () =>
           })
         }
       >
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[entry]}>
           <AdminAuthSettings />
         </MemoryRouter>
       </QueryClientProvider>
@@ -303,6 +303,37 @@ describe("настройки входа в админке", () => {
     expect(
       await screen.findByTestId("admin-settings-failed"),
     ).toHaveTextContent("Не удалось загрузить настройки");
+  });
+
+  it("провайдеры входа: поиск на сервере и «ничего не найдено»", async () => {
+    const user = userEvent.setup();
+    mount();
+    const section = await screen.findByTestId("admin-oidc");
+    await within(section).findByTestId("oidc-provider-keycloak");
+    await user.type(within(section).getByRole("searchbox"), "нет-такого");
+    expect(
+      await within(section).findByTestId("oidc-none", {}, { timeout: 5000 }),
+    ).toHaveTextContent("Ничего не найдено");
+    // «Добавить» остаётся в шапке: пустое состояние без кнопки создания.
+    expect(within(section).getByTestId("oidc-add")).toBeVisible();
+    await user.click(
+      within(within(section).getByTestId("oidc-none")).getByRole("button", {
+        name: "Сбросить фильтры",
+      }),
+    );
+    expect(
+      await within(section).findByTestId("oidc-provider-keycloak"),
+    ).toBeVisible();
+  });
+
+  it("провайдеры входа: состояние из адреса отбирает на сервере", async () => {
+    mount("/admin/settings?oidc.enabled=false");
+    const section = await screen.findByTestId("admin-oidc");
+    expect(await within(section).findByTestId("oidc-none")).toBeVisible();
+    expect(
+      within(section).getByTestId("oidc-filter-enabled"),
+    ).toHaveTextContent("Выключен");
+    expect(within(section).queryByTestId("oidc-empty")).toBeNull();
   });
 
   it("почта выключена: тест недоступен", async () => {

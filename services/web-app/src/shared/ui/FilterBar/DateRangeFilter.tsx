@@ -45,6 +45,33 @@ const shortDay = (day: string): string => {
   );
 };
 
+const presetOf = (value: DateRange, today: string) =>
+  PRESETS.find(
+    (p) =>
+      value.from === daysAgo(p.days) &&
+      (value.to === null || value.to === today),
+  );
+
+/**
+ * Период словами, как на кнопке фильтра: «7 дней», «с 3 окт.», «3 окт.–9 окт.».
+ * null, если период не задан. Нужен строке выбранных условий.
+ */
+export const useDateRangeLabel = (value: DateRange): string | null => {
+  const { t } = useTranslation("uiPrimitives");
+  if (value.from === null && value.to === null) return null;
+  const today = isoDay(new Date());
+  const preset = presetOf(value, today);
+  if (preset) return t(`dateRange.preset.${preset.id}`);
+  if (value.from && value.to)
+    return t("dateRange.between", {
+      from: shortDay(value.from),
+      to: shortDay(value.to),
+    });
+  return value.from
+    ? t("dateRange.since", { day: shortDay(value.from) })
+    : t("dateRange.until", { day: shortDay(value.to ?? today) });
+};
+
 export const DateRangeFilter = ({
   label,
   value,
@@ -57,24 +84,9 @@ export const DateRangeFilter = ({
   const toId = useId();
   const title = label ?? t("dateRange.label");
   const today = isoDay(new Date());
-  const preset = PRESETS.find(
-    (p) =>
-      value.from === daysAgo(p.days) &&
-      (value.to === null || value.to === today),
-  );
+  const preset = presetOf(value, today);
   const active = value.from !== null || value.to !== null;
-  const summary = !active
-    ? null
-    : preset
-      ? t(`dateRange.preset.${preset.id}`)
-      : value.from && value.to
-        ? t("dateRange.between", {
-            from: shortDay(value.from),
-            to: shortDay(value.to),
-          })
-        : value.from
-          ? t("dateRange.since", { day: shortDay(value.from) })
-          : t("dateRange.until", { day: shortDay(value.to ?? today) });
+  const summary = useDateRangeLabel(value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -204,7 +204,7 @@
   "audit": {
     "title": "Audit",
     "lead": "Sign-ins, administrator actions and settings changes.",
-    "group": "Event type",
+    "group": "Section",
     "groups": {
       "auth": "Sign-ins and accounts",
       "admin": "People",
@@ -304,10 +304,14 @@
       "setup_settings_done": "First-run settings saved",
       "signing_server_key_storage": "Signing key storage changed"
     },
-    "search": "Search the loaded entries",
-    "noMatch": {
-      "title": "Nothing found",
-      "body": "Change the search or the event type. Search covers only the loaded entries."
+    "search": "Search the log",
+    "searchPlaceholder": "Person, action code or object",
+    "filters": {
+      "search": "Search",
+      "actor": "Who",
+      "actorSearch": "Name or email",
+      "target": "Object",
+      "period": "Period"
     },
     "loadFailedBody": "Check the connection to the server and try again.",
     "refresh": "Refresh",
@@ -324,6 +328,10 @@
       "actor": "Who",
       "code": "Event code",
       "target": "Object"
+    },
+    "show": {
+      "byActor": "All actions by this person",
+      "byTarget": "All events for this object"
     },
     "detailKeys": {
       "email": "Email",

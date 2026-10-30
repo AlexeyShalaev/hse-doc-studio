@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -7,6 +7,7 @@ import {
   ConfirmByName,
   EmptyState,
   ErrorState,
+  NoResults,
   Section,
   StatusDot,
   TableSkeleton,
@@ -39,6 +40,20 @@ export type OidcSectionProps = {
   onDelete: (provider: AdminOidcProvider) => Promise<boolean> | undefined;
   /** Сбросить отказы при открытии формы. */
   onReset?: () => void;
+  /** Поиск, фильтр и порядок над списком. */
+  toolbar?: ReactNode;
+  /** Листание под списком. */
+  pagination?: ReactNode;
+  /**
+   * Заданы поиск или фильтр: пустой список значит «ничего не найдено», а не
+   * «провайдеров пока нет».
+   */
+  filtered?: boolean;
+  /** Текущий поиск: попадает в пояснение «ничего не найдено». */
+  query?: string;
+  onResetFilters?: () => void;
+  /** Идёт запрос с новыми условиями: прежние строки приглушены. */
+  busy?: boolean;
 };
 
 const hostOf = (issuer: string): string => {
@@ -68,6 +83,12 @@ export const OidcSection = ({
   onToggle,
   onDelete,
   onReset,
+  toolbar,
+  pagination,
+  filtered = false,
+  query,
+  onResetFilters,
+  busy = false,
 }: OidcSectionProps) => {
   const { t } = useTranslation("adminSettings");
   const [form, setForm] = useState<
@@ -91,8 +112,8 @@ export const OidcSection = ({
       description={t("oidc.sub")}
       flush
       actions={
-        status === "ready" &&
-        providers.length > 0 && (
+        status !== "loading" &&
+        (providers.length > 0 || filtered) && (
           <Button
             size="sm"
             variant="secondary"
@@ -106,6 +127,7 @@ export const OidcSection = ({
         )
       }
     >
+      {toolbar && <div className="adm-section-toolbar">{toolbar}</div>}
       {status === "loading" && (
         <TableSkeleton
           rows={2}
@@ -125,7 +147,15 @@ export const OidcSection = ({
           />
         </div>
       )}
-      {status === "ready" && providers.length === 0 && (
+      {status === "ready" && providers.length === 0 && filtered && (
+        <NoResults
+          compact
+          query={query}
+          onReset={onResetFilters}
+          testId="oidc-none"
+        />
+      )}
+      {status === "ready" && providers.length === 0 && !filtered && (
         <EmptyState
           icon={<KeyRound size={18} />}
           title={t("oidc.empty.title")}
@@ -146,7 +176,12 @@ export const OidcSection = ({
         />
       )}
       {status === "ready" && providers.length > 0 && (
-        <ul className="adm-list" aria-label={t("oidc.title")}>
+        <ul
+          className="adm-list"
+          aria-label={t("oidc.title")}
+          aria-busy={busy}
+          style={{ opacity: busy ? 0.6 : 1, transition: "opacity 0.12s" }}
+        >
           {providers.map((provider) => (
             <li key={provider.id} data-testid={`oidc-provider-${provider.id}`}>
               <div className="adm-item">
@@ -229,6 +264,9 @@ export const OidcSection = ({
             </li>
           ))}
         </ul>
+      )}
+      {status === "ready" && pagination && providers.length > 0 && (
+        <div className="adm-list-pager">{pagination}</div>
       )}
       {failure && !removing && !form && (
         <div style={{ padding: "0 20px 16px" }}>

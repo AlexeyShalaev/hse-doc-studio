@@ -1,14 +1,30 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
-import { ErrorState, Section, Spinner, TableSkeleton } from "@shared/ui";
-import { useBootstrap, type AdminOidcProvider } from "@entities/session";
 import {
+  needsPager,
+  toast,
+  useListQueryState,
+  useServerList,
+} from "@shared/lib";
+import {
+  ErrorState,
+  FilterBar,
+  FilterMenu,
+  Pagination,
+  Section,
+  SortMenu,
+  Spinner,
+  TableSkeleton,
+  type ActiveFilter,
+} from "@shared/ui";
+import { useBootstrap, type AdminOidcProvider } from "@entities/session";
+import { adminSettingsApi } from "../api/adminSettingsApi";
+import {
+  adminSettingsKeys,
   useAuthSettings,
   useCreateProvider,
   useDeleteProvider,
-  useOidcProviders,
   useRegistrationSettings,
   useSmtpSettings,
   useTestSmtp,
@@ -25,6 +41,15 @@ import { LocalesFailed } from "./LocalesFailed";
 import { OidcSection } from "./OidcSection";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
+
+// Список провайдеров в адресе под приставкой oidc.: на странице есть и другие
+// разделы. Поиск, состояние и порядок считает сервер.
+const OIDC_LIST = {
+  prefix: "oidc.",
+  filters: { enabled: { values: ["true", "false"] } },
+  sort: { fields: ["created_at", "label"], default: "created_at" },
+} as const;
+const OIDC_KEY = adminSettingsKeys.providers();
 
 /** Адрес для redirect URI: публичный адрес установки, иначе адрес вкладки. */
 const baseUrlOf = (publicUrl: string | undefined): string => {
@@ -95,7 +120,12 @@ export const AdminAuthSettings = ({
   const registration = useRegistrationSettings();
   const auth = useAuthSettings();
   const smtp = useSmtpSettings();
-  const providers = useOidcProviders();
+  const oidcState = useListQueryState(OIDC_LIST);
+  const providers = useServerList({
+    state: oidcState,
+    queryKey: OIDC_KEY,
+    fetchPage: adminSettingsApi.providers,
+  });
   const saveRegistration = useUpdateRegistration();
   const saveAuth = useUpdateAuth();
   const saveSmtp = useUpdateSmtp();
@@ -159,12 +189,95 @@ export const AdminAuthSettings = ({
     });
   };
 
+  const enabledLabel = (value: string) =>
+    t(value === "true" ? "oidc.on" : "oidc.off");
+  const oidcActive: ActiveFilter[] = [
+    ...(oidcState.q
+      ? [
+          {
+            id: "q",
+            label: t("oidc.filters.search"),
+            value: oidcState.q,
+            onRemove: () => {
+              oidcState.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(oidcState.filter("enabled")
+      ? [
+          {
+            id: "enabled",
+            label: t("oidc.filters.state"),
+            value: enabledLabel(oidcState.filter("enabled")),
+            onRemove: () => {
+              oidcState.setFilter("enabled", null);
+            },
+          },
+        ]
+      : []),
+  ];
+  const loaded = providers.query.data !== undefined;
+  // Провайдеров нет совсем: вместо поиска одно пустое состояние с «Добавить».
+  const nothingYet =
+    loaded &&
+    !oidcState.isFiltered &&
+    providers.total === 0 &&
+    !providers.query.isPlaceholderData;
+  const oidcToolbar =
+    !nothingYet && (loaded || oidcState.isFiltered) ? (
+      <FilterBar
+        search={oidcState.q}
+        onSearchChange={oidcState.setQ}
+        searchLabel={t("oidc.search")}
+        searchPlaceholder={t("oidc.searchPlaceholder")}
+        busy={providers.isFetching}
+        onReset={oidcState.reset}
+        active={oidcActive}
+        total={oidcState.isFiltered ? providers.total : null}
+        extra={
+          <>
+            <FilterMenu
+              single
+              label={t("oidc.filters.state")}
+              testId="oidc-filter-enabled"
+              values={oidcState.filters.enabled}
+              onChange={(values) => {
+                oidcState.setFilter("enabled", values);
+              }}
+              options={OIDC_LIST.filters.enabled.values.map((value) => ({
+                value,
+                label: enabledLabel(value),
+              }))}
+            />
+            <SortMenu
+              testId="oidc-sort"
+              value={oidcState.sort}
+              onChange={oidcState.setSort}
+              options={[
+                { field: "created_at", label: t("oidc.sort.created") },
+                { field: "label", label: t("oidc.sort.label") },
+              ]}
+            />
+          </>
+        }
+      />
+    ) : null;
+
   const oidc = (
     <OidcSection
-      status={
-        providers.data ? "ready" : providers.isError ? "error" : "loading"
+      status={providers.isError ? "error" : loaded ? "ready" : "loading"}
+      providers={providers.items}
+      toolbar={oidcToolbar}
+      pagination={
+        needsPager(providers.total, oidcState) ? (
+          <Pagination {...providers.pagination} />
+        ) : null
       }
-      providers={providers.data ?? []}
+      filtered={oidcState.isFiltered}
+      query={oidcState.q}
+      onResetFilters={oidcState.reset}
+      busy={providers.query.isPlaceholderData}
       baseUrl={baseUrlOf(publicUrl)}
       saving={create.isPending || update.isPending}
       formFailure={oidcFailure}

@@ -24,7 +24,7 @@ import { activateServerScenario } from "@/app/demo/server";
 import { serverAdminDemoRoutes } from "@/app/demo/server/routes";
 import { detailText } from "./lib/format";
 import { ensureAdminUsersLocales } from "./lib/locales";
-import { AdminUsers, AuditLog } from "./index";
+import { AdminUsers } from "./index";
 
 // Люди в админке поверх демо-транспорта: те же запросы, что уйдут настоящему бэкенду,
 // и ответы, проходящие те же строгие схемы.
@@ -284,35 +284,6 @@ describe("люди в админке: экраны", () => {
     render(wrap(<AdminUsers />));
     expect(await screen.findByTestId("users-forbidden")).toBeVisible();
     expect(screen.queryByTestId("users-invite")).toBeNull();
-  });
-
-  it("аудит: подписи действий, фильтр и подгрузка", async () => {
-    const user = userEvent.setup();
-    render(wrap(<AuditLog />));
-    expect((await screen.findAllByText("Вход")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Аккаунт одобрен").length).toBeGreaterThan(0);
-    await user.click(screen.getByTestId("audit-more"));
-    await waitFor(() => {
-      expect(screen.getAllByTestId(/^audit-\d+$/).length).toBeGreaterThan(25);
-    });
-    await user.click(screen.getByRole("button", { name: "Люди" }));
-    await waitFor(() => {
-      expect(screen.queryByText("Вход")).toBeNull();
-    });
-  });
-
-  it("аудит: поиск по загруженным записям и пустой результат", async () => {
-    const user = userEvent.setup();
-    render(wrap(<AuditLog />));
-    await screen.findAllByText("Вход");
-    await user.type(screen.getByRole("searchbox"), "нет-такого");
-    expect(await screen.findByText("Ничего не нашли")).toBeVisible();
-    await user.clear(screen.getByRole("searchbox"));
-    await user.type(screen.getByRole("searchbox"), "аккаунт одобрен");
-    await waitFor(() => {
-      expect(screen.getAllByText("Аккаунт одобрен").length).toBeGreaterThan(0);
-    });
-    expect(screen.queryByText("Вход")).toBeNull();
   });
 
   it("английский интерфейс", async () => {

@@ -403,7 +403,6 @@ export const AdminAuditEventSchema = z.strictObject({
   details: z.record(z.string(), z.unknown()),
 });
 // Курсор непрозрачный; total_estimate есть только без фильтров, иначе «из N» не показывается.
-// Оценка числа записей; только без фильтров, иначе null.
 export const AdminAuditPageSchema = cursorPageOf(AdminAuditEventSchema);
 export const CreateAdminInvitationRequestSchema = z.strictObject({
   email: z.string().nullable(),

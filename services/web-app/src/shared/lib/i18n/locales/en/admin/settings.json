@@ -65,6 +65,16 @@
     "title": "Single sign-on (OIDC)",
     "sub": "Sign-in through your organization's external service. The client secret is saved once and never shown.",
     "add": "Add provider",
+    "search": "Search providers",
+    "searchPlaceholder": "Name or issuer address",
+    "filters": {
+      "search": "Search",
+      "state": "State"
+    },
+    "sort": {
+      "created": "Date added",
+      "label": "Name"
+    },
     "loadFailed": "Could not load the providers",
     "empty": {
       "title": "No providers yet",

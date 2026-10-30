@@ -2,12 +2,27 @@ import { useState, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
-import { Button, Modal, Spinner } from "@shared/ui";
+import {
+  needsPager,
+  toast,
+  useListQueryState,
+  useServerList,
+} from "@shared/lib";
+import {
+  Button,
+  FilterBar,
+  FilterMenu,
+  Modal,
+  Pagination,
+  SortMenu,
+  Spinner,
+  type ActiveFilter,
+} from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
-  aiProviderApiFor,
-  useAIProviders,
+  AIProviderTypeSchema,
+  aiProviderKeys,
+  instanceAiProviderApi,
   useDeleteAIProvider,
   type AIProvider,
 } from "@entities/ai-provider";
@@ -22,7 +37,16 @@ export type EditorSlotProps = {
   onClose: () => void;
 };
 
-const instanceApi = aiProviderApiFor("instance");
+const TYPES = AIProviderTypeSchema.options;
+const SORT_FIELDS = ["created_at", "name", "type"] as const;
+
+// Состояние списка в адресе: поиск по названию и адресу, тип и порядок. Всё
+// это считает сервер; по умолчанию порядок добавления.
+const LIST = {
+  filters: { type: { multi: true, values: TYPES } },
+  sort: { fields: SORT_FIELDS, default: "created_at" },
+} as const;
+const LIST_KEY = [...aiProviderKeys.all, "instance"] as const;
 
 /**
  * Раздел «ИИ-провайдеры»: общие провайдеры установки. Форму провайдера рисует тот же
@@ -45,7 +69,12 @@ const AiBody = ({
   renderEditor: (props: EditorSlotProps) => ReactNode;
 }) => {
   const { t } = useTranslation("adminInstall");
-  const providers = useAIProviders("instance");
+  const state = useListQueryState(LIST);
+  const list = useServerList({
+    state,
+    queryKey: LIST_KEY,
+    fetchPage: instanceAiProviderApi.page,
+  });
   const remove = useDeleteAIProvider("instance");
   const [editing, setEditing] = useState<{
     provider: AIProvider | null;
@@ -72,6 +101,44 @@ const AiBody = ({
     setEditing({ provider: null });
   };
 
+  const typeLabel = (type: string) => t(`ai.type.${type}`);
+  // Провайдеров нет совсем: вместо поиска и фильтров одно пустое состояние с
+  // кнопкой «Добавить».
+  const loaded = list.query.data !== undefined;
+  const nothingYet =
+    loaded &&
+    !state.isFiltered &&
+    list.total === 0 &&
+    !list.query.isPlaceholderData;
+  // Поиск и фильтры видны и при отказе: иначе неудачное условие не снять.
+  const withBar = !nothingYet && (loaded || state.isFiltered);
+  const active: ActiveFilter[] = [
+    ...(state.q
+      ? [
+          {
+            id: "q",
+            label: t("ai.filters.search"),
+            value: state.q,
+            onRemove: () => {
+              state.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(state.filters.type.length > 0
+      ? [
+          {
+            id: "type",
+            label: t("ai.filters.type"),
+            value: state.filters.type.map(typeLabel).join(", "),
+            onRemove: () => {
+              state.setFilter("type", null);
+            },
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div
       className="flex flex-col"
@@ -82,7 +149,7 @@ const AiBody = ({
         title={t("ai.page.title")}
         lead={t("ai.page.lead")}
         actions={
-          providers.data && providers.data.length > 0 ? (
+          withBar ? (
             <Button
               size="sm"
               type="button"
@@ -95,9 +162,59 @@ const AiBody = ({
           ) : null
         }
       />
-      {providers.data ? (
+      {withBar && (
+        <FilterBar
+          search={state.q}
+          onSearchChange={state.setQ}
+          searchLabel={t("ai.search")}
+          searchPlaceholder={t("ai.searchPlaceholder")}
+          busy={list.isFetching}
+          onReset={state.reset}
+          active={active}
+          total={state.isFiltered ? list.total : null}
+          extra={
+            <>
+              <FilterMenu
+                label={t("ai.filters.type")}
+                testId="shared-provider-filter-type"
+                values={state.filters.type}
+                onChange={(values) => {
+                  state.setFilter("type", values);
+                }}
+                options={TYPES.map((type) => ({
+                  value: type,
+                  label: typeLabel(type),
+                }))}
+              />
+              <SortMenu
+                testId="shared-provider-sort"
+                value={state.sort}
+                onChange={state.setSort}
+                options={[
+                  {
+                    field: "created_at",
+                    label: t("ai.sort.created"),
+                  },
+                  { field: "name", label: t("ai.sort.name") },
+                  { field: "type", label: t("ai.sort.type") },
+                ]}
+              />
+            </>
+          }
+        />
+      )}
+      {loaded && !list.isError ? (
         <SharedProviders
-          providers={providers.data}
+          providers={list.items}
+          filtered={state.isFiltered}
+          query={state.q}
+          onResetFilters={state.reset}
+          busy={list.query.isPlaceholderData}
+          pagination={
+            needsPager(list.total, state) ? (
+              <Pagination {...list.pagination} />
+            ) : null
+          }
           deleting={remove.isPending}
           onAdd={add}
           onEdit={(provider) => {
@@ -107,14 +224,14 @@ const AiBody = ({
             setFailure(null);
             setDeleting(provider);
           }}
-          onCheck={(provider) => instanceApi.fetchModels(provider.id)}
+          onCheck={(provider) => instanceAiProviderApi.fetchModels(provider.id)}
         />
       ) : (
         <LoadState
-          failed={providers.isError}
+          failed={list.isError}
           sections={1}
           onRetry={() => {
-            void providers.refetch();
+            void list.refetch();
           }}
         />
       )}

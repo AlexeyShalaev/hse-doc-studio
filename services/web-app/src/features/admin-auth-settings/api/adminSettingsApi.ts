@@ -1,4 +1,5 @@
 import { adminClient, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AdminAuthSettingsSchema,
   AdminOidcProviderPageSchema,
@@ -54,12 +55,13 @@ export const adminSettingsApi = {
       .post("/settings/smtp/test", { to }, quiet)
       .then(parseResp(AdminSmtpTestResultSchema)),
 
-  // Провайдеров единицы: экран берёт одну страницу наибольшего размера.
-  providers: (): Promise<AdminOidcProvider[]> =>
+  providers: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<AdminOidcProvider>> =>
     adminClient
-      .get("/oidc-providers", { ...quiet, params: { limit: 200 } })
-      .then(parseResp(AdminOidcProviderPageSchema))
-      .then((page) => page.items),
+      .get("/oidc-providers", { ...quiet, signal, params })
+      .then(parseResp(AdminOidcProviderPageSchema)),
   createProvider: (
     body: CreateAdminOidcProviderRequest,
   ): Promise<AdminOidcProvider> =>

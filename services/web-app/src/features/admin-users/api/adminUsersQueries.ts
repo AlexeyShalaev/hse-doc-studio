@@ -1,6 +1,5 @@
 import {
   keepPreviousData,
-  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -19,7 +18,6 @@ export const adminUsersKeys = {
   user: (id: string) => [...adminUsersKeys.all, "user", id] as const,
   approvalsList: () => [...adminUsersKeys.all, "approvals-list"] as const,
   invitationsList: () => [...adminUsersKeys.all, "invitations-list"] as const,
-  audit: (action: string) => ["admin", "audit", action] as const,
 };
 
 export const useUsers = (query: UsersQuery) =>
@@ -65,16 +63,6 @@ export const useApprovals = (page: number) =>
     queryKey: adminUsersKeys.approvals(page),
     queryFn: () => adminUsersApi.approvals(page),
     placeholderData: keepPreviousData,
-    staleTime: 0,
-  });
-
-export const useAudit = (action: string) =>
-  useInfiniteQuery({
-    queryKey: adminUsersKeys.audit(action),
-    queryFn: ({ pageParam }) =>
-      adminUsersApi.audit({ action, cursor: pageParam }),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.next_cursor,
     staleTime: 0,
   });
 

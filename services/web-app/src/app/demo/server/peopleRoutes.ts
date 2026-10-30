@@ -8,7 +8,7 @@ import type {
   AdminUserOrg,
   OrgRoleName,
 } from "@entities/session";
-import type { DemoAdminPeople, DemoAuditEvent } from "./adminPeople";
+import type { DemoAdminPeople } from "./adminPeople";
 import {
   boolParam,
   cursorList,
@@ -48,6 +48,9 @@ const STATUSES: readonly AccountStatus[] = [
 const INVITE_STATUSES = ["pending", "used", "expired"] as const;
 const ORG_ROLES: readonly OrgRoleName[] = ["owner", "admin", "member"];
 type AuditRow = DemoAdminPeople["audit"][number];
+const AUDIT_LABEL_KEYS = ["name", "label", "email", "slug"] as const;
+// Удалённый человек остаётся в журнале псевдонимом с этой приставкой.
+const DELETED_PREFIX = "deleted:";
 
 /** Журнал сверху вниз: свежие записи, затем архив большого мира по id. */
 function* auditRows(people: DemoAdminPeople): Generator<AuditRow> {
@@ -123,21 +126,29 @@ export const createPeopleRoutes = (
   const publicUrl = () =>
     adminInstallOf(getWorld()).instance.public_url.replace(/\/+$/, "");
   const linkOf = (id: string) => `${publicUrl()}/invite/demo-${id}`;
-  /** Подписи, как у сервера: человек по id, иначе name, label, email или slug из details. */
-  const auditView = (e: DemoAuditEvent): AdminAuditEvent => {
-    const actor = e.actor_id ? userOf(e.actor_id) : undefined;
-    const target = e.target ? userOf(e.target) : undefined;
-    const detail = (["name", "label", "email", "slug"] as const)
-      .map((key) => e.details[key])
-      .find((value): value is string => typeof value === "string");
+  /**
+   * Строка журнала, как её отдаёт сервер: кто действовал и подпись цели.
+   * Порядок подписи тот же: человек по id, иначе name, label, email или slug
+   * из details, иначе псевдоним удалённого.
+   */
+  const auditView = (e: AuditRow): AdminAuditEvent => {
+    const actor = userOf(e.actor_id);
+    const person = userOf(e.target);
+    const detail = AUDIT_LABEL_KEYS.map((key) => e.details[key]).find(
+      (value): value is string => typeof value === "string" && value !== "",
+    );
     return {
       ...e,
-      actor: e.actor_id
-        ? actor
-          ? { id: actor.id, name: actor.name, email: actor.email }
-          : { id: e.actor_id, name: e.actor_id, email: null }
-        : null,
-      target_label: e.target ? (target?.name ?? detail ?? null) : null,
+      actor:
+        e.actor_id === null
+          ? null
+          : actor
+            ? { id: actor.id, name: actor.name, email: actor.email }
+            : { id: e.actor_id, name: e.actor_id, email: null },
+      target_label:
+        person?.name ??
+        detail ??
+        (e.target?.startsWith(DELETED_PREFIX) ? e.target : null),
     };
   };
   const record = (action: string, target: string | null) => {
@@ -473,6 +484,7 @@ export const createPeopleRoutes = (
           target !== null;
         const people = state();
         return cursorList(req, auditRows(people), (e) => e.id, {
+          view: auditView,
           accept: (e) => {
             const at = Date.parse(e.at);
             return (
@@ -488,7 +500,6 @@ export const createPeopleRoutes = (
                 (e.actor_id !== null && (actors?.has(e.actor_id) ?? false)))
             );
           },
-          view: auditView,
           totalEstimate: filtered
             ? null
             : people.audit.length + (people.archive?.count ?? 0),

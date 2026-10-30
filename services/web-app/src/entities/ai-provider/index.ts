@@ -15,6 +15,7 @@ export type {
 export {
   aiProviderApi,
   aiProviderApiFor,
+  instanceAiProviderApi,
   type AIProviderOwner,
 } from "./api/aiProviderApi";
 export {
