@@ -91,6 +91,9 @@ describe("оболочка и сводка админки", () => {
     const people = await screen.findByTestId("overview-kpi-people");
     expect(await within(people).findByText("13")).toBeInTheDocument();
     expect(within(people).getByText("3 ждут одобрения")).toBeInTheDocument();
+    // Занято столько же, сколько на странице «Хранилище»: диск проектов, а не только сборки.
+    const storage = screen.getByTestId("overview-kpi-storage");
+    expect(await within(storage).findByText("114 ГБ")).toBeInTheDocument();
     expect(
       await screen.findByTestId("overview-attention-approvals"),
     ).toHaveAttribute("href", "/admin/users?tab=approvals");

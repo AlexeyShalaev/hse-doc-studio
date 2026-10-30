@@ -410,7 +410,7 @@ const servicesFor = (seed: ServerDemoOpsSeed): AdminService[] => {
     svc("onlyoffice", "onlyoffice", "ok", null),
     runnersDown
       ? svc("runners", "runners", "down", "no_online_runner", [0, 3])
-      : svc("runners", "runners", "ok", null, [4, 6]),
+      : svc("runners", "runners", "ok", null, [2, 5]),
     svc("smtp", "smtp", "ok", null),
   ];
 };
@@ -443,9 +443,9 @@ const storageFor = (seed: ServerDemoOpsSeed, now: number): AdminStorage => {
       { id: MARIA[0], name: MARIA[1], projects: 12 },
       { id: IVAN[0], name: IVAN[1], projects: 9 },
       { id: PETR[0], name: PETR[1], projects: 6 },
-      { id: "u_01hx7kaa01", name: "Екатерина Смирнова", projects: 4 },
+      { id: "u_01hx7k7m6n", name: "Екатерина Смирнова", projects: 4 },
       { id: DARYA[0], name: DARYA[1], projects: 3 },
-      { id: "u_01hx7kbb02", name: "Алексей Ковалёв", projects: 2 },
+      { id: "u_01hx7k8p7q", name: "Алексей Новиков", projects: 2 },
     ],
   };
 };

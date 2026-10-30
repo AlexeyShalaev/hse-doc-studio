@@ -671,7 +671,7 @@ describe("операционные разделы: экраны", () => {
     // Баннер только при сбое; у здоровых сервисов нет строки причины.
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByTestId("service-detail-database")).toBeNull();
-    expect(screen.getByTestId("service-runners")).toHaveTextContent("4 из 6");
+    expect(screen.getByTestId("service-runners")).toHaveTextContent("2 из 5");
     await user.click(screen.getByTestId("services-refresh"));
     expect(await screen.findByTestId("service-database")).toBeVisible();
   }, 20_000);

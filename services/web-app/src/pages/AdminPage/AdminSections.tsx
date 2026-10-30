@@ -115,11 +115,15 @@ const Kpis = () => {
   ).length;
   const badServices = (services.data ?? []).filter(isBad).length;
   const disk = storage.data;
-  const used =
+  // Занятое место на диске проектов, как на странице «Хранилище»; без данных о
+  // томе показываем объём сборок и вложений.
+  const usedBytes =
     disk?.volume_total_bytes && disk.free_bytes !== null
-      ? ((disk.volume_total_bytes - disk.free_bytes) /
-          disk.volume_total_bytes) *
-        100
+      ? disk.volume_total_bytes - disk.free_bytes
+      : null;
+  const used =
+    usedBytes !== null && disk?.volume_total_bytes
+      ? (usedBytes / disk.volume_total_bytes) * 100
       : null;
   const low = disk ? isLowSpace(disk) : false;
   const failed = t("overview.kpi.failed");
@@ -173,7 +177,7 @@ const Kpis = () => {
         label={t("overview.kpi.storage")}
         loading={storage.isPending && !storage.isError}
         error={storage.isError ? failed : undefined}
-        value={disk ? formatFileSize(disk.blob_bytes) : ""}
+        value={disk ? formatFileSize(usedBytes ?? disk.blob_bytes) : ""}
         progress={used}
         progressTone={low ? "warning" : "neutral"}
         tone={low ? "warning" : "neutral"}

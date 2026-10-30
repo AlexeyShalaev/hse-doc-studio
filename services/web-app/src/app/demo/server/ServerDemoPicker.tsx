@@ -26,9 +26,10 @@ export const ServerDemoPicker = () => {
   };
 
   return (
+    // Выше подвала меню админки: на 80px кнопка закрывала «Вернуться в Студию».
     <div
       className="fixed"
-      style={{ left: 12, bottom: 80, zIndex: 110 }}
+      style={{ left: 12, bottom: 120, zIndex: 110 }}
       data-testid="server-demo-picker"
     >
       <Popover open={open} onOpenChange={setOpen}>
