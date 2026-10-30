@@ -14,7 +14,7 @@ from hse_doc_studio.api.schemas.ai_providers import (
     UpdateAIProviderRequest,
 )
 from hse_doc_studio.core.entities import AIProvider
-from hse_doc_studio.core.enums import Lang
+from hse_doc_studio.core.enums import AIProviderOwnerKind, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import (
@@ -52,6 +52,7 @@ def _map_provider(provider: AIProvider) -> AIProviderResponse:
         ssl_verify=provider.ssl_verify,
         connect_timeout_s=provider.connect_timeout_s,
         request_timeout_s=provider.request_timeout_s,
+        shared=provider.owner_kind is AIProviderOwnerKind.instance,
     )
 
 

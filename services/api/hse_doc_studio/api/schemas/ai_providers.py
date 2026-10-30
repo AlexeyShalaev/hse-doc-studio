@@ -46,6 +46,8 @@ class AIProviderResponse(BaseModel):
     ssl_verify: bool
     connect_timeout_s: float
     request_timeout_s: float
+    # Общий провайдер установки: его задал админ, ключ пользователю не виден. В локальном режиме всегда false.
+    shared: bool = False
 
 
 class ProviderModelsResponse(BaseModel):

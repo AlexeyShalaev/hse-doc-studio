@@ -261,3 +261,41 @@ async def test__owner_check__rejects_inconsistent_rows(world: World) -> None:
                         ),
                         {"id": uuid4(), "kind": kind, "owner": owner},
                     )
+
+
+async def test__admin_store__shared_provider_is_visible_to_users_without_the_key(world: World) -> None:
+    from hse_doc_studio.use_cases.admin.ops_ai_providers import InstanceAiProviderStore  # noqa: PLC0415
+
+    store = InstanceAiProviderStore(world.repo)
+    shared = make_provider("Общий Claude", owner_kind=AIProviderOwnerKind.instance, type=AIProviderType.claude)
+
+    with as_actor(_ADMIN):
+        await store.save(
+            await _as_instance(shared),
+            api_key=_KEY,
+        )
+        assert [p.name for p in await store.list()] == ["Общий Claude"]
+        assert await store.reveal_key(shared.id) == _KEY
+        await store.save(await _as_instance(shared), clear_key=True)
+        assert await store.reveal_key(shared.id) == ""
+        await store.save(await _as_instance(shared), api_key=_KEY)
+    with as_actor(_ANNA):
+        seen = await world.repo.list_all()
+    assert [(p.name, p.owner_kind, p.api_key) for p in seen] == [("Общий Claude", AIProviderOwnerKind.instance, "")]
+
+
+async def _as_instance(provider: AIProvider):  # noqa: ANN202
+    from hse_doc_studio.use_cases.admin.ops_ai_providers import InstanceAiProvider  # noqa: PLC0415
+
+    return InstanceAiProvider(
+        id=provider.id,
+        name=provider.name,
+        type=provider.type,
+        base_url=provider.base_url,
+        models=tuple(provider.models),
+        ssl_verify=provider.ssl_verify,
+        connect_timeout_s=provider.connect_timeout_s,
+        request_timeout_s=provider.request_timeout_s,
+        created_at=provider.created_at,
+        key_set=False,
+    )
