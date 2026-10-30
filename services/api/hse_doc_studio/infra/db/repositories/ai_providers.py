@@ -76,6 +76,8 @@ class PostgresAIProviderRepository:
                     connect_timeout_s=provider.connect_timeout_s,
                     request_timeout_s=provider.request_timeout_s,
                     created_at=provider.created_at,
+                    runner_id=provider.runner_id,
+                    runner_endpoint=provider.runner_endpoint,
                 )
             )
 
@@ -89,6 +91,10 @@ class PostgresAIProviderRepository:
             "ssl_verify": provider.ssl_verify,
             "connect_timeout_s": provider.connect_timeout_s,
             "request_timeout_s": provider.request_timeout_s,
+            # Провайдер «через раннер» хранит раннер и имя его ИИ-адреса, прямой провайдер оба null:
+            # ограничение ck_ai_providers_runner требует ровно этого.
+            "runner_id": provider.runner_id,
+            "runner_endpoint": provider.runner_endpoint,
         }
         if provider.api_key:
             values["api_key_enc"] = self._seal(provider.id, provider.api_key)
@@ -144,6 +150,8 @@ class PostgresAIProviderRepository:
             connect_timeout_s=row.connect_timeout_s,
             request_timeout_s=row.request_timeout_s,
             owner_kind=AIProviderOwnerKind(row.owner_kind),
+            runner_id=row.runner_id,
+            runner_endpoint=row.runner_endpoint,
         )
 
 
