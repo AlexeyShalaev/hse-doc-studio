@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from hse_doc_studio.api.config import AgentConfig, settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
@@ -66,8 +66,10 @@ class _FakeProvider:
     def __init__(self, turns: list[NormalizedTurn]) -> None:
         self._turns = turns
         self._i = 0
+        self.project_ids: list[UUID | None] = []
 
-    async def run_turn(self, *, sink: Any = None, **_: Any) -> NormalizedTurn:
+    async def run_turn(self, *, sink: Any = None, project_id: UUID | None = None, **_: Any) -> NormalizedTurn:
+        self.project_ids.append(project_id)
         turn = self._turns[self._i]
         self._i += 1
         if sink is not None and turn.text:
@@ -78,9 +80,13 @@ class _FakeProvider:
 class _FakeSummarizer:
     def __init__(self) -> None:
         self.called = False
+        self.project_id: UUID | None = None
 
-    async def summarize(self, messages: Any, prior: Any, model: str, provider: AIProvider) -> str:
+    async def summarize(
+        self, messages: Any, prior: Any, model: str, provider: AIProvider, project_id: UUID | None = None
+    ) -> str:
         self.called = True
+        self.project_id = project_id
         return "КРАТКОЕ СОДЕРЖАНИЕ"
 
 
@@ -159,9 +165,10 @@ async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_e
     )
     loop = _make_loop(repo, provider, ToolRegistry([_EchoTool().definition()]), bus=bus)
     run_id = uuid4()
+    project_id = uuid4()
 
     result = await loop.run(
-        project_id=uuid4(),
+        project_id=project_id,
         project_folder=tmp_path,
         session_id=session.id,
         run_id=run_id,
@@ -172,6 +179,8 @@ async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_e
     assert result.status == AgentRunStatus.succeeded
     assert result.iterations == 2
     assert result.usage.total_tokens == 18
+    # Проект чата доходит до провайдера: ретрансляция через раннер пишет его в задачу очереди.
+    assert provider.project_ids == [project_id, project_id]
 
     messages = await repo.list_messages(tmp_path, session.id)
     assert [m.role.value for m in messages] == ["user", "assistant", "tool", "assistant"]
@@ -373,9 +382,10 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
         context_service=ChatContextService(),
         summarizer=summarizer,
     )
+    project_id = uuid4()
 
     await loop.run(
-        project_id=uuid4(),
+        project_id=project_id,
         project_folder=tmp_path,
         session_id=session.id,
         run_id=uuid4(),
@@ -384,6 +394,7 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
     )
 
     assert summarizer.called is True
+    assert summarizer.project_id == project_id
     summaries = await repo.list_summaries(tmp_path, session.id)
     assert len(summaries) == 1
     assert summaries[0].text == "КРАТКОЕ СОДЕРЖАНИЕ"

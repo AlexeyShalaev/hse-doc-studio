@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from typing import Protocol
+from uuid import UUID
 
 from hse_doc_studio.core.agent.entities import (
     AgentEvent,
@@ -30,6 +31,7 @@ class IAgentProvider(Protocol):
     # depend on it without importing infra; the SDK-backed dispatcher lives in
     # infra/ai/agent. `tool_choice_allowed` is False for Ollama (its OpenAI-compat
     # endpoint rejects tool_choice). `cancel` is checked between streamed chunks.
+    # `project_id`: проект чата; ретрансляция через личный раннер пишет его в задачу очереди.
     async def run_turn(
         self,
         *,
@@ -43,6 +45,7 @@ class IAgentProvider(Protocol):
         temperature: float,
         sink: StreamSink | None,
         cancel: asyncio.Event,
+        project_id: UUID | None = None,
     ) -> NormalizedTurn: ...
 
 

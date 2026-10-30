@@ -243,7 +243,7 @@ class StartChatTurnUC:
         await self._chat_repo.save_run(run)
         self._spawn(run, project, provider, model, ())
         if should_generate_title and inp.text.strip():
-            self._spawn_title_generation(folder, inp.session_id, inp.text, provider, model)
+            self._spawn_title_generation(folder, inp.session_id, inp.text, provider, model, project.id)
         return StartChatTurnOutput(run_id=run.id, user_message_seq=user_seq)
 
     async def _resume(self, inp: StartChatTurnInput, folder: Path, project: Project) -> StartChatTurnOutput:
@@ -287,8 +287,11 @@ class StartChatTurnUC:
         user_text: str,
         provider: AIProvider,
         model: str,
+        project_id: UUID,
     ) -> None:
-        task = asyncio.create_task(self._generate_title_task(folder, session_id, user_text, provider, model))
+        task = asyncio.create_task(
+            self._generate_title_task(folder, session_id, user_text, provider, model, project_id)
+        )
         self._title_tasks.add(task)
         task.add_done_callback(self._title_tasks.discard)
 
@@ -299,6 +302,7 @@ class StartChatTurnUC:
         user_text: str,
         provider: AIProvider,
         model: str,
+        project_id: UUID,
     ) -> None:
         fallback = _fallback_title(user_text)
         language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
@@ -315,6 +319,7 @@ class StartChatTurnUC:
                     temperature=0.1,
                     sink=None,
                     cancel=asyncio.Event(),
+                    project_id=project_id,
                 ),
                 timeout=_TITLE_TIMEOUT_S,
             )

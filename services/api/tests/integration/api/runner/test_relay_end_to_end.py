@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -31,7 +31,7 @@ from hse_doc_studio.core.agent.entities import AgentMessage
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderType
 from hse_doc_studio.core.jobs.enums import JobState
-from hse_doc_studio.core.jobs.relay import AiEndpointFlavor, RelayErrorCode
+from hse_doc_studio.core.jobs.relay import NO_PROJECT_ID, AiEndpointFlavor, RelayErrorCode
 from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, JobTokenSigner, RunnerHostKind
 from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION, SERVER_FEATURES
 from hse_doc_studio.core.mode import StudioMode
@@ -64,6 +64,7 @@ from tests.unit.use_cases.ai_relay.helpers import OWNER_ID, make_personal_runner
 
 _ADMIN = Actor(kind="user", id="admin", is_instance_admin=True)
 _ANNA = Actor.user(OWNER_ID, "Анна")
+_PROJECT_ID = UUID("5e5e5e5e-0000-4000-8000-000000000000")
 
 
 class _Uow:
@@ -255,6 +256,7 @@ async def _turn(stack: _Stack, sink: _Sink, cancel: asyncio.Event):  # type: ign
             temperature=0.0,
             sink=sink,
             cancel=cancel,
+            project_id=_PROJECT_ID,
         )
 
 
@@ -275,6 +277,8 @@ async def test__chat_turn__tokens_stream_through_the_runner_before_the_answer_en
             await asyncio.sleep(0.02)
     (job,) = await stack.queue.list()
     assert job.state is JobState.succeeded
+    # Ретрансляция чата относится к его проекту, а не к «без проекта».
+    assert job.project_id == _PROJECT_ID
     assert job.result is not None
     assert job.result["data"]["status_code"] == 200
     request = stack.model.requests[0]
@@ -289,6 +293,8 @@ async def test__models__listed_through_the_runner(stack: _Stack) -> None:
         models = await SdkAIModelLister(stack.relay).list_models(stack.provider)
 
     assert models == ["fake-model"]
+    (job,) = await stack.queue.list()
+    assert job.project_id == NO_PROJECT_ID
 
 
 async def test__chat_cancel__closes_the_model_connection_within_seconds(stack: _Stack) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+from uuid import UUID
 
 import httpx2
 import openai
@@ -45,6 +46,7 @@ class SdkAgentProvider:
         temperature: float,
         sink: StreamSink | None,
         cancel: asyncio.Event,
+        project_id: UUID | None = None,
     ) -> NormalizedTurn:
         if provider.type == AIProviderType.claude:
             return await AnthropicShapedAgentProvider(provider).run_turn(
@@ -59,7 +61,7 @@ class SdkAgentProvider:
                 cancel=cancel,
             )
         if provider.type is AIProviderType.runner:
-            adapter = await self._runner_adapter(provider)
+            adapter = await self._runner_adapter(provider, project_id)
         else:
             adapter = OpenAIShapedAgentProvider(
                 provider, self._tokenizer, is_ollama=provider.type == AIProviderType.ollama
@@ -76,8 +78,11 @@ class SdkAgentProvider:
             cancel=cancel,
         )
 
-    async def _runner_adapter(self, provider: AIProvider) -> OpenAIShapedAgentProvider:
-        """OpenAI-путь через ретрансляцию: поправки Ollama по виду адреса, объявленному раннером, без повторов SDK."""
+    async def _runner_adapter(self, provider: AIProvider, project_id: UUID | None) -> OpenAIShapedAgentProvider:
+        """OpenAI-путь через ретрансляцию: поправки Ollama по виду адреса, объявленному раннером, без повторов SDK.
+
+        Проект чата уходит в задачу очереди, чтобы админка видела, к какому проекту относится ретрансляция.
+        """
         if self._relay is None:
             raise RuntimeError("runner providers need the relay client (server mode)")
         actor = require_actor()
@@ -89,7 +94,7 @@ class SdkAgentProvider:
             base_url=RELAY_BASE_URL,
             max_retries=0,
             http_client=httpx2.AsyncClient(
-                transport=RunnerRelayTransport(self._relay, actor, provider, None),
+                transport=RunnerRelayTransport(self._relay, actor, provider, project_id),
                 timeout=httpx2.Timeout(provider.request_timeout_s, connect=provider.connect_timeout_s),
             ),
         )
