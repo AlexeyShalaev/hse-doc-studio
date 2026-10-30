@@ -51,7 +51,7 @@ class FakeSession:
         if self.spec.registration_token is not None:
             # Как RunnerClient: личность пишется на диск, токен регистрации больше не нужен.
             save_identity(self.spec.data_dir, self.spec.server_url)
-            self._listener.on_registered(RUNNER_ID)
+            self._listener.on_registered()
         self._listener.on_session_state(self._owner.state_after_start)
         await self._stop.wait()
         self.stopped = True
@@ -97,3 +97,22 @@ async def eventually(predicate: Callable[[], bool], timeout_s: float = 3.0) -> N
         if time.monotonic() > deadline:
             raise AssertionError("condition not reached")
         await asyncio.sleep(0.005)
+
+
+class FakeEnvironment:
+    def __init__(self, *, docker: bool = True, image: bool = True, busy: bool = False) -> None:
+        self.docker = docker
+        self.image = image
+        self.busy = busy
+
+    async def docker_available(self) -> bool:
+        return self.docker
+
+    async def tex_image(self) -> str:
+        return "ghcr.io/example/texlive:2026"
+
+    async def image_present(self, image: str) -> bool:
+        return self.image
+
+    def local_busy(self) -> bool:
+        return self.busy

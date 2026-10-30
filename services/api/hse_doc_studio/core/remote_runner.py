@@ -21,6 +21,9 @@ REMOTE_RUNNER_NAME_MAX = 128
 AI_ENDPOINT_NAME_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,31}$"
 # http разрешён только для сервера на этой же машине: токен раннера иначе шёл бы по сети открытым текстом.
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+_LOCAL_SUFFIXES = (".local", ".lan", ".internal", ".home.arpa", ".localhost")
+# Управляемая Ollama и любой OpenAI-совместимый адрес; облачные виды (claude, openai) сервер вызывает сам.
+_CLOUD_FLAVORS = {"ollama": "ollama", "openai_compat": "openai"}
 
 
 class RemoteRunnerState(StrEnum):
@@ -164,6 +167,31 @@ def normalize_server_url(raw: str) -> str:
     raise RemoteRunnerError(
         RemoteRunnerErrorCode.url_invalid, "server address must use https (http only for localhost)"
     )
+
+
+def is_local_network_url(url: str) -> bool:
+    """Адрес модели в своей сети: loopback, частная сеть или имя без публичного домена.
+
+    Облаку открываются только такие адреса: модель в публичном интернете сервер вызовет и без раннера,
+    а ретрансляция туда только прятала бы, кто ходит наружу. Имя не разрешается (без ввода-вывода):
+    одно слово (`gpu`), `.local`, `.lan`, `.internal`, `.home.arpa` и `host.docker.internal` считаются своей сетью.
+    """
+    try:
+        host = (urlsplit(url.strip()).hostname or "").lower()
+    except ValueError:
+        return False
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return host in _LOOPBACK_HOSTS or "." not in host or host.endswith(_LOCAL_SUFFIXES)
+    return address.is_loopback or address.is_private
+
+
+def cloud_flavor(provider_type: str) -> str | None:
+    """Вид ИИ-адреса для облака по виду локального провайдера; None, если провайдер облаку не открывается."""
+    return _CLOUD_FLAVORS.get(provider_type)
 
 
 def _is_loopback(host: str) -> bool:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -28,6 +28,8 @@ class SessionFatalCode(StrEnum):
     unauthorized = "runner_unauthorized"
     # Хозяин отключён или личные раннеры выключены в установке.
     disabled = "runner_disabled"
+    # Сервер отказал по другой причине (предел раннеров, несовместимый протокол): код сервера в detail.
+    refused = "runner_refused"
 
 
 class RunnerSessionFatal(Exception):  # noqa: N818 — исход сессии, а не сбой кода
@@ -36,6 +38,7 @@ class RunnerSessionFatal(Exception):  # noqa: N818 — исход сессии, 
     def __init__(self, code: SessionFatalCode, detail: str = "") -> None:
         super().__init__(detail or code.value)
         self.code = code
+        self.detail = detail or code.value
 
 
 @dataclass(frozen=True)
@@ -46,11 +49,25 @@ class RunnerSessionSpec:
     name: str
     concurrency: int
     data_dir: Path
+    tex_image: str
+    # Без Docker или без образа тег tex не объявляется: сборки LaTeX тогда идут на общие раннеры.
+    tex_available: bool
+    # False: сейчас сборки не брать (идёт локальная сборка или нет Docker).
+    gate: Callable[[], bool] = field(default=lambda: True, compare=False)
+
+
+class IRunnerEnvironment(Protocol):
+    """Что супервизор узнаёт о машине: Docker, образ TeX и занятость локальных сборок."""
+
+    async def docker_available(self) -> bool: ...
+    async def tex_image(self) -> str: ...
+    async def image_present(self, image: str) -> bool: ...
+    def local_busy(self) -> bool: ...
 
 
 class IRunnerSessionListener(Protocol):
     def on_session_state(self, state: SessionState) -> None: ...
-    def on_registered(self, runner_id: str) -> None: ...
+    def on_registered(self) -> None: ...
 
 
 class IRunnerSession(Protocol):

@@ -46,11 +46,13 @@ class RunnerProvider(Provider):
         config: RunnerConfig,
         transport: httpx.AsyncBaseTransport | None = None,
         office_transport: httpx.AsyncBaseTransport | None = None,
+        host_paths: HostPathResolver | None = None,
     ) -> None:
         super().__init__()
         self._config = config
         self._transport = transport
         self._office_transport = office_transport
+        self._host_paths = host_paths
 
     @provide
     def get_config(self) -> RunnerConfig:
@@ -140,7 +142,7 @@ class RunnerProvider(Provider):
         lt_manager: ILanguageCheckService = NoLanguageCheck()
         return EmbeddedCompileRunner(
             executor=DockerCompileExecutor(
-                HostPathResolver(),
+                self._host_paths or HostPathResolver(),
                 image=config.tex_image,
                 cache_volume_name=config.tex_cache_volume,
                 idle_timeout_s=config.tex_idle_timeout_s,
@@ -201,6 +203,11 @@ def create_runner_container(
     *,
     transport: httpx.AsyncBaseTransport | None = None,
     office_transport: httpx.AsyncBaseTransport | None = None,
+    host_paths: HostPathResolver | None = None,
 ) -> AsyncContainer:
-    """Транспорты подменяют сеть в тестах: api раннера и Gotenberg."""
-    return make_async_container(RunnerProvider(config, transport, office_transport))
+    """Транспорты подменяют сеть в тестах: api раннера и Gotenberg.
+
+    `host_paths` нужен раннеру внутри контейнера Студии (облачные сборки локальной Студии): docker
+    монтирует папку сборки по пути хоста, а не по пути внутри контейнера.
+    """
+    return make_async_container(RunnerProvider(config, transport, office_transport, host_paths))

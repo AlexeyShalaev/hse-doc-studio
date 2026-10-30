@@ -22,15 +22,18 @@ from hse_doc_studio.core.remote_runner import (
     REMOTE_RUNNER_NAME_MAX,
     IRemoteRunnerSettingsStore,
     RemoteRunnerDetail,
+    RemoteRunnerDocker,
     RemoteRunnerError,
     RemoteRunnerErrorCode,
     RemoteRunnerPairing,
     RemoteRunnerSettings,
     RemoteRunnerState,
     RemoteRunnerStatusInfo,
+    RemoteRunnerTexImage,
     normalize_server_url,
 )
 from hse_doc_studio.infra.remote_runner.session import (
+    IRunnerEnvironment,
     IRunnerSession,
     RunnerSessionFactory,
     RunnerSessionFatal,
@@ -58,6 +61,8 @@ RUNNER_DIR_NAME = "remote-runner"
 DRAIN_TIMEOUT_S = 30.0
 # Раннер выключен на сервере (хозяин отключён или личные раннеры выключены): повтор раз в 5 минут.
 DISABLED_RETRY_S = 300.0
+# Как часто перепроверять Docker и образ TeX, пока сессия идёт.
+ENV_CHECK_S = 60.0
 CRASH_RETRY_S = 30.0
 # Сервер просит опрашивать сопряжение реже: прибавка к интервалу по RFC 8628.
 SLOW_DOWN_STEP_S = 5.0
@@ -81,6 +86,8 @@ class RemoteRunnerSupervisor:
         default_name: str,
         pairing_client: PairingClientFactory,
         session_factory: RunnerSessionFactory | None,
+        environment: IRunnerEnvironment | None = None,
+        env_check_s: float = ENV_CHECK_S,
         min_pairing_interval_s: float = 1.0,
         disabled_retry_s: float = DISABLED_RETRY_S,
         crash_retry_s: float = CRASH_RETRY_S,
@@ -92,6 +99,8 @@ class RemoteRunnerSupervisor:
         self._default_name = default_name[:REMOTE_RUNNER_NAME_MAX] or "Studio"
         self._pairing_client = pairing_client
         self._session_factory = session_factory
+        self._environment = environment
+        self._env_check_s = env_check_s
         self._min_pairing_interval_s = min_pairing_interval_s
         self._disabled_retry_s = disabled_retry_s
         self._crash_retry_s = crash_retry_s
@@ -109,7 +118,10 @@ class RemoteRunnerSupervisor:
         self._session_state = SessionState.connecting
         # Исход, который держится до следующего действия человека: отзыв, отказ сервера, сбой.
         self._sticky: RemoteRunnerState | None = None
-        self._detail: RemoteRunnerDetail | None = None
+        self._detail: str | None = None
+        self._docker = RemoteRunnerDocker.ok
+        self._tex = RemoteRunnerTexImage.ready
+        self._env_changed = False
 
     # --- чтение --------------------------------------------------------------------------------
 
@@ -122,8 +134,10 @@ class RemoteRunnerSupervisor:
             paired=identity is not None,
             runner_id=identity.runner_id if identity else None,
             runner_name=None if state is RemoteRunnerState.off and identity is None else self._name(),
-            detail_code=self._detail.value if self._detail else None,
+            detail_code=self._detail,
             running_jobs=self._session.running_jobs if self._session else 0,
+            docker=self._docker,
+            tex_image=self._tex,
             pairing=self._pairing,
         )
 
@@ -298,7 +312,7 @@ class RemoteRunnerSupervisor:
 
     def _finish_pairing(self, state: RemoteRunnerState, detail: RemoteRunnerDetail) -> None:
         self._sticky = None if state is RemoteRunnerState.unpaired else state
-        self._detail = detail
+        self._detail = detail.value
 
     async def _cancel_pairing(self) -> None:
         task, self._pairing_task = self._pairing_task, None
@@ -348,27 +362,72 @@ class RemoteRunnerSupervisor:
 
     async def _run_session_once(self, factory: RunnerSessionFactory, stop: asyncio.Event) -> float | None:
         """Одна сессия до конца; пауза перед повтором или None, когда повторять нечего."""
+        self._env_changed = False
+        watcher: asyncio.Task[None] | None = None
         try:
-            async with factory(self._spec(), self) as session:
+            spec = await self._spec()
+            async with factory(spec, self) as session:
                 self._session = session
                 # Остановку могли попросить, пока сессия открывалась: тогда она не берёт ни одной задачи.
                 if stop.is_set():
                     session.request_stop()
+                if self._environment is not None:
+                    watcher = asyncio.create_task(self._watch_environment(session, spec.tex_available))
                 await session.run()
         except RunnerSessionFatal as exc:
-            if exc.code is SessionFatalCode.unauthorized:
-                self._on_unauthorized()
-                return None
-            logger.info("remote runner disabled on server, retrying later")
-            self._sticky, self._detail = RemoteRunnerState.disabled, RemoteRunnerDetail.runner_disabled
-            return self._disabled_retry_s
+            return self._on_fatal(exc)
         except Exception:
             logger.exception("remote runner session crashed")
-            self._sticky, self._detail = RemoteRunnerState.error, RemoteRunnerDetail.crashed
+            self._sticky, self._detail = RemoteRunnerState.error, RemoteRunnerDetail.crashed.value
             return self._crash_retry_s
         finally:
             self._session = None
+            if watcher is not None:
+                watcher.cancel()
+        # Docker или образ появились (пропали): новая сессия объявит другие теги.
+        return 0.0 if self._env_changed and not stop.is_set() else None
+
+    def _on_fatal(self, exc: RunnerSessionFatal) -> float | None:
+        if exc.code is SessionFatalCode.unauthorized:
+            self._on_unauthorized()
+            return None
+        if exc.code is SessionFatalCode.disabled:
+            logger.info("remote runner disabled on server, retrying later")
+            self._sticky, self._detail = RemoteRunnerState.disabled, RemoteRunnerDetail.runner_disabled.value
+            return self._disabled_retry_s
+        # Предел раннеров, несовместимый протокол: повтор без действия человека ничего не изменит.
+        logger.warning("remote runner refused by server", code=exc.detail)
+        self._sticky, self._detail = RemoteRunnerState.error, exc.detail
         return None
+
+    async def _watch_environment(self, session: IRunnerSession, tex_available: bool) -> None:
+        while True:
+            await self._sleep(self._env_check_s)
+            image, now_available = await self._probe_environment()
+            if now_available != tex_available:
+                logger.info("remote runner environment changed", tex_available=now_available, image=image)
+                self._env_changed = True
+                session.request_stop()
+                return
+
+    async def _probe_environment(self) -> tuple[str, bool]:
+        """Активный образ TeX и можно ли им собирать; заодно обновляет состояние для интерфейса."""
+        env = self._environment
+        if env is None:
+            return "", False
+        docker = await env.docker_available()
+        image = await env.tex_image()
+        present = docker and await env.image_present(image)
+        self._docker = RemoteRunnerDocker.ok if docker else RemoteRunnerDocker.missing
+        self._tex = RemoteRunnerTexImage.ready if present else RemoteRunnerTexImage.missing
+        return image, present
+
+    def _gate(self) -> bool:
+        """Брать ли сборки сейчас: без Docker нет; при «уступать локальным» нет, пока идёт локальная сборка."""
+        env = self._environment
+        if env is None or self._docker is RemoteRunnerDocker.missing:
+            return False
+        return not (self._settings.yield_to_local and env.local_busy())
 
     async def _sleep_or_stop(self, stop: asyncio.Event, delay_s: float) -> None:
         sleeper = asyncio.create_task(self._sleep(delay_s))
@@ -384,21 +443,25 @@ class RemoteRunnerSupervisor:
             # Раннер отозван на сайте или токен сменили: личность бесполезна, переключатель остаётся включённым.
             self._identities.forget()
             self._identity = None
-            self._sticky, self._detail = RemoteRunnerState.revoked, RemoteRunnerDetail.runner_revoked
+            self._sticky, self._detail = RemoteRunnerState.revoked, RemoteRunnerDetail.runner_revoked.value
         else:
-            self._sticky, self._detail = RemoteRunnerState.error, RemoteRunnerDetail.token_rejected
+            self._sticky, self._detail = RemoteRunnerState.error, RemoteRunnerDetail.token_rejected.value
         self._registration_token = None
 
-    def _spec(self) -> RunnerSessionSpec:
+    async def _spec(self) -> RunnerSessionSpec:
         settings = self._settings
         if settings.server_url is None:
             raise RuntimeError("remote runner session without server url")
+        image, tex_available = await self._probe_environment()
         return RunnerSessionSpec(
             server_url=settings.server_url,
             registration_token=self._registration_token,
             name=self._name(),
             concurrency=settings.concurrency,
             data_dir=self._runner_dir,
+            tex_image=image,
+            tex_available=tex_available,
+            gate=self._gate,
         )
 
     # IRunnerSessionListener: зовётся из задачи цикла, в том же потоке событий.
@@ -406,11 +469,13 @@ class RemoteRunnerSupervisor:
         self._session_state = state
         if state is SessionState.online:
             self._detail = None
+            if self._identity is None:
+                # Личность пишет клиент протокола сразу после ответа регистрации: к первому опросу она на диске.
+                self._reload_identity()
 
-    def on_registered(self, runner_id: str) -> None:
+    def on_registered(self) -> None:
         self._registration_token = None
-        self._reload_identity()
-        logger.info("remote runner registered", runner_id=runner_id)
+        logger.info("remote runner registered")
 
     # --- служебное -----------------------------------------------------------------------------
 
