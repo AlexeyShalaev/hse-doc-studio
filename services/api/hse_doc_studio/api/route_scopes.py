@@ -226,9 +226,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/signing-identities/{identity_id}/public-key"): _A,
     ("GET", "/crypto/cadesplugin_api.js"): _A,
     ("GET", "/trusted-roots"): _A,
-    ("POST", "/trusted-roots"): _A,
-    ("POST", "/trusted-roots/from-chain/{fingerprint}"): _A,
-    ("DELETE", "/trusted-roots/{fingerprint}"): _A,
+    ("POST", "/trusted-roots"): _ADM,
+    ("POST", "/trusted-roots/from-chain/{fingerprint}"): _ADM,
+    ("DELETE", "/trusted-roots/{fingerprint}"): _ADM,
     # Профиль
     ("GET", "/profile"): _A,
     ("PUT", "/profile"): _A,
@@ -370,6 +370,21 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "/projects/suggestions",
         # Открытый ключ читается из идентичности подписи владельца.
         "/signing-identities/{identity_id}/public-key",
+        # Перенос проекта кладёт его под загрузившего.
+        "/projects/import",
+        # Роли агента лежат у владельца (файл на человека), встроенные одинаковы для всех.
+        "/agent-personas",
+        "/agent-personas/builtins",
+        "/agent-personas/{persona_id}",
+        # Операция видна только начавшему её (owner в реестре), чужая даёт 404.
+        "/git/operations/{operation_id}",
+        "/git/operations/{operation_id}/cancel",
+        # Связка OpenPGP общая, но закрытые ключи в ответе только владельца, а новые ключи привязаны к его идентичности.
+        "/signing-identities/openpgp/generate",
+        "/signing-identities/openpgp/import",
+        "/signing-identities/openpgp/keys",
+        # Список корней доверия общий по замыслу: менять его может только админ установки.
+        "/trusted-roots",
     }
 )
 

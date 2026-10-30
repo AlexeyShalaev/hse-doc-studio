@@ -50,8 +50,8 @@ docker compose up -d --scale runner=3        # три раннера
 Администратора можно создать и без мастера: задайте в окружении api
 `HSE_STUDIO__AUTH__ADMIN_EMAIL` и `HSE_STUDIO__AUTH__ADMIN_PASSWORD` (или `..._PASSWORD_FILE`).
 
-Серверный режим включается финальным срезом этапа 2: до него api отказывается стартовать в `server`
-без флага `HSE_STUDIO__AUTH__EXPERIMENTAL` (только для loopback). Полный список настроек api:
+api стартует в `server`, только когда реестр готовности зелёный; если нет, отказ называет всё недостающее
+(например, `HSE_STUDIO__DB__DSN`, `HSE_STUDIO__AUTH__PUBLIC_URL`, ключ секретов). Полный список настроек api:
 `docs/ru/deploy/env-reference.md`, настройки раннера лежат в `HSE_RUNNER__*`.
 
 ## Токен раннера

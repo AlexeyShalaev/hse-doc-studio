@@ -1,11 +1,8 @@
-# Оверлей для приёмочного смоука (e2e/tests/full.spec.ts): тот же набор, что в deploy/server, но до финального
-# среза этапа 2 api стартует в режиме server только как experimental, а порт публикуется на loopback.
+# Оверлей для приёмочного смоука (e2e/tests/full.spec.ts): тот же набор, что в deploy/server, но порт
+# публикуется только на loopback.
 # Для боевого развёртывания не нужен. Запуск и учётные данные: make server-stack-up (scripts/dev/server-stack/stack.sh).
 # Режим регистрации в окружение не задан намеренно: его выбирает мастер первого запуска, а смоук проходит мастер.
 services:
   api:
     ports: !override
       - "127.0.0.1:${PORT:-17240}:8000"
-    environment:
-      HSE_STUDIO__AUTH__EXPERIMENTAL: "true"
-      HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER: "true"

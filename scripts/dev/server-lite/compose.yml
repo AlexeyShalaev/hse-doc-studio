@@ -36,8 +36,6 @@ services:
       - "127.0.0.1:${SERVER_LITE_PORT:-8100}:8000"
     environment: &api-env
       HSE_STUDIO__MODE: server
-      HSE_STUDIO__AUTH__EXPERIMENTAL: "true"
-      HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER: "true"
       HSE_STUDIO__SERVER__HOST: "0.0.0.0"
       HSE_STUDIO__SERVER__PORT: "8000"
       HSE_STUDIO__DATA_DIR: /data

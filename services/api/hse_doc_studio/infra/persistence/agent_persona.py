@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.context import ActorRequired, require_actor
 from hse_doc_studio.core.entities import AgentPersona
 
 logger = structlog.get_logger()
@@ -108,3 +110,36 @@ class JsonAgentPersonaRepository:
             return False
         self._write(remaining)
         return True
+
+
+class ActorScopedAgentPersonaRepository:
+    """Роли агента сервера: у каждого человека свой файл, чужие роли не видны и не меняются.
+
+    Владелец берётся из текущего актора; без него ``ActorRequired``. Имя папки это хеш id, а не сам id.
+    """
+
+    def __init__(self, data_dir: Path) -> None:
+        self._root = data_dir / "users"
+
+    def _mine(self) -> JsonAgentPersonaRepository:
+        actor = require_actor()
+        owner = actor.key or actor.id or ""
+        if not owner:
+            raise ActorRequired("у актора нет ключа владельца")
+        digest = hashlib.sha256(owner.encode()).hexdigest()[:32]
+        return JsonAgentPersonaRepository(self._root / digest)
+
+    def list_all(self) -> list[AgentPersona]:
+        return self._mine().list_all()
+
+    def get(self, persona_id: UUID) -> AgentPersona | None:
+        return self._mine().get(persona_id)
+
+    def create(self, persona: AgentPersona) -> None:
+        self._mine().create(persona)
+
+    def update(self, persona: AgentPersona) -> None:
+        self._mine().update(persona)
+
+    def delete(self, persona_id: UUID) -> bool:
+        return self._mine().delete(persona_id)

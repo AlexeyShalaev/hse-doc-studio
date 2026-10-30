@@ -29,8 +29,8 @@ from tests.fixtures.app import create_test_app, create_test_container
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
 _PREFIXES = ("/api/v1", "/api/admin", "/api/runner/", "/api/services/")
 # Потолок общих пользовательских маршрутов: только уменьшается, когда срез переводит данные под владельца.
-# Остались: персоны агента, доверенные корни, связка ключей OpenPGP установки и реестр git-операций.
-_PENDING_CEILING = 15
+# Общих пользовательских маршрутов не осталось.
+_PENDING_CEILING = 0
 _USER = Actor.user("user")
 _ADMIN = Actor(kind="user", id="admin", is_instance_admin=True)
 
@@ -90,8 +90,8 @@ def test__route_scopes__host_routes_are_local_only_and_settings_stay_authenticat
 
 
 def test__per_user_routes_problem__red_while_pending_and_green_when_empty() -> None:
-    assert per_user_routes_problem() is not None
-    assert per_user_routes_problem(frozenset()) is None
+    assert per_user_routes_problem() is None
+    assert per_user_routes_problem(frozenset({("GET", "/agent-personas")})) is not None
 
 
 def test__per_user_routes_check__registered_for_server_start() -> None:
@@ -105,7 +105,8 @@ def test__per_user_routes_check__registered_for_server_start() -> None:
     with pytest.raises(RuntimeError) as err:
         ensure_supported_mode(cfg, registry)
 
-    assert "per_user_routes/global_user_routes" in str(err.value)
+    assert "per_user_routes" not in str(err.value)
+    assert "persistence/database" in str(err.value)
 
 
 def _stub(monkeypatch: pytest.MonkeyPatch, actor: Actor | None, *, server: bool = True) -> None:

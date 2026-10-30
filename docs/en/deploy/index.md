@@ -9,9 +9,6 @@ tags:
 
 <p class="hds-lede">Server mode is for when more than one person uses the Studio: each has an account and their own projects, and heavy work (builds, packaging, conversion) runs on runners. The single-user local install is unchanged.</p>
 
-!!! warning "Publish after the described code is merged"
-    This section describes stage 2 server mode. Until the final slice lifts the startup ban, the api starts in `server` mode only with `HSE_STUDIO__AUTH__EXPERIMENTAL` and only on loopback. For a public server, wait for the release where the flag is no longer needed.
-
 ## What it consists of
 
 | Part | Role |

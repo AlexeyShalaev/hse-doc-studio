@@ -46,6 +46,7 @@ from hse_doc_studio.core.projects.usage import (
 )
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
+    IAgentPersonaRepository,
     IAIProviderRepository,
     IChatRepository,
     ICompileRepository,
@@ -88,6 +89,7 @@ from hse_doc_studio.infra.export_import.local_data import LocalDataReader
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.s3_artifact_store import S3ArtifactStore
+from hse_doc_studio.infra.persistence.agent_persona import ActorScopedAgentPersonaRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
@@ -170,6 +172,11 @@ class ServerPersistenceProvider(Provider):
     def get_git_key_store(self) -> KeyFileStore:
         """В server ключ только из окружения: без него контейнер не создаётся."""
         return server_key_store(settings)
+
+    @provide(override=True)
+    def get_agent_persona_repo(self) -> IAgentPersonaRepository:
+        """Роли агента у каждого человека свои: общий файл установки на сервере не используется."""
+        return ActorScopedAgentPersonaRepository(settings.data_dir.expanduser())
 
     @provide
     def get_project_volume(self, server_config: ServerConfig) -> IProjectVolume:

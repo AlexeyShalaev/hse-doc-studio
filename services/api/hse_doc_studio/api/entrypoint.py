@@ -99,47 +99,25 @@ def _register_per_user_routes_check(readiness: ServerReadinessRegistry) -> None:
         readiness.register(check)
 
 
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+def _register_server_checks(readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.api.server_readiness import server_checks  # noqa: PLC0415
 
-
-def _ensure_experimental_allowed(cfg: Settings) -> None:
-    """Experimental пускает server мимо реестра готовности, поэтому только на закрытом адресе и с рабочими основами."""
-    if cfg.server.host not in _LOOPBACK_HOSTS and not cfg.auth.experimental_in_container:
-        msg = (
-            "HSE_STUDIO__AUTH__EXPERIMENTAL is refused on a public bind "
-            f"(server.host={cfg.server.host}): listen on 127.0.0.1, or set HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER "
-            "when the port is published to the host loopback only"
-        )
-        raise RuntimeError(msg)
-    if not (cfg.db.dsn or "").strip():
-        msg = "HSE_STUDIO__MODE=server needs HSE_STUDIO__DB__DSN even in experimental mode"
-        raise RuntimeError(msg)
-    from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
-
-    if (problem := secrets_key_problem(cfg)) is not None:
-        msg = f"HSE_STUDIO__MODE=server needs a secrets key even in experimental mode: {problem}"
-        raise RuntimeError(msg)
+    for check in server_checks(lambda: _secrets_cfg_by_registry[id(readiness)]):
+        with suppress(ValueError):
+            readiness.register(check)
 
 
 def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
-    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы).
+    """Пустить на старт server только при зелёном реестре готовности: все зоны зарегистрированы и проверены.
 
-    Server пускают, только когда все зоны зарегистрировали проверки готовности и все они зелёные.
+    Local не проверяется. Отказ называет всё недостающее сразу, чтобы настроить установку за один заход.
     """
     if cfg.mode is StudioMode.server:
         _register_secrets_check(cfg, readiness)
         _register_per_user_routes_check(readiness)
-        problems = readiness.unmet()
-        if cfg.auth.experimental:
-            _ensure_experimental_allowed(cfg)
-            if problems:
-                logger.warning("server mode runs as experimental", not_ready=problems)
-            return
-        if problems:
-            msg = (
-                "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local. "
-                f"Not ready: {'; '.join(problems)}"
-            )
+        _register_server_checks(readiness)
+        if problems := readiness.unmet():
+            msg = f"HSE_STUDIO__MODE=server cannot start. Not ready: {'; '.join(problems)}"
             raise RuntimeError(msg)
 
 

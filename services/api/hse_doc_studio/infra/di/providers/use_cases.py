@@ -3578,5 +3578,5 @@ class UseCaseProvider(Provider):
         return ExportOpenPgpPublicKeyUC(repo=repo, keyring=keyring)
 
     @provide
-    def get_list_openpgp_keys_uc(self, keyring: GpgKeyring) -> ListOpenPgpKeysUC:
-        return ListOpenPgpKeysUC(keyring=keyring)
+    def get_list_openpgp_keys_uc(self, keyring: GpgKeyring, repo: ISigningIdentityRepository) -> ListOpenPgpKeysUC:
+        return ListOpenPgpKeysUC(keyring=keyring, repo=repo)

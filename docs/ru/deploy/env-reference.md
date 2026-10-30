@@ -214,8 +214,6 @@ tags:
 | `HSE_STUDIO__AUTH__ADMIN_PASSWORD` 🔒 | str | секрет, не печатается | server | Пароль первого администратора из окружения. |
 | `HSE_STUDIO__AUTH__ADMIN_PASSWORD_FILE` | Path | не задано | server | Файл с паролем первого администратора (docker secret). |
 | `HSE_STUDIO__AUTH__SETUP_TOKEN_REQUIRED` | bool | не задано | server | Нужен ли токен установки в мастере первого запуска (печатается в журнале api). Не задано: нужен, если сервер слушает не только loopback. |
-| `HSE_STUDIO__AUTH__EXPERIMENTAL` | bool | `false` | server | Пустить server до финального среза этапа 2, минуя реестр готовности (dev-стенд server-lite). Запрещено при публичном bind: адрес сервера должен быть loopback. |
-| `HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER` | bool | `false` | server | Подтверждение для experimental: api слушает 0.0.0.0 внутри контейнера, а порт опубликован только на loopback хоста (compose server-lite). |
 | `HSE_STUDIO__MAIL__HOST` | str | не задано | server | SMTP host; empty means mail is off. |
 | `HSE_STUDIO__MAIL__PORT` | int | `587` | server | SMTP port. |
 | `HSE_STUDIO__MAIL__SECURITY` | starttls / tls / none | `starttls` | server | starttls upgrades a plain connection, tls connects over TLS at once. |

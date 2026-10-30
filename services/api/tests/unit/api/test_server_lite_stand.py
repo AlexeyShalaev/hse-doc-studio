@@ -52,12 +52,11 @@ def test__compose__api_port__published_on_loopback_only(compose: dict[str, Any])
     assert "ports" not in compose["services"]["postgres"]
 
 
-def test__compose__api_environment__server_mode_experimental_with_env_admin(compose: dict[str, Any]) -> None:
+def test__compose__api_environment__server_mode_with_env_admin(compose: dict[str, Any]) -> None:
     env = compose["services"]["api"]["environment"]
 
     assert env["HSE_STUDIO__MODE"] == "server"
-    assert env["HSE_STUDIO__AUTH__EXPERIMENTAL"] == "true"
-    assert env["HSE_STUDIO__AUTH__EXPERIMENTAL_IN_CONTAINER"] == "true"
+    assert "HSE_STUDIO__AUTH__EXPERIMENTAL" not in env
     assert env["HSE_STUDIO__DB__AUTO_MIGRATE"] == "true"
     assert env["HSE_STUDIO__AUTH__ADMIN_EMAIL"]
     assert env["HSE_STUDIO__AUTH__REGISTRATION_MODE"] == "invite"
@@ -71,7 +70,7 @@ def test__compose__secrets__come_from_env_not_from_the_repository(compose: dict[
     assert compose["services"]["postgres"]["environment"]["POSTGRES_PASSWORD"].startswith("${SERVER_LITE_")
 
 
-def test__compose__api_environment__is_accepted_by_the_experimental_gate(compose: dict[str, Any]) -> None:
+def test__compose__api_environment__is_accepted_by_the_readiness_gate(compose: dict[str, Any]) -> None:
     from cryptography.fernet import Fernet
     from hse_doc_studio.api.entrypoint import ensure_supported_mode
     from hse_doc_studio.core.readiness import ServerReadinessRegistry
@@ -83,7 +82,7 @@ def test__compose__api_environment__is_accepted_by_the_experimental_gate(compose
         server={"host": env["HSE_STUDIO__SERVER__HOST"]},
         db={"dsn": "postgresql://studio:x@postgres:5432/studio"},
         secrets={"key": Fernet.generate_key().decode()},
-        auth={"experimental": True, "experimental_in_container": True},
+        auth={"public_url": env["HSE_STUDIO__AUTH__PUBLIC_URL"]},
     )
 
     ensure_supported_mode(cfg, ServerReadinessRegistry())
