@@ -83,7 +83,8 @@
     "notTaking": "Не берёт сборки",
     "seenJustNow": "в сети только что",
     "seenJustNowIp": "в сети только что, IP {{ip}}",
-    "resumeAdminOnly": "Возобновить (только администратор)"
+    "resumeAdminOnly": "Возобновить (только администратор)",
+    "slotsJobs": "до {{jobs}}"
   },
   "rename": {
     "title": "Переименовать раннер",

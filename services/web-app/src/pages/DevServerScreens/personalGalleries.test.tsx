@@ -57,8 +57,10 @@ describe("галереи личных раннеров", () => {
           </QueryClientProvider>,
         );
         // Ключ перевода на экране выглядит как mine.state.online или compile.placement.x.
+        // Он начинает свой элемент, поэтому перед ним нет пробела; слово в конце
+        // предложения («new builds.» и следующая ячейка) ключом не считается.
         expect(container.textContent).not.toMatch(
-          /\b(mine|remote|pair|personal|placement|builds|relayError)\.[a-z]+[A-Za-z.]*/,
+          /(?<!\s)\b(mine|remote|pair|personal|placement|builds|relayError)\.[a-z]+[A-Za-z.]*/,
         );
         unmount();
       }

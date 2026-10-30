@@ -79,7 +79,8 @@
     "notTaking": "Not taking builds",
     "seenJustNow": "seen just now",
     "seenJustNowIp": "seen just now, IP {{ip}}",
-    "resumeAdminOnly": "Resume (administrator only)"
+    "resumeAdminOnly": "Resume (administrator only)",
+    "slotsJobs": "up to {{jobs}}"
   },
   "rename": {
     "title": "Rename runner",

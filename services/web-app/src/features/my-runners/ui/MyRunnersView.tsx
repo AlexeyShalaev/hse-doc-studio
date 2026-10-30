@@ -232,10 +232,15 @@ export const MyRunnersView = ({
                   ai: runner.ai_concurrency,
                 })}
               >
-                {t("mine.slots", {
-                  jobs: t("mine.jobs", { count: runner.concurrency }),
-                  ai: runner.ai_concurrency,
-                })}
+                {/* Без слотов ИИ «до 0 ИИ» ничего не говорит: только сборки. */}
+                {runner.ai_concurrency > 0
+                  ? t("mine.slots", {
+                      jobs: t("mine.jobs", { count: runner.concurrency }),
+                      ai: runner.ai_concurrency,
+                    })
+                  : t("mine.slotsJobs", {
+                      jobs: t("mine.jobs", { count: runner.concurrency }),
+                    })}
               </span>
               {row.original.load && (
                 <span className="myr-cell-sub">{row.original.load}</span>
@@ -517,7 +522,7 @@ export const MyRunnersView = ({
           columns={columns}
           data={rows}
           getRowId={(r) => r.runner.id}
-          columnWidths={{ state: "34%", load: 120, actions: 48 }}
+          columnWidths={{ state: "34%", load: 150, actions: 48 }}
         />
       )}
 
