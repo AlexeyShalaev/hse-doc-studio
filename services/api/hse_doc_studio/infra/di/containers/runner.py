@@ -7,6 +7,7 @@ import os
 import shutil
 from collections.abc import AsyncIterator, Callable, Sequence
 from functools import partial
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
@@ -227,7 +228,7 @@ class RunnerProvider(Provider):
         )
         if declared:
             # Адреса объявлены без ключей: имена и вид, URL остаётся у раннера.
-            logger.info("ai endpoints: %s", ", ".join(f"{e.name}={e.base_url}" for e in endpoints))
+            logger.info("ai endpoints: %s", ", ".join(f"{e.name}={_loggable_url(e.base_url)}" for e in endpoints))
         return RunnerLoop(
             client,
             RoutingJobExecutor(compile_executor, executor, relay),
@@ -257,6 +258,18 @@ def endpoints_of(config: RunnerConfig) -> tuple[AiEndpoint, ...]:
         )
         for entry in config.ai_endpoints
     )
+
+
+def _loggable_url(url: str) -> str:
+    """Адрес без логина и пароля: адреса из локальной Студии конфиг раннера не проверял."""
+    parts = urlsplit(url)
+    if parts.username is None and parts.password is None:
+        return url
+    host = parts.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    netloc = f"***@{host}:{parts.port}" if parts.port else f"***@{host}"
+    return urlunsplit(parts._replace(netloc=netloc))
 
 
 def _env_key(name: str | None) -> str | None:

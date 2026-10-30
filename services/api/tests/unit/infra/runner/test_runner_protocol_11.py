@@ -262,8 +262,9 @@ def test__config__ai_endpoints_from_env_json(monkeypatch: pytest.MonkeyPatch) ->
         [{"name": "x", "url": "file:///etc/passwd"}],
         [{"name": "x", "url": "http://h/v1?key=1"}],
         [{"name": "x", "url": "http://a"}, {"name": "x", "url": "http://b"}],
+        [{"name": "x", "url": "http://user:secret@h/v1"}],
     ],
-    ids=["bad_name", "not_http", "query", "duplicate"],
+    ids=["bad_name", "not_http", "query", "duplicate", "credentials"],
 )
 def test__config__bad_ai_endpoints__rejected(endpoints: list[dict[str, str]]) -> None:
     with pytest.raises(ValidationError):
@@ -293,3 +294,17 @@ async def test__container__no_token_and_no_identity__config_error(tmp_path: Path
     with pytest.raises(RunnerConfigError):
         await container.get(RunnerClient)
     await container.close()
+
+
+@pytest.mark.parametrize(
+    ("url", "logged"),
+    [
+        ("http://localhost:11434/v1", "http://localhost:11434/v1"),
+        ("http://user:secret@gpu.lan:8000/v1", "http://***@gpu.lan:8000/v1"),
+        ("https://token@[::1]/v1", "https://***@[::1]/v1"),
+    ],
+)
+def test__container__logged_ai_endpoint_url_has_no_credentials(url: str, logged: str) -> None:
+    from hse_doc_studio.infra.di.containers.runner import _loggable_url  # noqa: PLC0415
+
+    assert _loggable_url(url) == logged

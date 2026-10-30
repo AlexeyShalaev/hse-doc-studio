@@ -58,7 +58,7 @@ The server never reaches into users' internal networks. To use a model on your o
 
 - `name`: lowercase latin letters, digits, `-` and `_`, up to 32 characters; this is how the endpoint is called in the provider form.
 - `flavor`: `openai` (default) or `ollama` (no `tool_choice` and `stream_options`, as Ollama requires).
-- `key_env`: name of the runner's environment variable holding the model key; the key never reaches the server.
+- `key_env`: name of the runner's environment variable holding the model key; the key never reaches the server. The runner rejects a user or password inside `url`: endpoints are written to the log at startup.
 - The runner only calls declared endpoints and only the paths `models`, `chat/completions`, `completions`, `embeddings`; server headers are not forwarded and redirects are not followed.
 - Only the runner owner can relay through it. Without declared endpoints the runner takes no relay jobs.
 

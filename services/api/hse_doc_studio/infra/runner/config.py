@@ -38,6 +38,9 @@ class AiEndpointConfig(BaseModel):
             raise ValueError("ai endpoint url must be http(s)://host")
         if parts.query or parts.fragment:
             raise ValueError("ai endpoint url must not carry a query or a fragment")
+        if parts.username is not None or parts.password is not None:
+            # Адрес попадает в журнал при старте; ключ передаётся через key_env, а не в URL.
+            raise ValueError("ai endpoint url must not carry credentials, use key_env")
         return value
 
 
