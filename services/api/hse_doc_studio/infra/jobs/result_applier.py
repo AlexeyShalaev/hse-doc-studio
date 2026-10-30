@@ -30,11 +30,13 @@ from hse_doc_studio.core.jobs.entities import JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.files import ArtifactRef, validate_relative_posix
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload
+from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.jobs.storage import IJobOutputIngest
 from hse_doc_studio.core.projects.volume import IProjectVolume, UnsafePathError
 from hse_doc_studio.core.storage.errors import ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.ingest import output_prefix
 from hse_doc_studio.core.storage.ports import IObjectStore
+from hse_doc_studio.infra.submission.pack_executor import archive_ext
 
 logger = structlog.get_logger()
 
@@ -165,8 +167,21 @@ def _allowed(spec: JobSpec) -> _Allowed:
             assert isinstance(spec.payload, OfficeConvertPayload)  # noqa: S101
             return _Allowed(frozenset({spec.payload.output_path}))
         case JobKind.pack_submission:
-            return _Allowed(prefixes=(f"{SUBMISSIONS_DIR}/",))
+            return _pack_allowed(spec)
     return _Allowed()
+
+
+def _pack_allowed(spec: JobSpec) -> _Allowed:
+    """Только то, что спланировал сервер: архив этого пакета и, при `keep_folder`, его папка.
+
+    Широкий префикс `submissions/` позволил бы раннеру хозяина (политика `owner`) перезаписать чужие пакеты
+    того же проекта: сервер знает только `base_name`, остальное раннер заявляет сам.
+    """
+    assert isinstance(spec.payload, PackSubmissionPayload)  # noqa: S101
+    base = f"{SUBMISSIONS_DIR}/{spec.payload.base_name}"
+    archive = base + archive_ext(spec.payload.archive_format.value)
+    prefixes = (f"{base}/",) if spec.payload.keep_folder else ()
+    return _Allowed(frozenset({archive}), prefixes)
 
 
 def _final_pdf(spec: JobSpec) -> str:

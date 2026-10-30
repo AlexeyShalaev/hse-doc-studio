@@ -12,12 +12,13 @@ from hse_doc_studio.core.jobs.applier import ApplyError
 from hse_doc_studio.core.jobs.artifacts import PublishPdfOutcome, PublishPdfRequest
 from hse_doc_studio.core.jobs.entities import JobSpec
 from hse_doc_studio.core.jobs.files import ArtifactRef
+from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.storage.ingest import output_prefix
 from hse_doc_studio.infra.jobs.result_applier import VolumeJobResultApplier
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.storage.fs import FsObjectStore
 
-from tests.unit.core.jobs.samples import make_compile_spec, make_office_spec
+from tests.unit.core.jobs.samples import make_compile_spec, make_office_spec, make_pack_spec
 
 PROJECT = uuid4()
 
@@ -182,3 +183,39 @@ async def test__discard__delegates_to_ingest(rig: Rig) -> None:
     await rig.applier.discard(spec)
 
     assert rig.ingest.discarded == [spec.id]
+
+
+def _pack_spec(rig: Rig, *, keep_folder: bool) -> JobSpec:
+    base = make_pack_spec()
+    assert isinstance(base.payload, PackSubmissionPayload)
+    return rig.spec(replace(base, payload=replace(base.payload, keep_folder=keep_folder)))
+
+
+async def test__apply__pack__only_its_own_archive(rig: Rig) -> None:
+    # Раннер хозяина с токеном задачи одного пакета не перезапишет чужие пакеты того же проекта.
+    spec = _pack_spec(rig, keep_folder=False)
+    own = await rig.upload(spec, "submissions/cp1-ivanov-20261026-093015-1a2b3c4d.zip", b"PK")
+    other = await rig.upload(spec, "submissions/other.zip", b"PK")
+    stray = await rig.upload(spec, "submissions/cp1-ivanov-20261026-093015-1a2b3c4d/a.pdf", b"%PDF")
+
+    await rig.applier.apply(spec, [own])
+    for forged in (other, stray):
+        with pytest.raises(ApplyError) as raised:
+            await rig.applier.apply(spec, [forged])
+        assert raised.value.code == "output_not_allowed"
+
+    assert (rig.folder / own.path).read_bytes() == b"PK"
+    assert not (rig.folder / other.path).exists()
+
+
+async def test__apply__pack_keep_folder__its_folder_allowed_and_siblings_not(rig: Rig) -> None:
+    spec = _pack_spec(rig, keep_folder=True)
+    inside = await rig.upload(spec, "submissions/cp1-ivanov-20261026-093015-1a2b3c4d/a.pdf", b"%PDF")
+    sibling = await rig.upload(spec, "submissions/cp1-ivanov-20261026-093015-1a2b3c4d-x/a.pdf", b"%PDF")
+
+    await rig.applier.apply(spec, [inside])
+    with pytest.raises(ApplyError) as raised:
+        await rig.applier.apply(spec, [sibling])
+
+    assert raised.value.code == "output_not_allowed"
+    assert (rig.folder / inside.path).read_bytes() == b"%PDF"
