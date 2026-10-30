@@ -65,12 +65,18 @@ class RunnerJobService:
         Раннер на паузе работы не получает, но опрос принимается: он остаётся живым для админки.
         """
         deadline = time.monotonic() + request.wait_s
+        started = self._clock()
         while True:
-            await self._runners.touch(runner.id, self._clock())
             # Снимок раннера взят при входе, а опрос долгий: пауза, отзыв и выключение могли случиться за это время.
             current = await self._runners.get(runner.id)
             if current is None or current.revoked_at is not None:
                 return PollResponse()
+            # Раннер сказал `/offline`, пока этот опрос ждал: клиент уже ушёл и ответа не прочтёт. Такой опрос
+            # не продлевает «был в сети» (иначе ушедший раннер ещё минуту числился бы в сети и сборки ждали бы
+            # его окно) и не берёт задачу, которую некому исполнить.
+            if current.offline_at is not None and current.offline_at >= started:
+                return PollResponse()
+            await self._runners.touch(runner.id, self._clock())
             if not current.paused and await self._may_work(current):
                 ref = self._ref(current, request)
                 quota = (
