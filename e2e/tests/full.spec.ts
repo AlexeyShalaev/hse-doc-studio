@@ -86,7 +86,7 @@ test.describe("Полный смоук сервера", () => {
     await inputs.nth(4).fill(stackPassword());
     await shot(p, "ru", "full-02-first-run-admin");
     await p.getByTestId("setup-admin-submit").click();
-    await p.getByTestId("setup-next").click();
+    // Создание администратора само переводит мастер к шагу регистрации.
     await expect(p.getByTestId("setup-step-registration")).toBeVisible();
     await p.getByTestId("setup-mode-open").click();
     await shot(p, "ru", "full-03-first-run-registration");
@@ -101,11 +101,9 @@ test.describe("Полный смоук сервера", () => {
 
     admin = await newClient();
     await admin.login(ADMIN.email, stackPassword());
-    const status = await admin.json<{ steps_done: string[] }>(
-      await admin.get("/api/v1/server-setup/status"),
-      200,
-    );
-    expect(status.steps_done).toContain("admin");
+    // Мастер завершён: его ручки закрыты, а вошедший пользователь это администратор установки.
+    expect((await admin.get("/api/v1/server-setup/status")).status()).toBe(404);
+    expect((await admin.get("/api/admin/runners")).status()).toBe(200);
     // Повторно мастер уже не пускает: админ создан.
     const again = await (
       await newClient()
@@ -277,18 +275,8 @@ test.describe("Полный смоук сервера", () => {
       }),
       200,
     );
-    const runners = await admin.json<{ id: string }[]>(
-      await admin.get("/api/admin/runners"),
-      200,
-    );
-    // Раннеры на паузе: очередь копится, порядок выдачи определяет только справедливость.
-    for (const runner of runners)
-      expect(
-        (
-          await admin.patch(`/api/admin/runners/${runner.id}`, { paused: true })
-        ).status(),
-      ).toBe(204);
-
+    // Раннер на паузе не принимает новые сборки (503 no_runner), поэтому очередь копится квотой, а не паузой:
+    // у Алисы бежит одна сборка из пятнадцати, остальные ждут своей очереди.
     const flood: { project: string; doc: string; compile: string }[] = [];
     for (let n = 0; n < FLOOD; n += 1) {
       const project = await createProject(alice, `Смоук поток ${n + 1}`);
@@ -298,19 +286,32 @@ test.describe("Полный смоук сервера", () => {
         compile: await triggerCompile(alice, project.id, project.docId),
       });
     }
-    const single = await createProject(bob, "Смоук Боба");
+    // Боб ставит две сборки в разных проектах: первая занимает его слот, вторая ждёт квоту вместе с потоком Алисы.
+    const bobFirst = await createProject(bob, "Смоук Боба 1");
+    const single = await createProject(bob, "Смоук Боба 2");
+    await triggerCompile(bob, bobFirst.id, bobFirst.docId);
     const bobCompile = await triggerCompile(bob, single.id, single.docId);
 
-    const waiting = await compileOf(bob, single.id, single.docId, bobCompile);
+    // Задача попадает в очередь после выгрузки проекта в хранилище, поэтому причина ожидания появляется не сразу.
+    const waiting = await waitCompile(
+      bob,
+      single.id,
+      single.docId,
+      bobCompile,
+      (v) => v.wait !== null || TERMINAL.has(v.status),
+      30_000,
+    );
     expect(waiting.wait).not.toBeNull();
-    // Новичок встаёт сразу за первой задачей потока, а не за пятнадцатью.
+    // Боб встаёт сразу за первой задачей потока, а не за четырнадцатью.
     if (waiting.wait?.queue_position != null)
-      expect(waiting.wait.queue_position).toBeLessThanOrEqual(2);
-    const lastFlood = await compileOf(
+      expect(waiting.wait.queue_position).toBeLessThanOrEqual(3);
+    const lastFlood = await waitCompile(
       alice,
       flood[FLOOD - 1]!.project,
       flood[FLOOD - 1]!.doc,
       flood[FLOOD - 1]!.compile,
+      (v) => v.wait !== null || TERMINAL.has(v.status),
+      30_000,
     );
     expect(lastFlood.wait).not.toBeNull();
     if (
@@ -334,15 +335,6 @@ test.describe("Полный смоук сервера", () => {
       await shot(p, lang, "full-09-queued-build");
       await p.context().close();
     }
-
-    for (const runner of runners)
-      expect(
-        (
-          await admin.patch(`/api/admin/runners/${runner.id}`, {
-            paused: false,
-          })
-        ).status(),
-      ).toBe(204);
 
     // Квота держит: пока поток идёт, у Алисы бежит не больше одной сборки.
     let maxRunning = 0;
