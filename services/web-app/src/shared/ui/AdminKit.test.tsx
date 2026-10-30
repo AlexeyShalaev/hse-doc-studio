@@ -9,6 +9,15 @@ import { DataTable } from "./DataTable";
 import { FilterBar } from "./FilterBar";
 import { SecretOnce } from "./SecretOnce";
 import { StatusDot } from "./StatusDot";
+import { MemoryRouter } from "react-router";
+import { ActionMenu } from "./ActionMenu";
+import { PageHeader, PageTabs } from "./AdminPage";
+import { Badge } from "./Badge";
+import { EmptyState, ErrorState } from "./EmptyState";
+import { KpiTile } from "./KpiTile";
+import { PersonCell } from "./PersonCell";
+import { Section, SettingRow } from "./Section";
+import { StickySaveBar } from "./StickySaveBar";
 
 type Row = { id: string; name: string };
 const COLS: ColumnDef<Row>[] = [
@@ -293,5 +302,193 @@ describe("StatusDot", () => {
   it("names the icon when the label is hidden", () => {
     render(<StatusDot status="paused" hideLabel />);
     expect(screen.getByRole("img", { name: "На паузе" })).toBeInTheDocument();
+  });
+});
+
+describe("StatusDot tones", () => {
+  it("labels generic tones in sans text", () => {
+    render(
+      <>
+        <StatusDot status="success" />
+        <StatusDot status="danger" />
+      </>,
+    );
+    expect(screen.getByText("В норме")).toBeInTheDocument();
+    expect(screen.getByText("Сбой")).toBeInTheDocument();
+  });
+});
+
+describe("Badge", () => {
+  it("is set in sans, not monospace", () => {
+    render(<Badge>Администратор</Badge>);
+    expect(screen.getByText("Администратор")).toHaveClass("chip", "sans");
+  });
+});
+
+describe("PageHeader and PageTabs", () => {
+  const Tabs = ({ onChange }: { onChange: (id: string) => void }) => {
+    const [value, setValue] = useState("a");
+    return (
+      <PageHeader
+        title="Раннеры"
+        description="Машины для сборок."
+        actions={<button type="button">Создать</button>}
+        tabs={
+          <PageTabs
+            label="Вид"
+            value={value}
+            onChange={(id) => {
+              setValue(id);
+              onChange(id);
+            }}
+            tabs={[
+              { id: "a", label: "Раннеры", count: 5, testId: "tab-a" },
+              { id: "b", label: "Очередь", testId: "tab-b" },
+            ]}
+          />
+        }
+      />
+    );
+  };
+
+  it("puts the title first and tabs under it, arrows move between tabs", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Tabs onChange={onChange} />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Раннеры" }),
+    ).toBeInTheDocument();
+    const tabA = screen.getByTestId("tab-a");
+    expect(tabA).toHaveAttribute("aria-selected", "true");
+    expect(within(tabA).getByText("5")).toBeInTheDocument();
+    tabA.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(onChange).toHaveBeenLastCalledWith("b");
+    expect(screen.getByTestId("tab-b")).toHaveFocus();
+  });
+});
+
+describe("Section and SettingRow", () => {
+  it("links the label to the control and marks env-locked values", () => {
+    render(
+      <Section title="Почта" description="Отправка писем.">
+        <SettingRow label="Сервер" htmlFor="host" locked testId="row">
+          <input id="host" />
+        </SettingRow>
+      </Section>,
+    );
+    expect(screen.getByRole("region", { name: "Почта" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Сервер/)).toHaveAttribute("id", "host");
+    expect(screen.getByTestId("row-locked")).toHaveAccessibleName(
+      "Значение задано переменной окружения на сервере. Изменить его можно только там.",
+    );
+  });
+});
+
+describe("StickySaveBar", () => {
+  it("is hidden without changes and counts them with plural forms", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const { rerender } = render(
+      <StickySaveBar dirtyCount={0} onSave={onSave} onDiscard={onDiscard} />,
+    );
+    expect(screen.queryByTestId("save-bar")).toBeNull();
+    rerender(
+      <StickySaveBar dirtyCount={3} onSave={onSave} onDiscard={onDiscard} />,
+    );
+    expect(screen.getByText("3 несохранённых изменения")).toBeInTheDocument();
+    await user.click(screen.getByTestId("save-bar-save"));
+    await user.click(screen.getByTestId("save-bar-discard"));
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onDiscard).toHaveBeenCalledOnce();
+    rerender(
+      <StickySaveBar
+        dirtyCount={1}
+        busy
+        onSave={onSave}
+        onDiscard={onDiscard}
+      />,
+    );
+    expect(screen.getByTestId("save-bar-save")).toBeDisabled();
+    expect(screen.getByText("1 несохранённое изменение")).toBeInTheDocument();
+  });
+});
+
+describe("KpiTile", () => {
+  it("links to its section and shows loading and error states", () => {
+    render(
+      <MemoryRouter>
+        <KpiTile label="Люди" value="6" to="/admin/users" testId="k1" />
+        <KpiTile label="Место" value="" loading testId="k2" />
+        <KpiTile label="Сервисы" value="" error="Не удалось" testId="k3" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("k1")).toHaveAttribute("href", "/admin/users");
+    expect(within(screen.getByTestId("k2")).getByRole("status")).toBeTruthy();
+    expect(
+      within(screen.getByTestId("k3")).getByRole("alert"),
+    ).toHaveTextContent("Не удалось");
+  });
+});
+
+describe("PersonCell", () => {
+  it("shows name and email, and a neutral fallback instead of a raw id", () => {
+    render(
+      <>
+        <PersonCell id="u_1" name="Мария Келлер" email="maria@example.org" />
+        <PersonCell id="u_01hx7k9zz" />
+      </>,
+    );
+    expect(screen.getByText("Мария Келлер")).toBeInTheDocument();
+    expect(screen.getByText("maria@example.org")).toBeInTheDocument();
+    expect(screen.getByText("Неизвестный пользователь")).toBeInTheDocument();
+    expect(screen.queryByText("u_01hx7k9zz")).toBeNull();
+  });
+});
+
+describe("EmptyState and ErrorState", () => {
+  it("offers the main action and a retry", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <>
+        <EmptyState
+          title="Токенов пока нет"
+          action={<button type="button">Создать токен</button>}
+        />
+        <ErrorState onRetry={onRetry} />
+      </>,
+    );
+    expect(screen.getByText("Токенов пока нет")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Не удалось загрузить данные",
+    );
+    await user.click(screen.getByRole("button", { name: "Повторить" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+});
+
+describe("ActionMenu", () => {
+  it("opens from the ⋯ button and runs the chosen action", async () => {
+    const user = userEvent.setup();
+    const onPause = vi.fn();
+    render(
+      <ActionMenu
+        label="Действия с runner-1"
+        items={[
+          { id: "pause", label: "Пауза", onSelect: onPause },
+          { id: "rm", label: "Удалить", danger: true, onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Действия с runner-1" }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Удалить" }),
+    ).toHaveAttribute("data-danger", "true");
+    await user.click(screen.getByRole("menuitem", { name: "Пауза" }));
+    expect(onPause).toHaveBeenCalledOnce();
   });
 });

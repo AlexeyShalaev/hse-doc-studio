@@ -173,3 +173,40 @@ export type { SecretOnceProps } from "./SecretOnce";
 
 export { StatusDot } from "./StatusDot";
 export type { StatusDotProps, StatusDotStatus } from "./StatusDot";
+
+// Набор блоков страниц админки (галерея: /dev/server-screens → «Примитивы админки»).
+export { AdminPage, PageContainer, PageHeader, PageTabs } from "./AdminPage";
+export type {
+  AdminPageProps,
+  PageContainerProps,
+  PageHeaderProps,
+  PageTab,
+  PageTabsProps,
+  PageWidth,
+} from "./AdminPage";
+
+export { ListRow, Section, SectionList, SettingRow } from "./Section";
+export type {
+  ListRowProps,
+  ListRowTone,
+  SectionProps,
+  SettingRowProps,
+} from "./Section";
+
+export { StickySaveBar } from "./StickySaveBar";
+export type { StickySaveBarProps } from "./StickySaveBar";
+
+export { KpiGrid, KpiTile, Meter, Sparkline } from "./KpiTile";
+export type { KpiTileProps, KpiTone } from "./KpiTile";
+
+export { EmptyState, ErrorState } from "./EmptyState";
+export type { EmptyStateProps, ErrorStateProps } from "./EmptyState";
+
+export { TableSkeleton } from "./TableSkeleton";
+export type { TableSkeletonProps } from "./TableSkeleton";
+
+export { Avatar, PersonCell } from "./PersonCell";
+export type { AvatarProps, PersonCellProps } from "./PersonCell";
+
+export { ActionMenu } from "./ActionMenu";
+export type { ActionMenuItem, ActionMenuProps } from "./ActionMenu";

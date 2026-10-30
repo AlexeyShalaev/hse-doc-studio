@@ -1,7 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { clsx } from "clsx";
 
-const badgeVariants = cva("chip", {
+// Метки читаются как текст: sans, а не моноширинный «вывод отладки».
+const badgeVariants = cva("chip sans", {
   variants: {
     variant: {
       default: "",

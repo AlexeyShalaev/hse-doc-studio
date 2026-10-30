@@ -6,7 +6,17 @@ import { useTranslation } from "react-i18next";
 // что различимо и без цвета.
 
 export type StatusDotStatus =
-  "online" | "stale" | "offline" | "paused" | "degraded";
+  | "online"
+  | "stale"
+  | "offline"
+  | "paused"
+  | "degraded"
+  // Общие тона для любых состояний (сервис, письмо, задача): та же форма точки.
+  | "success"
+  | "warning"
+  | "danger"
+  | "neutral"
+  | "info";
 
 export type StatusDotProps = {
   status: StatusDotStatus;
@@ -23,12 +33,31 @@ const COLOR: Record<StatusDotStatus, string> = {
   offline: "var(--fg-3)",
   paused: "var(--c-info)",
   degraded: "var(--c-err)",
+  success: "var(--c-ok)",
+  warning: "var(--c-warn)",
+  danger: "var(--c-err)",
+  neutral: "var(--fg-3)",
+  info: "var(--c-info)",
+};
+
+// Тон рисуется формой ресурсного состояния с тем же смыслом.
+const SHAPE: Record<StatusDotStatus, StatusDotStatus> = {
+  online: "online",
+  stale: "stale",
+  offline: "offline",
+  paused: "paused",
+  degraded: "degraded",
+  success: "online",
+  warning: "stale",
+  danger: "degraded",
+  neutral: "offline",
+  info: "online",
 };
 
 const Shape = ({ status }: { status: StatusDotStatus }) => {
   const color = COLOR[status];
   const common = { width: 10, height: 10, viewBox: "0 0 10 10" } as const;
-  switch (status) {
+  switch (SHAPE[status]) {
     case "online":
       return (
         <svg {...common} aria-hidden="true">
@@ -69,7 +98,7 @@ const Shape = ({ status }: { status: StatusDotStatus }) => {
           <rect x="6.1" y="1" width="2.4" height="8" rx="0.6" fill={color} />
         </svg>
       );
-    case "degraded":
+    default:
       return (
         <svg {...common} aria-hidden="true">
           <path d="M5 0.8 9.4 9H0.6z" fill={color} />

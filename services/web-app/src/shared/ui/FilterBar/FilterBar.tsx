@@ -131,7 +131,13 @@ export const FilterBar = ({
             >
               {option.label}
               {option.count != null && (
-                <span style={{ color: "var(--fg-3)", marginLeft: 5 }}>
+                <span
+                  style={{
+                    color: "var(--fg-2)",
+                    marginLeft: 2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
                   {option.count}
                 </span>
               )}
@@ -167,10 +173,10 @@ const Chip = ({
 }) => (
   <button
     type="button"
-    className={clsx("chip", selected && "accent")}
+    className={clsx("chip sans", selected && "accent")}
     aria-pressed={selected}
     onClick={onClick}
-    style={{ cursor: "pointer" }}
+    style={{ cursor: "pointer", height: 26, padding: "0 10px", fontSize: 12 }}
   >
     {children}
   </button>
