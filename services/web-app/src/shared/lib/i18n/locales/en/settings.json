@@ -319,7 +319,8 @@
       "title": "Trusted CA certificates",
       "hint": "CryptoARM and CryptoPro signatures are shown as «trusted chain» only when the CA root certificate is added here (for example the Минцифры root from the official site). Without it the signer and file integrity are still checked.",
       "add": "Add a certificate (.cer, .crt, .pem)",
-      "addedToast": "Certificate added"
+      "addedToast": "Certificate added",
+      "adminOnly": "CA certificates are managed by the installation administrator."
     },
     "forbiddenTitle": "The server does not store secret keys",
     "forbiddenBody": "The installation administrator has forbidden storing secret signing keys on the server, so you cannot create or upload a key here. Keys that were already stored stay blocked until the policy changes.",

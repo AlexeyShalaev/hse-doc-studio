@@ -11,6 +11,8 @@
 | jobs | `jobs`, `runners`, `quotas`, API раннера, `QueueJobDispatcher`, планировщик, `BackgroundTaskRunner` |
 | admin и frontend | SPA (`/admin`, `/first-run`, вход, аккаунт, проекты) и тонкая часть `/api/admin` поверх use cases других зон |
 
+Известное ограничение: связка OpenPGP (`data_dir/gnupg`, `GpgKeyring`) одна на установку, это не по пользователю. Записи о ключах привязаны к владельцу в базе, но секретные и загруженные открытые ключи лежат в общей связке. Раздельные связки (`data_dir/users/<хеш>/gnupg`) потребуют актор-зависимого `GpgKeyring` и для раннера, это не сделано. Резервная копия `data_dir` обязана включать `gnupg/` и `users/**` (роли агента).
+
 ACL-поля (владелец, team, `shared_enabled`, персона, роли) живут только в Postgres; `project.json` их не источник. Репозитории APP-scope, многотабличные записи через ambient `IUnitOfWork`.
 
 ## 2. Порты
