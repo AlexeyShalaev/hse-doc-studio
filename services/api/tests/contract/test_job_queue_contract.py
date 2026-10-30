@@ -508,6 +508,21 @@ class TestJobQueueContract(PortContract):
         order = [await port.claim() for _ in range(3)]
         assert [job.id for job in order if job is not None].index(mine.id) <= 1
 
+    async def test__personal__q5_refund_happens_once_per_job(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        queued = await port.put_personal(owner, project, max_attempts=3)
+        runner = port.personal(owner)
+        first = await port.claim(runner)
+        port.clock.advance(LEASE_S + 1)
+        await port.queue.requeue_expired()
+        second = await port.claim(runner)
+        assert queued.vcost == 1.0
+        assert first is not None
+        assert second is not None
+        # Метка возвращена при первой выдаче; повторная выдача и повтор на общем раннере ничего не вернут.
+        assert (first.vcost, second.vcost) == (0.0, 0.0)
+
     async def test__personal__q6_lost_personal_attempt_retries_anywhere(self, port: _Harness) -> None:
         owner = uuid4()
         project = await port.project(owner)

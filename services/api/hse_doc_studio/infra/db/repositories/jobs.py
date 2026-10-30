@@ -242,6 +242,8 @@ class PostgresJobQueue:
                 .where(FairShareRow.user_id == row.user_id)
                 .values(vtime=func.greatest(func.coalesce(FairShareRow.vtime, 0) - row.vcost, 0))
             )
+            # Возврат один раз: потерянная и снова взятая задача второй раз метку не вернёт.
+            row.vcost = 0.0
 
     @staticmethod
     async def _take_shared(session: AsyncSession, row: JobRow) -> None:

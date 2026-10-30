@@ -219,6 +219,8 @@ class InMemoryJobQueue:
             route_reason=RouteReason.pinned if best.route is JobRoute.pinned else RouteReason.personal,
             timeout_s=timeout_s,
             timeout_personal_s=kept,
+            # Возврат один раз: потерянная и снова взятая задача второй раз метку не вернёт.
+            vcost=0.0,
         )
         self._jobs[taken.id] = taken
         # Личный раннер не двигает глобальное время и возвращает метку справедливости.
