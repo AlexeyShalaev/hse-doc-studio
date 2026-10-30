@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Lock, UserMinus, UserPlus, Users } from "lucide-react";
+import { Lock, UserMinus, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatPastTime } from "@shared/lib";
 import {
   Badge,
   Button,
@@ -9,8 +10,11 @@ import {
   FilterBar,
   Input,
   Modal,
+  PersonCell,
+  Section,
   Select,
   Spinner,
+  Tooltip,
 } from "@shared/ui";
 import type { AdminOrgMember, OrgRoleName } from "@entities/session";
 import type { Failure } from "../lib/failure";
@@ -19,9 +23,10 @@ import {
   assignableRoles,
   canEditMember,
   isLastOwner,
+  ROLES,
   type Viewer,
 } from "../lib/permissions";
-import { FailureNotice, Person, RoleBadge } from "./parts";
+import { FailureNotice, RoleBadge } from "./parts";
 
 export type MembersViewProps = {
   status: "loading" | "error" | "ready";
@@ -110,15 +115,16 @@ export const MembersView = ({
       id: "person",
       header: t("members.columns.person"),
       cell: ({ row }) => (
-        <Person
+        <PersonCell
           name={row.original.name}
           email={row.original.email}
-          badge={
+          id={row.original.user_id}
+          badges={
             row.original.user_id === selfId ? (
               <Badge variant="subtle" data-testid="member-self">
                 {t("members.you")}
               </Badge>
-            ) : undefined
+            ) : null
           }
         />
       ),
@@ -130,25 +136,29 @@ export const MembersView = ({
         const m = row.original;
         if (isLastOwner(members, m)) {
           return (
-            <span
-              className="flex items-center"
-              style={{ gap: 6 }}
-              title={t("members.lastOwner")}
-              data-testid={`member-last-owner-${m.user_id}`}
-            >
-              <RoleBadge role={m.role} />
-              <Lock
-                size={12}
-                aria-hidden="true"
-                style={{ color: "var(--fg-3)" }}
-              />
-              <span className="sr-only">{t("members.lastOwner")}</span>
-            </span>
+            <Tooltip content={t("members.lastOwner")}>
+              <span
+                className="org-lock"
+                tabIndex={0}
+                data-testid={`member-last-owner-${m.user_id}`}
+              >
+                <RoleBadge role={m.role} />
+                <Lock
+                  size={12}
+                  aria-hidden="true"
+                  style={{ color: "var(--fg-3)" }}
+                />
+                <span className="sr-only">{t("members.lastOwner")}</span>
+              </span>
+            </Tooltip>
           );
         }
         if (!canEditMember(viewer, m.role)) return <RoleBadge role={m.role} />;
         return (
-          <div style={{ width: 150 }} data-testid={`member-role-${m.user_id}`}>
+          <div
+            className="org-role-select"
+            data-testid={`member-role-${m.user_id}`}
+          >
             <Select
               value={m.role}
               placeholder={t("members.roleFor", { name: m.name })}
@@ -166,9 +176,14 @@ export const MembersView = ({
       id: "joined",
       header: t("members.columns.joined"),
       cell: ({ row }) => (
-        <span style={{ color: "var(--fg-2)" }}>
-          {formatDate(row.original.joined_at, i18n.language)}
-        </span>
+        <time
+          className="org-muted"
+          dateTime={row.original.joined_at}
+          title={formatDate(row.original.joined_at, i18n.language)}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {formatPastTime(row.original.joined_at)}
+        </time>
       ),
     },
     {
@@ -178,8 +193,8 @@ export const MembersView = ({
       ),
       cell: ({ row }) => {
         const m = row.original;
-        const blocked =
-          isLastOwner(members, m) || !canEditMember(viewer, m.role);
+        const lastOwner = isLastOwner(members, m);
+        const blocked = lastOwner || !canEditMember(viewer, m.role);
         return (
           <div className="flex" style={{ justifyContent: "flex-end" }}>
             <Button
@@ -188,7 +203,9 @@ export const MembersView = ({
               type="button"
               disabled={blocked || busyUserId === m.user_id}
               title={
-                isLastOwner(members, m) ? t("members.lastOwner") : undefined
+                lastOwner
+                  ? t("members.lastOwner")
+                  : t("members.remove.aria", { name: m.name })
               }
               aria-label={t("members.remove.aria", { name: m.name })}
               data-testid={`member-remove-${m.user_id}`}
@@ -205,73 +222,78 @@ export const MembersView = ({
     },
   ];
 
+  const counts = (r: OrgRoleName) => members.filter((m) => m.role === r).length;
+
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: 14 }}
-      data-testid="members-tab"
-    >
-      <form
-        className="flex items-end"
-        style={{ gap: 10, flexWrap: "wrap" }}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submitAdd();
-        }}
-        data-testid="member-add-form"
+    <div className="org-stack" data-testid="members-tab">
+      <Section
+        title={t("members.add.title")}
+        description={t("members.add.lead")}
       >
-        <div style={{ flex: "1 1 240px", minWidth: 200 }}>
-          <Input
-            label={t("members.add.email")}
-            type="email"
-            value={email}
-            autoComplete="off"
-            placeholder="name@example.org"
-            {...(emailError ? { error: emailError } : {})}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-            data-testid="member-add-email"
-          />
-        </div>
-        <div className="field" style={{ width: 160 }}>
-          <label htmlFor="member-add-role">{t("members.add.role")}</label>
-          <Select
-            id="member-add-role"
-            value={role}
-            placeholder={t("members.add.role")}
-            options={roleOptions(roles)}
-            onValueChange={(next) => {
-              setRole(next as OrgRoleName);
-            }}
-          />
-        </div>
-        <Button
-          type="submit"
-          size="md"
-          disabled={adding}
-          style={{ gap: 6 }}
-          data-testid="member-add-submit"
+        <form
+          className="org-add"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submitAdd();
+          }}
+          data-testid="member-add-form"
         >
-          {adding ? (
-            <Spinner size="sm" />
-          ) : (
-            <UserPlus size={14} aria-hidden="true" />
-          )}
-          {t("members.add.submit")}
-        </Button>
-      </form>
-      {addFailure && (
-        <FailureNotice
-          failure={
-            addFailure.code === "not_found" ||
-            addFailure.code === "user_not_found"
-              ? { code: "member_not_found" }
-              : addFailure
-          }
-        />
-      )}
+          <div className="org-add-email">
+            <Input
+              label={t("members.add.email")}
+              type="email"
+              value={email}
+              autoComplete="off"
+              placeholder="name@example.org"
+              {...(emailError ? { error: emailError } : {})}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+              data-testid="member-add-email"
+            />
+          </div>
+          <div className="field org-add-role">
+            <label htmlFor="member-add-role">{t("members.add.role")}</label>
+            <Select
+              id="member-add-role"
+              value={role}
+              placeholder={t("members.add.role")}
+              options={roleOptions(roles)}
+              onValueChange={(next) => {
+                setRole(next as OrgRoleName);
+              }}
+            />
+          </div>
+          <div className="org-add-submit">
+            <Button
+              type="submit"
+              disabled={adding}
+              data-testid="member-add-submit"
+            >
+              {adding ? (
+                <Spinner size="sm" />
+              ) : (
+                <UserPlus size={14} aria-hidden="true" />
+              )}
+              {t("members.add.submit")}
+            </Button>
+          </div>
+        </form>
+        {addFailure && (
+          <div style={{ marginTop: 12 }}>
+            <FailureNotice
+              failure={
+                addFailure.code === "not_found" ||
+                addFailure.code === "user_not_found"
+                  ? { code: "member_not_found" }
+                  : addFailure
+              }
+            />
+          </div>
+        )}
+      </Section>
+
       {failure && <FailureNotice failure={failure} />}
 
       <FilterBar
@@ -285,7 +307,11 @@ export const MembersView = ({
             label: t("members.columns.role"),
             value: roleFilter,
             onChange: setRoleFilter,
-            options: [...roleOptions(["owner", "admin", "member"])],
+            options: ROLES.map((r) => ({
+              value: r,
+              label: t(`role.${r}`),
+              ...(status === "ready" ? { count: counts(r) } : {}),
+            })),
           },
         ]}
         onReset={() => {
@@ -294,6 +320,7 @@ export const MembersView = ({
         }}
       />
       <DataTable
+        className="org-table"
         caption={t("members.caption")}
         columns={columns}
         data={rows}
@@ -306,14 +333,6 @@ export const MembersView = ({
         }
         {...(members.length > 0 ? {} : { emptyHint: t("members.empty.body") })}
       />
-      <p style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}>
-        <Users
-          size={12}
-          aria-hidden="true"
-          style={{ marginRight: 4, verticalAlign: -1 }}
-        />
-        {t("members.count", { count: members.length })}
-      </p>
 
       <Modal
         isOpen={confirming !== null}

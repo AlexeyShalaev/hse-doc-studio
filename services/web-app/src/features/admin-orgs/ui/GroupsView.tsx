@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { Pencil, Plus, Trash2, UsersRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Modal, Spinner } from "@shared/ui";
-import type { AdminGroup, AdminOrgMember } from "@entities/session";
-import type { Failure } from "../lib/failure";
-import { CARD } from "../lib/styles";
 import {
   Avatar,
-  EmptyBlock,
-  FailureNotice,
-  LoadFailed,
-  LoadingRow,
-} from "./parts";
+  Button,
+  EmptyState,
+  ErrorState,
+  Input,
+  Modal,
+  Spinner,
+  TableSkeleton,
+} from "@shared/ui";
+import type { AdminGroup, AdminOrgMember } from "@entities/session";
+import type { Failure } from "../lib/failure";
+import { FailureNotice } from "./parts";
 
 export type GroupDraft = { name: string; memberIds: string[] };
 
@@ -36,7 +38,7 @@ export type GroupsViewProps = {
   onReset?: () => void;
 };
 
-const SHOWN_AVATARS = 5;
+const SHOWN_AVATARS = 6;
 
 /** Вкладка «Группы»: карточки групп, создание, правка состава, удаление. */
 export const GroupsView = ({
@@ -69,7 +71,6 @@ export const GroupsView = ({
     <Button
       size="sm"
       type="button"
-      style={{ gap: 6 }}
       onClick={() => {
         open({ mode: "create" });
       }}
@@ -81,47 +82,39 @@ export const GroupsView = ({
   );
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }} data-testid="groups-tab">
-      <div className="flex items-start" style={{ gap: 12 }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12.5,
-            color: "var(--fg-2)",
-            flex: 1,
-            maxWidth: 560,
-          }}
-        >
-          {t("groups.lead")}
-        </p>
-        {status === "ready" && groups.length > 0 && addButton}
-      </div>
+    <div className="org-stack" data-testid="groups-tab">
+      {status === "ready" && groups.length > 0 && (
+        <div className="flex items-center" style={{ gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              className="org-muted"
+              style={{ margin: 0, fontSize: 12.5, maxWidth: 620 }}
+            >
+              {t("groups.lead")}
+            </p>
+          </div>
+          {addButton}
+        </div>
+      )}
       {failure && <FailureNotice failure={failure} />}
-      {status === "loading" && <LoadingRow testId="groups-loading" />}
+      {status === "loading" && (
+        <TableSkeleton rows={3} columns={2} testId="groups-loading" />
+      )}
       {status === "error" && (
-        <LoadFailed text={t("groups.loadFailed")} onRetry={onRetry} />
+        <ErrorState framed title={t("groups.loadFailed")} onRetry={onRetry} />
       )}
       {status === "ready" && groups.length === 0 && (
-        <EmptyBlock
+        <EmptyState
+          framed
           testId="groups-empty"
-          icon={<UsersRound size={18} aria-hidden="true" />}
+          icon={<UsersRound size={18} />}
           title={t("groups.empty.title")}
-          body={t("groups.empty.body")}
+          description={t("groups.empty.body")}
           action={addButton}
         />
       )}
       {status === "ready" && groups.length > 0 && (
-        <ul
-          aria-label={t("groups.caption")}
-          style={{
-            listStyle: "none",
-            margin: 0,
-            padding: 0,
-            display: "grid",
-            gap: 12,
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          }}
-        >
+        <ul aria-label={t("groups.caption")} className="org-groups">
           {groups.map((group) => {
             const people = group.member_ids
               .map((id) => byId.get(id))
@@ -129,17 +122,23 @@ export const GroupsView = ({
             return (
               <li
                 key={group.id}
-                className="flex flex-col"
-                style={{ ...CARD, gap: 12, padding: 14 }}
+                className="org-group"
                 data-testid={`group-${group.id}`}
               >
-                <div className="flex items-start" style={{ gap: 8 }}>
+                <div className="org-group-head">
+                  <span
+                    className="adm-row-icon"
+                    aria-hidden="true"
+                    style={{ width: 32, height: 32 }}
+                  >
+                    <UsersRound size={15} />
+                  </span>
                   <div
                     className="flex flex-col"
-                    style={{ gap: 2, flex: 1, minWidth: 0 }}
+                    style={{ gap: 1, flex: 1, minWidth: 0 }}
                   >
-                    <strong style={{ fontSize: 13.5 }}>{group.name}</strong>
-                    <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                    <span className="org-group-name">{group.name}</span>
+                    <span className="org-muted" style={{ fontSize: 12 }}>
                       {t("groups.count", { count: people.length })}
                     </span>
                   </div>
@@ -148,6 +147,7 @@ export const GroupsView = ({
                     variant="ghost"
                     type="button"
                     aria-label={t("groups.edit.aria", { name: group.name })}
+                    title={t("groups.edit.aria", { name: group.name })}
                     data-testid={`group-edit-${group.id}`}
                     onClick={() => {
                       open({ mode: "edit", group });
@@ -160,6 +160,7 @@ export const GroupsView = ({
                     variant="ghost"
                     type="button"
                     aria-label={t("groups.delete.aria", { name: group.name })}
+                    title={t("groups.delete.aria", { name: group.name })}
                     data-testid={`group-delete-${group.id}`}
                     onClick={() => {
                       onReset?.();
@@ -170,37 +171,25 @@ export const GroupsView = ({
                   </Button>
                 </div>
                 {people.length === 0 ? (
-                  <span style={{ fontSize: 12, color: "var(--fg-3)" }}>
+                  <span className="org-faint" style={{ fontSize: 12 }}>
                     {t("groups.noPeople")}
                   </span>
                 ) : (
-                  <div className="flex items-center" style={{ gap: 0 }}>
-                    {people.slice(0, SHOWN_AVATARS).map((m, index) => (
-                      <span
-                        key={m.user_id}
-                        title={m.name}
-                        style={{ marginLeft: index === 0 ? 0 : -6 }}
-                      >
-                        <Avatar
-                          name={m.name}
-                          size={26}
-                          style={{ border: "2px solid var(--bg-1)" }}
-                        />
-                      </span>
-                    ))}
-                    {people.length > SHOWN_AVATARS && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11.5,
-                          color: "var(--fg-2)",
-                        }}
-                      >
-                        {t("groups.more", {
-                          count: people.length - SHOWN_AVATARS,
-                        })}
-                      </span>
-                    )}
+                  <div className="flex items-center" style={{ gap: 10 }}>
+                    <span className="org-stack-avatars">
+                      {people.slice(0, SHOWN_AVATARS).map((m) => (
+                        <span key={m.user_id} title={m.name}>
+                          <Avatar name={m.name} seed={m.user_id} size={26} />
+                        </span>
+                      ))}
+                    </span>
+                    <span className="org-group-names">
+                      {people.length > SHOWN_AVATARS
+                        ? t("groups.more", {
+                            count: people.length - SHOWN_AVATARS,
+                          })
+                        : people.map((m) => m.name).join(", ")}
+                    </span>
                   </div>
                 )}
               </li>
@@ -373,17 +362,7 @@ const GroupForm = ({
                 setQuery(event.target.value);
               }}
             />
-            <ul
-              style={{
-                listStyle: "none",
-                margin: 0,
-                padding: 4,
-                maxHeight: 220,
-                overflowY: "auto",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--r-2)",
-              }}
-            >
+            <ul className="org-picker">
               {shown.length === 0 && (
                 <li style={{ padding: 8, fontSize: 12, color: "var(--fg-2)" }}>
                   {t("groups.form.noMatch")}
@@ -391,19 +370,17 @@ const GroupForm = ({
               )}
               {shown.map((m) => (
                 <li key={m.user_id}>
-                  <label
-                    className="flex items-center"
-                    style={{ gap: 10, padding: "6px 8px", cursor: "pointer" }}
-                  >
+                  <label>
                     <input
                       type="checkbox"
+                      className="org-check"
                       checked={chosen.includes(m.user_id)}
                       onChange={() => {
                         toggle(m.user_id);
                       }}
                       data-testid={`group-member-${m.user_id}`}
                     />
-                    <Avatar name={m.name} size={24} />
+                    <Avatar name={m.name} seed={m.user_id} size={24} />
                     <span className="flex flex-col" style={{ minWidth: 0 }}>
                       <span style={{ fontSize: 12.5 }}>{m.name}</span>
                       <span style={{ fontSize: 11, color: "var(--fg-2)" }}>

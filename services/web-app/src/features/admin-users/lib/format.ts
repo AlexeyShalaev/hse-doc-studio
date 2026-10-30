@@ -22,11 +22,17 @@ export const formatDateTime = (iso: string, lng: string): string => {
   }).format(date);
 };
 
-/** Инициалы для аватара: первые буквы первых двух слов. */
-export const initialsOf = (name: string): string => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.slice(0, 2).map((p) => Array.from(p)[0] ?? "");
-  return letters.join("").toUpperCase() || "?";
+/** Дата и время до минут: подсказка к «2 дня назад». */
+export const formatFull = (iso: string, lng: string): string => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(lng, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 };
 
 /** Значение из details журнала одной строкой. */

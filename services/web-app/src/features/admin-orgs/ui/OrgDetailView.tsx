@@ -1,26 +1,25 @@
-import { useId, useState, type ReactNode } from "react";
-import {
-  ArrowLeft,
-  FolderKanban,
-  Gauge,
-  Trash2,
-  UsersRound,
-  Users,
-} from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ArrowLeft, FolderKanban, SearchX, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, ConfirmByName, PageHeader } from "@shared/ui";
+import {
+  Button,
+  ConfirmByName,
+  CopyField,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PageTabs,
+  Section,
+  SettingRow,
+  TableSkeleton,
+} from "@shared/ui";
 import type { AdminOrg } from "@entities/session";
 import type { Failure } from "../lib/failure";
-import { CARD } from "../lib/styles";
-import { LoadFailed, LoadingRow, RoleBadge } from "./parts";
+import { OrgMark, RoleBadge } from "./parts";
 
-export type OrgTab = "members" | "groups";
+export type OrgTab = "members" | "groups" | "projects" | "settings";
 
-/** Вкладки, которых ещё нет: ведут на этапы 3 и 4, данных у них нет. */
-const SOON_TABS = [
-  { id: "projects", icon: FolderKanban },
-  { id: "quotas", icon: Gauge },
-] as const;
+const TABS: readonly OrgTab[] = ["members", "groups", "projects", "settings"];
 
 export type OrgDetailViewProps = {
   status: "loading" | "error" | "missing" | "ready";
@@ -29,17 +28,19 @@ export type OrgDetailViewProps = {
   onTab: (tab: OrgTab) => void;
   onBack: () => void;
   onRetry?: () => void;
+  /** Сколько групп: число на вкладке, пока не загрузилось, его нет. */
+  groupCount?: number | null;
   /** Только админ установки удаляет организацию. */
   canDelete: boolean;
   deleting?: boolean;
   deleteFailure?: Failure | null;
   onDelete: () => void;
   onDeleteReset?: () => void;
-  /** Содержимое открытой вкладки. */
+  /** Содержимое вкладок участников и групп. */
   children?: ReactNode;
 };
 
-/** Страница организации: шапка, вкладки и удаление. */
+/** Страница организации: шапка, вкладки «Участники», «Группы», «Проекты», «Настройки». */
 export const OrgDetailView = ({
   status,
   org,
@@ -47,6 +48,7 @@ export const OrgDetailView = ({
   onTab,
   onBack,
   onRetry,
+  groupCount = null,
   canDelete,
   deleting = false,
   deleteFailure = null,
@@ -56,190 +58,192 @@ export const OrgDetailView = ({
 }: OrgDetailViewProps) => {
   const { t } = useTranslation("adminOrgs");
   const [confirming, setConfirming] = useState(false);
-  const panelId = useId();
 
   const back = (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
       type="button"
+      className="org-back"
       onClick={onBack}
-      style={{ gap: 6, alignSelf: "flex-start" }}
       data-testid="org-back"
     >
       <ArrowLeft size={14} aria-hidden="true" />
       {t("detail.back")}
-    </Button>
+    </button>
   );
 
   if (status === "loading") {
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="org-page" role="status" aria-label={t("loading")}>
         {back}
-        <LoadingRow />
+        <div className="flex items-center" style={{ gap: 12 }}>
+          <span className="adm-skel" style={{ width: 34, height: 34 }} />
+          <div className="flex flex-col" style={{ gap: 8, flex: 1 }}>
+            <span className="adm-skel" style={{ width: 220, height: 14 }} />
+            <span className="adm-skel" style={{ width: 160 }} />
+          </div>
+        </div>
+        <TableSkeleton rows={4} columns={3} withAvatar />
       </div>
     );
   }
   if (status === "error") {
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="org-page">
         {back}
-        <LoadFailed text={t("detail.loadFailed")} onRetry={onRetry} />
+        <ErrorState framed title={t("detail.loadFailed")} onRetry={onRetry} />
       </div>
     );
   }
   if (status === "missing" || !org) {
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="org-page">
         {back}
-        <section
-          style={{ ...CARD, padding: 24, maxWidth: 520 }}
-          className="flex flex-col"
-          data-testid="org-missing"
-        >
-          <h1 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
-            {t("detail.missing.title")}
-          </h1>
-          <p
-            style={{ margin: "6px 0 0", fontSize: 12.5, color: "var(--fg-2)" }}
-          >
-            {t("detail.missing.body")}
-          </p>
-        </section>
+        <EmptyState
+          framed
+          testId="org-missing"
+          icon={<SearchX size={18} />}
+          title={t("detail.missing.title")}
+          description={t("detail.missing.body")}
+          action={
+            <Button size="sm" variant="outline" type="button" onClick={onBack}>
+              {t("detail.missing.action")}
+            </Button>
+          }
+        />
       </div>
     );
   }
 
-  const tabs: { id: OrgTab; icon: typeof Users; count: number | null }[] = [
-    { id: "members", icon: Users, count: org.member_count },
-    { id: "groups", icon: UsersRound, count: null },
-  ];
+  const count = (id: OrgTab): number | undefined => {
+    if (id === "members") return org.member_count;
+    if (id === "groups") return groupCount ?? undefined;
+    if (id === "projects") return org.project_count;
+    return undefined;
+  };
 
   return (
-    <div className="flex flex-col" style={{ gap: 16 }} data-testid="org-detail">
+    <div className="org-page" data-testid="org-detail">
       <PageHeader
         back={back}
-        title={org.name}
+        title={
+          <span className="org-title">
+            <OrgMark name={org.name} slug={org.slug} size={34} />
+            <span>{org.name}</span>
+          </span>
+        }
         meta={
           <>
-            <span
-              className="mono"
-              style={{ fontSize: 12, color: "var(--fg-2)" }}
-            >
-              {org.slug}
-            </span>
+            <span className="org-slug">{org.slug}</span>
             {org.my_role ? (
               <RoleBadge role={org.my_role} />
             ) : (
-              <Badge variant="subtle">{t("list.instanceAdmin")}</Badge>
-            )}
-            <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
-              {t("detail.stats", {
-                members: org.member_count,
-                projects: org.project_count,
-              })}
-            </span>
-          </>
-        }
-        actions={
-          canDelete && (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              style={{ gap: 6 }}
-              data-testid="org-delete"
-              onClick={() => {
-                onDeleteReset?.();
-                setConfirming(true);
-              }}
-            >
-              <Trash2 size={14} aria-hidden="true" />
-              {t("detail.delete.button")}
-            </Button>
-          )
-        }
-      />
-
-      <div
-        role="tablist"
-        aria-label={t("detail.tabs.label")}
-        className="flex"
-        style={{
-          gap: 4,
-          borderBottom: "1px solid var(--border)",
-          flexWrap: "wrap",
-        }}
-      >
-        {tabs.map(({ id, icon: Icon, count }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            id={`${panelId}-tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls={`${panelId}-panel`}
-            data-testid={`org-tab-${id}`}
-            className="row-btn"
-            style={{
-              width: "auto",
-              padding: "8px 12px",
-              gap: 6,
-              borderRadius: "var(--r-2) var(--r-2) 0 0",
-              borderBottom:
-                tab === id
-                  ? "2px solid var(--accent)"
-                  : "2px solid transparent",
-              fontWeight: tab === id ? 600 : 400,
-            }}
-            onClick={() => {
-              onTab(id);
-            }}
-          >
-            <Icon size={14} aria-hidden="true" />
-            {t(`detail.tabs.${id}`)}
-            {count !== null && (
-              <span className="chip subtle" style={{ marginLeft: 2 }}>
-                {count}
+              <span className="org-muted" style={{ fontSize: 12 }}>
+                {t("list.instanceAdmin")}
               </span>
             )}
-          </button>
-        ))}
-        {SOON_TABS.map(({ id, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={false}
-            aria-disabled="true"
-            tabIndex={-1}
-            data-testid={`org-tab-${id}`}
-            title={t("detail.tabs.soonHint")}
-            className="row-btn"
-            style={{
-              width: "auto",
-              padding: "8px 12px",
-              gap: 6,
-              opacity: 0.55,
-              cursor: "not-allowed",
-              borderRadius: "var(--r-2) var(--r-2) 0 0",
-            }}
-          >
-            <Icon size={14} aria-hidden="true" />
-            {t(`detail.tabs.${id}`)}
-            <span className="chip subtle" style={{ marginLeft: 2 }}>
-              {t("detail.tabs.soon")}
-            </span>
-          </button>
-        ))}
-      </div>
+          </>
+        }
+        tabs={
+          <PageTabs
+            label={t("detail.tabs.label")}
+            value={tab}
+            onChange={onTab}
+            idPrefix="org-tab"
+            panelId="org-panel"
+            tabs={TABS.map((id) => {
+              const n = count(id);
+              return {
+                id,
+                label: t(`detail.tabs.${id}`),
+                testId: `org-tab-${id}`,
+                ...(n !== undefined ? { count: n } : {}),
+              };
+            })}
+          />
+        }
+      />
       <div
         role="tabpanel"
-        id={`${panelId}-panel`}
-        aria-labelledby={`${panelId}-tab-${tab}`}
+        id="org-panel"
+        aria-labelledby={`org-tab-${tab}`}
         data-testid={`org-panel-${tab}`}
       >
-        {children}
+        {tab === "projects" && (
+          <EmptyState
+            framed
+            testId="org-projects"
+            icon={<FolderKanban size={18} />}
+            title={
+              org.project_count > 0
+                ? t("detail.projects.title", { count: org.project_count })
+                : t("detail.projects.none")
+            }
+            description={t("detail.projects.body")}
+          />
+        )}
+        {tab === "settings" && (
+          <div className="org-stack org-settings" data-testid="org-settings">
+            <Section
+              title={t("detail.settings.title")}
+              description={t("detail.settings.lead")}
+            >
+              <SettingRow label={t("detail.settings.name")}>
+                <span style={{ fontSize: 13, color: "var(--fg-0)" }}>
+                  {org.name}
+                </span>
+              </SettingRow>
+              <SettingRow
+                label={t("detail.settings.slug")}
+                hint={t("detail.settings.slugHint")}
+                align="stretch"
+              >
+                <CopyField value={org.slug} label={t("detail.settings.slug")} />
+              </SettingRow>
+              <SettingRow label={t("detail.settings.role")}>
+                {org.my_role ? (
+                  <RoleBadge role={org.my_role} />
+                ) : (
+                  <span className="org-muted" style={{ fontSize: 13 }}>
+                    {t("list.instanceAdmin")}
+                  </span>
+                )}
+              </SettingRow>
+            </Section>
+            {canDelete && (
+              <Section
+                title={t("detail.delete.section")}
+                testId="org-danger"
+                className="org-danger"
+              >
+                <SettingRow
+                  label={t("detail.delete.button")}
+                  hint={
+                    org.project_count > 0
+                      ? t("detail.delete.hintProjects", {
+                          count: org.project_count,
+                        })
+                      : t("detail.delete.hint")
+                  }
+                >
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    type="button"
+                    data-testid="org-delete"
+                    onClick={() => {
+                      onDeleteReset?.();
+                      setConfirming(true);
+                    }}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    {t("detail.delete.button")}
+                  </Button>
+                </SettingRow>
+              </Section>
+            )}
+          </div>
+        )}
+        {(tab === "members" || tab === "groups") && children}
       </div>
 
       <ConfirmByName

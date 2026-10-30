@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { ApiError, failureCode } from "@shared/api";
 import { useBootstrap } from "@entities/session";
-import { useDeleteOrg, useOrg } from "../api/adminOrgsQueries";
+import { useDeleteOrg, useGroups, useOrg } from "../api/adminOrgsQueries";
 import type { Failure } from "../lib/failure";
 import type { Viewer } from "../lib/permissions";
 import { GroupsTab } from "./GroupsTab";
 import { MembersTab } from "./MembersTab";
 import { OrgDetailView, type OrgTab } from "./OrgDetailView";
 
-/** Организация по адресу: шапка, вкладки участников и групп, удаление. */
+/** Организация по адресу: шапка, вкладки участников, групп, проектов и настроек. */
 export const OrgDetail = ({
   slug,
   initialTab = "members",
@@ -21,6 +21,8 @@ export const OrgDetail = ({
   onDeleted: () => void;
 }) => {
   const org = useOrg(slug);
+  // Тот же запрос, что у вкладки групп: число на вкладке без лишнего похода.
+  const groups = useGroups(slug);
   const remove = useDeleteOrg();
   const user = useBootstrap().data?.user;
   const [tab, setTab] = useState<OrgTab>(initialTab);
@@ -51,6 +53,7 @@ export const OrgDetail = ({
       onRetry={() => {
         void org.refetch();
       }}
+      groupCount={groups.data?.length ?? null}
       canDelete={instanceAdmin}
       deleting={remove.isPending}
       deleteFailure={deleteFailure}

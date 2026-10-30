@@ -47,7 +47,8 @@
     "noMatch": {
       "title": "Nothing found",
       "body": "Change the query or reset the search."
-    }
+    },
+    "open": "Open organization"
   },
   "create": {
     "title": "New organization",
@@ -64,11 +65,15 @@
     "loadFailed": "Could not load the organization.",
     "missing": {
       "title": "Organization not found",
-      "body": "There is no such organization, or you have no access to it."
+      "body": "There is no such organization, or you have no access to it.",
+      "action": "Back to organizations"
     },
-    "stats": "Members: {{members}}, projects: {{projects}}",
     "delete": {
-      "button": "Delete",
+      "section": "Danger zone",
+      "button": "Delete organization",
+      "hint": "Members and groups are deleted with the organization. This cannot be undone.",
+      "hintProjects_one": "Move or delete {{count}} project first: the server refuses while projects remain.",
+      "hintProjects_other": "Move or delete {{count}} projects first: the server refuses while projects remain.",
       "title": "Delete the organization?",
       "body": "Members and groups are deleted with the organization. This cannot be undone.",
       "withProjects": "The organization has projects ({{count}}), so the server will refuse. Move or delete them first.",
@@ -79,22 +84,36 @@
       "members": "Members",
       "groups": "Groups",
       "projects": "Projects",
-      "quotas": "Quotas",
-      "soon": "Soon",
-      "soonHint": "Coming in one of the next updates"
+      "settings": "Settings"
+    },
+    "projects": {
+      "title_one": "The organization has {{count}} project",
+      "title_other": "The organization has {{count}} projects",
+      "none": "The organization has no projects yet",
+      "body": "A list of projects with owners and moving projects between organizations are coming in one of the next updates. Projects themselves open in the Studio."
+    },
+    "settings": {
+      "title": "Organization",
+      "lead": "Members see the name and address in the Studio.",
+      "name": "Name",
+      "slug": "Address",
+      "slugHint": "Used in links. It cannot be changed after creation.",
+      "role": "Your role"
     }
   },
   "members": {
     "columns": {
       "person": "Person",
       "role": "Role",
-      "joined": "In the organization since",
+      "joined": "Added",
       "actions": "Actions"
     },
     "you": "you",
     "lastOwner": "The only owner: assign another one first",
     "roleFor": "Role: {{name}}",
     "add": {
+      "title": "Add a member",
+      "lead": "The person must already be registered on this installation.",
       "email": "Email",
       "role": "Role",
       "submit": "Add",
@@ -114,9 +133,7 @@
       "body": "{{name}} loses access to the organization's projects and leaves its groups.",
       "bodySelf": "You lose access to the organization and its projects. Only another admin can bring you back.",
       "confirm": "Remove"
-    },
-    "count_one": "{{count}} member in total",
-    "count_other": "{{count}} members in total"
+    }
   },
   "groups": {
     "lead": "A group collects people of the organization so access to projects can be given to all of them at once.",

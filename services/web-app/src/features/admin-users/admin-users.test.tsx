@@ -187,19 +187,92 @@ describe("люди в админке: экраны", () => {
     expect(await screen.findByTestId("link-delivery")).toBeVisible();
     expect(await screen.findByText("fresh@example.org")).toBeVisible();
 
-    await user.click(screen.getByTestId("invite-revoke-inv_01"));
+    await user.click(screen.getByTestId("invite-actions-inv_01"));
+    await user.click(await screen.findByTestId("invite-revoke-inv_01"));
     await waitFor(() => {
       expect(screen.queryByText("new.student@example.org")).toBeNull();
     });
   });
 
-  it("одобрения: счётчик на вкладке и решение", async () => {
+  it("одобрения: счётчик на вкладке, решение в строке и пачкой", async () => {
     const user = userEvent.setup();
     render(wrap(<AdminUsers />));
-    await user.click(await screen.findByTestId("users-tab-approvals"));
-    expect(await screen.findByText("Анна Волкова")).toBeVisible();
+    const tab = await screen.findByTestId("users-tab-approvals");
+    await waitFor(() => {
+      expect(tab).toHaveTextContent("3");
+    });
+    await user.click(tab);
+    expect(await screen.findByText("3 заявки ждут решения")).toBeVisible();
     await user.click(screen.getByTestId("approve-u_01hx7k4g3h"));
+    await waitFor(() => {
+      expect(screen.queryByText("Анна Волкова")).toBeNull();
+    });
+    expect(screen.getByText("2 заявки ждут решения")).toBeVisible();
+
+    // Отмеченная заявка одна: кнопка пачки одобряет только её.
+    await user.click(
+      screen.getByRole("checkbox", { name: "Выбрать Артём Ковалёв" }),
+    );
+    expect(screen.getByTestId("approve-bulk")).toHaveTextContent(
+      "Одобрить выбранные (1)",
+    );
+    await user.click(screen.getByTestId("approve-bulk"));
+    await waitFor(() => {
+      expect(screen.queryByText("Артём Ковалёв")).toBeNull();
+    });
+    await user.click(screen.getByTestId("approve-bulk"));
     expect(await screen.findByText("Очередь пуста")).toBeVisible();
+  });
+
+  it("карточка человека: сведения и действия по клику на строку", async () => {
+    const user = userEvent.setup();
+    render(wrap(<AdminUsers />));
+    await user.click(await screen.findByText("Мария Келлер"));
+    const drawer = await screen.findByTestId("person-drawer");
+    expect(within(drawer).getByText("maria.keller@example.org")).toBeVisible();
+    expect(within(drawer).getByText("Зарегистрирован")).toBeVisible();
+    await user.click(within(drawer).getByTestId("drawer-revokeSessions"));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Завершить все входы?",
+    });
+    await user.click(within(confirm).getByTestId("user-confirm"));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Завершить все входы?" }),
+      ).toBeNull();
+    });
+  });
+
+  it("свой аккаунт: в карточке нельзя отключить себя и снять свои права", async () => {
+    const user = userEvent.setup();
+    render(wrap(<AdminUsers />));
+    await user.click(await screen.findByText("Иван Сидоров"));
+    const drawer = await screen.findByTestId("person-drawer");
+    expect(within(drawer).getByTestId("drawer-disable")).toBeDisabled();
+    expect(within(drawer).getByTestId("drawer-revokeAdmin")).toBeDisabled();
+    expect(within(drawer).getByTestId("drawer-resetLink")).toBeEnabled();
+  });
+
+  it("фильтр по состоянию показывает число людей на чипе", async () => {
+    const user = userEvent.setup();
+    render(wrap(<AdminUsers />));
+    await screen.findByText("Мария Келлер");
+    const chip = await screen.findByRole("button", { name: /Ждёт одобрения/ });
+    await waitFor(() => {
+      expect(chip).toHaveTextContent("3");
+    });
+    await user.click(chip);
+    await waitFor(() => {
+      expect(screen.queryByText("Мария Келлер")).toBeNull();
+    });
+    expect(screen.getByText("Ксения Лебедева")).toBeVisible();
+  });
+
+  it("не админ установки видит запрет, а не ошибку", async () => {
+    activateServerScenario("org_admin");
+    render(wrap(<AdminUsers />));
+    expect(await screen.findByTestId("users-forbidden")).toBeVisible();
+    expect(screen.queryByTestId("users-invite")).toBeNull();
   });
 
   it("аудит: подписи действий, фильтр и подгрузка", async () => {
@@ -234,7 +307,10 @@ describe("люди в админке: экраны", () => {
   it("английский интерфейс", async () => {
     await i18n.changeLanguage("en");
     render(wrap(<AdminUsers />));
-    expect(await screen.findByText("Awaiting approval")).toBeVisible();
+    expect(
+      (await screen.findAllByText("Awaiting approval")).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Invite" })).toBeVisible();
     await i18n.changeLanguage("ru");
   });
 });
