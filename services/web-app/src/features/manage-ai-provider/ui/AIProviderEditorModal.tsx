@@ -277,7 +277,9 @@ export const AIProviderEditorModal = ({
                     setApiKey(e.target.value);
                   }}
                 />
-                <span className="hint">{t("fields.apiKeyHint")}</span>
+                <span className="text-2xs text-fg-3">
+                  {t("fields.apiKeyHint")}
+                </span>
               </div>
 
               {showBaseUrl && (
@@ -344,7 +346,7 @@ export const AIProviderEditorModal = ({
                     ))}
                   </div>
                 ) : (
-                  <span className="hint">
+                  <span className="text-2xs text-fg-3">
                     {isEdit ? t("models.emptyEdit") : t("models.emptyCreate")}
                   </span>
                 )}
@@ -403,7 +405,7 @@ export const AIProviderEditorModal = ({
                   </button>
                 </div>
                 {!sslVerify && (
-                  <span className="hint" style={{ color: "var(--c-warn)" }}>
+                  <span className="text-2xs" style={{ color: "var(--c-warn)" }}>
                     {t("fields.tlsWarning")}
                   </span>
                 )}

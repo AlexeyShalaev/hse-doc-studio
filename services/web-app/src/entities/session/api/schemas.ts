@@ -483,6 +483,17 @@ export const UpdateAdminGroupRequestSchema = z.strictObject({
   member_ids: z.array(z.string()).nullable(),
 });
 export type OrgRoleName = z.infer<typeof OrgRoleNameSchema>;
+export type AccountStatus = z.infer<typeof AccountStatusSchema>;
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+export type AdminUserPage = z.infer<typeof AdminUserPageSchema>;
+export type AdminResetLink = z.infer<typeof AdminResetLinkSchema>;
+export type AdminInvitation = z.infer<typeof AdminInvitationSchema>;
+export type AdminInvitationPage = z.infer<typeof AdminInvitationPageSchema>;
+export type AdminInvitationCreated = z.infer<
+  typeof AdminInvitationCreatedSchema
+>;
+export type AdminAuditEvent = z.infer<typeof AdminAuditEventSchema>;
+export type AdminAuditPage = z.infer<typeof AdminAuditPageSchema>;
 export type AdminOrg = z.infer<typeof AdminOrgSchema>;
 export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;
 export type AdminGroup = z.infer<typeof AdminGroupSchema>;

@@ -77,10 +77,7 @@ describe("AdminGate", () => {
     expect(screen.getByTestId("admin-nav-audit")).toHaveTextContent("Audit");
   });
 
-  it("shows a stub for a section that is not built yet and redirects unknown ones", async () => {
-    mount(bootstrap(true), "/admin/users");
-    expect(await screen.findByTestId("admin-section-soon")).toBeInTheDocument();
-    cleanup();
+  it("redirects an unknown section to the overview", async () => {
     mount(bootstrap(true), "/admin/nope");
     await waitFor(() => {
       expect(screen.getByTestId("admin-overview")).toBeInTheDocument();

@@ -335,7 +335,23 @@ describe("организации в админке: экраны", () => {
     expect(
       await screen.findByText("Этот человек уже в организации."),
     ).toBeVisible();
+
+    // Неверный адрес снимает прошлый отказ сервера: на экране одно сообщение.
+    await user.clear(screen.getByTestId("member-add-email"));
+    await user.type(screen.getByTestId("member-add-email"), "не-адрес");
+    await user.click(screen.getByTestId("member-add-submit"));
+    expect(await screen.findByText("Введите адрес почты.")).toBeVisible();
+    expect(screen.queryByText("Этот человек уже в организации.")).toBeNull();
   }, 20_000);
+
+  it("участники: фильтр по роли с одной кнопкой «Все»", async () => {
+    activateServerScenario("admin_ready");
+    render(wrap(<Detail slug="pilot-2026" />));
+    const group = await screen.findByRole("group", { name: "Роль" });
+    expect(within(group).getAllByRole("button", { name: "Все" })).toHaveLength(
+      1,
+    );
+  });
 
   it("участники: удаление требует подтверждения", async () => {
     const user = userEvent.setup();

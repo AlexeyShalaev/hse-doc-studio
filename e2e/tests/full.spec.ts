@@ -500,4 +500,45 @@ test.describe("Полный смоук сервера", () => {
       await p.context().close();
     }
   });
+  test("люди в админке: приглашение по ссылке и журнал", async ({
+    browser,
+  }) => {
+    for (const lang of LANGS) {
+      const p = await page(browser, lang);
+      await p.goto("/login");
+      await p.locator("input[type=email]").fill(ADMIN.email);
+      await p.locator("input[type=password]").fill(stackPassword());
+      await p.getByTestId("login-form").locator("button[type=submit]").click();
+      await expect(p.getByTestId("account-menu-trigger")).toBeVisible();
+
+      await p.goto("/admin/users");
+      await expect(p.getByTestId("users-panel")).toBeVisible();
+      await expect(p.getByText(ALICE.email)).toBeVisible();
+      await shot(p, lang, "full-12-admin-users");
+
+      await p.getByTestId("users-tab-invitations").click();
+      await p.getByTestId("invite-email").fill(`invited-${lang}@smoke.test`);
+      await p.getByTestId("invite-submit").click();
+      const link = p.getByTestId("link-delivery");
+      await expect(link).toBeVisible();
+      const url = await link.locator("input").first().inputValue();
+      expect(url).toMatch(/\/invite\/\S+$/);
+      await shot(p, lang, "full-13-admin-invitation");
+
+      // Ссылку открывает человек без сессии: имя пригласившего и закрытая почта.
+      const guest = await page(browser, lang);
+      await guest.goto(url!);
+      await expect(guest.locator("input[type=email]")).toHaveValue(
+        `invited-${lang}@smoke.test`,
+      );
+      await shot(guest, lang, "full-14-invite-landing");
+      await guest.context().close();
+
+      await p.goto("/admin/audit");
+      await expect(p.getByTestId("audit-log")).toBeVisible();
+      await expect(p.locator("[data-testid^=audit-]").first()).toBeVisible();
+      await shot(p, lang, "full-15-admin-audit");
+      await p.context().close();
+    }
+  });
 });

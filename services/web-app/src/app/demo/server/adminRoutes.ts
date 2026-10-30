@@ -9,6 +9,7 @@ import type {
 import { createInstallRoutes } from "./installRoutes";
 import { createOpsRoutes } from "./opsRoutes";
 import { createOrgRoutes } from "./orgRoutes";
+import { createPeopleRoutes } from "./peopleRoutes";
 import { adminSettingsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: настройки входа (регистрация, пароль, почта, провайдеры OIDC).
@@ -120,6 +121,10 @@ export const createAdminRoutes = (
 
   return [
     ...createOrgRoutes(getWorld),
+    ...createPeopleRoutes(getWorld).map((route) => ({
+      ...route,
+      handler: guarded(route.handler),
+    })),
     ...createOpsRoutes(getWorld),
     ...createInstallRoutes(getWorld),
     {

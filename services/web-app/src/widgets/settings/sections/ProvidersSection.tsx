@@ -11,6 +11,7 @@ import {
 } from "@entities/ai-provider";
 import { useOllamaRuntimeStatus, useSyncProvider } from "@entities/ai-runtime";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
+import { useCapabilities } from "@entities/session";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
 import { Spinner } from "@shared/ui/Spinner";
@@ -149,7 +150,10 @@ export const ProvidersSection = () => {
   // Живая локальная Ollama без провайдера — предлагаем подключить одним нажатием.
   // Бэкенд синкает провайдера сам (старт приложения, запуск/скачивание модели),
   // так что баннер — страховка для «Ollama появилась позже», не основной путь.
-  const runtimeStatus = useOllamaRuntimeStatus();
+  // На общем сервере локальной Ollama нет: ручка рантайма там не существует.
+  const { lacks } = useCapabilities();
+  const localServices = !lacks("local_services_ui");
+  const runtimeStatus = useOllamaRuntimeStatus({ enabled: localServices });
   const syncProvider = useSyncProvider();
   const ollamaDetected = Boolean(runtimeStatus.data?.base_url);
   const hasOllamaProvider = (providersQuery.data ?? []).some(
@@ -220,7 +224,9 @@ export const ProvidersSection = () => {
       <SettingHead
         anchorId="providers"
         title={t("providers.title")}
-        sub={t("providers.subtitle")}
+        sub={t(
+          localServices ? "providers.subtitle" : "providers.subtitleServer",
+        )}
       />
 
       <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>

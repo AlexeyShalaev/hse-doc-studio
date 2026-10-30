@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useParams } from "react-router";
 import { Spinner } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
 import { AdminLayout } from "./AdminLayout";
-import { AdminOverview, AdminSectionSoon } from "./AdminSections";
+import { AdminOverview } from "./AdminSections";
 
 // Настройки входа тяжелее остальной оболочки: свой чанк, чтобы admin-*.js оставался лёгким.
 const AdminSettingsPage = lazy(() =>
@@ -20,12 +20,19 @@ const AdminOpsPage = lazy(() =>
   import("./AdminOpsPage").then((m) => ({ default: m.AdminOpsPage })),
 );
 
+// Пользователи, приглашения, одобрения и журнал аудита.
+const AdminPeoplePage = lazy(() =>
+  import("./AdminPeoplePage").then((m) => ({ default: m.AdminPeoplePage })),
+);
+
 // Настройки установки: название и сборка, ключи подписи, общие ИИ-провайдеры.
 const AdminInstallPage = lazy(() =>
   import("./AdminInstallPage").then((m) => ({ default: m.AdminInstallPage })),
 );
 
 const INSTALL_PARTS = ["instance", "signing", "ai-providers"] as const;
+
+const PEOPLE_PARTS = ["users", "audit"] as const;
 
 const OPS_PARTS = ["runners", "quotas", "services", "storage"] as const;
 
@@ -121,6 +128,26 @@ export const AdminApp = () => {
             }
           />
         ))}
+        {PEOPLE_PARTS.map((part) => (
+          <Route
+            key={part}
+            path={part}
+            element={
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center"
+                    role="status"
+                  >
+                    <Spinner size="md" />
+                  </div>
+                }
+              >
+                <AdminPeoplePage part={part} />
+              </Suspense>
+            }
+          />
+        ))}
         {INSTALL_PARTS.map((part) => (
           <Route
             key={part}
@@ -142,7 +169,7 @@ export const AdminApp = () => {
           />
         ))}
         <Route path="org/:slug" element={<OrgRedirect />} />
-        <Route path=":section" element={<AdminSectionSoon />} />
+        <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>
   );

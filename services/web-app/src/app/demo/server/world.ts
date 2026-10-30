@@ -6,6 +6,7 @@ import {
 } from "./adminSettings";
 import { createDemoAdminInstall, type DemoAdminInstall } from "./adminInstall";
 import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
+import { createDemoAdminPeople, type DemoAdminPeople } from "./adminPeople";
 import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
 import { seedProjects, type DemoProject } from "./projects";
 import {
@@ -54,6 +55,8 @@ export type ServerDemoWorld = {
   adminOps: DemoAdminOps | null;
   /** Название, сборка, политика ключей и общие провайдеры; строятся при первом обращении. */
   adminInstall: DemoAdminInstall | null;
+  /** Люди установки: аккаунты, приглашения и журнал; строятся при первом обращении. */
+  adminPeople: DemoAdminPeople | null;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -101,6 +104,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminOrgs: null,
     adminOps: null,
     adminInstall: null,
+    adminPeople: null,
   };
 };
 
@@ -126,6 +130,12 @@ export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
 export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
   world.adminInstall ??= createDemoAdminInstall(world.scenario.installSeed);
   return world.adminInstall;
+};
+
+/** Люди установки мира. */
+export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
+  world.adminPeople ??= createDemoAdminPeople();
+  return world.adminPeople;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */

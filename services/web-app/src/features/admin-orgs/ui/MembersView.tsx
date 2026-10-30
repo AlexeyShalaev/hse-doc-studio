@@ -95,8 +95,8 @@ export const MembersView = ({
 
   const submitAdd = async () => {
     setTried(true);
-    if (!EMAIL.test(email.trim())) return;
     onReset?.();
+    if (!EMAIL.test(email.trim())) return;
     const ok = await onAdd(email.trim(), role);
     if (ok) {
       setEmail("");
@@ -285,10 +285,7 @@ export const MembersView = ({
             label: t("members.columns.role"),
             value: roleFilter,
             onChange: setRoleFilter,
-            options: [
-              { value: "", label: t("members.all") },
-              ...roleOptions(["owner", "admin", "member"]),
-            ],
+            options: [...roleOptions(["owner", "admin", "member"])],
           },
         ]}
         onReset={() => {
