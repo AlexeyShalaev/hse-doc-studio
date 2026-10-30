@@ -1,0 +1,13 @@
+{
+  "attempt": 1,
+  "seq": 3,
+  "events": [
+    {
+      "kind": "error",
+      "status": null,
+      "content_type": null,
+      "data": null,
+      "code": "upstream_unreachable"
+    }
+  ]
+}

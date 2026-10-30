@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState, JobStatus
+from hse_doc_studio.core.jobs.routing import JobRoute, RouteReason, RunnerScope
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 
 
@@ -35,6 +36,22 @@ class EnqueueRequest:
     timeout_s: float = 600.0
     # Раннер, который последним собирал этот проект: у него тёплый кэш.
     affinity_runner_id: UUID | None = None
+    route: JobRoute = JobRoute.shared
+    route_owner_id: str | None = None
+    personal_until: datetime | None = None
+    target_runner_id: UUID | None = None
+    route_reason: RouteReason | None = None
+    # False: метка справедливости не тратится (vtime = global_vtime, vcost = 0).
+    fair_share: bool = True
+    timeout_personal_s: float | None = None
+
+    def __post_init__(self) -> None:
+        if (self.route is JobRoute.pinned) != (self.target_runner_id is not None):
+            raise ValueError("a pinned job needs exactly one target runner")
+        if (self.route is JobRoute.personal_first) != (
+            self.route_owner_id is not None and self.personal_until is not None
+        ):
+            raise ValueError("a personal_first job needs an owner and a wait deadline")
 
 
 @dataclass(frozen=True)
@@ -67,6 +84,14 @@ class QueuedJob:
     error_code: str | None = None
     # Порядковый номер постановки: разрешает равные метки и время.
     seq: int = 0
+    route: JobRoute = JobRoute.shared
+    route_owner_id: str | None = None
+    personal_until: datetime | None = None
+    target_runner_id: UUID | None = None
+    runner_scope: RunnerScope | None = None
+    route_reason: RouteReason | None = None
+    vcost: float = 1.0
+    timeout_personal_s: float | None = None
 
 
 @dataclass(frozen=True)
@@ -78,11 +103,18 @@ class EnqueueOutcome:
 
 @dataclass(frozen=True)
 class RunnerRef:
-    """Кто просит работу: теги отбирают подходящие задачи, `concurrency` нужен для аффинности."""
+    """Кто просит работу: теги отбирают подходящие задачи, `concurrency` нужен для аффинности.
+
+    `accept_jobs` значит свободен слот сборок, `accept_relay` свободен слот ретрансляции ИИ.
+    """
 
     id: UUID
     tags: frozenset[str]
     concurrency: int = 1
+    scope: RunnerScope = RunnerScope.shared
+    owner_id: str | None = None
+    accept_jobs: bool = True
+    accept_relay: bool = False
 
 
 @dataclass(frozen=True)

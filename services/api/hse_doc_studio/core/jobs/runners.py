@@ -20,6 +20,8 @@ from typing import Protocol
 
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
+from hse_doc_studio.core.jobs.routing import RunnerScope
 
 REGISTRATION_TOKEN_PREFIX = "hsrt_"  # noqa: S105 — префикс для сканеров секретов, не секрет
 RUNNER_TOKEN_PREFIX = "hsrn_"  # noqa: S105
@@ -31,9 +33,25 @@ BOOTSTRAP_TOKEN_ID = "bootstrap"  # noqa: S105
 
 
 class RunnerOwnerKind(StrEnum):
-    """Кому принадлежит раннер. Сейчас только установка; остальные уровни заложены в схему."""
+    """Кому принадлежит раннер: установке (общий) или человеку (личный); организации заложены в схему."""
 
     instance = "instance"
+    user = "user"
+
+
+class RunnerHostKind(StrEnum):
+    """Где живёт раннер: консольный процесс или локальная Студия; нужно интерфейсу для подсказок."""
+
+    cli = "cli"
+    desktop = "desktop"
+
+
+@dataclass(frozen=True)
+class DeclaredAiEndpoint:
+    """ИИ-адрес, объявленный раннером: только имя и вид, URL знает один раннер."""
+
+    name: str
+    flavor: AiEndpointFlavor
 
 
 def new_runner_secret(prefix: str) -> str:
@@ -82,6 +100,35 @@ class Runner:
     revoked_at: datetime | None = None
     owner_kind: RunnerOwnerKind = RunnerOwnerKind.instance
     owner_id: str | None = None
+    host_kind: RunnerHostKind = RunnerHostKind.cli
+    # Согласованные возможности протокола (пересечение объявленных раннером и известных серверу).
+    features: frozenset[str] = frozenset()
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...] = ()
+    ai_concurrency: int = 0
+    last_seen_ip: str | None = None
+    offline_at: datetime | None = None
+    renamed_at: datetime | None = None
+
+    @property
+    def scope(self) -> RunnerScope:
+        return RunnerScope.personal if self.owner_kind is RunnerOwnerKind.user else RunnerScope.shared
+
+    def ai_endpoint(self, name: str) -> DeclaredAiEndpoint | None:
+        return next((endpoint for endpoint in self.ai_endpoints if endpoint.name == name), None)
+
+
+@dataclass(frozen=True)
+class RunnerAnnouncement:
+    """Что раннер сообщает о себе в `/announce`; `name=None` значит «имя не менять»."""
+
+    name: str | None
+    version: str
+    tags: frozenset[str]
+    concurrency: int
+    ai_concurrency: int
+    host_kind: RunnerHostKind
+    features: frozenset[str]
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...]
 
 
 class IRunnerRepository(Protocol):

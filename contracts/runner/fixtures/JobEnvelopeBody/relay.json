@@ -1,0 +1,37 @@
+{
+  "spec": {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "kind": "ai.relay",
+    "tags": [
+      "ai"
+    ],
+    "project_id": "22222222-2222-4222-8222-222222222222",
+    "actor": {
+      "kind": "user",
+      "id": "7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "name": "Анна Петрова",
+      "email": null,
+      "link_id": null,
+      "is_instance_admin": false,
+      "source": null,
+      "scopes": []
+    },
+    "locale": "ru",
+    "payload": {
+      "endpoint": "ollama",
+      "path": "chat/completions",
+      "method": "POST",
+      "content_type": "application/json",
+      "body_sha256": "9f2b5c0e3c6b8f1f4c3a2e1d0b9a8f7e6d5c4b3a29181716151413121110a0b0",
+      "body_size": 2048,
+      "stream": true,
+      "head_timeout_s": 120.0,
+      "idle_timeout_s": 120.0
+    }
+  },
+  "manifest": [],
+  "timeout_s": 900.0,
+  "attempt": 1,
+  "job_token": "v1.eyJqIjoiMzMzMyJ9.c2ln",
+  "actor_role": null
+}

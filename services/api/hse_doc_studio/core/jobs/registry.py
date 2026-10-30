@@ -9,6 +9,7 @@ from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload, OfficeConvertResult
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
 from hse_doc_studio.core.jobs.policy import JobKindPolicy
+from hse_doc_studio.core.jobs.relay import AiRelayPayload, AiRelayResult
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload, VerifyDetachedResult
 
 
@@ -62,6 +63,7 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
                 retryable=True,
                 max_attempts=2,
                 default_timeout_s=120.0,
+                personal_runner_allowed=False,
             ),
         ),
         JobKindSpec(
@@ -80,6 +82,19 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
                 retryable=True,
                 max_attempts=2,
                 default_timeout_s=300.0,
+            ),
+        ),
+        JobKindSpec(
+            kind=JobKind.ai_relay,
+            payload_cls=AiRelayPayload,
+            result_cls=AiRelayResult,
+            # Идёт только на выбранный раннер хозяина (pinned), поэтому не personal_first; повтор съел бы ответ.
+            policy=JobKindPolicy(
+                priority_class=JobPriorityClass.interactive,
+                retryable=False,
+                max_attempts=1,
+                default_timeout_s=900.0,
+                personal_runner_allowed=False,
             ),
         ),
     )

@@ -12,6 +12,7 @@ from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.entities import BuildOutcome, JobResult, JobSpec
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
+from hse_doc_studio.core.jobs.queue import QueuedJob
 
 
 class ProcessHandle(Protocol):
@@ -130,3 +131,9 @@ class IJobDispatcher(Protocol):
     def is_active(self, job_id: UUID) -> bool: ...
     def has_any_active(self) -> bool: ...
     def has_active_for_folder(self, folder: Path) -> bool: ...
+
+
+class IJobTerminalListener(Protocol):
+    async def on_terminal(self, job: QueuedJob) -> None:
+        """Задача стала терминальной: завершение раннером, отмена в очереди, потеря аренды, таймаут."""
+        ...

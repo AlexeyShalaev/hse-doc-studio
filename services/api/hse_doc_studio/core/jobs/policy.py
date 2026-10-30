@@ -31,6 +31,8 @@ class JobKindPolicy:
     retryable: bool = False
     # Сколько попыток даёт серверная очередь (первая и повторы после потери раннера).
     max_attempts: int = 1
+    # Можно ли отдать задачу личному раннеру владельца проекта. Итог, несущий доверие (проверка подписи), нельзя.
+    personal_runner_allowed: bool = True
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:

@@ -33,7 +33,17 @@ _FIXTURES = _CONTRACT / "fixtures"
 
 # Схема -> как разобрать эталон проводной моделью и собрать обратно; None значит у схемы нет датакласса.
 # Вложенные схемы: отдельных эталонов нет, их покрывают объемлющие.
-_NESTED = {"ActorWire", "JobSpecWire", "JobResultWire", "BlobLocationBody"}
+_NESTED = {"ActorWire", "JobSpecWire", "JobResultWire", "BlobLocationBody", "AiEndpointDeclBody", "RelayEventBody"}
+
+
+def _encode_poll(request: wire.PollRequest) -> object:
+    # Раннер без возможности `ai_slots` поле не шлёт: так тело старого раннера проходит круг без изменений.
+    body = encode(request)
+    assert isinstance(body, dict)
+    if not request.free_ai_slots:
+        body.pop("free_ai_slots")
+    return body
+
 
 _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "ManifestEntry": (lambda d: decode(ManifestFile, d), encode),
@@ -42,7 +52,7 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "PollResponseBody": (decode_poll_response, encode_poll_response),
     "RunnerRegisterRequestBody": (lambda d: decode(wire.RunnerRegisterRequest, d), encode),
     "RunnerRegisterResponseBody": (lambda d: decode(wire.RunnerRegisterResponse, d), encode),
-    "PollRequestBody": (lambda d: decode(wire.PollRequest, d), encode),
+    "PollRequestBody": (lambda d: decode(wire.PollRequest, d), _encode_poll),
     "HeartbeatRequestBody": (lambda d: decode(wire.HeartbeatRequest, d), encode),
     "HeartbeatResponseBody": (lambda d: decode(wire.HeartbeatResponse, d), encode),
     "LogBatchBody": (lambda d: decode(wire.LogBatch, d), encode),
@@ -53,6 +63,14 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "CompleteRequestBody": (lambda d: decode(wire.CompleteRequest, d), encode),
     "CompleteResponseBody": (lambda d: decode(wire.CompleteResponse, d), encode),
     "RunnerErrorBody": None,
+    "RunnerAnnounceRequestBody": (lambda d: decode(wire.RunnerAnnounceRequest, d), encode),
+    "RunnerAnnounceResponseBody": (lambda d: decode(wire.RunnerAnnounceResponse, d), encode),
+    "RunnerPairStartRequestBody": (lambda d: decode(wire.RunnerPairStartRequest, d), encode),
+    "RunnerPairStartResponseBody": (lambda d: decode(wire.RunnerPairStartResponse, d), encode),
+    "RunnerPairPollRequestBody": (lambda d: decode(wire.RunnerPairPollRequest, d), encode),
+    "RunnerPairPollResponseBody": (lambda d: decode(wire.RunnerPairPollResponse, d), encode),
+    "RelayEventBatchBody": (lambda d: decode(wire.RelayEventBatch, d), encode),
+    "RelayEventAckBody": (lambda d: decode(wire.RelayEventAck, d), encode),
 }
 
 
@@ -176,3 +194,17 @@ def test__models__reject_unknown_fields() -> None:
     body = json.loads(next(iter(_fixtures("LogBatchBody"))).read_text(encoding="utf-8"))
     with pytest.raises(ValueError, match="extra"):
         schemas.LogBatchBody.model_validate({**body, "surprise": 1})
+
+
+def test__wire__server_features_are_the_documented_capabilities() -> None:
+    assert {wire.FEATURE_ANNOUNCE, wire.FEATURE_OFFLINE, wire.FEATURE_AI_SLOTS, wire.FEATURE_AI_RELAY} == (
+        wire.SERVER_FEATURES
+    )
+
+
+def test__poll_request__needs_some_free_slot_and_accepts_a_relay_only_poll() -> None:
+    schemas.PollRequestBody.model_validate({"wait_s": 0, "free_slots": 0, "free_ai_slots": 1})
+    with pytest.raises(ValueError, match="free slot"):
+        schemas.PollRequestBody.model_validate({"wait_s": 0, "free_slots": 0})
+    with pytest.raises(ValueError, match="free slot"):
+        wire.PollRequest(wait_s=0, free_slots=0)
