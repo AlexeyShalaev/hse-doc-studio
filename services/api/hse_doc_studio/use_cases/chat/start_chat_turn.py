@@ -22,7 +22,7 @@ from hse_doc_studio.core.entities import (
     ChatSession,
     Project,
 )
-from hse_doc_studio.core.enums import AgentRunStatus, ChatContentKind, ChatMessageRole, Lang
+from hse_doc_studio.core.enums import AgentRunStatus, AIProviderType, ChatContentKind, ChatMessageRole, Lang
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error, set_interface_language
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -34,10 +34,16 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ChatContextService
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
+from hse_doc_studio.use_cases.ai_providers.relay_info import (
+    AiProviderSource,
+    ProviderRelayDescriber,
+    RelayState,
+    source_of,
+)
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.chat._support import describe_run_error
+from hse_doc_studio.use_cases.chat._support import describe_run_error, run_error_code
 
 logger = structlog.get_logger()
 
@@ -162,8 +168,10 @@ class StartChatTurnUC:
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
         access: IProjectAccessChecker,
+        relay: ProviderRelayDescriber | None = None,
     ) -> None:
         self._access = access
+        self._relay = relay or ProviderRelayDescriber()
         self._locator = locator
         self._chat_repo = chat_repo
         self._ai_provider_repo = ai_provider_repo
@@ -235,7 +243,7 @@ class StartChatTurnUC:
         await self._chat_repo.save_run(run)
         self._spawn(run, project, provider, model, ())
         if should_generate_title and inp.text.strip():
-            self._spawn_title_generation(folder, inp.session_id, inp.text, provider, model)
+            self._spawn_title_generation(folder, inp.session_id, inp.text, provider, model, project.id)
         return StartChatTurnOutput(run_id=run.id, user_message_seq=user_seq)
 
     async def _resume(self, inp: StartChatTurnInput, folder: Path, project: Project) -> StartChatTurnOutput:
@@ -279,8 +287,11 @@ class StartChatTurnUC:
         user_text: str,
         provider: AIProvider,
         model: str,
+        project_id: UUID,
     ) -> None:
-        task = asyncio.create_task(self._generate_title_task(folder, session_id, user_text, provider, model))
+        task = asyncio.create_task(
+            self._generate_title_task(folder, session_id, user_text, provider, model, project_id)
+        )
         self._title_tasks.add(task)
         task.add_done_callback(self._title_tasks.discard)
 
@@ -291,6 +302,7 @@ class StartChatTurnUC:
         user_text: str,
         provider: AIProvider,
         model: str,
+        project_id: UUID,
     ) -> None:
         fallback = _fallback_title(user_text)
         language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
@@ -307,6 +319,7 @@ class StartChatTurnUC:
                     temperature=0.1,
                     sink=None,
                     cancel=asyncio.Event(),
+                    project_id=project_id,
                 ),
                 timeout=_TITLE_TIMEOUT_S,
             )
@@ -337,18 +350,10 @@ class StartChatTurnUC:
                 provider_id = UUID(str(stored[_DEFAULT_PROVIDER_KEY]))
             if not model:
                 model = stored.get(_DEFAULT_MODEL_KEY)
-        if provider_id is None:
-            raise ValueError(
-                localized_error(
-                    "AI-провайдер не выбран: настройте провайдера по умолчанию или передайте provider_id",
-                    "No AI provider selected: configure a default provider or pass provider_id",
-                )
-            )
-        provider = await self._ai_provider_repo.get(provider_id)
-        if provider is None:
-            raise NotFoundError(
-                localized_error(f"AI-провайдер {provider_id!r} не найден", f"AI provider {provider_id!r} not found")
-            )
+        provider = await self._provider_by_id(provider_id) if provider_id else await self._first_ready_provider()
+        if not model and provider.models:
+            # Явной модели нет: первая из списка провайдера.
+            model = provider.models[0]
         if not model:
             raise ValueError(
                 localized_error(
@@ -357,6 +362,32 @@ class StartChatTurnUC:
                 )
             )
         return provider, model
+
+    async def _provider_by_id(self, provider_id: UUID) -> AIProvider:
+        provider = await self._ai_provider_repo.get(provider_id)
+        if provider is None:
+            raise NotFoundError(
+                localized_error(f"AI-провайдер {provider_id!r} не найден", f"AI provider {provider_id!r} not found")
+            )
+        return provider
+
+    async def _first_ready_provider(self) -> AIProvider:
+        """Порядок по умолчанию: свои (по времени создания), организации, установки; через раннер только готовые."""
+        providers = await self._ai_provider_repo.list_all()
+        relays = await self._relay.describe(providers)
+        rank = {AiProviderSource.own: 0, AiProviderSource.org: 1, AiProviderSource.instance: 2}
+        ordered = sorted(providers, key=lambda p: (rank[source_of(p)], p.created_at, str(p.id)))
+        for provider in ordered:
+            info = relays.get(provider.id)
+            if provider.type is AIProviderType.runner and (info is None or info.state is not RelayState.ready):
+                continue
+            return provider
+        raise ValueError(
+            localized_error(
+                "AI-провайдер не выбран: настройте провайдера по умолчанию или передайте provider_id",
+                "No AI provider selected: configure a default provider or pass provider_id",
+            )
+        )
 
     async def _enabled_tools(self) -> frozenset[str] | None:
         # null/missing → all tools; a stored list restricts the agent's catalog.
@@ -430,6 +461,7 @@ class StartChatTurnUC:
             logger.warning("agent run failed", run_id=str(run.id), error_type=type(exc).__name__)
             run.status = AgentRunStatus.failed
             run.error = describe_run_error(exc)
+            run.error_code = run_error_code(exc)
         finally:
             # awaiting_approval is a pause, not a finish — keep finished_at unset
             # so the run can be resumed.

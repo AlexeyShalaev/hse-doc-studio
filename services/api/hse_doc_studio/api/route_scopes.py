@@ -281,6 +281,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/account/runner-pairings/{user_code}"): _A,
     ("POST", "/api/runner/v1/pair/start"): _P,
     ("POST", "/api/runner/v1/pair/poll"): _P,
+    ("GET", "/api/runner/v1/jobs/{job_id}/relay/request"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/relay/events"): RouteScope.job_token,
     # Прокси к общим сервисам: токен задачи или вход проверяет сам маршрут
     ("POST", "/api/services/languagetool/v2/check"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу

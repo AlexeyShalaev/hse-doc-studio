@@ -119,6 +119,7 @@ from hse_doc_studio.infra.storage.live import NoLiveBlobs
 from hse_doc_studio.infra.submission.archive import AuditSubmissionDownloads, ObjectSubmissionArchive
 from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
@@ -379,12 +380,16 @@ class ServerPersistenceProvider(Provider):
         return PostgresKnownHostsStore(sessions, _git_runtime_dir())
 
     @provide(override=True)
-    def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:
-        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress)
+    def get_create_ai_provider_uc(
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber
+    ) -> CreateAIProviderUC:
+        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay)
 
     @provide(override=True)
-    def get_update_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> UpdateAIProviderUC:
-        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress)
+    def get_update_ai_provider_uc(
+        self, repo: IAIProviderRepository, egress: IEgressPolicy, relay: ProviderRelayDescriber
+    ) -> UpdateAIProviderUC:
+        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress, relay=relay)
 
     @provide(override=True)
     def get_list_provider_models_uc(

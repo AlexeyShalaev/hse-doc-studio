@@ -266,29 +266,30 @@ def make_pack_result() -> JobResult:
     )
 
 
-def make_relay_payload() -> AiRelayPayload:
+def make_relay_payload(*, stream: bool = True) -> AiRelayPayload:
     return AiRelayPayload(
         endpoint="ollama",
         path=RelayPath.chat_completions,
         method=RelayMethod.post,
         content_type="application/json",
-        body_sha256="9f" * 32,
+        body_sha256="ab" * 32,
         body_size=2048,
-        stream=True,
+        stream=stream,
         head_timeout_s=120.0,
         idle_timeout_s=120.0,
     )
 
 
 def make_relay_spec(*, local_root: object = None) -> JobSpec:
+    payload = make_relay_payload()
     return JobSpec(
         id=JOB_ID,
         kind=JobKind.ai_relay,
-        tags=frozenset({"ai"}),
+        tags=job_tags(JobKind.ai_relay, payload),
         project_id=PROJECT_ID,
         actor=Actor.user("u1", "Иван"),
         locale=Lang.ru,
-        payload=make_relay_payload(),
+        payload=payload,
         local_root=local_root,  # type: ignore[arg-type]
     )
 

@@ -65,6 +65,7 @@ def build_job_kinds() -> tuple[JobKindSpec, ...]:
                 retryable=True,
                 max_attempts=2,
                 default_timeout_s=120.0,
+                personal_runner_allowed=False,
             ),
         ),
         JobKindSpec(

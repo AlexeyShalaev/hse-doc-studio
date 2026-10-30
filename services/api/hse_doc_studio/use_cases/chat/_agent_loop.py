@@ -161,6 +161,7 @@ class AgentLoop:
         self._diagnostics: list[dict[str, Any]] = []
         # Whether the current run has a project in context (set in run()).
         self._has_project = True
+        self._project_id: UUID | None = None
 
     @property
     def diagnostics(self) -> list[dict[str, Any]]:
@@ -233,6 +234,7 @@ class AgentLoop:
         answers = tool_answers or {}
         self._diagnostics = []
         self._has_project = project_id is not None
+        self._project_id = project_id
         await self._maybe_compact(project_folder, session_id, run_id, system)
         summaries = await self._chat_repo.list_summaries(project_folder, session_id)
         history = [m for m in await self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
@@ -278,6 +280,7 @@ class AgentLoop:
                 temperature=self._config.temperature,
                 sink=sink,
                 cancel=cancel,
+                project_id=project_id,
             )
             turn_duration_ms = int((time.monotonic() - started_at) * 1000)
             tool_names = [c.name for c in turn.tool_calls]
@@ -415,7 +418,9 @@ class AgentLoop:
         if not to_summarize:
             return
         prior = summaries[-1] if summaries else None
-        text = await self._summarizer.summarize(to_summarize, prior, self._model, self._ai_provider)
+        text = await self._summarizer.summarize(
+            to_summarize, prior, self._model, self._ai_provider, project_id=self._project_id
+        )
         summary = ChatSummaryBlock(
             id=uuid4(),
             session_id=session_id,

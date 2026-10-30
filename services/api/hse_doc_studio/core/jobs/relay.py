@@ -1,8 +1,9 @@
-"""Ретрансляция ИИ через личный раннер: вид задачи `ai.relay`, её нагрузка, итог и белый список путей.
+"""Ретрансляция ИИ через личный раннер: вид задачи `ai.relay`, белый список путей и коды ошибок.
 
-Сервер знает только имя ИИ-адреса, объявленного раннером, и путь из белого списка; базовый URL
-живёт в локальной конфигурации раннера. Тела запроса к модели в нагрузке нет: оно лежит в памяти
-api до конца задачи и забирается раннером отдельным вызовом, поэтому в очередь (БД) промпты не попадают.
+Сервер не открывает адресов в сети пользователя. Раннер сам объявляет в своей конфигурации, какие
+OpenAI-совместимые адреса он открывает (имя и базовый URL), сервер знает только имена и вид. Задача несёт
+имя адреса и путь из белого списка; тело запроса к модели в очередь не пишется (живёт в памяти api до
+конца задачи), ответ модели раннер стримит порциями событий.
 """
 
 from __future__ import annotations
@@ -10,22 +11,31 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 
-# Задачи ретрансляции без проекта (список моделей, проверка провайдера); у `jobs.project_id` нет внешнего ключа.
+if TYPE_CHECKING:
+    from hse_doc_studio.core.jobs.wire import RelayEvent
+
+# У `jobs.project_id` нет внешнего ключа: ретрансляция без проекта (список моделей, проверка) пишет нулевой id.
 NO_PROJECT_ID = UUID(int=0)
 RELAY_TAG = "ai"
 ENDPOINT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 MAX_AI_ENDPOINTS = 16
-# Декодированный размер одного события `data` и число событий в порции.
-RELAY_MAX_EVENT_BYTES = 64 * 1024
-RELAY_MAX_EVENTS_PER_BATCH = 64
+# Пределы одной порции событий: столько событий, столько байт данных в одном событии и во всей порции.
+MAX_RELAY_EVENTS = 64
+MAX_RELAY_EVENT_BYTES = 64 * 1024
+MAX_RELAY_BATCH_BYTES = 256 * 1024
+# Как часто раннер шлёт пульс, пока порций нет: отмена доходит до него не позже этого срока.
 RELAY_KEEPALIVE_S = 2
+MAX_RELAY_CONTENT_TYPE = 128
 
 
 class AiEndpointFlavor(StrEnum):
+    """Вид адреса: `ollama` включает поправки OpenAI-пути под Ollama (без tool_choice и stream_options)."""
+
     openai = "openai"
     ollama = "ollama"
 
@@ -42,7 +52,7 @@ class RelayMethod(StrEnum):
     post = "POST"
 
 
-# Расширять только правкой спецификации: раннер исполняет ровно эти пары.
+# Расширять только правкой спецификации: раннер отвергает всё, чего здесь нет.
 RELAY_ROUTES: frozenset[tuple[RelayMethod, RelayPath]] = frozenset(
     {
         (RelayMethod.get, RelayPath.models),
@@ -61,12 +71,14 @@ class RelayEventKind(StrEnum):
 
 
 class RelayErrorCode(StrEnum):
+    # Раннер: адреса нет в его конфигурации, путь вне белого списка, модель недоступна или молчит, ответ велик.
     endpoint_unknown = "endpoint_unknown"
     path_forbidden = "path_forbidden"
     upstream_unreachable = "upstream_unreachable"
     upstream_timeout = "upstream_timeout"
     response_too_large = "response_too_large"
     cancelled = "cancelled"
+    # Сервер: раннер не взял задачу, лимит ретрансляций, раннер не годится, адрес пропал, выключено, тело велико.
     relay_unavailable = "relay_unavailable"
     relay_busy = "relay_busy"
     runner_offline = "runner_offline"
@@ -77,28 +89,40 @@ class RelayErrorCode(StrEnum):
     relay_too_large = "relay_too_large"
 
 
+def is_relay_route(method: str, path: str) -> bool:
+    """Путь и метод из белого списка; неизвестное значение это просто «нет»."""
+    try:
+        return (RelayMethod(method), RelayPath(path)) in RELAY_ROUTES
+    except ValueError:
+        return False
+
+
 @dataclass(frozen=True)
 class AiRelayPayload(JobPayload):
-    # Имя ИИ-адреса раннера, URL знает только раннер.
+    """Что переслать: тела запроса здесь нет, раннер забирает его отдельно и сверяет sha256 и размер."""
+
+    # Имя ИИ-адреса, объявленного раннером.
     endpoint: str
     path: RelayPath
+    # GET только для models, иначе POST.
     method: RelayMethod
     content_type: str | None
-    # Хеш и размер тела запроса; у GET тела нет.
     body_sha256: str | None
     body_size: int
-    # Клиент ждёт поток SSE.
+    # Клиент ждёт SSE.
     stream: bool
-    # Сколько ждать заголовка ответа модели и сколько длится допустимая тишина между порциями.
+    # Сколько ждать заголовка ответа модели и сколько тишины терпеть между порциями.
     head_timeout_s: float
     idle_timeout_s: float
 
     def __post_init__(self) -> None:
-        if not ENDPOINT_NAME_RE.match(self.endpoint):
-            raise ValueError(f"bad endpoint name {self.endpoint!r}")
+        if not ENDPOINT_NAME_RE.fullmatch(self.endpoint):
+            raise ValueError(f"invalid endpoint name {self.endpoint!r}")
         if (self.method, self.path) not in RELAY_ROUTES:
-            raise ValueError(f"{self.method.value} {self.path.value} is not relayed")
-        if self.body_size < 0 or (self.method is RelayMethod.get and (self.body_size or self.body_sha256)):
+            raise ValueError(f"relay route {self.method} {self.path} is not allowed")
+        if self.body_size < 0:
+            raise ValueError("body_size must not be negative")
+        if self.method is RelayMethod.get and (self.body_size or self.body_sha256 is not None):
             raise ValueError("GET carries no body")
         if self.head_timeout_s <= 0 or self.idle_timeout_s <= 0:
             raise ValueError("relay timeouts must be positive")
@@ -106,6 +130,69 @@ class AiRelayPayload(JobPayload):
 
 @dataclass(frozen=True)
 class AiRelayResult(JobResultData):
-    status_code: int | None = None
-    bytes_out: int = 0
-    upstream_ms: int = 0
+    """Сводка для админки очереди; токены считает чат по самому ответу модели."""
+
+    status_code: int | None
+    bytes_out: int
+    upstream_ms: int
+
+
+class RelayRequestGoneError(Exception):
+    """Тела запроса уже нет: задача закончилась или api перезапущен (404 `relay_request_gone`)."""
+
+
+class RelayOutOfOrderError(Exception):
+    """Порция событий пропустила номер или нарушила порядок head, data, end (409 `relay_out_of_order`)."""
+
+
+class RelayTooLargeError(Exception):
+    """Событие, порция или весь ответ больше предела (413 `relay_too_large`)."""
+
+
+class RelayStreamError(Exception):
+    """Поток ответа оборвался без `end`: раннер прислал `error` или задача стала терминальной."""
+
+    def __init__(self, code: str, detail: str = "") -> None:
+        super().__init__(detail or code)
+        self.code = code
+
+
+class IRelayChannel(Protocol):
+    """Канал одной ретрансляции в памяти api: потребитель (транспорт SDK) читает, ручки раннера пишут."""
+
+    async def wait_picked(self, timeout_s: float) -> bool:
+        """True, когда раннер забрал тело запроса; False по таймауту."""
+        ...
+
+    async def wait_head(self, timeout_s: float) -> tuple[int, str | None]:
+        """Статус и тип ответа модели; `TimeoutError` по таймауту, `RelayStreamError` при обрыве."""
+        ...
+
+    async def read(self, timeout_s: float) -> bytes | None:
+        """Следующая порция тела, `None` после `end`; `TimeoutError` при тишине, `RelayStreamError` при обрыве."""
+        ...
+
+    def close(self) -> None:
+        """Потребитель больше не читает: следующее подтверждение раннеру несёт `cancel`."""
+        ...
+
+    @property
+    def consumer_closed(self) -> bool: ...
+
+
+class IRelayHub(Protocol):
+    def open(self, job_id: UUID) -> IRelayChannel: ...
+
+    def discard(self, job_id: UUID) -> None: ...
+
+    def mark_picked(self, job_id: UUID) -> bool:
+        """Раннер забрал тело; False, если канала нет."""
+        ...
+
+    async def push(self, job_id: UUID, seq: int, events: tuple[RelayEvent, ...]) -> bool:
+        """Принять порцию по порядку; вернуть `cancel`. Канала нет: `cancel` (потребитель ушёл)."""
+        ...
+
+    def fail(self, job_id: UUID, code: str) -> None:
+        """Задача стала терминальной без `end`: поток завершается ошибкой с этим кодом."""
+        ...

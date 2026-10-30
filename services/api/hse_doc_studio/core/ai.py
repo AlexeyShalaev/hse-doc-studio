@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Protocol
+from uuid import UUID
 
 from hse_doc_studio.core.entities import AIProvider, ChatMessage, ChatSummaryBlock
 
@@ -26,4 +27,5 @@ class IChatSummarizer(Protocol):
         prior_summary: ChatSummaryBlock | None,
         model: str,
         provider: AIProvider,
+        project_id: UUID | None = None,
     ) -> str: ...

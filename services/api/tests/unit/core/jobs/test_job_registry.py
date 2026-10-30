@@ -126,3 +126,12 @@ def test__registry__ai_relay_is_interactive_and_never_retried() -> None:
     policy = job_kind_spec(JobKind.ai_relay).policy
 
     assert (policy.retryable, policy.max_attempts, policy.default_timeout_s) == (False, 1, 900.0)
+
+
+def test__registry__ai_relay_is_a_single_interactive_attempt_never_personal_first() -> None:
+    policy = job_kind_spec(JobKind.ai_relay).policy
+
+    assert (policy.retryable, policy.max_attempts, policy.personal_runner_allowed) == (False, 1, False)
+    assert policy.default_timeout_s == 900.0
+    assert not job_kind_spec(JobKind.verify_detached).policy.personal_runner_allowed
+    assert job_kind_spec(JobKind.compile).policy.personal_runner_allowed

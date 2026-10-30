@@ -238,7 +238,8 @@
       "compile": "Build",
       "office.convert": "Document conversion",
       "signature.verify_detached": "Signature check",
-      "pack.submission": "Submission packing"
+      "pack.submission": "Submission packing",
+      "ai.relay": "AI via runner"
     },
     "priority": {
       "interactive": "Urgent",

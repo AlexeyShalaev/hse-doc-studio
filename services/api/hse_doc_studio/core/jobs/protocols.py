@@ -12,6 +12,7 @@ from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.entities import BuildOutcome, JobResult, JobSpec
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
+from hse_doc_studio.core.jobs.queue import QueuedJob
 
 if TYPE_CHECKING:
     from hse_doc_studio.core.jobs.queue import QueuedJob

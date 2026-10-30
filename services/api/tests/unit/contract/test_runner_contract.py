@@ -36,11 +36,11 @@ _FIXTURES = _CONTRACT / "fixtures"
 _NESTED = {"ActorWire", "JobSpecWire", "JobResultWire", "BlobLocationBody", "DeclaredAiEndpointBody", "RelayEventBody"}
 
 
-def _encode_poll_request(request: wire.PollRequest) -> Any:
-    # Раннер без возможности `ai_slots` поле не шлёт: эталон старого раннера остаётся без него.
+def _encode_poll(request: wire.PollRequest) -> object:
+    # Раннер без возможности `ai_slots` поле не шлёт: так тело старого раннера проходит круг без изменений.
     body = encode(request)
     assert isinstance(body, dict)
-    if request.free_ai_slots == 0:
+    if not request.free_ai_slots:
         body.pop("free_ai_slots")
     return body
 
@@ -52,7 +52,7 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "PollResponseBody": (decode_poll_response, encode_poll_response),
     "RunnerRegisterRequestBody": (lambda d: decode(wire.RunnerRegisterRequest, d), encode),
     "RunnerRegisterResponseBody": (lambda d: decode(wire.RunnerRegisterResponse, d), encode),
-    "PollRequestBody": (lambda d: decode(wire.PollRequest, d), _encode_poll_request),
+    "PollRequestBody": (lambda d: decode(wire.PollRequest, d), _encode_poll),
     "HeartbeatRequestBody": (lambda d: decode(wire.HeartbeatRequest, d), encode),
     "HeartbeatResponseBody": (lambda d: decode(wire.HeartbeatResponse, d), encode),
     "LogBatchBody": (lambda d: decode(wire.LogBatch, d), encode),
@@ -220,3 +220,17 @@ def test__models__announce_rejects_duplicate_endpoint_names() -> None:
         schemas.RunnerAnnounceRequestBody.model_validate(body)
     with pytest.raises(ValueError, match="unique"):
         decode(wire.RunnerAnnounceRequest, body)
+
+
+def test__wire__server_features_are_the_documented_capabilities() -> None:
+    assert {wire.FEATURE_ANNOUNCE, wire.FEATURE_OFFLINE, wire.FEATURE_AI_SLOTS, wire.FEATURE_AI_RELAY} == (
+        wire.SERVER_FEATURES
+    )
+
+
+def test__poll_request__needs_some_free_slot_and_accepts_a_relay_only_poll() -> None:
+    schemas.PollRequestBody.model_validate({"wait_s": 0, "free_slots": 0, "free_ai_slots": 1})
+    with pytest.raises(ValueError, match="free slot"):
+        schemas.PollRequestBody.model_validate({"wait_s": 0, "free_slots": 0})
+    with pytest.raises(ValueError, match="free slot"):
+        wire.PollRequest(wait_s=0, free_slots=0)

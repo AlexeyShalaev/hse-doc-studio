@@ -125,6 +125,9 @@ class Runner:
     def scope(self) -> RunnerScope:
         return RunnerScope.personal if self.owner_kind is RunnerOwnerKind.user else RunnerScope.shared
 
+    def ai_endpoint(self, name: str) -> DeclaredAiEndpoint | None:
+        return next((endpoint for endpoint in self.ai_endpoints if endpoint.name == name), None)
+
 
 @dataclass(frozen=True)
 class RunnerAnnouncement:

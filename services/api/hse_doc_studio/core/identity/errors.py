@@ -57,6 +57,13 @@ class IdentityErrorCode(StrEnum):
     runner_pairing_invalid = "runner_pairing_invalid"
     runner_pairing_expired = "runner_pairing_expired"
     runner_pairing_used = "runner_pairing_used"
+    # ИИ через свой раннер и локальная Студия как раннер.
+    relay_unavailable = "relay_unavailable"
+    relay_busy = "relay_busy"
+    ai_provider_runner_invalid = "ai_provider_runner_invalid"
+    remote_runner_url_invalid = "remote_runner_url_invalid"
+    remote_runner_unreachable = "remote_runner_unreachable"
+    remote_runner_disabled = "remote_runner_disabled"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -180,6 +187,30 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "The code has expired. Start connecting from the Studio again.",
     ),
     IdentityErrorCode.runner_pairing_used: ("Код уже использован.", "The code has already been used."),
+    IdentityErrorCode.relay_unavailable: (
+        "Раннер не ответил. Запустите его или выберите другую модель.",
+        "The runner didn't respond. Start it or choose another model.",
+    ),
+    IdentityErrorCode.relay_busy: (
+        "Слишком много запросов к раннеру одновременно, попробуйте через минуту.",
+        "Too many requests to the runner at once, try again in a minute.",
+    ),
+    IdentityErrorCode.ai_provider_runner_invalid: (
+        "Выберите свой раннер и объявленный им ИИ-адрес.",
+        "Choose your own runner and an AI endpoint it declares.",
+    ),
+    IdentityErrorCode.remote_runner_url_invalid: (
+        "Адрес сервера должен начинаться с https:// (http только для localhost).",
+        "The server address must start with https:// (http only for localhost).",
+    ),
+    IdentityErrorCode.remote_runner_unreachable: (
+        "Сервер не отвечает. Проверьте адрес и сеть.",
+        "The server isn't responding. Check the address and the network.",
+    ),
+    IdentityErrorCode.remote_runner_disabled: (
+        "На сервере выключены личные раннеры.",
+        "Personal runners are turned off on the server.",
+    ),
 }
 
 

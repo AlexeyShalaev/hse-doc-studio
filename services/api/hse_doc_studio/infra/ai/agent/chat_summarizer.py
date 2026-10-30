@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from uuid import UUID
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.agent.entities import AgentMessage
@@ -46,6 +47,7 @@ class SdkChatSummarizer:
         prior_summary: ChatSummaryBlock | None,
         model: str,
         provider: AIProvider,
+        project_id: UUID | None = None,
     ) -> str:
         language = current_interface_language()
         parts: list[str] = []
@@ -63,6 +65,7 @@ class SdkChatSummarizer:
             temperature=0.2,
             sink=None,
             cancel=asyncio.Event(),
+            project_id=project_id,
         )
         return turn.text.strip()
 

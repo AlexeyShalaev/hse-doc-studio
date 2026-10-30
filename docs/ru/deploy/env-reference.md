@@ -202,6 +202,11 @@ tags:
 | `HSE_STUDIO__JOBS__STORAGE_DIR` | Path | не задано | оба | Каталог лога задач; блобы входа и выходы лежат в объектном хранилище. По умолчанию data_dir/jobs. |
 | `HSE_STUDIO__JOBS__MAX_ARTIFACT_BYTES` | int | `536870912` | оба | Предел одного выхода задачи; больший отвергается при заявке. |
 | `HSE_STUDIO__JOBS__MAX_LOG_BYTES` | int | `8388608` | оба | Предел лога одной попытки; остальное отбрасывается. |
+| `HSE_STUDIO__JOBS__RELAY_PICKUP_S` | float | `10.0` | оба | Сколько ждать, пока личный раннер заберёт тело запроса к модели. |
+| `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES` | int | `8388608` | оба | Предел тела запроса к модели через личный раннер. |
+| `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES` | int | `67108864` | оба | Предел ответа модели через личный раннер; больший обрывается. |
+| `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER` | int | `8` | оба | Одновременных ретрансляций ИИ на человека (в очереди и идущих). |
+| `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S` | float | `900.0` | оба | Потолок длительности одной ретрансляции ИИ. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |

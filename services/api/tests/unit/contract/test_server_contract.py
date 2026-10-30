@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
@@ -109,6 +110,9 @@ _SCHEMAS: dict[str, Any] = {
     "CreateAdminAiProviderRequest": ops.CreateAdminAiProviderRequest,
     "UpdateAdminAiProviderRequest": ops.UpdateAdminAiProviderRequest,
     "AdminAiProviderCheck": ops.AdminAiProviderCheck,
+    "AiProvider": aip.AIProviderResponse,
+    "AiProviderList": list[aip.AIProviderResponse],
+    "CreateAiProviderRequest": aip.CreateAIProviderRequest,
     "Org": s.Org,
     "CreateOrgRequest": s.CreateOrgRequest,
     "UpdateOrgRequest": s.UpdateOrgRequest,

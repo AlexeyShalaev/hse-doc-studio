@@ -10,6 +10,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
+from hse_doc_studio.use_cases.ai_providers.relay_info import AiProviderRunnerInvalidError, ProviderRelayDescriber
 
 
 @dataclass
@@ -26,6 +27,8 @@ class UpdateAIProviderInput:
     ssl_verify: bool | None = None
     connect_timeout_s: float | None = None
     request_timeout_s: float | None = None
+    runner_id: str | None = None
+    runner_endpoint: str | None = None
 
 
 @dataclass
@@ -34,9 +37,15 @@ class UpdateAIProviderOutput:
 
 
 class UpdateAIProviderUC:
-    def __init__(self, ai_provider_repo: IAIProviderRepository, egress: IEgressPolicy | None = None) -> None:
+    def __init__(
+        self,
+        ai_provider_repo: IAIProviderRepository,
+        egress: IEgressPolicy | None = None,
+        relay: ProviderRelayDescriber | None = None,
+    ) -> None:
         self._repo = ai_provider_repo
         self._egress = egress
+        self._relay = relay or ProviderRelayDescriber()
 
     async def execute(self, inp: UpdateAIProviderInput) -> UpdateAIProviderOutput:
         existing = await self._repo.get(inp.provider_id)
@@ -59,13 +68,18 @@ class UpdateAIProviderUC:
         if connect_timeout_s <= 0 or request_timeout_s <= 0:
             raise ValueError(localized_error("таймауты должны быть положительными", "timeouts must be positive"))
 
+        new_type = existing.type if inp.type is None else inp.type
         base_url = existing.base_url if inp.base_url is None else inp.base_url.strip()
-        if base_url != existing.base_url:
+        runner_id, runner_endpoint = await self._runner_of(existing, inp, new_type)
+        if existing.type is AIProviderType.runner:
+            # Адреса и ключа у такого провайдера нет.
+            base_url, api_key = "", ""
+        elif base_url != existing.base_url:
             await authorize_base_url(self._egress, base_url, existing.owner_kind)
         updated = AIProvider(
             id=existing.id,
             name=name,
-            type=existing.type if inp.type is None else inp.type,
+            type=new_type,
             api_key=api_key,
             base_url=base_url,
             models=existing.models if inp.models is None else list(inp.models),
@@ -74,6 +88,25 @@ class UpdateAIProviderUC:
             connect_timeout_s=connect_timeout_s,
             request_timeout_s=request_timeout_s,
             owner_kind=existing.owner_kind,
+            runner_id=runner_id,
+            runner_endpoint=runner_endpoint,
         )
         await self._repo.update(updated)
         return UpdateAIProviderOutput(provider=updated)
+
+    async def _runner_of(
+        self, existing: AIProvider, inp: UpdateAIProviderInput, new_type: AIProviderType
+    ) -> tuple[str | None, str | None]:
+        """Вид `runner` не меняется; раннер и имя адреса при смене проверяются заново."""
+        if (new_type is AIProviderType.runner) != (existing.type is AIProviderType.runner):
+            raise AiProviderRunnerInvalidError(
+                localized_error(
+                    "Вид «через раннер» нельзя сменить: создайте провайдер заново",
+                    "A runner provider cannot change its kind: create a new provider",
+                )
+            )
+        if existing.type is not AIProviderType.runner or (inp.runner_id is None and inp.runner_endpoint is None):
+            return existing.runner_id, existing.runner_endpoint
+        return await self._relay.validate(
+            inp.runner_id or existing.runner_id, inp.runner_endpoint or existing.runner_endpoint
+        )

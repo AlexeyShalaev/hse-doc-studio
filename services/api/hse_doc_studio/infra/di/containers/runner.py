@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import shutil
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Sequence
+from functools import partial
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
@@ -11,6 +15,8 @@ from dishka import AsyncContainer, Provider, Scope, make_async_container, provid
 from hse_doc_studio import __version__
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
+from hse_doc_studio.core.jobs.relay import RELAY_TAG
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IOfficeConvertService
 from hse_doc_studio.infra.checks.runner import CheckRunner
@@ -31,26 +37,42 @@ from hse_doc_studio.infra.runner.config import RunnerConfig
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
 from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.language_check import NoLanguageCheck
-from hse_doc_studio.infra.runner.loop import RunnerLoop, RunnerLoopConfig
+from hse_doc_studio.infra.runner.loop import IRunnerLoopObserver, RunnerLoop, RunnerLoopConfig
 from hse_doc_studio.infra.runner.office import GotenbergConverter, NoOfficeConverter
+from hse_doc_studio.infra.runner.relay_executor import AiEndpoint, AiRelayExecutor
 from hse_doc_studio.infra.runner.settings import RunnerSettingsRepository
 from hse_doc_studio.infra.runner.verify import EphemeralVerifyHandler
 from hse_doc_studio.infra.runner.workspace import BlobCache, RunnerWorkspaces
+
+logger = logging.getLogger(__name__)
+
+
+class RunnerConfigError(ValueError):
+    """Раннеру нечем представиться серверу: нет ни токена регистрации, ни токена раннера, ни сохранённой личности."""
 
 
 class RunnerProvider(Provider):
     scope = Scope.APP
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         config: RunnerConfig,
         transport: httpx.AsyncBaseTransport | None = None,
         office_transport: httpx.AsyncBaseTransport | None = None,
+        *,
+        ai_endpoints: Sequence[AiEndpoint] | None = None,
+        observer: IRunnerLoopObserver | None = None,
+        gate: Callable[[], bool] | None = None,
+        ai_transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         super().__init__()
         self._config = config
         self._transport = transport
         self._office_transport = office_transport
+        self._ai_endpoints = ai_endpoints
+        self._observer = observer
+        self._gate = gate
+        self._ai_transport = ai_transport
 
     @provide
     def get_config(self) -> RunnerConfig:
@@ -59,14 +81,22 @@ class RunnerProvider(Provider):
     @provide
     async def get_client(self, config: RunnerConfig) -> AsyncIterator[RunnerClient]:
         store = RunnerIdentityStore(config.data_dir)
+        identity = store.load(config.api_url)
+        if config.runner_token is None and config.token is None and identity is None:
+            raise RunnerConfigError(
+                "нужен HSE_RUNNER__TOKEN (токен регистрации) или HSE_RUNNER__RUNNER_TOKEN (токен раннера)"
+            )
         client = RunnerClient(
             config.api_url,
-            config.token.get_secret_value(),
+            config.token.get_secret_value() if config.token is not None else "",
             version=__version__,
             transport=self._transport,
             on_registered=lambda registered: store.save(config.api_url, registered),
         )
-        if (identity := store.load(config.api_url)) is not None:
+        if config.runner_token is not None:
+            # Токен после смены на сайте важнее сохранённой личности: старый уже не годится.
+            client.restore(identity.runner_id if identity is not None else "", config.runner_token.get_secret_value())
+        elif identity is not None:
             client.restore(identity.runner_id, identity.runner_token)
         yield client
         await client.aclose()
@@ -173,34 +203,102 @@ class RunnerProvider(Provider):
         )
 
     @provide
+    def get_relay_executor(self, config: RunnerConfig, client: RunnerClient) -> AiRelayExecutor:
+        endpoints = self._ai_endpoints if self._ai_endpoints is not None else endpoints_of(config)
+        return AiRelayExecutor(
+            client, endpoints, max_response_bytes=config.relay_max_response_bytes, transport=self._ai_transport
+        )
+
+    @provide
     def get_loop(
         self,
         config: RunnerConfig,
         client: RunnerClient,
         executor: HandlerJobExecutor,
         compile_executor: CompileJobExecutor,
+        relay: AiRelayExecutor,
     ) -> RunnerLoop:
+        endpoints = self._ai_endpoints if self._ai_endpoints is not None else endpoints_of(config)
+        declared = tuple(DeclaredAiEndpoint(endpoint.name, endpoint.flavor) for endpoint in endpoints)
+        relay_on = bool(declared) and config.ai_concurrency > 0
         tags = config.explicit_tags() or detect_tags(
-            office_url=config.office_url, tex_available=shutil.which(docker_binary()) is not None
+            office_url=config.office_url,
+            tex_available=shutil.which(docker_binary()) is not None,
+            ai_relay=relay_on,
         )
+        if declared:
+            # Адреса объявлены без ключей: имена и вид, URL остаётся у раннера.
+            logger.info("ai endpoints: %s", ", ".join(f"{e.name}={_loggable_url(e.base_url)}" for e in endpoints))
         return RunnerLoop(
             client,
-            RoutingJobExecutor(compile_executor, executor),
+            RoutingJobExecutor(compile_executor, executor, relay),
             RunnerLoopConfig(
                 name=config.name,
                 version=__version__,
-                tags=tags,
+                tags=tags - {RELAY_TAG} if not relay_on else tags | {RELAY_TAG},
                 concurrency=config.concurrency,
                 poll_wait_s=config.poll_wait_s,
+                ai_concurrency=config.ai_concurrency if relay_on else 0,
+                host_kind=config.host_kind,
+                ai_endpoints=declared,
+                gate=self._gate,
             ),
+            observer=self._observer,
         )
 
 
-def create_runner_container(
+def endpoints_of(config: RunnerConfig) -> tuple[AiEndpoint, ...]:
+    """ИИ-адреса из окружения раннера; ключ читается из его переменной в момент запроса."""
+    return tuple(
+        AiEndpoint(
+            name=entry.name,
+            base_url=entry.url,
+            flavor=entry.flavor,
+            api_key=partial(_env_key, entry.key_env),
+        )
+        for entry in config.ai_endpoints
+    )
+
+
+def _loggable_url(url: str) -> str:
+    """Адрес без логина и пароля: адреса из локальной Студии конфиг раннера не проверял."""
+    parts = urlsplit(url)
+    if parts.username is None and parts.password is None:
+        return url
+    host = parts.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    netloc = f"***@{host}:{parts.port}" if parts.port else f"***@{host}"
+    return urlunsplit(parts._replace(netloc=netloc))
+
+
+def _env_key(name: str | None) -> str | None:
+    return os.environ.get(name) if name else None
+
+
+def create_runner_container(  # noqa: PLR0913
     config: RunnerConfig,
     *,
     transport: httpx.AsyncBaseTransport | None = None,
     office_transport: httpx.AsyncBaseTransport | None = None,
+    ai_endpoints: Sequence[AiEndpoint] | None = None,
+    observer: IRunnerLoopObserver | None = None,
+    gate: Callable[[], bool] | None = None,
+    ai_transport: httpx.AsyncBaseTransport | None = None,
 ) -> AsyncContainer:
-    """Транспорты подменяют сеть в тестах: api раннера и Gotenberg."""
-    return make_async_container(RunnerProvider(config, transport, office_transport))
+    """Транспорты подменяют сеть в тестах: api раннера, Gotenberg и модели.
+
+    Локальная Студия передаёт свои ИИ-адреса (`ai_endpoints`, `None` значит из окружения раннера),
+    наблюдатель состояния и шлюз «уступать локальным сборкам».
+    """
+    return make_async_container(
+        RunnerProvider(
+            config,
+            transport,
+            office_transport,
+            ai_endpoints=ai_endpoints,
+            observer=observer,
+            gate=gate,
+            ai_transport=ai_transport,
+        )
+    )

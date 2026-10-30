@@ -5,6 +5,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
+from hse_doc_studio.core.enums import AIProviderType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IAIProviderRepository
@@ -38,6 +39,8 @@ class ListProviderModelsUC:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")
             )
-        await authorize_base_url(self._egress, provider.base_url, provider.owner_kind)
+        if provider.type is not AIProviderType.runner:
+            # У провайдера через раннер адреса нет: запрос уходит ретрансляцией, политике исходящих проверять нечего.
+            await authorize_base_url(self._egress, provider.base_url, provider.owner_kind)
         models = await self._model_lister.list_models(provider)
         return ListProviderModelsOutput(models=models)

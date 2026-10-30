@@ -295,6 +295,8 @@ class AIProviderType(StrEnum):
     openai = "openai"
     openai_compat = "openai_compat"
     ollama = "ollama"
+    # Модель в сети человека через его личный раннер: адреса и ключа у сервера нет, только раннер и имя адреса.
+    runner = "runner"
 
 
 class GpuVendor(StrEnum):

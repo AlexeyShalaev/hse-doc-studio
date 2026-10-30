@@ -150,8 +150,9 @@ def test__registry__every_kind_has_a_server_queue_policy() -> None:
     for spec in (spec for spec in build_job_kinds() if spec.kind is not JobKind.ai_relay):
         policy = spec.policy
         assert isinstance(policy.priority_class, JobPriorityClass)
-        assert policy.retryable
-        assert policy.max_attempts == 2
+        # Ретрансляция ИИ не повторяется: ответ модели уже ушёл потребителю.
+        assert policy.retryable is (spec.kind is not JobKind.ai_relay)
+        assert policy.max_attempts == (1 if spec.kind is JobKind.ai_relay else 2)
         assert policy.default_timeout_s is not None
         assert policy.default_timeout_s > 0
 

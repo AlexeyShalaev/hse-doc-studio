@@ -6,15 +6,23 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Protocol
 
 from hse_doc_studio.core.jobs.codec import encode_result
 from hse_doc_studio.core.jobs.entities import JobResult
-from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobStatus, RunnerErrorCode
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import JobError, JobFailure
 from hse_doc_studio.core.jobs.files import ArtifactRef
+from hse_doc_studio.core.jobs.relay import RELAY_KEEPALIVE_S, RELAY_TAG
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind
 from hse_doc_studio.core.jobs.wire import (
     DEFAULT_HEARTBEAT_S,
     DEFAULT_LEASE_S,
+    FEATURE_AI_RELAY,
+    FEATURE_AI_SLOTS,
+    FEATURE_ANNOUNCE,
+    FEATURE_OFFLINE,
     MAX_POLL_WAIT_S,
     RUNNER_PROTOCOL_VERSION,
     ArtifactUploadRequest,
@@ -23,6 +31,8 @@ from hse_doc_studio.core.jobs.wire import (
     JobEnvelope,
     LogBatch,
     PollRequest,
+    RunnerAnnounceRequest,
+    RunnerAnnounceResponse,
     RunnerRegisterRequest,
     RunnerRegisterResponse,
 )
@@ -49,6 +59,26 @@ _FORCE_GRACE_S = 5.0
 class RunnerFatalError(Exception):
     """Раннеру нельзя продолжать: токен отвергнут, раннер отключён или версия протокола несовместима."""
 
+    def __init__(self, message: str, code: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+class RunnerLoopState(StrEnum):
+    registering = "registering"
+    online = "online"
+    paused = "paused"
+    unreachable = "unreachable"
+    stopped = "stopped"
+
+
+class IRunnerLoopObserver(Protocol):
+    """Наблюдатель цикла (локальная Студия показывает по нему состояние раннера)."""
+
+    def on_state(self, state: RunnerLoopState, code: str | None = None) -> None: ...
+    def on_job_started(self, job_id: str, kind: str) -> None: ...
+    def on_job_finished(self, job_id: str, kind: str, status: str) -> None: ...
+
 
 @dataclass(frozen=True)
 class RunnerLoopConfig:
@@ -63,6 +93,14 @@ class RunnerLoopConfig:
     # Пульс и аренда по умолчанию берутся из ответа регистрации; переопределение нужно тестам.
     heartbeat_s: float | None = None
     backoff_factory: Callable[[], Backoff] = field(default=lambda: Backoff(base_s=0.5, cap_s=30.0))
+    # Слоты ретрансляции ИИ отдельно от сборок: длинная сборка не блокирует чат и наоборот.
+    ai_concurrency: int = 0
+    host_kind: RunnerHostKind = RunnerHostKind.cli
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...] = ()
+    # False: не брать сборки сейчас (ретрансляцию брать можно).
+    gate: Callable[[], bool] | None = None
+    # Пауза перед новой проверкой, пока шлюз закрыт и брать нечего.
+    gate_recheck_s: float = 1.0
 
 
 class RunnerLoop:
@@ -73,46 +111,166 @@ class RunnerLoop:
     потеряна) бросается без отчёта: сервер вернёт задачу в очередь.
     """
 
-    def __init__(self, client: RunnerClient, executor: JobExecutor, config: RunnerLoopConfig) -> None:
+    def __init__(
+        self,
+        client: RunnerClient,
+        executor: JobExecutor,
+        config: RunnerLoopConfig,
+        *,
+        observer: IRunnerLoopObserver | None = None,
+    ) -> None:
         if config.concurrency < 1:
             raise ValueError("concurrency must be at least 1")
         self._client = client
         self._executor = executor
         self._config = config
+        self._observer = observer
         self._stop = asyncio.Event()
         self._force = asyncio.Event()
         self._slot_freed = asyncio.Event()
         self._jobs: set[asyncio.Task[None]] = set()
+        self._ai_jobs: set[asyncio.Task[None]] = set()
         self._registration: RunnerRegisterResponse | None = None
+        self._announced: RunnerAnnounceResponse | None = None
+        self._ai_endpoints = config.ai_endpoints
+        self._state: RunnerLoopState | None = None
 
     @property
     def running_jobs(self) -> int:
-        return len(self._jobs)
+        return len(self._jobs) + len(self._ai_jobs)
+
+    @property
+    def runner_id(self) -> str | None:
+        if self._announced is not None:
+            return self._announced.runner_id
+        return self._registration.runner_id if self._registration is not None else None
+
+    @property
+    def features(self) -> frozenset[str]:
+        return self._client.features
+
+    def _set_state(self, state: RunnerLoopState, code: str | None = None) -> None:
+        if state is self._state and code is None:
+            return
+        self._state = state
+        if self._observer is not None:
+            self._observer.on_state(state, code)
+
+    async def reannounce(self, *, ai_endpoints: tuple[DeclaredAiEndpoint, ...] | None = None) -> None:
+        """Сообщить серверу новое описание (адреса ИИ поменялись) без перезапуска цикла."""
+        if ai_endpoints is not None:
+            self._ai_endpoints = ai_endpoints
+        await self._announce()
+
+    def _announce_request(self) -> RunnerAnnounceRequest:
+        cfg = self._config
+        endpoints = self._ai_endpoints
+        relay = cfg.ai_concurrency > 0 and bool(endpoints)
+        features = {FEATURE_ANNOUNCE, FEATURE_OFFLINE} | ({FEATURE_AI_SLOTS, FEATURE_AI_RELAY} if relay else set())
+        tags = set(cfg.tags) | ({RELAY_TAG} if relay else set())
+        return RunnerAnnounceRequest(
+            name=cfg.name,
+            version=cfg.version,
+            tags=frozenset(tags),
+            concurrency=cfg.concurrency,
+            ai_concurrency=cfg.ai_concurrency if relay else 0,
+            host_kind=cfg.host_kind,
+            features=frozenset(features),
+            ai_endpoints=endpoints if relay else (),
+        )
+
+    async def _announce(self) -> None:
+        """Согласование возможностей; старый сервер (404) оставляет раннер в прежнем режиме."""
+        try:
+            self._announced = await self._client.announce(self._announce_request())
+        except RunnerApiError as exc:
+            self._raise_if_fatal(exc)
+            logger.warning("announce rejected, staying on protocol 1.0: %s", exc)
+            self._announced = None
+            return
+        if self._announced is None:
+            logger.info("server does not know /announce: protocol 1.0 without ai relay")
+        else:
+            self._set_state(RunnerLoopState.paused if self._announced.paused else RunnerLoopState.online)
+
+    async def _announce_until_ready(self) -> None:
+        backoff = self._config.backoff_factory()
+        while not self._stop.is_set():
+            try:
+                await self._announce()
+            except RunnerUnreachable as exc:
+                self._set_state(RunnerLoopState.unreachable)
+                logger.warning("announce: api unreachable (%s)", exc)
+                await self._sleep_or_stop(backoff.next())
+            else:
+                return
 
     def request_stop(self) -> None:
         """Прекращает опрос; идущие задачи доделываются в пределах `drain_timeout_s`."""
         self._stop.set()
 
     async def run(self) -> None:
-        if not self._client.is_registered:
-            await self._register_until_ready()
+        self._set_state(RunnerLoopState.registering)
+        try:
+            if not self._client.is_registered:
+                await self._register_until_ready()
+            await self._announce_until_ready()
+            await self._poll_loop()
+            await self._drain()
+            await self._say_offline()
+        finally:
+            self._set_state(RunnerLoopState.stopped)
+
+    def _free_slots(self) -> tuple[int, int]:
+        """Свободные слоты сборок (с учётом шлюза) и ретрансляции (только после согласования `ai_slots`)."""
+        gate = self._config.gate
+        jobs = self._config.concurrency - len(self._jobs) if gate is None or gate() else 0
+        ai = 0
+        if FEATURE_AI_SLOTS in self._client.features:
+            ai = self._config.ai_concurrency - len(self._ai_jobs)
+        return max(jobs, 0), max(ai, 0)
+
+    async def _poll_loop(self) -> None:
         backoff = self._config.backoff_factory()
         while not self._stop.is_set():
-            if len(self._jobs) >= self._config.concurrency:
-                self._slot_freed.clear()
-                await self._wait_stop_or(self._slot_freed)
+            free_jobs, free_ai = self._free_slots()
+            if free_jobs + free_ai < 1:
+                await self._wait_for_slot()
                 continue
             try:
-                response = await self._poll()
+                response = await self._poll(free_jobs, free_ai)
             except (RunnerApiError, RunnerUnreachable) as exc:
-                self._raise_if_fatal(exc)
-                logger.warning("poll failed: %s", exc)
+                self._on_poll_failed(exc)
                 await self._sleep_or_stop(backoff.next())
-            else:
-                backoff.reset()
-                if response is not None:
-                    self._spawn(response)
-        await self._drain()
+                continue
+            backoff.reset()
+            if self._state in (RunnerLoopState.registering, RunnerLoopState.unreachable, None):
+                self._set_state(RunnerLoopState.online)
+            if response is not None:
+                self._spawn(response)
+
+    async def _wait_for_slot(self) -> None:
+        """Слот освободится по окончании задачи; шлюз закрыт без задач: проверим снова чуть позже."""
+        if self.running_jobs == 0:
+            await self._sleep_or_stop(self._config.gate_recheck_s)
+            return
+        self._slot_freed.clear()
+        await self._wait_stop_or_timeout(self._slot_freed, self._config.gate_recheck_s)
+
+    def _on_poll_failed(self, exc: RunnerApiError | RunnerUnreachable) -> None:
+        self._raise_if_fatal(exc)
+        if isinstance(exc, RunnerUnreachable):
+            self._set_state(RunnerLoopState.unreachable)
+        logger.warning("poll failed: %s", exc)
+
+    async def _say_offline(self) -> None:
+        """Мягкая остановка: сервер сразу уводит сборки хозяина на общие, не дожидаясь окна."""
+        if FEATURE_OFFLINE not in self._client.features:
+            return
+        try:
+            await self._client.offline()
+        except (RunnerApiError, RunnerUnreachable) as exc:
+            logger.warning("offline notice not delivered: %s", exc)
 
     async def _register(self) -> RunnerRegisterResponse:
         cfg = self._config
@@ -133,16 +291,15 @@ class RunnerLoop:
             try:
                 await self._register()
             except RunnerApiError as exc:
-                raise RunnerFatalError(f"registration refused: {exc}") from exc
+                raise RunnerFatalError(f"registration refused: {exc}", exc.code) from exc
             except RunnerUnreachable as exc:
                 logger.warning("registration: api unreachable (%s)", exc)
                 await self._sleep_or_stop(backoff.next())
             else:
                 return
 
-    async def _poll(self) -> JobEnvelope | None:
-        free = self._config.concurrency - len(self._jobs)
-        request = PollRequest(wait_s=self._config.poll_wait_s, free_slots=free)
+    async def _poll(self, free_jobs: int, free_ai: int) -> JobEnvelope | None:
+        request = PollRequest(wait_s=self._config.poll_wait_s, free_slots=free_jobs, free_ai_slots=free_ai)
         poll = asyncio.create_task(self._client.poll(request))
         stop = asyncio.create_task(self._stop.wait())
         try:
@@ -160,7 +317,7 @@ class RunnerLoop:
 
     def _raise_if_fatal(self, exc: Exception) -> None:
         if isinstance(exc, RunnerApiError) and exc.code in _FATAL_CODES:
-            raise RunnerFatalError(str(exc)) from exc
+            raise RunnerFatalError(str(exc), exc.code) from exc
 
     async def _wait_stop_or(self, event: asyncio.Event) -> None:
         waiter = asyncio.create_task(event.wait())
@@ -171,25 +328,30 @@ class RunnerLoop:
             waiter.cancel()
             stop.cancel()
 
+    async def _wait_stop_or_timeout(self, event: asyncio.Event, timeout_s: float) -> None:
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(self._wait_stop_or(event), timeout_s)
+
     async def _sleep_or_stop(self, delay_s: float) -> None:
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(self._stop.wait(), delay_s)
 
     def _spawn(self, envelope: JobEnvelope) -> None:
         task = asyncio.create_task(self._run_job(envelope))
-        self._jobs.add(task)
+        (self._ai_jobs if envelope.spec.kind is JobKind.ai_relay else self._jobs).add(task)
         task.add_done_callback(self._on_job_done)
 
     def _on_job_done(self, task: asyncio.Task[None]) -> None:
         self._jobs.discard(task)
+        self._ai_jobs.discard(task)
         self._slot_freed.set()
         if not task.cancelled() and (exc := task.exception()) is not None:
             logger.error("runner job task crashed", exc_info=exc)
 
     async def _drain(self) -> None:
-        if not self._jobs:
+        if not self.running_jobs:
             return
-        _, pending = await asyncio.wait(set(self._jobs), timeout=self._config.drain_timeout_s)
+        _, pending = await asyncio.wait(self._jobs | self._ai_jobs, timeout=self._config.drain_timeout_s)
         if not pending:
             return
         logger.warning("drain timeout: cancelling %d running job(s)", len(pending))
@@ -217,6 +379,8 @@ class RunnerLoop:
         )
         heartbeat = asyncio.create_task(self._heartbeats(envelope))
         forced = asyncio.create_task(self._force.wait())
+        if self._observer is not None:
+            self._observer.on_job_started(job_id, envelope.spec.kind.value)
         try:
             outcome = await self._await_outcome(envelope, execution, heartbeat, forced, cancelled)
         finally:
@@ -224,6 +388,9 @@ class RunnerLoop:
             forced.cancel()
             await asyncio.gather(heartbeat, forced, return_exceptions=True)
             await batcher.close()
+        if self._observer is not None:
+            status = "lost" if outcome is None else outcome.result.status.value
+            self._observer.on_job_finished(job_id, envelope.spec.kind.value, status)
         if outcome is None:
             logger.warning("job %s: lease lost, no report", job_id)
             return
@@ -263,15 +430,19 @@ class RunnerLoop:
             JobResult(status=status, error=JobError(category=JobErrorCategory.internal, code=code, detail=code))
         )
 
-    def _heartbeat_timing(self) -> tuple[float, float]:
+    def _heartbeat_timing(self, kind: JobKind) -> tuple[float, float]:
         registration = self._registration
         lease_s = registration.lease_s if registration else DEFAULT_LEASE_S
         interval = self._config.heartbeat_s or (registration.heartbeat_s if registration else DEFAULT_HEARTBEAT_S)
+        if kind is JobKind.ai_relay:
+            # Пока порций нет, отмена ретрансляции доходит только пульсом: он чаще обычного.
+            keepalive = self._announced.relay_keepalive_s if self._announced else RELAY_KEEPALIVE_S
+            interval = min(interval, float(keepalive))
         return interval, lease_s
 
     async def _heartbeats(self, envelope: JobEnvelope) -> str:
         """Возвращает `cancel` по флагу отмены или `lost`, когда аренду не удержать."""
-        interval, lease_s = self._heartbeat_timing()
+        interval, lease_s = self._heartbeat_timing(envelope.spec.kind)
         last_ok = time.monotonic()
         while True:
             await asyncio.sleep(interval)
