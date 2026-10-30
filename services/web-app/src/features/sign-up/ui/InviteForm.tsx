@@ -38,6 +38,7 @@ export const InviteForm = ({ token: tokenProp }: { token?: string }) => {
         status={result.status}
         link={result.link}
         email={result.email}
+        invited={(invitation.data?.email ?? "") !== ""}
       />
     );
   }

@@ -50,14 +50,21 @@ export const RegisterResultCard = ({
   status,
   link,
   email,
+  invited = false,
 }: {
   status: "check_email" | "pending_approval";
   link: string | null;
   email: string;
+  // Приглашение на этот адрес само подтвердило почту: аккаунт готов, письма ждать не надо.
+  invited?: boolean;
 }) => {
   const { t } = useTranslation("auth");
   const variant =
-    status === "check_email" && link ? "check_email_link" : status;
+    status === "check_email" && invited
+      ? "invited"
+      : status === "check_email" && link
+        ? "check_email_link"
+        : status;
   return (
     <section data-testid="auth-screen-registerResult" data-status={status}>
       <h1 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 14px" }}>

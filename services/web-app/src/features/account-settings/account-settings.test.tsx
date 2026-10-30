@@ -172,6 +172,21 @@ describe("пароль", () => {
     expect(field).toHaveTextContent("Неверный пароль.");
   });
 
+  it("отказ сервера гаснет, когда поле правят", async () => {
+    const user = userEvent.setup();
+    render(
+      <PasswordCard
+        minLength={10}
+        failure={{ code: "invalid_credentials" }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const input = screen.getByLabelText("Текущий пароль");
+    expect(input.closest(".field")).toHaveTextContent("Неверный пароль.");
+    await user.type(input, "x");
+    expect(input.closest(".field")).not.toHaveTextContent("Неверный пароль.");
+  });
+
   it("при входе через SSO формы нет", () => {
     render(
       <PasswordCard
