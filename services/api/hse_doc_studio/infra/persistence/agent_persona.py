@@ -112,6 +112,11 @@ class JsonAgentPersonaRepository:
         return True
 
 
+def user_data_folder(data_dir: Path, owner: str) -> Path:
+    """Личная папка человека под `data_dir/users`: имя это хеш id, а не сам id."""
+    return data_dir / "users" / hashlib.sha256(owner.encode()).hexdigest()[:32]
+
+
 class ActorScopedAgentPersonaRepository:
     """Роли агента сервера: у каждого человека свой файл, чужие роли не видны и не меняются.
 
@@ -126,8 +131,7 @@ class ActorScopedAgentPersonaRepository:
         owner = actor.key or actor.id or ""
         if not owner:
             raise ActorRequired("у актора нет ключа владельца")
-        digest = hashlib.sha256(owner.encode()).hexdigest()[:32]
-        return JsonAgentPersonaRepository(self._root / digest)
+        return JsonAgentPersonaRepository(user_data_folder(self._root.parent, owner))
 
     def list_all(self) -> list[AgentPersona]:
         return self._mine().list_all()

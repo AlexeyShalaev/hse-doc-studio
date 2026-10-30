@@ -696,7 +696,7 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_user_lifecycle(self, sessions: SessionProvider) -> IUserLifecycle:
-        return SqlUserLifecycle(sessions)
+        return SqlUserLifecycle(sessions, settings.data_dir.expanduser())
 
     @provide
     def get_delete_user_uc(
