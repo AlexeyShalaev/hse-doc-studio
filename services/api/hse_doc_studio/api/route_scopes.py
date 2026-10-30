@@ -214,10 +214,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/git/credentials/{credential_id}"): _A,
     ("GET", "/git/secrets/status"): _A,
     ("GET", "/git/hosts"): _A,
-    ("POST", "/git/hosts/trust"): _A,
-    ("DELETE", "/git/hosts"): _A,
+    ("POST", "/git/hosts/trust"): _ADM,
+    ("DELETE", "/git/hosts"): _ADM,
     ("GET", "/git/host-settings"): _A,
-    ("PUT", "/git/host-settings"): _A,
+    ("PUT", "/git/host-settings"): _ADM,
     # Клон принимает от клиента абсолютную папку и регистрирует проект в локальном индексе: на сервере это
     # запись в произвольное место диска. Пока клон не выбирает папку на томе проектов и не создаёт строку
     # с владельцем, маршруты существуют только в локальной установке.
@@ -299,7 +299,6 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
     if key[1].split("/")[1]
     in {
         "projects",
-        "ai-providers",
         "agent-personas",
         "agent",
         "signing-identities",
@@ -308,7 +307,22 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "git",
     }
     and ROUTE_SCOPES[key] is RouteScope.authenticated
-    and key[1] not in {"/git/secrets/status", "/git/clone/defaults", "/agent/tools", "/agent/personas"}
+    and key[1]
+    not in {
+        "/git/secrets/status",
+        "/git/clone/defaults",
+        "/agent/tools",
+        "/agent/personas",
+        # Идентичности подписи лежат в Postgres у владельца; ключи OpenPGP остаются в общей связке установки.
+        "/signing-identities",
+        "/signing-identities/self-signed",
+        "/signing-identities/import-pkcs12",
+        "/signing-identities/{identity_id}",
+        # Git-доступы лежат в Postgres у владельца; проект пользуется ими по привязке.
+        "/git/credentials",
+        "/git/credentials/{credential_id}",
+        "/git/credentials/{credential_id}/check",
+    }
 )
 
 

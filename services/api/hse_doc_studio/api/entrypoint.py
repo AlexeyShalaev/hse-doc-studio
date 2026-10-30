@@ -53,6 +53,7 @@ from hse_doc_studio.infra.git_sync.ssh_command import sweep_stale_key_dirs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.signatures.key_session import sweep_stale_key_sessions
 from hse_doc_studio.infra.update.auto_update_scheduler import AutoUpdateScheduler
 from hse_doc_studio.infra.update.deployment import docker_alive
 from hse_doc_studio.use_cases.ai_runtime.sync_local_provider import SyncLocalOllamaProviderUC
@@ -448,6 +449,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     async def _sweep_ssh_key_dirs() -> None:
         # Каталог временного ключа ssh удаляется в finally; остаться он может только после kill -9.
         sweep_stale_key_dirs()
+        sweep_stale_key_sessions()
 
     @app.on_event("startup")
     async def _auto_update_startup() -> None:

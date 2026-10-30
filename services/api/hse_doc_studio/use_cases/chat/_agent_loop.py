@@ -229,8 +229,8 @@ class AgentLoop:
         self._diagnostics = []
         self._has_project = project_id is not None
         await self._maybe_compact(project_folder, session_id, run_id, system)
-        summaries = self._chat_repo.list_summaries(project_folder, session_id)
-        history = [m for m in self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
+        summaries = await self._chat_repo.list_summaries(project_folder, session_id)
+        history = [m for m in await self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
         agent_messages = chat_history_to_agent_messages(history)
         system = self._system_with_summaries(system, summaries)
         weak = self._ai_provider.type == AIProviderType.ollama
@@ -341,7 +341,7 @@ class AgentLoop:
             budget.add(turn.usage)
             self._bus.publish(run_id, AgentEvent(type=AgentEventType.usage, data=_usage_payload(total)))
 
-            last_seq = self._persist_assistant(project_folder, session_id, run_id, turn)
+            last_seq = await self._persist_assistant(project_folder, session_id, run_id, turn)
             agent_messages.append(AgentMessage(role="assistant", content=turn.text, tool_calls=turn.tool_calls))
 
             if not turn.tool_calls or turn.stop_reason in _STOP_STATES:
@@ -389,8 +389,8 @@ class AgentLoop:
     async def _maybe_compact(self, project_folder: Path, session_id: UUID, run_id: UUID, system: str) -> None:
         if self._context_service is None or self._summarizer is None:
             return
-        messages = [m for m in self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
-        summaries = self._chat_repo.list_summaries(project_folder, session_id)
+        messages = [m for m in await self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
+        summaries = await self._chat_repo.list_summaries(project_folder, session_id)
         if not self._context_service.needs_compaction(
             system=system,
             messages=messages,
@@ -420,8 +420,8 @@ class AgentLoop:
             text=text,
             model=self._model,
         )
-        self._chat_repo.append_summary(project_folder, summary)
-        self._chat_repo.mark_compacted(project_folder, session_id, cutoff)
+        await self._chat_repo.append_summary(project_folder, summary)
+        await self._chat_repo.mark_compacted(project_folder, session_id, cutoff)
         self._bus.publish(
             run_id,
             AgentEvent(
@@ -458,7 +458,9 @@ class AgentLoop:
         tool = self._registry.get(call.name)
         return tool is not None and await self._approval_gate.requires_approval(tool.kind)
 
-    def _persist_assistant(self, project_folder: Path, session_id: UUID, run_id: UUID, turn: NormalizedTurn) -> int:
+    async def _persist_assistant(
+        self, project_folder: Path, session_id: UUID, run_id: UUID, turn: NormalizedTurn
+    ) -> int:
         blocks: list[ChatContentBlock] = []
         if turn.text:
             blocks.append(ChatContentBlock(kind=ChatContentKind.text, text=turn.text))
@@ -478,7 +480,7 @@ class AgentLoop:
             provider_id=self._ai_provider.id,
             usage=turn.usage,
         )
-        seq = self._chat_repo.append_message(project_folder, message)
+        seq = await self._chat_repo.append_message(project_folder, message)
         self._bus.publish(
             run_id,
             AgentEvent(type=AgentEventType.message, data={"id": str(message.id), "seq": seq, "role": "assistant"}),
@@ -515,7 +517,7 @@ class AgentLoop:
                 )
             return last_seq, True
         for call in ask_calls:
-            last_seq = self._emit_tool_result(
+            last_seq = await self._emit_tool_result(
                 call,
                 _answer_result(tool_answers.get(call.id, {})),
                 project_folder,
@@ -555,12 +557,12 @@ class AgentLoop:
         # 3) Execute the remaining (read/write/exec) calls.
         for call in remaining:
             result = truncate_tool_result(await self._execute_tool(ctx, call), self._config.max_tool_result_tokens)
-            last_seq = self._emit_tool_result(
+            last_seq = await self._emit_tool_result(
                 call, result, project_folder, session_id, run_id, agent_messages, last_seq
             )
         return last_seq, False
 
-    def _emit_tool_result(  # noqa: PLR0913 — small event/persist fan-out
+    async def _emit_tool_result(  # noqa: PLR0913 — small event/persist fan-out
         self,
         call: ToolCall,
         result: ToolResult,
@@ -592,7 +594,7 @@ class AgentLoop:
             blocks=[block],
             created_at=_now(),
         )
-        seq = self._chat_repo.append_message(project_folder, message)
+        seq = await self._chat_repo.append_message(project_folder, message)
         self._bus.publish(
             run_id,
             AgentEvent(

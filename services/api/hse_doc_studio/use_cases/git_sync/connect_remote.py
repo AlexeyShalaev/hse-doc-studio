@@ -34,6 +34,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitCredentialUsage,
     IGitOperationRegistry,
+    IGitRemoteBindings,
     IGitRemoteRegistry,
     IGitRepoReader,
     IGitStoreGuard,
@@ -83,6 +84,7 @@ class ConnectRemoteUC:
         transport: IGitTransport,
         guard: IGitStoreGuard,
         credentials: IGitCredentialRepository,
+        bindings: IGitRemoteBindings,
         profile: ILocalAuthorProfile,
         operations: IGitOperationRegistry,
         registry: IGitRemoteRegistry,
@@ -99,6 +101,7 @@ class ConnectRemoteUC:
         self._transport = transport
         self._guard = guard
         self._credentials = credentials
+        self._bindings = bindings
         self._profile = profile
         self._operations = operations
         self._registry = registry
@@ -109,7 +112,7 @@ class ConnectRemoteUC:
 
     async def execute(self, inp: ConnectRemoteInput) -> GitStatusView:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
-        url = self._checked_input(inp)
+        url = await self._checked_input(inp)
         await self._prepare_store(project)
         if await asyncio.to_thread(self._remotes.read, project) is not None:
             raise git_error(GitErrorCode.remote_exists)
@@ -136,7 +139,7 @@ class ConnectRemoteUC:
         self._operations.finish(operation.id)
         return await self._status.view(project)
 
-    def _checked_input(self, inp: ConnectRemoteInput) -> RemoteUrl:
+    async def _checked_input(self, inp: ConnectRemoteInput) -> RemoteUrl:
         self._policy.require_enabled()
         if inp.adopt not in (None, ADOPT_MERGE_REMOTE):
             raise ValueError("adopt must be null or 'merge_remote'")
@@ -145,7 +148,7 @@ class ConnectRemoteUC:
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
-        if inp.credential_id is not None and self._credentials.get(inp.credential_id) is None:
+        if inp.credential_id is not None and await self._credentials.get(inp.credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
         return url
 
@@ -171,7 +174,7 @@ class ConnectRemoteUC:
     async def _connect(
         self, project: Project, url: RemoteUrl, local_branch: str, inp: ConnectRemoteInput, operation_id: str
     ) -> None:
-        target = RemoteTarget(url, inp.credential_id, insecure_http=inp.insecure_http)
+        target = RemoteTarget(url, inp.credential_id, insecure_http=inp.insecure_http, project_id=project.id)
         probe = await self._transport.probe(target)
         raise_probe_error(probe)
         remote_branch = valid_branch(choose_remote_branch(inp.remote_branch, probe))
@@ -191,7 +194,13 @@ class ConnectRemoteUC:
             remote_empty=probe.empty,
             adopted_unrelated=adopted,
         )
-        await asyncio.to_thread(self._persist, project, url, state)
+        if inp.credential_id is not None:
+            await self._bindings.bind(project.id, inp.credential_id, url)
+        try:
+            await asyncio.to_thread(self._persist, project, url, state)
+        except BaseException:
+            await self._bindings.unbind(project.id)
+            raise
 
     async def _check_remote_project(
         self,
@@ -269,6 +278,7 @@ class DisconnectRemoteUC:
         registry: IGitRemoteRegistry,
         credentials: IGitCredentialRepository,
         credential_usage: IGitCredentialUsage,
+        bindings: IGitRemoteBindings,
         fetch_book: FetchBook,
     ) -> None:
         self._get_project = get_project
@@ -278,6 +288,7 @@ class DisconnectRemoteUC:
         self._registry = registry
         self._credentials = credentials
         self._usage = credential_usage
+        self._bindings = bindings
         self._fetch_book = fetch_book
 
     async def execute(self, inp: DisconnectRemoteInput) -> None:
@@ -289,10 +300,18 @@ class DisconnectRemoteUC:
         # Список проектов с этим доступом читается в цикле: в серверном режиме он идёт из БД.
         usage = await self._usage.by_credential() if inp.forget_credential else {}
         async with self._fetch_book.lock(project.folder):
-            await asyncio.to_thread(self._disconnect, project, inp.forget_credential, usage)
+            credential_id = await asyncio.to_thread(self._disconnect, project)
+            await self._bindings.unbind(project.id)
+            if (
+                inp.forget_credential
+                and credential_id is not None
+                and not self._used_elsewhere(usage, credential_id, project.id)
+            ):
+                await self._credentials.delete(credential_id)
+        logger.info("git remote disconnected", project_id=str(project.id), forgot_credential=inp.forget_credential)
         self._fetch_book.forget(project.folder)
 
-    def _disconnect(self, project: Project, forget_credential: bool, usage: dict[UUID, list[CredentialUsage]]) -> None:
+    def _disconnect(self, project: Project) -> UUID | None:
         config = self._remotes.read(project)
         credential_id = None
         if config is not None:
@@ -301,13 +320,7 @@ class DisconnectRemoteUC:
             self._remotes.clear(project)
         self._states.clear(project.folder)
         self._registry.remove(project.folder)
-        if (
-            forget_credential
-            and credential_id is not None
-            and not self._used_elsewhere(usage, credential_id, project.id)
-        ):
-            self._credentials.delete(credential_id)
-        logger.info("git remote disconnected", project_id=str(project.id), forgot_credential=forget_credential)
+        return credential_id
 
     @staticmethod
     def _used_elsewhere(usage: dict[UUID, list[CredentialUsage]], credential_id: UUID, project_id: UUID) -> bool:

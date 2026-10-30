@@ -131,7 +131,7 @@ class Stack:
     credentials: JsonGitCredentialRepository
     server: Sshd
 
-    def add_key(self, *, authorize: bool) -> UUID:
+    async def add_key(self, *, authorize: bool) -> UUID:
         generated = Ed25519KeyGenerator().generate("hse-test")
         credential = GitCredential(
             id=uuid4(),
@@ -145,7 +145,7 @@ class Stack:
             fingerprint_sha256=generated.fingerprint_sha256,
             port=self.server.port,
         )
-        self.credentials.add(credential, generated.private_key)
+        await self.credentials.add(credential, generated.private_key)
         if authorize:
             self.server.authorized_keys.write_text(generated.public_key + "\n")
         return credential.id
@@ -167,7 +167,7 @@ def stack(tmp_path: Path, sshd: Sshd) -> Stack:
 
 
 async def test__ssh_remote__unknown_then_trusted_then_reads_the_repository(stack: Stack) -> None:
-    credential = stack.add_key(authorize=True)
+    credential = await stack.add_key(authorize=True)
 
     unknown = await stack.transport.probe(stack.target(credential))
     assert unknown.error is not None
@@ -183,7 +183,7 @@ async def test__ssh_remote__unknown_then_trusted_then_reads_the_repository(stack
 
 
 async def test__ssh_remote__key_the_server_does_not_know__auth_failed(stack: Stack) -> None:
-    credential = stack.add_key(authorize=False)
+    credential = await stack.add_key(authorize=False)
     await stack.trust.execute(TrustHostInput("127.0.0.1", stack.server.port, stack.server.host_fingerprint))
 
     probe = await stack.transport.probe(stack.target(credential))
@@ -193,9 +193,9 @@ async def test__ssh_remote__key_the_server_does_not_know__auth_failed(stack: Sta
 
 
 async def test__ssh_remote__server_key_differs_from_the_trusted_one__host_key_changed(stack: Stack) -> None:
-    credential = stack.add_key(authorize=True)
+    credential = await stack.add_key(authorize=True)
     impostor = Ed25519KeyGenerator().generate("impostor").public_key.split()[1]
-    stack.known_hosts.trust(
+    await stack.known_hosts.trust(
         "127.0.0.1", stack.server.port, [ScannedHostKey("ssh-ed25519", impostor, key_fingerprint(impostor))]
     )
 

@@ -40,7 +40,7 @@ class SystemListChatSessionsUC:
         self._run_manager = run_manager
 
     async def execute(self) -> ListChatSessionsOutput:
-        sessions = self._chat_repo.list_sessions(self._folder)
+        sessions = await self._chat_repo.list_sessions(self._folder)
         sessions.sort(key=lambda s: s.updated_at, reverse=True)
         active = {s.id for s in sessions if self._run_manager.active_run_for_session(s.id) is not None}
         return ListChatSessionsOutput(sessions=sessions, active_session_ids=active)
@@ -77,7 +77,7 @@ class SystemCreateChatSessionUC:
             persona=persona,
             persona_instructions=persona_instructions,
         )
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)
         return CreateChatSessionOutput(session=session)
 
 
@@ -88,12 +88,12 @@ class SystemGetChatSessionUC:
         self._run_manager = run_manager
 
     async def execute(self, session_id: UUID) -> GetChatSessionOutput:
-        session = self._chat_repo.get_session(self._folder, session_id)
+        session = await self._chat_repo.get_session(self._folder, session_id)
         if session is None:
             raise NotFoundError(
                 localized_error(f"Сессия чата {session_id!r} не найдена", f"Chat session {session_id!r} not found")
             )
-        messages = self._chat_repo.list_messages(self._folder, session_id)
+        messages = await self._chat_repo.list_messages(self._folder, session_id)
         active_run_id = self._run_manager.active_run_for_session(session_id)
         return GetChatSessionOutput(session=session, messages=messages, active_run_id=active_run_id)
 
@@ -110,7 +110,7 @@ class SystemRenameChatSessionUC:
         persona: str | None = None,
         persona_instructions: str | None = None,
     ) -> RenameChatSessionOutput:
-        session = self._chat_repo.get_session(self._folder, session_id)
+        session = await self._chat_repo.get_session(self._folder, session_id)
         if session is None:
             raise NotFoundError(
                 localized_error(f"Сессия чата {session_id!r} не найдена", f"Chat session {session_id!r} not found")
@@ -124,7 +124,7 @@ class SystemRenameChatSessionUC:
             session.persona = persona
             session.persona_instructions = persona_instructions
         session.updated_at = _now()
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)
         return RenameChatSessionOutput(session=session)
 
 
@@ -137,7 +137,7 @@ class SystemDeleteChatSessionUC:
     async def execute(self, session_id: UUID) -> DeleteChatSessionOutput:
         if self._run_manager.active_run_for_session(session_id) is not None:
             raise PermissionError("a turn is currently running in this chat")
-        deleted = self._chat_repo.delete_session(self._folder, session_id)
+        deleted = await self._chat_repo.delete_session(self._folder, session_id)
         return DeleteChatSessionOutput(deleted=deleted)
 
 
@@ -158,7 +158,7 @@ class SystemCancelChatTurnUC:
         if self._run_manager.is_running(run_id):
             await self._run_manager.cancel(run_id)
             return CancelChatTurnOutput(cancelled_task=True, record_finalized=False)
-        run = self._chat_repo.get_run(self._folder, run_id)
+        run = await self._chat_repo.get_run(self._folder, run_id)
         if run is None:
             raise NotFoundError(localized_error(f"Запуск {run_id!r} не найден", f"Run {run_id!r} not found"))
         if run.status in _TERMINAL:
@@ -166,7 +166,7 @@ class SystemCancelChatTurnUC:
         run.status = AgentRunStatus.cancelled
         run.finished_at = _now()
         run.error = _CANCELLED_NO_TASK.get(current_interface_language(), _CANCELLED_NO_TASK[Lang.ru])
-        self._chat_repo.save_run(run)
+        await self._chat_repo.save_run(run)
         self._bus.close(run_id)
         self._bus.discard(run_id)
         return CancelChatTurnOutput(cancelled_task=False, record_finalized=True)

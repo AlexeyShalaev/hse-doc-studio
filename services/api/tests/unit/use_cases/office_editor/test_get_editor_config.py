@@ -277,7 +277,7 @@ async def test__editor_config__syncs_ai_plugin_settings_before_session(tmp_path:
         created_at=datetime.now(timezone.utc),
     )
     ai_repo = MagicMock()
-    ai_repo.list_all.return_value = [provider]
+    ai_repo.list_all = AsyncMock(return_value=[provider])
     uc._ai_provider_repo = ai_repo
 
     out = await uc.execute(GetOfficeEditorConfigInput(project_id=uuid4(), doc_id="pres"))

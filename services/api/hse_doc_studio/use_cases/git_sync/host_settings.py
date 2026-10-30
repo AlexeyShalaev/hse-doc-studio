@@ -51,10 +51,10 @@ class ListHostSettingsUC:
         self._resolver = resolver
 
     async def execute(self) -> list[HostSettingsView]:
-        items = {item.key: item for item in self._settings.list()}
-        for credential in self._credentials.list():
+        items = {item.key: item for item in await self._settings.list()}
+        for credential in await self._credentials.list():
             items.setdefault(host_settings_key(credential.host, None), GitHostSettings(credential.host))
-        return [HostSettingsView(item, self._resolver.known(item.host, item.port)) for item in items.values()]
+        return [HostSettingsView(item, await self._resolver.known(item.host, item.port)) for item in items.values()]
 
 
 @dataclass
@@ -89,7 +89,7 @@ class UpdateHostSettingsUC:
     async def execute(self, inp: UpdateHostSettingsInput) -> HostSettingsView:
         host = normalize_credential_host(inp.host)
         port = normalize_port(inp.port)
-        current = self._settings.get(host, port) or GitHostSettings(host, port)
+        current = await self._settings.get(host, port) or GitHostSettings(host, port)
         updated = current
         if FIELD_PROVIDER_OVERRIDE in inp.given:
             override = None if inp.provider_override is None else _provider(inp.provider_override)
@@ -99,8 +99,8 @@ class UpdateHostSettingsUC:
             updated = replace(updated, ca_pem=ca_pem)
         if FIELD_PINNED_FINGERPRINT in inp.given:
             updated = await self._pin(updated, inp.pinned_fingerprint)
-        self._settings.save(updated)
-        return HostSettingsView(updated, self._resolver.known(host, port))
+        await self._settings.save(updated)
+        return HostSettingsView(updated, await self._resolver.known(host, port))
 
     async def _pin(self, settings: GitHostSettings, fingerprint: str | None) -> GitHostSettings:
         if fingerprint is None:
@@ -146,7 +146,7 @@ class CheckCredentialUC:
         self._tokens = token_checker
 
     async def execute(self, credential_id: UUID) -> CredentialCheckView:
-        credential = self._credentials.get(credential_id)
+        credential = await self._credentials.get(credential_id)
         if credential is None:
             raise NotFoundError(localized_error("Доступ не найден", "Credential not found"))
         if credential.kind is not GitCredentialKind.pat:
@@ -160,18 +160,20 @@ class CheckCredentialUC:
             raise git_error(GitErrorCode.token_expired)
         if check is not None and check.state is TokenState.rejected:
             raise git_error(GitErrorCode.auth_failed)
-        refreshed = self._credentials.get(credential_id) or credential
+        refreshed = await self._credentials.get(credential_id) or credential
         used_by = tuple((await self._usage.by_credential()).get(credential_id, ()))
         return CredentialCheckView(CredentialView(refreshed, used_by), resolved.info, check)
 
     async def _resolve(self, credential: GitCredential) -> ResolvedProvider:
         """У токена в хранилище нет порта и пути установки: берутся из настроек хоста, где сервер уже встречали."""
-        known = next((item for item in self._settings.list() if item.host == credential.host), None)
-        info = self._resolver.known(credential.host, known.port if known else None)
+        known = next((item for item in await self._settings.list() if item.host == credential.host), None)
+        info = await self._resolver.known(credential.host, known.port if known else None)
         api = known.detected.api_base if known and known.detected and known.detected.provider is info.id else None
         if api is not None and not api.startswith("https://"):
             # У токена нет адреса и согласия на http: запомненный по http корень API ему не подходит.
             api = None
         base = web_base(host=credential.host, port=known.port if known else None)
+        if known and known.has_trust:
+            await self._settings.materialize()
         ca_file = self._settings.trust_file(known.host, known.port) if known and known.has_trust else None
         return ResolvedProvider(info, api or api_base(info.id, host=credential.host, base=base), ca_file)

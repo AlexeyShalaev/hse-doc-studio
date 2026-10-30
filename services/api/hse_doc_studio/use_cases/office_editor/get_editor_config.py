@@ -227,7 +227,7 @@ class GetOfficeEditorConfigUC:
         """
         if self._ai_provider_repo is None:
             return
-        desired = build_ai_plugin_settings(self._ai_provider_repo.list_all(), await self._settings_repo.get())
+        desired = build_ai_plugin_settings(await self._ai_provider_repo.list_all(), await self._settings_repo.get())
         await self._manager.apply_ai_settings(desired)
 
     def _resolve_title(self, doc: Any, doc_def: Any, chosen_variant: str | None, output_file: str) -> str:

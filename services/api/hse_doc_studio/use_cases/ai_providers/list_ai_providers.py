@@ -16,4 +16,4 @@ class ListAIProvidersUC:
         self._repo = ai_provider_repo
 
     async def execute(self) -> ListAIProvidersOutput:
-        return ListAIProvidersOutput(providers=self._repo.list_all())
+        return ListAIProvidersOutput(providers=await self._repo.list_all())

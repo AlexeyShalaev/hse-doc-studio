@@ -185,6 +185,29 @@ async def test__server_container__compile_repo_is_postgres_while_local_stays_jso
     assert isinstance(server_repo, PostgresCompileRepository)
 
 
+async def test__server_container__chat_repo_is_postgres_while_local_stays_json() -> None:
+    from hse_doc_studio.core.repositories import IChatRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.chat import JsonChatRepository  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(IChatRepository)
+        async with server() as request:
+            server_repo = await request.get(IChatRepository)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonChatRepository)
+    assert isinstance(server_repo, PostgresChatRepository)
+
+
 async def test__server_container__artifact_store_is_s3_while_local_stays_on_disk() -> None:
     from hse_doc_studio.core.jobs.artifacts import IArtifactStore  # noqa: PLC0415
     from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore  # noqa: PLC0415
@@ -301,3 +324,131 @@ async def test__server_container__dispatcher_is_the_queue_one_while_local_stays_
 
     assert isinstance(local_dispatcher, LocalJobDispatcher)
     assert isinstance(server_dispatcher, QueueJobDispatcher)
+
+
+async def test__server_container__ai_provider_repo_is_postgres_while_local_stays_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.repositories import IAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository  # noqa: PLC0415
+    from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(IAIProviderRepository)
+            local_create = await request.get(CreateAIProviderUC)
+        async with server() as request:
+            server_repo = await request.get(IAIProviderRepository)
+            server_create = await request.get(CreateAIProviderUC)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonAIProviderRepository)
+    assert isinstance(server_repo, PostgresAIProviderRepository)
+    # В local адрес провайдера не проверяется, в server проверяется политикой egress
+    assert local_create._egress is None  # noqa: SLF001
+    assert server_create._egress is not None  # noqa: SLF001
+
+
+async def test__server_container__signing_identity_repo_is_postgres_with_default_deny_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.repositories import ISigningIdentityRepository  # noqa: PLC0415
+    from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy  # noqa: PLC0415
+    from hse_doc_studio.infra.db.repositories.signing_identities import (  # noqa: PLC0415
+        PostgresSigningIdentityRepository,
+    )
+    from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy  # noqa: PLC0415
+    from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_repo = await request.get(ISigningIdentityRepository)
+        async with server() as request:
+            server_repo = await request.get(ISigningIdentityRepository)
+            policy = await request.get(ISigningKeyPolicy)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_repo, JsonSigningIdentityRepository)
+    assert isinstance(server_repo, PostgresSigningIdentityRepository)
+    assert isinstance(policy, InstanceSigningKeyPolicy)
+
+
+async def test__server_container__git_credentials_go_through_postgres_and_local_stays_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from hse_doc_studio.core.git_sync.protocols import (  # noqa: PLC0415
+        ICredentialAccess,
+        IGitCredentialRepository,
+        IGitCredentialUsage,
+        IGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.db.repositories.git_credentials import (  # noqa: PLC0415
+        PostgresCredentialAccess,
+        PostgresCredentialUsage,
+        PostgresGitCredentialRepository,
+        PostgresGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.git_sync.credential_access import (  # noqa: PLC0415
+        DirectCredentialAccess,
+        LocalGitRemoteBindings,
+    )
+    from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        async with local() as request:
+            local_got = [
+                await request.get(IGitCredentialRepository),
+                await request.get(ICredentialAccess),
+                await request.get(IGitRemoteBindings),
+            ]
+        async with server() as request:
+            server_got = [
+                await request.get(IGitCredentialRepository),
+                await request.get(ICredentialAccess),
+                await request.get(IGitRemoteBindings),
+                await request.get(IGitCredentialUsage),
+            ]
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert [type(item) for item in local_got] == [
+        JsonGitCredentialRepository,
+        DirectCredentialAccess,
+        LocalGitRemoteBindings,
+    ]
+    assert [type(item) for item in server_got] == [
+        PostgresGitCredentialRepository,
+        PostgresCredentialAccess,
+        PostgresGitRemoteBindings,
+        PostgresCredentialUsage,
+    ]

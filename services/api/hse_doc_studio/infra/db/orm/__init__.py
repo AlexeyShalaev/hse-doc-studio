@@ -1,5 +1,6 @@
 """ORM-модели. Каждая зона держит свои таблицы в своём модуле и импортирует их здесь для autogenerate."""
 
+from hse_doc_studio.infra.db.orm.ai_providers import AIProviderRow
 from hse_doc_studio.infra.db.orm.auth import (
     ApiTokenRow,
     AuditLogRow,
@@ -11,7 +12,10 @@ from hse_doc_studio.infra.db.orm.auth import (
     SessionRow,
 )
 from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
+from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
+from hse_doc_studio.infra.db.orm.git_credentials import GitCredentialRow, GitRemoteBindingRow
+from hse_doc_studio.infra.db.orm.git_trust import GitHostSettingsRow, GitKnownHostRow
 from hse_doc_studio.infra.db.orm.identity import (
     InstanceSettingRow,
     PasswordCredentialRow,
@@ -30,15 +34,25 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRow,
 )
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
+from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
 
 __all__ = [
+    "AIProviderRow",
+    "AgentRunRow",
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
     "BlobRow",
+    "ChatMessageRow",
+    "ChatSessionRow",
+    "ChatSummaryRow",
     "CompileRecordRow",
     "FairShareRow",
     "FileHashCacheRow",
+    "GitCredentialRow",
+    "GitHostSettingsRow",
+    "GitKnownHostRow",
+    "GitRemoteBindingRow",
     "InstanceMetaRow",
     "InstanceSettingRow",
     "JobQueueStateRow",
@@ -55,6 +69,7 @@ __all__ = [
     "RunnerRegistrationTokenRow",
     "RunnerRow",
     "SessionRow",
+    "SigningIdentityRow",
     "UserIdentityRow",
     "UserRow",
     "UserSettingRow",

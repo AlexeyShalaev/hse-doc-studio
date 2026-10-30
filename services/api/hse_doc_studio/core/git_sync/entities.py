@@ -180,6 +180,18 @@ class CredentialUsage:
 
 
 @dataclass(frozen=True)
+class RemoteBinding:
+    """Привязка доступа к проекту: для какой схемы, хоста и порта владелец разрешил им пользоваться."""
+
+    project_id: UUID
+    credential_id: UUID
+    bound_by: str | None
+    scheme: str
+    host: str
+    port: int | None
+
+
+@dataclass(frozen=True)
 class GitRemoteRef:
     """Подключённый к проекту удалённый репозиторий (адрес без секретов)."""
 
@@ -201,6 +213,8 @@ class RemoteTarget:
     credential_id: UUID | None = None
     # Явное согласие на открытый http: токен пойдёт по сети без шифрования.
     insecure_http: bool = False
+    # Проект, чей это удалённый репозиторий: по нему сервер находит привязку доступа.
+    project_id: UUID | None = None
 
 
 @dataclass(frozen=True)

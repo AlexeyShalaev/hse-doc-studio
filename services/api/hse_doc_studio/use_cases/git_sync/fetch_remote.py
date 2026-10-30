@@ -177,6 +177,7 @@ class FetchGitRemoteUC:
             ),
             state.credential_id or config.credential_id,
             insecure_http=state.insecure_http,
+            project_id=project.id,
         )
         tracking = f"{TRACKING_PREFIX}{state.remote_branch}"
         before = await asyncio.to_thread(self._reader.rev_parse, folder, tracking)

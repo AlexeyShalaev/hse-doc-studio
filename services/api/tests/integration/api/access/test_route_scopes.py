@@ -29,7 +29,7 @@ from tests.fixtures.app import create_test_app, create_test_container
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
 _PREFIXES = ("/api/v1", "/api/admin", "/api/runner/")
 # Потолок общих пользовательских маршрутов: только уменьшается, когда срез переводит данные под владельца.
-_PENDING_CEILING = 51
+_PENDING_CEILING = 36
 _USER = Actor.user("user")
 _ADMIN = Actor(kind="user", id="admin", is_instance_admin=True)
 

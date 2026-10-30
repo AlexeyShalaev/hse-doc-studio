@@ -89,14 +89,14 @@ class JsonGitCredentialRepository:
         self._cipher = cipher
         self._lock = threading.RLock()
 
-    def list(self) -> _Credentials:
+    async def list(self) -> _Credentials:
         with self._lock:
             return [self._entity(raw) for raw in self._records() if self._valid(raw)]
 
-    def get(self, credential_id: UUID) -> GitCredential | None:
-        return next((c for c in self.list() if c.id == credential_id), None)
+    async def get(self, credential_id: UUID) -> GitCredential | None:
+        return next((c for c in await self.list() if c.id == credential_id), None)
 
-    def add(self, credential: GitCredential, secret: Secret) -> None:
+    async def add(self, credential: GitCredential, secret: Secret) -> None:
         sealed = self._cipher.encrypt(secret, aad=secret_aad(credential.id, credential.kind))
         with self._lock:
             records = self._records(for_write=True)
@@ -104,7 +104,7 @@ class JsonGitCredentialRepository:
             self._write(records)
         logger.info("git credential added", credential_id=str(credential.id), kind=credential.kind.value)
 
-    def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
+    async def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
         with self._lock:
             records = self._records(for_write=True)
             for idx, raw in enumerate(records):
@@ -120,7 +120,7 @@ class JsonGitCredentialRepository:
                 return
         raise NotFoundError(localized_error("Доступ не найден", "Credential not found"))
 
-    def delete(self, credential_id: UUID) -> bool:
+    async def delete(self, credential_id: UUID) -> bool:
         with self._lock:
             records = self._records(for_write=True)
             kept = [raw for raw in records if raw.get("id") != str(credential_id)]
@@ -130,7 +130,7 @@ class JsonGitCredentialRepository:
         logger.info("git credential deleted", credential_id=str(credential_id))
         return True
 
-    def get_secret(self, credential_id: UUID) -> Secret:
+    async def get_secret(self, credential_id: UUID) -> Secret:
         with self._lock:
             raw = next((r for r in self._records() if r.get("id") == str(credential_id)), None)
         if raw is None or not self._valid(raw):
@@ -138,7 +138,7 @@ class JsonGitCredentialRepository:
         kind = GitCredentialKind(raw["kind"])
         return self._cipher.decrypt(raw["secret"], aad=secret_aad(credential_id, kind))
 
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+    async def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
         if status is CredentialStatus.unreadable:
             return
         with self._lock:

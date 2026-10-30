@@ -22,6 +22,6 @@ async def test__execute__running_run_left_from_a_dead_process__marked_interrupte
     out = await uc.execute()
 
     assert out.recovered_runs == 1
-    recovered = chat_repo.get_run(tmp_path, running_run.id)
+    recovered = await chat_repo.get_run(tmp_path, running_run.id)
     assert recovered is not None
     assert recovered.status == AgentRunStatus.interrupted

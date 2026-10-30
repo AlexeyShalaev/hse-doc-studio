@@ -25,7 +25,7 @@ from hse_doc_studio.core.git_sync.fetch_schedule import (
     next_attempt_at,
 )
 from hse_doc_studio.core.git_sync.protocols import (
-    IGitCredentialRepository,
+    ICredentialAccess,
     IGitOperationRegistry,
     IGitRemoteRegistry,
     IGitStoreRemotes,
@@ -57,7 +57,7 @@ class FetchAllGitRemotesUC:
         store_remotes: IGitStoreRemotes,
         state_repo: IGitSyncStateRepository,
         operations: IGitOperationRegistry,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         settings_repo: ISettingsRepository,
         fetch: FetchGitRemoteUC,
         book: FetchBook,
@@ -93,8 +93,10 @@ class FetchAllGitRemotesUC:
     async def _one(self, folder: Path, stored: dict[str, Any], gate: asyncio.Semaphore) -> FetchResult | None:
         """None: проект не опрашивали (не подошёл срок, выключено, остановлено до действия человека)."""
         try:
-            project = await asyncio.to_thread(self._due_project, folder, stored)
+            project, replaced_candidate = await asyncio.to_thread(self._due_project, folder, stored)
             if project is None:
+                return None
+            if replaced_candidate is not None and not await self._credential_replaced(project, *replaced_candidate):
                 return None
             async with gate:
                 return (await self._fetch.fetch(project, manual=False)).result
@@ -102,25 +104,28 @@ class FetchAllGitRemotesUC:
             logger.warning("git background fetch failed", folder=str(folder), exc_info=True)
             return FetchResult.failed
 
-    def _due_project(self, folder: Path, stored: dict[str, Any]) -> Project | None:
+    def _due_project(
+        self, folder: Path, stored: dict[str, Any]
+    ) -> tuple[Project | None, tuple[SyncState, UUID | None] | None]:
+        """Проект к опросу и, если автоопрос остановлен, состояние с доступом: заменён ли он, решает вызывающий."""
         project = self._projects.get(folder)
         if project is None or self._book.held(folder, self._clock()):
-            return None
+            return None, None
         loaded = self._load_state(project, folder)
         if loaded is None:
-            return None
+            return None, None
         state, config = loaded
         if not self._is_due(folder, state, stored):
-            return None
+            return None, None
         # Пора опрашивать: теперь подключение читается в любом случае (запуск git оправдан), и проект,
         # у которого его больше нет, выпадает из реестра.
         config = config or self._remotes.read(project)
         if config is None:
             self._registry.remove(folder)
-            return None
-        if halts_auto_fetch(state) and not self._credential_replaced(state, config.credential_id):
-            return None
-        return project
+            return None, None
+        if halts_auto_fetch(state):
+            return project, (state, config.credential_id)
+        return project, None
 
     def _is_due(self, folder: Path, state: SyncState, stored: dict[str, Any]) -> bool:
         enabled, interval = fetch_interval(state, stored)
@@ -141,7 +146,7 @@ class FetchAllGitRemotesUC:
             return None
         return default_state(config, None), config
 
-    def _credential_replaced(self, state: SyncState, config_credential: UUID | None) -> bool:
+    async def _credential_replaced(self, project: Project, state: SyncState, config_credential: UUID | None) -> bool:
         credential_id = state.credential_id or config_credential
-        credential = self._credentials.get(credential_id) if credential_id else None
+        credential = await self._credentials.get(credential_id, project_id=project.id) if credential_id else None
         return credential_replaced(state, credential)

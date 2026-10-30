@@ -27,6 +27,6 @@ async def test__execute__no_live_task_for_run__force_finalizes_orphan_run(
 
     assert out.cancelled_task is False
     assert out.record_finalized is True
-    finalized = chat_repo.get_run(tmp_path, running_run.id)
+    finalized = await chat_repo.get_run(tmp_path, running_run.id)
     assert finalized is not None
     assert finalized.status == AgentRunStatus.cancelled

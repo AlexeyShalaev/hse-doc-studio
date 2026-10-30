@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
 from hse_doc_studio.core.entities import AgentPersona, AIProvider
-from hse_doc_studio.core.enums import AIProviderType
+from hse_doc_studio.core.enums import AIProviderOwnerKind, AIProviderType
 from hse_doc_studio.core.export_import.serialization import persona_to_export_dict, provider_to_export_dict
 from hse_doc_studio.use_cases.export_import.export_data import ExportDataInput, ExportDataUC
 from hse_doc_studio.use_cases.export_import.import_data import ImportDataInput, ImportDataUC
@@ -15,19 +16,19 @@ class _FakeProviderRepo:
     def __init__(self, items: list[AIProvider] | None = None) -> None:
         self._items: dict[UUID, AIProvider] = {p.id: p for p in (items or [])}
 
-    def list_all(self) -> list[AIProvider]:
+    async def list_all(self) -> list[AIProvider]:
         return list(self._items.values())
 
-    def get(self, provider_id: UUID) -> AIProvider | None:
+    async def get(self, provider_id: UUID) -> AIProvider | None:
         return self._items.get(provider_id)
 
-    def create(self, provider: AIProvider) -> None:
+    async def create(self, provider: AIProvider) -> None:
         self._items[provider.id] = provider
 
-    def update(self, provider: AIProvider) -> None:
+    async def update(self, provider: AIProvider) -> None:
         self._items[provider.id] = provider
 
-    def delete(self, provider_id: UUID) -> bool:
+    async def delete(self, provider_id: UUID) -> bool:
         return self._items.pop(provider_id, None) is not None
 
 
@@ -166,7 +167,7 @@ async def test__export_encrypted_then_import__round_trips_api_key() -> None:
     )
 
     assert result.ai_providers_imported == 1
-    assert dst.list_all()[0].api_key == "sk-secret"
+    assert (await dst.list_all())[0].api_key == "sk-secret"
 
 
 @pytest.mark.unit
@@ -195,7 +196,7 @@ async def test__import_encrypted__wrong_password__raises_and_changes_nothing() -
         )
 
     # Atomic: a wrong password applies neither providers nor settings.
-    assert dst_providers.list_all() == []
+    assert await dst_providers.list_all() == []
     assert (await dst_settings.get())["theme"] == "dark"
 
 
@@ -210,7 +211,7 @@ async def test__import_skip__keeps_existing_by_id() -> None:
     )
 
     assert result.ai_providers_skipped == 1
-    kept = dst.get(pid)
+    kept = await dst.get(pid)
     assert kept is not None
     assert kept.name == "Old"
 
@@ -226,7 +227,7 @@ async def test__import_replace__overwrites_in_place_preserving_id() -> None:
     )
 
     assert result.ai_providers_imported == 1
-    replaced = dst.get(pid)
+    replaced = await dst.get(pid)
     assert replaced is not None
     assert replaced.name == "New"
     assert replaced.api_key == "sk-new"
@@ -382,3 +383,12 @@ async def test__import__bundle_without_local_profile__does_not_create_one() -> N
 
     assert "profile_name" not in (await settings.get())
     assert "profile_email" not in (await settings.get())
+
+
+@pytest.mark.unit
+async def test__export__skips_shared_instance_providers() -> None:
+    shared = replace(_provider("Общий"), owner_kind=AIProviderOwnerKind.instance)
+    repo = _FakeProviderRepo([_provider("Свой"), shared])
+    out = await _export_uc(_FakeSettingsRepo({}), repo).execute(ExportDataInput())
+
+    assert [p["name"] for p in out.ai_providers] == ["Свой"]

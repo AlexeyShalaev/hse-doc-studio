@@ -205,7 +205,7 @@ class CloneProjectUC:
 
     async def execute(self, inp: CloneProjectInput) -> GitOperation:
         """Проверяет всё, что можно проверить без сети, и запускает клонирование в фоне."""
-        url = self._checked_input(inp)
+        url = await self._checked_input(inp)
         plan = await self.plan_folder(inp.folder)
         operation = self._operations.begin(OperationKind.clone, project_id=None, folder=plan.folder)
         self.start(operation.id, plan, lambda: self._clone(operation.id, url, plan, inp))
@@ -216,7 +216,7 @@ class CloneProjectUC:
         task = asyncio.create_task(self._run(operation_id, plan, work))
         self._operations.attach_task(operation_id, task)
 
-    def _checked_input(self, inp: CloneProjectInput) -> RemoteUrl:
+    async def _checked_input(self, inp: CloneProjectInput) -> RemoteUrl:
         self._policy.require_enabled()
         if self._profile.get() is None:
             raise git_error(GitErrorCode.profile_required)
@@ -224,7 +224,7 @@ class CloneProjectUC:
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
         require_http_consent(url, insecure_http=inp.insecure_http)
-        if inp.credential_id is not None and self._credentials.get(inp.credential_id) is None:
+        if inp.credential_id is not None and await self._credentials.get(inp.credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
         if inp.branch:
             valid_branch(inp.branch)

@@ -184,7 +184,7 @@ class StartChatTurnUC:
                 localized_error(f"Проект {inp.project_id!r} не найден", f"Project {inp.project_id!r} not found")
             )
         folder, project = located
-        session = self._chat_repo.get_session(folder, inp.session_id)
+        session = await self._chat_repo.get_session(folder, inp.session_id)
         if session is None:
             raise NotFoundError(
                 localized_error(
@@ -194,7 +194,7 @@ class StartChatTurnUC:
         if self._run_manager.active_run_for_session(inp.session_id) is not None:
             raise PermissionError("a turn is already running in this chat")
         if inp.run_id is not None:
-            return self._resume(inp, folder, project)
+            return await self._resume(inp, folder, project)
         return await self._start_new(inp, folder, project, session)
 
     async def _start_new(
@@ -216,7 +216,7 @@ class StartChatTurnUC:
             blocks=[ChatContentBlock(kind=ChatContentKind.text, text=inp.text)],
             created_at=now,
         )
-        user_seq = self._chat_repo.append_message(folder, user_message)
+        user_seq = await self._chat_repo.append_message(folder, user_message)
         run = AgentRunRecord(
             id=uuid4(),
             session_id=inp.session_id,
@@ -229,19 +229,19 @@ class StartChatTurnUC:
             model=model,
             provider_id=provider.id,
         )
-        self._chat_repo.save_run(run)
+        await self._chat_repo.save_run(run)
         self._spawn(run, project, provider, model, ())
         if should_generate_title and inp.text.strip():
             self._spawn_title_generation(folder, inp.session_id, inp.text, provider, model)
         return StartChatTurnOutput(run_id=run.id, user_message_seq=user_seq)
 
-    def _resume(self, inp: StartChatTurnInput, folder: Path, project: Project) -> StartChatTurnOutput:
-        run = self._chat_repo.get_run(folder, inp.run_id) if inp.run_id else None
+    async def _resume(self, inp: StartChatTurnInput, folder: Path, project: Project) -> StartChatTurnOutput:
+        run = await self._chat_repo.get_run(folder, inp.run_id) if inp.run_id else None
         if run is None:
             raise NotFoundError(localized_error(f"Запуск {inp.run_id!r} не найден", f"Run {inp.run_id!r} not found"))
         if run.status != AgentRunStatus.awaiting_approval:
             raise ValueError(localized_error("Запуск не ожидает подтверждения", "Run is not awaiting approval"))
-        provider = self._ai_provider_repo.get(run.provider_id) if run.provider_id else None
+        provider = await self._ai_provider_repo.get(run.provider_id) if run.provider_id else None
         if provider is None:
             raise ValueError(
                 localized_error(
@@ -316,12 +316,12 @@ class StartChatTurnUC:
             )
             title = fallback
 
-        session = self._chat_repo.get_session(folder, session_id)
+        session = await self._chat_repo.get_session(folder, session_id)
         if session is None or not _is_default_title(session.title):
             return
         session.title = title
         session.updated_at = _now()
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)
 
     async def _resolve_provider(
         self, inp: StartChatTurnInput, session_provider_id: UUID | None, session_model: str | None
@@ -341,7 +341,7 @@ class StartChatTurnUC:
                     "No AI provider selected: configure a default provider or pass provider_id",
                 )
             )
-        provider = self._ai_provider_repo.get(provider_id)
+        provider = await self._ai_provider_repo.get(provider_id)
         if provider is None:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {provider_id!r} не найден", f"AI provider {provider_id!r} not found")
@@ -392,7 +392,7 @@ class StartChatTurnUC:
         # summarizer) reads the resolved value.
         language = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         set_interface_language(language.value)
-        session = self._chat_repo.get_session(folder, run.session_id)
+        session = await self._chat_repo.get_session(folder, run.session_id)
         custom_personas = {str(p.id): p.instruction for p in self._agent_persona_repo.list_all()}
         system = build_system_prompt(
             project,
@@ -406,7 +406,7 @@ class StartChatTurnUC:
         try:
             run.status = AgentRunStatus.running
             run.started_at = _now()
-            self._chat_repo.save_run(run)
+            await self._chat_repo.save_run(run)
             result = await loop.run(
                 project_id=project.id,
                 project_folder=folder,
@@ -433,8 +433,8 @@ class StartChatTurnUC:
                 run.finished_at = _now()
             # Accumulate per-task diagnostics onto the run (survives pause/resume).
             run.diagnostics = [*run.diagnostics, *loop.diagnostics][-_MAX_RUN_DIAGNOSTICS:]
-            self._chat_repo.save_run(run)  # terminal/paused record BEFORE closing the bus
-            self._link_session(folder, run)
+            await self._chat_repo.save_run(run)  # terminal/paused record BEFORE closing the bus
+            await self._link_session(folder, run)
             self._bus.close(run.id)
             self._run_manager.unregister(run.id)
         if cancelled:
@@ -448,12 +448,12 @@ class StartChatTurnUC:
         run.error = result.error
         run.last_emitted_seq = result.last_seq
 
-    def _link_session(self, folder: Path, run: AgentRunRecord) -> None:
+    async def _link_session(self, folder: Path, run: AgentRunRecord) -> None:
         # Reload: the session manifest was mutated (message_count) by the appends
         # during the run, so our captured copy is stale.
-        session = self._chat_repo.get_session(folder, run.session_id)
+        session = await self._chat_repo.get_session(folder, run.session_id)
         if session is None:
             return
         session.last_run_id = run.id
         session.updated_at = _now()
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)

@@ -22,4 +22,4 @@ async def test__execute__existing_session__deletes_it_from_the_repo(
     out = await uc.execute(DeleteChatSessionInput(project_id=project_id, session_id=created_session.id))
 
     assert out.deleted is True
-    assert chat_repo.get_session(tmp_path, created_session.id) is None
+    assert await chat_repo.get_session(tmp_path, created_session.id) is None

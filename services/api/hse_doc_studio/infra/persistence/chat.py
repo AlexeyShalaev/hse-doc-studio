@@ -62,7 +62,7 @@ class JsonChatRepository:
 
     # ── sessions ─────────────────────────────────────────────────────────────
 
-    def list_sessions(self, project_folder: Path) -> list[ChatSession]:
+    async def list_sessions(self, project_folder: Path) -> list[ChatSession]:
         chats_dir = self._chats_dir(project_folder)
         if not chats_dir.exists():
             return []
@@ -75,7 +75,7 @@ class JsonChatRepository:
                 logger.warning("chat session read error", path=str(session_json), exc=str(exc))
         return out
 
-    def get_session(self, project_folder: Path, session_id: UUID) -> ChatSession | None:
+    async def get_session(self, project_folder: Path, session_id: UUID) -> ChatSession | None:
         path = self._session_dir(project_folder, session_id) / "session.json"
         if not path.exists():
             return None
@@ -86,11 +86,11 @@ class JsonChatRepository:
             logger.warning("chat session read error", path=str(path), exc=str(exc))
             return None
 
-    def save_session(self, session: ChatSession) -> None:
+    async def save_session(self, session: ChatSession) -> None:
         path = self._session_dir(session.project_folder, session.id) / "session.json"
         self._write_atomic(path, serialize_chat_session(session))
 
-    def delete_session(self, project_folder: Path, session_id: UUID) -> bool:
+    async def delete_session(self, project_folder: Path, session_id: UUID) -> bool:
         session_dir = self._session_dir(project_folder, session_id)
         if not session_dir.exists():
             return False
@@ -99,8 +99,8 @@ class JsonChatRepository:
 
     # ── messages (append-only transcript) ────────────────────────────────────
 
-    def append_message(self, project_folder: Path, message: ChatMessage) -> int:
-        session = self.get_session(project_folder, message.session_id)
+    async def append_message(self, project_folder: Path, message: ChatMessage) -> int:
+        session = await self.get_session(project_folder, message.session_id)
         if session is None:
             raise ValueError(f"chat session {message.session_id} not found")
         seq = session.message_count
@@ -127,10 +127,10 @@ class JsonChatRepository:
             os.fsync(fh.fileno())
         session.message_count = seq + 1
         session.updated_at = message.created_at
-        self.save_session(session)
+        await self.save_session(session)
         return seq
 
-    def list_messages(self, project_folder: Path, session_id: UUID) -> list[ChatMessage]:
+    async def list_messages(self, project_folder: Path, session_id: UUID) -> list[ChatMessage]:
         path = self._session_dir(project_folder, session_id) / "messages.jsonl"
         if not path.exists():
             return []
@@ -151,14 +151,14 @@ class JsonChatRepository:
                     logger.warning("chat transcript: skipping bad line", session_id=str(session_id), exc=str(exc))
         return out
 
-    def update_message(self, project_folder: Path, message: ChatMessage) -> None:
+    async def update_message(self, project_folder: Path, message: ChatMessage) -> None:
         # Rare path (compaction flag only): rewrite the whole transcript atomically.
-        messages = self.list_messages(project_folder, message.session_id)
+        messages = await self.list_messages(project_folder, message.session_id)
         replaced = [message if m.id == message.id else m for m in messages]
         self._rewrite_transcript(project_folder, message.session_id, replaced)
 
-    def mark_compacted(self, project_folder: Path, session_id: UUID, through_seq: int) -> int:
-        messages = self.list_messages(project_folder, session_id)
+    async def mark_compacted(self, project_folder: Path, session_id: UUID, through_seq: int) -> int:
+        messages = await self.list_messages(project_folder, session_id)
         count = 0
         for message in messages:
             if message.seq <= through_seq and not message.compacted:
@@ -180,7 +180,7 @@ class JsonChatRepository:
 
     # ── rolling compaction summaries ─────────────────────────────────────────
 
-    def list_summaries(self, project_folder: Path, session_id: UUID) -> list[ChatSummaryBlock]:
+    async def list_summaries(self, project_folder: Path, session_id: UUID) -> list[ChatSummaryBlock]:
         path = self._session_dir(project_folder, session_id) / "summaries.json"
         if not path.exists():
             return []
@@ -192,8 +192,8 @@ class JsonChatRepository:
         items = raw if isinstance(raw, list) else []
         return [deserialize_chat_summary(item) for item in items]
 
-    def append_summary(self, project_folder: Path, summary: ChatSummaryBlock) -> None:
-        existing = self.list_summaries(project_folder, summary.session_id)
+    async def append_summary(self, project_folder: Path, summary: ChatSummaryBlock) -> None:
+        existing = await self.list_summaries(project_folder, summary.session_id)
         existing.append(summary)
         path = self._session_dir(project_folder, summary.session_id) / "summaries.json"
         self._write_atomic(path, [serialize_chat_summary(s) for s in existing])
@@ -203,7 +203,7 @@ class JsonChatRepository:
     def _runs_dir(self, project_folder: Path, session_id: UUID) -> Path:
         return self._session_dir(project_folder, session_id) / "runs"
 
-    def get_run(self, project_folder: Path, run_id: UUID) -> AgentRunRecord | None:
+    async def get_run(self, project_folder: Path, run_id: UUID) -> AgentRunRecord | None:
         for run_json in self._chats_dir(project_folder).glob(f"*/runs/{run_id}.json"):
             try:
                 data = json.loads(run_json.read_text(encoding="utf-8"))
@@ -213,7 +213,7 @@ class JsonChatRepository:
                 return None
         return None
 
-    def list_runs(self, project_folder: Path, session_id: UUID) -> list[AgentRunRecord]:
+    async def list_runs(self, project_folder: Path, session_id: UUID) -> list[AgentRunRecord]:
         runs_dir = self._runs_dir(project_folder, session_id)
         if not runs_dir.exists():
             return []
@@ -227,11 +227,11 @@ class JsonChatRepository:
         out.sort(key=lambda r: r.created_at)
         return out
 
-    def save_run(self, record: AgentRunRecord) -> None:
+    async def save_run(self, record: AgentRunRecord) -> None:
         path = self._runs_dir(record.project_folder, record.session_id) / f"{record.id}.json"
         self._write_atomic(path, serialize_agent_run(record))
 
-    def list_all_run_ids(self, project_folder: Path) -> list[UUID]:
+    async def list_all_run_ids(self, project_folder: Path) -> list[UUID]:
         chats_dir = self._chats_dir(project_folder)
         if not chats_dir.exists():
             return []

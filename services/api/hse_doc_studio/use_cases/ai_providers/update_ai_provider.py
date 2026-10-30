@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import IAIProviderRepository
+from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
 
 
 @dataclass
@@ -32,11 +34,12 @@ class UpdateAIProviderOutput:
 
 
 class UpdateAIProviderUC:
-    def __init__(self, ai_provider_repo: IAIProviderRepository) -> None:
+    def __init__(self, ai_provider_repo: IAIProviderRepository, egress: IEgressPolicy | None = None) -> None:
         self._repo = ai_provider_repo
+        self._egress = egress
 
     async def execute(self, inp: UpdateAIProviderInput) -> UpdateAIProviderOutput:
-        existing = self._repo.get(inp.provider_id)
+        existing = await self._repo.get(inp.provider_id)
         if existing is None:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")
@@ -56,17 +59,21 @@ class UpdateAIProviderUC:
         if connect_timeout_s <= 0 or request_timeout_s <= 0:
             raise ValueError(localized_error("таймауты должны быть положительными", "timeouts must be positive"))
 
+        base_url = existing.base_url if inp.base_url is None else inp.base_url.strip()
+        if base_url != existing.base_url:
+            await authorize_base_url(self._egress, base_url, existing.owner_kind)
         updated = AIProvider(
             id=existing.id,
             name=name,
             type=existing.type if inp.type is None else inp.type,
             api_key=api_key,
-            base_url=existing.base_url if inp.base_url is None else inp.base_url.strip(),
+            base_url=base_url,
             models=existing.models if inp.models is None else list(inp.models),
             created_at=existing.created_at,
             ssl_verify=existing.ssl_verify if inp.ssl_verify is None else inp.ssl_verify,
             connect_timeout_s=connect_timeout_s,
             request_timeout_s=request_timeout_s,
+            owner_kind=existing.owner_kind,
         )
-        self._repo.update(updated)
+        await self._repo.update(updated)
         return UpdateAIProviderOutput(provider=updated)

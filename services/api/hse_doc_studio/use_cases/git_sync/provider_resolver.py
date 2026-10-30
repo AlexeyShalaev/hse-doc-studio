@@ -48,18 +48,20 @@ class ProviderResolver:
         self._settings = settings
         self._detector = detector
 
-    def known(self, host: str | None, port: int | None) -> ProviderInfo:
+    async def known(self, host: str | None, port: int | None) -> ProviderInfo:
         """Провайдер без сети: выбор пользователя, имя хоста, ответ API при прошлой проверке."""
-        stored = self._settings.get(host, port) if host else None
+        stored = await self._settings.get(host, port) if host else None
         return self._decide(host, stored, None)
 
     async def resolve(self, url: RemoteUrl) -> ResolvedProvider:
         host = url.host
-        stored = self._settings.get(host, url.port) if host else None
+        stored = await self._settings.get(host, url.port) if host else None
+        if stored is not None and stored.has_trust:
+            await self._settings.materialize()
         ca_file = self._settings.trust_file(host, url.port) if host and stored and stored.has_trust else None
         found = await self._detect(url, stored, ca_file)
         if found is not None and host and (stored is None or stored.detected != found):
-            self._settings.save((stored or GitHostSettings(host, url.port)).with_detection(found))
+            await self._settings.save((stored or GitHostSettings(host, url.port)).with_detection(found))
         info = self._decide(host, stored, found)
         return ResolvedProvider(
             info, self._api_base(url, info, found or (stored.detected if stored else None)), ca_file

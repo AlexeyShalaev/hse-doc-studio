@@ -3,7 +3,9 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shutil
 import tempfile
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,7 +13,7 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.entities import SigningIdentity
+from hse_doc_studio.core.entities import SigningIdentity, SigningKeyMaterial
 from hse_doc_studio.core.enums import SigningIdentityKind
 
 logger = structlog.get_logger()
@@ -35,34 +37,56 @@ class JsonSigningIdentityRepository:
 
     # ── public API (ISigningIdentityRepository protocol) ─────────────────────
 
-    def list_all(self) -> list[SigningIdentity]:
+    async def list_all(self) -> list[SigningIdentity]:
         return self._load()
 
-    def get(self, identity_id: UUID) -> SigningIdentity | None:
+    async def get(self, identity_id: UUID) -> SigningIdentity | None:
         for item in self._load():
             if item.id == identity_id:
                 return item
         return None
 
-    def create(self, identity: SigningIdentity) -> None:
+    async def create(self, identity: SigningIdentity, material: SigningKeyMaterial | None = None) -> None:
+        if material is not None:
+            self._write_material(identity.id, material)
         records = self._load()
         records.append(identity)
         self._save(records)
 
-    def delete(self, identity_id: UUID) -> bool:
+    async def delete(self, identity_id: UUID) -> bool:
         records = self._load()
         before = len(records)
         records = [r for r in records if r.id != identity_id]
         if len(records) == before:
             return False
         self._save(records)
+        # Ключи убираем после записи: сбой (например, блокировка файла в Windows) не оставит
+        # запись, ссылающуюся на несуществующие ключи.
+        key_dir = self._keys_root / str(identity_id)
+        if key_dir.exists():
+            try:
+                shutil.rmtree(key_dir)
+            except OSError as exc:
+                logger.warning("signing_identity: could not remove key dir", exc=str(exc), dir=str(key_dir))
         return True
 
-    def key_dir(self, identity_id: UUID) -> Path:
-        """Return (and create) the directory that holds key material for this identity."""
-        d = self._keys_root / str(identity_id)
-        d.mkdir(parents=True, exist_ok=True)
-        return d
+    async def read_cert(self, identity_id: UUID) -> bytes | None:
+        cert = self._keys_root / str(identity_id) / "cert.pem"
+        return cert.read_bytes() if cert.is_file() else None
+
+    @contextlib.asynccontextmanager
+    async def private_key_session(self, identity_id: UUID) -> AsyncIterator[Path]:
+        """Локально ключи уже лежат в папке данных: отдаём её без копирования."""
+        yield self._keys_root / str(identity_id)
+
+    def _write_material(self, identity_id: UUID, material: SigningKeyMaterial) -> None:
+        key_dir = self._keys_root / str(identity_id)
+        key_dir.mkdir(parents=True, exist_ok=True)
+        key_path = key_dir / "key.pem"
+        fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(material.key_pem)
+        (key_dir / "cert.pem").write_bytes(material.cert_pem)
 
     # ── internal ─────────────────────────────────────────────────────────────
 

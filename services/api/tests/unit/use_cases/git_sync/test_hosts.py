@@ -56,7 +56,7 @@ async def test__trust__stores_only_the_key_that_was_confirmed(store: FileKnownHo
 
     await _trust(store, scanner).execute(TrustHostInput("github.com", None, GITHUB_FINGERPRINT))
 
-    host = store.find("github.com", None)
+    host = await store.find("github.com", None)
     assert host is not None
     assert host.key_types == ("ssh-ed25519",)
 
@@ -69,11 +69,11 @@ async def test__trust__host_presents_another_key_than_confirmed__host_key_change
 
     assert raised.value.code is GitErrorCode.host_key_changed
     assert raised.value.ctx == {"expected": GITHUB_FINGERPRINT, "actual": _OTHER_FINGERPRINT}
-    assert store.find("github.com", None) is None
+    assert await store.find("github.com", None) is None
 
 
 async def test__trust__known_host_with_another_key_needs_replace__host_key_changed(store: FileKnownHostsStore) -> None:
-    store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
     scanner = _Scanner([_scanned(_OTHER)])
 
     with pytest.raises(GitSyncError) as raised:
@@ -81,13 +81,13 @@ async def test__trust__known_host_with_another_key_needs_replace__host_key_chang
 
     assert raised.value.code is GitErrorCode.host_key_changed
     assert raised.value.ctx == {"expected": GITHUB_FINGERPRINT, "actual": _OTHER_FINGERPRINT}
-    host = store.find("github.com", None)
+    host = await store.find("github.com", None)
     assert host is not None
     assert host.fingerprints_sha256 == (GITHUB_FINGERPRINT,)
 
 
 async def test__trust__replace_without_the_typed_hostname__rejected(store: FileKnownHostsStore) -> None:
-    store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
     scanner = _Scanner([_scanned(_OTHER)])
 
     for typed in (None, "", "gitlab.com", "github.co"):
@@ -97,26 +97,26 @@ async def test__trust__replace_without_the_typed_hostname__rejected(store: FileK
             )
         assert raised.value.code is GitErrorCode.host_key_changed
 
-    host = store.find("github.com", None)
+    host = await store.find("github.com", None)
     assert host is not None
     assert host.fingerprints_sha256 == (GITHUB_FINGERPRINT,)
 
 
 async def test__trust__replace_with_the_typed_hostname__swaps_the_key(store: FileKnownHostsStore) -> None:
-    store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
     scanner = _Scanner([_scanned(_OTHER)])
 
     await _trust(store, scanner).execute(
         TrustHostInput("github.com", None, _OTHER_FINGERPRINT, replace=True, confirm_host=" GitHub.com ")
     )
 
-    host = store.find("github.com", None)
+    host = await store.find("github.com", None)
     assert host is not None
     assert host.fingerprints_sha256 == (_OTHER_FINGERPRINT,)
 
 
 async def test__trust__already_trusted_key_is_idempotent(store: FileKnownHostsStore) -> None:
-    store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
     scanner = _Scanner([_scanned(GITHUB_ED25519)])
 
     await _trust(store, scanner).execute(TrustHostInput("github.com", 22, GITHUB_FINGERPRINT))
@@ -158,10 +158,10 @@ async def test__trust__scan_failure_is_passed_on(store: FileKnownHostsStore) -> 
 
 
 async def test__forget__removes_only_the_given_port(store: FileKnownHostsStore) -> None:
-    store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
-    store.trust("github.com", 443, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", None, [_scanned(GITHUB_ED25519)])
+    await store.trust("github.com", 443, [_scanned(GITHUB_ED25519)])
 
     await ForgetHostUC(store).execute("GitHub.com", 443)
     await ForgetHostUC(store).execute("never-seen.example", None)
 
-    assert [(h.host, h.port) for h in store.list()] == [("github.com", None)]
+    assert [(h.host, h.port) for h in await store.list()] == [("github.com", None)]

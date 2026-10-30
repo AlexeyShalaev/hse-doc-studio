@@ -553,7 +553,7 @@ async def test__tick__auth_failed_then_the_token_is_replaced__tries_again(
         status=CredentialStatus.unverified,
         created_at=datetime.now(UTC),
     )
-    credentials.add(credential, Secret("pat-token-0123456789"))
+    await credentials.add(credential, Secret("pat-token-0123456789"))
     states = await stack.get(IGitSyncStateRepository)
     folder = Path(project["folder"])
     state = states.get(folder)
@@ -564,12 +564,14 @@ async def test__tick__auth_failed_then_the_token_is_replaced__tries_again(
     clock = Clock()
     clock.advance(_PERIOD_PASSED)
     await _tick(stack, clock)
-    credentials.mark(credential.id, CredentialStatus.auth_failed)
+    await credentials.mark(credential.id, CredentialStatus.auth_failed)
     clock.advance(timedelta(hours=1))
     await _tick(stack, clock)
     assert spy.calls == 1
 
-    credentials.update(replace(credential, status=CredentialStatus.unverified), Secret("pat-new-token-9876543210"))
+    await credentials.update(
+        replace(credential, status=CredentialStatus.unverified), Secret("pat-new-token-9876543210")
+    )
     clock.advance(timedelta(hours=1))
     result = await _tick(stack, clock)
 

@@ -22,7 +22,7 @@ class DeleteAIProviderUC:
         self._settings_repo = settings_repo
 
     async def execute(self, inp: DeleteAIProviderInput) -> None:
-        deleted = self._repo.delete(inp.provider_id)
+        deleted = await self._repo.delete(inp.provider_id)
         if not deleted:
             raise NotFoundError(
                 localized_error(f"AI-провайдер {inp.provider_id} не найден", f"AI provider {inp.provider_id} not found")

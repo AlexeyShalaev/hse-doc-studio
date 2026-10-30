@@ -37,7 +37,7 @@ class ListHostsUC:
         self._store = store
 
     async def execute(self) -> list[KnownHost]:
-        return self._store.list()
+        return await self._store.list()
 
 
 @dataclass
@@ -69,12 +69,12 @@ class TrustHostUC:
         matching = [key for key in scanned if key.fingerprint_sha256 == confirmed]
         if not matching:
             raise _changed(confirmed, scanned[0].fingerprint_sha256)
-        known = self._store.find(host, port)
+        known = await self._store.find(host, port)
         if known is not None and confirmed not in known.fingerprints_sha256 and not inp.replace:
             raise _changed(known.fingerprints_sha256[0], confirmed)
         if inp.replace and (inp.confirm_host or "").strip().lower() != host:
             raise _changed(known.fingerprints_sha256[0] if known else confirmed, confirmed)
-        self._store.trust(host, port, matching, replace=inp.replace)
+        await self._store.trust(host, port, matching, replace=inp.replace)
 
 
 class ForgetHostUC:
@@ -83,4 +83,4 @@ class ForgetHostUC:
 
     async def execute(self, host: str, port: int | None) -> None:
         normalized_host, normalized_port = _normalize(host, port)
-        self._store.forget(normalized_host, normalized_port)
+        await self._store.forget(normalized_host, normalized_port)

@@ -224,7 +224,9 @@ class SyncProjectUC:
         url = parse_remote_url(
             config.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
-        return RemoteTarget(url, state.credential_id or config.credential_id, insecure_http=state.insecure_http)
+        return RemoteTarget(
+            url, state.credential_id or config.credential_id, insecure_http=state.insecure_http, project_id=project.id
+        )
 
     def _load_state(self, project: Project) -> SyncState:
         config = self._remotes.read(project)

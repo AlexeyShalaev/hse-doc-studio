@@ -16,4 +16,4 @@ class ListSigningIdentitiesUC:
         self._repo = repo
 
     async def execute(self) -> ListSigningIdentitiesOutput:
-        return ListSigningIdentitiesOutput(identities=self._repo.list_all())
+        return ListSigningIdentitiesOutput(identities=await self._repo.list_all())

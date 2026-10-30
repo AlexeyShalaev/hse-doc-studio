@@ -151,7 +151,7 @@ class ProbeRemoteUC:
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
         require_http_consent(url, insecure_http=inp.insecure_http)
-        credential = self._credentials.get(inp.credential_id) if inp.credential_id is not None else None
+        credential = await self._credentials.get(inp.credential_id) if inp.credential_id is not None else None
         if inp.credential_id is not None and credential is None:
             raise git_error(GitErrorCode.credentials_missing)
         local_id = None

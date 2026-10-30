@@ -24,19 +24,19 @@ class _FakeRepo:
     def __init__(self) -> None:
         self._items: dict[UUID, AIProvider] = {}
 
-    def list_all(self) -> list[AIProvider]:
+    async def list_all(self) -> list[AIProvider]:
         return list(self._items.values())
 
-    def get(self, provider_id: UUID) -> AIProvider | None:
+    async def get(self, provider_id: UUID) -> AIProvider | None:
         return self._items.get(provider_id)
 
-    def create(self, provider: AIProvider) -> None:
+    async def create(self, provider: AIProvider) -> None:
         self._items[provider.id] = provider
 
-    def update(self, provider: AIProvider) -> None:
+    async def update(self, provider: AIProvider) -> None:
         self._items[provider.id] = provider
 
-    def delete(self, provider_id: UUID) -> bool:
+    async def delete(self, provider_id: UUID) -> bool:
         return self._items.pop(provider_id, None) is not None
 
 
@@ -57,7 +57,7 @@ async def test__create_ai_provider__persists_with_generated_id() -> None:
         CreateAIProviderInput(name="OpenAI", type=AIProviderType.openai, api_key="sk-x", base_url="", models=[])
     )
 
-    assert out.provider.id in {p.id for p in repo.list_all()}
+    assert out.provider.id in {p.id for p in await repo.list_all()}
     assert out.provider.api_key == "sk-x"
 
 

@@ -63,5 +63,5 @@ class CreateChatSessionUC:
             persona=inp.persona,
             persona_instructions=inp.persona_instructions,
         )
-        self._chat_repo.save_session(session)
+        await self._chat_repo.save_session(session)
         return CreateChatSessionOutput(session=session)

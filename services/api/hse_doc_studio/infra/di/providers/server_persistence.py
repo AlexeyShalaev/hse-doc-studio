@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import timedelta
+from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -16,28 +17,56 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.ai import IAIModelLister
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
-from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitRemoteRegistry
+from hse_doc_studio.core.git_sync.protocols import (
+    ICredentialAccess,
+    IGitCredentialRepository,
+    IGitCredentialUsage,
+    IGitHostSettingsRepository,
+    IGitOperationRegistry,
+    IGitRemoteBindings,
+    IGitRemoteRegistry,
+    IKnownHostsStore,
+    ISecretCipher,
+)
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
+    IAIProviderRepository,
+    IChatRepository,
     ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
+    ISigningIdentityRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.engine import create_engine, create_sessionmaker
+from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.blobs import PostgresBlobRegistry
+from hse_doc_studio.infra.db.repositories.chat import PostgresChatRepository
 from hse_doc_studio.infra.db.repositories.compile import PostgresCompileRepository
+from hse_doc_studio.infra.db.repositories.git_credentials import (
+    PostgresCredentialAccess,
+    PostgresCredentialUsage,
+    PostgresGitCredentialRepository,
+    PostgresGitRemoteBindings,
+)
+from hse_doc_studio.infra.db.repositories.git_trust import PostgresGitHostSettingsRepository, PostgresKnownHostsStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
+from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
+from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
@@ -60,6 +89,9 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
 from hse_doc_studio.infra.storage.live import NoLiveBlobs
+from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIProviderUC
+from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
@@ -68,6 +100,11 @@ from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProje
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
 from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+
+
+def _git_runtime_dir() -> Path:
+    """Каталог выполнения для файлов, которые читает git: материализованное доверие к серверам."""
+    return settings.data_dir.expanduser() / "runtime" / "git-trust"
 
 
 class ServerPersistenceProvider(Provider):
@@ -223,6 +260,65 @@ class ServerPersistenceProvider(Provider):
             keep_per_document=server_config.compile_records_per_document,
             log_limit_bytes=server_config.compile_log_limit_bytes,
         )
+
+    @provide(override=True)
+    def get_chat_repo(self, sessions: SessionProvider, volume: IProjectVolume) -> IChatRepository:
+        return PostgresChatRepository(sessions, volume, settings.data_dir.expanduser() / "system-chats")
+
+    @provide(override=True)
+    def get_ai_provider_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IAIProviderRepository:
+        return PostgresAIProviderRepository(sessions, cipher)
+
+    @provide
+    def get_signing_key_policy(self, instance_settings: IInstanceSettingsRepository) -> ISigningKeyPolicy:
+        return InstanceSigningKeyPolicy(instance_settings)
+
+    @provide(override=True)
+    def get_signing_identity_repo(
+        self, sessions: SessionProvider, cipher: ISecretCipher, policy: ISigningKeyPolicy
+    ) -> ISigningIdentityRepository:
+        return PostgresSigningIdentityRepository(sessions, cipher, policy)
+
+    @provide(override=True)
+    def get_git_credential_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IGitCredentialRepository:
+        return PostgresGitCredentialRepository(sessions, cipher)
+
+    @provide(override=True)
+    def get_git_credential_usage(self, sessions: SessionProvider) -> IGitCredentialUsage:
+        return PostgresCredentialUsage(sessions)
+
+    @provide(override=True)
+    def get_git_remote_bindings(self, sessions: SessionProvider, audit: IAuditLog) -> IGitRemoteBindings:
+        return PostgresGitRemoteBindings(sessions, audit)
+
+    @provide(override=True)
+    def get_git_credential_access(
+        self, sessions: SessionProvider, cipher: ISecretCipher, acl: PostgresProjectAclRepository, audit: IAuditLog
+    ) -> ICredentialAccess:
+        # Права не из кэша запроса: секрет просят и фоновые задачи, которые переживают запрос.
+        return PostgresCredentialAccess(sessions, cipher, acl, audit)
+
+    @provide(override=True)
+    def get_git_host_settings_repo(self, sessions: SessionProvider) -> IGitHostSettingsRepository:
+        return PostgresGitHostSettingsRepository(sessions, _git_runtime_dir())
+
+    @provide(override=True)
+    def get_known_hosts_store(self, sessions: SessionProvider) -> IKnownHostsStore:
+        return PostgresKnownHostsStore(sessions, _git_runtime_dir())
+
+    @provide(override=True)
+    def get_create_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> CreateAIProviderUC:
+        return CreateAIProviderUC(ai_provider_repo=repo, egress=egress)
+
+    @provide(override=True)
+    def get_update_ai_provider_uc(self, repo: IAIProviderRepository, egress: IEgressPolicy) -> UpdateAIProviderUC:
+        return UpdateAIProviderUC(ai_provider_repo=repo, egress=egress)
+
+    @provide(override=True)
+    def get_list_provider_models_uc(
+        self, repo: IAIProviderRepository, model_lister: IAIModelLister, egress: IEgressPolicy
+    ) -> ListProviderModelsUC:
+        return ListProviderModelsUC(ai_provider_repo=repo, model_lister=model_lister, egress=egress)
 
     @provide(override=True)
     def get_git_clone_defaults_uc(self, locator: IProjectLocator, volume: IProjectVolume) -> GetCloneDefaultsUC:

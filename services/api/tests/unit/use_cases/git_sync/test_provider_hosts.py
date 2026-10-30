@@ -85,21 +85,21 @@ class _Credentials:
         self.items[credential.id] = credential
         return credential
 
-    def list(self) -> list[GitCredential]:
+    async def list(self) -> list[GitCredential]:
         return list(self.items.values())
 
-    def get(self, credential_id: UUID) -> GitCredential | None:
+    async def get(self, credential_id: UUID) -> GitCredential | None:
         return self.items.get(credential_id)
 
-    def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
+    async def update(self, credential: GitCredential, secret: Secret | None = None) -> None:
         self.items[credential.id] = credential
 
-    def get_secret(self, credential_id: UUID) -> Secret:
+    async def get_secret(self, credential_id: UUID) -> Secret:
         if credential_id not in self.items:
             raise NotFoundError("credential")
         return Secret("glpat-CANARYtoken1234567890")
 
-    def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
+    async def mark(self, credential_id: UUID, status: CredentialStatus, *, used_at: datetime | None = None) -> None:
         self.marks.append((credential_id, status))
         self.items[credential_id] = replace(self.items[credential_id], status=status)
 
@@ -167,15 +167,15 @@ async def test__resolve__unknown_host_answering_like_gitlab__is_detected_by_api_
     request = detector.requests[0]
     assert (request.host, request.segments, request.secure) == ("git.hse.ru", ("gitlab", "team", "paper.git"), True)
     assert request.providers == (GitProvider.gitlab, GitProvider.gitea, GitProvider.github)
-    assert settings.get("git.hse.ru", None) == GitHostSettings("git.hse.ru", None, detected=found)
-    assert resolver.known("git.hse.ru", None).version == "17.3.1"
+    assert await settings.get("git.hse.ru", None) == GitHostSettings("git.hse.ru", None, detected=found)
+    assert (await resolver.known("git.hse.ru", None)).version == "17.3.1"
 
 
 async def test__resolve__http_api_base_stored_earlier__is_not_reused_for_an_https_address(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
     # Хост и порт без схемы: проба по http (при разрешённом http) сохранила бы http-корень для https-адреса тоже.
-    settings.save(
+    await settings.save(
         GitHostSettings(
             "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
         )
@@ -190,7 +190,7 @@ async def test__resolve__http_api_base_stored_earlier__is_not_reused_for_an_http
 async def test__resolve__http_api_base_stored_earlier__is_kept_for_the_same_http_address(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(
+    await settings.save(
         GitHostSettings(
             "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
         )
@@ -215,7 +215,7 @@ async def test__resolve__host_heuristic_hit__asks_only_that_provider_for_the_ver
 async def test__resolve__user_override__wins_over_the_host_name_and_is_the_only_one_asked(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(GitHostSettings("gitlab.hse.local", None, provider_override=GitProvider.gitea))
+    await settings.save(GitHostSettings("gitlab.hse.local", None, provider_override=GitProvider.gitea))
     detector = _Detector()
 
     resolved = await _resolver(settings, detector).resolve(_url("https://gitlab.hse.local/team/paper.git"))
@@ -230,7 +230,7 @@ async def test__resolve__nothing_answers__is_other_and_unknown(settings: JsonGit
 
     assert (resolved.info.id, resolved.info.detected_by) == (GitProvider.other, DetectedBy.unknown)
     assert resolved.api_base is None
-    assert settings.list() == []
+    assert await settings.list() == []
 
 
 @pytest.mark.parametrize("raw", ["ssh://git@git.hse.ru/team/paper.git", "git@git.hse.ru:team/paper.git"])
@@ -247,7 +247,7 @@ async def test__resolve__ssh_address__is_not_probed_over_http(
 async def test__resolve__server_with_own_trust__hands_the_trust_file_to_the_detector(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(GitHostSettings("git.hse.ru", None, ca_pem="CA\n"))
+    await settings.save(GitHostSettings("git.hse.ru", None, ca_pem="CA\n"))
     detector = _Detector()
 
     resolved = await _resolver(settings, detector).resolve(_url("https://git.hse.ru/team/paper.git"))
@@ -256,18 +256,18 @@ async def test__resolve__server_with_own_trust__hands_the_trust_file_to_the_dete
     assert detector.requests[0].ca_file == resolved.ca_file
 
 
-def test__known__remembered_detection_is_used_without_network(settings: JsonGitHostSettingsRepository) -> None:
-    settings.save(GitHostSettings("git.hse.ru", None, detected=ApiDetection(GitProvider.gitea, "1.22.3")))
+async def test__known__remembered_detection_is_used_without_network(settings: JsonGitHostSettingsRepository) -> None:
+    await settings.save(GitHostSettings("git.hse.ru", None, detected=ApiDetection(GitProvider.gitea, "1.22.3")))
 
-    info = _resolver(settings).known("git.hse.ru", None)
+    info = await _resolver(settings).known("git.hse.ru", None)
 
     assert (info.id, info.detected_by, info.version) == (GitProvider.gitea, DetectedBy.api, "1.22.3")
 
 
-def test__known__override_to_another_provider__drops_the_version_of_the_detected_one(
+async def test__known__override_to_another_provider__drops_the_version_of_the_detected_one(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(
+    await settings.save(
         GitHostSettings(
             "git.hse.ru",
             None,
@@ -276,7 +276,7 @@ def test__known__override_to_another_provider__drops_the_version_of_the_detected
         )
     )
 
-    info = _resolver(settings).known("git.hse.ru", None)
+    info = await _resolver(settings).known("git.hse.ru", None)
 
     assert (info.id, info.detected_by, info.version) == (GitProvider.github, DetectedBy.override, None)
 
@@ -297,7 +297,7 @@ async def test__update__override__is_saved_and_changes_the_reported_provider(
 
     assert view.settings.host == "git.hse.ru"
     assert (view.provider.id, view.provider.detected_by) == (GitProvider.gitlab, DetectedBy.override)
-    assert settings.get("git.hse.ru", None) is not None
+    assert await settings.get("git.hse.ru", None) is not None
 
 
 async def test__update__unknown_provider__is_provider_unknown(settings: JsonGitHostSettingsRepository) -> None:
@@ -324,9 +324,9 @@ async def test__update__absent_field_keeps_the_value_and_null_resets_it(
     )
 
     await uc.execute(UpdateHostSettingsInput("git.hse.ru", None, given=frozenset()))
-    kept = settings.get("git.hse.ru", None)
+    kept = await settings.get("git.hse.ru", None)
     await uc.execute(UpdateHostSettingsInput("git.hse.ru", None, given=frozenset({"provider_override"})))
-    reset = settings.get("git.hse.ru", None)
+    reset = await settings.get("git.hse.ru", None)
 
     assert kept is not None
     assert (kept.provider_override, kept.ca_pem is not None) == (GitProvider.gitlab, True)
@@ -342,7 +342,7 @@ async def test__update__all_fields_reset__removes_the_record(settings: JsonGitHo
 
     await uc.execute(UpdateHostSettingsInput("git.hse.ru", None, given=frozenset({"provider_override"})))
 
-    assert settings.list() == []
+    assert await settings.list() == []
 
 
 async def test__update__ca_pem__is_normalized_and_marks_ca_present(settings: JsonGitHostSettingsRepository) -> None:
@@ -352,7 +352,7 @@ async def test__update__ca_pem__is_normalized_and_marks_ca_present(settings: Jso
         )
     )
 
-    saved = settings.get("git.hse.ru", 8443)
+    saved = await settings.get("git.hse.ru", 8443)
     assert saved is not None
     assert saved.ca_pem == "-----BEGIN CERTIFICATE-----\n"
 
@@ -366,7 +366,7 @@ async def test__update__invalid_ca_pem__is_rejected_and_nothing_is_saved(
         )
 
     assert error.value.code is GitErrorCode.host_settings_invalid
-    assert settings.list() == []
+    assert await settings.list() == []
 
 
 async def test__update__pin_with_the_fingerprint_the_server_presents__stores_fingerprint_and_certificate(
@@ -380,7 +380,7 @@ async def test__update__pin_with_the_fingerprint_the_server_presents__stores_fin
         )
     )
 
-    saved = settings.get("git.hse.ru", 8443)
+    saved = await settings.get("git.hse.ru", 8443)
     assert saved is not None
     assert (saved.pinned_fingerprint, saved.pinned_pem) == (_PIN, "SERVER-PEM\n")
     assert certificates.fetched == [("git.hse.ru", 8443)]
@@ -398,7 +398,7 @@ async def test__update__pin_when_the_server_presents_another_certificate__is_a_m
 
     assert error.value.code is GitErrorCode.tls_pin_mismatch
     assert (error.value.ctx["expected"], error.value.ctx["actual"]) == (_PIN, _OTHER_PIN)
-    assert settings.list() == []
+    assert await settings.list() == []
 
 
 async def test__update__malformed_fingerprint__is_invalid_without_touching_the_network(
@@ -425,7 +425,7 @@ async def test__update__unpin__removes_fingerprint_and_certificate(settings: Jso
 
     await uc.execute(UpdateHostSettingsInput("git.hse.ru", None, given=frozenset({"pinned_fingerprint"})))
 
-    assert settings.list() == []
+    assert await settings.list() == []
 
 
 async def test__update__bad_host_or_port__is_credential_invalid(settings: JsonGitHostSettingsRepository) -> None:
@@ -436,7 +436,7 @@ async def test__update__bad_host_or_port__is_credential_invalid(settings: JsonGi
 
 
 async def test__list__merges_saved_settings_with_hosts_of_credentials(settings: JsonGitHostSettingsRepository) -> None:
-    settings.save(GitHostSettings("git.corp.example", 8443, provider_override=GitProvider.gitlab))
+    await settings.save(GitHostSettings("git.corp.example", 8443, provider_override=GitProvider.gitlab))
     credentials = _Credentials()
     credentials.add(_credential("github.com"))
     credentials.add(_credential("git.corp.example"))
@@ -483,7 +483,7 @@ async def test__check_credential__valid_gitlab_token__returns_assessment_and_rem
     assert view.token.info is not None
     assert (view.token.info.login, view.token.info.sufficiency) == ("anna", Sufficiency.sufficient)
     assert view.credential.credential.expires_at == expiry
-    assert credentials.get(credential.id).expires_at == expiry  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).expires_at == expiry  # type: ignore[union-attr]
     assert introspector.requests[0].api_base == _GITLAB_API
     assert introspector.requests[0].provider is GitProvider.gitlab
 
@@ -529,9 +529,9 @@ async def test__check_credential__expired__raises_token_expired_and_marks_the_cr
         await _check_uc(settings, credentials, checker).execute(credential.id)
 
     assert error.value.code is GitErrorCode.token_expired
-    assert credentials.get(credential.id).expires_at == expiry  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).expires_at == expiry  # type: ignore[union-attr]
     assert credentials.marks == [(credential.id, CredentialStatus.auth_failed)]
-    assert credentials.get(credential.id).status is CredentialStatus.auth_failed  # type: ignore[union-attr]
+    assert (await credentials.get(credential.id)).status is CredentialStatus.auth_failed  # type: ignore[union-attr]
 
 
 async def test__check_credential__valid_token_after_a_failure__clears_auth_failed(
@@ -601,7 +601,7 @@ async def test__check_credential__provider_without_introspection__returns_no_tok
 async def test__check_credential__uses_the_detected_api_base_and_trust_of_the_known_server(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(
+    await settings.save(
         GitHostSettings(
             "git.hse.ru",
             8443,
@@ -626,7 +626,7 @@ async def test__check_credential__uses_the_detected_api_base_and_trust_of_the_kn
 async def test__check_credential__http_api_base_stored_earlier__token_goes_to_https(
     settings: JsonGitHostSettingsRepository,
 ) -> None:
-    settings.save(
+    await settings.save(
         GitHostSettings(
             "git.hse.ru", None, detected=ApiDetection(GitProvider.gitlab, "17.3.1", "http://git.hse.ru/api/v4")
         )

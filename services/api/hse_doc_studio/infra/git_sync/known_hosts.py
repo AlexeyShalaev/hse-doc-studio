@@ -74,15 +74,20 @@ class FileKnownHostsStore:
     def file_path(self) -> Path:
         return self._path
 
-    def list(self) -> _Hosts:
+    async def materialize(self) -> None:
+        """Источник правды здесь сам файл known_hosts."""
+
+    async def list(self) -> _Hosts:
         return self._group(self._read())
 
-    def find(self, host: str, port: int | None) -> KnownHost | None:
+    async def find(self, host: str, port: int | None) -> KnownHost | None:
         pattern = known_host_pattern(host, port)
         found = self._group([entry for entry in self._read() if entry.pattern == pattern])
         return found[0] if found else None
 
-    def trust(self, host: str, port: int | None, keys: Sequence[ScannedHostKey], *, replace: bool = False) -> None:
+    async def trust(
+        self, host: str, port: int | None, keys: Sequence[ScannedHostKey], *, replace: bool = False
+    ) -> None:
         pattern = known_host_pattern(host, port)
         now = datetime.now(timezone.utc)
         with self._lock:
@@ -97,7 +102,7 @@ class FileKnownHostsStore:
                     entries.append(_Entry(pattern, key.type, key.key, now))
             self._write(entries)
 
-    def forget(self, host: str, port: int | None) -> None:
+    async def forget(self, host: str, port: int | None) -> None:
         pattern = known_host_pattern(host, port)
         with self._lock:
             entries = self._read()
