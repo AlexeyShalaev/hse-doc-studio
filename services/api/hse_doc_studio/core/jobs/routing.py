@@ -49,7 +49,10 @@ class RouteReason(StrEnum):
 
 # Причины, которые выдача общему раннеру сохраняет: остальные после окна становятся `fallback_timeout`.
 # `disabled` пишет выключение личных раннеров в установке: человеку важна именно эта причина.
-KEPT_FALLBACK_REASONS = frozenset({RouteReason.fallback_offline, RouteReason.fallback_lost, RouteReason.disabled})
+# `policy_shared` пишет переключение политики проекта: это не таймаут, пометки фолбэка у такой сборки нет.
+KEPT_FALLBACK_REASONS = frozenset(
+    {RouteReason.fallback_offline, RouteReason.fallback_lost, RouteReason.disabled, RouteReason.policy_shared}
+)
 
 
 class ProjectBuildRunners(StrEnum):

@@ -119,8 +119,10 @@ class ProjectBuildRunnersService:
                     details={"policy": policy.value},
                 )
             if policy is ProjectBuildRunners.shared and self._queue is not None:
-                # Сборки соавторов, ждущие раннер владельца, сразу уходят на общие.
-                await self._queue.expire_personal_wait(project_id=project_id, reason=RouteReason.policy_shared)
+                # Сборки соавторов, ждущие раннер владельца, сразу уходят на общие; свои сборки владельца ждут дальше.
+                await self._queue.expire_personal_wait(
+                    project_id=project_id, reason=RouteReason.policy_shared, coauthors_only=True
+                )
         return await self.view(actor, project_id)
 
     async def _project(self, project_id: UUID) -> ProjectRouteInfo:

@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, Select, and_, case, func, literal, null, or_, select, text, update
+from sqlalchemy import ColumnElement, Select, String, and_, case, func, literal, null, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -261,6 +261,7 @@ class PostgresJobQueue:
         owner_id: str | None = None,
         project_id: UUID | None = None,
         reason: RouteReason = RouteReason.fallback_offline,
+        coauthors_only: bool = False,
     ) -> int:
         now = self._clock()
         stmt = update(JobRow).where(
@@ -272,6 +273,8 @@ class PostgresJobQueue:
             stmt = stmt.where(JobRow.route_owner_id == owner_id)
         if project_id is not None:
             stmt = stmt.where(JobRow.project_id == project_id)
+        if coauthors_only:
+            stmt = stmt.where(func.cast(JobRow.user_id, String) != func.lower(JobRow.route_owner_id))
         async with self._sessions.use() as session:
             result = await session.execute(stmt.values(personal_until=now, route_reason=reason.value))
             return int(result.rowcount)  # type: ignore[attr-defined]

@@ -622,6 +622,25 @@ class TestJobQueueContract(PortContract):
         assert taken_build is not None
         assert taken_build.id == build.id
 
+    async def test__personal__q11_policy_shared_expires_only_coauthor_builds(self, port: _Harness) -> None:
+        owner, coauthor = uuid4(), uuid4()
+        project = await port.project(owner, ProjectBuildRunners.owner)
+        own = await port.put_personal(owner, project)
+        theirs = await port.put_personal(owner, project, user=coauthor)
+        await port.set_policy(project, ProjectBuildRunners.shared)
+        expired = await port.queue.expire_personal_wait(
+            project_id=project, reason=RouteReason.policy_shared, coauthors_only=True
+        )
+        assert expired == 1
+        taken = await port.claim()
+        assert taken is not None
+        # Общий раннер оставляет причину переключения политики, а не «не дождались 5 с».
+        assert (taken.id, taken.route_reason) == (theirs.id, RouteReason.policy_shared)
+        assert await port.claim() is None
+        mine = await port.claim(port.personal(owner))
+        assert mine is not None
+        assert mine.id == own.id
+
     async def test__personal__q11_expire_wait_and_cancel_pinned(self, port: _Harness) -> None:
         anna, boris = uuid4(), uuid4()
         anna_project, boris_project = await port.project(anna), await port.project(boris)

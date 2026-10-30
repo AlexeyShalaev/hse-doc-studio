@@ -104,9 +104,12 @@ class JobQueueService:
         owner_id: str | None = None,
         project_id: UUID | None = None,
         reason: RouteReason = RouteReason.fallback_offline,
+        coauthors_only: bool = False,
     ) -> int:
         """Ждущие личный раннер сборки сразу становятся доступны общим раннерам; общие будятся."""
-        count = await self._queue.expire_personal_wait(owner_id=owner_id, project_id=project_id, reason=reason)
+        count = await self._queue.expire_personal_wait(
+            owner_id=owner_id, project_id=project_id, reason=reason, coauthors_only=coauthors_only
+        )
         if count and self._wakeup is not None:
             self._wakeup.notify()
         return count

@@ -176,8 +176,11 @@ class IJobQueue(Protocol):
         owner_id: str | None = None,
         project_id: UUID | None = None,
         reason: RouteReason = RouteReason.fallback_offline,
+        coauthors_only: bool = False,
     ) -> int:
-        """Закрыть окно ожидания queued personal_first задач (всех, владельца или проекта); вернуть число."""
+        """Закрыть окно ожидания queued personal_first задач (всех, владельца или проекта); вернуть число.
+
+        `coauthors_only`: только сборки соавторов, свои сборки владельца продолжают ждать его раннер (D2)."""
         ...
 
     async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:

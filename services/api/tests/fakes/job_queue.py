@@ -246,6 +246,7 @@ class InMemoryJobQueue:
         owner_id: str | None = None,
         project_id: UUID | None = None,
         reason: RouteReason = RouteReason.fallback_offline,
+        coauthors_only: bool = False,
     ) -> int:
         now = self._clock()
         count = 0
@@ -257,6 +258,7 @@ class InMemoryJobQueue:
                 and job.personal_until > now
                 and (owner_id is None or job.route_owner_id == owner_id)
                 and (project_id is None or job.project_id == project_id)
+                and not (coauthors_only and str(job.user_id) == (job.route_owner_id or "").lower())
             ):
                 self._jobs[job.id] = replace(job, personal_until=now, route_reason=reason)
                 count += 1
