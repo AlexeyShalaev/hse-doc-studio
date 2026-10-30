@@ -10,17 +10,22 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
 
-JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission"]
+JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission", "ai.relay"]
 JobStatusName = Literal["succeeded", "failed", "cancelled", "timed_out"]
 JobStateName = Literal["queued", "running", "succeeded", "failed", "cancelled", "timed_out"]
 ActorKindName = Literal["local", "user", "guest"]
 ActorSourceName = Literal["session", "pat", "link", "local"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 LangName = Literal["ru", "en"]
+RunnerHostKindName = Literal["cli", "desktop"]
+RunnerOwnerKindName = Literal["instance", "user"]
+AiEndpointFlavorName = Literal["openai", "ollama"]
+PairStatusName = Literal["pending", "approved", "denied", "expired"]
+RelayEventKindName = Literal["head", "data", "end", "error"]
 Sha256 = Field(pattern=r"^[0-9a-f]{64}$")
 
 
@@ -90,7 +95,15 @@ class RunnerRegisterResponseBody(StrictModel):
 
 class PollRequestBody(StrictModel):
     wait_s: int = Field(ge=0, le=25)
-    free_slots: int = Field(ge=1)
+    free_slots: int = Field(ge=0)
+    # Только у раннера с возможностью `ai_slots`; старый раннер поле не шлёт.
+    free_ai_slots: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _some_slot_is_free(self) -> PollRequestBody:
+        if self.free_slots + self.free_ai_slots < 1:
+            raise ValueError("a poll needs at least one free slot")
+        return self
 
 
 class PollResponseBody(StrictModel):
@@ -149,3 +162,76 @@ class CompleteRequestBody(StrictModel):
 
 class CompleteResponseBody(StrictModel):
     accepted: bool
+
+
+class DeclaredAiEndpointBody(StrictModel):
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,31}$")
+    flavor: AiEndpointFlavorName
+
+
+class RunnerAnnounceRequestBody(StrictModel):
+    name: str | None = Field(min_length=1, max_length=128)
+    version: str
+    tags: list[str]
+    concurrency: int = Field(ge=1)
+    ai_concurrency: int = Field(ge=0)
+    host_kind: RunnerHostKindName
+    features: list[str]
+    ai_endpoints: list[DeclaredAiEndpointBody] = Field(max_length=16)
+
+    @model_validator(mode="after")
+    def _unique_endpoint_names(self) -> RunnerAnnounceRequestBody:
+        names = [endpoint.name for endpoint in self.ai_endpoints]
+        if len(set(names)) != len(names):
+            raise ValueError("ai endpoint names must be unique")
+        return self
+
+
+class RunnerAnnounceResponseBody(StrictModel):
+    runner_id: str
+    server_features: list[str]
+    owner_kind: RunnerOwnerKindName
+    paused: bool
+    relay_keepalive_s: int
+
+
+class RunnerPairStartRequestBody(StrictModel):
+    name: str = Field(min_length=1, max_length=128)
+    host_kind: RunnerHostKindName
+
+
+class RunnerPairStartResponseBody(StrictModel):
+    device_code: str
+    user_code: str
+    verification_uri: str
+    verification_uri_complete: str
+    expires_in: int
+    interval: int
+
+
+class RunnerPairPollRequestBody(StrictModel):
+    device_code: str = Field(min_length=1, max_length=256)
+
+
+class RunnerPairPollResponseBody(StrictModel):
+    status: PairStatusName
+    registration_token: str | None
+
+
+class RelayEventBody(StrictModel):
+    kind: RelayEventKindName
+    status: int | None = Field(ge=100, le=599)
+    content_type: str | None = Field(max_length=128)
+    # base64: 64 KiB данных занимают не больше 87382 символов.
+    data: str | None = Field(min_length=1, max_length=87384)
+    code: str | None = Field(max_length=64)
+
+
+class RelayEventBatchBody(StrictModel):
+    attempt: int = Field(ge=1)
+    seq: int = Field(ge=0)
+    events: list[RelayEventBody] = Field(min_length=1, max_length=64)
+
+
+class RelayEventAckBody(StrictModel):
+    cancel: bool

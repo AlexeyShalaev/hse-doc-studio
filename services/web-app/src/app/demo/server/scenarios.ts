@@ -48,6 +48,8 @@ const SERVER_CAPABILITIES: Capabilities = {
   local_services_ui: false,
   admin: false,
   personal_signing_keys: true,
+  personal_runners: false,
+  remote_runner: false,
 };
 
 export const DEMO_STUDENT: SessionUser = {
@@ -104,21 +106,28 @@ export const DEMO_NEWCOMER: SessionUser = {
 export const STUDENT_CSRF = "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o";
 export const ADMIN_CSRF = "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i";
 
-const base = (overrides: Partial<Bootstrap>): Bootstrap => ({
-  mode: "server",
-  version: "0.2.0",
-  setup_state: "ready",
-  auth: {
-    registration_mode: "open",
-    password_enabled: true,
-    oidc_providers: [],
-    smtp_enabled: true,
-    password_min_length: 10,
-  },
-  user: null,
-  capabilities: { ...SERVER_CAPABILITIES },
-  csrf_token: null,
-  ...overrides,
+const base = (overrides: Partial<Bootstrap>): Bootstrap =>
+  withPersonalRunners({
+    mode: "server",
+    version: "0.2.0",
+    setup_state: "ready",
+    auth: {
+      registration_mode: "open",
+      password_enabled: true,
+      oidc_providers: [],
+      smtp_enabled: true,
+      password_min_length: 10,
+    },
+    user: null,
+    capabilities: { ...SERVER_CAPABILITIES },
+    csrf_token: null,
+    ...overrides,
+  });
+
+/** Свои раннеры подключает только вошедший человек (личные раннеры в демо разрешены). */
+const withPersonalRunners = (boot: Bootstrap): Bootstrap => ({
+  ...boot,
+  capabilities: { ...boot.capabilities, personal_runners: boot.user !== null },
 });
 
 /** Токен установки демо: тот же, что в эталоне ServerSetupAdminRequest. */

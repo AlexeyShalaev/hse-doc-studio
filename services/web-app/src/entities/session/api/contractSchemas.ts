@@ -2,6 +2,7 @@ import type { ZodType } from "zod";
 import { z } from "zod";
 
 import * as inst from "./installSchemas";
+import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 
@@ -122,4 +123,20 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminBuildRequest: inst.UpdateAdminBuildRequestSchema,
   CompileWait: s.CompileWaitSchema,
   OfficeEditorBusy: s.OfficeEditorBusySchema,
+  MyRunner: rn.MyRunnerSchema,
+  MyRunnerList: rn.MyRunnerListSchema,
+  UpdateMyRunnerRequest: rn.UpdateMyRunnerRequestSchema,
+  MyRunnerRotated: rn.MyRunnerRotatedSchema,
+  MyRunnerTokenList: rn.MyRunnerTokenListSchema,
+  CreateMyRunnerTokenRequest: rn.CreateMyRunnerTokenRequestSchema,
+  MyRunnerTokenCreated: rn.MyRunnerTokenCreatedSchema,
+  RunnerPairingInfo: rn.RunnerPairingInfoSchema,
+  RunnerPairingDecisionRequest: rn.RunnerPairingDecisionRequestSchema,
+  ProjectBuildRunners: rn.ProjectBuildRunnersSchema,
+  UpdateProjectBuildRunnersRequest: rn.UpdateProjectBuildRunnersRequestSchema,
+  CompilePlacement: rn.CompilePlacementSchema,
+  RemoteRunnerStatus: rn.RemoteRunnerStatusSchema,
+  UpdateRemoteRunnerRequest: rn.UpdateRemoteRunnerRequestSchema,
+  RemoteRunnerPairRequest: rn.RemoteRunnerPairRequestSchema,
+  RemoteRunnerTokenRequest: rn.RemoteRunnerTokenRequestSchema,
 };

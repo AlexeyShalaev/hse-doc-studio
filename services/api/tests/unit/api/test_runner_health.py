@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from hse_doc_studio.api.observability.health import HealthRegistry, build_health_router
 from hse_doc_studio.api.observability.install import install_runner_health
 from hse_doc_studio.core.identity.session_policy import utc_now
-from hse_doc_studio.core.jobs.runners import Runner
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 
 from tests.fakes.runners import InMemoryRunnerRepository
 
@@ -23,7 +23,7 @@ class _Container:
         return self._runners
 
 
-def _runner(runner_id: str, *, seen_ago: timedelta | None, revoked: bool = False) -> Runner:
+def _runner(runner_id: str, *, seen_ago: timedelta | None, revoked: bool = False, personal: bool = False) -> Runner:
     now = utc_now()
     return Runner(
         id=runner_id,
@@ -36,6 +36,8 @@ def _runner(runner_id: str, *, seen_ago: timedelta | None, revoked: bool = False
         created_at=now - timedelta(days=1),
         last_seen_at=now - seen_ago if seen_ago is not None else None,
         revoked_at=now if revoked else None,
+        owner_kind=RunnerOwnerKind.user if personal else RunnerOwnerKind.instance,
+        owner_id="u1" if personal else None,
     )
 
 
@@ -57,6 +59,21 @@ async def test__probe__reports_reason_until_a_runner_is_online() -> None:
     assert offline == {"runners": "no_online_runner"}
     assert online == {"runners": None}
     assert health.optional == {"runners"}
+
+
+async def test__probe__ignores_personal_runners() -> None:
+    # Личный раннер на связи не обслуживает сборки соавторов и организаций: установке нужен общий.
+    runners = InMemoryRunnerRepository()
+    health = HealthRegistry()
+    install_runner_health(FastAPI(), _Container(runners), health)  # type: ignore[arg-type]
+
+    await runners.add(_runner("mine", seen_ago=timedelta(seconds=5), personal=True))
+    only_personal = await health.run()
+    await runners.add(_runner("silent", seen_ago=timedelta(hours=2)))
+    shared_offline = await health.run()
+
+    assert only_personal == {"runners": "no_runners"}
+    assert shared_offline == {"runners": "no_online_runner"}
 
 
 def test__ready__stays_green_without_runners_and_details_name_the_reason() -> None:

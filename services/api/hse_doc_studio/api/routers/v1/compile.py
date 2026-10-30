@@ -8,7 +8,7 @@ from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from hse_doc_studio.api.compile_stream import merged_events, wait_schema
+from hse_doc_studio.api.compile_stream import merged_events, placement_schema, wait_schema
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
     CheckResultsResponse,
@@ -22,6 +22,7 @@ from hse_doc_studio.api.schemas.compile import (
     CompileListItemResponse,
     TriggerCompileResponse,
 )
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.entities import CompileRecord
@@ -162,7 +163,13 @@ async def get_compile(
         errors=errors,
         check_results=[_map_check_result(r).model_dump() for r in record.check_results],
         wait=wait_schema(waiting),
+        placement=placement_schema(await waits.placement_of(record.id, _viewer_id())),
     )
+
+
+def _viewer_id() -> str | None:
+    actor = current_actor()
+    return actor.id if actor is not None else None
 
 
 @router.get(
@@ -183,6 +190,8 @@ async def get_compile_stream(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    viewer = _viewer_id()
+
     async def _event_stream() -> AsyncIterator[str]:
         done_payload: dict[str, object] = {
             "status": "success",
@@ -190,9 +199,9 @@ async def get_compile_stream(
             "warnings": 0,
             "errors": 0,
         }
-        async for kind, value in merged_events(stream, waits, compile_id):
-            if kind == "wait":
-                yield f"event: wait\ndata: {value}\n\n"
+        async for kind, value in merged_events(stream, waits, compile_id, viewer):
+            if kind in ("wait", "placement"):
+                yield f"event: {kind}\ndata: {value}\n\n"
                 continue
             if value.startswith("__STATUS__:"):
                 done_payload["status"] = value.split(":", 1)[1] or "success"

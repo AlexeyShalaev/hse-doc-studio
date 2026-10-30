@@ -3,22 +3,24 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
-from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.runner_commands import registration_command, studio_base_url
 from hse_doc_studio.api.schemas.runner_admin import (
     CreatedRegistrationTokenResponse,
     CreateRegistrationTokenRequest,
     RegistrationTokenInfo,
     RotatedRunnerTokenResponse,
     RunnerInfo,
+    RunnerOwner,
     UpdateRunnerRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.jobs.admin import runner_status
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 router = APIRouter()
@@ -36,11 +38,14 @@ def _token_info(token: RegistrationToken) -> RegistrationTokenInfo:
     )
 
 
-def _runner_info(runner: Runner) -> RunnerInfo:
+def _runner_info(
+    runner: Runner, *, personal_enabled: bool = True, owners: dict[str, tuple[str, str]] | None = None
+) -> RunnerInfo:
+    owner = (owners or {}).get(runner.owner_id) if runner.owner_id is not None else None
     return RunnerInfo(
         id=runner.id,
         name=runner.name,
-        status=runner_status(runner, datetime.now(UTC)).value,
+        status=runner_status(runner, datetime.now(UTC), personal_enabled=personal_enabled).value,
         tags=sorted(runner.tags),
         concurrency=runner.concurrency,
         resource_class=runner.resource_class,
@@ -49,13 +54,19 @@ def _runner_info(runner: Runner) -> RunnerInfo:
         last_seen_at=runner.last_seen_at,
         paused=runner.paused,
         revoked=runner.revoked_at is not None,
+        owner_kind=runner.owner_kind.value,
+        owner=RunnerOwner(id=runner.owner_id, name=owner[0], email=owner[1])
+        if owner is not None and runner.owner_id is not None
+        else None,
+        host_kind=runner.host_kind.value,
+        ai_endpoints=[endpoint.name for endpoint in runner.ai_endpoints],
+        last_seen_ip=runner.last_seen_ip,
     )
 
 
 def _command(request: Request, secret: str) -> str:
     """Команда запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа."""
-    base = (settings.auth.public_url or str(request.base_url)).rstrip("/")
-    return f"HSE_RUNNER__API_URL={base} HSE_RUNNER__TOKEN={secret} hse-doc-studio runner"
+    return registration_command(studio_base_url(request), secret)
 
 
 async def _registry(request: Request) -> RunnerRegistry:
@@ -95,8 +106,15 @@ async def revoke_registration_token(token_id: str, request: Request) -> Response
 
 
 @router.get("/runners", response_model=list[RunnerInfo])
-async def list_runners(request: Request) -> list[RunnerInfo]:
-    return [_runner_info(r) for r in await (await _registry(request)).list_runners(require_actor())]
+async def list_runners(
+    request: Request, owner_kind: Annotated[Literal["instance", "user"] | None, Query()] = None
+) -> list[RunnerInfo]:
+    """Раннеры установки и личные раннеры людей (с хозяином); `owner_kind` оставляет один вид."""
+    registry = await _registry(request)
+    runners = await registry.list_runners(require_actor(), RunnerOwnerKind(owner_kind) if owner_kind else None)
+    owners = await registry.owners_of(runners)
+    enabled = (await registry.personal_settings()).enabled
+    return [_runner_info(r, personal_enabled=enabled, owners=owners) for r in runners]
 
 
 @router.patch("/runners/{runner_id}", status_code=status.HTTP_204_NO_CONTENT)

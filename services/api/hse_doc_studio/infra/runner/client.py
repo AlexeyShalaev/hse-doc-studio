@@ -151,9 +151,11 @@ class RunnerClient:
 
     async def poll(self, request: PollRequest) -> PollResponse:
         # Долгий опрос не повторяем здесь: паузой и перерегистрацией управляет цикл.
-        response = await self._send(
-            "POST", "/poll", json=encode(request), retries=0, timeout_s=request.wait_s + self._timeout_s
-        )
+        body = encode(request)
+        if isinstance(body, dict) and request.free_ai_slots == 0:
+            # Сервер без личных раннеров строг к телу и поля не знает: без слотов ИИ его не шлём.
+            body.pop("free_ai_slots", None)
+        response = await self._send("POST", "/poll", json=body, retries=0, timeout_s=request.wait_s + self._timeout_s)
         return decode_poll_response(_json_object(response))
 
     async def heartbeat(self, job_id: str, job_token: str, request: HeartbeatRequest) -> HeartbeatResponse:

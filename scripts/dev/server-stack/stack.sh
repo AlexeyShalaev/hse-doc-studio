@@ -5,6 +5,9 @@
 #   stack.sh env       напечатать переменные для e2e (E2E_BASE_URL, E2E_COMPOSE, ...)
 #   stack.sh logs      журнал сервиса: stack.sh logs api
 #   stack.sh down      остановить и стереть данные
+#   stack.sh personal-up TOKEN  поднять личный раннер Анны (токен hsrt_ из «Мои раннеры») и поддельный OpenAI
+#   stack.sh personal-stop      мягко остановить личный раннер (SIGTERM: раннер успевает сказать /offline)
+#   stack.sh personal-kill      убить личный раннер без ухода (SIGKILL: сервер узнаёт о пропаже по тишине)
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -12,7 +15,7 @@ root="$(cd "$here/../../.." && pwd)"
 env_file="$here/.env"
 project="hse-doc-studio-stack"
 port="${STACK_PORT:-17251}"
-compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml")
+compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml")
 
 ensure_env() {
   [ -f "$env_file" ] && return
@@ -68,13 +71,28 @@ case "${1:-}" in
   logs)
     "${compose[@]}" logs --no-color "${2:-api}"
     ;;
+  personal-up)
+    ensure_env
+    token="${2:?usage: $0 personal-up TOKEN}"
+    personal_dir="${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data}"
+    mkdir -p "$personal_dir"
+    chmod 777 "$personal_dir"
+    PERSONAL_RUNNER_TOKEN="$token" PERSONAL_RUNNER_DATA_DIR="$personal_dir" \
+      "${compose[@]}" --profile personal up -d fake-openai runner-personal
+    ;;
+  personal-stop)
+    "${compose[@]}" --profile personal stop -t 30 runner-personal
+    ;;
+  personal-kill)
+    "${compose[@]}" --profile personal kill -s SIGKILL runner-personal
+    ;;
   down)
     [ -f "$env_file" ] || exit 0
-    "${compose[@]}" down --volumes --remove-orphans
-    rm -rf "$env_file" "$here/runner-data"
+    "${compose[@]}" --profile personal down --volumes --remove-orphans
+    rm -rf "$env_file" "$here/runner-data" "$here/runner-personal-data"
     ;;
   *)
-    echo "usage: $0 build|up|env|logs [service]|down" >&2
+    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill" >&2
     exit 2
     ;;
 esac

@@ -165,6 +165,8 @@
       "runnerLost": "Runner lost, retrying ({{attempt}}/{{max}})",
       "runnerLostNoCount": "Runner lost, retrying",
       "runnerLostBody": "The runner building this document went away. The build was handed to another runner, no action needed.",
+      "personalRunner": "Waiting for a personal runner…",
+      "personalRunnerBody": "The build is waiting for the project owner's personal runner. If it doesn't pick it up within a few seconds, it goes to a shared runner.",
       "superseded": "Build replaced by a newer one",
       "supersededBody": "While this build was waiting, a newer build of the same document was queued and took its place. See the result in the newer build.",
       "hintSeconds": "Expected wait about {{value}} s",

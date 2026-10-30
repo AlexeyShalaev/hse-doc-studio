@@ -1,0 +1,9 @@
+{
+  "user_code": "BCDF-2345",
+  "name": "MacBook Анны",
+  "host_kind": "desktop",
+  "requested_at": "2026-10-30T09:40:00Z",
+  "expires_at": "2026-10-30T09:50:00Z",
+  "client_ip": "203.0.113.7",
+  "status": "approved"
+}

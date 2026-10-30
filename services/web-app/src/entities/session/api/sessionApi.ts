@@ -28,6 +28,8 @@ export const LOCAL_BOOTSTRAP: Bootstrap = {
     local_services_ui: true,
     admin: false,
     personal_signing_keys: false,
+    personal_runners: false,
+    remote_runner: true,
   },
   csrf_token: null,
 };

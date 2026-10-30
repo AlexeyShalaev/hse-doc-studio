@@ -60,6 +60,8 @@ def _local_bootstrap() -> BootstrapResponse:
             local_services_ui=True,
             admin=False,
             personal_signing_keys=False,
+            # Студия может собирать облачные проекты хозяина как его личный раннер (только по его включению).
+            remote_runner=True,
         ),
         csrf_token=None,
     )
@@ -98,6 +100,8 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             local_services_ui=caps.local_services_ui,
             admin=is_admin,
             personal_signing_keys=caps.personal_signing_keys and result.personal_signing_keys,
+            # Свои раннеры подключает вошедший человек, пока админ не выключил личные раннеры.
+            personal_runners=result.user is not None and result.personal_runners,
         ),
         csrf_token=result.session.csrf_token if result.session else None,
     )

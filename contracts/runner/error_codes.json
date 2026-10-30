@@ -13,5 +13,10 @@
   "runner_unauthorized",
   "runner_disabled",
   "job_token_invalid",
-  "runner_protocol_unsupported"
+  "runner_protocol_unsupported",
+  "runner_limit",
+  "relay_request_gone",
+  "relay_out_of_order",
+  "relay_too_large",
+  "slow_down"
 ]

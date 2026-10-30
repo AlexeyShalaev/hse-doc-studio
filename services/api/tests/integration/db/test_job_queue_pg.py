@@ -10,6 +10,7 @@ import pytest
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.quotas import QuotaOverride, QuotaOwnerKind, QuotaResource
+from hse_doc_studio.core.jobs.routing import JobRoute, RunnerScope
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
@@ -18,6 +19,8 @@ from hse_doc_studio.infra.db.session import SessionProvider
 from sqlalchemy import text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from tests.factories.pg_projects import seed_project, seed_user
 
 pytestmark = pytest.mark.pg
 
@@ -167,3 +170,56 @@ async def test__quota_overrides__roundtrip_and_project_org(pg_migrated_engine: A
     await repo.delete(QuotaOwnerKind.user, user, QuotaResource.concurrent_user)
     assert [o.owner_id for o in await repo.list_all()] == ["hse"]
     assert await SqlProjectOrgReader(sessions).org_of(uuid4()) is None
+
+
+async def _personal_job(engine: AsyncEngine, queue: PostgresJobQueue, until: datetime) -> tuple[UUID, QueuedJob]:
+    sessions = SessionProvider(create_sessionmaker(engine))
+    owner = UUID(await seed_user(sessions))
+    project = await seed_project(sessions, owner_user_id=str(owner))
+    outcome = await queue.enqueue(
+        EnqueueRequest(
+            job_id=uuid4(),
+            kind=JobKind.compile,
+            project_id=project,
+            user_id=owner,
+            tags=frozenset({"tex"}),
+            payload={},
+            route=JobRoute.personal_first,
+            route_owner_id=str(owner),
+            personal_until=until,
+        )
+    )
+    return owner, outcome.job
+
+
+async def test__claim__personal_and_shared_race_at_window_edge__exactly_one_takes(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    queue = _queue(pg_migrated_engine)
+    # Окно уже закрыто: задачу могут взять и личный, и общий раннер, но только один из них.
+    owner, job = await _personal_job(pg_migrated_engine, queue, datetime.now(UTC))
+    personal = RunnerRef(id=uuid4(), tags=frozenset({"tex"}), scope=RunnerScope.personal, owner_id=str(owner))
+    claimers = [personal, *(_runner() for _ in range(5))]
+
+    results = await asyncio.gather(*(queue.claim(r, lease_s=LEASE_S) for r in claimers))
+
+    taken = [r for r in results if r is not None]
+    assert [r.id for r in taken] == [job.id]
+
+
+async def test__claim__personal_runner_does_not_wait_for_the_quota_lock(pg_migrated_engine: AsyncEngine) -> None:
+    queue = _queue(pg_migrated_engine)
+    owner, job = await _personal_job(pg_migrated_engine, queue, datetime(2100, 1, 1, tzinfo=UTC))
+    personal = RunnerRef(id=uuid4(), tags=frozenset({"tex"}), scope=RunnerScope.personal, owner_id=str(owner))
+    holder_engine = pg_migrated_engine
+    async with holder_engine.connect() as holder:
+        transaction = await holder.begin()
+        await holder.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 0x4A4F4253})
+        try:
+            taken = await asyncio.wait_for(
+                queue.claim(personal, lease_s=LEASE_S, quota=QueueQuota(max_running_per_user=1)), timeout=5
+            )
+        finally:
+            await transaction.rollback()
+    assert taken is not None
+    assert taken.id == job.id

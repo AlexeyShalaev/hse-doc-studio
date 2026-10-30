@@ -13,6 +13,8 @@ from typing import Any
 import pytest
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import personal_runners as pr
+from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
 from pydantic import TypeAdapter, ValidationError
@@ -139,6 +141,22 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
     "CompileWait": s.CompileWait,
     "OfficeEditorBusy": s.OfficeEditorBusy,
+    "MyRunner": pr.MyRunner,
+    "MyRunnerList": list[pr.MyRunner],
+    "UpdateMyRunnerRequest": pr.UpdateMyRunnerRequest,
+    "MyRunnerRotated": pr.MyRunnerRotated,
+    "MyRunnerTokenList": list[pr.MyRunnerToken],
+    "CreateMyRunnerTokenRequest": pr.CreateMyRunnerTokenRequest,
+    "MyRunnerTokenCreated": pr.MyRunnerTokenCreated,
+    "RunnerPairingInfo": pr.RunnerPairingInfo,
+    "RunnerPairingDecisionRequest": pr.RunnerPairingDecisionRequest,
+    "ProjectBuildRunners": pr.ProjectBuildRunners,
+    "UpdateProjectBuildRunnersRequest": pr.UpdateProjectBuildRunnersRequest,
+    "CompilePlacement": pr.CompilePlacement,
+    "RemoteRunnerStatus": rr.RemoteRunnerStatus,
+    "UpdateRemoteRunnerRequest": rr.UpdateRemoteRunnerRequest,
+    "RemoteRunnerPairRequest": rr.RemoteRunnerPairRequest,
+    "RemoteRunnerTokenRequest": rr.RemoteRunnerTokenRequest,
 }
 
 
@@ -245,3 +263,15 @@ def test_setup_environment_covers_ok_fail_and_not_configured() -> None:
     envs = [_read(f) for d, _, f in _CASES if d == "ServerSetupEnvironment"]
     statuses = {c["status"] for e in envs for c in e["checks"]}
     assert statuses == {"ok", "fail", "not_configured"}
+
+
+def test_bootstrap_capabilities_offer_personal_runners_only_to_signed_in_server_users() -> None:
+    boots = {name: _read(f)["capabilities"] for d, name, f in _CASES if d == "Bootstrap"}
+    assert {name for name, caps in boots.items() if caps["personal_runners"]} == {"server_user", "server_admin"}
+    assert {name for name, caps in boots.items() if caps["remote_runner"]} == {"local"}
+
+
+def test_owner_runner_chips_carry_only_name_and_state() -> None:
+    # Соавтор не видит у раннера владельца ничего, кроме имени и состояния.
+    assert set(pr.OwnerRunnerChip.model_fields) == {"name", "state"}
+    assert set(pr.CompilePlacement.model_fields) == {"state", "runner_name", "runner_owner", "fallback", "wait_s"}

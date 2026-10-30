@@ -57,6 +57,8 @@ const SERVER: Bootstrap = {
     local_services_ui: false,
     admin: false,
     personal_signing_keys: true,
+    personal_runners: false,
+    remote_runner: false,
   },
 };
 

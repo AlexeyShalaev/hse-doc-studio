@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from hse_doc_studio.core.jobs.enums import JobState, JobStatus, RunnerErrorCode
+from hse_doc_studio.core.jobs.enums import JobKind, JobState, JobStatus, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import (
     EnqueueOutcome,
@@ -17,6 +17,15 @@ from hse_doc_studio.core.jobs.queue import (
     Heartbeat,
     QueuedJob,
     RunnerRef,
+)
+from hse_doc_studio.core.jobs.registry import build_job_kinds
+from hse_doc_studio.core.jobs.routing import (
+    KEPT_FALLBACK_REASONS,
+    JobRoute,
+    ProjectBuildRunners,
+    ProjectRouteInfo,
+    RouteReason,
+    RunnerScope,
 )
 from hse_doc_studio.core.jobs.scheduler import (
     QueueQuota,
@@ -32,6 +41,16 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+_PERSONAL_KINDS = frozenset(spec.kind for spec in build_job_kinds() if spec.policy.personal_runner_allowed)
+
+
+def _uuid_or_none(value: str | None) -> UUID | None:
+    try:
+        return UUID(value) if value is not None else None
+    except ValueError:
+        return None
+
+
 class InMemoryJobQueue:
     def __init__(self, clock: Callable[[], datetime] = _now) -> None:
         self._clock = clock
@@ -41,6 +60,11 @@ class InMemoryJobQueue:
         self._seq = 0
         # Последний опрос раннера и его число слотов: по ним решается аффинность.
         self._runners: dict[UUID, tuple[datetime, int]] = {}
+        # Каталог проектов для выдачи личным раннерам: в Postgres это таблица projects.
+        self._projects: dict[UUID, ProjectRouteInfo] = {}
+
+    def set_project(self, info: ProjectRouteInfo) -> None:
+        self._projects[info.project_id] = info
 
     @property
     def global_vtime(self) -> float:
@@ -62,8 +86,14 @@ class InMemoryJobQueue:
                     superseded.append(done)
                 elif job.state is JobState.running and job.coalesce_key == request.coalesce_key:
                     self._jobs[job.id] = replace(job, cancel_requested=True)
-        vtime = assign_vtime(self._user_vtime.get(request.user_id), self._global_vtime, request.cost, request.weight)
-        self._user_vtime[request.user_id] = vtime
+        if request.fair_share:
+            vtime = assign_vtime(
+                self._user_vtime.get(request.user_id), self._global_vtime, request.cost, request.weight
+            )
+            self._user_vtime[request.user_id] = vtime
+            vcost = request.cost / request.weight
+        else:
+            vtime, vcost = self._global_vtime, 0.0
         self._seq += 1
         job = QueuedJob(
             id=request.job_id,
@@ -83,6 +113,13 @@ class InMemoryJobQueue:
             coalesce_key=request.coalesce_key,
             affinity_runner_id=request.affinity_runner_id,
             seq=self._seq,
+            route=request.route,
+            route_owner_id=request.route_owner_id,
+            personal_until=request.personal_until,
+            target_runner_id=request.target_runner_id,
+            route_reason=request.route_reason,
+            vcost=vcost,
+            timeout_personal_s=request.timeout_personal_s,
         )
         self._jobs[job.id] = job
         return EnqueueOutcome(job=job, superseded=tuple(superseded))
@@ -90,12 +127,25 @@ class InMemoryJobQueue:
     async def claim(self, runner: RunnerRef, *, lease_s: float, quota: QueueQuota | None = None) -> QueuedJob | None:
         now = self._clock()
         self._runners[runner.id] = (now, runner.concurrency)
+        if runner.scope is RunnerScope.personal:
+            return self._claim_personal(runner, now, lease_s)
+        if not runner.accept_jobs:
+            return None
         limits = quota or QueueQuota()
         candidates = [
             job
             for job in self._jobs.values()
             if job.state is JobState.queued
             and job.tags <= runner.tags
+            and job.kind is not JobKind.ai_relay
+            and (
+                job.route is JobRoute.shared
+                or (
+                    job.route is JobRoute.personal_first
+                    and job.personal_until is not None
+                    and job.personal_until <= now
+                )
+            )
             and caps_allow(
                 self._running_of_user(job.user_id),
                 self._running_of_org(job.org_id),
@@ -114,6 +164,9 @@ class InMemoryJobQueue:
         if not candidates:
             return None
         best = min(candidates, key=lambda j: (j.priority_class, j.vtime, j.queued_at, j.seq))
+        reason = best.route_reason
+        if best.route is JobRoute.personal_first and reason not in KEPT_FALLBACK_REASONS:
+            reason = RouteReason.fallback_timeout
         taken = replace(
             best,
             state=JobState.running,
@@ -121,10 +174,131 @@ class InMemoryJobQueue:
             runner_id=runner.id,
             lease_until=now + timedelta(seconds=lease_s),
             started_at=now,
+            runner_scope=RunnerScope.shared,
+            route_reason=reason,
         )
         self._jobs[taken.id] = taken
         self._global_vtime = advance_global_vtime(self._global_vtime, taken.vtime)
         return taken
+
+    def _claim_personal(self, runner: RunnerRef, now: datetime, lease_s: float) -> QueuedJob | None:
+        owner = runner.owner_id
+        owner_uuid = _uuid_or_none(owner)
+        candidates = [
+            job
+            for job in self._jobs.values()
+            if job.state is JobState.queued
+            and job.tags <= runner.tags
+            and (
+                (runner.accept_jobs and self._personal_build_allowed(job, owner, owner_uuid))
+                or (
+                    runner.accept_relay
+                    and job.route is JobRoute.pinned
+                    and job.target_runner_id == runner.id
+                    and job.kind is JobKind.ai_relay
+                    and owner_uuid is not None
+                    and job.user_id == owner_uuid
+                )
+            )
+        ]
+        if not candidates:
+            return None
+        best = min(candidates, key=lambda j: (j.priority_class, j.vtime, j.queued_at, j.seq))
+        timeout_s, kept = best.timeout_s, best.timeout_personal_s
+        if kept is not None:
+            # Предел без квоты на время личной попытки; предел с квотой ждёт возврата в очередь.
+            timeout_s, kept = kept, timeout_s
+        taken = replace(
+            best,
+            state=JobState.running,
+            attempt=best.attempt + 1,
+            runner_id=runner.id,
+            lease_until=now + timedelta(seconds=lease_s),
+            started_at=now,
+            runner_scope=RunnerScope.personal,
+            route_reason=RouteReason.pinned if best.route is JobRoute.pinned else RouteReason.personal,
+            timeout_s=timeout_s,
+            timeout_personal_s=kept,
+            # Возврат один раз: потерянная и снова взятая задача второй раз метку не вернёт.
+            vcost=0.0,
+        )
+        self._jobs[taken.id] = taken
+        # Личный раннер не двигает глобальное время и возвращает метку справедливости.
+        if best.vcost and best.user_id in self._user_vtime:
+            self._user_vtime[best.user_id] = max(self._user_vtime[best.user_id] - best.vcost, 0.0)
+        return taken
+
+    def _personal_build_allowed(self, job: QueuedJob, owner: str | None, owner_uuid: UUID | None) -> bool:
+        if owner is None or job.route is not JobRoute.personal_first or job.route_owner_id != owner:
+            return False
+        if job.kind not in _PERSONAL_KINDS:
+            return False
+        project = self._projects.get(job.project_id)
+        if project is None or project.deleted or project.owner_user_id != owner:
+            return False
+        return (
+            owner_uuid is not None and job.user_id == owner_uuid
+        ) or project.build_runners is ProjectBuildRunners.owner
+
+    async def expire_personal_wait(
+        self,
+        *,
+        owner_id: str | None = None,
+        project_id: UUID | None = None,
+        reason: RouteReason = RouteReason.fallback_offline,
+        coauthors_only: bool = False,
+    ) -> int:
+        now = self._clock()
+        count = 0
+        for job in list(self._jobs.values()):
+            if (
+                job.state is JobState.queued
+                and job.route is JobRoute.personal_first
+                and job.personal_until is not None
+                and job.personal_until > now
+                and (owner_id is None or job.route_owner_id == owner_id)
+                and (project_id is None or job.project_id == project_id)
+                and not (coauthors_only and str(job.user_id) == (job.route_owner_id or "").lower())
+            ):
+                self._jobs[job.id] = replace(job, personal_until=now, route_reason=reason)
+                count += 1
+        return count
+
+    async def personal_load(self, owner_id: str, runner_ids: frozenset[UUID], now: datetime) -> int:
+        busy = sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.running
+            and j.runner_scope is RunnerScope.personal
+            and j.kind is not JobKind.ai_relay
+            and j.runner_id in runner_ids
+        )
+        waiting = sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.queued
+            and j.route is JobRoute.personal_first
+            and j.route_owner_id == owner_id
+            and j.personal_until is not None
+            and j.personal_until > now
+        )
+        return busy + waiting
+
+    async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
+        now = self._clock()
+        done: list[QueuedJob] = []
+        for job in list(self._jobs.values()):
+            if (
+                job.state is JobState.queued
+                and job.route is JobRoute.pinned
+                and (runner_id is None or job.target_runner_id == runner_id)
+            ):
+                cancelled = replace(
+                    job, state=JobState.cancelled, finished_at=now, cancel_requested=True, error_code=error_code
+                )
+                self._jobs[job.id] = cancelled
+                done.append(cancelled)
+        return tuple(done)
 
     async def heartbeat(self, job_id: UUID, attempt: int, *, lease_s: float) -> Heartbeat:
         job = self._current(job_id, attempt)
@@ -183,7 +357,17 @@ class InMemoryJobQueue:
                     lease_until=None,
                     started_at=None,
                     affinity_runner_id=None,
+                    runner_scope=None,
                 )
+                if job.runner_scope is RunnerScope.personal:
+                    # Личный раннер пропал: повтор где угодно, предел с квотой возвращается.
+                    done = replace(
+                        done,
+                        personal_until=now if job.route is JobRoute.personal_first else job.personal_until,
+                        route_reason=RouteReason.fallback_lost,
+                        timeout_s=job.timeout_personal_s if job.timeout_personal_s is not None else job.timeout_s,
+                        timeout_personal_s=job.timeout_s if job.timeout_personal_s is not None else None,
+                    )
                 outcomes.append(ExpiredOutcome(done, requeued=True))
             else:
                 done = replace(
@@ -216,12 +400,20 @@ class InMemoryJobQueue:
         return job
 
     def _running_of_user(self, user_id: UUID) -> int:
-        return sum(1 for j in self._jobs.values() if j.state is JobState.running and j.user_id == user_id)
+        return sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.running and j.user_id == user_id and j.runner_scope is RunnerScope.shared
+        )
 
     def _running_of_org(self, org_id: UUID | None) -> int | None:
         if org_id is None:
             return None
-        return sum(1 for j in self._jobs.values() if j.state is JobState.running and j.org_id == org_id)
+        return sum(
+            1
+            for j in self._jobs.values()
+            if j.state is JobState.running and j.org_id == org_id and j.runner_scope is RunnerScope.shared
+        )
 
     def _affine_available(self, runner_id: UUID | None, now: datetime, lease_s: float) -> bool:
         if runner_id is None or runner_id not in self._runners:

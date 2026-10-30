@@ -30,6 +30,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     JobRow,
     JobRunnerPollRow,
     QuotaRow,
+    RunnerPairingRow,
     RunnerRegistrationTokenRow,
     RunnerRow,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ProjectUsageRow",
     "QuotaRow",
     "RegistrationInviteRow",
+    "RunnerPairingRow",
     "RunnerRegistrationTokenRow",
     "RunnerRow",
     "SessionRow",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.infra.db.base import Base
@@ -18,6 +18,7 @@ class ProjectRow(Base):
     __table_args__ = (
         Index("ix_projects_owner_user_id", "owner_user_id"),
         Index("ix_projects_owner_org_id", "owner_org_id"),
+        CheckConstraint("build_runners IN ('shared', 'owner')", name="build_runners"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -39,6 +40,8 @@ class ProjectRow(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Строка есть, а папки на томе нет: отмечает сверка на старте, проект при этом не пропадает из каталога.
     volume_missing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Где идут сборки соавторов личного проекта: на общих раннерах или на личных раннерах владельца.
+    build_runners: Mapped[str] = mapped_column(String(16), nullable=False, server_default="shared")
 
 
 class ProjectMemberRow(Base):

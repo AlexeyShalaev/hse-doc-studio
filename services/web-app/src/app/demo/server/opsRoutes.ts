@@ -102,6 +102,9 @@ export const createOpsRoutes = (
     runner_id: j.runner_id,
     cancel_requested: false,
     error_code: j.error,
+    route: "shared" as const,
+    runner_scope: j.runner_id === null ? null : ("shared" as const),
+    route_reason: null,
   });
 
   const summary = () => {

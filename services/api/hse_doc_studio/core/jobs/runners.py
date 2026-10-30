@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import base64
+import builtins
 import hashlib
 import hmac
 import json
@@ -20,6 +21,8 @@ from typing import Protocol
 
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError
+from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
+from hse_doc_studio.core.jobs.routing import RunnerScope
 
 REGISTRATION_TOKEN_PREFIX = "hsrt_"  # noqa: S105 — префикс для сканеров секретов, не секрет
 RUNNER_TOKEN_PREFIX = "hsrn_"  # noqa: S105
@@ -31,9 +34,32 @@ BOOTSTRAP_TOKEN_ID = "bootstrap"  # noqa: S105
 
 
 class RunnerOwnerKind(StrEnum):
-    """Кому принадлежит раннер. Сейчас только установка; остальные уровни заложены в схему."""
+    """Кому принадлежит раннер: установке (общий) или человеку (личный). Организации позже."""
 
     instance = "instance"
+    user = "user"
+
+
+class RunnerHostKind(StrEnum):
+    """Где живёт раннер: консольный процесс или локальная Студия; нужно интерфейсу для подсказок."""
+
+    cli = "cli"
+    desktop = "desktop"
+
+
+class RegistrationTokenPurpose(StrEnum):
+    # Создан человеком или админом.
+    manual = "manual"
+    # Выдан сопряжением по коду устройства.
+    pairing = "pairing"
+
+
+@dataclass(frozen=True)
+class DeclaredAiEndpoint:
+    """ИИ-адрес, объявленный раннером: только имя и вид, URL остаётся в конфигурации раннера."""
+
+    name: str
+    flavor: AiEndpointFlavor = AiEndpointFlavor.openai
 
 
 def new_runner_secret(prefix: str) -> str:
@@ -59,6 +85,7 @@ class RegistrationToken:
     revoked_at: datetime | None = None
     owner_kind: RunnerOwnerKind = RunnerOwnerKind.instance
     owner_id: str | None = None
+    purpose: RegistrationTokenPurpose = RegistrationTokenPurpose.manual
 
     def usable(self, now: datetime) -> bool:
         if self.revoked_at is not None or self.uses >= self.max_uses:
@@ -82,6 +109,35 @@ class Runner:
     revoked_at: datetime | None = None
     owner_kind: RunnerOwnerKind = RunnerOwnerKind.instance
     owner_id: str | None = None
+    host_kind: RunnerHostKind = RunnerHostKind.cli
+    # Согласованные возможности протокола (пересечение объявленных раннером и известных серверу).
+    features: frozenset[str] = frozenset()
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...] = ()
+    # Слоты под ретрансляцию ИИ, отдельно от `concurrency`.
+    ai_concurrency: int = 0
+    last_seen_ip: str | None = None
+    # Раннер сам сказал «ухожу»; следующий опрос это снимает.
+    offline_at: datetime | None = None
+    # Имя меняли в интерфейсе: `/announce` его больше не трогает.
+    renamed_at: datetime | None = None
+
+    @property
+    def scope(self) -> RunnerScope:
+        return RunnerScope.personal if self.owner_kind is RunnerOwnerKind.user else RunnerScope.shared
+
+
+@dataclass(frozen=True)
+class RunnerAnnouncement:
+    """Что раннер сообщает о себе в `/announce`; `name=None` значит «имя не менять»."""
+
+    name: str | None
+    version: str
+    tags: frozenset[str]
+    concurrency: int
+    ai_concurrency: int
+    host_kind: RunnerHostKind
+    features: frozenset[str]
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...]
 
 
 class IRunnerRepository(Protocol):
@@ -96,6 +152,19 @@ class IRunnerRepository(Protocol):
         ...
 
     async def touch(self, runner_id: str, now: datetime, version: str | None = None) -> None: ...
+    async def list_owned(self, owner_id: str) -> builtins.list[Runner]:
+        """Личные раннеры человека, включая отозванные."""
+        ...
+
+    async def count_active_owned(self, owner_id: str) -> int: ...
+    async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
+        """Меняет имя и ставит renamed_at: имя из интерфейса `/announce` больше не перетирает."""
+        ...
+
+    async def apply_announcement(
+        self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
+    ) -> Runner | None: ...
+    async def mark_offline(self, runner_id: str, now: datetime) -> None: ...
 
 
 class IRegistrationTokenRepository(Protocol):
@@ -109,6 +178,20 @@ class IRegistrationTokenRepository(Protocol):
 
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         """Токен из окружения: тот же секрет оставляет счётчик, новый секрет заменяет запись и обнуляет его."""
+        ...
+
+    async def list_owned(self, owner_id: str) -> builtins.list[RegistrationToken]:
+        """Личные токены человека, новые первыми."""
+        ...
+
+    async def revoke_owned(self, owner_id: str, now: datetime) -> int:
+        """Отзывает все неотозванные личные токены человека; возвращает их число."""
+        ...
+
+
+class IUserRunnerRevoker(Protocol):
+    async def revoke_all_of_user(self, user_id: str) -> int:
+        """Отзывает личные раннеры и токены человека в текущей транзакции; возвращает число раннеров."""
         ...
 
 

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -16,12 +17,20 @@ import pytest_asyncio
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, IJobQueue, QueuedJob, RunnerRef
+from hse_doc_studio.core.jobs.routing import (
+    JobRoute,
+    ProjectBuildRunners,
+    ProjectRouteInfo,
+    RouteReason,
+    RunnerScope,
+)
 from hse_doc_studio.core.jobs.scheduler import AFFINITY_WAIT, QueueQuota
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.session import SessionProvider
 
 from tests.contract.base import PortContract
+from tests.factories.pg_projects import seed_project, seed_user
 from tests.fakes.job_queue import InMemoryJobQueue
 
 if TYPE_CHECKING:
@@ -42,10 +51,75 @@ class FakeClock:
 
 
 class _Harness:
-    def __init__(self, _root: Path, queue: Callable[[FakeClock], IJobQueue] = InMemoryJobQueue) -> None:
+    def __init__(
+        self,
+        _root: Path,
+        queue: Callable[[FakeClock], IJobQueue] = InMemoryJobQueue,
+        sessions: SessionProvider | None = None,
+    ) -> None:
         self.clock = FakeClock()
         self.queue: IJobQueue = queue(self.clock)
         self.runner = RunnerRef(id=uuid4(), tags=frozenset({"tex", "pack"}), concurrency=2)
+        self._sessions = sessions
+
+    async def project(
+        self, owner: UUID | None, policy: ProjectBuildRunners = ProjectBuildRunners.shared, *, deleted: bool = False
+    ) -> UUID:
+        """Проект в каталоге: у Postgres строка projects (и владелец в users), у памяти запись фейка."""
+        if self._sessions is not None:
+            if owner is not None:
+                await seed_user(self._sessions, str(owner))
+            return await seed_project(
+                self._sessions,
+                owner_user_id=str(owner) if owner is not None else None,
+                build_runners=policy.value,
+                deleted=deleted,
+            )
+        project_id = uuid4()
+        assert isinstance(self.queue, InMemoryJobQueue)
+        self.queue.set_project(
+            ProjectRouteInfo(
+                project_id=project_id,
+                owner_user_id=str(owner) if owner is not None else None,
+                owner_org_id=None,
+                build_runners=policy,
+                deleted=deleted,
+            )
+        )
+        return project_id
+
+    async def set_policy(self, project_id: UUID, policy: ProjectBuildRunners) -> None:
+        if self._sessions is not None:
+            from hse_doc_studio.infra.db.repositories.project_route_policy import SqlProjectRoutePolicyRepository
+
+            await SqlProjectRoutePolicyRepository(self._sessions).set_build_runners(project_id, policy)
+            return
+        assert isinstance(self.queue, InMemoryJobQueue)
+        info = self.queue._projects[project_id]
+        self.queue.set_project(replace(info, build_runners=policy))
+
+    async def put_personal(
+        self, owner: UUID, project_id: UUID, *, user: UUID | None = None, **kwargs: Any
+    ) -> QueuedJob:
+        return await self.put(
+            user or owner,
+            project_id=project_id,
+            route=JobRoute.personal_first,
+            route_owner_id=str(owner),
+            personal_until=self.clock.now + timedelta(seconds=5),
+            route_reason=RouteReason.waiting_personal,
+            **kwargs,
+        )
+
+    def personal(self, owner: UUID, *, accept_jobs: bool = True, accept_relay: bool = True) -> RunnerRef:
+        return RunnerRef(
+            id=uuid4(),
+            tags=frozenset({"tex", "pack", "ai", "verify"}),
+            scope=RunnerScope.personal,
+            owner_id=str(owner),
+            accept_jobs=accept_jobs,
+            accept_relay=accept_relay,
+        )
 
     async def put(self, user: UUID, **kwargs: Any) -> QueuedJob:
         request = EnqueueRequest(
@@ -364,6 +438,261 @@ class TestJobQueueContract(PortContract):
         assert len(await port.queue.list(state=JobState.queued)) == 2
         assert await port.queue.list(state=JobState.running) == ()
 
+    # Личные раннеры: матрица выдачи Q1–Q12 спецификации.
+
+    async def test__personal__q1_owner_job__personal_in_window_shared_after_with_timeout(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        job = await port.put_personal(owner, project)
+        assert await port.claim() is None
+        taken = await port.claim(port.personal(owner))
+        assert taken is not None
+        assert (taken.id, taken.runner_scope, taken.route_reason) == (
+            job.id,
+            RunnerScope.personal,
+            RouteReason.personal,
+        )
+
+        late = await port.put_personal(owner, project)
+        port.clock.advance(5)
+        shared = await port.claim()
+        assert shared is not None
+        assert (shared.id, shared.runner_scope, shared.route_reason) == (
+            late.id,
+            RunnerScope.shared,
+            RouteReason.fallback_timeout,
+        )
+
+    async def test__personal__q2_coauthor_follows_project_policy(self, port: _Harness) -> None:
+        owner, coauthor = uuid4(), uuid4()
+        project = await port.project(owner)
+        await port.put_personal(owner, project, user=coauthor)
+        assert await port.claim(port.personal(owner)) is None
+        await port.set_policy(project, ProjectBuildRunners.owner)
+        taken = await port.claim(port.personal(owner))
+        assert taken is not None
+        assert taken.user_id == coauthor
+
+    async def test__personal__q3_stranger_runner_never_sees_the_job(self, port: _Harness) -> None:
+        owner, stranger = uuid4(), uuid4()
+        project = await port.project(owner, ProjectBuildRunners.owner)
+        await port.put_personal(owner, project)
+        assert await port.claim(port.personal(stranger)) is None
+        port.clock.advance(10)
+        assert await port.claim(port.personal(stranger)) is None
+
+    async def test__personal__q4_personal_jobs_do_not_use_the_user_quota(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        quota = QueueQuota(max_running_per_user=1)
+        await port.put_personal(owner, project)
+        assert await port.claim(port.personal(owner)) is not None
+        shared_job = await port.put(owner)
+        taken = await port.claim(quota=quota)
+        assert taken is not None
+        assert taken.id == shared_job.id
+        await port.put(owner)
+        assert await port.claim(quota=quota) is None
+
+    async def test__personal__q5_personal_claims_refund_the_fair_share(self, port: _Harness) -> None:
+        owner, other = uuid4(), uuid4()
+        project = await port.project(owner)
+        for _ in range(15):
+            await port.put_personal(owner, project)
+        runner = port.personal(owner)
+        for _ in range(15):
+            assert await port.claim(runner) is not None
+        await port.put(other)
+        await port.put(other)
+        mine = await port.put(owner)
+        order = [await port.claim() for _ in range(3)]
+        assert [job.id for job in order if job is not None].index(mine.id) <= 1
+
+    async def test__personal__q5_refund_happens_once_per_job(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        queued = await port.put_personal(owner, project, max_attempts=3)
+        runner = port.personal(owner)
+        first = await port.claim(runner)
+        port.clock.advance(LEASE_S + 1)
+        await port.queue.requeue_expired()
+        second = await port.claim(runner)
+        assert queued.vcost == 1.0
+        assert first is not None
+        assert second is not None
+        # Метка возвращена при первой выдаче; повторная выдача и повтор на общем раннере ничего не вернут.
+        assert (first.vcost, second.vcost) == (0.0, 0.0)
+
+    async def test__personal__q6_lost_personal_attempt_retries_anywhere(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        await port.put_personal(owner, project, max_attempts=2, timeout_s=300.0, timeout_personal_s=600.0)
+        taken = await port.claim(port.personal(owner))
+        assert taken is not None
+        assert taken.timeout_s == 600.0
+        port.clock.advance(LEASE_S + 1)
+        (outcome,) = await port.queue.requeue_expired()
+        assert outcome.requeued is True
+        assert (
+            outcome.job.runner_scope,
+            outcome.job.route_reason,
+            outcome.job.personal_until,
+            outcome.job.timeout_s,
+        ) == (
+            None,
+            RouteReason.fallback_lost,
+            port.clock.now,
+            300.0,
+        )
+        again = await port.claim()
+        assert again is not None
+        assert (again.runner_scope, again.route_reason) == (RunnerScope.shared, RouteReason.fallback_lost)
+
+    async def test__personal__q7_signature_check_never_goes_personal(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        await port.put_personal(owner, project, kind=JobKind.verify_detached, tags=frozenset({"verify"}))
+        assert await port.claim(port.personal(owner)) is None
+
+    async def test__personal__q8_owner_change_or_policy_change_after_enqueue(self, port: _Harness) -> None:
+        owner, coauthor = uuid4(), uuid4()
+        project = await port.project(owner, ProjectBuildRunners.owner)
+        await port.put_personal(owner, project, user=coauthor)
+        await port.set_policy(project, ProjectBuildRunners.shared)
+        assert await port.claim(port.personal(owner)) is None
+        other_owner = uuid4()
+        foreign = await port.project(other_owner)
+        # Запись маршрута говорит «владелец owner», а проект теперь чужой: личный раннер не берёт.
+        await port.put_personal(owner, foreign)
+        assert await port.claim(port.personal(owner)) is None
+
+    async def test__personal__q9_pinned_only_for_target_runner_of_its_owner(self, port: _Harness) -> None:
+        owner = uuid4()
+        runner = port.personal(owner)
+        pinned = await port.put(
+            owner,
+            kind=JobKind.ai_relay,
+            tags=frozenset({"ai"}),
+            route=JobRoute.pinned,
+            target_runner_id=runner.id,
+            fair_share=False,
+        )
+        assert await port.claim(RunnerRef(id=uuid4(), tags=frozenset({"ai"}))) is None
+        assert await port.claim(port.personal(owner)) is None
+        assert await port.claim(RunnerRef(**{**runner.__dict__, "owner_id": str(uuid4())})) is None
+        taken = await port.claim(runner)
+        assert taken is not None
+        assert (taken.id, taken.route_reason, taken.runner_scope) == (
+            pinned.id,
+            RouteReason.pinned,
+            RunnerScope.personal,
+        )
+
+    async def test__personal__q9_pinned_of_another_user_is_not_taken(self, port: _Harness) -> None:
+        owner = uuid4()
+        runner = port.personal(owner)
+        await port.put(
+            uuid4(),
+            kind=JobKind.ai_relay,
+            tags=frozenset({"ai"}),
+            route=JobRoute.pinned,
+            target_runner_id=runner.id,
+            fair_share=False,
+        )
+        assert await port.claim(runner) is None
+
+    async def test__personal__q10_slot_flags_split_builds_and_relays(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner)
+        relay_runner = port.personal(owner, accept_jobs=False)
+        build = await port.put_personal(owner, project)
+        relay = await port.put(
+            owner,
+            kind=JobKind.ai_relay,
+            tags=frozenset({"ai"}),
+            route=JobRoute.pinned,
+            target_runner_id=relay_runner.id,
+            fair_share=False,
+        )
+        no_relay = RunnerRef(**{**relay_runner.__dict__, "accept_jobs": True, "accept_relay": False})
+        taken_relay = await port.claim(relay_runner)
+        assert taken_relay is not None
+        assert taken_relay.id == relay.id
+        taken_build = await port.claim(no_relay)
+        assert taken_build is not None
+        assert taken_build.id == build.id
+
+    async def test__personal__q11_policy_shared_expires_only_coauthor_builds(self, port: _Harness) -> None:
+        owner, coauthor = uuid4(), uuid4()
+        project = await port.project(owner, ProjectBuildRunners.owner)
+        own = await port.put_personal(owner, project)
+        theirs = await port.put_personal(owner, project, user=coauthor)
+        await port.set_policy(project, ProjectBuildRunners.shared)
+        expired = await port.queue.expire_personal_wait(
+            project_id=project, reason=RouteReason.policy_shared, coauthors_only=True
+        )
+        assert expired == 1
+        taken = await port.claim()
+        assert taken is not None
+        # Общий раннер оставляет причину переключения политики, а не «не дождались 5 с».
+        assert (taken.id, taken.route_reason) == (theirs.id, RouteReason.policy_shared)
+        assert await port.claim() is None
+        mine = await port.claim(port.personal(owner))
+        assert mine is not None
+        assert mine.id == own.id
+
+    async def test__personal__q11_expire_wait_and_cancel_pinned(self, port: _Harness) -> None:
+        anna, boris = uuid4(), uuid4()
+        anna_project, boris_project = await port.project(anna), await port.project(boris)
+        await port.put_personal(anna, anna_project)
+        boris_job = await port.put_personal(boris, boris_project)
+        assert await port.queue.expire_personal_wait(owner_id=str(anna)) == 1
+        anna_taken = await port.claim()
+        assert anna_taken is not None
+        assert anna_taken.route_reason is RouteReason.fallback_offline
+        assert await port.claim() is None
+        assert await port.queue.expire_personal_wait(project_id=boris_project, reason=RouteReason.disabled) == 1
+        boris_taken = await port.claim()
+        assert boris_taken is not None
+        assert (boris_taken.id, boris_taken.route_reason) == (boris_job.id, RouteReason.disabled)
+        assert await port.queue.expire_personal_wait() == 0
+
+        target = uuid4()
+        relay = await port.put(
+            anna, kind=JobKind.ai_relay, tags=frozenset({"ai"}), route=JobRoute.pinned, target_runner_id=target
+        )
+        assert await port.queue.cancel_pinned(runner_id=uuid4(), error_code="relay_unavailable") == ()
+        (cancelled,) = await port.queue.cancel_pinned(runner_id=None, error_code="relay_unavailable")
+        assert (cancelled.id, cancelled.state, cancelled.error_code) == (
+            relay.id,
+            JobState.cancelled,
+            "relay_unavailable",
+        )
+
+    async def test__personal__q12_deleted_project_is_not_built_personally(self, port: _Harness) -> None:
+        owner = uuid4()
+        project = await port.project(owner, deleted=True)
+        await port.put_personal(owner, project)
+        assert await port.claim(port.personal(owner)) is None
+
+    async def test__personal__unfair_relay_keeps_the_user_mark(self, port: _Harness) -> None:
+        owner = uuid4()
+        relay = await port.put(
+            owner,
+            kind=JobKind.ai_relay,
+            tags=frozenset({"ai"}),
+            route=JobRoute.pinned,
+            target_runner_id=uuid4(),
+            fair_share=False,
+        )
+        build = await port.put(owner)
+        assert (relay.vcost, relay.vtime) == (0.0, 0.0)
+        assert build.vtime == pytest.approx(1.0)
+
+    async def test__personal__shared_runner_without_free_build_slots_takes_nothing(self, port: _Harness) -> None:
+        await port.put(uuid4())
+        assert await port.claim(RunnerRef(id=uuid4(), tags=frozenset({"tex"}), accept_jobs=False)) is None
+
 
 @pytest.mark.pg
 class TestPostgresJobQueueContract(TestJobQueueContract):
@@ -373,4 +702,4 @@ class TestPostgresJobQueueContract(TestJobQueueContract):
     @pytest_asyncio.fixture
     async def port(self, pg_db_factory: PgDbFactory) -> _Harness:
         sessions = SessionProvider(create_sessionmaker(await pg_db_factory()))
-        return _Harness(Path(), lambda clock: PostgresJobQueue(sessions, clock))
+        return _Harness(Path(), lambda clock: PostgresJobQueue(sessions, clock), sessions)

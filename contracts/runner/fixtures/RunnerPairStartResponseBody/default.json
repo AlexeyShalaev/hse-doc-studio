@@ -1,0 +1,8 @@
+{
+  "device_code": "hsdc_RGV2aWNlQ29kZUV4YW1wbGVWYWx1ZTEyMzQ",
+  "user_code": "BCDF-2345",
+  "verification_uri": "https://studio.example.org/settings/runners/pair",
+  "verification_uri_complete": "https://studio.example.org/settings/runners/pair?code=BCDF-2345",
+  "expires_in": 600,
+  "interval": 3
+}

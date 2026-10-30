@@ -13,6 +13,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import QueuedJob
+from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.jobs.runners import Runner
 
 # Долгий опрос раннера длится до 25 с: молчание дольше минуты уже подозрительно, дольше пяти минут означает потерю.
@@ -26,14 +27,25 @@ class RunnerStatus(StrEnum):
     offline = "offline"
     paused = "paused"
     revoked = "revoked"
+    # Личный раннер, когда личные раннеры выключены в установке.
+    disabled = "disabled"
 
 
-def runner_status(runner: Runner, now: datetime) -> RunnerStatus:
-    """Отзыв и пауза важнее давности опроса: на паузе раннер опрашивает, но работу не получает."""
+def runner_status(  # noqa: PLR0911 — порядок проверок закреплён спецификацией
+    runner: Runner, now: datetime, *, personal_enabled: bool = True
+) -> RunnerStatus:
+    """Отзыв, выключение и пауза важнее давности опроса: на паузе раннер опрашивает, но работу не получает.
+
+    Мягкий уход (`POST /offline`) делает раннер не в сети сразу, пока он снова не опросит сервер.
+    """
     if runner.revoked_at is not None:
         return RunnerStatus.revoked
+    if runner.scope is RunnerScope.personal and not personal_enabled:
+        return RunnerStatus.disabled
     if runner.paused:
         return RunnerStatus.paused
+    if runner.offline_at is not None and (runner.last_seen_at is None or runner.offline_at >= runner.last_seen_at):
+        return RunnerStatus.offline
     if runner.last_seen_at is None:
         return RunnerStatus.offline
     silence = now - runner.last_seen_at
@@ -48,6 +60,8 @@ class JobAdminFilter:
     kind: JobKind | None = None
     user_id: UUID | None = None
     project_id: UUID | None = None
+    # Кто взял задачу: общие или личные раннеры.
+    runner_scope: RunnerScope | None = None
 
 
 @dataclass(frozen=True)

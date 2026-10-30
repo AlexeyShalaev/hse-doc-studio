@@ -44,6 +44,12 @@ const VIEWS: Record<CompileWait["reason"], WaitView> = {
     tone: "neutral",
     live: false,
   },
+  personal_runner: {
+    titleKey: "personalRunner",
+    bodyKey: "personalRunnerBody",
+    tone: "info",
+    live: true,
+  },
 };
 
 export const waitView = (wait: CompileWait): WaitView => VIEWS[wait.reason];

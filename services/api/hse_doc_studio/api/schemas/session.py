@@ -41,6 +41,10 @@ class Capabilities(StrictModel):
     # Считается на запрос: админ установки, прошедший ограничение по хосту/IP.
     admin: bool
     personal_signing_keys: bool
+    # Сервер: вошедший человек может подключать свои раннеры (личные разрешены в установке).
+    personal_runners: bool = False
+    # Локально: Студия может собирать облачные проекты хозяина как его личный раннер.
+    remote_runner: bool = False
 
 
 class OidcProviderOption(StrictModel):
@@ -730,14 +734,15 @@ class UpdateAdminOidcProviderRequest(StrictModel):
     auto_provision: bool | None = None
 
 
-CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded"]
+CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded", "personal_runner"]
 
 
 class CompileWait(StrictModel):
     """Почему сборка ещё не идёт (поле `wait` деталей сборки и события `wait` потока).
 
     queued и quota_wait: сборка ждёт очереди (место и оценка ожидания); no_runner: свободных раннеров нет;
-    runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая.
+    runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая;
+    personal_runner: сборка ждёт личный раннер владельца проекта (`wait_hint_seconds` окно ожидания).
     """
 
     reason: CompileWaitReason

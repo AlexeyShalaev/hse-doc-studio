@@ -33,9 +33,16 @@ class AdminBuildSettings(StrictModel):
     timeout_s: int
     # Сколько суток хранятся результаты сборок.
     artifact_retention_days: int
+    # Личные раннеры: разрешены ли, сколько ждать личный раннер и сколько раннеров на человека.
+    personal_runners_enabled: bool = True
+    personal_runner_wait_s: int = 5
+    personal_runners_max_per_user: int = 5
     fields: dict[str, SettingState]
 
 
 class UpdateAdminBuildRequest(StrictModel):
     timeout_s: int | None = Field(default=None, ge=30, le=3600)
     artifact_retention_days: int | None = Field(default=None, ge=1, le=365)
+    personal_runners_enabled: bool | None = None
+    personal_runner_wait_s: int | None = Field(default=None, ge=0, le=60)
+    personal_runners_max_per_user: int | None = Field(default=None, ge=1, le=20)

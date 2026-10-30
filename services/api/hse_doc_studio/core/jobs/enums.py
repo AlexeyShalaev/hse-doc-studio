@@ -9,6 +9,8 @@ class JobKind(StrEnum):
     office_convert = "office.convert"
     verify_detached = "signature.verify_detached"
     pack_submission = "pack.submission"
+    # Ретрансляция запроса к модели через личный раннер хозяина (тег `ai`).
+    ai_relay = "ai.relay"
 
 
 class JobStatus(StrEnum):
@@ -74,3 +76,9 @@ class RunnerErrorCode(StrEnum):
     runner_disabled = "runner_disabled"
     job_token_invalid = "job_token_invalid"  # noqa: S105
     runner_protocol_unsupported = "runner_protocol_unsupported"
+    # Личные раннеры: предел раннеров хозяина, ретрансляция ИИ, частота опроса сопряжения.
+    runner_limit = "runner_limit"
+    relay_request_gone = "relay_request_gone"
+    relay_out_of_order = "relay_out_of_order"
+    relay_too_large = "relay_too_large"
+    slow_down = "slow_down"

@@ -1,0 +1,13 @@
+{
+  "attempt": 1,
+  "seq": 7,
+  "events": [
+    {
+      "kind": "end",
+      "status": null,
+      "content_type": null,
+      "data": null,
+      "code": null
+    }
+  ]
+}

@@ -125,7 +125,9 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
 
 @pytest_asyncio.fixture
 async def locked_stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
-    env = InstanceEnvOverrides(public_url="https://studio.hse.example", build_timeout_s=900)
+    env = InstanceEnvOverrides(
+        public_url="https://studio.hse.example", build_timeout_s=900, personal_runners_enabled=True
+    )
     async for s in _stack(monkeypatch, env):
         yield s
 
@@ -273,6 +275,9 @@ async def test__env_locked__keys_show_env_source_and_refuse_writes(locked_stack:
     assert (refused_build.status_code, refused_build.json()["code"]) == (409, "setting_locked")
     assert (await c.get("/api/admin/settings/instance", headers=boss)).json()["name"] == "HSE Doc Studio"
     assert free.json()["artifact_retention_days"] == 7
+    assert build["fields"]["runners.personal_enabled"] == {"source": "env", "locked": True}
+    locked_personal = await c.put("/api/admin/settings/build", json={"personal_runners_enabled": False}, headers=boss)
+    assert (locked_personal.status_code, locked_personal.json()["code"]) == (409, "setting_locked")
 
 
 async def test__build_settings__defaults_update_and_bounds(stack: _Stack) -> None:
@@ -292,3 +297,12 @@ async def test__build_settings__defaults_update_and_bounds(stack: _Stack) -> Non
     assert updated.json()["fields"]["build.timeout_s"] == {"source": "admin", "locked": False}
     assert (too_small.status_code, too_long.status_code) == (422, 422)
     assert [e.action for e in await stack.users.audit.list()] == ["settings.build_update"]
+    personal = await c.put(
+        "/api/admin/settings/build",
+        json={"personal_runner_wait_s": 0, "personal_runners_max_per_user": 3},
+        headers=boss,
+    )
+    assert (personal.json()["personal_runner_wait_s"], personal.json()["personal_runners_max_per_user"]) == (0, 3)
+    out_of_range = await c.put("/api/admin/settings/build", json={"personal_runner_wait_s": 61}, headers=boss)
+    assert out_of_range.status_code == 422
+    assert "settings.personal_runners_update" in [e.action for e in await stack.users.audit.list()]
