@@ -39,7 +39,6 @@ def stand(pg_engine: AsyncEngine, tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(settings.db, "dsn", dsn)
     monkeypatch.setattr(settings.db, "auto_migrate", True)
     monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
-    monkeypatch.setattr(settings.auth, "experimental", True)
     monkeypatch.setattr(settings.auth, "public_url", ORIGIN)
     monkeypatch.setattr(settings.auth, "registration_mode", RegistrationMode.invite)
     monkeypatch.setattr(settings.auth, "admin_email", ADMIN_EMAIL)
