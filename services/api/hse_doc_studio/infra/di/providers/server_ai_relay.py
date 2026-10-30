@@ -16,7 +16,7 @@ from hse_doc_studio.infra.ai.sdk_model_lister import SdkAIModelLister
 from hse_doc_studio.infra.jobs.relay_hub import RelayHub
 from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_relay.client import AiRelayClient, RelayLimits
-from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore
+from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore, RelayTerminalCleanup
 from hse_doc_studio.use_cases.ai_relay.runner_side import RelayRunnerService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
@@ -52,8 +52,11 @@ class ServerAiRelayProvider(Provider):
         return hub
 
     @provide
-    def get_relay_request_store(self) -> RelayRequestStore:
-        return RelayRequestStore()
+    def get_relay_request_store(self, hub: IRelayHub, terminal: JobTerminalBroadcaster) -> RelayRequestStore:
+        store = RelayRequestStore()
+        # Хаб уже среди слушателей (он зависимость): сначала поток рвётся с кодом задачи, потом память чистится.
+        terminal.add(RelayTerminalCleanup(hub, store))
+        return store
 
     @provide
     def get_ai_relay_client(  # noqa: PLR0913

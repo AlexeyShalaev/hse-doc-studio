@@ -24,7 +24,7 @@ from hse_doc_studio.use_cases.ai_relay.client import (
     RelayRequest,
     relay_error_of,
 )
-from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore
+from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore, RelayTerminalCleanup
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
@@ -54,6 +54,7 @@ class _Env:
     hub: RelayHub
     store: RelayRequestStore
     settings: _Settings
+    service: JobQueueService
 
 
 @pytest_asyncio.fixture
@@ -66,6 +67,7 @@ async def env() -> _Env:
     terminal.add(hub)
     service = JobQueueService(queue, clock=lambda: NOW, terminal=terminal)
     store = RelayRequestStore()
+    terminal.add(RelayTerminalCleanup(hub, store))
     settings = _Settings()
     client = AiRelayClient(
         queue,
@@ -78,7 +80,7 @@ async def env() -> _Env:
         limits=RelayLimits(pickup_s=0.2, max_request_bytes=1024, max_response_bytes=10, max_pending_per_user=1),
         clock=lambda: NOW,
     )
-    return _Env(client, queue, runners, hub, store, settings)
+    return _Env(client, queue, runners, hub, store, settings, service)
 
 
 def _request(**changes: object) -> RelayRequest:
@@ -251,6 +253,18 @@ async def test__stream__closed_before_end__cancels_the_job(env: _Env) -> None:
     assert job is not None
     assert job.state is JobState.cancelled
     assert await env.hub.push(job_id, 1, (_data(b"x"),)) is True
+
+
+async def test__stream__abandoned_without_aclose__terminal_job_frees_the_body_and_the_slot(env: _Env) -> None:
+    task = asyncio.create_task(env.client.open(_ANNA, _request()))
+    job_id = await _answer(env, _HEAD, _data(b"ab"))
+    await task  # ответ брошен: ни чтения до конца, ни aclose
+
+    await env.service.cancel(job_id)
+
+    assert env.store.get(job_id) is None
+    assert env.hub.get(job_id) is None
+    assert env.store.pending_for(OWNER_ID) == 0
 
 
 async def test__stream__larger_than_the_limit__relay_too_large(env: _Env) -> None:

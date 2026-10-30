@@ -31,8 +31,9 @@ _PREFIX = "/v1/"
 
 
 class _RelayStream(httpx2.AsyncByteStream):
-    def __init__(self, response: RelayResponse) -> None:
+    def __init__(self, response: RelayResponse, opened: set[RelayResponse]) -> None:
         self._response = response
+        self._opened = opened
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         try:
@@ -45,6 +46,7 @@ class _RelayStream(httpx2.AsyncByteStream):
 
     async def aclose(self) -> None:
         # Закрытие до конца ответа (отмена чата, обрыв SSE клиента) отменяет задачу на раннере.
+        self._opened.discard(self._response)
         await self._response.aclose()
 
 
@@ -56,6 +58,8 @@ class RunnerRelayTransport(httpx2.AsyncBaseTransport):
         self._actor = actor
         self._provider = provider
         self._project_id = project_id
+        # Ответы, которые SDK ещё не закрыл: закрытие клиента (отмена задачи asyncio посреди чтения) закрывает и их.
+        self._opened: set[RelayResponse] = set()
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         path = request.url.path
@@ -84,7 +88,15 @@ class RunnerRelayTransport(httpx2.AsyncBaseTransport):
         except AiRelayError as exc:
             raise httpx2.ConnectError(str(exc), request=request) from exc
         headers = {"content-type": response.content_type} if response.content_type else {}
-        return httpx2.Response(response.status_code, headers=headers, stream=_RelayStream(response), request=request)
+        self._opened.add(response)
+        return httpx2.Response(
+            response.status_code, headers=headers, stream=_RelayStream(response, self._opened), request=request
+        )
+
+    async def aclose(self) -> None:
+        opened, self._opened = list(self._opened), set()
+        for response in opened:
+            await response.aclose()
 
 
 def _wants_stream(body: bytes) -> bool:
