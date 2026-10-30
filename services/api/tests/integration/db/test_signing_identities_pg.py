@@ -22,7 +22,7 @@ from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
 from hse_doc_studio.infra.db.repositories.identity import SqlInstanceSettingsRepository, SqlUserRepository
 from hse_doc_studio.infra.db.repositories.signing_identities import PostgresSigningIdentityRepository
-from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy
+from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSigningKeyPolicy, SqlServerKeyCounter
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
@@ -93,6 +93,18 @@ async def test__policy_default__forbids_storing_a_private_key_and_nothing_is_sav
             await world.repo.create(identity, await _material())
         assert await world.repo.get(identity.id) is None
         assert await world.repo.list_all() == []
+
+
+async def test__server_key_counter__counts_only_identities_with_a_stored_private_key(world: World) -> None:
+    await _allow(world)
+    material = await _material()
+    with as_actor(_ANNA):
+        await world.repo.create(_identity(), material)
+        await world.repo.create(_identity(SigningIdentityKind.openpgp))
+    with as_actor(_BORIS):
+        await world.repo.create(_identity(), material)
+
+    assert await SqlServerKeyCounter(world.sessions).count_server_keys() == 2
 
 
 async def test__policy_denied__identity_without_private_key_is_still_stored(world: World) -> None:

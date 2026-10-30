@@ -76,6 +76,14 @@ class NoopUow:
         yield
 
 
+class FixedServerKeyCounter:
+    def __init__(self, count: int = 0) -> None:
+        self.count = count
+
+    async def count_server_keys(self) -> int:
+        return self.count
+
+
 class InMemoryAIProviderRepository:
     """IAIProviderRepository без шифрования: как у сервера, пустой ключ при обновлении оставляет прежний."""
 

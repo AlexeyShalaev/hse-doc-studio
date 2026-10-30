@@ -217,7 +217,7 @@ async def get_storage(
 async def get_signing_policy(request: Request, response: Response) -> AdminSigningPolicy:
     response.headers.update(_NO_STORE)
     policy = await (await _uc(request, GetSigningPolicyUC)).execute(_actor())
-    return AdminSigningPolicy(server_keys=policy.value)
+    return AdminSigningPolicy(server_keys=policy.server_keys.value, stored_keys=policy.stored_keys)
 
 
 @router.put("/settings/signing", response_model=AdminSigningPolicy)
@@ -226,7 +226,7 @@ async def put_signing_policy(
 ) -> AdminSigningPolicy:
     response.headers.update(_NO_STORE)
     policy = await (await _uc(request, UpdateSigningPolicyUC)).execute(_actor(), ServerKeyPolicy(body.server_keys))
-    return AdminSigningPolicy(server_keys=policy.value)
+    return AdminSigningPolicy(server_keys=policy.server_keys.value, stored_keys=policy.stored_keys)
 
 
 def _provider(provider: InstanceAiProvider) -> AdminAiProvider:

@@ -45,6 +45,7 @@ from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.ops import (
     CountingStorageReader,
+    FixedServerKeyCounter,
     InMemoryAIProviderRepository,
     InMemoryJobAdminReader,
     NoopUow,
@@ -132,11 +133,11 @@ class _Provider(Provider):
 
     @provide
     def get_signing(self) -> GetSigningPolicyUC:
-        return GetSigningPolicyUC(self.s.settings)
+        return GetSigningPolicyUC(self.s.settings, FixedServerKeyCounter(2))
 
     @provide
     def update_signing(self) -> UpdateSigningPolicyUC:
-        return UpdateSigningPolicyUC(self.s.settings, self.s.users.audit, NoopUow())
+        return UpdateSigningPolicyUC(self.s.settings, self.s.users.audit, NoopUow(), FixedServerKeyCounter(2))
 
     @provide
     def list_providers(self) -> ListInstanceAiProvidersUC:
@@ -289,11 +290,17 @@ async def test__signing_policy__default_forbidden_then_allowed(stack: _Stack) ->
     boss = await stack.users.add("boss", admin=True)
     c = stack.client
 
-    assert (await c.get("/api/admin/settings/signing", headers=boss)).json() == {"server_keys": "forbidden"}
+    assert (await c.get("/api/admin/settings/signing", headers=boss)).json() == {
+        "server_keys": "forbidden",
+        "stored_keys": 2,
+    }
     assert (await c.put("/api/admin/settings/signing", json={"server_keys": "yes"}, headers=boss)).status_code == 422
     await c.put("/api/admin/settings/signing", json={"server_keys": "allowed"}, headers=boss)
 
-    assert (await c.get("/api/admin/settings/signing", headers=boss)).json() == {"server_keys": "allowed"}
+    assert (await c.get("/api/admin/settings/signing", headers=boss)).json() == {
+        "server_keys": "allowed",
+        "stored_keys": 2,
+    }
     assert [e.action for e in await stack.users.audit.list()] == ["settings.signing_policy_update"]
 
 

@@ -13,9 +13,11 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.repositories import IAIProviderRepository
+from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
@@ -84,14 +86,20 @@ class ServerAdminOpsProvider(Provider):
         return GetStorageUsageUC(reader)
 
     @provide
-    def get_get_signing_policy_uc(self, repo: IInstanceSettingsRepository) -> GetSigningPolicyUC:
-        return GetSigningPolicyUC(repo)
+    def get_server_key_counter(self, sessions: SessionProvider) -> IServerKeyCounter:
+        return SqlServerKeyCounter(sessions)
+
+    @provide
+    def get_get_signing_policy_uc(
+        self, repo: IInstanceSettingsRepository, counter: IServerKeyCounter
+    ) -> GetSigningPolicyUC:
+        return GetSigningPolicyUC(repo, counter)
 
     @provide
     def get_update_signing_policy_uc(
-        self, repo: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork
+        self, repo: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork, counter: IServerKeyCounter
     ) -> UpdateSigningPolicyUC:
-        return UpdateSigningPolicyUC(repo, audit, uow)
+        return UpdateSigningPolicyUC(repo, audit, uow, counter)
 
     @provide
     def get_instance_ai_provider_store(self, repo: IAIProviderRepository) -> InstanceAiProviderStore:

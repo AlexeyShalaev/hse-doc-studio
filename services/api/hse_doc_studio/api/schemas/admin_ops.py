@@ -95,6 +95,8 @@ class AdminStorageUsage(StrictModel):
 
 class AdminSigningPolicy(StrictModel):
     server_keys: Literal["allowed", "forbidden"]
+    # Сколько закрытых ключей уже лежит на сервере: при запрете они заблокированы, но не удалены.
+    stored_keys: int
 
 
 class UpdateAdminSigningPolicyRequest(StrictModel):

@@ -28,7 +28,7 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
 )
 from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
-from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
+from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, SigningPolicy, UpdateSigningPolicyUC
 from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 
@@ -38,6 +38,7 @@ from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.job_quotas import InMemoryQuotaOverrides
 from tests.fakes.ops import (
     CountingStorageReader,
+    FixedServerKeyCounter,
     InMemoryAIProviderRepository,
     InMemoryJobAdminReader,
     NoopUow,
@@ -113,13 +114,15 @@ async def test__quota_service__caches_for_ttl_and_forgets_on_update() -> None:
 async def test__signing_policy__defaults_to_forbidden_and_audits_change() -> None:
     repo = InMemoryInstanceSettingsRepository()
     audit = InMemoryAuditLog()
-    assert await GetSigningPolicyUC(repo).execute(ADMIN) is ServerKeyPolicy.forbidden
+    counter = FixedServerKeyCounter(3)
+    assert await GetSigningPolicyUC(repo, counter).execute(ADMIN) == SigningPolicy(ServerKeyPolicy.forbidden, 3)
 
-    update = UpdateSigningPolicyUC(repo, audit, NoopUow())
+    update = UpdateSigningPolicyUC(repo, audit, NoopUow(), counter)
     await update.execute(ADMIN, ServerKeyPolicy.allowed)
-    await update.execute(ADMIN, ServerKeyPolicy.allowed)
+    saved = await update.execute(ADMIN, ServerKeyPolicy.allowed)
 
-    assert await GetSigningPolicyUC(repo).execute(ADMIN) is ServerKeyPolicy.allowed
+    assert saved == SigningPolicy(ServerKeyPolicy.allowed, 3)
+    assert await GetSigningPolicyUC(repo, counter).execute(ADMIN) == saved
     assert await _audit_actions(audit) == ["settings.signing_policy_update"]
 
 
@@ -142,8 +145,10 @@ async def test__ops_use_cases__not_admin__not_found() -> None:
     calls = [
         GetQuotasUC(repo).execute(STUDENT),
         UpdateQuotasUC(repo, InMemoryAuditLog(), NoopUow(), QuotaService(repo)).execute(STUDENT, QuotaSettings()),
-        GetSigningPolicyUC(repo).execute(STUDENT),
-        UpdateSigningPolicyUC(repo, InMemoryAuditLog(), NoopUow()).execute(STUDENT, ServerKeyPolicy.allowed),
+        GetSigningPolicyUC(repo, FixedServerKeyCounter()).execute(STUDENT),
+        UpdateSigningPolicyUC(repo, InMemoryAuditLog(), NoopUow(), FixedServerKeyCounter()).execute(
+            STUDENT, ServerKeyPolicy.allowed
+        ),
         GetStorageUsageUC(CountingStorageReader()).execute(STUDENT),
         ListQueueUC(InMemoryJobAdminReader(queue)).execute(STUDENT, JobAdminFilter()),
         ListInstanceAiProvidersUC(InstanceAiProviderStore(InMemoryAIProviderRepository())).execute(STUDENT),
