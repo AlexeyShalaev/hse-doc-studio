@@ -30,6 +30,7 @@ export type SettingsSectionId =
   | "data"
   | "git-access"
   | "runners"
+  | "remote-runner"
   | "about";
 
 export type SettingSearchEntry = {
@@ -523,6 +524,25 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
 
   // ── Доступ к репозиториям ────────────────────────────────────
+  // ── Облачные сборки (локальная Студия) ───────────────────────
+  {
+    sectionId: "remote-runner",
+    anchorId: "remote-runner",
+    labelKey: "search.remoteRunner",
+    keywords: [
+      "облачные сборки",
+      "облако",
+      "сервер",
+      "раннер",
+      "собирать на этой машине",
+      "модели для облака",
+      "cloud builds",
+      "cloud",
+      "runner",
+      "build on this machine",
+    ],
+  },
+
   // ── Мои раннеры (серверный режим) ────────────────────────────
   {
     sectionId: "runners",

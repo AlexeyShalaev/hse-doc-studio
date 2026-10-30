@@ -489,6 +489,7 @@
     "accountPassword": "Password",
     "accountCommit": "Version signature",
     "accountSessions": "Sessions",
-    "runners": "My runners: build on your own machine"
+    "runners": "My runners: build on your own machine",
+    "remoteRunner": "Cloud builds on this machine"
   }
 }

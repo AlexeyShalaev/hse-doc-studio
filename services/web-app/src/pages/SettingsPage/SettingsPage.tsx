@@ -5,6 +5,7 @@ import { i18n } from "@shared/lib";
 import {
   Bot,
   Building2,
+  CloudCog,
   Cpu,
   DatabaseBackup,
   Drama,
@@ -48,6 +49,7 @@ import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
 import { MyOrganizationsSection } from "@features/my-organizations";
 import { MyRunnersSection } from "@features/my-runners";
+import { RemoteRunnerSection } from "@features/remote-runner";
 import {
   LOCAL_BOOTSTRAP,
   useBootstrap,
@@ -232,6 +234,14 @@ const SECTIONS: readonly SectionDef[] = [
     icon: Server,
   },
   {
+    id: "remote-runner",
+    group: "system",
+    scope: "local-only",
+    requires: "remote_runner",
+    labelKey: "settingsPage.sections.remoteRunner",
+    icon: CloudCog,
+  },
+  {
     id: "git-access",
     group: "system",
     scope: "user",
@@ -295,6 +305,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <GitAccessSection />;
     case "runners":
       return <MyRunnersSection />;
+    case "remote-runner":
+      return <RemoteRunnerSection />;
     case "about":
       return <AboutSection />;
   }

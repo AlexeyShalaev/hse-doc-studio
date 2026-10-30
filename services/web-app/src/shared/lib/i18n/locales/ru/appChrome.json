@@ -122,7 +122,8 @@
       "gitAccess": "Доступ к репозиториям",
       "organizations": "Организации",
       "account": "Аккаунт",
-      "runners": "Мои раннеры"
+      "runners": "Мои раннеры",
+      "remoteRunner": "Облачные сборки"
     },
     "title": "Настройки",
     "searchPlaceholder": "Поиск по настройкам",

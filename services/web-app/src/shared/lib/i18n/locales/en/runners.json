@@ -208,5 +208,73 @@
         "body": "Revoke a runner or an unused token you don't need, then confirm the code again."
       }
     }
+  },
+  "remote": {
+    "title": "Cloud builds",
+    "sub": "This machine can build your cloud projects from the server with its own Docker. Your local projects are not affected.",
+    "toggle": "Build my cloud projects on this machine",
+    "toggleHint": "The Studio will connect to your account on the server and build your cloud projects with local Docker. Your local projects are not affected.",
+    "state": {
+      "off": "Off",
+      "unpaired": "Not connected to a server",
+      "pairing": "Waiting for the code to be confirmed",
+      "connecting": "Connecting…",
+      "online": "Online: takes your cloud builds",
+      "paused": "Paused (resume it on the website)",
+      "offline": "Server unreachable, retrying…",
+      "revoked": "The runner was revoked on the server. Connect again.",
+      "disabled": "The server administrator turned personal runners off.",
+      "error": "Error: {{reason}}"
+    },
+    "running_one": "{{count}} cloud build running",
+    "running_other": "{{count}} cloud builds running",
+    "serverUrl": "Server address",
+    "serverUrlHint": "The one you open in the browser. https is required; http only works for localhost.",
+    "serverUrlInvalid": "An https address is required, http only for localhost.",
+    "name": "This machine's name",
+    "nameHint": "The runner's name in \"My runners\". A name set on the website wins.",
+    "pair": "Connect",
+    "haveToken": "I have a token",
+    "hideToken": "Connect with a code",
+    "token": "Registration token",
+    "tokenHint": "Create it on the website: \"My runners\", \"Connect a runner\", \"Server or console\".",
+    "tokenInvalid": "The token starts with hsrt_.",
+    "useToken": "Connect with the token",
+    "code": {
+      "title": "Confirm the code on the website",
+      "lead": "Open the confirmation page in the browser where you're signed in and check that the code matches.",
+      "open": "Open the confirmation page",
+      "expires": "The code is valid for {{time}}",
+      "expired": "The code has expired: start connecting again.",
+      "cancel": "Cancel"
+    },
+    "connectedTo": "Connected to {{server}} as \"{{name}}\"",
+    "checks": {
+      "docker": "Docker is unavailable: LaTeX cloud builds go to shared runners.",
+      "image": "The TeX image isn't installed: LaTeX builds go to shared runners.",
+      "toImages": "Open \"Images\""
+    },
+    "concurrency": "Builds at once",
+    "concurrencyHint": "How many cloud builds to take at the same time.",
+    "yield": "Yield to local builds",
+    "yieldHint": "While a local build runs, cloud builds aren't taken. Model requests through the runner keep working.",
+    "models": {
+      "title": "Models for the cloud",
+      "lead": "Local models the server can reach through this machine. The address stays here; the server only knows the name.",
+      "empty": "No local Ollama or OpenAI-compatible providers in your network.",
+      "open": "Open to the cloud",
+      "name": "Name for the server",
+      "nameInvalid": "Latin letters, digits, dash and underscore, up to 32 characters.",
+      "flavor": {
+        "ollama": "Ollama",
+        "openai": "OpenAI API"
+      }
+    },
+    "unpair": "Disconnect from server",
+    "unpairTitle": "Disconnect the Studio from the server?",
+    "unpairBody": "The runner will be revoked and cloud builds will stop running on this machine. You can connect it again any time.",
+    "unpairConfirm": "Disconnect",
+    "unpaired": "The Studio is disconnected from the server",
+    "saved": "Saved"
   }
 }
