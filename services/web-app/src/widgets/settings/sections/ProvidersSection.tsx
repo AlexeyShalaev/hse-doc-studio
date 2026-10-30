@@ -140,7 +140,8 @@ const ProviderRow = ({
             />
             <span className="dim">
               {t("providers.via", {
-                runner: provider.relay.runner_name,
+                // Раннер удалён из базы: сервер отдаёт null вместо имени.
+                runner: provider.relay.runner_name ?? t("providers.runnerGone"),
                 endpoint: provider.relay.endpoint,
               })}
             </span>

@@ -261,6 +261,7 @@
       "org": "Your organization's provider",
       "instance": "Installation-wide provider: the administrator set the key"
     },
+    "runnerGone": "a removed runner",
     "via": "via \"{{runner}}\", endpoint {{endpoint}}",
     "relayState": {
       "ready": "ready",
