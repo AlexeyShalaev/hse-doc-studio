@@ -323,6 +323,15 @@ class ProjectSummary(StrictModel):
     shared_enabled: bool
 
 
+class ProjectSummaryPage(StrictModel):
+    """Список проектов серверного режима страницей (GET /api/v1/projects); в локальном режиме ответ массив."""
+
+    items: list[ProjectSummary]
+    total: int
+    limit: int
+    offset: int
+
+
 class ProjectImportWarning(StrictModel):
     code: Literal["remote_needs_access", "records_skipped", "store_hardened", "junk_skipped", "chats_unreadable"]
     # Число затронутых файлов или настроек; пусто, когда считать нечего.

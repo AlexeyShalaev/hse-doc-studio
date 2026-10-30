@@ -37,6 +37,9 @@ class ProjectRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Копия полей project.json для списка проектов (поиск, фильтры); обновляется сценариями правки.
+    pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    supervisor_name: Mapped[str | None] = mapped_column(String(256))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Строка есть, а папки на томе нет: отмечает сверка на старте, проект при этом не пропадает из каталога.
     volume_missing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

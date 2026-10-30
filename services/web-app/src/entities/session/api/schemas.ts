@@ -265,6 +265,14 @@ export type CreateApiTokenResponse = z.infer<
   typeof CreateApiTokenResponseSchema
 >;
 
+// Страница списка сервера: {items, total, limit, offset}.
+const pageOf = <T extends z.ZodType>(item: T) =>
+  z.strictObject({
+    items: z.array(item),
+    total: z.number().int(),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  });
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -283,6 +291,8 @@ export const ProjectSummarySchema = z.strictObject({
   archived: z.boolean(),
   shared_enabled: z.boolean(),
 });
+// Серверный режим отдаёт список проектов страницей; локальный по-прежнему массивом.
+export const ProjectSummaryPageSchema = pageOf(ProjectSummarySchema);
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
 export const CreateServerProjectRequestSchema = z.strictObject({
@@ -331,13 +341,6 @@ export const AdminUserSchema = z.strictObject({
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
 });
-const pageOf = <T extends z.ZodType>(item: T) =>
-  z.strictObject({
-    items: z.array(item),
-    total: z.number().int(),
-    limit: z.number().int(),
-    offset: z.number().int(),
-  });
 export const AdminUserPageSchema = pageOf(AdminUserSchema);
 // Счётчики на чипах списка людей под тем же поиском (GET /api/admin/users/facets).
 export const AdminUserFacetsSchema = z.strictObject({

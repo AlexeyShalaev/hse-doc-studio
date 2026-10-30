@@ -1,4 +1,5 @@
-"""adm_identity_lists: индексы серверных списков людей, организаций, приглашений, журнала и проектов
+"""adm_identity_lists: индексы серверных списков людей, организаций, приглашений, журнала и проектов; копия
+закрепления и руководителя проекта в каталоге
 
 Списки админки ищут, фильтруют, сортируют и листают в базе. Индексы под порядок по умолчанию и частые
 фильтры; поиск подстроки по людям дополнительно ускоряет pg_trgm, если расширение доступно.
@@ -63,6 +64,9 @@ def upgrade() -> None:
         postgresql_ops={"action": "varchar_pattern_ops"},
     )
 
+    # Список проектов строится по каталогу: копия полей project.json, которые нужны фильтрам и поиску.
+    op.add_column("projects", sa.Column("pinned", sa.Boolean(), server_default="false", nullable=False))
+    op.add_column("projects", sa.Column("supervisor_name", sa.String(length=256), nullable=True))
     op.drop_index("ix_projects_owner_org_id", table_name="projects")
     op.create_index("ix_projects_owner_org_updated", "projects", ["owner_org_id", "updated_at"])
     op.create_index("ix_projects_name_lower", "projects", [sa.text("lower(name)")])
@@ -72,6 +76,8 @@ def downgrade() -> None:
     op.drop_index("ix_projects_name_lower", table_name="projects")
     op.drop_index("ix_projects_owner_org_updated", table_name="projects")
     op.create_index("ix_projects_owner_org_id", "projects", ["owner_org_id"])
+    op.drop_column("projects", "supervisor_name")
+    op.drop_column("projects", "pinned")
 
     op.drop_index("ix_audit_log_action_id_desc", table_name="audit_log")
     op.drop_index("ix_audit_log_target_id_desc", table_name="audit_log")

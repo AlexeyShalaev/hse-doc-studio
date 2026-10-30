@@ -58,6 +58,7 @@ _SCHEMAS: dict[str, Any] = {
     "CreateApiTokenResponse": s.CreateApiTokenResponse,
     "ProjectSummary": s.ProjectSummary,
     "ProjectSummaryList": list[s.ProjectSummary],
+    "ProjectSummaryPage": s.ProjectSummaryPage,
     "CreateServerProjectRequest": s.CreateServerProjectRequest,
     "ProjectImportResult": s.ProjectImportResult,
     "AdminUser": s.AdminUser,

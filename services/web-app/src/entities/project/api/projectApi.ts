@@ -8,6 +8,7 @@ import type {
 import { CheckRuleSchema } from "@entities/document";
 import {
   ProjectImportResultSchema,
+  ProjectSummaryPageSchema,
   ProjectSummarySchema,
 } from "@entities/session";
 import {
@@ -39,14 +40,25 @@ const fromSummary = (summary: ProjectSummary): ProjectItem => ({
   my_role: summary.my_role,
 });
 
-const ProjectListSchema = z
+const ProjectItemsSchema = z
   .array(z.union([ProjectResponseSchema, ProjectSummarySchema]))
   .transform((items) =>
     items.map((item) => ("folder" in item ? item : fromSummary(item))),
   );
 
+// Локальный режим отдаёт массив папок, серверный страницу из каталога
+// ({items, total, limit, offset}): обе формы приводятся к массиву карточек.
+const ProjectListSchema = z.union([
+  ProjectItemsSchema,
+  ProjectSummaryPageSchema.transform((page) => page.items.map(fromSummary)),
+]);
+
 export const projectApi = {
-  list: () => apiClient.get("/projects").then(parseResp(ProjectListSchema)),
+  // До перевода экранов на постраничный показ берётся одна страница наибольшего размера.
+  list: () =>
+    apiClient
+      .get("/projects", { params: { limit: 200 } })
+      .then(parseResp(ProjectListSchema)),
 
   suggestions: () =>
     apiClient

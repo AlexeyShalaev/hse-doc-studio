@@ -43,8 +43,10 @@ for (const lang of LANGS) {
     test("в списке только свои проекты", async ({ page }) => {
       await login(page, USERS.anna.email);
       // Проекты демо-данных открываются: каждый из списка отвечает владельцу 200, а не «не найден».
-      const own = await page.request.get("/api/v1/projects");
-      for (const item of (await own.json()) as { id: string }[]) {
+      // На сервере список отдаётся страницей { items, total, limit, offset }.
+      const own = await page.request.get("/api/v1/projects?limit=200");
+      for (const item of ((await own.json()) as { items: { id: string }[] })
+        .items) {
         const opened = await page.request.get(`/api/v1/projects/${item.id}`);
         expect(opened.status()).toBe(200);
       }

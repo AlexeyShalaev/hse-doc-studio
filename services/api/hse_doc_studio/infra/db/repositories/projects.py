@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -125,6 +126,12 @@ class PostgresProjectLocator:
             # Единственный момент, когда права берутся из файла: проект создаёт его владелец.
             "team": project.staffing is ProjectStaffing.team,
             "shared_enabled": project.shared_enabled,
+            # Копия полей файла для списка проектов: дальше её обновляют сценарии правки.
+            "pinned": project.pinned,
+            "supervisor_name": project.supervisor.name if project.supervisor else None,
+            "archived_at": func.now() if project.archived else None,
+            # Время правки из файла (без зоны значит UTC): по нему список сортирует «недавние».
+            "updated_at": project.updated_at if project.updated_at.tzinfo else project.updated_at.replace(tzinfo=UTC),
         }
         insert = pg_insert(ProjectRow).values(**values)
         stmt = insert.on_conflict_do_update(
@@ -135,7 +142,10 @@ class PostgresProjectLocator:
                 "lang": insert.excluded.lang,
                 "team": insert.excluded.team,
                 "shared_enabled": insert.excluded.shared_enabled,
-                "updated_at": func.now(),
+                "pinned": insert.excluded.pinned,
+                "supervisor_name": insert.excluded.supervisor_name,
+                "archived_at": insert.excluded.archived_at,
+                "updated_at": insert.excluded.updated_at,
                 "deleted_at": None,
             },
             where=ProjectRow.owner_user_id == actor.id,

@@ -281,10 +281,10 @@ def test__matrix__stranger_responses__never_name_the_project(world: _World) -> N
 
 def test__matrix__lists_and_search__do_not_reveal_foreign_projects(world: _World) -> None:
     with world.alice as client:
-        assert [p["name"] for p in client.get("/api/v1/projects").json()] == [PROJECT_NAME]
+        assert [p["name"] for p in client.get("/api/v1/projects").json()["items"]] == [PROJECT_NAME]
     for session in (world.bob, world.admin):
         with session as client:
-            assert client.get("/api/v1/projects").json() == []
+            assert client.get("/api/v1/projects").json()["items"] == []
             for query in ("Секретная", "курсовая", "alice", world.project_id):
                 suggestions = client.get("/api/v1/projects/suggestions", params={"q": query})
                 assert PROJECT_NAME not in suggestions.text
@@ -297,13 +297,13 @@ def test__matrix__sharing_then_revoking__opens_and_closes_the_project(world: _Wo
     _share_with_bob_as_reader(world)
     with world.bob as client:
         assert client.get(base).status_code == 200
-        assert [p["name"] for p in client.get("/api/v1/projects").json()] == [PROJECT_NAME]
+        assert [p["name"] for p in client.get("/api/v1/projects").json()["items"]] == [PROJECT_NAME]
     with world.alice as client:
         revoked = client.delete(f"{base}/members/user:{world.bob_id}", headers=world.alice.headers)
         assert revoked.status_code in {200, 204}, revoked.text
     with world.bob as client:
         assert client.get(base).status_code == 404
-        assert client.get("/api/v1/projects").json() == []
+        assert client.get("/api/v1/projects").json()["items"] == []
 
 
 def test__access_panel__reader_sees_the_list_but_only_the_owner_searches_people(world: _World) -> None:

@@ -161,17 +161,18 @@ test.describe("Полный смоук сервера", () => {
     browser,
   }) => {
     aliceProject = await createProject(alice, "Смоук Алисы");
-    const own = await alice.json<{ id: string }[]>(
-      await alice.get("/api/v1/projects"),
+    // На сервере список проектов отдаётся страницей { items, total, limit, offset }.
+    const own = await alice.json<{ items: { id: string }[] }>(
+      await alice.get("/api/v1/projects?limit=200"),
       200,
     );
-    expect(own.map((item) => item.id)).toContain(aliceProject.id);
+    expect(own.items.map((item) => item.id)).toContain(aliceProject.id);
 
-    const theirs = await bob.json<{ id: string }[]>(
-      await bob.get("/api/v1/projects"),
+    const theirs = await bob.json<{ items: { id: string }[] }>(
+      await bob.get("/api/v1/projects?limit=200"),
       200,
     );
-    expect(theirs.map((item) => item.id)).not.toContain(aliceProject.id);
+    expect(theirs.items.map((item) => item.id)).not.toContain(aliceProject.id);
     const foreign = await bob.get(`/api/v1/projects/${aliceProject.id}`);
     const missing = await bob.get(
       "/api/v1/projects/00000000000000000000000000000000",

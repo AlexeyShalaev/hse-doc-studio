@@ -1,4 +1,4 @@
-"""Копия name/kind/lang проекта в таблице projects и сверка каталога с томом.
+"""Копия name/kind/lang, закрепления, архива и руководителя проекта в таблице projects и сверка каталога с томом.
 
 Источник правды о содержимом проекта остаётся project.json. Таблица держит копию для списков и
 админки: её обновляет декоратор над репозиторием проектов на каждый save, а на старте сверка
@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 from dataclasses import dataclass, field
+from datetime import UTC
 from pathlib import Path
 from uuid import UUID
 
@@ -31,16 +32,36 @@ class ProjectCatalogMirror:
         self._sessions = sessions
 
     async def mirror(self, project_id: UUID, project: Project) -> bool:
-        """Переносит name/kind/lang в строку каталога; False, если строки нет или копия уже совпадает."""
+        """Переносит в строку каталога то, что нужно спискам: name/kind/lang, закрепление, архив и руководителя.
+
+        False, если строки нет или копия уже совпадает. Время архивации берётся при первом переходе в архив.
+        """
+        supervisor = project.supervisor.name if project.supervisor else None
+        archived = ProjectRow.archived_at.is_not(None)
+        # Старые project.json хранят время без зоны: это UTC, как и всё время студии.
+        edited = project.updated_at if project.updated_at.tzinfo else project.updated_at.replace(tzinfo=UTC)
         stmt = (
             update(ProjectRow)
             .where(
                 ProjectRow.id == project_id,
                 (ProjectRow.name != project.name)
                 | (ProjectRow.kind != project.kind.value)
-                | (ProjectRow.lang != project.lang.value),
+                | (ProjectRow.lang != project.lang.value)
+                | (ProjectRow.pinned != project.pinned)
+                | (archived != project.archived)
+                | ProjectRow.supervisor_name.is_distinct_from(supervisor)
+                | (ProjectRow.updated_at != edited),
             )
-            .values(name=project.name, kind=project.kind.value, lang=project.lang.value, updated_at=func.now())
+            .values(
+                name=project.name,
+                kind=project.kind.value,
+                lang=project.lang.value,
+                pinned=project.pinned,
+                archived_at=func.coalesce(ProjectRow.archived_at, func.now()) if project.archived else None,
+                supervisor_name=supervisor,
+                # Время правки из файла: по нему список проектов сортирует «недавние».
+                updated_at=edited,
+            )
             .returning(ProjectRow.id)
         )
         async with self._sessions.use() as session:
