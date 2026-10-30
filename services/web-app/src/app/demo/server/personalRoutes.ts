@@ -213,6 +213,7 @@ export const createPersonalRoutes = (
         provider_id: provider.id,
         flavor: provider.type === "ollama" ? "ollama" : "openai",
         url: provider.base_url,
+        announced: false,
       });
     }
     return out;

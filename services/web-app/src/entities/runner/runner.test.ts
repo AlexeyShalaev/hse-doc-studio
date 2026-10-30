@@ -97,6 +97,7 @@ const REMOTE = {
       provider_id: "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d",
       flavor: "ollama",
       url: "http://localhost:11434/v1",
+      announced: false,
     },
   ],
   pairing: null,

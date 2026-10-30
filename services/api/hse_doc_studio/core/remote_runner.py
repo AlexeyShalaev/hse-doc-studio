@@ -135,6 +135,9 @@ class RemoteAiEndpointInfo:
     provider_id: str
     flavor: str
     url: str
+    # Дошёл ли адрес до сервера. Объявлять умеет только протокол 1.1 (`/announce`), до него False:
+    # интерфейс не должен выдавать выбранные модели за уже открытые облаку.
+    announced: bool = False
 
 
 @dataclass(frozen=True)

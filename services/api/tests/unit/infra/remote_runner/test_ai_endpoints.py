@@ -101,6 +101,8 @@ async def test__update__choose_models__reannounces_without_restart_and_shows_url
     )
 
     assert [(e.name, e.url) for e in status.ai_endpoints] == [("ollama", "http://localhost:11434/v1")]
+    # Без /announce сервер о модели не знает: статус не выдаёт её за открытую облаку.
+    assert [e.announced for e in status.ai_endpoints] == [False]
     assert sessions.sessions[0].announced == [("ollama",)]
     assert len(sessions.specs) == 1
     await supervisor.stop()

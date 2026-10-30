@@ -192,6 +192,8 @@ export const RemoteAiEndpointSchema = z.strictObject({
   provider_id: z.string(),
   flavor: AiEndpointFlavorSchema,
   url: z.string(),
+  /** false: модель выбрана, но сервер о ней ещё не знает; показывать «ещё не объявлена». */
+  announced: z.boolean(),
 });
 export type RemoteAiEndpoint = z.infer<typeof RemoteAiEndpointSchema>;
 

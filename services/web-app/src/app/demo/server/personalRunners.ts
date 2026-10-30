@@ -404,6 +404,8 @@ const OLLAMA_ENDPOINT = {
   provider_id: "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d",
   flavor: "ollama" as const,
   url: "http://localhost:11434/v1",
+  // Как у настоящей Студии до протокола 1.1: выбранная модель ещё не объявлена серверу.
+  announced: false,
 };
 
 export const createRemoteRunner = (

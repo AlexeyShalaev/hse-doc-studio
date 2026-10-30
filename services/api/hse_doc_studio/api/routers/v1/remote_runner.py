@@ -56,7 +56,9 @@ def status_body(info: RemoteRunnerStatusInfo) -> RemoteRunnerStatus:
         docker=info.docker.value,
         tex_image=info.tex_image.value,
         ai_endpoints=[
-            RemoteRunnerAiEndpoint(name=e.name, provider_id=e.provider_id, flavor=e.flavor, url=e.url)
+            RemoteRunnerAiEndpoint(
+                name=e.name, provider_id=e.provider_id, flavor=e.flavor, url=e.url, announced=e.announced
+            )
             for e in info.ai_endpoints
         ],
         pairing=(

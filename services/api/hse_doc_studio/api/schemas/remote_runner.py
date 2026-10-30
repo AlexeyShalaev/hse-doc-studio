@@ -29,6 +29,8 @@ class RemoteRunnerAiEndpoint(StrictModel):
     provider_id: str
     flavor: Literal["openai", "ollama"]
     url: str
+    # false: выбран здесь, но сервер о нём ещё не знает (без `/announce` не объявляется).
+    announced: bool
 
 
 class RemoteRunnerPairingInfo(StrictModel):
