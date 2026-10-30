@@ -34,6 +34,9 @@ jobs:
         run: uv run ruff format --check
       - name: Mypy
         run: uv run mypy hse_doc_studio
+      # Справочник переменных окружения генерируется из Settings; поле без description тоже падает здесь.
+      - name: Env reference in sync with Settings
+        run: uv run --frozen --all-extras python ../../scripts/gen_env_reference.py --check
       # Гейт релиза: release-notes.json корректен, у версии из __init__.py есть
       # заметки, CHANGELOG.md им соответствует. Падает в релизном PR (там и бампится
       # версия), то есть ДО тега и публикации образа. Скрипту хватает stdlib.

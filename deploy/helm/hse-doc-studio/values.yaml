@@ -1,0 +1,115 @@
+# Значения по умолчанию. Секреты в values не храните: используйте secrets.existingSecret.
+# Postgres и S3 внешние, в чарт они не входят.
+
+image:
+  repository: ghcr.io/alexeyshalaev/hse-doc-studio
+  # Пусто значит appVersion чарта.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Внешний адрес Студии (обязательно): по схеме выбирается Secure у cookie, адрес входит в допустимые Origin.
+publicUrl: ""
+# Обратные прокси перед api: IP или CIDR, по ним определяется адрес клиента.
+trustedProxies: []
+
+# Числовые uid/gid пользователя app из образа (см. deploy/all-in-one/Dockerfile): без них runAsNonRoot не проходит.
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+
+# Реплика одна, стратегия Recreate: том проектов монтируется ReadWriteOnce и пишется одним процессом.
+api:
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 2Gi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  # Дополнительные HSE_STUDIO__* (имя: значение), например HSE_STUDIO__LOGGING__LEVEL.
+  extraEnv: {}
+
+# Том исходников проектов (projects_root/<project_id>) и данных api.
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClassName: ""
+  accessModes: [ReadWriteOnce]
+  size: 20Gi
+  annotations: {}
+
+# Внешний Postgres. DSN лежит в секрете (ключ dsn), см. secrets.
+database:
+  dsn: ""
+
+s3:
+  endpoint: ""
+  bucket: studio
+  region: ""
+  accessKey: ""
+  secretKey: ""
+
+mail:
+  host: ""
+  port: 587
+  username: ""
+  password: ""
+  fromAddress: no-reply@localhost
+
+# Секреты. Либо существующий Secret с ключами из списка ниже, либо чарт создаст свой из значений.
+# Ключи: dsn, secrets-key, s3-access-key, s3-secret-key, runner-bootstrap-token,
+# а также необязательные smtp-password, health-token, metrics-token.
+secrets:
+  existingSecret: ""
+  # Ключ шифрования секретов в базе (Fernet). Потеря делает сохранённые секреты нечитаемыми.
+  secretsKey: ""
+  runnerBootstrapToken: ""
+  healthToken: ""
+  metricsToken: ""
+
+# Миграции схемы выполняет отдельный Job перед обновлением (helm pre-upgrade).
+# На первой установке схему ведёт сам api под advisory-локом.
+migrations:
+  enabled: true
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  # Долгий опрос раннера держит запрос до 25 секунд: таймаут чтения не меньше 60 секунд, буферизация выключена.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "75"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "75"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-body-size: 64m
+  tls:
+    enabled: false
+    secretName: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+# Раннер задач. Запускает TeX и проверки в соседних контейнерах через docker.sock узла:
+# сокет эквивалентен root на узле, включайте только на выделенных узлах (nodeSelector).
+runner:
+  enabled: false
+  replicas: 1
+  concurrency: 1
+  tags: ""
+  officeUrl: ""
+  # Каталог данных раннера. Соседние контейнеры видят пути узла, поэтому hostPath монтируется по тому же пути.
+  dataDir: /var/lib/hse-runner
+  dockerSocket: /var/run/docker.sock
+  dockerGid: 0
+  # Каталог на узле создаётся от root (hostPath, fsGroup на него не действует): раннер доходит до него
+  # через initContainer, который выдаёт его пользователю podSecurityContext.
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

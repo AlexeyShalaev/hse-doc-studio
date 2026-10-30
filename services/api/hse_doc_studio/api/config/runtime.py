@@ -106,9 +106,11 @@ class CorsConfig(BaseModel):
         ],
         description="Allowed origins",
     )
-    allow_credentials: bool = Field(default=True)
-    allow_methods: list[str] = Field(default=["*"])
-    allow_headers: list[str] = Field(default=["*"])
+    allow_credentials: bool = Field(
+        default=True, description="Отдавать Access-Control-Allow-Credentials (cookie и заголовки авторизации)."
+    )
+    allow_methods: list[str] = Field(default=["*"], description="Разрешённые методы CORS.")
+    allow_headers: list[str] = Field(default=["*"], description="Разрешённые заголовки запроса CORS.")
 
 
 class LoggingConfig(BaseModel):

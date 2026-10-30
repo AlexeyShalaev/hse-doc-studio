@@ -87,6 +87,12 @@ test-unit:
 changelog:
 	python scripts/gen_changelog.py
 
+env-reference:
+	cd services/api && uv run --frozen --all-extras python ../../scripts/gen_env_reference.py
+
+env-reference-check:
+	cd services/api && uv run --frozen --all-extras python ../../scripts/gen_env_reference.py --check
+
 changelog-check:
 	python scripts/gen_changelog.py --check
 

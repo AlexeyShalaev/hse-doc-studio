@@ -47,6 +47,14 @@ nav = [
         { "Визуальный редактор" = "workbench/editor-visual.md" },
         { "ИИ-агент" = "workbench/agent.md" },
     ] },
+    { "Развёртывание" = [
+        { "Общий сервер" = "deploy/index.md" },
+        { "Установка сервера" = "deploy/install.md" },
+        { "Люди и вход" = "deploy/accounts.md" },
+        { "Раннеры" = "deploy/runners.md" },
+        { "Безопасность и ПДн" = "deploy/security.md" },
+        { "Бэкап и обновление" = "deploy/operations.md" },
+    ] },
     { "Справочник" = [
         { "Карта справочника" = "reference/index.md" },
         { "Пак и шаблоны" = "reference/pack.md" },
@@ -56,6 +64,7 @@ nav = [
         { "Глоссарий" = "reference/glossary.md" },
         { "Раскладка на диске" = "reference/layout.md" },
         { "Что уходит в сеть" = "reference/privacy.md" },
+        { "Переменные окружения" = "deploy/env-reference.md" },
     ] },
     { "Что нового" = "whatsnew/index.md" },
 ]
