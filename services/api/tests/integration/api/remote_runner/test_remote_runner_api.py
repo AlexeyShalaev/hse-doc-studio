@@ -44,7 +44,9 @@ async def env(tmp_path: Path) -> AsyncIterator[Env]:
     )
     await supervisor.start()
     container = create_test_container(data_dir, remote_runner=supervisor)
-    async with AsyncClient(transport=ASGITransport(app=create_test_app(container)), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=create_test_app(container)), base_url="http://localhost"
+    ) as client:
         yield Env(client, server, sessions, supervisor)
     await supervisor.stop()
     await container.close()
@@ -165,3 +167,28 @@ async def test__delete__paired__deregisters_and_turns_off(env: Env) -> None:
     body = resp.json()
     assert (body["state"], body["paired"], body["enabled"]) == ("off", False, False)
     assert len(env.server.deregistered) == 1
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        # DNS-rebinding: имя злоумышленника перепривязано на 127.0.0.1, Host выдаёт чужую страницу.
+        {"Host": "evil.example:17240"},
+        # Тот же адрес, но запрос пришёл со страницы чужого сайта.
+        {"Origin": "http://evil.example"},
+    ],
+)
+async def test__foreign_host_or_origin__cannot_point_the_studio_at_a_server(env: Env, headers: dict[str, str]) -> None:
+    resp = await env.client.put(_BASE, json={"enabled": True, "server_url": _URL}, headers=headers)
+    status = await _status(env.client)
+
+    assert (resp.status_code, resp.json()["code"]) == (403, "forbidden")
+    assert (status["enabled"], status["server_url"]) == (False, None)
+
+
+async def test__studio_page_origin__allowed(env: Env) -> None:
+    resp = await env.client.put(
+        _BASE, json={"enabled": True, "server_url": _URL}, headers={"Origin": "http://localhost:5173"}
+    )
+
+    assert resp.status_code == 200, resp.text

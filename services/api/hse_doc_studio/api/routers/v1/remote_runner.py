@@ -8,10 +8,11 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from dishka.integrations.fastapi import FromDishka
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.local_host_guard import require_trusted_local_host
 from hse_doc_studio.api.schemas.remote_runner import (
     RemoteRunnerAiEndpoint,
     RemoteRunnerPairingInfo,
@@ -29,7 +30,8 @@ from hse_doc_studio.core.remote_runner import (
 )
 from hse_doc_studio.use_cases.remote_runner.update_remote_runner import UpdateRemoteRunnerInput, UpdateRemoteRunnerUC
 
-router = APIRouter(route_class=SafeDishkaRoute)
+# Ручки направляют облачные сборки и локальные модели на сервер: страница с чужим Host сюда не попадает.
+router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_trusted_local_host)])
 
 _ERROR_STATUS: dict[RemoteRunnerErrorCode, int] = {
     RemoteRunnerErrorCode.url_invalid: 422,
