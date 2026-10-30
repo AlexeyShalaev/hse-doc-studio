@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, Select, case, func, literal, null, select, text, update
+from sqlalchemy import ColumnElement, Select, and_, case, func, literal, null, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -27,14 +27,32 @@ from hse_doc_studio.core.jobs.queue import (
     QueuedJob,
     RunnerRef,
 )
-from hse_doc_studio.core.jobs.routing import JobRoute, RouteReason, RunnerScope
+from hse_doc_studio.core.jobs.registry import build_job_kinds
+from hse_doc_studio.core.jobs.routing import (
+    KEPT_FALLBACK_REASONS,
+    JobRoute,
+    ProjectBuildRunners,
+    RouteReason,
+    RunnerScope,
+)
 from hse_doc_studio.core.jobs.scheduler import AFFINITY_WAIT, QueueQuota, assign_vtime, retry_available
 from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow
+from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 # Ключ advisory-блокировки, которая выстраивает выдачу в очередь, когда действуют лимиты: иначе два раннера
 # одновременно увидят свободное место у пользователя и оба возьмут его задачи сверх лимита.
 _CAPS_LOCK_KEY = 0x4A4F4253  # "JOBS"
+# Виды, которые может взять личный раннер владельца проекта (без проверки подписи и ретрансляции).
+_PERSONAL_KINDS = sorted(spec.kind.value for spec in build_job_kinds() if spec.policy.personal_runner_allowed)
+_KEPT_REASONS = sorted(reason.value for reason in KEPT_FALLBACK_REASONS)
+
+
+def _uuid_or_none(value: str | None) -> UUID | None:
+    try:
+        return UUID(value) if value is not None else None
+    except ValueError:
+        return None
 
 
 def _utcnow() -> datetime:
@@ -97,12 +115,14 @@ class PostgresJobQueue:
         now = self._clock()
         async with self._sessions.use() as session:
             # Строка пользователя блокируется до конца транзакции: его метки выдаются строго по очереди.
-            await session.execute(pg_insert(FairShareRow).values(user_id=request.user_id).on_conflict_do_nothing())
-            user_vtime = (
-                await session.execute(
-                    select(FairShareRow.vtime).where(FairShareRow.user_id == request.user_id).with_for_update()
-                )
-            ).scalar_one()
+            user_vtime: float | None = None
+            if request.fair_share:
+                await session.execute(pg_insert(FairShareRow).values(user_id=request.user_id).on_conflict_do_nothing())
+                user_vtime = (
+                    await session.execute(
+                        select(FairShareRow.vtime).where(FairShareRow.user_id == request.user_id).with_for_update()
+                    )
+                ).scalar_one()
             global_vtime = (await session.execute(select(JobQueueStateRow.global_vtime))).scalar_one()
             superseded: list[JobRow] = []
             if request.coalesce_key is not None:
@@ -127,10 +147,15 @@ class PostgresJobQueue:
                     .where(JobRow.state == JobState.running.value, JobRow.coalesce_key == request.coalesce_key)
                     .values(cancel_requested=True)
                 )
-            vtime = assign_vtime(user_vtime, global_vtime, request.cost, request.weight)
-            await session.execute(
-                update(FairShareRow).where(FairShareRow.user_id == request.user_id).values(vtime=vtime)
-            )
+            if request.fair_share:
+                vtime = assign_vtime(user_vtime, global_vtime, request.cost, request.weight)
+                vcost = request.cost / request.weight
+                await session.execute(
+                    update(FairShareRow).where(FairShareRow.user_id == request.user_id).values(vtime=vtime)
+                )
+            else:
+                # Без справедливости (ретрансляция ИИ): задача встаёт на текущее время, метка человека не тратится.
+                vtime, vcost = global_vtime, 0.0
             row = JobRow(
                 id=request.job_id,
                 kind=request.kind.value,
@@ -149,6 +174,13 @@ class PostgresJobQueue:
                 coalesce_key=request.coalesce_key,
                 affinity_runner_id=request.affinity_runner_id,
                 cancel_requested=False,
+                route=request.route.value,
+                route_owner_id=request.route_owner_id,
+                personal_until=request.personal_until,
+                target_runner_id=request.target_runner_id,
+                route_reason=request.route_reason.value if request.route_reason is not None else None,
+                vcost=vcost,
+                timeout_personal_s=request.timeout_personal_s,
             )
             session.add(row)
             await session.flush()
@@ -158,6 +190,7 @@ class PostgresJobQueue:
     async def claim(self, runner: RunnerRef, *, lease_s: float, quota: QueueQuota | None = None) -> QueuedJob | None:
         now = self._clock()
         limits = quota or QueueQuota()
+        personal = runner.scope is RunnerScope.personal
         async with self._sessions.use() as session:
             await session.execute(
                 pg_insert(JobRunnerPollRow)
@@ -167,11 +200,18 @@ class PostgresJobQueue:
                     set_={"last_seen_at": now, "concurrency": runner.concurrency},
                 )
             )
-            if not limits.is_unlimited:
-                await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CAPS_LOCK_KEY})
-            row: JobRow | None = (
-                await session.execute(self._best_candidate(runner, limits, now, lease_s))
-            ).scalar_one_or_none()
+            if personal:
+                # Личный раннер квот установки не тратит: блокировка квот ему не нужна.
+                stmt = self._personal_candidate(runner)
+            else:
+                if not runner.accept_jobs:
+                    return None
+                if not limits.is_unlimited:
+                    await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CAPS_LOCK_KEY})
+                stmt = self._best_candidate(runner, limits, now, lease_s)
+            if stmt is None:
+                return None
+            row: JobRow | None = (await session.execute(stmt)).scalar_one_or_none()
             if row is None:
                 return None
             row.state = JobState.running.value
@@ -179,11 +219,77 @@ class PostgresJobQueue:
             row.runner_id = runner.id
             row.lease_until = now + timedelta(seconds=lease_s)
             row.started_at = now
-            await session.flush()
-            await session.execute(
-                update(JobQueueStateRow).values(global_vtime=func.greatest(JobQueueStateRow.global_vtime, row.vtime))
-            )
+            if personal:
+                await self._take_personal(session, row)
+            else:
+                await self._take_shared(session, row)
             return job_from_row(row)
+
+    @staticmethod
+    async def _take_personal(session: AsyncSession, row: JobRow) -> None:
+        row.runner_scope = RunnerScope.personal.value
+        row.route_reason = (
+            RouteReason.pinned.value if row.route == JobRoute.pinned.value else RouteReason.personal.value
+        )
+        if row.timeout_personal_s is not None:
+            # Предел без квоты на время личной попытки; предел с квотой ждёт возврата в очередь.
+            row.timeout_s, row.timeout_personal_s = row.timeout_personal_s, row.timeout_s
+        await session.flush()
+        if row.vcost:
+            # Личный раннер не двигает глобальное время и возвращает метку справедливости.
+            await session.execute(
+                update(FairShareRow)
+                .where(FairShareRow.user_id == row.user_id)
+                .values(vtime=func.greatest(func.coalesce(FairShareRow.vtime, 0) - row.vcost, 0))
+            )
+
+    @staticmethod
+    async def _take_shared(session: AsyncSession, row: JobRow) -> None:
+        row.runner_scope = RunnerScope.shared.value
+        if row.route == JobRoute.personal_first.value and row.route_reason not in _KEPT_REASONS:
+            row.route_reason = RouteReason.fallback_timeout.value
+        await session.flush()
+        await session.execute(
+            update(JobQueueStateRow).values(global_vtime=func.greatest(JobQueueStateRow.global_vtime, row.vtime))
+        )
+
+    async def expire_personal_wait(
+        self,
+        *,
+        owner_id: str | None = None,
+        project_id: UUID | None = None,
+        reason: RouteReason = RouteReason.fallback_offline,
+    ) -> int:
+        now = self._clock()
+        stmt = update(JobRow).where(
+            JobRow.state == JobState.queued.value,
+            JobRow.route == JobRoute.personal_first.value,
+            JobRow.personal_until > now,
+        )
+        if owner_id is not None:
+            stmt = stmt.where(JobRow.route_owner_id == owner_id)
+        if project_id is not None:
+            stmt = stmt.where(JobRow.project_id == project_id)
+        async with self._sessions.use() as session:
+            result = await session.execute(stmt.values(personal_until=now, route_reason=reason.value))
+            return int(result.rowcount)  # type: ignore[attr-defined]
+
+    async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
+        stmt = update(JobRow).where(JobRow.state == JobState.queued.value, JobRow.route == JobRoute.pinned.value)
+        if runner_id is not None:
+            stmt = stmt.where(JobRow.target_runner_id == runner_id)
+        stmt = (
+            stmt.values(
+                state=JobState.cancelled.value,
+                finished_at=self._clock(),
+                cancel_requested=True,
+                error_code=error_code,
+            )
+            .returning(JobRow)
+            .execution_options(populate_existing=True)
+        )
+        async with self._sessions.use() as session:
+            return tuple(job_from_row(row) for row in (await session.execute(stmt)).scalars())
 
     async def heartbeat(self, job_id: UUID, attempt: int, *, lease_s: float) -> Heartbeat:
         async with self._sessions.use() as session:
@@ -247,8 +353,16 @@ class PostgresJobQueue:
                     row.state = JobState.cancelled.value
                     row.finished_at = now
                 elif retry_available(row.attempt, row.max_attempts):
+                    if row.runner_scope == RunnerScope.personal.value:
+                        # Личный раннер пропал: повтор где угодно, предел с квотой возвращается.
+                        if row.route == JobRoute.personal_first.value:
+                            row.personal_until = now
+                        row.route_reason = RouteReason.fallback_lost.value
+                        if row.timeout_personal_s is not None:
+                            row.timeout_s, row.timeout_personal_s = row.timeout_personal_s, row.timeout_s
                     row.state = JobState.queued.value
                     row.runner_id = None
+                    row.runner_scope = None
                     row.started_at = None
                     row.affinity_runner_id = None
                     requeued = True
@@ -284,7 +398,15 @@ class PostgresJobQueue:
         job = aliased(JobRow, name="j")
         running = aliased(JobRow, name="r")
         busy = aliased(JobRow, name="b")
-        conditions = [job.state == JobState.queued.value, job.tags.contained_by(sorted(runner.tags))]
+        conditions = [
+            job.state == JobState.queued.value,
+            job.tags.contained_by(sorted(runner.tags)),
+            job.kind != JobKind.ai_relay.value,
+            or_(
+                job.route == JobRoute.shared.value,
+                and_(job.route == JobRoute.personal_first.value, job.personal_until <= now),
+            ),
+        ]
         user_cap = _cap_expression(
             limits.max_running_per_user,
             (job.user_id, limits.user_caps),
@@ -293,7 +415,11 @@ class PostgresJobQueue:
         if user_cap is not None:
             of_user = (
                 select(func.count())
-                .where(running.state == JobState.running.value, running.user_id == job.user_id)
+                .where(
+                    running.state == JobState.running.value,
+                    running.runner_scope == RunnerScope.shared.value,
+                    running.user_id == job.user_id,
+                )
                 .scalar_subquery()
             )
             conditions.append(user_cap.is_(None) | (of_user < user_cap))
@@ -301,7 +427,11 @@ class PostgresJobQueue:
         if org_cap is not None:
             of_org = (
                 select(func.count())
-                .where(running.state == JobState.running.value, running.org_id == job.org_id)
+                .where(
+                    running.state == JobState.running.value,
+                    running.runner_scope == RunnerScope.shared.value,
+                    running.org_id == job.org_id,
+                )
                 .scalar_subquery()
             )
             conditions.append(job.org_id.is_(None) | org_cap.is_(None) | (of_org < org_cap))
@@ -329,6 +459,57 @@ class PostgresJobQueue:
         return (
             select(job)
             .where(*conditions)
+            .order_by(job.priority_class, job.vtime, job.queued_at, job.seq)
+            .limit(1)
+            .with_for_update(skip_locked=True, of=job)
+            .execution_options(populate_existing=True)
+        )
+
+    @staticmethod
+    def _personal_candidate(runner: RunnerRef) -> Select[Any] | None:
+        """Задачи проектов хозяина раннера (проверка владельца и политики в момент выдачи) и его ретрансляции."""
+        owner = runner.owner_id
+        if owner is None:
+            return None
+        owner_uuid = _uuid_or_none(owner)
+        job = aliased(JobRow, name="j")
+        branches: list[ColumnElement[bool]] = []
+        if runner.accept_jobs:
+            author_allowed: ColumnElement[bool] = ProjectRow.build_runners == ProjectBuildRunners.owner.value
+            if owner_uuid is not None:
+                author_allowed = or_(job.user_id == owner_uuid, author_allowed)
+            project_allows = (
+                select(literal(1))
+                .where(
+                    ProjectRow.id == job.project_id,
+                    ProjectRow.owner_user_id == owner,
+                    ProjectRow.deleted_at.is_(None),
+                    author_allowed,
+                )
+                .exists()
+            )
+            branches.append(
+                and_(
+                    job.route == JobRoute.personal_first.value,
+                    job.route_owner_id == owner,
+                    job.kind.in_(_PERSONAL_KINDS),
+                    project_allows,
+                )
+            )
+        if runner.accept_relay and owner_uuid is not None:
+            branches.append(
+                and_(
+                    job.route == JobRoute.pinned.value,
+                    job.target_runner_id == runner.id,
+                    job.kind == JobKind.ai_relay.value,
+                    job.user_id == owner_uuid,
+                )
+            )
+        if not branches:
+            return None
+        return (
+            select(job)
+            .where(job.state == JobState.queued.value, job.tags.contained_by(sorted(runner.tags)), or_(*branches))
             .order_by(job.priority_class, job.vtime, job.queued_at, job.seq)
             .limit(1)
             .with_for_update(skip_locked=True, of=job)

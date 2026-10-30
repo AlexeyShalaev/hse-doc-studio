@@ -170,6 +170,20 @@ class IJobQueue(Protocol):
         """Задачи с истёкшей арендой: назад в очередь, пока остались попытки, иначе `failed` с `runner_lost`."""
         ...
 
+    async def expire_personal_wait(
+        self,
+        *,
+        owner_id: str | None = None,
+        project_id: UUID | None = None,
+        reason: RouteReason = RouteReason.fallback_offline,
+    ) -> int:
+        """Закрыть окно ожидания queued personal_first задач (всех, владельца или проекта); вернуть число."""
+        ...
+
+    async def cancel_pinned(self, *, runner_id: UUID | None, error_code: str) -> tuple[QueuedJob, ...]:
+        """Отменить queued pinned задачи раннера (или всех при None)."""
+        ...
+
     async def get(self, job_id: UUID) -> QueuedJob | None: ...
 
     async def list(self, *, state: JobState | None = None, project_id: UUID | None = None) -> tuple[QueuedJob, ...]: ...
