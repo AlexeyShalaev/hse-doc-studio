@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiClient, getCsrfToken, setCsrfToken } from "@shared/api";
+import { ApiError, apiClient, getCsrfToken, setCsrfToken } from "@shared/api";
 import { i18n } from "@shared/lib";
 import {
   LOCAL_BOOTSTRAP,
@@ -152,5 +152,24 @@ describe("AccountMenu", () => {
     });
     expect(client.getQueryData(["projects", "list"])).toEqual(["mine"]);
     expect(getCsrfToken()).toBe("tok");
+  });
+
+  it("treats an already expired session as a completed logout", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(apiClient, "post").mockRejectedValue(
+      new ApiError("Unauthorized", "unauthenticated", 401),
+    );
+    const client = mount(serverUser);
+    setCsrfToken("tok");
+    client.setQueryData(["projects", "list"], ["mine"]);
+
+    await user.click(screen.getByTestId("account-menu-trigger"));
+    await user.click(await screen.findByTestId("account-menu-logout"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("where")).toHaveTextContent(/^\/login$/);
+    });
+    expect(client.getQueryData(["projects", "list"])).toBeUndefined();
+    expect(getCsrfToken()).toBeNull();
   });
 });

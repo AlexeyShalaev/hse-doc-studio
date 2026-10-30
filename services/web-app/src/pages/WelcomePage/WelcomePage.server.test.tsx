@@ -123,12 +123,12 @@ describe("главная в серверном режиме", () => {
     cleanup();
   });
 
-  it("нет кнопки «Открыть папку», остаются клонирование и создание", () => {
+  it("нет кнопок «Открыть папку» и «Клонировать из git», остаётся создание", () => {
     mount();
     expect(screen.queryByRole("button", { name: /Открыть папку/ })).toBeNull();
     expect(
-      screen.getAllByRole("button", { name: "Клонировать из git" }),
-    ).toHaveLength(1);
+      screen.queryByRole("button", { name: "Клонировать из git" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Новый проект" })).toBeVisible();
     expect(screen.getByText("Сервер · Общее хранилище")).toBeVisible();
   });

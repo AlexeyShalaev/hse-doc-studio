@@ -22,11 +22,11 @@ export const GroupsTab = ({ slug }: { slug: string }) => {
   const [failure, setFailure] = useState<Failure | null>(null);
 
   const status =
-    groups.isError || members.isError
-      ? "error"
-      : groups.isPending || members.isPending
-        ? "loading"
-        : "ready";
+    groups.data !== undefined && members.data !== undefined
+      ? "ready"
+      : groups.isError || members.isError
+        ? "error"
+        : "loading";
 
   return (
     <GroupsView

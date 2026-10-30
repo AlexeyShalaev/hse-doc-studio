@@ -7,6 +7,7 @@ export {
   setUnauthorizedHandler,
 } from "./session";
 export { parseResp, SchemaParseError } from "./parse";
+export { startRedirectFlow } from "./redirectFlow";
 export { failureCode } from "./failure";
 export type {
   LocalizedString,

@@ -4,6 +4,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem
@@ -21,6 +23,8 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
+from hse_doc_studio.core.value_objects import Author
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.use_cases.submission.create_submission import (
@@ -135,6 +139,7 @@ class Harness:
             render_form_uc=MagicMock(),
             dispatcher=self.dispatcher,
             file_probes=self.probes,
+            access=LocalProjectAccessChecker(),
         )
 
     @property
@@ -343,6 +348,24 @@ async def test__create_submission__agent_tool_without_actor__actor_local(tmp_pat
     await h.create(None)
 
     assert h.dispatcher.specs[-1].actor == Actor.local()
+
+
+async def test__create_submission__team_foreign_author__access_denied_before_any_work(tmp_path) -> None:
+    h = Harness(tmp_path, [_doc("tz", ".pdf")], {"tz/_custom/tz.pdf"})
+    h.project.staffing = "team"
+    h.project.authors = [Author(name="Алиса", slug="alice"), Author(name="Боб", slug="bob")]
+    access = MagicMock(require=AsyncMock(side_effect=ProjectForbiddenError()))
+    h.uc._access = access
+
+    with pytest.raises(ProjectForbiddenError):
+        await h.uc.execute(
+            CreateSubmissionInput(
+                project_id=h.project.id, profile_id="final", items=[], extra_items=[], author_slug="bob"
+            )
+        )
+
+    access.require.assert_awaited_once_with(h.project.id, Action.SUBMISSION_CREATE, "bob")
+    assert h.events == []
 
 
 async def test__create_submission__request_actor__passed_to_job(tmp_path) -> None:

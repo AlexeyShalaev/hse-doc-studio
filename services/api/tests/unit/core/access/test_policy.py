@@ -72,6 +72,7 @@ _MATRIX = {
         Action.BUILD_RUN,
         Action.AGENT_USE,
         Action.HISTORY_WRITE,
+        Action.HISTORY_REWRITE,
         Action.SUBMISSION_READ,
         Action.SUBMISSION_CREATE,
     },
@@ -283,3 +284,14 @@ def test__files_write_by_instance_id__editor_writes_own_doc_not_others_nor_owner
     assert can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--alex"))
     assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--boris"))
     assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr"))
+
+
+def test__history_rewrite__team_editor__only_owner_or_edit_all() -> None:
+    plain = _acl(Grant(Role.editor, persona_slug="ivanov"), team=True)
+    edit_all = _acl(Grant(Role.editor, persona_slug="ivanov", can_edit_all=True), team=True)
+
+    assert decide(USER, Action.HISTORY_REWRITE, plain) is Decision.forbidden
+    assert can(USER, Action.HISTORY_WRITE, plain)
+    assert can(USER, Action.HISTORY_REWRITE, edit_all)
+    assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.owner), team=True))
+    assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.editor)))

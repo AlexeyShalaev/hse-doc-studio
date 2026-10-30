@@ -98,7 +98,7 @@ class _Provider(Provider):
         super().__init__()
         self.e = env
         self._delivery = LinkDelivery(env.sender, env.outbox)
-        self._create = CreateInviteUC(env.invites, self._delivery, env.audit, public_url="https://studio.test")
+        self._create = CreateInviteUC(env.invites, self._delivery, env.audit, env.uow, public_url="https://studio.test")
 
     @provide
     def resolver(self) -> IActorResolver:

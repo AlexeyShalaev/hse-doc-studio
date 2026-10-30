@@ -60,6 +60,8 @@ class InMemoryJobQueue:
                     )
                     self._jobs[job.id] = done
                     superseded.append(done)
+                elif job.state is JobState.running and job.coalesce_key == request.coalesce_key:
+                    self._jobs[job.id] = replace(job, cancel_requested=True)
         vtime = assign_vtime(self._user_vtime.get(request.user_id), self._global_vtime, request.cost, request.weight)
         self._user_vtime[request.user_id] = vtime
         self._seq += 1
@@ -140,6 +142,8 @@ class InMemoryJobQueue:
         error_code: str | None = None,
     ) -> QueuedJob:
         job = self._current(job_id, attempt)
+        if job.cancel_requested and status is JobStatus.succeeded:
+            status, result, error_code = JobStatus.cancelled, None, None
         done = replace(
             job,
             state=JobState.of_status(status),

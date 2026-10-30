@@ -171,3 +171,39 @@ def test_collector_skips_symlinks_unchanged_and_unlisted(tmp_path: Path) -> None
 def test_collector_size_limit(tmp_path: Path) -> None:
     (tmp_path / "big.pdf").write_bytes(b"x" * 10)
     assert collect_outputs(tmp_path, ["*.pdf"], max_file_bytes=5) == ()
+
+
+async def test_evict_removes_least_recently_used_idle_workspaces(tmp_path: Path) -> None:
+    store = _Store({"a": b"a" * 100})
+    cache = BlobCache(tmp_path, store.fetch)
+    spaces = RunnerWorkspaces(tmp_path, cache, max_bytes=150)
+    manifest = (_entry("a.tex", b"a" * 100),)
+    for index, project in enumerate(("old", "mid", "new")):
+        async with spaces.open(project, manifest):
+            pass
+        os.utime(tmp_path / "workspaces" / project, (1000 + index, 1000 + index))
+
+    removed = spaces.evict(keep=frozenset({"new"}))
+
+    assert removed == 2
+    assert sorted(p.name for p in (tmp_path / "workspaces").iterdir()) == ["new"]
+
+
+async def test_evict_skips_busy_workspace(tmp_path: Path) -> None:
+    store = _Store({"a": b"a" * 100})
+    spaces = RunnerWorkspaces(tmp_path, BlobCache(tmp_path, store.fetch), max_bytes=1)
+    async with spaces.open("busy", (_entry("a.tex", b"a" * 100),)):
+        assert spaces.evict() == 0
+    assert spaces.evict() == 1
+
+
+async def test_directory_in_place_of_file_is_replaced(tmp_path: Path) -> None:
+    store = _Store({"a": b"alpha"})
+    _, spaces = _make(tmp_path, store)
+    manifest = (_entry("a.tex", b"alpha"),)
+    async with spaces.open("p", manifest) as ws:
+        (ws.root / "a.tex").unlink()
+        (ws.root / "a.tex").mkdir()
+        (ws.root / "a.tex" / "x").write_text("x")
+    async with spaces.open("p", manifest) as ws:
+        assert (ws.root / "a.tex").read_bytes() == b"alpha"

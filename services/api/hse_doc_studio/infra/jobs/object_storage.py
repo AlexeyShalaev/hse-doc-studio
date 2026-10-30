@@ -20,6 +20,7 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.storage.errors import ObjectStoreError
 from hse_doc_studio.core.storage.ingest import OutputRejectedError, OutputSpec, output_prefix
 from hse_doc_studio.core.storage.keys import is_sha256
+from hse_doc_studio.core.storage.manifest import IBlobRegistry
 from hse_doc_studio.core.storage.ports import IBlobStore, IObjectStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 
@@ -36,11 +37,20 @@ class _Announced:
 class ObjectJobBlobStore:
     """Входные блобы задачи: те же объекты, что кладёт загрузчик манифеста проекта."""
 
-    def __init__(self, blobs: IBlobStore) -> None:
+    def __init__(self, blobs: IBlobStore, registry: IBlobRegistry | None = None) -> None:
         self._blobs = blobs
+        self._registry = registry
 
     async def exists(self, sha256: str) -> bool:
-        return is_sha256(sha256) and await self._blobs.head(sha256) is not None
+        if not is_sha256(sha256):
+            return False
+        if await self._blobs.head(sha256) is not None:
+            return True
+        # Реестр считает блоб загруженным, а объекта нет (бакет восстановили старее базы): без записи
+        # следующая сборка манифеста догрузит файл, иначе каждая сборка с ним падала бы с blob_missing.
+        if self._registry is not None:
+            await self._registry.forget([sha256])
+        return False
 
     async def url_for(self, sha256: str) -> str | None:
         link = await self._blobs.presign_get(sha256)

@@ -71,7 +71,7 @@ class SetupWorld:
 
     def settings_uc(self, state: SetupStateService | None = None) -> ApplyInitialSettingsUC:
         service = AuthSettingsService(self.settings, self.env)
-        update = UpdateAuthSettingsUC(service, self.settings, self.audit)
+        update = UpdateAuthSettingsUC(service, self.settings, self.audit, FakeUow())
         return ApplyInitialSettingsUC(service, update, self.oidc, state or self.state())
 
     def complete_uc(self, state: SetupStateService | None = None) -> CompleteSetupUC:

@@ -50,6 +50,7 @@ from tests.fakes.auth import (
     empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryInstanceSettingsRepository, InMemoryUserRepository
+from tests.fakes.ops import NoopUow
 from tests.unit.use_cases.identity.conftest import FakeSender
 
 NOW = datetime.now(UTC)
@@ -99,7 +100,8 @@ class _Provider(Provider):
         super().__init__()
         self.e = env
         self.auth = AuthSettingsService(env.settings, env.auth_env)
-        update = UpdateAuthSettingsUC(self.auth, env.settings, env.audit)
+        uow = NoopUow()
+        update = UpdateAuthSettingsUC(self.auth, env.settings, env.audit, uow)
         group = GetAuthGroupUC(self.auth, env.oidc)
         smtp = SmtpSettingsService(env.settings, env.cipher, env.smtp_env)
         self.uc: dict[type, object] = {
@@ -107,13 +109,13 @@ class _Provider(Provider):
             UpdateRegistrationUC: UpdateRegistrationUC(update, group),
             UpdateAuthMethodsUC: UpdateAuthMethodsUC(update, self.auth, env.oidc, group),
             GetSmtpSettingsUC: GetSmtpSettingsUC(smtp),
-            UpdateSmtpSettingsUC: UpdateSmtpSettingsUC(smtp, env.settings, env.audit),
+            UpdateSmtpSettingsUC: UpdateSmtpSettingsUC(smtp, env.settings, env.audit, uow),
             SendTestMailUC: SendTestMailUC(env.sender, env.users, env.audit),
             ListOidcProvidersUC: ListOidcProvidersUC(env.oidc),
             GetOidcProviderUC: GetOidcProviderUC(env.oidc),
-            CreateOidcProviderUC: CreateOidcProviderUC(env.oidc, env.cipher, env.audit),
-            UpdateOidcProviderUC: UpdateOidcProviderUC(env.oidc, env.cipher, self.auth, env.audit),
-            DeleteOidcProviderUC: DeleteOidcProviderUC(env.oidc, self.auth, env.audit),
+            CreateOidcProviderUC: CreateOidcProviderUC(env.oidc, env.cipher, env.audit, uow),
+            UpdateOidcProviderUC: UpdateOidcProviderUC(env.oidc, env.cipher, self.auth, env.audit, uow),
+            DeleteOidcProviderUC: DeleteOidcProviderUC(env.oidc, self.auth, env.audit, uow),
         }
         for kind, instance in self.uc.items():
             self._register(kind, instance)

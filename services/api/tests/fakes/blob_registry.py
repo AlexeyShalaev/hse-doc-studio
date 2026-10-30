@@ -37,6 +37,10 @@ class InMemoryBlobRegistry:
     async def known(self, shas: Collection[str]) -> set[str]:
         return {sha for sha in shas if sha in self.blobs}
 
+    async def forget(self, shas: Collection[str]) -> None:
+        for sha in shas:
+            self.blobs.pop(sha, None)
+
     async def hash_cache(self, project_id: UUID, paths: Collection[str]) -> dict[str, HashCacheEntry]:
         return {path: self.cache[project_id, path] for path in paths if (project_id, path) in self.cache}
 

@@ -156,6 +156,7 @@ async def _runner() -> int:
     import contextlib  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
+    from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
     from hse_doc_studio.infra.di.containers.runner import create_runner_container  # noqa: PLC0415
     from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
     from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
@@ -169,6 +170,9 @@ async def _runner() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     container = create_runner_container(config)
     try:
+        # Контейнеры сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
+        if (swept := await sweep_build_containers()) > 0:
+            logging.getLogger(__name__).warning("removed %d leftover build containers", swept)
         loop = await container.get(RunnerLoop)
         running = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):

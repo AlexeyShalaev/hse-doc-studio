@@ -17,11 +17,12 @@ from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.files import ManifestFile
-from hse_doc_studio.core.jobs.queue import QueuedJob, RunnerRef
+from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.runners import Runner
 from hse_doc_studio.core.storage.manifest import ManifestFileTooLargeError, ManifestLimits
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 
+from tests.fakes.job_apply import InMemoryApplyLedger
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.job_quotas import FixedProjectOrgs
 from tests.fakes.runners import InMemoryRunnerRepository
@@ -543,3 +544,51 @@ async def test__submit__no_user_latex_passes__template_value_stays(rig: Rig) -> 
     job = await rig.claim()
     envelope = decode_envelope({**job.payload, "attempt": 1, "job_token": "t"})
     assert envelope.spec.payload.default_passes == 5  # type: ignore[attr-defined]
+
+
+async def test__submit__build_timeout_setting__sets_the_enqueued_timeout(rig: Rig) -> None:
+    async def configured() -> float | None:
+        return 120.0
+
+    dispatcher = QueueJobDispatcher(
+        rig.queue, rig.uploader, rig.runners, build_timeout_source=configured, poll_interval_s=0.005
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    assert rig.queue._jobs[spec.id].timeout_s == 120.0
+
+
+async def test__cancel__lands_while_enqueueing__job_is_cancelled_in_the_queue(rig: Rig) -> None:
+    original = rig.queue.enqueue
+    spec = rig.spec()
+
+    async def enqueue_after_cancel(request: EnqueueRequest) -> EnqueueOutcome:
+        assert await rig.dispatcher.cancel(spec.id) is True
+        return await original(request)
+
+    rig.queue.enqueue = enqueue_after_cancel  # type: ignore[method-assign]
+    hooks = Hooks()
+    rig.dispatcher.submit(spec, hooks)
+    await _until(lambda: hooks.events == ["on_finished"])
+
+    assert hooks.finished[0][0].status is JobStatus.cancelled
+    stored = await rig.queue.get(spec.id)
+    assert stored is not None
+    assert stored.state is JobState.cancelled
+
+
+async def test__submit__record_rejected__result_is_marked_applied(rig: Rig) -> None:
+    ledger = InMemoryApplyLedger(rig.queue)
+    dispatcher = QueueJobDispatcher(rig.queue, rig.uploader, rig.runners, ledger=ledger, poll_interval_s=0.005)
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks(started=False))
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+    await rig.claim()
+    await rig.queue.complete(spec.id, 1, JobStatus.cancelled)
+    await _until(lambda: not dispatcher.is_active(spec.id))
+
+    assert await ledger.list_unapplied() == ()

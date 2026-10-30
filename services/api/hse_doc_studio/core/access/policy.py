@@ -73,6 +73,8 @@ def _extra_condition(action: Action, acl: ProjectAcl, grant: Grant, path: str | 
             return grant.role is Role.owner or not acl.team or _is_own_package(grant, path)
         case Action.FILES_WRITE:
             return path_in_author_scope(acl, grant, path)
+        case Action.HISTORY_REWRITE:
+            return not acl.team or grant.role is Role.owner or grant.can_edit_all
         case _:
             return True
 
@@ -89,5 +91,9 @@ def _may_sign_slot(grant: Grant, slot_id: str | None) -> bool:
 
 
 def _is_own_package(grant: Grant, author_slug: str | None) -> bool:
-    """Редактор team-проекта сдаёт только пакет автора, к которому привязан."""
+    """Редактор team-проекта сдаёт только пакет автора, к которому привязан.
+
+    Без слага (гард маршрута, тело запроса ещё не прочитано) хватает привязки к персоне; слаг из запроса
+    сценарий сдачи проверяет сам через IProjectAccessChecker.
+    """
     return grant.persona_slug is not None and (author_slug is None or author_slug == grant.persona_slug)

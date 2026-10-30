@@ -81,7 +81,7 @@ class RunnerProvider(Provider):
 
     @provide
     def get_workspaces(self, config: RunnerConfig, cache: BlobCache) -> RunnerWorkspaces:
-        return RunnerWorkspaces(config.data_dir, cache)
+        return RunnerWorkspaces(config.data_dir, cache, config.workspaces_max_bytes)
 
     @provide
     def get_outputs(self) -> IJobOutputs:

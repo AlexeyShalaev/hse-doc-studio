@@ -122,5 +122,6 @@ class HandlerJobExecutor:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BLOB_UNAVAILABLE, str(exc)) from exc
         keep = frozenset(entry.sha256 for entry in envelope.manifest if entry.sha256)
         await asyncio.to_thread(self._cache.evict, self._cache_max_bytes, keep)
+        await asyncio.to_thread(self._workspaces.evict, frozenset({str(spec.project_id)}))
         ctx.log(f"{spec.kind}: done")
         return JobOutcome(JobResult(status=JobStatus.succeeded, data=data), outputs)

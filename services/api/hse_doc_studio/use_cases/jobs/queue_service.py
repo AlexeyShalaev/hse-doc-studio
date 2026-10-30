@@ -18,6 +18,7 @@ import structlog
 from hse_doc_studio.core.jobs.enums import JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import ExpiredOutcome, Heartbeat, IJobQueue, QueuedJob
+from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger(__name__)
 
@@ -47,7 +48,9 @@ class JobQueueService:
         lease_s: float = LEASE_S,
         timeout_grace_s: float = TIMEOUT_GRACE_S,
         clock: Callable[[], datetime] = _utc_now,
+        wakeup: JobWakeup | None = None,
     ) -> None:
+        self._wakeup = wakeup
         self._queue = queue
         self._lease_s = lease_s
         self._grace = timedelta(seconds=timeout_grace_s)
@@ -98,6 +101,8 @@ class JobQueueService:
                 requeued=outcome.requeued,
                 state=outcome.job.state.value,
             )
+        if self._wakeup is not None and any(outcome.requeued for outcome in outcomes):
+            self._wakeup.notify()
         return outcomes
 
     async def enforce_timeouts(self) -> TimeoutSweep:

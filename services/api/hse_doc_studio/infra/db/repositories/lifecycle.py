@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import delete, exists, func, or_, select, update
@@ -14,6 +16,7 @@ from hse_doc_studio.core.identity.lifecycle import DeletionBlockers, ErasureRepo
 from hse_doc_studio.infra.db.orm import (
     ApiTokenRow,
     AuditLogRow,
+    CompileRecordRow,
     GroupMemberRow,
     GroupRow,
     MailOutboxRow,
@@ -21,14 +24,17 @@ from hse_doc_studio.infra.db.orm import (
     OrgRow,
     ProjectMemberRow,
     ProjectRow,
+    QuotaRow,
     RunnerRegistrationTokenRow,
     RunnerRow,
     SessionRow,
+    SubmissionRow,
     UserIdentityRow,
     UserRow,
     UserSettingRow,
 )
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository, user_data_folder
 
 _AUDIT_EXPORT_LIMIT = 5000
 
@@ -38,8 +44,9 @@ def _iso(value: datetime | None) -> str | None:
 
 
 class SqlUserLifecycle:
-    def __init__(self, sessions: SessionProvider) -> None:
+    def __init__(self, sessions: SessionProvider, data_dir: Path | None = None) -> None:
         self._sessions = sessions
+        self._data_dir = data_dir
 
     async def blockers(self, user_id: str) -> DeletionBlockers:
         peer = aliased(OrgMemberRow)
@@ -89,11 +96,37 @@ class SqlUserLifecycle:
                 .where(RunnerRegistrationTokenRow.created_by == user_id)
                 .values(created_by=None)
             )
+            # Имя человека в записях сборок и сдач снимок, внешний ключ обнуляет только actor_id.
+            await db.execute(
+                update(CompileRecordRow).where(CompileRecordRow.actor_id == user_id).values(actor_name=None)
+            )
+            await db.execute(update(SubmissionRow).where(SubmissionRow.actor_id == user_id).values(actor_name=None))
+            await db.execute(delete(QuotaRow).where(QuotaRow.owner_kind == "user", QuotaRow.owner_id == user_id))
             # Остальное уходит каскадом по внешним ключам на users.id (тест архитектуры следит, что их не забыли).
             await db.execute(delete(UserRow).where(UserRow.id == user_id))
+        self._remove_personal_folder(user_id)
         return ErasureReport(
             audit_anonymized=anonymized, api_tokens=int(tokens), sessions=int(sessions), settings=int(settings)
         )
+
+    def _remove_personal_folder(self, user_id: str) -> None:
+        """Личные роли агента лежат файлом вне базы (`users/<хеш>`): без этого после удаления остаётся текст."""
+        if self._data_dir is not None:
+            shutil.rmtree(user_data_folder(self._data_dir, user_id), ignore_errors=True)
+
+    def _personas(self, user_id: str) -> list[dict[str, object]]:
+        if self._data_dir is None:
+            return []
+        repo = JsonAgentPersonaRepository(user_data_folder(self._data_dir, user_id))
+        return [
+            {
+                "label": p.label,
+                "description": p.description,
+                "instruction": p.instruction,
+                "created_at": _iso(p.created_at),
+            }
+            for p in repo.list_all()
+        ]
 
     async def export(self, user_id: str) -> Mapping[str, object]:
         async with self._sessions.use() as db:
@@ -188,6 +221,7 @@ class SqlUserLifecycle:
                     for s in sessions
                 ],
                 "settings": {s.key: s.value for s in settings},
+                "agent_personas": self._personas(user_id),
                 "organizations": [{"slug": slug, "name": name, "role": role} for slug, name, role in orgs],
                 "groups": [{"organization": slug, "name": name} for slug, name in groups],
                 "projects_owned": [

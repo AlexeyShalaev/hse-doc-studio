@@ -10,6 +10,10 @@ export const PROJECT_ROLES: readonly ProjectRole[] = [
   "owner",
 ];
 
+/** Роли без права правки: читатель и рецензент. В локальном режиме роли нет, правка открыта. */
+export const isReadOnlyRole = (role: ProjectRole | null | undefined): boolean =>
+  role === "reader" || role === "reviewer";
+
 /**
  * Названия ролей на проекте (Читатель, Рецензент, Редактор, Владелец): один
  * словарь для карточек, тостов отказа и будущих экранов доступа. Термины те же,

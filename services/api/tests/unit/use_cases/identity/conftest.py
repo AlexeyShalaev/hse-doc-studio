@@ -195,11 +195,11 @@ class World:
         return ConfirmEmailChangeUC(self.users, self.auth_tokens, self.audit, self.uow, self.clock)
 
     def update_settings_uc(self) -> UpdateAuthSettingsUC:
-        return UpdateAuthSettingsUC(self.settings_service(), self.settings, self.audit)
+        return UpdateAuthSettingsUC(self.settings_service(), self.settings, self.audit, self.uow)
 
     def create_invite_uc(self) -> CreateInviteUC:
         return CreateInviteUC(
-            self.invites, self.delivery(), self.audit, public_url="https://studio.test", clock=self.clock
+            self.invites, self.delivery(), self.audit, self.uow, public_url="https://studio.test", clock=self.clock
         )
 
     def list_invites_uc(self) -> ListInvitesUC:

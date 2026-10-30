@@ -23,10 +23,10 @@ Redis не нужен: очередь задач работает на Postgres.
 ```bash
 cd deploy/server
 cp .env.example .env     # заполните обязательные значения, подсказки внутри файла
-sudo mkdir -p /var/lib/hse-runner   # каталог раннера, владелец см. ниже
+sudo mkdir -p /var/lib/hse-runner   # каталог раннера
+sudo chown 10001:10001 /var/lib/hse-runner   # владелец: пользователь app образа
 docker compose up -d
 docker compose --profile services up -d      # добавить LanguageTool и ONLYOFFICE
-docker compose up -d --scale runner=3        # три раннера
 ```
 
 Реплики из профиля `services` подключаются к api переменными `LANGUAGETOOL_REPLICAS` и `OFFICE_EDITOR_REPLICAS`
@@ -34,8 +34,11 @@ docker compose up -d --scale runner=3        # три раннера
 
 Каталог раннера принадлежит пользователю `app` внутри образа. Узнать его uid и gid:
 `docker run --rm --entrypoint id ghcr.io/alexeyshalaev/hse-doc-studio app`.
-При нескольких репликах `--scale runner=N` у каждой должен быть свой каталог данных: используйте
-отдельные compose-проекты или запускайте раннеры на разных машинах.
+Один раннер на хост и каталог данных: токен регистрации одноразовый, `--scale runner=N` не поддерживается.
+Дополнительные раннеры запускайте на других машинах со своими токенами из админки.
+
+api слушает только `127.0.0.1` (`BIND_ADDRESS` в `.env`): обратный прокси с TLS должен работать на том же хосте,
+иначе задайте `BIND_ADDRESS` явно.
 
 Проверка файла без запуска: `docker compose config -q`; все профили сразу:
 `docker compose --profile services --profile ai config -q`.
@@ -72,8 +75,12 @@ api стартует в `server`, только когда реестр гото�
 ## Обратный прокси и долгий опрос
 
 Раннер держит запрос опроса до 25 секунд. Перед api задайте read-timeout не меньше 60 секунд и
-отключите буферизацию ответов (nginx: `proxy_read_timeout 75s; proxy_buffering off;`).
+отключите буферизацию ответов (nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`).
 Не забудьте указать адрес прокси в `TRUSTED_PROXIES`.
+
+Загрузка проекта (`POST /projects/import`) идёт большим телом. Поднимите `client_max_body_size` до значения
+`HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` плюс запас около 1 МБ (по умолчанию `client_max_body_size 501m;`).
+Само api обрывает слишком большое тело с 413 ещё до записи во временный файл.
 
 ## Обновление и бэкап
 
@@ -82,6 +89,6 @@ api на старте под advisory-локом, совместимость в�
 
 Бэкап:
 
-- база: `docker compose exec postgres pg_dump -U studio studio > studio.sql`;
-- тома `minio-data` (исходники, блобы и выходы), `api-data` (проекты, `users/**` с ролями агента и `gnupg/` со связкой OpenPGP: копируйте том целиком) и `onlyoffice-data`;
+- база: `docker compose exec -T postgres pg_dump -U studio studio > studio.sql`;
+- тома `minio-data` (блобы и выходы сборки), `api-data` (исходники проектов, `users/**` с ролями агента и `gnupg/` со связкой OpenPGP: копируйте том целиком) и `onlyoffice-data`;
 - `SECRETS_KEY` отдельно от дампов: без него секреты в базе не прочитать.

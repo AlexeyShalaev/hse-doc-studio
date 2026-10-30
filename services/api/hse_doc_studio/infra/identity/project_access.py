@@ -15,17 +15,17 @@ from hse_doc_studio.core.errors import NotFoundError
 class LocalProjectAccessChecker:
     """Локальный режим: актор один и права не ограничены, репозиторий членства не нужен."""
 
-    async def require(self, project_id: UUID, action: Action) -> None:
+    async def require(self, project_id: UUID, action: Action, path: str | None = None) -> None:
         return None
 
 
 class ServerProjectAccessChecker:
-    async def require(self, project_id: UUID, action: Action) -> None:
+    async def require(self, project_id: UUID, action: Action, path: str | None = None) -> None:
         actor = require_actor()
         if actor.is_local:
             return
         acl = await self._acl.load_for(actor, project_id)
-        decision = decide(actor, action, acl)
+        decision = decide(actor, action, acl, path)
         if decision is Decision.not_found:
             raise NotFoundError("Project not found")
         if decision is Decision.forbidden:

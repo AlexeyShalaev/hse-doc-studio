@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 import secrets
 from dataclasses import dataclass, replace
@@ -27,6 +28,16 @@ _STATUS_ERRORS = {
     UserStatus.pending_approval: IdentityErrorCode.pending_approval,
     UserStatus.disabled: IdentityErrorCode.account_disabled,
 }
+
+
+def _failed_details(ip: str | None, email: str, user: User | None) -> dict[str, str | None]:
+    """Адрес пишем, только если он принадлежит аккаунту: в поле e-mail нередко вставляют пароль.
+
+    Для неизвестного адреса остаётся короткий отпечаток, чтобы повторы одного ввода были заметны в журнале.
+    """
+    if user is not None:
+        return {"ip": ip, "email": email}
+    return {"ip": ip, "email_hash": hashlib.sha256(email.encode()).hexdigest()[:12]}
 
 
 @dataclass(frozen=True)
@@ -87,7 +98,9 @@ class LoginUC:
         if user is None or stored is None or not password_ok:
             await self._attempts.record_failure(key, now, login_delay)
             await self._audit.record(
-                "auth.login_failed", actor_id=user.id if user else None, details={"ip": ip, "email": email_normalized}
+                "auth.login_failed",
+                actor_id=user.id if user else None,
+                details=_failed_details(ip, email_normalized, user),
             )
             raise IdentityError(IdentityErrorCode.invalid_credentials)
 

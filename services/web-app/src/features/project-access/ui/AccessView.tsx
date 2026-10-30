@@ -23,6 +23,9 @@ export type AccessViewProps = {
   onQuery: (q: string) => void;
   candidates?: ProjectAccessCandidate[];
   candidatesLoading?: boolean;
+  /** Поиск кандидатов не удался: это не то же самое, что «никого нет». */
+  candidatesError?: boolean;
+  onRetryCandidates?: () => void;
   adding?: boolean;
   /** Идентификатор смотрящего: его строка помечается. */
   selfId?: string | null;
@@ -61,6 +64,8 @@ export const AccessView = ({
   onQuery,
   candidates = [],
   candidatesLoading = false,
+  candidatesError = false,
+  onRetryCandidates,
   adding = false,
   selfId = null,
   onRetry,
@@ -196,10 +201,10 @@ export const AccessView = ({
                   <>
                     <div
                       style={{ width: 150 }}
-                      aria-label={t("panel.roleAria", { name: entry.name })}
                       data-testid={`access-role-${key}`}
                     >
                       <Select
+                        ariaLabel={t("panel.roleAria", { name: entry.name })}
                         value={entry.role}
                         isDisabled={busy}
                         options={roleOptions(GRANTABLE)}
@@ -273,12 +278,9 @@ export const AccessView = ({
                 data-testid="access-search"
               />
             </div>
-            <div
-              style={{ width: 150 }}
-              aria-label={t("panel.add.role")}
-              data-testid="access-new-role"
-            >
+            <div style={{ width: 150 }} data-testid="access-new-role">
               <Select
+                ariaLabel={t("panel.add.role")}
                 value={role}
                 options={roleOptions(GRANTABLE)}
                 onValueChange={(next) => {
@@ -296,7 +298,29 @@ export const AccessView = ({
               <span className="dim">{t("panel.add.loading")}</span>
             </div>
           )}
+          {!candidatesLoading && candidatesError && (
+            <div data-testid="access-search-error">
+              <Notice
+                tone="err"
+                role="alert"
+                text={t("panel.add.error")}
+                action={
+                  onRetryCandidates && (
+                    <button
+                      type="button"
+                      className="btn xs"
+                      onClick={onRetryCandidates}
+                      data-testid="access-search-retry"
+                    >
+                      {t("panel.retry")}
+                    </button>
+                  )
+                }
+              />
+            </div>
+          )}
           {!candidatesLoading &&
+            !candidatesError &&
             query.trim() !== "" &&
             candidates.length === 0 && (
               <p

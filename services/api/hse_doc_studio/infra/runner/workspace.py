@@ -36,6 +36,19 @@ class BlobIntegrityError(Exception):
     """Скачанные байты не совпали с заявленными sha256 или размером."""
 
 
+class WorkspaceStuckError(Exception):
+    """В рабочей папке остался каталог, который не удалить (чужой владелец): папку нужно создать заново."""
+
+
+def _tree_size(path: Path) -> int:
+    total = 0
+    for current, _, files in os.walk(path, followlinks=False):
+        for name in files:
+            with contextlib.suppress(OSError):
+                total += (Path(current) / name).lstat().st_size
+    return total
+
+
 def _is_sha256(value: str) -> bool:
     return len(value) == _SHA_LEN and all(c in "0123456789abcdef" for c in value)
 
@@ -145,9 +158,10 @@ class Workspace:
 class RunnerWorkspaces:
     """Тёплые рабочие папки по проектам; одновременно в папке работает одна задача."""
 
-    def __init__(self, root: Path, cache: BlobCache) -> None:
+    def __init__(self, root: Path, cache: BlobCache, max_bytes: int | None = None) -> None:
         self._root = root / "workspaces"
         self._cache = cache
+        self._max_bytes = max_bytes
         self._locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._root.mkdir(parents=True, exist_ok=True)
 
@@ -159,8 +173,60 @@ class RunnerWorkspaces:
         async with self._locks[project_id]:
             root = self._root / project_id
             root.mkdir(parents=True, exist_ok=True)
-            baseline = await self._sync(root, manifest)
-            yield Workspace(root=root, baseline=baseline)
+            try:
+                try:
+                    baseline = await self._sync(root, manifest)
+                except (WorkspaceStuckError, PermissionError):
+                    # Сборка оставила то, что раннер не может убрать: начинаем с чистой папки.
+                    await asyncio.to_thread(self._reset, root)
+                    baseline = await self._sync(root, manifest)
+                yield Workspace(root=root, baseline=baseline)
+            finally:
+                # Время последнего использования для вытеснения по LRU.
+                with contextlib.suppress(OSError):
+                    os.utime(root)
+
+    def _inventory(self) -> tuple[list[tuple[float, int, Path]], int]:
+        entries: list[tuple[float, int, Path]] = []
+        total = 0
+        for path in self._root.iterdir():
+            try:
+                mtime = path.lstat().st_mtime
+            except OSError:
+                continue
+            size = _tree_size(path)
+            total += size
+            entries.append((mtime, size, path))
+        return entries, total
+
+    def evict(self, keep: frozenset[str] = frozenset()) -> int:
+        """Удаляет давно не использованные папки проектов, пока все вместе не уложатся в предел.
+
+        Занятые (замок взят) и перечисленные в `keep` не трогаются; возвращает число удалённых.
+        """
+        if self._max_bytes is None:
+            return 0
+        entries, total = self._inventory()
+        removed = 0
+        for _, size, path in sorted(entries):
+            if total <= self._max_bytes:
+                break
+            lock = self._locks.get(path.name)
+            if path.name in keep or (lock is not None and lock.locked()):
+                continue
+            shutil.rmtree(path, ignore_errors=True)
+            if path.exists():
+                continue
+            total -= size
+            removed += 1
+        return removed
+
+    @staticmethod
+    def _reset(root: Path) -> None:
+        shutil.rmtree(root, ignore_errors=True)
+        if root.exists():
+            raise WorkspaceStuckError(root.name)
+        root.mkdir(parents=True, exist_ok=True)
 
     async def _sync(self, root: Path, manifest: tuple[ManifestFile, ...]) -> dict[str, str]:
         wanted: dict[str, ManifestFile] = {}
@@ -198,7 +264,9 @@ class RunnerWorkspaces:
             _ensure_real_dir(root / parent)
         target = root / rel
         if target.is_dir() and not target.is_symlink():
-            shutil.rmtree(target)
+            shutil.rmtree(target, ignore_errors=True)
+            if target.exists():
+                raise WorkspaceStuckError(rel)
         tmp = target.with_name(f".tmp-{uuid.uuid4().hex[:12]}")
         try:
             shutil.copyfile(blob, tmp)

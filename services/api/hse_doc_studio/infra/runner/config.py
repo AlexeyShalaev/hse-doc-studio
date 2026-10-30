@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import socket
 from pathlib import Path
 
@@ -46,6 +47,9 @@ class RunnerConfig(BaseSettings):
     )
     office_timeout_s: float = Field(default=180.0, gt=0, description="Предел одной конвертации.")
     cache_max_bytes: int = Field(default=2 * _GIB, gt=0, description="Предел кэша блобов; лишнее вытесняется по LRU.")
+    workspaces_max_bytes: int = Field(
+        default=20 * _GIB, gt=0, description="Предел тёплых папок проектов; давно не использованные удаляются по LRU."
+    )
     tex_image: str = Field(default=DEFAULT_IMAGE, description="Образ TeX Live для сборки; ставится на хосте заранее.")
     tex_cache_volume: str = Field(default=DEFAULT_CACHE_VOLUME, description="Том docker с кэшем TeX.")
     tex_idle_timeout_s: float = Field(default=DEFAULT_IDLE_TIMEOUT_S, gt=0, description="Тишина сборки до убийства.")
@@ -62,8 +66,14 @@ class RunnerConfig(BaseSettings):
     def executor_limits(self) -> ExecutorLimits | None:
         if not self.isolation:
             return None
+        # Контейнер идёт от имени раннера, иначе файлы сборки достаются root и раннер не уберёт их из папки проекта.
+        user = f"{os.getuid()}:{os.getgid()}" if hasattr(os, "getuid") and os.getuid() != 0 else None
         return ExecutorLimits(
-            cpus=self.build_cpus, memory=self.build_memory, pids_limit=self.build_pids, tmpfs_tmp=self.build_tmp_size
+            cpus=self.build_cpus,
+            memory=self.build_memory,
+            pids_limit=self.build_pids,
+            tmpfs_tmp=self.build_tmp_size,
+            user=user,
         )
 
     def explicit_tags(self) -> frozenset[str] | None:

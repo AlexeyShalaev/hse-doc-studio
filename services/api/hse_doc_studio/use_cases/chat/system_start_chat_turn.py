@@ -287,6 +287,7 @@ class SystemStartChatTurnUC:
             chat_repo=self._chat_repo,
             bus=self._bus,
             config=settings.agent,
+            access=self._access,
             context_service=self._context_service,
             summarizer=self._summarizer,
             allowed_tools=await self._enabled_tools(),

@@ -34,7 +34,7 @@ from hse_doc_studio.api.validation_errors import install_validation_error_handle
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor, set_current_actor
-from hse_doc_studio.core.access.entities import Actor, ProjectAcl, Role
+from hse_doc_studio.core.access.entities import Actor, ActorSource, ProjectAcl, Role
 from hse_doc_studio.core.access.policy import Decision, decide, required_role
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
@@ -219,7 +219,10 @@ def _enforce_scope(actor: Actor, request: Request) -> None:
         raise IdentityError(IdentityErrorCode.forbidden)
     if scope is RouteScope.local_only:
         raise IdentityError(IdentityErrorCode.not_found)
-    if scope in {RouteScope.instance_admin, RouteScope.org_admin} and not actor.is_instance_admin:
+    # Токен доступа (PAT) админа админских функций не открывает: утёкший токен работал бы без CSRF.
+    if scope in {RouteScope.instance_admin, RouteScope.org_admin} and (
+        not actor.is_instance_admin or actor.source is ActorSource.pat
+    ):
         # Админка не должна выдавать себя чужому: нет прав, значит нет и маршрута.
         if scope is RouteScope.org_admin or route_path_of(request).startswith(ADMIN_PREFIX):
             raise IdentityError(IdentityErrorCode.not_found)

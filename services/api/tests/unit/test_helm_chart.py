@@ -130,7 +130,14 @@ def test_existing_secret_skips_chart_secret() -> None:
 
 @pytest.mark.parametrize(
     "bad",
-    ["publicUrl=studio", "persistence.size=lots", "service.type=Bogus", "runner.concurrency=0", "unknownKey=1"],
+    [
+        "publicUrl=studio",
+        "persistence.size=lots",
+        "service.type=Bogus",
+        "runner.concurrency=0",
+        "runner.replicas=2",
+        "unknownKey=1",
+    ],
 )
 def test_schema_rejects_invalid_values(bad: str) -> None:
     assert _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", bad).returncode != 0

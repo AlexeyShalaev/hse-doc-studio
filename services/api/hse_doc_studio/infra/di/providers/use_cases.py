@@ -3149,12 +3149,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         submission_profile_service: SubmissionProfileService,
+        access: IProjectAccessChecker,
     ) -> PreviewSubmissionCustomDocsUC:
         return PreviewSubmissionCustomDocsUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             submission_profile_service=submission_profile_service,
+            access=access,
         )
 
     @provide
@@ -3174,6 +3176,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
         archive: ISubmissionArchive,
+        access: IProjectAccessChecker,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -3189,6 +3192,7 @@ class UseCaseProvider(Provider):
             render_form_uc=render_form_uc,
             dispatcher=dispatcher,
             file_probes=file_probes,
+            access=access,
             archive=archive,
         )
 
@@ -3373,6 +3377,7 @@ class UseCaseProvider(Provider):
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
+        access: IProjectAccessChecker,
     ) -> StartChatTurnUC:
         return StartChatTurnUC(
             locator=locator,
@@ -3387,6 +3392,7 @@ class UseCaseProvider(Provider):
             context_service=context_service,
             summarizer=summarizer,
             agent_persona_repo=agent_persona_repo,
+            access=access,
         )
 
     @provide

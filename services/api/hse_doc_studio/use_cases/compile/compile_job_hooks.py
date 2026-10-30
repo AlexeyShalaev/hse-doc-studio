@@ -54,6 +54,10 @@ class CompileJobHooks:
         self._project_folder = project_folder
         self._started_at: datetime | None = None
 
+    @property
+    def project_folder(self) -> Path:
+        return self._project_folder
+
     async def on_started(self, spec: JobSpec) -> bool:
         record = await self._compile_repo.get_for_project(self._project_folder, spec.id)
         if record is None:

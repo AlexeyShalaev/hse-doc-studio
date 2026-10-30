@@ -77,8 +77,12 @@ jobs:
           tags: ghcr.io/alexeyshalaev/hse-doc-studio:ci
           build-args: |
             HSE_STUDIO_BUILT=${{ steps.build.outputs.date }}
+            BACKEND_EXTRAS=--extra server
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke (server extra) — образ обязан уметь серверный режим
+        run: docker run --rm ghcr.io/alexeyshalaev/hse-doc-studio:ci python -c "import sqlalchemy, asyncpg, alembic, boto3, joserfc"
 
       - name: Smoke (compose) — не публикуем то, что не поднимается
         working-directory: deploy/all-in-one
@@ -124,6 +128,7 @@ jobs:
           # release-please бампит __version__/pyproject/package.json в релизном PR.
           build-args: |
             HSE_STUDIO_BUILT=${{ steps.build.outputs.date }}
+            BACKEND_EXTRAS=--extra server
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

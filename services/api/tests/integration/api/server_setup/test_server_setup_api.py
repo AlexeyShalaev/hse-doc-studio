@@ -142,7 +142,9 @@ class _Provider(Provider):
     def apply_settings(self) -> ApplyInitialSettingsUC:
         w = self._w
         service = w.auth_settings()
-        return ApplyInitialSettingsUC(service, UpdateAuthSettingsUC(service, w.settings, w.audit), _NoOidc(), w.state)
+        return ApplyInitialSettingsUC(
+            service, UpdateAuthSettingsUC(service, w.settings, w.audit, FakeUow()), _NoOidc(), w.state
+        )
 
     @provide
     def auth_settings_service(self) -> AuthSettingsService:

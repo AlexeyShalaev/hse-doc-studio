@@ -126,3 +126,27 @@ async def test__touch__during_reap__waits_and_blob_is_gone_afterwards(world) -> 
     await reaper
 
     assert await toucher == set()
+
+
+async def test__reap__keep_set_beyond_asyncpg_parameter_limit__still_runs(world) -> None:  # type: ignore[no-untyped-def]
+    _, registry = world
+    await registry.record({sha("old"): 1, sha("live"): 1}, NOW - timedelta(days=30))
+    keep = [sha(f"k{i}") for i in range(40_000)] + [sha("live")]
+    removed_shas: list[str] = []
+
+    async def remove(key: str) -> None:
+        removed_shas.append(key)
+
+    removed = await registry.reap(NOW - timedelta(days=14), 10, remove, keep=keep)
+
+    assert [blob.sha256 for blob in removed] == [sha("old")]
+    assert await registry.known([sha("live")]) == {sha("live")}
+
+
+async def test__forget__drops_rows_so_touch_no_longer_reports_them(world) -> None:  # type: ignore[no-untyped-def]
+    _, registry = world
+    await registry.record({sha("a"): 1, sha("b"): 2}, NOW)
+
+    await registry.forget([sha("a"), sha("never-recorded")])
+
+    assert await registry.touch([sha("a"), sha("b")], NOW) == {sha("b")}

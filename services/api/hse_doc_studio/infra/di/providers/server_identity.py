@@ -480,9 +480,10 @@ class ServerIdentityProvider(Provider):
         service: SmtpSettingsService,
         settings_repo: IInstanceSettingsRepository,
         audit: IAuditLog,
+        uow: IUnitOfWork,
         sender: ConfiguredMailSender,
     ) -> UpdateSmtpSettingsUC:
-        return UpdateSmtpSettingsUC(service, settings_repo, audit, on_change=sender.refresh)
+        return UpdateSmtpSettingsUC(service, settings_repo, audit, uow, on_change=sender.refresh)
 
     @provide
     def get_smtp_settings_uc(self, service: SmtpSettingsService) -> GetSmtpSettingsUC:
@@ -520,21 +521,26 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_create_oidc_provider_uc(
-        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, audit: IAuditLog
+        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, audit: IAuditLog, uow: IUnitOfWork
     ) -> CreateOidcProviderUC:
-        return CreateOidcProviderUC(oidc, cipher, audit)
+        return CreateOidcProviderUC(oidc, cipher, audit, uow)
 
     @provide
     def get_update_oidc_provider_uc(
-        self, oidc: IOidcProviderRepository, cipher: ISecretCipher, service: AuthSettingsService, audit: IAuditLog
+        self,
+        oidc: IOidcProviderRepository,
+        cipher: ISecretCipher,
+        service: AuthSettingsService,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
     ) -> UpdateOidcProviderUC:
-        return UpdateOidcProviderUC(oidc, cipher, service, audit)
+        return UpdateOidcProviderUC(oidc, cipher, service, audit, uow)
 
     @provide
     def get_delete_oidc_provider_uc(
-        self, oidc: IOidcProviderRepository, service: AuthSettingsService, audit: IAuditLog
+        self, oidc: IOidcProviderRepository, service: AuthSettingsService, audit: IAuditLog, uow: IUnitOfWork
     ) -> DeleteOidcProviderUC:
-        return DeleteOidcProviderUC(oidc, service, audit)
+        return DeleteOidcProviderUC(oidc, service, audit, uow)
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
@@ -558,9 +564,13 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_update_auth_settings_uc(
-        self, service: AuthSettingsService, settings_repo: IInstanceSettingsRepository, audit: IAuditLog
+        self,
+        service: AuthSettingsService,
+        settings_repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
     ) -> UpdateAuthSettingsUC:
-        return UpdateAuthSettingsUC(service, settings_repo, audit)
+        return UpdateAuthSettingsUC(service, settings_repo, audit, uow)
 
     @provide
     def get_register_uc(
@@ -668,9 +678,9 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_create_invite_uc(
-        self, invites: IRegistrationInviteRepository, delivery: LinkDelivery, audit: IAuditLog
+        self, invites: IRegistrationInviteRepository, delivery: LinkDelivery, audit: IAuditLog, uow: IUnitOfWork
     ) -> CreateInviteUC:
-        return CreateInviteUC(invites, delivery, audit, public_url=settings.auth.public_url)
+        return CreateInviteUC(invites, delivery, audit, uow, public_url=settings.auth.public_url)
 
     @provide
     def get_list_invites_uc(self, invites: IRegistrationInviteRepository) -> ListInvitesUC:
@@ -696,7 +706,7 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_user_lifecycle(self, sessions: SessionProvider) -> IUserLifecycle:
-        return SqlUserLifecycle(sessions)
+        return SqlUserLifecycle(sessions, settings.data_dir.expanduser())
 
     @provide
     def get_delete_user_uc(

@@ -137,7 +137,7 @@
       "type": "object",
       "properties": {
         "enabled": {"type": "boolean"},
-        "replicas": {"type": "integer", "minimum": 0},
+        "replicas": {"type": "integer", "minimum": 0, "maximum": 1},
         "concurrency": {"type": "integer", "minimum": 1, "maximum": 64},
         "tags": {"type": "string"},
         "officeUrl": {"type": "string"},

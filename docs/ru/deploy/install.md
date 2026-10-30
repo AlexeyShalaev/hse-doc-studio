@@ -25,6 +25,7 @@ tags:
 cd deploy/server
 cp .env.example .env              # заполните обязательные значения, подсказки внутри файла
 sudo mkdir -p /var/lib/hse-runner # каталог данных раннера
+sudo chown 10001:10001 /var/lib/hse-runner # владелец: пользователь app образа
 docker compose up -d
 docker compose --profile services up -d   # добавить LanguageTool и ONLYOFFICE
 ```
@@ -46,7 +47,11 @@ docker compose --profile services up -d   # добавить LanguageTool и ONL
 
 ### Обратный прокси
 
-Раннер держит запрос опроса до 25 секунд. Задайте read-timeout не меньше 60 секунд и отключите буферизацию ответов. Для nginx: `proxy_read_timeout 75s; proxy_buffering off;`.
+Раннер держит запрос опроса до 25 секунд. Задайте read-timeout не меньше 60 секунд и отключите буферизацию ответов. Для nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. Лимит тела должен покрывать и загрузку файлов (до 256 МиБ), и импорт проекта.
+
+По умолчанию api публикуется на `127.0.0.1` (`BIND_ADDRESS` в `.env`): прокси должен работать на том же хосте, иначе задайте адрес явно. Раннер один на хост и каталог данных, `--scale runner=N` не поддерживается: токен регистрации одноразовый.
+
+Загрузка проекта идёт большим телом. Задайте `client_max_body_size` не меньше `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` плюс около 1 МБ (по умолчанию `client_max_body_size 501m;`). Само api обрывает слишком большое тело ответом 413 до записи во временный файл.
 
 ## Kubernetes
 

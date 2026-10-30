@@ -12,6 +12,7 @@ from hse_doc_studio.core.identity.normalize import hash_token, is_valid_email, n
 from hse_doc_studio.core.identity.protocols import IAuditLog, IRegistrationInviteRepository, IUserRepository
 from hse_doc_studio.core.identity.registration import invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
 INVITE_PATH = "/invite"
@@ -48,12 +49,14 @@ class CreateInviteUC:
         invites: IRegistrationInviteRepository,
         delivery: LinkDelivery,
         audit: IAuditLog,
+        uow: IUnitOfWork,
         *,
         public_url: str | None = None,
         clock: Clock = utc_now,
     ) -> None:
         self._invites = invites
         self._delivery = delivery
+        self._uow = uow
         self._audit = audit
         self._public_url = public_url
         self._clock = clock
@@ -83,13 +86,15 @@ class CreateInviteUC:
             org_id=org_id,
             org_role=org_role,
         )
-        await self._invites.add(invite)
+        async with self._uow.begin():
+            await self._invites.add(invite)
+            await self._audit.record(
+                "invite.create", actor_id=creator, target=invite.id, details={"email": invite.email, "org_id": org_id}
+            )
         link = auth_link(self._public_url, INVITE_PATH, token)
-        # Приглашение на адрес уходит письмом; без SMTP и для приглашения «на любого» ссылку пересылает сам админ.
+        # Приглашение на адрес уходит письмом после коммита; без SMTP и для приглашения «на любого» ссылку
+        # пересылает сам админ.
         shown = await self._delivery.deliver(MailKind.invite, invite.email, link, now) if invite.email else link
-        await self._audit.record(
-            "invite.create", actor_id=creator, target=invite.id, details={"email": invite.email, "org_id": org_id}
-        )
         return CreatedInvite(invite=invite, token=token, link=shown)
 
 

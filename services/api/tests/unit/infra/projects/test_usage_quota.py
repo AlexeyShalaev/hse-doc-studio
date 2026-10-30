@@ -153,8 +153,8 @@ async def test__status__warns_from_80_percent_and_flags_exceeded(world: World) -
 
 async def test__measure__splits_tree_git_and_s3_and_ignores_symlinks(world: World, tmp_path: Path) -> None:
     world.write("a.tex", 10)
-    (world.folder / ".git").mkdir()
-    (world.folder / ".git" / "pack").write_bytes(b"g" * 30)
+    (world.folder / ".hse-studio" / "git").mkdir(parents=True)
+    (world.folder / ".hse-studio" / "git" / "pack").write_bytes(b"g" * 30)
     outside = tmp_path / "outside.bin"
     outside.write_bytes(b"o" * 999)
     (world.folder / "link.bin").symlink_to(outside)

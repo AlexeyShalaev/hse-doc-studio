@@ -176,6 +176,22 @@ async def test__execute__cancelled__container_process_is_killed(
     else:
         pytest.fail("docker process is still alive after cancel")
 
+    calls = recorded_calls(docker_log)
+    run = next(call for call in calls if call[:1] == ["run"] and "latexmk" in call)
+    name = run[run.index("--name") + 1]
+    assert name.startswith("hds-build-")
+    assert "--init" in run
+    assert ["rm", "-f", name] in calls
+
+
+async def test__sweep__leftover_containers__removed_by_name(docker_log: Path) -> None:
+    from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
+
+    assert await sweep_build_containers() == 0
+    calls = recorded_calls(docker_log)
+    assert ["ps", "-aq", "--filter", "name=hds-build-"] in calls
+    assert not any(call[:2] == ["rm", "-f"] for call in calls)
+
 
 async def test__routing__compile_goes_to_compile_executor_the_rest_to_handlers() -> None:
     seen: list[str] = []

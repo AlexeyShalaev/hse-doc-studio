@@ -33,6 +33,7 @@ from hse_doc_studio.core.identity.smtp_settings import (
     smtp_config_of,
 )
 from hse_doc_studio.core.secrets import column_aad
+from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import SOURCE_ADMIN
 
@@ -136,11 +137,13 @@ class UpdateSmtpSettingsUC:
         service: SmtpSettingsService,
         repo: IInstanceSettingsRepository,
         audit: IAuditLog,
+        uow: IUnitOfWork,
         on_change: ChangeHook | None = None,
     ) -> None:
         self._service = service
         self._repo = repo
         self._audit = audit
+        self._uow = uow
         self._on_change = on_change
 
     async def execute(self, actor: Actor, patch: SmtpPatch) -> SmtpSettingsView:
@@ -152,21 +155,23 @@ class UpdateSmtpSettingsUC:
                 f"{message_for(IdentityErrorCode.setting_locked)} ({KEY_HOST})",
             )
         changes = self._validated(patch)
-        for key, value in changes.items():
-            if value in (None, ""):
-                await self._repo.delete(key)
-            else:
-                await self._repo.set(key, value, source=SOURCE_ADMIN)
-        await self._store_password(patch.password)
         changed = sorted(changes) + ([KEY_PASSWORD] if patch.password is not None else [])
-        if changed:
-            await self._audit.record(
-                "settings.smtp_update",
-                actor_id=admin_id,
-                details={"fields": changed, "credential_changed": patch.password is not None},
-            )
-            if self._on_change is not None:
-                await self._on_change()
+        # Настройки, пароль и журнал пишутся одной транзакцией: полупримененной конфигурации не бывает.
+        async with self._uow.begin():
+            for key, value in changes.items():
+                if value in (None, ""):
+                    await self._repo.delete(key)
+                else:
+                    await self._repo.set(key, value, source=SOURCE_ADMIN)
+            await self._store_password(patch.password)
+            if changed:
+                await self._audit.record(
+                    "settings.smtp_update",
+                    actor_id=admin_id,
+                    details={"fields": changed, "credential_changed": patch.password is not None},
+                )
+        if changed and self._on_change is not None:
+            await self._on_change()
         return await self._service.view()
 
     async def _store_password(self, password: str | None) -> None:

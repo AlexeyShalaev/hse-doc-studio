@@ -278,7 +278,7 @@ class RunnerLoop:
             verdict = await self._beat(envelope)
             if verdict == "ok":
                 last_ok = time.monotonic()
-            elif verdict == "unreachable" and time.monotonic() - last_ok >= lease_s:
+            elif verdict in ("unreachable", "rejected") and time.monotonic() - last_ok >= lease_s:
                 return "lost"
             elif verdict in ("lost", "cancel"):
                 return verdict

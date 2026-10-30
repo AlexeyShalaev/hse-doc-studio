@@ -117,6 +117,7 @@ class JobTokenClaims:
     job_id: str
     runner_id: str
     expires_at: datetime
+    attempt: int | None = None
 
 
 def _b64(raw: bytes) -> str:
@@ -143,10 +144,11 @@ class JobTokenSigner:
             raise ValueError("нужен хотя бы один ключ")
         self._keys = tuple(keys)
 
-    def sign(self, job_id: str, runner_id: str, expires_at: datetime) -> str:
-        payload = json.dumps(
-            {"j": job_id, "r": runner_id, "e": int(expires_at.timestamp())}, separators=(",", ":"), sort_keys=True
-        )
+    def sign(self, job_id: str, runner_id: str, expires_at: datetime, attempt: int | None = None) -> str:
+        claims: dict[str, str | int] = {"j": job_id, "r": runner_id, "e": int(expires_at.timestamp())}
+        if attempt is not None:
+            claims["a"] = attempt
+        payload = json.dumps(claims, separators=(",", ":"), sort_keys=True)
         signed = f"{JOB_TOKEN_VERSION}.{_b64(payload.encode('utf-8'))}"
         return f"{signed}.{_b64(_mac(self._keys[0], signed))}"
 
@@ -166,6 +168,7 @@ class JobTokenSigner:
                 job_id=str(payload["j"]),
                 runner_id=str(payload["r"]),
                 expires_at=datetime.fromtimestamp(int(payload["e"]), tz=now.tzinfo),
+                attempt=int(payload["a"]) if "a" in payload else None,
             )
         except (ValueError, KeyError, TypeError, UnicodeError, OverflowError, OSError):
             raise invalid from None

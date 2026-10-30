@@ -70,6 +70,7 @@
       "role": "Role",
       "button": "Add",
       "hint": "You cannot name an owner from this panel.",
+      "error": "Search failed. Check your connection and try again.",
       "loading": "Searching…",
       "none": "No one found. A person must be a server user, a group must exist in an organization."
     },

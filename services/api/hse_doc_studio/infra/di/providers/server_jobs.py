@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 from typing import NewType
 from uuid import UUID
@@ -11,7 +12,8 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
-from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
@@ -34,7 +36,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.ingest import OutputLimits
-from hse_doc_studio.core.storage.manifest import IBlobUploader, ILiveBlobSource, ManifestLimits
+from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
@@ -48,6 +50,7 @@ from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 from hse_doc_studio.infra.jobs.result_applier import VolumeJobResultApplier
+from hse_doc_studio.infra.jobs.retention import JobRetention
 from hse_doc_studio.infra.jobs.storage_fs import FsJobLogSink
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
@@ -70,8 +73,10 @@ class ServerJobsProvider(Provider):
         return PostgresJobQueue(sessions)
 
     @provide
-    def get_job_queue_service(self, queue: IJobQueue) -> JobQueueService:
-        return JobQueueService(queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s)
+    def get_job_queue_service(self, queue: IJobQueue, wakeup: JobWakeup) -> JobQueueService:
+        return JobQueueService(
+            queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s, wakeup=wakeup
+        )
 
     @provide(override=True)
     def get_compile_wait_reader(self, queue: IJobQueue, runners: IRunnerRepository) -> ICompileWaitReader:
@@ -135,8 +140,19 @@ class ServerJobsProvider(Provider):
         return JobStorageRoot(settings.jobs.storage_dir or settings.data_dir.expanduser() / "jobs")
 
     @provide
-    def get_job_blob_store(self, blobs: IBlobStore) -> IJobBlobStore:
-        return ObjectJobBlobStore(blobs)
+    def get_job_retention(self, sessions: SessionProvider, store: IObjectStore, root: JobStorageRoot) -> JobRetention:
+        days = settings.server.job_retention_days
+        return JobRetention(
+            sessions,
+            store,
+            root,
+            output_min_age=timedelta(hours=settings.server.job_output_min_age_hours),
+            retention=timedelta(days=days) if days > 0 else None,
+        )
+
+    @provide
+    def get_job_blob_store(self, blobs: IBlobStore, registry: IBlobRegistry) -> IJobBlobStore:
+        return ObjectJobBlobStore(blobs, registry)
 
     @provide
     def get_job_output_ingest(self, queue: IJobQueue, store: IObjectStore) -> IJobOutputIngest:
@@ -205,11 +221,17 @@ class ServerJobsProvider(Provider):
         settings_repo: ISettingsRepository,
         quotas: QuotaService,
         project_orgs: IProjectOrgReader,
+        instance_settings: IInstanceSettingsRepository,
+        env: InstanceEnvOverrides,
+        wakeup: JobWakeup,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
             grant = project_acl.grant_for(actor) if project_acl is not None else None
             return grant.role if grant is not None else None
+
+        async def build_timeout_s() -> float | None:
+            return effective_build_settings(await instance_settings.get_all(), env).timeout_s
 
         return QueueJobDispatcher(
             queue,
@@ -224,4 +246,6 @@ class ServerJobsProvider(Provider):
             settings_repo=settings_repo,
             quotas=quotas,
             project_orgs=project_orgs,
+            build_timeout_source=build_timeout_s,
+            wakeup=wakeup,
         )

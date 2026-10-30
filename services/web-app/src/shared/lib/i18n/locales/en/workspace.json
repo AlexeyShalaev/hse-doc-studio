@@ -6,6 +6,9 @@
     "copyPath": "Copy path",
     "pathCopied": "Path copied to clipboard"
   },
+  "roleBanner": {
+    "text": "Read-only: your role is \"{{role}}\". The server will refuse changes; editing needs the Editor role."
+  },
   "emptyState": {
     "noDocTitle": "No document selected",
     "noDocHint": "Open a document from the navigator or start with one of the project work screens.",

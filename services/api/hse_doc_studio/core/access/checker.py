@@ -26,4 +26,6 @@ class ProjectForbiddenError(Exception):
 
 
 class IProjectAccessChecker(Protocol):
-    async def require(self, project_id: UUID, action: Action) -> None: ...
+    async def require(self, project_id: UUID, action: Action, path: str | None = None) -> None:
+        """`path` — область проверки, как в `policy.decide`: путь файла или слаг автора пакета."""
+        ...

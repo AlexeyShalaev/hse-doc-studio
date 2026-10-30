@@ -112,6 +112,12 @@ class PostgresJobQueue:
                         )
                     ).scalars()
                 )
+                # Идущая сборка того же документа уже не нужна: раннер узнает об этом в heartbeat.
+                await session.execute(
+                    update(JobRow)
+                    .where(JobRow.state == JobState.running.value, JobRow.coalesce_key == request.coalesce_key)
+                    .values(cancel_requested=True)
+                )
             vtime = assign_vtime(user_vtime, global_vtime, request.cost, request.weight)
             await session.execute(
                 update(FairShareRow).where(FairShareRow.user_id == request.user_id).values(vtime=vtime)
@@ -188,6 +194,9 @@ class PostgresJobQueue:
     ) -> QueuedJob:
         async with self._sessions.use() as session:
             row = await self._current(session, job_id, attempt)
+            if row.cancel_requested and status is JobStatus.succeeded:
+                # Отмена сильнее успеха: выходы отброшены, как в локальном режиме.
+                status, result, error_code = JobStatus.cancelled, None, None
             row.state = JobState.of_status(status).value
             row.finished_at = self._clock()
             row.lease_until = None

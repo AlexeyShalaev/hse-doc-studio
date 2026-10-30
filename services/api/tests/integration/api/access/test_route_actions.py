@@ -19,6 +19,7 @@ _WRITE_ACTIONS = frozenset(
     {
         Action.FILES_WRITE,
         Action.HISTORY_WRITE,
+        Action.HISTORY_REWRITE,
         Action.PROJECT_SETTINGS,
         Action.TEMPLATE_MANAGE,
         Action.PROJECT_DELETE,

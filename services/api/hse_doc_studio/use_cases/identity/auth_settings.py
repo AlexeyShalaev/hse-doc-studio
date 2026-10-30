@@ -18,6 +18,7 @@ from hse_doc_studio.core.identity.entities import AuthSettings, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.identity.setting_source import SettingDescription, describe_setting
+from hse_doc_studio.core.uow import IUnitOfWork
 
 SOURCE_ADMIN = "admin"
 
@@ -71,10 +72,13 @@ class AuthSettingsPatch:
 
 
 class UpdateAuthSettingsUC:
-    def __init__(self, service: AuthSettingsService, repo: IInstanceSettingsRepository, audit: IAuditLog) -> None:
+    def __init__(
+        self, service: AuthSettingsService, repo: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> None:
         self._service = service
         self._repo = repo
         self._audit = audit
+        self._uow = uow
 
     async def execute(self, actor_id: str, patch: AuthSettingsPatch) -> AuthSettingsView:
         """Заданный окружением ключ не правится: отказ целиком, ничего не записывается."""
@@ -85,8 +89,9 @@ class UpdateAuthSettingsUC:
                 IdentityErrorCode.setting_locked,
                 f"{message_for(IdentityErrorCode.setting_locked)} ({', '.join(locked)})",
             )
-        for key, value in values.items():
-            await self._repo.set(key, value, source=SOURCE_ADMIN)
-        if values:
-            await self._audit.record("settings.auth_update", actor_id=actor_id, details=values)
+        async with self._uow.begin():
+            for key, value in values.items():
+                await self._repo.set(key, value, source=SOURCE_ADMIN)
+            if values:
+                await self._audit.record("settings.auth_update", actor_id=actor_id, details=values)
         return await self._service.view()

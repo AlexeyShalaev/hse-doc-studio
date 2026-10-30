@@ -145,15 +145,25 @@ describe("операционные разделы: чистая логика", (
 
   it("нет прав и отсутствие раздела дают отдельное состояние, а не ошибку", () => {
     const failed = (status: number, code: string) => ({
+      data: undefined,
       isError: true,
-      isPending: false,
       error: new ApiError(code, code, status),
     });
     expect(statusOf(failed(403, "forbidden"))).toBe("forbidden");
     expect(statusOf(failed(404, "not_found"))).toBe("forbidden");
     expect(statusOf(failed(500, "internal"))).toBe("error");
-    expect(statusOf({ isError: false, isPending: true })).toBe("loading");
-    expect(statusOf({ isError: false, isPending: false })).toBe("ready");
+    expect(statusOf({ data: undefined, isError: false })).toBe("loading");
+    expect(statusOf({ data: [], isError: false })).toBe("ready");
+  });
+
+  it("неудачный фоновый опрос не заменяет полученные данные ошибкой", () => {
+    const stale = (status: number, code: string) => ({
+      data: [],
+      isError: true,
+      error: new ApiError(code, code, status),
+    });
+    expect(statusOf(stale(500, "internal"))).toBe("ready");
+    expect(statusOf(stale(403, "forbidden"))).toBe("ready");
   });
 
   it("люди по идентификатору: имя из справочника, без имени нейтрально", () => {

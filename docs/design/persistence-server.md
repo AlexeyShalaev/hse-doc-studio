@@ -12,7 +12,8 @@
 | список проектов (`IProjectIndexRepository`) | `data_dir/projects.json` | таблица `projects` |
 | владелец, участники, роль, team, `shared_enabled`, персона | поля `project.json` | `projects`, `project_members` (единственный источник; файл только подсказка, БД перезаписывает его) |
 | настройки (`ISettingsRepository`) | `data_dir/config.json` | `user_settings` и `instance_settings` по реестру `SettingScope` |
-| ИИ-провайдеры, персоны агента | `ai_providers.json`, `agent_personas.json` | таблицы, ключ провайдера шифртекстом |
+| ИИ-провайдеры | `ai_providers.json` | таблицы, ключ провайдера шифртекстом |
+| персоны агента | `agent_personas.json` | остаются JSON под `data_dir/users/<хеш пользователя>/` (`ActorScopedAgentPersonaRepository`), том `api-data` |
 | подписи (`ISigningIdentityRepository`) | `signing_identities.json`, `signing_keys/` | таблица, закрытый ключ шифртекстом, только если админ разрешил |
 | git-доступы и настройки хостов | `git/credentials.json`, `host_settings.json`, `known_hosts` | таблицы, секреты шифртекстом `hs1:<key_id>:<токен>` с AAD |
 | проверка обновлений | `update-check.json` | ключ `instance_settings` (самообновление выключено) |
@@ -88,7 +89,7 @@ async with uow.begin():
 
 ## 9. Журнал аудита
 
-`audit_log` только на дозапись, и гарантия живёт в базе: триггеры отвергают UPDATE, DELETE и TRUNCATE для любой роли, включая владельца таблицы, а у `PUBLIC` прав на таблицу нет. Миграции идут под владельцем схемы, а приложению в проде выдают отдельную роль только с `SELECT, INSERT` на `audit_log` и `USAGE` на `audit_log_id_seq`; тогда любое изменение отвергается ещё и правами. Репозиторий (`SqlAuditLog`) умеет только `record` и чтение; значения под ключами `password`, `token`, `secret`, `key`, `authorization`, `cookie` любой вложенности записываются как `[redacted]` (`core/identity/redaction.py`). Очистка по сроку хранения придёт отдельной функцией владельца схемы вместе со срезом retention, из приложения удалить события нельзя.
+`audit_log` только на дозапись, и гарантия живёт в базе: триггеры отвергают UPDATE, DELETE и TRUNCATE для любой роли, включая владельца таблицы, а у `PUBLIC` прав на таблицу нет. Миграции идут под владельцем схемы, а приложению в проде выдают отдельную роль только с `SELECT, INSERT` на `audit_log` и `USAGE` на `audit_log_id_seq`; тогда любое изменение отвергается ещё и правами. Репозиторий (`SqlAuditLog`) умеет только `record` и чтение; значения под ключами `password`, `token`, `secret`, `key`, `authorization`, `cookie` любой вложенности записываются как `[redacted]` (`core/identity/redaction.py`). Единственные обходы запрета устроены как функции `SECURITY DEFINER` (роли приложения хватает `EXECUTE`, прав на таблицу не нужно), каждая на время своей транзакции выставляет флаг, который пропускает триггер: `audit_log_purge(cutoff)` (миграция `s2_44`) удаляет события старше срока хранения, `audit_log_anonymize(subject, pseudonym)` (миграция `s2_91`) заменяет в событиях удалённого человека идентификатор псевдонимом и стирает из details почту, имя, IP и user agent. Прямой UPDATE и DELETE из приложения по-прежнему отвергаются.
 
 Одноразовые токены (`auth_tokens`, `registration_invites`) потребляются одним `UPDATE ... WHERE used_at IS NULL AND expires_at > now RETURNING`, поэтому при параллельных запросах срабатывает ровно один. Задержки входа (`login_attempts`) и письма без SMTP (`mail_outbox`) живут в базе и переживают рестарт. Секрет клиента OIDC хранится шифртекстом (`oidc_providers.client_secret_enc`, колонка в реестре из раздела 8).
 

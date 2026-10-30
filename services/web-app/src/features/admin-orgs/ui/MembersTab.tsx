@@ -29,11 +29,12 @@ export const MembersTab = ({
   const [failure, setFailure] = useState<Failure | null>(null);
   const [addFailure, setAddFailure] = useState<Failure | null>(null);
 
-  const status = members.isError
-    ? "error"
-    : members.isPending
-      ? "loading"
-      : "ready";
+  const status =
+    members.data !== undefined
+      ? "ready"
+      : members.isError
+        ? "error"
+        : "loading";
   const busyUserId = setRole.isPending
     ? setRole.variables.userId
     : remove.isPending

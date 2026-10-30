@@ -1,6 +1,7 @@
 import axios from "axios";
 import { z } from "zod";
 import { env } from "@shared/config";
+import { notifyUnauthorized } from "@shared/api/session";
 import { useThemeStore } from "@shared/lib";
 
 export const RunnerHealthSchema = z.object({
@@ -141,6 +142,15 @@ export const systemClient = axios.create({
 systemClient.interceptors.request.use((config) => {
   config.headers.set("X-Interface-Language", useThemeStore.getState().lang);
   return config;
+});
+
+// 401 здесь значит конец сессии: будим тот же обработчик, что и общий клиент.
+// Сам запрос остаётся ошибкой, но реакцию на неё общий обработчик гасит (см. providers).
+systemClient.interceptors.response.use(undefined, (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.status === 401) {
+    notifyUnauthorized(error.config?.url ?? "");
+  }
+  return Promise.reject(error instanceof Error ? error : new Error("request"));
 });
 
 // The update check talks to an external release feed through the backend, whose

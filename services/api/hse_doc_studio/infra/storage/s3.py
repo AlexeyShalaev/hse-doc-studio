@@ -7,15 +7,16 @@ boto3 синхронный, поэтому каждый вызов уходит 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
-from hse_doc_studio.core.storage.errors import ObjectNotFoundError, ObjectStoreError
+from hse_doc_studio.core.storage.errors import ChecksumMismatchError, ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.keys import is_sha256, validate_key
 from hse_doc_studio.core.storage.models import ObjectInfo, PresignedUrl
 from hse_doc_studio.core.storage.ports import ByteRange, ObjectSource
@@ -50,6 +51,27 @@ def cors_rules(origins: Sequence[str]) -> dict[str, Any]:
             }
         ]
     }
+
+
+class _HashingReader:
+    """Читает источник строго подряд и считает размер и sha256 того, что действительно ушло в S3.
+
+    Без `seek`/`tell`: загрузчик тогда не перечитывает части параллельно и каждый байт виден хешу ровно раз.
+    """
+
+    def __init__(self, source: BinaryIO) -> None:
+        self._source = source
+        self._digest = hashlib.sha256()
+        self.size = 0
+
+    def read(self, size: int = -1) -> bytes:
+        chunk = self._source.read(size)
+        self._digest.update(chunk)
+        self.size += len(chunk)
+        return chunk
+
+    def hexdigest(self) -> str:
+        return self._digest.hexdigest()
 
 
 class S3ObjectStore:
@@ -100,13 +122,19 @@ class S3ObjectStore:
             extra: dict[str, Any] = {"Metadata": {_SHA_METADATA: actual}}
             if content_type:
                 extra["ContentType"] = content_type
+            reader = _HashingReader(BytesIO(source) if isinstance(source, bytes) else source)
             self._client.upload_fileobj(
-                BytesIO(source) if isinstance(source, bytes) else source,
+                reader,
                 self._bucket,
                 key,
                 ExtraArgs=extra,
                 Config=TransferConfig(multipart_threshold=self._multipart_threshold),
             )
+            if reader.size != size or reader.hexdigest() != actual:
+                # Источник изменился между проверкой и загрузкой: под ключом-хешем лежали бы чужие байты.
+                self._client.delete_object(Bucket=self._bucket, Key=key)
+                msg = "источник изменился во время загрузки"
+                raise ChecksumMismatchError(msg)
             return ObjectInfo(key=key, size=size, last_modified=datetime.now(UTC), sha256=actual)
 
         return await self._call(run)

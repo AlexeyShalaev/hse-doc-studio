@@ -8,6 +8,8 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, TemplateVersion
@@ -109,6 +111,7 @@ class CreateSubmissionUC:
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        access: IProjectAccessChecker,
         archive: ISubmissionArchive | None = None,
     ) -> None:
         self._archive = archive or DisabledSubmissionArchive()
@@ -125,6 +128,7 @@ class CreateSubmissionUC:
         self._render_form_uc = render_form_uc
         self._dispatcher = dispatcher
         self._file_probes = file_probes
+        self._access = access
 
     @staticmethod
     def _reroute_form_extra(
@@ -150,6 +154,11 @@ class CreateSubmissionUC:
             output_name=extra.output_name,
             format=extra.format,
         )
+
+    async def _require_package_access(self, inp: CreateSubmissionInput, *, team: bool) -> None:
+        # Гард маршрута слага из тела не видит: пакет чужого автора закрываем здесь.
+        if team:
+            await self._access.require(inp.project_id, Action.SUBMISSION_CREATE, inp.author_slug)
 
     async def execute(self, inp: CreateSubmissionInput) -> CreateSubmissionOutput:  # noqa: C901, PLR0915
         located = await self._locator.locate(inp.project_id)
@@ -191,6 +200,8 @@ class CreateSubmissionUC:
                     "Team project: specify an existing author (author_slug) for the submission package",
                 )
             )
+
+        await self._require_package_access(inp, team=team)
 
         validated_items = self._submission_profile_service.build_item_list(
             profile=profile,

@@ -88,6 +88,10 @@ export const ProjectAccessPanel = ({
       onQuery={setQuery}
       candidates={candidates.data ?? []}
       candidatesLoading={candidates.isFetching && query.trim() !== ""}
+      candidatesError={candidates.isError && query.trim() !== ""}
+      onRetryCandidates={() => {
+        void candidates.refetch();
+      }}
       adding={set.isPending}
       selfId={selfId}
       onRetry={() => {

@@ -6,8 +6,10 @@ import {
   useParams,
   useSearchParams,
 } from "react-router";
-import { PageContainer, Spinner, type PageWidth } from "@shared/ui";
+import { PageContainer, type PageWidth } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
+import { AdminChunkError } from "./AdminChunkError";
+import { AdminChunkLoading } from "./AdminChunkLoading";
 import { AdminLayout } from "./AdminLayout";
 
 // Сводка тянет запросы всех разделов: свой чанк, чтобы admin-*.js оставался лёгким.
@@ -69,13 +71,13 @@ const OrgRedirect = () => {
   return <Navigate to={`/admin/orgs/${encodeURIComponent(slug)}`} replace />;
 };
 
+/** Ожидание чанка раздела: та же крутилка, что у корня админки, по центру поля страницы. */
 const Loading = () => (
   <div
-    className="flex flex-1 items-center justify-center"
-    role="status"
+    className="flex flex-1 flex-col justify-center"
     style={{ minHeight: 240 }}
   >
-    <Spinner size="md" />
+    <AdminChunkLoading />
   </div>
 );
 
@@ -124,28 +126,36 @@ const OpsRoute = ({ part }: { part: (typeof OPS_PARTS)[number][0] }) => {
  */
 export const AdminApp = () => {
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
-    void loadAdminLocales().then(() => {
-      if (live) setReady(true);
-    });
+    loadAdminLocales().then(
+      () => {
+        if (live) setReady(true);
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
-  if (!ready) {
+  if (failed) {
     return (
-      <div
-        className="flex flex-1 items-center justify-center"
-        data-testid={ADMIN_CHUNK_MARKER}
-        role="status"
-        aria-label="admin"
-      >
-        <Spinner size="lg" />
-      </div>
+      <AdminChunkError
+        onRetry={() => {
+          setFailed(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
     );
+  }
+  if (!ready) {
+    return <AdminChunkLoading size="lg" testId={ADMIN_CHUNK_MARKER} />;
   }
   return (
     <Routes>

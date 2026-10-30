@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.entities import AgentPersona
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.lifecycle import pseudonym_for
 from hse_doc_studio.infra.db.engine import create_sessionmaker
@@ -15,6 +17,7 @@ from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
 from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
+from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository, user_data_folder
 from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -94,6 +97,48 @@ async def test__delete__personal_data_and_secrets_erased(pg_migrated_engine: Asy
         assert await _count(e, f"SELECT count(*) FROM {table} WHERE user_id = 'u1'") == 0
     assert await _count(e, "SELECT count(*) FROM mail_outbox") == 0
     assert await _count(e, "SELECT count(*) FROM users WHERE id = 'boss'") == 1
+
+
+async def test__delete__names_quotas_and_personas_erased(pg_migrated_engine: AsyncEngine, tmp_path: Path) -> None:
+    w = _World(pg_migrated_engine)
+    w.lifecycle = SqlUserLifecycle(w.sessions, tmp_path)
+    w.delete = DeleteUserUC(w.users, w.lifecycle, w.audit, SqlUnitOfWork(w.sessions))
+    await w.user("boss", disabled=False)
+    await w.user("u1")
+    await w.user("u2", disabled=False)
+    project = uuid.uuid4()
+    await _exec(
+        pg_migrated_engine,
+        "INSERT INTO projects (id, name, owner_user_id, workspace_path, kind, lang) "
+        "VALUES (:p, 'p', 'u2', '/x', 'thesis', 'ru')",
+        p=project,
+    )
+    await _exec(
+        pg_migrated_engine,
+        "INSERT INTO compile_records (id, project_id, doc_id, engine, status, actor_id, actor_name, started_at) "
+        "VALUES (:i, :p, 'd', 'xelatex', 'ok', 'u1', 'Иван Петров', now())",
+        i=uuid.uuid4(),
+        p=project,
+    )
+    await _exec(
+        pg_migrated_engine,
+        "INSERT INTO quotas (owner_kind, owner_id, resource, period, hard_limit) VALUES "
+        "('user', 'u1', 'compile', 'day', 5), ('user', 'u2', 'compile', 'day', 5)",
+    )
+    folder = user_data_folder(tmp_path, "u1")
+    persona = AgentPersona(id=uuid.uuid4(), label="Строгий", description="", instruction="секрет", created_at=NOW)
+    JsonAgentPersonaRepository(folder).create(persona)
+    exported = await w.lifecycle.export("u1")
+    assert [p["instruction"] for p in exported["agent_personas"]] == ["секрет"]  # type: ignore[union-attr, index]
+
+    await w.delete.execute(w.admin, "u1")
+
+    e = pg_migrated_engine
+    assert await _count(e, "SELECT count(*) FROM compile_records WHERE actor_name IS NOT NULL") == 0
+    assert await _count(e, "SELECT count(*) FROM compile_records") == 1
+    assert await _count(e, "SELECT count(*) FROM quotas WHERE owner_id = 'u1'") == 0
+    assert await _count(e, "SELECT count(*) FROM quotas WHERE owner_id = 'u2'") == 1
+    assert not folder.exists()
 
 
 async def test__delete__audit_anonymized_not_erased(pg_migrated_engine: AsyncEngine) -> None:

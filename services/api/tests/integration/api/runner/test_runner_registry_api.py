@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.server_routers import include_server_routers
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.identity.entities import ActorCredentials
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION
@@ -25,7 +25,7 @@ from httpx import ASGITransport, AsyncClient
 from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.runners import InMemoryRegistrationTokenRepository, InMemoryRunnerRepository
 
-_ADMIN = Actor(kind="user", id="admin", is_instance_admin=True)
+_ADMIN = Actor(kind="user", id="admin", is_instance_admin=True, source=ActorSource.session)
 _USER = Actor.user("user")
 
 

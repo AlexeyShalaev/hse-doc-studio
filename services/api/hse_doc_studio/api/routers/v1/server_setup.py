@@ -27,7 +27,7 @@ from hse_doc_studio.api.schemas.session import (
     ServerSetupSettingsRequest,
     ServerSetupStatus,
 )
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.identity.auth_settings import (
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
@@ -68,7 +68,8 @@ async def _admin_actor(request: Request) -> Actor:
     actor = await resolver.resolve(credentials_from_request(request))
     if actor is None or not actor.id:
         raise IdentityError(IdentityErrorCode.auth_required)
-    if not actor.is_instance_admin:
+    # Токен доступа (PAT) админа мастер не открывает, как и админку.
+    if not actor.is_instance_admin or actor.source is ActorSource.pat:
         raise IdentityError(IdentityErrorCode.forbidden)
     return actor
 

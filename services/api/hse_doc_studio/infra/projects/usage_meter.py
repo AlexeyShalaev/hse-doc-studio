@@ -27,10 +27,9 @@ from hse_doc_studio.core.projects.usage import (
 )
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.storage import IObjectStore
+from hse_doc_studio.infra.vcs.git_vcs_service import store_git_dir
 
 logger = structlog.get_logger()
-
-GIT_DIR = ".git"
 
 
 def project_objects_prefix(project_id: UUID | str) -> str:
@@ -64,7 +63,7 @@ def _dir_size(root: Path) -> int:
 
 
 def _measure_folder(folder: Path) -> tuple[int, int]:
-    git = _dir_size(folder / GIT_DIR)
+    git = _dir_size(store_git_dir(folder))
     return _dir_size(folder) - git, git
 
 

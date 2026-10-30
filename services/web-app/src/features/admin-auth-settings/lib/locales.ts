@@ -21,6 +21,12 @@ export const ensureAdminSettingsLocales = (): Promise<void> => {
       const mod = await load();
       i18n.addResourceBundle(lng, "adminSettings", mod.default, true, true);
     }),
-  ).then(() => undefined);
+  ).then(
+    () => undefined,
+    (error: unknown) => {
+      pending = null;
+      throw error;
+    },
+  );
   return pending;
 };
