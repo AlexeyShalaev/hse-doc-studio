@@ -121,7 +121,8 @@ async def test_resend_without_smtp_goes_to_outbox_not_to_the_caller(world: World
     assert result is None
     (entry,) = await world.outbox.list_active(T0)
     assert entry.kind is MailKind.verify_email
-    assert entry.link.startswith("https://studio.test/verify/")
+    assert entry.link == ""
+    assert world.links[-1].startswith("https://studio.test/verify/")
 
 
 # --- забыл пароль и сброс ---
@@ -215,7 +216,7 @@ async def test_reset_token_expires(world: World) -> None:
     await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
     (entry,) = await world.outbox.list_active(T0)
-    token = entry.link.rpartition("/")[2]
+    token = world.links[-1].rpartition("/")[2]
 
     world.clock.advance(seconds=RESET_TTL.total_seconds() + 1)
 
@@ -226,7 +227,7 @@ async def test_reset_rejects_a_weak_password_before_spending_the_token(world: Wo
     await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
     (entry,) = await world.outbox.list_active(T0)
-    token = entry.link.rpartition("/")[2]
+    token = world.links[-1].rpartition("/")[2]
 
     await _expect(world.reset_uc().execute(token, "short"), IdentityErrorCode.password_policy)
     await _expect(world.reset_uc().execute(token, "password123456"), IdentityErrorCode.password_policy)
@@ -240,7 +241,7 @@ async def test_reset_password_equal_to_the_email_is_refused(world: World) -> Non
     (entry,) = await world.outbox.list_active(T0)
 
     await _expect(
-        world.reset_uc().execute(entry.link.rpartition("/")[2], "long.address@example.org"),
+        world.reset_uc().execute(world.links[-1].rpartition("/")[2], "long.address@example.org"),
         IdentityErrorCode.password_policy,
     )
 
@@ -254,7 +255,7 @@ async def test_reset_refuses_when_the_account_was_disabled_meanwhile(world: Worl
     await world.users.update(replace(user, status=UserStatus.disabled))
 
     await _expect(
-        world.reset_uc().execute(entry.link.rpartition("/")[2], NEW_PASSWORD), IdentityErrorCode.token_invalid
+        world.reset_uc().execute(world.links[-1].rpartition("/")[2], NEW_PASSWORD), IdentityErrorCode.token_invalid
     )
 
 

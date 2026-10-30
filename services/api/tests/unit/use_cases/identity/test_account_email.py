@@ -122,4 +122,4 @@ async def test_a_verification_token_cannot_confirm_an_email_change(world: World)
     (entry,) = await world.outbox.list_active(T0)
 
     with pytest.raises(IdentityError):
-        await world.confirm_email_change_uc().execute(entry.link.rpartition("/")[2])
+        await world.confirm_email_change_uc().execute(world.links[-1].rpartition("/")[2])

@@ -96,6 +96,19 @@ async def test_open_registration_answers_with_the_contract_shape(env: tuple[Asyn
     assert await world.users.get_by_email(_fixture("RegisterRequest", "open")["email"]) is not None
 
 
+async def test_register_never_returns_the_verify_link_even_without_smtp(env: tuple[AsyncClient, World]) -> None:
+    client, world = env
+    await world.settings.set(KEY_REGISTRATION_MODE, "open", source="test")
+    assert not world.sender.enabled
+    body = _fixture("RegisterRequest", "open")
+
+    fresh = await client.post("/api/v1/auth/register", json=body)
+    again = await client.post("/api/v1/auth/register", json=body)
+
+    assert fresh.json() == again.json()
+    assert fresh.json()["link"] is None
+
+
 async def test_closed_registration_is_refused_with_a_code(env: tuple[AsyncClient, World]) -> None:
     client, world = env
     await world.settings.set(KEY_REGISTRATION_MODE, "closed", source="test")

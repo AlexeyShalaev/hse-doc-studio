@@ -45,4 +45,4 @@ async def test_background_failure_keeps_the_link_in_outbox(world: World) -> None
     await delivery.drain()
 
     assert result is None
-    assert [e.link for e in await world.outbox.list_active(T0)] == ["https://studio.test/reset/t"]
+    assert [(e.kind, e.link) for e in await world.outbox.list_active(T0)] == [(MailKind.reset_password, "")]

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
-from hse_doc_studio.core.identity.entities import User, UserStatus
+from hse_doc_studio.core.identity.entities import MailKind, User, UserStatus
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
@@ -105,6 +106,18 @@ class Clock:
         self.now += timedelta(**kw)
 
 
+class RecordingDelivery(LinkDelivery):
+    """Запоминает ссылки: в outbox их больше нет, а тестам нужны токены."""
+
+    def __init__(self, *args: Any, links: list[str], **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._links = links
+
+    async def deliver(self, kind: MailKind, to_email: str, link: str, now: datetime, **kwargs: Any) -> str | None:
+        self._links.append(link)
+        return await super().deliver(kind, to_email, link, now, **kwargs)
+
+
 @dataclass
 class World:
     clock: Clock
@@ -123,6 +136,7 @@ class World:
     settings: InMemoryInstanceSettingsRepository
     sender: FakeSender
     env: AuthEnvOverrides
+    links: list[str] = field(default_factory=list)
 
     def login_uc(self) -> LoginUC:
         return LoginUC(
@@ -137,7 +151,7 @@ class World:
         return AuthSettingsService(self.settings, self.env)
 
     def delivery(self) -> LinkDelivery:
-        return LinkDelivery(self.sender, self.outbox)
+        return RecordingDelivery(self.sender, self.outbox, links=self.links)
 
     def register_uc(self) -> RegisterUC:
         return RegisterUC(

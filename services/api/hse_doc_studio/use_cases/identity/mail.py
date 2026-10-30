@@ -1,4 +1,4 @@
-"""Доставка ссылок из писем: почтой, если настроен SMTP, иначе ссылкой на экране и записью в outbox."""
+"""Доставка ссылок из писем: почтой, если настроен SMTP, иначе ссылка возвращается вызывающему."""
 
 from __future__ import annotations
 
@@ -99,11 +99,12 @@ def _lang(locale: str | None) -> Lang:
 
 
 class LinkDelivery:
-    """Письмо уходит по SMTP; без SMTP или при сбое ссылка остаётся в outbox.
+    """Письмо уходит по SMTP; без SMTP или при сбое в outbox остаётся запись о неушедшем письме, но без ссылки.
 
-    Без SMTP ссылка возвращается вызывающему. С `background=True` отправка идёт отдельной задачей: запрос не ждёт
-    SMTP (до его таймаута), а время ответа не выдаёт, существует ли адрес. Сбой такой отправки кладёт ссылку в
-    outbox, вызывающему её уже не вернуть.
+    Ссылка с одноразовым токеном нигде не хранится (в БД токены лежат хешами) и возвращается только вызывающему:
+    анонимным маршрутам её показывать нельзя. С `background=True` отправка идёт отдельной задачей: запрос не ждёт
+    SMTP (до его таймаута), а время ответа не выдаёт, существует ли адрес. Сбой такой отправки вызывающему
+    ссылку уже не вернёт: нужно запросить письмо заново.
     """
 
     def __init__(
@@ -142,7 +143,7 @@ class LinkDelivery:
             subject, body = en if _lang(locale) is Lang.en else ru
             text = body.format(link=link)
             if self._background:
-                task = asyncio.create_task(self._send_in_background(kind, to_email, link, now, subject, text))
+                task = asyncio.create_task(self._send_in_background(kind, to_email, now, subject, text))
                 self._pending.add(task)
                 task.add_done_callback(self._pending.discard)
                 return None
@@ -150,31 +151,30 @@ class LinkDelivery:
                 await self._sender.send(to_email, subject, text)
             except Exception:
                 # Сбой почты не должен ломать регистрацию: человек получит ссылку другим путём.
-                _log.warning("mail delivery failed, link kept in outbox", extra={"kind": kind.value})
+                _log.warning("mail delivery failed, outbox entry kept", extra={"kind": kind.value})
             else:
                 return None
-        await self._keep_in_outbox(kind, to_email, link, now)
+        await self._keep_in_outbox(kind, to_email, now)
         return link
 
-    async def _send_in_background(
-        self, kind: MailKind, to_email: str, link: str, now: datetime, subject: str, text: str
-    ) -> None:
+    async def _send_in_background(self, kind: MailKind, to_email: str, now: datetime, subject: str, text: str) -> None:
         try:
             await self._sender.send(to_email, subject, text)
         except Exception:
-            _log.warning("mail delivery failed, link kept in outbox", extra={"kind": kind.value})
+            _log.warning("mail delivery failed, outbox entry kept", extra={"kind": kind.value})
             try:
-                await self._keep_in_outbox(kind, to_email, link, now)
+                await self._keep_in_outbox(kind, to_email, now)
             except Exception:
                 _log.exception("mail outbox write failed", extra={"kind": kind.value})
 
-    async def _keep_in_outbox(self, kind: MailKind, to_email: str, link: str, now: datetime) -> None:
+    async def _keep_in_outbox(self, kind: MailKind, to_email: str, now: datetime) -> None:
+        # Ссылку не сохраняем: открытый токен в БД и бэкапах позволял бы захватить аккаунт.
         await self._outbox.add(
             MailOutboxEntry(
                 id=uuid.uuid4().hex,
                 kind=kind,
                 to_email=to_email,
-                link=link,
+                link="",
                 created_at=now,
                 expires_at=now + self._ttl,
             )

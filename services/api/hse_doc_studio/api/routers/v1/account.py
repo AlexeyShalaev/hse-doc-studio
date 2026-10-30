@@ -213,14 +213,12 @@ async def unlink_identity(provider_id: str, request: Request) -> Response:
 
 @router.post("/account/email", response_model=ChangeEmailResponse)
 async def change_email(body: ChangeEmailRequest, request: Request, response: Response) -> ChangeEmailResponse:
-    """Ссылка подтверждения уходит на новый адрес; пока её не открыли, действует прежний."""
+    """Ссылка подтверждения уходит на новый адрес; пока её не открыли, действует прежний. В ответ ссылка не попадает."""
     user_id = _user_id()
     await enforce_email(request, body.email, action=f"change_email:{user_id}")
-    result = await (await request.state.dishka_container.get(RequestEmailChangeUC)).execute(
-        user_id, body.password, body.email
-    )
+    await (await request.state.dishka_container.get(RequestEmailChangeUC)).execute(user_id, body.password, body.email)
     response.headers["Cache-Control"] = "no-store"
-    return ChangeEmailResponse(status="check_email", link=result.link)
+    return ChangeEmailResponse(status="check_email", link=None)
 
 
 @router.post("/account/email/confirm", status_code=status.HTTP_204_NO_CONTENT)

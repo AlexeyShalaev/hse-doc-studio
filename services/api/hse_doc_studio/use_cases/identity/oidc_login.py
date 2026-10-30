@@ -207,7 +207,8 @@ class CompleteOidcLoginUC:
         self, user: User, provider: OidcProviderConfig, claims: OidcClaims, details: dict[str, object]
     ) -> User:
         # Аккаунт с неподтверждённой почтой мог завести кто угодно на чужой адрес и знает его пароль: связывать
-        # с ним нельзя, иначе владелец адреса войдёт в аккаунт злоумышленника.
+        # с ним нельзя, иначе владелец адреса войдёт в аккаунт злоумышленника. Подтверждённой почта считается
+        # только по письму: ссылки подтверждения и смены адреса анониму и запросившему не отдаются.
         if not user.email_verified:
             await self._audit.record("auth.oidc_link_refused", actor_id=user.id, details=details)
             raise OidcLoginError(OidcErrorCode.link_required)

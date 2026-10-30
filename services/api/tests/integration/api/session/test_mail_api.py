@@ -88,6 +88,7 @@ class _World:
         self.tokens = InMemoryAuthTokenRepository()
         self.outbox = InMemoryMailOutboxRepository()
         self.audit = InMemoryAuditLog()
+        self.links: list[tuple[MailKind, str]] = []
 
     async def add_user(self, email: str = "anna.petrova@example.org", *, verified: bool = True) -> User:
         user = User(
@@ -110,8 +111,20 @@ class _World:
         )
 
     async def outbox_token(self, kind: MailKind) -> str:
-        (entry,) = [e for e in await self.outbox.list_active(NOW) if e.kind is kind]
-        return entry.link.rpartition("/")[2]
+        (link,) = [link for k, link in self.links if k is kind]
+        return link.rpartition("/")[2]
+
+
+class _RecordingDelivery(LinkDelivery):
+    """В outbox ссылок нет, а тесту нужен токен из письма."""
+
+    def __init__(self, world: _World) -> None:
+        super().__init__(_Sender(), world.outbox)
+        self._world = world
+
+    async def deliver(self, kind: MailKind, to_email: str, link: str, now: datetime, **kwargs: Any) -> str | None:
+        self._world.links.append((kind, link))
+        return await super().deliver(kind, to_email, link, now, **kwargs)
 
 
 class _Provider(Provider):
@@ -120,7 +133,7 @@ class _Provider(Provider):
     def __init__(self, world: _World) -> None:
         super().__init__()
         self._w = world
-        self._delivery = LinkDelivery(_Sender(), world.outbox)
+        self._delivery = _RecordingDelivery(world)
         self._url = "https://studio.test"
 
     @provide
@@ -267,9 +280,9 @@ async def test_email_change_round_trip(env: tuple[AsyncClient, _World]) -> None:
     payload = response.json()
     assert set(payload) == set(_fixture("ChangeEmailResponse", "link_only"))
     assert payload["status"] == "check_email"
-    # Без SMTP ссылку копирует сам человек.
-    token = payload["link"].rpartition("/")[2]
-    assert payload["link"] == f"https://studio.test/confirm-email/{token}"
+    # Ссылка не возвращается запросившему даже без SMTP: иначе он «подтвердил» бы чужой адрес.
+    assert payload["link"] is None
+    token = await world.outbox_token(MailKind.email_change)
     confirm = await client.post("/api/v1/account/email/confirm", json={"token": token})
     assert confirm.status_code == 204
     user = await world.users.get("u1")

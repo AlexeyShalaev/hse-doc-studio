@@ -120,7 +120,8 @@ async def reset_password(body: ResetRequest, request: Request) -> Response:
 
 @router.post("/auth/register", response_model=RegisterResponse)
 async def register(body: RegisterRequest, request: Request, response: Response) -> RegisterResponse:
-    """Ответ нейтральный: для нового и уже занятого адреса одинаковый. Ссылка в ответе только без SMTP."""
+    """Ответ нейтральный: для нового и уже занятого адреса одинаковый. Ссылку подтверждения не отдаём никогда:
+    по ней аноним подтвердил бы чужой адрес и отличил бы занятый."""
     await enforce_ip(request, AUTH_IP)
     await enforce_email(request, body.email, action="register")
     language = request.headers.get("x-interface-language")
@@ -131,7 +132,7 @@ async def register(body: RegisterRequest, request: Request, response: Response) 
     # Контракт знает два исхода. Приглашённый на свой адрес уже активен и подтверждён, но ответ ему тот же:
     # форма ведёт на вход, а по другому ответу нельзя было бы отличить занятый адрес.
     outcome = "pending_approval" if result.outcome is RegistrationOutcome.pending_approval else "check_email"
-    return RegisterResponse(status=outcome, link=result.link)
+    return RegisterResponse(status=outcome, link=None)
 
 
 @router.get("/auth/invitations/{token}", response_model=InvitationInfo)
