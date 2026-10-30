@@ -24,11 +24,17 @@ export const UpdateAdminInstanceRequestSchema = z.strictObject({
 export const AdminBuildSettingsSchema = z.strictObject({
   timeout_s: z.number().int(),
   artifact_retention_days: z.number().int(),
+  personal_runners_enabled: z.boolean(),
+  personal_runner_wait_s: z.number().int(),
+  personal_runners_max_per_user: z.number().int(),
   fields,
 });
 export const UpdateAdminBuildRequestSchema = z.strictObject({
   timeout_s: z.number().int().nullable(),
   artifact_retention_days: z.number().int().nullable(),
+  personal_runners_enabled: z.boolean().nullable(),
+  personal_runner_wait_s: z.number().int().min(0).max(60).nullable(),
+  personal_runners_max_per_user: z.number().int().min(1).max(20).nullable(),
 });
 
 export type AdminInstanceSettings = z.infer<typeof AdminInstanceSettingsSchema>;

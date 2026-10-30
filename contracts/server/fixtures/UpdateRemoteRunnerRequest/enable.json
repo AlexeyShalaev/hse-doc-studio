@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "server_url": null,
+  "name": null,
+  "concurrency": null,
+  "yield_to_local": null,
+  "ai_endpoints": null
+}

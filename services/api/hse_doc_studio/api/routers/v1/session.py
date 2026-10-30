@@ -60,6 +60,8 @@ def _local_bootstrap() -> BootstrapResponse:
             local_services_ui=True,
             admin=False,
             personal_signing_keys=False,
+            # Студия может собирать облачные проекты хозяина как его личный раннер (только по его включению).
+            remote_runner=True,
         ),
         csrf_token=None,
     )

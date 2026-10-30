@@ -128,6 +128,10 @@ export const InstanceForm = ({
             artifact_retention_days: bld.isChanged("days")
               ? Number(bld.value.days)
               : null,
+            // Личные раннеры правит отдельная строка настроек; здесь их не трогаем.
+            personal_runners_enabled: null,
+            personal_runner_wait_s: null,
+            personal_runners_max_per_user: null,
           }),
         done: bld.reset,
       },

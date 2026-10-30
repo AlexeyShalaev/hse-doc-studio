@@ -54,9 +54,15 @@ const INSTANCE_ALL_ENV: AdminInstanceSettings = {
 const BUILD: AdminBuildSettings = {
   timeout_s: 300,
   artifact_retention_days: 30,
+  personal_runners_enabled: true,
+  personal_runner_wait_s: 5,
+  personal_runners_max_per_user: 5,
   fields: {
     "build.timeout_s": free,
     "build.artifact_retention_days": free,
+    "runners.personal_enabled": free,
+    "runners.personal_wait_s": free,
+    "runners.personal_max_per_user": free,
   },
 };
 const BUILD_ENV: AdminBuildSettings = {

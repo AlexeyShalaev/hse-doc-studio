@@ -48,6 +48,11 @@ const runner = (
   last_seen_at: seenAgo === null ? null : ago(seenAgo, now),
   paused: false,
   revoked: false,
+  owner_kind: "instance",
+  owner: null,
+  host_kind: "cli",
+  ai_endpoints: [],
+  last_seen_ip: null,
   ...extra,
 });
 

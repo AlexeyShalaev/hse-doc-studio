@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import {
   CalendarClock,
   Hourglass,
+  Laptop,
   Layers,
   RefreshCw,
   ServerOff,
@@ -17,6 +18,7 @@ const ICONS: Record<CompileWait["reason"], LucideIcon> = {
   no_runner: ServerOff,
   runner_lost: RefreshCw,
   superseded: Layers,
+  personal_runner: Laptop,
 };
 
 const TONE: Record<WaitTone, { fg: string; bg: string; border: string }> = {
