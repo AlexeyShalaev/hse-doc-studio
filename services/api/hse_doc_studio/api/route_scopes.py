@@ -266,6 +266,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/runner/v1/jobs/{job_id}/artifacts"): RouteScope.job_token,
     ("PUT", "/api/runner/v1/jobs/{job_id}/artifacts/{sha256}"): RouteScope.job_token,
     ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
+    ("GET", "/api/runner/v1/jobs/{job_id}/relay/request"): RouteScope.job_token,
+    ("POST", "/api/runner/v1/jobs/{job_id}/relay/events"): RouteScope.job_token,
     # Прокси к общим сервисам: токен задачи или вход проверяет сам маршрут
     ("POST", "/api/services/languagetool/v2/check"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу

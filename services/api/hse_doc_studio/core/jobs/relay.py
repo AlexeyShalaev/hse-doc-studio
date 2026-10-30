@@ -11,9 +11,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
+
+if TYPE_CHECKING:
+    from hse_doc_studio.core.jobs.wire import RelayEvent
 
 # У `jobs.project_id` нет внешнего ключа: ретрансляция без проекта (список моделей, проверка) пишет нулевой id.
 NO_PROJECT_ID = UUID(int=0)
@@ -131,3 +135,64 @@ class AiRelayResult(JobResultData):
     status_code: int | None
     bytes_out: int
     upstream_ms: int
+
+
+class RelayRequestGoneError(Exception):
+    """Тела запроса уже нет: задача закончилась или api перезапущен (404 `relay_request_gone`)."""
+
+
+class RelayOutOfOrderError(Exception):
+    """Порция событий пропустила номер или нарушила порядок head, data, end (409 `relay_out_of_order`)."""
+
+
+class RelayTooLargeError(Exception):
+    """Событие, порция или весь ответ больше предела (413 `relay_too_large`)."""
+
+
+class RelayStreamError(Exception):
+    """Поток ответа оборвался без `end`: раннер прислал `error` или задача стала терминальной."""
+
+    def __init__(self, code: str, detail: str = "") -> None:
+        super().__init__(detail or code)
+        self.code = code
+
+
+class IRelayChannel(Protocol):
+    """Канал одной ретрансляции в памяти api: потребитель (транспорт SDK) читает, ручки раннера пишут."""
+
+    async def wait_picked(self, timeout_s: float) -> bool:
+        """True, когда раннер забрал тело запроса; False по таймауту."""
+        ...
+
+    async def wait_head(self, timeout_s: float) -> tuple[int, str | None]:
+        """Статус и тип ответа модели; `TimeoutError` по таймауту, `RelayStreamError` при обрыве."""
+        ...
+
+    async def read(self, timeout_s: float) -> bytes | None:
+        """Следующая порция тела, `None` после `end`; `TimeoutError` при тишине, `RelayStreamError` при обрыве."""
+        ...
+
+    def close(self) -> None:
+        """Потребитель больше не читает: следующее подтверждение раннеру несёт `cancel`."""
+        ...
+
+    @property
+    def consumer_closed(self) -> bool: ...
+
+
+class IRelayHub(Protocol):
+    def open(self, job_id: UUID) -> IRelayChannel: ...
+
+    def discard(self, job_id: UUID) -> None: ...
+
+    def mark_picked(self, job_id: UUID) -> bool:
+        """Раннер забрал тело; False, если канала нет."""
+        ...
+
+    async def push(self, job_id: UUID, seq: int, events: tuple[RelayEvent, ...]) -> bool:
+        """Принять порцию по порядку; вернуть `cancel`. Канала нет: `cancel` (потребитель ушёл)."""
+        ...
+
+    def fail(self, job_id: UUID, code: str) -> None:
+        """Задача стала терминальной без `end`: поток завершается ошибкой с этим кодом."""
+        ...

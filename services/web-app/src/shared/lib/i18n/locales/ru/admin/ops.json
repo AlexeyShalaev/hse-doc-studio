@@ -254,7 +254,8 @@
       "compile": "Сборка",
       "office.convert": "Конвертация документа",
       "signature.verify_detached": "Проверка подписи",
-      "pack.submission": "Упаковка работы"
+      "pack.submission": "Упаковка работы",
+      "ai.relay": "ИИ через раннер"
     },
     "priority": {
       "interactive": "Срочная",

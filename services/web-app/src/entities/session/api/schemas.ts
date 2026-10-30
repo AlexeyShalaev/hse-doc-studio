@@ -637,6 +637,7 @@ export const AdminJobSchema = z.strictObject({
     "office.convert",
     "signature.verify_detached",
     "pack.submission",
+    "ai.relay",
   ]),
   state: JobStateSchema,
   project_id: z.string(),

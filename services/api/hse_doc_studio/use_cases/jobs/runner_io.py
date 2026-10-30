@@ -61,14 +61,14 @@ class RunnerJobIoService:
         self._clock = clock
 
     async def append_log(self, runner: Runner, job_id: UUID, job_token: str, batch: LogBatch) -> None:
-        job = await self._authorize(runner, job_id, job_token, batch.attempt)
+        job = await self.authorize(runner, job_id, job_token, batch.attempt)
         await self._logs.append(job.id, job.attempt, batch.seq, batch.lines)
 
     async def need_blobs(
         self, runner: Runner, job_id: UUID, job_token: str, request: BlobNeedRequest
     ) -> BlobNeedResponse:
         """Ссылки на блобы манифеста; хоть один хеш вне манифеста отклоняет весь запрос."""
-        job = await self._authorize(runner, job_id, job_token, request.attempt)
+        job = await self.authorize(runner, job_id, job_token, request.attempt)
         allowed = _manifest_hashes(job)
         if any(sha not in allowed for sha in request.sha256):
             raise BlobForbiddenError("blob is not in the job manifest")
@@ -81,7 +81,7 @@ class RunnerJobIoService:
 
     async def open_blob(self, runner: Runner, job_id: UUID, job_token: str, sha256: str) -> AsyncIterator[bytes]:
         """Чужой для задачи хеш неотличим от отсутствующего блоба."""
-        job = await self._authorize(runner, job_id, job_token)
+        job = await self.authorize(runner, job_id, job_token)
         if sha256 not in _manifest_hashes(job):
             raise BlobMissingError(f"blob {sha256} is missing")
         return await self._blobs.open(sha256)
@@ -89,21 +89,21 @@ class RunnerJobIoService:
     async def announce_artifact(
         self, runner: Runner, job_id: UUID, job_token: str, request: ArtifactUploadRequest
     ) -> ArtifactUploadResponse:
-        job = await self._authorize(runner, job_id, job_token, request.attempt)
+        job = await self.authorize(runner, job_id, job_token, request.attempt)
         url = await self._outputs.announce(job.id, job.attempt, request.artifact)
         return ArtifactUploadResponse(url=url)
 
     async def put_artifact(
         self, runner: Runner, job_id: UUID, job_token: str, sha256: str, chunks: AsyncIterator[bytes]
     ) -> None:
-        job = await self._authorize(runner, job_id, job_token)
+        job = await self.authorize(runner, job_id, job_token)
         await self._outputs.put(job.id, job.attempt, sha256, chunks)
 
     async def complete(
         self, runner: Runner, job_id: UUID, job_token: str, request: CompleteRequest
     ) -> CompleteResponse:
         """Устаревшая попытка получает `StaleAttemptError`; выходы проверяются до смены состояния задачи."""
-        job = await self._authorize(runner, job_id, job_token, request.attempt, require_running=False)
+        job = await self.authorize(runner, job_id, job_token, request.attempt, require_running=False)
         if job.state is not JobState.running:
             raise StaleAttemptError(f"job {job_id} is already {job.state.value}")
         try:
@@ -122,7 +122,7 @@ class RunnerJobIoService:
             await self._outputs.discard(job.id)
         return CompleteResponse(accepted=True)
 
-    async def _authorize(
+    async def authorize(
         self, runner: Runner, job_id: UUID, job_token: str, attempt: int | None = None, *, require_running: bool = True
     ) -> QueuedJob:
         claims = self._signer.verify(job_token, self._clock(), job_id=str(job_id), runner_id=runner.id)

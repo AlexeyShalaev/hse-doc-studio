@@ -60,6 +60,7 @@ from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 JobStorageRoot = NewType("JobStorageRoot", Path)
@@ -73,9 +74,19 @@ class ServerJobsProvider(Provider):
         return PostgresJobQueue(sessions)
 
     @provide
-    def get_job_queue_service(self, queue: IJobQueue, wakeup: JobWakeup) -> JobQueueService:
+    def get_job_terminal_broadcaster(self) -> JobTerminalBroadcaster:
+        return JobTerminalBroadcaster()
+
+    @provide
+    def get_job_queue_service(
+        self, queue: IJobQueue, wakeup: JobWakeup, terminal: JobTerminalBroadcaster
+    ) -> JobQueueService:
         return JobQueueService(
-            queue, lease_s=settings.jobs.lease_s, timeout_grace_s=settings.jobs.timeout_grace_s, wakeup=wakeup
+            queue,
+            lease_s=settings.jobs.lease_s,
+            timeout_grace_s=settings.jobs.timeout_grace_s,
+            wakeup=wakeup,
+            terminal=terminal,
         )
 
     @provide(override=True)

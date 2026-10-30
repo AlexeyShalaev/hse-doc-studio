@@ -18,6 +18,7 @@ from hse_doc_studio.core.jobs.errors import (
     RunnerAuthError,
     StaleAttemptError,
 )
+from hse_doc_studio.core.jobs.relay import RelayOutOfOrderError, RelayRequestGoneError, RelayTooLargeError
 
 RUNNER_ERROR_STATUS: Mapping[RunnerErrorCode, int] = {
     RunnerErrorCode.runner_unauthorized: 401,
@@ -60,3 +61,6 @@ def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(BlobForbiddenError, _coded_handler(403, RunnerErrorCode.blob_forbidden))
     app.add_exception_handler(BlobMissingError, _coded_handler(404, RunnerErrorCode.blob_missing))
     app.add_exception_handler(ArtifactInvalidError, _coded_handler(422, RunnerErrorCode.artifact_invalid))
+    app.add_exception_handler(RelayRequestGoneError, _coded_handler(404, RunnerErrorCode.relay_request_gone))
+    app.add_exception_handler(RelayOutOfOrderError, _coded_handler(409, RunnerErrorCode.relay_out_of_order))
+    app.add_exception_handler(RelayTooLargeError, _coded_handler(413, RunnerErrorCode.relay_too_large))

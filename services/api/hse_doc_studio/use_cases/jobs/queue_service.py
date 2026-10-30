@@ -18,6 +18,7 @@ import structlog
 from hse_doc_studio.core.jobs.enums import JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import ExpiredOutcome, Heartbeat, IJobQueue, QueuedJob
+from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger(__name__)
@@ -49,8 +50,10 @@ class JobQueueService:
         timeout_grace_s: float = TIMEOUT_GRACE_S,
         clock: Callable[[], datetime] = _utc_now,
         wakeup: JobWakeup | None = None,
+        terminal: JobTerminalBroadcaster | None = None,
     ) -> None:
         self._wakeup = wakeup
+        self._terminal = terminal
         self._queue = queue
         self._lease_s = lease_s
         self._grace = timedelta(seconds=timeout_grace_s)
@@ -84,16 +87,26 @@ class JobQueueService:
             raise QueuedJobNotFoundError(f"job {job_id} not found")
         if status is JobStatus.cancelled and job.state is JobState.running and self._overdue(job):
             status = JobStatus.timed_out
-        return await self._queue.complete(job_id, attempt, status, result=result, error_code=error_code)
+        finished = await self._queue.complete(job_id, attempt, status, result=result, error_code=error_code)
+        await self._emit(finished)
+        return finished
 
     async def cancel(self, job_id: UUID) -> QueuedJob:
         """Не начатая задача отменяется сразу, идущая получает флаг для heartbeat."""
-        return await self._queue.request_cancel(job_id)
+        job = await self._queue.request_cancel(job_id)
+        await self._emit(job)
+        return job
+
+    async def _emit(self, job: QueuedJob) -> None:
+        if self._terminal is not None and job.state.is_terminal:
+            await self._terminal.emit(job)
 
     async def reap(self) -> tuple[ExpiredOutcome, ...]:
         """Возвращает в очередь задачи с истёкшей арендой, пока остались попытки, иначе `runner_lost`."""
         outcomes = await self._queue.requeue_expired()
         for outcome in outcomes:
+            if not outcome.requeued:
+                await self._emit(outcome.job)
             logger.warning(
                 "job_lease_expired",
                 job_id=str(outcome.job.id),
@@ -116,7 +129,9 @@ class JobQueueService:
                 continue
             try:
                 if deadline + self._grace <= now:
-                    timed_out.append(await self._queue.complete(job.id, job.attempt, JobStatus.timed_out))
+                    finished = await self._queue.complete(job.id, job.attempt, JobStatus.timed_out)
+                    timed_out.append(finished)
+                    await self._emit(finished)
                 elif not job.cancel_requested:
                     cancelled.append(await self._queue.request_cancel(job.id))
             except StaleAttemptError:

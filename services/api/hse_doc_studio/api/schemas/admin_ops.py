@@ -15,7 +15,7 @@ from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.core.jobs.quotas import MAX_CONCURRENT, MAX_DURATION_S, MIN_DURATION_S
 
 JobStateName = Literal["queued", "running", "succeeded", "failed", "cancelled", "timed_out"]
-JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission"]
+JobKindName = Literal["compile", "office.convert", "signature.verify_detached", "pack.submission", "ai.relay"]
 ServiceStateName = Literal["ok", "down", "degraded", "not_configured"]
 AiProviderTypeName = Literal["claude", "openai", "openai_compat", "ollama"]
 

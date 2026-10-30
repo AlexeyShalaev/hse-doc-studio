@@ -57,3 +57,18 @@ class JobsConfig(BaseModel):
     max_log_bytes: int = Field(
         default=8 * 1024 * 1024, gt=0, description="Предел лога одной попытки; остальное отбрасывается."
     )
+    relay_pickup_s: float = Field(
+        default=10.0, gt=0, le=120, description="Сколько ждать, пока личный раннер заберёт тело запроса к модели."
+    )
+    relay_max_request_bytes: int = Field(
+        default=8 * 1024 * 1024, gt=0, description="Предел тела запроса к модели через личный раннер."
+    )
+    relay_max_response_bytes: int = Field(
+        default=64 * 1024 * 1024, gt=0, description="Предел ответа модели через личный раннер; больший обрывается."
+    )
+    relay_max_pending_per_user: int = Field(
+        default=8, ge=1, le=64, description="Одновременных ретрансляций ИИ на человека (в очереди и идущих)."
+    )
+    relay_max_duration_s: float = Field(
+        default=900.0, ge=30, le=3600, description="Потолок длительности одной ретрансляции ИИ."
+    )

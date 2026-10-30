@@ -324,6 +324,10 @@ class QueueJobDispatcher:
         for job in await self._ledger.list_unapplied():
             if job.id in self._in_flight:
                 continue
+            if job.kind is JobKind.ai_relay:
+                # Ретрансляцию ИИ после рестарта довершать нечем: её поток жил в памяти прошлого процесса.
+                await self._ledger.mark_applied(job.id)
+                continue
             try:
                 await asyncio.create_task(self._recover_finished(job))
                 finished += 1

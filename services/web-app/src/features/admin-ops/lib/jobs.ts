@@ -15,6 +15,7 @@ export const JOB_KINDS = [
   "office.convert",
   "signature.verify_detached",
   "pack.submission",
+  "ai.relay",
 ] as const;
 
 export const isActive = (job: Pick<AdminJob, "status">): boolean =>
