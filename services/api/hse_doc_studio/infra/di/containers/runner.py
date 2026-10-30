@@ -38,6 +38,10 @@ from hse_doc_studio.infra.runner.verify import EphemeralVerifyHandler
 from hse_doc_studio.infra.runner.workspace import BlobCache, RunnerWorkspaces
 
 
+class RunnerConfigError(ValueError):
+    """Раннеру нечем представиться серверу: нет ни токена регистрации, ни токена раннера, ни сохранённой личности."""
+
+
 class RunnerProvider(Provider):
     scope = Scope.APP
 
@@ -59,14 +63,22 @@ class RunnerProvider(Provider):
     @provide
     async def get_client(self, config: RunnerConfig) -> AsyncIterator[RunnerClient]:
         store = RunnerIdentityStore(config.data_dir)
+        identity = store.load(config.api_url)
+        if config.runner_token is None and config.token is None and identity is None:
+            raise RunnerConfigError(
+                "нужен HSE_RUNNER__TOKEN (токен регистрации) или HSE_RUNNER__RUNNER_TOKEN (токен раннера)"
+            )
         client = RunnerClient(
             config.api_url,
-            config.token.get_secret_value(),
+            config.token.get_secret_value() if config.token is not None else "",
             version=__version__,
             transport=self._transport,
             on_registered=lambda registered: store.save(config.api_url, registered),
         )
-        if (identity := store.load(config.api_url)) is not None:
+        if config.runner_token is not None:
+            # Токен после смены на сайте важнее сохранённой личности: старый уже не годится.
+            client.restore(identity.runner_id if identity is not None else "", config.runner_token.get_secret_value())
+        elif identity is not None:
             client.restore(identity.runner_id, identity.runner_token)
         yield client
         await client.aclose()

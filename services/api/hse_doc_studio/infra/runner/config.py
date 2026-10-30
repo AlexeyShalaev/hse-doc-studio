@@ -5,10 +5,13 @@ from __future__ import annotations
 import os
 import socket
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from hse_doc_studio.core.jobs.relay import MAX_AI_ENDPOINTS, AiEndpointFlavor
+from hse_doc_studio.core.jobs.runners import RunnerHostKind
 from hse_doc_studio.infra.compile.docker_compile_executor import (
     DEFAULT_CACHE_VOLUME,
     DEFAULT_IDLE_TIMEOUT_S,
@@ -19,17 +22,58 @@ from hse_doc_studio.infra.compile.docker_compile_executor import (
 _GIB = 1024**3
 
 
+class AiEndpointConfig(BaseModel):
+    """ИИ-адрес в сети раннера: URL знает только раннер, ключ берётся из его переменной окружения."""
+
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,31}$")
+    url: str
+    flavor: AiEndpointFlavor = AiEndpointFlavor.openai
+    key_env: str | None = None
+
+    @field_validator("url")
+    @classmethod
+    def _http_only(cls, value: str) -> str:
+        parts = urlsplit(value)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise ValueError("ai endpoint url must be http(s)://host")
+        if parts.query or parts.fragment:
+            raise ValueError("ai endpoint url must not carry a query or a fragment")
+        return value
+
+
 class RunnerConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="HSE_RUNNER__", env_nested_delimiter="__", extra="ignore", case_sensitive=False
     )
 
     api_url: str = Field(description="Адрес api Студии, например https://studio.example.org.")
-    token: SecretStr = Field(
+    token: SecretStr | None = Field(
+        default=None,
         description=(
-            "Токен регистрации из админки: нужен один раз. Выданный раннеру токен хранится в data_dir/identity.json, "
-            "после этого значение можно убрать из окружения."
-        )
+            "Токен регистрации из админки или из «Мои раннеры»: нужен один раз. Выданный раннеру токен хранится в "
+            "data_dir/identity.json, после этого значение можно убрать из окружения."
+        ),
+    )
+    runner_token: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Постоянный токен раннера после смены токена на сайте (hsrn_…): перекрывает data_dir/identity.json."
+        ),
+    )
+    host_kind: RunnerHostKind = Field(
+        default=RunnerHostKind.cli, description="Где живёт раннер: cli (консоль) или desktop (локальная Студия)."
+    )
+    ai_endpoints: list[AiEndpointConfig] = Field(
+        default_factory=list,
+        description=(
+            "ИИ-адреса, которые раннер открывает своему хозяину, JSON-списком: "
+            '[{"name":"ollama","url":"http://localhost:11434/v1","flavor":"ollama"}]. Сервер знает только имена; '
+            "key_env называет переменную окружения раннера с ключом модели."
+        ),
+    )
+    ai_concurrency: int = Field(default=2, ge=0, le=16, description="Сколько запросов к моделям раннер ведёт сразу.")
+    relay_max_response_bytes: int = Field(
+        default=64 * 1024 * 1024, gt=0, description="Предел ответа модели при ретрансляции; больший обрывается."
     )
     name: str = Field(default_factory=socket.gethostname, description="Имя раннера в списке администратора.")
     tags: str = Field(
@@ -75,6 +119,15 @@ class RunnerConfig(BaseSettings):
             tmpfs_tmp=self.build_tmp_size,
             user=user,
         )
+
+    @model_validator(mode="after")
+    def _unique_endpoints(self) -> RunnerConfig:
+        names = [endpoint.name for endpoint in self.ai_endpoints]
+        if len(set(names)) != len(names):
+            raise ValueError("ai endpoint names must be unique")
+        if len(names) > MAX_AI_ENDPOINTS:
+            raise ValueError(f"at most {MAX_AI_ENDPOINTS} ai endpoints")
+        return self
 
     def explicit_tags(self) -> frozenset[str] | None:
         tags = frozenset(part.strip() for part in self.tags.split(",") if part.strip())

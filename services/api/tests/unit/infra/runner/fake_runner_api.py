@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,6 +38,9 @@ class FakeJob:
     completed: list[dict[str, Any]] = field(default_factory=list)
     artifacts: dict[str, bytes] = field(default_factory=dict)
     announced: list[dict[str, Any]] = field(default_factory=list)
+    relay_body: bytes = b""
+    relay_batches: list[dict[str, Any]] = field(default_factory=list)
+    relay_cancel: bool = False
 
     @property
     def job_id(self) -> str:
@@ -57,6 +61,15 @@ class FakeRunnerState:
         self.fail_register_with: int | None = None
         self.blobs: dict[str, bytes] = {}
         self.blob_requests: list[tuple[str, str]] = []
+        # Сервер с /announce (протокол 1.1); False: старый сервер отвечает 404.
+        self.supports_announce = True
+        self.announce_paused = False
+        self.announces: list[dict[str, Any]] = []
+        self.poll_bodies: list[dict[str, Any]] = []
+        self.offline_calls = 0
+        self.deregister_calls = 0
+        self.pair_polls: list[str] = []
+        self.pair_status = "pending"
 
     def enqueue(self, envelope: dict[str, Any]) -> FakeJob:
         job = FakeJob(envelope)
@@ -75,6 +88,8 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
     @app.middleware("http")
     async def auth(request: Request, call_next: Any) -> Response:
         state.headers_seen.append(dict(request.headers))
+        if "/pair/" in request.url.path:
+            return await call_next(request)
         expected = TOKEN if request.url.path.endswith("/register") else RUNNER_TOKEN
         if request.headers.get("authorization") != f"Bearer {expected}":
             return _error(401, "runner_unauthorized")
@@ -89,11 +104,70 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
             runner_id="runner-1", runner_token=RUNNER_TOKEN, lease_s=45, heartbeat_s=10, max_poll_wait_s=25
         ).model_dump()
 
+    @app.post("/api/runner/v1/announce")
+    async def announce_runner(body: schemas.RunnerAnnounceRequestBody) -> Any:
+        if not state.supports_announce:
+            return Response(status_code=404)
+        state.announces.append(body.model_dump())
+        return schemas.RunnerAnnounceResponseBody(
+            runner_id="runner-1",
+            server_features=sorted(set(body.features) & {"announce", "offline", "ai_slots", "ai_relay"}),
+            owner_kind="user",
+            paused=state.announce_paused,
+            relay_keepalive_s=2,
+        ).model_dump()
+
+    @app.post("/api/runner/v1/offline")
+    async def offline() -> Any:
+        if not state.supports_announce:
+            return Response(status_code=404)
+        state.offline_calls += 1
+        return Response(status_code=204)
+
+    @app.post("/api/runner/v1/deregister")
+    async def deregister() -> Any:
+        state.deregister_calls += 1
+        return Response(status_code=204)
+
+    @app.post("/api/runner/v1/pair/start")
+    async def pair_start(body: schemas.RunnerPairStartRequestBody) -> Any:
+        return json.loads((_FIXTURES / "RunnerPairStartResponseBody" / "default.json").read_text())
+
+    @app.post("/api/runner/v1/pair/poll")
+    async def pair_poll(body: schemas.RunnerPairPollRequestBody) -> Any:
+        state.pair_polls.append(body.device_code)
+        token = TOKEN if state.pair_status == "approved" else None
+        return {"status": state.pair_status, "registration_token": token}
+
+    @app.get("/api/runner/v1/jobs/{job_id}/relay/request")
+    async def relay_request(job_id: str) -> Any:
+        job = state.jobs.get(job_id)
+        if job is None:
+            return _error(404, "relay_request_gone")
+        digest = hashlib.sha256(job.relay_body).hexdigest()
+        return Response(content=job.relay_body, headers={"X-Relay-Sha256": digest})
+
+    @app.post("/api/runner/v1/jobs/{job_id}/relay/events")
+    async def relay_events(job_id: str, body: schemas.RelayEventBatchBody) -> Any:
+        job = job_or_error(job_id, body.attempt)
+        if isinstance(job, JSONResponse):
+            return job
+        job.relay_batches.append(body.model_dump())
+        return {"cancel": job.relay_cancel}
+
     @app.post("/api/runner/v1/poll")
-    async def poll(body: schemas.PollRequestBody) -> Any:
+    async def poll(request: Request) -> Any:
+        raw = await request.json()
+        state.poll_bodies.append(raw)
+        schemas.PollRequestBody.model_validate(raw)
+        if not state.supports_announce and "free_ai_slots" in raw:
+            return _error(422, "unknown_field")
         state.polls += 1
-        if state.queue:
-            return {"envelope": state.queue.pop(0).envelope}
+        for job in list(state.queue):
+            relay = job.envelope["spec"]["kind"] == "ai.relay"
+            if (relay and raw.get("free_ai_slots", 0) > 0) or (not relay and raw["free_slots"] > 0):
+                state.queue.remove(job)
+                return {"envelope": job.envelope}
         await asyncio.sleep(0.02)
         return {"envelope": None}
 

@@ -151,13 +151,19 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+_FATAL_HINTS = {
+    "runner_unauthorized": "раннер отозван или его токен сменили на сайте; подключите раннер заново. ",
+    "runner_disabled": "раннер выключен: администратор выключил личные раннеры или отключил хозяина. ",
+}
+
+
 async def _runner() -> int:
     # Лениво: раннеру не нужны ни настройки api, ни extra server.
     import contextlib  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
     from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
-    from hse_doc_studio.infra.di.containers.runner import create_runner_container  # noqa: PLC0415
+    from hse_doc_studio.infra.di.containers.runner import RunnerConfigError, create_runner_container  # noqa: PLC0415
     from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
     from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
 
@@ -173,7 +179,11 @@ async def _runner() -> int:
         # Контейнеры сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
         if (swept := await sweep_build_containers()) > 0:
             logging.getLogger(__name__).warning("removed %d leftover build containers", swept)
-        loop = await container.get(RunnerLoop)
+        try:
+            loop = await container.get(RunnerLoop)
+        except RunnerConfigError as exc:
+            _write(f"error: {exc}", stream=sys.stderr)
+            return _EXIT_USAGE
         running = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             with contextlib.suppress(NotImplementedError):
@@ -181,7 +191,7 @@ async def _runner() -> int:
         try:
             await loop.run()
         except RunnerFatalError as exc:
-            _write(f"error: {exc}", stream=sys.stderr)
+            _write(f"error: {_FATAL_HINTS.get(exc.code or '', '')}{exc}", stream=sys.stderr)
             return _EXIT_BUILD_FAILED
         return _EXIT_OK
     finally:
