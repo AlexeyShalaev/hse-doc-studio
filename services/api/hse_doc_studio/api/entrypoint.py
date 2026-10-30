@@ -16,6 +16,7 @@ from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
     install_audit_retention,
@@ -42,7 +43,6 @@ from hse_doc_studio.api.server_setup import prepare_server_setup
 from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
-from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.readiness import (
@@ -162,13 +162,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         expose_headers=CORS_EXPOSE_HEADERS,
     )
 
-    @app.middleware("http")
-    async def _interface_language_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
-        # Bind the UI language for this request (and any background task spawned
-        # within it, e.g. an agent run, which inherits the context). Absent header
-        # → None, so downstream code falls back to settings.interface_language.
-        set_interface_language(request.headers.get("X-Interface-Language"))
-        return await call_next(request)
+    app.add_middleware(InterfaceLanguageMiddleware)
 
     app.include_router(api_router)
     include_server_routers(app)
