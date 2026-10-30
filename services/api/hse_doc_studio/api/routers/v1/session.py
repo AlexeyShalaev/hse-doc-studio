@@ -97,7 +97,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             self_update=caps.self_update,
             local_services_ui=caps.local_services_ui,
             admin=is_admin,
-            personal_signing_keys=caps.personal_signing_keys,
+            personal_signing_keys=caps.personal_signing_keys and result.personal_signing_keys,
         ),
         csrf_token=result.session.csrf_token if result.session else None,
     )

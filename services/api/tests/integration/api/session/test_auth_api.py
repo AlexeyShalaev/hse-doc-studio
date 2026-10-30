@@ -23,6 +23,7 @@ from hse_doc_studio.core.identity.entities import Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.signatures.key_policy import KEY_SERVER_KEYS, ServerKeyPolicy, server_key_policy_from
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
@@ -140,7 +141,17 @@ class _Provider(Provider):
 
     @provide
     def bootstrap(self) -> BootstrapUC:
-        return BootstrapUC(SetupStateService(self._w.settings), AuthSettingsService(self._w.settings), self._service)
+        settings = self._w.settings
+
+        async def signing_keys_allowed() -> bool:
+            return server_key_policy_from(await settings.get_all()) is ServerKeyPolicy.allowed
+
+        return BootstrapUC(
+            SetupStateService(settings),
+            AuthSettingsService(settings),
+            self._service,
+            signing_keys_allowed=signing_keys_allowed,
+        )
 
     @provide
     def login(self) -> LoginUC:
@@ -231,6 +242,20 @@ async def test_bootstrap_with_session_returns_user_and_csrf(env: tuple[AsyncClie
     assert body["csrf_token"] == "csrf-secret"
     assert body["capabilities"]["admin"] is True
     assert body["capabilities"]["fs_browse"] is False
+
+
+async def test_bootstrap_personal_signing_keys_follow_the_admin_policy(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    user = await world.add_user()
+    await world.add_session(user, "secret")
+
+    async def flag() -> bool:
+        body = (await client.get("/api/v1/session/bootstrap", headers=_cookie("secret"))).json()
+        return bool(body["capabilities"]["personal_signing_keys"])
+
+    assert await flag() is False
+    await world.settings.set(KEY_SERVER_KEYS, "allowed", source="admin")
+    assert await flag() is True
 
 
 async def test_bootstrap_with_dead_cookie_is_anonymous(env: tuple[AsyncClient, _World]) -> None:

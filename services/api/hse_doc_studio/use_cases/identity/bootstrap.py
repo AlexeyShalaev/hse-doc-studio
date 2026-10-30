@@ -25,6 +25,8 @@ class BootstrapResult:
     session: Session | None
     # Кнопки единого входа: пары (id, название).
     oidc_providers: tuple[tuple[str, str], ...] = ()
+    # Разрешил ли админ установки хранить на сервере личные закрытые ключи подписи.
+    personal_signing_keys: bool = True
 
 
 class BootstrapUC:
@@ -36,12 +38,14 @@ class BootstrapUC:
         *,
         smtp_enabled: bool | Callable[[], bool] = False,
         oidc_providers: Callable[[], Awaitable[list[tuple[str, str]]]] | None = None,
+        signing_keys_allowed: Callable[[], Awaitable[bool]] | None = None,
     ) -> None:
         self._setup = setup
         self._settings = settings
         self._sessions = sessions
         self._smtp_enabled = smtp_enabled
         self._oidc_providers = oidc_providers
+        self._signing_keys_allowed = signing_keys_allowed
 
     async def auth_settings(self) -> AuthSettings:
         return await self._settings.effective()
@@ -58,4 +62,5 @@ class BootstrapUC:
             user=resolved.user if resolved else None,
             session=resolved.session if resolved else None,
             oidc_providers=tuple(await self._oidc_providers()) if self._oidc_providers else (),
+            personal_signing_keys=await self._signing_keys_allowed() if self._signing_keys_allowed else True,
         )

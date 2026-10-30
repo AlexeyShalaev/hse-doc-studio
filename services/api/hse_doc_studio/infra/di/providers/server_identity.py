@@ -42,6 +42,7 @@ from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy, server_key_policy_from
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
     SqlApiTokenRepository,
@@ -723,9 +724,18 @@ class ServerIdentityProvider(Provider):
         sessions: SessionService,
         sender: IMailSender,
         oidc: IOidcProviderCatalog,
+        settings_repo: IInstanceSettingsRepository,
     ) -> BootstrapUC:
+        async def signing_keys_allowed() -> bool:
+            return server_key_policy_from(await settings_repo.get_all()) is ServerKeyPolicy.allowed
+
         return BootstrapUC(
-            setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled, oidc_providers=oidc.list_enabled
+            setup,
+            auth_settings,
+            sessions,
+            smtp_enabled=lambda: sender.enabled,
+            oidc_providers=oidc.list_enabled,
+            signing_keys_allowed=signing_keys_allowed,
         )
 
     @provide
