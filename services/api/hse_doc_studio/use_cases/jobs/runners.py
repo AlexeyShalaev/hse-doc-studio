@@ -479,9 +479,20 @@ class RunnerRegistry:
             )
         await self._after_runner_left(runner, cancel_relays=True)
 
-    async def list_runners(self, actor: Actor) -> list[Runner]:
+    async def list_runners(self, actor: Actor, owner_kind: RunnerOwnerKind | None = None) -> list[Runner]:
         _require_admin(actor)
-        return await self._runners.list()
+        return [r for r in await self._runners.list() if owner_kind is None or r.owner_kind is owner_kind]
+
+    async def owners_of(self, runners: list[Runner]) -> dict[str, tuple[str, str]]:
+        """Имя и почта хозяев личных раннеров: админу нужно знать, с кем связаться."""
+        found: dict[str, tuple[str, str]] = {}
+        if self._users is None:
+            return found
+        for owner_id in {r.owner_id for r in runners if r.owner_id is not None}:
+            user = await self._users.get(owner_id)
+            if user is not None:
+                found[owner_id] = (user.name, user.email)
+        return found
 
     async def rotate_token(self, actor: Actor, runner_id: str) -> RegisteredRunner:
         """Админ меняет токен только общему раннеру: иначе он получил бы токен, под которым видны проекты человека."""

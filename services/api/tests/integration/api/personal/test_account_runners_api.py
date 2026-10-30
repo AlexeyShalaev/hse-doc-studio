@@ -180,3 +180,36 @@ async def test__disabled_owner__runner_is_refused_and_deletion_revokes_it(stand:
     assert gone.status_code == 401
     listed = admin.get("/api/admin/runners").json()
     assert [r["revoked"] for r in listed if r["id"] == runner_id] == [True]
+
+
+async def test__admin__lists_personal_runners_with_owner_and_filters_by_kind(stand: Stand) -> None:
+    anna = await stand.person("anna")
+    runner_id = stand.personal_runner(anna, "MacBook Анны")["X-Runner-Id"]
+    admin = stand.admin()
+
+    personal = admin.get("/api/admin/runners", params={"owner_kind": "user"}).json()
+    assert [(r["id"], r["owner_kind"], r["owner"]["id"], r["owner"]["email"]) for r in personal] == [
+        (runner_id, "user", anna.id, anna.email)
+    ]
+    assert admin.get("/api/admin/runners", params={"owner_kind": "instance"}).json() == []
+
+    admin.put("/api/admin/settings/build", json={"personal_runners_enabled": False}).raise_for_status()
+    (row,) = admin.get("/api/admin/runners").json()
+    assert row["status"] == "disabled"
+    settings = admin.get("/api/admin/settings/build").json()
+    assert (settings["personal_runners_enabled"], settings["fields"]["runners.personal_enabled"]["source"]) == (
+        False,
+        "admin",
+    )
+
+
+async def test__bootstrap__personal_runners_capability_follows_the_setting(stand: Stand) -> None:
+    # Bootstrap знает человека по сессии: берём сессию админа из окружения.
+    admin = stand.admin()
+    boot = admin.get("/api/v1/session/bootstrap").json()
+    assert boot["capabilities"]["personal_runners"] is True
+    assert boot["capabilities"]["remote_runner"] is False
+    assert stand.client.get("/api/v1/session/bootstrap").json()["capabilities"]["personal_runners"] is False
+    admin.put("/api/admin/settings/build", json={"personal_runners_enabled": False}).raise_for_status()
+    off = admin.get("/api/v1/session/bootstrap").json()
+    assert off["capabilities"]["personal_runners"] is False
