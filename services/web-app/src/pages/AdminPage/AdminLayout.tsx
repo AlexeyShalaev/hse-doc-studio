@@ -61,21 +61,18 @@ export const AdminLayout = () => {
       data-testid="admin-layout"
     >
       <AppTitlebar />
-      <div className="flex flex-1" style={{ minHeight: 0 }}>
+      <div className="flex flex-1 max-sm:flex-col" style={{ minHeight: 0 }}>
         <nav
           aria-label={t("nav.label")}
-          className="flex flex-col shrink-0"
+          className="flex flex-col shrink-0 overflow-y-auto w-[220px] border-r border-[var(--border)] max-sm:w-full max-sm:flex-row max-sm:border-r-0 max-sm:border-b max-sm:overflow-x-auto max-sm:overflow-y-hidden"
           style={{
-            width: 220,
             gap: 2,
             padding: 12,
-            borderRight: "1px solid var(--border)",
             background: "var(--bg-1)",
-            overflowY: "auto",
           }}
         >
           <div
-            className="mono"
+            className="mono max-sm:hidden"
             style={{
               padding: "4px 10px 8px",
               fontSize: 10,
@@ -93,10 +90,9 @@ export const AdminLayout = () => {
               end={id === "overview"}
               data-testid={`admin-nav-${id}`}
               className={({ isActive }) =>
-                `row-btn${isActive ? " active" : ""}`
+                `row-btn w-full max-sm:w-auto max-sm:shrink-0 max-sm:whitespace-nowrap${isActive ? " active" : ""}`
               }
               style={{
-                width: "100%",
                 justifyContent: "flex-start",
                 textDecoration: "none",
                 padding: "7px 10px",
@@ -109,8 +105,8 @@ export const AdminLayout = () => {
           ))}
         </nav>
         <main
-          className="flex flex-col flex-1"
-          style={{ minWidth: 0, overflowY: "auto", padding: 24 }}
+          className="flex flex-col flex-1 p-6 max-sm:p-3"
+          style={{ minWidth: 0, overflowY: "auto" }}
         >
           <Outlet />
         </main>
