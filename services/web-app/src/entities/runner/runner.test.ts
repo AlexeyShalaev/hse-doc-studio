@@ -47,6 +47,7 @@ const MY_RUNNER = {
   last_seen_at: "2026-10-30T09:44:50Z",
   last_seen_ip: "203.0.113.7",
   paused: false,
+  paused_by: null,
   revoked: false,
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],

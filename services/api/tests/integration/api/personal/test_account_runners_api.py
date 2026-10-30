@@ -159,7 +159,13 @@ async def test__admin__pauses_and_revokes_personal_runner_but_cannot_rotate_its_
     assert (rotated.status_code, rotated.json()["code"]) == (403, "forbidden")
     assert admin.patch(f"/api/admin/runners/{runner_id}", json={"paused": True}).status_code == 204
     (view,) = stand.client.get("/api/v1/account/runners", headers=anna.headers).json()
-    assert view["state"] == "paused"
+    assert (view["state"], view["paused_by"]) == ("paused", "admin")
+    # Пауза админа это модерация: хозяин её не снимает, админ снимает.
+    resumed = stand.client.patch(f"/api/v1/account/runners/{runner_id}", json={"paused": False}, headers=anna.headers)
+    assert (resumed.status_code, resumed.json()["code"]) == (403, "runner_paused_by_admin")
+    assert admin.patch(f"/api/admin/runners/{runner_id}", json={"paused": False}).status_code == 204
+    (view,) = stand.client.get("/api/v1/account/runners", headers=anna.headers).json()
+    assert view["paused_by"] is None
     assert admin.delete(f"/api/admin/runners/{runner_id}").status_code == 204
     (view,) = stand.client.get("/api/v1/account/runners", headers=anna.headers).json()
     assert view["revoked"] is True

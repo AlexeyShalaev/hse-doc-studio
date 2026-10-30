@@ -46,6 +46,7 @@ const RUNNER: MyRunner = {
   last_seen_at: "2026-10-30T10:00:00Z",
   last_seen_ip: null,
   paused: false,
+  paused_by: null,
   revoked: false,
   running_jobs: 0,
   ai_endpoints: [],

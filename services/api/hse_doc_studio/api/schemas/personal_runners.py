@@ -42,6 +42,8 @@ class MyRunner(StrictModel):
     last_seen_at: datetime | None
     last_seen_ip: str | None
     paused: bool
+    # Кто поставил на паузу: паузу админа хозяин снять не может.
+    paused_by: Literal["owner", "admin"] | None
     revoked: bool
     running_jobs: int
     ai_endpoints: list[MyRunnerAiEndpoint]

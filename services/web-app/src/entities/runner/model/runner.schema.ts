@@ -46,6 +46,8 @@ export const MyRunnerSchema = z.strictObject({
   last_seen_at: iso.nullable(),
   last_seen_ip: z.string().nullable(),
   paused: z.boolean(),
+  /** Кто поставил на паузу: паузу администратора хозяин снять не может. */
+  paused_by: z.enum(["owner", "admin"]).nullable(),
   revoked: z.boolean(),
   running_jobs: z.number().int(),
   ai_endpoints: z.array(DeclaredAiEndpointSchema),

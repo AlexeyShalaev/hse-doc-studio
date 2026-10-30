@@ -28,6 +28,7 @@ from hse_doc_studio.core.jobs.runners import (
     Runner,
     RunnerAnnouncement,
     RunnerOwnerKind,
+    RunnerPausedBy,
     hash_runner_secret,
     new_runner_secret,
 )
@@ -435,12 +436,15 @@ class RunnerRegistry:
         clean = " ".join(name.split())[:MAX_RUNNER_NAME] if name is not None else None
         if name is not None and not clean:
             raise IdentityError(IdentityErrorCode.input_invalid)
+        # Пауза админа это модерация: хозяин её не снимает (иначе у админа нет ничего между «ничего» и отзывом).
+        if paused is False and runner.paused and runner.paused_by is RunnerPausedBy.admin:
+            raise IdentityError(IdentityErrorCode.runner_paused_by_admin)
         async with self._uow.begin():
             if clean is not None and clean != runner.name:
                 await self._runners.rename(runner_id, clean, self._clock())
                 await self._audit.record("runner.rename", actor_id=actor.id, target=runner_id, details={"name": clean})
             if paused is not None and paused != runner.paused:
-                await self._runners.set_paused(runner_id, paused)
+                await self._runners.set_paused(runner_id, paused, RunnerPausedBy.owner)
                 await self._audit.record(
                     "runner.pause" if paused else "runner.resume", actor_id=actor.id, target=runner_id
                 )
@@ -527,7 +531,7 @@ class RunnerRegistry:
         creator = _require_admin(actor)
         runner = await self._runners.get(runner_id)
         async with self._uow.begin():
-            if runner is None or not await self._runners.set_paused(runner_id, paused):
+            if runner is None or not await self._runners.set_paused(runner_id, paused, RunnerPausedBy.admin):
                 raise RunnerNotFoundError("runner not found")
             await self._audit.record(
                 "runner.pause" if paused else "runner.resume",

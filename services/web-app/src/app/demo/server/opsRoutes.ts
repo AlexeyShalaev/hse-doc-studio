@@ -215,6 +215,7 @@ export const createOpsRoutes = (
         const personal = personalOfId(req.params.id);
         if (personal) {
           personal.paused = paused;
+          personal.paused_by = paused ? "admin" : null;
           return demoNoContent();
         }
         const found = runnerOf(req.params.id);

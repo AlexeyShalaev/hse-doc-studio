@@ -419,7 +419,15 @@ export const createPersonalRoutes = (
           if (r.revoked_at !== null) {
             return demoError(409, "runner_revoked", "The runner is revoked");
           }
+          if (!b.paused && r.paused && r.paused_by === "admin") {
+            return demoError(
+              403,
+              "runner_paused_by_admin",
+              "An administrator paused this runner",
+            );
+          }
           r.paused = b.paused;
+          r.paused_by = b.paused ? "owner" : null;
         }
         return demoJson(toMyRunner(r, state().enabled));
       }),

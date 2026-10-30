@@ -43,7 +43,8 @@
       "offline": "Builds use shared runners.",
       "paused": "Doesn't take new builds.",
       "stale": "If it doesn't respond, builds go to shared runners.",
-      "disabled": "Builds use shared runners."
+      "disabled": "Builds use shared runners.",
+      "pausedByAdmin": "Paused by an administrator: only they can resume it."
     },
     "seen": "seen {{ago}}",
     "seenIp": "seen {{ago}}, IP {{ip}}",
@@ -51,7 +52,7 @@
     "version": "v{{version}}",
     "outdated": "Outdated",
     "outdatedHint": "The server is newer ({{version}}): update the runner.",
-    "slots": "{{jobs}} · {{ai}} AI",
+    "slots": "up to {{jobs}} · {{ai}} AI",
     "slotsTitle": "At once: {{jobs}} builds, {{ai}} AI requests",
     "running_one": "{{count}} build running",
     "running_other": "{{count}} builds running",
@@ -74,7 +75,11 @@
     "jobs_one": "{{count}} build",
     "jobs_other": "{{count}} builds",
     "ipOnly": "IP {{ip}}",
-    "onlineNow": "responding now"
+    "onlineNow": "responding now",
+    "notTaking": "Not taking builds",
+    "seenJustNow": "seen just now",
+    "seenJustNowIp": "seen just now, IP {{ip}}",
+    "resumeAdminOnly": "Resume (administrator only)"
   },
   "rename": {
     "title": "Rename runner",

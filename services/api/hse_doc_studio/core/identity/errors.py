@@ -53,6 +53,7 @@ class IdentityErrorCode(StrEnum):
     personal_runners_disabled = "personal_runners_disabled"
     personal_runner_limit = "personal_runner_limit"
     runner_revoked = "runner_revoked"
+    runner_paused_by_admin = "runner_paused_by_admin"
     project_not_personal = "project_not_personal"
     runner_pairing_invalid = "runner_pairing_invalid"
     runner_pairing_expired = "runner_pairing_expired"
@@ -174,6 +175,10 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "You've reached the limit of personal runners or tokens. Revoke one you no longer need.",
     ),
     IdentityErrorCode.runner_revoked: ("Раннер отозван.", "The runner has been revoked."),
+    IdentityErrorCode.runner_paused_by_admin: (
+        "Раннер приостановил администратор: снять паузу может только он.",
+        "An administrator paused this runner: only an administrator can resume it.",
+    ),
     IdentityErrorCode.project_not_personal: (
         "Это проект организации: сборки идут на общих раннерах.",
         "This is an organization project: builds use shared runners.",

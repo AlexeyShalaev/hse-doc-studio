@@ -47,6 +47,13 @@ class RunnerHostKind(StrEnum):
     desktop = "desktop"
 
 
+class RunnerPausedBy(StrEnum):
+    """Кто поставил раннер на паузу: паузу админа хозяин личного раннера снять не может."""
+
+    owner = "owner"
+    admin = "admin"
+
+
 class RegistrationTokenPurpose(StrEnum):
     # Создан человеком или админом.
     manual = "manual"
@@ -120,6 +127,8 @@ class Runner:
     offline_at: datetime | None = None
     # Имя меняли в интерфейсе: `/announce` его больше не трогает.
     renamed_at: datetime | None = None
+    # Кто поставил на паузу; без паузы пусто.
+    paused_by: RunnerPausedBy | None = None
 
     @property
     def scope(self) -> RunnerScope:
@@ -149,7 +158,10 @@ class IRunnerRepository(Protocol):
     async def get_by_token_hash(self, token_hash: str) -> Runner | None: ...
     async def list(self) -> list[Runner]: ...
     async def set_token_hash(self, runner_id: str, token_hash: str) -> bool: ...
-    async def set_paused(self, runner_id: str, paused: bool) -> bool: ...
+    async def set_paused(self, runner_id: str, paused: bool, by: RunnerPausedBy | None = None) -> bool:
+        """Пауза запоминает, кто её поставил (`by`); снятие паузы стирает и это."""
+        ...
+
     async def revoke(self, runner_id: str, now: datetime) -> bool:
         """Отзыв необратим: токен перестаёт работать, запись остаётся для журнала. False, если раннера нет."""
         ...

@@ -77,10 +77,15 @@ const ORDER: Record<MyRunnerState, number> = {
 };
 
 const DEFAULT_WAIT_S = 5;
+const JUST_NOW_MS = 60_000;
 
 type Row = {
   runner: MyRunner;
   seen: string;
+  /** Пояснение под состоянием; null, когда его нет или его уже сказал баннер. */
+  hint: string | null;
+  /** Что раннер делает сейчас; null, когда это не имеет смысла (выключен админом). */
+  load: string | null;
   outdated: boolean;
   busy: boolean;
   actions: ActionMenuItem[];
@@ -185,18 +190,12 @@ export const MyRunnersView = ({
         enableSorting: false,
         cell: ({ row }) => {
           const { runner, seen } = row.original;
-          const hint =
-            runner.state === "offline" ||
-            runner.state === "paused" ||
-            runner.state === "stale" ||
-            runner.state === "disabled"
-              ? t(`mine.stateHint.${runner.state}`)
-              : null;
           return (
             <span className="myr-cell">
               <span
                 data-testid={`my-runner-status-${runner.id}`}
                 data-status={runner.state}
+                data-paused-by={runner.paused_by ?? undefined}
               >
                 <StatusDot
                   status={RUNNER_STATE_DOT[runner.state]}
@@ -206,10 +205,10 @@ export const MyRunnersView = ({
               {!runner.revoked && (
                 <span className="myr-cell-sub" style={{ paddingLeft: 16 }}>
                   {seen}
-                  {hint && (
+                  {row.original.hint && (
                     <>
                       <br />
-                      {hint}
+                      {row.original.hint}
                     </>
                   )}
                 </span>
@@ -238,11 +237,9 @@ export const MyRunnersView = ({
                   ai: runner.ai_concurrency,
                 })}
               </span>
-              <span className="myr-cell-sub">
-                {runner.running_jobs > 0
-                  ? t("mine.running", { count: runner.running_jobs })
-                  : t("mine.idle")}
-              </span>
+              {row.original.load && (
+                <span className="myr-cell-sub">{row.original.load}</span>
+              )}
             </span>
           );
         },
@@ -268,16 +265,50 @@ export const MyRunnersView = ({
     ],
     [t, serverVersion],
   );
-
   // У раннера в сети «был в сети сейчас» звучит странно: там только адрес.
+  // Меньше минуты назад «был в сети сейчас» неграмотно: «в сети только что».
   const seenText = useCallback(
-    (runner: MyRunner, ago: string | null): string => {
-      if (ago === null) return t("mine.neverSeen");
+    (runner: MyRunner): string => {
+      if (runner.last_seen_at === null) return t("mine.neverSeen");
       const ip = runner.last_seen_ip;
       if (runner.state === "online") {
         return ip ? t("mine.ipOnly", { ip }) : t("mine.onlineNow");
       }
+      if (now - Date.parse(runner.last_seen_at) < JUST_NOW_MS) {
+        return ip ? t("mine.seenJustNowIp", { ip }) : t("mine.seenJustNow");
+      }
+      const ago = formatPastTime(runner.last_seen_at, now);
       return ip ? t("mine.seenIp", { ago, ip }) : t("mine.seen", { ago });
+    },
+    [t, now],
+  );
+
+  const hintText = useCallback(
+    (runner: MyRunner): string | null => {
+      if (runner.state === "paused" && runner.paused_by === "admin") {
+        return t("mine.stateHint.pausedByAdmin");
+      }
+      // Баннер «Администратор выключил личные раннеры» уже сказал, где идут сборки.
+      if (runner.state === "disabled") return null;
+      return runner.state === "offline" ||
+        runner.state === "paused" ||
+        runner.state === "stale"
+        ? t(`mine.stateHint.${runner.state}`)
+        : null;
+    },
+    [t],
+  );
+
+  const loadText = useCallback(
+    (runner: MyRunner): string | null => {
+      // Выключенный админом раннер не проходит проверку токена: начатую сборку он не сдаст.
+      if (runner.state === "disabled") return null;
+      if (runner.running_jobs > 0) {
+        return t("mine.running", { count: runner.running_jobs });
+      }
+      return runner.state === "online" || runner.state === "stale"
+        ? t("mine.idle")
+        : t("mine.notTaking");
     },
     [t],
   );
@@ -288,10 +319,7 @@ export const MyRunnersView = ({
         .sort((a, b) => ORDER[a.state] - ORDER[b.state])
         .map((runner) => {
           const busy = busyId === runner.id;
-          const ago =
-            runner.last_seen_at === null
-              ? null
-              : formatPastTime(runner.last_seen_at, now);
+          const adminPaused = runner.paused && runner.paused_by === "admin";
           const items: ActionMenuItem[] = [
             {
               id: "rename",
@@ -305,14 +333,19 @@ export const MyRunnersView = ({
             },
             {
               id: "pause",
-              label: runner.paused ? t("mine.resume") : t("mine.pause"),
+              label: adminPaused
+                ? t("mine.resumeAdminOnly")
+                : runner.paused
+                  ? t("mine.resume")
+                  : t("mine.pause"),
               icon: runner.paused ? (
                 <Play size={14} aria-hidden="true" />
               ) : (
                 <Pause size={14} aria-hidden="true" />
               ),
-              // Пауза ничего не меняет, пока личные раннеры выключены админом.
-              disabled: busy || !enabled,
+              // Пауза ничего не меняет, пока личные раннеры выключены админом;
+              // паузу администратора хозяин не снимает.
+              disabled: busy || !enabled || adminPaused,
               testId: `my-runner-pause-${runner.id}`,
               onSelect: () => {
                 onTogglePause(runner);
@@ -353,7 +386,9 @@ export const MyRunnersView = ({
           ];
           return {
             runner,
-            seen: seenText(runner, ago),
+            seen: seenText(runner),
+            hint: hintText(runner),
+            load: loadText(runner),
             outdated: isRunnerOutdated(runner.version, serverVersion),
             busy,
             actions: items,
@@ -362,7 +397,6 @@ export const MyRunnersView = ({
     [
       shown,
       busyId,
-      now,
       t,
       enabled,
       serverVersion,
@@ -372,6 +406,8 @@ export const MyRunnersView = ({
       onRotate,
       onRevoke,
       seenText,
+      hintText,
+      loadText,
     ],
   );
 

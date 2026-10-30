@@ -43,7 +43,8 @@
       "offline": "Сборки идут на общих раннерах.",
       "paused": "Новые сборки не берёт.",
       "stale": "Если не ответит, сборки пойдут на общие.",
-      "disabled": "Сборки идут на общих раннерах."
+      "disabled": "Сборки идут на общих раннерах.",
+      "pausedByAdmin": "Приостановил администратор: снять паузу может только он."
     },
     "seen": "был в сети {{ago}}",
     "seenIp": "был в сети {{ago}}, IP {{ip}}",
@@ -51,7 +52,7 @@
     "version": "v{{version}}",
     "outdated": "Устарел",
     "outdatedHint": "Сервер новее ({{version}}): обновите раннер.",
-    "slots": "{{jobs}} · {{ai}} ИИ",
+    "slots": "до {{jobs}} · до {{ai}} ИИ",
     "slotsTitle": "Одновременно: сборок {{jobs}}, запросов к ИИ {{ai}}",
     "running_one": "Идёт {{count}} сборка",
     "running_few": "Идёт {{count}} сборки",
@@ -73,12 +74,16 @@
     "renamed": "Раннер переименован",
     "revoked": "Раннер «{{name}}» отозван",
     "connected": "Раннер «{{name}}» подключён",
-    "jobs_one": "{{count}} сборка",
-    "jobs_few": "{{count}} сборки",
+    "jobs_one": "{{count}} сборки",
+    "jobs_few": "{{count}} сборок",
     "jobs_many": "{{count}} сборок",
     "jobs_other": "{{count}} сборки",
     "ipOnly": "IP {{ip}}",
-    "onlineNow": "отвечает сейчас"
+    "onlineNow": "отвечает сейчас",
+    "notTaking": "Не берёт сборки",
+    "seenJustNow": "в сети только что",
+    "seenJustNowIp": "в сети только что, IP {{ip}}",
+    "resumeAdminOnly": "Возобновить (только администратор)"
   },
   "rename": {
     "title": "Переименовать раннер",

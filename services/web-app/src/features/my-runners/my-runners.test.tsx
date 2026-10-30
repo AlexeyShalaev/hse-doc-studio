@@ -21,6 +21,7 @@ const RUNNER: MyRunner = {
   last_seen_at: "2026-10-30T09:59:50Z",
   last_seen_ip: "203.0.113.7",
   paused: false,
+  paused_by: null,
   revoked: false,
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],
@@ -70,7 +71,7 @@ describe("«Мои раннеры»: вид", () => {
     );
     expect(screen.getByText("Идёт 1 сборка")).toBeInTheDocument();
     expect(screen.getByText("IP 203.0.113.7")).toBeInTheDocument();
-    expect(screen.getByText("1 сборка · 2 ИИ")).toBeInTheDocument();
+    expect(screen.getByText("до 1 сборки · до 2 ИИ")).toBeInTheDocument();
   });
 
   it("пусто: пояснение раскрыто, кнопка подключения ведёт к диалогу", async () => {
@@ -110,6 +111,47 @@ describe("«Мои раннеры»: вид", () => {
       "data-status",
       "disabled",
     );
+    // Баннер уже сказал, где идут сборки; нагрузка выключенного раннера не показывается.
+    expect(screen.queryByText("Сборки идут на общих раннерах.")).toBeNull();
+    expect(screen.queryByText("Идёт 1 сборка")).toBeNull();
+  });
+
+  it("на паузе и не в сети: «Не берёт сборки», а не «Свободен»", () => {
+    renderView({
+      runners: [
+        { ...RUNNER, state: "paused", paused: true, running_jobs: 0 },
+        { ...RUNNER, id: "r2", state: "offline", running_jobs: 0 },
+      ],
+    });
+    expect(screen.getAllByText("Не берёт сборки")).toHaveLength(2);
+    expect(screen.queryByText("Свободен")).toBeNull();
+  });
+
+  it("меньше минуты назад: «в сети только что»", () => {
+    renderView({
+      runners: [{ ...RUNNER, state: "paused", paused: true }],
+    });
+    expect(
+      screen.getByText(/в сети только что, IP 203\.0\.113\.7/),
+    ).toBeInTheDocument();
+  });
+
+  it("пауза администратора: пояснение, снять её хозяин не может", async () => {
+    const onTogglePause = vi.fn();
+    renderView({
+      onTogglePause,
+      runners: [
+        { ...RUNNER, state: "paused", paused: true, paused_by: "admin" },
+      ],
+    });
+    expect(screen.getByTestId("my-runner-status-r1")).toHaveAttribute(
+      "data-paused-by",
+      "admin",
+    );
+    expect(screen.getByText(/Приостановил администратор/)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("my-runner-actions-r1"));
+    const resume = await screen.findByTestId("my-runner-pause-r1");
+    expect(resume).toHaveAttribute("aria-disabled", "true");
   });
 
   it("ошибка загрузки с повтором", async () => {

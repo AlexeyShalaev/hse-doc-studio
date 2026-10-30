@@ -168,6 +168,7 @@ class RunnerRow(Base):
         CheckConstraint("concurrency >= 1", name="runner_concurrency"),
         CheckConstraint(_OWNER_CHECK, name="owner"),
         CheckConstraint("ai_concurrency >= 0", name="ai_concurrency"),
+        CheckConstraint("paused_by IS NULL OR paused_by IN ('owner', 'admin')", name="paused_by"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -192,6 +193,8 @@ class RunnerRow(Base):
     last_seen_ip: Mapped[str | None] = mapped_column(String(64))
     offline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     renamed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Кто поставил на паузу: `owner` или `admin`; паузу админа хозяин не снимает.
+    paused_by: Mapped[str | None] = mapped_column(String(16))
 
 
 class RunnerRegistrationTokenRow(Base):

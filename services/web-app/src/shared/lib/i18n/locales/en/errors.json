@@ -121,6 +121,7 @@
     "personal_runners_disabled": "The administrator turned personal runners off: builds use shared runners.",
     "personal_runner_limit": "You have reached the personal runner limit. Revoke a runner or an unused token.",
     "runner_revoked": "The runner is already revoked.",
+    "runner_paused_by_admin": "An administrator paused this runner: only an administrator can resume it.",
     "project_not_personal": "This is an organization project: it only builds on shared runners.",
     "runner_pairing_invalid": "Code not found. Check it in the Studio.",
     "runner_pairing_expired": "The code has expired. Start connecting from the Studio again.",

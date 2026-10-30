@@ -26,6 +26,7 @@ const base: MyRunner = {
   last_seen_at: at(8),
   last_seen_ip: "203.0.113.7",
   paused: false,
+  paused_by: null,
   revoked: false,
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],
@@ -41,6 +42,7 @@ const RUNNERS: MyRunner[] = [
     host_kind: "cli",
     state: "paused",
     paused: true,
+    paused_by: "owner",
     concurrency: 2,
     running_jobs: 0,
     last_seen_at: at(20),
@@ -167,6 +169,20 @@ export const getMyRunnersGallery = (): GalleryGroup[] => [
           runners: RUNNERS.map((r) =>
             r.revoked ? r : { ...r, state: "disabled" as const },
           ),
+          tokens: [],
+        }),
+      ),
+      entry("paused_by_admin", "Приостановлен администратором", () =>
+        view({
+          runners: [
+            {
+              ...base,
+              state: "paused",
+              paused: true,
+              paused_by: "admin",
+              running_jobs: 0,
+            },
+          ],
           tokens: [],
         }),
       ),

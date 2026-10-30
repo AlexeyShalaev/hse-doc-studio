@@ -63,6 +63,7 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.personal_runners_disabled: _FORBIDDEN,
     IdentityErrorCode.personal_runner_limit: _STATE,
     IdentityErrorCode.runner_revoked: _STATE,
+    IdentityErrorCode.runner_paused_by_admin: _FORBIDDEN,
     IdentityErrorCode.project_not_personal: _STATE,
     IdentityErrorCode.runner_pairing_invalid: _NOT_FOUND,
     IdentityErrorCode.runner_pairing_expired: _GONE,

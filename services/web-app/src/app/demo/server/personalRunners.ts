@@ -52,6 +52,8 @@ export type DemoPersonalRunner = {
   /** Раннер опрашивает сервер: last_seen_at обновляется при каждом чтении мира. */
   alive: boolean;
   paused: boolean;
+  /** Кто поставил на паузу: паузу администратора хозяин не снимает. */
+  paused_by: "owner" | "admin" | null;
   revoked_at: string | null;
   running_jobs: number;
   ai_endpoints: DeclaredAiEndpoint[];
@@ -171,6 +173,7 @@ const runner = (
     offline: false,
     alive: seenMs !== null && seenMs <= MINUTE,
     paused: false,
+    paused_by: null,
     revoked_at: null,
     running_jobs: 0,
     ai_endpoints: [],
@@ -248,6 +251,7 @@ const annaRunners = (
       tags: ["ai", "pack", "tex"],
       ai_endpoints: [{ name: "vllm", flavor: "openai" }],
       paused: true,
+      paused_by: "owner",
       seenMs: 20 * SECOND,
       last_seen_ip: "198.51.100.8",
     }),
@@ -509,6 +513,7 @@ export const toMyRunner = (
   last_seen_at: r.last_seen_at,
   last_seen_ip: r.last_seen_ip,
   paused: r.paused,
+  paused_by: r.paused ? r.paused_by : null,
   revoked: r.revoked_at !== null,
   running_jobs: r.revoked_at === null ? r.running_jobs : 0,
   ai_endpoints: r.ai_endpoints,

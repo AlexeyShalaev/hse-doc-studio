@@ -18,6 +18,7 @@ from hse_doc_studio.core.jobs.runners import (
     RunnerAnnouncement,
     RunnerHostKind,
     RunnerOwnerKind,
+    RunnerPausedBy,
 )
 from hse_doc_studio.infra.db.orm.jobs import RunnerRegistrationTokenRow, RunnerRow
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -46,6 +47,7 @@ def _runner(row: RunnerRow) -> Runner:
         last_seen_ip=row.last_seen_ip,
         offline_at=row.offline_at,
         renamed_at=row.renamed_at,
+        paused_by=RunnerPausedBy(row.paused_by) if row.paused_by else None,
     )
 
 
@@ -142,8 +144,9 @@ class SqlRunnerRepository:
     async def set_token_hash(self, runner_id: str, token_hash: str) -> bool:
         return await self._update(runner_id, {"token_hash": token_hash}, only_active=True)
 
-    async def set_paused(self, runner_id: str, paused: bool) -> bool:
-        return await self._update(runner_id, {"paused": paused}, only_active=True)
+    async def set_paused(self, runner_id: str, paused: bool, by: RunnerPausedBy | None = None) -> bool:
+        paused_by = by.value if paused and by is not None else None
+        return await self._update(runner_id, {"paused": paused, "paused_by": paused_by}, only_active=True)
 
     async def revoke(self, runner_id: str, now: datetime) -> bool:
         return await self._update(runner_id, {"revoked_at": now})

@@ -37,6 +37,7 @@
   "personal_runners_disabled",
   "personal_runner_limit",
   "runner_revoked",
+  "runner_paused_by_admin",
   "project_not_personal",
   "runner_pairing_invalid",
   "runner_pairing_expired",

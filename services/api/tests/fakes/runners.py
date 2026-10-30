@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
-from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerAnnouncement, RunnerOwnerKind
+from hse_doc_studio.core.jobs.runners import (
+    RegistrationToken,
+    Runner,
+    RunnerAnnouncement,
+    RunnerOwnerKind,
+    RunnerPausedBy,
+)
 
 
 class InMemoryRunnerRepository:
@@ -34,8 +40,8 @@ class InMemoryRunnerRepository:
     async def set_token_hash(self, runner_id: str, token_hash: str) -> bool:
         return self._replace(runner_id, only_active=True, token_hash=token_hash)
 
-    async def set_paused(self, runner_id: str, paused: bool) -> bool:
-        return self._replace(runner_id, only_active=True, paused=paused)
+    async def set_paused(self, runner_id: str, paused: bool, by: RunnerPausedBy | None = None) -> bool:
+        return self._replace(runner_id, only_active=True, paused=paused, paused_by=by if paused else None)
 
     async def revoke(self, runner_id: str, now: datetime) -> bool:
         return self._replace(runner_id, revoked_at=now)
