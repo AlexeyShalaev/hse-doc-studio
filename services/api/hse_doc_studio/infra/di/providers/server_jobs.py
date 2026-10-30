@@ -222,6 +222,7 @@ class ServerJobsProvider(Provider):
         wakeup: JobWakeup,
         quotas: QuotaService,
         personal: IPersonalRunnerSettings,
+        users: IUserRepository,
     ) -> RunnerJobService:
         return RunnerJobService(
             queue,
@@ -233,6 +234,7 @@ class ServerJobsProvider(Provider):
             timeout_grace_s=settings.jobs.timeout_grace_s,
             quota_source=quotas.current,
             personal_settings=personal,
+            users=users,
         )
 
     @provide

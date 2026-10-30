@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from hse_doc_studio.core.identity.entities import User, UserStatus
 from hse_doc_studio.core.jobs.codec import encode_envelope
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
 from hse_doc_studio.core.jobs.routing import (
@@ -21,6 +22,7 @@ from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
+from tests.fakes.identity import InMemoryUserRepository
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.runners import InMemoryRunnerRepository
 from tests.unit.core.jobs.samples import make_compile_spec
@@ -36,9 +38,11 @@ class _Settings:
         return self.value
 
 
-async def _world() -> tuple[RunnerJobService, InMemoryJobQueue, Runner, _Settings, UUID]:
+async def _world(
+    *, users: InMemoryUserRepository | None = None, runners: InMemoryRunnerRepository | None = None
+) -> tuple[RunnerJobService, InMemoryJobQueue, Runner, _Settings, UUID]:
     queue = InMemoryJobQueue(clock=lambda: NOW)
-    runners = InMemoryRunnerRepository()
+    runners = runners or InMemoryRunnerRepository()
     settings = _Settings()
     owner = uuid4()
     runner = Runner(
@@ -64,7 +68,12 @@ async def _world() -> tuple[RunnerJobService, InMemoryJobQueue, Runner, _Setting
         timeout_grace_s=15.0,
         clock=lambda: NOW,
         personal_settings=settings,
+        users=users,
     )
+    if users is not None:
+        await users.add(
+            User(str(owner), "anna@example.org", "anna@example.org", "Анна", UserStatus.active, created_at=NOW)
+        )
     spec = replace(make_compile_spec(), id=uuid4())
     project = spec.project_id
     queue.set_project(ProjectRouteInfo(project, str(owner), None, ProjectBuildRunners.shared))
@@ -123,3 +132,36 @@ async def test__poll__scope_comes_from_the_record_not_the_runner() -> None:
     await service.poll(runner, PollRequest(wait_s=0))
     (job,) = await queue.list()
     assert job.runner_scope is RunnerScope.personal
+
+
+async def test__poll__token_rotated_after_authentication__old_poll_gets_nothing() -> None:
+    """Хозяин сменил утёкший токен, пока на старом шёл долгий опрос: задача ему не достаётся."""
+    runners = InMemoryRunnerRepository()
+    service, queue, runner, _, _ = await _world(runners=runners)
+    await runners.set_token_hash(runner.id, "rotated")
+
+    response = await service.poll(runner, PollRequest(wait_s=0))
+
+    assert response.envelope is None
+    assert all(job.runner_id is None for job in await queue.list())
+
+
+async def test__poll__owner_disabled_after_authentication__no_work() -> None:
+    users = InMemoryUserRepository()
+    service, queue, runner, _, owner = await _world(users=users)
+    user = await users.get(str(owner))
+    assert user is not None
+    await users.update(replace(user, status=UserStatus.disabled))
+
+    response = await service.poll(runner, PollRequest(wait_s=0))
+
+    assert response.envelope is None
+    assert all(job.runner_id is None for job in await queue.list())
+
+
+async def test__poll__active_owner__still_gets_work() -> None:
+    service, _, runner, _, _ = await _world(users=InMemoryUserRepository())
+
+    response = await service.poll(runner, PollRequest(wait_s=0))
+
+    assert response.envelope is not None

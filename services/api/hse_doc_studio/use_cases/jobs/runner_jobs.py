@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.jobs.codec import decode_envelope
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
 from hse_doc_studio.core.jobs.queue import IJobQueue, QueuedJob, RunnerRef
@@ -46,8 +47,10 @@ class RunnerJobService:
         clock: Callable[[], datetime] = _utc_now,
         quota_source: Callable[[], Awaitable[QueueQuota | None]] | None = None,
         personal_settings: IPersonalRunnerSettings | None = None,
+        users: IUserRepository | None = None,
     ) -> None:
         self._personal_settings = personal_settings
+        self._users = users
         self._queue = queue
         self._service = queue_service
         self._runners = runners
@@ -66,6 +69,7 @@ class RunnerJobService:
 
         Раннер на паузе работы не получает, но опрос принимается: он остаётся живым для админки.
         `gone` сообщает, что клиент опроса отключился (раннер убит без `/offline`): такой опрос заканчивается.
+        `runner` это снимок, прошедший проверку токена: его хеш и есть токен, которым опрос подписан.
         """
         deadline = time.monotonic() + request.wait_s
         started = self._clock()
@@ -73,6 +77,9 @@ class RunnerJobService:
             # Снимок раннера взят при входе, а опрос долгий: пауза, отзыв и выключение могли случиться за это время.
             current = await self._runners.get(runner.id)
             if current is None or await _poll_over(current, started, gone):
+                return PollResponse()
+            # Хозяин сменил утёкший токен или его отключили посреди опроса: старый токен задачу уже не получает.
+            if current.token_hash != runner.token_hash or not await self._owner_active(current):
                 return PollResponse()
             await self._runners.touch(runner.id, self._clock())
             if not current.paused and await self._may_work(current):
@@ -100,6 +107,15 @@ class RunnerJobService:
         await self._runners.touch(runner.id, self._clock())
         beat = await self._service.heartbeat(job_id, attempt)
         return HeartbeatResponse(cancel=beat.cancel, lease_until=beat.lease_until)
+
+    async def _owner_active(self, runner: Runner) -> bool:
+        """Хозяин личного раннера всё ещё может входить: `authenticate` проверял это только в начале опроса."""
+        if runner.scope is not RunnerScope.personal or self._users is None:
+            return True
+        if runner.owner_id is None:
+            return False
+        user = await self._users.get(runner.owner_id)
+        return user is not None and user.can_sign_in
 
     async def _may_work(self, runner: Runner) -> bool:
         """Личный раннер при выключенных в установке личных раннерах опрашивает, но работы не получает."""
