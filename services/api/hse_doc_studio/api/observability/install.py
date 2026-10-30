@@ -215,10 +215,16 @@ def install_runner_health(app: FastAPI, container: AsyncContainer, health: Healt
     `/health/ready` остаётся зелёным, а мастер показывает причину."""
     from hse_doc_studio.core.identity.session_policy import utc_now  # noqa: PLC0415
     from hse_doc_studio.core.jobs.admin import RunnerStatus, runner_status  # noqa: PLC0415
+    from hse_doc_studio.core.jobs.routing import RunnerScope  # noqa: PLC0415
     from hse_doc_studio.core.jobs.runners import IRunnerRepository  # noqa: PLC0415
 
     async def _runners() -> str | None:
-        active = [r for r in await (await container.get(IRunnerRepository)).list() if r.revoked_at is None]
+        # Личные раннеры не обслуживают общую очередь: здоровье установки считаем только по общим.
+        active = [
+            r
+            for r in await (await container.get(IRunnerRepository)).list()
+            if r.revoked_at is None and r.scope is RunnerScope.shared
+        ]
         if not active:
             return "no_runners"
         now = utc_now()
@@ -236,6 +242,9 @@ def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -
 
     app.state.background.register(PeriodicTask(name="job_reaper", interval_s=cfg.jobs.reaper_interval_s, run=_sweep))
 
+
+def install_runner_pairings_purge(app: FastAPI, container: AsyncContainer) -> None:
+    """Периодическая чистка устаревших сопряжений раннера по коду устройства; идёт только у лидера."""
     from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService  # noqa: PLC0415
 
     async def _purge_pairings() -> None:

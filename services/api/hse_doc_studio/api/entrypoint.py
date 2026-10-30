@@ -30,6 +30,7 @@ from hse_doc_studio.api.observability.install import (
     install_project_purge,
     install_project_usage,
     install_runner_health,
+    install_runner_pairings_purge,
     install_server_observability,
     install_service_pool_health,
 )
@@ -217,6 +218,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_auth_cleanup(app, container, settings)
         install_audit_retention(app, container, settings)
         install_job_reaper(app, container, settings)
+        install_runner_pairings_purge(app, container)
         install_job_retention(app, container, settings)
 
         @app.on_event("startup")
