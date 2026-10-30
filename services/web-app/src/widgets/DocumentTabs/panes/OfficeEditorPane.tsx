@@ -73,7 +73,7 @@ const OfficeEditorResponseSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("image_missing"), image: z.string() }),
   z.object({ state: z.literal("unavailable"), detail: z.string() }),
   // Серверный режим: исчерпан лимит одновременных сессий ONLYOFFICE.
-  OfficeEditorBusySchema,
+  OfficeEditorBusySchema.loose(),
 ]);
 
 type OfficeEditorResponse = z.infer<typeof OfficeEditorResponseSchema>;
@@ -135,7 +135,7 @@ export const OfficeEditorPane = ({
         } else if (resp.state === "editor_busy") {
           setState({
             kind: "busy",
-            retryAfterSeconds: resp.retry_after_seconds,
+            retryAfterSeconds: resp.retry_after_s,
             limit: resp.limit,
           });
         } else if (resp.state === "image_missing") {

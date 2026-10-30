@@ -51,6 +51,7 @@ async def get_office_editor_config(
         detail=result.detail,
         settings_section=result.settings_section,
         retry_after_s=result.retry_after_s,
+        limit=result.limit,
     )
 
 

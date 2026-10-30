@@ -65,6 +65,8 @@ class GetOfficeEditorConfigOutput:
     settings_section: str = _SETTINGS_SECTION
     # При editor_busy: через сколько секунд повторить попытку.
     retry_after_s: int | None = None
+    # При editor_busy: сколько одновременных сессий допускает установка.
+    limit: int | None = None
 
 
 def build_document_key(doc_id: str, mtime_ns: int, size: int) -> str:
@@ -193,7 +195,9 @@ class GetOfficeEditorConfigUC:
         # Липкая реплика пула определяется ключом документа; у локального контейнера адрес один.
         base = self._manager.base_url_for(key) or base
         if not self._manager.try_open_session(key, inp.doc_id):
-            return GetOfficeEditorConfigOutput(state="editor_busy", retry_after_s=self._busy_retry_after_s)
+            return GetOfficeEditorConfigOutput(
+                state="editor_busy", retry_after_s=self._busy_retry_after_s, limit=self._manager.session_limit
+            )
 
         await self._sync_ai_plugin(base)
 

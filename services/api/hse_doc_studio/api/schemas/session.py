@@ -742,5 +742,5 @@ class OfficeEditorBusy(StrictModel):
     """Ответ редактора документов, когда исчерпан лимит сессий ONLYOFFICE (state=editor_busy)."""
 
     state: Literal["editor_busy"]
-    retry_after_seconds: int = Field(ge=1)
+    retry_after_s: int = Field(ge=1)
     limit: int = Field(ge=1)

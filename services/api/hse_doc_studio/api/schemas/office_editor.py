@@ -19,6 +19,8 @@ class OfficeEditorConfigResponse(BaseModel):
 
     state: str = Field(description='"ready" | "image_missing" | "unavailable" | "editor_busy"')
     retry_after_s: int | None = None
+    # При editor_busy: сколько одновременных сессий допускает установка.
+    limit: int | None = None
     editor_base_url: str | None = None
     api_js_url: str | None = None
     config: dict[str, Any] | None = None

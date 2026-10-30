@@ -209,6 +209,7 @@ async def test__editor_config__over_limit__editor_busy_with_retry_hint(tmp_path:
 
     assert out.state == "editor_busy"
     assert out.retry_after_s == 17
+    assert out.limit == 1
     assert out.config is None
 
 

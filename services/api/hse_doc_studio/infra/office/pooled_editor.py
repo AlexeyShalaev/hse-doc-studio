@@ -87,6 +87,10 @@ class PooledOfficeEditorService:
         """Настройки ИИ реплик задаёт оператор вместе с развёртыванием: до контейнеров пул не дотягивается."""
         return False
 
+    @property
+    def session_limit(self) -> int | None:
+        return self._max_sessions
+
     def try_open_session(self, key: str, doc_id: str | None = None) -> bool:
         self._sweep()
         existing = self._sessions.get(key)

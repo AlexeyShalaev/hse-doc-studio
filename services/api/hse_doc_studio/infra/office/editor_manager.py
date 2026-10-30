@@ -144,6 +144,10 @@ class OfficeEditorManager:
     def base_url_for(self, key: str) -> str | None:  # noqa: ARG002 — один контейнер на все документы
         return self._base_url
 
+    @property
+    def session_limit(self) -> int | None:
+        return None
+
     def try_open_session(self, key: str, doc_id: str | None = None) -> bool:  # noqa: ARG002
         """Локальный контейнер сессии не считает: лимита нет."""
         return True

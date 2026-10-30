@@ -765,7 +765,7 @@ export type CompileWait = z.infer<typeof CompileWaitSchema>;
 export type CompileWaitReason = CompileWait["reason"];
 export const OfficeEditorBusySchema = z.strictObject({
   state: z.literal("editor_busy"),
-  retry_after_seconds: z.number().int().min(1),
+  retry_after_s: z.number().int().min(1),
   limit: z.number().int().min(1),
 });
 export type OfficeEditorBusy = z.infer<typeof OfficeEditorBusySchema>;
