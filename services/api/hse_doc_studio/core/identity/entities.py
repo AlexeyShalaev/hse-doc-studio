@@ -250,6 +250,19 @@ class OidcProvider:
     auto_provision: bool = False
 
 
+OIDC_SORTS = ("label", "created_at")
+
+
+@dataclass(frozen=True)
+class OidcProviderQuery:
+    """Провайдеры входа в админке: поиск по названию и издателю, фильтр включённых."""
+
+    q: str | None = None
+    enabled: bool | None = None
+    sort: SortKey = field(default_factory=lambda: SortKey("created_at"))
+    window: Window = field(default_factory=Window)
+
+
 @dataclass(frozen=True)
 class AuditEntry:
     id: int

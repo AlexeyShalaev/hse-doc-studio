@@ -20,6 +20,7 @@ from hse_doc_studio.core.identity.entities import (
     LoginAttempt,
     MailOutboxEntry,
     OidcProvider,
+    OidcProviderQuery,
     RegistrationInvite,
     Session,
     invite_state,
@@ -225,6 +226,15 @@ class InMemoryOidcProviderRepository:
     async def list(self, *, only_enabled: bool = False) -> list[OidcProvider]:
         found = [p for p in self._items.values() if p.enabled or not only_enabled]
         return sorted(found, key=lambda p: (p.label, p.id))
+
+    async def page(self, query: OidcProviderQuery) -> Found[OidcProvider]:
+        found = [
+            p
+            for p in self._items.values()
+            if matches(query.q, p.label, p.issuer) and (query.enabled is None or p.enabled is query.enabled)
+        ]
+        keys = {"label": lambda p: p.label.lower(), "created_at": lambda p: p.created_at}
+        return page(ordered(found, query.sort, keys, lambda p: p.id), query.window)
 
     async def save(self, provider: OidcProvider) -> None:
         existing = self._items.get(provider.id)

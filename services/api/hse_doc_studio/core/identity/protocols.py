@@ -20,6 +20,7 @@ from hse_doc_studio.core.identity.entities import (
     LoginAttempt,
     MailOutboxEntry,
     OidcProvider,
+    OidcProviderQuery,
     RegistrationInvite,
     Session,
     User,
@@ -166,6 +167,7 @@ class IMailOutboxRepository(Protocol):
 class IOidcProviderRepository(Protocol):
     async def get(self, provider_id: str) -> OidcProvider | None: ...
     async def list(self, *, only_enabled: bool = False) -> list[OidcProvider]: ...
+    async def page(self, query: OidcProviderQuery) -> Found[OidcProvider]: ...
     async def save(self, provider: OidcProvider) -> None:
         """Создаёт или заменяет провайдера (`created_at` существующего не меняется)."""
         ...

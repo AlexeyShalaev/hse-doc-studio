@@ -1,24 +1,29 @@
-[
-  {
-    "id": "3f2b9c1e7a4d4b6f8e0a1c2d3e4f5a6b",
-    "label": "HSE ID",
-    "issuer": "https://id.example.org",
-    "client_id": "studio",
-    "client_secret_set": true,
-    "scopes": "openid email profile",
-    "enabled": true,
-    "auto_provision": false,
-    "created_at": "2026-10-29T10:00:00Z"
-  },
-  {
-    "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "label": "Google",
-    "issuer": "https://accounts.google.com",
-    "client_id": "studio",
-    "client_secret_set": true,
-    "scopes": "openid email profile",
-    "enabled": false,
-    "auto_provision": true,
-    "created_at": "2026-10-29T10:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "3f2b9c1e7a4d4b6f8e0a1c2d3e4f5a6b",
+      "label": "HSE ID",
+      "issuer": "https://id.example.org",
+      "client_id": "studio",
+      "client_secret_set": true,
+      "scopes": "openid email profile",
+      "enabled": true,
+      "auto_provision": false,
+      "created_at": "2026-10-29T10:00:00Z"
+    },
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "label": "Google",
+      "issuer": "https://accounts.google.com",
+      "client_id": "studio",
+      "client_secret_set": true,
+      "scopes": "openid email profile",
+      "enabled": false,
+      "auto_provision": true,
+      "created_at": "2026-10-29T10:00:00Z"
+    }
+  ],
+  "total": 2,
+  "limit": 50,
+  "offset": 0
+}

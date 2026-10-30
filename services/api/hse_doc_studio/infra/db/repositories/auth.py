@@ -24,6 +24,7 @@ from hse_doc_studio.core.identity.entities import (
     MailKind,
     MailOutboxEntry,
     OidcProvider,
+    OidcProviderQuery,
     RegistrationInvite,
     Session,
     TokenScope,
@@ -452,6 +453,12 @@ def _oidc(row: OidcProviderRow) -> OidcProvider:
     )
 
 
+_OIDC_SORT: dict[str, Expr] = {
+    "label": func.lower(OidcProviderRow.label),
+    "created_at": OidcProviderRow.created_at,
+}
+
+
 class SqlOidcProviderRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -467,6 +474,17 @@ class SqlOidcProviderRepository:
             stmt = stmt.where(OidcProviderRow.enabled.is_(True))
         async with self._sessions.use() as db:
             return [_oidc(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def page(self, query: OidcProviderQuery) -> Found[OidcProvider]:
+        stmt = select(OidcProviderRow)
+        if query.q:
+            stmt = stmt.where(contains(query.q, OidcProviderRow.label, OidcProviderRow.issuer))
+        if query.enabled is not None:
+            stmt = stmt.where(OidcProviderRow.enabled.is_(query.enabled))
+        stmt = stmt.order_by(*ordering(query.sort, _OIDC_SORT, OidcProviderRow.id))
+        async with self._sessions.use() as db:
+            rows, total = await fetch_page(db, stmt, query.window)
+            return Found([_oidc(row) for (row,) in rows], total)
 
     async def save(self, provider: OidcProvider) -> None:
         stmt = pg_insert(OidcProviderRow).values(

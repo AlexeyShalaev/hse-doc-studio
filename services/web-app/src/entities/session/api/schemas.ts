@@ -669,6 +669,7 @@ export const AdminOidcProviderSchema = z.strictObject({
   auto_provision: z.boolean(),
   created_at: iso,
 });
+export const AdminOidcProviderPageSchema = pageOf(AdminOidcProviderSchema);
 export const CreateAdminOidcProviderRequestSchema = z.strictObject({
   label: z.string(),
   issuer: z.string(),

@@ -805,6 +805,13 @@ class AdminOidcProvider(StrictModel):
     created_at: datetime
 
 
+class AdminOidcProviderPage(StrictModel):
+    items: list[AdminOidcProvider]
+    total: int
+    limit: int
+    offset: int
+
+
 class CreateAdminOidcProviderRequest(StrictModel):
     label: str = Field(max_length=128)
     issuer: str = Field(max_length=2048)

@@ -10,10 +10,11 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.identity.entities import OidcProvider
+from hse_doc_studio.core.identity.entities import OidcProvider, OidcProviderQuery
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, IOidcProviderRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.listing import Found
 from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.use_cases.admin.settings import ensure_login_method_remains
 from hse_doc_studio.use_cases.admin.users import require_admin
@@ -86,9 +87,9 @@ class ListOidcProvidersUC:
     def __init__(self, repo: IOidcProviderRepository) -> None:
         self._repo = repo
 
-    async def execute(self, actor: Actor) -> list[OidcProvider]:
+    async def execute(self, actor: Actor, query: OidcProviderQuery) -> Found[OidcProvider]:
         require_admin(actor)
-        return await self._repo.list()
+        return await self._repo.page(query)
 
 
 class GetOidcProviderUC:
