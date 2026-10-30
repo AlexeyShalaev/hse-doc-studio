@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 
 class NoLanguageCheck:
     """`ILanguageCheckService` без сервиса: `ExternalCheckEngine` без адреса ничего не находит."""
@@ -12,3 +14,6 @@ class NoLanguageCheck:
 
     async def ensure_running(self, image: str) -> str | None:
         return None
+
+    def auth_headers(self) -> Mapping[str, str]:
+        return {}
