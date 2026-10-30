@@ -62,7 +62,10 @@ describe("серверное демо", () => {
     async (id) => {
       activateServerScenario(id);
       const response = await call("GET", "/session/bootstrap");
-      expect(BootstrapSchema.parse(response.data).mode).toBe("server");
+      // Сценарии local_remote_* показывают локальную Студию с облачными сборками.
+      expect(BootstrapSchema.parse(response.data).mode).toBe(
+        id.startsWith("local_") ? "local" : "server",
+      );
     },
   );
 

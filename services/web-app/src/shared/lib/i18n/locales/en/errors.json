@@ -118,18 +118,18 @@
     "import_no_project": "The archive holds no Studio project. Zip the whole project folder, including .hse-studio.",
     "import_project_newer": "The project was saved by a newer Studio. Update the server and upload it again.",
     "import_unavailable": "The server could not allocate room for the project. Try again.",
-    "personal_runners_disabled": "The administrator turned personal runners off.",
-    "personal_runner_limit": "You've reached the limit of personal runners or tokens. Revoke one you no longer need.",
-    "runner_revoked": "The runner has been revoked.",
-    "project_not_personal": "This is an organization project: builds use shared runners.",
+    "personal_runners_disabled": "The administrator turned personal runners off: builds use shared runners.",
+    "personal_runner_limit": "You have reached the personal runner limit. Revoke a runner or an unused token.",
+    "runner_revoked": "The runner is already revoked.",
+    "project_not_personal": "This is an organization project: it only builds on shared runners.",
     "runner_pairing_invalid": "Code not found. Check it in the Studio.",
     "runner_pairing_expired": "The code has expired. Start connecting from the Studio again.",
     "runner_pairing_used": "The code has already been used.",
-    "relay_unavailable": "The runner didn't respond. Start it or choose another model.",
+    "relay_unavailable": "The runner didn't respond. Start it or pick another model.",
     "relay_busy": "Too many requests to the runner at once, try again in a minute.",
-    "ai_provider_runner_invalid": "Choose your own runner and an AI endpoint it declares.",
-    "remote_runner_url_invalid": "The server address must start with https:// (http only for localhost).",
-    "remote_runner_unreachable": "The server isn't responding. Check the address and the network.",
-    "remote_runner_disabled": "Personal runners are turned off on the server."
+    "ai_provider_runner_invalid": "Pick your runner and an AI endpoint it has declared.",
+    "remote_runner_url_invalid": "An https address is required. http only works for localhost.",
+    "remote_runner_unreachable": "The server didn't respond. Check the address and your network.",
+    "remote_runner_disabled": "The server administrator turned personal runners off."
   }
 }

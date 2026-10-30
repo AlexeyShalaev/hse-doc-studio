@@ -59,6 +59,7 @@ class RunnerProvider(Provider):
         config: RunnerConfig,
         transport: httpx.AsyncBaseTransport | None = None,
         office_transport: httpx.AsyncBaseTransport | None = None,
+        host_paths: HostPathResolver | None = None,
         *,
         ai_endpoints: Sequence[AiEndpoint] | None = None,
         observer: IRunnerLoopObserver | None = None,
@@ -69,6 +70,7 @@ class RunnerProvider(Provider):
         self._config = config
         self._transport = transport
         self._office_transport = office_transport
+        self._host_paths = host_paths
         self._ai_endpoints = ai_endpoints
         self._observer = observer
         self._gate = gate
@@ -170,7 +172,7 @@ class RunnerProvider(Provider):
         lt_manager: ILanguageCheckService = NoLanguageCheck()
         return EmbeddedCompileRunner(
             executor=DockerCompileExecutor(
-                HostPathResolver(),
+                self._host_paths or HostPathResolver(),
                 image=config.tex_image,
                 cache_volume_name=config.tex_cache_volume,
                 idle_timeout_s=config.tex_idle_timeout_s,
@@ -238,7 +240,9 @@ class RunnerProvider(Provider):
                 tags=tags - {RELAY_TAG} if not relay_on else tags | {RELAY_TAG},
                 concurrency=config.concurrency,
                 poll_wait_s=config.poll_wait_s,
-                ai_concurrency=config.ai_concurrency if relay_on else 0,
+                # Слоты ИИ остаются и без адресов: Студия может объявить их позже через `reannounce`,
+                # а без согласованной возможности `ai_slots` цикл их не использует.
+                ai_concurrency=config.ai_concurrency,
                 host_kind=config.host_kind,
                 ai_endpoints=declared,
                 gate=self._gate,
@@ -281,6 +285,7 @@ def create_runner_container(  # noqa: PLR0913
     *,
     transport: httpx.AsyncBaseTransport | None = None,
     office_transport: httpx.AsyncBaseTransport | None = None,
+    host_paths: HostPathResolver | None = None,
     ai_endpoints: Sequence[AiEndpoint] | None = None,
     observer: IRunnerLoopObserver | None = None,
     gate: Callable[[], bool] | None = None,
@@ -289,13 +294,15 @@ def create_runner_container(  # noqa: PLR0913
     """Транспорты подменяют сеть в тестах: api раннера, Gotenberg и модели.
 
     Локальная Студия передаёт свои ИИ-адреса (`ai_endpoints`, `None` значит из окружения раннера),
-    наблюдатель состояния и шлюз «уступать локальным сборкам».
+    наблюдатель состояния и шлюз «уступать локальным сборкам». `host_paths` нужен раннеру внутри
+    контейнера Студии: docker монтирует папку сборки по пути хоста, а не по пути внутри контейнера.
     """
     return make_async_container(
         RunnerProvider(
             config,
             transport,
             office_transport,
+            host_paths,
             ai_endpoints=ai_endpoints,
             observer=observer,
             gate=gate,

@@ -51,6 +51,7 @@ from hse_doc_studio.core.readiness import (
     ServerReadinessRegistry,
     server_readiness,
 )
+from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -619,6 +620,23 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             await runtime.stop()
         except Exception:
             logger.exception("ollama shutdown stop failed")
+
+    if settings.mode is StudioMode.local:
+
+        @app.on_event("startup")
+        async def _remote_runner_startup() -> None:
+            # Облачные сборки на этой машине: с выключенным переключателем супервизор только читает настройки.
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).start()
+            except Exception:
+                logger.exception("remote runner startup failed")
+
+        @app.on_event("shutdown")
+        async def _remote_runner_shutdown() -> None:
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).stop()
+            except Exception:
+                logger.exception("remote runner shutdown failed")
 
     if settings.static_dir is not None:
         _mount_spa(app, settings)

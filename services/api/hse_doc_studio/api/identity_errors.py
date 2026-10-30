@@ -22,6 +22,7 @@ _LIMIT = 429
 _NOT_FOUND = 404
 _UNAVAILABLE = 503
 _GONE = 410
+_BAD_GATEWAY = 502
 
 IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.auth_required: _UNAUTHORIZED,
@@ -66,6 +67,13 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.runner_pairing_invalid: _NOT_FOUND,
     IdentityErrorCode.runner_pairing_expired: _GONE,
     IdentityErrorCode.runner_pairing_used: _STATE,
+    # Те же статусы, что отдают ai_relay_errors и локальный /remote-runner (раздел 9.9 спецификации).
+    IdentityErrorCode.relay_unavailable: _UNAVAILABLE,
+    IdentityErrorCode.relay_busy: _LIMIT,
+    IdentityErrorCode.ai_provider_runner_invalid: _INPUT,
+    IdentityErrorCode.remote_runner_url_invalid: _INPUT,
+    IdentityErrorCode.remote_runner_unreachable: _BAD_GATEWAY,
+    IdentityErrorCode.remote_runner_disabled: _STATE,
 }
 
 

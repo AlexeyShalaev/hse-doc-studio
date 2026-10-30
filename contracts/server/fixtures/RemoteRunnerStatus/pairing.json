@@ -3,7 +3,7 @@
   "server_url": "https://studio.example.org",
   "paired": false,
   "runner_id": null,
-  "runner_name": null,
+  "runner_name": "MacBook Анны",
   "state": "pairing",
   "detail_code": null,
   "running_jobs": 0,
