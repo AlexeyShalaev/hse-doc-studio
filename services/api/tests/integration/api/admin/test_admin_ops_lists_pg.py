@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.admin import make_admin_router
+from hse_doc_studio.api.schemas.admin import decode_cursor
 from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource
 from hse_doc_studio.core.identity.entities import ActorCredentials
 from hse_doc_studio.core.identity.protocols import IActorResolver
@@ -100,18 +101,23 @@ def _user_id(i: int) -> str:
 
 
 def _runner_status(i: int) -> tuple[datetime | None, bool, datetime | None]:
-    """last_seen_at, paused, revoked_at по номеру: online, stale, offline, paused, revoked, никогда не виден."""
+    """last_seen_at, paused, revoked_at по номеру: online, stale, offline, paused, revoked, никогда не виден.
+
+    Статус раннера считается от текущего времени, поэтому отметки берутся в момент посева, а не NOW
+    модуля: в полном прогоне модуль импортируется на сбор задолго до теста, и «онлайн» успевал устареть.
+    """
+    now = datetime.now(UTC)
     match i % 6:
         case 0:
-            return NOW - timedelta(seconds=5), False, None
+            return now - timedelta(seconds=5), False, None
         case 1:
-            return NOW - timedelta(minutes=3), False, None
+            return now - timedelta(minutes=3), False, None
         case 2:
-            return NOW - timedelta(hours=2), False, None
+            return now - timedelta(hours=2), False, None
         case 3:
-            return NOW - timedelta(seconds=5), True, None
+            return now - timedelta(seconds=5), True, None
         case 4:
-            return NOW - timedelta(seconds=5), False, NOW - timedelta(days=1)
+            return now - timedelta(seconds=5), False, now - timedelta(days=1)
         case _:
             return None, False, None
 
@@ -484,7 +490,7 @@ async def test__queue__cursor_walks_everything_once_newest_first(world: World) -
 async def test__queue__cursor_is_opaque_and_legacy_digits_still_work(world: World) -> None:
     first = await world.get("/api/admin/queue", limit=10)
     cursor = first["next_cursor"]
-    seq = int(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
+    seq = decode_cursor(cursor)
     by_new = await world.get("/api/admin/queue", limit=10, cursor=cursor)
     by_legacy = await world.get("/api/admin/queue", limit=10, cursor=str(seq))
 

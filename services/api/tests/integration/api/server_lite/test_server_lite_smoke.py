@@ -69,7 +69,8 @@ def test__login__env_admin__sees_empty_project_list(stand: TestClient) -> None:
 
     assert login.status_code == 200
     assert login.json()["user"]["is_instance_admin"] is True
-    assert stand.get("/api/v1/projects").json() == []
+    # Серверный режим отдаёт каталог страницей.
+    assert stand.get("/api/v1/projects").json()["items"] == []
 
 
 def test__projects__anonymous__is_unauthorized(stand: TestClient) -> None:

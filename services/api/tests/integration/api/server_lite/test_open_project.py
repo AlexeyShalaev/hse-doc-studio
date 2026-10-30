@@ -145,7 +145,8 @@ def test__open_project__owner_works_stranger_gets_404_anonymous_401(stand: TestC
         assert documents.json()
         assert client.get(f"{base}/vcs/status").status_code == 200
         assert client.get(f"{base}/git").status_code == 200
-        assert [item["name"] for item in client.get("/api/v1/projects").json()] == ["Курсовая: открытие"]
+        # Серверный режим отдаёт каталог страницей.
+        assert [item["name"] for item in client.get("/api/v1/projects").json()["items"]] == ["Курсовая: открытие"]
         assert client.post(f"{base}/vcs/snapshots", json={"message": "m"}, headers=owner.headers).status_code == 200
         assert client.post(f"{base}/chats", json={}, headers=owner.headers).status_code == 201
         assert client.patch(base, json={"name": "Новое имя"}, headers=owner.headers).status_code == 200
@@ -159,7 +160,7 @@ def test__open_project__owner_works_stranger_gets_404_anonymous_401(stand: TestC
         assert client.post(f"{base}/chats", json={}, headers=stranger.headers).status_code == 404
         assert client.patch(base, json={"name": "Взлом"}, headers=stranger.headers).status_code == 404
         assert client.delete(base, headers=stranger.headers).status_code == 404
-        assert client.get("/api/v1/projects").json() == []
+        assert client.get("/api/v1/projects").json()["items"] == []
     with anonymous as client:
         for path in paths:
             assert client.get(f"{base}{path}").status_code == 401, path
