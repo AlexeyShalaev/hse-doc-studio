@@ -70,9 +70,14 @@ describe("оболочка и сводка админки", () => {
     expect(
       await screen.findByTestId("admin-nav-count-users"),
     ).toHaveTextContent("3");
+    // Три сервиса не работают, у раннеров перебои: как на странице «Сервисы».
     expect(
       await screen.findByTestId("admin-nav-count-services"),
-    ).toHaveTextContent("3");
+    ).toHaveTextContent("4");
+    // Места мало: у «Хранилища» точка без числа.
+    expect(
+      await screen.findByTestId("admin-nav-count-storage"),
+    ).toHaveAttribute("data-tone", "danger");
     expect(screen.getByTestId("admin-back-to-studio")).toHaveAttribute(
       "href",
       "/",
@@ -89,7 +94,7 @@ describe("оболочка и сводка админки", () => {
     activateServerScenario("admin_ready");
     mount();
     const people = await screen.findByTestId("overview-kpi-people");
-    expect(await within(people).findByText("13")).toBeInTheDocument();
+    expect(await within(people).findByText("17")).toBeInTheDocument();
     expect(within(people).getByText("3 ждут одобрения")).toBeInTheDocument();
     // Занято столько же, сколько на странице «Хранилище»: диск проектов, а не только сборки.
     const storage = screen.getByTestId("overview-kpi-storage");
@@ -132,7 +137,7 @@ describe("оболочка и сводка админки", () => {
       await screen.findByTestId("overview-attention-failed"),
     ).toBeInTheDocument();
     const people = screen.getByTestId("overview-kpi-people");
-    expect(await within(people).findByText("13")).toBeInTheDocument();
+    expect(await within(people).findByText("17")).toBeInTheDocument();
   });
 
   it("сводка на английском", async () => {

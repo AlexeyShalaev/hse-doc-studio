@@ -226,7 +226,7 @@ export const ApprovalsPanel = () => {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     type="button"
                     disabled={busy}
                     data-testid={`approve-${u.id}`}

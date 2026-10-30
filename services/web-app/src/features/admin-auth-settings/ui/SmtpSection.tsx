@@ -89,6 +89,7 @@ export const SmtpSection = ({
       hint={hint}
       htmlFor={`${uid}-${key}`}
       locked={lock(key)}
+      lockStyle={allLocked ? "icon" : "chip"}
       align="stretch"
       testId={`smtp-${key}`}
     >
@@ -142,6 +143,11 @@ export const SmtpSection = ({
                 id: `${uid}-port`,
                 "aria-label": t("smtp.port"),
                 inputMode: "numeric",
+                // Число по правому краю, как в остальных числовых полях.
+                style: {
+                  textAlign: "right",
+                  fontVariantNumeric: "tabular-nums",
+                },
                 ...issue("port"),
               })}
             </div>

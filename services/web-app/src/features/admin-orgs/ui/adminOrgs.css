@@ -176,12 +176,18 @@
   font-variant-numeric: tabular-nums;
 }
 .org-role-select {
-  width: 150px;
-  margin-left: -10px;
+  display: inline-block;
+  margin-left: -9px;
 }
-/* В таблице выбор роли выглядит как текст и проявляется при наведении. */
+/* В таблице выбор роли выглядит как текст ячейки и проявляется при наведении:
+   стрелка сразу за подписью, размер как у остального текста. */
 .org-role-select > .input {
-  height: 30px;
+  width: auto;
+  height: 28px;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  color: var(--fg-1);
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -191,6 +197,12 @@
 .org-role-select > .input[data-state="open"] {
   border-color: var(--border);
   background: var(--bg-2);
+  color: var(--fg-0);
+}
+.org-role-text {
+  font-size: 12.5px;
+  color: var(--fg-1);
+  white-space: nowrap;
 }
 .org-settings {
   max-width: var(--adm-narrow);
@@ -317,4 +329,38 @@
 .org-check:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* ── организации человека в карточке «Пользователи» ── */
+.org-user-orgs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.org-user-orgs > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+.org-user-orgs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--fg-0);
+  font-size: 13px;
+  text-decoration: none;
+}
+.org-user-orgs a:hover .org-user-orgs-name {
+  text-decoration: underline;
+}
+.org-user-orgs-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

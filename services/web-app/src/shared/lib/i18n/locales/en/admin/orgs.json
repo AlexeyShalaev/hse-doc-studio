@@ -69,6 +69,7 @@
     "submit": "Create"
   },
   "detail": {
+    "myRole": "You: {{role}}",
     "back": "Back to organizations",
     "loadFailed": "Could not load the organization.",
     "missing": {
@@ -183,5 +184,9 @@
     "count_other": "{{count}} people",
     "more_one": "and {{count}} more",
     "more_other": "and {{count}} more"
+  },
+  "userOrgs": {
+    "none": "Not in any organization.",
+    "failed": "Could not load organizations."
   }
 }

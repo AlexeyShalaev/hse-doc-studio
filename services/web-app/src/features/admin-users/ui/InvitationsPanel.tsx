@@ -257,7 +257,11 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
                 onValueChange={setTtl}
               />
             </div>
-            <div className="ppl-invite-submit">
+            {/* Пустая подпись той же высоты: кнопка встаёт вровень с полями. */}
+            <div className="field ppl-invite-submit">
+              <span className="form-label" aria-hidden="true">
+                {"\u00a0"}
+              </span>
               <Button type="submit" disabled={busy} data-testid="invite-submit">
                 {invite.isPending ? (
                   <Spinner size="sm" />

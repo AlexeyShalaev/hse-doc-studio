@@ -26,7 +26,7 @@ import {
   ROLES,
   type Viewer,
 } from "../lib/permissions";
-import { FailureNotice, RoleBadge } from "./parts";
+import { FailureNotice } from "./parts";
 
 export type MembersViewProps = {
   status: "loading" | "error" | "ready";
@@ -153,7 +153,7 @@ export const MembersView = ({
                 tabIndex={0}
                 data-testid={`member-last-owner-${m.user_id}`}
               >
-                <RoleBadge role={m.role} />
+                <span className="org-role-text">{t(`role.${m.role}`)}</span>
                 <Lock
                   size={12}
                   aria-hidden="true"
@@ -164,7 +164,14 @@ export const MembersView = ({
             </Tooltip>
           );
         }
-        if (!canEditMember(viewer, m.role)) return <RoleBadge role={m.role} />;
+        // В таблице роль текстом, как у соседних ячеек; выбор проявляется при наведении.
+        if (!canEditMember(viewer, m.role)) {
+          return (
+            <span className="org-role-text" data-testid={`role-${m.role}`}>
+              {t(`role.${m.role}`)}
+            </span>
+          );
+        }
         return (
           <div
             className="org-role-select"
@@ -267,7 +274,6 @@ export const MembersView = ({
           }}
         />
         <Button
-          size="sm"
           type="button"
           data-testid="member-add-open"
           onClick={() => {

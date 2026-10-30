@@ -5,6 +5,7 @@ import type {
 } from "@entities/session";
 
 // Организации в демо-мире админки: люди установки, организации, участники и группы.
+// Участники те же, что в разделе «Пользователи» (adminPeople): по именам и почтам.
 // Формы совпадают с contracts/server/fixtures (AdminOrg, AdminOrgMember, AdminGroup).
 
 export type DemoDirectoryUser = { id: string; name: string; email: string };
@@ -52,7 +53,7 @@ export const DIRECTORY: readonly DemoDirectoryUser[] = [
     email: "dmitry.kuznetsov@example.org",
   },
   {
-    id: "u_01hx7k7s9k",
+    id: "u_01hx7k2c1d",
     name: "Мария Келлер",
     email: "maria.keller@example.org",
   },

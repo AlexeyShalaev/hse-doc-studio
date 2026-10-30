@@ -354,7 +354,7 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           registration_mode: "invite",
           password_enabled: true,
           oidc_providers: [],
-          smtp_enabled: true,
+          smtp_enabled: false,
           password_min_length: 10,
         },
         user: DEMO_ADMIN,

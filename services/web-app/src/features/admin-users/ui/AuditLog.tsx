@@ -9,6 +9,7 @@ import {
   Mail,
   RefreshCw,
   ScrollText,
+  SearchX,
   Server,
   Settings2,
   UserCog,
@@ -392,7 +393,7 @@ export const AuditLog = () => {
       {audit.isSuccess && events.length === 0 && (
         <EmptyState
           framed
-          icon={<ScrollText size={18} />}
+          icon={filtering ? <SearchX size={18} /> : <ScrollText size={18} />}
           title={t(filtering ? "audit.noMatch.title" : "audit.empty.title")}
           description={t(filtering ? "audit.noMatch.body" : "audit.empty.body")}
           testId="audit-empty"

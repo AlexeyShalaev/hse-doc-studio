@@ -151,7 +151,12 @@ export const OrgDetailView = ({
             {org.my_role && (
               <>
                 <span className="adm-dotsep" />
-                <RoleBadge role={org.my_role} />
+                {/* Роль того, кто смотрит, а не состояние организации. */}
+                <span data-testid="org-my-role">
+                  {t("detail.myRole", {
+                    role: t(`role.${org.my_role}`).toLowerCase(),
+                  })}
+                </span>
               </>
             )}
           </span>

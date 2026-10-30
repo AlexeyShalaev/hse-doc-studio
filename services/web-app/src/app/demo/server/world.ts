@@ -133,8 +133,8 @@ export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
 };
 
 /**
- * Люди установки мира; на свежей установке журнал пуст, а без раннеров в нём
- * нет записей о раннерах.
+ * Люди установки мира; на свежей установке журнал пуст, а на только что
+ * поднятой людей несколько и журнал короткий.
  */
 export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
   world.adminPeople ??= createDemoAdminPeople(
@@ -143,6 +143,12 @@ export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
       : world.scenario.opsSeed === "fresh"
         ? "no_runners"
         : "default",
+    // Журнал говорит о том же мире, что и разделы: без организаций нет
+    // записей о них, без приостановленного раннера нет записи о паузе.
+    {
+      orgs: world.scenario.orgSeed !== "empty",
+      pausedRunner: world.scenario.opsSeed !== "runners_offline",
+    },
   );
   return world.adminPeople;
 };

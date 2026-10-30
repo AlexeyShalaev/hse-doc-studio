@@ -30,7 +30,7 @@
     "you": "you",
     "admin": "Administrator",
     "member": "User",
-    "never": "never signed in",
+    "never": "no sign-ins yet",
     "search": "Search by name or email",
     "caption": "People of this installation",
     "loadFailed": "Could not load the list of people.",
@@ -60,6 +60,7 @@
     "body": "People and invitations are visible to installation administrators. Ask one of them if you need access."
   },
   "drawer": {
+    "orgs": "Organizations",
     "account": "Account",
     "created": "Registered",
     "access": "Access",

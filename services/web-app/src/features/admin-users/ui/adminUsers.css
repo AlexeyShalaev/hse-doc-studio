@@ -116,8 +116,8 @@
 .ppl-invite-form > .ppl-invite-ttl {
   width: 168px;
 }
-.ppl-invite-form > .ppl-invite-submit {
-  padding-top: 21px;
+.ppl-invite-form > .ppl-invite-submit > .form-label {
+  visibility: hidden;
 }
 
 /* ── очередь одобрений ── */

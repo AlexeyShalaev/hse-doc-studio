@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { SearchX, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
@@ -36,6 +37,15 @@ import { AccountStatusLabel, FailureNotice, RoleLabel, When } from "./parts";
 
 type Confirm = { user: AdminUser; kind: UserActionKind };
 
+// Колонки не прыгают, когда поиск ничего не нашёл.
+const COLUMN_WIDTHS = {
+  status: 200,
+  role: 170,
+  projects: 96,
+  lastLogin: 170,
+  actions: 52,
+};
+
 // Testid пунктов меню строки: их ждут тесты.
 const MENU_TESTID: Record<UserActionKind, string> = {
   enable: "user-enable",
@@ -50,7 +60,11 @@ const MENU_TESTID: Record<UserActionKind, string> = {
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
 /** Вкладка «Люди»: поиск, фильтр по состоянию, карточка человека и действия над аккаунтом. */
-export const UsersPanel = () => {
+export const UsersPanel = ({
+  renderOrgs,
+}: {
+  renderOrgs?: ((user: AdminUser) => ReactNode) | undefined;
+}) => {
   const { t, i18n } = useTranslation("adminUsers");
   const selfId = useBootstrap().data?.user?.id ?? "";
   const [search, setSearch] = useState("");
@@ -275,11 +289,13 @@ export const UsersPanel = () => {
           filtering ? t("users.noMatch.title") : t("users.empty.title")
         }
         emptyHint={filtering ? t("users.noMatch.body") : t("users.empty.body")}
+        emptyIcon={filtering ? <SearchX size={18} /> : <Users size={18} />}
+        columnWidths={COLUMN_WIDTHS}
         emptyAction={
           filtering ? (
             <Button
               size="sm"
-              variant="outline"
+              variant="secondary"
               type="button"
               onClick={resetFilters}
             >
@@ -305,6 +321,7 @@ export const UsersPanel = () => {
 
       <PersonDrawer
         user={opened}
+        renderOrgs={renderOrgs}
         self={opened?.id === selfId}
         busy={busy}
         onClose={() => {

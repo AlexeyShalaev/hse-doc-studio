@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Lock, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@shared/api";
 import { Button, EmptyState, PageHeader, PageTabs } from "@shared/ui";
+import type { AdminUser } from "@entities/session";
 import { useApprovals, useUsers } from "../api/adminUsersQueries";
 import { ApprovalsPanel } from "./ApprovalsPanel";
 import { InvitationsPanel } from "./InvitationsPanel";
@@ -15,8 +16,11 @@ const TABS: readonly UsersTab[] = ["users", "invitations", "approvals"];
 /** Раздел «Пользователи»: люди, приглашения и очередь одобрений. */
 export const AdminUsers = ({
   initialTab = "users",
+  renderOrgs,
 }: {
   initialTab?: UsersTab;
+  /** Организации человека в его карточке: их рисует раздел «Организации». */
+  renderOrgs?: ((user: AdminUser) => ReactNode) | undefined;
 }) => {
   const { t } = useTranslation("adminUsers");
   const [tab, setTab] = useState<UsersTab>(initialTab);
@@ -57,25 +61,23 @@ export const AdminUsers = ({
         title={t("title")}
         description={t("lead")}
         actions={
-          // На вкладке приглашений форма уже на экране: вторая яркая кнопка
-          // с тем же действием не нужна.
-          tab === "invitations" ? null : (
-            <Button
-              size="sm"
-              type="button"
-              data-testid="users-invite"
-              onClick={() => {
-                setTab("invitations");
-                // Вкладка отрисуется в этом же кадре: фокус в поле почты после неё.
-                requestAnimationFrame(() => {
-                  emailRef.current?.focus();
-                });
-              }}
-            >
-              <UserPlus size={14} aria-hidden="true" />
-              {t("invite")}
-            </Button>
-          )
+          // Действие на всех вкладках одно: на вкладке приглашений кнопка
+          // просто ставит курсор в поле почты.
+          <Button
+            size="sm"
+            type="button"
+            data-testid="users-invite"
+            onClick={() => {
+              setTab("invitations");
+              // Вкладка отрисуется в этом же кадре: фокус в поле почты после неё.
+              requestAnimationFrame(() => {
+                emailRef.current?.focus();
+              });
+            }}
+          >
+            <UserPlus size={14} aria-hidden="true" />
+            {t("invite")}
+          </Button>
         }
         tabs={
           <PageTabs
@@ -98,7 +100,7 @@ export const AdminUsers = ({
         id="users-panel-current"
         aria-labelledby={`users-tab-${tab}`}
       >
-        {tab === "users" && <UsersPanel />}
+        {tab === "users" && <UsersPanel renderOrgs={renderOrgs} />}
         {tab === "invitations" && <InvitationsPanel ref={emailRef} />}
         {tab === "approvals" && <ApprovalsPanel />}
       </div>

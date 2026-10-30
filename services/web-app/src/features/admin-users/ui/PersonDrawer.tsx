@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,12 +15,15 @@ export const PersonDrawer = ({
   busy,
   onClose,
   onAction,
+  renderOrgs,
 }: {
   user: AdminUser | null;
   self: boolean;
   busy: boolean;
   onClose: () => void;
   onAction: (kind: UserActionKind) => void;
+  /** Организации человека: их рисует раздел «Организации», страница передаёт сюда. */
+  renderOrgs?: ((user: AdminUser) => ReactNode) | undefined;
 }) => {
   const { t, i18n } = useTranslation("adminUsers");
   const actions = user ? userActions(user, self) : [];
@@ -81,7 +85,6 @@ export const PersonDrawer = ({
                   <p className="ppl-drawer-sub">{user.email}</p>
                   <div className="ppl-drawer-badges">
                     <AccountStatusLabel status={user.status} />
-                    <RoleLabel isAdmin={user.is_instance_admin} />
                   </div>
                 </div>
                 <Dialog.Close asChild>
@@ -98,6 +101,10 @@ export const PersonDrawer = ({
                 <section>
                   <h3 className="ppl-drawer-caption">{t("drawer.account")}</h3>
                   <dl className="adm-kv">
+                    <dt>{t("users.columns.role")}</dt>
+                    <dd>
+                      <RoleLabel isAdmin={user.is_instance_admin} />
+                    </dd>
                     <dt>{t("drawer.created")}</dt>
                     <dd title={formatFull(user.created_at, i18n.language)}>
                       <When iso={user.created_at} />
@@ -112,6 +119,12 @@ export const PersonDrawer = ({
                     </dd>
                   </dl>
                 </section>
+                {renderOrgs && (
+                  <section>
+                    <h3 className="ppl-drawer-caption">{t("drawer.orgs")}</h3>
+                    {renderOrgs(user)}
+                  </section>
+                )}
                 <section>
                   <h3 className="ppl-drawer-caption">{t("drawer.access")}</h3>
                   <div className="ppl-drawer-actions">
