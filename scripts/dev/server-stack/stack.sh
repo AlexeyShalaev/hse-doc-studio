@@ -8,19 +8,24 @@
 #   stack.sh personal-up TOKEN  поднять личный раннер Анны (токен hsrt_ из «Мои раннеры») и поддельный OpenAI
 #   stack.sh personal-stop      мягко остановить личный раннер (SIGTERM: раннер успевает сказать /offline)
 #   stack.sh personal-kill      убить личный раннер без ухода (SIGKILL: сервер узнаёт о пропаже по тишине)
+#   stack.sh personal-reset     стереть контейнер и личность личного раннера (повторный прогон с новым токеном)
+# Второй стенд рядом с первым: STACK_PROJECT=имя STACK_PORT=порт (свои .env, каталоги раннеров и тома).
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../../.." && pwd)"
-env_file="$here/.env"
-project="hse-doc-studio-stack"
+# STACK_PROJECT даёт второй стенд рядом с первым: свои имя compose, .env и каталоги раннеров.
+project="${STACK_PROJECT:-hse-doc-studio-stack}"
+suffix=""
+[ "$project" = "hse-doc-studio-stack" ] || suffix=".$project"
+env_file="$here/.env$suffix"
 port="${STACK_PORT:-17251}"
 compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml")
 
 ensure_env() {
   [ -f "$env_file" ] && return
   umask 077
-  runner_dir="${STACK_RUNNER_DIR:-$here/runner-data}"
+  runner_dir="${STACK_RUNNER_DIR:-$here/runner-data$suffix}"
   mkdir -p "$runner_dir"
   chmod 777 "$runner_dir"
   {
@@ -74,7 +79,7 @@ case "${1:-}" in
   personal-up)
     ensure_env
     token="${2:?usage: $0 personal-up TOKEN}"
-    personal_dir="${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data}"
+    personal_dir="${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}"
     mkdir -p "$personal_dir"
     chmod 777 "$personal_dir"
     PERSONAL_RUNNER_TOKEN="$token" PERSONAL_RUNNER_DATA_DIR="$personal_dir" \
@@ -86,13 +91,18 @@ case "${1:-}" in
   personal-kill)
     "${compose[@]}" --profile personal kill -s SIGKILL runner-personal
     ;;
+  personal-reset)
+    # Стирает контейнер и личность личного раннера: следующий personal-up регистрирует новый раннер.
+    "${compose[@]}" --profile personal rm -f -s runner-personal
+    rm -rf "${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}"
+    ;;
   down)
     [ -f "$env_file" ] || exit 0
     "${compose[@]}" --profile personal down --volumes --remove-orphans
-    rm -rf "$env_file" "$here/runner-data" "$here/runner-personal-data"
+    rm -rf "$env_file" "$here/runner-data$suffix" "$here/runner-personal-data$suffix"
     ;;
   *)
-    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill" >&2
+    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset" >&2
     exit 2
     ;;
 esac

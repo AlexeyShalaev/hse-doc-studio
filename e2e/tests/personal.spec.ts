@@ -237,6 +237,22 @@ test.describe("Личные раннеры на живом стенде", () => 
   test("4. Сборки Бориса идут по политике проекта, раннер Анны ему не виден", async ({
     browser,
   }) => {
+    // Соавтора можно позвать только из общей организации: админ сводит Анну и Бориса в одну.
+    await admin.json(
+      await admin.post("/api/admin/orgs", {
+        name: "Кафедра личных раннеров",
+        slug: "personal-e2e",
+      }),
+      201,
+    );
+    for (const who of [ANNA, BORIS])
+      await admin.json(
+        await admin.post("/api/admin/orgs/personal-e2e/members", {
+          email: who.email,
+          role: "member",
+        }),
+        201,
+      );
     await anna.json(
       await anna.put(`/api/v1/projects/${project.id}/members/user:${borisId}`, {
         role: "editor",
