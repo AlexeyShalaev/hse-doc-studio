@@ -628,15 +628,20 @@ components:
             type: string
           - type: 'null'
         version:
+          maxLength: 64
           type: string
         tags:
           items:
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,31}$
             type: string
+          maxItems: 32
           type: array
         concurrency:
+          maximum: 64
           minimum: 1
           type: integer
         ai_concurrency:
+          maximum: 16
           minimum: 0
           type: integer
         host_kind:
@@ -646,7 +651,9 @@ components:
           type: string
         features:
           items:
+            maxLength: 32
             type: string
+          maxItems: 16
           type: array
         ai_endpoints:
           items:
@@ -775,15 +782,20 @@ components:
         protocol:
           type: integer
         version:
+          maxLength: 64
           type: string
         tags:
           items:
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,31}$
             type: string
+          maxItems: 32
           type: array
         concurrency:
+          maximum: 64
           minimum: 1
           type: integer
         resource_class:
+          maxLength: 32
           type: string
       required:
       - name
