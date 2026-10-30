@@ -41,6 +41,8 @@ class FakeJob:
     relay_body: bytes = b""
     relay_batches: list[dict[str, Any]] = field(default_factory=list)
     relay_cancel: bool = False
+    # Как api, когда дочитавший потребитель уже снял канал: подтверждение порции с `end` несёт `cancel`.
+    relay_cancel_on_end: bool = False
 
     @property
     def job_id(self) -> str:
@@ -153,7 +155,8 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         if isinstance(job, JSONResponse):
             return job
         job.relay_batches.append(body.model_dump())
-        return {"cancel": job.relay_cancel}
+        has_end = any(event.kind == "end" for event in body.events)
+        return {"cancel": job.relay_cancel or (job.relay_cancel_on_end and has_end)}
 
     @app.post("/api/runner/v1/poll")
     async def poll(request: Request) -> Any:

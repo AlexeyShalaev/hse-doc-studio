@@ -215,6 +215,17 @@ async def test__relay__cancel_in_ack__closes_the_model_connection() -> None:
     assert model.sent_chunks < 50
 
 
+async def test__relay__cancel_in_the_ack_of_end__still_succeeded() -> None:
+    rig = Rig(FakeOpenAI())
+    job = rig.enqueue(relay_envelope())
+    job.relay_cancel_on_end = True
+
+    result = await rig.run_until_done(job)
+
+    assert _events(job)[-1]["kind"] == "end"
+    assert result["status"] == "succeeded"
+
+
 async def test__relay__cancel_by_heartbeat_before_any_batch() -> None:
     model = FakeOpenAI(mode="hang")
     rig = Rig(model)

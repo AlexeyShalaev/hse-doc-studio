@@ -127,6 +127,18 @@ async def test__close__unblocks_the_runner_and_answers_cancel() -> None:
     assert channel.consumer_closed
 
 
+async def test__push__consumer_closed_after_end__repeated_batch_is_not_cancelled() -> None:
+    hub = RelayHub()
+    job_id = uuid4()
+    channel = hub.open(job_id)
+    await hub.push(job_id, 0, (_head(), _data(b"a"), _END))
+    assert [await channel.read(1), await channel.read(1)] == [b"a", None]
+
+    channel.close()
+
+    assert await hub.push(job_id, 0, (_head(), _data(b"a"), _END)) is False
+
+
 async def test__error_event__breaks_the_stream_with_its_code() -> None:
     hub = RelayHub()
     job_id = uuid4()

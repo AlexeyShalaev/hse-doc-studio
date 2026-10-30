@@ -58,6 +58,8 @@ class RelayChannel:
         self._items: asyncio.Queue[_Item] = asyncio.Queue(maxsize=buffer_chunks)
         self._last_seq = -1
         self._finished = False
+        # Раннер прислал `end`: ответ модели доставлен целиком, отменять на раннере уже нечего.
+        self._ended = False
         self._consumer_closed = False
         self._lock = asyncio.Lock()
 
@@ -93,17 +95,23 @@ class RelayChannel:
         self._picked.set()
 
     async def push(self, seq: int, events: tuple[RelayEvent, ...]) -> bool:
-        """Принимает порцию строго по порядку; повтор принятой порции безвреден. Возвращает `cancel`."""
+        """Принимает порцию строго по порядку; повтор принятой порции безвреден. Возвращает `cancel`.
+
+        После `end` отмены нет: потребитель, дочитав, закрывает поток раньше, чем раннер получит подтверждение.
+        """
         async with self._lock:
             if seq <= self._last_seq:
-                return self._consumer_closed
+                return self._cancel()
             if seq != self._last_seq + 1:
                 raise RelayOutOfOrderError(f"expected batch {self._last_seq + 1}, got {seq}")
             decoded = self._validate(events)
             self._last_seq = seq
             for event, data in zip(events, decoded, strict=True):
                 await self._apply(event, data)
-            return self._consumer_closed
+            return self._cancel()
+
+    def _cancel(self) -> bool:
+        return self._consumer_closed and not self._ended
 
     def fail(self, code: str) -> None:
         """Обрыв без `end`: потребитель получает `RelayStreamError`; после `end` ничего не меняет."""
@@ -139,6 +147,7 @@ class RelayChannel:
             await self._put(data)
         elif event.kind is RelayEventKind.end:
             self._finished = True
+            self._ended = True
             await self._put(_End())
         elif event.kind is RelayEventKind.error:
             self.fail(event.code or RelayErrorCode.relay_unavailable.value)

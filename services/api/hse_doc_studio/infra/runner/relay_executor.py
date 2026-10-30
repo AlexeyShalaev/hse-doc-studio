@@ -103,7 +103,9 @@ class _Emitter:
             self._pending, self._pending_bytes = [], 0
             ack = await self._client.relay_events(self._job_id, self._token, batch)
             self._seq += 1
-            if ack.cancel:
+            # Порция с `end` доставила ответ целиком: дочитавший потребитель уже закрыл канал, и сервер
+            # может ответить `cancel` (канала нет). Это не отмена, итог остаётся успешным.
+            if ack.cancel and not any(event.kind is RelayEventKind.end for event in batch.events):
                 self.cancelled = True
 
     async def run_timer(self) -> None:
