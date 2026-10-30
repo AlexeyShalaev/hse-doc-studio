@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState, JobStatus
+from hse_doc_studio.core.jobs.routing import JobRoute, RouteReason, RunnerScope
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 
 
@@ -35,6 +36,23 @@ class EnqueueRequest:
     timeout_s: float = 600.0
     # Раннер, который последним собирал этот проект: у него тёплый кэш.
     affinity_runner_id: UUID | None = None
+    # Маршрут решает `IJobRouter`; по умолчанию только общие раннеры, как до личных раннеров.
+    route: JobRoute = JobRoute.shared
+    route_owner_id: str | None = None
+    personal_until: datetime | None = None
+    target_runner_id: UUID | None = None
+    route_reason: RouteReason | None = None
+    # False: метка справедливости не тратится (vtime = global_vtime, vcost = 0).
+    fair_share: bool = True
+    # Предел длительности без квоты установки: применяется, если задачу взял личный раннер.
+    timeout_personal_s: float | None = None
+
+    def __post_init__(self) -> None:
+        if (self.route is JobRoute.pinned) != (self.target_runner_id is not None):
+            raise ValueError("pinned route needs exactly a target runner")
+        personal = self.route is JobRoute.personal_first
+        if personal != (self.route_owner_id is not None and self.personal_until is not None):
+            raise ValueError("personal_first route needs route_owner_id and personal_until")
 
 
 @dataclass(frozen=True)
@@ -67,6 +85,17 @@ class QueuedJob:
     error_code: str | None = None
     # Порядковый номер постановки: разрешает равные метки и время.
     seq: int = 0
+    route: JobRoute = JobRoute.shared
+    route_owner_id: str | None = None
+    # До этого момента задачу `personal_first` могут взять только личные раннеры владельца.
+    personal_until: datetime | None = None
+    target_runner_id: UUID | None = None
+    # Кто взял текущую попытку; пишет очередь по записи раннера, сбрасывается при возврате в очередь.
+    runner_scope: RunnerScope | None = None
+    route_reason: RouteReason | None = None
+    # Сколько метки справедливости потратила постановка: возвращается, если задачу взял личный раннер.
+    vcost: float = 1.0
+    timeout_personal_s: float | None = None
 
 
 @dataclass(frozen=True)
@@ -78,11 +107,20 @@ class EnqueueOutcome:
 
 @dataclass(frozen=True)
 class RunnerRef:
-    """Кто просит работу: теги отбирают подходящие задачи, `concurrency` нужен для аффинности."""
+    """Кто просит работу: теги отбирают подходящие задачи, `concurrency` нужен для аффинности.
+
+    Область и хозяина берёт сервер из записи раннера: личный раннер видит только задачи проектов
+    своего хозяина, общий никогда не видит задачи `pinned`.
+    """
 
     id: UUID
     tags: frozenset[str]
     concurrency: int = 1
+    scope: RunnerScope = RunnerScope.shared
+    owner_id: str | None = None
+    # Есть свободный слот под сборки и под ретрансляцию ИИ соответственно.
+    accept_jobs: bool = True
+    accept_relay: bool = False
 
 
 @dataclass(frozen=True)

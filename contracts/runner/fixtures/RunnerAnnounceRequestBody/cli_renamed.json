@@ -1,0 +1,16 @@
+{
+  "name": "build-box",
+  "version": "0.3.0",
+  "tags": [
+    "pack",
+    "tex"
+  ],
+  "concurrency": 2,
+  "ai_concurrency": 0,
+  "host_kind": "cli",
+  "features": [
+    "announce",
+    "offline"
+  ],
+  "ai_endpoints": []
+}

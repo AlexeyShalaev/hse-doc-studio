@@ -9,6 +9,13 @@ info:
     несёт `attempt`; устаревшая попытка получает 409 `stale_attempt`, её выходы игнорируются.
     Раннер видит только блобы манифеста своей задачи. Ошибки имеют тело `RunnerErrorBody`
     с кодом из `x-error-codes` (тот же список в error_codes.json).
+
+    Личные раннеры и ретрансляция ИИ (версия протокола та же): новый раннер сразу после регистрации
+    зовёт `/announce` и получает пересечение возможностей (`announce`, `offline`, `ai_slots`,
+    `ai_relay`). Пока раннер возможность не объявил, сервер не шлёт ему ничего нового: старый раннер
+    (без `/announce`, 404 от старого сервера) работает как раньше, в том числе как личный, но без
+    ретрансляции. `free_ai_slots` в опросе шлёт только раннер с `ai_slots`. Сопряжение по коду
+    устройства (`/pair/start`, `/pair/poll`) публичное и выдаёт токен регистрации один раз.
 servers:
   - url: /api/runner/v1
 x-error-codes:
@@ -27,6 +34,11 @@ x-error-codes:
   - runner_disabled
   - job_token_invalid
   - runner_protocol_unsupported
+  - runner_limit
+  - relay_request_gone
+  - relay_out_of_order
+  - relay_too_large
+  - slow_down
 x-defaults:
   lease_s: 45
   heartbeat_s: 10
@@ -41,6 +53,7 @@ paths:
       responses:
         "200": {description: Раннер принят, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerRegisterResponseBody'}}}}
         "401": {$ref: '#/components/responses/Error'}
+        "403": {$ref: '#/components/responses/Error'}
         "409": {$ref: '#/components/responses/Error'}
   /poll:
     post:
@@ -121,6 +134,72 @@ paths:
       responses:
         "200": {description: Итог принят, content: {application/json: {schema: {$ref: '#/components/schemas/CompleteResponseBody'}}}}
         "409": {$ref: '#/components/responses/Error'}
+  /announce:
+    post:
+      operationId: announceRunner
+      summary: Возможности, теги, слоты и ИИ-адреса раннера; ответ несёт пересечение возможностей.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RunnerAnnounceRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerAnnounceResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
+        "403": {$ref: '#/components/responses/Error'}
+  /offline:
+    post:
+      operationId: runnerOffline
+      summary: Раннер уходит (мягкая остановка); ждущие его сборки сразу идут на общие раннеры.
+      security: [{runnerToken: []}]
+      responses:
+        "204": {description: Принято}
+        "401": {$ref: '#/components/responses/Error'}
+  /deregister:
+    post:
+      operationId: deregisterRunner
+      summary: Раннер отзывает сам себя (отключение от сервера); необратимо.
+      security: [{runnerToken: []}]
+      responses:
+        "204": {description: Отозван}
+        "401": {$ref: '#/components/responses/Error'}
+  /pair/start:
+    post:
+      operationId: startRunnerPairing
+      summary: Начать сопряжение по коду устройства; человек подтверждает user_code на сайте.
+      security: [{}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RunnerPairStartRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Коды выданы, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerPairStartResponseBody'}}}}
+        "403": {$ref: '#/components/responses/Error'}
+        "429": {$ref: '#/components/responses/Error'}
+  /pair/poll:
+    post:
+      operationId: pollRunnerPairing
+      summary: Состояние сопряжения; токен регистрации приходит ровно один раз.
+      security: [{}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RunnerPairPollRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Состояние, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerPairPollResponseBody'}}}}
+        "429": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/relay/request:
+    get:
+      operationId: getRelayRequest
+      summary: Тело запроса к модели для задачи ai.relay; заголовок X-Relay-Sha256 несёт его хеш.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      responses:
+        "200": {description: Тело запроса, content: {application/octet-stream: {schema: {type: string, format: binary}}}}
+        "404": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+  /jobs/{job_id}/relay/events:
+    post:
+      operationId: postRelayEvents
+      summary: Порция событий ответа модели (head, data, end, error); подтверждение доставляет отмену.
+      security: [{runnerToken: [], jobToken: []}]
+      parameters: [{$ref: '#/components/parameters/JobId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RelayEventBatchBody'}}}, required: true}
+      responses:
+        "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/RelayEventAckBody'}}}}
+        "409": {$ref: '#/components/responses/Error'}
+        "413": {$ref: '#/components/responses/Error'}
 components:
   schemas:
     ActorWire:
@@ -275,6 +354,21 @@ components:
       required:
       - accepted
       type: object
+    DeclaredAiEndpointBody:
+      additionalProperties: false
+      properties:
+        name:
+          pattern: ^[a-z0-9][a-z0-9_-]{0,31}$
+          type: string
+        flavor:
+          enum:
+          - openai
+          - ollama
+          type: string
+      required:
+      - name
+      - flavor
+      type: object
     HeartbeatRequestBody:
       additionalProperties: false
       properties:
@@ -367,6 +461,7 @@ components:
           - office.convert
           - signature.verify_detached
           - pack.submission
+          - ai.relay
           type: string
         tags:
           items:
@@ -436,7 +531,11 @@ components:
           minimum: 0
           type: integer
         free_slots:
-          minimum: 1
+          minimum: 0
+          type: integer
+        free_ai_slots:
+          default: 0
+          minimum: 0
           type: integer
       required:
       - wait_s
@@ -452,6 +551,143 @@ components:
       required:
       - envelope
       type: object
+    RelayEventAckBody:
+      additionalProperties: false
+      properties:
+        cancel:
+          type: boolean
+      required:
+      - cancel
+      type: object
+    RelayEventBatchBody:
+      additionalProperties: false
+      properties:
+        attempt:
+          minimum: 1
+          type: integer
+        seq:
+          minimum: 0
+          type: integer
+        events:
+          items:
+            $ref: '#/components/schemas/RelayEventBody'
+          maxItems: 64
+          minItems: 1
+          type: array
+      required:
+      - attempt
+      - seq
+      - events
+      type: object
+    RelayEventBody:
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+          - head
+          - data
+          - end
+          - error
+          type: string
+        status:
+          anyOf:
+          - maximum: 599
+            minimum: 100
+            type: integer
+          - type: 'null'
+        content_type:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+        data:
+          anyOf:
+          - maxLength: 87384
+            minLength: 1
+            type: string
+          - type: 'null'
+        code:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+      required:
+      - kind
+      - status
+      - content_type
+      - data
+      - code
+      type: object
+    RunnerAnnounceRequestBody:
+      additionalProperties: false
+      properties:
+        name:
+          anyOf:
+          - maxLength: 128
+            minLength: 1
+            type: string
+          - type: 'null'
+        version:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+        concurrency:
+          minimum: 1
+          type: integer
+        ai_concurrency:
+          minimum: 0
+          type: integer
+        host_kind:
+          enum:
+          - cli
+          - desktop
+          type: string
+        features:
+          items:
+            type: string
+          type: array
+        ai_endpoints:
+          items:
+            $ref: '#/components/schemas/DeclaredAiEndpointBody'
+          maxItems: 16
+          type: array
+      required:
+      - name
+      - version
+      - tags
+      - concurrency
+      - ai_concurrency
+      - host_kind
+      - features
+      - ai_endpoints
+      type: object
+    RunnerAnnounceResponseBody:
+      additionalProperties: false
+      properties:
+        runner_id:
+          type: string
+        server_features:
+          items:
+            type: string
+          type: array
+        owner_kind:
+          enum:
+          - instance
+          - user
+          type: string
+        paused:
+          type: boolean
+        relay_keepalive_s:
+          type: integer
+      required:
+      - runner_id
+      - server_features
+      - owner_kind
+      - paused
+      - relay_keepalive_s
+      type: object
     RunnerErrorBody:
       additionalProperties: false
       properties:
@@ -462,6 +698,73 @@ components:
       required:
       - detail
       - code
+      type: object
+    RunnerPairPollRequestBody:
+      additionalProperties: false
+      properties:
+        device_code:
+          maxLength: 256
+          minLength: 1
+          type: string
+      required:
+      - device_code
+      type: object
+    RunnerPairPollResponseBody:
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+          - pending
+          - approved
+          - denied
+          - expired
+          type: string
+        registration_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - status
+      - registration_token
+      type: object
+    RunnerPairStartRequestBody:
+      additionalProperties: false
+      properties:
+        name:
+          maxLength: 128
+          minLength: 1
+          type: string
+        host_kind:
+          enum:
+          - cli
+          - desktop
+          type: string
+      required:
+      - name
+      - host_kind
+      type: object
+    RunnerPairStartResponseBody:
+      additionalProperties: false
+      properties:
+        device_code:
+          type: string
+        user_code:
+          type: string
+        verification_uri:
+          type: string
+        verification_uri_complete:
+          type: string
+        expires_in:
+          type: integer
+        interval:
+          type: integer
+      required:
+      - device_code
+      - user_code
+      - verification_uri
+      - verification_uri_complete
+      - expires_in
+      - interval
       type: object
     RunnerRegisterRequestBody:
       additionalProperties: false

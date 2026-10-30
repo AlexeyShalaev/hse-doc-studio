@@ -18,6 +18,13 @@ from typing import Any
 from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.core.jobs.entities import JobSpec
 from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
+from hse_doc_studio.core.jobs.relay import (
+    ENDPOINT_NAME_RE,
+    MAX_AI_ENDPOINTS,
+    RELAY_MAX_EVENTS_PER_BATCH,
+    RelayEventKind,
+)
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind, RunnerOwnerKind
 
 # Версия протокола в пути и в регистрации; несовместимый раннер получает отказ при регистрации.
 RUNNER_PROTOCOL_VERSION = 1
@@ -27,6 +34,14 @@ RUNNER_API_PREFIX = f"/api/runner/v{RUNNER_PROTOCOL_VERSION}"
 DEFAULT_LEASE_S = 45
 DEFAULT_HEARTBEAT_S = 10
 MAX_POLL_WAIT_S = 25
+
+# Возможности протокола сверх версии 1. Сервер шлёт раннеру новое (вид `ai.relay`, поля) только после того,
+# как раннер объявил соответствующую возможность в `/announce`; старый раннер работает как раньше.
+FEATURE_ANNOUNCE = "announce"
+FEATURE_OFFLINE = "offline"
+FEATURE_AI_SLOTS = "ai_slots"
+FEATURE_AI_RELAY = "ai_relay"
+SERVER_FEATURES = frozenset({FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_AI_SLOTS, FEATURE_AI_RELAY})
 
 
 @dataclass(frozen=True)
@@ -92,12 +107,16 @@ class PollRequest:
 
     wait_s: int
     free_slots: int = 1
+    # Свободные слоты ретрансляции ИИ; шлёт только раннер с возможностью `ai_slots`.
+    free_ai_slots: int = 0
 
     def __post_init__(self) -> None:
         if not 0 <= self.wait_s <= MAX_POLL_WAIT_S:
             raise ValueError(f"wait_s must be within 0..{MAX_POLL_WAIT_S}")
-        if self.free_slots < 1:
-            raise ValueError("free_slots must be at least 1")
+        if self.free_slots < 0 or self.free_ai_slots < 0:
+            raise ValueError("free slots cannot be negative")
+        if self.free_slots + self.free_ai_slots < 1:
+            raise ValueError("a poll needs at least one free slot")
 
 
 @dataclass(frozen=True)
@@ -173,3 +192,110 @@ class CompleteRequest:
 @dataclass(frozen=True)
 class CompleteResponse:
     accepted: bool
+
+
+def _check_endpoints(endpoints: tuple[DeclaredAiEndpoint, ...]) -> None:
+    if len(endpoints) > MAX_AI_ENDPOINTS:
+        raise ValueError(f"at most {MAX_AI_ENDPOINTS} ai endpoints")
+    names = [endpoint.name for endpoint in endpoints]
+    if len(set(names)) != len(names):
+        raise ValueError("ai endpoint names must be unique")
+    for name in names:
+        if not ENDPOINT_NAME_RE.match(name):
+            raise ValueError(f"bad ai endpoint name {name!r}")
+
+
+@dataclass(frozen=True)
+class RunnerAnnounceRequest:
+    """Возможности и описание раннера; `name=None` не меняет имя (имя из интерфейса хозяина важнее)."""
+
+    name: str | None
+    version: str
+    tags: frozenset[str]
+    concurrency: int
+    ai_concurrency: int
+    host_kind: RunnerHostKind
+    # Неизвестные серверу возможности он молча отбрасывает.
+    features: frozenset[str]
+    ai_endpoints: tuple[DeclaredAiEndpoint, ...]
+
+    def __post_init__(self) -> None:
+        if self.concurrency < 1 or self.ai_concurrency < 0:
+            raise ValueError("concurrency must be at least 1, ai_concurrency non-negative")
+        _check_endpoints(self.ai_endpoints)
+
+
+@dataclass(frozen=True)
+class RunnerAnnounceResponse:
+    runner_id: str
+    # Пересечение возможностей раннера и сервера.
+    server_features: frozenset[str]
+    owner_kind: RunnerOwnerKind
+    paused: bool
+    # Как часто слать пульс задачи ретрансляции, пока порций нет.
+    relay_keepalive_s: int
+
+
+@dataclass(frozen=True)
+class RunnerPairStartRequest:
+    name: str
+    host_kind: RunnerHostKind
+
+    def __post_init__(self) -> None:
+        if not 1 <= len(self.name) <= 128:  # noqa: PLR2004
+            raise ValueError("name must be 1..128 characters")
+
+
+@dataclass(frozen=True)
+class RunnerPairStartResponse:
+    """`device_code` секрет устройства; `user_code` человек подтверждает на сайте."""
+
+    device_code: str
+    user_code: str
+    verification_uri: str
+    verification_uri_complete: str
+    expires_in: int
+    interval: int
+
+
+@dataclass(frozen=True)
+class RunnerPairPollRequest:
+    device_code: str
+
+
+@dataclass(frozen=True)
+class RunnerPairPollResponse:
+    """`registration_token` непуст ровно один раз, при `approved`."""
+
+    status: str
+    registration_token: str | None = None
+
+
+@dataclass(frozen=True)
+class RelayEvent:
+    kind: RelayEventKind
+    status: int | None = None
+    content_type: str | None = None
+    # base64; декодированный размер до 64 KiB.
+    data: str | None = None
+    code: str | None = None
+
+
+@dataclass(frozen=True)
+class RelayEventBatch:
+    """Порция событий ответа модели; `seq` растёт с нуля на попытку, повтор той же порции безвреден."""
+
+    attempt: int
+    seq: int
+    events: tuple[RelayEvent, ...]
+
+    def __post_init__(self) -> None:
+        if self.attempt < 1 or self.seq < 0:
+            raise ValueError("attempt starts at 1, seq at 0")
+        if not 1 <= len(self.events) <= RELAY_MAX_EVENTS_PER_BATCH:
+            raise ValueError(f"a batch carries 1..{RELAY_MAX_EVENTS_PER_BATCH} events")
+
+
+@dataclass(frozen=True)
+class RelayEventAck:
+    cancel: bool

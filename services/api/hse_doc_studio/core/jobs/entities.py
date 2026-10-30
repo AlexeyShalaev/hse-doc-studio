@@ -129,4 +129,6 @@ def job_tags(kind: JobKind, payload: JobPayload) -> frozenset[str]:
         return frozenset({"verify"})
     if kind is JobKind.pack_submission and isinstance(payload, PackSubmissionPayload):
         return pack_job_tags(payload.archive_format)
+    if kind is JobKind.ai_relay:
+        return frozenset({"ai"})
     raise ValueError(f"no tags for job kind {kind}")
