@@ -33,6 +33,8 @@ def test__parser__import_project_needs_user() -> None:
 def test__main__missing_data_dir__usage_exit_code(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
+    pytest.importorskip("sqlalchemy")  # до подмены команда импортирует серверный слой
+
     async def fail(*_: object, **__: object) -> object:
         raise cli_import.ImportCliError("каталог данных не найден")
 

@@ -34,6 +34,18 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 collect_ignore_glob: list[str] = []
 if importlib.util.find_spec("sqlalchemy") is None:
     collect_ignore_glob += ["integration/db/*", "unit/infra/db/*"]
+    collect_ignore_glob += [
+        "contract/test_job_queue_contract.py",
+        "contract/test_job_queue_service.py",
+        "integration/e2e/test_queue_soak_pg.py",
+        "unit/api/test_db_errors.py",
+    ]
+if importlib.util.find_spec("joserfc") is None:
+    collect_ignore_glob += [
+        "integration/api/session/test_oidc_api.py",
+        "unit/use_cases/identity/test_oidc_linking.py",
+        "unit/use_cases/identity/test_oidc_login.py",
+    ]
 if importlib.util.find_spec("argon2") is None:
     collect_ignore_glob += ["unit/infra/identity/*"]
 if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto") is None:
