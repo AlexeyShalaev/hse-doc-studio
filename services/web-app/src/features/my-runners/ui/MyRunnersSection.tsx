@@ -259,9 +259,10 @@ export const MyRunnersSection = () => {
         isOpen={revokingToken !== null}
         title={t("tokens.revokeTitle")}
         body={t("tokens.revokeBody", {
-          label: revokingToken?.label
-            ? revokingToken.label
-            : t("tokens.noLabel"),
+          label:
+            revokingToken === null || revokingToken.label === ""
+              ? t("tokens.noLabel")
+              : revokingToken.label,
         })}
         confirmLabel={t("tokens.revoke")}
         danger

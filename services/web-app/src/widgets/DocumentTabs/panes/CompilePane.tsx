@@ -95,9 +95,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const placement = liveOwnsPane ? slot.placement : recordPlacement;
   const myRole = useProject(projectId).data?.my_role;
   const perspective =
-    myRole === undefined || myRole === null || myRole === "owner"
-      ? "me"
-      : "owner";
+    myRole === undefined || myRole === "owner" ? "me" : "owner";
 
   // Auto-scroll to bottom on new lines.
   useEffect(() => {

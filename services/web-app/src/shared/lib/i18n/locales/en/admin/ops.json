@@ -461,8 +461,6 @@
     "online": "Online",
     "onlineOf": "of {{total}}",
     "onlineHint": "Personal runners taking jobs right now.",
-    "owners_one": "{{count}} person",
-    "owners_other": "{{count}} people",
     "search": "Search by owner or runner name",
     "searchPlaceholder": "Owner or runner",
     "filterState": "State",
@@ -509,6 +507,7 @@
     "unknownOwner": "Deleted user",
     "ownersLabel": "Owners",
     "pausedLabel": "Paused",
-    "pausedHint": "Paused: the runner polls but takes no jobs."
+    "pausedHint": "Paused: the runner polls but takes no jobs.",
+    "ownersHint": "People who have a runner of their own"
   }
 }

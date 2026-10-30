@@ -26,30 +26,9 @@ import {
   type StatusDotStatus,
 } from "@shared/ui";
 import type { AdminRunner } from "@entities/session";
-import {
-  secondsSince,
-  ONLINE_WITHIN_S,
-  STALE_WITHIN_S,
-} from "../lib/runnerStatus";
+import { personalStatus, type PersonalStatus } from "../lib/personalStatus";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
-
-/** Состояние личного раннера: сервер знает «выключен», остальное считаем как у общих. */
-export type PersonalStatus =
-  "online" | "stale" | "offline" | "paused" | "revoked" | "disabled";
-
-export const personalStatus = (
-  runner: AdminRunner,
-  now: number,
-): PersonalStatus => {
-  if (runner.revoked) return "revoked";
-  if (runner.status === "disabled") return "disabled";
-  if (runner.paused) return "paused";
-  const age = secondsSince(runner.last_seen_at, now);
-  if (age === null) return "offline";
-  if (age <= ONLINE_WITHIN_S) return "online";
-  return age <= STALE_WITHIN_S ? "stale" : "offline";
-};
 
 const DOT: Record<PersonalStatus, StatusDotStatus> = {
   online: "online",
@@ -367,7 +346,7 @@ export const PersonalRunnersView = ({
                 icon={<Users size={14} aria-hidden="true" />}
                 label={t("personal.ownersLabel")}
                 value={owners}
-                secondary={t("personal.owners", { count: owners })}
+                secondary={t("personal.ownersHint")}
               />
               <KpiTile
                 testId="admin-personal-runners-paused"

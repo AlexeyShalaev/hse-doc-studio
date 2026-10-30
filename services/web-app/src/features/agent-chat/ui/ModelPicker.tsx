@@ -192,7 +192,7 @@ export const ModelPicker = ({
         />
         <span className="modelpick-name truncate">{row.model}</span>
         <span className="modelpick-provider truncate">
-          {row.unavailable ? row.unavailable : row.providerName}
+          {row.unavailable ?? row.providerName}
         </span>
       </button>
     );

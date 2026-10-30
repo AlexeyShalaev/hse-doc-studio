@@ -19,7 +19,8 @@ import { serverAdminDemoRoutes } from "@/app/demo/server/routes";
 import { jobWhere } from "./lib/jobs";
 import { ensureAdminOpsLocales } from "./lib/locales";
 import { RunnersPage } from "./index";
-import { PersonalRunnersView, personalStatus } from "./ui/PersonalRunnersView";
+import { personalStatus } from "./lib/personalStatus";
+import { PersonalRunnersView } from "./ui/PersonalRunnersView";
 
 const wrap = (node: React.ReactNode) => (
   <I18nextProvider i18n={i18n}>

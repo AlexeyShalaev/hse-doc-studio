@@ -80,7 +80,10 @@ export const ConnectRunnerDialog = ({
                 key={id}
                 type="button"
                 role="tab"
+                id={`runner-connect-tab-${id}-button`}
                 aria-selected={tab === id}
+                aria-controls="runner-connect-panel"
+                tabIndex={tab === id ? 0 : -1}
                 data-testid={`runner-connect-tab-${id}`}
                 onClick={() => {
                   setTab(id);
@@ -97,7 +100,11 @@ export const ConnectRunnerDialog = ({
               </button>
             ))}
           </div>
-          <div role="tabpanel">
+          <div
+            role="tabpanel"
+            id="runner-connect-panel"
+            aria-labelledby={`runner-connect-tab-${tab}-button`}
+          >
             {tab === "studio" ? (
               <StudioTab onPairCode={onPairCode} />
             ) : created ? (
