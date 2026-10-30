@@ -171,6 +171,8 @@ export {
   FilterBar,
   FilterMenu,
   isoDay,
+  SortMenu,
+  useDateRangeLabel,
 } from "./FilterBar";
 export type {
   ActiveFilter,
@@ -181,6 +183,9 @@ export type {
   FilterGroup,
   FilterMenuProps,
   FilterOption,
+  SortMenuOption,
+  SortMenuProps,
+  SortMenuValue,
 } from "./FilterBar";
 
 // Серверные списки: листание, поиск и пикеры (галерея «Примитивы админки»).

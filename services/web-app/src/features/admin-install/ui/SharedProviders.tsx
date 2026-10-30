@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Bot, Lock, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   ActionMenu,
   Button,
   EmptyState,
+  NoResults,
   Section,
   Spinner,
   StatusDot,
@@ -25,6 +26,18 @@ export type SharedProvidersProps = {
   onDelete: (provider: AIProvider) => void;
   /** Проверка подключения: число моделей или отказ с текстом ошибки. */
   onCheck?: (provider: AIProvider) => Promise<{ models: string[] }>;
+  /**
+   * Заданы поиск или фильтры: пустой список значит «ничего не найдено», а не
+   * «провайдеров пока нет».
+   */
+  filtered?: boolean;
+  /** Текущий поиск: попадает в пояснение «ничего не найдено». */
+  query?: string;
+  onResetFilters?: () => void;
+  /** Идёт запрос с новыми условиями: прежние строки приглушены. */
+  busy?: boolean;
+  /** Листание под списком. */
+  pagination?: ReactNode;
 };
 
 const hostOf = (url: string): string => {
@@ -47,6 +60,11 @@ export const SharedProviders = ({
   onEdit,
   onDelete,
   onCheck,
+  filtered = false,
+  query,
+  onResetFilters,
+  busy = false,
+  pagination,
 }: SharedProvidersProps) => {
   const { t } = useTranslation("adminInstall");
   const [checks, setChecks] = useState<Record<string, ProviderCheck>>({});
@@ -84,7 +102,13 @@ export const SharedProviders = ({
         </span>
       }
     >
-      {providers.length === 0 ? (
+      {providers.length === 0 && filtered ? (
+        <NoResults
+          query={query}
+          onReset={onResetFilters}
+          testId="shared-provider-none"
+        />
+      ) : providers.length === 0 ? (
         <EmptyState
           icon={<Bot size={18} />}
           title={t("ai.empty.title")}
@@ -103,7 +127,12 @@ export const SharedProviders = ({
           }
         />
       ) : (
-        <ul className="adm-list" aria-label={t("ai.listLabel")}>
+        <ul
+          className="adm-list"
+          aria-label={t("ai.listLabel")}
+          aria-busy={busy}
+          style={{ opacity: busy ? 0.6 : 1, transition: "opacity 0.12s" }}
+        >
           {providers.map((provider) => {
             const status = checks[provider.id];
             return (
@@ -238,6 +267,9 @@ export const SharedProviders = ({
             );
           })}
         </ul>
+      )}
+      {pagination && providers.length > 0 && (
+        <div className="adm-list-pager">{pagination}</div>
       )}
     </Section>
   );

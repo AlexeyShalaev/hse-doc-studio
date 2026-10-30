@@ -229,6 +229,17 @@ export const getAdminInstallGallery = (): GalleryGroup[] => [
           }
         />
       )),
+      entry("admin_ai_none", "Поиск ничего не нашёл", () => (
+        <SharedProviders
+          providers={[]}
+          filtered
+          query="vllm"
+          onResetFilters={noop}
+          onAdd={noop}
+          onEdit={noop}
+          onDelete={noop}
+        />
+      )),
       entry("admin_ai_empty", "Провайдеров нет", () => (
         <SharedProviders
           providers={[]}

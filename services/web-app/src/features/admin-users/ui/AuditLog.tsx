@@ -1,58 +1,60 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Activity,
   Cpu,
   Building2,
   ChevronRight,
   FolderOpen,
+  ListFilter,
   LogIn,
   Mail,
   RefreshCw,
   ScrollText,
-  SearchX,
   Server,
   Settings2,
   UserCog,
   Users,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatPastTime, localeTag } from "@shared/lib";
+import {
+  formatPastTime,
+  localeTag,
+  useCursorList,
+  useListQueryState,
+} from "@shared/lib";
 import {
   Button,
+  DateRangeFilter,
   EmptyState,
   ErrorState,
   FilterBar,
+  FilterMenu,
+  NoResults,
   PageHeader,
+  Pagination,
   PersonCell,
+  PickerFilter,
   Spinner,
   TableSkeleton,
+  useDateRangeLabel,
+  usePickedItem,
+  type ActiveFilter,
 } from "@shared/ui";
-import type { AdminAuditEvent, AdminUser } from "@entities/session";
-import { useApprovals, useAudit, useUsers } from "../api/adminUsersQueries";
+import { adminPickers, type AdminAuditEvent } from "@entities/session";
+import { AUDIT_CATEGORIES, auditApi } from "../api/auditApi";
+import { auditKeys } from "../api/auditQueries";
 import {
   auditCategory,
   auditTarget,
   auditTone,
   daysAgo,
   groupByDay,
+  isPseudonym,
   looksLikeId,
   type AuditCategory,
 } from "../lib/auditFormat";
 import { useAuditActionLabel } from "../lib/auditLabel";
 import { detailText } from "../lib/format";
-
-const GROUPS = [
-  "auth.",
-  "admin.",
-  "invite.",
-  "org.",
-  "group.",
-  "settings.",
-  "runner.",
-  "project.",
-] as const;
-
-const ALL_USERS = { q: "", status: "", page: 0 } as const;
 
 const ICON: Record<AuditCategory, ReactNode> = {
   auth: <LogIn size={14} />,
@@ -67,6 +69,24 @@ const ICON: Record<AuditCategory, ReactNode> = {
 };
 
 const SUMMARY_LIMIT = 2;
+
+// Состояние журнала в адресе: поиск, разделы, человек, объект и период.
+// Сортировки нет: журнал всегда идёт от новых к старым.
+const LIST = {
+  mode: "cursor",
+  filters: {
+    category: { multi: true, values: AUDIT_CATEGORIES },
+    actor_id: {},
+    target: {},
+    from: { date: "from" },
+    to: { date: "to" },
+  },
+} as const;
+
+// Пикер людей ищет на сервере среди всех людей установки.
+const PEOPLE = adminPickers.users();
+
+const idOf = (e: AdminAuditEvent): string => String(e.id);
 
 const fullDate = (iso: string): string => {
   const date = new Date(iso);
@@ -114,62 +134,119 @@ const useDetails = (): ((
       .filter((d) => d.value !== "");
 };
 
-/** Раздел «Аудит»: журнал по дням, новые сверху, дальше подгружается по кнопке. */
+/**
+ * Раздел «Аудит»: журнал по дням, новые сверху. Поиск, разделы, человек и
+ * период считает сервер; дальше журнал подгружается по курсору.
+ */
 export const AuditLog = () => {
   const { t } = useTranslation("adminUsers");
-  const [group, setGroup] = useState("");
-  const audit = useAudit(group);
-  const users = useUsers(ALL_USERS);
-  const approvals = useApprovals(0);
-  const [search, setSearch] = useState("");
+  const state = useListQueryState(LIST);
+  const log = useCursorList({
+    state,
+    queryKey: auditKeys.all,
+    fetchPage: auditApi.page,
+    getId: idOf,
+  });
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
   const label = useAuditActionLabel();
   const detailsOf = useDetails();
 
-  const people = useMemo(() => {
-    const map = new Map<string, AdminUser>();
-    for (const u of [
-      ...(users.data?.items ?? []),
-      ...(approvals.data?.items ?? []),
-    ]) {
-      map.set(u.id, u);
-    }
-    return map;
-  }, [users.data, approvals.data]);
+  const actorId = state.filter("actor_id") || null;
+  const targetId = state.filter("target") || null;
+  const period = {
+    from: state.filter("from") || null,
+    to: state.filter("to") || null,
+  };
+  const periodLabel = useDateRangeLabel(period);
+  const picked = usePickedItem(PEOPLE, actorId, null);
+  const events = log.items;
 
-  const all = useMemo<AdminAuditEvent[]>(
-    () => audit.data?.pages.flatMap((p) => p.items) ?? [],
-    [audit.data],
-  );
-  const filtering = group !== "" || search.trim() !== "";
-
-  const actorName = (e: AdminAuditEvent): string =>
-    e.actor_id
-      ? (people.get(e.actor_id)?.name ?? t("audit.unknownActor"))
-      : t("audit.system");
-  const targetText = (e: AdminAuditEvent): string | null => {
-    const target = auditTarget(e, people);
-    if (!target) return null;
-    return target.kind === "person" ? target.user.name : target.text;
+  /** Имя человека; псевдоним удалённого и неизвестный id людям не показываем. */
+  const actorName = (e: AdminAuditEvent): string => {
+    if (!e.actor_id) return t("audit.system");
+    const actor = e.actor ?? null;
+    return actor && !isPseudonym(actor) ? actor.name : t("audit.unknownActor");
   };
 
-  // Поиск идёт по уже загруженным записям: подпись, кто, на что и подробности.
-  const needle = search.trim().toLowerCase();
-  const events =
-    needle === ""
-      ? all
-      : all.filter((e) =>
-          [
-            label(e.action),
-            e.action,
-            actorName(e),
-            people.get(e.actor_id ?? "")?.email ?? "",
-            targetText(e) ?? "",
-            ...Object.values(e.details).map(detailText),
-          ].some((part) => part.toLowerCase().includes(needle)),
-        );
+  // Подписи выбранных условий. Строки журнала уже отобраны сервером, так что
+  // имя человека или объекта берётся из любой из них.
+  const first = events[0];
+  const shownActor =
+    picked?.name ??
+    (first && actorId && first.actor_id === actorId ? actorName(first) : null);
+  const shownTarget =
+    first && targetId && first.target === targetId
+      ? (auditTarget(first)?.text ?? targetId)
+      : targetId;
+
+  const active: ActiveFilter[] = [
+    ...(state.q
+      ? [
+          {
+            id: "q",
+            label: t("audit.filters.search"),
+            value: state.q,
+            onRemove: () => {
+              state.setQ("");
+            },
+          },
+        ]
+      : []),
+    ...(state.filters.category.length > 0
+      ? [
+          {
+            id: "category",
+            label: t("audit.group"),
+            value: state.filters.category
+              .map((c) => t(`audit.groups.${c}`))
+              .join(", "),
+            onRemove: () => {
+              state.setFilter("category", null);
+            },
+          },
+        ]
+      : []),
+    ...(actorId
+      ? [
+          {
+            id: "actor",
+            label: t("audit.filters.actor"),
+            value: shownActor ?? t("audit.unknownActor"),
+            onRemove: () => {
+              state.setFilter("actor_id", null);
+            },
+          },
+        ]
+      : []),
+    ...(targetId
+      ? [
+          {
+            id: "target",
+            label: t("audit.filters.target"),
+            value: shownTarget ?? targetId,
+            onRemove: () => {
+              state.setFilter("target", null);
+            },
+          },
+        ]
+      : []),
+    ...(periodLabel
+      ? [
+          {
+            id: "period",
+            label: t("audit.filters.period"),
+            value: periodLabel,
+            onRemove: () => {
+              state.setFilters({ from: null, to: null });
+            },
+          },
+        ]
+      : []),
+  ];
+
   const days = groupByDay(events);
   const now = new Date();
+  const lastDay = days[days.length - 1]?.key;
 
   const dayLabel = (key: string): string => {
     const ago = daysAgo(key, now);
@@ -205,18 +282,10 @@ export const AuditLog = () => {
     });
   };
 
-  const resetFilters = () => {
-    setGroup("");
-    setSearch("");
-  };
-
   const row = (e: AdminAuditEvent, today: boolean) => {
-    const target = auditTarget(e, people);
-    const details = detailsOf(
-      e.details,
-      target?.kind === "text" ? target.key : null,
-    );
-    const actor = e.actor_id ? people.get(e.actor_id) : undefined;
+    const target = auditTarget(e);
+    const details = detailsOf(e.details, target?.key ?? null);
+    const actor = e.actor && !isPseudonym(e.actor) ? e.actor : null;
     const expanded = open.has(e.id);
     const panelId = `audit-panel-${String(e.id)}`;
     const summary = details
@@ -245,6 +314,8 @@ export const AuditLog = () => {
         </span>
       </span>
     );
+    const byActor = e.actor_id !== null && e.actor_id !== actorId;
+    const byTarget = e.target !== null && e.target !== targetId;
     return (
       <li key={e.id} data-testid={`audit-${String(e.id)}`}>
         <button
@@ -269,7 +340,7 @@ export const AuditLog = () => {
               {target && (
                 <span className="adm-audit-target">
                   {" · "}
-                  {target.kind === "person" ? target.user.name : target.text}
+                  {target.text}
                 </span>
               )}
             </span>
@@ -302,7 +373,9 @@ export const AuditLog = () => {
               <dt>{t("audit.detail.when")}</dt>
               <dd>{fullDate(e.at)}</dd>
               <dt>{t("audit.detail.actor")}</dt>
-              <dd>{actor ? `${actor.name} (${actor.email})` : actorName(e)}</dd>
+              <dd>
+                {actor?.email ? `${actor.name} (${actor.email})` : actorName(e)}
+              </dd>
               {details.map((d) => (
                 <FragmentKV key={d.key} label={d.label} machine={d.machine}>
                   {d.value}
@@ -321,11 +394,49 @@ export const AuditLog = () => {
                 </>
               )}
             </dl>
+            {(byActor || byTarget) && (
+              <div className="adm-audit-jump">
+                {byActor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    data-testid={`audit-by-actor-${String(e.id)}`}
+                    onClick={() => {
+                      state.setFilter("actor_id", e.actor_id);
+                    }}
+                  >
+                    <ListFilter size={13} aria-hidden="true" />
+                    {t("audit.show.byActor")}
+                  </Button>
+                )}
+                {byTarget && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    data-testid={`audit-by-target-${String(e.id)}`}
+                    onClick={() => {
+                      state.setFilter("target", e.target);
+                    }}
+                  >
+                    <ListFilter size={13} aria-hidden="true" />
+                    {t("audit.show.byTarget")}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </li>
     );
   };
+
+  // Пока идёт запрос с новыми условиями, на экране прежние строки, приглушённые.
+  const stale = log.query.isPlaceholderData;
+  const refreshing = log.isFetching && !log.isLoadingMore;
+  const failedFirst = log.isError && events.length === 0;
+  const failedMore = log.query.isFetchNextPageError;
 
   return (
     <div
@@ -341,13 +452,13 @@ export const AuditLog = () => {
             variant="ghost"
             size="sm"
             type="button"
-            disabled={audit.isFetching}
+            disabled={log.isFetching}
             onClick={() => {
-              void audit.refetch();
+              void log.refetch();
             }}
             data-testid="audit-refresh"
           >
-            {audit.isFetching && !audit.isFetchingNextPage ? (
+            {refreshing ? (
               <Spinner size="sm" />
             ) : (
               <RefreshCw size={13} aria-hidden="true" />
@@ -357,62 +468,87 @@ export const AuditLog = () => {
         }
       />
       <FilterBar
-        search={search}
-        onSearchChange={setSearch}
+        search={state.q}
+        onSearchChange={state.setQ}
         searchLabel={t("audit.search")}
-        searchPlaceholder={t("audit.search")}
-        filters={[
-          {
-            id: "group",
-            label: t("audit.group"),
-            value: group,
-            onChange: setGroup,
-            options: GROUPS.map((g) => ({
-              value: g,
-              label: t(`audit.groups.${g.slice(0, -1)}`),
-            })),
-          },
-        ]}
-        onReset={resetFilters}
+        searchPlaceholder={t("audit.searchPlaceholder")}
+        busy={refreshing}
+        onReset={state.reset}
+        active={active}
+        extra={
+          <>
+            <FilterMenu
+              label={t("audit.group")}
+              testId="audit-filter-category"
+              values={state.filters.category}
+              onChange={(values) => {
+                state.setFilter("category", values);
+              }}
+              options={AUDIT_CATEGORIES.map((c) => ({
+                value: c,
+                label: t(`audit.groups.${c}`),
+              }))}
+            />
+            <PickerFilter
+              label={t("audit.filters.actor")}
+              testId="audit-filter-actor"
+              source={PEOPLE}
+              value={actorId}
+              searchPlaceholder={t("audit.filters.actorSearch")}
+              onChange={(item) => {
+                state.setFilter("actor_id", item?.id ?? null);
+              }}
+            />
+            <DateRangeFilter
+              testId="audit-filter-period"
+              value={period}
+              onChange={({ from, to }) => {
+                state.setFilters({ from, to });
+              }}
+            />
+          </>
+        }
       />
-      {audit.isError && (
+      {failedFirst && (
         <ErrorState
           framed
           title={t("audit.loadFailed")}
           description={t("audit.loadFailedBody")}
-          retrying={audit.isFetching}
+          retrying={log.isFetching}
           onRetry={() => {
-            void audit.refetch();
+            void log.refetch();
           }}
           testId="audit-failed"
         />
       )}
-      {audit.isPending && (
+      {log.isLoading && (
         <TableSkeleton rows={6} columns={3} withAvatar testId="audit-loading" />
       )}
-      {audit.isSuccess && events.length === 0 && (
-        <EmptyState
-          framed
-          icon={filtering ? <SearchX size={18} /> : <ScrollText size={18} />}
-          title={t(filtering ? "audit.noMatch.title" : "audit.empty.title")}
-          description={t(filtering ? "audit.noMatch.body" : "audit.empty.body")}
-          testId="audit-empty"
-          action={
-            filtering ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={resetFilters}
-              >
-                {t("audit.resetFilters")}
-              </Button>
-            ) : undefined
-          }
-        />
-      )}
+      {!log.isLoading &&
+        !log.isError &&
+        events.length === 0 &&
+        (state.isFiltered ? (
+          <NoResults
+            framed
+            query={state.q}
+            onReset={state.reset}
+            testId="audit-empty"
+          />
+        ) : (
+          <EmptyState
+            framed
+            icon={<ScrollText size={18} />}
+            title={t("audit.empty.title")}
+            description={t("audit.empty.body")}
+            testId="audit-empty"
+          />
+        ))}
       {days.length > 0 && (
-        <div className="adm-audit">
+        <div
+          className="adm-audit"
+          aria-busy={stale}
+          style={{ opacity: stale ? 0.6 : 1, transition: "opacity 0.12s" }}
+        >
           {days.map((day) => (
             <section
               key={day.key}
@@ -421,30 +557,38 @@ export const AuditLog = () => {
             >
               <div className="adm-audit-dayhead">
                 <span>{dayLabel(day.key)}</span>
-                <span>{t("audit.dayCount", { count: day.events.length })}</span>
+                {/* Последний день может продолжаться на следующей странице:
+                    его неполное число не показываем. */}
+                {(day.key !== lastDay || !log.hasMore) && (
+                  <span>
+                    {t("audit.dayCount", { count: day.events.length })}
+                  </span>
+                )}
               </div>
               <ul className="adm-audit-list" aria-label={t("audit.caption")}>
                 {day.events.map((e) => row(e, daysAgo(day.key, now) === 0))}
               </ul>
             </section>
           ))}
-          {audit.hasNextPage && (
-            <div className="adm-audit-foot">
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                disabled={audit.isFetchingNextPage}
-                data-testid="audit-more"
-                onClick={() => {
-                  void audit.fetchNextPage();
-                }}
-              >
-                {audit.isFetchingNextPage && <Spinner size="sm" />}
-                {t("audit.more")}
-              </Button>
+          {failedMore && (
+            <div style={{ padding: "4px 12px 8px" }}>
+              <ErrorState
+                compact
+                title={t("audit.loadFailed")}
+                retrying={log.isLoadingMore}
+                onRetry={log.loadMore}
+                testId="audit-more-failed"
+              />
             </div>
           )}
+          <div className="adm-audit-foot" style={{ display: "block" }}>
+            <Pagination
+              {...log.pagination}
+              pageSize={state.pageSize}
+              pageSizes={state.pageSizes}
+              onPageSizeChange={state.setPageSize}
+            />
+          </div>
         </div>
       )}
     </div>

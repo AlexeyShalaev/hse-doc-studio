@@ -1,4 +1,4 @@
-import type { AdminAuditEvent, AdminUser } from "@entities/session";
+import type { AdminAuditActor, AdminAuditEvent } from "@entities/session";
 
 // Журнал аудита для людей: раздел действия, понятная цель и дни. Сырые коды и
 // идентификаторы на экран не выходят, они остаются в раскрытых подробностях.
@@ -50,31 +50,39 @@ export const looksLikeId = (value: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(value) ||
   /^[0-9a-f]{24,}$/i.test(value);
 
-// Поля details, которые сами по себе читаются как название цели.
-const NAME_KEYS = ["name", "label", "email", "slug", "title"] as const;
+// Поле details, которое подставляется в подпись цели: прячем его из краткой
+// строки, чтобы название не повторялось дважды.
+const LABEL_KEYS = ["name", "label", "email", "slug", "title"] as const;
 
-export type AuditTarget =
-  | { kind: "person"; user: AdminUser }
-  | { kind: "text"; text: string; key: string | null };
+export type AuditTarget = { text: string; key: string | null };
 
-/** На что направлено действие: человек по id, иначе понятное поле из details. */
-export const auditTarget = (
-  event: AdminAuditEvent,
-  people: ReadonlyMap<string, AdminUser>,
-): AuditTarget | null => {
-  const person = event.target ? people.get(event.target) : undefined;
-  if (person) return { kind: "person", user: person };
-  for (const key of NAME_KEYS) {
-    const value = event.details[key];
-    if (typeof value === "string" && value.trim() !== "") {
-      return { kind: "text", text: value, key };
-    }
+/**
+ * На что направлено действие. Подпись вычисляет сервер (target_label): человек
+ * по id, организация, понятное поле details. Без неё остаётся только цель,
+ * если это не служебный идентификатор.
+ */
+export const auditTarget = (event: AdminAuditEvent): AuditTarget | null => {
+  const label = event.target_label ?? null;
+  if (label) {
+    const key = LABEL_KEYS.find((k) => event.details[k] === label) ?? null;
+    return { text: label, key };
+  }
+  const title = event.details.title;
+  if (typeof title === "string" && title.trim() !== "") {
+    return { text: title, key: "title" };
   }
   if (event.target && !looksLikeId(event.target)) {
-    return { kind: "text", text: event.target, key: null };
+    return { text: event.target, key: null };
   }
   return null;
 };
+
+/**
+ * Удалённый человек остаётся в журнале псевдонимом: сервер отдаёт его вместо
+ * имени и без почты. Такое имя людям не показываем.
+ */
+export const isPseudonym = (actor: AdminAuditActor): boolean =>
+  actor.email === null && (actor.name === actor.id || actor.name === "");
 
 /** Ключ дня в местном времени: события группируются по нему. */
 export const dayKey = (iso: string): string => {

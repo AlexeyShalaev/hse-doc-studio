@@ -22,6 +22,7 @@ export type {
   SortParam,
 } from "./useListQueryState";
 export { useServerList } from "./useServerList";
+export { needsPager } from "./needsPager";
 export type {
   ListStateCore,
   OffsetPaginationState,

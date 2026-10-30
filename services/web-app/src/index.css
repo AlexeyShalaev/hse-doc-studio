@@ -5025,6 +5025,13 @@
   white-space: nowrap;
   min-width: 0;
 }
+/* Порядок не отбирает строки: значение обычным цветом, не как выбранный фильтр. */
+.fmenu.is-sort .fmenu-value {
+  color: var(--fg-0);
+}
+.fmenu.is-sort svg {
+  color: var(--fg-2);
+}
 .fmenu-clear {
   all: unset;
   display: inline-flex;
@@ -6253,6 +6260,13 @@ th button:focus-visible .dt-sort-hint {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* «Все действия этого человека»: текст кнопок по краю подписей подробностей. */
+.adm-audit-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 0 -10px;
+}
 .adm-audit-foot {
   display: flex;
   justify-content: center;
@@ -6561,6 +6575,16 @@ a.adm-kpi:focus-visible {
   padding: 0;
 }
 .adm-list > li + li {
+  border-top: 1px solid var(--border);
+}
+/* Поиск и фильтры над списком внутри раздела (провайдеры входа). */
+.adm-section-toolbar {
+  padding: 0 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+/* Листание под списком-карточками (провайдеры): та же линия, что между строками. */
+.adm-list-pager {
+  padding: 10px 12px 10px 20px;
   border-top: 1px solid var(--border);
 }
 .adm-row {

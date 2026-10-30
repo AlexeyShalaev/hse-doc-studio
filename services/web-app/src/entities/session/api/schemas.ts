@@ -366,12 +366,22 @@ export const AdminInvitationSchema = z.strictObject({
   used_at: iso.nullable(),
 });
 export const AdminInvitationPageSchema = pageOf(AdminInvitationSchema);
+// Кто действовал; у удалённого человека имя это псевдоним из журнала, почты нет.
+export const AdminAuditActorSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().nullable(),
+});
 export const AdminAuditEventSchema = z.strictObject({
   id: z.number().int(),
   at: iso,
   action: z.string(),
   actor_id: z.string().nullable(),
+  // Имя действовавшего и подпись цели сервер подставляет сам: справочник людей
+  // на клиенте не нужен. Необязательны, пока не все серверы их отдают.
+  actor: AdminAuditActorSchema.nullable().optional(),
   target: z.string().nullable(),
+  target_label: z.string().nullable().optional(),
   details: z.record(z.string(), z.unknown()),
 });
 export const AdminAuditPageSchema = z.strictObject({
@@ -495,6 +505,7 @@ export type AdminInvitationCreated = z.infer<
   typeof AdminInvitationCreatedSchema
 >;
 export type AdminAuditEvent = z.infer<typeof AdminAuditEventSchema>;
+export type AdminAuditActor = z.infer<typeof AdminAuditActorSchema>;
 export type AdminAuditPage = z.infer<typeof AdminAuditPageSchema>;
 export type AdminOrg = z.infer<typeof AdminOrgSchema>;
 export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;

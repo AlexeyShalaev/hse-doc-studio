@@ -34,12 +34,6 @@ export const useSmtpSettings = () =>
     queryFn: () => adminSettingsApi.smtp(),
     staleTime: 0,
   });
-export const useOidcProviders = () =>
-  useQuery({
-    queryKey: adminSettingsKeys.providers(),
-    queryFn: () => adminSettingsApi.providers(),
-    staleTime: 0,
-  });
 
 /** Экран входа читает режимы и провайдеров из bootstrap: после правки он устаревает. */
 const useRefreshBootstrap = () => {

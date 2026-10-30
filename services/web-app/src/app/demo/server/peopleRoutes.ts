@@ -2,6 +2,7 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type {
   AccountStatus,
+  AdminAuditEvent,
   AdminInvitation,
   AdminUser,
 } from "@entities/session";
@@ -44,6 +45,9 @@ const STATUSES: readonly AccountStatus[] = [
 ];
 const INVITE_STATUSES = ["pending", "used", "expired"] as const;
 type AuditRow = DemoAdminPeople["audit"][number];
+const AUDIT_LABEL_KEYS = ["name", "label", "email", "slug"] as const;
+// Удалённый человек остаётся в журнале псевдонимом с этой приставкой.
+const DELETED_PREFIX = "deleted:";
 
 /** Журнал сверху вниз: свежие записи, затем архив большого мира по id. */
 function* auditRows(people: DemoAdminPeople): Generator<AuditRow> {
@@ -119,6 +123,31 @@ export const createPeopleRoutes = (
   const publicUrl = () =>
     adminInstallOf(getWorld()).instance.public_url.replace(/\/+$/, "");
   const linkOf = (id: string) => `${publicUrl()}/invite/demo-${id}`;
+  /**
+   * Строка журнала, как её отдаёт сервер: кто действовал и подпись цели.
+   * Порядок подписи тот же: человек по id, иначе name, label, email или slug
+   * из details, иначе псевдоним удалённого.
+   */
+  const auditView = (e: AuditRow): AdminAuditEvent => {
+    const actor = userOf(e.actor_id);
+    const person = userOf(e.target);
+    const detail = AUDIT_LABEL_KEYS.map((key) => e.details[key]).find(
+      (value): value is string => typeof value === "string" && value !== "",
+    );
+    return {
+      ...e,
+      actor:
+        e.actor_id === null
+          ? null
+          : actor
+            ? { id: actor.id, name: actor.name, email: actor.email }
+            : { id: e.actor_id, name: e.actor_id, email: null },
+      target_label:
+        person?.name ??
+        detail ??
+        (e.target?.startsWith(DELETED_PREFIX) ? e.target : null),
+    };
+  };
   const record = (action: string, target: string | null) => {
     const events = state().audit;
     events.unshift({
@@ -415,6 +444,7 @@ export const createPeopleRoutes = (
           target !== null;
         const people = state();
         return cursorList(req, auditRows(people), (e) => e.id, {
+          view: auditView,
           accept: (e) => {
             const at = Date.parse(e.at);
             return (

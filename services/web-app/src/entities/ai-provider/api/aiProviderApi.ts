@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { adminClient, apiClient, parseResp } from "@shared/api";
+import { adminClient, apiClient, listPageOf, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AIProviderSchema,
   ProviderModelsSchema,
+  type AIProvider,
   type CreateAIProviderInput,
   type UpdateAIProviderInput,
 } from "../model/aiProvider.schema";
@@ -28,6 +30,18 @@ const InstanceCheckSchema = z.object({
   models: z.array(z.string()),
   error: z.string().nullable(),
 });
+
+// Страница общих провайдеров (единый контракт списков). Сервер до перехода на
+// контракт отдавал весь список массивом: он читается как одна страница.
+const InstancePageSchema = z.union([
+  listPageOf(InstanceProviderSchema),
+  z.array(InstanceProviderSchema).transform((items) => ({
+    items,
+    total: items.length,
+    limit: items.length,
+    offset: 0,
+  })),
+]);
 
 const fromInstance = (wire: z.infer<typeof InstanceProviderSchema>) =>
   AIProviderSchema.parse({
@@ -81,6 +95,16 @@ export const aiProviderApiFor = (owner: AIProviderOwner = "user") => {
 const quiet = { silentError: true } as const;
 
 const instanceApi = {
+  /** Страница списка: поиск, тип, сортировка и окно считает сервер. */
+  page: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<AIProvider>> =>
+    adminClient
+      .get(`/ai-providers`, { ...quiet, signal, params })
+      .then(parseResp(InstancePageSchema))
+      .then((page) => ({ ...page, items: page.items.map(fromInstance) })),
+
   list: () =>
     adminClient
       .get(`/ai-providers`, quiet)
@@ -113,3 +137,6 @@ const instanceApi = {
 };
 
 export const aiProviderApi = aiProviderApiFor("user");
+
+/** Общие провайдеры установки (админка): страницы списка, правка, проверка. */
+export const instanceAiProviderApi = instanceApi;

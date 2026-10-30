@@ -278,6 +278,14 @@ export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
       entry("admin_oidc_empty", "Провайдеров нет", () =>
         oidc({ providers: [] }),
       ),
+      entry("admin_oidc_none", "Поиск ничего не нашёл", () =>
+        oidc({
+          providers: [],
+          filtered: true,
+          query: "keycloak",
+          onResetFilters: noop,
+        }),
+      ),
       entry("admin_oidc_loading", "Загрузка", () =>
         oidc({ status: "loading", providers: [] }),
       ),

@@ -34,7 +34,6 @@ import {
   useBootstrap,
   type AdminAuditEvent,
   type AdminService,
-  type AdminUser,
 } from "@entities/session";
 import { useInstanceSettings } from "@features/admin-install";
 import {
@@ -49,9 +48,11 @@ import {
   useStorage,
 } from "@features/admin-ops";
 import {
+  auditTarget,
+  isPseudonym,
   useApprovals,
-  useAudit,
   useAuditActionLabel,
+  useRecentAudit,
   useUsers,
 } from "@features/admin-users";
 
@@ -60,9 +61,6 @@ import {
 // себя, остальная страница работает.
 
 const ACTIVITY_LIMIT = 7;
-
-// Поля details, которые сами по себе читаются как название цели.
-const DETAIL_NAMES = ["name", "label", "email", "slug"] as const;
 
 const ALL_USERS = { q: "", status: "", page: 0 } as const;
 
@@ -81,11 +79,6 @@ const TONE_ICON: Record<Tone, ReactNode> = {
   warning: <CircleAlert size={15} />,
   info: <Mail size={15} />,
 };
-
-// Служебные идентификаторы (u_01hx…, uuid) людям ни о чём не говорят.
-const looksLikeId = (value: string): boolean =>
-  /^[a-z]{1,6}_[0-9a-z]{6,}$/i.test(value) ||
-  /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(value);
 
 const isBad = (s: AdminService): boolean =>
   s.status === "degraded" || s.status === "down";
@@ -417,34 +410,12 @@ const AttentionBlock = () => {
 
 const ActivityBlock = () => {
   const { t } = useTranslation("adminShell");
-  const audit = useAudit("");
-  const users = useUsers(ALL_USERS);
-  const approvals = useApprovals(0);
+  // Одна короткая страница журнала: имена людей и подписи целей сервер
+  // отдаёт в строках, справочник людей не нужен.
+  const audit = useRecentAudit(ACTIVITY_LIMIT);
   const label = useAuditActionLabel();
-
-  const people = new Map<string, AdminUser>();
-  for (const u of [
-    ...(users.data?.items ?? []),
-    ...(approvals.data?.items ?? []),
-  ]) {
-    people.set(u.id, u);
-  }
-  const events: AdminAuditEvent[] = (audit.data?.pages[0]?.items ?? []).slice(
-    0,
-    ACTIVITY_LIMIT,
-  );
+  const events: AdminAuditEvent[] = audit.data?.items ?? [];
   const now = useNow();
-
-  // На что направлено действие: человек по id, иначе понятное поле из details.
-  const target = (e: AdminAuditEvent): string | null => {
-    const person = e.target ? people.get(e.target) : undefined;
-    if (person) return person.name;
-    for (const key of DETAIL_NAMES) {
-      const value = e.details[key];
-      if (typeof value === "string" && value !== "") return value;
-    }
-    return e.target && !looksLikeId(e.target) ? e.target : null;
-  };
 
   return (
     <Section
@@ -485,11 +456,11 @@ const ActivityBlock = () => {
       {events.length > 0 && (
         <SectionList label={t("overview.activity.title")}>
           {events.map((e) => {
-            const actor = e.actor_id ? people.get(e.actor_id) : undefined;
+            const actor = e.actor && !isPseudonym(e.actor) ? e.actor : null;
             const who = e.actor_id
               ? (actor?.name ?? t("overview.activity.unknown"))
               : t("overview.activity.system");
-            const what = target(e);
+            const what = auditTarget(e)?.text ?? null;
             return (
               <ListRow
                 key={e.id}

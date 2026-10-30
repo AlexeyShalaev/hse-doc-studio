@@ -172,6 +172,13 @@
       "quarter": "90 days"
     }
   },
+  "sortMenu": {
+    "label": "Sort",
+    "field": "Sort by",
+    "direction": "Direction",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
   "activeFilters": {
     "label": "Active conditions",
     "remove": "Remove condition {{label}}: {{value}}",

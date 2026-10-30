@@ -10,7 +10,16 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { adminClient } from "@shared/api";
 import { i18n } from "@shared/lib";
 import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
@@ -43,11 +52,11 @@ const client = () =>
     },
   });
 
-const mount = (node: ReactNode) =>
+const mount = (node: ReactNode, entry = "/") =>
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={client()}>
-        <MemoryRouter>{node}</MemoryRouter>
+        <MemoryRouter initialEntries={[entry]}>{node}</MemoryRouter>
       </QueryClientProvider>
     </I18nextProvider>,
   );
@@ -362,6 +371,61 @@ describe("настройки установки в админке", () => {
       expect(
         await screen.findByText("Подключение работает, 2 модели"),
       ).toBeVisible();
+    });
+
+    it("поиск и тип уходят на сервер, пустой ответ предлагает сбросить", async () => {
+      const user = userEvent.setup();
+      const get = vi.spyOn(adminClient, "get");
+      mount(<AiProvidersPage renderEditor={noEditor} />);
+      await screen.findByTestId("shared-provider-aip_shared1");
+      await user.type(screen.getByRole("searchbox"), "vllm");
+      await waitFor(
+        () => {
+          expect(
+            screen.queryByTestId("shared-provider-aip_shared1"),
+          ).toBeNull();
+        },
+        { timeout: 5000 },
+      );
+      expect(screen.getByTestId("shared-provider-aip_shared2")).toBeVisible();
+      const params = get.mock.calls
+        .filter(([url]) => url === "/ai-providers")
+        .map(([, config]) => config?.params as Record<string, unknown>);
+      expect(params.at(-1)).toMatchObject({
+        q: "vllm",
+        limit: 50,
+        offset: 0,
+        sort: "created_at",
+      });
+      await user.clear(screen.getByRole("searchbox"));
+      await user.type(screen.getByRole("searchbox"), "нет-такого");
+      const none = await screen.findByTestId(
+        "shared-provider-none",
+        {},
+        { timeout: 5000 },
+      );
+      await user.click(
+        within(none).getByRole("button", { name: "Сбросить фильтры" }),
+      );
+      expect(
+        await screen.findByTestId("shared-provider-aip_shared1"),
+      ).toBeVisible();
+      get.mockRestore();
+    });
+
+    it("тип и порядок из адреса", async () => {
+      mount(
+        <AiProvidersPage renderEditor={noEditor} />,
+        "/admin/ai-providers?type=claude&sort=-name",
+      );
+      await screen.findByTestId("shared-provider-aip_shared1");
+      expect(screen.queryByTestId("shared-provider-aip_shared2")).toBeNull();
+      expect(
+        screen.getByTestId("shared-provider-filter-type"),
+      ).toHaveTextContent("Anthropic");
+      expect(screen.getByTestId("shared-provider-sort")).toHaveTextContent(
+        "Название",
+      );
     });
 
     it("пустой список объясняет, что делать", async () => {

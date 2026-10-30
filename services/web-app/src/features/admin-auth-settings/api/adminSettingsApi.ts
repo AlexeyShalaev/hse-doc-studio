@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { adminClient, parseResp } from "@shared/api";
+import { adminClient, listPageOf, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AdminAuthSettingsSchema,
   AdminOidcProviderSchema,
@@ -16,6 +17,18 @@ import {
   type UpdateAdminRegistrationRequest,
   type UpdateAdminSmtpRequest,
 } from "@entities/session";
+
+// Провайдеры входа приходят страницей (единый контракт списков). Сервер до
+// перехода на контракт отдавал весь список массивом: он читается как одна страница.
+const OidcPageSchema = z.union([
+  listPageOf(AdminOidcProviderSchema),
+  z.array(AdminOidcProviderSchema).transform((items) => ({
+    items,
+    total: items.length,
+    limit: items.length,
+    offset: 0,
+  })),
+]);
 
 // Ошибки форм показывают сами карточки: тост не нужен.
 const quiet = { silentError: true } as const;
@@ -54,10 +67,13 @@ export const adminSettingsApi = {
       .post("/settings/smtp/test", { to }, quiet)
       .then(parseResp(AdminSmtpTestResultSchema)),
 
-  providers: (): Promise<AdminOidcProvider[]> =>
+  providers: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<AdminOidcProvider>> =>
     adminClient
-      .get("/oidc-providers", quiet)
-      .then(parseResp(z.array(AdminOidcProviderSchema))),
+      .get("/oidc-providers", { ...quiet, signal, params })
+      .then(parseResp(OidcPageSchema)),
   createProvider: (
     body: CreateAdminOidcProviderRequest,
   ): Promise<AdminOidcProvider> =>
