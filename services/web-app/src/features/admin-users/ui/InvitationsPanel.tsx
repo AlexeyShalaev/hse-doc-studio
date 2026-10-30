@@ -1,25 +1,43 @@
 import { forwardRef, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Link2, Mail, MailCheck, RefreshCw, Send, Trash2 } from "lucide-react";
+import {
+  Building2,
+  Link2,
+  Mail,
+  MailCheck,
+  RefreshCw,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import {
+  toast,
+  useListQueryState,
+  useServerList,
+  type ListStateOptions,
+} from "@shared/lib";
 import {
   ActionMenu,
   Button,
   DataTable,
+  FilterBar,
+  FilterMenu,
   Input,
+  PickerFilter,
   Section,
   SecretOnce,
   Select,
   Spinner,
   StatusDot,
+  usePickedItem,
+  type ActiveFilter,
   type StatusDotStatus,
 } from "@shared/ui";
-import type { AdminInvitation } from "@entities/session";
-import { PAGE_SIZE } from "../api/adminUsersApi";
+import { adminPickers, type AdminInvitation } from "@entities/session";
+import { adminUsersApi } from "../api/adminUsersApi";
 import {
-  useInvitations,
+  adminUsersKeys,
   useInvite,
   useResendInvite,
   useRevokeInvite,
@@ -38,6 +56,19 @@ const STATUS_TONE: Record<AdminInvitation["status"], StatusDotStatus> = {
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
+const INVITE_STATUSES = ["pending", "used", "expired"] as const;
+type InviteSort = "expires_at" | "email";
+type InviteFilter = "status" | "org";
+
+// Состояние приглашения сервер считает сам (по used_at и сроку), фильтр и
+// сортировка тоже на нём: приглашений бывают тысячи.
+const LIST: ListStateOptions<InviteFilter, InviteSort> = {
+  filters: { status: { multi: true, values: INVITE_STATUSES }, org: {} },
+  sort: { fields: ["expires_at", "email"], default: "-expires_at" },
+};
+const SORTABLE: readonly InviteSort[] = ["email", "expires_at"];
+const ORGS = adminPickers.orgs();
+
 type Shown =
   | { kind: "link"; url: string; email: string | null }
   | { kind: "sent"; email: string };
@@ -49,8 +80,13 @@ type Shown =
 export const InvitationsPanel = forwardRef<HTMLInputElement>(
   function InvitationsPanel(_props, emailRef) {
     const { t } = useTranslation("adminUsers");
-    const [page, setPage] = useState(0);
-    const list = useInvitations(page);
+    const state = useListQueryState(LIST);
+    const list = useServerList({
+      state,
+      queryKey: adminUsersKeys.invitationsList(),
+      fetchPage: adminUsersApi.invitationsPage,
+    });
+    const org = usePickedItem(ORGS, state.filter("org") || null, null);
     const invite = useInvite();
     const resend = useResendInvite();
     const revoke = useRevokeInvite();
@@ -126,7 +162,8 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
           ),
         },
         {
-          id: "expires",
+          id: "expires_at",
+          sortDescFirst: true,
           header: t("invitations.columns.expires"),
           cell: ({ row }) => {
             const inv = row.original;
@@ -212,6 +249,49 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
       ],
       [t, busy, resend, revoke],
     );
+
+    const statuses = state.filters
+      .status as readonly AdminInvitation["status"][];
+    const active: ActiveFilter[] = [
+      ...(state.q
+        ? [
+            {
+              id: "q",
+              label: t("filters.search"),
+              value: state.q,
+              onRemove: () => {
+                state.setQ("");
+              },
+            },
+          ]
+        : []),
+      ...(statuses.length > 0
+        ? [
+            {
+              id: "status",
+              label: t("invitations.columns.status"),
+              value: statuses
+                .map((st) => t(`invitations.status.${st}`))
+                .join(", "),
+              onRemove: () => {
+                state.setFilter("status", null);
+              },
+            },
+          ]
+        : []),
+      ...(state.filter("org")
+        ? [
+            {
+              id: "org",
+              label: t("filters.org"),
+              value: org?.name ?? state.filter("org"),
+              onRemove: () => {
+                state.setFilter("org", null);
+              },
+            },
+          ]
+        : []),
+    ];
 
     return (
       <div className="ppl-stack" data-testid="invitations-panel">
@@ -317,29 +397,64 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
           )}
         </Section>
 
+        <FilterBar
+          search={state.q}
+          onSearchChange={state.setQ}
+          searchLabel={t("invitations.search")}
+          searchPlaceholder={t("invitations.search")}
+          busy={list.isFetching}
+          onReset={state.reset}
+          active={active}
+          total={list.isLoading ? null : list.total}
+          extra={
+            <>
+              <FilterMenu
+                label={t("invitations.columns.status")}
+                testId="invites-filter-status"
+                values={state.filters.status}
+                onChange={(values) => {
+                  state.setFilter("status", values);
+                }}
+                options={INVITE_STATUSES.map((st) => ({
+                  value: st,
+                  label: t(`invitations.status.${st}`),
+                }))}
+              />
+              <PickerFilter
+                label={t("filters.org")}
+                source={ORGS}
+                icon={<Building2 size={13} aria-hidden="true" />}
+                testId="invites-filter-org"
+                searchPlaceholder={t("filters.orgSearch")}
+                value={state.filter("org") || null}
+                onChange={(item) => {
+                  state.setFilter("org", item?.id ?? null);
+                }}
+              />
+            </>
+          }
+        />
         <DataTable
           className="ppl-table"
           caption={t("invitations.caption")}
           columns={columns}
-          data={list.data?.items ?? []}
+          data={list.items}
           getRowId={(i) => i.id}
-          loading={list.isPending}
+          loading={list.isFetching}
           error={list.isError ? t("invitations.loadFailed") : null}
           onRetry={() => {
             void list.refetch();
           }}
+          sorting={state.sorting}
+          onSortingChange={state.onSortingChange}
+          sortable={SORTABLE}
+          pagination={list.pagination}
+          filtered={state.isFiltered}
+          searchQuery={state.q}
+          onResetFilters={state.reset}
           emptyTitle={t("invitations.empty.title")}
           emptyHint={t("invitations.empty.body")}
-          {...((list.data?.total ?? 0) > PAGE_SIZE
-            ? {
-                pagination: {
-                  page,
-                  pageSize: PAGE_SIZE,
-                  total: list.data?.total ?? 0,
-                  onPageChange: setPage,
-                },
-              }
-            : {})}
+          columnWidths={{ status: 160, expires_at: 200, actions: 52 }}
         />
       </div>
     );

@@ -1,28 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { failureCode } from "@shared/api";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type {
   CreateAdminGroupRequest,
   CreateAdminOrgRequest,
   OrgRoleName,
-  UpdateAdminGroupRequest,
 } from "@entities/session";
-import { adminOrgsApi } from "./adminOrgsApi";
+import { adminOrgsApi, type AddMemberInput } from "./adminOrgsApi";
 
+// Списки организаций, участников, групп и состава группы листает сервер
+// (useServerList): здесь только начала ключей и мутации, которые их сбрасывают.
 export const adminOrgsKeys = {
   all: ["admin", "orgs"] as const,
   list: () => ["admin", "orgs-list"] as const,
   org: (slug: string) => [...adminOrgsKeys.all, slug] as const,
   members: (slug: string) => [...adminOrgsKeys.org(slug), "members"] as const,
+  memberFacets: (slug: string, q: string) =>
+    [...adminOrgsKeys.members(slug), "facets", q] as const,
   groups: (slug: string) => [...adminOrgsKeys.org(slug), "groups"] as const,
+  groupMembers: (slug: string, id: string) =>
+    [...adminOrgsKeys.groups(slug), id, "members"] as const,
   userOrgs: (userId: string) => ["admin", "user-orgs", userId] as const,
 };
-
-export const useOrgs = () =>
-  useQuery({
-    queryKey: adminOrgsKeys.list(),
-    queryFn: () => adminOrgsApi.list(),
-    staleTime: 0,
-  });
 
 export const useOrg = (slug: string) =>
   useQuery({
@@ -32,25 +34,36 @@ export const useOrg = (slug: string) =>
     retry: false,
   });
 
-export const useMembers = (slug: string) =>
+/** Числа на чипах ролей при текущем поиске. */
+export const useMemberFacets = (slug: string, q: string) =>
   useQuery({
-    queryKey: adminOrgsKeys.members(slug),
-    queryFn: () => adminOrgsApi.members(slug),
+    queryKey: adminOrgsKeys.memberFacets(slug, q),
+    queryFn: ({ signal }) => adminOrgsApi.memberFacets(slug, q, signal),
+    placeholderData: keepPreviousData,
     staleTime: 0,
   });
 
-export const useGroups = (slug: string) =>
+/** Сколько групп в организации: число на вкладке, одна строка ответа. */
+export const useGroupCount = (slug: string) =>
   useQuery({
-    queryKey: adminOrgsKeys.groups(slug),
-    queryFn: () => adminOrgsApi.groups(slug),
+    queryKey: [...adminOrgsKeys.groups(slug), "count"],
+    queryFn: ({ signal }) =>
+      adminOrgsApi.groups(slug, { limit: 1, offset: 0 }, signal),
+    select: (page) => page.total,
     staleTime: 0,
   });
 
-/** Число людей и групп видно в списке и в шапке организации: после правки они устаревают. */
+/**
+ * После правки устаревают список организаций (числа), шапка организации,
+ * её участники и группы; организации людей в карточках тоже.
+ */
 const useChanged = (slug?: string) => {
   const client = useQueryClient();
   return () => {
     void client.invalidateQueries({ queryKey: adminOrgsKeys.list() });
+    void client.invalidateQueries({ queryKey: ["admin", "user-orgs"] });
+    // Пикеры «не в организации» и «участники организации» тоже устарели.
+    void client.invalidateQueries({ queryKey: ["admin", "pickers"] });
     if (slug)
       void client.invalidateQueries({ queryKey: adminOrgsKeys.org(slug) });
   };
@@ -75,8 +88,7 @@ export const useDeleteOrg = () => {
 export const useAddMember = (slug: string) => {
   const changed = useChanged(slug);
   return useMutation({
-    mutationFn: (body: { email: string; role: OrgRoleName }) =>
-      adminOrgsApi.addMember(slug, body),
+    mutationFn: (input: AddMemberInput) => adminOrgsApi.addMember(slug, input),
     onSuccess: changed,
   });
 };
@@ -91,15 +103,11 @@ export const useSetRole = (slug: string) => {
 };
 
 export const useRemoveMember = (slug: string) => {
-  const client = useQueryClient();
   const changed = useChanged(slug);
   return useMutation({
     mutationFn: (userId: string) => adminOrgsApi.removeMember(slug, userId),
-    onSuccess: () => {
-      // Ушедший человек уходит и из групп.
-      void client.invalidateQueries({ queryKey: adminOrgsKeys.groups(slug) });
-      changed();
-    },
+    // Ушедший человек уходит и из групп: ключ организации сбрасывает и их.
+    onSuccess: changed,
   });
 };
 
@@ -112,44 +120,24 @@ export const useCreateGroup = (slug: string) => {
   });
 };
 
-export const useUpdateGroup = (slug: string) => {
+export const useRenameGroup = (slug: string) => {
   const changed = useChanged(slug);
   return useMutation({
-    mutationFn: (input: { id: string; body: UpdateAdminGroupRequest }) =>
-      adminOrgsApi.updateGroup(slug, input.id, input.body),
+    mutationFn: (input: { id: string; name: string }) =>
+      adminOrgsApi.renameGroup(slug, input.id, input.name),
     onSuccess: changed,
   });
 };
 
-/**
- * Правка состава группы точечными запросами: добавить выбранных, убрать снятых.
- * Полный список участников не пересылается, поэтому участники за пределами
- * показанных не теряются. Уже состоящий в группе (409) считается добавленным.
- */
-export const useSyncGroupMembers = (slug: string) => {
+/** Состав группы меняется по одному человеку: добавить или убрать. */
+export const useGroupMembership = (slug: string, groupId: string) => {
   const changed = useChanged(slug);
-  const client = useQueryClient();
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      add: readonly string[];
-      remove: readonly string[];
-    }) => {
-      for (const userId of input.add) {
-        await adminOrgsApi
-          .addGroupMember(slug, input.id, userId)
-          .catch((error: unknown) => {
-            if (failureCode(error) !== "already_member") throw error;
-          });
-      }
-      for (const userId of input.remove) {
-        await adminOrgsApi.removeGroupMember(slug, input.id, userId);
-      }
-    },
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: adminOrgsKeys.groups(slug) });
-      changed();
-    },
+    mutationFn: ({ userId, add }: { userId: string; add: boolean }) =>
+      add
+        ? adminOrgsApi.addGroupMember(slug, groupId, userId)
+        : adminOrgsApi.removeGroupMember(slug, groupId, userId),
+    onSuccess: changed,
   });
 };
 

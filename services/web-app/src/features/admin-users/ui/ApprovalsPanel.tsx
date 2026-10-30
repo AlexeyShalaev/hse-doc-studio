@@ -1,39 +1,62 @@
 import { useState } from "react";
-import { Check, CheckCheck, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Check, CheckCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import {
+  toast,
+  useListQueryState,
+  useServerList,
+  type ListStateOptions,
+} from "@shared/lib";
 import {
   Button,
   EmptyState,
   ErrorState,
+  FilterBar,
+  NoResults,
+  Pagination,
   PersonCell,
   Section,
+  SortSelect,
   Spinner,
   TableSkeleton,
 } from "@shared/ui";
 import type { AdminUser } from "@entities/session";
-import { PAGE_SIZE } from "../api/adminUsersApi";
-import { useApprovals, useDecideApproval } from "../api/adminUsersQueries";
+import { adminUsersApi } from "../api/adminUsersApi";
+import {
+  adminUsersKeys,
+  useApprovals,
+  useDecideApproval,
+} from "../api/adminUsersQueries";
 import type { Failure } from "../lib/failure";
 import { FailureNotice, When } from "./parts";
+
+type ApprovalSort = "created_at" | "name" | "email";
+
+// Старые заявки первыми: они ждут дольше всех. Порядок задаёт сервер.
+const LIST: ListStateOptions<never, ApprovalSort> = {
+  sort: { fields: ["created_at", "name", "email"], default: "created_at" },
+};
 
 /** Вкладка «Одобрения»: очередь заявок, решение в строке и одобрение пачкой. */
 export const ApprovalsPanel = () => {
   const { t } = useTranslation("adminUsers");
-  const [page, setPage] = useState(0);
-  const list = useApprovals(page);
+  const state = useListQueryState(LIST);
+  const list = useServerList({
+    state,
+    queryKey: adminUsersKeys.approvalsList(),
+    fetchPage: adminUsersApi.approvalsPage,
+  });
+  // Сколько всего ждёт решения: тот же запрос, что у числа на вкладке.
+  const waiting = useApprovals(0).data?.total ?? list.total;
   const decide = useDecideApproval();
   const [failure, setFailure] = useState<Failure | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   // Строка, по которой идёт запрос; при пачке все отмеченные.
   const [working, setWorking] = useState<ReadonlySet<string>>(new Set());
 
-  // Кто дольше ждёт, тот выше.
-  const items = [...(list.data?.items ?? [])].sort((a, b) =>
-    a.created_at.localeCompare(b.created_at),
-  );
-  const total = list.data?.total ?? 0;
+  const items = list.items;
+  const total = list.total;
   const chosen = items.filter((u) => selected.has(u.id));
   const allChosen = items.length > 0 && chosen.length === items.length;
   const busy = working.size > 0;
@@ -95,7 +118,7 @@ export const ApprovalsPanel = () => {
     });
   };
 
-  if (list.isPending) {
+  if (list.isLoading) {
     return (
       <div data-testid="approvals-panel">
         <TableSkeleton rows={3} columns={3} withAvatar />
@@ -116,7 +139,7 @@ export const ApprovalsPanel = () => {
       </div>
     );
   }
-  if (items.length === 0) {
+  if (items.length === 0 && !state.isFiltered) {
     return (
       <div data-testid="approvals-panel">
         <EmptyState
@@ -130,21 +153,44 @@ export const ApprovalsPanel = () => {
     );
   }
 
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const bulk = chosen.length > 0 ? chosen : items;
+  // На странице не все заявки: кнопка честно говорит, что одобрит только видимые.
+  const partial = total > items.length;
 
   return (
     <div className="ppl-stack" data-testid="approvals-panel">
+      <FilterBar
+        search={state.q}
+        onSearchChange={state.setQ}
+        searchLabel={t("users.search")}
+        searchPlaceholder={t("users.search")}
+        busy={list.isFetching}
+        onReset={state.reset}
+        extra={
+          <SortSelect
+            sort={state.sort}
+            onChange={state.setSort}
+            label={t("sort.label")}
+            testId="approvals-sort"
+            options={[
+              { field: "created_at", desc: false, label: t("sort.waiting") },
+              { field: "created_at", desc: true, label: t("sort.newest") },
+              { field: "name", desc: false, label: t("sort.name") },
+              { field: "email", desc: false, label: t("sort.email") },
+            ]}
+          />
+        }
+      />
       {failure && <FailureNotice failure={failure} />}
       <Section
-        title={t("approvals.title", { count: total })}
+        title={t("approvals.title", { count: waiting })}
         description={t("approvals.lead")}
         flush
         actions={
           <Button
             size="sm"
             type="button"
-            disabled={busy}
+            disabled={busy || items.length === 0}
             data-testid="approve-bulk"
             onClick={() => {
               void approveMany(bulk);
@@ -157,33 +203,46 @@ export const ApprovalsPanel = () => {
             )}
             {chosen.length > 0
               ? t("approvals.approveSelected", { count: chosen.length })
-              : t("approvals.approveAll", { count: items.length })}
+              : partial
+                ? t("approvals.approveShown", { count: items.length })
+                : t("approvals.approveAll", { count: items.length })}
           </Button>
         }
       >
-        <div className="ppl-queue-head">
-          <label>
-            <input
-              type="checkbox"
-              className="ppl-check"
-              checked={allChosen}
-              ref={(node) => {
-                if (node) node.indeterminate = chosen.length > 0 && !allChosen;
-              }}
-              disabled={busy}
-              aria-label={t("approvals.selectAll")}
-              onChange={() => {
-                setSelected(
-                  allChosen ? new Set() : new Set(items.map((u) => u.id)),
-                );
-              }}
-            />
-            {chosen.length > 0
-              ? t("approvals.selected", { count: chosen.length })
-              : t("approvals.selectAll")}
-          </label>
-        </div>
-        <ul className="ppl-queue" aria-label={t("approvals.caption")}>
+        {items.length === 0 && (
+          <NoResults compact query={state.q} onReset={state.reset} />
+        )}
+        {items.length > 0 && (
+          <div className="ppl-queue-head">
+            <label>
+              <input
+                type="checkbox"
+                className="ppl-check"
+                checked={allChosen}
+                ref={(node) => {
+                  if (node)
+                    node.indeterminate = chosen.length > 0 && !allChosen;
+                }}
+                disabled={busy}
+                aria-label={t("approvals.selectAll")}
+                onChange={() => {
+                  setSelected(
+                    allChosen ? new Set() : new Set(items.map((u) => u.id)),
+                  );
+                }}
+              />
+              {chosen.length > 0
+                ? t("approvals.selected", { count: chosen.length })
+                : t("approvals.selectAll")}
+            </label>
+          </div>
+        )}
+        <ul
+          className="ppl-queue"
+          aria-label={t("approvals.caption")}
+          aria-busy={list.isFetching}
+          style={{ opacity: list.isFetching && !busy ? 0.6 : 1 }}
+        >
           {items.map((u) => {
             const rowBusy = working.has(u.id);
             return (
@@ -247,37 +306,9 @@ export const ApprovalsPanel = () => {
             );
           })}
         </ul>
-        {pages > 1 && (
+        {total > 0 && (
           <div className="adm-section-foot">
-            <span className="ppl-muted" style={{ fontSize: 12 }}>
-              {t("approvals.page", { page: page + 1, pages })}
-            </span>
-            <span className="flex" style={{ gap: 6 }}>
-              <Button
-                size="sm"
-                variant="ghost"
-                type="button"
-                disabled={page === 0}
-                aria-label={t("approvals.prev")}
-                onClick={() => {
-                  setPage(page - 1);
-                }}
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                type="button"
-                disabled={page + 1 >= pages}
-                aria-label={t("approvals.next")}
-                onClick={() => {
-                  setPage(page + 1);
-                }}
-              >
-                <ChevronRight size={14} aria-hidden="true" />
-              </Button>
-            </span>
+            <Pagination {...list.pagination} />
           </div>
         )}
       </Section>

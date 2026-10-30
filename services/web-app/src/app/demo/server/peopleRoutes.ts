@@ -5,6 +5,8 @@ import type {
   AdminAuditEvent,
   AdminInvitation,
   AdminUser,
+  AdminUserOrg,
+  OrgRoleName,
 } from "@entities/session";
 import type { DemoAdminPeople, DemoAuditEvent } from "./adminPeople";
 import {
@@ -44,6 +46,7 @@ const STATUSES: readonly AccountStatus[] = [
   "disabled",
 ];
 const INVITE_STATUSES = ["pending", "used", "expired"] as const;
+const ORG_ROLES: readonly OrgRoleName[] = ["owner", "admin", "member"];
 type AuditRow = DemoAdminPeople["audit"][number];
 
 /** Журнал сверху вниз: свежие записи, затем архив большого мира по id. */
@@ -204,6 +207,43 @@ export const createPeopleRoutes = (
       handler: (req) => {
         const user = userOf(req.params.id);
         return user ? demoJson(user) : notFound();
+      },
+    },
+    {
+      // Организации человека: одной ручкой, а не составом каждой организации.
+      method: "GET",
+      pattern: "/users/:id/orgs",
+      handler: (req) => {
+        const user = userOf(req.params.id);
+        if (!user) return notFound();
+        const roles = enumParam(req, "role", ORG_ROLES);
+        if (roles === null) return invalidQuery();
+        const rows = adminOrgsOf(getWorld()).orgs.flatMap(
+          (org): AdminUserOrg[] => {
+            const me = org.members.find((m) => m.user_id === user.id);
+            if (!me || (roles.length > 0 && !roles.includes(me.role))) {
+              return [];
+            }
+            return [
+              {
+                slug: org.slug,
+                name: org.name,
+                role: me.role,
+                joined_at: me.joined_at,
+              },
+            ];
+          },
+        );
+        return offsetList(req, rows, {
+          sort: {
+            name: (o: AdminUserOrg) => o.name,
+            role: (o: AdminUserOrg) => ORG_ROLES.indexOf(o.role),
+            joined_at: (o: AdminUserOrg) => o.joined_at,
+          },
+          defaultSort: "name",
+          search: (o) => [o.name, o.slug],
+          id: (o) => o.slug,
+        });
       },
     },
     {

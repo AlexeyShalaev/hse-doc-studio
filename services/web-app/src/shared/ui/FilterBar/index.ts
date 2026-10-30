@@ -6,3 +6,5 @@ export { DateRangeFilter, isoDay } from "./DateRangeFilter";
 export type { DateRange, DateRangeFilterProps } from "./DateRangeFilter";
 export { ActiveFilters } from "./ActiveFilters";
 export type { ActiveFilter, ActiveFiltersProps } from "./ActiveFilters";
+export { SortSelect } from "./SortSelect";
+export type { SortOption, SortSelectProps } from "./SortSelect";

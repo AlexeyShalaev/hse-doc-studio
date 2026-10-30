@@ -511,11 +511,15 @@ export const CreateAdminOrgRequestSchema = z.strictObject({
   slug: z.string(),
 });
 // Группа в админке: число участников и первые пять по имени; полный состав листается отдельно.
+export const AdminGroupPreviewSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+});
 export const AdminGroupSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
   member_count: z.number().int(),
-  preview: z.array(z.strictObject({ user_id: z.string(), name: z.string() })),
+  preview: z.array(AdminGroupPreviewSchema),
 });
 export const AdminGroupPageSchema = pageOf(AdminGroupSchema);
 export const AdminGroupMemberSchema = GroupMemberSchema;

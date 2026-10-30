@@ -1,13 +1,22 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
-import type { ProjectRole } from "@entities/session";
+import type { ProjectAccessEntry, ProjectRole } from "@entities/session";
 import {
   accessCandidates,
   accessEntries,
   effectiveRole,
   findGroup,
 } from "./projectAccess";
-import { PICKER_MAX, invalidQuery, limitOf, queryOne } from "./demoList";
+import {
+  PICKER_MAX,
+  enumParam,
+  hit,
+  invalidQuery,
+  limitOf,
+  queryOne,
+  searchOf,
+  sortOf,
+} from "./demoList";
 import type { DemoProject } from "./projects";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
@@ -60,9 +69,50 @@ export const createProjectAccessRoutes = (
     {
       method: "GET",
       pattern: "/projects/:projectId/members",
-      handler: withProject(false, (project, _req, world) => {
-        const items = accessEntries(world, project);
-        return demoJson({ items, total: items.length, limit: 50, offset: 0 });
+      handler: withProject(false, (project, req, world) => {
+        const rows = accessEntries(world, project);
+        const q = searchOf(req);
+        const limit = limitOf(req);
+        const offset = Number(queryOne(req, "offset") ?? "0");
+        const kinds = enumParam(req, "kind", ["user", "group"] as const);
+        const roles = enumParam(req, "role", ROLES);
+        const sort = sortOf(req, ["name", "role"] as const, "name");
+        if (
+          q === null ||
+          limit === null ||
+          !Number.isInteger(offset) ||
+          offset < 0 ||
+          kinds === null ||
+          roles === null ||
+          sort === null
+        ) {
+          return invalidQuery();
+        }
+        const found = rows.filter(
+          (e) =>
+            hit(q, e.name, e.detail) &&
+            (kinds.length === 0 ||
+              kinds.includes(e.subject_kind as "user" | "group")) &&
+            (roles.length === 0 || roles.includes(e.role)),
+        );
+        // Закреплённые строки (владелец, организация) всегда в начале.
+        const key = (e: ProjectAccessEntry): string =>
+          sort.field === "role"
+            ? String(ROLES.indexOf(e.role)).padStart(2, "0") + e.name
+            : e.name;
+        const dir = sort.desc ? -1 : 1;
+        const ordered = [
+          ...found.filter((e) => e.locked),
+          ...found
+            .filter((e) => !e.locked)
+            .sort((a, b) => dir * key(a).localeCompare(key(b), "ru")),
+        ];
+        return demoJson({
+          items: ordered.slice(offset, offset + limit),
+          total: ordered.length,
+          limit,
+          offset,
+        });
       }),
     },
     {

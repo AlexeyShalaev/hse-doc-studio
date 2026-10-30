@@ -6,8 +6,17 @@ import type { AdminOrgMember, OrgRoleName } from "@entities/session";
 
 export type DemoDirectoryUser = { id: string; name: string; email: string };
 
-/** Группа в демо-мире хранит весь состав; наружу уходит число участников и первые по имени (AdminGroup). */
-export type DemoGroup = { id: string; name: string; member_ids: string[] };
+/**
+ * Группа в демо-мире хранит весь состав: наружу уходят число участников и
+ * первые пять (AdminGroup), сам состав листается отдельной ручкой.
+ */
+export type DemoGroup = {
+  id: string;
+  name: string;
+  member_ids: string[];
+  /** Когда человек попал в группу; без отметки берётся вступление в организацию. */
+  added_at?: Record<string, string>;
+};
 
 export type DemoOrg = {
   slug: string;

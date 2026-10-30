@@ -59,6 +59,7 @@ const call = async (
   method: DemoRequest["method"],
   path: string,
   body?: unknown,
+  query: Record<string, string> = {},
 ) => {
   const found = router.match(method, path);
   if (!found) throw new Error(`no demo route ${method} ${path}`);
@@ -66,7 +67,7 @@ const call = async (
     method,
     path,
     params: found.params,
-    query: {},
+    query,
     body,
     forward: () => Promise.reject(new Error("forward")),
   });
@@ -91,21 +92,22 @@ describe("организации в админке: демо-API", () => {
   });
 
   it("ответы проходят схемы контракта", async () => {
+    // Списки всегда приходят страницей, как у сервера.
     const orgs = AdminOrgPageSchema.parse((await call("GET", "/orgs")).data);
     expect(orgs.items).toHaveLength(3);
-    expect(orgs.total).toBe(3);
     AdminOrgMemberPageSchema.parse(
       (await call("GET", "/orgs/msp-2025/members")).data,
     );
-    const groups = AdminGroupPageSchema.parse(
+    AdminGroupPageSchema.parse(
       (await call("GET", "/orgs/msp-2025/groups")).data,
     );
-    expect(groups.items.length).toBeGreaterThan(0);
   });
 
   it("админ организации видит только свои, чужую организацию не открыть", async () => {
     activateServerScenario("org_admin");
-    const orgs = AdminOrgPageSchema.parse((await call("GET", "/orgs")).data);
+    const orgs = (await call("GET", "/orgs")).data as {
+      items: { slug: string }[];
+    };
     expect(orgs.items.map((o) => o.slug).sort()).toEqual([
       "ai-lab",
       "msp-2025",
@@ -205,12 +207,51 @@ describe("организации в админке: демо-API", () => {
     });
     expect(bad.status).toBe(422);
     await call("DELETE", "/orgs/msp-2025/members/u_01hx7k2m9c");
-    const groups = AdminGroupPageSchema.parse(
-      (await call("GET", "/orgs/msp-2025/groups")).data,
-    );
-    expect(
-      groups.items.flatMap((g) => g.preview.map((m) => m.user_id)),
-    ).not.toContain("u_01hx7k2m9c");
+    const groups = (await call("GET", "/orgs/msp-2025/groups")).data as {
+      items: { id: string }[];
+    };
+    for (const g of groups.items) {
+      const page = (await call("GET", `/orgs/msp-2025/groups/${g.id}/members`))
+        .data as { items: { user_id: string }[] };
+      expect(page.items.map((m) => m.user_id)).not.toContain("u_01hx7k2m9c");
+    }
+  });
+
+  it("списки по контракту: страница, поиск, сортировка и 422", async () => {
+    const page = (
+      await call("GET", "/orgs", undefined, {
+        limit: "1",
+        offset: "0",
+        sort: "-member_count",
+      })
+    ).data as { items: { slug: string }[]; total: number };
+    expect(page.total).toBe(3);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]?.slug).toBe("msp-2025");
+    const bad = await call("GET", "/orgs", undefined, { sort: "nope" });
+    expect(bad.status).toBe(422);
+    // Единственного владельца клиент узнаёт по owner_count организации.
+    const pilot = (await call("GET", "/orgs/pilot-2026")).data as {
+      owner_count: number;
+    };
+    expect(pilot.owner_count).toBe(1);
+    const facets = (await call("GET", "/orgs/msp-2025/members/facets"))
+      .data as { role: Record<string, number> };
+    expect(facets.role.owner).toBe(1);
+  });
+
+  it("состав группы меняется по одному человеку", async () => {
+    const group = (
+      (await call("GET", "/orgs/msp-2025/groups")).data as {
+        items: { id: string }[];
+      }
+    ).items[0];
+    const id = group?.id ?? "";
+    const path = `/orgs/msp-2025/groups/${id}/members/u_01hx7k6r8j`;
+    expect((await call("POST", path)).status).toBe(201);
+    expect(codeOf(await call("POST", path))).toBe("already_member");
+    expect((await call("DELETE", path)).status).toBe(204);
+    expect((await call("DELETE", path)).status).toBe(404);
   });
 });
 
@@ -329,6 +370,9 @@ describe("организации в админке: экраны", () => {
     expect(screen.queryByTestId("member-role-u_01hx7k1a0b")).toBeNull();
 
     await user.click(screen.getByTestId("member-add-open"));
+    // Админ установки выбирает человека поиском; почта остаётся запасным путём.
+    expect(screen.getByTestId("member-add-person")).toBeVisible();
+    await user.click(screen.getByTestId("member-add-mode"));
     await user.type(
       screen.getByTestId("member-add-email"),
       "nobody@example.org",
@@ -350,6 +394,7 @@ describe("организации в админке: экраны", () => {
       expect(screen.queryByTestId("member-add-email")).toBeNull();
     });
     await user.click(screen.getByTestId("member-add-open"));
+    await user.click(screen.getByTestId("member-add-mode"));
     expect(screen.getByTestId("member-add-email")).toHaveValue("");
 
     await user.type(
@@ -369,13 +414,37 @@ describe("организации в админке: экраны", () => {
     expect(screen.queryByText("Этот человек уже в организации.")).toBeNull();
   }, 20_000);
 
-  it("участники: фильтр по роли с одной кнопкой «Все»", async () => {
-    activateServerScenario("admin_ready");
+  it("участники: выбор человека поиском добавляет его по id", async () => {
+    const user = userEvent.setup();
     render(wrap(<Detail slug="pilot-2026" />));
-    const group = await screen.findByRole("group", { name: "Роль" });
-    expect(within(group).getAllByRole("button", { name: "Все" })).toHaveLength(
-      1,
+    await user.click(await screen.findByTestId("member-add-open"));
+    await user.click(screen.getByTestId("member-add-person"));
+    await user.type(
+      screen.getByRole("combobox", { name: "Человек" }),
+      "келлер",
     );
+    await user.click(
+      await screen.findByRole("option", { name: /Мария Келлер/ }),
+    );
+    await user.click(screen.getByTestId("member-add-submit"));
+    expect(await screen.findByText("Мария Келлер")).toBeVisible();
+  }, 20_000);
+
+  it("участники: фильтр по роли с числами с сервера", async () => {
+    const user = userEvent.setup();
+    render(wrap(<Detail slug="msp-2025" />));
+    await screen.findByText("Дмитрий Кузнецов");
+    await user.click(screen.getByTestId("members-filter-role"));
+    const owner = await screen.findByRole("checkbox", {
+      name: /Владелец/,
+    });
+    await waitFor(() => {
+      expect(owner).toHaveTextContent("1");
+    });
+    await user.click(owner);
+    await waitFor(() => {
+      expect(screen.queryByText("Дмитрий Кузнецов")).toBeNull();
+    });
   });
 
   it("участники: удаление требует подтверждения", async () => {
@@ -401,7 +470,13 @@ describe("организации в админке: экраны", () => {
     await user.click(within(form).getByTestId("group-save"));
     expect(within(form).getByText("Введите название.")).toBeVisible();
     await user.type(within(form).getByTestId("group-name"), "Проект");
-    await user.click(within(form).getByTestId("group-member-u_01hx7k6r8j"));
+    await user.click(within(form).getByTestId("group-add-person"));
+    await user.click(
+      await screen.findByRole("option", { name: /Дмитрий Кузнецов/ }),
+    );
+    expect(within(form).getByTestId("group-chosen")).toHaveTextContent(
+      "Дмитрий Кузнецов",
+    );
     await user.click(within(form).getByTestId("group-save"));
     expect(await screen.findByText("Проект")).toBeVisible();
     expect(screen.getByText("1 человек")).toBeVisible();
@@ -464,24 +539,17 @@ describe("организации: чистая логика", () => {
     expect(assignableRoles(admin)).not.toContain("owner");
     expect(canEditMember(admin, "owner")).toBe(false);
     expect(canEditMember(admin, "member")).toBe(true);
-    const members = [
-      {
-        user_id: "a",
-        name: "A",
-        email: "a@x.org",
-        role: "owner",
-        joined_at: "",
-      },
-      {
-        user_id: "b",
-        name: "B",
-        email: "b@x.org",
-        role: "owner",
-        joined_at: "",
-      },
-    ] as const;
-    expect(isLastOwner(members, members[0])).toBe(false);
-    expect(isLastOwner([members[0]], members[0])).toBe(true);
+    const owner = {
+      user_id: "a",
+      name: "A",
+      email: "a@x.org",
+      role: "owner",
+      joined_at: "",
+    } as const;
+    expect(isLastOwner(owner, 2)).toBe(false);
+    expect(isLastOwner(owner, 1)).toBe(true);
+    // Без числа владельцев замка нет: защищает сервер.
+    expect(isLastOwner(owner)).toBe(false);
   });
 
   it("локаль подключается один раз", async () => {

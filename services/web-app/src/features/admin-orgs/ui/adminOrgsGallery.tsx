@@ -150,6 +150,8 @@ const members = (extra: Partial<MembersViewProps> = {}) => (
     members={MEMBERS}
     viewer={FULL}
     selfId="ivan"
+    total={MEMBERS.length}
+    roleCounts={{ owner: 1, admin: 1, member: 4 }}
     onAdd={() => undefined}
     onSetRole={noop}
     onRemove={() => undefined}
@@ -161,9 +163,9 @@ const groups = (extra: Partial<GroupsViewProps> = {}) => (
   <GroupsView
     status="ready"
     groups={GROUPS}
-    members={MEMBERS}
+    total={GROUPS.length}
     onCreate={() => undefined}
-    onUpdate={() => undefined}
+    onRename={() => undefined}
     onDelete={() => undefined}
     {...extra}
   />
@@ -337,7 +339,7 @@ export const getAdminOrgsGallery = (): GalleryGroup[] => [
       entry(
         "admin_groups_nomembers",
         "В организации нет людей",
-        () => groups({ groups: [], members: [] }),
+        () => groups({ groups: [], memberSource: null }),
         { note: "В форме создания группы выбирать некого." },
       ),
     ],

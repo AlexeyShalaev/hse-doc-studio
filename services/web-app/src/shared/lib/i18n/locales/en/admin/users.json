@@ -170,7 +170,8 @@
     "linkLabel": "Invitation link",
     "linkFor": "Send it to {{email}}: only this address can open it.",
     "linkAnyone": "Anyone you pass it to can sign up with it.",
-    "sent": "Invitation sent to {{email}}."
+    "sent": "Invitation sent to {{email}}.",
+    "search": "Find by email"
   },
   "approvals": {
     "caption": "Awaiting approval",
@@ -197,9 +198,8 @@
     "rejected": "{{name}}: request rejected.",
     "approvedMany_one": "{{count}} request approved.",
     "approvedMany_other": "{{count}} requests approved.",
-    "page": "Page {{page}} of {{pages}}",
-    "prev": "Previous page",
-    "next": "Next page"
+    "approveShown_one": "Approve {{count}} on this page",
+    "approveShown_other": "Approve {{count}} on this page"
   },
   "audit": {
     "title": "Audit",
@@ -384,5 +384,21 @@
     "network": "The server is unreachable. Check the connection and try again.",
     "unknown": "The action failed. Try again later."
   },
-  "linkOnce": "The link is shown once: after closing you cannot see it again."
+  "linkOnce": "The link is shown once: after closing you cannot see it again.",
+  "filters": {
+    "search": "Search",
+    "admins": "Administrators",
+    "members": "Users",
+    "org": "Organization",
+    "orgSearch": "Find an organization"
+  },
+  "sort": {
+    "label": "Order",
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "waiting": "Waiting longest",
+    "name": "By name",
+    "email": "By email",
+    "lastLogin": "Recently signed in"
+  }
 }

@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { PICKER_LIMIT, type ListRequestParams } from "@shared/lib";
 import {
   projectAccessApi,
   type SetProjectAccessRequest,
@@ -12,10 +18,15 @@ export const projectAccessKeys = {
     [...projectAccessKeys.all, projectId, "candidates", q] as const,
 };
 
-export const useProjectAccess = (projectId: string) =>
+/** Страница списка доступа: поиск, вид и окно считает сервер. */
+export const useProjectAccess = (
+  projectId: string,
+  params: ListRequestParams,
+) =>
   useQuery({
-    queryKey: projectAccessKeys.list(projectId),
-    queryFn: () => projectAccessApi.list(projectId),
+    queryKey: [...projectAccessKeys.list(projectId), params],
+    queryFn: ({ signal }) => projectAccessApi.list(projectId, params, signal),
+    placeholderData: keepPreviousData,
     staleTime: 10_000,
   });
 
@@ -26,7 +37,9 @@ export const useAccessCandidates = (
 ) =>
   useQuery({
     queryKey: projectAccessKeys.candidates(projectId, q),
-    queryFn: () => projectAccessApi.candidates(projectId, q),
+    queryFn: ({ signal }) =>
+      projectAccessApi.candidates(projectId, q, PICKER_LIMIT, signal),
+    placeholderData: keepPreviousData,
     enabled,
     staleTime: 5_000,
   });

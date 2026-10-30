@@ -10,12 +10,12 @@ import type {
 } from "@entities/session";
 import type { DemoGroup, DemoOrg } from "./adminOrgs";
 import {
-  enumParam,
   boolParam,
+  enumParam,
+  hit,
   invalidQuery,
   offsetList,
   searchOf,
-  hit,
 } from "./demoList";
 import { adminOrgsOf, type ServerDemoWorld } from "./world";
 
@@ -32,7 +32,8 @@ import { adminOrgsOf, type ServerDemoWorld } from "./world";
 // адрес организации admin, api, auth, account зарезервирован.
 //
 // Списки идут по единому контракту (demoList.ts): поиск, фильтры, сортировка и
-// страницы.
+// страницы. Организация несёт owner_count; группа отдаёт число участников и
+// первых пятерых, состав листается .../groups/{id}/members и меняется точечно.
 
 const ROLES: readonly OrgRoleName[] = ["owner", "admin", "member"];
 const RESERVED = ["admin", "api", "auth", "account", "orgs", "new"];
@@ -64,20 +65,24 @@ export const createOrgRoutes = (
   const isFull = (org: DemoOrg): boolean =>
     viewer()?.is_instance_admin === true || roleIn(org) === "owner";
 
+  const owners = (org: DemoOrg): number =>
+    org.members.filter((m) => m.role === "owner").length;
+
   const summary = (org: DemoOrg): AdminOrg => ({
     slug: org.slug,
     name: org.name,
     member_count: org.members.length,
     project_count: org.project_count,
-    owner_count: org.members.filter((m) => m.role === "owner").length,
+    owner_count: owners(org),
     my_role: roleIn(org),
   });
 
   /** Группа наружу: число участников и первые пять по имени. */
   const groupOf = (org: DemoOrg, group: DemoGroup): AdminGroup => {
+    const ids = new Set(group.member_ids);
     const people = org.members
-      .filter((m) => group.member_ids.includes(m.user_id))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .filter((m) => ids.has(m.user_id))
+      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
     return {
       id: group.id,
       name: group.name,
@@ -86,6 +91,19 @@ export const createOrgRoutes = (
         .slice(0, 5)
         .map((m) => ({ user_id: m.user_id, name: m.name })),
     };
+  };
+
+  /** Участник группы: имя и почта из организации, время добавления. */
+  const groupMembers = (org: DemoOrg, group: DemoGroup): AdminGroupMember[] => {
+    const ids = new Set(group.member_ids);
+    return org.members
+      .filter((m) => ids.has(m.user_id))
+      .map((m) => ({
+        user_id: m.user_id,
+        name: m.name,
+        email: m.email,
+        added_at: group.added_at?.[m.user_id] ?? m.joined_at,
+      }));
   };
 
   const guard = (): DemoResponse | null => {
@@ -113,9 +131,6 @@ export const createOrgRoutes = (
       const org = state().orgs.find((o) => o.slug === req.params.slug);
       return org && manages(org) ? handler(org, req) : notFound();
     });
-
-  const owners = (org: DemoOrg): number =>
-    org.members.filter((m) => m.role === "owner").length;
 
   const body = (req: { body?: unknown }): Record<string, unknown> =>
     (req.body ?? {}) as Record<string, unknown>;
@@ -237,6 +252,7 @@ export const createOrgRoutes = (
       }),
     },
     {
+      // Числа на чипах ролей под тем же поиском.
       method: "GET",
       pattern: "/orgs/:slug/members/facets",
       handler: withOrg((org, req) => {
@@ -254,8 +270,9 @@ export const createOrgRoutes = (
       pattern: "/orgs/:slug/members",
       handler: withOrg((org, req) => {
         const b = body(req);
+        // Человек из пикера приходит по id, запасной путь по почте.
+        const userId = str(b.user_id).trim();
         const email = str(b.email).trim().toLowerCase();
-        const userId = str(b.user_id);
         if ((email === "") === (userId === "") || !isRole(b.role)) {
           return invalid();
         }
@@ -364,10 +381,12 @@ export const createOrgRoutes = (
         ) {
           return invalid();
         }
+        const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
         const group: DemoGroup = {
           id: newId("g"),
           name,
           member_ids: memberIds,
+          added_at: Object.fromEntries(memberIds.map((id) => [id, now])),
         };
         org.groups = [...org.groups, group];
         return demoJson(groupOf(org, group), 201);
@@ -413,16 +432,7 @@ export const createOrgRoutes = (
       handler: withOrg((org, req) => {
         const group = org.groups.find((g) => g.id === req.params.id);
         if (!group) return notFound();
-        const ids = new Set(group.member_ids);
-        const people: AdminGroupMember[] = org.members
-          .filter((m) => ids.has(m.user_id))
-          .map((m) => ({
-            user_id: m.user_id,
-            name: m.name,
-            email: m.email,
-            added_at: m.joined_at,
-          }));
-        return offsetList(req, people, {
+        return offsetList(req, groupMembers(org, group), {
           sort: {
             name: (m: AdminGroupMember) => m.name,
             email: (m: AdminGroupMember) => m.email,
@@ -445,12 +455,14 @@ export const createOrgRoutes = (
         if (group.member_ids.includes(person.user_id)) {
           return demoError(409, "already_member", "Already a member");
         }
+        const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
         group.member_ids = [...group.member_ids, person.user_id];
+        group.added_at = { ...group.added_at, [person.user_id]: now };
         const added: AdminGroupMember = {
           user_id: person.user_id,
           name: person.name,
           email: person.email,
-          added_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+          added_at: now,
         };
         return demoJson(added, 201);
       }),

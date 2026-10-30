@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ApiError, failureCode } from "@shared/api";
 import { useBootstrap } from "@entities/session";
-import { useDeleteOrg, useGroups, useOrg } from "../api/adminOrgsQueries";
+import { useDeleteOrg, useGroupCount, useOrg } from "../api/adminOrgsQueries";
 import type { Failure } from "../lib/failure";
 import type { Viewer } from "../lib/permissions";
 import { GroupsTab } from "./GroupsTab";
@@ -21,8 +21,8 @@ export const OrgDetail = ({
   onDeleted: () => void;
 }) => {
   const org = useOrg(slug);
-  // Тот же запрос, что у вкладки групп: число на вкладке без лишнего похода.
-  const groups = useGroups(slug);
+  // Число групп на вкладке: total ответа из одной строки, без всего списка.
+  const groupCount = useGroupCount(slug).data ?? null;
   const remove = useDeleteOrg();
   const user = useBootstrap().data?.user;
   const [tab, setTab] = useState<OrgTab>(initialTab);
@@ -53,7 +53,7 @@ export const OrgDetail = ({
       onRetry={() => {
         void org.refetch();
       }}
-      groupCount={groups.data?.length ?? null}
+      groupCount={groupCount}
       canDelete={instanceAdmin}
       deleting={remove.isPending}
       deleteFailure={deleteFailure}

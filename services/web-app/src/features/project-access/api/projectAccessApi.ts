@@ -1,4 +1,5 @@
 import { apiClient, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   ProjectAccessCandidateListSchema,
   ProjectAccessPageSchema,
@@ -17,26 +18,35 @@ export type SetProjectAccessRequest = {
 };
 const base = (projectId: string) => `/projects/${enc(projectId)}/members`;
 
+export type CandidatePage = {
+  items: ProjectAccessCandidate[];
+  has_more: boolean;
+};
+
 // Запись идёт без молчания: отказ по роли показывает общий тост с названием роли.
 // Остальные отказы панель показывает сама.
 export const projectAccessApi = {
-  // Сервер листает список сам; панель пока берёт одну страницу наибольшего размера.
-  list: (projectId: string): Promise<ProjectAccessEntry[]> =>
+  list: (
+    projectId: string,
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<ProjectAccessEntry>> =>
     apiClient
-      .get(base(projectId), { params: { limit: 200 }, silentError: true })
-      .then(parseResp(ProjectAccessPageSchema))
-      .then((page) => page.items),
+      .get(base(projectId), { silentError: true, signal, params })
+      .then(parseResp(ProjectAccessPageSchema)),
   candidates: (
     projectId: string,
     q: string,
-  ): Promise<ProjectAccessCandidate[]> =>
+    limit: number,
+    signal: AbortSignal,
+  ): Promise<CandidatePage> =>
     apiClient
       .get(`${base(projectId)}/candidates`, {
-        params: { q },
+        params: { q, limit },
         silentError: true,
+        signal,
       })
-      .then(parseResp(ProjectAccessCandidateListSchema))
-      .then((list) => list.items),
+      .then(parseResp(ProjectAccessCandidateListSchema)),
   // Запись идёт ручками бэкенда PUT|DELETE .../members/{user|group}:{id}; список панель
   // перечитывает сама, поэтому ответ не нужен.
   set: async (

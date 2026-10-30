@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
+import { localeTag } from "../../lib/i18n/localeTag";
 
 // Каркас страницы админки: одинаковые поля, ширина и заголовок на всех
 // разделах. Ширина «wide» для таблиц и сводок, «narrow» для форм настроек.
@@ -94,7 +95,7 @@ export const PageTabs = <T extends string>({
           {tab.label}
           {tab.count !== undefined && (
             <span className="adm-count" data-tone={tab.countTone ?? "neutral"}>
-              {tab.count}
+              {tab.count.toLocaleString(localeTag())}
             </span>
           )}
         </button>

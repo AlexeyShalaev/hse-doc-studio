@@ -44,24 +44,12 @@
       "bodyAdmin": "Организация объединяет участников и их проекты. Создайте первую и назначьте владельца.",
       "bodyOrgAdmin": "Вы пока не управляете ни одной организацией."
     },
-    "noMatch": {
-      "title": "Ничего не найдено",
-      "body": "Измените запрос или сбросьте поиск."
-    },
     "open": "Открыть организацию",
-    "summary": {
-      "orgs_one": "{{count}} организация",
-      "orgs_few": "{{count}} организации",
-      "orgs_many": "{{count}} организаций",
-      "orgs_other": "{{count}} организации",
-      "members_one": "{{count}} участник",
-      "members_few": "{{count}} участника",
-      "members_many": "{{count}} участников",
-      "members_other": "{{count}} участника",
-      "projects_one": "{{count}} проект",
-      "projects_few": "{{count}} проекта",
-      "projects_many": "{{count}} проектов",
-      "projects_other": "{{count}} проекта"
+    "filters": {
+      "search": "Поиск",
+      "mine": "Участие",
+      "member": "Где я участник",
+      "notMember": "Где меня нет"
     }
   },
   "create": {
@@ -105,10 +93,10 @@
     },
     "projects": {
       "none": "Проектов нет",
-      "count_one": "{{count}} проект",
-      "count_few": "{{count}} проекта",
-      "count_many": "{{count}} проектов",
-      "count_other": "{{count}} проекта",
+      "count_one": "{{count, number}} проект",
+      "count_few": "{{count, number}} проекта",
+      "count_many": "{{count, number}} проектов",
+      "count_other": "{{count, number}} проекта",
       "hint": "Проекты открываются в Studio. Здесь видно, сколько их в организации."
     },
     "settings": {
@@ -120,10 +108,10 @@
       "role": "Ваша роль"
     },
     "members": {
-      "count_one": "{{count}} участник",
-      "count_few": "{{count}} участника",
-      "count_many": "{{count}} участников",
-      "count_other": "{{count}} участника"
+      "count_one": "{{count, number}} участник",
+      "count_few": "{{count, number}} участника",
+      "count_many": "{{count, number}} участников",
+      "count_other": "{{count, number}} участника"
     }
   },
   "members": {
@@ -142,7 +130,14 @@
       "email": "Почта",
       "role": "Роль",
       "submit": "Добавить",
-      "emailInvalid": "Введите адрес почты."
+      "emailInvalid": "Введите адрес почты.",
+      "person": "Человек",
+      "personRequired": "Выберите человека.",
+      "personPlaceholder": "Выберите человека",
+      "personSearch": "Имя или почта",
+      "personNone": "Никого не нашли среди активных людей вне организации.",
+      "byPicker": "Выбрать из людей установки",
+      "byEmail": "Нет в списке? Добавить по почте"
     },
     "search": "Найти человека",
     "caption": "Участники организации",
@@ -151,7 +146,6 @@
       "title": "Участников нет",
       "body": "Добавьте человека по почте: он должен быть зарегистрирован."
     },
-    "noMatch": "Никого не нашли",
     "remove": {
       "aria": "Убрать: {{name}}",
       "title": "Убрать из организации?",
@@ -160,7 +154,10 @@
       "confirm": "Убрать",
       "item": "Убрать из организации"
     },
-    "actions": "Действия: {{name}}"
+    "actions": "Действия: {{name}}",
+    "filters": {
+      "search": "Поиск"
+    }
   },
   "groups": {
     "lead": "Группа собирает людей организации, чтобы выдавать доступ к проектам сразу всем.",
@@ -192,19 +189,33 @@
       "members_one": "Участники группы: {{count}}",
       "members_few": "Участники группы: {{count}}",
       "members_many": "Участники группы: {{count}}",
-      "members_other": "Участники группы: {{count}}"
+      "members_other": "Участники группы: {{count}}",
+      "add": "Добавить человека",
+      "unpick": "Не добавлять: {{name}}",
+      "searchIn": "Найти в группе",
+      "removeOne": "Убрать из группы: {{name}}",
+      "loadFailed": "Не удалось загрузить состав группы."
     },
-    "count_one": "{{count}} человек",
-    "count_few": "{{count}} человека",
-    "count_many": "{{count}} человек",
-    "count_other": "{{count}} человека",
-    "more_one": "и ещё {{count}}",
-    "more_few": "и ещё {{count}}",
-    "more_many": "и ещё {{count}}",
-    "more_other": "и ещё {{count}}"
+    "count_one": "{{count, number}} человек",
+    "count_few": "{{count, number}} человека",
+    "count_many": "{{count, number}} человек",
+    "count_other": "{{count, number}} человека",
+    "more_one": "и ещё {{count, number}}",
+    "more_few": "и ещё {{count, number}}",
+    "more_many": "и ещё {{count, number}}",
+    "more_other": "и ещё {{count, number}}",
+    "search": "Найти группу",
+    "sort": {
+      "label": "Порядок",
+      "name": "По названию",
+      "biggest": "Сначала большие",
+      "smallest": "Сначала маленькие"
+    }
   },
   "userOrgs": {
     "none": "Ни в одной организации.",
-    "failed": "Не удалось загрузить организации."
+    "failed": "Не удалось загрузить организации.",
+    "search": "Найти организацию",
+    "noMatch": "Ничего не нашли."
   }
 }

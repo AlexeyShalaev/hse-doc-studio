@@ -1,95 +1,81 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { failureCode } from "@shared/api";
+import { useListQueryState, useServerList } from "@shared/lib";
+import { adminPickers } from "@entities/session";
+import { adminOrgsApi } from "../api/adminOrgsApi";
 import {
+  adminOrgsKeys,
   useCreateGroup,
   useDeleteGroup,
-  useGroups,
-  useMembers,
-  useSyncGroupMembers,
-  useUpdateGroup,
+  useRenameGroup,
 } from "../api/adminOrgsQueries";
 import type { Failure } from "../lib/failure";
+import { GROUPS_LIST } from "../lib/listState";
 import { GroupsView } from "./GroupsView";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
 export const GroupsTab = ({ slug }: { slug: string }) => {
-  const groups = useGroups(slug);
-  const members = useMembers(slug);
+  const state = useListQueryState(GROUPS_LIST);
+  const groups = useServerList({
+    state,
+    queryKey: adminOrgsKeys.groups(slug),
+    fetchPage: (params, signal) => adminOrgsApi.groups(slug, params, signal),
+  });
+  // Участников группы ищут среди участников организации на сервере.
+  const memberSource = useMemo(() => adminPickers.orgMembers(slug), [slug]);
   const create = useCreateGroup(slug);
-  const update = useUpdateGroup(slug);
-  const sync = useSyncGroupMembers(slug);
+  const rename = useRenameGroup(slug);
   const remove = useDeleteGroup(slug);
   const [formFailure, setFormFailure] = useState<Failure | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
 
   const status =
-    groups.data !== undefined && members.data !== undefined
-      ? "ready"
-      : groups.isError || members.isError
-        ? "error"
-        : "loading";
+    groups.isError && groups.items.length === 0
+      ? "error"
+      : groups.isLoading
+        ? "loading"
+        : "ready";
+
+  const settle = (promise: Promise<unknown>, onFail: (f: Failure) => void) =>
+    promise.then(
+      () => true,
+      (error: unknown) => {
+        onFail(asFailure(error));
+        return false;
+      },
+    );
 
   return (
     <GroupsView
       status={status}
-      groups={groups.data ?? []}
-      members={members.data ?? []}
+      groups={groups.items}
+      slug={slug}
+      memberSource={memberSource}
+      total={groups.isLoading ? null : groups.total}
+      pagination={groups.pagination}
+      fetching={groups.isFetching}
       formFailure={formFailure}
       failure={failure}
-      saving={create.isPending || update.isPending || sync.isPending}
+      saving={create.isPending || rename.isPending}
       deleting={remove.isPending}
       onRetry={() => {
         void groups.refetch();
-        void members.refetch();
       }}
       onReset={() => {
         setFormFailure(null);
         setFailure(null);
       }}
       onCreate={(draft) =>
-        create
-          .mutateAsync({ name: draft.name, member_ids: draft.memberIds })
-          .then(
-            () => true,
-            (error: unknown) => {
-              setFormFailure(asFailure(error));
-              return false;
-            },
-          )
-      }
-      onUpdate={(group, draft) => {
-        // Форма знает только показанных участников (preview): меняем состав разницей, а не заменой.
-        const shown = group.preview.map((m) => m.user_id);
-        return update
-          .mutateAsync({
-            id: group.id,
-            body: { name: draft.name, member_ids: null },
-          })
-          .then(() =>
-            sync.mutateAsync({
-              id: group.id,
-              add: draft.memberIds.filter((id) => !shown.includes(id)),
-              remove: shown.filter((id) => !draft.memberIds.includes(id)),
-            }),
-          )
-          .then(
-            () => true,
-            (error: unknown) => {
-              setFormFailure(asFailure(error));
-              return false;
-            },
-          );
-      }}
-      onDelete={(group) =>
-        remove.mutateAsync(group.id).then(
-          () => true,
-          (error: unknown) => {
-            setFailure(asFailure(error));
-            return false;
-          },
+        settle(
+          create.mutateAsync({ name: draft.name, member_ids: draft.memberIds }),
+          setFormFailure,
         )
       }
+      onRename={(group, name) =>
+        settle(rename.mutateAsync({ id: group.id, name }), setFormFailure)
+      }
+      onDelete={(group) => settle(remove.mutateAsync(group.id), setFailure)}
     />
   );
 };

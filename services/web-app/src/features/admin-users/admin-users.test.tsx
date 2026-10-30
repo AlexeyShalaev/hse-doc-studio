@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
 import { createDemoRouter } from "@shared/api/demo";
@@ -40,7 +41,7 @@ const wrap = (node: React.ReactNode) => (
         })
       }
     >
-      {node}
+      <MemoryRouter>{node}</MemoryRouter>
     </QueryClientProvider>
   </I18nextProvider>
 );
@@ -122,13 +123,19 @@ describe("люди в админке: экраны", () => {
     expect(screen.getByTestId("status-disabled")).toBeVisible();
     expect(screen.getByText("вы")).toBeVisible();
     await user.type(screen.getByRole("searchbox"), "келлер");
-    await waitFor(() => {
-      expect(screen.queryByText("Пётр Орлов")).toBeNull();
-    });
+    // Поиск уходит на сервер после паузы в наборе.
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Пётр Орлов")).toBeNull();
+      },
+      { timeout: 3000 },
+    );
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "никого-нет");
-    expect(await screen.findByText("Никого не нашли")).toBeVisible();
-  });
+    expect(
+      await screen.findByText("Ничего не найдено", {}, { timeout: 3000 }),
+    ).toBeVisible();
+  }, 15_000);
 
   it("отключение требует подтверждения, ссылка сброса показывается на экране", async () => {
     const user = userEvent.setup();
@@ -152,7 +159,7 @@ describe("люди в админке: экраны", () => {
       within(await screen.findByRole("dialog")).getByTestId("user-confirm"),
     );
     expect(await screen.findByTestId("link-delivery")).toBeVisible();
-  });
+  }, 15_000);
 
   it("назначение администратором меняет действие в меню", async () => {
     const user = userEvent.setup();
@@ -193,7 +200,7 @@ describe("люди в админке: экраны", () => {
     await waitFor(() => {
       expect(screen.queryByText("new.student@example.org")).toBeNull();
     });
-  });
+  }, 15_000);
 
   it("одобрения: счётчик на вкладке, решение в строке и пачкой", async () => {
     const user = userEvent.setup();
@@ -254,15 +261,18 @@ describe("люди в админке: экраны", () => {
     expect(within(drawer).getByTestId("drawer-resetLink")).toBeEnabled();
   });
 
-  it("фильтр по состоянию показывает число людей на чипе", async () => {
+  it("фильтр по состоянию показывает число людей с сервера", async () => {
     const user = userEvent.setup();
     render(wrap(<AdminUsers />));
     await screen.findByText("Мария Келлер");
-    const chip = await screen.findByRole("button", { name: /Ждёт одобрения/ });
-    await waitFor(() => {
-      expect(chip).toHaveTextContent("3");
+    await user.click(screen.getByTestId("users-filter-status"));
+    const option = await screen.findByRole("checkbox", {
+      name: /Ждёт одобрения/,
     });
-    await user.click(chip);
+    await waitFor(() => {
+      expect(option).toHaveTextContent("3");
+    });
+    await user.click(option);
     await waitFor(() => {
       expect(screen.queryByText("Мария Келлер")).toBeNull();
     });

@@ -44,18 +44,12 @@
       "bodyAdmin": "An organization groups people and their projects. Create the first one and assign an owner.",
       "bodyOrgAdmin": "You do not manage any organization yet."
     },
-    "noMatch": {
-      "title": "Nothing found",
-      "body": "Change the query or reset the search."
-    },
     "open": "Open organization",
-    "summary": {
-      "orgs_one": "{{count}} organization",
-      "orgs_other": "{{count}} organizations",
-      "members_one": "{{count}} member",
-      "members_other": "{{count}} members",
-      "projects_one": "{{count}} project",
-      "projects_other": "{{count}} projects"
+    "filters": {
+      "search": "Search",
+      "mine": "Membership",
+      "member": "I am a member",
+      "notMember": "I am not a member"
     }
   },
   "create": {
@@ -97,8 +91,8 @@
     },
     "projects": {
       "none": "No projects",
-      "count_one": "{{count}} project",
-      "count_other": "{{count}} projects",
+      "count_one": "{{count, number}} project",
+      "count_other": "{{count, number}} projects",
       "hint": "Projects open in the Studio. This shows how many the organization has."
     },
     "settings": {
@@ -110,8 +104,8 @@
       "role": "Your role"
     },
     "members": {
-      "count_one": "{{count}} member",
-      "count_other": "{{count}} members"
+      "count_one": "{{count, number}} member",
+      "count_other": "{{count, number}} members"
     }
   },
   "members": {
@@ -130,7 +124,14 @@
       "email": "Email",
       "role": "Role",
       "submit": "Add",
-      "emailInvalid": "Enter an email address."
+      "emailInvalid": "Enter an email address.",
+      "person": "Person",
+      "personRequired": "Choose a person.",
+      "personPlaceholder": "Choose a person",
+      "personSearch": "Name or email",
+      "personNone": "No active people outside the organization match.",
+      "byPicker": "Choose from people on this server",
+      "byEmail": "Not listed? Add by email"
     },
     "search": "Find a person",
     "caption": "Organization members",
@@ -139,7 +140,6 @@
       "title": "No members",
       "body": "Add a person by email: they need to be registered."
     },
-    "noMatch": "Nobody found",
     "remove": {
       "aria": "Remove {{name}}",
       "title": "Remove from the organization?",
@@ -148,7 +148,10 @@
       "confirm": "Remove",
       "item": "Remove from organization"
     },
-    "actions": "Actions: {{name}}"
+    "actions": "Actions: {{name}}",
+    "filters": {
+      "search": "Search"
+    }
   },
   "groups": {
     "lead": "A group collects people of the organization so access to projects can be given to all of them at once.",
@@ -178,15 +181,29 @@
       "noMatch": "Nobody found",
       "noMembers": "The organization has no people yet: add them on the Members tab.",
       "members_one": "Group members: {{count}}",
-      "members_other": "Group members: {{count}}"
+      "members_other": "Group members: {{count}}",
+      "add": "Add a person",
+      "unpick": "Do not add {{name}}",
+      "searchIn": "Find in the group",
+      "removeOne": "Remove from the group: {{name}}",
+      "loadFailed": "Could not load the group members."
     },
-    "count_one": "{{count}} person",
-    "count_other": "{{count}} people",
-    "more_one": "and {{count}} more",
-    "more_other": "and {{count}} more"
+    "count_one": "{{count, number}} person",
+    "count_other": "{{count, number}} people",
+    "more_one": "and {{count, number}} more",
+    "more_other": "and {{count, number}} more",
+    "search": "Find a group",
+    "sort": {
+      "label": "Order",
+      "name": "By name",
+      "biggest": "Largest first",
+      "smallest": "Smallest first"
+    }
   },
   "userOrgs": {
     "none": "Not in any organization.",
-    "failed": "Could not load organizations."
+    "failed": "Could not load organizations.",
+    "search": "Find an organization",
+    "noMatch": "Nothing found."
   }
 }

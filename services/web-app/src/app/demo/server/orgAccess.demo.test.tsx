@@ -198,7 +198,11 @@ describe("демо: панель «Доступ»", () => {
       role: "reviewer",
     });
     await projectAccessApi.remove(OWN, "user", "u_01hx7k4p6g");
-    const entries = await projectAccessApi.list(OWN);
+    const { items: entries } = await projectAccessApi.list(
+      OWN,
+      { limit: 50, offset: 0 },
+      new AbortController().signal,
+    );
     expect(entries.some((e) => e.subject_id === "u_01hx7k4p6g")).toBe(false);
   });
 });
