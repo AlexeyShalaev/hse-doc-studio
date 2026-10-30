@@ -190,8 +190,11 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ),
     ("POST", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
     ("DELETE", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
+    # Панель «Доступ»: список видит любой участник проекта
+    ("GET", "/projects/{project_id}/members"): RouteRule(Action.PROJECT_VIEW),
     # Настройки проекта (владелец)
     ("PATCH", "/projects/{project_id}"): RouteRule(Action.PROJECT_SETTINGS),
+    ("GET", "/projects/{project_id}/members/candidates"): RouteRule(Action.PROJECT_SETTINGS),
     ("PUT", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("DELETE", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/move"): RouteRule(Action.PROJECT_SETTINGS),

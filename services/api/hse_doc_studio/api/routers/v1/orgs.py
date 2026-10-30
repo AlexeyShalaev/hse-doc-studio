@@ -13,6 +13,7 @@ from hse_doc_studio.api.schemas.session import (
     CreateOrgRequest,
     Group,
     GroupMember,
+    MyOrg,
     Org,
     OrgMember,
     UpdateGroupRequest,
@@ -21,7 +22,14 @@ from hse_doc_studio.api.schemas.session import (
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
-from hse_doc_studio.core.orgs.entities import GroupMemberView, GroupSummary, OrgMemberView, OrgRole, OrgSummary
+from hse_doc_studio.core.orgs.entities import (
+    GroupMemberView,
+    GroupSummary,
+    MyOrgSummary,
+    OrgMemberView,
+    OrgRole,
+    OrgSummary,
+)
 from hse_doc_studio.use_cases.orgs.groups import (
     AddGroupMemberUC,
     CreateGroupUC,
@@ -38,7 +46,14 @@ from hse_doc_studio.use_cases.orgs.members import (
     ListOrgMembersUC,
     RemoveOrgMemberUC,
 )
-from hse_doc_studio.use_cases.orgs.orgs import CreateOrgUC, DeleteOrgUC, GetOrgUC, ListMyOrgsUC, UpdateOrgUC
+from hse_doc_studio.use_cases.orgs.orgs import (
+    CreateOrgUC,
+    DeleteOrgUC,
+    GetOrgUC,
+    ListAccountOrgsUC,
+    ListMyOrgsUC,
+    UpdateOrgUC,
+)
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
 
@@ -84,6 +99,30 @@ def _group(found: GroupSummary) -> Group:
 
 def _group_member(view: GroupMemberView) -> GroupMember:
     return GroupMember(user_id=view.user_id, name=view.name, email=view.email, added_at=view.added_at)
+
+
+def _my_org(found: MyOrgSummary) -> MyOrg:
+    return MyOrg(
+        slug=found.summary.org.slug,
+        name=found.summary.org.name,
+        my_role=found.summary.my_role.value,
+        member_count=found.summary.member_count,
+        groups=list(found.groups),
+        sole_owner=found.sole_owner,
+    )
+
+
+@router.get("/account/orgs", response_model=list[MyOrg])
+async def list_account_orgs(request: Request, response: Response) -> list[MyOrg]:
+    """«Настройки / Организации»: только свои организации, чужих не видно."""
+    response.headers["Cache-Control"] = "no-store"
+    return [_my_org(x) for x in await (await _uc(request, ListAccountOrgsUC)).execute(_actor())]
+
+
+@router.delete("/account/orgs/{slug}/membership", status_code=status.HTTP_204_NO_CONTENT)
+async def leave_account_org(slug: str, request: Request) -> Response:
+    await (await _uc(request, LeaveOrgUC)).execute(_actor(), slug)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/orgs", response_model=list[Org])

@@ -10,8 +10,8 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import is_reserved_slug, is_valid_slug, normalize_email
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
-from hse_doc_studio.core.orgs.entities import ORG_NAME_MAX, Org, OrgMember, OrgRole, OrgSummary
-from hse_doc_studio.core.orgs.protocols import IOrgRepository
+from hse_doc_studio.core.orgs.entities import ORG_NAME_MAX, MyOrgSummary, Org, OrgMember, OrgRole, OrgSummary
+from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import load_context_by_slug, require_role, user_id_of
 
@@ -41,6 +41,28 @@ class ListMyOrgsUC:
 
     async def execute(self, actor: Actor) -> list[OrgSummary]:
         return await self._orgs.list_for_user(user_id_of(actor))
+
+
+class ListAccountOrgsUC:
+    """«Настройки / Организации»: свои организации с названиями своих групп и признаком единственного владельца."""
+
+    def __init__(self, orgs: IOrgRepository, groups: IGroupRepository) -> None:
+        self._orgs = orgs
+        self._groups = groups
+
+    async def execute(self, actor: Actor) -> list[MyOrgSummary]:
+        user_id = user_id_of(actor)
+        found = await self._orgs.list_for_user(user_id)
+        owners = await self._orgs.owner_counts([x.org.id for x in found])
+        groups = await self._groups.names_for_user(user_id)
+        return [
+            MyOrgSummary(
+                summary=x,
+                groups=tuple(groups.get(x.org.id, ())),
+                sole_owner=x.my_role is OrgRole.owner and owners.get(x.org.id, 0) == 1,
+            )
+            for x in found
+        ]
 
 
 class GetOrgUC:

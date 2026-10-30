@@ -83,6 +83,20 @@ from hse_doc_studio.use_cases.admin.oidc import (
     ListOidcProvidersUC,
     UpdateOidcProviderUC,
 )
+from hse_doc_studio.use_cases.admin.orgs import (
+    AddAdminMemberUC,
+    CreateAdminGroupUC,
+    CreateAdminOrgUC,
+    DeleteAdminGroupUC,
+    DeleteAdminOrgUC,
+    GetAdminOrgUC,
+    ListAdminGroupsUC,
+    ListAdminMembersUC,
+    ListAdminOrgsUC,
+    RemoveAdminMemberUC,
+    SetAdminMemberRoleUC,
+    UpdateAdminGroupUC,
+)
 from hse_doc_studio.use_cases.admin.settings import GetAuthGroupUC, UpdateAuthMethodsUC, UpdateRegistrationUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
@@ -144,7 +158,14 @@ from hse_doc_studio.use_cases.orgs.members import (
     ListOrgMembersUC,
     RemoveOrgMemberUC,
 )
-from hse_doc_studio.use_cases.orgs.orgs import CreateOrgUC, DeleteOrgUC, GetOrgUC, ListMyOrgsUC, UpdateOrgUC
+from hse_doc_studio.use_cases.orgs.orgs import (
+    CreateOrgUC,
+    DeleteOrgUC,
+    GetOrgUC,
+    ListAccountOrgsUC,
+    ListMyOrgsUC,
+    UpdateOrgUC,
+)
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.server_profile import ServerClearProfileUC, ServerUpdateProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -907,3 +928,67 @@ class ServerIdentityProvider(Provider):
         self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> RemoveGroupMemberUC:
         return RemoveGroupMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_account_orgs_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListAccountOrgsUC:
+        return ListAccountOrgsUC(orgs, groups)
+
+    @provide
+    def get_list_admin_orgs_uc(self, orgs: IOrgRepository) -> ListAdminOrgsUC:
+        return ListAdminOrgsUC(orgs)
+
+    @provide
+    def get_get_admin_org_uc(self, orgs: IOrgRepository) -> GetAdminOrgUC:
+        return GetAdminOrgUC(orgs)
+
+    @provide
+    def get_create_admin_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> CreateAdminOrgUC:
+        return CreateAdminOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_delete_admin_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> DeleteAdminOrgUC:
+        return DeleteAdminOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_list_admin_members_uc(self, orgs: IOrgRepository) -> ListAdminMembersUC:
+        return ListAdminMembersUC(orgs)
+
+    @provide
+    def get_add_admin_member_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> AddAdminMemberUC:
+        return AddAdminMemberUC(orgs, users, audit, uow)
+
+    @provide
+    def get_set_admin_member_role_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> SetAdminMemberRoleUC:
+        return SetAdminMemberRoleUC(orgs, users, audit, uow)
+
+    @provide
+    def get_remove_admin_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveAdminMemberUC:
+        return RemoveAdminMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_admin_groups_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListAdminGroupsUC:
+        return ListAdminGroupsUC(orgs, groups)
+
+    @provide
+    def get_create_admin_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> CreateAdminGroupUC:
+        return CreateAdminGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_update_admin_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> UpdateAdminGroupUC:
+        return UpdateAdminGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_delete_admin_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DeleteAdminGroupUC:
+        return DeleteAdminGroupUC(orgs, groups, audit, uow)

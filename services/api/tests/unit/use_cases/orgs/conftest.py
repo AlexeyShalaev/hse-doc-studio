@@ -24,7 +24,14 @@ from hse_doc_studio.use_cases.orgs.members import (
     ListOrgMembersUC,
     RemoveOrgMemberUC,
 )
-from hse_doc_studio.use_cases.orgs.orgs import CreateOrgUC, DeleteOrgUC, GetOrgUC, ListMyOrgsUC, UpdateOrgUC
+from hse_doc_studio.use_cases.orgs.orgs import (
+    CreateOrgUC,
+    DeleteOrgUC,
+    GetOrgUC,
+    ListAccountOrgsUC,
+    ListMyOrgsUC,
+    UpdateOrgUC,
+)
 
 from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryInstanceSettingsRepository, InMemoryUserRepository
@@ -75,6 +82,7 @@ class OrgWorld:
         builders = {
             ListMyOrgsUC: lambda: ListMyOrgsUC(o),
             GetOrgUC: lambda: GetOrgUC(o),
+            ListAccountOrgsUC: lambda: ListAccountOrgsUC(o, g),
             CreateOrgUC: lambda: CreateOrgUC(o, u, self.settings, a, w, clock=lambda: T0),
             UpdateOrgUC: lambda: UpdateOrgUC(o, a, w),
             DeleteOrgUC: lambda: DeleteOrgUC(o, a, w),

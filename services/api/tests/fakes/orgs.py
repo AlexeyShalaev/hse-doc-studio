@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, replace
 
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.orgs.entities import (
+    AdminOrgSummary,
     Group,
     GroupMemberView,
     GroupSummary,
@@ -83,6 +84,28 @@ class InMemoryOrgRepository:
             self._summary(self._s.orgs[m.org_id], m.role) for m in self._s.members.values() if m.user_id == user_id
         ]
         return sorted(found, key=lambda x: (x.org.name.lower(), x.org.slug))
+
+    def _admin_summary(self, org: Org, role: OrgRole | None) -> AdminOrgSummary:
+        base = self._summary(org, role or OrgRole.member)
+        return AdminOrgSummary(org, role, base.member_count, base.group_count, base.project_count)
+
+    async def list_all(self, viewer_id: str) -> list[AdminOrgSummary]:
+        found = [
+            self._admin_summary(org, m.role if (m := self._s.members.get((org.id, viewer_id))) is not None else None)
+            for org in self._s.orgs.values()
+        ]
+        return sorted(found, key=lambda x: (x.org.name.lower(), x.org.slug))
+
+    async def summary_for_admin(self, org: Org, viewer_id: str) -> AdminOrgSummary:
+        member = self._s.members.get((org.id, viewer_id))
+        return self._admin_summary(org, member.role if member else None)
+
+    async def owner_counts(self, org_ids: list[str]) -> dict[str, int]:
+        return {
+            org_id: n
+            for org_id in org_ids
+            if (n := sum(1 for m in self._s.members.values() if m.org_id == org_id and m.role is OrgRole.owner))
+        }
 
     async def get_member(self, org_id: str, user_id: str) -> OrgMember | None:
         return self._s.members.get((org_id, user_id))
@@ -164,6 +187,21 @@ class InMemoryGroupRepository:
 
     async def remove_member(self, group_id: str, user_id: str) -> bool:
         return self._s.group_members.pop((group_id, user_id), None) is not None
+
+    async def member_ids_by_org(self, org_id: str) -> dict[str, list[str]]:
+        result: dict[str, list[str]] = {g.id: [] for g in self._s.groups.values() if g.org_id == org_id}
+        for (group_id, user_id), _ in sorted(self._s.group_members.items(), key=lambda kv: kv[1]):
+            if group_id in result:
+                result[group_id].append(user_id)
+        return result
+
+    async def names_for_user(self, user_id: str) -> dict[str, list[str]]:
+        result: dict[str, list[str]] = {}
+        for (group_id, uid), _ in self._s.group_members.items():
+            if uid == user_id:
+                group = self._s.groups[group_id]
+                result.setdefault(group.org_id, []).append(group.name)
+        return {k: sorted(v, key=str.lower) for k, v in result.items()}
 
     async def remove_user_from_org_groups(self, org_id: str, user_id: str) -> int:
         doomed = [k for k in self._s.group_members if k[1] == user_id and self._s.groups[k[0]].org_id == org_id]

@@ -28,6 +28,7 @@ from hse_doc_studio.api.observability.install import (
     install_object_store_health,
     install_project_purge,
     install_project_usage,
+    install_runner_health,
     install_server_observability,
     install_service_pool_health,
 )
@@ -206,6 +207,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         )
         install_object_store_health(app, container, health_checks)
         install_service_pool_health(app, container, health_checks, settings)
+        install_runner_health(app, container, health_checks)
         install_bucket_cors(app, container, settings)
         install_project_purge(app, container, settings)
         install_blob_gc(app, container, settings)

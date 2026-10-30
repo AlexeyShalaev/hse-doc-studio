@@ -16,7 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
-from hse_doc_studio.core.access.repositories import IProjectAclRepository, IProjectMemberRepository
+from hse_doc_studio.core.access.repositories import (
+    IProjectAccessDirectory,
+    IProjectAclRepository,
+    IProjectMemberRepository,
+)
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.export_import.local_data import ILocalDataReader
@@ -77,6 +81,7 @@ from hse_doc_studio.infra.db.repositories.git_credentials import (
 )
 from hse_doc_studio.infra.db.repositories.git_trust import PostgresGitHostSettingsRepository, PostgresKnownHostsStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository, RequestAclCache
+from hse_doc_studio.infra.db.repositories.project_directory import PostgresProjectAccessDirectory
 from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
 from hse_doc_studio.infra.db.repositories.project_usage import PostgresProjectUsageStore
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
@@ -116,6 +121,7 @@ from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIPro
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
+from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
@@ -255,6 +261,18 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_project_member_repository(self, sessions: SessionProvider) -> IProjectMemberRepository:
         return PostgresProjectMemberRepository(sessions)
+
+    @provide
+    def get_project_access_directory(self, sessions: SessionProvider) -> IProjectAccessDirectory:
+        return PostgresProjectAccessDirectory(sessions)
+
+    @provide
+    def get_list_project_access_uc(self, directory: IProjectAccessDirectory) -> ListProjectAccessUC:
+        return ListProjectAccessUC(directory)
+
+    @provide
+    def get_list_access_candidates_uc(self, directory: IProjectAccessDirectory) -> ListAccessCandidatesUC:
+        return ListAccessCandidatesUC(directory)
 
     @provide
     def get_set_project_member_uc(

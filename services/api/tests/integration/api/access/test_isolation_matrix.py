@@ -67,7 +67,6 @@ def stand(pg_engine: AsyncEngine, tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(settings.db, "dsn", dsn)
     monkeypatch.setattr(settings.db, "auto_migrate", True)
     monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
-    monkeypatch.setattr(settings.auth, "experimental", True)
     monkeypatch.setattr(settings.auth, "public_url", ORIGIN)
     monkeypatch.setattr(settings.auth, "registration_mode", RegistrationMode.invite)
     monkeypatch.setattr(settings.auth, "admin_email", ADMIN_EMAIL)
@@ -274,6 +273,33 @@ def test__matrix__sharing_then_revoking__opens_and_closes_the_project(world: _Wo
     with world.bob as client:
         assert client.get(base).status_code == 404
         assert client.get("/api/v1/projects").json() == []
+
+
+def test__access_panel__reader_sees_the_list_but_only_the_owner_searches_people(world: _World) -> None:
+    base = f"/api/v1/projects/{world.project_id}/members"
+    _share_with_bob_as_reader(world)
+    with world.alice as client:
+        owner_list = client.get(base, headers=world.alice.headers)
+        found = client.get(f"{base}/candidates", params={"q": "bob"}, headers=world.alice.headers)
+    with world.bob as client:
+        reader_list = client.get(base, headers=world.bob.headers)
+        reader_search = client.get(f"{base}/candidates", headers=world.bob.headers)
+    with world.admin as client:
+        admin_list = client.get(base, headers=world.admin.headers)
+        admin_search = client.get(f"{base}/candidates", headers=world.admin.headers)
+
+    assert owner_list.status_code == reader_list.status_code == 200
+    assert [(r["subject_id"], r["role"], r["locked"]) for r in owner_list.json()] == [
+        (world.alice_id, "owner", True),
+        (world.bob_id, "reader", False),
+    ]
+    assert owner_list.json() == reader_list.json()
+    # Люди без общей организации и без общих проектов владельцу не предлагаются.
+    assert found.status_code == 200
+    assert found.json() == []
+    assert (reader_search.status_code, reader_search.json()["code"]) == (403, "forbidden_role")
+    assert reader_search.json()["required_role"] == "owner"
+    assert (admin_list.status_code, admin_search.status_code) == (404, 404)
 
 
 def test__matrix__admin_area__is_a_404_for_a_regular_user_and_401_for_anonymous(world: _World) -> None:

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Delete, Select, delete, func, select
+from sqlalchemy import Delete, Select, and_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.orgs.entities import (
+    AdminOrgSummary,
     Group,
     GroupMemberView,
     GroupSummary,
@@ -51,11 +52,10 @@ def _group_grants_of(group_ids: Select[Any]) -> Delete:
     )
 
 
-async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> list[OrgSummary]:
-    """Счётчики одним запросом на вид: список «моих организаций» не растёт запросами вместе с числом организаций."""
-    if not pairs:
-        return []
-    ids = [org.id for org, _ in pairs]
+async def _counts(
+    session: AsyncSession, ids: list[str]
+) -> tuple[dict[str, int], dict[str, int], dict[str | None, int]]:
+    """Участники, группы и проекты по организациям: по одному запросу на вид, а не на организацию."""
     members = dict(
         (
             await session.execute(
@@ -81,10 +81,34 @@ async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> 
             )
         ).all()
     )
+    return members, groups, projects
+
+
+async def _summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str]]) -> list[OrgSummary]:
+    """Счётчики одним запросом на вид: список «моих организаций» не растёт запросами вместе с числом организаций."""
+    if not pairs:
+        return []
+    members, groups, projects = await _counts(session, [org.id for org, _ in pairs])
     return [
         OrgSummary(
             org=_org(org),
             my_role=OrgRole(role),
+            member_count=members.get(org.id, 0),
+            group_count=groups.get(org.id, 0),
+            project_count=projects.get(org.id, 0),
+        )
+        for org, role in pairs
+    ]
+
+
+async def _admin_summaries(session: AsyncSession, pairs: list[tuple[OrgRow, str | None]]) -> list[AdminOrgSummary]:
+    if not pairs:
+        return []
+    members, groups, projects = await _counts(session, [org.id for org, _ in pairs])
+    return [
+        AdminOrgSummary(
+            org=_org(org),
+            my_role=OrgRole(role) if role is not None else None,
             member_count=members.get(org.id, 0),
             group_count=groups.get(org.id, 0),
             project_count=projects.get(org.id, 0),
@@ -167,6 +191,37 @@ class SqlOrgRepository:
                 )
             ).all()
             return await _summaries(session, [(org, role) for org, role in found])
+
+    async def list_all(self, viewer_id: str) -> list[AdminOrgSummary]:
+        async with self._sessions.use() as session:
+            found = (
+                await session.execute(
+                    select(OrgRow, OrgMemberRow.role)
+                    .outerjoin(OrgMemberRow, and_(OrgMemberRow.org_id == OrgRow.id, OrgMemberRow.user_id == viewer_id))
+                    .order_by(func.lower(OrgRow.name), OrgRow.slug)
+                )
+            ).all()
+            return await _admin_summaries(session, [(org, role) for org, role in found])
+
+    async def summary_for_admin(self, org: Org, viewer_id: str) -> AdminOrgSummary:
+        async with self._sessions.use() as session:
+            row = await session.get(OrgRow, org.id)
+            role = await session.get(OrgMemberRow, (org.id, viewer_id))
+            found = await _admin_summaries(session, [(row, role.role if role else None)]) if row else []
+        if not found:
+            raise IdentityError(IdentityErrorCode.not_found)
+        return found[0]
+
+    async def owner_counts(self, org_ids: list[str]) -> dict[str, int]:
+        if not org_ids:
+            return {}
+        async with self._sessions.use() as session:
+            rows = await session.execute(
+                select(OrgMemberRow.org_id, func.count())
+                .where(OrgMemberRow.org_id.in_(org_ids), OrgMemberRow.role == OrgRole.owner.value)
+                .group_by(OrgMemberRow.org_id)
+            )
+            return dict(rows.all())
 
     async def get_member(self, org_id: str, user_id: str) -> OrgMember | None:
         async with self._sessions.use() as session:
@@ -316,6 +371,36 @@ class SqlGroupRepository:
                 .returning(GroupMemberRow.user_id)
             )
             return result.first() is not None
+
+    async def member_ids_by_org(self, org_id: str) -> dict[str, list[str]]:
+        async with self._sessions.use() as session:
+            groups = (await session.execute(select(GroupRow.id).where(GroupRow.org_id == org_id))).scalars().all()
+            found = (
+                await session.execute(
+                    select(GroupMemberRow.group_id, GroupMemberRow.user_id)
+                    .where(GroupMemberRow.group_id.in_(select(GroupRow.id).where(GroupRow.org_id == org_id)))
+                    .order_by(GroupMemberRow.created_at, GroupMemberRow.user_id)
+                )
+            ).all()
+        result: dict[str, list[str]] = {group_id: [] for group_id in groups}
+        for group_id, user_id in found:
+            result[group_id].append(user_id)
+        return result
+
+    async def names_for_user(self, user_id: str) -> dict[str, list[str]]:
+        async with self._sessions.use() as session:
+            found = (
+                await session.execute(
+                    select(GroupRow.org_id, GroupRow.name)
+                    .join(GroupMemberRow, GroupMemberRow.group_id == GroupRow.id)
+                    .where(GroupMemberRow.user_id == user_id)
+                    .order_by(func.lower(GroupRow.name), GroupRow.id)
+                )
+            ).all()
+        result: dict[str, list[str]] = {}
+        for org_id, name in found:
+            result.setdefault(org_id, []).append(name)
+        return result
 
     async def remove_user_from_org_groups(self, org_id: str, user_id: str) -> int:
         async with self._sessions.use() as session:
