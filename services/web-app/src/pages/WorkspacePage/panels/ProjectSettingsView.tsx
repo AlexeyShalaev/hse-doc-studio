@@ -338,7 +338,7 @@ export const ProjectSettingsView = ({
     hasDocFormats: variantRows.length > 0,
     hasDocSetMeta: docSetCards.length > 0,
     hasMetaFields: metaFields.length > 0,
-    hasAccess: project.my_role !== undefined,
+    hasAccess: project.my_role != null,
     ...syncContext,
   };
   const activeGroup = resolveProjectSettingsGroup(section, sectionCtx);

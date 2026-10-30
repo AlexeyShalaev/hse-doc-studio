@@ -124,6 +124,7 @@ from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIPro
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
+from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
@@ -303,6 +304,15 @@ class ServerPersistenceProvider(Provider):
         self, project_repo: IProjectRepository, locator: IProjectLocator, acl: PostgresProjectAclRepository
     ) -> ListProjectsUC:
         return ListProjectsUC(project_repo=project_repo, locator=locator, memberships=acl)
+
+    @provide(override=True)
+    def get_get_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        acl: PostgresProjectAclRepository,
+    ) -> GetProjectUC:
+        return GetProjectUC(project_repo=project_repo, project_index_repo=project_index_repo, memberships=acl)
 
     @provide(override=True)
     def get_project_suggestions_uc(self, list_projects: ListProjectsUC) -> GetProjectSuggestionsUC:

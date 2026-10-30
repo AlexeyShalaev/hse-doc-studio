@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 
 from tests.integration.api.personal.conftest import Stand, seed_shared_project
@@ -55,3 +57,33 @@ async def test__build_runners__owner_without_runners_builds_on_shared(stand: Sta
     project = await seed_shared_project(stand, anna)
     view = stand.client.get(f"/api/v1/projects/{project}/build-runners", headers=anna.headers).json()
     assert (view["owner_runners"], view["my_builds"]) == ([], "shared")
+
+
+async def test__project_detail__carries_owner_and_viewer_role(stand: Stand) -> None:
+    """Интерфейс открывает «Сборки» и «Доступ» серверного проекта по роли из деталей проекта, не из списка."""
+    from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow  # noqa: PLC0415
+
+    anna, boris = await stand.person("anna"), await stand.person("boris")
+    created = stand.client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Курсовая",
+            "pack_id": "hse-cs-sse",
+            "template_id": "coursework",
+            "version": "2026.1",
+            "lang": "ru",
+            "authors": [{"name": "Анна"}],
+        },
+        headers=anna.headers,
+    )
+    assert created.status_code == 201, created.text
+    project = created.json()["id"]
+    async with stand.sessions.use() as db:
+        db.add(ProjectMemberRow(project_id=UUID(project), principal_kind="user", principal_id=boris.id, role="editor"))
+        await db.flush()
+
+    owner_view = stand.client.get(f"/api/v1/projects/{project}", headers=anna.headers)
+    assert owner_view.status_code == 200, owner_view.text
+    body = owner_view.json()
+    assert (body["my_role"], body["owner"]["kind"], body["owner"]["id"]) == ("owner", "user", anna.id)
+    assert stand.client.get(f"/api/v1/projects/{project}", headers=boris.headers).json()["my_role"] == "editor"

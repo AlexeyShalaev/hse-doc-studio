@@ -63,9 +63,10 @@ export const ProjectResponseSchema = z.object({
   // Team mode: whether the shared/ docs group exists. Old backends omit it.
   shared_enabled: z.boolean().default(true),
   // Только на сервере: чей проект и какая у человека роль. В локальном режиме
-  // владельца нет (проект лежит в папке на этом компьютере), поля не приходят.
-  owner: ProjectOwnerSchema.optional(),
-  my_role: ProjectRoleSchema.optional(),
+  // владельца нет (проект лежит в папке на этом компьютере): поля не приходят
+  // или приходят null (детали проекта отдают их всегда).
+  owner: ProjectOwnerSchema.nullish(),
+  my_role: ProjectRoleSchema.nullish(),
   // Что эта Студия может делать с проектом (только в GET /projects/{id}).
   // mode ∈ full | read_only | files_only; reasons — коды причин ограничения.
   access: z
