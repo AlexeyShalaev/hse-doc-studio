@@ -398,7 +398,7 @@ const servicesFor = (seed: ServerDemoOpsSeed): AdminService[] => {
       svc("s3", "storage", "down", "timeout"),
       svc("languagetool", "languagetool", "down", "no_healthy_replica"),
       svc("onlyoffice", "onlyoffice", "down", "no_healthy_replica"),
-      svc("runners", "runners", "ok", null, [2, 3]),
+      svc("runners", "runners", "ok", null, [2, 5]),
       svc("smtp", "smtp", "unconfigured", null),
     ];
   }
@@ -424,7 +424,8 @@ const storageFor = (seed: ServerDemoOpsSeed, now: number): AdminStorage => {
       blob_bytes: 0,
       projects: 0,
       deleted_projects: 0,
-      free_bytes: g(120),
+      // Проектов ещё нет: занято только то, что поставили с сервером.
+      free_bytes: g(196.6),
       volume_total_bytes: g(200),
       computed_at: ago(40, now),
       owners: [],

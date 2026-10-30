@@ -139,6 +139,18 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+.ops-version[data-outdated] {
+  gap: 3px;
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+  cursor: help;
+}
+.ops-token-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 28px;
+  flex-shrink: 0;
+}
 .ops-row-actions {
   display: flex;
   align-items: center;
@@ -211,8 +223,8 @@
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  /* Карточка без нижней строки не тянется до соседней: пустоты нет. */
-  align-items: start;
+  /* Карточки в ряду одной высоты: нижняя строка прижата к низу. */
+  align-items: stretch;
 }
 .ops-service {
   display: flex;
@@ -231,7 +243,8 @@
     inset 3px 0 0 var(--c-err),
     var(--shadow-1);
 }
-.ops-service[data-status="degraded"] {
+.ops-service[data-status="degraded"],
+.ops-service[data-health="partial"] {
   border-color: color-mix(in oklch, var(--c-warn) 50%, var(--border));
   box-shadow:
     inset 3px 0 0 var(--c-warn),
@@ -262,7 +275,8 @@
   background: var(--c-err-soft);
   color: var(--c-err);
 }
-.ops-service[data-status="degraded"] .ops-service-icon {
+.ops-service[data-status="degraded"] .ops-service-icon,
+.ops-service[data-health="partial"] .ops-service-icon {
   background: var(--c-warn-soft);
   color: var(--c-warn);
 }
@@ -289,6 +303,7 @@
   color: var(--fg-2);
 }
 .ops-service-foot {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;

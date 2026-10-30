@@ -19,9 +19,13 @@ import {
   Spinner,
   StatusDot,
   Tooltip,
-  type StatusDotStatus,
 } from "@shared/ui";
-import type { AdminService, ServiceStatus } from "@entities/session";
+import type { AdminService } from "@entities/session";
+import {
+  HEALTH_TONE,
+  serviceHealth,
+  summarizeHealth,
+} from "../lib/serviceHealth";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
 
@@ -46,13 +50,6 @@ const ICON: Record<AdminService["kind"], LucideIcon> = {
   smtp: Mail,
 };
 
-const DOT: Record<ServiceStatus, StatusDotStatus> = {
-  ok: "success",
-  degraded: "warning",
-  down: "danger",
-  unconfigured: "neutral",
-};
-
 const KNOWN_REASONS = [
   "timeout",
   "no_healthy_replica",
@@ -63,28 +60,14 @@ const KNOWN_REASONS = [
 const isBad = (s: AdminService): boolean =>
   s.status === "down" || s.status === "degraded";
 
-/**
- * Что показать на карточке: сервер считает раннеры рабочими, пока на связи
- * хоть один, но меньше половины в сети уже повод посмотреть.
- */
-const shownStatus = (
-  s: AdminService,
-): { dot: StatusDotStatus; key: string } => {
-  const few =
-    s.kind === "runners" &&
-    s.status === "ok" &&
-    s.total !== null &&
-    s.online !== null &&
-    s.online * 2 < s.total;
-  return few
-    ? { dot: "warning", key: "services.status.partial" }
-    : { dot: DOT[s.status], key: `services.status.${s.status}` };
-};
-
 const ServiceCard = ({ service }: { service: AdminService }) => {
   const { t } = useTranslation("adminOps");
   const Icon = ICON[service.kind];
-  const shown = shownStatus(service);
+  const health = serviceHealth(service);
+  const shown = {
+    dot: HEALTH_TONE[health],
+    key: `services.status.${health}`,
+  };
   const counted = service.total !== null && service.online !== null;
   let foot: ReactNode = null;
   if (service.status === "unconfigured") {
@@ -132,6 +115,7 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
       className="ops-service"
       data-testid={`service-${service.id}`}
       data-status={service.status}
+      data-health={health}
     >
       <div className="ops-service-head">
         <span className="ops-service-icon" aria-hidden="true">
@@ -195,10 +179,12 @@ export const ServicesView = ({
 }: ServicesViewProps) => {
   const { t } = useTranslation("adminOps");
 
-  const connected = services.filter((s) => s.status !== "unconfigured");
-  const off = services.filter((s) => s.status === "unconfigured");
-  const down = services.filter((s) => s.status === "down");
-  const degraded = services.filter((s) => s.status === "degraded");
+  const health = summarizeHealth(services);
+  const { off, down } = health;
+  // Перебои и частичная работа (мало раннеров на связи) в одной сводке.
+  const degraded = health.warn;
+  // Сначала то, что сломано: здоровые карточки заполняют конец сетки.
+  const connected = [...down, ...degraded, ...health.ok];
   const names = (list: readonly AdminService[]): string =>
     list.map((s) => t(`services.kind.${s.kind}`)).join(", ");
 

@@ -400,6 +400,7 @@ export const QueueView = ({
           {
             id: "kind",
             label: t("queue.filters.kind"),
+            display: "select",
             value: query.kind,
             onChange: (kind) => {
               onQueryChange({ kind });

@@ -3,6 +3,7 @@ import {
   Activity,
   CircleAlert,
   CircleCheck,
+  Cpu,
   HardDrive,
   KeyRound,
   Mail,
@@ -37,8 +38,10 @@ import {
 } from "@entities/session";
 import { useInstanceSettings } from "@features/admin-install";
 import {
+  diskTone,
   isLowSpace,
   runnerStatus,
+  summarizeHealth,
   useNow,
   useQueueSummary,
   useRunners,
@@ -107,14 +110,18 @@ const Kpis = () => {
   const waiting = approvals.data?.total ?? 0;
   const live = (runners.data ?? []).filter((r) => !r.revoked);
   const online = live.filter((r) => runnerStatus(r, now) === "online").length;
-  const okServices = (services.data ?? []).filter(
-    (s) => s.status === "ok",
-  ).length;
+  // Как в «Требует внимания»: приостановленные молчат намеренно.
+  const quiet = live.filter((r) => {
+    const status = runnerStatus(r, now);
+    return status === "stale" || status === "offline";
+  }).length;
+  // То же правило, что на странице «Сервисы»: мало раннеров в сети уже перебои.
   // Неподключённый сервис не сломан: его не считаем ни в норме, ни в сбое.
-  const offServices = (services.data ?? []).filter(
-    (s) => s.status === "unconfigured",
-  ).length;
-  const badServices = (services.data ?? []).filter(isBad).length;
+  const health = summarizeHealth(services.data ?? []);
+  const okServices = health.ok.length;
+  const offServices = health.off.length;
+  const downServices = health.down.length;
+  const warnServices = health.warn.length;
   const disk = storage.data;
   // Занятое место на диске проектов, как на странице «Хранилище»; без данных о
   // томе показываем объём сборок и вложений.
@@ -126,7 +133,7 @@ const Kpis = () => {
     usedBytes !== null && disk?.volume_total_bytes
       ? (usedBytes / disk.volume_total_bytes) * 100
       : null;
-  const low = disk ? isLowSpace(disk) : false;
+  const storageTone = disk ? diskTone(disk) : "neutral";
   const failed = t("overview.kpi.failed");
 
   return (
@@ -159,16 +166,29 @@ const Kpis = () => {
             ? t("overview.kpi.runnersOf", { total: num(live.length) })
             : undefined
         }
-        tone={live.length > 0 && online === 0 ? "danger" : "neutral"}
+        tone={
+          live.length === 0
+            ? "neutral"
+            : online === 0
+              ? "danger"
+              : quiet > 0
+                ? "warning"
+                : "success"
+        }
         secondary={
           live.length === 0
             ? t("overview.kpi.runnersNone")
-            : summary.data
-              ? t("overview.kpi.queue", {
-                  queued: num(summary.data.queued),
-                  running: num(summary.data.running),
+            : quiet > 0
+              ? t("overview.kpi.runnersQuiet", {
+                  count: quiet,
+                  queued: num(summary.data?.queued ?? 0),
                 })
-              : null
+              : summary.data
+                ? t("overview.kpi.queue", {
+                    queued: num(summary.data.queued),
+                    running: num(summary.data.running),
+                  })
+                : null
         }
       />
       <KpiTile
@@ -180,8 +200,8 @@ const Kpis = () => {
         error={storage.isError ? failed : undefined}
         value={disk ? formatFileSize(usedBytes ?? disk.blob_bytes) : ""}
         progress={used}
-        progressTone={low ? "warning" : "neutral"}
-        tone={low ? "warning" : "neutral"}
+        progressTone={storageTone}
+        tone={storageTone === "neutral" ? "success" : storageTone}
         secondary={
           disk?.volume_total_bytes && disk.free_bytes !== null
             ? t("overview.kpi.storageFree", {
@@ -205,14 +225,22 @@ const Kpis = () => {
           total: num((services.data?.length ?? 0) - offServices),
         })}
         tone={
-          badServices > 0 ? "danger" : offServices > 0 ? "neutral" : "success"
+          downServices > 0
+            ? "danger"
+            : warnServices > 0
+              ? "warning"
+              : offServices > 0
+                ? "neutral"
+                : "success"
         }
         secondary={
-          badServices > 0
-            ? t("overview.kpi.servicesBad", { count: badServices })
-            : offServices > 0
-              ? t("overview.kpi.servicesOff", { count: offServices })
-              : t("overview.kpi.servicesAllOk")
+          downServices > 0
+            ? t("overview.kpi.servicesBad", { count: downServices })
+            : warnServices > 0
+              ? t("overview.kpi.servicesWarn", { count: warnServices })
+              : offServices > 0
+                ? t("overview.kpi.servicesOff", { count: offServices })
+                : t("overview.kpi.servicesAllOk")
         }
       />
     </KpiGrid>
@@ -310,7 +338,7 @@ const AttentionBlock = () => {
   if (storage.data && isLowSpace(storage.data)) {
     items.push({
       id: "low-space",
-      tone: "warning",
+      tone: "danger",
       title: t("overview.attention.lowSpace"),
       body: t("overview.attention.lowSpaceBody", {
         free: formatFileSize(storage.data.free_bytes ?? 0),
@@ -463,11 +491,22 @@ const ActivityBlock = () => {
                 key={e.id}
                 testId={`overview-activity-${String(e.id)}`}
                 leading={
-                  <Avatar
-                    name={actor?.name ?? null}
-                    seed={e.actor_id}
-                    size={26}
-                  />
+                  e.actor_id ? (
+                    <Avatar
+                      name={actor?.name ?? null}
+                      seed={e.actor_id}
+                      size={26}
+                    />
+                  ) : (
+                    // Действие самой установки: тот же значок, что в аудите.
+                    <span
+                      className="adm-avatar"
+                      aria-hidden="true"
+                      style={{ width: 26, height: 26 }}
+                    >
+                      <Cpu size={13} />
+                    </span>
+                  )
                 }
                 title={
                   <>

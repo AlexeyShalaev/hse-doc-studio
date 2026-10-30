@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { useInstanceSettings } from "@features/admin-install";
 import {
+  diskTone,
   runnerStatus,
+  summarizeHealth,
   useNow,
   useRunners,
   useServices,
+  useStorage,
 } from "@features/admin-ops";
 import { useApprovals } from "@features/admin-users";
 
@@ -15,7 +18,8 @@ import { useApprovals } from "@features/admin-users";
 export type NavCounterTone = "accent" | "warning" | "danger";
 export type NavCounters = Partial<
   Record<
-    "users" | "runners" | "services",
+    "users" | "runners" | "services" | "storage",
+    /** count 0: только точка, без числа (место на диске). */
     { count: number; tone: NavCounterTone }
   >
 >;
@@ -49,10 +53,12 @@ export const NavStatusProbe = ({
     const status = runnerStatus(r, now);
     return status === "stale" || status === "offline";
   }).length;
-  const down = (services ?? []).filter((s) => s.status === "down").length;
-  const degraded = (services ?? []).filter(
-    (s) => s.status === "degraded",
-  ).length;
+  // То же правило, что на странице «Сервисы» и в сводке.
+  const health = summarizeHealth(services ?? []);
+  const down = health.down.length;
+  const degraded = health.warn.length;
+  const storage = useStorage().data;
+  const diskCritical = storage ? diskTone(storage) === "danger" : false;
   const name = instance?.name.trim() ?? "";
   const host = instance ? hostOf(instance.public_url) : null;
 
@@ -66,12 +72,13 @@ export const NavStatusProbe = ({
         tone: down > 0 ? "danger" : "warning",
       };
     }
+    if (diskCritical) counters.storage = { count: 0, tone: "danger" };
     onChange({
       counters,
       instanceName: name !== "" ? name : null,
       instanceHost: host,
     });
-  }, [approvals, quiet, down, degraded, name, host, onChange]);
+  }, [approvals, quiet, down, degraded, diskCritical, name, host, onChange]);
 
   return null;
 };

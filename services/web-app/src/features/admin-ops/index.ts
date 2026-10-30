@@ -13,5 +13,11 @@ export {
 } from "./api/opsQueries";
 export { countOnline, runnerStatus } from "./lib/runnerStatus";
 export type { RunnerStatus } from "./lib/runnerStatus";
-export { isLowSpace } from "./lib/storage";
+export { diskTone, isLowSpace } from "./lib/storage";
+export {
+  HEALTH_TONE,
+  serviceHealth,
+  summarizeHealth,
+} from "./lib/serviceHealth";
+export type { ServiceHealth } from "./lib/serviceHealth";
 export { useNow } from "./lib/useNow";

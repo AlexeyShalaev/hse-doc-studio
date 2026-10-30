@@ -473,6 +473,8 @@ describe("операционные разделы: экраны", () => {
   it("токен: отзыв просит подтверждения", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage />));
+    // Отзыв в меню «⋯», как у раннеров: состояния токенов стоят ровно.
+    await user.click(await screen.findByTestId("token-actions-rt_01hxc1"));
     await user.click(await screen.findByTestId("token-revoke-rt_01hxc1"));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Сервер в аудитории 305/)).toBeVisible();
@@ -534,11 +536,13 @@ describe("операционные разделы: экраны", () => {
     );
   }, 20_000);
 
-  it("чистая установка: раннеров и токенов нет", async () => {
+  it("чистая установка: одно пустое состояние, а не два", async () => {
     activateServerScenario("ops_fresh");
     render(wrap(<RunnersPage />));
     expect(await screen.findByTestId("runners-empty")).toBeVisible();
-    expect(await screen.findByTestId("tokens-empty")).toBeVisible();
+    expect(screen.getByTestId("runners-empty-create")).toBeVisible();
+    // Пустой блок токенов повторял бы тот же совет: его нет.
+    expect(screen.queryByTestId("runner-tokens")).toBeNull();
   }, 20_000);
 
   it("очередь: сводка, поиск и отмена с подтверждением", async () => {
@@ -661,21 +665,22 @@ describe("операционные разделы: экраны", () => {
     );
   }, 20_000);
 
-  it("сервисы: все работают, раннеры в сети из скольких", async () => {
+  it("сервисы: мало раннеров в сети, и сводка говорит о перебоях", async () => {
     const user = userEvent.setup();
     render(wrap(<ServicesPage />));
     expect(await screen.findByTestId("service-runners")).toBeVisible();
-    expect(screen.getByTestId("services-summary")).toHaveTextContent(
-      "Все подключённые сервисы работают",
-    );
-    // Баннер только при сбое; у здоровых сервисов нет строки причины.
-    expect(screen.queryByRole("alert")).toBeNull();
+    // У здоровых сервисов нет строки причины.
     expect(screen.queryByTestId("service-detail-database")).toBeNull();
     expect(screen.getByTestId("service-runners")).toHaveTextContent("2 из 5");
-    // Меньше половины раннеров в сети: карточка предупреждает.
+    // Меньше половины раннеров в сети: карточка предупреждает, и сводка над
+    // карточками говорит то же самое, а не «всё работает».
     expect(screen.getByTestId("service-runners")).toHaveTextContent(
       "Часть не на связи",
     );
+    expect(screen.getByTestId("services-summary")).toHaveTextContent(
+      "Перебои у 1 сервиса",
+    );
+    expect(screen.getByTestId("services-summary")).toHaveTextContent("Раннеры");
     await user.click(screen.getByTestId("services-refresh"));
     expect(await screen.findByTestId("service-database")).toBeVisible();
   }, 20_000);

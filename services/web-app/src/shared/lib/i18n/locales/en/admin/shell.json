@@ -27,8 +27,9 @@
       "users_other": "{{count}} people awaiting approval",
       "runners_one": "{{count}} runner not responding",
       "runners_other": "{{count}} runners not responding",
-      "services_one": "{{count}} service with errors",
-      "services_other": "{{count}} services with errors"
+      "services_one": "{{count}} service with problems",
+      "services_other": "{{count}} services with problems",
+      "storage": "Running out of space"
     },
     "back": "Back to Studio",
     "version": "Version {{version}}",
@@ -53,6 +54,10 @@
       "storageProjects_other": "{{count}} projects",
       "services": "Services healthy",
       "servicesOf": "of {{total}}",
+      "servicesWarn_one": "{{count}} disrupted",
+      "servicesWarn_other": "{{count}} disrupted",
+      "runnersQuiet_one": "{{count}} not responding · {{queued}} queued",
+      "runnersQuiet_other": "{{count}} not responding · {{queued}} queued",
       "servicesAllOk": "Everything works",
       "servicesBad_one": "{{count}} with errors",
       "servicesBad_other": "{{count}} with errors",

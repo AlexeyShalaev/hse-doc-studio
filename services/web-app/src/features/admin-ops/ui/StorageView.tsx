@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Archive, FolderOpen, HardDrive, Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatFileSize, formatPastTime } from "@shared/lib";
+import { formatFileSize, formatPastTime, localeTag } from "@shared/lib";
 import {
   DataTable,
   EmptyState,
@@ -18,7 +18,7 @@ import {
 import type { AdminStorage } from "@entities/session";
 import { percent } from "../lib/format";
 import { personRef, type OpsPerson, type PersonRef } from "../lib/people";
-import { isLowSpace } from "../lib/storage";
+import { diskTone as toneOf, isLowSpace } from "../lib/storage";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
 
@@ -32,9 +32,6 @@ export type StorageViewProps = {
 };
 
 const NO_PEOPLE: ReadonlyMap<string, OpsPerson> = new Map();
-
-// Доля занятого диска, с которой полоса желтеет; красной её делает isLowSpace.
-const WARN_USED = 80;
 
 type OwnerRow = {
   rank: number;
@@ -125,15 +122,7 @@ export const StorageView = ({
   const low = storage ? isLowSpace(storage) : false;
   const total = storage?.volume_total_bytes ?? null;
   const free = storage?.free_bytes ?? null;
-  const usedPct =
-    total !== null && free !== null && total > 0
-      ? ((total - free) / total) * 100
-      : null;
-  const diskTone: KpiTone = low
-    ? "danger"
-    : usedPct !== null && usedPct >= WARN_USED
-      ? "warning"
-      : "neutral";
+  const diskTone: KpiTone = storage ? toneOf(storage) : "neutral";
 
   const rows = useMemo<OwnerRow[]>(
     () =>
@@ -180,7 +169,7 @@ export const StorageView = ({
         enableSorting: false,
         cell: ({ row }) => (
           <span className="ops-num">
-            {t("storage.owners.projects", { count: row.original.projects })}
+            {row.original.projects.toLocaleString(localeTag())}
           </span>
         ),
       },

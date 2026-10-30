@@ -12,6 +12,7 @@ import {
   Server,
   Tag,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatPastTime, formatRelativeTime } from "@shared/lib";
@@ -28,6 +29,7 @@ import {
   Section,
   SectionList,
   StatusDot,
+  Tooltip,
   type KpiTone,
   type StatusDotStatus,
 } from "@shared/ui";
@@ -77,6 +79,8 @@ type Row = {
   pause: () => void;
   rotate: () => void;
   revoke: () => void;
+  /** Есть раннер новее: версия, до которой стоит обновить. */
+  newer: string | null;
 };
 
 const DOT: Record<RunnerStatus, StatusDotStatus> = {
@@ -149,15 +153,21 @@ export const RunnersView = ({
   const used = slots
     ? onlineRunners.reduce((sum, r) => sum + (slots.get(r.id) ?? 0), 0)
     : null;
-  const newest = live
-    .map((r) => r.version)
-    .reduce<string | null>(
-      (best, v) => (best === null || compareVersions(v, best) > 0 ? v : best),
-      null,
-    );
-  const outdated = newest
-    ? live.filter((r) => compareVersions(r.version, newest) < 0).length
-    : 0;
+  const newest = useMemo(
+    () =>
+      runners
+        .filter((r) => !r.revoked)
+        .map((r) => r.version)
+        .reduce<string | null>(
+          (best, v) =>
+            best === null || compareVersions(v, best) > 0 ? v : best,
+          null,
+        ),
+    [runners],
+  );
+  const outdatedOf = (r: AdminRunner): boolean =>
+    newest !== null && !r.revoked && compareVersions(r.version, newest) < 0;
+  const outdated = live.filter(outdatedOf).length;
 
   const columns = useMemo<ColumnDef<Row>[]>(
     () => [
@@ -166,16 +176,32 @@ export const RunnersView = ({
         header: t("runners.columns.name"),
         enableSorting: false,
         cell: ({ row }) => {
-          const { runner, status: st } = row.original;
+          const { runner, status: st, newer } = row.original;
           return (
             <span
               className={st === "revoked" ? "ops-cell ops-dim-row" : "ops-cell"}
             >
               <span className="ops-cell-title">{runner.name}</span>
               <span className="ops-cell-sub">
-                <span className="ops-version" title={t("runners.versionOf")}>
-                  v{runner.version}
-                </span>
+                {newer !== null ? (
+                  <Tooltip
+                    content={t("runners.newerVersion", { version: newer })}
+                  >
+                    <span
+                      className="ops-version"
+                      data-outdated="true"
+                      tabIndex={0}
+                      data-testid={`runner-outdated-${runner.id}`}
+                    >
+                      <TriangleAlert size={11} aria-hidden="true" />v
+                      {runner.version}
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <span className="ops-version" title={t("runners.versionOf")}>
+                    v{runner.version}
+                  </span>
+                )}
                 {/* Обычный класс ничего не говорит: подписан только особый. */}
                 {runner.resource_class !== "standard" && (
                   <>
@@ -335,10 +361,16 @@ export const RunnersView = ({
             revoke: () => {
               onRevoke(runner);
             },
+            newer:
+              newest !== null &&
+              !runner.revoked &&
+              compareVersions(runner.version, newest) < 0
+                ? newest
+                : null,
           };
         })
         .sort((a, b) => ORDER[a.status] - ORDER[b.status]),
-    [runners, now, t, slots, busyId, onTogglePause, onRotate, onRevoke],
+    [runners, now, t, slots, busyId, newest, onTogglePause, onRotate, onRevoke],
   );
 
   const noneOnline = status === "ready" && live.length > 0 && online === 0;
@@ -511,108 +543,127 @@ export const RunnersView = ({
         />
       )}
 
-      <Section
-        title={t("tokens.title")}
-        description={t("tokens.lead")}
-        flush
-        testId="runner-tokens"
-        footer={
-          <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
-            {t("tokens.howTo")}
-          </span>
-        }
-      >
-        {tokensStatus !== "ready" && (
-          <div style={{ padding: "0 20px 16px" }}>
-            <ViewState
-              status={tokensStatus}
-              errorText={t("tokens.loadFailed")}
-              onRetry={onRetryTokens}
-              testId="tokens"
-              compact
-              skeleton={<TokensSkeleton />}
-            />
-          </div>
-        )}
-        {tokensStatus === "ready" && tokens.length === 0 && (
-          <div style={{ padding: "0 20px 16px" }}>
-            <EmptyState
-              testId="tokens-empty"
-              icon={<KeyRound size={18} />}
-              title={t("tokens.empty.title")}
-              description={t("tokens.empty.body")}
-            />
-          </div>
-        )}
-        {tokensStatus === "ready" && tokens.length > 0 && (
-          <SectionList label={t("tokens.title")}>
-            {sortedTokens.map((token) => {
-              const st = tokenStatus(token, now);
-              const active = st === "active";
-              return (
-                <div
-                  key={token.id}
-                  data-testid={`token-${token.id}`}
-                  data-status={st}
-                  className={active ? undefined : "ops-dim-row"}
-                >
-                  <ListRow
-                    icon={<KeyRound size={15} />}
-                    tone={active ? "accent" : "neutral"}
-                    title={
-                      token.label === "" ? t("tokens.noLabel") : token.label
-                    }
-                    description={[
-                      t("tokens.uses", {
-                        uses: token.uses,
-                        max: token.max_uses,
-                      }),
-                      active && token.expires_at
-                        ? t("tokens.expires", {
-                            when: formatRelativeTime(token.expires_at, now),
-                          })
-                        : st === "expired" && token.expires_at
-                          ? t("tokens.expired", {
-                              when: formatPastTime(token.expires_at, now),
+      {/* Ни раннеров, ни токенов: пустое состояние выше уже ведёт к созданию
+          токена, второй пустой блок с тем же советом не нужен. */}
+      {!(
+        status === "ready" &&
+        runners.length === 0 &&
+        tokensStatus === "ready" &&
+        tokens.length === 0
+      ) && (
+        <Section
+          title={t("tokens.title")}
+          description={t("tokens.lead")}
+          flush
+          testId="runner-tokens"
+          footer={
+            <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+              {t("tokens.howTo")}
+            </span>
+          }
+        >
+          {tokensStatus !== "ready" && (
+            <div style={{ padding: "0 20px 16px" }}>
+              <ViewState
+                status={tokensStatus}
+                errorText={t("tokens.loadFailed")}
+                onRetry={onRetryTokens}
+                testId="tokens"
+                compact
+                skeleton={<TokensSkeleton />}
+              />
+            </div>
+          )}
+          {tokensStatus === "ready" && tokens.length === 0 && (
+            <div style={{ padding: "0 20px 16px" }}>
+              <EmptyState
+                testId="tokens-empty"
+                icon={<KeyRound size={18} />}
+                title={t("tokens.empty.title")}
+                description={t("tokens.empty.body")}
+              />
+            </div>
+          )}
+          {tokensStatus === "ready" && tokens.length > 0 && (
+            <SectionList label={t("tokens.title")}>
+              {sortedTokens.map((token) => {
+                const st = tokenStatus(token, now);
+                const active = st === "active";
+                return (
+                  <div
+                    key={token.id}
+                    data-testid={`token-${token.id}`}
+                    data-status={st}
+                    className={active ? undefined : "ops-dim-row"}
+                  >
+                    <ListRow
+                      icon={<KeyRound size={15} />}
+                      tone={active ? "accent" : "neutral"}
+                      title={
+                        token.label === "" ? t("tokens.noLabel") : token.label
+                      }
+                      description={[
+                        t("tokens.uses", {
+                          uses: token.uses,
+                          max: token.max_uses,
+                        }),
+                        active && token.expires_at
+                          ? t("tokens.expires", {
+                              when: formatRelativeTime(token.expires_at, now),
                             })
-                          : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    meta={
-                      <>
-                        <StatusDot
-                          status={TOKEN_DOT[st]}
-                          label={t(`tokens.status.${st}`)}
-                        />
-                        {active && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            type="button"
-                            data-testid={`token-revoke-${token.id}`}
-                            aria-label={t("tokens.revokeLabel", {
-                              label:
-                                token.label === ""
-                                  ? t("tokens.noLabel")
-                                  : token.label,
-                            })}
-                            onClick={() => {
-                              onRevokeToken(token);
-                            }}
-                          >
-                            {t("tokens.revoke")}
-                          </Button>
-                        )}
-                      </>
-                    }
-                  />
-                </div>
-              );
-            })}
-          </SectionList>
-        )}
-      </Section>
+                          : st === "expired" && token.expires_at
+                            ? t("tokens.expired", {
+                                when: formatPastTime(token.expires_at, now),
+                              })
+                            : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      meta={
+                        <>
+                          <StatusDot
+                            status={TOKEN_DOT[st]}
+                            label={t(`tokens.status.${st}`)}
+                          />
+                          {/* Слот действий одной ширины у всех строк: состояния
+                            стоят ровной колонкой, как в таблицах. */}
+                          <span className="ops-token-actions">
+                            {active && (
+                              <ActionMenu
+                                label={t("tokens.actionsLabel", {
+                                  label:
+                                    token.label === ""
+                                      ? t("tokens.noLabel")
+                                      : token.label,
+                                })}
+                                testId={`token-actions-${token.id}`}
+                                items={[
+                                  {
+                                    id: "revoke",
+                                    label: t("tokens.revoke"),
+                                    icon: (
+                                      <Trash2 size={14} aria-hidden="true" />
+                                    ),
+                                    danger: true,
+                                    testId: `token-revoke-${token.id}`,
+                                    onSelect: () => {
+                                      onRevokeToken(token);
+                                    },
+                                  },
+                                ]}
+                              />
+                            )}
+                          </span>
+                        </>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </SectionList>
+          )}
+        </Section>
+      )}
     </div>
   );
 };

@@ -114,6 +114,7 @@
       "body": "The runner loses access and stops taking jobs. Jobs it is running are handed to another runner.",
       "confirm": "Revoke"
     },
+    "newerVersion": "Newer available: {{version}}",
     "versionOf": "Runner version"
   },
   "tokens": {
@@ -125,6 +126,7 @@
     "expires": "expires {{when}}",
     "expired": "expired {{when}}",
     "revoke": "Revoke",
+    "actionsLabel": "Actions for token “{{label}}”",
     "revokeLabel": "Revoke token \"{{label}}\"",
     "howTo": "To connect a runner: create a token, run the command shown on the runner machine, and it appears in the table above within seconds.",
     "loadFailed": "Could not load tokens.",
@@ -220,7 +222,7 @@
       "who": "Started by",
       "status": "State",
       "wait": "Wait",
-      "run": "Running for",
+      "run": "Duration",
       "runner": "Runner",
       "actions": "Actions"
     },
@@ -350,7 +352,7 @@
       "ok": "Working",
       "degraded": "Disrupted",
       "down": "Down",
-      "unconfigured": "Not connected",
+      "unconfigured": "Not set up",
       "partial": "Partly offline"
     },
     "kind": {
@@ -432,8 +434,6 @@
       "who": "Owner",
       "projectsCol": "Projects",
       "shareCol": "Share of all",
-      "projects_one": "{{count}} project",
-      "projects_other": "{{count}} projects",
       "share": "Share of projects: {{name}}"
     },
     "empty": {

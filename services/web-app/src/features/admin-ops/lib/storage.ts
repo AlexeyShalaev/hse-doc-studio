@@ -12,3 +12,20 @@ export const isLowSpace = (storage: AdminStorage): boolean => {
     (disk > 0 && storage.free_bytes / disk < LOW_FREE_SHARE)
   );
 };
+
+// Доля занятого диска, с которой полоса желтеет; красной её делает isLowSpace.
+const WARN_USED = 80;
+
+/**
+ * Тон диска проектов: «danger», когда места мало, «warning» с 80% занятого.
+ * Один и тот же на странице «Хранилище», в сводке и в навигации.
+ */
+export const diskTone = (
+  storage: AdminStorage,
+): "danger" | "warning" | "neutral" => {
+  if (isLowSpace(storage)) return "danger";
+  const total = storage.volume_total_bytes;
+  const free = storage.free_bytes;
+  if (total === null || free === null || total <= 0) return "neutral";
+  return ((total - free) / total) * 100 >= WARN_USED ? "warning" : "neutral";
+};

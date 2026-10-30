@@ -122,6 +122,7 @@ const COUNTER_KEY: Record<string, string> = {
   users: "nav.count.users",
   runners: "nav.count.runners",
   services: "nav.count.services",
+  storage: "nav.count.storage",
 };
 
 const WithTip = ({
@@ -230,10 +231,13 @@ const AdminNav = () => {
                         <span
                           className="adm-count"
                           data-tone={counter.tone}
+                          data-dot={counter.count === 0 || undefined}
                           data-testid={`admin-nav-count-${id}`}
                           title={counterText ?? undefined}
                         >
-                          <span aria-hidden="true">{counter.count}</span>
+                          {counter.count > 0 && (
+                            <span aria-hidden="true">{counter.count}</span>
+                          )}
                           {counterText && (
                             <span className="sr-only">{counterText}</span>
                           )}
