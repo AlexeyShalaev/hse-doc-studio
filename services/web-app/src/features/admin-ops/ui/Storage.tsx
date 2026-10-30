@@ -6,11 +6,12 @@ import { StorageView } from "./StorageView";
 export const Storage = () => {
   const storage = useStorage();
   const now = useNow(15000);
-  const status = storage.isError
-    ? "error"
-    : storage.isPending
-      ? "loading"
-      : "ready";
+  const status =
+    storage.data !== undefined
+      ? "ready"
+      : storage.isError
+        ? "error"
+        : "loading";
   return (
     <StorageView
       status={status}

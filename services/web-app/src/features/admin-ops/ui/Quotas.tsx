@@ -11,11 +11,8 @@ export const Quotas = () => {
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
 
-  const status = quotas.isError
-    ? "error"
-    : quotas.isPending
-      ? "loading"
-      : "ready";
+  const status =
+    quotas.data !== undefined ? "ready" : quotas.isError ? "error" : "loading";
 
   return (
     <QuotasView

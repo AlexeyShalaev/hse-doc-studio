@@ -14,7 +14,8 @@ export const OrgsList = ({ onOpen }: { onOpen: (slug: string) => void }) => {
     instanceAdmin: user?.is_instance_admin === true,
   });
 
-  const status = orgs.isError ? "error" : orgs.isPending ? "loading" : "ready";
+  const status =
+    orgs.data !== undefined ? "ready" : orgs.isError ? "error" : "loading";
   return (
     <>
       <OrgsListView

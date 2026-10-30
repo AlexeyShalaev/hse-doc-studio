@@ -10,8 +10,9 @@ import { JobDetail } from "./JobDetail";
 import { PAGE_STEP, QueueView } from "./QueueView";
 import { ConfirmDialog } from "./RunnerDialogs";
 
-const statusOf = (q: { isError: boolean; isPending: boolean }) =>
-  q.isError ? "error" : q.isPending ? "loading" : "ready";
+// Неудачный фоновый опрос не стирает уже полученные данные.
+const statusOf = (q: { data: unknown; isError: boolean }) =>
+  q.data !== undefined ? "ready" : q.isError ? "error" : "loading";
 
 /** Очередь: опрос раз в несколько секунд, отмена с подтверждением, подробности задачи. */
 export const Queue = () => {

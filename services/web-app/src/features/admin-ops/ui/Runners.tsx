@@ -27,8 +27,9 @@ import {
 import { FailureNotice } from "./parts";
 import { RunnersView } from "./RunnersView";
 
-const statusOf = (q: { isError: boolean; isPending: boolean }) =>
-  q.isError ? "error" : q.isPending ? "loading" : "ready";
+// Неудачный фоновый опрос не стирает уже полученные данные.
+const statusOf = (q: { data: unknown; isError: boolean }) =>
+  q.data !== undefined ? "ready" : q.isError ? "error" : "loading";
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
 export const Runners = () => {

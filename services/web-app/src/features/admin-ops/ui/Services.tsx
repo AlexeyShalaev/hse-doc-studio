@@ -4,11 +4,12 @@ import { ServicesView } from "./ServicesView";
 /** Сервисы: данные с опросом раз в полминуты и обновление по кнопке. */
 export const Services = () => {
   const services = useServices();
-  const status = services.isError
-    ? "error"
-    : services.isPending
-      ? "loading"
-      : "ready";
+  const status =
+    services.data !== undefined
+      ? "ready"
+      : services.isError
+        ? "error"
+        : "loading";
   return (
     <ServicesView
       status={status}
