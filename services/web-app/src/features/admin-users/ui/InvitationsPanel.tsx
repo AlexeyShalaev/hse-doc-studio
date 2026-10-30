@@ -204,7 +204,6 @@ export const InvitationsPanel = () => {
             value={email}
             autoComplete="off"
             placeholder="name@example.org"
-            hint={t("invitations.emailHint")}
             {...(emailError ? { error: emailError } : {})}
             onChange={(event) => {
               setEmail(event.target.value);
@@ -239,6 +238,9 @@ export const InvitationsPanel = () => {
           {t("invitations.create")}
         </Button>
       </form>
+      <p className="hint" style={{ marginTop: -6 }}>
+        {t("invitations.emailHint")}
+      </p>
       {failure && <FailureNotice failure={failure} />}
       {link && (
         <div
