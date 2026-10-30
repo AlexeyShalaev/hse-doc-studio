@@ -66,6 +66,7 @@ export const MyRunnersSection = () => {
   // говорим об этом тостом, не дожидаясь, пока человек закроет окно.
   const known = useRef<Set<string> | null>(null);
   const list = runners.data;
+  const refetchTokens = tokens.refetch;
   useEffect(() => {
     if (!connecting) {
       known.current = null;
@@ -80,11 +81,17 @@ export const MyRunnersSection = () => {
       if (!known.current.has(runner.id)) {
         known.current.add(runner.id);
         toast.success(t("mine.connected", { name: runner.name }));
+        // Раннер израсходовал токен: из «Неиспользованных» он должен уйти сразу.
+        void refetchTokens();
       }
     }
-  }, [connecting, list, t]);
+  }, [connecting, list, t, refetchTokens]);
 
   const closeConnect = () => {
+    // Раннер мог подключиться между опросами: после закрытия диалога список
+    // и токены перечитываются сразу, а не через полминуты.
+    void runners.refetch();
+    void tokens.refetch();
     setConnecting(false);
     setCreated(null);
     setError(null);
