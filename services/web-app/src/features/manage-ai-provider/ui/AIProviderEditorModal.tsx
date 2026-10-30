@@ -203,41 +203,51 @@ export const AIProviderEditorModal = ({
             "modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2",
             variant === "console" && "ui-console",
           )}
+          // Анатомия как у общего Modal: заголовок с описанием, середина,
+          // кнопки справа без отдельной полосы.
           style={{
-            width: 460,
+            width: 480,
             maxWidth: "calc(100vw - 32px)",
             maxHeight: "calc(100vh - 64px)",
           }}
         >
-          <DialogPrimitive.Description className="sr-only">
-            {t("modal.a11yDescription")}
-          </DialogPrimitive.Description>
-
-          <div
-            className="flex items-center justify-between"
-            style={{
-              padding: "12px 18px",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
+          <div style={{ padding: "24px 24px 0", flexShrink: 0 }}>
             <DialogPrimitive.Title
-              style={{ fontSize: 14, fontWeight: 600, margin: 0 }}
+              style={{
+                margin: 0,
+                paddingRight: 28,
+                fontSize: 15,
+                fontWeight: 600,
+                color: "var(--fg-0)",
+              }}
             >
               {isEdit ? t("modal.titleEdit") : t("modal.titleCreate")}
             </DialogPrimitive.Title>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={onClose}
-              title={t("modal.close")}
+            <DialogPrimitive.Description
+              style={{
+                margin: "8px 0 0",
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: "var(--fg-2)",
+              }}
             >
-              <X size={14} />
-            </button>
+              {t("modal.lead")}
+            </DialogPrimitive.Description>
           </div>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            aria-label={t("modal.close")}
+            style={{ position: "absolute", right: 12, top: 12 }}
+          >
+            <X size={14} />
+          </button>
 
           <div
+            className="modal-body"
             style={{
-              padding: 18,
+              padding: "16px 24px 4px",
               overflowY: "auto",
               flex: "1 1 auto",
               minHeight: 0,
@@ -391,7 +401,7 @@ export const AIProviderEditorModal = ({
 
               <div className="flex flex-col gap-1.5">
                 <label className="form-label">{t("fields.tlsVerify")}</label>
-                <div className="seg">
+                <div className="seg seg-fill">
                   <button
                     type="button"
                     className={clsx(sslVerify && "active")}
@@ -463,11 +473,7 @@ export const AIProviderEditorModal = ({
 
           <div
             className="flex items-center justify-end"
-            style={{
-              gap: 8,
-              padding: "10px 18px",
-              borderTop: "1px solid var(--border)",
-            }}
+            style={{ gap: 10, padding: "16px 24px 24px", flexShrink: 0 }}
           >
             <Button
               type="button"

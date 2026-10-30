@@ -1097,7 +1097,7 @@
     color: var(--fg-0);
     border-color: transparent;
   }
-  .btn.outline {
+  .btn.btn-outline {
     background: transparent;
   }
   .btn.danger {
@@ -1648,7 +1648,7 @@
     width: 100%;
   }
   .seg.seg-fill button {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
     height: auto;
     min-height: 26px;
@@ -2931,6 +2931,8 @@
     max-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
+    /* Фон середины и кнопок не выходит за скруглённые углы. */
+    overflow: hidden;
   }
   /* Прокручиваемая середина окна: пока ниже есть содержимое, над кнопками
      видна черта. Заплатка с attachment: local едет вместе с содержимым и
@@ -4662,6 +4664,22 @@
 .ui-console .field {
   gap: 6px;
 }
+/* Одна высота у полей, списков и кнопок в ряду: 32px, как у .btn. */
+.ui-console .input:not(textarea) {
+  height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+/* Стрелки числового поля наезжают на значение: число вводят с клавиатуры. */
+.ui-console input[type="number"].input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.ui-console input[type="number"].input::-webkit-inner-spin-button,
+.ui-console input[type="number"].input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .ui-console .field > p[role="alert"] {
   margin: -2px 0 0;
   font-size: 12px;
@@ -4856,6 +4874,84 @@
   background: var(--bg-3);
   color: var(--fg-1);
 }
+/* ── панель фильтров над таблицей ── */
+.fbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  /* Первый ряд чипов по центру поля поиска, следующие ниже. */
+  align-items: flex-start;
+}
+.fbar-search {
+  position: relative;
+  flex: 0 1 300px;
+  min-width: 200px;
+}
+.fbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  /* Чипы переносятся внутри своей группы, а не выталкивают поиск. */
+  flex: 1 1 0;
+  min-width: 240px;
+  /* Чипы 26px по центру поля поиска 32px. */
+  padding-top: 3px;
+}
+.fbar-select {
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 8px;
+  padding-top: 0;
+}
+.fbar-select > .input {
+  width: auto;
+  min-width: 150px;
+}
+.fbar-caption {
+  font-size: 12px;
+  color: var(--fg-2);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+/* ── секрет, показанный один раз ── */
+.secret-once {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-color: color-mix(in oklch, var(--c-warn) 45%, transparent);
+}
+.secret-once-warning {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+/* В окне рамка уже есть: без второй рамки, предупреждение тонированной полосой. */
+.modal-panel .secret-once {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.modal-panel .secret-once-warning {
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  background: var(--c-warn-soft);
+  color: var(--fg-1);
+}
+
+/* Точка без числа: «здесь проблема», когда считать нечего. */
+.adm-count[data-dot] {
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+}
+.adm-count[data-dot][data-tone="danger"] {
+  background: var(--c-err);
+}
 .adm-count[data-tone="accent"] {
   background: var(--accent-soft);
   color: var(--accent);
@@ -4920,6 +5016,13 @@
     height: 15px;
     padding: 0 4px;
     font-size: 9.5px;
+  }
+  .adm-nav-item .adm-count[data-dot] {
+    top: 6px;
+    right: 6px;
+    min-width: 8px;
+    height: 8px;
+    padding: 0;
   }
   :root {
     --adm-gutter: 24px;
@@ -5055,6 +5158,16 @@
 .adm-section[data-variant="plain"] .adm-section-head {
   padding: 0 0 12px;
 }
+.adm-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Текст ghost-кнопки встаёт по правому краю содержимого, а не её подложки. */
+.adm-section-actions > .btn.ghost:last-child,
+.adm-header-actions > .btn.ghost:last-child {
+  margin-right: -10px;
+}
 .adm-section-head h2 {
   margin: 0;
   font-size: 14px;
@@ -5109,7 +5222,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 .adm-setting-label {
-  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -5164,6 +5276,19 @@
   font-weight: 500;
   white-space: nowrap;
   cursor: help;
+}
+.adm-setting-label-text {
+  min-width: 0;
+}
+.adm-setting-label > .adm-lock {
+  flex-shrink: 0;
+}
+.adm-lock[data-style="icon"] {
+  width: 20px;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+  color: var(--fg-2);
 }
 .adm-lock:focus-visible {
   outline: 2px solid var(--accent);
@@ -5546,7 +5671,8 @@
 }
 .adm-audit-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 190px) 92px 16px;
+  /* Время во всю длину «52 минуты назад» / «52 minutes ago»: правый край ровный. */
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 190px) 124px 16px;
   align-items: center;
   gap: 12px;
   width: 100%;
@@ -5651,7 +5777,7 @@
 }
 @container (max-width: 620px) {
   .adm-audit-row {
-    grid-template-columns: 28px minmax(0, 1fr) 84px 16px;
+    grid-template-columns: 28px minmax(0, 1fr) 116px 16px;
   }
   .adm-audit-row > .adm-person {
     display: none;

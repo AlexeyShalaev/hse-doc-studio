@@ -54,11 +54,7 @@ export const Section = ({
             {title != null && <h2 id={headingId}>{title}</h2>}
             {description && <p className="adm-section-desc">{description}</p>}
           </div>
-          {actions && (
-            <div className="flex items-center" style={{ gap: 8 }}>
-              {actions}
-            </div>
-          )}
+          {actions && <div className="adm-section-actions">{actions}</div>}
         </div>
       )}
       {children != null && (
@@ -87,6 +83,12 @@ export type SettingRowProps = {
    * подсказкой. Строка заменяет стандартный текст подсказки.
    */
   locked?: boolean | string | undefined;
+  /**
+   * chip: замок с подписью «Задано окружением»; icon: только замок. Когда
+   * окружением задан весь раздел, об этом говорит одна пометка раздела, а у
+   * строк остаётся значок.
+   */
+  lockStyle?: "chip" | "icon" | undefined;
   /** inline: управление справа; stacked: под подписью (радиогруппы, длинные поля). */
   layout?: "inline" | "stacked" | undefined;
   /** end: по правому краю (переключатели); stretch: на всю колонку (поля ввода). */
@@ -100,6 +102,7 @@ export const SettingRow = ({
   children,
   htmlFor,
   locked = false,
+  lockStyle = "chip",
   layout = "inline",
   align = "end",
   testId,
@@ -117,17 +120,19 @@ export const SettingRow = ({
     >
       <div style={{ minWidth: 0 }}>
         <Label className="adm-setting-label" htmlFor={htmlFor}>
-          {label}
+          {/* Пометка стоит в строке с подписью, а длинная подпись переносится сама. */}
+          <span className="adm-setting-label-text">{label}</span>
           {locked && (
             <Tooltip content={lockText}>
               <span
                 className="adm-lock"
+                data-style={lockStyle}
                 tabIndex={0}
                 aria-label={lockText}
                 data-testid={testId ? `${testId}-locked` : undefined}
               >
                 <Lock size={12} aria-hidden="true" />
-                {t("adminKit.locked")}
+                {lockStyle === "chip" && t("adminKit.locked")}
               </span>
             </Tooltip>
           )}

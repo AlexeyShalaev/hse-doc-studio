@@ -23,14 +23,14 @@
     "added": "Провайдер «{{name}}» добавлен"
   },
   "modal": {
-    "a11yDescription": "Параметры подключения к ИИ-провайдеру: тип, API-ключ, адрес, модели, TLS и таймауты.",
+    "lead": "Подключение к Anthropic, OpenAI или совместимому API.",
     "titleEdit": "Изменить провайдера",
     "titleCreate": "Добавить провайдера",
     "close": "Закрыть"
   },
   "fields": {
     "name": "Название",
-    "namePlaceholder": "Напр. OpenAI или Local vLLM",
+    "namePlaceholder": "Например, OpenAI или Local vLLM",
     "type": "Тип",
     "apiKey": "API-ключ",
     "apiKeyPlaceholderEdit": "Оставьте пустым, чтобы не менять",

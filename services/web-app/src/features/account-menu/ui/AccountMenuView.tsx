@@ -1,5 +1,6 @@
 import { LogOut, Settings, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Badge } from "@shared/ui/Badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
 import { Spinner } from "@shared/ui/Spinner";
 import type { SessionUser } from "@entities/session";
@@ -105,19 +106,16 @@ export const AccountMenuView = ({
             }}
           >
             {user.is_instance_admin && (
-              <span className="chip" data-testid="account-menu-admin">
+              <Badge variant="accent" data-testid="account-menu-admin">
+                <ShieldCheck size={11} aria-hidden="true" />
                 {t("accountMenu.admin")}
-              </span>
+              </Badge>
             )}
             {!user.email_verified && (
-              <span
-                className="chip"
-                data-testid="account-menu-unverified"
-                style={{ color: "var(--c-warn)" }}
-              >
-                <ShieldAlert size={10} />
+              <Badge variant="warning" data-testid="account-menu-unverified">
+                <ShieldAlert size={11} aria-hidden="true" />
                 {t("accountMenu.unverified")}
-              </span>
+              </Badge>
             )}
           </div>
         )}
@@ -129,18 +127,18 @@ export const AccountMenuView = ({
               listStyle: "none",
               margin: 0,
               padding: "8px 12px 0",
-              fontSize: 11.5,
-              color: "var(--fg-2)",
+              fontSize: 12,
+              color: "var(--fg-1)",
             }}
           >
             {user.org_roles.map((org) => (
               <li
                 key={org.slug}
                 className="flex items-center justify-between"
-                style={{ gap: 8 }}
+                style={{ gap: 8, padding: "2px 0" }}
               >
                 <span className="truncate">{org.name}</span>
-                <span className="mono dim">
+                <span className="shrink-0" style={{ color: "var(--fg-2)" }}>
                   {t(`accountMenu.orgRole.${org.role}`)}
                 </span>
               </li>

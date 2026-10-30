@@ -23,14 +23,14 @@
     "added": "Provider «{{name}}» added"
   },
   "modal": {
-    "a11yDescription": "AI provider connection settings: type, API key, address, models, TLS, and timeouts.",
+    "lead": "Connect Anthropic, OpenAI or a compatible API.",
     "titleEdit": "Edit provider",
     "titleCreate": "Add provider",
     "close": "Close"
   },
   "fields": {
     "name": "Name",
-    "namePlaceholder": "E.g. OpenAI or Local vLLM",
+    "namePlaceholder": "For example, OpenAI or Local vLLM",
     "type": "Type",
     "apiKey": "API key",
     "apiKeyPlaceholderEdit": "Leave empty to keep unchanged",

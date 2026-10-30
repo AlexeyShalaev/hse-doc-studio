@@ -3,6 +3,7 @@ import { Search, X } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
+import { Select } from "../Select";
 
 // Панель над таблицей: поиск с задержкой и группы фильтров-чипов. Каждая группа
 // выбирает одно значение; пустое значение значит «все».
@@ -17,7 +18,12 @@ export type FilterGroup = {
   /** Выбранное значение; "" значит «все». */
   value: string;
   onChange: (value: string) => void;
+  /** Длинный список вариантов удобнее выпадающим списком, чем рядом чипов. */
+  display?: "chips" | "select";
 };
+
+// Radix Select не принимает пустое значение: «все» под своим ключом.
+const ALL = "__all__";
 
 export type FilterBarProps = {
   /** Текущий поисковый запрос (после задержки). */
@@ -67,19 +73,32 @@ export const FilterBar = ({
   // Когда групп несколько, у каждой видна подпись: иначе непонятно, к чему
   // относится каждая кнопка «Все».
   const labelled = filters.length > 1;
+  // Выпадающие списки сразу за поиском, чипы дальше: ряд чипов может
+  // переноситься, не сдвигая остальное.
+  const selects = filters.filter((f) => f.display === "select");
+  const chips = filters.filter((f) => f.display !== "select");
+  // «Сбросить» нужен, только когда групп несколько: одну группу сбрасывает
+  // чип «Все», поиск очищает крестик в поле. Встаёт в конец последнего ряда
+  // чипов, так что его появление ничего не двигает, кроме него самого.
+  const reset =
+    onReset && active && filters.length > 1 ? (
+      <button
+        type="button"
+        className="btn ghost sm"
+        onClick={() => {
+          setText("");
+          onReset();
+        }}
+      >
+        <X size={12} aria-hidden="true" />
+        {t("filterBar.reset")}
+      </button>
+    ) : null;
 
   return (
-    <div
-      role="search"
-      className={clsx(className)}
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 10,
-        alignItems: "center",
-      }}
-    >
-      <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 360 }}>
+    <div role="search" className={clsx("fbar", className)}>
+      {/* Ширина поиска постоянная: выбор фильтра не сдвигает ряд. */}
+      <div className="fbar-search">
         <Search
           size={14}
           aria-hidden="true"
@@ -104,28 +123,37 @@ export const FilterBar = ({
           style={{ width: "100%", paddingLeft: 30 }}
         />
       </div>
-      {filters.map((group) => (
+      {selects.map((group) => (
+        <div key={group.id} className="fbar-group fbar-select">
+          <span className="fbar-caption" aria-hidden="true">
+            {group.label}
+          </span>
+          <Select
+            value={group.value === "" ? ALL : group.value}
+            onValueChange={(value) => {
+              group.onChange(value === ALL ? "" : value);
+            }}
+            placeholder={group.label}
+            options={[
+              { value: ALL, label: t("filterBar.all") },
+              ...group.options.map((o) => ({
+                value: o.value,
+                label:
+                  o.count != null ? `${o.label} · ${String(o.count)}` : o.label,
+              })),
+            ]}
+          />
+        </div>
+      ))}
+      {chips.map((group, index) => (
         <div
           key={group.id}
           role="group"
           aria-label={group.label}
-          style={{
-            display: "flex",
-            gap: 6,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
+          className="fbar-group"
         >
           {labelled && (
-            <span
-              aria-hidden="true"
-              style={{
-                fontSize: 12,
-                color: "var(--fg-2)",
-                marginRight: 2,
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span aria-hidden="true" className="fbar-caption">
               {group.label}
             </span>
           )}
@@ -159,21 +187,10 @@ export const FilterBar = ({
               )}
             </Chip>
           ))}
+          {index === chips.length - 1 && reset}
         </div>
       ))}
-      {onReset && active && (
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => {
-            setText("");
-            onReset();
-          }}
-        >
-          <X size={12} aria-hidden="true" />
-          {t("filterBar.reset")}
-        </button>
-      )}
+      {chips.length === 0 && reset}
     </div>
   );
 };

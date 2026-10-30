@@ -164,9 +164,9 @@
     "unverified": "Email not verified",
     "orgs": "Organizations",
     "orgRole": {
-      "owner": "owner",
-      "admin": "admin",
-      "member": "member"
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   }
 }

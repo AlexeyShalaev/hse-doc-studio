@@ -5,16 +5,10 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronLeft,
-  ChevronRight,
-  CircleAlert,
-  Inbox,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
+import { EmptyState, ErrorState } from "../EmptyState";
 
 // Таблица админских экранов. Сортировка и страницы серверные: таблица только
 // показывает состояние и сообщает о намерении (onSortingChange, onPageChange).
@@ -40,6 +34,13 @@ export type DataTableProps<T> = {
   emptyTitle?: string;
   emptyHint?: string;
   emptyAction?: React.ReactNode;
+  /** Значок пустого состояния; по умолчанию «входящие». */
+  emptyIcon?: React.ReactNode;
+  /**
+   * Ширины колонок по id: без них пустая таблица раскладывает шапку по-другому,
+   * и колонки прыгают при смене фильтра.
+   */
+  columnWidths?: Partial<Record<string, number | string>>;
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
   pagination?: DataTablePagination;
@@ -63,6 +64,8 @@ export const DataTable = <T,>({
   emptyTitle,
   emptyHint,
   emptyAction,
+  emptyIcon,
+  columnWidths,
   sorting = [],
   onSortingChange,
   pagination,
@@ -112,8 +115,28 @@ export const DataTable = <T,>({
         <table
           aria-label={caption}
           aria-busy={loading}
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: 12.5,
+            // С заданными ширинами раскладка не зависит от содержимого строк.
+            tableLayout: columnWidths ? "fixed" : undefined,
+          }}
         >
+          {columnWidths && (
+            <colgroup>
+              {table.getVisibleLeafColumns().map((column) => (
+                <col
+                  key={column.id}
+                  style={
+                    columnWidths[column.id] !== undefined
+                      ? { width: columnWidths[column.id] }
+                      : undefined
+                  }
+                />
+              ))}
+            </colgroup>
+          )}
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
@@ -264,24 +287,10 @@ export const DataTable = <T,>({
             {showError && (
               <tr>
                 <td colSpan={colCount} style={{ padding: 0 }}>
-                  <Placeholder
-                    role="alert"
-                    icon={
-                      <CircleAlert
-                        size={22}
-                        aria-hidden="true"
-                        style={{ color: "var(--c-err)" }}
-                      />
-                    }
+                  <ErrorState
                     title={t("dataTable.errorTitle")}
-                    hint={error}
-                    action={
-                      onRetry && (
-                        <button type="button" className="btn" onClick={onRetry}>
-                          {t("dataTable.retry")}
-                        </button>
-                      )
-                    }
+                    description={error}
+                    onRetry={onRetry}
                   />
                 </td>
               </tr>
@@ -289,17 +298,12 @@ export const DataTable = <T,>({
             {showEmpty && (
               <tr>
                 <td colSpan={colCount} style={{ padding: 0 }}>
-                  <Placeholder
-                    icon={
-                      <Inbox
-                        size={22}
-                        aria-hidden="true"
-                        style={{ color: "var(--fg-3)" }}
-                      />
-                    }
+                  {/* Тот же вид, что у пустых состояний вне таблиц. */}
+                  <EmptyState
+                    icon={emptyIcon}
                     title={emptyTitle ?? t("dataTable.emptyTitle")}
-                    hint={emptyHint}
-                    action={emptyAction}
+                    description={emptyHint}
+                    action={emptyAction ?? undefined}
                   />
                 </td>
               </tr>
@@ -311,41 +315,6 @@ export const DataTable = <T,>({
     </div>
   );
 };
-
-const Placeholder = ({
-  icon,
-  title,
-  hint,
-  action,
-  role,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  hint?: string | undefined;
-  action?: React.ReactNode;
-  role?: "alert";
-}) => (
-  <div
-    role={role}
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: 8,
-      padding: "36px 16px",
-      textAlign: "center",
-    }}
-  >
-    {icon}
-    <strong style={{ fontSize: 13.5, color: "var(--fg-0)" }}>{title}</strong>
-    {hint && (
-      <span style={{ fontSize: 12.5, color: "var(--fg-2)", maxWidth: 380 }}>
-        {hint}
-      </span>
-    )}
-    {action && <div style={{ marginTop: 4 }}>{action}</div>}
-  </div>
-);
 
 const Pager = ({ pagination }: { pagination: DataTablePagination }) => {
   const { t } = useTranslation("uiPrimitives");

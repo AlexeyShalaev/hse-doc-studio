@@ -37,17 +37,7 @@ export const SecretOnce = ({
   };
 
   return (
-    <section
-      aria-label={label}
-      className="card"
-      style={{
-        padding: 16,
-        borderColor: "color-mix(in oklch, var(--c-warn) 45%, transparent)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
-    >
+    <section aria-label={label} className="card secret-once">
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <KeyRound
           size={15}
@@ -56,14 +46,7 @@ export const SecretOnce = ({
         />
         <strong style={{ fontSize: 13.5 }}>{label}</strong>
       </div>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 12.5,
-          color: "var(--fg-2)",
-          lineHeight: 1.5,
-        }}
-      >
+      <p className="secret-once-warning">
         {warning ?? t("secretOnce.warning")}
         {hint ? ` ${hint}` : ""}
       </p>

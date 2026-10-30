@@ -9,7 +9,8 @@ const buttonVariants = cva("btn", {
       primary: "primary",
       secondary: "",
       ghost: "ghost",
-      outline: "outline",
+      // Не «outline»: так называется утилита Tailwind, она рисует резкую обводку.
+      outline: "btn-outline",
       danger: "danger",
     },
     size: {
