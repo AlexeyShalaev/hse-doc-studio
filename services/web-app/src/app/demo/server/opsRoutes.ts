@@ -15,7 +15,7 @@ import { adminOpsOf, type ServerDemoWorld } from "./world";
 // Демо админки: раннеры, токены регистрации, очередь, квоты, сервисы и место.
 // Тела совпадают с contracts/server/fixtures (AdminRunnerList, AdminJobPage, AdminQuotas и т.д.).
 // Мир хранит данные в виде экранов (с именами), а наружу отдаёт их в проводной форме сервера:
-// идентификаторы в ней заменены именами, чтобы демо читалось так же, как с настоящими данными.
+// только идентификаторы, имена людей и раннеров экран находит сам, как с настоящим API.
 //
 // Правила, как у настоящего API: только админ установки (остальным 404), секрет токена виден
 // только в ответе на создание или ротацию, отозванный раннер исчезает из ротации.
@@ -89,8 +89,8 @@ export const createOpsRoutes = (
     id: j.id,
     kind: j.kind,
     state: j.status,
-    project_id: j.project_name ?? "-",
-    user_id: j.user_name,
+    project_id: j.project_id ?? "-",
+    user_id: j.user_id,
     org_id: null,
     tags: j.tags,
     priority_class: j.priority,
@@ -99,7 +99,7 @@ export const createOpsRoutes = (
     finished_at: j.finished_at,
     attempt: j.attempt,
     max_attempts: j.max_attempts,
-    runner_id: j.runner_name,
+    runner_id: j.runner_id,
     cancel_requested: false,
     error_code: j.error,
   });

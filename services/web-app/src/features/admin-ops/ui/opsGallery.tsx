@@ -207,13 +207,13 @@ const JOBS: AdminJob[] = [
     runner_id: "rn2",
     runner_name: "runner-2",
     priority: "batch",
-    error: "Сборка завершилась с ошибкой LaTeX: undefined control sequence",
+    error: "artifact_invalid",
   }),
   job("j7", "office.convert", "timed_out", {
     runner_id: "rn2",
     runner_name: "runner-2",
     attempt: 2,
-    error: "Превышено время выполнения: 180 с",
+    error: "job_timeout",
   }),
   job("j8", "compile", "cancelled", { project_id: null, project_name: null }),
 ];
@@ -221,6 +221,14 @@ const JOBS: AdminJob[] = [
 const SUMMARY: AdminQueueSummary = {
   queued: 2,
   running: 2,
+  by_state: {
+    queued: 2,
+    running: 2,
+    succeeded: 14,
+    failed: 1,
+    cancelled: 1,
+    timed_out: 1,
+  },
   oldest_queued_age_s: 215,
   wait_p50_s: 12,
   wait_p95_s: 80,
@@ -302,10 +310,10 @@ const STORAGE: AdminStorage = {
   volume_total_bytes: 200 * GIB,
   computed_at: ago(40),
   owners: [
-    { id: "msp-2025", name: "МСПИН 2025", projects: 31 },
+    { id: "u3", name: "Мария Келлер", projects: 12 },
+    { id: "u4", name: "Иван Сидоров", projects: 9 },
+    { id: "u2", name: "Пётр Орлов", projects: 6 },
     { id: "u1", name: "Анна Петрова", projects: 2 },
-    { id: "ai-lab", name: "Лаборатория ИИ", projects: 4 },
-    { id: "u2", name: "Пётр Орлов", projects: 1 },
   ],
 };
 
@@ -351,6 +359,14 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       ),
       entry("admin_runners_busy", "Меняется раннер", () =>
         runnersView({ busyId: "rn1" }),
+      ),
+      entry("admin_runners_forbidden", "Нет прав", () =>
+        runnersView({
+          status: "forbidden",
+          runners: [],
+          tokensStatus: "forbidden",
+          tokens: [],
+        }),
       ),
     ],
   },
@@ -424,6 +440,14 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           summary: {
             queued: 0,
             running: 0,
+            by_state: {
+              queued: 0,
+              running: 0,
+              succeeded: 0,
+              failed: 0,
+              cancelled: 0,
+              timed_out: 0,
+            },
             oldest_queued_age_s: null,
             wait_p50_s: null,
             wait_p95_s: null,
@@ -431,6 +455,14 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           },
           jobs: [],
           hasMore: false,
+        }),
+      ),
+      entry("admin_queue_forbidden", "Нет прав", () =>
+        queueView({
+          summaryStatus: "forbidden",
+          summary: null,
+          status: "forbidden",
+          jobs: [],
         }),
       ),
       entry("admin_queue_nomatch", "Фильтр ничего не нашёл", () =>
@@ -485,6 +517,9 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       entry("admin_quotas_error", "Не загрузились", () =>
         quotasView(QUOTAS, { status: "error", quotas: null, onRetry: noop }),
       ),
+      entry("admin_quotas_forbidden", "Нет прав", () =>
+        quotasView(QUOTAS, { status: "forbidden", quotas: null }),
+      ),
     ],
   },
   {
@@ -515,6 +550,9 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           onRetry={noop}
           onRefresh={noop}
         />
+      )),
+      entry("admin_services_forbidden", "Нет прав", () => (
+        <ServicesView status="forbidden" services={[]} onRefresh={noop} />
       )),
     ],
   },
@@ -559,6 +597,9 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       entry("admin_storage_error", "Не загрузилось", () => (
         <StorageView status="error" storage={null} now={NOW} onRetry={noop} />
       )),
+      entry("admin_storage_forbidden", "Нет прав", () => (
+        <StorageView status="forbidden" storage={null} now={NOW} />
+      )),
     ],
   },
   {
@@ -576,7 +617,7 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       entry(
         "admin_ops_runners_only",
         "Только раннеры",
-        () => <Runners />,
+        () => <Runners creating={false} onCreatingChange={noop} />,
         live("admin_ready"),
       ),
       entry(

@@ -10,6 +10,8 @@ import type {
 } from "@entities/session";
 import {
   useCreateToken,
+  useQueue,
+  useQueueSummary,
   useRevokeRunner,
   useRevokeToken,
   useRotateToken,
@@ -18,28 +20,36 @@ import {
   useTokens,
 } from "../api/opsQueries";
 import { failureKey, type Failure } from "../lib/failure";
+import { busySlots } from "../lib/jobs";
 import { useNow } from "../lib/useNow";
 import {
   ConfirmDialog,
   CreateTokenDialog,
   RotatedDialog,
 } from "./RunnerDialogs";
+import { statusOf } from "../lib/viewStatus";
 import { FailureNotice } from "./parts";
 import { RunnersView } from "./RunnersView";
 
-const statusOf = (q: { isError: boolean; isPending: boolean }) =>
-  q.isError ? "error" : q.isPending ? "loading" : "ready";
+// Все выполняющиеся задачи одним запросом: из них считается занятость каждого раннера.
+const RUNNING = { status: "running", kind: "", q: "", limit: 200 } as const;
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
 export const Runners = ({
-  initialCreateToken = false,
+  creating,
+  onCreatingChange,
+  onOpenQueue,
 }: {
-  /** Открыть создание токена сразу (ссылка со сводки). */
-  initialCreateToken?: boolean;
+  /** Открыт диалог создания токена (кнопка в заголовке раздела). */
+  creating: boolean;
+  onCreatingChange: (open: boolean) => void;
+  onOpenQueue?: () => void;
 }) => {
   const { t } = useTranslation("adminOps");
   const runners = useRunners();
   const tokens = useTokens();
+  const summary = useQueueSummary();
+  const running = useQueue(RUNNING);
   const now = useNow();
 
   const pause = useSetPaused();
@@ -51,7 +61,6 @@ export const Runners = ({
   const [rotating, setRotating] = useState<AdminRunner | null>(null);
   const [rotated, setRotated] = useState<AdminRunnerRotated | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
-  const [creating, setCreating] = useState(initialCreateToken);
   const [created, setCreated] = useState<AdminRunnerTokenCreated | null>(null);
   const [revokingToken, setRevokingToken] = useState<AdminRunnerToken | null>(
     null,
@@ -64,7 +73,7 @@ export const Runners = ({
     setFailure({ code: failureCode(error) });
   };
   const closeCreate = () => {
-    setCreating(false);
+    onCreatingChange(false);
     setCreated(null);
     setFailure(null);
     createToken.reset();
@@ -82,6 +91,9 @@ export const Runners = ({
         runners={runners.data ?? []}
         tokensStatus={statusOf(tokens)}
         tokens={tokens.data ?? []}
+        summary={summary.data ?? null}
+        summaryStatus={statusOf(summary)}
+        slots={running.data ? busySlots(running.data.items) : null}
         now={now}
         busyId={busyId}
         onRetry={() => void runners.refetch()}
@@ -111,8 +123,9 @@ export const Runners = ({
         }}
         onCreateToken={() => {
           setFailure(null);
-          setCreating(true);
+          onCreatingChange(true);
         }}
+        onOpenQueue={onOpenQueue}
         onRevokeToken={(token) => {
           setFailure(null);
           setRevokingToken(token);

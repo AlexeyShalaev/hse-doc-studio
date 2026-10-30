@@ -32,13 +32,14 @@ export const jobFromWire = (job: WireJob, now: number): AdminJob => ({
   status: job.state,
   priority: job.priority_class,
   project_id: job.project_id,
-  // Имён сервер не отдаёт: до появления справочника показываем идентификаторы.
-  project_name: job.project_id,
+  // Имён сервер не отдаёт: человека и раннера экран находит сам по идентификатору,
+  // а вместо идентификатора на экран выводится нейтральная подпись.
+  project_name: null,
   user_id: job.user_id,
-  user_name: job.user_id,
+  user_name: "",
   tags: job.tags,
   runner_id: job.runner_id,
-  runner_name: job.runner_id,
+  runner_name: null,
   attempt: job.attempt,
   max_attempts: job.max_attempts,
   created_at: job.queued_at,
@@ -62,6 +63,14 @@ export const summaryFromWire = (
 ): AdminQueueSummary => ({
   queued: summary.by_state.queued ?? 0,
   running: summary.by_state.running ?? 0,
+  by_state: {
+    queued: summary.by_state.queued ?? 0,
+    running: summary.by_state.running ?? 0,
+    succeeded: summary.by_state.succeeded ?? 0,
+    failed: summary.by_state.failed ?? 0,
+    cancelled: summary.by_state.cancelled ?? 0,
+    timed_out: summary.by_state.timed_out ?? 0,
+  },
   oldest_queued_age_s:
     summary.oldest_queued_at === null
       ? null

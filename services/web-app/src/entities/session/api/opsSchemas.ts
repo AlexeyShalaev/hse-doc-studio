@@ -84,6 +84,8 @@ export type AdminJobPage = { items: AdminJob[]; hasMore: boolean };
 export type AdminQueueSummary = {
   queued: number;
   running: number;
+  /** Число задач в каждом состоянии: для счётчиков фильтров. */
+  by_state: Record<JobState, number>;
   oldest_queued_age_s: number | null;
   wait_p50_s: number | null;
   wait_p95_s: number | null;

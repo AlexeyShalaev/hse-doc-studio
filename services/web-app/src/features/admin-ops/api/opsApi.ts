@@ -11,6 +11,7 @@ import {
   AdminRunnerTokenSchema,
   AdminServiceHealthSchema,
   AdminStorageUsageSchema,
+  AdminUserSchema,
   type AdminJob,
   type AdminJobPage,
   type AdminQueueSummary,
@@ -21,6 +22,7 @@ import {
   type AdminRunnerTokenCreated,
   type AdminService,
   type AdminStorage,
+  type AdminUser,
   type CreateAdminRunnerTokenRequest,
   type JobState,
   type UpdateAdminQuotasRequest,
@@ -140,6 +142,12 @@ export const opsApi = {
     )
       .map(serviceFromWire)
       .filter((service): service is AdminService => service !== null),
+
+  /** Человек по идентификатору: имя и почта для очереди и списка владельцев. */
+  person: (id: string): Promise<AdminUser> =>
+    adminClient
+      .get(`/users/${enc(id)}`, quiet)
+      .then(parseResp(AdminUserSchema)),
 
   storage: async (): Promise<AdminStorage> =>
     storageFromWire(

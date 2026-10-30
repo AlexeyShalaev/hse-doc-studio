@@ -2,6 +2,7 @@ import { useState } from "react";
 import { failureCode } from "@shared/api";
 import { useQuotas, useUpdateQuotas } from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
+import { statusOf } from "../lib/viewStatus";
 import { QuotasView } from "./QuotasView";
 
 /** Квоты: три предела установки, сохраняются одной формой. */
@@ -11,15 +12,9 @@ export const Quotas = () => {
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
 
-  const status = quotas.isError
-    ? "error"
-    : quotas.isPending
-      ? "loading"
-      : "ready";
-
   return (
     <QuotasView
-      status={status}
+      status={statusOf(quotas)}
       quotas={quotas.data ?? null}
       saving={update.isPending}
       saved={saved}

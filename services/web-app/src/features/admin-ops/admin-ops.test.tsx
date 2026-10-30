@@ -30,6 +30,8 @@ import { installServerDemo } from "@/app/demo";
 import { activateServerScenario } from "@/app/demo/server";
 import { serverAdminDemoRoutes } from "@/app/demo/server/routes";
 import { formatBytes, formatDuration, percent } from "./lib/format";
+import { busySlots } from "./lib/jobs";
+import { personRef, shortRef } from "./lib/people";
 import { ensureAdminOpsLocales } from "./lib/locales";
 import { fromMinutes, toMinutes } from "./lib/minutes";
 import {
@@ -40,6 +42,8 @@ import {
 } from "./lib/runnerStatus";
 import { isLowSpace } from "./lib/storage";
 import { tokenStatus } from "./lib/tokenStatus";
+import { statusOf } from "./lib/viewStatus";
+import { ApiError } from "@shared/api";
 import { QuotasPage, RunnersPage, ServicesPage, StoragePage } from "./index";
 
 // Операционные экраны поверх демо-транспорта: те же запросы, что уйдут настоящему бэкенду,
@@ -137,6 +141,50 @@ describe("операционные разделы: чистая логика", (
     expect(tokenStatus(token({ expires_at: iso(1) }), NOW)).toBe("expired");
     expect(tokenStatus(token({ expires_at: null }), NOW)).toBe("active");
     expect(tokenStatus(token({ revoked: true, uses: 2 }), NOW)).toBe("revoked");
+  });
+
+  it("нет прав и отсутствие раздела дают отдельное состояние, а не ошибку", () => {
+    const failed = (status: number, code: string) => ({
+      isError: true,
+      isPending: false,
+      error: new ApiError(code, code, status),
+    });
+    expect(statusOf(failed(403, "forbidden"))).toBe("forbidden");
+    expect(statusOf(failed(404, "not_found"))).toBe("forbidden");
+    expect(statusOf(failed(500, "internal"))).toBe("error");
+    expect(statusOf({ isError: false, isPending: true })).toBe("loading");
+    expect(statusOf({ isError: false, isPending: false })).toBe("ready");
+  });
+
+  it("люди по идентификатору: имя из справочника, без имени нейтрально", () => {
+    const people = new Map([
+      ["u1", { name: "Мария Келлер", email: "maria@example.org" }],
+    ]);
+    expect(personRef("u1", "", people)).toEqual({
+      id: "u1",
+      name: "Мария Келлер",
+      email: "maria@example.org",
+    });
+    expect(personRef("u2", "  ", people)).toEqual({
+      id: "u2",
+      name: null,
+      email: null,
+    });
+    expect(shortRef("p_01hxa1c4de")).toBe("a1c4de");
+    expect(shortRef("3f2c9a1e-0000-4000-8000-00000a1c4de9")).toBe("1c4de9");
+  });
+
+  it("занятые места считаются по выполняющимся задачам раннера", () => {
+    const slots = busySlots([
+      { status: "running", runner_id: "r1" },
+      { status: "running", runner_id: "r1" },
+      { status: "running", runner_id: "r2" },
+      { status: "queued", runner_id: null },
+      { status: "succeeded", runner_id: "r2" },
+    ]);
+    expect(slots.get("r1")).toBe(2);
+    expect(slots.get("r2")).toBe(1);
+    expect(slots.has("r3")).toBe(false);
   });
 
   it("размеры, длительности и доли", () => {
@@ -342,14 +390,22 @@ describe("операционные разделы: экраны", () => {
     expect(await status("rn_01hxb5")).toBe("offline");
     expect(await status("rn_01hxb6")).toBe("revoked");
     expect(screen.getByTestId("runners-stat-online")).toHaveTextContent(
-      "2 / 5",
+      /2\s*из 5/,
     );
     expect(screen.queryByTestId("runners-none-online")).toBeNull();
+    // Занятость считается по выполняющимся задачам: у runner-1 две из двух.
+    expect(
+      await screen.findByText("2 из 2", {}, { timeout: 5000 }),
+    ).toBeVisible();
+    expect(screen.getByTestId("runners-stat-version")).toHaveTextContent(
+      "1 раннер на старой версии",
+    );
   }, 20_000);
 
   it("пауза и возврат раннера", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-actions-rn_01hxb1"));
     await user.click(await screen.findByTestId("runner-pause-rn_01hxb1"));
     await waitFor(() => {
       expect(screen.getByTestId("runner-status-rn_01hxb1")).toHaveAttribute(
@@ -357,9 +413,10 @@ describe("операционные разделы: экраны", () => {
         "paused",
       );
     });
-    expect(screen.getByTestId("runner-pause-rn_01hxb1")).toHaveTextContent(
-      "Вернуть",
-    );
+    await user.click(screen.getByTestId("runner-actions-rn_01hxb1"));
+    expect(
+      await screen.findByTestId("runner-pause-rn_01hxb1"),
+    ).toHaveTextContent("Снять с паузы");
   }, 20_000);
 
   it("токен показывается один раз, вместе с командой запуска", async () => {
@@ -431,6 +488,7 @@ describe("операционные разделы: экраны", () => {
   it("новый токен раннера: подтверждение, затем секрет с командой", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-actions-rn_01hxb2"));
     await user.click(await screen.findByTestId("runner-rotate-rn_01hxb2"));
     const confirm = await screen.findByTestId("rotate-dialog");
     expect(within(confirm).getByText(/перестанет действовать/)).toBeVisible();
@@ -443,6 +501,7 @@ describe("операционные разделы: экраны", () => {
   it("отзыв раннера требует ввести его имя", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-actions-rn_01hxb5"));
     await user.click(await screen.findByTestId("runner-revoke-rn_01hxb5"));
     const confirmButton = await screen.findByRole("button", {
       name: "Отозвать",
@@ -464,9 +523,11 @@ describe("операционные разделы: экраны", () => {
     render(wrap(<RunnersPage />));
     expect(await screen.findByTestId("runners-none-online")).toBeVisible();
     await user.click(screen.getByTestId("ops-tab-queue"));
-    expect(await screen.findByTestId("queue-stat-queued")).toHaveTextContent(
-      "4",
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("queue-stat-queued")).toHaveTextContent(
+        /В очереди\s*4/,
+      );
+    });
     // Самая старая задача ждёт больше двух минут: время подсвечено.
     expect(await screen.findByTestId("job-wait-j_01hxe1")).toHaveTextContent(
       "21 мин",
@@ -483,9 +544,11 @@ describe("операционные разделы: экраны", () => {
   it("очередь: сводка, поиск и отмена с подтверждением", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage initialTab="queue" />));
-    expect(await screen.findByTestId("queue-stat-queued")).toHaveTextContent(
-      "4",
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("queue-stat-queued")).toHaveTextContent(
+        /В очереди\s*4/,
+      );
+    });
     expect(screen.getByTestId("queue-stat-running")).toHaveTextContent("3");
     expect(screen.getByTestId("queue-class-interactive")).toBeVisible();
 
@@ -513,20 +576,39 @@ describe("операционные разделы: экраны", () => {
     render(wrap(<RunnersPage initialTab="queue" />));
     await user.click(await screen.findByTestId("job-status-j_01hxd9"));
     const detail = await screen.findByTestId("job-detail");
+    // Код ошибки переведён в человеческий текст, сам код остаётся мелко для журнала.
     expect(within(detail).getByTestId("job-error")).toHaveTextContent(
-      "undefined control sequence",
+      "Раннер вернул повреждённый результат",
+    );
+    expect(within(detail).getByTestId("job-error")).toHaveTextContent(
+      "artifact_invalid",
     );
     expect(detail.textContent).toContain("runner-2");
     expect(detail.textContent).toContain("1 из 3");
+  }, 20_000);
+
+  it("очередь: люди по именам, удалённый без идентификатора", async () => {
+    render(wrap(<RunnersPage initialTab="queue" />));
+    expect(await screen.findAllByText("Мария Келлер")).not.toHaveLength(0);
+    expect(screen.getAllByText("maria.keller@example.org")).not.toHaveLength(0);
+    expect(await screen.findByText("Удалённый пользователь")).toBeVisible();
+    expect(screen.queryByText(/u_01hx/)).toBeNull();
+    // Счётчики состояний у фильтров приходят из сводки.
+    expect(
+      screen.getByRole("button", { name: /Выполняется\s*3/ }),
+    ).toBeVisible();
   }, 20_000);
 
   it("очередь: поиск по человеку", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage initialTab="queue" />));
     await screen.findByTestId("job-status-j_01hxd1");
+    await screen.findAllByText("Дарья Лис");
     await user.type(
-      screen.getByRole("searchbox", { name: "Найти по человеку или проекту" }),
-      "Белова",
+      screen.getByRole("searchbox", {
+        name: "Найти по человеку, проекту или раннеру",
+      }),
+      "Лис",
     );
     await waitFor(() => {
       expect(screen.queryByTestId("job-status-j_01hxd1")).toBeNull();
@@ -538,12 +620,16 @@ describe("операционные разделы: экраны", () => {
     const user = userEvent.setup();
     render(wrap(<QuotasPage />));
     const concurrent = await screen.findByTestId("quota-concurrent");
-    expect(screen.getByTestId("quotas-save")).toBeDisabled();
+    // Панель сохранения появляется только с правками.
+    expect(screen.queryByTestId("quotas-save")).toBeNull();
     await user.clear(concurrent);
     await user.type(concurrent, "0");
+    expect(screen.getByTestId("quotas")).toHaveTextContent(
+      "1 несохранённое изменение",
+    );
     await user.click(screen.getByTestId("quotas-save"));
     expect(
-      await screen.findByText("Введите целое число от 1 до 1000."),
+      await screen.findByText("Целое число от 1 до 1000 или пусто."),
     ).toBeVisible();
     await user.clear(concurrent);
     await user.type(concurrent, "3");
@@ -556,6 +642,23 @@ describe("операционные разделы: экраны", () => {
     await waitFor(() => {
       expect(screen.getByTestId("quota-org-concurrent")).toHaveValue(null);
     });
+    await waitFor(() => {
+      expect(screen.queryByTestId("quotas-save")).toBeNull();
+    });
+  }, 20_000);
+
+  it("квоты: «Отменить» возвращает сохранённые значения", async () => {
+    const user = userEvent.setup();
+    render(wrap(<QuotasPage />));
+    const duration = await screen.findByTestId("quota-duration");
+    await user.clear(duration);
+    await user.type(duration, "30");
+    await user.click(screen.getByTestId("quotas-discard"));
+    expect(screen.getByTestId("quota-duration")).toHaveValue(10);
+    expect(screen.queryByTestId("quotas")).toBeNull();
+    expect(screen.getByTestId("quotas-explain")).toHaveTextContent(
+      "ждёт, а не отклоняется",
+    );
   }, 20_000);
 
   it("сервисы: все работают, раннеры в сети из скольких", async () => {
@@ -563,8 +666,11 @@ describe("операционные разделы: экраны", () => {
     render(wrap(<ServicesPage />));
     expect(await screen.findByTestId("service-runners")).toBeVisible();
     expect(screen.getByTestId("services-summary")).toHaveTextContent(
-      "Все сервисы работают.",
+      "Все подключённые сервисы работают",
     );
+    // Баннер только при сбое; у здоровых сервисов нет строки причины.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("service-detail-database")).toBeNull();
     expect(screen.getByTestId("service-runners")).toHaveTextContent("4 из 6");
     await user.click(screen.getByTestId("services-refresh"));
     expect(await screen.findByTestId("service-database")).toBeVisible();
@@ -578,22 +684,33 @@ describe("операционные разделы: экраны", () => {
       "down",
     );
     expect(screen.getByTestId("service-detail-s3")).toHaveTextContent(
+      "Не ответил вовремя",
+    );
+    expect(screen.getByTestId("service-detail-s3")).toHaveTextContent(
       "timeout",
     );
+    expect(screen.getByTestId("services-off")).toHaveTextContent("Почта");
     expect(screen.getByTestId("service-languagetool")).toHaveAttribute(
       "data-status",
       "down",
     );
     expect(screen.getByTestId("services-summary")).toHaveTextContent(
-      "Не работает сервисов: 3.",
+      "Не работают 3 сервиса",
     );
   }, 20_000);
 
   it("хранилище: владельцы по убыванию, места достаточно", async () => {
     render(wrap(<StoragePage />));
-    expect(await screen.findByTestId("owner-msp-2025")).toBeVisible();
+    const top = await screen.findByTestId("owner-u_01hx7k2c1d");
+    expect(top).toHaveTextContent("Мария Келлер");
+    expect(
+      await within(top).findByText("maria.keller@example.org"),
+    ).toBeVisible();
     expect(screen.getByTestId("storage-total")).toHaveTextContent("38");
-    expect(screen.getByTestId("storage-free")).toHaveTextContent("86 GB");
+    expect(screen.getByTestId("storage-free")).toHaveTextContent("86 ГБ");
+    expect(screen.getByTestId("storage-disk")).toHaveTextContent(
+      "занято 114 ГБ из 200 ГБ",
+    );
     expect(screen.queryByTestId("storage-low")).toBeNull();
     expect(screen.getByTestId("storage-note")).toHaveTextContent("без обхода");
   }, 20_000);
@@ -602,7 +719,7 @@ describe("операционные разделы: экраны", () => {
     activateServerScenario("ops_services_degraded");
     render(wrap(<StoragePage />));
     expect(await screen.findByTestId("storage-low")).toHaveTextContent(
-      "2,4 GB",
+      "2,4 ГБ",
     );
   }, 20_000);
 
