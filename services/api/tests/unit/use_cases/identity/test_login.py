@@ -43,6 +43,19 @@ async def test_unknown_email_is_indistinguishable_and_still_hashes(world: World)
     assert unknown_calls == known_calls == 1
 
 
+async def test_failed_login_unknown_email__audit_keeps_no_typed_value(world: World) -> None:
+    await world.add_user()
+    typed = "My$ecretPassw0rd-pasted-by-mistake"
+
+    await _fail(world, typed)
+    await _fail(world, "ann@example.org")
+
+    known, unknown = (e.details for e in await world.audit.list(action="auth.login_failed"))
+    assert known == {"ip": "1.2.3.4", "email": "ann@example.org"}
+    assert typed not in str(unknown)
+    assert set(unknown) == {"ip", "email_hash"}
+
+
 async def test_user_without_password_gets_same_error(world: World) -> None:
     user = await world.add_user()
     world.store.hashes.pop(user.id)
