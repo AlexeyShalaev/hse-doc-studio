@@ -2,9 +2,11 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { AccountStatus } from "@entities/session";
 import { adminUsersApi, type UsersQuery } from "./adminUsersApi";
 
 export const adminUsersKeys = {
@@ -23,6 +25,40 @@ export const useUsers = (query: UsersQuery) =>
     queryFn: () => adminUsersApi.users(query),
     placeholderData: keepPreviousData,
     staleTime: 0,
+  });
+
+export const ACCOUNT_STATUSES: readonly AccountStatus[] = [
+  "active",
+  "pending_verification",
+  "pending_approval",
+  "disabled",
+];
+
+/**
+ * Сколько людей в каждом состоянии при текущем поиске: числа на чипах фильтра.
+ * Ключи те же, что у первой страницы списка, так что выбранный чип берёт
+ * ответ из кеша.
+ */
+export const useStatusCounts = (
+  q: string,
+): Partial<Record<AccountStatus, number>> =>
+  useQueries({
+    queries: ACCOUNT_STATUSES.map((status) => {
+      const query: UsersQuery = { q, status, page: 0 };
+      return {
+        queryKey: adminUsersKeys.users(query),
+        queryFn: () => adminUsersApi.users(query),
+        placeholderData: keepPreviousData,
+        staleTime: 0,
+      };
+    }),
+    combine: (results) =>
+      Object.fromEntries(
+        ACCOUNT_STATUSES.flatMap((status, i) => {
+          const total = results[i]?.data?.total;
+          return total === undefined ? [] : [[status, total]];
+        }),
+      ) as Partial<Record<AccountStatus, number>>,
   });
 
 export const useApprovals = (page: number) =>

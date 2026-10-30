@@ -1,28 +1,17 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  Ban,
-  CircleCheck,
-  KeyRound,
-  LogOut,
-  MoreHorizontal,
-  ShieldCheck,
-  ShieldOff,
-  Trash2,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
+import { toast } from "@shared/lib";
 import {
+  ActionMenu,
   Badge,
   Button,
   DataTable,
   FilterBar,
-  LinkDelivery,
   Modal,
-  Popover,
-  PopoverClose,
-  PopoverContent,
-  PopoverTrigger,
+  PersonCell,
+  SecretOnce,
   Spinner,
 } from "@shared/ui";
 import {
@@ -32,89 +21,110 @@ import {
 } from "@entities/session";
 import { PAGE_SIZE } from "../api/adminUsersApi";
 import {
+  ACCOUNT_STATUSES,
   useIssueResetLink,
   useRevokeSessions,
+  useStatusCounts,
   useUserAction,
   useUsers,
 } from "../api/adminUsersQueries";
 import type { Failure } from "../lib/failure";
-import { formatDate } from "../lib/format";
-import { HINT } from "../lib/styles";
-import { FailureNotice, Person, StatusBadge } from "./parts";
+import { formatFull } from "../lib/format";
+import { PersonDrawer } from "./PersonDrawer";
+import { ACTION_ICON, userActions, type UserActionKind } from "./userActions";
+import { AccountStatusLabel, FailureNotice, RoleLabel, When } from "./parts";
 
-type Pending =
-  | { kind: "disable" | "enable" | "grantAdmin" | "revokeAdmin" | "remove" }
-  | { kind: "resetLink" | "revokeSessions" };
+type Confirm = { user: AdminUser; kind: UserActionKind };
 
-type Confirm = { user: AdminUser } & Pending;
-
-const STATUSES: readonly AccountStatus[] = [
-  "active",
-  "pending_verification",
-  "pending_approval",
-  "disabled",
-];
+// Testid пунктов меню строки: их ждут тесты.
+const MENU_TESTID: Record<UserActionKind, string> = {
+  enable: "user-enable",
+  disable: "user-disable",
+  grantAdmin: "user-admin",
+  revokeAdmin: "user-admin",
+  resetLink: "user-reset",
+  revokeSessions: "user-sessions",
+  remove: "user-remove",
+};
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
-const menuItem = {
-  width: "100%",
-  justifyContent: "flex-start",
-  gap: 8,
-} as const;
-
-/** Вкладка «Люди»: поиск, фильтр по состоянию, действия над учётными записями. */
+/** Вкладка «Люди»: поиск, фильтр по состоянию, карточка человека и действия над аккаунтом. */
 export const UsersPanel = () => {
   const { t, i18n } = useTranslation("adminUsers");
   const selfId = useBootstrap().data?.user?.id ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<AccountStatus | "">("");
   const [page, setPage] = useState(0);
-  const users = useUsers({ q: search.trim(), status, page });
+  const query = search.trim();
+  const users = useUsers({ q: query, status, page });
+  const counts = useStatusCounts(query);
   const act = useUserAction();
   const issue = useIssueResetLink();
   const revoke = useRevokeSessions();
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const [link, setLink] = useState<{ user: AdminUser; url: string } | null>(
-    null,
-  );
-  const [notice, setNotice] = useState<string | null>(null);
+  const [link, setLink] = useState<{
+    user: AdminUser;
+    url: string;
+    notified: boolean;
+    expires: string;
+  } | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const busy = act.isPending || issue.isPending || revoke.isPending;
   const total = users.data?.total ?? 0;
-  const rows = users.data?.items ?? [];
+  const rows = useMemo(() => users.data?.items ?? [], [users.data]);
+  // Карточка берёт свежую запись из списка: после действия видно новое состояние.
+  const opened = rows.find((u) => u.id === openId) ?? null;
+
+  const pick = (user: AdminUser, kind: UserActionKind) => {
+    setFailure(null);
+    setConfirm({ user, kind });
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("");
+    setPage(0);
+  };
 
   const run = () => {
     if (!confirm) return;
-    const { user } = confirm;
+    const { user, kind } = confirm;
     setFailure(null);
-    setNotice(null);
     const fail = (error: unknown) => {
       setFailure(asFailure(error));
       setConfirm(null);
     };
-    if (confirm.kind === "resetLink") {
+    if (kind === "resetLink") {
       issue.mutate(user.id, {
         onSuccess: (res) => {
-          setLink({ user, url: res.link });
+          setLink({
+            user,
+            url: res.link,
+            notified: res.user_notified,
+            expires: res.expires_at,
+          });
           setConfirm(null);
         },
         onError: fail,
       });
-    } else if (confirm.kind === "revokeSessions") {
+    } else if (kind === "revokeSessions") {
       revoke.mutate(user.id, {
         onSuccess: (count) => {
-          setNotice(t("notice.sessions", { count, name: user.name }));
+          toast.success(t("notice.sessions", { count, name: user.name }));
           setConfirm(null);
         },
         onError: fail,
       });
     } else {
       act.mutate(
-        { kind: confirm.kind, id: user.id },
+        { kind, id: user.id },
         {
           onSuccess: () => {
+            toast.success(t(`done.${kind}`, { name: user.name }));
+            if (kind === "remove") setOpenId(null);
             setConfirm(null);
           },
           onError: fail,
@@ -129,13 +139,14 @@ export const UsersPanel = () => {
         id: "person",
         header: t("users.columns.person"),
         cell: ({ row }) => (
-          <Person
+          <PersonCell
             name={row.original.name}
             email={row.original.email}
-            badge={
+            id={row.original.id}
+            badges={
               row.original.id === selfId ? (
                 <Badge variant="subtle">{t("users.you")}</Badge>
-              ) : undefined
+              ) : null
             }
           />
         ),
@@ -143,31 +154,36 @@ export const UsersPanel = () => {
       {
         id: "status",
         header: t("users.columns.status"),
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => <AccountStatusLabel status={row.original.status} />,
       },
       {
         id: "role",
         header: t("users.columns.role"),
-        cell: ({ row }) =>
-          row.original.is_instance_admin ? (
-            <Badge variant="accent">{t("users.admin")}</Badge>
-          ) : (
-            <span style={{ color: "var(--fg-2)" }}>{t("users.member")}</span>
-          ),
+        cell: ({ row }) => (
+          <RoleLabel isAdmin={row.original.is_instance_admin} />
+        ),
       },
       {
         id: "projects",
-        header: t("users.columns.projects"),
-        cell: ({ row }) => row.original.project_count,
+        header: () => (
+          <span className="ppl-num">{t("users.columns.projects")}</span>
+        ),
+        cell: ({ row }) => (
+          <span
+            className={
+              row.original.project_count === 0 ? "ppl-num ppl-faint" : "ppl-num"
+            }
+          >
+            {row.original.project_count}
+          </span>
+        ),
       },
       {
         id: "lastLogin",
         header: t("users.columns.lastLogin"),
         cell: ({ row }) => (
-          <span style={{ color: "var(--fg-2)" }}>
-            {row.original.last_login_at
-              ? formatDate(row.original.last_login_at, i18n.language)
-              : t("users.never")}
+          <span className="ppl-muted">
+            <When iso={row.original.last_login_at} empty={t("users.never")} />
           </span>
         ),
       },
@@ -178,152 +194,45 @@ export const UsersPanel = () => {
         ),
         cell: ({ row }) => {
           const u = row.original;
-          const self = u.id === selfId;
-          const pick = (p: Pending) => () => {
-            setFailure(null);
-            setConfirm({ user: u, ...p });
-          };
           return (
-            <div className="flex" style={{ justifyContent: "flex-end" }}>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    type="button"
-                    disabled={busy}
-                    aria-label={t("users.actions.open", { name: u.name })}
-                    data-testid={`user-actions-${u.id}`}
-                  >
-                    <MoreHorizontal size={14} aria-hidden="true" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  width={240}
-                  aria-label={t("users.actions.menu", { name: u.name })}
-                >
-                  <div className="flex flex-col" style={{ padding: 4 }}>
-                    {u.status === "disabled" ? (
-                      <PopoverClose asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          style={menuItem}
-                          data-testid={`user-enable-${u.id}`}
-                          onClick={pick({ kind: "enable" })}
-                        >
-                          <CircleCheck size={14} aria-hidden="true" />
-                          {t("users.actions.enable")}
-                        </Button>
-                      </PopoverClose>
-                    ) : (
-                      <PopoverClose asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          disabled={self}
-                          title={self ? t("users.actions.selfHint") : undefined}
-                          style={menuItem}
-                          data-testid={`user-disable-${u.id}`}
-                          onClick={pick({ kind: "disable" })}
-                        >
-                          <Ban size={14} aria-hidden="true" />
-                          {t("users.actions.disable")}
-                        </Button>
-                      </PopoverClose>
-                    )}
-                    <PopoverClose asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        disabled={self && u.is_instance_admin}
-                        title={
-                          self && u.is_instance_admin
-                            ? t("users.actions.selfHint")
-                            : undefined
-                        }
-                        style={menuItem}
-                        data-testid={`user-admin-${u.id}`}
-                        onClick={pick({
-                          kind: u.is_instance_admin
-                            ? "revokeAdmin"
-                            : "grantAdmin",
-                        })}
-                      >
-                        {u.is_instance_admin ? (
-                          <ShieldOff size={14} aria-hidden="true" />
-                        ) : (
-                          <ShieldCheck size={14} aria-hidden="true" />
-                        )}
-                        {u.is_instance_admin
-                          ? t("users.actions.revokeAdmin")
-                          : t("users.actions.grantAdmin")}
-                      </Button>
-                    </PopoverClose>
-                    <PopoverClose asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        style={menuItem}
-                        data-testid={`user-reset-${u.id}`}
-                        onClick={pick({ kind: "resetLink" })}
-                      >
-                        <KeyRound size={14} aria-hidden="true" />
-                        {t("users.actions.resetLink")}
-                      </Button>
-                    </PopoverClose>
-                    <PopoverClose asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        style={menuItem}
-                        data-testid={`user-sessions-${u.id}`}
-                        onClick={pick({ kind: "revokeSessions" })}
-                      >
-                        <LogOut size={14} aria-hidden="true" />
-                        {t("users.actions.revokeSessions")}
-                      </Button>
-                    </PopoverClose>
-                    {u.status === "disabled" && (
-                      <PopoverClose asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          style={{ ...menuItem, color: "var(--c-err)" }}
-                          data-testid={`user-remove-${u.id}`}
-                          onClick={pick({ kind: "remove" })}
-                        >
-                          <Trash2 size={14} aria-hidden="true" />
-                          {t("users.actions.remove")}
-                        </Button>
-                      </PopoverClose>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+            // Меню внутри кликабельной строки: клик и Enter по нему не открывают карточку.
+            <div
+              className="ppl-actions"
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              <ActionMenu
+                label={t("users.actions.open", { name: u.name })}
+                testId={`user-actions-${u.id}`}
+                items={userActions(u, u.id === selfId).map((a) => ({
+                  id: a.kind,
+                  label: t(`users.actions.${a.kind}`),
+                  icon: ACTION_ICON[a.kind],
+                  danger: a.danger,
+                  disabled: a.disabled || busy,
+                  testId: `${MENU_TESTID[a.kind]}-${u.id}`,
+                  onSelect: () => {
+                    pick(u, a.kind);
+                  },
+                }))}
+              />
             </div>
           );
         },
       },
     ],
-    [t, i18n.language, selfId, busy],
+    [t, selfId, busy],
   );
 
-  const filtering = search.trim() !== "" || status !== "";
+  const filtering = query !== "" || status !== "";
   const danger = confirm?.kind === "remove" || confirm?.kind === "disable";
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: 14 }}
-      data-testid="users-panel"
-    >
+    <div className="ppl-stack" data-testid="users-panel">
       <FilterBar
         search={search}
         onSearchChange={(value) => {
@@ -341,42 +250,18 @@ export const UsersPanel = () => {
               setStatus(value as AccountStatus | "");
               setPage(0);
             },
-            options: STATUSES.map((s) => ({
+            options: ACCOUNT_STATUSES.map((s) => ({
               value: s,
               label: t(`status.${s}`),
+              ...(counts[s] !== undefined ? { count: counts[s] } : {}),
             })),
           },
         ]}
-        onReset={() => {
-          setSearch("");
-          setStatus("");
-          setPage(0);
-        }}
+        onReset={resetFilters}
       />
       {failure && <FailureNotice failure={failure} />}
-      {notice && (
-        <p style={HINT} role="status" data-testid="users-notice">
-          {notice}
-        </p>
-      )}
-      {link && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
-          <LinkDelivery link={link.url} kind="reset" once />
-          <div>
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setLink(null);
-              }}
-            >
-              {t("close")}
-            </Button>
-          </div>
-        </div>
-      )}
       <DataTable
+        className="ppl-table"
         caption={t("users.caption")}
         columns={columns}
         data={rows}
@@ -390,11 +275,43 @@ export const UsersPanel = () => {
           filtering ? t("users.noMatch.title") : t("users.empty.title")
         }
         emptyHint={filtering ? t("users.noMatch.body") : t("users.empty.body")}
-        pagination={{
-          page,
-          pageSize: PAGE_SIZE,
-          total,
-          onPageChange: setPage,
+        emptyAction={
+          filtering ? (
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={resetFilters}
+            >
+              {t("users.noMatch.reset")}
+            </Button>
+          ) : null
+        }
+        selectedRowId={openId}
+        onRowClick={(u) => {
+          setOpenId(u.id);
+        }}
+        {...(total > PAGE_SIZE
+          ? {
+              pagination: {
+                page,
+                pageSize: PAGE_SIZE,
+                total,
+                onPageChange: setPage,
+              },
+            }
+          : {})}
+      />
+
+      <PersonDrawer
+        user={opened}
+        self={opened?.id === selfId}
+        busy={busy}
+        onClose={() => {
+          setOpenId(null);
+        }}
+        onAction={(kind) => {
+          if (opened) pick(opened, kind);
         }}
       />
 
@@ -434,6 +351,38 @@ export const UsersPanel = () => {
           </>
         }
       />
+
+      <Modal
+        isOpen={link !== null}
+        onClose={() => {
+          setLink(null);
+        }}
+        title={t("resetLink.title")}
+        description={
+          link
+            ? t("resetLink.lead", {
+                name: link.user.name,
+                time: formatFull(link.expires, i18n.language),
+              })
+            : undefined
+        }
+        width={520}
+      >
+        {link && (
+          <div data-testid="link-delivery">
+            <SecretOnce
+              label={t("resetLink.label")}
+              value={link.url}
+              hint={
+                link.notified ? t("resetLink.notified") : t("resetLink.manual")
+              }
+              onClose={() => {
+                setLink(null);
+              }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

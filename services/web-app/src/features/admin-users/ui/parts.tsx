@@ -1,90 +1,66 @@
-import type { ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@shared/ui";
+import { formatPastTime, formatRelativeTime } from "@shared/lib";
+import { StatusDot, type StatusDotStatus } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AccountStatus } from "@entities/session";
 import { failureKey, type Failure } from "../lib/failure";
-import { initialsOf } from "../lib/format";
+import { formatFull } from "../lib/format";
+import "./adminUsers.css";
 
-/** Круглый аватар с инициалами. */
-export const Avatar = ({
-  name,
-  size = 28,
-}: {
-  name: string;
-  size?: number;
-}) => (
-  <span
-    aria-hidden="true"
-    style={{
-      width: size,
-      height: size,
-      borderRadius: "50%",
-      background: "var(--bg-3)",
-      border: "1px solid var(--border)",
-      color: "var(--fg-1)",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: Math.round(size * 0.38),
-      fontWeight: 600,
-      flexShrink: 0,
-    }}
-  >
-    {initialsOf(name)}
-  </span>
-);
-
-/** Человек: аватар, имя и почта. */
-export const Person = ({
-  name,
-  email,
-  badge,
-}: {
-  name: string;
-  email: string;
-  badge?: ReactNode;
-}) => (
-  <span className="flex items-center" style={{ gap: 10, minWidth: 0 }}>
-    <Avatar name={name} />
-    <span className="flex flex-col" style={{ minWidth: 0 }}>
-      <span
-        className="flex items-center"
-        style={{ gap: 6, fontWeight: 500, fontSize: 13 }}
-      >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-          {name}
-        </span>
-        {badge}
-      </span>
-      <span
-        style={{
-          color: "var(--fg-2)",
-          fontSize: 11.5,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {email}
-      </span>
-    </span>
-  </span>
-);
-
-const STATUS_VARIANT = {
+// Одобрение ждёт администратора, подтверждение почты ждёт самого человека.
+const STATUS_TONE: Record<AccountStatus, StatusDotStatus> = {
   active: "success",
-  pending_verification: "warning",
+  pending_verification: "info",
   pending_approval: "warning",
-  disabled: "subtle",
-} as const;
+  disabled: "neutral",
+};
 
-/** Состояние учётной записи чипом. */
-export const StatusBadge = ({ status }: { status: AccountStatus }) => {
+/** Состояние учётной записи: точка и подпись. */
+export const AccountStatusLabel = ({ status }: { status: AccountStatus }) => {
   const { t } = useTranslation("adminUsers");
   return (
-    <Badge variant={STATUS_VARIANT[status]} data-testid={`status-${status}`}>
-      {t(`status.${status}`)}
-    </Badge>
+    <span data-testid={`status-${status}`}>
+      <StatusDot status={STATUS_TONE[status]} label={t(`status.${status}`)} />
+    </span>
+  );
+};
+
+/** Роль на установке: администратор пилюлей, остальные спокойным текстом. */
+export const RoleLabel = ({ isAdmin }: { isAdmin: boolean }) => {
+  const { t } = useTranslation("adminUsers");
+  return isAdmin ? (
+    <span className="ppl-role">
+      <ShieldCheck size={12} aria-hidden="true" />
+      {t("users.admin")}
+    </span>
+  ) : (
+    <span className="ppl-muted">{t("users.member")}</span>
+  );
+};
+
+/** Момент относительно сейчас («2 дня назад»); точное время в подсказке. */
+export const When = ({
+  iso,
+  empty,
+  future = false,
+}: {
+  iso: string | null;
+  /** Подпись, когда времени нет («не входил»). */
+  empty?: string;
+  /** Срок впереди («через 5 дней»). */
+  future?: boolean;
+}) => {
+  const { i18n } = useTranslation("adminUsers");
+  if (!iso) return <span className="ppl-faint">{empty ?? ""}</span>;
+  return (
+    <time
+      dateTime={iso}
+      title={formatFull(iso, i18n.language)}
+      className="ppl-nowrap"
+    >
+      {future ? formatRelativeTime(iso) : formatPastTime(iso)}
+    </time>
   );
 };
 

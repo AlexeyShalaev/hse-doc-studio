@@ -1,10 +1,11 @@
 {
   "title": "Users",
-  "lead": "People with accounts, invitations and the approval queue. Project contents are not visible here.",
+  "lead": "Accounts, invitations and sign-up requests.",
   "close": "Close",
   "cancel": "Cancel",
   "retry": "Retry",
   "loading": "Loading…",
+  "invite": "Invite",
   "tabs": {
     "label": "People sections",
     "users": "People",
@@ -13,7 +14,7 @@
   },
   "status": {
     "active": "Active",
-    "pending_verification": "Awaiting email confirmation",
+    "pending_verification": "Email unconfirmed",
     "pending_approval": "Awaiting approval",
     "disabled": "Disabled"
   },
@@ -35,23 +36,42 @@
     "loadFailed": "Could not load the list of people.",
     "noMatch": {
       "title": "Nobody found",
-      "body": "Change the search or reset the filters."
+      "body": "Change the search or reset the filters.",
+      "reset": "Reset filters"
     },
     "empty": {
       "title": "No people yet",
       "body": "Accounts appear after registration or by invitation."
     },
     "actions": {
-      "open": "Actions: {{name}}",
-      "menu": "Actions for the account of {{name}}",
+      "open": "Actions for {{name}}",
       "enable": "Enable",
       "disable": "Disable",
       "grantAdmin": "Make administrator",
       "revokeAdmin": "Remove administrator rights",
-      "resetLink": "Password reset link",
+      "resetLink": "Issue password reset link",
       "revokeSessions": "End all sign-ins",
       "remove": "Delete permanently",
       "selfHint": "You cannot do this to your own account."
+    }
+  },
+  "forbidden": {
+    "title": "Only installation administrators can open this section",
+    "body": "People and invitations are visible to installation administrators. Ask one of them if you need access."
+  },
+  "drawer": {
+    "account": "Account",
+    "created": "Registered",
+    "access": "Access",
+    "danger": "Dangerous actions",
+    "hints": {
+      "resetLink": "A one-time link to set a new password",
+      "revokeSessions": "Sign out on every device",
+      "grantAdmin": "Access to every admin section",
+      "revokeAdmin": "The account stays, the admin area closes",
+      "enable": "The person can sign in again",
+      "disable": "Sign-in is blocked, projects and data are kept",
+      "remove": "Personal data is erased for good"
     }
   },
   "confirm": {
@@ -91,13 +111,28 @@
       "action": "Delete permanently"
     }
   },
+  "done": {
+    "disable": "{{name}}: account disabled.",
+    "enable": "{{name}}: account enabled.",
+    "grantAdmin": "{{name}} is now an administrator.",
+    "revokeAdmin": "{{name}} is no longer an administrator.",
+    "remove": "The account of {{name}} was deleted."
+  },
+  "resetLink": {
+    "title": "Password reset link",
+    "lead": "Account: {{name}}. The link is valid until {{time}}.",
+    "label": "New password link",
+    "notified": "The person also received this link by email.",
+    "manual": "No email was sent: pass the link to the person yourself."
+  },
   "notice": {
     "sessions_one": "{{name}}: {{count}} sign-in ended.",
     "sessions_other": "{{name}}: {{count}} sign-ins ended."
   },
   "invitations": {
-    "email": "Invitee email",
-    "emailHint": "Optional. If set, only this address can use the link.",
+    "newTitle": "New invitation",
+    "newLead": "The person signs up with the link, no approval needed. With an email set, only that address can use it.",
+    "email": "Email (optional)",
     "emailInvalid": "Enter an email address.",
     "ttl": "Valid for",
     "days_one": "{{count}} day",
@@ -108,28 +143,35 @@
     "columns": {
       "email": "For",
       "status": "Status",
-      "expires": "Valid until",
+      "expires": "Validity",
       "actions": "Actions"
     },
-    "anyone": "anyone with the link",
+    "anyone": "Anyone with the link",
     "status": {
-      "pending": "Pending",
-      "used": "Used",
+      "pending": "Awaiting reply",
+      "used": "Accepted",
       "expired": "Expired"
     },
-    "usedAt": "used {{date}}",
-    "resend": "New link",
+    "resend": "Issue a new link",
     "revoke": "Revoke",
     "empty": {
       "title": "No invitations yet",
       "body": "Create an invitation and send the link to a person: they register with it."
     },
-    "note": "The link is shown once. If email is not configured, pass it to the person yourself."
+    "anyoneHint": "not tied to an address",
+    "when": {
+      "pending": "expires",
+      "used": "accepted",
+      "expired": "expired"
+    },
+    "menu": "Invitation actions: {{target}}",
+    "revoked": "Invitation revoked.",
+    "linkLabel": "Invitation link",
+    "linkFor": "Send it to {{email}}: only this address can open it.",
+    "linkAnyone": "Anyone you pass it to can sign up with it.",
+    "sent": "Invitation sent to {{email}}."
   },
   "approvals": {
-    "columns": {
-      "created": "Registered"
-    },
     "caption": "Awaiting approval",
     "loadFailed": "Could not load the approval queue.",
     "approve": "Approve",
@@ -139,7 +181,24 @@
     "empty": {
       "title": "The queue is empty",
       "body": "New registrations that need an administrator's decision appear here."
-    }
+    },
+    "title_one": "{{count}} request awaits a decision",
+    "title_other": "{{count}} requests await a decision",
+    "lead": "Until a request is approved, the person cannot sign in. A rejected account is disabled.",
+    "approveAll": "Approve all",
+    "approveSelected": "Approve selected ({{count}})",
+    "selectAll": "Select all",
+    "selected_one": "{{count}} request selected",
+    "selected_other": "{{count}} requests selected",
+    "select": "Select {{name}}",
+    "since": "requested",
+    "approved": "{{name}}: request approved.",
+    "rejected": "{{name}}: request rejected.",
+    "approvedMany_one": "{{count}} request approved.",
+    "approvedMany_other": "{{count}} requests approved.",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous page",
+    "next": "Next page"
   },
   "audit": {
     "title": "Audit",

@@ -69,7 +69,7 @@ describe("оболочка и сводка админки", () => {
     );
     expect(
       await screen.findByTestId("admin-nav-count-users"),
-    ).toHaveTextContent("1");
+    ).toHaveTextContent("3");
     expect(
       await screen.findByTestId("admin-nav-count-services"),
     ).toHaveTextContent("3");
@@ -89,8 +89,8 @@ describe("оболочка и сводка админки", () => {
     activateServerScenario("admin_ready");
     mount();
     const people = await screen.findByTestId("overview-kpi-people");
-    expect(await within(people).findByText("6")).toBeInTheDocument();
-    expect(within(people).getByText("1 ждёт одобрения")).toBeInTheDocument();
+    expect(await within(people).findByText("13")).toBeInTheDocument();
+    expect(within(people).getByText("3 ждут одобрения")).toBeInTheDocument();
     expect(
       await screen.findByTestId("overview-attention-approvals"),
     ).toHaveAttribute("href", "/admin/users?tab=approvals");
@@ -129,7 +129,7 @@ describe("оболочка и сводка админки", () => {
       await screen.findByTestId("overview-attention-failed"),
     ).toBeInTheDocument();
     const people = screen.getByTestId("overview-kpi-people");
-    expect(await within(people).findByText("6")).toBeInTheDocument();
+    expect(await within(people).findByText("13")).toBeInTheDocument();
   });
 
   it("сводка на английском", async () => {
@@ -140,7 +140,7 @@ describe("оболочка и сводка админки", () => {
       await screen.findByText("Installation overview"),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("1 person is waiting for account approval"),
+      await screen.findByText("3 people are waiting for account approval"),
     ).toBeInTheDocument();
   });
 });
