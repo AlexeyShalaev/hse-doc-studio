@@ -158,5 +158,55 @@
     "network": "The server is unreachable. Check your connection."
   },
   "cancel": "Cancel",
-  "retry": "Retry"
+  "retry": "Retry",
+  "pair": {
+    "pageTitle": "Connect a runner",
+    "enterTitle": "Enter the code from the Studio",
+    "enterLead": "The Studio shows an eight-character code after you click \"Connect\" in Cloud builds.",
+    "continue": "Continue",
+    "loading": "Checking the code…",
+    "loadFailed": "Couldn't check the code.",
+    "question": "Connect \"{{name}}\" as your runner?",
+    "kind": "Kind",
+    "requested": "Requested",
+    "ip": "Device IP",
+    "expires": "Code valid",
+    "expiresIn": "for {{time}}",
+    "expiredNow": "expired",
+    "warning": "Confirm only if you've just clicked \"Connect\" in your own Studio. The runner will get copies of your projects when building and will be able to answer on behalf of your models.",
+    "approve": "Connect",
+    "deny": "Deny",
+    "toRunners": "To my runners",
+    "otherCode": "Enter another code",
+    "result": {
+      "approved": {
+        "title": "Done",
+        "body": "Go back to the Studio: it will connect by itself."
+      },
+      "denied": {
+        "title": "Denied",
+        "body": "The device won't get access."
+      },
+      "expired": {
+        "title": "The code has expired",
+        "body": "Start connecting from the Studio again."
+      },
+      "invalid": {
+        "title": "Code not found",
+        "body": "Check it in the Studio."
+      },
+      "used": {
+        "title": "The code has already been used",
+        "body": "If it's your device, it's already in your runners."
+      },
+      "disabled": {
+        "title": "Personal runners are off",
+        "body": "The administrator turned personal runners off on this installation: the device can't be connected."
+      },
+      "limit": {
+        "title": "Runner limit reached",
+        "body": "Revoke a runner or an unused token you don't need, then confirm the code again."
+      }
+    }
+  }
 }

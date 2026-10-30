@@ -8,6 +8,7 @@ import { InvitePage } from "@pages/InvitePage";
 import { LoginPage } from "@pages/LoginPage";
 import { RegisterPage } from "@pages/RegisterPage";
 import { ResetPage } from "@pages/ResetPage";
+import { RunnerPairPage } from "@pages/RunnerPairPage";
 import { SettingsPage } from "@pages/SettingsPage";
 import { VerifyPage } from "@pages/VerifyPage";
 import { WelcomePage } from "@pages/WelcomePage";
@@ -41,17 +42,27 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
       {
         path: "/dev/server-screens",
         lazy: async () => {
-          const [{ DevServerScreensPage }, { getProjectsGallery }, demo] =
-            await Promise.all([
-              import("@pages/DevServerScreens"),
-              import("@pages/WelcomePage"),
-              import("./demo"),
-            ]);
+          const [
+            { DevServerScreensPage },
+            { getProjectsGallery },
+            { getRunnerPairGallery },
+            demo,
+          ] = await Promise.all([
+            import("@pages/DevServerScreens"),
+            import("@pages/WelcomePage"),
+            import("@pages/RunnerPairPage"),
+            import("./demo"),
+          ]);
           const extraSections = [
             {
               id: "projects",
               title: "Проекты и доступ",
               groups: getProjectsGallery(),
+            },
+            {
+              id: "runner-pair",
+              title: "Подтверждение сопряжения раннера",
+              groups: getRunnerPairGallery(),
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
@@ -101,6 +112,12 @@ export const router = createBrowserRouter([
       {
         path: "/settings",
         element: <Navigate to="/settings/appearance" replace />,
+      },
+      // Подтверждение кода из Студии: своя страница, а не раздел настроек.
+      // Гостя шлюз отправит на вход и вернёт сюда с тем же кодом.
+      {
+        path: "/settings/runners/pair",
+        element: <RunnerPairPage />,
       },
       {
         path: "/settings/:section",

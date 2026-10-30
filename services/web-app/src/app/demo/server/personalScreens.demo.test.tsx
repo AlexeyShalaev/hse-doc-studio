@@ -2,9 +2,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { i18n } from "@shared/lib";
 import { MyRunnersSection } from "@features/my-runners";
+import { RunnerPairPage } from "@pages/RunnerPairPage";
 import { installServerDemo } from "../index";
 import { activateServerScenario } from "./index";
 
@@ -127,6 +136,80 @@ describe("«Мои раннеры» на демо-мире", () => {
     await user.click(screen.getByTestId("runner-token-how-docker"));
     expect(screen.getByTestId("runner-token-docker-command")).toHaveTextContent(
       "docker run",
+    );
+  });
+});
+
+vi.mock("@widgets/AppTitlebar", () => ({ AppTitlebar: () => null }));
+vi.mock("@widgets/AppStatusBar", () => ({ AppStatusBar: () => null }));
+
+const mountPair = (path: string) =>
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false },
+          },
+        })
+      }
+    >
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/settings/runners/pair" element={<RunnerPairPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+describe("подтверждение сопряжения на демо-мире", () => {
+  beforeAll(() => {
+    installServerDemo();
+  });
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+    activateServerScenario("runners_ready");
+  });
+  afterEach(cleanup);
+
+  it("код из адреса: подтверждение подключает устройство", async () => {
+    const user = userEvent.setup();
+    mountPair("/settings/runners/pair?code=bcdf-2345");
+    await user.click(await screen.findByTestId("runner-pair-approve"));
+    expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
+      "data-state",
+      "approved",
+    );
+  });
+
+  it.each([
+    ["XKCD-7777", "expired"],
+    ["QRST-2468", "used"],
+    ["ZZZZ-2222", "invalid"],
+    ["nonsense", "invalid"],
+  ])("код %s даёт итог %s", async (code, result) => {
+    mountPair(`/settings/runners/pair?code=${code}`);
+    expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
+      "data-state",
+      result,
+    );
+  });
+
+  it("предел раннеров и отказ", async () => {
+    const user = userEvent.setup();
+    mountPair("/settings/runners/pair?code=LMNP-6789");
+    await user.click(await screen.findByTestId("runner-pair-approve"));
+    expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
+      "data-state",
+      "limit",
+    );
+    cleanup();
+    mountPair("/settings/runners/pair?code=BCDF-2345");
+    await user.click(await screen.findByTestId("runner-pair-deny"));
+    expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
+      "data-state",
+      "denied",
     );
   });
 });
