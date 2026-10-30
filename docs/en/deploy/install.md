@@ -55,7 +55,7 @@ The chart is in `deploy/helm/hse-doc-studio`: the api (one replica, Recreate str
 ## First run
 
 1. Open `PUBLIC_URL`. While there is no administrator, the Studio shows the first-run wizard.
-2. If the server listens on more than loopback, the wizard asks for the setup token. It is printed in the api log: `docker compose logs api | grep -i setup`.
+2. If the server listens on more than loopback, or an external `PUBLIC_URL` or trusted proxies are set, the wizard asks for the setup token. It is printed in the api log: `docker compose logs api | grep -i setup`.
 3. Create the administrator, choose the registration mode and configure mail if needed.
 4. In the admin area open the runners section and check that the runner is registered and takes jobs.
 

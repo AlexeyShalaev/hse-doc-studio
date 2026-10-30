@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 from dishka import Provider, Scope, provide
 
@@ -175,6 +176,24 @@ from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupS
 from hse_doc_studio.use_cases.server_setup.token import SetupToken
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def setup_token_required(
+    *, override: bool | None, host: str, public_url: str | None, trusted_proxies: list[str]
+) -> bool:
+    """Нужен ли токен установки. Явное значение оператора главнее; иначе токен не нужен только при настоящем loopback.
+
+    Приложение на 127.0.0.1 за nginx доступно из сети, хотя слушает loopback: поэтому внешний `public_url` или
+    доверенные прокси означают, что первый посетитель мастера стал бы администратором без токена.
+    """
+    if override is not None:
+        return override
+    if host not in _LOOPBACK_HOSTS or trusted_proxies:
+        return True
+    if not public_url:
+        return False
+    public_host = (urlsplit(public_url).hostname or "").lower()
+    return public_host not in _LOOPBACK_HOSTS and not public_host.endswith(".localhost")
 
 
 class ServerIdentityProvider(Provider):
@@ -770,9 +789,12 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_setup_token(self) -> SetupToken:
         # Токен одноразовый и живёт в памяти процесса: один экземпляр на приложение (APP-scope).
-        required = settings.auth.setup_token_required
-        if required is None:
-            required = settings.server.host not in _LOOPBACK_HOSTS
+        required = setup_token_required(
+            override=settings.auth.setup_token_required,
+            host=settings.server.host,
+            public_url=settings.auth.public_url,
+            trusted_proxies=settings.auth.trusted_proxies,
+        )
         return SetupToken(required=required)
 
     @provide

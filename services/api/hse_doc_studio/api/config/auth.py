@@ -118,6 +118,6 @@ class AuthConfig(BaseModel):
         default=None,
         description=(
             "Нужен ли токен установки в мастере первого запуска (печатается в журнале api). "
-            "Не задано: нужен, если сервер слушает не только loopback."
+            "Не задано: нужен, если сервер слушает не только loopback, задан внешний public_url или trusted_proxies."
         ),
     )

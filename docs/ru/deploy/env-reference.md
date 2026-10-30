@@ -217,7 +217,7 @@ tags:
 | `HSE_STUDIO__AUTH__ADMIN_NAME` | str | не задано | server | Имя первого администратора из окружения. |
 | `HSE_STUDIO__AUTH__ADMIN_PASSWORD` 🔒 | str | секрет, не печатается | server | Пароль первого администратора из окружения. |
 | `HSE_STUDIO__AUTH__ADMIN_PASSWORD_FILE` | Path | не задано | server | Файл с паролем первого администратора (docker secret). |
-| `HSE_STUDIO__AUTH__SETUP_TOKEN_REQUIRED` | bool | не задано | server | Нужен ли токен установки в мастере первого запуска (печатается в журнале api). Не задано: нужен, если сервер слушает не только loopback. |
+| `HSE_STUDIO__AUTH__SETUP_TOKEN_REQUIRED` | bool | не задано | server | Нужен ли токен установки в мастере первого запуска (печатается в журнале api). Не задано: нужен, если сервер слушает не только loopback, задан внешний public_url или trusted_proxies. |
 | `HSE_STUDIO__MAIL__HOST` | str | не задано | server | SMTP host; empty means mail is off. |
 | `HSE_STUDIO__MAIL__PORT` | int | `587` | server | SMTP port. |
 | `HSE_STUDIO__MAIL__SECURITY` | starttls / tls / none | `starttls` | server | starttls upgrades a plain connection, tls connects over TLS at once. |
