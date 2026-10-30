@@ -13,8 +13,10 @@ import pytest
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, EngineType
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec
-from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus
+from hse_doc_studio.core.jobs.errors import JobError
 from hse_doc_studio.core.value_objects import CheckResult
+from hse_doc_studio.use_cases.compile.compile_hooks_factory import CompileJobHooksFactory
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
 
 from tests.factories import make_document, make_project
@@ -366,3 +368,44 @@ async def test__on_finished__not_a_compile_spec__raises_type_error(tmp_path: Pat
 
     with pytest.raises(TypeError):
         await env.hooks.on_finished(spec, _result(JobStatus.succeeded), "log")
+
+
+# --- заменённая сборка и хуки после рестарта ---
+
+
+async def test__on_finished__superseded__record_closed_but_document_state_belongs_to_newer_build(
+    tmp_path: Path,
+) -> None:
+    env = Env(tmp_path)
+    superseded = JobResult(status=JobStatus.cancelled, error=JobError(JobErrorCategory.internal, "superseded"))
+
+    await env.hooks.on_finished(env.spec, superseded, "")
+
+    assert env.saved[-1].status is CompileStatus.cancelled
+    assert env.doc_status is None
+    env.changelog_repo.append.assert_not_called()
+
+
+async def test__on_finished__hooks_rebuilt_after_restart__started_at_comes_from_the_record(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "")
+
+    assert env.saved[-1].started_at == STARTED_AT
+
+
+def test__factory__compile_spec__builds_hooks_for_the_spec_folder(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    factory = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    )
+
+    assert isinstance(factory.for_spec(env.spec), CompileJobHooks)
+    assert factory.for_spec(replace(env.spec, local_root=None)) is None
+    assert factory.for_spec(replace(env.spec, kind=JobKind.office_convert)) is None

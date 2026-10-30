@@ -34,3 +34,10 @@ class GotenbergConverter:
             logger.warning("runner office: gotenberg error", status=response.status_code)
             return None
         return response.content
+
+
+class NoOfficeConverter:
+    """Раннер без Gotenberg: предпросмотр не строится, сборка office-файла всё равно успешна."""
+
+    async def convert_to_pdf(self, source: Path, image: str | None = None) -> bytes | None:
+        return None

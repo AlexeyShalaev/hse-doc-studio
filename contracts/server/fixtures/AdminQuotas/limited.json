@@ -1,0 +1,6 @@
+{
+  "user_concurrent": 2,
+  "org_concurrent": null,
+  "max_duration_s": 600,
+  "on_exhausted": "wait"
+}

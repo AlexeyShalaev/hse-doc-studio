@@ -46,6 +46,11 @@ class JobRow(Base):
         Index("ix_jobs_running_lease", "lease_until", postgresql_where=text("state = 'running'")),
         Index("ix_jobs_queued_coalesce", "coalesce_key", postgresql_where=text("state = 'queued'")),
         Index("ix_jobs_project_id", "project_id"),
+        Index(
+            "ix_jobs_unapplied",
+            "seq",
+            postgresql_where=text("applied_at IS NULL AND state IN ('succeeded', 'failed', 'cancelled', 'timed_out')"),
+        ),
         CheckConstraint("attempt >= 0 AND max_attempts >= 1", name="attempts"),
     )
 
@@ -73,6 +78,8 @@ class JobRow(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     error_code: Mapped[str | None] = mapped_column(String(64))
+    # Когда итог задачи применён к тому и записи сборки; пусто у терминальной задачи значит «довершить при старте».
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class FairShareRow(Base):
@@ -143,3 +150,17 @@ class RunnerRegistrationTokenRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class QuotaRow(Base):
+    """Переопределение квоты для организации или пользователя; уровень установки живёт в instance_settings."""
+
+    __tablename__ = "quotas"
+    __table_args__ = (CheckConstraint("hard_limit >= 1", name="quota_hard_limit"),)
+
+    owner_kind: Mapped[str] = mapped_column(String(16), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    resource: Mapped[str] = mapped_column(String(32), primary_key=True)
+    period: Mapped[str] = mapped_column(String(16), primary_key=True, server_default="none")
+    soft_limit: Mapped[int | None] = mapped_column(Integer)
+    hard_limit: Mapped[int] = mapped_column(Integer, nullable=False)

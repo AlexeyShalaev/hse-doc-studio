@@ -1,0 +1,21 @@
+{
+  "blob_count": 412,
+  "blob_bytes": 1932735283,
+  "projects": 37,
+  "deleted_projects": 2,
+  "top_owners": [
+    {
+      "owner_id": "u_01hx",
+      "owner_name": "Анна Иванова",
+      "projects": 9
+    },
+    {
+      "owner_id": "u_01hy",
+      "owner_name": "Boris Petrov",
+      "projects": 4
+    }
+  ],
+  "volume_total_bytes": 107374182400,
+  "volume_free_bytes": 64424509440,
+  "computed_at": "2026-10-27T09:44:00Z"
+}

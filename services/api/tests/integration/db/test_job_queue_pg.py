@@ -9,8 +9,10 @@ from uuid import UUID, uuid4
 import pytest
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, QueuedJob, RunnerRef
+from hse_doc_studio.core.jobs.quotas import QuotaOverride, QuotaOwnerKind, QuotaResource
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 from hse_doc_studio.infra.db.engine import create_sessionmaker
+from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.session import SessionProvider
 from sqlalchemy import text
@@ -132,3 +134,36 @@ async def test__claim__query_plan__walks_partial_queue_index(pg_migrated_engine:
         plan = "\n".join(row[0] for row in await conn.execute(text(f"EXPLAIN {sql}")))
 
     assert "ix_jobs_queued_order" in plan
+
+
+async def test__claim__per_owner_caps__capped_user_skipped_others_served(pg_migrated_engine: AsyncEngine) -> None:
+    queue = _queue(pg_migrated_engine)
+    org, strict, roomy = uuid4(), uuid4(), uuid4()
+    for user in (strict, strict, roomy, roomy):
+        await queue.enqueue(_request(user, org_id=org))
+    quota = QueueQuota(max_running_per_user=1, user_caps={roomy: 2}, org_caps={org: 3})
+
+    taken: list[QueuedJob] = []
+    while (job := await queue.claim(_runner(), lease_s=LEASE_S, quota=quota)) is not None:
+        taken.append(job)
+
+    assert sorted(job.user_id == roomy for job in taken) == [False, True, True]
+    assert len(taken) == 3
+
+
+async def test__quota_overrides__roundtrip_and_project_org(pg_migrated_engine: AsyncEngine) -> None:
+    sessions = SessionProvider(create_sessionmaker(pg_migrated_engine))
+    repo = SqlQuotaOverrideRepository(sessions)
+    user = str(uuid4())
+    await repo.set(QuotaOverride(QuotaOwnerKind.user, user, QuotaResource.concurrent_user, 2))
+    await repo.set(QuotaOverride(QuotaOwnerKind.user, user, QuotaResource.concurrent_user, 3))
+    await repo.set(QuotaOverride(QuotaOwnerKind.org, "hse", QuotaResource.max_duration_s, 90))
+
+    assert {(o.owner_id, o.resource, o.hard_limit) for o in await repo.list_all()} == {
+        (user, QuotaResource.concurrent_user, 3),
+        ("hse", QuotaResource.max_duration_s, 90),
+    }
+
+    await repo.delete(QuotaOwnerKind.user, user, QuotaResource.concurrent_user)
+    assert [o.owner_id for o in await repo.list_all()] == ["hse"]
+    assert await SqlProjectOrgReader(sessions).org_of(uuid4()) is None

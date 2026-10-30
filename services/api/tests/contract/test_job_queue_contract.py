@@ -153,6 +153,35 @@ class TestJobQueueContract(PortContract):
         assert await port.claim(quota=quota) is not None
         assert await port.claim(quota=quota) is None
 
+    async def test__claim__user_override_beats_org_and_installation(self, port: _Harness) -> None:
+        org, strict, roomy, member = uuid4(), uuid4(), uuid4(), uuid4()
+        for user in (strict, strict, roomy, roomy, roomy, member, member):
+            await port.put(user, org_id=org)
+        quota = QueueQuota(
+            max_running_per_user=2,
+            user_caps={strict: 1, roomy: 3},
+            org_user_caps={org: 1},
+        )
+        taken: list[QueuedJob] = []
+        while (job := await port.claim(quota=quota)) is not None:
+            taken.append(job)
+        by_user = {user: sum(1 for job in taken if job.user_id == user) for user in (strict, roomy, member)}
+        assert by_user == {strict: 1, roomy: 3, member: 1}
+
+    async def test__claim__org_override_does_not_block_other_orgs(self, port: _Harness) -> None:
+        capped, free = uuid4(), uuid4()
+        await port.put(uuid4(), org_id=capped)
+        await port.put(uuid4(), org_id=capped)
+        later = await port.put(uuid4(), org_id=free)
+        quota = QueueQuota(max_running_per_org=5, org_caps={capped: 1})
+        first = await port.claim(quota=quota)
+        second = await port.claim(quota=quota)
+        assert first is not None
+        assert first.org_id == capped
+        assert second is not None
+        assert second.id == later.id
+        assert await port.claim(quota=quota) is None
+
     async def test__enqueue__same_coalesce_key__cancels_only_queued_job(self, port: _Harness) -> None:
         project = uuid4()
         running = await port.put(uuid4(), project_id=project, coalesce_key="doc")

@@ -94,7 +94,13 @@ class InMemoryJobQueue:
             for job in self._jobs.values()
             if job.state is JobState.queued
             and job.tags <= runner.tags
-            and caps_allow(self._running_of_user(job.user_id), self._running_of_org(job.org_id), limits)
+            and caps_allow(
+                self._running_of_user(job.user_id),
+                self._running_of_org(job.org_id),
+                limits,
+                user_id=job.user_id,
+                org_id=job.org_id,
+            )
             and affinity_allows(
                 job.affinity_runner_id,
                 job.queued_at,

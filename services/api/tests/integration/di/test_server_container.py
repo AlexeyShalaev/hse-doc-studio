@@ -228,3 +228,76 @@ async def test__server_container__job_storage_and_live_blobs_use_the_object_stor
     assert isinstance(blobs, ObjectJobBlobStore)
     assert isinstance(outputs, AnnouncedJobOutputIngest)
     assert isinstance(live, QueueLiveBlobs)
+
+
+async def test__server_container__resolves_the_admin_ops_use_cases(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cryptography.fernet import Fernet
+    from hse_doc_studio.use_cases.admin.ops_ai_providers import (
+        CheckInstanceAiProviderUC,
+        CreateInstanceAiProviderUC,
+        DeleteInstanceAiProviderUC,
+        GetInstanceAiProviderUC,
+        ListInstanceAiProvidersUC,
+        UpdateInstanceAiProviderUC,
+    )
+    from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, QueueSummaryUC
+    from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
+    from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
+    from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
+    from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
+    from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
+    from pydantic import SecretStr
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    kinds = [
+        ListQueueUC,
+        QueueSummaryUC,
+        CancelJobUC,
+        GetQuotasUC,
+        UpdateQuotasUC,
+        ServicesOverviewUC,
+        GetStorageUsageUC,
+        GetSigningPolicyUC,
+        UpdateSigningPolicyUC,
+        ListInstanceAiProvidersUC,
+        GetInstanceAiProviderUC,
+        CreateInstanceAiProviderUC,
+        UpdateInstanceAiProviderUC,
+        DeleteInstanceAiProviderUC,
+        CheckInstanceAiProviderUC,
+        RunnerJobService,
+    ]
+    try:
+        resolved = [await container.get(kind) for kind in kinds]
+        quotas = await container.get(QuotaService)
+        again = await container.get(QuotaService)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert [type(r) for r in resolved] == kinds
+    assert quotas is again
+
+
+async def test__server_container__dispatcher_is_the_queue_one_while_local_stays_embedded() -> None:
+    from hse_doc_studio.core.jobs.protocols import IJobDispatcher  # noqa: PLC0415
+    from hse_doc_studio.infra.jobs.local_dispatcher import LocalJobDispatcher  # noqa: PLC0415
+    from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    local = create_container(StudioMode.local)
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    server = create_container(StudioMode.server, engine=engine)
+    try:
+        local_dispatcher = await local.get(IJobDispatcher)
+        server_dispatcher = await server.get(IJobDispatcher)
+    finally:
+        await local.close()
+        await server.close()
+        await engine.dispose()
+
+    assert isinstance(local_dispatcher, LocalJobDispatcher)
+    assert isinstance(server_dispatcher, QueueJobDispatcher)

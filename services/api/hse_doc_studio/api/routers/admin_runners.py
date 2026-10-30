@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.runner_admin import (
     CreatedRegistrationTokenResponse,
     CreateRegistrationTokenRequest,
@@ -15,6 +16,7 @@ from hse_doc_studio.api.schemas.runner_admin import (
     UpdateRunnerRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
+from hse_doc_studio.core.jobs.admin import runner_status
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -38,6 +40,7 @@ def _runner_info(runner: Runner) -> RunnerInfo:
     return RunnerInfo(
         id=runner.id,
         name=runner.name,
+        status=runner_status(runner, datetime.now(UTC)).value,
         tags=sorted(runner.tags),
         concurrency=runner.concurrency,
         resource_class=runner.resource_class,
@@ -64,7 +67,9 @@ async def create_registration_token(
     created = await (await _registry(request)).create_registration_token(
         require_actor(), label=body.label, ttl=timedelta(hours=body.ttl_hours), max_uses=body.max_uses
     )
-    return CreatedRegistrationTokenResponse(token=_token_info(created.token), secret=created.secret)
+    api_url = settings.auth.public_url or str(request.base_url).rstrip("/")
+    command = f"HSE_RUNNER__API_URL={api_url} HSE_RUNNER__TOKEN={created.secret} hse-doc-studio runner"
+    return CreatedRegistrationTokenResponse(token=_token_info(created.token), secret=created.secret, command=command)
 
 
 @router.get("/runner-tokens", response_model=list[RegistrationTokenInfo])

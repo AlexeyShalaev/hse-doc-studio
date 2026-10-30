@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import session as s
+from hse_doc_studio.api.schemas.runner_admin import CreatedRegistrationTokenResponse, RunnerInfo
 from pydantic import TypeAdapter, ValidationError
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -66,7 +68,21 @@ _SCHEMAS: dict[str, Any] = {
     "CreateAdminInvitationRequest": s.CreateAdminInvitationRequest,
     "AdminInvitationCreated": s.AdminInvitationCreated,
     "AdminOrgList": list[s.AdminOrg],
-    "AdminRunnerList": list[s.AdminRunner],
+    "AdminRunnerList": list[RunnerInfo],
+    "AdminRegistrationTokenCreated": CreatedRegistrationTokenResponse,
+    "AdminJobPage": ops.AdminJobPage,
+    "AdminQueueSummary": ops.AdminQueueSummary,
+    "AdminQuotas": ops.AdminQuotas,
+    "UpdateAdminQuotasRequest": ops.UpdateAdminQuotasRequest,
+    "AdminServiceHealthList": list[ops.AdminServiceHealth],
+    "AdminStorageUsage": ops.AdminStorageUsage,
+    "AdminSigningPolicy": ops.AdminSigningPolicy,
+    "UpdateAdminSigningPolicyRequest": ops.UpdateAdminSigningPolicyRequest,
+    "AdminAiProvider": ops.AdminAiProvider,
+    "AdminAiProviderList": list[ops.AdminAiProvider],
+    "CreateAdminAiProviderRequest": ops.CreateAdminAiProviderRequest,
+    "UpdateAdminAiProviderRequest": ops.UpdateAdminAiProviderRequest,
+    "AdminAiProviderCheck": ops.AdminAiProviderCheck,
     "AdminSettings": s.AdminSettings,
     "AdminRegistrationSettings": s.AdminRegistrationSettings,
     "UpdateAdminRegistrationRequest": s.UpdateAdminRegistrationRequest,

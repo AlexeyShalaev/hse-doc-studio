@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, func, literal, select, text, update
+from sqlalchemy import ColumnElement, Select, case, func, literal, null, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -40,7 +40,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def _job(row: JobRow) -> QueuedJob:
+def job_from_row(row: JobRow) -> QueuedJob:
     return QueuedJob(
         id=row.id,
         kind=JobKind(row.kind),
@@ -67,6 +67,16 @@ def _job(row: JobRow) -> QueuedJob:
         error_code=row.error_code,
         seq=row.seq,
     )
+
+
+def _cap_expression(default: int | None, *levels: tuple[Any, Mapping[UUID, int]]) -> ColumnElement[int] | None:
+    """Предел конкретной задачи: переопределения по владельцам, затем значение установки; `None` без лимитов."""
+    parts: list[Any] = [case(dict(caps), value=column, else_=null()) for column, caps in levels if caps]
+    if default is not None:
+        parts.append(literal(default))
+    if not parts:
+        return None
+    return func.coalesce(*parts) if len(parts) > 1 else parts[0]
 
 
 class PostgresJobQueue:
@@ -128,7 +138,7 @@ class PostgresJobQueue:
             session.add(row)
             await session.flush()
             await session.refresh(row)
-            return EnqueueOutcome(job=_job(row), superseded=tuple(_job(r) for r in superseded))
+            return EnqueueOutcome(job=job_from_row(row), superseded=tuple(job_from_row(r) for r in superseded))
 
     async def claim(self, runner: RunnerRef, *, lease_s: float, quota: QueueQuota | None = None) -> QueuedJob | None:
         now = self._clock()
@@ -142,7 +152,7 @@ class PostgresJobQueue:
                     set_={"last_seen_at": now, "concurrency": runner.concurrency},
                 )
             )
-            if limits.max_running_per_user is not None or limits.max_running_per_org is not None:
+            if not limits.is_unlimited:
                 await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CAPS_LOCK_KEY})
             row: JobRow | None = (
                 await session.execute(self._best_candidate(runner, limits, now, lease_s))
@@ -158,7 +168,7 @@ class PostgresJobQueue:
             await session.execute(
                 update(JobQueueStateRow).values(global_vtime=func.greatest(JobQueueStateRow.global_vtime, row.vtime))
             )
-            return _job(row)
+            return job_from_row(row)
 
     async def heartbeat(self, job_id: UUID, attempt: int, *, lease_s: float) -> Heartbeat:
         async with self._sessions.use() as session:
@@ -184,7 +194,7 @@ class PostgresJobQueue:
             row.result = result
             row.error_code = error_code
             await session.flush()
-            return _job(row)
+            return job_from_row(row)
 
     async def request_cancel(self, job_id: UUID) -> QueuedJob:
         async with self._sessions.use() as session:
@@ -198,7 +208,7 @@ class PostgresJobQueue:
             elif row.state == JobState.running.value:
                 row.cancel_requested = True
             await session.flush()
-            return _job(row)
+            return job_from_row(row)
 
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:
         now = self._clock()
@@ -229,7 +239,7 @@ class PostgresJobQueue:
                     row.finished_at = now
                     row.error_code = RunnerErrorCode.runner_lost.value
                 row.lease_until = None
-                outcomes.append(ExpiredOutcome(_job(row), requeued=requeued))
+                outcomes.append(ExpiredOutcome(job_from_row(row), requeued=requeued))
             await session.flush()
         return tuple(outcomes)
 
@@ -240,7 +250,7 @@ class PostgresJobQueue:
                     select(JobRow).where(JobRow.id == job_id).execution_options(populate_existing=True)
                 )
             ).scalar_one_or_none()
-            return _job(row) if row is not None else None
+            return job_from_row(row) if row is not None else None
 
     async def list(self, *, state: JobState | None = None, project_id: UUID | None = None) -> tuple[QueuedJob, ...]:
         stmt = select(JobRow).order_by(JobRow.seq).execution_options(populate_existing=True)
@@ -249,7 +259,7 @@ class PostgresJobQueue:
         if project_id is not None:
             stmt = stmt.where(JobRow.project_id == project_id)
         async with self._sessions.use() as session:
-            return tuple(_job(row) for row in (await session.execute(stmt)).scalars())
+            return tuple(job_from_row(row) for row in (await session.execute(stmt)).scalars())
 
     @staticmethod
     def _best_candidate(runner: RunnerRef, limits: QueueQuota, now: datetime, lease_s: float) -> Select[Any]:
@@ -257,20 +267,26 @@ class PostgresJobQueue:
         running = aliased(JobRow, name="r")
         busy = aliased(JobRow, name="b")
         conditions = [job.state == JobState.queued.value, job.tags.contained_by(sorted(runner.tags))]
-        if limits.max_running_per_user is not None:
+        user_cap = _cap_expression(
+            limits.max_running_per_user,
+            (job.user_id, limits.user_caps),
+            (job.org_id, limits.org_user_caps),
+        )
+        if user_cap is not None:
             of_user = (
                 select(func.count())
                 .where(running.state == JobState.running.value, running.user_id == job.user_id)
                 .scalar_subquery()
             )
-            conditions.append(of_user < limits.max_running_per_user)
-        if limits.max_running_per_org is not None:
+            conditions.append(user_cap.is_(None) | (of_user < user_cap))
+        org_cap = _cap_expression(limits.max_running_per_org, (job.org_id, limits.org_caps))
+        if org_cap is not None:
             of_org = (
                 select(func.count())
                 .where(running.state == JobState.running.value, running.org_id == job.org_id)
                 .scalar_subquery()
             )
-            conditions.append((job.org_id.is_(None)) | (of_org < limits.max_running_per_org))
+            conditions.append(job.org_id.is_(None) | org_cap.is_(None) | (of_org < org_cap))
         # Закреплённый раннер жив (опрашивал в пределах аренды) и у него есть свободный слот.
         busy_count = (
             select(func.count())

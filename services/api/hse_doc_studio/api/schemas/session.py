@@ -416,16 +416,6 @@ class AdminOrg(StrictModel):
     project_count: int
 
 
-class AdminRunner(StrictModel):
-    id: str
-    name: str
-    status: Literal["online", "offline", "draining"]
-    tags: list[str]
-    version: str
-    last_seen_at: datetime | None
-    running_jobs: int
-
-
 class AdminSettings(StrictModel):
     registration_mode: RegistrationMode
     require_approval: bool

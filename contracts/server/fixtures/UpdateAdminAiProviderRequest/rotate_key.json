@@ -1,0 +1,11 @@
+{
+  "name": null,
+  "type": null,
+  "api_key": "sk-new",
+  "clear_key": false,
+  "base_url": null,
+  "models": null,
+  "ssl_verify": null,
+  "connect_timeout_s": null,
+  "request_timeout_s": null
+}

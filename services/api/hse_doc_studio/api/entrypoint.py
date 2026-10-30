@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 from contextlib import suppress
+from dataclasses import asdict
 
 import structlog
 from dishka.integrations.fastapi import setup_dishka
@@ -255,6 +256,16 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         @app.on_event("startup")
         async def _prepare_server_setup() -> None:
             await prepare_server_setup(app, container, settings, health_checks)
+
+        @app.on_event("startup")
+        async def _recover_queued_jobs() -> None:
+            # Хуки и применение выходов жили в памяти прошлого процесса: довершаем задачи без метки применённого.
+            from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher  # noqa: PLC0415
+
+            dispatcher = await container.get(IJobDispatcher)
+            if isinstance(dispatcher, QueueJobDispatcher):
+                report = await dispatcher.recover()
+                logger.info("queued jobs recovered", **asdict(report))
 
     @app.on_event("startup")
     async def _probe_docker() -> None:
