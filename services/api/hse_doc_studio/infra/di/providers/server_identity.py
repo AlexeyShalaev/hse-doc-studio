@@ -143,6 +143,7 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpSettingsService,
     UpdateSmtpSettingsUC,
 )
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.orgs.groups import (
     AddGroupMemberUC,
     CreateGroupUC,
@@ -710,9 +711,14 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_delete_user_uc(
-        self, users: IUserRepository, lifecycle: IUserLifecycle, audit: IAuditLog, uow: IUnitOfWork
+        self,
+        users: IUserRepository,
+        lifecycle: IUserLifecycle,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        runners: RunnerRegistry,
     ) -> DeleteUserUC:
-        return DeleteUserUC(users, lifecycle, audit, uow)
+        return DeleteUserUC(users, lifecycle, audit, uow, runners)
 
     @provide
     def get_export_my_data_uc(self, lifecycle: IUserLifecycle, audit: IAuditLog) -> ExportMyDataUC:

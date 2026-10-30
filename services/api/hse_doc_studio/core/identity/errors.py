@@ -49,6 +49,14 @@ class IdentityErrorCode(StrEnum):
     user_not_found = "user_not_found"
     user_has_projects = "user_has_projects"
     user_not_disabled = "user_not_disabled"
+    # Личные раннеры: выключены в установке, предел, отозван, проект без личного владельца, сопряжение.
+    personal_runners_disabled = "personal_runners_disabled"
+    personal_runner_limit = "personal_runner_limit"
+    runner_revoked = "runner_revoked"
+    project_not_personal = "project_not_personal"
+    runner_pairing_invalid = "runner_pairing_invalid"
+    runner_pairing_expired = "runner_pairing_expired"
+    runner_pairing_used = "runner_pairing_used"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -150,6 +158,28 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "Сначала отключите учётную запись: удалить можно только отключённую.",
         "Disable the account first: only a disabled account can be deleted.",
     ),
+    IdentityErrorCode.personal_runners_disabled: (
+        "Администратор выключил личные раннеры.",
+        "The administrator turned personal runners off.",
+    ),
+    IdentityErrorCode.personal_runner_limit: (
+        "Достигнут предел личных раннеров или токенов. Отзовите ненужный.",
+        "You've reached the limit of personal runners or tokens. Revoke one you no longer need.",
+    ),
+    IdentityErrorCode.runner_revoked: ("Раннер отозван.", "The runner has been revoked."),
+    IdentityErrorCode.project_not_personal: (
+        "Это проект организации: сборки идут на общих раннерах.",
+        "This is an organization project: builds use shared runners.",
+    ),
+    IdentityErrorCode.runner_pairing_invalid: (
+        "Код не найден. Проверьте его в Студии.",
+        "Code not found. Check it in the Studio.",
+    ),
+    IdentityErrorCode.runner_pairing_expired: (
+        "Код истёк. Начните подключение в Студии заново.",
+        "The code has expired. Start connecting from the Studio again.",
+    ),
+    IdentityErrorCode.runner_pairing_used: ("Код уже использован.", "The code has already been used."),
 }
 
 

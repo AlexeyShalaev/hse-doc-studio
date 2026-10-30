@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.runners import (
     RegistrationToken,
     RegistrationTokenPurpose,
     Runner,
+    RunnerAnnouncement,
     RunnerHostKind,
     RunnerOwnerKind,
 )
@@ -162,6 +163,39 @@ class SqlRunnerRepository:
         async with self._sessions.use() as db:
             return [_runner(row) for row in (await db.execute(stmt)).scalars()]
 
+    async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
+        return await self._update(runner_id, {"name": name, "renamed_at": now}, only_active=True)
+
+    async def apply_announcement(
+        self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
+    ) -> Runner | None:
+        values: dict[str, object] = {
+            "version": info.version,
+            "tags": sorted(info.tags),
+            "concurrency": info.concurrency,
+            "ai_concurrency": info.ai_concurrency,
+            "host_kind": info.host_kind.value,
+            "features": sorted(info.features),
+            "ai_endpoints": endpoints_json(info.ai_endpoints),
+            "last_seen_at": now,
+            "last_seen_ip": ip,
+            "offline_at": None,
+        }
+        async with self._sessions.use() as db:
+            row = await db.get(RunnerRow, runner_id, with_for_update=True, populate_existing=True)
+            if row is None or row.revoked_at is not None:
+                return None
+            for key, value in values.items():
+                setattr(row, key, value)
+            # Имя, заданное хозяином или админом в интерфейсе, `/announce` не перетирает.
+            if info.name is not None and row.renamed_at is None:
+                row.name = info.name
+            await db.flush()
+            return _runner(row)
+
+    async def mark_offline(self, runner_id: str, now: datetime) -> None:
+        await self._update(runner_id, {"offline_at": now})
+
     async def count_active_owned(self, owner_id: str) -> int:
         stmt = select(func.count()).where(
             RunnerRow.owner_kind == RunnerOwnerKind.user.value,
@@ -220,6 +254,28 @@ class SqlRegistrationTokenRepository:
         async with self._sessions.use() as db:
             row = (await db.execute(stmt)).scalar_one_or_none()
             return _token(row) if row else None
+
+    async def list_owned(self, owner_id: str) -> builtins.list[RegistrationToken]:
+        row_t = RunnerRegistrationTokenRow
+        stmt = (
+            select(row_t)
+            .where(row_t.owner_kind == RunnerOwnerKind.user.value, row_t.owner_id == owner_id)
+            .order_by(row_t.created_at.desc(), row_t.id)
+        )
+        async with self._sessions.use() as db:
+            return [_token(row) for row in (await db.execute(stmt)).scalars()]
+
+    async def revoke_owned(self, owner_id: str, now: datetime) -> int:
+        row_t = RunnerRegistrationTokenRow
+        stmt = (
+            update(row_t)
+            .where(
+                row_t.owner_kind == RunnerOwnerKind.user.value, row_t.owner_id == owner_id, row_t.revoked_at.is_(None)
+            )
+            .values(revoked_at=now)
+        )
+        async with self._sessions.use() as db:
+            return int((await db.execute(stmt)).rowcount)  # type: ignore[attr-defined]
 
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         async with self._sessions.use() as db:

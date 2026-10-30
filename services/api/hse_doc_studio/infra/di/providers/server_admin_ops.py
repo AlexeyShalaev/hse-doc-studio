@@ -41,6 +41,7 @@ from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
 from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
+from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 
 
@@ -85,8 +86,10 @@ class ServerAdminOpsProvider(Provider):
         audit: IAuditLog,
         uow: IUnitOfWork,
         read: GetInstanceSettingsUC,
+        personal: InstancePersonalRunnerSettings,
+        queue: JobQueueService,
     ) -> UpdateBuildSettingsUC:
-        return UpdateBuildSettingsUC(repo, env, audit, uow, read)
+        return UpdateBuildSettingsUC(repo, env, audit, uow, read, personal=personal, queue=queue)
 
     @provide
     def get_job_admin_reader(self, sessions: SessionProvider) -> IJobAdminReader:

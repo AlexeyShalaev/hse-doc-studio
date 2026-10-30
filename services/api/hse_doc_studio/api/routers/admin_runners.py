@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.runner_commands import registration_command, studio_base_url
 from hse_doc_studio.api.schemas.runner_admin import (
     CreatedRegistrationTokenResponse,
     CreateRegistrationTokenRequest,
@@ -54,8 +54,7 @@ def _runner_info(runner: Runner) -> RunnerInfo:
 
 def _command(request: Request, secret: str) -> str:
     """Команда запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа."""
-    base = (settings.auth.public_url or str(request.base_url)).rstrip("/")
-    return f"HSE_RUNNER__API_URL={base} HSE_RUNNER__TOKEN={secret} hse-doc-studio runner"
+    return registration_command(studio_base_url(request), secret)
 
 
 async def _registry(request: Request) -> RunnerRegistry:

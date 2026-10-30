@@ -266,6 +266,17 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/runner/v1/jobs/{job_id}/artifacts"): RouteScope.job_token,
     ("PUT", "/api/runner/v1/jobs/{job_id}/artifacts/{sha256}"): RouteScope.job_token,
     ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
+    # Личные раннеры (трек core): аккаунт и протокол раннера
+    ("GET", "/account/runners"): _A,
+    ("PATCH", "/account/runners/{runner_id}"): _A,
+    ("POST", "/account/runners/{runner_id}/rotate-token"): _A,
+    ("DELETE", "/account/runners/{runner_id}"): _A,
+    ("GET", "/account/runner-tokens"): _A,
+    ("POST", "/account/runner-tokens"): _A,
+    ("DELETE", "/account/runner-tokens/{token_id}"): _A,
+    ("POST", "/api/runner/v1/announce"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/offline"): RouteScope.runner_token,
+    ("POST", "/api/runner/v1/deregister"): RouteScope.runner_token,
     # Прокси к общим сервисам: токен задачи или вход проверяет сам маршрут
     ("POST", "/api/services/languagetool/v2/check"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу

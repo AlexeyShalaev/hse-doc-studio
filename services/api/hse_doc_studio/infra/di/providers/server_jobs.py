@@ -13,7 +13,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
@@ -155,10 +155,20 @@ class ServerJobsProvider(Provider):
         return SqlProjectOrgReader(sessions)
 
     @provide
-    def get_runner_registry(
-        self, runners: IRunnerRepository, tokens: IRegistrationTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    def get_runner_registry(  # noqa: PLR0913
+        self,
+        runners: IRunnerRepository,
+        tokens: IRegistrationTokenRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        personal: IPersonalRunnerSettings,
+        users: IUserRepository,
+        queue_service: JobQueueService,
+        queue: IJobQueue,
     ) -> RunnerRegistry:
-        return RunnerRegistry(runners, tokens, audit, uow)
+        return RunnerRegistry(
+            runners, tokens, audit, uow, personal=personal, users=users, queue=queue_service, jobs=queue
+        )
 
     @provide
     def get_job_token_signer(self, key_store: KeyFileStore) -> JobTokenSigner:

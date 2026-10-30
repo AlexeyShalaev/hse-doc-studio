@@ -24,6 +24,11 @@ RUNNER_ERROR_STATUS: Mapping[RunnerErrorCode, int] = {
     RunnerErrorCode.job_token_invalid: 401,
     RunnerErrorCode.runner_disabled: 403,
     RunnerErrorCode.runner_protocol_unsupported: 409,
+    RunnerErrorCode.runner_limit: 409,
+    RunnerErrorCode.slow_down: 429,
+    RunnerErrorCode.relay_request_gone: 404,
+    RunnerErrorCode.relay_out_of_order: 409,
+    RunnerErrorCode.relay_too_large: 413,
 }
 
 

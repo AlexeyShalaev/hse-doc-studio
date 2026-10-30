@@ -157,6 +157,14 @@ class IRunnerRepository(Protocol):
         ...
 
     async def count_active_owned(self, owner_id: str) -> int: ...
+    async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
+        """Меняет имя и ставит renamed_at: имя из интерфейса `/announce` больше не перетирает."""
+        ...
+
+    async def apply_announcement(
+        self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
+    ) -> Runner | None: ...
+    async def mark_offline(self, runner_id: str, now: datetime) -> None: ...
 
 
 class IRegistrationTokenRepository(Protocol):
@@ -170,6 +178,20 @@ class IRegistrationTokenRepository(Protocol):
 
     async def upsert_bootstrap(self, token: RegistrationToken) -> None:
         """Токен из окружения: тот же секрет оставляет счётчик, новый секрет заменяет запись и обнуляет его."""
+        ...
+
+    async def list_owned(self, owner_id: str) -> builtins.list[RegistrationToken]:
+        """Личные токены человека, новые первыми."""
+        ...
+
+    async def revoke_owned(self, owner_id: str, now: datetime) -> int:
+        """Отзывает все неотозванные личные токены человека; возвращает их число."""
+        ...
+
+
+class IUserRunnerRevoker(Protocol):
+    async def revoke_all_of_user(self, user_id: str) -> int:
+        """Отзывает личные раннеры и токены человека в текущей транзакции; возвращает число раннеров."""
         ...
 
 
