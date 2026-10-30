@@ -3,7 +3,8 @@
 Локально токенов нет: документ отдаёт обычный маршрут, колбэк проверяют подпись и JWT Document Server.
 В серверном режиме Document Server ходит без cookie, поэтому адресам выдаём короткие подписанные токены.
 Роль в токене не источник права: при каждом использовании ACL читается заново, так что отозванный
-участник теряет возможность сохранять сразу, а не после срока токена.
+участник теряет возможность сохранять сразу, а не после срока токена. То же с учётной записью: отключённый
+администратором человек или удалённый аккаунт токенами больше не пользуется.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource
 from hse_doc_studio.core.access.policy import Decision, decide
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.office_tokens import (
     OfficeTokenClaims,
     OfficeTokenError,
@@ -92,12 +94,14 @@ class ServerOfficeAccess:
         self,
         signer: OfficeTokenSigner,
         acl_repo: IProjectAclRepository,
+        users: IUserRepository,
         *,
         ttl_s: int = 43_200,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._signer = signer
         self._acl_repo = acl_repo
+        self._users = users
         self._ttl = timedelta(seconds=ttl_s)
         self._clock = clock
 
@@ -146,6 +150,10 @@ class ServerOfficeAccess:
         except OfficeTokenError:
             raise _denied() from None
         if path is not None and path != claims.path:
+            raise _denied()
+        # Токен живёт часы и лежит в адресах: отключённый или удалённый аккаунт теряет его сразу.
+        user = await self._users.get(claims.actor_id)
+        if user is None or not user.can_sign_in:
             raise _denied()
         actor = Actor.user(claims.actor_id, source=ActorSource.session)
         await self._role_of(actor, project_id, claims.path)

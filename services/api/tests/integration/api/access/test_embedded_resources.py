@@ -67,20 +67,23 @@ class _Providers(Provider):
 
     @provide
     def office_access(self) -> IOfficeAccess:
-        return ServerOfficeAccess(OfficeTokenSigner([b"k" * 32]), self._acl)
+        return ServerOfficeAccess(OfficeTokenSigner([b"k" * 32]), self._acl, self._users)
 
 
 class _Env:
-    def __init__(self, client: AsyncClient, acl: _Acl) -> None:
+    def __init__(self, client: AsyncClient, acl: _Acl, users: InMemoryUserRepository) -> None:
         self.client = client
         self.acl = acl
+        self.users = users
 
     async def token(self, *, purpose: OfficeTokenPurpose = OfficeTokenPurpose.document, path: str = _FILE) -> str:
         from hse_doc_studio.core.access.context import set_current_actor
 
         set_current_actor(Actor.user("u1"))
         try:
-            tokens = await ServerOfficeAccess(OfficeTokenSigner([b"k" * 32]), self.acl).issue(PROJECT, "pres", path)
+            tokens = await ServerOfficeAccess(OfficeTokenSigner([b"k" * 32]), self.acl, self.users).issue(
+                PROJECT, "pres", path
+            )
         finally:
             set_current_actor(None)
         assert tokens is not None
@@ -142,7 +145,7 @@ async def env(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Env]:
     container = make_async_container(_Providers(sessions, users, acl), FastapiProvider())
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield _Env(client, acl)
+        yield _Env(client, acl, users)
     await container.close()
 
 

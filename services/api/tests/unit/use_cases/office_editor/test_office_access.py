@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
+from hse_doc_studio.core.identity.entities import User, UserStatus
 from hse_doc_studio.core.office_tokens import OfficeTokenPurpose, OfficeTokenSigner
 from hse_doc_studio.infra.office.jwt import sign
 from hse_doc_studio.infra.office.pooled_editor import ConfiguredReachability, PooledOfficeEditorService
@@ -54,8 +55,28 @@ def _reset_actor():
     set_current_actor(None)
 
 
-def _access(acl: FakeAcl, clock: Clock | None = None) -> ServerOfficeAccess:
-    return ServerOfficeAccess(OfficeTokenSigner([b"k" * 32]), acl, ttl_s=600, clock=clock or Clock())
+class FakeUsers:
+    """Любой id считается действующим аккаунтом, кроме перечисленных в `disabled` и `missing`."""
+
+    def __init__(self) -> None:
+        self.disabled: set[str] = set()
+        self.missing: set[str] = set()
+
+    async def get(self, user_id: str) -> User | None:
+        if user_id in self.missing:
+            return None
+        status = UserStatus.disabled if user_id in self.disabled else UserStatus.active
+        return User(user_id, f"{user_id}@example.org", f"{user_id}@example.org", user_id, status, datetime.now(UTC))
+
+
+def _access(acl: FakeAcl, clock: Clock | None = None, users: FakeUsers | None = None) -> ServerOfficeAccess:
+    return ServerOfficeAccess(
+        OfficeTokenSigner([b"k" * 32]),
+        acl,
+        users or FakeUsers(),  # type: ignore[arg-type]
+        ttl_s=600,
+        clock=clock or Clock(),
+    )
 
 
 @pytest.mark.unit
@@ -330,3 +351,24 @@ async def test__callback__document_token_is_not_a_callback_token(tmp_path: Path)
     with pytest.raises(PermissionError):
         await uc.execute(_save_inp(project_id, tokens.document))
     put_file_uc.execute.assert_not_awaited()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("state", ["disabled", "missing"])
+@pytest.mark.parametrize("purpose", [OfficeTokenPurpose.document, OfficeTokenPurpose.callback])
+async def test__authorize__account_disabled_or_deleted__tokens_stop_working(
+    state: str, purpose: OfficeTokenPurpose
+) -> None:
+    acl, project_id, users = FakeAcl(), uuid4(), FakeUsers()
+    acl.roles[(project_id, "u-1")] = Role.editor
+    set_current_actor(Actor.user("u-1"))
+    access = _access(acl, users=users)
+    tokens = await access.issue(project_id, "pres", _PATH)
+    assert tokens is not None
+    token = tokens.document if purpose is OfficeTokenPurpose.document else tokens.callback
+    assert (await access.authorize(token, purpose, project_id, "pres")).id == "u-1"
+
+    getattr(users, state).add("u-1")
+
+    with pytest.raises(PermissionError):
+        await access.authorize(token, purpose, project_id, "pres")

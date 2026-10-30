@@ -7,6 +7,7 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.egress import EgressPurpose, IEgressPolicy
+from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.office_tokens import OFFICE_TOKEN_KEY_PURPOSE, OfficeTokenSigner
 from hse_doc_studio.infra.egress.http import egress_client
@@ -73,5 +74,7 @@ class ServerServicesProvider(Provider):
         return OfficeTokenSigner(key_store.ensure_primary().derive_all(OFFICE_TOKEN_KEY_PURPOSE))
 
     @provide(override=True, scope=Scope.REQUEST)
-    def get_office_access(self, signer: OfficeTokenSigner, acl: IProjectAclRepository) -> IOfficeAccess:
-        return ServerOfficeAccess(signer, acl, ttl_s=settings.office_editor.token_ttl_s)
+    def get_office_access(
+        self, signer: OfficeTokenSigner, acl: IProjectAclRepository, users: IUserRepository
+    ) -> IOfficeAccess:
+        return ServerOfficeAccess(signer, acl, users, ttl_s=settings.office_editor.token_ttl_s)
