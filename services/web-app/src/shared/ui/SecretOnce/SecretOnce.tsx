@@ -12,6 +12,10 @@ export type SecretOnceProps = {
   value: string;
   /** Пояснение под заголовком (куда вставить, что будет после закрытия). */
   hint?: string;
+  /** Своё предупреждение вместо общего «Значение показано один раз…». */
+  warning?: string;
+  /** Что ещё скопировать до закрытия (команда запуска): стоит над «Готово». */
+  extra?: React.ReactNode;
   onClose: () => void;
 };
 
@@ -19,6 +23,8 @@ export const SecretOnce = ({
   label,
   value,
   hint,
+  warning,
+  extra,
   onClose,
 }: SecretOnceProps) => {
   const { t } = useTranslation("uiPrimitives");
@@ -58,7 +64,7 @@ export const SecretOnce = ({
           lineHeight: 1.5,
         }}
       >
-        {t("secretOnce.warning")}
+        {warning ?? t("secretOnce.warning")}
         {hint ? ` ${hint}` : ""}
       </p>
       <CopyField
@@ -69,6 +75,7 @@ export const SecretOnce = ({
           setConfirming(false);
         }}
       />
+      {extra}
       {confirming ? (
         <div
           role="alert"

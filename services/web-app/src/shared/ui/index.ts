@@ -10,6 +10,9 @@ export type { SpinnerProps } from "./Spinner";
 export { Tooltip, TooltipProvider } from "./Tooltip";
 export type { TooltipProps } from "./Tooltip";
 
+export { UiVariantContext, useUiVariant } from "./UiVariant";
+export type { UiVariant } from "./UiVariant";
+
 export { Modal } from "./Modal";
 export type { ModalProps } from "./Modal";
 

@@ -1642,6 +1642,32 @@
     color: var(--fg-0);
     box-shadow: var(--shadow-1);
   }
+  /* Сегменты на всю ширину: подписи не обрезаются, переносятся. */
+  .seg.seg-fill {
+    display: flex;
+    width: 100%;
+  }
+  .seg.seg-fill button {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: auto;
+    min-height: 26px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  /* Подпись и пояснение поля в формах, собранных без <Input label>. */
+  .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-1);
+  }
+  .form-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--fg-3);
+  }
 
   /* ── toggle ─────────────────────────────────────────────────── */
   .toggle {
@@ -2905,6 +2931,16 @@
     max-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
+  }
+  /* Прокручиваемая середина окна: пока ниже есть содержимое, над кнопками
+     видна черта. Заплатка с attachment: local едет вместе с содержимым и
+     закрывает черту, когда прокрутили до конца или прокручивать нечего. */
+  .modal-body {
+    background:
+      linear-gradient(var(--bg-1), var(--bg-1)) bottom / 100% 6px no-repeat
+        local,
+      linear-gradient(var(--border-strong), var(--border-strong)) bottom / 100%
+        1px no-repeat scroll;
   }
 
   /* ── rendered markdown preview (e.g. NDA documents) ───────────── */
@@ -4616,6 +4652,52 @@
   --adm-wide: 1120px;
   --adm-narrow: 760px;
   --adm-gutter: 32px;
+  /* Одна ширина числового поля с единицей на всех страницах настроек. */
+  --adm-num-width: 96px;
+}
+
+/* Поля в консоли (страницы и окна админки): подпись 13px, поле, пояснение
+   12px сразу под полем. Окна получают .ui-console через UiVariantContext,
+   потому что рисуются в портале вне .adm-shell. */
+.ui-console .field {
+  gap: 6px;
+}
+.ui-console .field > p[role="alert"] {
+  margin: -2px 0 0;
+  font-size: 12px;
+}
+.ui-console .field > label,
+.ui-console .form-label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-0);
+}
+.ui-console .field > .hint,
+.ui-console .form-hint {
+  margin: -2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.ui-console .seg {
+  background: var(--bg-2);
+}
+.ui-console .seg button {
+  font-size: 12.5px;
+  color: var(--fg-2);
+  border: 1px solid transparent;
+}
+.ui-console .seg button.active {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+  color: var(--fg-0);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+[data-theme="light"] .ui-console .seg button.active {
+  background: var(--bg-1);
+  box-shadow: 0 1px 2px rgba(15, 25, 60, 0.1);
 }
 
 /* Внутри админки чипы и метки статусов читаются как текст, а не как вывод
@@ -5027,6 +5109,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 .adm-setting-label {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -5039,6 +5122,19 @@
   font-size: 12px;
   line-height: 1.5;
   color: var(--fg-2);
+}
+.adm-hint-link {
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.adm-hint-link:hover {
+  text-decoration: underline;
+}
+.adm-hint-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--r-1);
 }
 .adm-setting-control {
   display: flex;
@@ -5059,10 +5155,19 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--fg-2);
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
   font-size: 11.5px;
-  font-weight: 400;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: help;
+}
+.adm-lock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 @container (max-width: 560px) {
   .adm-setting {
@@ -5102,12 +5207,40 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   font-size: 13px;
   color: var(--fg-0);
 }
 .adm-savebar-text[data-error="true"] {
   color: var(--c-err);
+}
+/* Ошибки полей отдельной строкой под счётчиком, вровень с его текстом. */
+.adm-savebar-issue {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding-left: 14px;
+  font-size: 12.5px;
+  color: var(--c-err);
+  min-width: 0;
+}
+.adm-savebar-reveal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.adm-savebar-reveal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
 }
 @keyframes adm-rise {
   from {
@@ -5129,13 +5262,46 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-.adm-setting .input[readonly] {
-  background: var(--bg-elev);
-  color: var(--fg-1);
-  cursor: default;
+/* Поле, заданное окружением: без заливки ввода, пунктирная рамка, текст
+   приглушён, замок внутри справа. Фокус не подсвечивает его как поле ввода. */
+.input-locked-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
 }
-.adm-setting .input[readonly]:focus {
+.input[data-locked="true"] {
+  background: var(--bg-1);
+  border-style: dashed;
   border-color: var(--border-strong);
+  color: var(--fg-2);
+  cursor: default;
+  padding-right: 32px;
+}
+.input[data-locked="true"]:focus {
+  background: var(--bg-1);
+  border-color: var(--border-strong);
+  outline: none;
+  box-shadow: none;
+}
+.input-lock {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--fg-2);
+  cursor: help;
+  border-radius: var(--r-1);
+}
+.input-lock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.adm-unit .input[data-locked="true"] {
+  padding-right: 28px;
+}
+.adm-unit .input-lock {
+  right: 8px;
 }
 /* Под полем ошибка или пометка: подпись строки держится у верха поля. */
 .adm-setting:has(.adm-setting-control [role="alert"], .adm-fields > * + *) {
@@ -5178,12 +5344,12 @@
   white-space: nowrap;
 }
 .adm-unit .input {
-  width: 84px;
+  width: var(--adm-num-width);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 .adm-unit-label {
-  min-width: 34px;
+  min-width: 48px;
 }
 .adm-field-error {
   margin: 0;

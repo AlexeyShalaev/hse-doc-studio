@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "../Spinner";
@@ -17,6 +18,11 @@ export type StickySaveBarProps = {
   saveDisabled?: boolean | undefined;
   /** Текст ошибки сохранения вместо счётчика. */
   error?: string | null | undefined;
+  /**
+   * В полях есть ошибки: текст встаёт рядом со счётчиком, а кнопка
+   * «Показать» прокручивает к первому неверному полю и ставит в него фокус.
+   */
+  invalidHint?: string | null | undefined;
   saveLabel?: string | undefined;
   testId?: string | undefined;
 };
@@ -28,13 +34,25 @@ export const StickySaveBar = ({
   busy = false,
   saveDisabled = false,
   error = null,
+  invalidHint = null,
   saveLabel,
   testId = "save-bar",
 }: StickySaveBarProps) => {
   const { t } = useTranslation("uiPrimitives");
+  const slot = useRef<HTMLDivElement>(null);
   if (dirtyCount <= 0 && !busy) return null;
+
+  const reveal = () => {
+    // Ищем в той же странице, что и панель: ошибки другой формы не нужны.
+    const scope: ParentNode =
+      slot.current?.closest(".adm-page, form") ?? document;
+    const first = scope.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (!first) return;
+    first.scrollIntoView({ block: "center", behavior: "smooth" });
+    first.focus({ preventScroll: true });
+  };
   return (
-    <div className="adm-savebar-slot">
+    <div className="adm-savebar-slot" ref={slot}>
       <div
         className="adm-savebar"
         role="region"
@@ -52,6 +70,19 @@ export const StickySaveBar = ({
             <span className="dot warn" aria-hidden="true" />
           )}
           {error ?? t("adminKit.saveBar.unsaved", { count: dirtyCount })}
+          {!error && invalidHint && (
+            <span className="adm-savebar-issue" data-testid={`${testId}-issue`}>
+              {invalidHint}
+              <button
+                type="button"
+                className="adm-savebar-reveal"
+                onClick={reveal}
+                data-testid={`${testId}-reveal`}
+              >
+                {t("adminKit.saveBar.reveal")}
+              </button>
+            </span>
+          )}
         </span>
         <button
           type="button"

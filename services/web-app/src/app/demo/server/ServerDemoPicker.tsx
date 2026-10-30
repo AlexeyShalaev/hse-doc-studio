@@ -26,10 +26,11 @@ export const ServerDemoPicker = () => {
   };
 
   return (
-    // Выше подвала меню админки: на 80px кнопка закрывала «Вернуться в Студию».
+    // Справа внизу над строкой состояния, ниже окон и выезжающих панелей
+    // (z-index 90+): не ложится на меню админки и не спорит с диалогами.
     <div
       className="fixed"
-      style={{ left: 12, bottom: 120, zIndex: 110 }}
+      style={{ right: 16, bottom: 36, zIndex: 80 }}
       data-testid="server-demo-picker"
     >
       <Popover open={open} onOpenChange={setOpen}>
@@ -41,17 +42,22 @@ export const ServerDemoPicker = () => {
               gap: 6,
               boxShadow: "0 2px 10px rgba(0, 0, 0, 0.25)",
               background: "var(--bg-1)",
+              border: "1px dashed var(--c-warn)",
+              color: "var(--fg-1)",
             }}
             aria-label={t("demo.open")}
           >
-            <Server size={14} aria-hidden />
+            <Server size={14} aria-hidden style={{ color: "var(--c-warn)" }} />
+            <span style={{ color: "var(--c-warn)", fontWeight: 600 }}>
+              {t("demo.prefix")}
+            </span>
             <span>{t(`demo.scenario.${scenarioId}.title`)}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
           width={340}
           side="top"
-          align="start"
+          align="end"
           aria-label={t("demo.title")}
           style={{ maxHeight: 520, overflowY: "auto", padding: 0 }}
         >

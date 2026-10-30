@@ -13,11 +13,11 @@ import {
   Building2,
   ClipboardList,
   Gauge,
+  Globe,
   HardDrive,
   KeyRound,
   LayoutDashboard,
   Server,
-  Settings2,
   ShieldCheck,
   SlidersHorizontal,
   Users,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Avatar, Tooltip } from "@shared/ui";
+import { Tooltip, UiVariantContext } from "@shared/ui";
 import { useBootstrap } from "@entities/session";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
@@ -86,7 +86,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
   {
     id: "settings",
     items: [
-      { id: "instance", to: "/admin/instance", icon: Settings2 },
+      { id: "instance", to: "/admin/instance", icon: Globe },
       { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
       { id: "signing", to: "/admin/signing", icon: KeyRound },
       { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
@@ -148,6 +148,7 @@ const AdminNav = () => {
   const [status, setStatus] = useState<NavStatus>({
     counters: {},
     instanceName: null,
+    instanceHost: null,
   });
   const report = useCallback((next: NavStatus) => {
     setStatus(next);
@@ -156,7 +157,6 @@ const AdminNav = () => {
     Record<AdminSection, NavStatus["counters"]["users"]>
   > = status.counters;
   const bootstrap = useBootstrap().data;
-  const user = bootstrap?.user ?? null;
   const name = status.instanceName ?? t("nav.instanceFallback");
 
   return (
@@ -178,17 +178,9 @@ const AdminNav = () => {
           <div className="adm-nav-title" data-testid="admin-instance-name">
             {name}
           </div>
-          {user && (
-            <div className="adm-nav-who" title={t("nav.role")}>
-              <Avatar
-                name={user.name}
-                seed={user.id}
-                initials={
-                  user.avatar_initials !== "" ? user.avatar_initials : undefined
-                }
-                size={16}
-              />
-              <span>{user.name}</span>
+          {status.instanceHost && (
+            <div className="adm-nav-who" data-testid="admin-instance-host">
+              <span>{status.instanceHost}</span>
             </div>
           )}
         </div>
@@ -280,17 +272,19 @@ const AdminNav = () => {
 /** Каркас админки: заголовок приложения, сгруппированная навигация, содержимое. */
 export const AdminLayout = () => (
   <div
-    className="adm-shell flex flex-col flex-1 bg-bg-0"
+    className="adm-shell ui-console flex flex-col flex-1 bg-bg-0"
     style={{ minHeight: 0 }}
     data-testid="admin-layout"
   >
-    <AppTitlebar />
-    <div className="flex flex-1" style={{ minHeight: 0 }}>
-      <AdminNav />
-      <main className="adm-main">
-        <Outlet />
-      </main>
-    </div>
+    <UiVariantContext.Provider value="console">
+      <AppTitlebar showVersion={false} />
+      <div className="flex flex-1" style={{ minHeight: 0 }}>
+        <AdminNav />
+        <main className="adm-main">
+          <Outlet />
+        </main>
+      </div>
+    </UiVariantContext.Provider>
     <AppStatusBar />
   </div>
 );

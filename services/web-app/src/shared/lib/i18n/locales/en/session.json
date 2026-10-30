@@ -6,6 +6,7 @@
   },
   "demo": {
     "open": "Server demo scenarios",
+    "prefix": "Demo:",
     "title": "Server demo",
     "subtitle": "Data lives in the tab memory, no backend needed.",
     "scenario": {

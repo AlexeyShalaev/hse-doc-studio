@@ -105,13 +105,14 @@
   "adminKit": {
     "loading": "Loading",
     "locked": "Set by environment",
-    "lockedHint": "This value comes from an environment variable on the server and can only be changed there.",
+    "lockedHint": "Set in the server environment and can only be changed there.",
     "saveBar": {
       "label": "Unsaved changes",
       "unsaved_one": "{{count}} unsaved change",
       "unsaved_other": "{{count}} unsaved changes",
       "save": "Save",
-      "discard": "Discard"
+      "discard": "Discard",
+      "reveal": "Show"
     },
     "error": {
       "title": "Couldn't load data",

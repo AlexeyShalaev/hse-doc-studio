@@ -64,6 +64,9 @@ export const FilterBar = ({
   }, [debounced, onSearchChange]);
 
   const active = text !== "" || filters.some((f) => f.value !== "");
+  // Когда групп несколько, у каждой видна подпись: иначе непонятно, к чему
+  // относится каждая кнопка «Все».
+  const labelled = filters.length > 1;
 
   return (
     <div
@@ -113,6 +116,19 @@ export const FilterBar = ({
             alignItems: "center",
           }}
         >
+          {labelled && (
+            <span
+              aria-hidden="true"
+              style={{
+                fontSize: 12,
+                color: "var(--fg-2)",
+                marginRight: 2,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {group.label}
+            </span>
+          )}
           <Chip
             selected={group.value === ""}
             onClick={() => {

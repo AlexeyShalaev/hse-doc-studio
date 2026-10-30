@@ -380,7 +380,7 @@ describe("Section and SettingRow", () => {
     expect(screen.getByRole("region", { name: "Почта" })).toBeInTheDocument();
     expect(screen.getByLabelText(/Сервер/)).toHaveAttribute("id", "host");
     expect(screen.getByTestId("row-locked")).toHaveAccessibleName(
-      "Значение задано переменной окружения на сервере. Изменить его можно только там.",
+      "Задано в окружении сервера, поменять можно только там.",
     );
   });
 });

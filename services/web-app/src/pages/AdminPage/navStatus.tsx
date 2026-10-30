@@ -19,7 +19,20 @@ export type NavCounters = Partial<
     { count: number; tone: NavCounterTone }
   >
 >;
-export type NavStatus = { counters: NavCounters; instanceName: string | null };
+export type NavStatus = {
+  counters: NavCounters;
+  instanceName: string | null;
+  /** Хост публичного адреса: studio.example.org. */
+  instanceHost: string | null;
+};
+
+const hostOf = (url: string): string | null => {
+  try {
+    return new URL(url).host || null;
+  } catch {
+    return null;
+  }
+};
 
 export const NavStatusProbe = ({
   onChange,
@@ -41,6 +54,7 @@ export const NavStatusProbe = ({
     (s) => s.status === "degraded",
   ).length;
   const name = instance?.name.trim() ?? "";
+  const host = instance ? hostOf(instance.public_url) : null;
 
   useEffect(() => {
     const counters: NavCounters = {};
@@ -52,8 +66,12 @@ export const NavStatusProbe = ({
         tone: down > 0 ? "danger" : "warning",
       };
     }
-    onChange({ counters, instanceName: name !== "" ? name : null });
-  }, [approvals, quiet, down, degraded, name, onChange]);
+    onChange({
+      counters,
+      instanceName: name !== "" ? name : null,
+      instanceHost: host,
+    });
+  }, [approvals, quiet, down, degraded, name, host, onChange]);
 
   return null;
 };

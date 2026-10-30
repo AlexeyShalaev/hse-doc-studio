@@ -21,6 +21,8 @@ export type AppTitlebarProps = {
    * Так же, слотом, а не импортом: виджет не может подтянуть другой виджет.
    */
   projectActions?: React.ReactNode;
+  /** Строка версии под логотипом. Админка прячет её: версия есть в её меню. */
+  showVersion?: boolean;
 };
 
 const Logomark = () => (
@@ -48,6 +50,7 @@ export const AppTitlebar = ({
   projectIsNda,
   projectSwitcher,
   projectActions,
+  showVersion = true,
 }: AppTitlebarProps) => {
   const { t } = useTranslation("appChrome");
   const navigate = useNavigate();
@@ -104,18 +107,20 @@ export const AppTitlebar = ({
           >
             HSE Studio
           </div>
-          <div
-            className="mono"
-            style={{
-              fontSize: 9.5,
-              color: "var(--fg-3)",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              marginTop: -2,
-            }}
-          >
-            {versionLabel}
-          </div>
+          {showVersion && (
+            <div
+              className="mono"
+              style={{
+                fontSize: 9.5,
+                color: "var(--fg-3)",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginTop: -2,
+              }}
+            >
+              {versionLabel}
+            </div>
+          )}
         </div>
       </button>
 
