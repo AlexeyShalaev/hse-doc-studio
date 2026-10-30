@@ -58,11 +58,15 @@ class RunnerJobService:
         ref = RunnerRef(id=UUID(runner.id), tags=runner.tags, concurrency=runner.concurrency)
         while True:
             await self._runners.touch(runner.id, self._clock())
-            if not runner.paused:
+            # Снимок раннера взят при входе, а опрос долгий: пауза и отзыв могли случиться за это время.
+            current = await self._runners.get(runner.id)
+            if current is None or current.revoked_at is not None:
+                return PollResponse()
+            if not current.paused:
                 quota = await self._quota_source() if self._quota_source is not None else None
                 job = await self._queue.claim(ref, lease_s=self._lease_s, quota=quota)
                 if job is not None:
-                    return PollResponse(envelope=self._envelope(job, runner))
+                    return PollResponse(envelope=self._envelope(job, current))
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 return PollResponse()

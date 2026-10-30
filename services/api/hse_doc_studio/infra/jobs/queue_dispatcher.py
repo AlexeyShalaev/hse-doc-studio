@@ -102,6 +102,7 @@ class QueueJobDispatcher:
         settings_repo: ISettingsRepository | None = None,
         quotas: IQuotaResolver | None = None,
         project_orgs: IProjectOrgReader | None = None,
+        build_timeout_source: Callable[[], Awaitable[float | None]] | None = None,
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
         runner_live_window_s: float = DEFAULT_RUNNER_LIVE_WINDOW_S,
         clock: Callable[[], datetime] = _utc_now,
@@ -118,6 +119,7 @@ class QueueJobDispatcher:
         self._settings_repo = settings_repo
         self._quotas = quotas
         self._project_orgs = project_orgs
+        self._build_timeout_source = build_timeout_source
         self._interval = poll_interval_s
         self._live_window = timedelta(seconds=runner_live_window_s)
         self._clock = clock
@@ -187,6 +189,11 @@ class QueueJobDispatcher:
         if rejected:
             # Записи сборки нет: задача прекращается, как и во встроенном диспетчере.
             await self._cancel_quietly(spec.id)
+            if self._ledger is not None:
+                # Без метки recover() гонял бы хуки для неё при каждом рестарте; метка ставится
+                # только терминальной записи, поэтому ждём, пока раннер узнает об отмене.
+                await self._wait(spec.id, None)
+                await self._ledger.mark_applied(spec.id)
             return
         await self._finish(spec, job, hooks)
 
@@ -400,7 +407,7 @@ class QueueJobDispatcher:
         if spec.id in self._cancelled:
             return None
         policy = job_kind_spec(spec.kind).policy
-        timeout = timeout_s or policy.default_timeout_s or DEFAULT_TIMEOUT_S
+        timeout = timeout_s or await self._default_timeout(spec, policy.default_timeout_s)
         org_id = await self._project_orgs.org_of(spec.project_id) if self._project_orgs is not None else None
         if self._quotas is not None:
             cap = await self._quotas.max_duration_s(user_id, org_id)
@@ -417,6 +424,8 @@ class QueueJobDispatcher:
             actor_role=role,
         )
         payload = {k: v for k, v in encode_envelope(envelope).items() if k not in {"job_token", "attempt"}}
+        if spec.id in self._cancelled:
+            return None
         outcome = await self._queue.enqueue(
             EnqueueRequest(
                 job_id=spec.id,
@@ -432,7 +441,18 @@ class QueueJobDispatcher:
                 timeout_s=timeout,
             )
         )
+        if spec.id in self._cancelled:
+            # Отмена пришла, пока шли обращения к базе после проверки выше: задача уже в очереди.
+            await self._cancel_quietly(spec.id)
         return outcome.job
+
+    async def _default_timeout(self, spec: JobSpec, policy_default: float | None) -> float:
+        """Срок сборки задаёт настройка установки; у остальных видов он из политики вида."""
+        if spec.kind is JobKind.compile and self._build_timeout_source is not None:
+            configured = await self._build_timeout_source()
+            if configured:
+                return configured
+        return policy_default or DEFAULT_TIMEOUT_S
 
     async def _with_user_passes(self, spec: JobSpec) -> JobSpec:
         """Настройка `latex_passes` пользователя важнее значения из шаблона; у раннера своих настроек нет."""

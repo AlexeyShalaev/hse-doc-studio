@@ -205,6 +205,23 @@ class TestJobQueueContract(PortContract):
         assert current is not None
         assert current.state is JobState.running
 
+    async def test__enqueue__same_coalesce_key__asks_running_job_to_stop(self, port: _Harness) -> None:
+        project = uuid4()
+        running = await port.put(uuid4(), project_id=project, coalesce_key="doc")
+        assert await port.claim() is not None
+        await port.put(uuid4(), project_id=project, coalesce_key="doc")
+        current = await port.queue.get(running.id)
+        assert current is not None
+        assert (current.state, current.cancel_requested) == (JobState.running, True)
+
+    async def test__complete__succeeded_after_cancel_request__is_stored_as_cancelled(self, port: _Harness) -> None:
+        await port.put(uuid4())
+        job = await port.claim()
+        assert job is not None
+        await port.queue.request_cancel(job.id)
+        done = await port.queue.complete(job.id, job.attempt, JobStatus.succeeded, result={"ok": True})
+        assert (done.state, done.result, done.error_code) == (JobState.cancelled, None, None)
+
     async def test__enqueue__other_coalesce_key__keeps_queued_job(self, port: _Harness) -> None:
         await port.put(uuid4(), coalesce_key="a")
         outcome = await port.queue.enqueue(

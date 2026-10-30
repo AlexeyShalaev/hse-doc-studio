@@ -406,6 +406,49 @@ def test__factory__compile_spec__builds_hooks_for_the_spec_folder(tmp_path: Path
         env.artifacts,
     )
 
-    assert isinstance(factory.for_spec(env.spec), CompileJobHooks)
+    assert factory.for_spec(env.spec) is not None
     assert factory.for_spec(replace(env.spec, local_root=None)) is None
     assert factory.for_spec(replace(env.spec, kind=JobKind.office_convert)) is None
+
+
+# --- хуки после рестарта ---
+
+
+async def test__recovered_hooks__finished_record__outcome_is_not_applied_twice(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.compile_repo.get_for_project.return_value = replace(_record(tmp_path), status=CompileStatus.success)
+    hooks = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    ).for_spec(env.spec)
+    assert hooks is not None
+
+    await hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    env.compile_repo.save.assert_not_called()
+    env.changelog_repo.append.assert_not_called()
+    env.artifacts.archive_pdf.assert_not_called()
+
+
+async def test__recovered_hooks__record_missing__nothing_is_recreated(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.compile_repo.get_for_project.return_value = None
+    hooks = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    ).for_spec(env.spec)
+    assert hooks is not None
+
+    await hooks.on_finished(env.spec, _result(JobStatus.failed), "log")
+
+    env.compile_repo.save.assert_not_called()

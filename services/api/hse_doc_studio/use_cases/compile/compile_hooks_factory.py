@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from hse_doc_studio.core.enums import CompileStatus
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
-from hse_doc_studio.core.jobs.entities import JobSpec
+from hse_doc_studio.core.jobs.entities import JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.protocols import IJobHooks
 from hse_doc_studio.core.repositories import (
@@ -12,6 +13,27 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
+
+
+class _RecoveredCompileHooks:
+    """Хуки после рестарта api: итог уже мог быть записан до падения, и повторять его побочные эффекты нельзя.
+
+    Журнал, снимок VCS и архив PDF не идемпотентны, поэтому при готовой записи (успех или сбой) или при
+    удалённой записи итог не применяется второй раз.
+    """
+
+    def __init__(self, inner: CompileJobHooks, compile_repo: ICompileRepository) -> None:
+        self._inner = inner
+        self._compile_repo = compile_repo
+
+    async def on_started(self, spec: JobSpec) -> bool:
+        return await self._inner.on_started(spec)
+
+    async def on_finished(self, spec: JobSpec, result: JobResult, log: str) -> None:
+        record = await self._compile_repo.get_for_project(self._inner.project_folder, spec.id)
+        if record is None or record.status in (CompileStatus.success, CompileStatus.failure):
+            return
+        await self._inner.on_finished(spec, result, log)
 
 
 class CompileJobHooksFactory:
@@ -41,7 +63,7 @@ class CompileJobHooksFactory:
     def for_spec(self, spec: JobSpec) -> IJobHooks | None:
         if spec.kind is not JobKind.compile or spec.local_root is None:
             return None
-        return CompileJobHooks(
+        hooks = CompileJobHooks(
             compile_repo=self._compile_repo,
             project_repo=self._project_repo,
             changelog_repo=self._changelog_repo,
@@ -51,3 +73,4 @@ class CompileJobHooksFactory:
             artifacts=self._artifacts,
             project_folder=spec.local_root,
         )
+        return _RecoveredCompileHooks(hooks, self._compile_repo)

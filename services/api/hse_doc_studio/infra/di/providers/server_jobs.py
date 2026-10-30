@@ -12,7 +12,8 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
-from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
@@ -218,11 +219,16 @@ class ServerJobsProvider(Provider):
         settings_repo: ISettingsRepository,
         quotas: QuotaService,
         project_orgs: IProjectOrgReader,
+        instance_settings: IInstanceSettingsRepository,
+        env: InstanceEnvOverrides,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
             grant = project_acl.grant_for(actor) if project_acl is not None else None
             return grant.role if grant is not None else None
+
+        async def build_timeout_s() -> float | None:
+            return effective_build_settings(await instance_settings.get_all(), env).timeout_s
 
         return QueueJobDispatcher(
             queue,
@@ -237,4 +243,5 @@ class ServerJobsProvider(Provider):
             settings_repo=settings_repo,
             quotas=quotas,
             project_orgs=project_orgs,
+            build_timeout_source=build_timeout_s,
         )
