@@ -130,7 +130,7 @@ export type SelfUpdateResponse = z.infer<typeof SelfUpdateResponseSchema>;
 // endpoint is polled on a timer and we don't want a global toast every few
 // seconds when docker is stopped or the backend is unreachable. We reuse the
 // same client for editors for consistency.
-const systemClient = axios.create({
+export const systemClient = axios.create({
   baseURL: `${env.VITE_API_BASE_URL}/api/v1`,
   timeout: 5_000,
 });

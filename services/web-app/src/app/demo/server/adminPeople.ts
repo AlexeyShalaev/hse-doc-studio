@@ -18,6 +18,55 @@ const ago = (days: number): string =>
 const ahead = (days: number): string =>
   new Date(Date.now() + days * day).toISOString();
 
+// Свежие записи журнала: разные действия и люди, как в живой установке. Цели
+// записаны так же, как их пишет сервер: идентификаторы, подробности в details.
+const RECENT_AUDIT: (Omit<AdminAuditEvent, "id" | "at"> & {
+  minutesAgo: number;
+})[] = [
+  {
+    minutesAgo: 6,
+    action: "invite.create",
+    actor_id: "u_01hx7k1a0b",
+    target: "inv_01",
+    details: { email: "new.student@example.org" },
+  },
+  {
+    minutesAgo: 24,
+    action: "auth.login",
+    actor_id: "u_01hx7k2c1d",
+    target: null,
+    details: { method: "password" },
+  },
+  {
+    minutesAgo: 52,
+    action: "runner.pause",
+    actor_id: "u_01hx7k1a0b",
+    target: "rn_01hxb4",
+    details: {},
+  },
+  {
+    minutesAgo: 95,
+    action: "settings.quotas_update",
+    actor_id: "u_01hx7k1a0b",
+    target: null,
+    details: { user_concurrent: 2, org_concurrent: 6 },
+  },
+  {
+    minutesAgo: 150,
+    action: "runner.registration_token_create",
+    actor_id: "u_01hx7k1a0b",
+    target: "rt_01hxc1",
+    details: { label: "Сервер в аудитории 305" },
+  },
+  {
+    minutesAgo: 200,
+    action: "org.create",
+    actor_id: "u_01hx7k1a0b",
+    target: "org_01hxp3",
+    details: { slug: "pilot-2026" },
+  },
+];
+
 export const createDemoAdminPeople = (): DemoAdminPeople => ({
   users: [
     {
@@ -111,15 +160,22 @@ export const createDemoAdminPeople = (): DemoAdminPeople => ({
       used_at: null,
     },
   ],
-  audit: Array.from({ length: 60 }, (_, i) => {
-    const admin = i % 3 === 0;
-    return {
-      id: 60 - i,
-      at: new Date(Date.now() - i * 3_600_000 * 5).toISOString(),
-      action: admin ? "admin.user_approved" : "auth.login",
-      actor_id: "u_01hx7k1a0b",
-      target: admin ? "u_01hx7k2c1d" : null,
-      details: admin ? {} : { method: "password" },
-    };
-  }),
+  audit: [
+    ...RECENT_AUDIT.map(({ minutesAgo, ...e }, i) => ({
+      ...e,
+      id: 60 + RECENT_AUDIT.length - i,
+      at: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+    })),
+    ...Array.from({ length: 60 }, (_, i) => {
+      const admin = i % 3 === 0;
+      return {
+        id: 60 - i,
+        at: new Date(Date.now() - (i * 5 + 4) * 3_600_000).toISOString(),
+        action: admin ? "admin.user_approved" : "auth.login",
+        actor_id: "u_01hx7k1a0b",
+        target: admin ? "u_01hx7k2c1d" : null,
+        details: admin ? {} : { method: "password" },
+      };
+    }),
+  ],
 });

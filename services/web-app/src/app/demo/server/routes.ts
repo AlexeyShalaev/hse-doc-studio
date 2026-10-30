@@ -10,6 +10,7 @@ import { createMemberOrgRoutes } from "./memberOrgRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
 import { createSetupRoutes } from "./setupRoutes";
+import { createSystemRoutes } from "./systemRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
 
 // Серверное демо включается явно (VITE_SERVER_DEMO=1 или галерея /dev/server-screens).
@@ -18,6 +19,7 @@ let active = false;
 export const setServerDemoActive = (value: boolean): void => {
   active = value;
 };
+export const isServerDemoActive = (): boolean => active;
 
 let world = createServerWorld(useServerDemoScenarioStore.getState().scenarioId);
 export const getServerWorld = () => world;
@@ -133,6 +135,11 @@ const withGuard = (route: DemoRoute): DemoRoute => ({
 
 /** Маршруты клиента /api/admin: ставятся на adminClient отдельно от /api/v1. */
 export const serverAdminDemoRoutes: DemoRoute[] = createAdminRoutes(
+  () => world,
+).map(withGuard);
+
+/** Маршруты клиента systemClient (/api/v1/system/*): у него свой транспорт. */
+export const serverSystemDemoRoutes: DemoRoute[] = createSystemRoutes(
   () => world,
 ).map(withGuard);
 

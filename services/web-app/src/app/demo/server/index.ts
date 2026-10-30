@@ -4,10 +4,12 @@ import {
   resetServerWorld,
   serverAdminDemoRoutes,
   serverDemoRoutes,
+  serverSystemDemoRoutes,
   setServerDemoActive,
 } from "./routes";
 
-export { serverAdminDemoRoutes, serverDemoRoutes };
+export { isServerDemoActive } from "./routes";
+export { serverAdminDemoRoutes, serverDemoRoutes, serverSystemDemoRoutes };
 export { SERVER_SCENARIOS } from "./scenarios";
 export { ServerDemoPicker } from "./ServerDemoPicker";
 

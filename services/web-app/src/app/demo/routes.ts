@@ -45,6 +45,7 @@ import {
   tokenModeOf,
 } from "./providers";
 import { createWorld, projectOf } from "./scenarios";
+import { isServerDemoActive } from "./server/routes";
 import { useDemoScenarioStore } from "./scenarioStore";
 import {
   CLONE_STEPS,
@@ -952,7 +953,8 @@ const appSettings = async (
   req: DemoRequest,
   forward = true,
 ): Promise<Record<string, unknown>> => {
-  if (forward) {
+  // В серверном демо бэкенда нет вовсе: запрос туда только оставил бы ошибку в консоли.
+  if (forward && !isServerDemoActive()) {
     try {
       const response = await req.forward();
       if (response.data !== null && typeof response.data === "object") {
