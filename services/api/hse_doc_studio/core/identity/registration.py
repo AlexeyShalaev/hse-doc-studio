@@ -64,6 +64,18 @@ class RegistrationPolicy:
             return RegistrationDecision(UserStatus.pending_verification, False, True, RegistrationOutcome.check_email)
         return RegistrationDecision(UserStatus.active, False, True, RegistrationOutcome.check_email)
 
+    def evaluate_external(self, email: str) -> RegistrationDecision:
+        """Новый человек пришёл через внешнего провайдера с подтверждённой там почтой (JIT).
+
+        Режим регистрации действует как обычно (закрыта, по приглашению, домены); почту подтверждать не нужно.
+        """
+        if not is_valid_email(email):
+            raise IdentityError(IdentityErrorCode.domain_not_allowed)
+        self._ensure_open(email)
+        if self._settings.require_approval:
+            return RegistrationDecision(UserStatus.pending_approval, True, False, RegistrationOutcome.pending_approval)
+        return RegistrationDecision(UserStatus.active, True, False, RegistrationOutcome.active)
+
     def _invited(self, invite: RegistrationInvite) -> RegistrationDecision:
         # Приглашение на конкретный адрес само подтверждает почту: письмо с токеном дошло именно туда.
         if invite.email is not None:

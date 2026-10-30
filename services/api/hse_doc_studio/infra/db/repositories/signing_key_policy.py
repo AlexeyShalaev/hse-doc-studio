@@ -1,4 +1,4 @@
-"""Политика хранения закрытых ключей: `signing.server_key_storage` (allowed|forbidden) в instance_settings, по умолчанию запрет."""
+"""Политика хранения закрытых ключей: `signing.server_key_storage` (allowed|forbidden), по умолчанию запрет."""
 
 from __future__ import annotations
 

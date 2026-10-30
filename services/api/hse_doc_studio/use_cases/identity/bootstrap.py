@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -23,6 +23,8 @@ class BootstrapResult:
     password_min_length: int
     user: User | None
     session: Session | None
+    # Кнопки единого входа: пары (id, название).
+    oidc_providers: tuple[tuple[str, str], ...] = ()
 
 
 class BootstrapUC:
@@ -33,11 +35,13 @@ class BootstrapUC:
         sessions: SessionService,
         *,
         smtp_enabled: bool | Callable[[], bool] = False,
+        oidc_providers: Callable[[], Awaitable[list[tuple[str, str]]]] | None = None,
     ) -> None:
         self._setup = setup
         self._settings = settings
         self._sessions = sessions
         self._smtp_enabled = smtp_enabled
+        self._oidc_providers = oidc_providers
 
     async def auth_settings(self) -> AuthSettings:
         return await self._settings.effective()
@@ -53,4 +57,5 @@ class BootstrapUC:
             password_min_length=PASSWORD_MIN_LENGTH,
             user=resolved.user if resolved else None,
             session=resolved.session if resolved else None,
+            oidc_providers=tuple(await self._oidc_providers()) if self._oidc_providers else (),
         )

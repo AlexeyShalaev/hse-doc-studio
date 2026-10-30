@@ -15,13 +15,16 @@ class ProjectRow(Base):
     """Каталог проектов; источник правды о содержимом остаётся project.json, здесь копия name/kind/lang."""
 
     __tablename__ = "projects"
-    __table_args__ = (Index("ix_projects_owner_user_id", "owner_user_id"),)
+    __table_args__ = (
+        Index("ix_projects_owner_user_id", "owner_user_id"),
+        Index("ix_projects_owner_org_id", "owner_org_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
-    # Организации появятся позже; пока колонка без внешнего ключа.
-    owner_org_id: Mapped[str | None] = mapped_column(String(64))
+    # Организацию с проектами не удалить: сначала проекты передают или стирают окончательно.
+    owner_org_id: Mapped[str | None] = mapped_column(ForeignKey("orgs.id", ondelete="RESTRICT"))
     workspace_path: Mapped[str] = mapped_column(Text, nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     lang: Mapped[str] = mapped_column(String(8), nullable=False)

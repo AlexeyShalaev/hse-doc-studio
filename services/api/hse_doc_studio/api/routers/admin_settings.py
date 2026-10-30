@@ -11,6 +11,7 @@ from hse_doc_studio.api.schemas.session import (
     AdminAuthSettings,
     AdminOidcProvider,
     AdminRegistrationSettings,
+    AdminRetentionSettings,
     AdminSmtpSettings,
     AdminSmtpTestRequest,
     AdminSmtpTestResult,
@@ -26,6 +27,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.entities import OidcProvider, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.setting_source import SettingDescription
+from hse_doc_studio.use_cases.admin.lifecycle import GetRetentionUC
 from hse_doc_studio.use_cases.admin.oidc import (
     CreateOidcProviderUC,
     DeleteOidcProviderUC,
@@ -112,6 +114,17 @@ def _provider(provider: OidcProvider) -> AdminOidcProvider:
         enabled=provider.enabled,
         auto_provision=provider.auto_provision,
         created_at=provider.created_at,
+    )
+
+
+@router.get("/settings/retention", response_model=AdminRetentionSettings)
+async def get_retention(request: Request, response: Response) -> AdminRetentionSettings:
+    response.headers.update(_NO_STORE)
+    policy = await (await _uc(request, GetRetentionUC)).execute(_actor())
+    return AdminRetentionSettings(
+        audit_days=policy.audit_days,
+        deleted_projects_days=policy.deleted_projects_days,
+        unused_blobs_days=policy.unused_blobs_days,
     )
 
 

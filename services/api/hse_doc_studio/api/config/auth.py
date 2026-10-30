@@ -24,6 +24,38 @@ class SecretsConfig(BaseModel):
     )
 
 
+class OidcEnvConfig(BaseModel):
+    """Единственный провайдер OIDC из окружения (HSE_STUDIO__AUTH__OIDC__*). Остальные заводятся в админке.
+
+    Провайдер включается, когда заданы issuer, client_id и секрет клиента (значением или файлом).
+    """
+
+    id: str = Field(default="sso", pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$", description="Идентификатор в адресах входа.")
+    label: str = Field(default="SSO", max_length=128, description="Название на кнопке входа.")
+    issuer: str | None = Field(default=None, description="Адрес издателя (discovery лежит под ним).")
+    client_id: str | None = Field(default=None, description="Идентификатор клиента у провайдера.")
+    client_secret: SecretStr | None = Field(default=None, description="Секрет клиента.")
+    client_secret_file: Path | None = Field(default=None, description="Файл с секретом клиента (docker secret).")
+    scopes: str = Field(default="openid email profile", description="Запрашиваемые области.")
+    auto_provision: bool = Field(
+        default=False, description="Создавать аккаунт при первом входе в обход политики регистрации."
+    )
+
+    def resolved_secret(self) -> str:
+        if self.client_secret is not None and self.client_secret.get_secret_value():
+            return self.client_secret.get_secret_value()
+        if self.client_secret_file is not None:
+            try:
+                return self.client_secret_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                return ""
+        return ""
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.issuer and self.client_id and self.resolved_secret())
+
+
 class AuthConfig(BaseModel):
     """Вход, сессии и мастер первого запуска сервера (HSE_STUDIO__AUTH__*). Поля добавляет срез identity."""
 
@@ -67,6 +99,8 @@ class AuthConfig(BaseModel):
     password_enabled: bool | None = Field(
         default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )
+
+    oidc: OidcEnvConfig = Field(default_factory=OidcEnvConfig, description="Провайдер OIDC из окружения.")
 
     admin_email: str | None = Field(
         default=None,

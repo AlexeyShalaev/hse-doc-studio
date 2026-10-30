@@ -1,0 +1,6 @@
+{
+  "provider": "corp-sso",
+  "label": "Корпоративный вход",
+  "email": "ann@example.org",
+  "email_verified": true
+}

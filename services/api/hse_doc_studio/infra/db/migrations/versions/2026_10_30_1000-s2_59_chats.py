@@ -1,7 +1,7 @@
 """chats: личные чаты агента (сессии, реплики, сводки, ходы)
 
 Revision ID: s2_59_chats
-Revises: s2_73_runners
+Revises: s2_83_quotas
 Create Date: 2026-10-30 10:00:00
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision: str = "s2_59_chats"
-down_revision: str | None = "s2_73_runners"
+down_revision: str | None = "s2_83_quotas"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

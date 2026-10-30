@@ -42,6 +42,13 @@ class IdentityErrorCode(StrEnum):
     setting_locked = "setting_locked"
     last_login_method = "last_login_method"
     input_invalid = "input_invalid"
+    slug_taken = "slug_taken"
+    org_has_projects = "org_has_projects"
+    name_taken = "name_taken"
+    already_member = "already_member"
+    user_not_found = "user_not_found"
+    user_has_projects = "user_has_projects"
+    user_not_disabled = "user_not_disabled"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -115,6 +122,34 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "The last way to sign in cannot be turned off: nobody would be able to sign in.",
     ),
     IdentityErrorCode.input_invalid: ("Некорректные данные.", "Invalid input."),
+    IdentityErrorCode.slug_taken: (
+        "Этот адрес организации уже занят.",
+        "This organization address is already taken.",
+    ),
+    IdentityErrorCode.org_has_projects: (
+        "В организации есть проекты: сначала передайте или удалите их.",
+        "The organization still has projects: move or delete them first.",
+    ),
+    IdentityErrorCode.name_taken: (
+        "Такое название уже есть.",
+        "This name is already in use.",
+    ),
+    IdentityErrorCode.already_member: (
+        "Человек уже состоит здесь.",
+        "This person is already a member.",
+    ),
+    IdentityErrorCode.user_not_found: (
+        "Пользователь не найден.",
+        "User not found.",
+    ),
+    IdentityErrorCode.user_has_projects: (
+        "У человека остались проекты или организации, где он единственный владелец: сначала удалите или передайте их.",
+        "This person is still the only owner of projects or organizations: delete or hand them over first.",
+    ),
+    IdentityErrorCode.user_not_disabled: (
+        "Сначала отключите учётную запись: удалить можно только отключённую.",
+        "Disable the account first: only a disabled account can be deleted.",
+    ),
 }
 
 

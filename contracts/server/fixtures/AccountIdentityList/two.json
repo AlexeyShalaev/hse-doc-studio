@@ -1,0 +1,14 @@
+[
+  {
+    "provider": "corp-sso",
+    "label": "Корпоративный вход",
+    "email": "ann@example.org",
+    "email_verified": true
+  },
+  {
+    "provider": "old-idp",
+    "label": null,
+    "email": null,
+    "email_verified": false
+  }
+]

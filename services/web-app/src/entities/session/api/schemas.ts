@@ -231,6 +231,13 @@ export const AccountSessionSchema = z.strictObject({
   user_agent: z.string(),
   current: z.boolean(),
 });
+export const AccountIdentitySchema = z.strictObject({
+  provider: z.string(),
+  label: z.string().nullable(),
+  email: z.string().nullable(),
+  email_verified: z.boolean(),
+});
+export type AccountIdentity = z.infer<typeof AccountIdentitySchema>;
 export const ApiTokenSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -315,6 +322,11 @@ export const AdminResetLinkSchema = z.strictObject({
 export const AdminSessionsRevokedSchema = z.strictObject({
   revoked: z.number().int(),
 });
+export const AdminRetentionSettingsSchema = z.strictObject({
+  audit_days: z.number().int(),
+  deleted_projects_days: z.number().int(),
+  unused_blobs_days: z.number().int(),
+});
 export const AdminInvitationSchema = z.strictObject({
   id: z.string(),
   email: z.string().nullable(),
@@ -348,6 +360,70 @@ export const AdminOrgSchema = z.strictObject({
   name: z.string(),
   member_count: z.number().int(),
   project_count: z.number().int(),
+});
+export const OrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  my_role: OrgRoleNameSchema,
+  member_count: z.number().int(),
+  group_count: z.number().int(),
+  project_count: z.number().int(),
+  created_at: iso,
+});
+export const CreateOrgRequestSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  owner_email: z.string().nullable(),
+});
+export const UpdateOrgRequestSchema = z.strictObject({ name: z.string() });
+export const OrgMemberSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: OrgRoleNameSchema,
+  joined_at: iso,
+});
+export const AddOrgMemberRequestSchema = z.strictObject({
+  email: z.string(),
+  role: OrgRoleNameSchema,
+});
+export const ChangeOrgMemberRoleRequestSchema = z.strictObject({
+  role: OrgRoleNameSchema,
+});
+export const GroupSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  member_count: z.number().int(),
+  created_at: iso,
+});
+export const CreateGroupRequestSchema = z.strictObject({ name: z.string() });
+export const UpdateGroupRequestSchema = z.strictObject({ name: z.string() });
+export const GroupMemberSchema = z.strictObject({
+  user_id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  added_at: iso,
+});
+export const AddGroupMemberRequestSchema = z.strictObject({
+  user_id: z.string(),
+});
+export const ProjectMemberRoleSchema = z.enum(["reader", "reviewer", "editor"]);
+export const ProjectMemberSchema = z.strictObject({
+  kind: z.enum(["user", "group"]),
+  principal_id: z.string(),
+  name: z.string(),
+  role: ProjectMemberRoleSchema,
+  persona: z.string().nullable(),
+  can_share: z.boolean(),
+  show_sources: z.boolean(),
+  can_edit_all: z.boolean(),
+});
+export const SetProjectMemberRequestSchema = z.strictObject({
+  role: ProjectMemberRoleSchema,
+  persona: z.string().nullable(),
+  can_share: z.boolean(),
+  show_sources: z.boolean(),
+  can_edit_all: z.boolean(),
 });
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),

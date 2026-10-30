@@ -45,3 +45,44 @@ class IProjectMemberships(Protocol):
     async def memberships_for(self, actor: Actor, project_ids: Sequence[UUID]) -> dict[UUID, ProjectMembership]:
         """Владелец и роль актора для каждого из проектов; проекта, где актор не участник, в ответе нет."""
         ...
+
+
+@dataclass(frozen=True)
+class ProjectOwnership:
+    """Кому принадлежит проект: ровно одно из двух полей заполнено."""
+
+    owner_user_id: str | None
+    owner_org_id: str | None
+
+
+@dataclass(frozen=True)
+class ProjectMemberGrant:
+    """Запись участника проекта: человек или группа и его роль (владелец записью не назначается)."""
+
+    principal_kind: Literal["user", "group"]
+    principal_id: str
+    role: Role
+    persona: str | None = None
+    can_share: bool = False
+    show_sources: bool = True
+    can_edit_all: bool = False
+
+
+@dataclass(frozen=True)
+class ProjectMemberView:
+    grant: ProjectMemberGrant
+    name: str
+
+
+class IProjectMemberRepository(Protocol):
+    async def get_ownership(self, project_id: UUID) -> ProjectOwnership | None:
+        """None, если проекта нет или он удалён."""
+        ...
+
+    async def set_member(self, project_id: UUID, grant: ProjectMemberGrant) -> None:
+        """Заводит запись или заменяет роль и флаги существующей."""
+        ...
+
+    async def remove_member(self, project_id: UUID, principal_kind: str, principal_id: str) -> bool:
+        """False, если такой записи не было. Доступ закрывается сразу: загрузчик прав кэша между запросами не держит."""
+        ...

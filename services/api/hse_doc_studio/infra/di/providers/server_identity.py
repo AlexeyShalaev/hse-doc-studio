@@ -6,14 +6,18 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import timedelta
 
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile, ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.commit_identity import noreply_domain
+from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy
+from hse_doc_studio.core.identity.oidc import IOidcClient, IOidcProviderCatalog, IOidcStateCodec, OidcProviderConfig
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
     IApiTokenRepository,
@@ -36,6 +40,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
+from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.auth import (
@@ -55,14 +60,21 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlUserDirectory,
     SqlUserRepository,
 )
+from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
+from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
+from hse_doc_studio.infra.identity.oidc.catalog import OidcProviderCatalog
+from hse_doc_studio.infra.identity.oidc.client import OidcClient
+from hse_doc_studio.infra.identity.oidc.state import OIDC_STATE_KEY_PURPOSE, HmacOidcStateCodec
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.identity.user_author_profile import UserAuthorProfile
+from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC, PurgeAuditUC
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
+from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC, ExportMyDataUC, GetRetentionUC
 from hse_doc_studio.use_cases.admin.oidc import (
     CreateOidcProviderUC,
     DeleteOidcProviderUC,
@@ -92,6 +104,8 @@ from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
+from hse_doc_studio.use_cases.identity.oidc_login import CompleteOidcLoginUC, StartOidcLoginUC
 from hse_doc_studio.use_cases.identity.recovery import (
     ForgotPasswordUC,
     IssueResetLinkUC,
@@ -113,6 +127,23 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpSettingsService,
     UpdateSmtpSettingsUC,
 )
+from hse_doc_studio.use_cases.orgs.groups import (
+    AddGroupMemberUC,
+    CreateGroupUC,
+    DeleteGroupUC,
+    ListGroupMembersUC,
+    ListGroupsUC,
+    RemoveGroupMemberUC,
+    UpdateGroupUC,
+)
+from hse_doc_studio.use_cases.orgs.members import (
+    AddOrgMemberUC,
+    ChangeOrgRoleUC,
+    LeaveOrgUC,
+    ListOrgMembersUC,
+    RemoveOrgMemberUC,
+)
+from hse_doc_studio.use_cases.orgs.orgs import CreateOrgUC, DeleteOrgUC, GetOrgUC, ListMyOrgsUC, UpdateOrgUC
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.server_profile import ServerClearProfileUC, ServerUpdateProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -240,6 +271,75 @@ class ServerIdentityProvider(Provider):
         policy: SessionPolicy,
     ) -> LoginUC:
         return LoginUC(users, credentials, sessions, attempts, hasher, audit, uow, policy)
+
+    @provide
+    def get_oidc_provider_catalog(self, repo: IOidcProviderRepository, cipher: ISecretCipher) -> IOidcProviderCatalog:
+        env = settings.auth.oidc
+        from_env = (
+            OidcProviderConfig(
+                id=env.id,
+                label=env.label,
+                issuer=env.issuer or "",
+                client_id=env.client_id or "",
+                client_secret=env.resolved_secret(),
+                scopes=env.scopes,
+                auto_provision=env.auto_provision,
+            )
+            if env.configured
+            else None
+        )
+        return OidcProviderCatalog(repo, cipher, from_env)
+
+    @provide
+    async def get_oidc_client(self, egress: IEgressPolicy) -> AsyncIterator[IOidcClient]:
+        client = OidcClient(egress)
+        yield client
+        await client.aclose()
+
+    @provide
+    def get_oidc_state_codec(self, key_store: KeyFileStore) -> IOidcStateCodec:
+        """Ключи подписи производные от связки секретов: ротация ключа не рвёт входы, начатые до неё."""
+        return HmacOidcStateCodec(key_store.ensure_primary().derive_all(OIDC_STATE_KEY_PURPOSE))
+
+    @provide
+    def get_start_oidc_login_uc(
+        self, catalog: IOidcProviderCatalog, client: IOidcClient, codec: IOidcStateCodec
+    ) -> StartOidcLoginUC:
+        return StartOidcLoginUC(catalog, client, codec)
+
+    @provide
+    def get_complete_oidc_login_uc(
+        self,
+        catalog: IOidcProviderCatalog,
+        client: IOidcClient,
+        codec: IOidcStateCodec,
+        users: IUserRepository,
+        sessions: ISessionRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        policy: SessionPolicy,
+        auth_settings: AuthSettingsService,
+    ) -> CompleteOidcLoginUC:
+        return CompleteOidcLoginUC(
+            catalog, client, codec, users, sessions, audit, uow, policy, auth_settings=auth_settings
+        )
+
+    @provide
+    def get_list_oidc_identities_uc(
+        self, users: IUserRepository, catalog: IOidcProviderCatalog
+    ) -> ListOidcIdentitiesUC:
+        return ListOidcIdentitiesUC(users, catalog)
+
+    @provide
+    def get_unlink_oidc_identity_uc(
+        self,
+        users: IUserRepository,
+        credentials: ICredentialRepository,
+        settings: AuthSettingsService,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> UnlinkOidcIdentityUC:
+        return UnlinkOidcIdentityUC(users, credentials, settings, audit, uow)
 
     @provide
     def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> LogoutUC:
@@ -554,6 +654,30 @@ class ServerIdentityProvider(Provider):
         return GetUserUC(directory)
 
     @provide
+    def get_user_lifecycle(self, sessions: SessionProvider) -> IUserLifecycle:
+        return SqlUserLifecycle(sessions)
+
+    @provide
+    def get_delete_user_uc(
+        self, users: IUserRepository, lifecycle: IUserLifecycle, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DeleteUserUC:
+        return DeleteUserUC(users, lifecycle, audit, uow)
+
+    @provide
+    def get_export_my_data_uc(self, lifecycle: IUserLifecycle, audit: IAuditLog) -> ExportMyDataUC:
+        return ExportMyDataUC(lifecycle, audit)
+
+    @provide
+    def get_retention_uc(self) -> GetRetentionUC:
+        return GetRetentionUC(
+            RetentionPolicy(
+                audit_days=settings.server.audit_retention_days,
+                deleted_projects_days=settings.server.project_retention_days,
+                unused_blobs_days=round(settings.server.blob_gc_min_age_days),
+            )
+        )
+
+    @provide
     def get_disable_user_uc(
         self, users: IUserRepository, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> DisableUserUC:
@@ -598,8 +722,11 @@ class ServerIdentityProvider(Provider):
         auth_settings: AuthSettingsService,
         sessions: SessionService,
         sender: IMailSender,
+        oidc: IOidcProviderCatalog,
     ) -> BootstrapUC:
-        return BootstrapUC(setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled)
+        return BootstrapUC(
+            setup, auth_settings, sessions, smtp_enabled=lambda: sender.enabled, oidc_providers=oidc.list_enabled
+        )
 
     @provide
     def get_first_admin_repository(self, sessions: SessionProvider) -> IFirstAdminRepository:
@@ -669,3 +796,104 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_complete_setup_uc(self, state: SetupStateService, audit: IAuditLog) -> CompleteSetupUC:
         return CompleteSetupUC(state, audit)
+
+    @provide
+    def get_org_repository(self, sessions: SessionProvider) -> IOrgRepository:
+        return SqlOrgRepository(sessions)
+
+    @provide
+    def get_group_repository(self, sessions: SessionProvider) -> IGroupRepository:
+        return SqlGroupRepository(sessions)
+
+    @provide
+    def get_list_my_orgs_uc(self, orgs: IOrgRepository) -> ListMyOrgsUC:
+        return ListMyOrgsUC(orgs)
+
+    @provide
+    def get_get_org_uc(self, orgs: IOrgRepository) -> GetOrgUC:
+        return GetOrgUC(orgs)
+
+    @provide
+    def get_create_org_uc(
+        self,
+        orgs: IOrgRepository,
+        users: IUserRepository,
+        settings_repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> CreateOrgUC:
+        return CreateOrgUC(orgs, users, settings_repo, audit, uow)
+
+    @provide
+    def get_update_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> UpdateOrgUC:
+        return UpdateOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_delete_org_uc(self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork) -> DeleteOrgUC:
+        return DeleteOrgUC(orgs, audit, uow)
+
+    @provide
+    def get_list_org_members_uc(self, orgs: IOrgRepository) -> ListOrgMembersUC:
+        return ListOrgMembersUC(orgs)
+
+    @provide
+    def get_add_org_member_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> AddOrgMemberUC:
+        return AddOrgMemberUC(orgs, users, audit, uow)
+
+    @provide
+    def get_change_org_role_uc(
+        self, orgs: IOrgRepository, users: IUserRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> ChangeOrgRoleUC:
+        return ChangeOrgRoleUC(orgs, users, audit, uow)
+
+    @provide
+    def get_remove_org_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveOrgMemberUC:
+        return RemoveOrgMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_leave_org_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> LeaveOrgUC:
+        return LeaveOrgUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_groups_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListGroupsUC:
+        return ListGroupsUC(orgs, groups)
+
+    @provide
+    def get_create_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> CreateGroupUC:
+        return CreateGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_update_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> UpdateGroupUC:
+        return UpdateGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_delete_group_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> DeleteGroupUC:
+        return DeleteGroupUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_list_group_members_uc(self, orgs: IOrgRepository, groups: IGroupRepository) -> ListGroupMembersUC:
+        return ListGroupMembersUC(orgs, groups)
+
+    @provide
+    def get_add_group_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> AddGroupMemberUC:
+        return AddGroupMemberUC(orgs, groups, audit, uow)
+
+    @provide
+    def get_remove_group_member_uc(
+        self, orgs: IOrgRepository, groups: IGroupRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RemoveGroupMemberUC:
+        return RemoveGroupMemberUC(orgs, groups, audit, uow)

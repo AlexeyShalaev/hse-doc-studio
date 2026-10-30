@@ -1,0 +1,10 @@
+{
+  "kind": "group",
+  "principal_id": "grp_msp251",
+  "name": "МСПИН251",
+  "role": "editor",
+  "persona": null,
+  "can_share": false,
+  "show_sources": true,
+  "can_edit_all": false
+}

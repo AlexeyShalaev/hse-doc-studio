@@ -36,6 +36,8 @@ ACL-поля (владелец, team, `shared_enabled`, персона, роли
 | аккаунт: identities | `/account/identities` | план |
 | проекты | `GET`, `POST /projects` (`ProjectSummary`, `CreateServerProjectRequest`) | есть |
 | участники проекта | `/projects/{id}/members` | план |
+| организации и группы | `/orgs`, `/orgs/{slug}` (`Org`), `/orgs/{slug}/members` (`OrgMember`), `POST /orgs/{slug}/leave`, `/orgs/{slug}/groups` и `/groups/{id}`, `/groups/{id}/members` (`Group`, `GroupMember`); не участнику 404, мало роли 403; создание организации только админом установки или по настройке `orgs.users_can_create` | есть |
+| жизненный цикл данных | `DELETE /api/admin/users/{id}` (только отключённый, не единственный владелец проектов и организаций; журнал обезличивается), `GET /api/v1/account/export`, `GET /api/admin/settings/retention` (только чтение) | есть |
 | админка | `/api/admin/*`: `users`, `runners`, `runner-tokens`, `settings` (в том числе `settings/signing`), `audit`, `queue`, `quotas`, `services`, `storage`, `ai-providers` | есть; `orgs`, `overview` план |
 | раннер | `/api/runner/*`: `register`, `poll`, `jobs/{id}/heartbeat|log|complete|blobs|artifacts` | есть |
 | здоровье | `GET /health`, `GET /health/live`, `GET /health/ready` (публично только ok/fail, детали по `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` или админу), `GET /metrics` (только с токеном, иначе 404). Экран окружения мастера читает проверки `database`, `s3`, `runners` из реестра здоровья; срезы хранилища и раннеров регистрируют их под этими именами, пока не зарегистрировано, экран показывает «не настроено» | есть |
