@@ -151,7 +151,27 @@
       "failure": "{{code}}: build error"
     },
     "fixPrompt": "The build of document [{{code}}](doc:{{docId}}) finished with errors. Study the log of the last build (`{{logPath}}`) and the source `{{file}}`, find the cause of the LaTeX errors and fix them. After the edits, rebuild the document with the compile_document tool and make sure the build passes without errors.",
-    "explainPrompt": "The build of document [{{code}}](doc:{{docId}}) failed. Read the log of the last build (`{{logPath}}`) and explain in plain language what causes the LaTeX error and how to fix it. Do NOT change files — just explain."
+    "explainPrompt": "The build of document [{{code}}](doc:{{docId}}) failed. Read the log of the last build (`{{logPath}}`) and explain in plain language what causes the LaTeX error and how to fix it. Do NOT change files — just explain.",
+    "waiting": "waiting…",
+    "wait": {
+      "queued": "Queued: #{{position}}",
+      "queuedNoPlace": "Queued",
+      "queuedBody": "The build starts as soon as a runner is free. You can leave this page: the result will appear in the document.",
+      "quota": "Waiting for your turn: #{{position}}",
+      "quotaNoPlace": "Waiting for your turn",
+      "quotaBody": "You already have the maximum number of builds running. This one starts by itself when one of them finishes.",
+      "noRunner": "No runners available",
+      "noRunnerBody": "No build runner is connected right now. Contact the server administrator. The build starts by itself once a runner appears.",
+      "runnerLost": "Runner lost, retrying ({{attempt}}/{{max}})",
+      "runnerLostNoCount": "Runner lost, retrying",
+      "runnerLostBody": "The runner building this document went away. The build was handed to another runner, no action needed.",
+      "superseded": "Build replaced by a newer one",
+      "supersededBody": "While this build was waiting, a newer build of the same document was queued and took its place. See the result in the newer build.",
+      "hintSeconds": "Expected wait about {{value}} s",
+      "hintMinutes": "Expected wait about {{value}} min",
+      "retry": "Retry build",
+      "rebuildSuperseded": "Build again"
+    }
   },
   "preview": {
     "passWord_one": "pass",
@@ -204,7 +224,15 @@
     "checkAgain": "Check again",
     "unavailableTitle": "Editor unavailable",
     "retry": "Retry",
-    "scriptError": "Failed to load the editor script (api.js). Make sure the ONLYOFFICE container is running and try again."
+    "scriptError": "Failed to load the editor script (api.js). Make sure the ONLYOFFICE container is running and try again.",
+    "busy": {
+      "title": "The editor is busy right now",
+      "body": "All seats in the document editor are taken (up to {{limit}} people can edit at once). Wait a moment and try again.",
+      "retryIn": "Retry in {{seconds}} s",
+      "retry": "Retry",
+      "download": "Download file",
+      "downloadHint": "You can download the file, edit it in your own app and upload it back from the document menu."
+    }
   },
   "checks": {
     "results": "Results",

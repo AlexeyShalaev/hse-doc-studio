@@ -1,6 +1,7 @@
 import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type { ProjectRole } from "@entities/session";
+import { effectiveRole } from "./projectAccess";
 import type { DemoProject } from "./projects";
 import type { ServerDemoWorld } from "./world";
 
@@ -17,10 +18,10 @@ const notFound = () =>
   demoError(404, "not_found", "Project not found or no access");
 
 const roleOf = (
+  world: ServerDemoWorld,
   project: DemoProject,
   userId: string | undefined,
-): ProjectRole | null =>
-  userId === undefined ? null : (project.roles[userId] ?? null);
+): ProjectRole | null => effectiveRole(world, project, userId);
 
 const detail = (project: DemoProject, role: ProjectRole) => ({
   id: project.summary.id,
@@ -56,7 +57,7 @@ export const createProjectRoutes = (
         return demoError(401, "auth_required", "Authentication required");
       }
       const items = world.projects.flatMap((project) => {
-        const role = roleOf(project, user.id);
+        const role = roleOf(world, project, user.id);
         return role ? [{ ...project.summary, my_role: role }] : [];
       });
       return demoJson(items);
@@ -127,7 +128,9 @@ export const createProjectRoutes = (
       const project = world.projects.find(
         (p) => p.summary.id === req.params.projectId,
       );
-      const role = project ? roleOf(project, world.bootstrap.user?.id) : null;
+      const role = project
+        ? roleOf(world, project, world.bootstrap.user?.id)
+        : null;
       return project && role ? demoJson(detail(project, role)) : notFound();
     },
   },
@@ -139,7 +142,9 @@ export const createProjectRoutes = (
       const project = world.projects.find(
         (p) => p.summary.id === req.params.projectId,
       );
-      const role = project ? roleOf(project, world.bootstrap.user?.id) : null;
+      const role = project
+        ? roleOf(world, project, world.bootstrap.user?.id)
+        : null;
       if (!project || !role) return notFound();
       const body = (req.body ?? {}) as Record<string, unknown>;
       if (typeof body.archived === "boolean" && role !== "owner") {

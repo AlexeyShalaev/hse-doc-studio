@@ -12,6 +12,7 @@ import {
   Lock,
   Package,
   RefreshCw,
+  ShieldCheck,
   Tag,
   Timer,
   Type,
@@ -31,6 +32,7 @@ export type ProjectSettingsSectionId =
   | "doc-formats"
   | "shared-docs"
   | "authors"
+  | "access"
   | "meta"
   | "fonts"
   | "supervisor"
@@ -65,6 +67,8 @@ export type ProjectSettingsSectionContext = {
   syncConnected: boolean;
   // Папка проекта лежит в облачном диске (бэкенд определил это сам).
   hasSharedFolder: boolean;
+  // Серверный проект: у него есть роль смотрящего и панель «Доступ».
+  hasAccess?: boolean;
 };
 
 export type ProjectSettingsSectionDef = {
@@ -116,6 +120,12 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     id: "authors",
     labelKey: "projectSettings.sectionAuthors",
     icon: Users,
+  },
+  {
+    id: "access",
+    labelKey: "projectSettings.sectionAccess",
+    icon: ShieldCheck,
+    isAvailable: (ctx) => ctx.hasAccess === true,
   },
   {
     id: "meta",
@@ -220,7 +230,7 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     id: "people",
     labelKey: "projectSettingsNav.groupPeople",
     icon: Users,
-    sections: ["authors", "supervisor"],
+    sections: ["authors", "access", "supervisor"],
   },
   {
     id: "documents",

@@ -1,0 +1,7 @@
+{
+  "reason": "quota_wait",
+  "queue_position": 1,
+  "wait_hint_seconds": 20,
+  "attempt": null,
+  "max_attempts": null
+}

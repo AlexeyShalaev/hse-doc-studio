@@ -41,6 +41,42 @@
         "title": "Registration by domain",
         "hint": "Allowed domains only, emails are sent."
       },
+      "admin_env_locked": {
+        "title": "Admin, environment-set",
+        "hint": "Registration and mail are set by the environment: read-only."
+      },
+      "admin_sso": {
+        "title": "Admin, SSO only",
+        "hint": "Password is off, two providers, no mail."
+      },
+      "admin_no_orgs": {
+        "title": "Admin, no organizations",
+        "hint": "The organization list is empty: create the first one."
+      },
+      "ops_runners_offline": {
+        "title": "Admin, runners offline",
+        "hint": "Every runner is silent and jobs pile up in the queue."
+      },
+      "ops_services_degraded": {
+        "title": "Admin, services failing",
+        "hint": "Storage and LanguageTool are down and disk is almost full."
+      },
+      "ops_fresh": {
+        "title": "Admin, fresh install",
+        "hint": "No runners, no jobs, services not connected."
+      },
+      "install_env_locked": {
+        "title": "Admin, environment-set settings",
+        "hint": "Address, build limit and key policy are set by the environment."
+      },
+      "install_fresh": {
+        "title": "Admin, factory settings",
+        "hint": "Factory values, key storage forbidden, no shared providers."
+      },
+      "org_admin": {
+        "title": "Organization admin",
+        "hint": "Not an installation admin: sees only their two organizations."
+      },
       "registration_open_nosmtp": {
         "title": "Open, no email",
         "hint": "Emails are not sent: links are shown on screen."
@@ -56,6 +92,18 @@
       "fresh_install_broken": {
         "title": "Install, storage is down",
         "hint": "The environment check is red: setup cannot be finished."
+      },
+      "student_nosmtp": {
+        "title": "Student, no email",
+        "hint": "A student is signed in and email is not configured: links appear on screen."
+      },
+      "student_sso": {
+        "title": "Student, SSO sign-in",
+        "hint": "A student is signed in and the account has no password."
+      },
+      "student_linked": {
+        "title": "Student, password and SSO",
+        "hint": "A student is signed in with a password and linked HSE SSO; Google can be linked."
       }
     }
   }

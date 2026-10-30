@@ -1,6 +1,8 @@
 import type { ZodType } from "zod";
 import { z } from "zod";
 
+import * as inst from "./installSchemas";
+import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
@@ -53,8 +55,6 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   CreateAdminInvitationRequest: s.CreateAdminInvitationRequestSchema,
   AdminInvitationCreated: s.AdminInvitationCreatedSchema,
   AdminOrgList: z.array(s.AdminOrgSchema),
-  AdminRunnerList: z.array(s.AdminRunnerSchema),
-  AdminRegistrationTokenCreated: s.AdminRegistrationTokenCreatedSchema,
   AdminJobPage: s.AdminJobPageSchema,
   AdminQueueSummary: s.AdminQueueSummarySchema,
   AdminQuotas: s.AdminQuotasSchema,
@@ -81,6 +81,28 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AddGroupMemberRequest: s.AddGroupMemberRequestSchema,
   ProjectMember: s.ProjectMemberSchema,
   SetProjectMemberRequest: s.SetProjectMemberRequestSchema,
+  AdminOrgMember: s.AdminOrgMemberSchema,
+  AdminOrgMemberList: z.array(s.AdminOrgMemberSchema),
+  AddAdminOrgMemberRequest: s.AddAdminOrgMemberRequestSchema,
+  UpdateAdminOrgMemberRequest: s.UpdateAdminOrgMemberRequestSchema,
+  CreateAdminOrgRequest: s.CreateAdminOrgRequestSchema,
+  AdminGroup: s.AdminGroupSchema,
+  AdminGroupList: z.array(s.AdminGroupSchema),
+  CreateAdminGroupRequest: s.CreateAdminGroupRequestSchema,
+  UpdateAdminGroupRequest: s.UpdateAdminGroupRequestSchema,
+  MyOrg: s.MyOrgSchema,
+  MyOrgList: z.array(s.MyOrgSchema),
+  ProjectAccessEntry: s.ProjectAccessEntrySchema,
+  ProjectAccessList: z.array(s.ProjectAccessEntrySchema),
+  ProjectAccessCandidate: s.ProjectAccessCandidateSchema,
+  ProjectAccessCandidateList: z.array(s.ProjectAccessCandidateSchema),
+  SetProjectAccessRequest: s.SetProjectAccessRequestSchema,
+  AdminRunnerList: z.array(ops.AdminRunnerSchema),
+  AdminRunnerTokenList: z.array(ops.AdminRunnerTokenSchema),
+  CreateAdminRunnerTokenRequest: ops.CreateAdminRunnerTokenRequestSchema,
+  AdminRunnerTokenCreated: ops.AdminRunnerTokenCreatedSchema,
+  AdminRunnerRotated: ops.AdminRunnerRotatedSchema,
+  UpdateAdminRunnerRequest: ops.UpdateAdminRunnerRequestSchema,
   AdminSettings: s.AdminSettingsSchema,
   AdminRegistrationSettings: s.AdminRegistrationSettingsSchema,
   UpdateAdminRegistrationRequest: s.UpdateAdminRegistrationRequestSchema,
@@ -94,4 +116,10 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminOidcProviderList: z.array(s.AdminOidcProviderSchema),
   CreateAdminOidcProviderRequest: s.CreateAdminOidcProviderRequestSchema,
   UpdateAdminOidcProviderRequest: s.UpdateAdminOidcProviderRequestSchema,
+  AdminInstanceSettings: inst.AdminInstanceSettingsSchema,
+  UpdateAdminInstanceRequest: inst.UpdateAdminInstanceRequestSchema,
+  AdminBuildSettings: inst.AdminBuildSettingsSchema,
+  UpdateAdminBuildRequest: inst.UpdateAdminBuildRequestSchema,
+  CompileWait: s.CompileWaitSchema,
+  OfficeEditorBusy: s.OfficeEditorBusySchema,
 };

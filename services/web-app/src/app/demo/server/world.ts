@@ -1,4 +1,12 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
+import { createDemoAccount, type DemoAccount } from "./accounts";
+import {
+  createDemoAdminSettings,
+  type DemoAdminSettings,
+} from "./adminSettings";
+import { createDemoAdminInstall, type DemoAdminInstall } from "./adminInstall";
+import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
+import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
 import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
@@ -36,6 +44,26 @@ export type ServerDemoWorld = {
   setup: DemoSetupState;
   /** Проекты мира: у каждого своя роль у каждого человека. */
   projects: DemoProject[];
+  /** Аккаунт вошедшего человека (подпись версий, сессии); строится при первом обращении. */
+  account: DemoAccount | null;
+  /** Настройки входа в админке; строятся при первом обращении. */
+  adminSettings: DemoAdminSettings | null;
+  /** Организации, участники и группы в админке; строятся при первом обращении. */
+  adminOrgs: DemoAdminOrgs | null;
+  /** Раннеры, очередь, квоты, сервисы и место в админке; строятся при первом обращении. */
+  adminOps: DemoAdminOps | null;
+  /** Название, сборка, политика ключей и общие провайдеры; строятся при первом обращении. */
+  adminInstall: DemoAdminInstall | null;
+};
+
+/** Аккаунт текущего человека; для другого пользователя строится заново. */
+export const accountOf = (world: ServerDemoWorld): DemoAccount | null => {
+  const user = world.bootstrap.user;
+  if (!user) return null;
+  if (world.account?.profile.id !== user.id) {
+    world.account = createDemoAccount(user, world.bootstrap.auth);
+  }
+  return world.account;
 };
 
 const createSetupState = (scenario: ServerDemoScenario): DemoSetupState => {
@@ -68,7 +96,36 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminCreated: false,
     setup: createSetupState(scenario),
     projects: seedProjects(),
+    account: null,
+    adminSettings: null,
+    adminOrgs: null,
+    adminOps: null,
+    adminInstall: null,
   };
+};
+
+/** Настройки входа мира; для сценария берутся его заготовки. */
+export const adminSettingsOf = (world: ServerDemoWorld): DemoAdminSettings => {
+  world.adminSettings ??= createDemoAdminSettings(world.scenario.adminSeed);
+  return world.adminSettings;
+};
+
+/** Организации мира; для сценария берётся его набор. */
+export const adminOrgsOf = (world: ServerDemoWorld): DemoAdminOrgs => {
+  world.adminOrgs ??= createDemoAdminOrgs(world.scenario.orgSeed);
+  return world.adminOrgs;
+};
+
+/** Операционные данные мира; для сценария берётся его набор. */
+export const adminOpsOf = (world: ServerDemoWorld): DemoAdminOps => {
+  world.adminOps ??= createDemoAdminOps(world.scenario.opsSeed);
+  return world.adminOps;
+};
+
+/** Настройки установки мира; для сценария берутся его заготовки. */
+export const adminInstallOf = (world: ServerDemoWorld): DemoAdminInstall => {
+  world.adminInstall ??= createDemoAdminInstall(world.scenario.installSeed);
+  return world.adminInstall;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */
@@ -81,6 +138,7 @@ export const signIn = (world: ServerDemoWorld, email: string): SessionUser => {
     capabilities: { ...world.bootstrap.capabilities, admin: isAdmin },
     csrf_token: isAdmin ? ADMIN_CSRF : STUDENT_CSRF,
   };
+  world.account = null;
   return user;
 };
 

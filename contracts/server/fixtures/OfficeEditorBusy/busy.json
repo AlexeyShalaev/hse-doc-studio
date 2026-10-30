@@ -1,0 +1,5 @@
+{
+  "state": "editor_busy",
+  "retry_after_seconds": 60,
+  "limit": 18
+}

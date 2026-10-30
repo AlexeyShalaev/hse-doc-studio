@@ -1,0 +1,49 @@
+{
+  "section": {
+    "title": "Organizations",
+    "subtitle": "Organizations you belong to, your role and groups.",
+    "loading": "Loading organizations…",
+    "loadFailed": "Could not load organizations.",
+    "retry": "Try again"
+  },
+  "empty": {
+    "title": "You are not in any organization",
+    "description": "An installation admin creates organizations. Ask to be added by e-mail and it will show up here."
+  },
+  "role": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "roleHint": {
+    "owner": "Manages members, groups and projects of the organization.",
+    "admin": "Manages members and groups, except owners.",
+    "member": "Works in the projects the organization has opened to you."
+  },
+  "card": {
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "groups": "Your groups",
+    "noGroups": "You are not in any groups.",
+    "manage": "Manage organization",
+    "leave": "Leave organization",
+    "soleOwner": "You are the only owner. Name another owner in the organization admin first, then you can leave."
+  },
+  "leave": {
+    "title": "Leave “{{name}}”?",
+    "description": "You will lose access to projects shared through this organization and its groups. You can only come back by invitation from its admin.",
+    "confirm": "Leave",
+    "leaving": "Leaving…",
+    "cancel": "Cancel",
+    "done": "You left “{{name}}”."
+  },
+  "failure": {
+    "last_owner": "You are the only owner of this organization. Name another one first.",
+    "not_found": "Organization not found: you may have been removed from it already.",
+    "forbidden": "Not enough permissions for this action.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "csrf_failed": "The session expired: refresh the page and try again.",
+    "network": "Cannot reach the server. Try again later.",
+    "unknown": "Something went wrong. Try again later."
+  }
+}

@@ -12,7 +12,11 @@ export type {
   CreateAIProviderInput,
   UpdateAIProviderInput,
 } from "./model/aiProvider.schema";
-export { aiProviderApi } from "./api/aiProviderApi";
+export {
+  aiProviderApi,
+  aiProviderApiFor,
+  type AIProviderOwner,
+} from "./api/aiProviderApi";
 export {
   aiProviderKeys,
   useAIProviders,

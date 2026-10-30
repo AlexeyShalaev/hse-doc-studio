@@ -34,6 +34,9 @@ vi.mock("@widgets/settings", async () => {
   };
 });
 vi.mock("@features/export-import", () => ({ ExportImportSection: () => null }));
+vi.mock("@features/account-settings", () => ({
+  AccountSection: () => <div data-testid="account-section" />,
+}));
 vi.mock("@features/author-profile", () => ({
   AuthorProfileSection: () => null,
 }));
@@ -121,6 +124,32 @@ describe("SettingsPage: sections by capabilities", () => {
         "/settings/about",
       ]),
     );
+  });
+
+  it("server с вошедшим человеком: «Аккаунт» вместо второго профиля автора", () => {
+    mount("/settings/account", {
+      ...SERVER,
+      user: {
+        id: "u_1",
+        name: "Анна Петрова",
+        email: "anna@example.org",
+        avatar_initials: "АП",
+        is_instance_admin: false,
+        email_verified: true,
+        locale: "ru",
+        org_roles: [],
+      },
+    });
+    const hrefs = navHrefs();
+    expect(hrefs).toContain("/settings/account");
+    expect(hrefs).not.toContain("/settings/profile");
+    expect(screen.getByTestId("account-section")).toBeInTheDocument();
+  });
+
+  it("server без пользователя и local: раздела «Аккаунт» нет, автор версий на месте", () => {
+    mount("/settings/appearance", SERVER);
+    expect(navHrefs()).not.toContain("/settings/account");
+    expect(navHrefs()).toContain("/settings/profile");
   });
 
   it("server: search does not find hidden settings", async () => {

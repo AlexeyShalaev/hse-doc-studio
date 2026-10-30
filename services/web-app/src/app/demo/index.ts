@@ -1,9 +1,13 @@
-import { apiClient } from "@shared/api";
+import { adminClient, apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { gitDemoRoutes, resetWorld } from "./routes";
 import { useDemoScenarioStore } from "./scenarioStore";
 import { SCENARIOS } from "./scenarios";
-import { enableServerDemo, serverDemoRoutes } from "./server";
+import {
+  enableServerDemo,
+  serverAdminDemoRoutes,
+  serverDemoRoutes,
+} from "./server";
 
 // Демо-режим синхронизации (VITE_GIT_DEMO=1): ответы по git, профилю и доступам
 // отдаёт память вкладки, остальные запросы идут настоящему бэкенду. Подключается
@@ -22,6 +26,10 @@ export const installGitDemo = (): void => {
       uploadStepMs: 300,
     },
   );
+  // Админка ходит другим клиентом (/api/admin): ему свой набор демо-маршрутов.
+  installDemoAdapter(adminClient, createDemoRouter(serverAdminDemoRoutes), {
+    latencyMs: 180,
+  });
 };
 
 // Серверное демо (VITE_SERVER_DEMO=1): сессия, вход и мастер первого запуска на

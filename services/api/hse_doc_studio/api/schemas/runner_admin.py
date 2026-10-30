@@ -57,3 +57,4 @@ class UpdateRunnerRequest(StrictModel):
 class RotatedRunnerTokenResponse(StrictModel):
     runner: RunnerInfo
     runner_token: str
+    command: str

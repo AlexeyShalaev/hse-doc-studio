@@ -103,6 +103,18 @@ async def _admin_token(env: _Env) -> str:
     return str(response.json()["secret"])
 
 
+async def test__create_registration_token__returns_ready_start_command(env: _Env, as_actor) -> None:  # type: ignore[no-untyped-def]
+    as_actor(_ADMIN)
+    response = await env.client.post("/api/admin/runner-tokens", json={"label": "t"})
+    assert response.status_code == 201
+    body = response.json()
+    assert body["command"].endswith("hse-doc-studio runner")
+    assert f"HSE_RUNNER__TOKEN={body['secret']}" in body["command"]
+    assert "HSE_RUNNER__API_URL=http" in body["command"]
+    listed = await env.client.get("/api/admin/runner-tokens")
+    assert body["secret"] not in listed.text
+
+
 @pytest.fixture
 def as_actor(env: _Env):  # type: ignore[no-untyped-def]
     def _set(actor: Actor | None) -> None:

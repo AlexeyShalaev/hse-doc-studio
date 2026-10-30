@@ -455,6 +455,8 @@ class AdminOrg(StrictModel):
     name: str
     member_count: int
     project_count: int
+    # Роль смотрящего в организации; null у админа установки, который в ней не состоит.
+    my_role: OrgRoleName | None
 
 
 # Организации и группы: /orgs и /groups (серверный режим).
@@ -520,6 +522,84 @@ class GroupMember(StrictModel):
 
 class AddGroupMemberRequest(StrictModel):
     user_id: str = Field(min_length=1, max_length=64)
+
+
+class AdminOrgMember(OrgMember):
+    """Участник организации в админке: та же форма, что у участника в /orgs."""
+
+
+class AddAdminOrgMemberRequest(StrictModel):
+    email: str
+    role: OrgRoleName
+
+
+class UpdateAdminOrgMemberRequest(StrictModel):
+    role: OrgRoleName
+
+
+class CreateAdminOrgRequest(StrictModel):
+    name: str
+    slug: str
+
+
+class AdminGroup(StrictModel):
+    id: str
+    name: str
+    member_ids: list[str]
+
+
+class CreateAdminGroupRequest(StrictModel):
+    name: str
+    member_ids: list[str]
+
+
+class UpdateAdminGroupRequest(StrictModel):
+    # null значит «не менять».
+    name: str | None
+    member_ids: list[str] | None
+
+
+class MyOrg(StrictModel):
+    """Организация глазами участника: «Настройки → Организации» (GET /api/v1/account/orgs)."""
+
+    slug: str
+    name: str
+    my_role: OrgRoleName
+    member_count: int
+    # Названия групп организации, в которых состоит человек.
+    groups: list[str]
+    # Человек единственный владелец: выйти нельзя, пока не назначен другой (409 last_owner).
+    sole_owner: bool
+
+
+class ProjectAccessEntry(StrictModel):
+    """Строка панели «Доступ» проекта (GET /api/v1/projects/{id}/members)."""
+
+    subject_kind: Literal["user", "group", "org"]
+    subject_id: str
+    name: str
+    # Почта человека или организация группы; у организации null.
+    detail: str | None
+    role: ProjectRoleName
+    # Строку нельзя менять здесь: владелец проекта и доступ через организацию-владельца.
+    locked: bool
+
+
+class ProjectAccessCandidate(StrictModel):
+    """Кого можно добавить (GET /api/v1/projects/{id}/members/candidates?q=)."""
+
+    subject_kind: Literal["user", "group"]
+    subject_id: str
+    name: str
+    detail: str | None
+
+
+class SetProjectAccessRequest(StrictModel):
+    """PUT /api/v1/projects/{id}/members: добавить или сменить роль, одна и та же ручка."""
+
+    subject_kind: Literal["user", "group"]
+    subject_id: str
+    role: ProjectRoleName
 
 
 class AdminSettings(StrictModel):
@@ -639,3 +719,28 @@ class UpdateAdminOidcProviderRequest(StrictModel):
     scopes: str | None = Field(default=None, max_length=256)
     enabled: bool | None = None
     auto_provision: bool | None = None
+
+
+CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded"]
+
+
+class CompileWait(StrictModel):
+    """Почему сборка ещё не идёт (поле `wait` деталей сборки и события `wait` потока).
+
+    queued и quota_wait: сборка ждёт очереди (место и оценка ожидания); no_runner: свободных раннеров нет;
+    runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая.
+    """
+
+    reason: CompileWaitReason
+    queue_position: int | None = Field(ge=1)
+    wait_hint_seconds: int | None = Field(ge=0)
+    attempt: int | None = Field(ge=1)
+    max_attempts: int | None = Field(ge=1)
+
+
+class OfficeEditorBusy(StrictModel):
+    """Ответ редактора документов, когда исчерпан лимит сессий ONLYOFFICE (state=editor_busy)."""
+
+    state: Literal["editor_busy"]
+    retry_after_seconds: int = Field(ge=1)
+    limit: int = Field(ge=1)

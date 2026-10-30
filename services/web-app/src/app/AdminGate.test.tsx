@@ -78,7 +78,7 @@ describe("AdminGate", () => {
   });
 
   it("shows a stub for a section that is not built yet and redirects unknown ones", async () => {
-    mount(bootstrap(true), "/admin/runners");
+    mount(bootstrap(true), "/admin/users");
     expect(await screen.findByTestId("admin-section-soon")).toBeInTheDocument();
     cleanup();
     mount(bootstrap(true), "/admin/nope");

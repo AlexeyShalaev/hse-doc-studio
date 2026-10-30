@@ -1,0 +1,332 @@
+{
+  "loading": "Loading",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "units": {
+    "s": "s",
+    "min": "min",
+    "h": "h"
+  },
+  "failure": {
+    "job_finished": "The job has already finished: nothing to cancel.",
+    "runner_not_found": "The runner was not found: it may already be removed.",
+    "not_found": "Not found or no access.",
+    "forbidden": "You do not have enough rights for this action.",
+    "setting_locked": "The value is set by the environment and cannot be changed here.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "csrf_failed": "The session is out of date: reload the page and try again.",
+    "input_invalid": "Check the entered data.",
+    "network": "No connection to the server. Try again later.",
+    "unknown": "Something went wrong. Try again later."
+  },
+  "tabs": {
+    "label": "Runners and queue",
+    "runners": "Runners",
+    "queue": "Queue"
+  },
+  "secret": {
+    "hint": "Copy it now and pass it to whoever starts the runner.",
+    "commandTitle": "Start command",
+    "commandLabel": "Runner start command",
+    "commandHint": "Run it on the runner machine. The Studio address and the secret are already filled in; after the first start the runner stores its own token and the value can be removed from the environment."
+  },
+  "runners": {
+    "title": "Runners",
+    "lead": "Machines that run builds and checks. The state is derived from the time of the last signal.",
+    "caption": "Runners",
+    "loadFailed": "Could not load runners.",
+    "noneOnline": "No runner is online: builds and checks will wait in the queue until a runner connects.",
+    "neverSeen": "Never connected",
+    "seenAgo": "{{ago}} ago",
+    "slots": "up to {{count}} jobs",
+    "pause": "Pause",
+    "resume": "Resume",
+    "rotate": "New token",
+    "revokeLabel": "Revoke runner {{name}}",
+    "stats": {
+      "online": "Online",
+      "paused": "Paused",
+      "capacity": "Job slots",
+      "capacityHint": "total across online runners"
+    },
+    "status": {
+      "online": "Online",
+      "stale": "Quiet for a while",
+      "offline": "Offline",
+      "paused": "Paused",
+      "revoked": "Revoked"
+    },
+    "columns": {
+      "name": "Runner",
+      "status": "State",
+      "tags": "Tags",
+      "concurrency": "Capacity",
+      "actions": "Actions"
+    },
+    "empty": {
+      "title": "No runners yet",
+      "body": "Create a registration token and start a runner with it. Without runners no builds are executed."
+    },
+    "rotateDialog": {
+      "title": "New token for {{name}}",
+      "body": "The previous runner token stops working and the runner loses its connection until it receives the new one. The secret is shown once.",
+      "confirm": "Issue token"
+    },
+    "rotated": {
+      "title": "New token for {{name}}",
+      "lead": "The previous token no longer works.",
+      "label": "Runner token"
+    },
+    "revoke": {
+      "title": "Revoke runner",
+      "body": "The runner loses access and stops taking jobs. Jobs it is running are handed to another runner.",
+      "confirm": "Revoke"
+    }
+  },
+  "tokens": {
+    "title": "Registration tokens",
+    "lead": "A one-time secret a new runner exchanges for its own token.",
+    "create": "Create token",
+    "noLabel": "Untitled",
+    "uses": "Used {{uses}} of {{max}}",
+    "revoke": "Revoke",
+    "loadFailed": "Could not load tokens.",
+    "empty": {
+      "title": "No tokens",
+      "body": "Create a token when you need to connect a new runner."
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "exhausted": "Used up",
+      "revoked": "Revoked"
+    },
+    "form": {
+      "title": "New registration token",
+      "lead": "The secret is shown once, right after it is created.",
+      "label": "Name",
+      "labelHint": "So you can tell later what it was for: for example, the server in room 305.",
+      "ttl": "Valid for",
+      "ttlOption": {
+        "1": "1 hour",
+        "24": "24 hours",
+        "168": "7 days",
+        "720": "30 days"
+      },
+      "maxUses": "How many runners can connect",
+      "maxUsesHint": "From 1 to 100. The token stops working after the last connection.",
+      "maxUsesInvalid": "Enter a whole number from 1 to 100.",
+      "submit": "Create"
+    },
+    "created": {
+      "title": "Token created",
+      "label": "Registration token"
+    },
+    "revokeDialog": {
+      "title": "Revoke token",
+      "body": "Token \"{{label}}\" will stop accepting new runners. Runners already connected keep working.",
+      "confirm": "Revoke"
+    }
+  },
+  "queue": {
+    "title": "Job queue",
+    "lead": "What is waiting for a runner and what is running now. Updates by itself.",
+    "caption": "Job queue",
+    "loadFailed": "Could not load the queue.",
+    "summaryFailed": "Could not load the queue summary.",
+    "search": "Search by person or project",
+    "noProject": "No project",
+    "cancel": "Cancel",
+    "count": "Showing {{shown}} of {{total}}",
+    "more": "Show more",
+    "empty": {
+      "title": "The queue is empty",
+      "body": "Jobs appear here when someone starts a build or a check."
+    },
+    "noMatch": {
+      "title": "Nothing found",
+      "body": "Change the filters or reset them."
+    },
+    "stats": {
+      "queued": "Queued",
+      "running": "Running",
+      "oldest": "Oldest in queue",
+      "wait": "Wait: median and 95th",
+      "waitHint": "over recent jobs"
+    },
+    "tags": {
+      "title": "By runner tag",
+      "tag": "Tag",
+      "queued": "Queued",
+      "running": "Running",
+      "avgWait": "Average wait"
+    },
+    "filters": {
+      "status": "Status",
+      "kind": "Kind"
+    },
+    "columns": {
+      "kind": "Kind",
+      "who": "Who and where",
+      "status": "Status",
+      "wait": "Wait",
+      "run": "Run time",
+      "runner": "Runner",
+      "actions": "Actions"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "timed_out": "Timed out"
+    },
+    "kind": {
+      "compile": "Build",
+      "office.convert": "Document conversion",
+      "signature.verify_detached": "Signature check",
+      "pack.submission": "Submission packing"
+    },
+    "priority": {
+      "interactive": "urgent",
+      "checks": "check",
+      "batch": "background"
+    },
+    "detail": {
+      "status": "Status",
+      "user": "Person",
+      "project": "Project",
+      "runner": "Runner",
+      "noRunner": "Not assigned yet",
+      "attempts": "Attempts",
+      "attemptsValue": "{{attempt}} of {{max}}",
+      "tags": "Tags",
+      "created": "Created",
+      "wait": "Wait",
+      "run": "Run time",
+      "error": "Error"
+    },
+    "cancelDialog": {
+      "title": "Cancel job",
+      "body": "The \"{{kind}}\" job of {{user}} will be stopped.",
+      "running": "It is already running: the runner will interrupt it and the result will not be saved.",
+      "confirm": "Cancel job"
+    }
+  },
+  "quotas": {
+    "title": "Quotas",
+    "lead": "How many jobs a person can run at once and how long a job may take.",
+    "loadFailed": "Could not load quotas.",
+    "lockedByEnv": "Set by the environment",
+    "sourceAdmin": "Changed in admin",
+    "sourceDefault": "Default value",
+    "minutes": "{{value}} min",
+    "save": "Save",
+    "saved": "Saved",
+    "note": "Only these two limits apply for now. When a limit is used up, a new job waits in the queue instead of being rejected.",
+    "concurrent": {
+      "label": "Concurrent jobs per person",
+      "short": "Jobs",
+      "hint": "From 1 to 64.",
+      "invalid": "Enter a whole number from 1 to 64."
+    },
+    "duration": {
+      "label": "Job time limit, min",
+      "short": "Time",
+      "hint": "From 0.5 to 1440 minutes. A longer job is stopped.",
+      "invalid": "Enter minutes from 0.5 to 1440."
+    },
+    "defaults": {
+      "title": "Installation defaults",
+      "lead": "Apply to everyone until an organization gets its own value."
+    },
+    "overrides": {
+      "title": "Organization overrides",
+      "lead": "An organization can have its own limit: an empty field means \"as default\".",
+      "add": "Add",
+      "edit": "Edit",
+      "clear": "Reset",
+      "inherit": "default",
+      "empty": {
+        "title": "No overrides",
+        "body": "Every organization uses the installation values."
+      },
+      "form": {
+        "title": "Organization limit",
+        "lead": "Leave a field empty to use the installation value.",
+        "org": "Organization",
+        "orgPlaceholder": "Choose an organization",
+        "blankHint": "Empty means \"as default\".",
+        "empty": "Fill in at least one field or reset the override.",
+        "submit": "Save"
+      },
+      "clearDialog": {
+        "title": "Reset override",
+        "body": "Organization \"{{org}}\" returns to the installation values.",
+        "confirm": "Reset"
+      }
+    }
+  },
+  "services": {
+    "title": "Services",
+    "lead": "Everything Studio depends on. The state refreshes by itself and the button runs a check right away.",
+    "loadFailed": "Could not load service health.",
+    "check": "Check",
+    "checkedAgo": "Checked {{ago}} ago",
+    "latency": "Response {{ms}} ms",
+    "unconfigured": "Not connected",
+    "slots": "{{used}} of {{total}} slots in use",
+    "summary": {
+      "ok": "All services are working.",
+      "degraded": "Services with problems: {{count}}.",
+      "down": "Services down: {{count}}."
+    },
+    "status": {
+      "ok": "Working",
+      "degraded": "Degraded",
+      "down": "Down",
+      "unconfigured": "Not configured"
+    },
+    "kind": {
+      "database": "Database",
+      "storage": "File storage",
+      "languagetool": "LanguageTool",
+      "onlyoffice": "ONLYOFFICE",
+      "runners": "Runners",
+      "smtp": "Mail"
+    }
+  },
+  "storage": {
+    "title": "Storage",
+    "lead": "How much space projects take and who takes it.",
+    "loadFailed": "Could not load storage usage.",
+    "unknown": "unknown",
+    "low": "Free space is running low: {{free}}. Free some space or extend the disk, otherwise saving files will stop working.",
+    "stats": {
+      "total": "Used in total",
+      "volume": "Project volumes",
+      "volumeHint": "working files",
+      "objects": "Object storage",
+      "objectsHint": "builds and attachments",
+      "free": "Free on disk",
+      "freeHint": "on the projects volume"
+    },
+    "owners": {
+      "title": "Who takes the space",
+      "lead": "Organizations and people with personal projects, largest first.",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "kind": {
+        "user": "Person",
+        "org": "Organization"
+      },
+      "share": "Share of space: {{name}}"
+    },
+    "empty": {
+      "title": "No projects yet",
+      "body": "Data appears when people start creating projects."
+    },
+    "note": "Counted from database records, without walking the storage. Data was updated {{ago}} ago."
+  }
+}

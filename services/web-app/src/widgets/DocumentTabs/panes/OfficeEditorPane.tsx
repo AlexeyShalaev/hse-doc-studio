@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Copy, FileEdit, RefreshCw, Settings } from "lucide-react";
 import { z } from "zod";
+import { EditorBusyView } from "@features/build-states";
+import { OfficeEditorBusySchema } from "@entities/session";
 import { apiClient, ApiError, parseResp } from "@shared/api";
 import { env } from "@shared/config";
 import { toast } from "@shared/lib";
@@ -70,6 +72,8 @@ const OfficeEditorResponseSchema = z.discriminatedUnion("state", [
   }),
   z.object({ state: z.literal("image_missing"), image: z.string() }),
   z.object({ state: z.literal("unavailable"), detail: z.string() }),
+  // Серверный режим: исчерпан лимит одновременных сессий ONLYOFFICE.
+  OfficeEditorBusySchema,
 ]);
 
 type OfficeEditorResponse = z.infer<typeof OfficeEditorResponseSchema>;
@@ -79,6 +83,7 @@ type PaneState =
   | { kind: "loading" }
   | { kind: "image_missing"; image: string }
   | { kind: "unavailable"; detail: string }
+  | { kind: "busy"; retryAfterSeconds: number; limit: number }
   | { kind: "script_error" }
   | { kind: "ready"; editor: ReadyResponse };
 
@@ -93,11 +98,16 @@ const COLD_START_TIMEOUT_MS = 300_000;
 export type OfficeEditorPaneProps = {
   projectId: string;
   docId: string;
+  /** Файл документа для скачивания, пока редактор занят. */
+  downloadHref?: string | null;
+  downloadName?: string;
 };
 
 export const OfficeEditorPane = ({
   projectId,
   docId,
+  downloadHref = null,
+  downloadName,
 }: OfficeEditorPaneProps) => {
   const { t } = useTranslation("documents");
   const navigate = useNavigate();
@@ -122,6 +132,12 @@ export const OfficeEditorPane = ({
         if (cancelled) return;
         if (resp.state === "ready") {
           setState({ kind: "ready", editor: resp });
+        } else if (resp.state === "editor_busy") {
+          setState({
+            kind: "busy",
+            retryAfterSeconds: resp.retry_after_seconds,
+            limit: resp.limit,
+          });
         } else if (resp.state === "image_missing") {
           setState({ kind: "image_missing", image: resp.image });
         } else {
@@ -222,6 +238,18 @@ export const OfficeEditorPane = ({
           </span>
         </div>
       </div>
+    );
+  }
+
+  if (state.kind === "busy") {
+    return (
+      <EditorBusyView
+        retryAfterSeconds={state.retryAfterSeconds}
+        limit={state.limit}
+        onRetry={refetch}
+        downloadHref={downloadHref}
+        {...(downloadName ? { downloadName } : {})}
+      />
     );
   }
 

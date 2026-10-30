@@ -1,0 +1,7 @@
+{
+  "reason": "queued",
+  "queue_position": 3,
+  "wait_hint_seconds": 45,
+  "attempt": null,
+  "max_attempts": null
+}

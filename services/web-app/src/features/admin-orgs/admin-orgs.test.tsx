@@ -1,0 +1,455 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { i18n } from "@shared/lib";
+import { createDemoRouter } from "@shared/api/demo";
+import type { DemoRequest } from "@shared/api/demo";
+import {
+  AdminGroupSchema,
+  AdminOrgMemberSchema,
+  AdminOrgSchema,
+} from "@entities/session";
+import { installServerDemo } from "@/app/demo";
+import { activateServerScenario } from "@/app/demo/server";
+import { serverAdminDemoRoutes } from "@/app/demo/server/routes";
+import { ensureAdminOrgsLocales } from "./lib/locales";
+import { assignableRoles, canEditMember, isLastOwner } from "./lib/permissions";
+import { isValidSlug, slugify } from "./lib/slug";
+import { OrgDetail, OrgsList } from "./index";
+
+// Организации поверх демо-транспорта: те же запросы, что уйдут настоящему бэкенду,
+// и ответы, проходящие те же схемы.
+
+const client = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+const wrap = (node: React.ReactNode) => (
+  <I18nextProvider i18n={i18n}>
+    <QueryClientProvider client={client()}>
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>
+  </I18nextProvider>
+);
+
+const router = createDemoRouter(serverAdminDemoRoutes);
+const call = async (
+  method: DemoRequest["method"],
+  path: string,
+  body?: unknown,
+) => {
+  const found = router.match(method, path);
+  if (!found) throw new Error(`no demo route ${method} ${path}`);
+  return found.handler({
+    method,
+    path,
+    params: found.params,
+    query: {},
+    body,
+    forward: () => Promise.reject(new Error("forward")),
+  });
+};
+const codeOf = (res: { data?: unknown }) =>
+  (res.data as { code?: string }).code;
+
+const Detail = ({
+  slug,
+  onDeleted = () => undefined,
+}: {
+  slug: string;
+  onDeleted?: () => void;
+}) => <OrgDetail slug={slug} onBack={() => undefined} onDeleted={onDeleted} />;
+
+describe("организации в админке: демо-API", () => {
+  beforeAll(() => {
+    installServerDemo();
+  });
+  beforeEach(() => {
+    activateServerScenario("admin_ready");
+  });
+
+  it("ответы проходят схемы контракта", async () => {
+    const orgs = (await call("GET", "/orgs")).data as unknown[];
+    expect(orgs).toHaveLength(3);
+    for (const o of orgs) AdminOrgSchema.parse(o);
+    const members = (await call("GET", "/orgs/msp-2025/members"))
+      .data as unknown[];
+    for (const x of members) AdminOrgMemberSchema.parse(x);
+    const groups = (await call("GET", "/orgs/msp-2025/groups"))
+      .data as unknown[];
+    for (const g of groups) AdminGroupSchema.parse(g);
+  });
+
+  it("админ организации видит только свои, чужую организацию не открыть", async () => {
+    activateServerScenario("org_admin");
+    const orgs = (await call("GET", "/orgs")).data as { slug: string }[];
+    expect(orgs.map((o) => o.slug).sort()).toEqual(["ai-lab", "msp-2025"]);
+    expect((await call("GET", "/orgs/pilot-2026")).status).toBe(404);
+    expect((await call("GET", "/orgs/pilot-2026/members")).status).toBe(404);
+    expect((await call("POST", "/orgs", { name: "X", slug: "x" })).status).toBe(
+      403,
+    );
+    expect((await call("DELETE", "/orgs/ai-lab")).status).toBe(403);
+  });
+
+  it("студент без ролей админа получает 404, аноним 401", async () => {
+    activateServerScenario("student_ready");
+    expect((await call("GET", "/orgs")).status).toBe(404);
+  });
+
+  it("матрица ролей: админ организации не трогает владельцев", async () => {
+    activateServerScenario("org_admin");
+    const owner = "u_01hx7k1a0b";
+    expect(
+      (
+        await call("PATCH", `/orgs/msp-2025/members/${owner}`, {
+          role: "member",
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await call("DELETE", `/orgs/msp-2025/members/${owner}`)).status,
+    ).toBe(403);
+    expect(
+      (
+        await call("POST", "/orgs/msp-2025/members", {
+          email: "maria.keller@example.org",
+          role: "owner",
+        })
+      ).status,
+    ).toBe(403);
+    const added = await call("POST", "/orgs/msp-2025/members", {
+      email: "maria.keller@example.org",
+      role: "member",
+    });
+    expect(added.status).toBe(201);
+  });
+
+  it("последнего владельца не понизить и не убрать", async () => {
+    const owner = "u_01hx7k1a0b";
+    const demote = await call("PATCH", `/orgs/pilot-2026/members/${owner}`, {
+      role: "admin",
+    });
+    expect(demote.status).toBe(409);
+    expect(codeOf(demote)).toBe("last_owner");
+    const remove = await call("DELETE", `/orgs/pilot-2026/members/${owner}`);
+    expect(codeOf(remove)).toBe("last_owner");
+    // С двумя владельцами первого понизить можно.
+    await call("PATCH", "/orgs/msp-2025/members/u_01hx7k3e5f", {
+      role: "owner",
+    });
+    expect(
+      (
+        await call("PATCH", `/orgs/msp-2025/members/${owner}`, {
+          role: "admin",
+        })
+      ).status,
+    ).toBe(200);
+  });
+
+  it("добавление: неизвестный адрес, повтор и неверная роль", async () => {
+    const add = (email: string, role: string) =>
+      call("POST", "/orgs/msp-2025/members", { email, role });
+    expect((await add("nobody@example.org", "member")).status).toBe(404);
+    const again = await add("anna.petrova@example.org", "member");
+    expect(codeOf(again)).toBe("already_member");
+    expect((await add("maria.keller@example.org", "boss")).status).toBe(422);
+  });
+
+  it("организация: адрес, зарезервированные имена, повтор и удаление с проектами", async () => {
+    const create = (name: string, slug: string) =>
+      call("POST", "/orgs", { name, slug });
+    expect(codeOf(await create("X", "Bad Slug"))).toBe("slug_invalid");
+    expect(codeOf(await create("X", "admin"))).toBe("slug_reserved");
+    expect(codeOf(await create("X", "msp-2025"))).toBe("slug_taken");
+    expect((await create("", "ok-slug")).status).toBe(422);
+    const made = await create("Новая", "novaya");
+    expect(made.status).toBe(201);
+    expect(AdminOrgSchema.parse(made.data).my_role).toBe("owner");
+    expect(codeOf(await call("DELETE", "/orgs/msp-2025"))).toBe(
+      "org_has_projects",
+    );
+    expect((await call("DELETE", "/orgs/novaya")).status).toBe(204);
+  });
+
+  it("группы: состав только из участников, уход из организации чистит группы", async () => {
+    const bad = await call("POST", "/orgs/ai-lab/groups", {
+      name: "Команда",
+      member_ids: ["u_01hx7k4p6g"],
+    });
+    expect(bad.status).toBe(422);
+    await call("DELETE", "/orgs/msp-2025/members/u_01hx7k2m9c");
+    const groups = (await call("GET", "/orgs/msp-2025/groups")).data as {
+      member_ids: string[];
+    }[];
+    expect(groups.flatMap((g) => g.member_ids)).not.toContain("u_01hx7k2m9c");
+  });
+});
+
+describe("организации в админке: экраны", () => {
+  beforeAll(() => {
+    installServerDemo();
+  });
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+    await ensureAdminOrgsLocales();
+    activateServerScenario("admin_ready");
+  });
+  afterEach(cleanup);
+
+  it("список: строки, поиск и открытие организации", async () => {
+    const onOpen = vi.fn();
+    const user = userEvent.setup();
+    render(wrap(<OrgsList onOpen={onOpen} />));
+    expect(await screen.findByTestId("org-open-msp-2025")).toBeVisible();
+    expect(screen.getByTestId("org-open-pilot-2026")).toBeVisible();
+    await user.type(screen.getByRole("searchbox"), "лаб");
+    await waitFor(() => {
+      expect(screen.queryByTestId("org-open-msp-2025")).toBeNull();
+    });
+    await user.click(screen.getByTestId("org-open-ai-lab"));
+    expect(onOpen).toHaveBeenCalledWith("ai-lab");
+  });
+
+  it("админ организации не видит чужих и кнопки создания", async () => {
+    activateServerScenario("org_admin");
+    render(wrap(<OrgsList onOpen={() => undefined} />));
+    expect(await screen.findByTestId("org-open-msp-2025")).toBeVisible();
+    expect(screen.queryByTestId("org-open-pilot-2026")).toBeNull();
+    expect(screen.queryByTestId("org-create")).toBeNull();
+  });
+
+  it("пустой список: призыв создать первую организацию", async () => {
+    activateServerScenario("admin_no_orgs");
+    render(wrap(<OrgsList onOpen={() => undefined} />));
+    expect(await screen.findByText("Организаций пока нет")).toBeVisible();
+    expect(screen.getByTestId("org-create")).toBeVisible();
+  });
+
+  it("создание: адрес из названия, отказ занятого адреса, успех открывает организацию", async () => {
+    const onOpen = vi.fn();
+    const user = userEvent.setup();
+    render(wrap(<OrgsList onOpen={onOpen} />));
+    await user.click(await screen.findByTestId("org-create"));
+    await user.type(screen.getByTestId("org-create-name"), "МСПИН 2025");
+    expect(screen.getByTestId("org-create-slug")).toHaveValue("mspin-2025");
+    await user.clear(screen.getByTestId("org-create-slug"));
+    await user.type(screen.getByTestId("org-create-slug"), "msp-2025");
+    await user.click(screen.getByTestId("org-create-submit"));
+    expect(
+      await screen.findByText("Такой адрес уже занят другой организацией."),
+    ).toBeVisible();
+    await user.clear(screen.getByTestId("org-create-slug"));
+    await user.type(screen.getByTestId("org-create-slug"), "mspin-2026");
+    await user.click(screen.getByTestId("org-create-submit"));
+    await waitFor(() => {
+      expect(onOpen).toHaveBeenCalledWith("mspin-2026");
+    });
+  });
+
+  it("создание: пустое название и неверный адрес не уходят на сервер", async () => {
+    const user = userEvent.setup();
+    render(wrap(<OrgsList onOpen={() => undefined} />));
+    await user.click(await screen.findByTestId("org-create"));
+    await user.click(screen.getByTestId("org-create-submit"));
+    expect(screen.getByText("Введите название.")).toBeVisible();
+    expect(screen.getByText(/Введите адрес/)).toBeVisible();
+  });
+
+  it("вкладки этапов 3 и 4 неактивны и не показывают данных", async () => {
+    const user = userEvent.setup();
+    render(wrap(<Detail slug="msp-2025" />));
+    const members = await screen.findByTestId("org-tab-members");
+    expect(members).toHaveAttribute("aria-selected", "true");
+    for (const id of ["projects", "quotas"]) {
+      const tab = screen.getByTestId(`org-tab-${id}`);
+      expect(tab).toHaveAttribute("aria-disabled", "true");
+      await user.click(tab);
+      expect(tab).toHaveAttribute("aria-selected", "false");
+      expect(screen.queryByTestId(`org-panel-${id}`)).toBeNull();
+    }
+    // Открыта по-прежнему вкладка участников.
+    expect(screen.getByTestId("org-panel-members")).toBeVisible();
+  });
+
+  it("чужая организация выглядит как несуществующая", async () => {
+    activateServerScenario("org_admin");
+    render(wrap(<Detail slug="pilot-2026" />));
+    expect(await screen.findByTestId("org-missing")).toBeVisible();
+  });
+
+  it("участники: единственный владелец защищён, добавление и отказы", async () => {
+    activateServerScenario("admin_ready");
+    const user = userEvent.setup();
+    render(wrap(<Detail slug="pilot-2026" />));
+    expect(
+      await screen.findByTestId("member-last-owner-u_01hx7k1a0b"),
+    ).toBeVisible();
+    expect(screen.getByTestId("member-remove-u_01hx7k1a0b")).toBeDisabled();
+    expect(screen.queryByTestId("member-role-u_01hx7k1a0b")).toBeNull();
+
+    await user.type(
+      screen.getByTestId("member-add-email"),
+      "nobody@example.org",
+    );
+    await user.click(screen.getByTestId("member-add-submit"));
+    expect(
+      await screen.findByText(/Человека с таким адресом нет/),
+    ).toBeVisible();
+
+    await user.clear(screen.getByTestId("member-add-email"));
+    await user.type(
+      screen.getByTestId("member-add-email"),
+      "maria.keller@example.org",
+    );
+    await user.click(screen.getByTestId("member-add-submit"));
+    expect(await screen.findByText("Мария Келлер")).toBeVisible();
+    expect(screen.getByTestId("member-add-email")).toHaveValue("");
+
+    await user.type(
+      screen.getByTestId("member-add-email"),
+      "maria.keller@example.org",
+    );
+    await user.click(screen.getByTestId("member-add-submit"));
+    expect(
+      await screen.findByText("Этот человек уже в организации."),
+    ).toBeVisible();
+  }, 20_000);
+
+  it("участники: удаление требует подтверждения", async () => {
+    const user = userEvent.setup();
+    render(wrap(<Detail slug="msp-2025" />));
+    await user.click(await screen.findByTestId("member-remove-u_01hx7k6r8j"));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/потеряет доступ/)).toBeVisible();
+    await user.click(within(dialog).getByTestId("member-remove-confirm"));
+    await waitFor(() => {
+      expect(screen.queryByText("Дмитрий Кузнецов")).toBeNull();
+    });
+  });
+
+  it("группы: создание с составом, правка и удаление", async () => {
+    const user = userEvent.setup();
+    render(wrap(<Detail slug="ai-lab" />));
+    await user.click(await screen.findByTestId("org-tab-groups"));
+    expect(await screen.findByTestId("groups-empty")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Создать группу" }));
+    const form = await screen.findByTestId("group-form");
+    await user.click(within(form).getByTestId("group-save"));
+    expect(within(form).getByText("Введите название.")).toBeVisible();
+    await user.type(within(form).getByTestId("group-name"), "Проект");
+    await user.click(within(form).getByTestId("group-member-u_01hx7k6r8j"));
+    await user.click(within(form).getByTestId("group-save"));
+    expect(await screen.findByText("Проект")).toBeVisible();
+    expect(screen.getByText("1 человек")).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", { name: "Удалить группу Проект" }),
+    );
+    await user.click(await screen.findByTestId("group-delete-confirm"));
+    expect(await screen.findByTestId("groups-empty")).toBeVisible();
+  }, 20_000);
+
+  it("удаление организации: с проектами отказ, без проектов уходит", async () => {
+    const user = userEvent.setup();
+    const first = render(wrap(<Detail slug="msp-2025" />));
+    await user.click(await screen.findByTestId("org-delete"));
+    expect(await screen.findByText(/сервер откажет/)).toBeVisible();
+    const input = screen.getByRole("textbox", { name: /МСПИН 2025/ });
+    await user.type(input, "МСПИН 2025");
+    await user.click(
+      screen.getByRole("button", { name: "Удалить организацию" }),
+    );
+    expect(await screen.findByText(/В организации есть проекты/)).toBeVisible();
+    first.unmount();
+
+    const onDeleted = vi.fn();
+    render(wrap(<Detail slug="pilot-2026" onDeleted={onDeleted} />));
+    await user.click(await screen.findByTestId("org-delete"));
+    await user.type(
+      screen.getByRole("textbox", { name: /Пилот 2026/ }),
+      "Пилот 2026",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Удалить организацию" }),
+    );
+    await waitFor(() => {
+      expect(onDeleted).toHaveBeenCalled();
+    });
+  }, 20_000);
+
+  it("английский интерфейс", async () => {
+    await i18n.changeLanguage("en");
+    render(wrap(<OrgsList onOpen={() => undefined} />));
+    expect(await screen.findByText("Organizations")).toBeVisible();
+    expect(await screen.findByText("Create organization")).toBeVisible();
+    await i18n.changeLanguage("ru");
+  });
+});
+
+describe("организации: чистая логика", () => {
+  it("адрес из названия", () => {
+    expect(slugify("МСПИН 2025")).toBe("mspin-2025");
+    expect(slugify("  Лаборатория ИИ!  ")).toBe("laboratoriya-ii");
+    expect(slugify("---")).toBe("");
+    expect(isValidSlug("msp-2025")).toBe(true);
+    expect(isValidSlug("-msp")).toBe(false);
+    expect(isValidSlug("Msp")).toBe(false);
+    expect(isValidSlug("")).toBe(false);
+  });
+
+  it("права по ролям", () => {
+    const full = { instanceAdmin: true, role: null } as const;
+    const admin = { instanceAdmin: false, role: "admin" } as const;
+    expect(assignableRoles(full)).toContain("owner");
+    expect(assignableRoles(admin)).not.toContain("owner");
+    expect(canEditMember(admin, "owner")).toBe(false);
+    expect(canEditMember(admin, "member")).toBe(true);
+    const members = [
+      {
+        user_id: "a",
+        name: "A",
+        email: "a@x.org",
+        role: "owner",
+        joined_at: "",
+      },
+      {
+        user_id: "b",
+        name: "B",
+        email: "b@x.org",
+        role: "owner",
+        joined_at: "",
+      },
+    ] as const;
+    expect(isLastOwner(members, members[0])).toBe(false);
+    expect(isLastOwner([members[0]], members[0])).toBe(true);
+  });
+
+  it("локаль подключается один раз", async () => {
+    const first = ensureAdminOrgsLocales();
+    expect(ensureAdminOrgsLocales()).toBe(first);
+    await first;
+    expect(i18n.hasResourceBundle("ru", "adminOrgs")).toBe(true);
+  });
+});

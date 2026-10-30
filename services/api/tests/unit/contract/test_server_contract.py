@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
-from hse_doc_studio.api.schemas.runner_admin import CreatedRegistrationTokenResponse, RunnerInfo
 from pydantic import TypeAdapter, ValidationError
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -71,8 +72,28 @@ _SCHEMAS: dict[str, Any] = {
     "CreateAdminInvitationRequest": s.CreateAdminInvitationRequest,
     "AdminInvitationCreated": s.AdminInvitationCreated,
     "AdminOrgList": list[s.AdminOrg],
-    "AdminRunnerList": list[RunnerInfo],
-    "AdminRegistrationTokenCreated": CreatedRegistrationTokenResponse,
+    "AdminOrgMember": s.AdminOrgMember,
+    "AdminOrgMemberList": list[s.AdminOrgMember],
+    "AddAdminOrgMemberRequest": s.AddAdminOrgMemberRequest,
+    "UpdateAdminOrgMemberRequest": s.UpdateAdminOrgMemberRequest,
+    "CreateAdminOrgRequest": s.CreateAdminOrgRequest,
+    "AdminGroup": s.AdminGroup,
+    "AdminGroupList": list[s.AdminGroup],
+    "CreateAdminGroupRequest": s.CreateAdminGroupRequest,
+    "UpdateAdminGroupRequest": s.UpdateAdminGroupRequest,
+    "MyOrg": s.MyOrg,
+    "MyOrgList": list[s.MyOrg],
+    "ProjectAccessEntry": s.ProjectAccessEntry,
+    "ProjectAccessList": list[s.ProjectAccessEntry],
+    "ProjectAccessCandidate": s.ProjectAccessCandidate,
+    "ProjectAccessCandidateList": list[s.ProjectAccessCandidate],
+    "SetProjectAccessRequest": s.SetProjectAccessRequest,
+    "AdminRunnerList": list[ra.RunnerInfo],
+    "AdminRunnerTokenList": list[ra.RegistrationTokenInfo],
+    "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
+    "AdminRunnerTokenCreated": ra.CreatedRegistrationTokenResponse,
+    "AdminRunnerRotated": ra.RotatedRunnerTokenResponse,
+    "UpdateAdminRunnerRequest": ra.UpdateRunnerRequest,
     "AdminJobPage": ops.AdminJobPage,
     "AdminQueueSummary": ops.AdminQueueSummary,
     "AdminQuotas": ops.AdminQuotas,
@@ -105,6 +126,10 @@ _SCHEMAS: dict[str, Any] = {
     "AdminAuthSettings": s.AdminAuthSettings,
     "UpdateAdminAuthRequest": s.UpdateAdminAuthRequest,
     "AdminSmtpSettings": s.AdminSmtpSettings,
+    "AdminInstanceSettings": inst.AdminInstanceSettings,
+    "UpdateAdminInstanceRequest": inst.UpdateAdminInstanceRequest,
+    "AdminBuildSettings": inst.AdminBuildSettings,
+    "UpdateAdminBuildRequest": inst.UpdateAdminBuildRequest,
     "UpdateAdminSmtpRequest": s.UpdateAdminSmtpRequest,
     "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
     "AdminSmtpTestResult": s.AdminSmtpTestResult,
@@ -112,6 +137,8 @@ _SCHEMAS: dict[str, Any] = {
     "AdminOidcProviderList": list[s.AdminOidcProvider],
     "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,
     "UpdateAdminOidcProviderRequest": s.UpdateAdminOidcProviderRequest,
+    "CompileWait": s.CompileWait,
+    "OfficeEditorBusy": s.OfficeEditorBusy,
 }
 
 

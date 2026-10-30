@@ -238,6 +238,7 @@ export const AccountIdentitySchema = z.strictObject({
   email_verified: z.boolean(),
 });
 export type AccountIdentity = z.infer<typeof AccountIdentitySchema>;
+export type AccountSession = z.infer<typeof AccountSessionSchema>;
 export const ApiTokenSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -256,6 +257,15 @@ export const CreateApiTokenResponseSchema = z.strictObject({
   token: z.string(),
   item: ApiTokenSchema,
 });
+
+export type ApiToken = z.infer<typeof ApiTokenSchema>;
+export type TokenScope = z.infer<typeof TokenScopeSchema>;
+export type CreateApiTokenRequest = z.infer<typeof CreateApiTokenRequestSchema>;
+export type CreateApiTokenResponse = z.infer<
+  typeof CreateApiTokenResponseSchema
+>;
+
+export type LinkIdentityResponse = z.infer<typeof LinkIdentityResponseSchema>;
 
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
@@ -360,6 +370,7 @@ export const AdminOrgSchema = z.strictObject({
   name: z.string(),
   member_count: z.number().int(),
   project_count: z.number().int(),
+  my_role: OrgRoleNameSchema.nullable(),
 });
 export const OrgSchema = z.strictObject({
   slug: z.string(),
@@ -425,32 +436,77 @@ export const SetProjectMemberRequestSchema = z.strictObject({
   show_sources: z.boolean(),
   can_edit_all: z.boolean(),
 });
-export const AdminRunnerSchema = z.strictObject({
+export const AdminOrgMemberSchema = OrgMemberSchema;
+export const AddAdminOrgMemberRequestSchema = z.strictObject({
+  email: z.string(),
+  role: OrgRoleNameSchema,
+});
+export const UpdateAdminOrgMemberRequestSchema = z.strictObject({
+  role: OrgRoleNameSchema,
+});
+export const CreateAdminOrgRequestSchema = z.strictObject({
+  name: z.string(),
+  slug: z.string(),
+});
+export const AdminGroupSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
-  status: z.enum(["online", "stale", "offline", "paused", "revoked"]),
-  tags: z.array(z.string()),
-  concurrency: z.number().int(),
-  resource_class: z.string(),
-  version: z.string(),
-  created_at: iso,
-  last_seen_at: iso.nullable(),
-  paused: z.boolean(),
-  revoked: z.boolean(),
+  member_ids: z.array(z.string()),
 });
-export const AdminRegistrationTokenCreatedSchema = z.strictObject({
-  token: z.strictObject({
-    id: z.string(),
-    label: z.string(),
-    created_at: iso,
-    expires_at: iso.nullable(),
-    max_uses: z.number().int(),
-    uses: z.number().int(),
-    revoked: z.boolean(),
-  }),
-  secret: z.string(),
-  command: z.string(),
+export const CreateAdminGroupRequestSchema = z.strictObject({
+  name: z.string(),
+  member_ids: z.array(z.string()),
 });
+export const UpdateAdminGroupRequestSchema = z.strictObject({
+  name: z.string().nullable(),
+  member_ids: z.array(z.string()).nullable(),
+});
+export type OrgRoleName = z.infer<typeof OrgRoleNameSchema>;
+export type AdminOrg = z.infer<typeof AdminOrgSchema>;
+export type AdminOrgMember = z.infer<typeof AdminOrgMemberSchema>;
+export type AdminGroup = z.infer<typeof AdminGroupSchema>;
+export type CreateAdminOrgRequest = z.infer<typeof CreateAdminOrgRequestSchema>;
+export type CreateAdminGroupRequest = z.infer<
+  typeof CreateAdminGroupRequestSchema
+>;
+export type UpdateAdminGroupRequest = z.infer<
+  typeof UpdateAdminGroupRequestSchema
+>;
+export const MyOrgSchema = z.strictObject({
+  slug: z.string(),
+  name: z.string(),
+  my_role: OrgRoleNameSchema,
+  member_count: z.number().int(),
+  groups: z.array(z.string()),
+  sole_owner: z.boolean(),
+});
+export const ProjectAccessEntrySchema = z.strictObject({
+  subject_kind: z.enum(["user", "group", "org"]),
+  subject_id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+  role: ProjectRoleSchema,
+  locked: z.boolean(),
+});
+export const ProjectAccessCandidateSchema = z.strictObject({
+  subject_kind: z.enum(["user", "group"]),
+  subject_id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+});
+export const SetProjectAccessRequestSchema = z.strictObject({
+  subject_kind: z.enum(["user", "group"]),
+  subject_id: z.string(),
+  role: ProjectRoleSchema,
+});
+export type MyOrg = z.infer<typeof MyOrgSchema>;
+export type ProjectAccessEntry = z.infer<typeof ProjectAccessEntrySchema>;
+export type ProjectAccessCandidate = z.infer<
+  typeof ProjectAccessCandidateSchema
+>;
+export type SetProjectAccessRequest = z.infer<
+  typeof SetProjectAccessRequestSchema
+>;
 export const AdminSettingsSchema = z.strictObject({
   registration_mode: RegistrationModeSchema,
   require_approval: z.boolean(),
@@ -646,3 +702,46 @@ export const AdminAiProviderCheckSchema = z.strictObject({
   models: z.array(z.string()),
   error: z.string().nullable(),
 });
+export type AdminSettingState = z.infer<typeof SettingStateSchema>;
+export type AdminRegistrationSettings = z.infer<
+  typeof AdminRegistrationSettingsSchema
+>;
+export type UpdateAdminRegistrationRequest = z.infer<
+  typeof UpdateAdminRegistrationRequestSchema
+>;
+export type AdminAuthSettings = z.infer<typeof AdminAuthSettingsSchema>;
+export type AdminSmtpSettings = z.infer<typeof AdminSmtpSettingsSchema>;
+export type UpdateAdminSmtpRequest = z.infer<
+  typeof UpdateAdminSmtpRequestSchema
+>;
+export type AdminSmtpTestResult = z.infer<typeof AdminSmtpTestResultSchema>;
+export type AdminOidcProvider = z.infer<typeof AdminOidcProviderSchema>;
+export type CreateAdminOidcProviderRequest = z.infer<
+  typeof CreateAdminOidcProviderRequestSchema
+>;
+export type UpdateAdminOidcProviderRequest = z.infer<
+  typeof UpdateAdminOidcProviderRequestSchema
+>;
+
+export const COMPILE_WAIT_REASONS = [
+  "queued",
+  "no_runner",
+  "quota_wait",
+  "runner_lost",
+  "superseded",
+] as const;
+export const CompileWaitSchema = z.strictObject({
+  reason: z.enum(COMPILE_WAIT_REASONS),
+  queue_position: z.number().int().min(1).nullable(),
+  wait_hint_seconds: z.number().int().min(0).nullable(),
+  attempt: z.number().int().min(1).nullable(),
+  max_attempts: z.number().int().min(1).nullable(),
+});
+export type CompileWait = z.infer<typeof CompileWaitSchema>;
+export type CompileWaitReason = CompileWait["reason"];
+export const OfficeEditorBusySchema = z.strictObject({
+  state: z.literal("editor_busy"),
+  retry_after_seconds: z.number().int().min(1),
+  limit: z.number().int().min(1),
+});
+export type OfficeEditorBusy = z.infer<typeof OfficeEditorBusySchema>;

@@ -1,8 +1,13 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import { useServerDemoScenarioStore } from "./scenarioStore";
+import { createAccountRoutes } from "./accountRoutes";
+import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
+import { createSharedProviderUserRoutes } from "./installRoutes";
+import { createMemberOrgRoutes } from "./memberOrgRoutes";
+import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
@@ -121,11 +126,25 @@ const routes: DemoRoute[] = [
   },
 ];
 
+const withGuard = (route: DemoRoute): DemoRoute => ({
+  ...route,
+  handler: guarded(route.handler),
+});
+
+/** Маршруты клиента /api/admin: ставятся на adminClient отдельно от /api/v1. */
+export const serverAdminDemoRoutes: DemoRoute[] = createAdminRoutes(
+  () => world,
+).map(withGuard);
+
 export const serverDemoRoutes: DemoRoute[] = [
   ...routes,
   ...createAuthRoutes(() => world),
+  ...createAccountRoutes(() => world),
   ...createSetupRoutes(() => world),
   ...createProjectRoutes(() => world),
+  ...createProjectAccessRoutes(() => world),
+  ...createMemberOrgRoutes(() => world),
+  ...createSharedProviderUserRoutes(() => world),
   ...catalogRoutes,
 ].map((route) => ({
   ...route,

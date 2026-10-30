@@ -1,3 +1,4 @@
+import type { ServerDemoInstallSeed } from "./adminInstall";
 import type {
   Bootstrap,
   Capabilities,
@@ -15,13 +16,25 @@ export type ServerDemoScenarioId =
   | "fresh_install_raced"
   | "fresh_install_broken"
   | "admin_ready"
+  | "admin_env_locked"
+  | "admin_sso"
+  | "admin_no_orgs"
+  | "ops_runners_offline"
+  | "ops_services_degraded"
+  | "ops_fresh"
+  | "install_env_locked"
+  | "install_fresh"
+  | "org_admin"
   | "student_ready"
   | "registration_closed"
   | "sso_only"
   | "registration_open"
   | "registration_domains"
   | "registration_open_nosmtp"
-  | "newcomer";
+  | "newcomer"
+  | "student_nosmtp"
+  | "student_sso"
+  | "student_linked";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -58,6 +71,23 @@ export const DEMO_ADMIN: SessionUser = {
   locale: "en",
   org_roles: [{ slug: "msp-2025", name: "МСПИН 2025", role: "owner" }],
 };
+
+/** Админ организации: не админ установки, но управляет двумя организациями. */
+export const DEMO_ORG_ADMIN: SessionUser = {
+  id: "u_01hx7k3e5f",
+  name: "Елена Миронова",
+  email: "elena.mironova@example.org",
+  avatar_initials: "ЕМ",
+  is_instance_admin: false,
+  email_verified: true,
+  locale: "ru",
+  org_roles: [
+    { slug: "msp-2025", name: "МСПИН 2025", role: "admin" },
+    { slug: "ai-lab", name: "Лаборатория ИИ", role: "owner" },
+  ],
+};
+
+export const ORG_ADMIN_CSRF = "Zr4cNb8LkQ2wXs6YtVe0PdMh9aUfJg3o";
 
 /** Новичок: вошёл впервые, ни проектов, ни организаций. */
 export const DEMO_NEWCOMER: SessionUser = {
@@ -118,7 +148,22 @@ export type ServerDemoScenario = {
   tokenRequired: boolean;
   /** Состояние мастера первого запуска; по умолчанию чистая установка. */
   setup?: Partial<ServerDemoSetup>;
+  /** Настройки входа в админке: чем они заданы. По умолчанию всё редактируется. */
+  adminSeed?: ServerDemoAdminSeed;
+  /** Организации в админке: набор по умолчанию или ни одной. */
+  orgSeed?: "default" | "empty";
+  /** Раннеры, очередь, сервисы и место в админке: набор по умолчанию или вариант состояния. */
+  opsSeed?: ServerDemoOpsSeed;
+  /** Название, сборка, политика ключей и общие провайдеры: набор по умолчанию или вариант состояния. */
+  installSeed?: ServerDemoInstallSeed;
 };
+
+/** default: рабочая установка; runners_offline: раннеров в сети нет; services_degraded: сервисы падают, места мало; fresh: ничего не подключено. */
+export type ServerDemoOpsSeed =
+  "default" | "runners_offline" | "services_degraded" | "fresh";
+
+/** default: всё редактируется; env_locked: регистрация и почта заданы окружением; sso: пароль выключен, провайдеры включены. */
+export type ServerDemoAdminSeed = "default" | "env_locked" | "sso";
 
 export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
   {
@@ -205,6 +250,178 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
       }),
   },
   {
+    id: "admin_env_locked",
+    tokenRequired: false,
+    adminSeed: "env_locked",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_sso",
+    tokenRequired: false,
+    adminSeed: "sso",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "closed",
+          password_enabled: false,
+          oidc_providers: [
+            { id: "keycloak", label: "HSE SSO" },
+            { id: "google", label: "Google" },
+          ],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "admin_no_orgs",
+    tokenRequired: false,
+    orgSeed: "empty",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_runners_offline",
+    tokenRequired: false,
+    opsSeed: "runners_offline",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_services_degraded",
+    tokenRequired: false,
+    opsSeed: "services_degraded",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_fresh",
+    tokenRequired: false,
+    opsSeed: "fresh",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "install_env_locked",
+    tokenRequired: false,
+    installSeed: "env_locked",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_signing_keys: false,
+        },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "install_fresh",
+    tokenRequired: false,
+    installSeed: "fresh",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_signing_keys: false,
+        },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "org_admin",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ORG_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ORG_ADMIN_CSRF,
+      }),
+  },
+  {
     id: "student_ready",
     tokenRequired: false,
     bootstrap: () =>
@@ -213,6 +430,57 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           registration_mode: "domains",
           password_enabled: true,
           oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "student_nosmtp",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: false,
+          password_min_length: 10,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "student_sso",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "closed",
+          password_enabled: false,
+          oidc_providers: [{ id: "keycloak", label: "HSE SSO" }],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+      }),
+  },
+  {
+    id: "student_linked",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [
+            { id: "keycloak", label: "HSE SSO" },
+            { id: "google", label: "Google" },
+          ],
           smtp_enabled: true,
           password_min_length: 10,
         },

@@ -111,6 +111,9 @@
     "already_member": "This person is already a member.",
     "user_not_found": "User not found.",
     "user_has_projects": "This person is still the only owner of projects or organizations: delete or hand them over first.",
-    "user_not_disabled": "Disable the account first: only a disabled account can be deleted."
+    "user_not_disabled": "Disable the account first: only a disabled account can be deleted.",
+    "member_not_found": "This person or group is not available to the project.",
+    "job_finished": "The job has already finished: nothing to cancel.",
+    "runner_not_found": "The runner was not found: it may already be removed."
   }
 }

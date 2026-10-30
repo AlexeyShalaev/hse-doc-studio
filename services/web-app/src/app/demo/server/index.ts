@@ -2,11 +2,12 @@ import { useServerDemoScenarioStore } from "./scenarioStore";
 import { findServerScenario } from "./scenarios";
 import {
   resetServerWorld,
+  serverAdminDemoRoutes,
   serverDemoRoutes,
   setServerDemoActive,
 } from "./routes";
 
-export { serverDemoRoutes };
+export { serverAdminDemoRoutes, serverDemoRoutes };
 export { SERVER_SCENARIOS } from "./scenarios";
 export { ServerDemoPicker } from "./ServerDemoPicker";
 

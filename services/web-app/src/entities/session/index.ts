@@ -1,4 +1,6 @@
 export * from "./api/schemas";
+export * from "./api/opsSchemas";
+export * from "./api/installSchemas";
 export { LOCAL_BOOTSTRAP, sessionApi } from "./api/sessionApi";
 export {
   clearUserScopedCache,

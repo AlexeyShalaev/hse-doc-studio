@@ -1,13 +1,43 @@
-import { useEffect, useState } from "react";
-import { Route, Routes } from "react-router";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Navigate, Route, Routes, useParams } from "react-router";
 import { Spinner } from "@shared/ui";
 import { loadAdminLocales } from "./adminLocales";
 import { AdminLayout } from "./AdminLayout";
 import { AdminOverview, AdminSectionSoon } from "./AdminSections";
 
+// Настройки входа тяжелее остальной оболочки: свой чанк, чтобы admin-*.js оставался лёгким.
+const AdminSettingsPage = lazy(() =>
+  import("./AdminSettingsPage").then((m) => ({ default: m.AdminSettingsPage })),
+);
+
+// Организации, участники и группы тоже в своём чанке.
+const AdminOrgsPage = lazy(() =>
+  import("./AdminOrgsPage").then((m) => ({ default: m.AdminOrgsPage })),
+);
+
+// Раннеры, очередь, квоты, сервисы и хранилище: один общий lazy-чанк.
+const AdminOpsPage = lazy(() =>
+  import("./AdminOpsPage").then((m) => ({ default: m.AdminOpsPage })),
+);
+
+// Настройки установки: название и сборка, ключи подписи, общие ИИ-провайдеры.
+const AdminInstallPage = lazy(() =>
+  import("./AdminInstallPage").then((m) => ({ default: m.AdminInstallPage })),
+);
+
+const INSTALL_PARTS = ["instance", "signing", "ai-providers"] as const;
+
+const OPS_PARTS = ["runners", "quotas", "services", "storage"] as const;
+
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
 // auth-чанках. Она лежит в коде чанка, а не в словарях.
 export const ADMIN_CHUNK_MARKER = "hse-admin-chunk-marker";
+
+/** Короткий адрес организации /admin/org/:slug ведёт на её страницу. */
+const OrgRedirect = () => {
+  const { slug = "" } = useParams<{ slug: string }>();
+  return <Navigate to={`/admin/orgs/${encodeURIComponent(slug)}`} replace />;
+};
 
 /**
  * Корень админки (маршрут /admin/*). Единственная точка входа lazy-чанка:
@@ -43,6 +73,75 @@ export const AdminApp = () => {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<AdminOverview />} />
+        <Route
+          path="settings"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center" role="status">
+                  <Spinner size="md" />
+                </div>
+              }
+            >
+              <AdminSettingsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="orgs/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center" role="status">
+                  <Spinner size="md" />
+                </div>
+              }
+            >
+              <AdminOrgsPage />
+            </Suspense>
+          }
+        />
+        {OPS_PARTS.map((part) => (
+          <Route
+            key={part}
+            path={part}
+            element={
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center"
+                    role="status"
+                  >
+                    <Spinner size="md" />
+                  </div>
+                }
+              >
+                <AdminOpsPage part={part} />
+              </Suspense>
+            }
+          />
+        ))}
+        {INSTALL_PARTS.map((part) => (
+          <Route
+            key={part}
+            path={part}
+            element={
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center"
+                    role="status"
+                  >
+                    <Spinner size="md" />
+                  </div>
+                }
+              >
+                <AdminInstallPage part={part} />
+              </Suspense>
+            }
+          />
+        ))}
+        <Route path="org/:slug" element={<OrgRedirect />} />
         <Route path=":section" element={<AdminSectionSoon />} />
       </Route>
     </Routes>

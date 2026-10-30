@@ -83,6 +83,7 @@ export const ProjectSettingsPanel = ({
       buildMetaGroupCards(allMetaFields, metaGroups, "documents").length > 0,
     hasMetaFields:
       filterMetaFieldsBySection(allMetaFields, metaGroups, "meta").length > 0,
+    hasAccess: project?.my_role !== undefined,
     ...syncContext,
   };
   const groups = visibleProjectSettingsGroups(sectionCtx);

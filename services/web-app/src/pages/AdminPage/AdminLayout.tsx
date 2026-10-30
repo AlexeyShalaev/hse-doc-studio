@@ -1,8 +1,14 @@
 import {
+  Activity,
+  Bot,
   ClipboardList,
+  Gauge,
+  HardDrive,
+  KeyRound,
   LayoutDashboard,
   Building2,
   Server,
+  Settings2,
   SlidersHorizontal,
   Users,
   type LucideIcon,
@@ -13,7 +19,18 @@ import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 
 export type AdminSection =
-  "overview" | "users" | "orgs" | "runners" | "settings" | "audit";
+  | "overview"
+  | "users"
+  | "orgs"
+  | "runners"
+  | "quotas"
+  | "services"
+  | "storage"
+  | "instance"
+  | "settings"
+  | "signing"
+  | "aiProviders"
+  | "audit";
 
 export const ADMIN_SECTIONS: readonly {
   id: AdminSection;
@@ -24,7 +41,13 @@ export const ADMIN_SECTIONS: readonly {
   { id: "users", to: "/admin/users", icon: Users },
   { id: "orgs", to: "/admin/orgs", icon: Building2 },
   { id: "runners", to: "/admin/runners", icon: Server },
+  { id: "quotas", to: "/admin/quotas", icon: Gauge },
+  { id: "services", to: "/admin/services", icon: Activity },
+  { id: "storage", to: "/admin/storage", icon: HardDrive },
+  { id: "instance", to: "/admin/instance", icon: Settings2 },
   { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
+  { id: "signing", to: "/admin/signing", icon: KeyRound },
+  { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
   { id: "audit", to: "/admin/audit", icon: ClipboardList },
 ];
 
