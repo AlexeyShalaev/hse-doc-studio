@@ -19,6 +19,7 @@ from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository, IProjectMemberRepository
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
+from hse_doc_studio.core.export_import.local_data import ILocalDataReader
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.protocols import (
     ICredentialAccess,
@@ -34,6 +35,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
+from hse_doc_studio.core.projects.importer import ILocalHistoryReader, ImportLimits, IProjectArchive
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import (
@@ -50,6 +52,7 @@ from hse_doc_studio.core.repositories import (
     IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
+    ISettingsRepository,
     ISigningIdentityRepository,
     ITemplateRepository,
 )
@@ -81,18 +84,21 @@ from hse_doc_studio.infra.db.repositories.signing_key_policy import InstanceSign
 from hse_doc_studio.infra.db.repositories.submission import PostgresPackSubmissionRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
+from hse_doc_studio.infra.export_import.local_data import LocalDataReader
 from hse_doc_studio.infra.identity.project_access import ServerProjectAccessChecker
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.s3_artifact_store import S3ArtifactStore
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.projects.acl_flags import AclFlagsCache
+from hse_doc_studio.infra.projects.archive import ZipProjectArchive
 from hse_doc_studio.infra.projects.catalog_index import CatalogProjectIndex
 from hse_doc_studio.infra.projects.catalog_sync import (
     MirroringProjectRepository,
     ProjectCatalogMirror,
     ProjectCatalogReconciler,
 )
+from hse_doc_studio.infra.projects.local_history import LocalChatHistory
 from hse_doc_studio.infra.projects.orphan_gc import OrphanGc
 from hse_doc_studio.infra.projects.purge import ProjectPurger
 from hse_doc_studio.infra.projects.usage_meter import ProjectQuotaService, ProjectUsageSweeper, VolumeUsageMeasurer
@@ -110,10 +116,12 @@ from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIPro
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
+from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
 from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 from hse_doc_studio.use_cases.projects.members import RemoveProjectMemberUC, SetProjectMemberUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
+from hse_doc_studio.use_cases.server_import.import_user_data import ImportUserDataUC
 from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
@@ -445,6 +453,59 @@ class ServerPersistenceProvider(Provider):
             vcs_service=vcs_service,
             base_service=base_service,
             server_storage=storage,
+        )
+
+    @provide
+    def get_project_import_limits(self, server_config: ServerConfig) -> ImportLimits:
+        """Распакованный проект не больше ни предела приёма, ни предела размера проекта."""
+        quota = server_config.project_quota_bytes
+        biggest = server_config.project_import_max_bytes
+        return ImportLimits(
+            max_unpacked_bytes=min(biggest, quota) if quota > 0 else biggest,
+            max_files=server_config.project_import_max_files,
+        )
+
+    @provide
+    def get_local_data_reader(self) -> ILocalDataReader:
+        return LocalDataReader()
+
+    @provide(scope=Scope.REQUEST)
+    def get_import_user_data_uc(
+        self,
+        reader: ILocalDataReader,
+        settings_repo: ISettingsRepository,
+        ai_provider_repo: IAIProviderRepository,
+        egress: IEgressPolicy,
+    ) -> ImportUserDataUC:
+        return ImportUserDataUC(reader, settings_repo, ai_provider_repo, egress)
+
+    @provide
+    def get_project_archive(self) -> IProjectArchive:
+        return ZipProjectArchive()
+
+    @provide
+    def get_local_history_reader(self) -> ILocalHistoryReader:
+        return LocalChatHistory()
+
+    @provide(scope=Scope.REQUEST)
+    def get_import_project_uc(
+        self,
+        project_repo: IProjectRepository,
+        storage: ServerProjectStorage,
+        archive: IProjectArchive,
+        history: ILocalHistoryReader,
+        chat_repo: IChatRepository,
+        quota: IProjectQuota,
+        limits: ImportLimits,
+    ) -> ImportProjectUC:
+        return ImportProjectUC(
+            project_repo=project_repo,
+            server_storage=storage,
+            archive=archive,
+            history=history,
+            chat_repo=chat_repo,
+            quota=quota,
+            limits=limits,
         )
 
     @provide(scope=Scope.REQUEST, override=True)

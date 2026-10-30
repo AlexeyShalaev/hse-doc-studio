@@ -6,7 +6,10 @@ import type {
   UpdateProjectRequest,
 } from "@shared/api/types";
 import { CheckRuleSchema } from "@entities/document";
-import { ProjectSummarySchema } from "@entities/session";
+import {
+  ProjectImportResultSchema,
+  ProjectSummarySchema,
+} from "@entities/session";
 import {
   NdaStatusResponseSchema,
   ProjectResponseSchema,
@@ -60,6 +63,31 @@ export const projectApi = {
     apiClient
       .post("/projects/connect", data)
       .then(parseResp(ProjectResponseSchema)),
+
+  // Проект из локальной Студии: zip с папкой проекта (только сервер).
+  importArchive: (
+    file: File,
+    options: {
+      signal?: AbortSignal;
+      onProgress?: (percent: number) => void;
+    } = {},
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post("/projects/import", formData, {
+        // Границу multipart ставит браузер, иначе тело уйдёт как JSON.
+        headers: { "Content-Type": null },
+        // Отказ показывает окно импорта, общий тост не нужен.
+        silentError: true,
+        ...(options.signal ? { signal: options.signal } : {}),
+        onUploadProgress: (event) => {
+          if (event.total)
+            options.onProgress?.((event.loaded / event.total) * 100);
+        },
+      })
+      .then(parseResp(ProjectImportResultSchema));
+  },
 
   update: (id: string, data: UpdateProjectRequest) =>
     apiClient

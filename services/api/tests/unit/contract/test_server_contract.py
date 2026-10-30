@@ -58,6 +58,7 @@ _SCHEMAS: dict[str, Any] = {
     "ProjectSummary": s.ProjectSummary,
     "ProjectSummaryList": list[s.ProjectSummary],
     "CreateServerProjectRequest": s.CreateServerProjectRequest,
+    "ProjectImportResult": s.ProjectImportResult,
     "AdminUser": s.AdminUser,
     "AdminUserList": s.AdminUserPage,
     "UpdateAdminUserRequest": s.UpdateAdminUserRequest,

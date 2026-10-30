@@ -6,6 +6,7 @@ import type { DemoRequest, DemoResponse } from "@shared/api/demo";
 import { z } from "zod";
 import {
   CreateServerProjectRequestSchema,
+  ProjectImportResultSchema,
   ProjectSummarySchema,
 } from "@entities/session";
 import { ProjectResponseSchema } from "@entities/project";
@@ -146,5 +147,49 @@ describe("демо проектов сервера", () => {
     activateServerScenario("admin_ready");
     const response = await call("POST", "/projects", body);
     expect(response.status).toBe(201);
+  });
+});
+
+describe("демо импорта проекта из zip", () => {
+  beforeEach(() => {
+    setServerDemoActive(true);
+    activateServerScenario("student_ready");
+  });
+
+  const upload = (name: string) => {
+    const body = new FormData();
+    body.append("file", new File(["x"], name));
+    return call("POST", "/projects/import", body);
+  };
+
+  it("ответ проходит схему и совпадает по форме с эталоном", async () => {
+    const response = await upload("thesis.zip");
+    expect(response.status).toBe(201);
+    const parsed = ProjectImportResultSchema.parse(response.data);
+    expect(Object.keys(parsed).sort()).toEqual(
+      Object.keys(fixture("ProjectImportResult", "clean") as object).sort(),
+    );
+    expect((await list()).some((p) => p.id === parsed.project_id)).toBe(true);
+  });
+
+  it("имя файла выбирает исход: отказы с кодами и предупреждения", async () => {
+    expect(await upload("evil.zip")).toMatchObject({
+      status: 422,
+      data: { code: "import_archive_unsafe" },
+    });
+    expect(await upload("huge.zip")).toMatchObject({ status: 413 });
+    const noisy = ProjectImportResultSchema.parse(
+      (await upload("remote-again.zip")).data,
+    );
+    expect(noisy.id_regenerated).toBe(true);
+    expect(noisy.warnings.map((w) => w.code)).toEqual([
+      "remote_needs_access",
+      "records_skipped",
+    ]);
+  });
+
+  it("аноним получает 401", async () => {
+    activateServerScenario("registration_open");
+    expect((await upload("thesis.zip")).status).toBe(401);
   });
 });

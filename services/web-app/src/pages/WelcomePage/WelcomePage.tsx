@@ -7,7 +7,14 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { GitBranch, History, Plus, Search, Upload } from "lucide-react";
+import {
+  FileArchive,
+  GitBranch,
+  History,
+  Plus,
+  Search,
+  Upload,
+} from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
 import { CLONE_PATH } from "@entities/git-sync";
@@ -18,6 +25,7 @@ import {
   useTemplateMeta,
   useUpdateProject,
 } from "@entities/project";
+import { ProjectImportDialog } from "@features/project-import";
 import { useRecentProjectIds, useWorkspaceStore } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { AppTitlebar } from "@widgets/AppTitlebar";
@@ -129,6 +137,7 @@ export const WelcomePage = () => {
   const { t, i18n } = useTranslation("welcome");
   const navigate = useNavigate();
   const { t: tAccess } = useTranslation("projectAccess");
+  const { t: tImport } = useTranslation("projectImport");
   const {
     data: projects,
     isLoading,
@@ -152,6 +161,7 @@ export const WelcomePage = () => {
   const [filter, setFilter] = useState<FilterType>("active");
   const [scope, setScope] = useState<ScopeType>("all");
   const [sort, setSort] = useState<SortMode>(readStoredSortMode);
+  const [importOpen, setImportOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -272,6 +282,10 @@ export const WelcomePage = () => {
     void navigate(CLONE_PATH);
   };
 
+  const handleImportArchive = () => {
+    setImportOpen(true);
+  };
+
   const handleChangeSort = (next: SortMode) => {
     setSort(next);
     try {
@@ -372,6 +386,16 @@ export const WelcomePage = () => {
                   >
                     <Upload size={13} />
                     {t("header.openFolder")}
+                  </button>
+                )}
+                {isServerList && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleImportArchive}
+                  >
+                    <FileArchive size={13} />
+                    {tImport("open")}
                   </button>
                 )}
                 <button
@@ -552,6 +576,7 @@ export const WelcomePage = () => {
               <EmptyState
                 onCreate={handleCreateProject}
                 onClone={handleCloneFromGit}
+                onImport={isServerList ? handleImportArchive : undefined}
                 query={query}
                 onResetQuery={handleResetQuery}
                 variant={isServerList ? "server" : "local"}
@@ -598,6 +623,14 @@ export const WelcomePage = () => {
       </div>
 
       <AppStatusBar />
+      {isServerList && (
+        <ProjectImportDialog
+          isOpen={importOpen}
+          onClose={() => {
+            setImportOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

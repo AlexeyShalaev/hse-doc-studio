@@ -298,6 +298,29 @@ export const CreateServerProjectRequestSchema = z.strictObject({
   shared_enabled: z.boolean(),
 });
 
+export const ProjectImportWarningSchema = z.strictObject({
+  code: z.enum([
+    "remote_needs_access",
+    "records_skipped",
+    "store_hardened",
+    "junk_skipped",
+    "chats_unreadable",
+  ]),
+  detail: z.string(),
+});
+export type ProjectImportWarning = z.infer<typeof ProjectImportWarningSchema>;
+
+export const ProjectImportResultSchema = z.strictObject({
+  project_id: z.string(),
+  name: z.string(),
+  id_regenerated: z.boolean(),
+  files: z.number(),
+  bytes: z.number(),
+  chats: z.number(),
+  warnings: z.array(ProjectImportWarningSchema),
+});
+export type ProjectImportResult = z.infer<typeof ProjectImportResultSchema>;
+
 export const AdminUserSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

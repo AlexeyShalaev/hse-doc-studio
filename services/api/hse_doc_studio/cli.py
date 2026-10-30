@@ -129,6 +129,21 @@ def _parser() -> argparse.ArgumentParser:
         "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
     )
     reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
+    server = sub.add_parser("server", help="перенос из локальной Студии на сервер (запускает оператор)")
+    server_sub = server.add_subparsers(dest="server_command", required=True)
+    data = server_sub.add_parser(
+        "import", help="перенести настройки и ИИ-провайдеров из каталога данных локальной Студии"
+    )
+    data.add_argument("--data-dir", required=True, type=Path, help="каталог данных локальной Студии (с config.json)")
+    data.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, чьи записи создаются")
+    data.add_argument("--dry-run", action="store_true", help="только показать, что будет перенесено")
+    data.add_argument(
+        "--include-instance", action="store_true", help="переносить и настройки всей установки (нужен админ)"
+    )
+    project = server_sub.add_parser("import-project", help="перенести проект из папки или zip локальной Студии")
+    project.add_argument("source", type=Path, help="папка проекта или zip-архив")
+    project.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, который станет владельцем")
+    project.add_argument("--dry-run", action="store_true", help="только проверить архив, ничего не записывать")
     sub.add_parser(
         "runner",
         help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
@@ -245,10 +260,51 @@ def _run_secrets(*, dry_run: bool) -> int:
         return _EXIT_USAGE
 
 
+async def _server_import(args: argparse.Namespace) -> int:
+    from hse_doc_studio import cli_import  # noqa: PLC0415 — extra server нужен только этим командам
+    from hse_doc_studio.core.mode import StudioMode  # noqa: PLC0415
+    from hse_doc_studio.core.projects.importer import ProjectImportError  # noqa: PLC0415
+    from hse_doc_studio.infra.di.containers.api import create_container  # noqa: PLC0415
+
+    container = create_container(StudioMode.server)
+    try:
+        if args.server_command == "import":
+            data_report = await cli_import.import_user_data(
+                container,
+                email=args.user,
+                data_dir=args.data_dir.expanduser().resolve(),
+                dry_run=args.dry_run,
+                include_instance=args.include_instance,
+            )
+            cli_import.format_data_report(data_report, _write)
+            return _EXIT_OK if data_report.ok else _EXIT_BUILD_FAILED
+        project_report = await cli_import.import_project(
+            container, email=args.user, source=args.source.expanduser().resolve(), dry_run=args.dry_run
+        )
+        cli_import.format_project_report(project_report, _write)
+    except (cli_import.ImportCliError, ProjectImportError) as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
+    else:
+        return _EXIT_OK
+    finally:
+        await container.close()
+
+
+def _run_server(args: argparse.Namespace) -> int:
+    try:
+        return asyncio.run(_server_import(args))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "db":
         return _run_db(args.db_command)
+    if args.command == "server":
+        return _run_server(args)
     if args.command == "runner":
         return asyncio.run(_runner())
     if args.command == "secrets":

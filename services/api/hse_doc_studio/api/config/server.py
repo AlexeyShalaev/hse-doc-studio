@@ -41,6 +41,8 @@ class ServerConfig:
     manifest_max_job_bytes: int = 1024 * 1024 * 1024
     project_quota_bytes: int = 2 * 1024**3
     project_quota_warn_percent: int = 80
+    project_import_max_bytes: int = 500 * 1024**2
+    project_import_max_files: int = 50_000
     project_usage_interval_s: float = 3600.0
     project_usage_batch: int = 20
     orphan_gc_interval_s: float = 21600.0
@@ -62,6 +64,8 @@ class ServerConfig:
             manifest_max_job_bytes=cfg.server.manifest_max_job_bytes,
             project_quota_bytes=cfg.server.project_quota_bytes,
             project_quota_warn_percent=cfg.server.project_quota_warn_percent,
+            project_import_max_bytes=cfg.server.project_import_max_bytes,
+            project_import_max_files=cfg.server.project_import_max_files,
             project_usage_interval_s=cfg.server.project_usage_interval_s,
             project_usage_batch=cfg.server.project_usage_batch,
             orphan_gc_interval_s=cfg.server.orphan_gc_interval_s,

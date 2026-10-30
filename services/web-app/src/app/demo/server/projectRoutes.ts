@@ -44,6 +44,30 @@ const detail = (project: DemoProject, role: ProjectRole) => ({
   my_role: role,
 });
 
+const IMPORT_REFUSALS: readonly (readonly [string, number, string, string])[] =
+  [
+    [
+      "evil",
+      422,
+      "import_archive_unsafe",
+      "The archive was rejected: unsafe path or file type",
+    ],
+    ["huge", 413, "import_too_large", "The project is too large"],
+    ["empty", 422, "import_no_project", "The archive holds no Studio project"],
+    [
+      "newer",
+      422,
+      "import_project_newer",
+      "The project was saved by a newer Studio",
+    ],
+    [
+      "broken",
+      422,
+      "import_archive_invalid",
+      "This is not a zip archive or it is damaged",
+    ],
+  ];
+
 export const createProjectRoutes = (
   getWorld: () => ServerDemoWorld,
 ): DemoRoute[] => [
@@ -118,6 +142,60 @@ export const createProjectRoutes = (
       };
       world.projects.push(project);
       return demoJson(detail(project, "owner"), 201);
+    },
+  },
+  {
+    // Загрузка zip из локальной Студии. Исход выбирает имя файла:
+    // evil, huge, empty, newer, broken дают отказы; again даёт новый id; remote даёт предупреждения.
+    method: "POST",
+    pattern: "/projects/import",
+    handler: (req) => {
+      const world = getWorld();
+      const user = world.bootstrap.user;
+      if (!user) {
+        return demoError(401, "auth_required", "Authentication required");
+      }
+      const file = req.body instanceof FormData ? req.body.get("file") : null;
+      const name = file instanceof File ? file.name.toLowerCase() : "";
+      const refusal = IMPORT_REFUSALS.find(([word]) => name.includes(word));
+      if (refusal) {
+        const [, status, code, text] = refusal;
+        return demoError(status, code, text);
+      }
+      const project: DemoProject = {
+        summary: {
+          id: `p_demo${String(world.projects.length + 1).padStart(4, "0")}`,
+          name: "Курсовая из локальной Студии",
+          kind: "research",
+          staffing: "solo",
+          lang: "ru",
+          owner: { kind: "user", id: user.id, name: user.name, slug: null },
+          updated_at: new Date().toISOString(),
+          pinned: false,
+          archived: false,
+          shared_enabled: true,
+        },
+        roles: { [user.id]: "owner" },
+      };
+      world.projects.push(project);
+      const remote = name.includes("remote");
+      return demoJson(
+        {
+          project_id: project.summary.id,
+          name: project.summary.name,
+          id_regenerated: name.includes("again"),
+          files: 42,
+          bytes: 3_145_728,
+          chats: remote ? 0 : 2,
+          warnings: remote
+            ? [
+                { code: "remote_needs_access", detail: "" },
+                { code: "records_skipped", detail: "6" },
+              ]
+            : [],
+        },
+        201,
+      );
     },
   },
   {

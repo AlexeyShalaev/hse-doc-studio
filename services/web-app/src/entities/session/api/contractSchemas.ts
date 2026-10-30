@@ -41,6 +41,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ProjectSummary: s.ProjectSummarySchema,
   ProjectSummaryList: z.array(s.ProjectSummarySchema),
   CreateServerProjectRequest: s.CreateServerProjectRequestSchema,
+  ProjectImportResult: s.ProjectImportResultSchema,
   AdminUser: s.AdminUserSchema,
   AdminUserList: s.AdminUserPageSchema,
   UpdateAdminUserRequest: s.UpdateAdminUserRequestSchema,

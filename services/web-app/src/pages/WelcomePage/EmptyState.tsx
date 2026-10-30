@@ -1,10 +1,18 @@
-import { GitBranch, GraduationCap, Plus, SearchX } from "lucide-react";
+import {
+  FileArchive,
+  GitBranch,
+  GraduationCap,
+  Plus,
+  SearchX,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export type EmptyStateProps = {
   onCreate: () => void;
   /** Клонировать проект из git: второе действие рядом с созданием. */
   onClone?: (() => void) | undefined;
+  /** server: загрузить проект из zip локальной Студии. */
+  onImport?: (() => void) | undefined;
   /** Непустой запрос → «ничего не нашлось», а не «проектов ещё нет». */
   query?: string | undefined;
   onResetQuery?: (() => void) | undefined;
@@ -18,6 +26,7 @@ export type EmptyStateProps = {
 export const EmptyState = ({
   onCreate,
   onClone,
+  onImport,
   query,
   onResetQuery,
   variant = "local",
@@ -26,6 +35,7 @@ export const EmptyState = ({
 }: EmptyStateProps) => {
   const { t } = useTranslation("welcome");
   const { t: tAccess } = useTranslation("projectAccess");
+  const { t: tImport } = useTranslation("projectImport");
   const isServer = variant === "server";
   const trimmedQuery = (query ?? "").trim();
   const isSearchMiss = trimmedQuery !== "";
@@ -85,6 +95,12 @@ export const EmptyState = ({
             <Plus size={13} />
             {t("empty.create")}
           </button>
+          {onImport && (
+            <button type="button" className="btn" onClick={onImport}>
+              <FileArchive size={13} />
+              {tImport("empty")}
+            </button>
+          )}
           {onClone && (
             <button type="button" className="btn" onClick={onClone}>
               <GitBranch size={13} />

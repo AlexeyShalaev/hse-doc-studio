@@ -227,4 +227,20 @@ describe("главная в серверном режиме", () => {
     expect(screen.getByText("/tmp/local")).toBeVisible();
     expect(screen.queryByTestId("project-owner")).toBeNull();
   });
+
+  it("импорт из zip: кнопка в шапке и в пустом списке открывает окно, в локальном режиме её нет", async () => {
+    const user = userEvent.setup();
+    projects.data = [];
+    mount();
+    expect(
+      screen.getByRole("button", { name: "Загрузить проект из zip" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Импорт из zip" }));
+    expect(
+      await screen.findByText("Импорт проекта из локальной Студии"),
+    ).toBeVisible();
+    cleanup();
+    mount(LOCAL_BOOTSTRAP);
+    expect(screen.queryByRole("button", { name: "Импорт из zip" })).toBeNull();
+  });
 });

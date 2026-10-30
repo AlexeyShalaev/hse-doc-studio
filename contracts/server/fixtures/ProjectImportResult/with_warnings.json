@@ -1,0 +1,14 @@
+{
+  "project_id": "7c1e9f40-5b8a-4c3d-8e21-6a9d0b4f2e73",
+  "name": "ВКР: распределённые системы",
+  "id_regenerated": true,
+  "files": 311,
+  "bytes": 52428800,
+  "chats": 0,
+  "warnings": [
+    { "code": "remote_needs_access", "detail": "" },
+    { "code": "records_skipped", "detail": "6" },
+    { "code": "store_hardened", "detail": "2" },
+    { "code": "junk_skipped", "detail": "4" }
+  ]
+}

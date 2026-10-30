@@ -84,6 +84,15 @@ If the key must be replaced and the old one is known:
 3. Run `hse-doc-studio secrets reencrypt`. It prints the number of re-encrypted and unreadable records. If it reports a record changed during the run, run it again.
 4. When nothing is unreadable, remove the previous key from `RETIRED_KEYS`.
 
+## Moving over from a local Studio
+
+The operator moves a person's data with commands on the server (needs the server extra and migrations at head). Records belong to the user by e-mail, as if they had moved them themselves.
+
+- `hse-doc-studio server import --data-dir <local Studio data dir> --user <e-mail> [--dry-run] [--include-instance]` moves user settings and AI providers (keys are encrypted with the server key). What already exists on the server is not overwritten and a rerun duplicates nothing. Git tokens, signing keys and agent roles are not moved: the command lists them in the report, add them again on the server.
+- `hse-doc-studio server import-project <folder or zip> --user <e-mail> [--dry-run]` creates a project with its version history and agent chats. A taken id is replaced by a new one; an archive with an outside path, a symlink, encryption or an oversize is rejected as a whole.
+
+A person can upload a project folder zip (with the hidden `.hse-studio`) themselves on the home page: "Import from zip". The size is limited by `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` and the project limit.
+
 ## When something goes wrong
 
 - a start without the database lists what is missing; read the api log;

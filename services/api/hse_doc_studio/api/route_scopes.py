@@ -114,6 +114,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/projects/suggestions"): _A,
     ("POST", "/projects"): _A,
     ("POST", "/projects/connect"): _LOCAL,
+    # Загрузка zip проекта из локальной Студии: только сервер, права владельца новый проект получает сам
+    ("POST", "/projects/import"): _A,
     # Образы сборки, LanguageTool и ONLYOFFICE: docker хоста управляется только локально
     ("GET", "/compile/docker-status"): _LOCAL,
     ("GET", "/compile/images"): _LOCAL,

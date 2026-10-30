@@ -323,6 +323,23 @@ class ProjectSummary(StrictModel):
     shared_enabled: bool
 
 
+class ProjectImportWarning(StrictModel):
+    code: Literal["remote_needs_access", "records_skipped", "store_hardened", "junk_skipped", "chats_unreadable"]
+    # Число затронутых файлов или настроек; пусто, когда считать нечего.
+    detail: str
+
+
+class ProjectImportResult(StrictModel):
+    project_id: str
+    name: str
+    # Id из архива был занят, проекту выдан новый.
+    id_regenerated: bool
+    files: int
+    bytes: int
+    chats: int
+    warnings: list[ProjectImportWarning]
+
+
 # Папку проекта в серверном режиме выбирает сервер: поля folder нет, владелец задаётся slug организации.
 class CreateServerProjectRequest(StrictModel):
     name: str

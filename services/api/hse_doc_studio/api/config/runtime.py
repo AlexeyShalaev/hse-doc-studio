@@ -75,6 +75,14 @@ class HttpServerConfig(BaseModel):
         ge=0,
         description="Предел размера проекта (дерево, git-стор, S3); запись сверх него отклоняется, 0 без предела.",
     )
+    project_import_max_bytes: int = Field(
+        default=500 * 1024**2,
+        ge=1,
+        description="Предел размера проекта в архиве при импорте (после распаковки); не больше предела проекта.",
+    )
+    project_import_max_files: int = Field(
+        default=50_000, ge=1, description="Сколько файлов допускается в архиве проекта при импорте."
+    )
     project_quota_warn_percent: int = Field(
         default=80, ge=1, le=100, description="С какого процента предела статус проекта предупреждает о нехватке места."
     )

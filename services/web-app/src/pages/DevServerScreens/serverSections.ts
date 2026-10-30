@@ -6,6 +6,7 @@ import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
 import { getMyOrganizationsGallery } from "@features/my-organizations";
 import { getProjectAccessGallery } from "@features/project-access";
+import { getProjectImportGallery } from "@features/project-import";
 import { getAccountMenuGallery } from "@features/account-menu";
 import { getRecoveryGallery } from "@features/account-recovery";
 import { getServerSetupGallery } from "@features/server-setup";
@@ -54,6 +55,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "project-access",
     title: "Проект: доступ",
     groups: getProjectAccessGallery(),
+  },
+  {
+    id: "project-import",
+    title: "Импорт проекта из локальной Студии",
+    groups: getProjectImportGallery(),
   },
   {
     id: "build-states",
