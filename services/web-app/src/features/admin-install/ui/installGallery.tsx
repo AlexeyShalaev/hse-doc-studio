@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import type {
-  AdminAiProvider,
   AdminBuildSettings,
   AdminInstanceSettings,
   AdminSettingState,
   AdminSigningPolicy,
 } from "@entities/session";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
+import type { AIProvider } from "@entities/ai-provider";
 import { AiProvidersPage } from "./AiProvidersPage";
 import { BuildCard } from "./BuildCard";
 import { InstanceCard } from "./InstanceCard";
@@ -62,7 +62,6 @@ const BUILD_ENV: AdminBuildSettings = {
 const POLICY_FORBIDDEN: AdminSigningPolicy = {
   server_keys: "forbidden",
   stored_keys: 0,
-  fields: { "signing.server_keys": free },
 };
 const POLICY_BLOCKED: AdminSigningPolicy = {
   ...POLICY_FORBIDDEN,
@@ -71,14 +70,9 @@ const POLICY_BLOCKED: AdminSigningPolicy = {
 const POLICY_ALLOWED: AdminSigningPolicy = {
   server_keys: "allowed",
   stored_keys: 3,
-  fields: { "signing.server_keys": free },
-};
-const POLICY_ENV: AdminSigningPolicy = {
-  ...POLICY_ALLOWED,
-  fields: { "signing.server_keys": env },
 };
 
-const PROVIDERS: AdminAiProvider[] = [
+const PROVIDERS: AIProvider[] = [
   {
     id: "aip_shared1",
     name: "Общий Claude",
@@ -187,9 +181,6 @@ export const getAdminInstallGallery = (): GalleryGroup[] => [
       )),
       entry("admin_signing_allowed", "Разрешено", () => (
         <SigningPolicyCard policy={POLICY_ALLOWED} onSave={noop} />
-      )),
-      entry("admin_signing_env", "Политика задана окружением", () => (
-        <SigningPolicyCard policy={POLICY_ENV} onSave={noop} />
       )),
     ],
   },

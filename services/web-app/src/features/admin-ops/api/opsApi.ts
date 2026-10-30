@@ -2,19 +2,17 @@ import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
 import {
   AdminJobPageSchema,
-  AdminJobSchema,
-  AdminOrgSchema,
+  AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
   AdminRunnerRotatedSchema,
   AdminRunnerSchema,
   AdminRunnerTokenCreatedSchema,
   AdminRunnerTokenSchema,
-  AdminServiceSchema,
-  AdminStorageSchema,
+  AdminServiceHealthSchema,
+  AdminStorageUsageSchema,
   type AdminJob,
   type AdminJobPage,
-  type AdminOrg,
   type AdminQueueSummary,
   type AdminQuotas,
   type AdminRunner,
@@ -27,6 +25,14 @@ import {
   type JobState,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";
+import {
+  jobFromWire,
+  jobPageFromWire,
+  quotasFromWire,
+  serviceFromWire,
+  storageFromWire,
+  summaryFromWire,
+} from "./wire";
 
 // Ошибки форм показывают сами экраны: тост не нужен.
 const quiet = { silentError: true } as const;
@@ -35,6 +41,7 @@ const enc = encodeURIComponent;
 export type QueueQuery = {
   status: JobState | "";
   kind: string;
+  /** Поиск по уже загруженным задачам: сервер его не знает. */
   q: string;
   limit: number;
 };
@@ -69,54 +76,75 @@ export const opsApi = {
     await adminClient.delete(`/runner-tokens/${enc(id)}`, quiet);
   },
 
-  queue: (query: QueueQuery): Promise<AdminJobPage> =>
-    adminClient
+  queue: async (query: QueueQuery): Promise<AdminJobPage> => {
+    const page = await adminClient
       .get("/queue", {
         ...quiet,
         params: {
-          ...(query.status ? { status: query.status } : {}),
+          ...(query.status ? { state: query.status } : {}),
           ...(query.kind ? { kind: query.kind } : {}),
-          ...(query.q ? { q: query.q } : {}),
           limit: query.limit,
         },
       })
-      .then(parseResp(AdminJobPageSchema)),
-  queueSummary: (): Promise<AdminQueueSummary> =>
-    adminClient
-      .get("/queue/summary", quiet)
-      .then(parseResp(AdminQueueSummarySchema)),
-  cancelJob: (id: string): Promise<AdminJob> =>
-    adminClient
-      .post(`/jobs/${enc(id)}/cancel`, {}, quiet)
-      .then(parseResp(AdminJobSchema)),
+      .then(parseResp(AdminJobPageSchema));
+    return jobPageFromWire(page, Date.now());
+  },
+  queueSummary: async (): Promise<AdminQueueSummary> =>
+    summaryFromWire(
+      await adminClient
+        .get("/queue/summary", quiet)
+        .then(parseResp(AdminQueueSummarySchema)),
+      Date.now(),
+    ),
+  cancelJob: async (id: string): Promise<AdminJob> =>
+    jobFromWire(
+      await adminClient
+        .post(`/queue/${enc(id)}/cancel`, {}, quiet)
+        .then(parseResp(WireJobSchema)),
+      Date.now(),
+    ),
 
-  quotas: (): Promise<AdminQuotas> =>
-    adminClient.get("/quotas", quiet).then(parseResp(AdminQuotasSchema)),
-  updateQuotas: (body: UpdateAdminQuotasRequest): Promise<AdminQuotas> =>
-    adminClient.put("/quotas", body, quiet).then(parseResp(AdminQuotasSchema)),
-  setOverride: (
-    slug: string,
-    body: UpdateAdminQuotasRequest,
-  ): Promise<AdminQuotas> =>
-    adminClient
-      .put(`/quotas/orgs/${enc(slug)}`, body, quiet)
-      .then(parseResp(AdminQuotasSchema)),
-  clearOverride: (slug: string): Promise<AdminQuotas> =>
-    adminClient
-      .delete(`/quotas/orgs/${enc(slug)}`, quiet)
-      .then(parseResp(AdminQuotasSchema)),
-  orgs: (): Promise<AdminOrg[]> =>
-    adminClient.get("/orgs", quiet).then(parseResp(z.array(AdminOrgSchema))),
+  quotas: async (): Promise<AdminQuotas> =>
+    quotasFromWire(
+      await adminClient
+        .get("/quotas", quiet)
+        .then(parseResp(AdminQuotasSchema)),
+    ),
+  /** Сервер заменяет квоты целиком, поэтому меняются только присланные поля. */
+  updateQuotas: async (
+    body: Partial<UpdateAdminQuotasRequest>,
+  ): Promise<AdminQuotas> => {
+    const current = await adminClient
+      .get("/quotas", quiet)
+      .then(parseResp(AdminQuotasSchema));
+    const saved = await adminClient
+      .put(
+        "/quotas",
+        {
+          user_concurrent: current.user_concurrent,
+          org_concurrent: current.org_concurrent,
+          max_duration_s: current.max_duration_s,
+          ...body,
+        },
+        quiet,
+      )
+      .then(parseResp(AdminQuotasSchema));
+    return quotasFromWire(saved);
+  },
 
-  services: (): Promise<AdminService[]> =>
-    adminClient
-      .get("/services", quiet)
-      .then(parseResp(z.array(AdminServiceSchema))),
-  checkService: (id: string): Promise<AdminService> =>
-    adminClient
-      .post(`/services/${enc(id)}/check`, {}, quiet)
-      .then(parseResp(AdminServiceSchema)),
+  services: async (): Promise<AdminService[]> =>
+    (
+      await adminClient
+        .get("/services", quiet)
+        .then(parseResp(z.array(AdminServiceHealthSchema)))
+    )
+      .map(serviceFromWire)
+      .filter((service): service is AdminService => service !== null),
 
-  storage: (): Promise<AdminStorage> =>
-    adminClient.get("/storage", quiet).then(parseResp(AdminStorageSchema)),
+  storage: async (): Promise<AdminStorage> =>
+    storageFromWire(
+      await adminClient
+        .get("/storage", quiet)
+        .then(parseResp(AdminStorageUsageSchema)),
+    ),
 };

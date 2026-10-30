@@ -73,6 +73,7 @@ const runner = (
 ): AdminRunner => ({
   id,
   name,
+  status: "offline",
   tags: ["compile", "office"],
   concurrency: 2,
   resource_class: "standard",
@@ -223,9 +224,9 @@ const SUMMARY: AdminQueueSummary = {
   oldest_queued_age_s: 215,
   wait_p50_s: 12,
   wait_p95_s: 80,
-  tags: [
-    { tag: "compile", queued: 2, running: 1, avg_wait_s: 18 },
-    { tag: "office", queued: 0, running: 1, avg_wait_s: null },
+  classes: [
+    { name: "interactive", queued: 2 },
+    { name: "checks", queued: 0 },
   ],
 };
 
@@ -237,7 +238,7 @@ const queueView = (extra: Partial<QueueViewProps> = {}) => (
     summary={SUMMARY}
     status="ready"
     jobs={JOBS}
-    total={JOBS.length}
+    hasMore={false}
     query={QUERY}
     now={NOW}
     onQueryChange={noop}
@@ -249,140 +250,62 @@ const queueView = (extra: Partial<QueueViewProps> = {}) => (
 );
 
 const QUOTAS: AdminQuotas = {
-  jobs_concurrent: 2,
-  jobs_max_duration_s: 600,
-  fields: {
-    jobs_concurrent: { source: "default", locked: false },
-    jobs_max_duration_s: { source: "default", locked: false },
-  },
-  overrides: [
-    {
-      org_slug: "msp-2025",
-      org_name: "МСПИН 2025",
-      jobs_concurrent: 4,
-      jobs_max_duration_s: null,
-    },
-    {
-      org_slug: "ai-lab",
-      org_name: "Лаборатория ИИ",
-      jobs_concurrent: null,
-      jobs_max_duration_s: 1800,
-    },
-  ],
+  user_concurrent: 2,
+  org_concurrent: 6,
+  max_duration_s: 600,
 };
 
 const quotasView = (
   quotas: AdminQuotas,
   extra: Partial<Parameters<typeof QuotasView>[0]> = {},
-) => (
-  <QuotasView
-    status="ready"
-    quotas={quotas}
-    canAddOverride
-    onSave={noop}
-    onAddOverride={noop}
-    onEditOverride={noop}
-    onClearOverride={noop}
-    {...extra}
-  />
-);
+) => <QuotasView status="ready" quotas={quotas} onSave={noop} {...extra} />;
 
 const svc = (
   id: string,
   kind: AdminService["kind"],
   status: AdminService["status"],
-  latency: number | null,
   detail: string | null,
-  replicas: AdminService["replicas"] = [],
+  counts: [number, number] | null = null,
 ): AdminService => ({
   id,
   kind,
   status,
-  latency_ms: latency,
   detail,
-  checked_at: ago(20),
-  replicas,
-});
-const rep = (
-  name: string,
-  status: AdminService["status"],
-  latency: number | null,
-  used: number | null,
-  total: number | null,
-) => ({
-  name,
-  status,
-  latency_ms: latency,
-  slots_used: used,
-  slots_total: total,
+  online: counts?.[0] ?? null,
+  total: counts?.[1] ?? null,
 });
 
 const HEALTHY: AdminService[] = [
-  svc("database", "database", "ok", 3, null),
-  svc("storage", "storage", "ok", 24, null),
-  svc("languagetool", "languagetool", "ok", 110, null, [
-    rep("lt-1", "ok", 105, 1, 4),
-    rep("lt-2", "ok", 118, 0, 4),
-  ]),
-  svc("onlyoffice", "onlyoffice", "ok", 64, null, [
-    rep("oo-1", "ok", 61, 5, 5),
-    rep("oo-2", "ok", 67, 2, 5),
-  ]),
-  svc("runners", "runners", "ok", null, null),
-  svc("smtp", "smtp", "ok", 180, null),
+  svc("database", "database", "ok", null),
+  svc("s3", "storage", "ok", null),
+  svc("languagetool", "languagetool", "ok", null),
+  svc("onlyoffice", "onlyoffice", "ok", null),
+  svc("runners", "runners", "ok", null, [4, 6]),
+  svc("smtp", "smtp", "ok", null),
 ];
 
 const BROKEN: AdminService[] = [
-  svc("database", "database", "ok", 4, null),
-  svc("storage", "storage", "down", null, "Хранилище не отвечает"),
-  svc(
-    "languagetool",
-    "languagetool",
-    "degraded",
-    920,
-    "Одна реплика не отвечает",
-    [rep("lt-1", "ok", 340, 3, 4), rep("lt-2", "down", null, null, null)],
-  ),
-  svc("onlyoffice", "onlyoffice", "unconfigured", null, null),
-  svc("runners", "runners", "down", null, "Ни один раннер не в сети"),
-  svc("smtp", "smtp", "degraded", 2400, "Сервер почты отвечает медленно"),
+  svc("database", "database", "ok", null),
+  svc("s3", "storage", "down", "timeout"),
+  svc("languagetool", "languagetool", "down", "no_healthy_replica"),
+  svc("onlyoffice", "onlyoffice", "unconfigured", null),
+  svc("runners", "runners", "down", "no_online_runner", [0, 3]),
+  svc("smtp", "smtp", "unconfigured", null),
 ];
 
 const STORAGE: AdminStorage = {
-  total_bytes: Math.round(5.2 * GIB),
+  blob_count: 1840,
+  blob_bytes: Math.round(2.1 * GIB),
+  projects: 38,
+  deleted_projects: 3,
   free_bytes: 86 * GIB,
-  volume_bytes: Math.round(3.1 * GIB),
-  object_bytes: Math.round(2.1 * GIB),
+  volume_total_bytes: 200 * GIB,
   computed_at: ago(40),
   owners: [
-    {
-      kind: "org",
-      id: "msp-2025",
-      name: "МСПИН 2025",
-      bytes: Math.round(3.6 * GIB),
-      projects: 31,
-    },
-    {
-      kind: "user",
-      id: "u1",
-      name: "Анна Петрова",
-      bytes: Math.round(0.8 * GIB),
-      projects: 2,
-    },
-    {
-      kind: "org",
-      id: "ai-lab",
-      name: "Лаборатория ИИ",
-      bytes: Math.round(0.5 * GIB),
-      projects: 4,
-    },
-    {
-      kind: "user",
-      id: "u2",
-      name: "Пётр Орлов",
-      bytes: Math.round(0.3 * GIB),
-      projects: 1,
-    },
+    { id: "msp-2025", name: "МСПИН 2025", projects: 31 },
+    { id: "u1", name: "Анна Петрова", projects: 2 },
+    { id: "ai-lab", name: "Лаборатория ИИ", projects: 4 },
+    { id: "u2", name: "Пётр Орлов", projects: 1 },
   ],
 };
 
@@ -504,21 +427,21 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
             oldest_queued_age_s: null,
             wait_p50_s: null,
             wait_p95_s: null,
-            tags: [],
+            classes: [],
           },
           jobs: [],
-          total: 0,
+          hasMore: false,
         }),
       ),
       entry("admin_queue_nomatch", "Фильтр ничего не нашёл", () =>
         queueView({
           jobs: [],
-          total: 0,
+          hasMore: false,
           query: { ...QUERY, status: "failed", q: "иванов" },
         }),
       ),
       entry("admin_queue_more", "Есть ещё страницы", () =>
-        queueView({ total: 140 }),
+        queueView({ hasMore: true }),
       ),
       entry("admin_queue_loading", "Загрузка", () =>
         queueView({
@@ -526,7 +449,7 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           summary: null,
           status: "loading",
           jobs: [],
-          total: 0,
+          hasMore: false,
         }),
       ),
       entry("admin_queue_error", "Не загрузилась", () =>
@@ -535,7 +458,7 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           summary: null,
           status: "error",
           jobs: [],
-          total: 0,
+          hasMore: false,
           onRetry: noop,
         }),
       ),
@@ -545,23 +468,16 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
     id: "admin-ops-quotas",
     title: "Админка: квоты",
     entries: [
-      entry("admin_quotas", "Значения и переопределения", () =>
-        quotasView(QUOTAS),
-      ),
-      entry("admin_quotas_locked", "Предел времени задан окружением", () =>
+      entry("admin_quotas", "Три предела", () => quotasView(QUOTAS)),
+      entry("admin_quotas_unlimited", "Без пределов", () =>
         quotasView({
-          ...QUOTAS,
-          fields: {
-            ...QUOTAS.fields,
-            jobs_max_duration_s: { source: "env", locked: true },
-          },
+          user_concurrent: null,
+          org_concurrent: null,
+          max_duration_s: null,
         }),
       ),
-      entry("admin_quotas_empty", "Переопределений нет", () =>
-        quotasView({ ...QUOTAS, overrides: [] }),
-      ),
       entry("admin_quotas_failed", "Отказ сохранения", () =>
-        quotasView(QUOTAS, { failure: { code: "setting_locked" } }),
+        quotasView(QUOTAS, { failure: { code: "input_invalid" } }),
       ),
       entry("admin_quotas_loading", "Загрузка", () =>
         quotasView(QUOTAS, { status: "loading", quotas: null }),
@@ -575,46 +491,29 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
     id: "admin-ops-services",
     title: "Админка: сервисы",
     entries: [
-      entry(
-        "admin_services",
-        "Всё работает",
-        () => (
-          <ServicesView
-            status="ready"
-            services={HEALTHY}
-            now={NOW}
-            onCheck={noop}
-          />
-        ),
-        { note: "У ONLYOFFICE одна реплика занята полностью." },
-      ),
+      entry("admin_services", "Всё работает", () => (
+        <ServicesView status="ready" services={HEALTHY} onRefresh={noop} />
+      )),
       entry("admin_services_broken", "Перебои и отказы", () => (
-        <ServicesView
-          status="ready"
-          services={BROKEN}
-          now={NOW}
-          onCheck={noop}
-        />
+        <ServicesView status="ready" services={BROKEN} onRefresh={noop} />
       )),
       entry("admin_services_checking", "Идёт проверка", () => (
         <ServicesView
           status="ready"
           services={HEALTHY}
-          now={NOW}
-          checkingId="storage"
-          onCheck={noop}
+          refreshing
+          onRefresh={noop}
         />
       )),
       entry("admin_services_loading", "Загрузка", () => (
-        <ServicesView status="loading" services={[]} now={NOW} onCheck={noop} />
+        <ServicesView status="loading" services={[]} onRefresh={noop} />
       )),
       entry("admin_services_error", "Не загрузились", () => (
         <ServicesView
           status="error"
           services={[]}
-          now={NOW}
           onRetry={noop}
-          onCheck={noop}
+          onRefresh={noop}
         />
       )),
     ],
@@ -645,9 +544,10 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           status="ready"
           storage={{
             ...STORAGE,
-            total_bytes: 0,
-            volume_bytes: 0,
-            object_bytes: 0,
+            blob_count: 0,
+            blob_bytes: 0,
+            projects: 0,
+            deleted_projects: 0,
             owners: [],
           }}
           now={NOW}

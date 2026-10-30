@@ -43,7 +43,7 @@ export const Queue = () => {
         summary={summary.data ?? null}
         status={statusOf(jobs)}
         jobs={jobs.data?.items ?? []}
-        total={jobs.data?.total ?? 0}
+        hasMore={jobs.data?.hasMore ?? false}
         query={query}
         now={now}
         onQueryChange={(patch) => {

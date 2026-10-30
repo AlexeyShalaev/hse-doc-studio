@@ -8,8 +8,6 @@
     "h": "h"
   },
   "failure": {
-    "job_finished": "The job has already finished: nothing to cancel.",
-    "runner_not_found": "The runner was not found: it may already be removed.",
     "not_found": "Not found or no access.",
     "forbidden": "You do not have enough rights for this action.",
     "setting_locked": "The value is set by the environment and cannot be changed here.",
@@ -137,7 +135,7 @@
     "search": "Search by person or project",
     "noProject": "No project",
     "cancel": "Cancel",
-    "count": "Showing {{shown}} of {{total}}",
+    "count": "Jobs shown: {{shown}}",
     "more": "Show more",
     "empty": {
       "title": "The queue is empty",
@@ -153,13 +151,6 @@
       "oldest": "Oldest in queue",
       "wait": "Wait: median and 95th",
       "waitHint": "over recent jobs"
-    },
-    "tags": {
-      "title": "By runner tag",
-      "tag": "Tag",
-      "queued": "Queued",
-      "running": "Running",
-      "avgWait": "Average wait"
     },
     "filters": {
       "status": "Status",
@@ -212,60 +203,43 @@
       "body": "The \"{{kind}}\" job of {{user}} will be stopped.",
       "running": "It is already running: the runner will interrupt it and the result will not be saved.",
       "confirm": "Cancel job"
+    },
+    "classes": {
+      "title": "Waiting by class",
+      "name": "Class",
+      "queued": "Queued"
     }
   },
   "quotas": {
     "title": "Quotas",
     "lead": "How many jobs a person can run at once and how long a job may take.",
     "loadFailed": "Could not load quotas.",
-    "lockedByEnv": "Set by the environment",
-    "sourceAdmin": "Changed in admin",
-    "sourceDefault": "Default value",
     "minutes": "{{value}} min",
     "save": "Save",
     "saved": "Saved",
-    "note": "Only these two limits apply for now. When a limit is used up, a new job waits in the queue instead of being rejected.",
+    "note": "Limits for individual organizations and people cannot be set from the interface yet.",
     "concurrent": {
       "label": "Concurrent jobs per person",
       "short": "Jobs",
-      "hint": "From 1 to 64.",
-      "invalid": "Enter a whole number from 1 to 64."
+      "invalid": "Enter a whole number from 1 to 1000."
     },
     "duration": {
       "label": "Job time limit, min",
       "short": "Time",
-      "hint": "From 0.5 to 1440 minutes. A longer job is stopped.",
+      "hint": "From 0.5 to 1440 minutes. Empty means no limit; a longer job is stopped.",
       "invalid": "Enter minutes from 0.5 to 1440."
     },
     "defaults": {
-      "title": "Installation defaults",
-      "lead": "Apply to everyone until an organization gets its own value."
+      "title": "Installation limits",
+      "lead": "They apply to everyone. When a limit is used up, a new job waits in the queue instead of being rejected."
     },
-    "overrides": {
-      "title": "Organization overrides",
-      "lead": "An organization can have its own limit: an empty field means \"as default\".",
-      "add": "Add",
-      "edit": "Edit",
-      "clear": "Reset",
-      "inherit": "default",
-      "empty": {
-        "title": "No overrides",
-        "body": "Every organization uses the installation values."
-      },
-      "form": {
-        "title": "Organization limit",
-        "lead": "Leave a field empty to use the installation value.",
-        "org": "Organization",
-        "orgPlaceholder": "Choose an organization",
-        "blankHint": "Empty means \"as default\".",
-        "empty": "Fill in at least one field or reset the override.",
-        "submit": "Save"
-      },
-      "clearDialog": {
-        "title": "Reset override",
-        "body": "Organization \"{{org}}\" returns to the installation values.",
-        "confirm": "Reset"
-      }
+    "userConcurrent": {
+      "label": "Concurrent jobs per person",
+      "hint": "From 1 to 1000. Empty means no limit."
+    },
+    "orgConcurrent": {
+      "label": "Concurrent jobs per organization",
+      "hint": "From 1 to 1000. Empty means no limit."
     }
   },
   "services": {
@@ -273,10 +247,7 @@
     "lead": "Everything Studio depends on. The state refreshes by itself and the button runs a check right away.",
     "loadFailed": "Could not load service health.",
     "check": "Check",
-    "checkedAgo": "Checked {{ago}} ago",
-    "latency": "Response {{ms}} ms",
     "unconfigured": "Not connected",
-    "slots": "{{used}} of {{total}} slots in use",
     "summary": {
       "ok": "All services are working.",
       "degraded": "Services with problems: {{count}}.",
@@ -295,7 +266,8 @@
       "onlyoffice": "ONLYOFFICE",
       "runners": "Runners",
       "smtp": "Mail"
-    }
+    },
+    "online": "{{online}} of {{total}} online"
   },
   "storage": {
     "title": "Storage",
@@ -304,23 +276,22 @@
     "unknown": "unknown",
     "low": "Free space is running low: {{free}}. Free some space or extend the disk, otherwise saving files will stop working.",
     "stats": {
-      "total": "Used in total",
-      "volume": "Project volumes",
-      "volumeHint": "working files",
+      "projects": "Projects",
+      "projectsHint_one": "{{count}} more deleted, waiting to be erased",
+      "projectsHint_other": "{{count}} more deleted, waiting to be erased",
       "objects": "Object storage",
-      "objectsHint": "builds and attachments",
+      "objectsHint_one": "{{count}} build or attachment file",
+      "objectsHint_other": "{{count}} build and attachment files",
+      "volume": "Projects volume",
+      "volumeHint": "total on disk",
       "free": "Free on disk",
       "freeHint": "on the projects volume"
     },
     "owners": {
-      "title": "Who takes the space",
-      "lead": "Organizations and people with personal projects, largest first.",
+      "title": "Who owns the projects",
+      "lead": "Organizations and people with personal projects, by project count.",
       "projects_one": "{{count}} project",
       "projects_other": "{{count}} projects",
-      "kind": {
-        "user": "Person",
-        "org": "Organization"
-      },
       "share": "Share of space: {{name}}"
     },
     "empty": {

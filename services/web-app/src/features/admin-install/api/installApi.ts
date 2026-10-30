@@ -1,7 +1,5 @@
-import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
 import {
-  AdminAiProviderSchema,
   AdminBuildSettingsSchema,
   AdminInstanceSettingsSchema,
   AdminSigningPolicySchema,
@@ -45,9 +43,4 @@ export const installApi = {
     adminClient
       .put("/settings/signing", { server_keys: serverKeys }, quiet)
       .then(parseResp(AdminSigningPolicySchema)),
-
-  sharedProviders: () =>
-    adminClient
-      .get("/ai-providers", quiet)
-      .then(parseResp(z.array(AdminAiProviderSchema))),
 };

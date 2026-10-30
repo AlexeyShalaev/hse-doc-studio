@@ -1,5 +1,4 @@
 import type {
-  AdminAiProvider,
   AdminBuildSettings,
   AdminInstanceSettings,
   AdminSettingState,
@@ -9,16 +8,30 @@ import type {
 // Настройки установки в демо-мире админки: название и адрес, сборка, политика ключей подписи
 // и общие ИИ-провайдеры. Формы совпадают с contracts/server/fixtures (AdminInstanceSettings...).
 
+/** Общий провайдер в форме ответа сервера: ключ только признаком key_set. */
+export type DemoSharedProvider = {
+  id: string;
+  name: string;
+  type: "claude" | "openai" | "openai_compat" | "ollama";
+  base_url: string;
+  models: string[];
+  key_set: boolean;
+  ssl_verify: boolean;
+  connect_timeout_s: number;
+  request_timeout_s: number;
+  created_at: string;
+};
+
 export type DemoAdminInstall = {
   instance: AdminInstanceSettings;
   build: AdminBuildSettings;
   signing: AdminSigningPolicy;
-  providers: AdminAiProvider[];
+  providers: DemoSharedProvider[];
 };
 
 /**
  * default: всё редактируется, хранение ключей разрешено и два ключа уже лежат на сервере;
- * env_locked: адрес, предел сборки и политика ключей заданы окружением;
+ * env_locked: адрес и предел сборки заданы окружением, ключи заблокированы запретом;
  * fresh: заводские значения, хранение ключей запрещено, общих провайдеров нет.
  */
 export type ServerDemoInstallSeed = "default" | "env_locked" | "fresh";
@@ -29,19 +42,18 @@ const state = (
 
 const NOW = "2026-10-29T10:00:00Z";
 
-const providers = (): AdminAiProvider[] => [
+const providers = (): DemoSharedProvider[] => [
   {
     id: "aip_shared1",
     name: "Общий Claude",
     type: "claude",
     base_url: "",
     models: ["claude-sonnet-4-5", "claude-haiku-4-5"],
-    has_api_key: true,
+    key_set: true,
     created_at: NOW,
     ssl_verify: true,
     connect_timeout_s: 10,
     request_timeout_s: 60,
-    shared: true,
   },
   {
     id: "aip_shared2",
@@ -49,12 +61,11 @@ const providers = (): AdminAiProvider[] => [
     type: "openai_compat",
     base_url: "http://llm.dept.internal:8000/v1",
     models: [],
-    has_api_key: false,
+    key_set: false,
     created_at: NOW,
     ssl_verify: false,
     connect_timeout_s: 10,
     request_timeout_s: 120,
-    shared: true,
   },
 ];
 
@@ -84,7 +95,6 @@ export const createDemoAdminInstall = (
       signing: {
         server_keys: "forbidden",
         stored_keys: 2,
-        fields: { "signing.server_keys": state("env") },
       },
       providers: providers().slice(0, 1),
     };
@@ -112,7 +122,6 @@ export const createDemoAdminInstall = (
       signing: {
         server_keys: "forbidden",
         stored_keys: 0,
-        fields: { "signing.server_keys": state() },
       },
       providers: [],
     };
@@ -139,7 +148,6 @@ export const createDemoAdminInstall = (
     signing: {
       server_keys: "allowed",
       stored_keys: 2,
-      fields: { "signing.server_keys": state("admin") },
     },
     providers: providers(),
   };

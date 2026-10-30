@@ -265,8 +265,6 @@ export type CreateApiTokenResponse = z.infer<
   typeof CreateApiTokenResponseSchema
 >;
 
-export type LinkIdentityResponse = z.infer<typeof LinkIdentityResponseSchema>;
-
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -598,10 +596,22 @@ export const UpdateAdminOidcProviderRequestSchema = z.strictObject({
   auto_provision: z.boolean().nullable(),
 });
 
-const JobStateSchema = z.enum(["queued", "running", "succeeded", "failed", "cancelled", "timed_out"]);
+const JobStateSchema = z.enum([
+  "queued",
+  "running",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "timed_out",
+]);
 export const AdminJobSchema = z.strictObject({
   id: z.string(),
-  kind: z.enum(["compile", "office.convert", "signature.verify_detached", "pack.submission"]),
+  kind: z.enum([
+    "compile",
+    "office.convert",
+    "signature.verify_detached",
+    "pack.submission",
+  ]),
   state: JobStateSchema,
   project_id: z.string(),
   user_id: z.string(),
@@ -652,18 +662,32 @@ export const AdminStorageUsageSchema = z.strictObject({
   projects: z.number().int(),
   deleted_projects: z.number().int(),
   top_owners: z.array(
-    z.strictObject({ owner_id: z.string(), owner_name: z.string(), projects: z.number().int() }),
+    z.strictObject({
+      owner_id: z.string(),
+      owner_name: z.string(),
+      projects: z.number().int(),
+    }),
   ),
   volume_total_bytes: z.number().int().nullable(),
   volume_free_bytes: z.number().int().nullable(),
   computed_at: iso.nullable(),
 });
 const ServerKeyPolicySchema = z.enum(["allowed", "forbidden"]);
-export const AdminSigningPolicySchema = z.strictObject({ server_keys: ServerKeyPolicySchema });
+export const AdminSigningPolicySchema = z.strictObject({
+  server_keys: ServerKeyPolicySchema,
+  stored_keys: z.number().int(),
+});
+export type AdminSigningPolicy = z.infer<typeof AdminSigningPolicySchema>;
+export type SigningServerKeys = z.infer<typeof ServerKeyPolicySchema>;
 export const UpdateAdminSigningPolicyRequestSchema = z.strictObject({
   server_keys: ServerKeyPolicySchema,
 });
-const AiProviderTypeSchema = z.enum(["claude", "openai", "openai_compat", "ollama"]);
+const AiProviderTypeSchema = z.enum([
+  "claude",
+  "openai",
+  "openai_compat",
+  "ollama",
+]);
 export const AdminAiProviderSchema = z.strictObject({
   id: z.string(),
   name: z.string(),

@@ -17,7 +17,6 @@ export const opsKeys = {
   queueAll: ["admin", "ops", "queue"] as const,
   summary: ["admin", "ops", "queue-summary"] as const,
   quotas: ["admin", "ops", "quotas"] as const,
-  orgs: ["admin", "ops", "orgs"] as const,
   services: ["admin", "ops", "services"] as const,
   storage: ["admin", "ops", "storage"] as const,
 };
@@ -62,13 +61,6 @@ export const useQuotas = () =>
     queryKey: opsKeys.quotas,
     queryFn: () => opsApi.quotas(),
     staleTime: 0,
-  });
-
-export const useOrgChoices = () =>
-  useQuery({
-    queryKey: opsKeys.orgs,
-    queryFn: () => opsApi.orgs(),
-    staleTime: 30000,
   });
 
 export const useServices = () =>
@@ -163,37 +155,6 @@ export const useUpdateQuotas = () => {
     mutationFn: (body: UpdateAdminQuotasRequest) => opsApi.updateQuotas(body),
     onSuccess: () => {
       invalidate(opsKeys.quotas);
-    },
-  });
-};
-
-export const useSetOverride = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (v: { slug: string; body: UpdateAdminQuotasRequest }) =>
-      opsApi.setOverride(v.slug, v.body),
-    onSuccess: () => {
-      invalidate(opsKeys.quotas);
-    },
-  });
-};
-
-export const useClearOverride = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (slug: string) => opsApi.clearOverride(slug),
-    onSuccess: () => {
-      invalidate(opsKeys.quotas);
-    },
-  });
-};
-
-export const useCheckService = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (id: string) => opsApi.checkService(id),
-    onSuccess: () => {
-      invalidate(opsKeys.services);
     },
   });
 };

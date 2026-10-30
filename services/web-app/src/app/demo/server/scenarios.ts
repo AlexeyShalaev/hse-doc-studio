@@ -179,6 +179,8 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           smtp_enabled: false,
           password_min_length: 10,
         },
+        // Политика ключей по умолчанию запрещает хранить их на сервере.
+        capabilities: { ...SERVER_CAPABILITIES, personal_signing_keys: false },
       }),
   },
   {

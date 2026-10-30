@@ -240,19 +240,6 @@ describe("настройки установки в админке", () => {
       expect(screen.getByText(/смогут хранить секретные ключи/)).toBeVisible();
     });
 
-    it("политика окружения только читается", async () => {
-      activateServerScenario("install_env_locked");
-      mount(<SigningPolicyPage />);
-      const toggle = await screen.findByTestId("signing-toggle");
-      expect(toggle).toBeDisabled();
-      expect(screen.getByTestId("locked-signing")).toBeVisible();
-      expect(screen.queryByTestId("signing-save")).toBeNull();
-      const res = await call("PUT", "/settings/signing", {
-        server_keys: "allowed",
-      });
-      expect(res.status).toBe(409);
-    });
-
     it("запрет не стирает ключи", async () => {
       await call("PUT", "/settings/signing", { server_keys: "forbidden" });
       const policy = (await call("GET", "/settings/signing")).data as {
@@ -293,7 +280,7 @@ describe("настройки установки в админке", () => {
       expect(created.status).toBe(201);
       const body = created.data as Record<string, unknown>;
       AdminAiProviderSchema.parse(body);
-      expect(body.has_api_key).toBe(true);
+      expect(body.key_set).toBe(true);
       expect(JSON.stringify(body)).not.toContain("sk-secret-123");
       expect(
         JSON.stringify((await call("GET", "/ai-providers")).data),

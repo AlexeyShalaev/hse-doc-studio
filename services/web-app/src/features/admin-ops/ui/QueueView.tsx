@@ -29,7 +29,8 @@ export type QueueViewProps = {
   summary: AdminQueueSummary | null;
   status: "loading" | "error" | "ready";
   jobs: readonly AdminJob[];
-  total: number;
+  /** Есть ещё задачи сверх показанных. */
+  hasMore: boolean;
   query: QueueQuery;
   now: number;
   /** Количество запросов меняется фильтром, пока старая страница ещё на экране. */
@@ -61,7 +62,7 @@ export const QueueView = ({
   summary,
   status,
   jobs,
-  total,
+  hasMore,
   query,
   now,
   onQueryChange,
@@ -182,22 +183,29 @@ export const QueueView = ({
     [t],
   );
 
+  const needle = query.q.trim().toLowerCase();
   const rows = useMemo<Row[]>(
     () =>
-      jobs.map((job) => ({
-        job,
-        wait: dur(job.wait_s),
-        run: dur(runSeconds(job, now)),
-        stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
-        cancel: () => {
-          onCancel(job);
-        },
-      })),
-    [jobs, now, dur, onCancel],
+      jobs
+        .filter(
+          (job) =>
+            needle === "" ||
+            job.user_name.toLowerCase().includes(needle) ||
+            (job.project_name ?? "").toLowerCase().includes(needle),
+        )
+        .map((job) => ({
+          job,
+          wait: dur(job.wait_s),
+          run: dur(runSeconds(job, now)),
+          stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
+          cancel: () => {
+            onCancel(job);
+          },
+        })),
+    [jobs, needle, now, dur, onCancel],
   );
 
   const filtered = query.status !== "" || query.kind !== "" || query.q !== "";
-  const limitReached = jobs.length < total;
 
   return (
     <div className="flex flex-col" style={{ gap: 16 }} data-testid="queue-view">
@@ -236,8 +244,8 @@ export const QueueView = ({
               hint={t("queue.stats.waitHint")}
             />
           </StatRow>
-          {summary.tags.length > 0 && (
-            <Card title={t("queue.tags.title")} testId="queue-tags">
+          {summary.classes.length > 0 && (
+            <Card title={t("queue.classes.title")} testId="queue-classes">
               <table
                 style={{
                   width: "100%",
@@ -251,32 +259,28 @@ export const QueueView = ({
                       scope="col"
                       style={{ padding: "4px 0", fontWeight: 500 }}
                     >
-                      {t("queue.tags.tag")}
+                      {t("queue.classes.name")}
                     </th>
                     <th scope="col" style={{ fontWeight: 500 }}>
-                      {t("queue.tags.queued")}
-                    </th>
-                    <th scope="col" style={{ fontWeight: 500 }}>
-                      {t("queue.tags.running")}
-                    </th>
-                    <th scope="col" style={{ fontWeight: 500 }}>
-                      {t("queue.tags.avgWait")}
+                      {t("queue.classes.queued")}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.tags.map((row) => (
+                  {summary.classes.map((row) => (
                     <tr
-                      key={row.tag}
-                      data-testid={`queue-tag-${row.tag}`}
+                      key={row.name}
+                      data-testid={`queue-class-${row.name}`}
                       style={{ borderTop: "1px solid var(--border)" }}
                     >
                       <td style={{ padding: "6px 0" }}>
-                        <Badge variant="subtle">{row.tag}</Badge>
+                        <Badge variant="subtle">
+                          {t(`queue.priority.${row.name}`, {
+                            defaultValue: row.name,
+                          })}
+                        </Badge>
                       </td>
                       <td>{row.queued}</td>
-                      <td>{row.running}</td>
-                      <td>{dur(row.avg_wait_s)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -345,9 +349,9 @@ export const QueueView = ({
           style={{ gap: 12, fontSize: 12, color: "var(--fg-2)" }}
         >
           <span data-testid="queue-count">
-            {t("queue.count", { shown: jobs.length, total })}
+            {t("queue.count", { shown: jobs.length })}
           </span>
-          {limitReached && (
+          {hasMore && (
             <Button
               size="sm"
               variant="ghost"

@@ -1,17 +1,11 @@
 import { useState } from "react";
-import { Lock, Pencil, Plus, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, Input, Spinner } from "@shared/ui";
-import type {
-  AdminQuotaOverride,
-  AdminQuotas,
-  UpdateAdminQuotasRequest,
-} from "@entities/session";
+import { Button, Input, Spinner } from "@shared/ui";
+import type { AdminQuotas, UpdateAdminQuotasRequest } from "@entities/session";
 import type { Failure } from "../lib/failure";
 import { fromMinutes, toMinutes } from "../lib/minutes";
 import {
   Card,
-  EmptyBlock,
   FailureNotice,
   LoadFailed,
   LoadingRow,
@@ -24,36 +18,35 @@ export type QuotasViewProps = {
   saving?: boolean;
   saved?: boolean;
   failure?: Failure | null;
-  /** Организации, для которых ещё можно завести переопределение. */
-  canAddOverride: boolean;
   onRetry?: () => void;
   onSave: (body: UpdateAdminQuotasRequest) => void;
-  onAddOverride: () => void;
-  onEditOverride: (override: AdminQuotaOverride) => void;
-  onClearOverride: (override: AdminQuotaOverride) => void;
 };
 
-const SourceChip = ({
-  locked,
-  source,
-}: {
-  locked: boolean;
-  source: string;
-}) => {
-  const { t } = useTranslation("adminOps");
-  return locked ? (
-    <Badge variant="subtle" style={{ gap: 4 }}>
-      <Lock size={11} aria-hidden="true" />
-      {t("quotas.lockedByEnv")}
-    </Badge>
-  ) : source === "admin" ? (
-    <Badge variant="info">{t("quotas.sourceAdmin")}</Badge>
-  ) : (
-    <Badge variant="subtle">{t("quotas.sourceDefault")}</Badge>
-  );
+const MAX_CONCURRENT = 1000;
+const MIN_DURATION_S = 10;
+const MAX_DURATION_S = 86400;
+
+/** Пустое поле значит «без предела»; число проверяется границами сервера. */
+const parseCount = (value: string): number | null | "bad" => {
+  if (value.trim() === "") return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= MAX_CONCURRENT ? n : "bad";
 };
 
-const DefaultsForm = ({
+const parseMinutes = (value: string): number | null | "bad" => {
+  if (value.trim() === "") return null;
+  const seconds = fromMinutes(value);
+  return seconds !== null &&
+    seconds >= MIN_DURATION_S &&
+    seconds <= MAX_DURATION_S
+    ? seconds
+    : "bad";
+};
+
+const text = (value: number | null): string =>
+  value === null ? "" : String(value);
+
+const LimitsForm = ({
   quotas,
   saving,
   saved,
@@ -67,25 +60,22 @@ const DefaultsForm = ({
   onSave: (body: UpdateAdminQuotasRequest) => void;
 }) => {
   const { t } = useTranslation("adminOps");
-  const [concurrent, setConcurrent] = useState(String(quotas.jobs_concurrent));
-  const [minutes, setMinutes] = useState(toMinutes(quotas.jobs_max_duration_s));
+  const [user, setUser] = useState(text(quotas.user_concurrent));
+  const [org, setOrg] = useState(text(quotas.org_concurrent));
+  const [minutes, setMinutes] = useState(
+    quotas.max_duration_s === null ? "" : toMinutes(quotas.max_duration_s),
+  );
   const [tried, setTried] = useState(false);
 
-  const cLocked = quotas.fields.jobs_concurrent?.locked === true;
-  const dLocked = quotas.fields.jobs_max_duration_s?.locked === true;
-
-  const c = Number(concurrent);
-  const cValid = Number.isInteger(c) && c >= 1 && c <= 64;
-  const seconds = fromMinutes(minutes);
-  const dValid = seconds !== null && seconds >= 30 && seconds <= 86400;
-
-  const cChanged = cValid && c !== quotas.jobs_concurrent;
-  const dChanged = dValid && seconds !== quotas.jobs_max_duration_s;
-  const changed = (cChanged && !cLocked) || (dChanged && !dLocked);
-  // Пока в полях есть правка (даже неверная), кнопка живая: ошибка показывается по нажатию.
+  const u = parseCount(user);
+  const o = parseCount(org);
+  const d = parseMinutes(minutes);
+  const valid = u !== "bad" && o !== "bad" && d !== "bad";
   const dirty =
-    (!cLocked && concurrent !== String(quotas.jobs_concurrent)) ||
-    (!dLocked && minutes !== toMinutes(quotas.jobs_max_duration_s));
+    user !== text(quotas.user_concurrent) ||
+    org !== text(quotas.org_concurrent) ||
+    minutes !==
+      (quotas.max_duration_s === null ? "" : toMinutes(quotas.max_duration_s));
 
   return (
     <form
@@ -96,11 +86,8 @@ const DefaultsForm = ({
       onSubmit={(event) => {
         event.preventDefault();
         setTried(true);
-        if (!cValid || !dValid || !changed) return;
-        onSave({
-          jobs_concurrent: cChanged && !cLocked ? c : null,
-          jobs_max_duration_s: dChanged && !dLocked ? seconds : null,
-        });
+        if (!valid || !dirty) return;
+        onSave({ user_concurrent: u, org_concurrent: o, max_duration_s: d });
       }}
     >
       <div
@@ -110,51 +97,52 @@ const DefaultsForm = ({
           gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
         }}
       >
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <Input
-            label={t("quotas.concurrent.label")}
-            type="number"
-            min={1}
-            max={64}
-            value={concurrent}
-            disabled={cLocked}
-            hint={t("quotas.concurrent.hint")}
-            {...(tried && !cValid
-              ? { error: t("quotas.concurrent.invalid") }
-              : {})}
-            onChange={(event) => {
-              setConcurrent(event.target.value);
-            }}
-            data-testid="quota-concurrent"
-          />
-          <SourceChip
-            locked={cLocked}
-            source={quotas.fields.jobs_concurrent?.source ?? "default"}
-          />
-        </div>
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <Input
-            label={t("quotas.duration.label")}
-            type="number"
-            min={0.5}
-            max={1440}
-            step="any"
-            value={minutes}
-            disabled={dLocked}
-            hint={t("quotas.duration.hint")}
-            {...(tried && !dValid
-              ? { error: t("quotas.duration.invalid") }
-              : {})}
-            onChange={(event) => {
-              setMinutes(event.target.value);
-            }}
-            data-testid="quota-duration"
-          />
-          <SourceChip
-            locked={dLocked}
-            source={quotas.fields.jobs_max_duration_s?.source ?? "default"}
-          />
-        </div>
+        <Input
+          label={t("quotas.userConcurrent.label")}
+          type="number"
+          min={1}
+          max={MAX_CONCURRENT}
+          value={user}
+          hint={t("quotas.userConcurrent.hint")}
+          {...(tried && u === "bad"
+            ? { error: t("quotas.concurrent.invalid") }
+            : {})}
+          onChange={(event) => {
+            setUser(event.target.value);
+          }}
+          data-testid="quota-concurrent"
+        />
+        <Input
+          label={t("quotas.orgConcurrent.label")}
+          type="number"
+          min={1}
+          max={MAX_CONCURRENT}
+          value={org}
+          hint={t("quotas.orgConcurrent.hint")}
+          {...(tried && o === "bad"
+            ? { error: t("quotas.concurrent.invalid") }
+            : {})}
+          onChange={(event) => {
+            setOrg(event.target.value);
+          }}
+          data-testid="quota-org-concurrent"
+        />
+        <Input
+          label={t("quotas.duration.label")}
+          type="number"
+          min={0.5}
+          max={1440}
+          step="any"
+          value={minutes}
+          hint={t("quotas.duration.hint")}
+          {...(tried && d === "bad"
+            ? { error: t("quotas.duration.invalid") }
+            : {})}
+          onChange={(event) => {
+            setMinutes(event.target.value);
+          }}
+          data-testid="quota-duration"
+        />
       </div>
       {failure && <FailureNotice failure={failure} />}
       <div className="flex items-center" style={{ gap: 10 }}>
@@ -166,7 +154,7 @@ const DefaultsForm = ({
           {saving && <Spinner size="sm" />}
           {t("quotas.save")}
         </Button>
-        {saved && !changed && (
+        {saved && !dirty && (
           <span
             role="status"
             style={{ fontSize: 12, color: "var(--c-ok)" }}
@@ -180,28 +168,17 @@ const DefaultsForm = ({
   );
 };
 
-/** Квоты на задачи: значения установки и переопределения организаций. */
+/** Квоты на задачи: пределы для человека, организации и времени задачи. */
 export const QuotasView = ({
   status,
   quotas,
   saving = false,
   saved = false,
   failure = null,
-  canAddOverride,
   onRetry,
   onSave,
-  onAddOverride,
-  onEditOverride,
-  onClearOverride,
 }: QuotasViewProps) => {
   const { t } = useTranslation("adminOps");
-  const val = (v: number | null, kind: "n" | "min"): string =>
-    v === null
-      ? t("quotas.overrides.inherit")
-      : kind === "n"
-        ? String(v)
-        : t("quotas.minutes", { value: toMinutes(v) });
-
   return (
     <div
       className="flex flex-col"
@@ -219,115 +196,14 @@ export const QuotasView = ({
             title={t("quotas.defaults.title")}
             lead={t("quotas.defaults.lead")}
           >
-            <DefaultsForm
-              key={`${String(quotas.jobs_concurrent)}:${String(quotas.jobs_max_duration_s)}`}
+            <LimitsForm
+              key={`${text(quotas.user_concurrent)}:${text(quotas.org_concurrent)}:${text(quotas.max_duration_s)}`}
               quotas={quotas}
               saving={saving}
               saved={saved}
               failure={failure}
               onSave={onSave}
             />
-          </Card>
-          <Card
-            title={t("quotas.overrides.title")}
-            lead={t("quotas.overrides.lead")}
-            testId="quota-overrides"
-            action={
-              <Button
-                size="sm"
-                type="button"
-                disabled={!canAddOverride}
-                style={{ gap: 6 }}
-                onClick={onAddOverride}
-                data-testid="override-add"
-              >
-                <Plus size={14} aria-hidden="true" />
-                {t("quotas.overrides.add")}
-              </Button>
-            }
-          >
-            {quotas.overrides.length === 0 ? (
-              <EmptyBlock
-                testId="overrides-empty"
-                title={t("quotas.overrides.empty.title")}
-                body={t("quotas.overrides.empty.body")}
-              />
-            ) : (
-              <ul
-                style={{
-                  listStyle: "none",
-                  margin: 0,
-                  padding: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                {quotas.overrides.map((o) => (
-                  <li
-                    key={o.org_slug}
-                    className="flex items-center"
-                    style={{
-                      gap: 12,
-                      padding: "8px 10px",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--r-2)",
-                      flexWrap: "wrap",
-                    }}
-                    data-testid={`override-${o.org_slug}`}
-                  >
-                    <span
-                      className="flex flex-col"
-                      style={{ flex: 1, minWidth: 140 }}
-                    >
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>
-                        {o.org_name}
-                      </span>
-                      <span
-                        className="mono"
-                        style={{ fontSize: 11, color: "var(--fg-2)" }}
-                      >
-                        {o.org_slug}
-                      </span>
-                    </span>
-                    <span style={{ fontSize: 12.5 }}>
-                      {t("quotas.concurrent.short")}:{" "}
-                      <strong>{val(o.jobs_concurrent, "n")}</strong>
-                    </span>
-                    <span style={{ fontSize: 12.5 }}>
-                      {t("quotas.duration.short")}:{" "}
-                      <strong>{val(o.jobs_max_duration_s, "min")}</strong>
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      type="button"
-                      style={{ gap: 5 }}
-                      data-testid={`override-edit-${o.org_slug}`}
-                      onClick={() => {
-                        onEditOverride(o);
-                      }}
-                    >
-                      <Pencil size={13} aria-hidden="true" />
-                      {t("quotas.overrides.edit")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      type="button"
-                      style={{ gap: 5 }}
-                      data-testid={`override-clear-${o.org_slug}`}
-                      onClick={() => {
-                        onClearOverride(o);
-                      }}
-                    >
-                      <Undo2 size={13} aria-hidden="true" />
-                      {t("quotas.overrides.clear")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </Card>
           <p
             style={{

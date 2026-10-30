@@ -153,7 +153,11 @@ export const createOrgRoutes = (
       handler: withOrg((org) => {
         if (!viewer()?.is_instance_admin) return forbidden();
         if (org.project_count > 0) {
-          return demoError(409, "org_has_projects", "Organization has projects");
+          return demoError(
+            409,
+            "org_has_projects",
+            "Organization has projects",
+          );
         }
         state().orgs = state().orgs.filter((o) => o !== org);
         return demoNoContent();

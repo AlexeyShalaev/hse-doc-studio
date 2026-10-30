@@ -12,20 +12,16 @@ import { useTranslation } from "react-i18next";
 import { Button, Spinner, StatusDot } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AdminService, ServiceStatus } from "@entities/session";
-import { formatDuration } from "../lib/format";
-import { secondsSince } from "../lib/runnerStatus";
-import { useDurationUnits } from "../lib/useDurationUnits";
 import { CARD } from "../lib/styles";
-import { LoadFailed, LoadingRow, Meter, PageHeader } from "./parts";
+import { LoadFailed, LoadingRow, PageHeader } from "./parts";
 
 export type ServicesViewProps = {
   status: "loading" | "error" | "ready";
   services: readonly AdminService[];
-  now: number;
-  /** Сервис, который проверяется прямо сейчас. */
-  checkingId?: string | null;
+  /** Идёт повторная проверка всех сервисов. */
+  refreshing?: boolean;
   onRetry?: () => void;
-  onCheck: (service: AdminService) => void;
+  onRefresh: () => void;
 };
 
 const ICON: Record<AdminService["kind"], LucideIcon> = {
@@ -49,13 +45,11 @@ const DOT: Record<ServiceStatus, "online" | "stale" | "degraded" | "offline"> =
 export const ServicesView = ({
   status,
   services,
-  now,
-  checkingId = null,
+  refreshing = false,
   onRetry,
-  onCheck,
+  onRefresh,
 }: ServicesViewProps) => {
   const { t } = useTranslation("adminOps");
-  const units = useDurationUnits();
 
   const down = services.filter((s) => s.status === "down").length;
   const degraded = services.filter((s) => s.status === "degraded").length;
@@ -66,7 +60,28 @@ export const ServicesView = ({
       style={{ gap: 16 }}
       data-testid="services-view"
     >
-      <PageHeader title={t("services.title")} lead={t("services.lead")} />
+      <PageHeader
+        title={t("services.title")}
+        lead={t("services.lead")}
+        action={
+          <Button
+            size="sm"
+            variant="ghost"
+            type="button"
+            disabled={refreshing}
+            style={{ gap: 5 }}
+            data-testid="services-refresh"
+            onClick={onRefresh}
+          >
+            {refreshing ? (
+              <Spinner size="sm" />
+            ) : (
+              <RefreshCw size={13} aria-hidden="true" />
+            )}
+            {t("services.check")}
+          </Button>
+        }
+      />
       {status === "loading" && <LoadingRow testId="services-loading" />}
       {status === "error" && (
         <LoadFailed text={t("services.loadFailed")} onRetry={onRetry} />
@@ -103,8 +118,6 @@ export const ServicesView = ({
         >
           {services.map((service) => {
             const Icon = ICON[service.kind];
-            const age = secondsSince(service.checked_at, now);
-            const checking = checkingId === service.id;
             return (
               <li
                 key={service.id}
@@ -130,8 +143,11 @@ export const ServicesView = ({
                 <div style={{ fontSize: 12, color: "var(--fg-2)" }}>
                   {service.status === "unconfigured"
                     ? t("services.unconfigured")
-                    : service.latency_ms !== null
-                      ? t("services.latency", { ms: service.latency_ms })
+                    : service.total !== null && service.online !== null
+                      ? t("services.online", {
+                          online: service.online,
+                          total: service.total,
+                        })
                       : "-"}
                 </div>
                 {service.detail && (
@@ -148,100 +164,6 @@ export const ServicesView = ({
                     {service.detail}
                   </div>
                 )}
-                {service.replicas.length > 0 && (
-                  <ul
-                    style={{
-                      listStyle: "none",
-                      margin: 0,
-                      padding: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                    }}
-                  >
-                    {service.replicas.map((r) => (
-                      <li
-                        key={r.name}
-                        className="flex items-center"
-                        style={{ gap: 8, fontSize: 12 }}
-                        data-testid={`replica-${r.name}`}
-                        data-status={r.status}
-                      >
-                        <StatusDot
-                          status={DOT[r.status]}
-                          hideLabel
-                          label={t(`services.status.${r.status}`)}
-                        />
-                        <span className="mono" style={{ width: 54 }}>
-                          {r.name}
-                        </span>
-                        {r.slots_total !== null && r.slots_used !== null ? (
-                          <>
-                            <span style={{ flex: 1 }}>
-                              <Meter
-                                value={Math.round(
-                                  (r.slots_used / Math.max(1, r.slots_total)) *
-                                    100,
-                                )}
-                                label={t("services.slots", {
-                                  used: r.slots_used,
-                                  total: r.slots_total,
-                                })}
-                                tone={
-                                  r.slots_used >= r.slots_total
-                                    ? "warn"
-                                    : "accent"
-                                }
-                              />
-                            </span>
-                            <span
-                              style={{
-                                color: "var(--fg-2)",
-                                fontVariantNumeric: "tabular-nums",
-                              }}
-                            >
-                              {r.slots_used}/{r.slots_total}
-                            </span>
-                          </>
-                        ) : (
-                          <span style={{ flex: 1, color: "var(--fg-3)" }}>
-                            {t(`services.status.${r.status}`)}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div
-                  className="flex items-center"
-                  style={{ gap: 8, marginTop: "auto" }}
-                >
-                  <span style={{ flex: 1, fontSize: 11, color: "var(--fg-3)" }}>
-                    {age === null
-                      ? ""
-                      : t("services.checkedAgo", {
-                          ago: formatDuration(age, units),
-                        })}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    type="button"
-                    disabled={checking}
-                    style={{ gap: 5 }}
-                    data-testid={`service-check-${service.id}`}
-                    onClick={() => {
-                      onCheck(service);
-                    }}
-                  >
-                    {checking ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <RefreshCw size={13} aria-hidden="true" />
-                    )}
-                    {t("services.check")}
-                  </Button>
-                </div>
               </li>
             );
           })}

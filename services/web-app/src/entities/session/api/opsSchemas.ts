@@ -1,13 +1,22 @@
 import { z } from "zod";
 
-// Операционные экраны админки: раннеры, очередь, квоты, сервисы, место. Формы совпадают с
-// contracts/server/fixtures и pydantic-моделями api/schemas/runner_admin.py и admin_ops.py.
+// Операционные экраны админки. Раннеры и токены разбираются схемами ниже (api/schemas/runner_admin.py).
+// Очередь, квоты, сервисы и место приходят в формах api/schemas/admin_ops.py (схемы в schemas.ts),
+// а экранам отдаются в видах ниже: имена вместо идентификаторов там, где сервер их не знает.
 
 const iso = z.string().min(1);
 
+export const RunnerStatusSchema = z.enum([
+  "online",
+  "stale",
+  "offline",
+  "paused",
+  "revoked",
+]);
 export const AdminRunnerSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
+  status: RunnerStatusSchema,
   tags: z.array(z.string()),
   concurrency: z.number().int(),
   resource_class: z.string(),
@@ -49,137 +58,66 @@ export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),
 });
 
-export const JobStateSchema = z.enum([
-  "queued",
-  "running",
-  "succeeded",
-  "failed",
-  "cancelled",
-  "timed_out",
-]);
-export const AdminJobSchema = z.strictObject({
-  id: z.string(),
-  kind: z.string(),
-  status: JobStateSchema,
-  priority: z.enum(["interactive", "checks", "batch"]),
-  project_id: z.string().nullable(),
-  project_name: z.string().nullable(),
-  user_id: z.string(),
-  user_name: z.string(),
-  tags: z.array(z.string()),
-  runner_id: z.string().nullable(),
-  runner_name: z.string().nullable(),
-  attempt: z.number().int(),
-  max_attempts: z.number().int(),
-  created_at: iso,
-  started_at: iso.nullable(),
-  finished_at: iso.nullable(),
-  wait_s: z.number().int(),
-  error: z.string().nullable(),
-});
-export const AdminJobPageSchema = z.strictObject({
-  items: z.array(AdminJobSchema),
-  total: z.number().int(),
-});
-export const AdminQueueSummarySchema = z.strictObject({
-  queued: z.number().int(),
-  running: z.number().int(),
-  oldest_queued_age_s: z.number().int().nullable(),
-  wait_p50_s: z.number().int().nullable(),
-  wait_p95_s: z.number().int().nullable(),
-  tags: z.array(
-    z.strictObject({
-      tag: z.string(),
-      queued: z.number().int(),
-      running: z.number().int(),
-      avg_wait_s: z.number().int().nullable(),
-    }),
-  ),
-});
-
-const QuotaSettingStateSchema = z.strictObject({
-  source: z.enum(["env", "admin", "default"]),
-  locked: z.boolean(),
-});
-export const AdminQuotaOverrideSchema = z.strictObject({
-  org_slug: z.string(),
-  org_name: z.string(),
-  jobs_concurrent: z.number().int().nullable(),
-  jobs_max_duration_s: z.number().int().nullable(),
-});
-export const AdminQuotasSchema = z.strictObject({
-  jobs_concurrent: z.number().int(),
-  jobs_max_duration_s: z.number().int(),
-  fields: z.record(z.string(), QuotaSettingStateSchema),
-  overrides: z.array(AdminQuotaOverrideSchema),
-});
-export const UpdateAdminQuotasRequestSchema = z.strictObject({
-  jobs_concurrent: z.number().int().min(1).max(64).nullable().optional(),
-  jobs_max_duration_s: z
-    .number()
-    .int()
-    .min(30)
-    .max(86400)
-    .nullable()
-    .optional(),
-});
-export const SetAdminQuotaOverrideRequestSchema = z.strictObject({
-  jobs_concurrent: z.number().int().min(1).max(64).nullable().optional(),
-  jobs_max_duration_s: z
-    .number()
-    .int()
-    .min(30)
-    .max(86400)
-    .nullable()
-    .optional(),
-});
-
-export const ServiceStatusSchema = z.enum([
-  "ok",
-  "degraded",
-  "down",
-  "unconfigured",
-]);
-export const AdminServiceSchema = z.strictObject({
-  id: z.string(),
-  kind: z.enum([
-    "database",
-    "storage",
-    "languagetool",
-    "onlyoffice",
-    "runners",
-    "smtp",
-  ]),
-  status: ServiceStatusSchema,
-  latency_ms: z.number().int().nullable(),
-  detail: z.string().nullable(),
-  checked_at: iso,
-  replicas: z.array(
-    z.strictObject({
-      name: z.string(),
-      status: ServiceStatusSchema,
-      latency_ms: z.number().int().nullable(),
-      slots_used: z.number().int().nullable(),
-      slots_total: z.number().int().nullable(),
-    }),
-  ),
-});
-export const AdminStorageSchema = z.strictObject({
-  total_bytes: z.number().int(),
-  free_bytes: z.number().int().nullable(),
-  volume_bytes: z.number().int(),
-  object_bytes: z.number().int(),
-  computed_at: iso,
-  owners: z.array(
-    z.strictObject({
-      kind: z.enum(["user", "org"]),
-      id: z.string(),
-      name: z.string(),
-      bytes: z.number().int(),
-      projects: z.number().int(),
-    }),
-  ),
-});
+export type JobState =
+  "queued" | "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
+export type AdminJob = {
+  id: string;
+  kind: string;
+  status: JobState;
+  priority: string;
+  project_id: string | null;
+  project_name: string | null;
+  user_id: string;
+  user_name: string;
+  tags: string[];
+  runner_id: string | null;
+  runner_name: string | null;
+  attempt: number;
+  max_attempts: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  wait_s: number;
+  error: string | null;
+};
+export type AdminJobPage = { items: AdminJob[]; hasMore: boolean };
+export type AdminQueueSummary = {
+  queued: number;
+  running: number;
+  oldest_queued_age_s: number | null;
+  wait_p50_s: number | null;
+  wait_p95_s: number | null;
+  /** Ожидающие задачи по классам приоритета. */
+  classes: { name: string; queued: number }[];
+};
+export type AdminQuotas = {
+  user_concurrent: number | null;
+  org_concurrent: number | null;
+  max_duration_s: number | null;
+};
+export type UpdateAdminQuotasRequest = AdminQuotas;
+export type ServiceStatus = "ok" | "degraded" | "down" | "unconfigured";
+export type AdminService = {
+  id: string;
+  kind:
+    "database" | "storage" | "languagetool" | "onlyoffice" | "runners" | "smtp";
+  status: ServiceStatus;
+  /** Короткая причина сбоя от сервера. */
+  detail: string | null;
+  /** Для раннеров: сколько в сети из скольких. */
+  online: number | null;
+  total: number | null;
+};
+export type AdminStorage = {
+  blob_count: number;
+  blob_bytes: number;
+  projects: number;
+  deleted_projects: number;
+  free_bytes: number | null;
+  volume_total_bytes: number | null;
+  computed_at: string | null;
+  owners: { id: string; name: string; projects: number }[];
+};
 
 export type AdminRunner = z.infer<typeof AdminRunnerSchema>;
 export type AdminRunnerToken = z.infer<typeof AdminRunnerTokenSchema>;
@@ -190,15 +128,3 @@ export type AdminRunnerTokenCreated = z.infer<
   typeof AdminRunnerTokenCreatedSchema
 >;
 export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
-export type JobState = z.infer<typeof JobStateSchema>;
-export type AdminJob = z.infer<typeof AdminJobSchema>;
-export type AdminJobPage = z.infer<typeof AdminJobPageSchema>;
-export type AdminQueueSummary = z.infer<typeof AdminQueueSummarySchema>;
-export type AdminQuotaOverride = z.infer<typeof AdminQuotaOverrideSchema>;
-export type AdminQuotas = z.infer<typeof AdminQuotasSchema>;
-export type UpdateAdminQuotasRequest = z.infer<
-  typeof UpdateAdminQuotasRequestSchema
->;
-export type ServiceStatus = z.infer<typeof ServiceStatusSchema>;
-export type AdminService = z.infer<typeof AdminServiceSchema>;
-export type AdminStorage = z.infer<typeof AdminStorageSchema>;

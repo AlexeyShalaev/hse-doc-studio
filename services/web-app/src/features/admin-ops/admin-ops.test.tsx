@@ -20,8 +20,8 @@ import {
   AdminRunnerSchema,
   AdminRunnerTokenCreatedSchema,
   AdminRunnerTokenSchema,
-  AdminServiceSchema,
-  AdminStorageSchema,
+  AdminServiceHealthSchema,
+  AdminStorageUsageSchema,
   type AdminRunner,
   type AdminRunnerToken,
   type AdminStorage,
@@ -80,9 +80,6 @@ const call = async (
     forward: () => Promise.reject(new Error("forward")),
   });
 };
-const codeOf = (res: { data?: unknown }) =>
-  (res.data as { code?: string }).code;
-
 const NOW = Date.parse("2026-10-27T10:00:00Z");
 const iso = (secondsAgo: number | null) =>
   secondsAgo === null ? null : new Date(NOW - secondsAgo * 1000).toISOString();
@@ -92,6 +89,7 @@ const runner = (
 ): AdminRunner => ({
   id: "r",
   name: "r",
+  status: "offline",
   tags: [],
   concurrency: 1,
   resource_class: "standard",
@@ -164,10 +162,12 @@ describe("операционные разделы: чистая логика", (
   it("мало места: меньше запаса или малая доля диска", () => {
     const GIB = 1024 ** 3;
     const base: AdminStorage = {
-      total_bytes: 0,
+      blob_count: 0,
+      blob_bytes: 0,
+      projects: 0,
+      deleted_projects: 0,
       free_bytes: 86 * GIB,
-      volume_bytes: 10 * GIB,
-      object_bytes: 0,
+      volume_total_bytes: 100 * GIB,
       computed_at: iso(1) ?? "",
       owners: [],
     };
@@ -175,7 +175,11 @@ describe("операционные разделы: чистая логика", (
     expect(isLowSpace({ ...base, free_bytes: 2 * GIB })).toBe(true);
     expect(isLowSpace({ ...base, free_bytes: null })).toBe(false);
     expect(
-      isLowSpace({ ...base, free_bytes: 6 * GIB, volume_bytes: 100 * GIB }),
+      isLowSpace({
+        ...base,
+        free_bytes: 6 * GIB,
+        volume_total_bytes: 100 * GIB,
+      }),
     ).toBe(true);
   });
 });
@@ -199,9 +203,9 @@ describe("операционные разделы: демо-API", () => {
     AdminQueueSummarySchema.parse((await call("GET", "/queue/summary")).data);
     AdminQuotasSchema.parse((await call("GET", "/quotas")).data);
     for (const s of (await call("GET", "/services")).data as unknown[]) {
-      AdminServiceSchema.parse(s);
+      AdminServiceHealthSchema.parse(s);
     }
-    AdminStorageSchema.parse((await call("GET", "/storage")).data);
+    AdminStorageUsageSchema.parse((await call("GET", "/storage")).data);
   });
 
   it("не админ получает 404, аноним 401", async () => {
@@ -263,85 +267,55 @@ describe("операционные разделы: демо-API", () => {
     );
   });
 
-  it("очередь: фильтры по статусу, виду и тексту, лимит", async () => {
-    const queued = (
-      await call("GET", "/queue", undefined, { status: "queued" })
-    ).data as { items: { status: string }[]; total: number };
-    expect(queued.total).toBe(4);
-    expect(queued.items.every((j) => j.status === "queued")).toBe(true);
+  it("очередь: фильтры по состоянию и виду, лимит и курсор", async () => {
+    const queued = (await call("GET", "/queue", undefined, { state: "queued" }))
+      .data as { items: { state: string }[]; next_cursor: string | null };
+    expect(queued.items).toHaveLength(4);
+    expect(queued.items.every((j) => j.state === "queued")).toBe(true);
+    expect(queued.next_cursor).toBeNull();
     const kind = (
       await call("GET", "/queue", undefined, { kind: "pack.submission" })
-    ).data as { total: number };
-    expect(kind.total).toBe(2);
-    const who = (await call("GET", "/queue", undefined, { q: "орлов" }))
-      .data as { items: { user_name: string }[] };
-    expect(who.items.every((j) => j.user_name === "Пётр Орлов")).toBe(true);
+    ).data as { items: unknown[] };
+    expect(kind.items).toHaveLength(2);
     const page = (await call("GET", "/queue", undefined, { limit: "3" }))
-      .data as { items: unknown[]; total: number };
+      .data as { items: unknown[]; next_cursor: string | null };
     expect(page.items).toHaveLength(3);
-    expect(page.total).toBeGreaterThan(3);
+    expect(page.next_cursor).not.toBeNull();
   });
 
-  it("отмена: очередь и работа отменяются, завершённая задача нет", async () => {
-    const queued = await call("POST", "/jobs/j_01hxd4/cancel");
-    expect((queued.data as { status: string }).status).toBe("cancelled");
-    const running = await call("POST", "/jobs/j_01hxd1/cancel");
-    expect((running.data as { status: string }).status).toBe("cancelled");
-    const done = await call("POST", "/jobs/j_01hxd8/cancel");
-    expect(done.status).toBe(409);
-    expect(codeOf(done)).toBe("job_finished");
-    expect((await call("POST", "/jobs/nope/cancel")).status).toBe(404);
+  it("отмена: очередь и работа отменяются, завершённая задача остаётся как есть", async () => {
+    const queued = await call("POST", "/queue/j_01hxd4/cancel");
+    expect((queued.data as { state: string }).state).toBe("cancelled");
+    const running = await call("POST", "/queue/j_01hxd1/cancel");
+    expect((running.data as { state: string }).state).toBe("cancelled");
+    const done = await call("POST", "/queue/j_01hxd8/cancel");
+    expect(done.status).toBe(200);
+    expect((done.data as { state: string }).state).toBe("succeeded");
+    expect((await call("POST", "/queue/nope/cancel")).status).toBe(404);
     const summary = (await call("GET", "/queue/summary")).data as {
-      queued: number;
-      running: number;
+      by_state: { queued: number; running: number };
     };
-    expect(summary.queued).toBe(3);
-    expect(summary.running).toBe(2);
+    expect(summary.by_state.queued).toBe(3);
+    expect(summary.by_state.running).toBe(2);
   });
 
-  it("квоты: проверка границ и переопределения", async () => {
-    expect((await call("PUT", "/quotas", { jobs_concurrent: 0 })).status).toBe(
-      422,
-    );
+  it("квоты: проверка границ и полная замена", async () => {
+    const full = {
+      user_concurrent: 3,
+      org_concurrent: null,
+      max_duration_s: 600,
+    };
     expect(
-      (await call("PUT", "/quotas", { jobs_max_duration_s: 10 })).status,
+      (await call("PUT", "/quotas", { ...full, user_concurrent: 0 })).status,
     ).toBe(422);
-    const ok = await call("PUT", "/quotas", {
-      jobs_concurrent: 3,
-      jobs_max_duration_s: null,
-    });
-    const quotas = AdminQuotasSchema.parse(ok.data);
-    expect(quotas.jobs_concurrent).toBe(3);
-    expect(quotas.jobs_max_duration_s).toBe(600);
-    expect(quotas.fields.jobs_concurrent?.source).toBe("admin");
-
-    const added = await call("PUT", "/quotas/orgs/ai-lab", {
-      jobs_concurrent: 5,
-      jobs_max_duration_s: null,
-    });
-    expect(AdminQuotasSchema.parse(added.data).overrides).toHaveLength(2);
-    expect((await call("PUT", "/quotas/orgs/ai-lab", {})).data).toMatchObject({
-      overrides: [{ org_slug: "msp-2025" }],
-    });
     expect(
-      (await call("PUT", "/quotas/orgs/nope", { jobs_concurrent: 2 })).status,
-    ).toBe(404);
-    expect((await call("DELETE", "/quotas/orgs/msp-2025")).status).toBe(200);
-    expect((await call("DELETE", "/quotas/orgs/msp-2025")).status).toBe(404);
-  });
-
-  it("сервис: проверка обновляет время", async () => {
-    const before = (await call("GET", "/services")).data as {
-      id: string;
-      checked_at: string;
-    }[];
-    const checked = (await call("POST", "/services/database/check")).data as {
-      checked_at: string;
-    };
-    expect(Date.parse(checked.checked_at)).toBeGreaterThan(
-      Date.parse(before[0]?.checked_at ?? ""),
-    );
-    expect((await call("POST", "/services/nope/check")).status).toBe(404);
+      (await call("PUT", "/quotas", { ...full, max_duration_s: 5 })).status,
+    ).toBe(422);
+    const ok = await call("PUT", "/quotas", full);
+    expect(AdminQuotasSchema.parse(ok.data)).toMatchObject(full);
+    expect(
+      AdminQuotasSchema.parse((await call("GET", "/quotas")).data),
+    ).toMatchObject(full);
   });
 });
 
@@ -513,7 +487,7 @@ describe("операционные разделы: экраны", () => {
       "4",
     );
     expect(screen.getByTestId("queue-stat-running")).toHaveTextContent("3");
-    expect(screen.getByTestId("queue-tag-compile")).toBeVisible();
+    expect(screen.getByTestId("queue-class-interactive")).toBeVisible();
 
     await user.click(await screen.findByTestId("job-cancel-j_01hxd4"));
     const dialog = await screen.findByTestId("cancel-dialog");
@@ -569,78 +543,56 @@ describe("операционные разделы: экраны", () => {
     await user.type(concurrent, "0");
     await user.click(screen.getByTestId("quotas-save"));
     expect(
-      await screen.findByText("Введите целое число от 1 до 64."),
+      await screen.findByText("Введите целое число от 1 до 1000."),
     ).toBeVisible();
     await user.clear(concurrent);
     await user.type(concurrent, "3");
     await user.click(screen.getByTestId("quotas-save"));
     expect(await screen.findByTestId("quotas-saved")).toBeVisible();
     expect(screen.getByTestId("quota-concurrent")).toHaveValue(3);
-  }, 20_000);
-
-  it("квоты: переопределение добавляется и сбрасывается", async () => {
-    const user = userEvent.setup();
-    render(wrap(<QuotasPage />));
-    expect(await screen.findByTestId("override-msp-2025")).toBeVisible();
-    await user.click(screen.getByTestId("override-add"));
-    const form = await screen.findByTestId("override-form");
-    await user.click(within(form).getByTestId("override-submit"));
-    expect(
-      await within(form).findByText(/Заполните хотя бы одно поле/),
-    ).toBeVisible();
-    await user.type(within(form).getByTestId("override-concurrent"), "6");
-    await user.click(within(form).getByTestId("override-submit"));
-    expect(await screen.findByTestId("override-ai-lab")).toHaveTextContent("6");
-
-    await user.click(screen.getByTestId("override-clear-msp-2025"));
-    await user.click(
-      await screen.findByTestId("override-clear-dialog-confirm"),
-    );
+    // Пустое поле снимает предел.
+    await user.clear(screen.getByTestId("quota-org-concurrent"));
+    await user.click(screen.getByTestId("quotas-save"));
     await waitFor(() => {
-      expect(screen.queryByTestId("override-msp-2025")).toBeNull();
+      expect(screen.getByTestId("quota-org-concurrent")).toHaveValue(null);
     });
   }, 20_000);
 
-  it("сервисы: реплики, проверка по кнопке и сводка", async () => {
+  it("сервисы: все работают, раннеры в сети из скольких", async () => {
     const user = userEvent.setup();
     render(wrap(<ServicesPage />));
-    expect(await screen.findByTestId("replica-oo-1")).toBeVisible();
+    expect(await screen.findByTestId("service-runners")).toBeVisible();
     expect(screen.getByTestId("services-summary")).toHaveTextContent(
       "Все сервисы работают.",
     );
-    await user.click(screen.getByTestId("service-check-database"));
-    await waitFor(() => {
-      expect(
-        within(screen.getByTestId("service-database")).getByText(
-          /Проверено 0 с назад/,
-        ),
-      ).toBeVisible();
-    });
+    expect(screen.getByTestId("service-runners")).toHaveTextContent("4 из 6");
+    await user.click(screen.getByTestId("services-refresh"));
+    expect(await screen.findByTestId("service-database")).toBeVisible();
   }, 20_000);
 
-  it("сервисы падают: причины, реплики, сводка об отказе", async () => {
+  it("сервисы падают: причины и сводка об отказе", async () => {
     activateServerScenario("ops_services_degraded");
     render(wrap(<ServicesPage />));
-    expect(await screen.findByTestId("service-storage")).toHaveAttribute(
+    expect(await screen.findByTestId("service-s3")).toHaveAttribute(
       "data-status",
       "down",
     );
-    expect(screen.getByTestId("service-detail-storage")).toHaveTextContent(
-      "Хранилище не отвечает",
+    expect(screen.getByTestId("service-detail-s3")).toHaveTextContent(
+      "timeout",
     );
-    expect(screen.getByTestId("replica-lt-2")).toHaveAttribute(
+    expect(screen.getByTestId("service-languagetool")).toHaveAttribute(
       "data-status",
       "down",
     );
     expect(screen.getByTestId("services-summary")).toHaveTextContent(
-      "Не работает сервисов: 2.",
+      "Не работает сервисов: 3.",
     );
   }, 20_000);
 
   it("хранилище: владельцы по убыванию, места достаточно", async () => {
     render(wrap(<StoragePage />));
     expect(await screen.findByTestId("owner-msp-2025")).toBeVisible();
-    expect(screen.getByTestId("storage-total")).toHaveTextContent("5,2 GB");
+    expect(screen.getByTestId("storage-total")).toHaveTextContent("38");
     expect(screen.getByTestId("storage-free")).toHaveTextContent("86 GB");
     expect(screen.queryByTestId("storage-low")).toBeNull();
     expect(screen.getByTestId("storage-note")).toHaveTextContent("без обхода");

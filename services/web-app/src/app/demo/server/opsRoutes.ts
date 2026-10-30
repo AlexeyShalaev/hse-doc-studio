@@ -7,21 +7,21 @@ import {
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type {
   AdminJob,
-  AdminQueueSummary,
-  AdminQuotas,
   AdminRunner,
   AdminRunnerToken,
 } from "@entities/session";
-import { adminOpsOf, adminOrgsOf, type ServerDemoWorld } from "./world";
+import { adminOpsOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: раннеры, токены регистрации, очередь, квоты, сервисы и место.
-// Тела совпадают с contracts/server/fixtures (AdminRunner, AdminJobPage, AdminQuotas и т.д.).
+// Тела совпадают с contracts/server/fixtures (AdminRunnerList, AdminJobPage, AdminQuotas и т.д.).
+// Мир хранит данные в виде экранов (с именами), а наружу отдаёт их в проводной форме сервера:
+// идентификаторы в ней заменены именами, чтобы демо читалось так же, как с настоящими данными.
 //
 // Правила, как у настоящего API: только админ установки (остальным 404), секрет токена виден
 // только в ответе на создание или ротацию, отозванный раннер исчезает из ротации.
 //
 // Особые значения: имя токена с limit в начале даёт 429 rate_limited; отмена завершённой
-// задачи даёт 409 job_finished; сервис с id storage при проверке в сценарии с падением остаётся down.
+// задачи возвращает её без изменений; сервис с id storage при проверке в сценарии с падением остаётся down.
 
 const str = (value: unknown): string =>
   typeof value === "string" ? value : "";
@@ -30,6 +30,14 @@ const num = (value: unknown): number | null =>
 
 const notFound = () => demoError(404, "not_found", "Not Found");
 const invalid = () => demoError(422, "input_invalid", "Invalid input");
+// Те же пороги, что у сервера: в сети до минуты тишины, «затих» до пяти.
+const runnerStatusOf = (r: AdminRunner): AdminRunner["status"] => {
+  if (r.revoked) return "revoked";
+  if (r.paused) return "paused";
+  if (r.last_seen_at === null) return "offline";
+  const age = (Date.now() - Date.parse(r.last_seen_at)) / 1000;
+  return age <= 60 ? "online" : age <= 300 ? "stale" : "offline";
+};
 const API_URL = "https://studio.example.org";
 
 const ACTIVE: readonly AdminJob["status"][] = ["running", "queued"];
@@ -72,10 +80,33 @@ export const createOpsRoutes = (
   const runnerOf = (id: string | undefined): AdminRunner | undefined =>
     state().runners.find((r) => r.id === id && !r.revoked);
 
-  const summary = (): AdminQueueSummary => {
+  const wireRunner = (r: AdminRunner): AdminRunner => ({
+    ...r,
+    status: runnerStatusOf(r),
+  });
+
+  const wireJob = (j: AdminJob) => ({
+    id: j.id,
+    kind: j.kind,
+    state: j.status,
+    project_id: j.project_name ?? "-",
+    user_id: j.user_name,
+    org_id: null,
+    tags: j.tags,
+    priority_class: j.priority,
+    queued_at: j.created_at,
+    started_at: j.started_at,
+    finished_at: j.finished_at,
+    attempt: j.attempt,
+    max_attempts: j.max_attempts,
+    runner_id: j.runner_name,
+    cancel_requested: false,
+    error_code: j.error,
+  });
+
+  const summary = () => {
     const jobs = state().jobs;
     const queued = jobs.filter((j) => j.status === "queued");
-    const running = jobs.filter((j) => j.status === "running");
     const waits = jobs
       .filter((j) => j.status !== "queued")
       .map((j) => j.wait_s)
@@ -85,76 +116,47 @@ export const createOpsRoutes = (
         ? null
         : (waits[Math.min(waits.length - 1, Math.floor(waits.length * p))] ??
           null);
-    const tags = [...new Set(jobs.flatMap((j) => j.tags))].sort();
+    const count = (status: AdminJob["status"]) =>
+      jobs.filter((j) => j.status === status).length;
+    const oldest = queued.length
+      ? queued.reduce((a, b) =>
+          Date.parse(a.created_at) <= Date.parse(b.created_at) ? a : b,
+        )
+      : null;
+    const byClass: Record<string, number> = {};
+    for (const j of queued)
+      byClass[j.priority] = (byClass[j.priority] ?? 0) + 1;
     return {
-      queued: queued.length,
-      running: running.length,
-      oldest_queued_age_s:
-        queued.length === 0 ? null : Math.max(...queued.map((j) => j.wait_s)),
+      by_state: {
+        queued: count("queued"),
+        running: count("running"),
+        succeeded: count("succeeded"),
+        failed: count("failed"),
+        cancelled: count("cancelled"),
+        timed_out: count("timed_out"),
+      },
+      queued_by_class: byClass,
+      oldest_queued_at: oldest?.created_at ?? null,
       wait_p50_s: at(0.5),
       wait_p95_s: at(0.95),
-      tags: tags
-        .map((tag) => {
-          const mine = jobs.filter((j) => j.tags.includes(tag));
-          const waited = mine.filter((j) => j.status !== "queued");
-          return {
-            tag,
-            queued: mine.filter((j) => j.status === "queued").length,
-            running: mine.filter((j) => j.status === "running").length,
-            avg_wait_s:
-              waited.length === 0
-                ? null
-                : Math.round(
-                    waited.reduce((sum, j) => sum + j.wait_s, 0) /
-                      waited.length,
-                  ),
-          };
-        })
-        .filter((t) => t.queued + t.running > 0),
     };
   };
 
-  const setQuota = (
-    slug: string,
-    b: Record<string, unknown>,
-  ): DemoResponse | AdminQuotas => {
-    const concurrent =
-      b.jobs_concurrent == null ? null : num(b.jobs_concurrent);
-    const duration =
-      b.jobs_max_duration_s == null ? null : num(b.jobs_max_duration_s);
-    if (
-      (b.jobs_concurrent != null &&
-        (concurrent === null || concurrent < 1 || concurrent > 64)) ||
-      (b.jobs_max_duration_s != null &&
-        (duration === null || duration < 30 || duration > 86400))
-    ) {
-      return invalid();
-    }
-    const org = adminOrgsOf(getWorld()).orgs.find((o) => o.slug === slug);
-    if (!org) return notFound();
-    const quotas = state().quotas;
-    const rest = quotas.overrides.filter((o) => o.org_slug !== slug);
-    const next =
-      concurrent === null && duration === null
-        ? rest
-        : [
-            ...rest,
-            {
-              org_slug: slug,
-              org_name: org.name,
-              jobs_concurrent: concurrent,
-              jobs_max_duration_s: duration,
-            },
-          ];
-    state().quotas = { ...quotas, overrides: next };
-    return state().quotas;
+  const quotaValue = (
+    value: unknown,
+    min: number,
+    max: number,
+  ): number | null | "bad" => {
+    if (value === null) return null;
+    const n = num(value);
+    return n === null || n < min || n > max ? "bad" : n;
   };
 
   return [
     {
       method: "GET",
       pattern: "/runners",
-      handler: guarded(() => demoJson(state().runners)),
+      handler: guarded(() => demoJson(state().runners.map(wireRunner))),
     },
     {
       method: "PATCH",
@@ -176,7 +178,7 @@ export const createOpsRoutes = (
         if (!found) return notFound();
         const value = secret("hse_rn");
         return demoJson({
-          runner: found,
+          runner: wireRunner(found),
           runner_token: value,
           command: commandFor(value),
         });
@@ -254,9 +256,8 @@ export const createOpsRoutes = (
       method: "GET",
       pattern: "/queue",
       handler: guarded((req) => {
-        const status = queryString(req, "status");
+        const status = queryString(req, "state");
         const kind = queryString(req, "kind");
-        const q = (queryString(req, "q") ?? "").trim().toLowerCase();
         const limit = Math.max(
           1,
           Math.min(200, Number(queryString(req, "limit") ?? "25") || 25),
@@ -264,18 +265,17 @@ export const createOpsRoutes = (
         const rows = state()
           .jobs.filter(
             (j) =>
-              (!status || j.status === status) &&
-              (!kind || j.kind === kind) &&
-              (q === "" ||
-                j.user_name.toLowerCase().includes(q) ||
-                (j.project_name ?? "").toLowerCase().includes(q)),
+              (!status || j.status === status) && (!kind || j.kind === kind),
           )
           .sort(
             (a, b) =>
               RANK[a.status] - RANK[b.status] ||
               Date.parse(b.created_at) - Date.parse(a.created_at),
           );
-        return demoJson({ items: rows.slice(0, limit), total: rows.length });
+        return demoJson({
+          items: rows.slice(0, limit).map(wireJob),
+          next_cursor: rows.length > limit ? String(limit) : null,
+        });
       }),
     },
     {
@@ -285,111 +285,80 @@ export const createOpsRoutes = (
     },
     {
       method: "POST",
-      pattern: "/jobs/:id/cancel",
+      pattern: "/queue/:id/cancel",
       handler: guarded((req) => {
         const found = state().jobs.find((j) => j.id === req.params.id);
         if (!found) return notFound();
-        if (!ACTIVE.includes(found.status)) {
-          return demoError(409, "job_finished", "The job has finished");
-        }
+        // Как у сервера: завершённая задача остаётся как есть, отмена идемпотентна.
+        if (!ACTIVE.includes(found.status)) return demoJson(wireJob(found));
         found.status = "cancelled";
         found.finished_at = new Date().toISOString();
-        return demoJson(found);
+        return demoJson(wireJob(found));
       }),
     },
 
     {
       method: "GET",
       pattern: "/quotas",
-      handler: guarded(() => demoJson(state().quotas)),
+      handler: guarded(() =>
+        demoJson({ ...state().quotas, on_exhausted: "wait" }),
+      ),
     },
     {
       method: "PUT",
       pattern: "/quotas",
       handler: guarded((req) => {
         const b = body(req);
-        const q = state().quotas;
-        const concurrent =
-          b.jobs_concurrent == null ? null : num(b.jobs_concurrent);
-        const duration =
-          b.jobs_max_duration_s == null ? null : num(b.jobs_max_duration_s);
-        if (
-          (b.jobs_concurrent != null &&
-            (concurrent === null || concurrent < 1 || concurrent > 64)) ||
-          (b.jobs_max_duration_s != null &&
-            (duration === null || duration < 30 || duration > 86400))
-        ) {
+        const user = quotaValue(b.user_concurrent, 1, 1000);
+        const org = quotaValue(b.org_concurrent, 1, 1000);
+        const duration = quotaValue(b.max_duration_s, 10, 86400);
+        if (user === "bad" || org === "bad" || duration === "bad") {
           return invalid();
         }
-        if (
-          (concurrent !== null && q.fields.jobs_concurrent?.locked) ||
-          (duration !== null && q.fields.jobs_max_duration_s?.locked)
-        ) {
-          return demoError(409, "setting_locked", "Set by the environment");
-        }
         state().quotas = {
-          ...q,
-          jobs_concurrent: concurrent ?? q.jobs_concurrent,
-          jobs_max_duration_s: duration ?? q.jobs_max_duration_s,
-          fields: {
-            ...q.fields,
-            ...(concurrent !== null
-              ? { jobs_concurrent: { source: "admin", locked: false } }
-              : {}),
-            ...(duration !== null
-              ? { jobs_max_duration_s: { source: "admin", locked: false } }
-              : {}),
-          },
+          user_concurrent: user,
+          org_concurrent: org,
+          max_duration_s: duration,
         };
-        return demoJson(state().quotas);
-      }),
-    },
-    {
-      method: "PUT",
-      pattern: "/quotas/orgs/:slug",
-      handler: guarded((req) => {
-        const result = setQuota(req.params.slug ?? "", body(req));
-        return "status" in result ? result : demoJson(result);
-      }),
-    },
-    {
-      method: "DELETE",
-      pattern: "/quotas/orgs/:slug",
-      handler: guarded((req) => {
-        const q = state().quotas;
-        if (!q.overrides.some((o) => o.org_slug === req.params.slug)) {
-          return notFound();
-        }
-        state().quotas = {
-          ...q,
-          overrides: q.overrides.filter((o) => o.org_slug !== req.params.slug),
-        };
-        return demoJson(state().quotas);
+        return demoJson({ ...state().quotas, on_exhausted: "wait" });
       }),
     },
 
     {
       method: "GET",
       pattern: "/services",
-      handler: guarded(() => demoJson(state().services)),
-    },
-    {
-      method: "POST",
-      pattern: "/services/:id/check",
-      handler: guarded((req) => {
-        const ops = state();
-        const index = ops.services.findIndex((s) => s.id === req.params.id);
-        const found = ops.services[index];
-        if (!found) return notFound();
-        const checked = { ...found, checked_at: new Date().toISOString() };
-        ops.services = ops.services.map((s, i) => (i === index ? checked : s));
-        return demoJson(checked);
-      }),
+      handler: guarded(() =>
+        demoJson(
+          state().services.map((x) => ({
+            id: x.id,
+            state: x.status === "unconfigured" ? "not_configured" : x.status,
+            reason: x.detail,
+            total: x.total,
+            online: x.online,
+          })),
+        ),
+      ),
     },
     {
       method: "GET",
       pattern: "/storage",
-      handler: guarded(() => demoJson(state().storage)),
+      handler: guarded(() => {
+        const x = state().storage;
+        return demoJson({
+          blob_count: x.blob_count,
+          blob_bytes: x.blob_bytes,
+          projects: x.projects,
+          deleted_projects: x.deleted_projects,
+          top_owners: x.owners.map((o) => ({
+            owner_id: o.id,
+            owner_name: o.name,
+            projects: o.projects,
+          })),
+          volume_total_bytes: x.volume_total_bytes,
+          volume_free_bytes: x.free_bytes,
+          computed_at: x.computed_at,
+        });
+      }),
     },
   ];
 };

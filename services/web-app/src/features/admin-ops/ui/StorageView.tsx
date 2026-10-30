@@ -1,4 +1,4 @@
-import { Building2, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AdminStorage } from "@entities/session";
@@ -39,7 +39,7 @@ export const StorageView = ({
 
   const age = storage ? secondsSince(storage.computed_at, now) : null;
   const biggest = storage
-    ? Math.max(1, ...storage.owners.map((o) => o.bytes))
+    ? Math.max(1, ...storage.owners.map((o) => o.projects))
     : 1;
 
   return (
@@ -68,19 +68,28 @@ export const StorageView = ({
           )}
           <StatRow>
             <Stat
-              label={t("storage.stats.total")}
-              value={bytes(storage.total_bytes)}
+              label={t("storage.stats.projects")}
+              value={String(storage.projects)}
+              hint={t("storage.stats.projectsHint", {
+                count: storage.deleted_projects,
+              })}
               testId="storage-total"
             />
             <Stat
-              label={t("storage.stats.volume")}
-              value={bytes(storage.volume_bytes)}
-              hint={t("storage.stats.volumeHint")}
+              label={t("storage.stats.objects")}
+              value={bytes(storage.blob_bytes)}
+              hint={t("storage.stats.objectsHint", {
+                count: storage.blob_count,
+              })}
             />
             <Stat
-              label={t("storage.stats.objects")}
-              value={bytes(storage.object_bytes)}
-              hint={t("storage.stats.objectsHint")}
+              label={t("storage.stats.volume")}
+              value={
+                storage.volume_total_bytes === null
+                  ? t("storage.unknown")
+                  : bytes(storage.volume_total_bytes)
+              }
+              hint={t("storage.stats.volumeHint")}
             />
             <Stat
               label={t("storage.stats.free")}
@@ -117,10 +126,9 @@ export const StorageView = ({
                 }}
               >
                 {storage.owners.map((o) => {
-                  const Icon = o.kind === "org" ? Building2 : User;
                   return (
                     <li
-                      key={`${o.kind}:${o.id}`}
+                      key={o.id}
                       className="flex items-center"
                       style={{
                         ...CARD,
@@ -130,7 +138,7 @@ export const StorageView = ({
                       }}
                       data-testid={`owner-${o.id}`}
                     >
-                      <Icon
+                      <User
                         size={15}
                         aria-hidden="true"
                         style={{ color: "var(--fg-2)" }}
@@ -143,25 +151,14 @@ export const StorageView = ({
                           {o.name}
                         </span>
                         <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
-                          {t(`storage.owners.kind.${o.kind}`)} ·{" "}
                           {t("storage.owners.projects", { count: o.projects })}
                         </span>
                       </span>
                       <span style={{ width: "28%", minWidth: 70 }}>
                         <Meter
-                          value={percent(o.bytes, biggest)}
+                          value={percent(o.projects, biggest)}
                           label={t("storage.owners.share", { name: o.name })}
                         />
-                      </span>
-                      <span
-                        style={{
-                          width: 80,
-                          textAlign: "right",
-                          fontVariantNumeric: "tabular-nums",
-                          fontSize: 13,
-                        }}
-                      >
-                        {bytes(o.bytes)}
                       </span>
                     </li>
                   );

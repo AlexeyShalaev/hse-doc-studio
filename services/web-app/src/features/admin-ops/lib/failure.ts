@@ -1,7 +1,5 @@
 // Отказы операционных экранов: код каталога ошибок или "network" и "unknown".
 export const KNOWN_FAILURES = [
-  "job_finished",
-  "runner_not_found",
   "not_found",
   "forbidden",
   "setting_locked",

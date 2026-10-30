@@ -265,7 +265,8 @@ export const MembersView = ({
       {addFailure && (
         <FailureNotice
           failure={
-            addFailure.code === "not_found"
+            addFailure.code === "not_found" ||
+            addFailure.code === "user_not_found"
               ? { code: "member_not_found" }
               : addFailure
           }

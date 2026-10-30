@@ -1,6 +1,7 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
-import type { AdminAiProvider, AdminSettingState } from "@entities/session";
+import type { AdminSettingState } from "@entities/session";
+import type { DemoSharedProvider } from "./adminInstall";
 import { adminInstallOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
@@ -69,15 +70,15 @@ export const createInstallRoutes = (
 
   const providerFrom = (
     body: Record<string, unknown>,
-    base: AdminAiProvider,
-  ): AdminAiProvider | null => {
+    base: DemoSharedProvider,
+  ): DemoSharedProvider | null => {
     const next = { ...base };
     if (typeof body.name === "string") next.name = body.name.trim();
     if (
       typeof body.type === "string" &&
       (TYPES as readonly string[]).includes(body.type)
     ) {
-      next.type = body.type as AdminAiProvider["type"];
+      next.type = body.type as DemoSharedProvider["type"];
     }
     if (typeof body.base_url === "string") next.base_url = body.base_url.trim();
     if (Array.isArray(body.models)) next.models = body.models.map(str);
@@ -89,8 +90,9 @@ export const createInstallRoutes = (
       next.request_timeout_s = body.request_timeout_s;
     }
     if (typeof body.api_key === "string" && body.api_key !== "") {
-      next.has_api_key = true;
+      next.key_set = true;
     }
+    if (body.clear_key === true) next.key_set = false;
     if (next.name === "") return null;
     if (next.type === "openai_compat" && next.base_url === "") return null;
     return next;
@@ -198,13 +200,8 @@ export const createInstallRoutes = (
         >;
         if (value == null) return demoJson(s.signing);
         if (value !== "allowed" && value !== "forbidden") return invalid();
-        if (s.signing.fields["signing.server_keys"]?.locked) return locked();
         // Ключи не стираются: при запрете они лишь блокируются.
-        s.signing = {
-          ...s.signing,
-          server_keys: value,
-          fields: { "signing.server_keys": admin() },
-        };
+        s.signing = { ...s.signing, server_keys: value };
         syncBootstrap();
         return demoJson(s.signing);
       }),
@@ -232,12 +229,11 @@ export const createInstallRoutes = (
           type: "claude",
           base_url: "",
           models: [],
-          has_api_key: false,
+          key_set: false,
           created_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
           ssl_verify: true,
           connect_timeout_s: 10,
           request_timeout_s: 60,
-          shared: true,
         });
         if (!created) return invalid();
         s.providers = [...s.providers, created];
@@ -275,15 +271,20 @@ export const createInstallRoutes = (
       }),
     },
     {
-      method: "GET",
-      pattern: "/ai-providers/:id/models",
+      method: "POST",
+      pattern: "/ai-providers/:id/check",
       handler: guarded((req) => {
         const found = state().providers.find((p) => p.id === req.params.id);
         if (!found) return notFound();
+        // Сбой провайдера приходит ответом ok=false, а не ошибкой запроса.
         if (found.name.toLowerCase().startsWith("fail")) {
-          return demoError(502, "upstream_unavailable", "Provider unavailable");
+          return demoJson({ ok: false, models: [], error: "ConnectError" });
         }
-        return demoJson({ models: ["model-large", "model-small"] });
+        return demoJson({
+          ok: true,
+          models: ["model-large", "model-small"],
+          error: null,
+        });
       }),
     },
   ];
@@ -304,7 +305,16 @@ export const createSharedProviderUserRoutes = (
       if (world.bootstrap.user === null) {
         return demoError(401, "auth_required", "Authentication required");
       }
-      return demoJson(adminInstallOf(world).providers);
+      return demoJson(
+        adminInstallOf(world).providers.map(
+          ({ key_set: _keySet, ...rest }) => ({
+            ...rest,
+            // Ключа пользователь не видит, но запись общая.
+            has_api_key: true,
+            shared: true,
+          }),
+        ),
+      );
     },
   },
 ];

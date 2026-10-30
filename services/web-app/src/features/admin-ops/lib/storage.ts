@@ -6,7 +6,7 @@ const LOW_FREE_SHARE = 0.1;
 
 export const isLowSpace = (storage: AdminStorage): boolean => {
   if (storage.free_bytes === null) return false;
-  const disk = storage.free_bytes + storage.volume_bytes;
+  const disk = storage.volume_total_bytes ?? 0;
   return (
     storage.free_bytes < LOW_FREE_BYTES ||
     (disk > 0 && storage.free_bytes / disk < LOW_FREE_SHARE)

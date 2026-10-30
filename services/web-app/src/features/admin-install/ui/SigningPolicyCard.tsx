@@ -5,9 +5,8 @@ import { Badge } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { AdminSigningPolicy, SigningServerKeys } from "@entities/session";
 import type { Failure } from "../lib/failure";
-import { isLocked } from "../lib/locked";
 import { HINT } from "../lib/styles";
-import { LockedBadge, SettingsCard } from "./parts";
+import { SettingsCard } from "./parts";
 import { SaveRow } from "./SaveRow";
 
 export type SigningPolicyCardProps = {
@@ -33,7 +32,6 @@ export const SigningPolicyCard = ({
 }: SigningPolicyCardProps) => {
   const { t } = useTranslation("adminInstall");
   const [allowed, setAllowed] = useState(policy.server_keys === "allowed");
-  const locked = isLocked(policy.fields, "signing.server_keys");
   const dirty = allowed !== (policy.server_keys === "allowed");
   const turningOn = dirty && allowed;
   const turningOff = dirty && !allowed;
@@ -60,7 +58,7 @@ export const SigningPolicyCard = ({
         data-testid="signing-form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (dirty && !pending && !locked) {
+          if (dirty && !pending) {
             onSave(allowed ? "allowed" : "forbidden");
           }
         }}
@@ -69,7 +67,6 @@ export const SigningPolicyCard = ({
           <input
             type="checkbox"
             checked={allowed}
-            disabled={locked}
             onChange={(e) => {
               setAllowed(e.target.checked);
             }}
@@ -82,7 +79,6 @@ export const SigningPolicyCard = ({
               style={{ gap: 8, fontSize: 13, fontWeight: 500 }}
             >
               {t("signing.toggle")}
-              {locked && <LockedBadge testId="locked-signing" />}
             </span>
             <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
               {t("signing.toggleHint")}
@@ -142,7 +138,7 @@ export const SigningPolicyCard = ({
           pending={pending}
           failure={failure}
           saved={saved}
-          allLocked={locked}
+          allLocked={false}
         />
       </form>
     </SettingsCard>

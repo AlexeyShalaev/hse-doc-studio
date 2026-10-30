@@ -39,6 +39,7 @@ const runner = (
 ): AdminRunner => ({
   id,
   name,
+  status: "offline",
   tags,
   concurrency: 2,
   resource_class: "standard",
@@ -361,87 +362,51 @@ const tokensFor = (seed: ServerDemoOpsSeed, now: number): AdminRunnerToken[] =>
 
 const GIB = 1024 ** 3;
 
-const servicesFor = (seed: ServerDemoOpsSeed, now: number): AdminService[] => {
-  const at = ago(20, now);
+const servicesFor = (seed: ServerDemoOpsSeed): AdminService[] => {
   const svc = (
     id: string,
     kind: AdminService["kind"],
     status: AdminService["status"],
-    latency: number | null,
     detail: string | null,
-    replicas: AdminService["replicas"] = [],
+    counts: [number, number] | null = null,
   ): AdminService => ({
     id,
     kind,
     status,
-    latency_ms: latency,
     detail,
-    checked_at: at,
-    replicas,
-  });
-  const rep = (
-    name: string,
-    status: AdminService["status"],
-    latency: number | null,
-    used: number | null,
-    total: number | null,
-  ): AdminService["replicas"][number] => ({
-    name,
-    status,
-    latency_ms: latency,
-    slots_used: used,
-    slots_total: total,
+    online: counts?.[0] ?? null,
+    total: counts?.[1] ?? null,
   });
   if (seed === "fresh") {
     return [
-      svc("database", "database", "ok", 3, null),
-      svc("storage", "storage", "unconfigured", null, null),
-      svc("languagetool", "languagetool", "unconfigured", null, null),
-      svc("onlyoffice", "onlyoffice", "unconfigured", null, null),
-      svc("runners", "runners", "down", null, "Нет ни одного раннера"),
-      svc("smtp", "smtp", "unconfigured", null, null),
+      svc("database", "database", "ok", null),
+      svc("s3", "storage", "unconfigured", null),
+      svc("languagetool", "languagetool", "unconfigured", null),
+      svc("onlyoffice", "onlyoffice", "unconfigured", null),
+      svc("runners", "runners", "unconfigured", null, [0, 0]),
+      svc("smtp", "smtp", "unconfigured", null),
     ];
   }
   if (seed === "services_degraded") {
     return [
-      svc("database", "database", "ok", 4, null),
-      svc("storage", "storage", "down", null, "Хранилище не отвечает"),
-      svc(
-        "languagetool",
-        "languagetool",
-        "degraded",
-        920,
-        "Одна реплика не отвечает",
-        [rep("lt-1", "ok", 340, 3, 4), rep("lt-2", "down", null, null, null)],
-      ),
-      svc("onlyoffice", "onlyoffice", "down", null, "Все реплики недоступны", [
-        rep("oo-1", "down", null, null, null),
-        rep("oo-2", "down", null, null, null),
-      ]),
-      svc("runners", "runners", "ok", null, null),
-      svc("smtp", "smtp", "degraded", 2400, "Сервер почты отвечает медленно"),
+      svc("database", "database", "ok", null),
+      svc("s3", "storage", "down", "timeout"),
+      svc("languagetool", "languagetool", "down", "no_healthy_replica"),
+      svc("onlyoffice", "onlyoffice", "down", "no_healthy_replica"),
+      svc("runners", "runners", "ok", null, [2, 3]),
+      svc("smtp", "smtp", "unconfigured", null),
     ];
   }
-  const online = seed === "runners_offline" ? "down" : "ok";
+  const runnersDown = seed === "runners_offline";
   return [
-    svc("database", "database", "ok", 3, null),
-    svc("storage", "storage", "ok", 24, null),
-    svc("languagetool", "languagetool", "ok", 110, null, [
-      rep("lt-1", "ok", 105, 1, 4),
-      rep("lt-2", "ok", 118, 0, 4),
-    ]),
-    svc("onlyoffice", "onlyoffice", "ok", 64, null, [
-      rep("oo-1", "ok", 61, 3, 5),
-      rep("oo-2", "ok", 67, 2, 5),
-    ]),
-    svc(
-      "runners",
-      "runners",
-      online,
-      null,
-      online === "down" ? "Ни один раннер не в сети" : null,
-    ),
-    svc("smtp", "smtp", "ok", 180, null),
+    svc("database", "database", "ok", null),
+    svc("s3", "storage", "ok", null),
+    svc("languagetool", "languagetool", "ok", null),
+    svc("onlyoffice", "onlyoffice", "ok", null),
+    runnersDown
+      ? svc("runners", "runners", "down", "no_online_runner", [0, 3])
+      : svc("runners", "runners", "ok", null, [4, 6]),
+    svc("smtp", "smtp", "ok", null),
   ];
 };
 
@@ -450,49 +415,29 @@ const g = (n: number): number => Math.round(n * GIB);
 const storageFor = (seed: ServerDemoOpsSeed, now: number): AdminStorage => {
   if (seed === "fresh") {
     return {
-      total_bytes: 0,
+      blob_count: 0,
+      blob_bytes: 0,
+      projects: 0,
+      deleted_projects: 0,
       free_bytes: g(120),
-      volume_bytes: 0,
-      object_bytes: 0,
+      volume_total_bytes: g(200),
       computed_at: ago(40, now),
       owners: [],
     };
   }
   return {
-    total_bytes: g(5.2),
+    blob_count: 1840,
+    blob_bytes: g(2.1),
+    projects: 38,
+    deleted_projects: 3,
     free_bytes: seed === "services_degraded" ? g(2.4) : g(86),
-    volume_bytes: g(3.1),
-    object_bytes: g(2.1),
+    volume_total_bytes: seed === "services_degraded" ? g(40) : g(200),
     computed_at: ago(40, now),
     owners: [
-      {
-        kind: "org",
-        id: "msp-2025",
-        name: "МСПИН 2025",
-        bytes: g(3.6),
-        projects: 31,
-      },
-      {
-        kind: "user",
-        id: "u_01hx7k2m9c",
-        name: "Анна Петрова",
-        bytes: g(0.8),
-        projects: 2,
-      },
-      {
-        kind: "org",
-        id: "ai-lab",
-        name: "Лаборатория ИИ",
-        bytes: g(0.5),
-        projects: 4,
-      },
-      {
-        kind: "user",
-        id: "u_01hx7k4p6g",
-        name: "Пётр Орлов",
-        bytes: g(0.3),
-        projects: 1,
-      },
+      { id: "msp-2025", name: "МСПИН 2025", projects: 31 },
+      { id: "u_01hx7k2m9c", name: "Анна Петрова", projects: 2 },
+      { id: "ai-lab", name: "Лаборатория ИИ", projects: 4 },
+      { id: "u_01hx7k4p6g", name: "Пётр Орлов", projects: 1 },
     ],
   };
 };
@@ -505,25 +450,11 @@ export const createDemoAdminOps = (
   tokens: tokensFor(seed, now),
   jobs: jobsFor(seed, now),
   quotas: {
-    jobs_concurrent: 2,
-    jobs_max_duration_s: 600,
-    fields: {
-      jobs_concurrent: { source: "default", locked: false },
-      jobs_max_duration_s: { source: "default", locked: false },
-    },
-    overrides:
-      seed === "fresh"
-        ? []
-        : [
-            {
-              org_slug: "msp-2025",
-              org_name: "МСПИН 2025",
-              jobs_concurrent: 4,
-              jobs_max_duration_s: null,
-            },
-          ],
+    user_concurrent: 2,
+    org_concurrent: seed === "fresh" ? null : 6,
+    max_duration_s: 600,
   },
-  services: servicesFor(seed, now),
+  services: servicesFor(seed),
   storage: storageFor(seed, now),
   counter: 10,
 });
