@@ -300,7 +300,7 @@ class PostgresChatRepository:
             "iterations": record.iterations,
             "usage": data["usage"],
             "error": record.error,
-            "diagnostics": data["diagnostics"],
+            "diagnostics": _with_error_code(data["diagnostics"], record.error_code),
         }
         async with self._sessions.use() as session:
             if (
@@ -424,7 +424,29 @@ def _run_from_row(row: AgentRunRow, project_folder: Path) -> AgentRunRecord:
             "iterations": row.iterations,
             "usage": row.usage,
             "error": row.error,
-            "diagnostics": row.diagnostics,
+            "error_code": _error_code_of(row.diagnostics),
+            "diagnostics": [d for d in row.diagnostics if not _is_error_code_entry(d)],
         },
         project_folder,
     )
+
+
+# Код причины падения рана живёт записью в diagnostics: отдельной колонки в chat_agent_runs нет.
+_ERROR_CODE_ENTRY = "run_error_code"
+
+
+def _is_error_code_entry(entry: object) -> bool:
+    return isinstance(entry, dict) and entry.get("kind") == _ERROR_CODE_ENTRY
+
+
+def _with_error_code(diagnostics: list[Any], code: str | None) -> list[Any]:
+    kept = [d for d in diagnostics if not _is_error_code_entry(d)]
+    return [*kept, {"kind": _ERROR_CODE_ENTRY, "code": code}] if code else kept
+
+
+def _error_code_of(diagnostics: list[Any]) -> str | None:
+    for entry in diagnostics:
+        if _is_error_code_entry(entry):
+            code = entry.get("code")
+            return code if isinstance(code, str) else None
+    return None

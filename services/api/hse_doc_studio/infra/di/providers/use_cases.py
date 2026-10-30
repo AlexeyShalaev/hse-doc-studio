@@ -155,6 +155,7 @@ from hse_doc_studio.use_cases.ai_providers.delete_ai_provider import DeleteAIPro
 from hse_doc_studio.use_cases.ai_providers.get_ai_provider import GetAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_ai_providers import ListAIProvidersUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 
 # --- AI Runtime (local Ollama) ---
@@ -3378,8 +3379,10 @@ class UseCaseProvider(Provider):
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
         access: IProjectAccessChecker,
+        relay: ProviderRelayDescriber,
     ) -> StartChatTurnUC:
         return StartChatTurnUC(
+            relay=relay,
             locator=locator,
             chat_repo=chat_repo,
             ai_provider_repo=ai_provider_repo,

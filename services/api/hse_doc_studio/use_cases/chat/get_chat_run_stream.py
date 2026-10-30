@@ -113,6 +113,8 @@ class GetChatRunStreamUC:
         data: dict[str, object] = {"status": status, "run_id": str(run.id)}
         if run.error:
             data["message"] = run.error
+        if run.error_code:
+            data["code"] = run.error_code
         if run.usage is not None:
             data["usage"] = {
                 "input_tokens": run.usage.input_tokens,

@@ -382,6 +382,8 @@ class AgentRunRecord:
     iterations: int = 0
     usage: TokenUsage | None = None
     error: str | None = None
+    # Машинный код причины падения для интерфейса (например `relay_unavailable`: раннер не ответил).
+    error_code: str | None = None
     # Per-turn diagnostics captured by the agent loop (stop reasons, tool
     # timings, warnings) for post-hoc debugging — survives reloads via the run JSON.
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
