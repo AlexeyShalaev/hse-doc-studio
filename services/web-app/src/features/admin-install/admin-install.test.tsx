@@ -16,6 +16,7 @@ import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
 import { AIProviderSchema } from "@entities/ai-provider";
 import {
+  AdminAiProviderPageSchema,
   AdminAiProviderSchema,
   AdminBuildSettingsSchema,
   AdminInstanceSettingsSchema,
@@ -89,8 +90,9 @@ describe("настройки установки в админке", () => {
     AdminSigningPolicySchema.parse(
       (await call("GET", "/settings/signing")).data,
     );
-    const providers = (await call("GET", "/ai-providers")).data as unknown[];
-    for (const p of providers) AdminAiProviderSchema.parse(p);
+    const providers = AdminAiProviderPageSchema.parse(
+      (await call("GET", "/ai-providers")).data,
+    );
     expect(JSON.stringify(providers)).not.toContain('"api_key"');
   });
 

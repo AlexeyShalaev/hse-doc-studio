@@ -5,16 +5,61 @@ from __future__ import annotations
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import BigInteger, Select, String, cast, func, literal, null, select, union_all
 
-from hse_doc_studio.core.storage.usage import OwnerUsage, StorageUsage
+from hse_doc_studio.core.listing import Found
+from hse_doc_studio.core.storage.usage import (
+    OwnerUsage,
+    StorageOwner,
+    StorageOwnerKind,
+    StorageOwnerQuery,
+    StorageUsage,
+)
 from hse_doc_studio.infra.db.orm.blobs import BlobRow
 from hse_doc_studio.infra.db.orm.identity import UserRow
+from hse_doc_studio.infra.db.orm.orgs import OrgRow
+from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
+from hse_doc_studio.infra.db.search import matches_any, ordered
 from hse_doc_studio.infra.db.session import SessionProvider
 
-TOP_OWNERS = 10
+# Крупнейшие владельцы в сводке места: только для KPI, полный список отдаёт `list_owners`.
+TOP_OWNERS = 5
+
+
+def _owner_branch(kind: StorageOwnerKind, q: str | None) -> Select[*tuple[Any, ...]]:
+    """Владельцы одного вида с числом живых проектов и местом по последнему измерению каждого проекта."""
+    used = ProjectUsageRow.bytes_tree + ProjectUsageRow.bytes_git + ProjectUsageRow.bytes_s3
+    if kind is StorageOwnerKind.user:
+        owner_id, name, email = UserRow.id, UserRow.name, UserRow.email
+        searched: list[Any] = [UserRow.name, UserRow.email]
+        link = UserRow.id == ProjectRow.owner_user_id
+        owner: Any = UserRow
+    else:
+        owner_id, name, email = OrgRow.id, OrgRow.name, cast(null(), String)
+        searched = [OrgRow.name, OrgRow.slug]
+        link = OrgRow.id == ProjectRow.owner_org_id
+        owner = OrgRow
+    stmt = (
+        select(
+            literal(kind.value, String).label("kind"),
+            owner_id.label("id"),
+            name.label("name"),
+            email.label("email"),
+            func.count(ProjectRow.id).label("projects"),
+            cast(func.coalesce(func.sum(used), 0), BigInteger).label("bytes"),
+        )
+        .select_from(ProjectRow)
+        .join(owner, link)
+        .outerjoin(ProjectUsageRow, ProjectUsageRow.project_id == ProjectRow.id)
+        .where(ProjectRow.deleted_at.is_(None))
+        .group_by(owner_id)
+    )
+    if q:
+        stmt = stmt.where(matches_any(q, searched))
+    return stmt
 
 
 class SqlStorageUsageReader:
@@ -61,3 +106,35 @@ class SqlStorageUsageReader:
         except OSError:
             return None, None
         return usage.total, usage.free
+
+    async def list_owners(self, query: StorageOwnerQuery) -> Found[StorageOwner]:
+        kinds = [k for k in StorageOwnerKind if not query.kinds or k in query.kinds]
+        owners = union_all(*(_owner_branch(k, query.q) for k in kinds)).subquery("owners")
+        keys: dict[str, list[Any]] = {
+            "projects": [owners.c.projects],
+            "bytes": [owners.c.bytes],
+            "name": [func.lower(owners.c.name)],
+        }
+        stmt = (
+            select(owners)
+            .order_by(*ordered(query.sort, keys, owners.c.id))
+            .limit(query.window.limit)
+            .offset(query.window.offset)
+        )
+        async with self._sessions.use() as session:
+            total = (await session.execute(select(func.count()).select_from(owners))).scalar_one()
+            rows = (await session.execute(stmt)).all()
+        return Found(
+            items=[
+                StorageOwner(
+                    kind=StorageOwnerKind(row.kind),
+                    id=row.id,
+                    name=row.name,
+                    email=row.email,
+                    projects=int(row.projects),
+                    bytes=int(row.bytes),
+                )
+                for row in rows
+            ],
+            total=int(total),
+        )

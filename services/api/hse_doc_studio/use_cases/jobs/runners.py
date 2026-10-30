@@ -102,10 +102,6 @@ class RunnerRegistry:
             )
         return CreatedRegistrationToken(token=token, secret=secret)
 
-    async def list_registration_tokens(self, actor: Actor) -> list[RegistrationToken]:
-        _require_admin(actor)
-        return await self._tokens.list()
-
     async def revoke_registration_token(self, actor: Actor, token_id: str) -> None:
         creator = _require_admin(actor)
         async with self._uow.begin():
@@ -176,10 +172,6 @@ class RunnerRegistry:
         if runner.revoked_at is not None:
             raise RunnerAuthError(RunnerErrorCode.runner_unauthorized)
         return runner
-
-    async def list_runners(self, actor: Actor) -> list[Runner]:
-        _require_admin(actor)
-        return await self._runners.list()
 
     async def rotate_token(self, actor: Actor, runner_id: str) -> RegisteredRunner:
         creator = _require_admin(actor)

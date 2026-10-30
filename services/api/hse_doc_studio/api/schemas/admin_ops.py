@@ -37,11 +37,21 @@ class AdminJob(StrictModel):
     runner_id: str | None
     cancel_requested: bool
     error_code: str | None
+    # Подписи для экрана; `null`, если записи уже нет (человек удалён, раннер ещё не назначен).
+    user_name: str | None
+    user_email: str | None
+    org_name: str | None
+    project_name: str | None
+    runner_name: str | None
 
 
 class AdminJobPage(StrictModel):
+    """Журнал очереди: новые первыми, `next_cursor` непрозрачный, `null` на последней странице."""
+
     items: list[AdminJob]
     next_cursor: str | None
+    # Оценка числа задач по статистике таблицы, только без фильтров; иначе `null`.
+    total_estimate: int | None
 
 
 class AdminQueueSummary(StrictModel):
@@ -80,6 +90,17 @@ class AdminStorageOwner(StrictModel):
     owner_id: str
     owner_name: str
     projects: int
+
+
+class AdminStorageOwnerRow(StrictModel):
+    """Строка списка владельцев: человек или организация, число живых проектов и место по последнему замеру."""
+
+    kind: Literal["user", "org"]
+    id: str
+    name: str
+    email: str | None
+    projects: int
+    bytes: int
 
 
 class AdminStorageUsage(StrictModel):

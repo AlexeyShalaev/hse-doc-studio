@@ -19,12 +19,18 @@ from hse_doc_studio.core.identity.entities import ActorCredentials
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.use_cases.admin.ops_runners import ListRegistrationTokensUC, ListRunnersUC
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import InMemoryAuditLog
-from tests.fakes.runners import InMemoryRegistrationTokenRepository, InMemoryRunnerRepository
+from tests.fakes.runners import (
+    InMemoryRegistrationTokenRepository,
+    InMemoryRunnerAdminReader,
+    InMemoryRunnerRepository,
+)
 
+# Админка открывается только сессией: токен доступа админа её не открывает.
 _ADMIN = Actor(kind="user", id="admin", is_instance_admin=True, source=ActorSource.session)
 _USER = Actor.user("user")
 
@@ -51,13 +57,21 @@ class _Provider(Provider):
     def __init__(self) -> None:
         super().__init__()
         self.resolver_ = _HeldActorResolver()
-        self.registry = RunnerRegistry(
-            InMemoryRunnerRepository(), InMemoryRegistrationTokenRepository(), InMemoryAuditLog(), _Uow()
-        )
+        runners, tokens = InMemoryRunnerRepository(), InMemoryRegistrationTokenRepository()
+        self.registry = RunnerRegistry(runners, tokens, InMemoryAuditLog(), _Uow())
+        self.reader = InMemoryRunnerAdminReader(runners, tokens)
 
     @provide
     def registry_(self) -> RunnerRegistry:
         return self.registry
+
+    @provide
+    def list_runners(self) -> ListRunnersUC:
+        return ListRunnersUC(self.reader)
+
+    @provide
+    def list_tokens(self) -> ListRegistrationTokensUC:
+        return ListRegistrationTokensUC(self.reader)
 
     @provide
     def resolver(self) -> IActorResolver:
@@ -188,20 +202,20 @@ async def test__admin_flow__list_rotate_pause_revoke(env: _Env, as_actor) -> Non
     runner_id = registered["runner_id"]
 
     listed = (await env.client.get("/api/admin/runners")).json()
-    assert [r["id"] for r in listed] == [runner_id]
+    assert [r["id"] for r in listed["items"]] == [runner_id]
     assert "token" not in str(listed)
     assert registered["runner_token"] not in str(listed)
     tokens = (await env.client.get("/api/admin/runner-tokens")).json()
-    assert tokens[0]["uses"] == 1
+    assert tokens["items"][0]["uses"] == 1
     assert secret not in str(tokens)
 
     assert (await env.client.patch(f"/api/admin/runners/{runner_id}", json={"paused": True})).status_code == 204
-    assert (await env.client.get("/api/admin/runners")).json()[0]["paused"] is True
+    assert (await env.client.get("/api/admin/runners")).json()["items"][0]["paused"] is True
     rotated = await env.client.post(f"/api/admin/runners/{runner_id}/rotate-token")
     assert rotated.status_code == 200
     assert rotated.json()["runner_token"] != registered["runner_token"]
     assert (await env.client.delete(f"/api/admin/runners/{runner_id}")).status_code == 204
-    assert (await env.client.get("/api/admin/runners")).json()[0]["revoked"] is True
+    assert (await env.client.get("/api/admin/runners")).json()["items"][0]["revoked"] is True
     assert (await env.client.delete("/api/admin/runners/missing")).status_code == 404
     assert (await env.client.post("/api/admin/runners/missing/rotate-token")).status_code == 404
 

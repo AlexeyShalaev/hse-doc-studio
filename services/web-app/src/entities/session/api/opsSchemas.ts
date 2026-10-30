@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { pageOf } from "./schemas";
+
 // Операционные экраны админки. Раннеры и токены разбираются схемами ниже (api/schemas/runner_admin.py).
 // Очередь, квоты, сервисы и место приходят в формах api/schemas/admin_ops.py (схемы в schemas.ts),
 // а экранам отдаются в видах ниже: имена вместо идентификаторов там, где сервер их не знает.
@@ -56,6 +58,18 @@ export const AdminRunnerRotatedSchema = z.strictObject({
 });
 export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),
+});
+export const AdminRunnerPageSchema = pageOf(AdminRunnerSchema);
+export const AdminRunnerTokenPageSchema = pageOf(AdminRunnerTokenSchema);
+/** Счётчики раннеров для KPI; outdated и newest_version только среди неотозванных. */
+export const AdminRunnerSummarySchema = z.strictObject({
+  online: z.number().int(),
+  paused: z.number().int(),
+  stale: z.number().int(),
+  offline: z.number().int(),
+  revoked: z.number().int(),
+  outdated: z.number().int(),
+  newest_version: z.string().nullable(),
 });
 
 export type JobState =
@@ -130,3 +144,6 @@ export type AdminRunnerTokenCreated = z.infer<
   typeof AdminRunnerTokenCreatedSchema
 >;
 export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
+export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;
+export type AdminRunnerTokenPage = z.infer<typeof AdminRunnerTokenPageSchema>;
+export type AdminRunnerSummary = z.infer<typeof AdminRunnerSummarySchema>;

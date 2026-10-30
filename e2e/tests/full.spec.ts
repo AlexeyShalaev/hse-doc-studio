@@ -203,11 +203,13 @@ test.describe("Полный смоук сервера", () => {
   test("сборка через раннер: PDF лежит в хранилище и отдаётся владельцу", async ({
     browser,
   }) => {
-    const runners = await admin.json<{ status: string }[]>(
-      await admin.get("/api/admin/runners"),
+    const runners = await admin.json<{ items: { status: string }[] }>(
+      await admin.get("/api/admin/runners?status=online"),
       200,
     );
-    expect(runners.some((runner) => runner.status === "online")).toBe(true);
+    expect(runners.items.some((runner) => runner.status === "online")).toBe(
+      true,
+    );
 
     const compileId = await triggerCompile(
       alice,

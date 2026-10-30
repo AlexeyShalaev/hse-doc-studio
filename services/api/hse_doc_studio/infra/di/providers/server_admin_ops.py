@@ -7,17 +7,20 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
-from hse_doc_studio.core.jobs.admin import IJobAdminReader
+from hse_doc_studio.core.jobs.admin import IAdminProjectPicker, IJobAdminReader, IRunnerAdminReader
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
-from hse_doc_studio.core.repositories import IAIProviderRepository
+from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
-from hse_doc_studio.infra.db.repositories.jobs_admin import SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
+from hse_doc_studio.infra.db.repositories.jobs_admin import SqlAdminProjectPicker, SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
 from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -35,11 +38,17 @@ from hse_doc_studio.use_cases.admin.ops_install import (
     UpdateBuildSettingsUC,
     UpdateInstanceSettingsUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
+from hse_doc_studio.use_cases.admin.ops_runners import (
+    ListRegistrationTokensUC,
+    ListRunnersUC,
+    PickRunnersUC,
+    RunnerSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
-from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
+from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListStorageOwnersUC
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 
@@ -107,9 +116,37 @@ class ServerAdminOpsProvider(Provider):
 
     @provide
     def get_cancel_job_uc(
-        self, queue: IJobQueue, service: JobQueueService, audit: IAuditLog, uow: IUnitOfWork
+        self, queue: IJobQueue, service: JobQueueService, audit: IAuditLog, uow: IUnitOfWork, reader: IJobAdminReader
     ) -> CancelJobUC:
-        return CancelJobUC(queue, service, audit, uow)
+        return CancelJobUC(queue, service, audit, uow, reader)
+
+    @provide
+    def get_admin_project_picker(self, sessions: SessionProvider) -> IAdminProjectPicker:
+        return SqlAdminProjectPicker(sessions)
+
+    @provide
+    def get_pick_projects_uc(self, picker: IAdminProjectPicker) -> PickProjectsUC:
+        return PickProjectsUC(picker)
+
+    @provide
+    def get_runner_admin_reader(self, sessions: SessionProvider) -> IRunnerAdminReader:
+        return SqlRunnerAdminReader(sessions)
+
+    @provide
+    def get_list_runners_uc(self, reader: IRunnerAdminReader) -> ListRunnersUC:
+        return ListRunnersUC(reader)
+
+    @provide
+    def get_runner_summary_uc(self, reader: IRunnerAdminReader) -> RunnerSummaryUC:
+        return RunnerSummaryUC(reader)
+
+    @provide
+    def get_list_registration_tokens_uc(self, reader: IRunnerAdminReader) -> ListRegistrationTokensUC:
+        return ListRegistrationTokensUC(reader)
+
+    @provide
+    def get_pick_runners_uc(self, reader: IRunnerAdminReader) -> PickRunnersUC:
+        return PickRunnersUC(reader)
 
     @provide
     def get_get_quotas_uc(self, repo: IInstanceSettingsRepository) -> GetQuotasUC:
@@ -128,6 +165,10 @@ class ServerAdminOpsProvider(Provider):
     @provide
     def get_storage_usage_uc(self, reader: IStorageUsageReader) -> GetStorageUsageUC:
         return GetStorageUsageUC(reader)
+
+    @provide
+    def get_list_storage_owners_uc(self, reader: IStorageUsageReader) -> ListStorageOwnersUC:
+        return ListStorageOwnersUC(reader)
 
     @provide
     def get_server_key_counter(self, sessions: SessionProvider) -> IServerKeyCounter:
@@ -150,8 +191,14 @@ class ServerAdminOpsProvider(Provider):
         return InstanceAiProviderStore(repo)
 
     @provide
-    def get_list_instance_ai_providers_uc(self, store: InstanceAiProviderStore) -> ListInstanceAiProvidersUC:
-        return ListInstanceAiProvidersUC(store)
+    def get_instance_ai_provider_directory(
+        self, sessions: SessionProvider, cipher: ISecretCipher
+    ) -> IInstanceAiProviderDirectory:
+        return PostgresAIProviderRepository(sessions, cipher)
+
+    @provide
+    def get_list_instance_ai_providers_uc(self, directory: IInstanceAiProviderDirectory) -> ListInstanceAiProvidersUC:
+        return ListInstanceAiProvidersUC(directory)
 
     @provide
     def get_get_instance_ai_provider_uc(self, store: InstanceAiProviderStore) -> GetInstanceAiProviderUC:

@@ -85,6 +85,21 @@ export const createOpsRoutes = (
     status: runnerStatusOf(r),
   });
 
+  // Страница в форме Page сервера: окно limit/offset и общее число.
+  const page = <T>(items: T[], req: Parameters<DemoRoute["handler"]>[0]) => {
+    const limit = Math.max(
+      1,
+      Math.min(200, Number(queryString(req, "limit") ?? "50") || 50),
+    );
+    const offset = Math.max(0, Number(queryString(req, "offset") ?? "0") || 0);
+    return {
+      items: items.slice(offset, offset + limit),
+      total: items.length,
+      limit,
+      offset,
+    };
+  };
+
   const wireJob = (j: AdminJob) => ({
     id: j.id,
     kind: j.kind,
@@ -102,6 +117,11 @@ export const createOpsRoutes = (
     runner_id: j.runner_id,
     cancel_requested: false,
     error_code: j.error,
+    user_name: j.user_name || null,
+    user_email: null,
+    org_name: null,
+    project_name: j.project_name,
+    runner_name: j.runner_name,
   });
 
   const summary = () => {
@@ -155,7 +175,9 @@ export const createOpsRoutes = (
     {
       method: "GET",
       pattern: "/runners",
-      handler: guarded(() => demoJson(state().runners.map(wireRunner))),
+      handler: guarded((req) =>
+        demoJson(page(state().runners.map(wireRunner), req)),
+      ),
     },
     {
       method: "PATCH",
@@ -197,7 +219,7 @@ export const createOpsRoutes = (
     {
       method: "GET",
       pattern: "/runner-tokens",
-      handler: guarded(() => demoJson(state().tokens)),
+      handler: guarded((req) => demoJson(page(state().tokens, req))),
     },
     {
       method: "POST",
@@ -274,6 +296,7 @@ export const createOpsRoutes = (
         return demoJson({
           items: rows.slice(0, limit).map(wireJob),
           next_cursor: rows.length > limit ? String(limit) : null,
+          total_estimate: null,
         });
       }),
     },

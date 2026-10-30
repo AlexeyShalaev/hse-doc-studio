@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import ColumnElement, and_, delete, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, or_, select, update
 
 from hse_doc_studio.core.access.context import ActorRequired, require_actor
 from hse_doc_studio.core.access.entities import Actor, ActorKind
@@ -17,8 +18,11 @@ from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
+from hse_doc_studio.core.listing import Found
+from hse_doc_studio.core.repositories import InstanceAiProviderQuery
 from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.infra.db.orm.ai_providers import AIProviderRow
+from hse_doc_studio.infra.db.search import matches_any, ordered
 from hse_doc_studio.infra.db.session import SessionProvider
 
 logger = structlog.get_logger()
@@ -47,6 +51,33 @@ class PostgresAIProviderRepository:
         async with self._sessions.use() as session:
             rows = (await session.execute(stmt)).scalars().all()
         return [self._to_entity(row, actor, strict=False) for row in rows]
+
+    async def list_instance(self, query: InstanceAiProviderQuery) -> Found[AIProvider]:
+        """Общие провайдеры установки страницей; ключ расшифровывается только у строк страницы и только админу."""
+        actor = _actor()
+        conditions: list[ColumnElement[bool]] = [AIProviderRow.owner_kind == _INSTANCE]
+        if query.q:
+            conditions.append(matches_any(query.q, [AIProviderRow.name, AIProviderRow.base_url]))
+        if query.types:
+            conditions.append(AIProviderRow.type.in_(sorted(t.value for t in query.types)))
+        keys: dict[str, list[Any]] = {
+            "name": [func.lower(AIProviderRow.name)],
+            "type": [AIProviderRow.type],
+            "created_at": [AIProviderRow.created_at],
+        }
+        stmt = (
+            select(AIProviderRow)
+            .where(*conditions)
+            .order_by(*ordered(query.sort, keys, AIProviderRow.id))
+            .limit(query.window.limit)
+            .offset(query.window.offset)
+        )
+        async with self._sessions.use() as session:
+            total = (
+                await session.execute(select(func.count()).select_from(AIProviderRow).where(*conditions))
+            ).scalar_one()
+            rows = (await session.execute(stmt)).scalars().all()
+        return Found(items=[self._to_entity(row, actor, strict=False) for row in rows], total=int(total))
 
     async def get(self, provider_id: UUID) -> AIProvider | None:
         actor = _actor()

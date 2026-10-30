@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "kind": "runner",
+      "id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "name": "runner-1",
+      "detail": "office, verify"
+    },
+    {
+      "kind": "runner",
+      "id": "0f9e8d7c6b5a49382716f5e4d3c2b1a0",
+      "name": "runner-2",
+      "detail": null
+    }
+  ],
+  "has_more": false
+}

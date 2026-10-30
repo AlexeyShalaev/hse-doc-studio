@@ -83,9 +83,9 @@ const quiet = { silentError: true } as const;
 const instanceApi = {
   list: () =>
     adminClient
-      .get(`/ai-providers`, quiet)
-      .then(parseResp(z.array(InstanceProviderSchema)))
-      .then((items) => items.map(fromInstance)),
+      .get(`/ai-providers`, { ...quiet, params: { limit: 200 } })
+      .then(parseResp(z.object({ items: z.array(InstanceProviderSchema) })))
+      .then((page) => page.items.map(fromInstance)),
 
   create: (body: CreateAIProviderInput) =>
     adminClient

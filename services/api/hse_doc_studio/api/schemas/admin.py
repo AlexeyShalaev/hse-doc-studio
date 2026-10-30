@@ -1,4 +1,4 @@
-"""Общие формы админ-API: страница списка, её параметры, сортировка, поиск и пикер.
+"""Общие формы админ-API: страница списка, её параметры, сортировка, поиск, курсор журналов и пикер.
 
 Списки ищут, фильтруют, сортируют и листают только на сервере. Нарушение параметров даёт 422 от FastAPI:
 `limit` 1..200, `offset` от 0, `q` до 200 символов, `sort` одно поле из разрешённых ресурсом (`-` значит
@@ -16,13 +16,16 @@ from dataclasses import dataclass
 from typing import Annotated, Literal
 
 from fastapi import Query
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.core import listing
 from hse_doc_studio.core.listing import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     PICKER_LIMIT,
     SEARCH_MAX,
+    Picked,
     SortKey,
     Window,
     search_text,
@@ -119,6 +122,14 @@ class PickerList(BaseModel):
     has_more: bool
 
 
+def picker_list(found: Picked[listing.PickerItem]) -> PickerList:
+    """Ответ пикера из строк хранилища (раннеры, проекты очереди)."""
+    return PickerList(
+        items=[PickerItem.model_validate(i, from_attributes=True) for i in found.items],
+        has_more=found.has_more,
+    )
+
+
 # Ключ страницы журналов с дописыванием непрозрачен для клиента: base64url от id последней строки.
 _CURSOR_PREFIX = "k:"
 _LEGACY_CURSOR = re.compile(r"^[0-9]{1,18}$")
@@ -140,3 +151,15 @@ def decode_cursor(raw: str) -> int:
     if not text.startswith(_CURSOR_PREFIX) or not _LEGACY_CURSOR.match(text[len(_CURSOR_PREFIX) :]):
         raise ValueError("cursor")
     return int(text[len(_CURSOR_PREFIX) :])
+
+
+def cursor_param(cursor: Annotated[str | None, Query(max_length=CURSOR_MAX)] = None) -> int | None:
+    """Ключ последней строки прошлой страницы; непонятный курсор даёт 422, а не первую страницу."""
+    if not cursor:
+        return None
+    try:
+        return decode_cursor(cursor)
+    except ValueError as exc:
+        raise RequestValidationError(
+            [{"type": "value_error", "loc": ("query", "cursor"), "msg": "Invalid cursor"}]
+        ) from exc

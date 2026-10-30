@@ -46,6 +46,16 @@ class Found[T]:
 
 
 @dataclass(frozen=True)
+class PickerItem:
+    """Строка пикера без HTTP: вид сущности, id, подпись и вторая строка подписи."""
+
+    kind: str
+    id: str
+    name: str
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
 class Picked[T]:
     """Ответ пикера: первые подходящие и признак, что есть ещё (тогда поиск надо уточнить)."""
 
@@ -56,6 +66,11 @@ class Picked[T]:
     def of(cls, rows: list[T], limit: int) -> Picked[T]:
         """Хранилище читает на одну строку больше `limit`: лишняя только говорит, что дальше есть ещё."""
         return cls(rows[:limit], len(rows) > limit)
+
+
+def clamp_limit(limit: int, maximum: int = MAX_LIMIT) -> int:
+    """Размер окна в пределах 1..`maximum`: вызов use case в обход HTTP не прочтёт таблицу целиком."""
+    return max(1, min(limit, maximum))
 
 
 def search_text(q: str | None) -> str | None:

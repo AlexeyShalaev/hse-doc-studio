@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "8d7c6b5a-4f3e-4d2c-9b1a-0f9e8d7c6b5a",
+      "kind": "compile",
+      "state": "running",
+      "project_id": "5f0b3f6e-6f43-4c0a-9d3e-0d8d3a3c1e11",
+      "user_id": "7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "org_id": "0b6c2f0e-3a51-5d6e-9f4a-2b1c0d9e8f7a",
+      "tags": [
+        "tex"
+      ],
+      "priority_class": "interactive",
+      "queued_at": "2026-10-27T09:30:00Z",
+      "started_at": "2026-10-27T09:31:00Z",
+      "finished_at": null,
+      "attempt": 1,
+      "max_attempts": 3,
+      "runner_id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "cancel_requested": false,
+      "error_code": null,
+      "user_name": "Анна Петрова",
+      "user_email": "anna.petrova@example.org",
+      "org_name": "Кафедра ИИ",
+      "project_name": "Диплом",
+      "runner_name": "runner-1"
+    }
+  ],
+  "next_cursor": null,
+  "total_estimate": null
+}

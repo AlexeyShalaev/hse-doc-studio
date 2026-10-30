@@ -21,6 +21,8 @@ from hse_doc_studio.core.entities import (
     SigningIdentity,
     SigningKeyMaterial,
 )
+from hse_doc_studio.core.enums import AIProviderType
+from hse_doc_studio.core.listing import Found, SortKey, Window
 from hse_doc_studio.core.value_objects import FormState, SignaturesState
 
 
@@ -139,6 +141,23 @@ class IAIProviderRepository(Protocol):
     async def create(self, provider: AIProvider) -> None: ...
     async def update(self, provider: AIProvider) -> None: ...
     async def delete(self, provider_id: UUID) -> bool: ...
+
+
+INSTANCE_AI_PROVIDER_SORT_FIELDS = ("name", "type", "created_at")
+
+
+@dataclass(frozen=True)
+class InstanceAiProviderQuery:
+    q: str | None = None
+    types: frozenset[AIProviderType] = frozenset()
+    sort: SortKey = SortKey("created_at")
+    window: Window = Window()
+
+
+class IInstanceAiProviderDirectory(Protocol):
+    # Server only: shared (owner_kind=instance) providers for the admin console. Search, filter, order and
+    # window are applied by the storage; personal providers of users never reach this list.
+    async def list_instance(self, query: InstanceAiProviderQuery) -> Found[AIProvider]: ...
 
 
 class ISigningIdentityRepository(Protocol):

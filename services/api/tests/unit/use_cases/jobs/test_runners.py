@@ -172,9 +172,7 @@ async def test__management__non_admin__forbidden(world: World) -> None:
     registered = await world.registry.register(created.secret, _request())
     calls = [
         world.registry.create_registration_token(USER),
-        world.registry.list_registration_tokens(USER),
         world.registry.revoke_registration_token(USER, created.token.id),
-        world.registry.list_runners(USER),
         world.registry.rotate_token(USER, registered.runner.id),
         world.registry.revoke(USER, registered.runner.id),
         world.registry.set_paused(USER, registered.runner.id, True),

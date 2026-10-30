@@ -30,11 +30,17 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     ListInstanceAiProvidersUC,
     UpdateInstanceAiProviderUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
+from hse_doc_studio.use_cases.admin.ops_runners import (
+    ListRegistrationTokensUC,
+    ListRunnersUC,
+    PickRunnersUC,
+    RunnerSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
-from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC
+from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListStorageOwnersUC
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -45,13 +51,18 @@ from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.ops import (
     CountingStorageReader,
+    FixedProjectPicker,
     FixedServerKeyCounter,
     InMemoryAIProviderRepository,
     InMemoryJobAdminReader,
     NoopUow,
     ReversingCipher,
 )
-from tests.fakes.runners import InMemoryRegistrationTokenRepository, InMemoryRunnerRepository
+from tests.fakes.runners import (
+    InMemoryRegistrationTokenRepository,
+    InMemoryRunnerAdminReader,
+    InMemoryRunnerRepository,
+)
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
 
 
@@ -76,10 +87,14 @@ class _Stack:
         self.queue = InMemoryJobQueue()
         self.storage = CountingStorageReader()
         self.runners = InMemoryRunnerRepository()
+        self.tokens = InMemoryRegistrationTokenRepository()
+        self.runner_reader = InMemoryRunnerAdminReader(self.runners, self.tokens)
+        self.job_reader = InMemoryJobAdminReader(self.queue)
         self.health = HealthRegistry()
         self.quotas = QuotaService(self.settings, ttl_s=0)
-        self.store = InstanceAiProviderStore(InMemoryAIProviderRepository())
-        self.registry = RunnerRegistry(self.runners, InMemoryRegistrationTokenRepository(), users.audit, NoopUow())
+        self.providers = InMemoryAIProviderRepository()
+        self.store = InstanceAiProviderStore(self.providers)
+        self.registry = RunnerRegistry(self.runners, self.tokens, users.audit, NoopUow())
         self.smtp = SmtpSettingsService(self.settings, ReversingCipher())  # type: ignore[arg-type]
         self.client: AsyncClient
 
@@ -104,16 +119,38 @@ class _Provider(Provider):
         return self.s.registry
 
     @provide
+    def list_runners(self) -> ListRunnersUC:
+        return ListRunnersUC(self.s.runner_reader)
+
+    @provide
+    def runner_summary(self) -> RunnerSummaryUC:
+        return RunnerSummaryUC(self.s.runner_reader)
+
+    @provide
+    def list_tokens(self) -> ListRegistrationTokensUC:
+        return ListRegistrationTokensUC(self.s.runner_reader)
+
+    @provide
+    def pick_runners(self) -> PickRunnersUC:
+        return PickRunnersUC(self.s.runner_reader)
+
+    @provide
+    def pick_projects(self) -> PickProjectsUC:
+        return PickProjectsUC(FixedProjectPicker({str(uuid4()): "Диплом"}))
+
+    @provide
     def list_queue(self) -> ListQueueUC:
-        return ListQueueUC(InMemoryJobAdminReader(self.s.queue))
+        return ListQueueUC(self.s.job_reader)
 
     @provide
     def queue_summary(self) -> QueueSummaryUC:
-        return QueueSummaryUC(InMemoryJobAdminReader(self.s.queue))
+        return QueueSummaryUC(self.s.job_reader)
 
     @provide
     def cancel(self) -> CancelJobUC:
-        return CancelJobUC(self.s.queue, JobQueueService(self.s.queue), self.s.users.audit, NoopUow())
+        return CancelJobUC(
+            self.s.queue, JobQueueService(self.s.queue), self.s.users.audit, NoopUow(), self.s.job_reader
+        )
 
     @provide
     def get_quotas(self) -> GetQuotasUC:
@@ -132,6 +169,10 @@ class _Provider(Provider):
         return GetStorageUsageUC(self.s.storage)
 
     @provide
+    def storage_owners(self) -> ListStorageOwnersUC:
+        return ListStorageOwnersUC(self.s.storage)
+
+    @provide
     def get_signing(self) -> GetSigningPolicyUC:
         return GetSigningPolicyUC(self.s.settings, FixedServerKeyCounter(2))
 
@@ -141,7 +182,7 @@ class _Provider(Provider):
 
     @provide
     def list_providers(self) -> ListInstanceAiProvidersUC:
-        return ListInstanceAiProvidersUC(self.s.store)
+        return ListInstanceAiProvidersUC(self.s.providers)
 
     @provide
     def get_provider(self) -> GetInstanceAiProviderUC:
@@ -199,6 +240,12 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("PUT", "/api/admin/quotas", {"user_concurrent": 1, "org_concurrent": None, "max_duration_s": None}),
     ("GET", "/api/admin/services", None),
     ("GET", "/api/admin/storage", None),
+    ("GET", "/api/admin/storage/owners", None),
+    ("GET", "/api/admin/runners", None),
+    ("GET", "/api/admin/runners/summary", None),
+    ("GET", "/api/admin/runner-tokens", None),
+    ("GET", "/api/admin/pickers/runners", None),
+    ("GET", "/api/admin/pickers/projects", None),
     ("GET", "/api/admin/settings/signing", None),
     ("PUT", "/api/admin/settings/signing", {"server_keys": "allowed"}),
     ("GET", "/api/admin/ai-providers", None),
@@ -379,7 +426,8 @@ async def test__ai_providers__crud_never_returns_key(stack: _Stack) -> None:
     assert created.status_code == 201
     everything = created.text + listed.text + patched.text
     assert "sk-top-secret" not in everything
-    assert listed.json()[0]["key_set"] is True
+    assert listed.json()["items"][0]["key_set"] is True
+    assert listed.json()["total"] == 1
     assert patched.json()["name"] == "LAN2"
     assert patched.json()["key_set"] is True
     assert checked.json() == {"ok": True, "models": ["m1"], "error": None}
@@ -427,7 +475,8 @@ async def test__runners__list_has_status(stack: _Stack) -> None:
 
     runners = (await stack.client.get("/api/admin/runners", headers=boss)).json()
 
-    assert [(r["name"], r["status"]) for r in runners] == [("r1", "online")]
+    assert [(r["name"], r["status"]) for r in runners["items"]] == [("r1", "online")]
+    assert runners["total"] == 1
 
 
 def _admin_actor():  # type: ignore[no-untyped-def]

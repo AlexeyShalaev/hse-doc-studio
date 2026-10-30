@@ -65,6 +65,7 @@ class _Env:
     wakeup: JobWakeup
     clock: _Clock
     registry: RunnerRegistry
+    runners: InMemoryRunnerRepository
 
     async def register(self) -> dict[str, str]:
         created = await self.registry.create_registration_token(_ADMIN)
@@ -148,7 +149,7 @@ async def env(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Env]:
     container = make_async_container(_Provider(), FastapiProvider())
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield _Env(client, queue, wakeup, clock, registry)
+        yield _Env(client, queue, wakeup, clock, registry, runners)
     await container.close()
 
 
@@ -205,7 +206,7 @@ async def test__poll__nothing_arrives__answers_empty_after_wait(env: _Env) -> No
 
 async def test__poll__paused_runner__gets_nothing(env: _Env) -> None:
     headers = await env.register()
-    runner = (await env.registry.list_runners(_ADMIN))[0]
+    runner = (await env.runners.list())[0]
     await env.registry.set_paused(_ADMIN, runner.id, True)
     await env.enqueue()
 
@@ -310,7 +311,7 @@ async def test__heartbeat__bad_or_foreign_job_token__401(env: _Env) -> None:
 async def test__heartbeat__unknown_job__404(env: _Env) -> None:
     headers, job_id, envelope = await _leased(env)
     signer = JobTokenSigner([b"k" * 32])
-    runner = (await env.registry.list_runners(_ADMIN))[0]
+    runner = (await env.runners.list())[0]
     ghost = uuid4()
     token = signer.sign(str(ghost), runner.id, env.clock.now + timedelta(hours=1))
 

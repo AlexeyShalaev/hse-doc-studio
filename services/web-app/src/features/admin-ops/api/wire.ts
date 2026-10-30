@@ -32,14 +32,13 @@ export const jobFromWire = (job: WireJob, now: number): AdminJob => ({
   status: job.state,
   priority: job.priority_class,
   project_id: job.project_id,
-  // Имён сервер не отдаёт: человека и раннера экран находит сам по идентификатору,
-  // а вместо идентификатора на экран выводится нейтральная подпись.
-  project_name: null,
+  // Подписи сервер берёт соединением; null значит, что записи уже нет.
+  project_name: job.project_name,
   user_id: job.user_id,
-  user_name: "",
+  user_name: job.user_name ?? "",
   tags: job.tags,
   runner_id: job.runner_id,
-  runner_name: null,
+  runner_name: job.runner_name,
   attempt: job.attempt,
   max_attempts: job.max_attempts,
   created_at: job.queued_at,

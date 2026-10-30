@@ -17,9 +17,10 @@ import {
   AdminJobPageSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
+  AdminRunnerPageSchema,
   AdminRunnerSchema,
   AdminRunnerTokenCreatedSchema,
-  AdminRunnerTokenSchema,
+  AdminRunnerTokenPageSchema,
   AdminServiceHealthSchema,
   AdminStorageUsageSchema,
   type AdminRunner,
@@ -251,12 +252,10 @@ describe("операционные разделы: демо-API", () => {
   });
 
   it("ответы проходят схемы контракта", async () => {
-    for (const r of (await call("GET", "/runners")).data as unknown[]) {
-      AdminRunnerSchema.parse(r);
-    }
-    for (const t of (await call("GET", "/runner-tokens")).data as unknown[]) {
-      AdminRunnerTokenSchema.parse(t);
-    }
+    AdminRunnerPageSchema.parse((await call("GET", "/runners")).data);
+    AdminRunnerTokenPageSchema.parse(
+      (await call("GET", "/runner-tokens")).data,
+    );
     AdminJobPageSchema.parse((await call("GET", "/queue")).data);
     AdminQueueSummarySchema.parse((await call("GET", "/queue/summary")).data);
     AdminQuotasSchema.parse((await call("GET", "/quotas")).data);
@@ -302,8 +301,11 @@ describe("операционные разделы: демо-API", () => {
     });
     expect(limited.status).toBe(429);
     expect((await call("DELETE", "/runner-tokens/rt_01hxc1")).status).toBe(204);
-    const tokens = (await call("GET", "/runner-tokens"))
-      .data as AdminRunnerToken[];
+    const tokens = (
+      (await call("GET", "/runner-tokens")).data as {
+        items: AdminRunnerToken[];
+      }
+    ).items;
     expect(tokens.find((t) => t.id === "rt_01hxc1")?.revoked).toBe(true);
     expect((await call("DELETE", "/runner-tokens/nope")).status).toBe(404);
   });
@@ -604,7 +606,10 @@ describe("операционные разделы: экраны", () => {
   it("очередь: люди по именам, удалённый без идентификатора", async () => {
     render(wrap(<RunnersPage initialTab="queue" />));
     expect(await screen.findAllByText("Мария Келлер")).not.toHaveLength(0);
-    expect(screen.getAllByText("maria.keller@example.org")).not.toHaveLength(0);
+    // Имя приходит в строке очереди сразу, почта дочитывается по человеку.
+    expect(
+      await screen.findAllByText("maria.keller@example.org"),
+    ).not.toHaveLength(0);
     expect(await screen.findByText("Удалённый пользователь")).toBeVisible();
     expect(screen.queryByText(/u_01hx/)).toBeNull();
     // Счётчики состояний у фильтров приходят из сводки.
