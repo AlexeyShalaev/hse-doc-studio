@@ -117,6 +117,9 @@
     "import_too_large": "The project is larger than allowed. Remove build files and large attachments from the folder.",
     "import_no_project": "The archive holds no Studio project. Zip the whole project folder, including .hse-studio.",
     "import_project_newer": "The project was saved by a newer Studio. Update the server and upload it again.",
-    "import_unavailable": "The server could not allocate room for the project. Try again."
+    "import_unavailable": "The server could not allocate room for the project. Try again.",
+    "relay_unavailable": "The runner did not respond. Start it or pick another model.",
+    "relay_busy": "Too many requests to the runner at once, try again in a minute.",
+    "ai_provider_runner_invalid": "The runner was not found or has not declared this AI endpoint."
   }
 }

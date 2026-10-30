@@ -29,7 +29,8 @@ type AIProviderEditorModalProps = {
 // `ollama` providers are auto-managed by the local runtime and never created or
 // edited through this modal, so the manual form only covers the user-creatable
 // types.
-type EditableProviderType = Exclude<AIProviderType, "ollama">;
+// Вид «через мой раннер» заводится отдельной формой: у него нет ни ключа, ни адреса.
+type EditableProviderType = Exclude<AIProviderType, "ollama" | "runner">;
 
 // Labels for `Anthropic` / `OpenAI` are brand names kept verbatim; only the
 // `openai_compat` label is localised (see `type.openaiCompat`).
@@ -67,7 +68,9 @@ export const AIProviderEditorModal = ({
   // open (and keys it by provider), so there is no stale state to reset.
   const [name, setName] = useState(provider?.name ?? "");
   const [type, setType] = useState<EditableProviderType>(
-    provider && provider.type !== "ollama" ? provider.type : "claude",
+    provider && provider.type !== "ollama" && provider.type !== "runner"
+      ? provider.type
+      : "claude",
   );
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState(provider?.base_url ?? "");

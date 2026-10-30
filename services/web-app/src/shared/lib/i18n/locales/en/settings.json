@@ -222,6 +222,7 @@
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-compat.",
     "typeOllama": "Local",
+    "typeRunner": "Via my runner",
     "modelCount_one": "{{count}} model",
     "modelCount_other": "{{count}} models",
     "modelsNotLoaded": "Models not loaded",

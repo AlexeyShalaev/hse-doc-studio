@@ -203,6 +203,7 @@ from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 from hse_doc_studio.infra.vcs.profile_source import ConfigAuthorProfile
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
@@ -248,6 +249,11 @@ class DomainServiceProvider(Provider):
     def get_ai_model_lister(self) -> IAIModelLister:
         # Stateless: SDK clients are built per request from each provider's key.
         return SdkAIModelLister()
+
+    @provide
+    def get_provider_relay_describer(self) -> ProviderRelayDescriber:
+        # Локально раннеров нет: провайдеров через раннер не бывает, описывать нечего.
+        return ProviderRelayDescriber()
 
     @provide
     def get_agent_provider(self) -> IAgentProvider:

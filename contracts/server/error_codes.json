@@ -33,5 +33,8 @@
   "already_member",
   "user_not_found",
   "user_has_projects",
-  "user_not_disabled"
+  "user_not_disabled",
+  "relay_unavailable",
+  "relay_busy",
+  "ai_provider_runner_invalid"
 ]

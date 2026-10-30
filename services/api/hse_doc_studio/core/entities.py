@@ -165,6 +165,9 @@ class AIProvider:
     request_timeout_s: float = 60.0
     # Локальный режим знает только личных провайдеров; общие создаёт сервер.
     owner_kind: AIProviderOwnerKind = AIProviderOwnerKind.user
+    # Вид `runner`: личный раннер-ретранслятор и имя ИИ-адреса, объявленного им (URL знает только раннер).
+    runner_id: str | None = None
+    runner_endpoint: str | None = None
 
 
 @dataclass

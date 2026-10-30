@@ -222,6 +222,7 @@
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-совмест.",
     "typeOllama": "Локально",
+    "typeRunner": "Через мой раннер",
     "modelCount_one": "{{count}} модель",
     "modelCount_few": "{{count}} модели",
     "modelCount_many": "{{count}} моделей",

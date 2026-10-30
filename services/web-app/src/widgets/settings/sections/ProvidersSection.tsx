@@ -23,6 +23,7 @@ const TYPE_LABEL: Record<AIProviderType, string> = {
   openai: "settings:providers.typeOpenai",
   openai_compat: "settings:providers.typeOpenaiCompat",
   ollama: "settings:providers.typeOllama",
+  runner: "settings:providers.typeRunner",
 };
 
 type ProviderRowProps = {

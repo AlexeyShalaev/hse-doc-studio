@@ -5,10 +5,15 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.agent.protocols import IAgentProvider
+from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.relay import IRelayHub
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.infra.ai.agent.sdk_agent_provider import SdkAgentProvider
+from hse_doc_studio.infra.ai.sdk_model_lister import SdkAIModelLister
 from hse_doc_studio.infra.jobs.relay_hub import RelayHub
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_relay.client import AiRelayClient, RelayLimits
 from hse_doc_studio.use_cases.ai_relay.request_store import RelayRequestStore
 from hse_doc_studio.use_cases.ai_relay.runner_side import RelayRunnerService
@@ -60,6 +65,18 @@ class ServerAiRelayProvider(Provider):
         wakeup: JobWakeup,
     ) -> AiRelayClient:
         return AiRelayClient(queue, queue_service, runners, hub, store, wakeup, limits=relay_limits())
+
+    @provide(override=True)
+    def get_provider_relay_describer(self, runners: IRunnerRepository) -> ProviderRelayDescriber:
+        return ProviderRelayDescriber(runners)
+
+    @provide(override=True)
+    def get_ai_model_lister(self, relay: AiRelayClient) -> IAIModelLister:
+        return SdkAIModelLister(relay)
+
+    @provide(override=True)
+    def get_agent_provider(self, relay: AiRelayClient) -> IAgentProvider:
+        return SdkAgentProvider(relay=relay)
 
     @provide
     def get_relay_runner_service(

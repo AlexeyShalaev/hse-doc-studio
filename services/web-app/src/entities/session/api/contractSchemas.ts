@@ -1,6 +1,11 @@
 import type { ZodType } from "zod";
 import { z } from "zod";
 
+import {
+  AIProviderSchema,
+  CreateAIProviderRequestSchema,
+} from "@entities/ai-provider";
+
 import * as inst from "./installSchemas";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
@@ -69,6 +74,9 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   CreateAdminAiProviderRequest: s.CreateAdminAiProviderRequestSchema,
   UpdateAdminAiProviderRequest: s.UpdateAdminAiProviderRequestSchema,
   AdminAiProviderCheck: s.AdminAiProviderCheckSchema,
+  AiProvider: AIProviderSchema,
+  AiProviderList: z.array(AIProviderSchema),
+  CreateAiProviderRequest: CreateAIProviderRequestSchema,
   Org: s.OrgSchema,
   CreateOrgRequest: s.CreateOrgRequestSchema,
   UpdateOrgRequest: s.UpdateOrgRequestSchema,
