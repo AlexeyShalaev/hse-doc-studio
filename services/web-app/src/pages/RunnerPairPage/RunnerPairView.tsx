@@ -12,6 +12,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { formatPastTime } from "@shared/lib";
 import { Button, Input, Spinner } from "@shared/ui";
+import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
   maskUserCode,
@@ -207,6 +208,9 @@ const Pending = ({
   onDeny: () => void;
 }) => {
   const { t } = useTranslation("runners");
+  // Защита от фишинга кода устройства: ссылку с кодом мог прислать чужой человек.
+  // Подключить можно, только подтвердив, что подключение начато на своей машине.
+  const [mine, setMine] = useState(false);
   const left = countdown(info.expires_at, now);
   const KindIcon = info.host_kind === "desktop" ? Laptop : Terminal;
   return (
@@ -218,6 +222,36 @@ const Pending = ({
       <h1 style={{ margin: 0, fontSize: 18, lineHeight: 1.3 }}>
         {t("pair.question", { name: info.name })}
       </h1>
+      {/* Код крупно, как в Студии: несовпадение должно бросаться в глаза. */}
+      <div
+        className="flex flex-col"
+        style={{
+          gap: 4,
+          padding: "12px 14px",
+          borderRadius: "var(--r-2)",
+          border: "1px solid var(--accent)",
+          background: "var(--bg-0)",
+        }}
+      >
+        <span className="dim" style={{ fontSize: 12 }}>
+          {t("pair.codeTitle")}
+        </span>
+        <span
+          className="mono"
+          style={{
+            fontSize: 28,
+            fontWeight: 600,
+            letterSpacing: "0.14em",
+            color: "var(--fg-0)",
+          }}
+          data-testid="runner-pair-user-code"
+        >
+          {info.user_code}
+        </span>
+        <span className="dim" style={{ fontSize: 12 }}>
+          {t("pair.codeHint")}
+        </span>
+      </div>
       <dl
         style={{
           display: "grid",
@@ -253,11 +287,27 @@ const Pending = ({
               : t("pair.expiresIn", { time: left })}
           </span>
         </Fact>
-        <Fact label={t("connectDialog.studio.codeLabel")}>
-          <span className="mono">{info.user_code}</span>
-        </Fact>
       </dl>
-      <Notice tone="warn" text={t("pair.warning")} />
+      <Notice
+        tone="warn"
+        text={
+          info.client_ip
+            ? `${t("pair.warning")} ${t("pair.warningIp", { ip: info.client_ip })}`
+            : t("pair.warning")
+        }
+      />
+      <label
+        className="flex items-center"
+        style={{ gap: 10, fontSize: 13, cursor: "pointer" }}
+      >
+        <Switch
+          checked={mine}
+          onChange={setMine}
+          disabled={deciding !== null}
+          testId="runner-pair-confirm-mine"
+        />
+        {t("pair.confirmMine")}
+      </label>
       <div
         className="flex items-center"
         style={{ gap: 8, justifyContent: "flex-end" }}
@@ -275,7 +325,7 @@ const Pending = ({
         <Button
           type="button"
           onClick={onApprove}
-          disabled={deciding !== null || left === null}
+          disabled={deciding !== null || left === null || !mine}
           data-testid="runner-pair-approve"
         >
           {deciding === "approve" && <Spinner size="sm" />}

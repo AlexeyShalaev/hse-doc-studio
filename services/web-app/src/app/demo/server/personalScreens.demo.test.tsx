@@ -188,7 +188,8 @@ describe("подтверждение сопряжения на демо-мире
   it("код из адреса: подтверждение подключает устройство", async () => {
     const user = userEvent.setup();
     mountPair("/settings/runners/pair?code=bcdf-2345");
-    await user.click(await screen.findByTestId("runner-pair-approve"));
+    await user.click(await screen.findByTestId("runner-pair-confirm-mine"));
+    await user.click(screen.getByTestId("runner-pair-approve"));
     expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
       "data-state",
       "approved",
@@ -211,7 +212,8 @@ describe("подтверждение сопряжения на демо-мире
   it("предел раннеров и отказ", async () => {
     const user = userEvent.setup();
     mountPair("/settings/runners/pair?code=LMNP-6789");
-    await user.click(await screen.findByTestId("runner-pair-approve"));
+    await user.click(await screen.findByTestId("runner-pair-confirm-mine"));
+    await user.click(screen.getByTestId("runner-pair-approve"));
     expect(await screen.findByTestId("runner-pair-result")).toHaveAttribute(
       "data-state",
       "limit",

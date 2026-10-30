@@ -44,12 +44,18 @@ describe("страница подтверждения сопряжения", () 
       screen.getByText("Подключить «MacBook Анны» как ваш раннер?"),
     ).toBeInTheDocument();
     expect(screen.getByText("203.0.113.7")).toBeInTheDocument();
+    expect(screen.getByTestId("runner-pair-user-code")).toHaveTextContent(
+      "BCDF-2345",
+    );
     expect(screen.getByTestId("runner-pair-countdown")).toHaveTextContent(
       "ещё 8:00",
     );
     expect(
       screen.getByText(/Подтверждайте, только если вы сами/),
     ).toBeInTheDocument();
+    // Подключить можно, только подтвердив, что подключение начато на своей машине.
+    expect(screen.getByTestId("runner-pair-approve")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("runner-pair-confirm-mine"));
     await userEvent.click(screen.getByTestId("runner-pair-approve"));
     expect(onApprove).toHaveBeenCalledOnce();
   });

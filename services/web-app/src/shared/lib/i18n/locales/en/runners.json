@@ -214,7 +214,11 @@
         "title": "Runner limit reached",
         "body": "Revoke a runner or an unused token you don't need, then confirm the code again."
       }
-    }
+    },
+    "codeTitle": "Code from the Studio",
+    "codeHint": "It must match the code on your Studio's screen.",
+    "warningIp": "The request came from IP {{ip}}: if this isn't your computer, deny it.",
+    "confirmMine": "I just clicked \"Connect\" in the Studio on my own computer"
   },
   "remote": {
     "title": "Cloud builds",
