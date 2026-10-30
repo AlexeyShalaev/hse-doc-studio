@@ -320,14 +320,14 @@ def test__access_panel__reader_sees_the_list_but_only_the_owner_searches_people(
         admin_search = client.get(f"{base}/candidates", headers=world.admin.headers)
 
     assert owner_list.status_code == reader_list.status_code == 200
-    assert [(r["subject_id"], r["role"], r["locked"]) for r in owner_list.json()] == [
+    assert [(r["subject_id"], r["role"], r["locked"]) for r in owner_list.json()["items"]] == [
         (world.alice_id, "owner", True),
         (world.bob_id, "reader", False),
     ]
     assert owner_list.json() == reader_list.json()
     # Уже добавленный человек повторно не предлагается.
     assert found.status_code == 200
-    assert found.json() == []
+    assert found.json() == {"items": [], "has_more": False}
     assert (reader_search.status_code, reader_search.json()["code"]) == (403, "forbidden_role")
     assert reader_search.json()["required_role"] == "owner"
     assert (admin_list.status_code, admin_search.status_code) == (404, 404)
@@ -452,3 +452,24 @@ def test__mutation__acl_that_lets_everyone_in__fails_the_matrix(world: _World, m
     leaks = stranger_leaks(world, _checked_rules())
 
     assert len(leaks) > len(_checked_rules()) // 2
+
+
+def test__access_panel__paging_filters_and_transfer_candidates_scope(world: _World) -> None:
+    base = f"/api/v1/projects/{world.project_id}"
+    _share_with_bob_as_reader(world)
+    with world.alice as client:
+        first = client.get(f"{base}/members", params={"limit": 1}, headers=world.alice.headers)
+        readers = client.get(f"{base}/members", params={"role": "reader"}, headers=world.alice.headers)
+        bad_sort = client.get(f"{base}/members", params={"sort": "email"}, headers=world.alice.headers)
+        bad_limit = client.get(f"{base}/members/candidates", params={"limit": 21}, headers=world.alice.headers)
+        transfer = client.get(f"{base}/transfer-candidates", params={"kind": "user"}, headers=world.alice.headers)
+    with world.bob as client:
+        reader_transfer = client.get(f"{base}/transfer-candidates", headers=world.bob.headers)
+
+    assert (first.json()["total"], [r["subject_id"] for r in first.json()["items"]]) == (2, [world.alice_id])
+    assert [r["subject_id"] for r in readers.json()["items"]] == [world.bob_id]
+    assert (bad_sort.status_code, bad_limit.status_code) == (422, 422)
+    # Только люди общей с Алисой организации: ни её самой, ни остальных людей установки.
+    assert transfer.status_code == 200
+    assert [(c["kind"], c["id"]) for c in transfer.json()["items"]] == [("user", world.bob_id)]
+    assert reader_transfer.status_code == 403

@@ -699,6 +699,15 @@ class ProjectAccessEntry(StrictModel):
     locked: bool
 
 
+class ProjectAccessPage(StrictModel):
+    """Страница панели «Доступ»: закреплённые строки (владелец, организация-владелец) всегда первыми."""
+
+    items: list[ProjectAccessEntry]
+    total: int
+    limit: int
+    offset: int
+
+
 class ProjectAccessCandidate(StrictModel):
     """Кого можно добавить (GET /api/v1/projects/{id}/members/candidates?q=)."""
 
@@ -706,6 +715,13 @@ class ProjectAccessCandidate(StrictModel):
     subject_id: str
     name: str
     detail: str | None
+
+
+class ProjectAccessCandidateList(StrictModel):
+    """Пикер «Добавить»: первые подходящие (до 20); `has_more` значит «уточните поиск»."""
+
+    items: list[ProjectAccessCandidate]
+    has_more: bool
 
 
 class AdminSettings(StrictModel):

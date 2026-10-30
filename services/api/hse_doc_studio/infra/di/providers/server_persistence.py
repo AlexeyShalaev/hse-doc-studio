@@ -121,7 +121,11 @@ from hse_doc_studio.use_cases.ai_providers.create_ai_provider import CreateAIPro
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
-from hse_doc_studio.use_cases.projects.access_panel import ListAccessCandidatesUC, ListProjectAccessUC
+from hse_doc_studio.use_cases.projects.access_panel import (
+    ListAccessCandidatesUC,
+    ListProjectAccessUC,
+    ListTransferCandidatesUC,
+)
 from hse_doc_studio.use_cases.projects.create_project import CreateProjectUC
 from hse_doc_studio.use_cases.projects.get_project_suggestions import GetProjectSuggestionsUC
 from hse_doc_studio.use_cases.projects.import_project import ImportProjectUC
@@ -273,6 +277,10 @@ class ServerPersistenceProvider(Provider):
     @provide
     def get_list_access_candidates_uc(self, directory: IProjectAccessDirectory) -> ListAccessCandidatesUC:
         return ListAccessCandidatesUC(directory)
+
+    @provide
+    def get_list_transfer_candidates_uc(self, directory: IProjectAccessDirectory) -> ListTransferCandidatesUC:
+        return ListTransferCandidatesUC(directory)
 
     @provide
     def get_set_project_member_uc(

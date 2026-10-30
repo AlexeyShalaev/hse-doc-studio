@@ -586,11 +586,18 @@ export const ProjectAccessEntrySchema = z.strictObject({
   role: ProjectRoleSchema,
   locked: z.boolean(),
 });
+// Панель «Доступ» страницей: владелец и организация-владелец всегда первыми.
+export const ProjectAccessPageSchema = pageOf(ProjectAccessEntrySchema);
 export const ProjectAccessCandidateSchema = z.strictObject({
   subject_kind: z.enum(["user", "group"]),
   subject_id: z.string(),
   name: z.string(),
   detail: z.string().nullable(),
+});
+// Пикер «Добавить»: до 20 подходящих; has_more значит «уточните поиск».
+export const ProjectAccessCandidateListSchema = z.strictObject({
+  items: z.array(ProjectAccessCandidateSchema),
+  has_more: z.boolean(),
 });
 export type MyOrg = z.infer<typeof MyOrgSchema>;
 export type ProjectAccessEntry = z.infer<typeof ProjectAccessEntrySchema>;

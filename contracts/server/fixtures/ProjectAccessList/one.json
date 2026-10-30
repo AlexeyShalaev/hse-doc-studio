@@ -1,26 +1,31 @@
-[
-  {
-    "subject_kind": "user",
-    "subject_id": "u_01hx7k2m9c",
-    "name": "Анна Петрова",
-    "detail": "anna.petrova@example.org",
-    "role": "owner",
-    "locked": true
-  },
-  {
-    "subject_kind": "group",
-    "subject_id": "g_01hx7m4c2d",
-    "name": "Команда Bertie",
-    "detail": "МСПИН 2025",
-    "role": "editor",
-    "locked": false
-  },
-  {
-    "subject_kind": "org",
-    "subject_id": "org_01hx5a",
-    "name": "МСПИН 2025",
-    "detail": null,
-    "role": "reader",
-    "locked": true
-  }
-]
+{
+  "items": [
+    {
+      "subject_kind": "user",
+      "subject_id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "detail": "anna.petrova@example.org",
+      "role": "owner",
+      "locked": true
+    },
+    {
+      "subject_kind": "group",
+      "subject_id": "g_01hx7m4c2d",
+      "name": "Команда Bertie",
+      "detail": "МСПИН 2025",
+      "role": "editor",
+      "locked": false
+    },
+    {
+      "subject_kind": "org",
+      "subject_id": "org_01hx5a",
+      "name": "МСПИН 2025",
+      "detail": null,
+      "role": "reader",
+      "locked": true
+    }
+  ],
+  "total": 3,
+  "limit": 50,
+  "offset": 0
+}

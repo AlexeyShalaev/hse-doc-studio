@@ -1,14 +1,17 @@
-[
-  {
-    "subject_kind": "user",
-    "subject_id": "u_01hx7k3e5f",
-    "name": "Елена Миронова",
-    "detail": "elena.mironova@example.org"
-  },
-  {
-    "subject_kind": "group",
-    "subject_id": "g_01hx7m5d3e",
-    "name": "Наставники",
-    "detail": "МСПИН 2025"
-  }
-]
+{
+  "items": [
+    {
+      "subject_kind": "user",
+      "subject_id": "u_01hx7k3e5f",
+      "name": "Елена Миронова",
+      "detail": "elena.mironova@example.org"
+    },
+    {
+      "subject_kind": "group",
+      "subject_id": "g_01hx7m5d3e",
+      "name": "Наставники",
+      "detail": "МСПИН 2025"
+    }
+  ],
+  "has_more": false
+}
