@@ -44,6 +44,11 @@ export const CapabilitiesSchema = z.strictObject({
   local_services_ui: z.boolean(),
   admin: z.boolean(),
   personal_signing_keys: z.boolean(),
+  // Личные раннеры: сервер с вошедшим человеком, если админ их не выключил.
+  // Необязательные, пока не все бэкенды отдают эти поля: нет значит «нет».
+  personal_runners: z.boolean().optional(),
+  // Облачные сборки на этой машине: только локальная Студия.
+  remote_runner: z.boolean().optional(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 

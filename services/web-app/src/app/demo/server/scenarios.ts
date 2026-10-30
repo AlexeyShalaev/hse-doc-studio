@@ -1,5 +1,9 @@
 import type { ServerDemoInstallSeed } from "./adminInstall";
 import type {
+  ServerDemoPersonalSeed,
+  ServerDemoRemoteSeed,
+} from "./personalRunners";
+import type {
   Bootstrap,
   Capabilities,
   SessionUser,
@@ -34,7 +38,15 @@ export type ServerDemoScenarioId =
   | "newcomer"
   | "student_nosmtp"
   | "student_sso"
-  | "student_linked";
+  | "student_linked"
+  | "runners_ready"
+  | "runners_none"
+  | "runners_offline"
+  | "runners_disabled"
+  | "admin_runners_disabled"
+  | "local_remote_off"
+  | "local_remote_online"
+  | "local_remote_problems";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -121,6 +133,53 @@ const base = (overrides: Partial<Bootstrap>): Bootstrap => ({
   ...overrides,
 });
 
+/** Анна на сервере с личными раннерами (или с выключенными администратором). */
+const personalBase = (enabled: boolean): Bootstrap =>
+  base({
+    auth: {
+      registration_mode: "domains",
+      password_enabled: true,
+      oidc_providers: [],
+      smtp_enabled: true,
+      password_min_length: 10,
+    },
+    user: DEMO_STUDENT,
+    capabilities: { ...SERVER_CAPABILITIES, personal_runners: enabled },
+    csrf_token: STUDENT_CSRF,
+  });
+
+/**
+ * Локальная Студия: без входа, без Docker-экранов и локальных служб (их в демо
+ * нет), зато с облачными сборками на этой машине.
+ */
+const localBase = (): Bootstrap => ({
+  mode: "local",
+  version: "0.2.0",
+  setup_state: "ready",
+  auth: {
+    registration_mode: "closed",
+    password_enabled: false,
+    oidc_providers: [],
+    smtp_enabled: false,
+    password_min_length: 10,
+  },
+  user: null,
+  capabilities: {
+    fs_browse: false,
+    connect_folder: false,
+    open_in_editor: false,
+    move_project: false,
+    docker_ui: false,
+    self_update: false,
+    local_services_ui: false,
+    admin: false,
+    personal_signing_keys: false,
+    personal_runners: false,
+    remote_runner: true,
+  },
+  csrf_token: null,
+});
+
 /** Токен установки демо: тот же, что в эталоне ServerSetupAdminRequest. */
 export const DEMO_SETUP_TOKEN = "st_7Fk2Rn5DxQ8WbHa1";
 
@@ -156,6 +215,10 @@ export type ServerDemoScenario = {
   opsSeed?: ServerDemoOpsSeed;
   /** Название, сборка, политика ключей и общие провайдеры: набор по умолчанию или вариант состояния. */
   installSeed?: ServerDemoInstallSeed;
+  /** Личные раннеры, сопряжение и провайдеры через раннер: набор по умолчанию или вариант. */
+  personalSeed?: ServerDemoPersonalSeed;
+  /** Облачные сборки локальной Студии (сценарии local_remote_*). */
+  remoteSeed?: ServerDemoRemoteSeed;
 };
 
 /** default: рабочая установка; runners_offline: раннеров в сети нет; services_degraded: сервисы падают, места мало; fresh: ничего не подключено. */
@@ -578,6 +641,74 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
           password_min_length: 10,
         },
       }),
+  },
+  // Личные раннеры: Анна с раннерами во всех состояниях, без раннеров, с
+  // раннером не в сети и с выключенными администратором личными раннерами.
+  {
+    id: "runners_ready",
+    tokenRequired: false,
+    personalSeed: "default",
+    bootstrap: () => personalBase(true),
+  },
+  {
+    id: "runners_none",
+    tokenRequired: false,
+    personalSeed: "none",
+    bootstrap: () => personalBase(true),
+  },
+  {
+    id: "runners_offline",
+    tokenRequired: false,
+    personalSeed: "offline",
+    bootstrap: () => personalBase(true),
+  },
+  {
+    id: "runners_disabled",
+    tokenRequired: false,
+    personalSeed: "disabled",
+    bootstrap: () => personalBase(false),
+  },
+  {
+    id: "admin_runners_disabled",
+    tokenRequired: false,
+    personalSeed: "disabled",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_runners: false,
+        },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  // Локальная Студия с облачными сборками: только раздел «Облачные сборки»
+  // ходит в демо-мир, остальное приложение работает как локальное.
+  {
+    id: "local_remote_off",
+    tokenRequired: false,
+    remoteSeed: "off",
+    bootstrap: localBase,
+  },
+  {
+    id: "local_remote_online",
+    tokenRequired: false,
+    remoteSeed: "online",
+    bootstrap: localBase,
+  },
+  {
+    id: "local_remote_problems",
+    tokenRequired: false,
+    remoteSeed: "docker_missing",
+    bootstrap: localBase,
   },
 ];
 

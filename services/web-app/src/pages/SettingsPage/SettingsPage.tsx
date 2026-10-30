@@ -314,7 +314,7 @@ export const SettingsPage = () => {
   const caps = capabilities ?? LOCAL_BOOTSTRAP.capabilities;
   const hasAccount = useBootstrap().data?.user != null;
   const visibleSections = SECTIONS.filter((s) =>
-    isSectionAvailable(s, (name) => caps[name], hasAccount),
+    isSectionAvailable(s, (name) => caps[name] === true, hasAccount),
   );
   const visibleIds = new Set<SettingsSectionId>(
     visibleSections.map((s) => s.id),

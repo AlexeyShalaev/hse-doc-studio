@@ -8,6 +8,11 @@ import { createDemoAdminInstall, type DemoAdminInstall } from "./adminInstall";
 import { createDemoAdminOps, type DemoAdminOps } from "./adminOps";
 import { createDemoAdminPeople, type DemoAdminPeople } from "./adminPeople";
 import { createDemoAdminOrgs, type DemoAdminOrgs } from "./adminOrgs";
+import {
+  createDemoPersonal,
+  touchRunners,
+  type DemoPersonal,
+} from "./personalRunners";
 import { seedProjects, type DemoProject } from "./projects";
 import {
   ADMIN_CSRF,
@@ -57,6 +62,8 @@ export type ServerDemoWorld = {
   adminInstall: DemoAdminInstall | null;
   /** Люди установки: аккаунты, приглашения и журнал; строятся при первом обращении. */
   adminPeople: DemoAdminPeople | null;
+  /** Личные раннеры, сопряжение, политика сборок и личные провайдеры; строятся при первом обращении. */
+  personal: DemoPersonal | null;
 };
 
 /** Аккаунт текущего человека; для другого пользователя строится заново. */
@@ -105,6 +112,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminOps: null,
     adminInstall: null,
     adminPeople: null,
+    personal: null,
   };
 };
 
@@ -151,6 +159,19 @@ export const adminPeopleOf = (world: ServerDemoWorld): DemoAdminPeople => {
     },
   );
   return world.adminPeople;
+};
+
+/**
+ * Личные раннеры мира. Живые раннеры при каждом обращении будто только что
+ * опросили сервер: состояние «в сети» не тает, пока открыта вкладка.
+ */
+export const personalOf = (world: ServerDemoWorld): DemoPersonal => {
+  world.personal ??= createDemoPersonal(
+    world.scenario.personalSeed,
+    world.scenario.remoteSeed,
+  );
+  touchRunners(world.personal);
+  return world.personal;
 };
 
 /** Входит в мир: админ по своему адресу, остальные как студент. */
