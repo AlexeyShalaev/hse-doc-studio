@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -66,6 +67,7 @@ class RunnerPairingClient:
             base_url=server_url, transport=transport, timeout=timeout_s, follow_redirects=False
         )
         self._version = version
+        self._origin = _origin(server_url)
 
     async def aclose(self) -> None:
         await self._http.aclose()
@@ -73,6 +75,11 @@ class RunnerPairingClient:
     async def start(self, name: str, host_kind: str) -> PairingStart:
         body = await self._post("/pair/start", {"name": name, "host_kind": host_kind})
         _require_fields(body, _START_FIELDS)
+        # Ссылку локальная Студия открывает человеку: только страница того же сервера, без javascript: и чужих хостов.
+        for key in ("verification_uri", "verification_uri_complete"):
+            origin = _origin(_str(body, key))
+            if origin is None or origin != self._origin:
+                raise RunnerApiError(200, None, f"{key} does not point to the runner server")
         return PairingStart(
             device_code=_str(body, "device_code"),
             user_code=_str(body, "user_code"),
@@ -138,6 +145,19 @@ def _api_error(response: httpx.Response) -> RunnerApiError:
         code = body["code"] if isinstance(body.get("code"), str) else None
         detail = body["detail"] if isinstance(body.get("detail"), str) else detail
     return RunnerApiError(response.status_code, code, detail)
+
+
+def _origin(url: str) -> tuple[str, str, int | None] | None:
+    """Схема, хост и порт адреса; None для всего, кроме http(s) с хостом."""
+    try:
+        parts = urlsplit(url.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    scheme = parts.scheme.lower()
+    if scheme not in ("http", "https") or not parts.hostname:
+        return None
+    return scheme, parts.hostname.lower(), port or (443 if scheme == "https" else 80)
 
 
 def _require_fields(body: dict[str, Any], expected: frozenset[str]) -> None:

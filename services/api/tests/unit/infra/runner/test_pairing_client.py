@@ -75,3 +75,49 @@ async def test__deregister__sends_runner_token_and_id() -> None:
 
     assert server.deregistered == [("runner-1", "hsrn_secret")]
     await client.aclose()
+
+
+def _start_answer(uri: str, complete: str) -> httpx.MockTransport:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "device_code": DEVICE_CODE,
+                "user_code": USER_CODE,
+                "verification_uri": uri,
+                "verification_uri_complete": complete,
+                "expires_in": 600,
+                "interval": 5,
+            },
+        )
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.parametrize(
+    "complete",
+    [
+        "javascript:alert(1)",
+        "http://studio.example.org/settings/runners/pair?code=X",
+        "https://evil.example.org/settings/runners/pair?code=X",
+        "https://studio.example.org:8443/settings/runners/pair?code=X",
+        "/settings/runners/pair?code=X",
+    ],
+)
+async def test__start__verification_uri_off_server__is_rejected(complete: str) -> None:
+    uri = f"{_URL}/settings/runners/pair"
+    client = RunnerPairingClient(_URL, version="0.3.0", transport=_start_answer(uri, complete))
+
+    with pytest.raises(RunnerApiError, match="verification_uri_complete"):
+        await client.start("x", "desktop")
+    await client.aclose()
+
+
+async def test__start__verification_uri_same_server_with_default_port__accepted() -> None:
+    uri = "https://STUDIO.example.org:443/settings/runners/pair"
+    client = RunnerPairingClient(_URL + "/prefix", version="0.3.0", transport=_start_answer(uri, uri + "?code=X"))
+
+    started = await client.start("x", "desktop")
+
+    assert started.verification_uri_complete == uri + "?code=X"
+    await client.aclose()
