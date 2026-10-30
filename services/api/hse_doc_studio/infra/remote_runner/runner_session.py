@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -59,6 +60,7 @@ class ObservingTransport(httpx.AsyncBaseTransport):
         self._hold_s = hold_s
         self._inner = inner or httpx.AsyncHTTPTransport()
         self._gate_check_s = gate_check_s
+        self._confirmed = False
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -66,19 +68,28 @@ class ObservingTransport(httpx.AsyncBaseTransport):
         if is_poll and not await self._gate_opens():
             # Пустой ответ опроса, будто задач нет: цикл сразу опросит снова и снова упрётся в шлюз.
             return httpx.Response(200, json={"envelope": None}, request=request)
+        if is_poll and not self._confirmed:
+            request = _short_poll(request)
         try:
             response = await self._inner.handle_async_request(request)
         except httpx.TransportError:
             if is_poll or path.endswith("/register"):
-                self._listener.on_session_state(SessionState.offline)
+                self._set_reachable(reachable=False)
             raise
-        if is_poll and response.status_code < 400:
-            self._listener.on_session_state(SessionState.online)
-        elif is_poll and response.status_code in _UNAVAILABLE:
-            self._listener.on_session_state(SessionState.offline)
-        elif path.endswith("/register") and response.status_code < 400:
-            self._listener.on_registered()
+        self._observe(path, response.status_code)
         return response
+
+    def _observe(self, path: str, status: int) -> None:
+        if path.endswith("/poll") and status < 400:
+            self._set_reachable(reachable=True)
+        elif path.endswith("/poll") and status in _UNAVAILABLE:
+            self._set_reachable(reachable=False)
+        elif path.endswith("/register") and status < 400:
+            self._listener.on_registered()
+
+    def _set_reachable(self, *, reachable: bool) -> None:
+        self._confirmed = reachable
+        self._listener.on_session_state(SessionState.online if reachable else SessionState.offline)
 
     async def aclose(self) -> None:
         await self._inner.aclose()
@@ -90,6 +101,21 @@ class ObservingTransport(httpx.AsyncBaseTransport):
                 return False
             await asyncio.sleep(self._gate_check_s)
         return True
+
+
+def _short_poll(request: httpx.Request) -> httpx.Request:
+    """Первый опрос после подключения без ожидания: долгий опрос ответил бы только через 25 с,
+    а «в сети» человек должен увидеть сразу. Остальное в запросе не меняется."""
+    try:
+        body = json.loads(request.content)
+    except ValueError:
+        return request
+    if not isinstance(body, dict):
+        return request
+    headers = {k: v for k, v in request.headers.items() if k.lower() != "content-length"}
+    return httpx.Request(
+        request.method, request.url, headers=headers, json={**body, "wait_s": 0}, extensions=request.extensions
+    )
 
 
 class LoopSession:
