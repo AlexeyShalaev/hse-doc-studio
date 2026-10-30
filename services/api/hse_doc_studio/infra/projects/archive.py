@@ -40,6 +40,7 @@ _RECORD_PREFIXES = (f"{_STUDIO}/compiles/", f"{_STUDIO}/submissions/")
 _HOOKS_PREFIX = f"{_STUDIO}/git/hooks/"
 _PROJECT_JSON_MAX = 5 * 1024 * 1024
 _CHUNK = 1024 * 1024
+_NAME_MAX = 255
 _DRIVE = re.compile(r"^[A-Za-z]:")
 _REGULAR_OR_DIR = (stat.S_IFREG, stat.S_IFDIR)
 
@@ -65,6 +66,8 @@ def _clean_name(info: zipfile.ZipInfo) -> str:
     trimmed = name.rstrip("/") if info.is_dir() else name
     parts = trimmed.split("/")
     if any(part in ("", ".", "..") for part in parts):
+        raise _unsafe(name)
+    if any(len(part.encode("utf-8")) > _NAME_MAX for part in parts):
         raise _unsafe(name)
     return trimmed
 
@@ -182,6 +185,7 @@ class ZipProjectArchive:
                 total += info.file_size
                 if total > limits.max_unpacked_bytes:
                     raise self._too_large(limits)
+        self._check_no_file_dirs(names)
         prefix = _find_prefix([n for n, i in names.items() if not i.is_dir()])
         data = _read_project(zf, names[f"{prefix}{_PROJECT_JSON}"])
         _check_shape(data)
@@ -198,6 +202,17 @@ class ZipProjectArchive:
             records=sum(1 for f in kept if f.startswith(_RECORD_PREFIXES)),
             prefix=prefix,
         )
+
+    @staticmethod
+    def _check_no_file_dirs(names: dict[str, zipfile.ZipInfo]) -> None:
+        """Файл не может быть каталогом другой записи (`x/y` вместе с файлом `x`): на диске такое не создать."""
+        dirs: set[str] = set()
+        for name in names:
+            parts = name.split("/")
+            dirs.update("/".join(parts[:i]) for i in range(1, len(parts)))
+        for name, info in names.items():
+            if not info.is_dir() and name in dirs:
+                raise _unsafe(info.filename)
 
     @staticmethod
     def _has_remote(zf: zipfile.ZipFile, config: zipfile.ZipInfo) -> bool:
@@ -256,6 +271,8 @@ class ZipProjectArchive:
                 "Архив повреждён.",
                 "The archive is damaged.",
             ) from exc
+        except OSError as exc:
+            raise _unsafe(rel) from exc
         return size
 
     def harden_store(self, folder: Path) -> int:

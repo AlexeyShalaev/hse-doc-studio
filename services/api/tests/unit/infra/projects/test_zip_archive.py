@@ -183,6 +183,18 @@ def test__inspect__newer_schema__refused(archive_path: Path) -> None:
     assert "9.9.9" in error.message
 
 
+def test__inspect__file_is_dir_of_other_entry__unsafe(archive_path: Path) -> None:
+    make_zip(archive_path, {"x/y": "1", "x": "2"})
+
+    refused(archive_path, ProjectImportCode.archive_unsafe)
+
+
+def test__inspect__name_over_255_bytes__unsafe(archive_path: Path) -> None:
+    make_zip(archive_path, {"я" * 128: "1"})
+
+    refused(archive_path, ProjectImportCode.archive_unsafe)
+
+
 def test__inspect__declared_size_over_limit__too_large(archive_path: Path) -> None:
     make_zip(archive_path, {"big.bin": b"0" * 4096})
 
