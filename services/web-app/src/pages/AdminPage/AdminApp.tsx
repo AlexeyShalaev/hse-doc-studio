@@ -15,6 +15,13 @@ const AdminOrgsPage = lazy(() =>
   import("./AdminOrgsPage").then((m) => ({ default: m.AdminOrgsPage })),
 );
 
+// Раннеры, очередь, квоты, сервисы и хранилище: один общий lazy-чанк.
+const AdminOpsPage = lazy(() =>
+  import("./AdminOpsPage").then((m) => ({ default: m.AdminOpsPage })),
+);
+
+const OPS_PARTS = ["runners", "quotas", "services", "storage"] as const;
+
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
 // auth-чанках. Она лежит в коде чанка, а не в словарях.
 export const ADMIN_CHUNK_MARKER = "hse-admin-chunk-marker";
@@ -87,6 +94,26 @@ export const AdminApp = () => {
             </Suspense>
           }
         />
+        {OPS_PARTS.map((part) => (
+          <Route
+            key={part}
+            path={part}
+            element={
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center"
+                    role="status"
+                  >
+                    <Spinner size="md" />
+                  </div>
+                }
+              >
+                <AdminOpsPage part={part} />
+              </Suspense>
+            }
+          />
+        ))}
         <Route path="org/:slug" element={<OrgRedirect />} />
         <Route path=":section" element={<AdminSectionSoon />} />
       </Route>

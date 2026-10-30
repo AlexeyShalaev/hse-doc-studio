@@ -454,15 +454,6 @@ export type ProjectAccessCandidate = z.infer<
 export type SetProjectAccessRequest = z.infer<
   typeof SetProjectAccessRequestSchema
 >;
-export const AdminRunnerSchema = z.strictObject({
-  id: z.string(),
-  name: z.string(),
-  status: z.enum(["online", "offline", "draining"]),
-  tags: z.array(z.string()),
-  version: z.string(),
-  last_seen_at: iso.nullable(),
-  running_jobs: z.number().int(),
-});
 export const AdminSettingsSchema = z.strictObject({
   registration_mode: RegistrationModeSchema,
   require_approval: z.boolean(),

@@ -6,7 +6,10 @@
     "overview": "Overview",
     "users": "Users",
     "orgs": "Organizations",
-    "runners": "Runners",
+    "runners": "Runners and queue",
+    "quotas": "Quotas",
+    "services": "Services",
+    "storage": "Storage",
     "settings": "Settings",
     "audit": "Audit"
   },
@@ -19,7 +22,10 @@
   "sections": {
     "users": "People with accounts, their roles, blocks and invitations.",
     "orgs": "Organizations, members and groups.",
-    "runners": "Build runners: registration, state and tokens.",
+    "runners": "Runners, registration tokens and the job queue.",
+    "quotas": "Job limits per person and organization.",
+    "services": "Health of the database, storage, ONLYOFFICE, LanguageTool and mail.",
+    "storage": "How much space is used and by whom.",
     "settings": "Registration, OIDC sign-in, mail and restrictions.",
     "audit": "The log of administrator actions."
   },

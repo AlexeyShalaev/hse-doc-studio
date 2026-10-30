@@ -1,0 +1,21 @@
+{
+  "queued": 4,
+  "running": 2,
+  "oldest_queued_age_s": 95,
+  "wait_p50_s": 12,
+  "wait_p95_s": 80,
+  "tags": [
+    {
+      "tag": "compile",
+      "queued": 3,
+      "running": 1,
+      "avg_wait_s": 18
+    },
+    {
+      "tag": "office",
+      "queued": 1,
+      "running": 1,
+      "avg_wait_s": null
+    }
+  ]
+}

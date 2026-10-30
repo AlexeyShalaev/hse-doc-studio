@@ -18,6 +18,9 @@ export type ServerDemoScenarioId =
   | "admin_env_locked"
   | "admin_sso"
   | "admin_no_orgs"
+  | "ops_runners_offline"
+  | "ops_services_degraded"
+  | "ops_fresh"
   | "org_admin"
   | "student_ready"
   | "registration_closed"
@@ -146,7 +149,13 @@ export type ServerDemoScenario = {
   adminSeed?: ServerDemoAdminSeed;
   /** Организации в админке: набор по умолчанию или ни одной. */
   orgSeed?: "default" | "empty";
+  /** Раннеры, очередь, сервисы и место в админке: набор по умолчанию или вариант состояния. */
+  opsSeed?: ServerDemoOpsSeed;
 };
+
+/** default: рабочая установка; runners_offline: раннеров в сети нет; services_degraded: сервисы падают, места мало; fresh: ничего не подключено. */
+export type ServerDemoOpsSeed =
+  "default" | "runners_offline" | "services_degraded" | "fresh";
 
 /** default: всё редактируется; env_locked: регистрация и почта заданы окружением; sso: пароль выключен, провайдеры включены. */
 export type ServerDemoAdminSeed = "default" | "env_locked" | "sso";
@@ -278,6 +287,60 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
     id: "admin_no_orgs",
     tokenRequired: false,
     orgSeed: "empty",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_runners_offline",
+    tokenRequired: false,
+    opsSeed: "runners_offline",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_services_degraded",
+    tokenRequired: false,
+    opsSeed: "services_degraded",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: { ...SERVER_CAPABILITIES, admin: true },
+        csrf_token: ADMIN_CSRF,
+      }),
+  },
+  {
+    id: "ops_fresh",
+    tokenRequired: false,
+    opsSeed: "fresh",
     bootstrap: () =>
       base({
         auth: {

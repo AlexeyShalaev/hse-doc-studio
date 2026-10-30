@@ -108,6 +108,8 @@
     "already_member": "This person is already in the organization.",
     "slug_taken": "This organization address is already taken.",
     "member_not_found": "This person or group is not available to the project.",
+    "job_finished": "The job has already finished: nothing to cancel.",
+    "runner_not_found": "The runner was not found: it may already be removed.",
     "input_invalid": "Invalid input."
   }
 }

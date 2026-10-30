@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.schemas import admin_ops as ops
+from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
 from pydantic import TypeAdapter, ValidationError
 
@@ -86,7 +88,19 @@ _SCHEMAS: dict[str, Any] = {
     "ProjectAccessCandidate": s.ProjectAccessCandidate,
     "ProjectAccessCandidateList": list[s.ProjectAccessCandidate],
     "SetProjectAccessRequest": s.SetProjectAccessRequest,
-    "AdminRunnerList": list[s.AdminRunner],
+    "AdminRunnerList": list[ra.RunnerInfo],
+    "AdminRunnerTokenList": list[ra.RegistrationTokenInfo],
+    "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
+    "AdminRunnerTokenCreated": ra.CreatedRegistrationTokenResponse,
+    "AdminRunnerRotated": ra.RotatedRunnerTokenResponse,
+    "UpdateAdminRunnerRequest": ra.UpdateRunnerRequest,
+    "AdminJobPage": ops.AdminJobPage,
+    "AdminQueueSummary": ops.AdminQueueSummary,
+    "AdminQuotas": ops.AdminQuotas,
+    "UpdateAdminQuotasRequest": ops.UpdateAdminQuotasRequest,
+    "SetAdminQuotaOverrideRequest": ops.SetAdminQuotaOverrideRequest,
+    "AdminServiceList": list[ops.AdminService],
+    "AdminStorage": ops.AdminStorage,
     "AdminSettings": s.AdminSettings,
     "AdminRegistrationSettings": s.AdminRegistrationSettings,
     "UpdateAdminRegistrationRequest": s.UpdateAdminRegistrationRequest,

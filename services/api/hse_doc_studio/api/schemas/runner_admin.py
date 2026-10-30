@@ -31,6 +31,8 @@ class RegistrationTokenInfo(StrictModel):
 class CreatedRegistrationTokenResponse(StrictModel):
     token: RegistrationTokenInfo
     secret: str
+    # Готовая команда запуска раннера с адресом и секретом; показывается вместе с секретом один раз.
+    command: str
 
 
 class RunnerInfo(StrictModel):
@@ -53,3 +55,4 @@ class UpdateRunnerRequest(StrictModel):
 class RotatedRunnerTokenResponse(StrictModel):
     runner: RunnerInfo
     runner_token: str
+    command: str

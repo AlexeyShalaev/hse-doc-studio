@@ -1,5 +1,8 @@
 import {
+  Activity,
   ClipboardList,
+  Gauge,
+  HardDrive,
   LayoutDashboard,
   Building2,
   Server,
@@ -13,7 +16,15 @@ import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 
 export type AdminSection =
-  "overview" | "users" | "orgs" | "runners" | "settings" | "audit";
+  | "overview"
+  | "users"
+  | "orgs"
+  | "runners"
+  | "quotas"
+  | "services"
+  | "storage"
+  | "settings"
+  | "audit";
 
 export const ADMIN_SECTIONS: readonly {
   id: AdminSection;
@@ -24,6 +35,9 @@ export const ADMIN_SECTIONS: readonly {
   { id: "users", to: "/admin/users", icon: Users },
   { id: "orgs", to: "/admin/orgs", icon: Building2 },
   { id: "runners", to: "/admin/runners", icon: Server },
+  { id: "quotas", to: "/admin/quotas", icon: Gauge },
+  { id: "services", to: "/admin/services", icon: Activity },
+  { id: "storage", to: "/admin/storage", icon: HardDrive },
   { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
   { id: "audit", to: "/admin/audit", icon: ClipboardList },
 ];

@@ -1,0 +1,53 @@
+[
+  {
+    "id": "database",
+    "kind": "database",
+    "status": "ok",
+    "latency_ms": 3,
+    "detail": null,
+    "checked_at": "2026-10-27T09:45:00Z",
+    "replicas": []
+  },
+  {
+    "id": "storage",
+    "kind": "storage",
+    "status": "ok",
+    "latency_ms": 24,
+    "detail": null,
+    "checked_at": "2026-10-27T09:45:00Z",
+    "replicas": []
+  },
+  {
+    "id": "languagetool",
+    "kind": "languagetool",
+    "status": "degraded",
+    "latency_ms": 850,
+    "detail": "Одна реплика не отвечает",
+    "checked_at": "2026-10-27T09:45:00Z",
+    "replicas": [
+      {
+        "name": "lt-1",
+        "status": "ok",
+        "latency_ms": 120,
+        "slots_used": 1,
+        "slots_total": 4
+      },
+      {
+        "name": "lt-2",
+        "status": "down",
+        "latency_ms": null,
+        "slots_used": null,
+        "slots_total": null
+      }
+    ]
+  },
+  {
+    "id": "smtp",
+    "kind": "smtp",
+    "status": "unconfigured",
+    "latency_ms": null,
+    "detail": null,
+    "checked_at": "2026-10-27T09:45:00Z",
+    "replicas": []
+  }
+]

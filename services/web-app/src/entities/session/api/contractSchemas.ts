@@ -1,6 +1,7 @@
 import type { ZodType } from "zod";
 import { z } from "zod";
 
+import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
@@ -70,7 +71,19 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ProjectAccessCandidate: s.ProjectAccessCandidateSchema,
   ProjectAccessCandidateList: z.array(s.ProjectAccessCandidateSchema),
   SetProjectAccessRequest: s.SetProjectAccessRequestSchema,
-  AdminRunnerList: z.array(s.AdminRunnerSchema),
+  AdminRunnerList: z.array(ops.AdminRunnerSchema),
+  AdminRunnerTokenList: z.array(ops.AdminRunnerTokenSchema),
+  CreateAdminRunnerTokenRequest: ops.CreateAdminRunnerTokenRequestSchema,
+  AdminRunnerTokenCreated: ops.AdminRunnerTokenCreatedSchema,
+  AdminRunnerRotated: ops.AdminRunnerRotatedSchema,
+  UpdateAdminRunnerRequest: ops.UpdateAdminRunnerRequestSchema,
+  AdminJobPage: ops.AdminJobPageSchema,
+  AdminQueueSummary: ops.AdminQueueSummarySchema,
+  AdminQuotas: ops.AdminQuotasSchema,
+  UpdateAdminQuotasRequest: ops.UpdateAdminQuotasRequestSchema,
+  SetAdminQuotaOverrideRequest: ops.SetAdminQuotaOverrideRequestSchema,
+  AdminServiceList: z.array(ops.AdminServiceSchema),
+  AdminStorage: ops.AdminStorageSchema,
   AdminSettings: s.AdminSettingsSchema,
   AdminRegistrationSettings: s.AdminRegistrationSettingsSchema,
   UpdateAdminRegistrationRequest: s.UpdateAdminRegistrationRequestSchema,

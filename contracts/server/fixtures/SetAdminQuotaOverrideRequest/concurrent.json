@@ -1,0 +1,4 @@
+{
+  "jobs_concurrent": 4,
+  "jobs_max_duration_s": 900
+}

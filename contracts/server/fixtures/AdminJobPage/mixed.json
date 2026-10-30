@@ -1,0 +1,71 @@
+{
+  "items": [
+    {
+      "id": "j_01hxd1",
+      "kind": "compile",
+      "status": "queued",
+      "priority": "interactive",
+      "project_id": "p_01hxa1c4de",
+      "project_name": "Bertie: курсовая",
+      "user_id": "u_01hx7k2m9c",
+      "user_name": "Анна Петрова",
+      "tags": [
+        "compile"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "attempt": 0,
+      "max_attempts": 3,
+      "created_at": "2026-10-27T09:40:00Z",
+      "started_at": null,
+      "finished_at": null,
+      "wait_s": 42,
+      "error": null
+    },
+    {
+      "id": "j_01hxd2",
+      "kind": "compile",
+      "status": "running",
+      "priority": "interactive",
+      "project_id": "p_01hxa1c4de",
+      "project_name": "Bertie: курсовая",
+      "user_id": "u_01hx7k2m9c",
+      "user_name": "Анна Петрова",
+      "tags": [
+        "compile"
+      ],
+      "runner_id": "rn_01hxb1",
+      "runner_name": "runner-1",
+      "attempt": 1,
+      "max_attempts": 3,
+      "created_at": "2026-10-27T09:40:00Z",
+      "started_at": "2026-10-27T09:41:00Z",
+      "finished_at": null,
+      "wait_s": 60,
+      "error": null
+    },
+    {
+      "id": "j_01hxd3",
+      "kind": "pack.submission",
+      "status": "failed",
+      "priority": "batch",
+      "project_id": "p_01hxa1c4de",
+      "project_name": "Bertie: курсовая",
+      "user_id": "u_01hx7k2m9c",
+      "user_name": "Анна Петрова",
+      "tags": [
+        "pack"
+      ],
+      "runner_id": "rn_01hxb1",
+      "runner_name": "runner-1",
+      "attempt": 3,
+      "max_attempts": 3,
+      "created_at": "2026-10-27T09:40:00Z",
+      "started_at": "2026-10-27T09:30:00Z",
+      "finished_at": "2026-10-27T09:32:00Z",
+      "wait_s": 5,
+      "error": "Сборка завершилась с ошибкой LaTeX"
+    }
+  ],
+  "total": 3
+}

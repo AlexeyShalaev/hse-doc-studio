@@ -30,5 +30,7 @@
   "org_not_empty",
   "already_member",
   "slug_taken",
-  "member_not_found"
+  "member_not_found",
+  "job_finished",
+  "runner_not_found"
 ]

@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.runner_admin import (
     CreatedRegistrationTokenResponse,
     CreateRegistrationTokenRequest,
@@ -49,6 +50,12 @@ def _runner_info(runner: Runner) -> RunnerInfo:
     )
 
 
+def _command(request: Request, secret: str) -> str:
+    """Команда запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа."""
+    base = (settings.auth.public_url or str(request.base_url)).rstrip("/")
+    return f"HSE_RUNNER__API_URL={base} HSE_RUNNER__TOKEN={secret} hse-doc-studio runner"
+
+
 async def _registry(request: Request) -> RunnerRegistry:
     return await request.state.dishka_container.get(RunnerRegistry)
 
@@ -64,7 +71,11 @@ async def create_registration_token(
     created = await (await _registry(request)).create_registration_token(
         require_actor(), label=body.label, ttl=timedelta(hours=body.ttl_hours), max_uses=body.max_uses
     )
-    return CreatedRegistrationTokenResponse(token=_token_info(created.token), secret=created.secret)
+    return CreatedRegistrationTokenResponse(
+        token=_token_info(created.token),
+        secret=created.secret,
+        command=_command(request, created.secret),
+    )
 
 
 @router.get("/runner-tokens", response_model=list[RegistrationTokenInfo])
@@ -101,7 +112,11 @@ async def rotate_runner_token(runner_id: str, request: Request) -> RotatedRunner
         rotated = await (await _registry(request)).rotate_token(require_actor(), runner_id)
     except RunnerNotFoundError as exc:
         raise _not_found(exc) from exc
-    return RotatedRunnerTokenResponse(runner=_runner_info(rotated.runner), runner_token=rotated.secret)
+    return RotatedRunnerTokenResponse(
+        runner=_runner_info(rotated.runner),
+        runner_token=rotated.secret,
+        command=_command(request, rotated.secret),
+    )
 
 
 @router.delete("/runners/{runner_id}", status_code=status.HTTP_204_NO_CONTENT)

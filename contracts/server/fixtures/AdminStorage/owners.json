@@ -1,0 +1,23 @@
+{
+  "total_bytes": 5368709120,
+  "free_bytes": 53687091200,
+  "volume_bytes": 3221225472,
+  "object_bytes": 2147483648,
+  "computed_at": "2026-10-27T09:44:00Z",
+  "owners": [
+    {
+      "kind": "org",
+      "id": "msp-2025",
+      "name": "МСПИН 2025",
+      "bytes": 4294967296,
+      "projects": 31
+    },
+    {
+      "kind": "user",
+      "id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "bytes": 805306368,
+      "projects": 2
+    }
+  ]
+}

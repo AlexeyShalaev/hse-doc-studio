@@ -1,0 +1,22 @@
+{
+  "jobs_concurrent": 2,
+  "jobs_max_duration_s": 600,
+  "fields": {
+    "jobs_concurrent": {
+      "source": "default",
+      "locked": false
+    },
+    "jobs_max_duration_s": {
+      "source": "env",
+      "locked": true
+    }
+  },
+  "overrides": [
+    {
+      "org_slug": "msp-2025",
+      "org_name": "МСПИН 2025",
+      "jobs_concurrent": 4,
+      "jobs_max_duration_s": null
+    }
+  ]
+}
