@@ -669,6 +669,8 @@ export const createPersonalRoutes = (
             remote.running_jobs = 0;
           } else {
             remote.state = remote.paired ? "online" : "unpaired";
+            // Как настоящая Студия: без своего имени раннер зовётся именем компьютера.
+            remote.runner_name ??= "MacBook Анны";
           }
         }
         return demoJson(remoteView());

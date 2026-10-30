@@ -212,17 +212,65 @@ describe("облачные сборки: вид", () => {
     );
   });
 
-  it("проверки: нет Docker", () => {
+  it("проверки: нет Docker, и строка состояния не обещает сборки LaTeX", () => {
     mount({ status: { ...ONLINE, docker: "missing", tex_image: "missing" } });
-    expect(screen.getByText(/Docker недоступен/)).toBeInTheDocument();
+    const state = screen.getByTestId("remote-runner-state");
+    expect(state).toHaveAttribute("data-degraded", "true");
+    expect(state).toHaveTextContent(
+      "В сети, но сборки LaTeX не берёт: Docker недоступен",
+    );
+    expect(state).not.toHaveTextContent("берёт ваши облачные сборки");
+    expect(
+      screen.getByText(/облачные сборки LaTeX пойдут на общие/),
+    ).toBeInTheDocument();
+  });
+
+  it("нет образа TeX: строка состояния тоже предупреждает", () => {
+    mount({ status: { ...ONLINE, tex_image: "missing" } });
+    expect(screen.getByTestId("remote-runner-state")).toHaveTextContent(
+      "образ TeX не установлен",
+    );
   });
 
   it("модель открывается облаку флажком", async () => {
     const onModels = vi.fn();
     mount({ onModels });
-    await userEvent.click(screen.getByRole("checkbox", { name: /Ollama/ }));
+    // Закрытый адрес имени не показывает: имя для сервера есть только у открытых.
+    expect(screen.queryByLabelText("Имя для сервера")).toBeNull();
+    await userEvent.click(screen.getByRole("switch", { name: /Ollama/ }));
     expect(onModels).toHaveBeenCalledWith([
       { provider_id: "o", name: "ollama" },
+    ]);
+  });
+
+  it("смена имени открытого адреса только с подтверждением", async () => {
+    const onModels = vi.fn();
+    mount({
+      onModels,
+      status: {
+        ...ONLINE,
+        ai_endpoints: [
+          {
+            name: "ollama",
+            provider_id: "o",
+            flavor: "ollama",
+            url: "http://localhost:11434/v1",
+            announced: true,
+          },
+        ],
+      },
+    });
+    const input = screen.getByLabelText("Имя для сервера");
+    await userEvent.clear(input);
+    await userEvent.type(input, "ollama2");
+    await userEvent.tab();
+    expect(onModels).not.toHaveBeenCalled();
+    expect(screen.getByText(/перестанут работать/)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Переименовать" }),
+    );
+    expect(onModels).toHaveBeenCalledWith([
+      { provider_id: "o", name: "ollama2" },
     ]);
   });
 });

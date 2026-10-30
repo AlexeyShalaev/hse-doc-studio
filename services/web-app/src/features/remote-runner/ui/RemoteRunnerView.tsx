@@ -247,12 +247,23 @@ const StateLine = ({
   detailText: string | null;
 }) => {
   const { t } = useTranslation("runners");
+  // В сети, но без Docker или образа TeX машина сборки LaTeX не берёт: зелёная
+  // точка «берёт ваши облачные сборки» противоречила бы предупреждению ниже.
+  const noTex =
+    status.state === "online" &&
+    (status.docker === "missing" || status.tex_image === "missing");
   const text =
     status.state === "error"
       ? t("remote.state.error", {
           reason: detailText ?? status.detail_code ?? "",
         })
-      : t(`remote.state.${status.state}`);
+      : noTex
+        ? t(
+            status.docker === "missing"
+              ? "remote.state.onlineNoDocker"
+              : "remote.state.onlineNoImage",
+          )
+        : t(`remote.state.${status.state}`);
   return (
     <div
       className="flex items-center"
@@ -266,8 +277,12 @@ const StateLine = ({
       }}
       data-testid="remote-runner-state"
       data-state={status.state}
+      data-degraded={noTex ? "true" : undefined}
     >
-      <StatusDot status={REMOTE_STATE_DOT[status.state]} label={text} />
+      <StatusDot
+        status={noTex ? "warning" : REMOTE_STATE_DOT[status.state]}
+        label={text}
+      />
       {status.paired && status.server_url && (
         <span className="dim" style={{ fontSize: 12 }}>
           <Laptop
@@ -371,6 +386,7 @@ const PairForm = ({
           label={t("remote.name")}
           hint={t("remote.nameHint")}
           value={machine}
+          placeholder={t("remote.namePlaceholder")}
           maxLength={128}
           onChange={(event) => {
             setMachine(event.target.value);
@@ -522,73 +538,120 @@ const CloudModels = ({
         >
           {candidates.map((c) => {
             const on = chosen.has(c.providerId);
+            const saved = chosen.get(c.providerId);
             const name = nameOf(c);
             const nameOk = isValidEndpointName(name);
+            // Имя открытого адреса на сервере уже выбрано в провайдерах «через
+            // мой раннер»: его смена ломает их, поэтому только с подтверждением.
+            const renaming = on && saved !== undefined && name !== saved;
+            const revert = () => {
+              setNames((prev) => {
+                const { [c.providerId]: _dropped, ...rest } = prev;
+                return rest;
+              });
+            };
             return (
               <li
                 key={c.providerId}
-                className="flex items-center"
-                style={{ gap: 12, flexWrap: "wrap" }}
+                className="flex flex-col"
+                style={{ gap: 8 }}
                 data-testid={`remote-runner-ai-endpoint-${c.defaultName}`}
                 data-on={on ? "true" : undefined}
               >
-                <label
-                  className="flex items-center"
-                  style={{ gap: 8, minWidth: 220, flex: 1 }}
+                <div
+                  className="flex items-start"
+                  style={{ gap: 12, flexWrap: "wrap" }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    disabled={busy || (!on && !nameOk)}
-                    aria-label={`${t("remote.models.open")}: ${c.name}`}
-                    onChange={() => {
-                      const next = new Map(chosen);
-                      if (on) next.delete(c.providerId);
-                      else next.set(c.providerId, name);
-                      save(next);
-                    }}
-                  />
-                  <span
-                    className="flex flex-col"
-                    style={{ gap: 2, minWidth: 0 }}
+                  <div
+                    className="flex items-center"
+                    style={{ gap: 10, minWidth: 220, flex: 1 }}
                   >
-                    <span style={{ fontSize: 12.5, fontWeight: 500 }}>
-                      {c.name}
-                      <span className="dim" style={{ fontWeight: 400 }}>
-                        {" · "}
-                        {t(`remote.models.flavor.${c.flavor}`)}
+                    <Switch
+                      checked={on}
+                      disabled={busy || (!on && !nameOk)}
+                      label={`${t("remote.models.open")}: ${c.name}`}
+                      testId={`remote-runner-ai-endpoint-toggle-${c.defaultName}`}
+                      onChange={() => {
+                        const next = new Map(chosen);
+                        if (on) next.delete(c.providerId);
+                        else next.set(c.providerId, name);
+                        revert();
+                        save(next);
+                      }}
+                    />
+                    <span
+                      className="flex flex-col"
+                      style={{ gap: 2, minWidth: 0 }}
+                    >
+                      <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+                        {c.name}
+                        <span className="dim" style={{ fontWeight: 400 }}>
+                          {" · "}
+                          {t(`remote.models.flavor.${c.flavor}`)}
+                        </span>
+                      </span>
+                      <span className="dim mono" style={{ fontSize: 11 }}>
+                        {c.url}
                       </span>
                     </span>
-                    <span className="dim mono" style={{ fontSize: 11 }}>
-                      {c.url}
-                    </span>
-                  </span>
-                </label>
-                <div style={{ width: 180 }}>
-                  <Input
-                    aria-label={`${t("remote.models.name")}: ${c.name}`}
-                    value={name}
-                    isMono
-                    disabled={busy}
-                    {...(!nameOk
-                      ? { error: t("remote.models.nameInvalid") }
-                      : {})}
-                    onChange={(event) => {
-                      setNames((prev) => ({
-                        ...prev,
-                        [c.providerId]: event.target.value,
-                      }));
-                    }}
-                    onBlur={() => {
-                      // Имя уходит на сервер, только если адрес уже открыт и имя верное.
-                      if (on && nameOk && chosen.get(c.providerId) !== name) {
-                        const next = new Map(chosen);
-                        next.set(c.providerId, name);
-                        save(next);
-                      }
-                    }}
-                  />
+                  </div>
+                  {on && (
+                    <div style={{ width: 200 }}>
+                      <Input
+                        label={t("remote.models.name")}
+                        value={name}
+                        isMono
+                        disabled={busy}
+                        {...(!nameOk
+                          ? { error: t("remote.models.nameInvalid") }
+                          : {})}
+                        onChange={(event) => {
+                          setNames((prev) => ({
+                            ...prev,
+                            [c.providerId]: event.target.value,
+                          }));
+                        }}
+                        data-testid={`remote-runner-ai-endpoint-name-${c.defaultName}`}
+                      />
+                    </div>
+                  )}
                 </div>
+                {renaming && (
+                  <Notice
+                    tone="warn"
+                    text={t("remote.models.renameWarn", {
+                      from: saved,
+                      to: name,
+                    })}
+                    action={
+                      <span className="flex" style={{ gap: 6 }}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={busy || !nameOk}
+                          onClick={() => {
+                            const next = new Map(chosen);
+                            next.set(c.providerId, name);
+                            save(next);
+                            revert();
+                          }}
+                          data-testid={`remote-runner-ai-endpoint-rename-${c.defaultName}`}
+                        >
+                          {t("remote.models.renameConfirm")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={revert}
+                        >
+                          {t("remote.models.renameCancel")}
+                        </Button>
+                      </span>
+                    }
+                  />
+                )}
               </li>
             );
           })}

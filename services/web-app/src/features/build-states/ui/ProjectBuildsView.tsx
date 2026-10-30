@@ -178,26 +178,19 @@ export const ProjectBuildsView = ({
         <p className="dim" style={{ margin: "0 0 8px", fontSize: 11.5 }}>
           {t("projectSettings.builds.coauthorsHint")}
         </p>
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        {/* Те же карточки выбора, что «Вход и регистрация» в админке: не системные радиокнопки. */}
+        <div className="adm-choices">
           {POLICIES.map((policy) => {
             const checked = info.policy === policy;
+            const locked = !enabled || saving;
             return (
               <label
                 key={policy}
-                className="flex items-start"
+                className="adm-choice"
                 data-testid={`project-builds-policy-${policy}`}
                 data-checked={checked ? "true" : undefined}
-                style={{
-                  gap: 10,
-                  padding: "10px 12px",
-                  borderRadius: "var(--r-2)",
-                  border: `1px solid ${checked ? "var(--accent)" : "var(--border)"}`,
-                  background: checked
-                    ? "var(--accent-soft, var(--bg-2))"
-                    : "var(--bg-1)",
-                  cursor: enabled && !saving ? "pointer" : "default",
-                  opacity: enabled ? 1 : 0.6,
-                }}
+                data-active={checked}
+                data-disabled={locked || undefined}
               >
                 <input
                   type="radio"
@@ -207,17 +200,18 @@ export const ProjectBuildsView = ({
                   onChange={() => {
                     onChange(policy);
                   }}
-                  style={{ marginTop: 3 }}
                 />
-                <span className="flex flex-col" style={{ gap: 2 }}>
-                  <strong style={{ fontSize: 12.5, fontWeight: 500 }}>
-                    {t(`projectSettings.builds.policy.${policy}.title`)}
-                  </strong>
-                  <span className="dim" style={{ fontSize: 11.5 }}>
-                    {t(`projectSettings.builds.policy.${policy}.hint`)}
-                  </span>
+                <span className="adm-choice-mark" aria-hidden="true" />
+                <span
+                  className="adm-choice-title flex items-center"
+                  style={{ gap: 6 }}
+                >
+                  {t(`projectSettings.builds.policy.${policy}.title`)}
+                  {saving && checked && <Spinner size="sm" />}
                 </span>
-                {saving && checked && <Spinner size="sm" />}
+                <span className="adm-choice-body">
+                  {t(`projectSettings.builds.policy.${policy}.hint`)}
+                </span>
               </label>
             );
           })}

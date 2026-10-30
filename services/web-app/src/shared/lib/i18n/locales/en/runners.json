@@ -216,7 +216,7 @@
   },
   "remote": {
     "title": "Cloud builds",
-    "sub": "This machine can build your cloud projects from the server with its own Docker. Your local projects are not affected.",
+    "sub": "This Studio as your personal runner.",
     "toggle": "Build my cloud projects on this machine",
     "toggleHint": "The Studio will connect to your account on the server and build your cloud projects with local Docker. Your local projects are not affected.",
     "state": {
@@ -229,7 +229,9 @@
       "offline": "Server unreachable, retrying…",
       "revoked": "The runner was revoked on the server. Connect again.",
       "disabled": "The server administrator turned personal runners off.",
-      "error": "Error: {{reason}}"
+      "error": "Error: {{reason}}",
+      "onlineNoDocker": "Online, but not taking LaTeX builds: Docker is unavailable",
+      "onlineNoImage": "Online, but not taking LaTeX builds: the TeX image isn't installed"
     },
     "running_one": "{{count}} cloud build running",
     "running_other": "{{count}} cloud builds running",
@@ -273,13 +275,17 @@
       "flavor": {
         "ollama": "Ollama",
         "openai": "OpenAI API"
-      }
+      },
+      "renameWarn": "\"Via my runner\" providers on the server that use the \"{{from}}\" endpoint will stop working until you pick the new name \"{{to}}\" in them.",
+      "renameConfirm": "Rename",
+      "renameCancel": "Cancel"
     },
     "unpair": "Disconnect from server",
     "unpairTitle": "Disconnect the Studio from the server?",
     "unpairBody": "The runner will be revoked and cloud builds will stop running on this machine. You can connect it again any time.",
     "unpairConfirm": "Disconnect",
     "unpaired": "The Studio is disconnected from the server",
-    "saved": "Saved"
+    "saved": "Saved",
+    "namePlaceholder": "For example, Anna's MacBook"
   }
 }
