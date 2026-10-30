@@ -50,7 +50,21 @@
     "issue": {
       "range": "A whole number from {{min}} to {{max}}."
     },
-    "toQuotas": "Open Quotas"
+    "toQuotas": "Open Quotas",
+    "personal": {
+      "enabled": "Allow personal runners",
+      "enabledHint": "People connect their own machines to build their own projects. Builds on them don't use installation quotas.",
+      "wait": "Wait for a personal runner",
+      "waitHint": "From {{min}} to {{max}} s. How long a build waits for the owner's runner before going to shared runners.",
+      "secondsUnit": "s",
+      "max": "Runners per person, at most",
+      "maxHint": "From {{min}} to {{max}}. Revoked runners don't count.",
+      "runnersUnit": "pcs",
+      "offTitle": "Turn personal runners off?",
+      "offBody": "Builds will go to shared runners and use quotas. AI via runners will stop working.",
+      "offCancel": "Cancel",
+      "offConfirm": "Turn off and save"
+    }
   },
   "signing": {
     "page": {

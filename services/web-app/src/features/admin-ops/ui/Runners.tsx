@@ -29,6 +29,7 @@ import {
 } from "./RunnerDialogs";
 import { statusOf } from "../lib/viewStatus";
 import { FailureNotice } from "./parts";
+import { PersonalRunners } from "./PersonalRunners";
 import { RunnersView } from "./RunnersView";
 
 // Все выполняющиеся задачи одним запросом: из них считается занятость каждого раннера.
@@ -131,6 +132,9 @@ export const Runners = ({
           setRevokingToken(token);
         }}
       />
+      <div style={{ marginTop: 20 }}>
+        <PersonalRunners />
+      </div>
       <ConfirmDialog
         isOpen={rotating !== null}
         title={t("runners.rotateDialog.title", { name: rotating?.name ?? "" })}

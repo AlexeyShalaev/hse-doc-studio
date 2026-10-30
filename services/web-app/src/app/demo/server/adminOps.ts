@@ -80,9 +80,14 @@ type JobSeed = {
   duration?: number;
   priority?: AdminJob["priority"];
   error?: string;
+  /** Личные раннеры: маршрут, кто взял, причина. */
+  route?: string;
+  scope?: "shared" | "personal";
+  reason?: string;
 };
 
 const TAGS: Record<string, string[]> = {
+  "ai.relay": ["ai"],
   compile: ["compile"],
   "office.convert": ["office"],
   "signature.verify_detached": ["verify"],
@@ -115,6 +120,9 @@ const job = (seed: JobSeed, now: number): AdminJob => {
     finished_at: finished === null ? null : ago(Math.max(0, finished), now),
     wait_s: seed.waited,
     error: seed.error ?? null,
+    ...(seed.route !== undefined ? { route: seed.route } : {}),
+    ...(seed.scope !== undefined ? { runner_scope: seed.scope } : {}),
+    ...(seed.reason !== undefined ? { route_reason: seed.reason } : {}),
   };
 };
 
@@ -128,8 +136,71 @@ const GONE: [string, string] = ["u_01hx7k9x8w", ""];
 const BERTIE: [string, string] = ["p_01hxa1c4de", "Bertie: курсовая"];
 const LAB: [string, string] = ["p_01hxa2f8gh", "Лаборатория: отчёт"];
 const THESIS: [string, string] = ["p_01hxa3k2mn", "ВКР: глава 2"];
+const ANNA: [string, string] = ["u_01hx7k2m9c", "Анна Петрова"];
+const MACBOOK: [string, string] = [
+  "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "MacBook Анны",
+];
 const R1: [string, string] = ["rn_01hxb1", "runner-1"];
 const R2: [string, string] = ["rn_01hxb2", "runner-2"];
+
+// Задачи личных раннеров: сборка на своём раннере, ожидание его, ИИ через
+// раннер и сборка, которую раннер не взял за окно ожидания. Только в мирах с
+// личными раннерами, чтобы прежние сценарии очереди не менялись.
+const PERSONAL_JOBS: JobSeed[] = [
+  {
+    id: "j_01hxp1",
+    kind: "compile",
+    status: "running",
+    waited: 1,
+    age: 30,
+    user: ANNA,
+    project: BERTIE,
+    runner: MACBOOK,
+    route: "personal_first",
+    scope: "personal",
+    reason: "personal",
+  },
+  {
+    id: "j_01hxp2",
+    kind: "compile",
+    status: "queued",
+    waited: 2,
+    age: 2,
+    user: ANNA,
+    project: BERTIE,
+    route: "personal_first",
+    reason: "waiting_personal",
+  },
+  {
+    id: "j_01hxp3",
+    kind: "ai.relay",
+    status: "running",
+    waited: 0,
+    age: 12,
+    user: ANNA,
+    project: null,
+    runner: MACBOOK,
+    route: "pinned",
+    scope: "personal",
+    reason: "pinned",
+    priority: "interactive",
+  },
+  {
+    id: "j_01hxp4",
+    kind: "compile",
+    status: "succeeded",
+    waited: 6,
+    age: 700,
+    user: ANNA,
+    project: BERTIE,
+    runner: R2,
+    duration: 37,
+    route: "personal_first",
+    scope: "shared",
+    reason: "fallback_timeout",
+  },
+];
 
 const jobsFor = (seed: ServerDemoOpsSeed, now: number): AdminJob[] => {
   if (seed === "fresh") return [];
@@ -454,10 +525,14 @@ const storageFor = (seed: ServerDemoOpsSeed, now: number): AdminStorage => {
 export const createDemoAdminOps = (
   seed: ServerDemoOpsSeed = "default",
   now: number = Date.now(),
+  personalJobs = false,
 ): DemoAdminOps => ({
   runners: runnersFor(seed, now),
   tokens: tokensFor(seed, now),
-  jobs: jobsFor(seed, now),
+  jobs: [
+    ...(personalJobs ? PERSONAL_JOBS.map((r) => job(r, now)) : []),
+    ...jobsFor(seed, now),
+  ],
   quotas: {
     user_concurrent: 2,
     org_concurrent: seed === "fresh" ? null : 6,

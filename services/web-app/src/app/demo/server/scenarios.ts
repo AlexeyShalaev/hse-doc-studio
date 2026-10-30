@@ -43,6 +43,7 @@ export type ServerDemoScenarioId =
   | "runners_none"
   | "runners_offline"
   | "runners_disabled"
+  | "admin_personal_runners"
   | "admin_runners_disabled"
   | "local_remote_off"
   | "local_remote_online"
@@ -667,6 +668,28 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
     tokenRequired: false,
     personalSeed: "disabled",
     bootstrap: () => personalBase(false),
+  },
+  {
+    id: "admin_personal_runners",
+    tokenRequired: false,
+    personalSeed: "default",
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "invite",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+        },
+        user: DEMO_ADMIN,
+        capabilities: {
+          ...SERVER_CAPABILITIES,
+          admin: true,
+          personal_runners: true,
+        },
+        csrf_token: ADMIN_CSRF,
+      }),
   },
   {
     id: "admin_runners_disabled",

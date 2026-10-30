@@ -15,7 +15,24 @@ export const JOB_KINDS = [
   "office.convert",
   "signature.verify_detached",
   "pack.submission",
+  "ai.relay",
 ] as const;
+
+/** Где задача: на общем раннере, на личном, ИИ через раннер или ждёт личный. */
+export type JobWhere = "shared" | "personal" | "ai" | "waiting";
+
+export const jobWhere = (
+  job: Pick<AdminJob, "kind" | "runner_scope" | "route" | "status">,
+): JobWhere | null => {
+  if (job.kind === "ai.relay") return "ai";
+  if (job.runner_scope === "personal") return "personal";
+  if (job.runner_scope === "shared") return "shared";
+  if (job.status === "queued" && job.route === "personal_first") {
+    return "waiting";
+  }
+  // Задача ещё не взята или сервер без маршрутов: общие раннеры.
+  return job.status === "queued" ? null : "shared";
+};
 
 export const isActive = (job: Pick<AdminJob, "status">): boolean =>
   job.status === "queued" || job.status === "running";

@@ -24,11 +24,25 @@ export const UpdateAdminInstanceRequestSchema = z.strictObject({
 export const AdminBuildSettingsSchema = z.strictObject({
   timeout_s: z.number().int(),
   artifact_retention_days: z.number().int(),
+  // Личные раннеры: ключи runners.* в fields. Необязательные, пока не все
+  // бэкенды их отдают; без них строки настроек не показываются.
+  personal_runners_enabled: z.boolean().optional(),
+  personal_runner_wait_s: z.number().int().min(0).max(60).optional(),
+  personal_runners_max_per_user: z.number().int().min(1).max(20).optional(),
   fields,
 });
 export const UpdateAdminBuildRequestSchema = z.strictObject({
   timeout_s: z.number().int().nullable(),
   artifact_retention_days: z.number().int().nullable(),
+  personal_runners_enabled: z.boolean().nullable().optional(),
+  personal_runner_wait_s: z.number().int().min(0).max(60).nullable().optional(),
+  personal_runners_max_per_user: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .nullable()
+    .optional(),
 });
 
 export type AdminInstanceSettings = z.infer<typeof AdminInstanceSettingsSchema>;

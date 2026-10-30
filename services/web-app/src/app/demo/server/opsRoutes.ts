@@ -10,7 +10,8 @@ import type {
   AdminRunner,
   AdminRunnerToken,
 } from "@entities/session";
-import { adminOpsOf, type ServerDemoWorld } from "./world";
+import { runnerState, type DemoPersonalRunner } from "./personalRunners";
+import { adminOpsOf, personalOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: раннеры, токены регистрации, очередь, квоты, сервисы и место.
 // Тела совпадают с contracts/server/fixtures (AdminRunnerList, AdminJobPage, AdminQuotas и т.д.).
@@ -83,6 +84,37 @@ export const createOpsRoutes = (
   const wireRunner = (r: AdminRunner): AdminRunner => ({
     ...r,
     status: runnerStatusOf(r),
+    owner_kind: "instance",
+    owner: null,
+    host_kind: "cli",
+    ai_endpoints: [],
+    last_seen_ip: null,
+  });
+
+  // Личные раннеры людей: админ видит владельца и состояние, может приостановить
+  // и отозвать, но не сменить токен (403 forbidden).
+  const personalRunners = () => personalOf(getWorld());
+  const personalOfId = (
+    id: string | undefined,
+  ): DemoPersonalRunner | undefined =>
+    personalRunners().runners.find((r) => r.id === id && r.revoked_at === null);
+  const wirePersonal = (r: DemoPersonalRunner): AdminRunner => ({
+    id: r.id,
+    name: r.name,
+    status: runnerState(r, personalRunners().enabled),
+    tags: r.tags,
+    concurrency: r.concurrency,
+    resource_class: "standard",
+    version: r.version,
+    created_at: r.created_at,
+    last_seen_at: r.last_seen_at,
+    paused: r.paused,
+    revoked: r.revoked_at !== null,
+    owner_kind: "user",
+    owner: { ...r.owner },
+    host_kind: r.host_kind,
+    ai_endpoints: r.ai_endpoints.map((e) => e.name),
+    last_seen_ip: r.last_seen_ip,
   });
 
   const wireJob = (j: AdminJob) => ({
@@ -102,10 +134,19 @@ export const createOpsRoutes = (
     runner_id: j.runner_id,
     cancel_requested: false,
     error_code: j.error,
+    route: j.route ?? "shared",
+    runner_scope: j.runner_scope ?? (j.started_at === null ? null : "shared"),
+    route_reason: j.route_reason ?? null,
   });
 
   const summary = () => {
-    const jobs = state().jobs;
+    // Как у сервера: задача в окне ожидания личного раннера и ИИ через раннер
+    // общих раннеров не ждут и в «ждут раннера» не считаются.
+    const jobs = state().jobs.filter(
+      (j) =>
+        j.status !== "queued" ||
+        (j.route !== "personal_first" && j.route !== "pinned"),
+    );
     const queued = jobs.filter((j) => j.status === "queued");
     // Ожидание считается и по тем, кто ещё в очереди: иначе 95-й процентиль
     // оказывается меньше ожиданий, видных в таблице.
@@ -155,16 +196,29 @@ export const createOpsRoutes = (
     {
       method: "GET",
       pattern: "/runners",
-      handler: guarded(() => demoJson(state().runners.map(wireRunner))),
+      handler: guarded((req) => {
+        const owner = queryString(req, "owner_kind");
+        return demoJson([
+          ...(owner === "user" ? [] : state().runners.map(wireRunner)),
+          ...(owner === "instance"
+            ? []
+            : personalRunners().runners.map(wirePersonal)),
+        ]);
+      }),
     },
     {
       method: "PATCH",
       pattern: "/runners/:id",
       handler: guarded((req) => {
-        const found = runnerOf(req.params.id);
-        if (!found) return notFound();
         const paused = body(req).paused;
         if (typeof paused !== "boolean") return invalid();
+        const personal = personalOfId(req.params.id);
+        if (personal) {
+          personal.paused = paused;
+          return demoNoContent();
+        }
+        const found = runnerOf(req.params.id);
+        if (!found) return notFound();
         found.paused = paused;
         return demoNoContent();
       }),
@@ -173,6 +227,13 @@ export const createOpsRoutes = (
       method: "POST",
       pattern: "/runners/:id/rotate-token",
       handler: guarded((req) => {
+        if (personalOfId(req.params.id)) {
+          return demoError(
+            403,
+            "forbidden",
+            "Only the owner can rotate a personal runner token",
+          );
+        }
         const found = runnerOf(req.params.id);
         if (!found) return notFound();
         const value = secret("hse_rn");
@@ -187,6 +248,13 @@ export const createOpsRoutes = (
       method: "DELETE",
       pattern: "/runners/:id",
       handler: guarded((req) => {
+        const personal = personalOfId(req.params.id);
+        if (personal) {
+          personal.revoked_at = new Date().toISOString();
+          personal.alive = false;
+          personal.running_jobs = 0;
+          return demoNoContent();
+        }
         const found = runnerOf(req.params.id);
         if (!found) return notFound();
         found.revoked = true;
@@ -257,6 +325,7 @@ export const createOpsRoutes = (
       handler: guarded((req) => {
         const status = queryString(req, "state");
         const kind = queryString(req, "kind");
+        const scope = queryString(req, "runner_scope");
         const limit = Math.max(
           1,
           Math.min(200, Number(queryString(req, "limit") ?? "25") || 25),
@@ -264,7 +333,9 @@ export const createOpsRoutes = (
         const rows = state()
           .jobs.filter(
             (j) =>
-              (!status || j.status === status) && (!kind || j.kind === kind),
+              (!status || j.status === status) &&
+              (!kind || j.kind === kind) &&
+              (!scope || wireJob(j).runner_scope === scope),
           )
           .sort(
             (a, b) =>

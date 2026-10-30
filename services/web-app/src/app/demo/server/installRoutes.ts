@@ -2,7 +2,7 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import type { AdminSettingState } from "@entities/session";
 import type { DemoSharedProvider } from "./adminInstall";
-import { adminInstallOf, type ServerDemoWorld } from "./world";
+import { adminInstallOf, personalOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
 // Тела совпадают с contracts/server/fixtures. Правила как у настоящего API: только админ
@@ -55,6 +55,43 @@ export const createInstallRoutes = (
     (req) =>
       guard() ?? handler(req);
   const state = () => adminInstallOf(getWorld());
+
+  // Ключи runners.* в env_locked заданы окружением, как у настоящего сервера.
+  const personalFields = (): Record<string, AdminSettingState> => {
+    const env = getWorld().scenario.installSeed === "env_locked";
+    const source: AdminSettingState = env
+      ? { source: "env", locked: true }
+      : { source: "default", locked: false };
+    return {
+      "runners.personal_enabled": source,
+      "runners.personal_wait_s": { source: "default", locked: false },
+      "runners.personal_max_per_user": { source: "default", locked: false },
+    };
+  };
+
+  const buildView = () => {
+    const personal = personalOf(getWorld());
+    const s = state();
+    return {
+      ...s.build,
+      personal_runners_enabled: personal.enabled,
+      personal_runner_wait_s: personal.waitS,
+      personal_runners_max_per_user: personal.maxPerUser,
+      fields: { ...personalFields(), ...s.build.fields },
+    };
+  };
+
+  /** Выключение личных раннеров видно людям в bootstrap, как на сервере. */
+  const syncPersonalBootstrap = (enabled: boolean) => {
+    const world = getWorld();
+    world.bootstrap = {
+      ...world.bootstrap,
+      capabilities: {
+        ...world.bootstrap.capabilities,
+        personal_runners: enabled,
+      },
+    };
+  };
 
   /** Пользователь узнаёт политику из bootstrap: держим его в согласии с админкой. */
   const syncBootstrap = () => {
@@ -141,7 +178,7 @@ export const createInstallRoutes = (
     {
       method: "GET",
       pattern: "/settings/build",
-      handler: guarded(() => demoJson(state().build)),
+      handler: guarded(() => demoJson(buildView())),
     },
     {
       method: "PUT",
@@ -180,8 +217,34 @@ export const createInstallRoutes = (
           next.artifact_retention_days = days;
           fields["build.artifact_retention_days"] = admin();
         }
+        // Личные раннеры живут в своём мире: их флаг видят и люди, и админка.
+        const personal = personalOf(getWorld());
+        const pf = personalFields();
+        if (
+          (body.personal_runners_enabled != null &&
+            pf["runners.personal_enabled"]?.locked) ||
+          (body.personal_runner_wait_s != null &&
+            pf["runners.personal_wait_s"]?.locked)
+        ) {
+          return locked();
+        }
+        if (typeof body.personal_runners_enabled === "boolean") {
+          personal.enabled = body.personal_runners_enabled;
+          syncPersonalBootstrap(personal.enabled);
+        }
+        if (typeof body.personal_runner_wait_s === "number") {
+          const wait = body.personal_runner_wait_s;
+          if (!Number.isInteger(wait) || wait < 0 || wait > 60)
+            return invalid();
+          personal.waitS = wait;
+        }
+        if (typeof body.personal_runners_max_per_user === "number") {
+          const max = body.personal_runners_max_per_user;
+          if (!Number.isInteger(max) || max < 1 || max > 20) return invalid();
+          personal.maxPerUser = max;
+        }
         s.build = { ...next, fields };
-        return demoJson(s.build);
+        return demoJson(buildView());
       }),
     },
     {

@@ -2,7 +2,15 @@ import { useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { useDraft } from "@shared/lib/useDraft";
-import { Input, Section, SettingRow, StickySaveBar } from "@shared/ui";
+import {
+  Button,
+  Input,
+  Modal,
+  Section,
+  SettingRow,
+  StickySaveBar,
+} from "@shared/ui";
+import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
 import type {
   AdminBuildSettings,
@@ -35,6 +43,13 @@ export type InstanceFormProps = {
 };
 
 type BuildDraft = { minutes: string; days: string };
+type PersonalDraft = { enabled: boolean; wait: string; max: string };
+
+// Пределы личных раннеров: те же, что проверяет сервер (раздел 3.7 спецификации).
+const WAIT_MIN = 0;
+const WAIT_MAX = 60;
+const PER_USER_MIN = 1;
+const PER_USER_MAX = 20;
 
 const INSTANCE_KEYS = ["name", "public_url", "docs_url"] as const;
 type InstanceKey = (typeof INSTANCE_KEYS)[number];
@@ -72,6 +87,26 @@ export const InstanceForm = ({
     },
     (key) => (key === "minutes" ? !timeoutLocked : !daysLocked),
   );
+  // Сервер без личных раннеров этих полей не отдаёт: тогда и строк нет.
+  const personalKnown = build.personal_runners_enabled !== undefined;
+  const enabledLocked = isLocked(build.fields, "runners.personal_enabled");
+  const waitLocked = isLocked(build.fields, "runners.personal_wait_s");
+  const maxLocked = isLocked(build.fields, "runners.personal_max_per_user");
+  const prs = useDraft<PersonalDraft>(
+    {
+      enabled: build.personal_runners_enabled ?? true,
+      wait: String(build.personal_runner_wait_s ?? 5),
+      max: String(build.personal_runners_max_per_user ?? 5),
+    },
+    (key) =>
+      personalKnown &&
+      (key === "enabled"
+        ? !enabledLocked
+        : key === "wait"
+          ? !waitLocked
+          : !maxLocked),
+  );
+  const [confirmOff, setConfirmOff] = useState(false);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -89,22 +124,38 @@ export const InstanceForm = ({
   const daysBad =
     bld.isChanged("days") &&
     !inRange(bld.value.days, RETENTION_MIN, RETENTION_MAX);
+  const waitBad =
+    prs.isChanged("wait") && !inRange(prs.value.wait, WAIT_MIN, WAIT_MAX);
+  const maxBad =
+    prs.isChanged("max") && !inRange(prs.value.max, PER_USER_MIN, PER_USER_MAX);
   const invalid =
     inst.changed.some((key) => issues[key] !== undefined) ||
     minutesBad ||
-    daysBad;
-  const dirtyCount = inst.changed.length + bld.changed.length;
+    daysBad ||
+    waitBad ||
+    maxBad;
+  const dirtyCount =
+    inst.changed.length + bld.changed.length + prs.changed.length;
 
   const discard = () => {
     inst.reset();
     bld.reset();
+    prs.reset();
     setTouched(false);
     setFailure(null);
   };
 
-  const save = async () => {
+  // Выключение личных раннеров меняет жизнь всех их хозяев: сначала подтверждение.
+  const turningOff = prs.isChanged("enabled") && !prs.value.enabled;
+
+  const save = async (confirmed = false) => {
     setTouched(true);
     if (dirtyCount === 0 || invalid || busy) return;
+    if (turningOff && !confirmed) {
+      setConfirmOff(true);
+      return;
+    }
+    setConfirmOff(false);
     setBusy(true);
     setFailure(null);
     const pick = (key: InstanceKey): string | null =>
@@ -119,7 +170,7 @@ export const InstanceForm = ({
           }),
         done: inst.reset,
       },
-      bld.changed.length > 0 && {
+      (bld.changed.length > 0 || prs.changed.length > 0) && {
         run: () =>
           saveBuild({
             timeout_s: bld.isChanged("minutes")
@@ -128,8 +179,26 @@ export const InstanceForm = ({
             artifact_retention_days: bld.isChanged("days")
               ? Number(bld.value.days)
               : null,
+            // Поля личных раннеров уходят только серверу, который их знает:
+            // старый сервер отверг бы лишние ключи.
+            ...(personalKnown
+              ? {
+                  personal_runners_enabled: prs.isChanged("enabled")
+                    ? prs.value.enabled
+                    : null,
+                  personal_runner_wait_s: prs.isChanged("wait")
+                    ? Number(prs.value.wait)
+                    : null,
+                  personal_runners_max_per_user: prs.isChanged("max")
+                    ? Number(prs.value.max)
+                    : null,
+                }
+              : {}),
           }),
-        done: bld.reset,
+        done: () => {
+          bld.reset();
+          prs.reset();
+        },
       },
     ]);
     setBusy(false);
@@ -227,7 +296,13 @@ export const InstanceForm = ({
         testId="admin-build"
         title={t("build.title")}
         description={t("build.sub")}
-        footer={timeoutLocked && daysLocked ? <AllLockedNote /> : null}
+        footer={
+          timeoutLocked &&
+          daysLocked &&
+          (!personalKnown || (enabledLocked && waitLocked && maxLocked)) ? (
+            <AllLockedNote />
+          ) : null
+        }
       >
         <div data-testid="build-form" style={{ display: "contents" }}>
           <SettingRow
@@ -299,8 +374,124 @@ export const InstanceForm = ({
               )}
             </div>
           </SettingRow>
+          {personalKnown && (
+            <>
+              <SettingRow
+                label={t("build.personal.enabled")}
+                hint={t("build.personal.enabledHint")}
+                htmlFor={`${uid}-personal`}
+                locked={enabledLocked}
+                testId="build-personal-enabled"
+              >
+                <Switch
+                  id={`${uid}-personal`}
+                  checked={prs.value.enabled}
+                  disabled={enabledLocked}
+                  onChange={(enabled) => {
+                    prs.set({ enabled });
+                  }}
+                  testId="admin-personal-runners-toggle"
+                />
+              </SettingRow>
+              <SettingRow
+                label={t("build.personal.wait")}
+                hint={t("build.personal.waitHint", {
+                  min: WAIT_MIN,
+                  max: WAIT_MAX,
+                })}
+                htmlFor={`${uid}-wait`}
+                locked={waitLocked}
+                testId="build-personal-wait"
+              >
+                <div className="adm-fields" style={{ alignItems: "flex-end" }}>
+                  <UnitInput
+                    id={`${uid}-wait`}
+                    unit={t("build.personal.secondsUnit")}
+                    value={prs.value.wait}
+                    locked={waitLocked}
+                    disabled={!prs.value.enabled && !waitLocked}
+                    aria-invalid={waitBad || undefined}
+                    onChange={(e) => {
+                      prs.set({ wait: e.target.value });
+                    }}
+                    data-testid="admin-personal-wait-s"
+                  />
+                  {waitBad && (
+                    <p className="adm-field-error" role="alert">
+                      {t("build.issue.range", { min: WAIT_MIN, max: WAIT_MAX })}
+                    </p>
+                  )}
+                </div>
+              </SettingRow>
+              <SettingRow
+                label={t("build.personal.max")}
+                hint={t("build.personal.maxHint", {
+                  min: PER_USER_MIN,
+                  max: PER_USER_MAX,
+                })}
+                htmlFor={`${uid}-max`}
+                locked={maxLocked}
+                testId="build-personal-max"
+              >
+                <div className="adm-fields" style={{ alignItems: "flex-end" }}>
+                  <UnitInput
+                    id={`${uid}-max`}
+                    unit={t("build.personal.runnersUnit")}
+                    value={prs.value.max}
+                    locked={maxLocked}
+                    disabled={!prs.value.enabled && !maxLocked}
+                    aria-invalid={maxBad || undefined}
+                    onChange={(e) => {
+                      prs.set({ max: e.target.value });
+                    }}
+                    data-testid="admin-personal-max"
+                  />
+                  {maxBad && (
+                    <p className="adm-field-error" role="alert">
+                      {t("build.issue.range", {
+                        min: PER_USER_MIN,
+                        max: PER_USER_MAX,
+                      })}
+                    </p>
+                  )}
+                </div>
+              </SettingRow>
+            </>
+          )}
         </div>
       </Section>
+
+      <Modal
+        isOpen={confirmOff}
+        onClose={() => {
+          setConfirmOff(false);
+        }}
+        title={t("build.personal.offTitle")}
+        description={t("build.personal.offBody")}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setConfirmOff(false);
+              }}
+            >
+              {t("build.personal.offCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                void save(true);
+              }}
+              data-testid="admin-personal-off-confirm"
+            >
+              {t("build.personal.offConfirm")}
+            </Button>
+          </>
+        }
+      />
 
       <StickySaveBar
         dirtyCount={dirtyCount}

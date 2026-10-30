@@ -642,6 +642,7 @@ export const AdminJobSchema = z.strictObject({
     "office.convert",
     "signature.verify_detached",
     "pack.submission",
+    "ai.relay",
   ]),
   state: JobStateSchema,
   project_id: z.string(),
@@ -657,6 +658,10 @@ export const AdminJobSchema = z.strictObject({
   runner_id: z.string().nullable(),
   cancel_requested: z.boolean(),
   error_code: z.string().nullable(),
+  // Маршрут и область исполнения (личные раннеры). Нет поля: задача общих раннеров.
+  route: z.enum(["shared", "personal_first", "pinned"]).optional(),
+  runner_scope: z.enum(["shared", "personal"]).nullable().optional(),
+  route_reason: z.string().nullable().optional(),
 });
 export const AdminJobPageSchema = z.strictObject({
   items: z.array(AdminJobSchema),
