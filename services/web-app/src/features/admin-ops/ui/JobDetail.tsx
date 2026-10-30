@@ -5,7 +5,7 @@ import { Badge, Modal, PersonCell, StatusDot } from "@shared/ui";
 import type { AdminJob } from "@entities/session";
 import { dateTime, formatDuration } from "../lib/format";
 import { JOB_TONE, runSeconds } from "../lib/jobs";
-import { shortRef, type PersonRef } from "../lib/people";
+import { personRef, shortRef } from "../lib/people";
 import { useDurationUnits } from "../lib/useDurationUnits";
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -20,19 +20,18 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
 /** Метаданные задачи: ошибка, раннер, попытки. Логи и результаты здесь не показываются. */
 export const JobDetail = ({
   job,
-  person = null,
-  runnerName = null,
   now,
   onClose,
 }: {
+  /** Задача из строки очереди: имена людей, проекта и раннера в ней от сервера. */
   job: AdminJob | null;
-  /** Кто запустил: имя и почта, если человек найден. */
-  person?: PersonRef | null;
-  runnerName?: string | null;
   now: number;
   onClose: () => void;
 }) => {
   const { t, i18n } = useTranslation("adminOps");
+  const person = job
+    ? personRef(job.user_id, job.user_name, job.user_email)
+    : null;
   const units = useDurationUnits();
   const locale = i18n.language;
   const run = job ? runSeconds(job, now) : null;
@@ -80,8 +79,8 @@ export const JobDetail = ({
             >
               <PersonCell
                 size="sm"
-                id={person?.id ?? job.user_id}
-                name={person?.name ?? (job.user_name || null)}
+                id={job.user_id}
+                name={person?.name ?? null}
                 email={person?.email ?? null}
                 fallback={t("queue.unknownPerson")}
               />
@@ -96,14 +95,29 @@ export const JobDetail = ({
                   </span>
                 ))}
           </Row>
+          {job.org_id != null && (
+            <Row label={t("queue.detail.org")}>
+              {job.org_name ?? (
+                <span className="ops-code" title={job.org_id}>
+                  {shortRef(job.org_id)}
+                </span>
+              )}
+            </Row>
+          )}
           <Row label={t("queue.detail.priority")}>
             {t(`queue.priority.${job.priority}`, {
               defaultValue: job.priority,
             })}
           </Row>
           <Row label={t("queue.detail.runner")}>
-            {runnerName ?? job.runner_name ?? (
+            {job.runner_id === null ? (
               <span className="ops-muted">{t("queue.detail.noRunner")}</span>
+            ) : (
+              (job.runner_name ?? (
+                <span className="ops-code" title={job.runner_id}>
+                  {shortRef(job.runner_id)}
+                </span>
+              ))
             )}
           </Row>
           <Row label={t("queue.detail.attempts")}>

@@ -1,45 +1,44 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
+import { useCursorList } from "@shared/lib";
 import type { AdminJob } from "@entities/session";
-import type { QueueQuery } from "../api/opsApi";
+import { opsApi } from "../api/opsApi";
 import {
+  opsKeys,
+  POLL_MS,
   useCancelJob,
-  usePeople,
-  useQueue,
   useQueueSummary,
-  useRunners,
 } from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
+import { useQueueListState } from "../lib/lists";
 import { personRef } from "../lib/people";
 import { useNow } from "../lib/useNow";
-import { JobDetail } from "./JobDetail";
 import { statusOf } from "../lib/viewStatus";
-import { PAGE_STEP, QueueView } from "./QueueView";
+import { JobDetail } from "./JobDetail";
+import { QueueView } from "./QueueView";
 import { ConfirmDialog } from "./RunnerDialogs";
 
-/** Очередь: опрос раз в несколько секунд, отмена с подтверждением, подробности задачи. */
+const jobId = (job: AdminJob) => job.id;
+
+/**
+ * Очередь: журнал по курсору сервера, «Показать ещё» дописывает страницы.
+ * Опрос раз в несколько секунд перечитывает только первую страницу и вклеивает
+ * её сверху; отмена с подтверждением, подробности задачи.
+ */
 export const Queue = () => {
   const { t } = useTranslation("adminOps");
-  const [query, setQuery] = useState<QueueQuery>({
-    status: "",
-    kind: "",
-    q: "",
-    limit: PAGE_STEP,
+  const state = useQueueListState();
+  const jobs = useCursorList({
+    state,
+    queryKey: opsKeys.queueAll,
+    fetchPage: (params, signal) => opsApi.queue(params, signal),
+    getId: jobId,
+    pollMs: POLL_MS,
   });
-  const jobs = useQueue(query);
   const summary = useQueueSummary();
-  const runners = useRunners();
   const cancel = useCancelJob();
   const now = useNow(5000);
-
-  const items = jobs.data?.items;
-  const ids = useMemo(() => (items ?? []).map((j) => j.user_id), [items]);
-  const people = usePeople(ids);
-  const runnerNames = useMemo(
-    () => new Map((runners.data ?? []).map((r) => [r.id, r.name])),
-    [runners.data],
-  );
 
   const [opened, setOpened] = useState<AdminJob | null>(null);
   const [cancelling, setCancelling] = useState<AdminJob | null>(null);
@@ -47,10 +46,10 @@ export const Queue = () => {
 
   // Открытую задачу берём из свежего ответа, чтобы статус в панели не отставал.
   const fresh = opened
-    ? (items?.find((j) => j.id === opened.id) ?? opened)
+    ? (jobs.items.find((j) => j.id === opened.id) ?? opened)
     : null;
   const cancellingWho = cancelling
-    ? personRef(cancelling.user_id, cancelling.user_name, people)
+    ? personRef(cancelling.user_id, cancelling.user_name, cancelling.user_email)
     : null;
 
   return (
@@ -58,19 +57,13 @@ export const Queue = () => {
       <QueueView
         summaryStatus={statusOf(summary)}
         summary={summary.data ?? null}
-        status={statusOf(jobs)}
-        jobs={items ?? []}
-        hasMore={jobs.data?.hasMore ?? false}
-        people={people}
-        runnerNames={runnerNames}
-        query={query}
+        status={statusOf(jobs.query)}
+        jobs={jobs.items}
+        fetching={jobs.isFetching && !jobs.isLoadingMore}
+        failed={jobs.isError}
+        state={state}
+        pagination={jobs.pagination}
         now={now}
-        onQueryChange={(patch) => {
-          setQuery((prev) => ({ ...prev, ...patch, limit: PAGE_STEP }));
-        }}
-        onLoadMore={() => {
-          setQuery((prev) => ({ ...prev, limit: prev.limit + PAGE_STEP }));
-        }}
         onOpen={setOpened}
         onCancel={(job) => {
           setFailure(null);
@@ -80,14 +73,6 @@ export const Queue = () => {
       />
       <JobDetail
         job={fresh}
-        person={
-          fresh ? personRef(fresh.user_id, fresh.user_name, people) : null
-        }
-        runnerName={
-          fresh?.runner_id
-            ? (runnerNames.get(fresh.runner_id) ?? fresh.runner_name)
-            : null
-        }
         now={now}
         onClose={() => {
           setOpened(null);

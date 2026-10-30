@@ -124,6 +124,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Имя раннера в очереди в одну строку: длинное режется, а не ломает ряд. */
+.ops-ellipsis {
+  display: block;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ops-muted {
   color: var(--fg-3);
   white-space: nowrap;
@@ -137,6 +145,48 @@
 .ops-tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 4px;
+}
+/* Тег и класс раннера в строке: щелчок ставит фильтр списка. */
+.ops-tag-btn {
+  all: unset;
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: var(--r-1);
+}
+.ops-tag-btn:hover .chip {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.ops-tag-btn:focus-visible,
+.ops-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ops-link {
+  all: unset;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.ops-link:hover {
+  color: var(--fg-0);
+}
+/* Поиск и фильтры внутри карточки раздела (токены): те же отступы, что у строк. */
+.ops-section-bar {
+  padding: 0 20px 12px;
+}
+.ops-section-pager {
+  padding: 10px 20px 4px;
+  border-top: 1px solid var(--border);
+}
+.ops-sort > button {
+  min-width: 170px;
+}
+.ops-owner-org {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
 }
 .ops-version[data-outdated] {

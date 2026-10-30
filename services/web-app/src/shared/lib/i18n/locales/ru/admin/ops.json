@@ -1,4 +1,7 @@
 {
+  "filters": {
+    "search": "Поиск"
+  },
   "loading": "Загружаем",
   "retry": "Повторить",
   "cancel": "Отмена",
@@ -53,7 +56,9 @@
     "revokeAction": "Отозвать раннер",
     "actionsLabel": "Действия с раннером {{name}}",
     "class": {
-      "standard": "обычный"
+      "standard": "обычный",
+      "large": "большой",
+      "gpu": "с GPU"
     },
     "noneOnline": {
       "title": "Ни один раннер не в сети",
@@ -75,13 +80,6 @@
       "paused_few": "{{count}} на паузе",
       "paused_many": "{{count}} на паузе",
       "paused_other": "{{count}} на паузе",
-      "capacity": "Занято мест",
-      "capacityHint": "Мест у раннеров в сети",
-      "noCapacity": "Нет раннеров, готовых взять задачу",
-      "free_one": "Свободно {{count}} место",
-      "free_few": "Свободно {{count}} места",
-      "free_many": "Свободно {{count}} мест",
-      "free_other": "Свободно {{count}} места",
       "waiting": "Ждут раннера",
       "waitingFailed": "Не удалось загрузить",
       "nobodyWaits": "Очередь пуста",
@@ -91,7 +89,9 @@
       "outdated_few": "{{count}} раннера на старой версии",
       "outdated_many": "{{count}} раннеров на старой версии",
       "outdated_other": "{{count}} раннера на старой версии",
-      "sameVersion": "У всех одна версия"
+      "sameVersion": "У всех одна версия",
+      "running": "Выполняется",
+      "runningHint": "Задач на раннерах прямо сейчас"
     },
     "status": {
       "online": "В сети",
@@ -105,7 +105,8 @@
       "status": "Состояние",
       "tags": "Теги",
       "load": "Загрузка",
-      "actions": "Действия"
+      "actions": "Действия",
+      "version": "Версия"
     },
     "empty": {
       "title": "Раннеров пока нет",
@@ -127,7 +128,21 @@
       "confirm": "Отозвать"
     },
     "newerVersion": "Есть новее: {{version}}",
-    "versionOf": "Версия раннера"
+    "versionOf": "Версия раннера",
+    "search": "Найти раннер",
+    "searchPlaceholder": "Имя, версия или тег",
+    "filters": {
+      "status": "Состояние",
+      "version": "Версия",
+      "tag": "Тег",
+      "class": "Класс"
+    },
+    "version": {
+      "outdated": "Устаревшие",
+      "current": "Последняя версия"
+    },
+    "tagFilter": "Показать раннеры с тегом {{tag}}",
+    "classFilter": "Показать раннеры этого класса"
   },
   "tokens": {
     "title": "Токены регистрации",
@@ -177,33 +192,32 @@
       "title": "Отозвать токен",
       "body": "Токен «{{label}}» перестанет принимать новые раннеры. Уже подключённые раннеры продолжат работать.",
       "confirm": "Отозвать"
+    },
+    "search": "Найти токен",
+    "searchPlaceholder": "Название токена",
+    "filters": {
+      "status": "Состояние"
+    },
+    "sort": {
+      "label": "Порядок",
+      "newest": "Сначала новые",
+      "expiring": "Скоро истекают",
+      "byLabel": "По названию"
     }
   },
   "queue": {
     "caption": "Очередь задач",
     "loadFailed": "Не удалось загрузить очередь.",
     "summaryFailed": "Не удалось загрузить",
-    "search": "Найти по человеку, проекту или раннеру",
-    "searchPlaceholder": "Человек или проект",
     "noProject": "Без проекта",
     "unknownPerson": "Удалённый пользователь",
     "notStarted": "не начата",
     "noRunner": "не назначен",
     "cancel": "Отменить",
     "cancelLabel": "Отменить задачу «{{kind}}»",
-    "count_one": "Показана {{count}} задача",
-    "count_few": "Показано {{count}} задачи",
-    "count_many": "Показано {{count}} задач",
-    "count_other": "Показано {{count}} задачи",
-    "more": "Показать ещё",
     "empty": {
       "title": "Очередь пуста",
       "body": "Задачи появятся здесь, когда кто-нибудь запустит сборку или проверку."
-    },
-    "noMatch": {
-      "title": "Ничего не найдено",
-      "body": "Под эти фильтры задач нет.",
-      "reset": "Сбросить фильтры"
     },
     "stats": {
       "queued": "В очереди",
@@ -216,10 +230,10 @@
       "waitHint": "По недавним задачам",
       "p95": "95% задач ждут не дольше {{value}}",
       "failed": "Завершились с ошибкой",
-      "failedHint_one": "Из {{count}} завершённой",
-      "failedHint_few": "Из {{count}} завершённых",
-      "failedHint_many": "Из {{count}} завершённых",
-      "failedHint_other": "Из {{count}} завершённых"
+      "failedHint_one": "Из {{n}} завершённой",
+      "failedHint_few": "Из {{n}} завершённых",
+      "failedHint_many": "Из {{n}} завершённых",
+      "failedHint_other": "Из {{n}} завершённых"
     },
     "classes": {
       "title": "Ждут по приоритету:",
@@ -231,7 +245,20 @@
     },
     "filters": {
       "status": "Состояние",
-      "kind": "Тип"
+      "kind": "Тип",
+      "label": "Фильтры очереди",
+      "user": "Человек",
+      "org": "Организация",
+      "project": "Проект",
+      "runner": "Раннер",
+      "period": "Период",
+      "userPlaceholder": "Имя или почта",
+      "orgPlaceholder": "Название организации",
+      "projectPlaceholder": "Название проекта",
+      "runnerPlaceholder": "Имя раннера",
+      "periodRange": "с {{from}} по {{to}}",
+      "periodFrom": "с {{from}}",
+      "periodTo": "по {{to}}"
     },
     "columns": {
       "kind": "Задача",
@@ -287,7 +314,8 @@
       "created": "Создана",
       "wait": "Ожидание",
       "run": "Работа",
-      "error": "Ошибка"
+      "error": "Ошибка",
+      "org": "Организация"
     },
     "cancelDialog": {
       "title": "Отменить задачу",
@@ -426,16 +454,16 @@
     "lowBody": "Освободите место или расширьте диск, иначе сохранение файлов перестанет работать.",
     "stats": {
       "projects": "Проекты",
-      "projectsHint_one": "Ещё {{count}} удалён и ждёт стирания",
-      "projectsHint_few": "Ещё {{count}} удалены и ждут стирания",
-      "projectsHint_many": "Ещё {{count}} удалены и ждут стирания",
-      "projectsHint_other": "Ещё {{count}} удалены и ждут стирания",
+      "projectsHint_one": "Ещё {{n}} удалён и ждёт стирания",
+      "projectsHint_few": "Ещё {{n}} удалены и ждут стирания",
+      "projectsHint_many": "Ещё {{n}} удалены и ждут стирания",
+      "projectsHint_other": "Ещё {{n}} удалены и ждут стирания",
       "noDeleted": "Удалённых нет",
       "objects": "Сборки и вложения",
-      "objectsHint_one": "{{count}} файл в хранилище объектов",
-      "objectsHint_few": "{{count}} файла в хранилище объектов",
-      "objectsHint_many": "{{count}} файлов в хранилище объектов",
-      "objectsHint_other": "{{count}} файла в хранилище объектов",
+      "objectsHint_one": "{{n}} файл в хранилище объектов",
+      "objectsHint_few": "{{n}} файла в хранилище объектов",
+      "objectsHint_many": "{{n}} файлов в хранилище объектов",
+      "objectsHint_other": "{{n}} файла в хранилище объектов",
       "diskUnknown": "Размер диска неизвестен",
       "free": "Свободно",
       "freeLow": "Пора освободить место",
@@ -454,13 +482,23 @@
       "free": "Свободно"
     },
     "owners": {
-      "title": "У кого больше всего проектов",
-      "lead": "Люди с личными проектами, по числу проектов.",
+      "title": "Владельцы проектов",
+      "lead": "Люди и организации по числу проектов и занятому месту.",
       "rank": "Место",
       "who": "Владелец",
       "projectsCol": "Проекты",
       "shareCol": "Доля от всех",
-      "share": "Доля проектов: {{name}}"
+      "share": "Доля проектов: {{name}}",
+      "search": "Найти владельца",
+      "searchPlaceholder": "Имя или почта",
+      "kind": "Владелец",
+      "kinds": {
+        "user": "Люди",
+        "org": "Организации"
+      },
+      "org": "Организация",
+      "bytesCol": "Объём",
+      "loadFailed": "Не удалось загрузить владельцев."
     },
     "empty": {
       "title": "Проектов ещё нет",

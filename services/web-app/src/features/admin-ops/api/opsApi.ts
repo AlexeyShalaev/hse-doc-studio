@@ -1,30 +1,32 @@
 import { z } from "zod";
 import { adminClient, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AdminJobPageSchema,
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
+  AdminRunnerPageSchema,
   AdminRunnerRotatedSchema,
-  AdminRunnerSchema,
+  AdminRunnerSummarySchema,
   AdminRunnerTokenCreatedSchema,
-  AdminRunnerTokenSchema,
+  AdminRunnerTokenPageSchema,
   AdminServiceHealthSchema,
+  AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
-  AdminUserSchema,
   type AdminJob,
   type AdminJobPage,
   type AdminQueueSummary,
   type AdminQuotas,
   type AdminRunner,
   type AdminRunnerRotated,
+  type AdminRunnerSummary,
   type AdminRunnerToken,
   type AdminRunnerTokenCreated,
   type AdminService,
   type AdminStorage,
-  type AdminUser,
+  type AdminStorageOwnerRow,
   type CreateAdminRunnerTokenRequest,
-  type JobState,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";
 import {
@@ -40,19 +42,27 @@ import {
 const quiet = { silentError: true } as const;
 const enc = encodeURIComponent;
 
-export type QueueQuery = {
-  status: JobState | "";
-  kind: string;
-  /** Поиск по уже загруженным задачам: сервер его не знает. */
-  q: string;
-  limit: number;
-};
+// Списки ищут, фильтруют, сортируют и листают на сервере (единый контракт
+// списков): params собирает состояние списка в адресе, сюда они идут как есть.
+const list = (params: ListRequestParams, signal?: AbortSignal) => ({
+  ...quiet,
+  params,
+  ...(signal ? { signal } : {}),
+});
 
 export const opsApi = {
-  runners: (): Promise<AdminRunner[]> =>
+  runners: (
+    params: ListRequestParams,
+    signal?: AbortSignal,
+  ): Promise<ListPage<AdminRunner>> =>
     adminClient
-      .get("/runners", quiet)
-      .then(parseResp(z.array(AdminRunnerSchema))),
+      .get("/runners", list(params, signal))
+      .then(parseResp(AdminRunnerPageSchema)),
+  /** Счётчики раннеров для плиток, вкладки и навигации: без чтения списка. */
+  runnerSummary: (): Promise<AdminRunnerSummary> =>
+    adminClient
+      .get("/runners/summary", quiet)
+      .then(parseResp(AdminRunnerSummarySchema)),
   setPaused: async (id: string, paused: boolean): Promise<void> => {
     await adminClient.patch(`/runners/${enc(id)}`, { paused }, quiet);
   },
@@ -64,10 +74,13 @@ export const opsApi = {
     await adminClient.delete(`/runners/${enc(id)}`, quiet);
   },
 
-  tokens: (): Promise<AdminRunnerToken[]> =>
+  tokens: (
+    params: ListRequestParams,
+    signal?: AbortSignal,
+  ): Promise<ListPage<AdminRunnerToken>> =>
     adminClient
-      .get("/runner-tokens", quiet)
-      .then(parseResp(z.array(AdminRunnerTokenSchema))),
+      .get("/runner-tokens", list(params, signal))
+      .then(parseResp(AdminRunnerTokenPageSchema)),
   createToken: (
     body: CreateAdminRunnerTokenRequest,
   ): Promise<AdminRunnerTokenCreated> =>
@@ -78,16 +91,13 @@ export const opsApi = {
     await adminClient.delete(`/runner-tokens/${enc(id)}`, quiet);
   },
 
-  queue: async (query: QueueQuery): Promise<AdminJobPage> => {
+  /** Страница очереди по курсору: новые первыми, имена людей и раннеров в строке. */
+  queue: async (
+    params: ListRequestParams & { cursor?: string },
+    signal?: AbortSignal,
+  ): Promise<AdminJobPage> => {
     const page = await adminClient
-      .get("/queue", {
-        ...quiet,
-        params: {
-          ...(query.status ? { state: query.status } : {}),
-          ...(query.kind ? { kind: query.kind } : {}),
-          limit: query.limit,
-        },
-      })
+      .get("/queue", list(params, signal))
       .then(parseResp(AdminJobPageSchema));
     return jobPageFromWire(page, Date.now());
   },
@@ -143,16 +153,18 @@ export const opsApi = {
       .map(serviceFromWire)
       .filter((service): service is AdminService => service !== null),
 
-  /** Человек по идентификатору: имя и почта для очереди и списка владельцев. */
-  person: (id: string): Promise<AdminUser> =>
-    adminClient
-      .get(`/users/${enc(id)}`, quiet)
-      .then(parseResp(AdminUserSchema)),
-
   storage: async (): Promise<AdminStorage> =>
     storageFromWire(
       await adminClient
         .get("/storage", quiet)
         .then(parseResp(AdminStorageUsageSchema)),
     ),
+  /** Все владельцы места страницей: люди и организации, имя и почта в строке. */
+  storageOwners: (
+    params: ListRequestParams,
+    signal?: AbortSignal,
+  ): Promise<ListPage<AdminStorageOwnerRow>> =>
+    adminClient
+      .get("/storage/owners", list(params, signal))
+      .then(parseResp(AdminStorageOwnerPageSchema)),
 };

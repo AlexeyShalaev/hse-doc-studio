@@ -1,7 +1,4 @@
-/** Что экрану известно о человеке из справочника пользователей. */
-export type OpsPerson = { name: string; email: string };
-
-/** Человек для PersonCell: имя из справочника, иначе из ответа; id только для цвета и подсказки. */
+/** Человек для PersonCell: имя и почта из строки ответа; id только для цвета и подсказки. */
 export type PersonRef = {
   id: string;
   name: string | null;
@@ -13,15 +10,15 @@ const clean = (value: string | null | undefined): string | null => {
   return text === "" ? null : text;
 };
 
+/**
+ * Имя и почту сервер кладёт в саму строку (JOIN). Пустое имя значит, что
+ * человека уже нет: экран пишет нейтральную подпись, а не идентификатор.
+ */
 export const personRef = (
   id: string,
-  known: string | null | undefined,
-  people: ReadonlyMap<string, OpsPerson>,
-): PersonRef => {
-  const found = people.get(id);
-  const name = clean(found?.name) ?? clean(known);
-  return { id, name, email: found?.email ?? null };
-};
+  name: string | null | undefined,
+  email: string | null | undefined,
+): PersonRef => ({ id, name: clean(name), email: clean(email) });
 
 /** Короткая ссылка на объект без имени: хвост идентификатора, по нему его можно найти в логах. */
 export const shortRef = (id: string): string => {

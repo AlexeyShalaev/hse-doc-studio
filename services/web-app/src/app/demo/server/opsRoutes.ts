@@ -25,7 +25,7 @@ import {
 // Демо админки: раннеры, токены регистрации, очередь, квоты, сервисы и место.
 // Тела совпадают с contracts/server/fixtures (AdminRunnerList, AdminJobPage, AdminQuotas и т.д.).
 // Мир хранит данные в виде экранов (с именами), а наружу отдаёт их в проводной форме сервера:
-// только идентификаторы, имена людей и раннеров экран находит сам, как с настоящим API.
+// строка очереди несёт имена человека, организации, проекта и раннера, как JOIN у настоящего API.
 //
 // Правила, как у настоящего API: только админ установки (остальным 404), секрет токена виден
 // только в ответе на создание или ротацию, отозванный раннер исчезает из ротации.
@@ -146,6 +146,23 @@ export const createOpsRoutes = (
       .map((r) => r.version)
       .sort((a, b) => (versionKey(a) < versionKey(b) ? 1 : -1))[0] ?? null;
 
+  // Почта по человеку: справочник строится раз на массив людей, а не на строку.
+  const emailCache = new WeakMap<object, Map<string, string>>();
+  const emailOf = (id: string): string | null => {
+    const users = adminPeopleOf(getWorld()).users;
+    let map = emailCache.get(users);
+    if (!map) {
+      map = new Map(users.map((u) => [u.id, u.email]));
+      emailCache.set(users, map);
+    }
+    return map.get(id) ?? null;
+  };
+  const runnerNameOf = (j: AdminJob): string | null =>
+    j.runner_id === null
+      ? null
+      : (state().runners.find((r) => r.id === j.runner_id)?.name ??
+        j.runner_name);
+
   const wireJob = (j: AdminJob) => ({
     id: j.id,
     kind: j.kind,
@@ -163,6 +180,11 @@ export const createOpsRoutes = (
     runner_id: j.runner_id,
     cancel_requested: false,
     error_code: j.error,
+    user_name: j.user_name || null,
+    user_email: j.user_name ? emailOf(j.user_id) : null,
+    org_name: state().jobOrgs?.get(j.id)?.name ?? null,
+    project_name: j.project_name,
+    runner_name: runnerNameOf(j),
   });
 
   const summary = () => {

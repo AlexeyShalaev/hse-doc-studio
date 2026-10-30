@@ -1,4 +1,7 @@
 {
+  "filters": {
+    "search": "Search"
+  },
   "loading": "Loading",
   "retry": "Retry",
   "cancel": "Cancel",
@@ -51,7 +54,9 @@
     "revokeAction": "Revoke runner",
     "actionsLabel": "Actions for runner {{name}}",
     "class": {
-      "standard": "standard"
+      "standard": "standard",
+      "large": "large",
+      "gpu": "GPU"
     },
     "noneOnline": {
       "title": "No runner is online",
@@ -67,11 +72,6 @@
       "silent_other": "{{count}} not connected",
       "paused_one": "{{count}} paused",
       "paused_other": "{{count}} paused",
-      "capacity": "Busy slots",
-      "capacityHint": "Slots of online runners",
-      "noCapacity": "No runner can take a job",
-      "free_one": "{{count}} slot free",
-      "free_other": "{{count}} slots free",
       "waiting": "Waiting for a runner",
       "waitingFailed": "Could not load",
       "nobodyWaits": "The queue is empty",
@@ -79,7 +79,9 @@
       "version": "Runner version",
       "outdated_one": "{{count}} runner on an older version",
       "outdated_other": "{{count}} runners on an older version",
-      "sameVersion": "All on the same version"
+      "sameVersion": "All on the same version",
+      "running": "Running",
+      "runningHint": "Jobs on runners right now"
     },
     "status": {
       "online": "Online",
@@ -93,7 +95,8 @@
       "status": "State",
       "tags": "Tags",
       "load": "Load",
-      "actions": "Actions"
+      "actions": "Actions",
+      "version": "Version"
     },
     "empty": {
       "title": "No runners yet",
@@ -115,7 +118,21 @@
       "confirm": "Revoke"
     },
     "newerVersion": "Newer available: {{version}}",
-    "versionOf": "Runner version"
+    "versionOf": "Runner version",
+    "search": "Find a runner",
+    "searchPlaceholder": "Name, version or tag",
+    "filters": {
+      "status": "Status",
+      "version": "Version",
+      "tag": "Tag",
+      "class": "Class"
+    },
+    "version": {
+      "outdated": "Outdated",
+      "current": "Latest version"
+    },
+    "tagFilter": "Show runners tagged {{tag}}",
+    "classFilter": "Show runners of this class"
   },
   "tokens": {
     "title": "Registration tokens",
@@ -165,31 +182,32 @@
       "title": "Revoke token",
       "body": "Token \"{{label}}\" will stop accepting new runners. Runners already connected keep working.",
       "confirm": "Revoke"
+    },
+    "search": "Find a token",
+    "searchPlaceholder": "Token name",
+    "filters": {
+      "status": "Status"
+    },
+    "sort": {
+      "label": "Order",
+      "newest": "Newest first",
+      "expiring": "Expiring soon",
+      "byLabel": "By name"
     }
   },
   "queue": {
     "caption": "Job queue",
     "loadFailed": "Could not load the queue.",
     "summaryFailed": "Could not load",
-    "search": "Find by person, project or runner",
-    "searchPlaceholder": "Person or project",
     "noProject": "No project",
     "unknownPerson": "Deleted user",
     "notStarted": "not started",
     "noRunner": "not assigned",
     "cancel": "Cancel",
     "cancelLabel": "Cancel the \"{{kind}}\" job",
-    "count_one": "Showing {{count}} job",
-    "count_other": "Showing {{count}} jobs",
-    "more": "Show more",
     "empty": {
       "title": "The queue is empty",
       "body": "Jobs appear here when someone starts a build or a check."
-    },
-    "noMatch": {
-      "title": "Nothing found",
-      "body": "No jobs match these filters.",
-      "reset": "Reset filters"
     },
     "stats": {
       "queued": "Queued",
@@ -202,8 +220,8 @@
       "waitHint": "Over recent jobs",
       "p95": "95% of jobs wait under {{value}}",
       "failed": "Finished with an error",
-      "failedHint_one": "Of {{count}} finished",
-      "failedHint_other": "Of {{count}} finished"
+      "failedHint_one": "Of {{n}} finished",
+      "failedHint_other": "Of {{n}} finished"
     },
     "classes": {
       "title": "Waiting by priority:",
@@ -215,7 +233,20 @@
     },
     "filters": {
       "status": "State",
-      "kind": "Type"
+      "kind": "Type",
+      "label": "Queue filters",
+      "user": "Person",
+      "org": "Organization",
+      "project": "Project",
+      "runner": "Runner",
+      "period": "Period",
+      "userPlaceholder": "Name or email",
+      "orgPlaceholder": "Organization name",
+      "projectPlaceholder": "Project name",
+      "runnerPlaceholder": "Runner name",
+      "periodRange": "{{from}} to {{to}}",
+      "periodFrom": "from {{from}}",
+      "periodTo": "until {{to}}"
     },
     "columns": {
       "kind": "Job",
@@ -271,7 +302,8 @@
       "created": "Created",
       "wait": "Wait",
       "run": "Run time",
-      "error": "Error"
+      "error": "Error",
+      "org": "Organization"
     },
     "cancelDialog": {
       "title": "Cancel job",
@@ -404,12 +436,12 @@
     "lowBody": "Free up space or extend the disk, otherwise saving files will stop working.",
     "stats": {
       "projects": "Projects",
-      "projectsHint_one": "{{count}} more deleted, awaiting erasure",
-      "projectsHint_other": "{{count}} more deleted, awaiting erasure",
+      "projectsHint_one": "{{n}} more deleted, awaiting erasure",
+      "projectsHint_other": "{{n}} more deleted, awaiting erasure",
       "noDeleted": "None deleted",
       "objects": "Builds and attachments",
-      "objectsHint_one": "{{count}} file in object storage",
-      "objectsHint_other": "{{count}} files in object storage",
+      "objectsHint_one": "{{n}} file in object storage",
+      "objectsHint_other": "{{n}} files in object storage",
       "diskUnknown": "Disk size unknown",
       "free": "Free",
       "freeLow": "Time to free up space",
@@ -428,13 +460,23 @@
       "free": "Free"
     },
     "owners": {
-      "title": "Who has the most projects",
-      "lead": "People with personal projects, by number of projects.",
+      "title": "Project owners",
+      "lead": "People and organizations by project count and space used.",
       "rank": "Rank",
       "who": "Owner",
       "projectsCol": "Projects",
       "shareCol": "Share of all",
-      "share": "Share of projects: {{name}}"
+      "share": "Share of projects: {{name}}",
+      "search": "Find an owner",
+      "searchPlaceholder": "Name or email",
+      "kind": "Owner",
+      "kinds": {
+        "user": "People",
+        "org": "Organizations"
+      },
+      "org": "Organization",
+      "bytesCol": "Size",
+      "loadFailed": "Could not load owners."
     },
     "empty": {
       "title": "No projects yet",

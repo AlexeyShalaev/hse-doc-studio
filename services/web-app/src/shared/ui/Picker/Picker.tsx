@@ -374,6 +374,11 @@ export type PickerFilterProps = {
   searchPlaceholder?: string | undefined;
   icon?: ReactNode | undefined;
   testId?: string | undefined;
+  /**
+   * Выбранное, если имя уже известно экрану (например, из строк списка):
+   * без resolve у источника кнопка иначе пишет только «выбрано».
+   */
+  known?: PickerItem | null | undefined;
 };
 
 /** Фильтр «Человек», «Организация», «Раннер»: кнопка в панели фильтров и поиск. */
@@ -385,11 +390,16 @@ export const PickerFilter = ({
   searchPlaceholder,
   icon,
   testId,
+  known = null,
 }: PickerFilterProps) => {
   const { t } = useTranslation("uiPrimitives");
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PickerItem | null>(null);
-  const item = usePickedItem(source, value, picked);
+  const item = usePickedItem(
+    source,
+    value,
+    picked?.id === value ? picked : known?.id === value ? known : null,
+  );
   const summary =
     value === null ? null : (item?.name ?? t("picker.selectedOne"));
   return (

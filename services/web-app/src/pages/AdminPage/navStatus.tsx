@@ -2,10 +2,9 @@ import { useEffect } from "react";
 import { useInstanceSettings } from "@features/admin-install";
 import {
   diskTone,
-  runnerStatus,
+  quietRunners,
   summarizeHealth,
-  useNow,
-  useRunners,
+  useRunnerSummary,
   useServices,
   useStorage,
 } from "@features/admin-ops";
@@ -44,15 +43,12 @@ export const NavStatusProbe = ({
   onChange: (status: NavStatus) => void;
 }) => {
   const approvals = useApprovals(0).data?.total ?? 0;
-  const runners = useRunners().data;
+  const runners = useRunnerSummary().data;
   const services = useServices().data;
   const instance = useInstanceSettings().data;
-  const now = useNow();
 
-  const quiet = (runners ?? []).filter((r) => {
-    const status = runnerStatus(r, now);
-    return status === "stale" || status === "offline";
-  }).length;
+  // Счётчики сервера: раннеров может быть сколько угодно, список не читается.
+  const quiet = runners ? quietRunners(runners) : 0;
   // То же правило, что на странице «Сервисы» и в сводке.
   const health = summarizeHealth(services ?? []);
   const down = health.down.length;

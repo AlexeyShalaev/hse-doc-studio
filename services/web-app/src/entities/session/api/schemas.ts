@@ -331,7 +331,8 @@ export const AdminUserSchema = z.strictObject({
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
 });
-const pageOf = <T extends z.ZodType>(item: T) =>
+/** Страница списка админки: срез и общее число под теми же фильтрами. */
+export const pageOf = <T extends z.ZodType>(item: T) =>
   z.strictObject({
     items: z.array(item),
     total: z.number().int(),
@@ -654,12 +655,18 @@ export const AdminJobSchema = z.strictObject({
   runner_id: z.string().nullable(),
   cancel_requested: z.boolean(),
   error_code: z.string().nullable(),
+  // Подписи от сервера (JOIN); null, если записи уже нет.
+  user_name: z.string().nullable(),
+  user_email: z.string().nullable(),
+  org_name: z.string().nullable(),
+  project_name: z.string().nullable(),
+  runner_name: z.string().nullable(),
 });
+/** Журнал очереди: курсор непрозрачный, null на последней странице; оценка только без фильтров. */
 export const AdminJobPageSchema = z.strictObject({
   items: z.array(AdminJobSchema),
   next_cursor: z.string().nullable(),
-  // Оценка числа задач; только без фильтров, иначе null.
-  total_estimate: z.number().int().nullable().optional(),
+  total_estimate: z.number().int().nullable(),
 });
 export const AdminQueueSummarySchema = z.strictObject({
   by_state: z.record(z.string(), z.number().int()),
@@ -702,6 +709,16 @@ export const AdminStorageUsageSchema = z.strictObject({
   volume_free_bytes: z.number().int().nullable(),
   computed_at: iso.nullable(),
 });
+export const AdminStorageOwnerRowSchema = z.strictObject({
+  kind: z.enum(["user", "org"]),
+  id: z.string(),
+  name: z.string(),
+  email: z.string().nullable(),
+  projects: z.number().int(),
+  bytes: z.number().int(),
+});
+export const AdminStorageOwnerPageSchema = pageOf(AdminStorageOwnerRowSchema);
+export type AdminStorageOwnerRow = z.infer<typeof AdminStorageOwnerRowSchema>;
 const ServerKeyPolicySchema = z.enum(["allowed", "forbidden"]);
 export const AdminSigningPolicySchema = z.strictObject({
   server_keys: ServerKeyPolicySchema,
@@ -730,6 +747,7 @@ export const AdminAiProviderSchema = z.strictObject({
   request_timeout_s: z.number(),
   created_at: iso,
 });
+export const AdminAiProviderPageSchema = pageOf(AdminAiProviderSchema);
 export const CreateAdminAiProviderRequestSchema = z.strictObject({
   name: z.string().min(1).max(128),
   type: AiProviderTypeSchema,

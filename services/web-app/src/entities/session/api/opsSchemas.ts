@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { pageOf } from "./schemas";
+
 // Операционные экраны админки. Раннеры и токены разбираются схемами ниже (api/schemas/runner_admin.py).
 // Очередь, квоты, сервисы и место приходят в формах api/schemas/admin_ops.py (схемы в schemas.ts),
 // а экранам отдаются в видах ниже: имена вместо идентификаторов там, где сервер их не знает.
@@ -57,6 +59,29 @@ export const AdminRunnerRotatedSchema = z.strictObject({
 export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),
 });
+export const AdminRunnerPageSchema = pageOf(AdminRunnerSchema);
+export const AdminRunnerTokenPageSchema = pageOf(AdminRunnerTokenSchema);
+/** Счётчики раннеров для KPI; outdated и newest_version только среди неотозванных. */
+export const AdminRunnerSummarySchema = z.strictObject({
+  online: z.number().int(),
+  paused: z.number().int(),
+  stale: z.number().int(),
+  offline: z.number().int(),
+  revoked: z.number().int(),
+  outdated: z.number().int(),
+  newest_version: z.string().nullable(),
+});
+/** Пикер: первые совпадения поиска; has_more просит уточнить запрос. */
+export const AdminPickerOptionSchema = z.strictObject({
+  kind: z.string(),
+  id: z.string(),
+  name: z.string(),
+  detail: z.string().nullable(),
+});
+export const AdminPickerPageSchema = z.strictObject({
+  items: z.array(AdminPickerOptionSchema),
+  has_more: z.boolean(),
+});
 
 export type JobState =
   "queued" | "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
@@ -69,6 +94,10 @@ export type AdminJob = {
   project_name: string | null;
   user_id: string;
   user_name: string;
+  /** Почта того, кто запустил; null, если человека уже нет. */
+  user_email?: string | null;
+  org_id?: string | null;
+  org_name?: string | null;
   tags: string[];
   runner_id: string | null;
   runner_name: string | null;
@@ -80,7 +109,12 @@ export type AdminJob = {
   wait_s: number;
   error: string | null;
 };
-export type AdminJobPage = { items: AdminJob[]; hasMore: boolean };
+/** Страница очереди: курсор непрозрачный, null на последней; оценка числа только без фильтров. */
+export type AdminJobPage = {
+  items: AdminJob[];
+  next_cursor: string | null;
+  total_estimate: number | null;
+};
 export type AdminQueueSummary = {
   queued: number;
   running: number;
@@ -130,3 +164,8 @@ export type AdminRunnerTokenCreated = z.infer<
   typeof AdminRunnerTokenCreatedSchema
 >;
 export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
+export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;
+export type AdminRunnerTokenPage = z.infer<typeof AdminRunnerTokenPageSchema>;
+export type AdminRunnerSummary = z.infer<typeof AdminRunnerSummarySchema>;
+export type AdminPickerOption = z.infer<typeof AdminPickerOptionSchema>;
+export type AdminPickerPage = z.infer<typeof AdminPickerPageSchema>;

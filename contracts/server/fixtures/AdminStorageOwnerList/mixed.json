@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "kind": "org",
+      "id": "org_8f2a3b4c5d6e7f8091a2b3c4d5e6f708",
+      "name": "Кафедра ИИ",
+      "email": null,
+      "projects": 42,
+      "bytes": 1288490188
+    },
+    {
+      "kind": "user",
+      "id": "7a1d2c3b4e5f4a6b8c7d9e0f1a2b3c4d",
+      "name": "Анна Петрова",
+      "email": "anna.petrova@example.org",
+      "projects": 3,
+      "bytes": 52428800
+    }
+  ],
+  "total": 118,
+  "limit": 2,
+  "offset": 0
+}
