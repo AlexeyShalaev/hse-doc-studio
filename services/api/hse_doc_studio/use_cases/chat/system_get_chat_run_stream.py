@@ -9,6 +9,7 @@ from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import AgentRunRecord
 from hse_doc_studio.core.enums import AgentEventType, AgentRunStatus
 from hse_doc_studio.core.repositories import IChatRepository
+from hse_doc_studio.use_cases.chat.run_channel import CHANNEL_WAIT_S, await_run_channel
 
 _TERMINAL = (
     AgentRunStatus.succeeded,
@@ -23,10 +24,18 @@ class SystemGetChatRunStreamUC:
     """System-scope twin of GetChatRunStreamUC: live bus events, then backfill +
     terminal event, against a fixed app-level folder (no project resolution)."""
 
-    def __init__(self, folder: Path, chat_repo: IChatRepository, bus: IAgentRunBus) -> None:
+    def __init__(
+        self,
+        folder: Path,
+        chat_repo: IChatRepository,
+        bus: IAgentRunBus,
+        *,
+        channel_wait_s: float = CHANNEL_WAIT_S,
+    ) -> None:
         self._folder = folder
         self._chat_repo = chat_repo
         self._bus = bus
+        self._channel_wait_s = channel_wait_s
 
     async def execute(self, session_id: UUID, run_id: UUID) -> AsyncGenerator[AgentEvent, None]:
         # Чужой запуск (другая сессия) не должен ни подписываться на шину, ни показывать события.
@@ -49,9 +58,12 @@ class SystemGetChatRunStreamUC:
         chat_repo = self._chat_repo
         folder = self._folder
         backfill = self._backfill_messages
+        wait_s = self._channel_wait_s
 
         async def _gen() -> AsyncGenerator[AgentEvent, None]:
             seen_live = False
+            # Запуск мог быть принят только что: канал шины откроет его фоновая задача.
+            await await_run_channel(bus, chat_repo, folder, run_id, timeout_s=wait_s)
             if bus.has(run_id):
                 async for event in bus.subscribe(run_id):
                     seen_live = True
