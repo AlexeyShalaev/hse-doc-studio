@@ -21,6 +21,7 @@ from hse_doc_studio.infra.db.repositories.auth import SqlAuditLog
 from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
 from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
+from hse_doc_studio.infra.db.repositories.project_directory import PostgresProjectAccessDirectory
 from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
 from hse_doc_studio.infra.db.repositories.projects import PostgresProjectLocator
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -119,7 +120,9 @@ async def world(pg_migrated_engine, tmp_path: Path) -> World:  # type: ignore[no
 
 
 def _set_uc(w: World) -> SetProjectMemberUC:
-    return SetProjectMemberUC(w.members, w.users, w.groups, w.orgs, w.audit, w.uow)
+    return SetProjectMemberUC(
+        w.members, w.users, w.groups, w.orgs, PostgresProjectAccessDirectory(w.sessions), w.audit, w.uow
+    )
 
 
 # Организация-владелец проекта: (роль в организации, org_visible, группа с ролью, прямая роль) -> итог.
@@ -281,6 +284,7 @@ async def test__set_member__org_project__only_groups_of_that_org(world: World) -
 
 
 async def test__set_member__user_replaces_role_and_opens_access(world: World) -> None:
+    await world.org("acme", owner=OrgRole.owner, anna=OrgRole.member)
     pid = await world.project(owner="owner")
     uc = _set_uc(world)
 
@@ -290,6 +294,28 @@ async def test__set_member__user_replaces_role_and_opens_access(world: World) ->
 
     assert await world.role_of("anna", pid) is Role.editor
     assert await world.visible("anna") == {pid}
+
+
+async def test__set_member__user_outside_the_owners_circle__not_found_like_a_missing_one(world: World) -> None:
+    pid = await world.project(owner="owner")
+    await world.org("elsewhere", anna=OrgRole.owner)
+    uc = _set_uc(world)
+
+    for principal in ("anna", "nobody"):
+        with pytest.raises(IdentityError) as exc:
+            await uc.execute(actor("owner"), pid, ProjectMemberGrant("user", principal, Role.reader))
+        assert exc.value.code is IdentityErrorCode.not_found
+    assert await world.role_of("anna", pid) is None
+
+
+async def test__set_member__user_known_from_owners_other_project__allowed(world: World) -> None:
+    first = await world.project(owner="owner")
+    second = await world.project(owner="owner")
+    await world.grant(first, "user", "anna", "reader")
+
+    await _set_uc(world).execute(actor("owner"), second, ProjectMemberGrant("user", "anna", Role.reader))
+
+    assert await world.role_of("anna", second) is Role.reader
 
 
 @pytest.mark.parametrize(
@@ -306,6 +332,7 @@ async def test__set_member__invalid__rejected(world: World, principal: str, role
 
 
 async def test__remove_member__closes_access_and_reports_missing(world: World) -> None:
+    await world.org("acme", owner=OrgRole.owner, anna=OrgRole.member)
     pid = await world.project(owner="owner")
     await _set_uc(world).execute(actor("owner"), pid, ProjectMemberGrant("user", "anna", Role.editor))
     remove = RemoveProjectMemberUC(world.members, world.audit, world.uow)

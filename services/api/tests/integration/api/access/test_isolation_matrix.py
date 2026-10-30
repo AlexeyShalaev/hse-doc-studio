@@ -33,6 +33,8 @@ from hse_doc_studio.core.identity.entities import RegistrationMode, User, UserSt
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.protocols import ICredentialRepository, IPasswordHasher, IUserRepository
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.orgs.entities import Org, OrgMember, OrgRole
+from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.di.containers.api import create_container
 from pydantic import SecretStr
@@ -99,6 +101,21 @@ async def _add_user(email: str, name: str) -> str:
             await users.add(user)
             await credentials.set_hash(user.id, hasher.hash(USER_PASSWORD))
         return user.id
+    finally:
+        await container.close()
+
+
+async def _put_in_one_org(*user_ids: str) -> None:
+    """Проект можно открыть только тому, кого владелец вправе видеть: например, по общей организации."""
+    container = create_container(StudioMode.server)
+    try:
+        orgs = await container.get(IOrgRepository)
+        uow = await container.get(IUnitOfWork)
+        now = datetime.now(UTC)
+        async with uow.begin():
+            await orgs.add(Org(id="org_matrix", slug="matrix", name="Matrix", created_at=now))
+            for user_id in user_ids:
+                await orgs.add_member(OrgMember("org_matrix", user_id, OrgRole.member, now))
     finally:
         await container.close()
 
@@ -216,6 +233,7 @@ def reader_deviations(world: _World, routes: Mapping[RouteKey, RouteRule]) -> li
 
 
 def _share_with_bob_as_reader(world: _World) -> None:
+    asyncio.run(_put_in_one_org(world.alice_id, world.bob_id))
     with world.alice as client:
         response = client.put(
             f"/api/v1/projects/{world.project_id}/members/user:{world.bob_id}",
@@ -237,6 +255,19 @@ def test__matrix__reader_member__gets_exactly_what_the_policy_decides(world: _Wo
     _share_with_bob_as_reader(world)
 
     assert reader_deviations(world, _checked_rules()) == []
+
+
+def test__members__user_outside_the_owners_circle__is_not_found_like_a_missing_one(world: _World) -> None:
+    base = f"/api/v1/projects/{world.project_id}/members"
+    body = {"role": "reader", "persona": None, "can_share": False, "show_sources": False, "can_edit_all": False}
+    with world.alice as client:
+        known = client.put(f"{base}/user:{world.bob_id}", json=body, headers=world.alice.headers)
+        missing = client.put(f"{base}/user:{uuid.uuid4().hex}", json=body, headers=world.alice.headers)
+
+    assert (known.status_code, known.json()["code"]) == (missing.status_code, missing.json()["code"])
+    assert known.status_code == 404
+    with world.bob as client:
+        assert client.get(f"/api/v1/projects/{world.project_id}").status_code == 404
 
 
 def test__matrix__stranger_responses__never_name_the_project(world: _World) -> None:
@@ -294,7 +325,7 @@ def test__access_panel__reader_sees_the_list_but_only_the_owner_searches_people(
         (world.bob_id, "reader", False),
     ]
     assert owner_list.json() == reader_list.json()
-    # Люди без общей организации и без общих проектов владельцу не предлагаются.
+    # Уже добавленный человек повторно не предлагается.
     assert found.status_code == 200
     assert found.json() == []
     assert (reader_search.status_code, reader_search.json()["code"]) == (403, "forbidden_role")

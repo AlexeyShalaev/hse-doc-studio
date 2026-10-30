@@ -281,10 +281,11 @@ class ServerPersistenceProvider(Provider):
         users: IUserRepository,
         groups: IGroupRepository,
         orgs: IOrgRepository,
+        directory: IProjectAccessDirectory,
         audit: IAuditLog,
         uow: IUnitOfWork,
     ) -> SetProjectMemberUC:
-        return SetProjectMemberUC(members, users, groups, orgs, audit, uow)
+        return SetProjectMemberUC(members, users, groups, orgs, directory, audit, uow)
 
     @provide
     def get_remove_project_member_uc(

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, func, or_, select
+from sqlalchemy import ColumnElement, Select, func, or_, select
 
 from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.core.access.repositories import ProjectAccessRow, ProjectCandidate
@@ -19,6 +20,33 @@ from hse_doc_studio.infra.db.session import SessionProvider
 def _like(query: str) -> str:
     escaped = query.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
+
+
+def _scope_orgs(owner_org_id: str | None, actor_id: str) -> Select[Any]:
+    """Организации, из которых берут группы и людей: у проекта организации только она, иначе организации смотрящего."""
+    if owner_org_id is not None:
+        return select(OrgRow.id).where(OrgRow.id == owner_org_id)
+    return select(OrgMemberRow.org_id).where(OrgMemberRow.user_id == actor_id)
+
+
+def _visible_people(owner_org_id: str | None, actor_id: str, scope_orgs: Select[Any]) -> ColumnElement[bool]:
+    """Люди, которых смотрящий вправе видеть: общая организация и, для личного проекта, уже открытые им проекты."""
+    visible: list[ColumnElement[bool]] = [
+        UserRow.id.in_(select(OrgMemberRow.user_id).where(OrgMemberRow.org_id.in_(scope_orgs)))
+    ]
+    if owner_org_id is None:
+        # Люди, которым смотрящий уже открывал свои проекты, тоже известны ему.
+        known_from_projects = (
+            select(ProjectMemberRow.principal_id)
+            .join(ProjectRow, ProjectRow.id == ProjectMemberRow.project_id)
+            .where(
+                ProjectRow.owner_user_id == actor_id,
+                ProjectRow.deleted_at.is_(None),
+                ProjectMemberRow.principal_kind == USER_PRINCIPAL,
+            )
+        )
+        visible.append(UserRow.id.in_(known_from_projects))
+    return or_(*visible)
 
 
 def _role_or_none(raw: str) -> Role | None:
@@ -113,13 +141,7 @@ class PostgresProjectAccessDirectory:
             ).first()
             if project is None:
                 return []
-            actor_orgs = select(OrgMemberRow.org_id).where(OrgMemberRow.user_id == actor_id)
-            # Проект организации принимает группы и людей только этой организации.
-            scope_orgs = (
-                select(OrgRow.id).where(OrgRow.id == project.owner_org_id)
-                if project.owner_org_id is not None
-                else actor_orgs
-            )
+            scope_orgs = _scope_orgs(project.owner_org_id, actor_id)
             needle = query.strip()
             taken = select(ProjectMemberRow.principal_id).where(ProjectMemberRow.project_id == project_id)
             group_filters: list[ColumnElement[bool]] = [
@@ -141,26 +163,9 @@ class PostgresProjectAccessDirectory:
             room = limit - len(found)
             if room <= 0:
                 return found
-            shared_orgs = (
-                select(OrgMemberRow.user_id).where(OrgMemberRow.org_id.in_(scope_orgs))
-                if project.owner_org_id is not None
-                else select(OrgMemberRow.user_id).where(OrgMemberRow.org_id.in_(actor_orgs))
-            )
-            # Люди, которым смотрящий уже открывал свои проекты, тоже известны ему.
-            known_from_projects = (
-                select(ProjectMemberRow.principal_id)
-                .join(ProjectRow, ProjectRow.id == ProjectMemberRow.project_id)
-                .where(
-                    ProjectRow.owner_user_id == actor_id,
-                    ProjectRow.deleted_at.is_(None),
-                    ProjectMemberRow.principal_kind == USER_PRINCIPAL,
-                )
-            )
-            visible: list[ColumnElement[bool]] = [UserRow.id.in_(shared_orgs)]
-            if project.owner_org_id is None:
-                visible.append(UserRow.id.in_(known_from_projects))
+            visible = _visible_people(project.owner_org_id, actor_id, scope_orgs)
             people_filters: list[ColumnElement[bool]] = [
-                or_(*visible),
+                visible,
                 UserRow.status == UserStatus.active.value,
                 UserRow.id != actor_id,
                 UserRow.id.not_in(taken.where(ProjectMemberRow.principal_kind == USER_PRINCIPAL)),
@@ -182,3 +187,16 @@ class PostgresProjectAccessDirectory:
             ).all()
         found.extend(ProjectCandidate("user", uid, name, email) for uid, name, email in people)
         return found
+
+    async def can_share_with(self, project_id: UUID, actor_id: str, user_id: str) -> bool:
+        async with self._sessions.use() as session:
+            project = (
+                await session.execute(
+                    select(ProjectRow.owner_org_id).where(ProjectRow.id == project_id, ProjectRow.deleted_at.is_(None))
+                )
+            ).first()
+            if project is None:
+                return False
+            visible = _visible_people(project.owner_org_id, actor_id, _scope_orgs(project.owner_org_id, actor_id))
+            found = await session.execute(select(UserRow.id).where(UserRow.id == user_id, visible))
+            return found.first() is not None

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.access.repositories import (
+    IProjectAccessDirectory,
     IProjectMemberRepository,
     ProjectMemberGrant,
     ProjectMemberView,
@@ -34,10 +35,12 @@ class SetProjectMemberUC:
         users: IUserRepository,
         groups: IGroupRepository,
         orgs: IOrgRepository,
+        directory: IProjectAccessDirectory,
         audit: IAuditLog,
         uow: IUnitOfWork,
     ) -> None:
         self._members = members
+        self._directory = directory
         self._users = users
         self._groups = groups
         self._orgs = orgs
@@ -51,7 +54,7 @@ class SetProjectMemberUC:
         if grant.role not in GRANTABLE_ROLES:
             raise IdentityError(IdentityErrorCode.input_invalid)
         ownership = await _ownership(self._members, project_id)
-        name = await self._principal_name(actor_id, ownership, grant)
+        name = await self._principal_name(actor_id, project_id, ownership, grant)
         async with self._uow.begin():
             await self._members.set_member(project_id, grant)
             await self._audit.record(
@@ -62,14 +65,11 @@ class SetProjectMemberUC:
             )
         return ProjectMemberView(grant, name)
 
-    async def _principal_name(self, actor_id: str, ownership: ProjectOwnership, grant: ProjectMemberGrant) -> str:
+    async def _principal_name(
+        self, actor_id: str, project_id: UUID, ownership: ProjectOwnership, grant: ProjectMemberGrant
+    ) -> str:
         if grant.principal_kind == "user":
-            if grant.principal_id == ownership.owner_user_id:
-                raise IdentityError(IdentityErrorCode.input_invalid)
-            user = await self._users.get(grant.principal_id)
-            if user is None or not user.can_sign_in:
-                raise IdentityError(IdentityErrorCode.user_not_found)
-            return user.name
+            return await self._user_name(actor_id, project_id, ownership, grant.principal_id)
         group = await self._groups.get(grant.principal_id)
         if group is None:
             raise IdentityError(IdentityErrorCode.not_found)
@@ -81,6 +81,18 @@ class SetProjectMemberUC:
         if not allowed:
             raise IdentityError(IdentityErrorCode.not_found)
         return group.name
+
+    async def _user_name(self, actor_id: str, project_id: UUID, ownership: ProjectOwnership, user_id: str) -> str:
+        if user_id == ownership.owner_user_id:
+            raise IdentityError(IdentityErrorCode.input_invalid)
+        # Назначить можно только тех, кого владелец вправе видеть (общая организация, уже открытые проекты);
+        # для остальных ответ как для несуществующего, иначе по id можно проверять, есть ли такой человек.
+        if not await self._directory.can_share_with(project_id, actor_id, user_id):
+            raise IdentityError(IdentityErrorCode.not_found)
+        user = await self._users.get(user_id)
+        if user is None or not user.can_sign_in:
+            raise IdentityError(IdentityErrorCode.not_found)
+        return user.name
 
 
 class RemoveProjectMemberUC:
