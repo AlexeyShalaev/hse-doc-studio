@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -16,6 +17,7 @@ from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.fs import FsObjectStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 
+from tests.fakes.blob_registry import InMemoryBlobRegistry
 from tests.fakes.job_queue import InMemoryJobQueue
 
 DATA = b"%PDF-1.7 output" * 20
@@ -79,6 +81,18 @@ async def test__blob_store__missing_or_malformed_hash__is_missing(objects: FsObj
     assert not await store.exists("../x")
     with pytest.raises(BlobMissingError):
         await store.open("0" * 64)
+
+
+async def test__blob_store__registry_row_without_object__forgotten_so_next_build_reuploads(
+    objects: FsObjectStore,
+) -> None:
+    registry = InMemoryBlobRegistry()
+    sha = "a" * 64
+    await registry.record({sha: 3}, datetime.now(UTC))
+    store = ObjectJobBlobStore(ObjectBlobStore(objects), registry)
+
+    assert not await store.exists(sha)
+    assert await registry.known([sha]) == set()
 
 
 async def test__outputs__announce_put_commit__stored_under_job_prefix(

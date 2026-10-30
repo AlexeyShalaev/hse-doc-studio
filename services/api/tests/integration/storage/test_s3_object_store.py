@@ -147,3 +147,40 @@ async def test__presign_get__public_endpoint_client__signs_for_public_host(s3_cl
     assert link is not None
     assert link.url.startswith(f"https://files.example.test/{s3_bucket}/a/b?")
     assert "X-Amz-Signature=" in link.url
+
+
+class _ChangingFile:
+    """Файл, чьё содержимое меняется после первого полного чтения (правка пользователя во время сборки)."""
+
+    def __init__(self, first: bytes, second: bytes) -> None:
+        self._versions = [first, second]
+        self._data = first
+        self._pos = 0
+        self._passes = 0
+
+    def read(self, size: int = -1) -> bytes:
+        end = len(self._data) if size < 0 else self._pos + size
+        chunk = self._data[self._pos : end]
+        self._pos += len(chunk)
+        return chunk
+
+    def tell(self) -> int:
+        return self._pos
+
+    def seek(self, pos: int, whence: int = 0) -> int:
+        if self._pos >= len(self._data) and pos == 0:
+            self._passes += 1
+            self._data = self._versions[min(self._passes, 1)]
+        self._pos = pos
+        return pos
+
+
+async def test__put__source_changes_between_hash_and_upload__object_removed_and_rejected(
+    store: S3ObjectStore,
+) -> None:
+    source = _ChangingFile(b"a" * 1024, b"b" * 1024)
+
+    with pytest.raises(ChecksumMismatchError):
+        await store.put("blobs/aa/x", source)  # type: ignore[arg-type]
+
+    assert await store.head("blobs/aa/x") is None

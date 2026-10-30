@@ -8,7 +8,8 @@ from typing import TypeVar
 from uuid import UUID
 
 import structlog
-from sqlalchemy import delete, select, update
+from sqlalchemy import String, all_, delete, literal, select, update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.storage.manifest import HashCacheEntry, UnreferencedBlob
@@ -67,6 +68,11 @@ class PostgresBlobRegistry:
                 found.update((await session.execute(select(BlobRow.sha256).where(BlobRow.sha256.in_(batch)))).scalars())
         return found
 
+    async def forget(self, shas: Collection[str]) -> None:
+        async with self._sessions.use() as session:
+            for batch in _chunks(sorted(set(shas))):
+                await session.execute(delete(BlobRow).where(BlobRow.sha256.in_(batch)))
+
     async def hash_cache(self, project_id: UUID, paths: Collection[str]) -> dict[str, HashCacheEntry]:
         found: dict[str, HashCacheEntry] = {}
         async with self._sessions.use() as session:
@@ -119,7 +125,8 @@ class PostgresBlobRegistry:
             .with_for_update(skip_locked=True)
         )
         if keep:
-            stmt = stmt.where(BlobRow.sha256.not_in(sorted(keep)))
+            # Одним массивом, а не по параметру на блоб: живых хешей в очереди может быть больше лимита asyncpg.
+            stmt = stmt.where(BlobRow.sha256 != all_(literal(sorted(set(keep)), ARRAY(String))))
         removed: list[UnreferencedBlob] = []
         async with self._sessions.use() as session:
             for sha, size in (await session.execute(stmt)).all():

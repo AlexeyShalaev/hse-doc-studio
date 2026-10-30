@@ -55,7 +55,7 @@ Checks after the restore:
 - `hse-doc-studio db current` and `hse-doc-studio db check` show head with no drift;
 - `GET /health/ready` with `HEALTH_TOKEN` is green for every check;
 - sign in as an administrator, open a project, build a PDF: the build reads blobs from S3 and confirms their hashes;
-- if the database is newer than the bucket (blobs in the registry are missing from S3), a build that needs a missing file fails with a manifest error. Extra blobs in the bucket are harmless: cleanup removes them.
+- if the database is newer than the bucket (blobs in the registry are missing from S3), the first build that needs a missing file fails with `blob_missing`, and the blob's registry entry is dropped at that moment. Run the build again: the file is uploaded to the bucket anew. Extra blobs in the bucket are harmless: cleanup removes them.
 
 If the database is newer than the projects volume, open the affected projects and re-save the files from users' working copies; if the volume is newer than the database, new projects are missing from the database and must be imported again.
 

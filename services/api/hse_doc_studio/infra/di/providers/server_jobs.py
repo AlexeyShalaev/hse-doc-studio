@@ -34,7 +34,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.ingest import OutputLimits
-from hse_doc_studio.core.storage.manifest import IBlobUploader, ILiveBlobSource, ManifestLimits
+from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
@@ -135,8 +135,8 @@ class ServerJobsProvider(Provider):
         return JobStorageRoot(settings.jobs.storage_dir or settings.data_dir.expanduser() / "jobs")
 
     @provide
-    def get_job_blob_store(self, blobs: IBlobStore) -> IJobBlobStore:
-        return ObjectJobBlobStore(blobs)
+    def get_job_blob_store(self, blobs: IBlobStore, registry: IBlobRegistry) -> IJobBlobStore:
+        return ObjectJobBlobStore(blobs, registry)
 
     @provide
     def get_job_output_ingest(self, queue: IJobQueue, store: IObjectStore) -> IJobOutputIngest:
