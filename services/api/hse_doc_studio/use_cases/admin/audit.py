@@ -28,7 +28,13 @@ class ListAuditUC:
         limit = max(1, min(query.limit, MAX_AUDIT_PAGE))
         found = await self._reader.query(replace(query, limit=limit + 1))
         items = found[:limit]
-        return AuditPage(items=items, next_before_id=items[-1].id if len(found) > limit else None)
+        # Оценка только без фильтров: с ними число дорого и точно его клиенту знать не нужно.
+        estimate = await self._reader.estimate_total() if not query.filtered else None
+        return AuditPage(
+            items=items,
+            next_before_id=items[-1].entry.id if len(found) > limit else None,
+            total_estimate=estimate,
+        )
 
 
 @dataclass(frozen=True)

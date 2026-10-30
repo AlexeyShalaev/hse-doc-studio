@@ -5,7 +5,13 @@
       "at": "2026-10-28T09:41:12Z",
       "action": "admin.user_disabled",
       "actor_id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+      "actor": {
+        "id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+        "name": "Иван Сидоров",
+        "email": "ivan.sidorov@example.org"
+      },
       "target": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "target_label": "Анна Петрова",
       "details": {}
     },
     {
@@ -13,11 +19,18 @@
       "at": "2026-10-28T09:40:03Z",
       "action": "admin.reset_link_issued",
       "actor_id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+      "actor": {
+        "id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+        "name": "Иван Сидоров",
+        "email": "ivan.sidorov@example.org"
+      },
       "target": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "target_label": "Анна Петрова",
       "details": {
         "break_glass": true
       }
     }
   ],
-  "next_cursor": "4181"
+  "next_cursor": "azo0MTgx",
+  "total_estimate": null
 }

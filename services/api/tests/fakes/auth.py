@@ -8,9 +8,12 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from hse_doc_studio.core.identity.entities import (
+    AUDIT_PEOPLE_LIMIT,
     ApiToken,
+    AuditActor,
     AuditEntry,
     AuditQuery,
+    AuditView,
     AuthToken,
     AuthTokenKind,
     InviteQuery,
@@ -21,6 +24,7 @@ from hse_doc_studio.core.identity.entities import (
     Session,
     invite_state,
 )
+from hse_doc_studio.core.identity.lifecycle import DELETED_PREFIX
 from hse_doc_studio.core.identity.normalize import normalize_email
 from hse_doc_studio.core.identity.redaction import redact
 from hse_doc_studio.core.listing import Found
@@ -231,9 +235,14 @@ class InMemoryOidcProviderRepository:
 
 
 class InMemoryAuditLog:
-    def __init__(self) -> None:
+    """Журнал в памяти. Имена людей берутся из `people` (общее хранилище identity), названия организаций
+    из `org_names`; без них подписи пусты, как у события о несуществующей цели."""
+
+    def __init__(self, people: InMemoryIdentityStore | None = None) -> None:
         self._entries: list[AuditEntry] = []
         self._next_id = 1
+        self.people = people or InMemoryIdentityStore()
+        self.org_names: dict[str, str] = {}
 
     async def record(
         self,
@@ -264,18 +273,54 @@ class InMemoryAuditLog:
         ]
         return found[:limit]
 
-    async def query(self, query: AuditQuery) -> list[AuditEntry]:
-        found = [
-            e
-            for e in reversed(self._entries)
-            if (query.actor_id is None or e.actor_id == query.actor_id)
+    def _matches(self, e: AuditEntry, query: AuditQuery) -> bool:
+        kinds = [*(f"{c}." for c in query.categories)]
+        kind_ok = (not kinds and not query.actions) or any(e.action.startswith(k) for k in kinds)
+        kind_ok = kind_ok or e.action in query.actions
+        return (
+            (query.actor_id is None or e.actor_id == query.actor_id)
             and (not query.action_prefix or e.action.startswith(query.action_prefix))
+            and kind_ok
             and (query.target is None or e.target == query.target)
             and (query.since is None or e.at >= query.since)
             and (query.until is None or e.at < query.until)
             and (query.before_id is None or e.id < query.before_id)
-        ]
-        return found[: query.limit]
+            and self._searched(e, query.q)
+        )
+
+    def _searched(self, e: AuditEntry, q: str | None) -> bool:
+        if not q:
+            return True
+        people = sorted(u.id for u in self.people.users.values() if matches(q, u.name, u.email_normalized))
+        return matches(q, e.action, e.target) or e.actor_id in people[:AUDIT_PEOPLE_LIMIT]
+
+    def _view(self, e: AuditEntry) -> AuditView:
+        actor = None
+        if e.actor_id is not None:
+            user = self.people.users.get(e.actor_id)
+            actor = AuditActor(e.actor_id, user.name, user.email) if user else AuditActor(e.actor_id, e.actor_id, None)
+        return AuditView(e, actor, self._label(e))
+
+    def _label(self, e: AuditEntry) -> str | None:
+        if e.target is None:
+            return None
+        user = self.people.users.get(e.target)
+        if user is not None:
+            return user.name
+        if e.target in self.org_names:
+            return self.org_names[e.target]
+        for key in ("name", "label", "email", "slug"):
+            value = e.details.get(key)
+            if value is not None:
+                return str(value)
+        return e.target if e.target.startswith(DELETED_PREFIX) else None
+
+    async def query(self, query: AuditQuery) -> list[AuditView]:
+        found = [e for e in reversed(self._entries) if self._matches(e, query)]
+        return [self._view(e) for e in found[: query.limit]]
+
+    async def estimate_total(self) -> int | None:
+        return len(self._entries)
 
     async def purge_before(self, cutoff: datetime) -> int:
         kept = [e for e in self._entries if e.at >= cutoff]

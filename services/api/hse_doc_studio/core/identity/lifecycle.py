@@ -37,9 +37,12 @@ class RetentionPolicy:
     unused_blobs_days: int
 
 
+DELETED_PREFIX = "deleted:"
+
+
 def pseudonym_for(user_id: str) -> str:
     """Стабильная замена id в журнале: события одного удалённого человека остаются связанными, но не называют его."""
-    return "deleted:" + hashlib.sha256(user_id.encode()).hexdigest()[:12]
+    return DELETED_PREFIX + hashlib.sha256(user_id.encode()).hexdigest()[:12]
 
 
 class IUserLifecycle(Protocol):

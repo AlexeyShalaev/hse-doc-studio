@@ -63,7 +63,7 @@ class _Env:
         self.users = InMemoryUserRepository(self.store)
         self.directory = InMemoryUserDirectory(self.store)
         self.sessions = InMemorySessionRepository()
-        self.audit = InMemoryAuditLog()
+        self.audit = InMemoryAuditLog(self.store)
         self.invites = InMemoryRegistrationInviteRepository()
         self.auth_tokens = InMemoryAuthTokenRepository()
         self.outbox = InMemoryMailOutboxRepository()

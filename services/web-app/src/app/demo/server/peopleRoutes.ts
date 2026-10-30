@@ -1,6 +1,11 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
-import type { AdminInvitation, AdminUser } from "@entities/session";
+import type {
+  AdminAuditEvent,
+  AdminInvitation,
+  AdminUser,
+} from "@entities/session";
+import type { DemoAuditEvent } from "./adminPeople";
 import { adminInstallOf, adminPeopleOf, type ServerDemoWorld } from "./world";
 
 // Демо админки: люди, одобрения, приглашения и журнал. Тела совпадают с contracts/server/fixtures.
@@ -42,6 +47,23 @@ export const createPeopleRoutes = (
   const publicUrl = () =>
     adminInstallOf(getWorld()).instance.public_url.replace(/\/+$/, "");
   const linkOf = (id: string) => `${publicUrl()}/invite/demo-${id}`;
+  /** Подписи, как у сервера: человек по id, иначе name, label, email или slug из details. */
+  const auditView = (e: DemoAuditEvent): AdminAuditEvent => {
+    const actor = e.actor_id ? userOf(e.actor_id) : undefined;
+    const target = e.target ? userOf(e.target) : undefined;
+    const detail = (["name", "label", "email", "slug"] as const)
+      .map((key) => e.details[key])
+      .find((value): value is string => typeof value === "string");
+    return {
+      ...e,
+      actor: e.actor_id
+        ? actor
+          ? { id: actor.id, name: actor.name, email: actor.email }
+          : { id: e.actor_id, name: e.actor_id, email: null }
+        : null,
+      target_label: e.target ? (target?.name ?? detail ?? null) : null,
+    };
+  };
   const record = (action: string, target: string | null) => {
     const events = state().audit;
     events.unshift({
@@ -265,11 +287,12 @@ export const createPeopleRoutes = (
           (e) =>
             e.id < before && (prefix === "" || e.action.startsWith(prefix)),
         );
-        const items = found.slice(0, limit);
+        const items = found.slice(0, limit).map(auditView);
         const last = items[items.length - 1];
         return demoJson({
           items,
           next_cursor: found.length > limit && last ? String(last.id) : null,
+          total_estimate: prefix === "" ? state().audit.length : null,
         });
       },
     },

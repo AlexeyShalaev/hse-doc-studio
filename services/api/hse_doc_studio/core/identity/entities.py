@@ -262,21 +262,68 @@ class AuditEntry:
 
 @dataclass(frozen=True)
 class AuditQuery:
-    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного)."""
+    """Фильтры чтения журнала; события новые первыми, страница идёт ключом `before_id` (id последнего виденного).
+
+    Все фильтры сочетаются по И. Внутри «что случилось» действие подходит, если оно из любой категории
+    `categories` (префикс до точки) или равно любому из `actions`. `q` ищет подстроку в действии и цели,
+    а также события людей, у которых она есть в имени или почте.
+    """
 
     actor_id: str | None = None
     action_prefix: str | None = None
+    categories: tuple[str, ...] = ()
+    actions: tuple[str, ...] = ()
     target: str | None = None
     since: datetime | None = None
     until: datetime | None = None
+    q: str | None = None
     before_id: int | None = None
     limit: int = 50
+
+    @property
+    def filtered(self) -> bool:
+        return any(
+            (
+                self.actor_id,
+                self.action_prefix,
+                self.categories,
+                self.actions,
+                self.target,
+                self.since,
+                self.until,
+                self.q,
+            )
+        )
+
+
+# Сколько людей, подходящих под поиск журнала, учитывается как «кто»: поиск не превращается в перебор установки.
+AUDIT_PEOPLE_LIMIT = 200
+
+
+@dataclass(frozen=True)
+class AuditActor:
+    """Кто действовал. У удалённого человека вместо имени псевдоним из журнала, почты нет."""
+
+    id: str
+    name: str
+    email: str | None
+
+
+@dataclass(frozen=True)
+class AuditView:
+    """Событие с подписями, которые сервер вычисляет сам: имя действовавшего и подпись цели."""
+
+    entry: AuditEntry
+    actor: AuditActor | None
+    target_label: str | None
 
 
 @dataclass(frozen=True)
 class AuditPage:
-    items: list[AuditEntry]
+    items: list[AuditView]
     next_before_id: int | None
+    # Оценка числа событий без фильтров (по статистике таблицы); с фильтрами не считается.
+    total_estimate: int | None = None
 
 
 @dataclass(frozen=True)

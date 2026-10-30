@@ -36,6 +36,49 @@ async def test__audit__admin_reads_pages_with_keyset_and_filters(env: _Env) -> N
     assert len(by_actor["items"]) == 5
 
 
+async def test__audit__filters_search_labels_and_opaque_cursor(env: _Env) -> None:
+    boss = await env.add("boss", admin=True, name="Иван Босс")
+    await env.add("anna", name="Анна Петрова")
+    await env.audit.record("auth.login", actor_id="anna")
+    await env.audit.record("admin.user_disabled", actor_id="boss", target="anna")
+    await env.audit.record("invite.create", actor_id="boss", target="inv_1", details={"email": "new@example.org"})
+    await env.audit.record("org.member.add", actor_id="deleted:abc", target="org_1", details={"slug": "lab"})
+    client = env.make()
+
+    async def actions(query: str) -> list[str]:
+        response = await client.get(f"/api/admin/audit?{query}", headers=boss)
+        assert response.status_code == 200, response.text
+        return [e["action"] for e in response.json()["items"]]
+
+    page = (await client.get("/api/admin/audit?limit=2", headers=boss)).json()
+    rest = (await client.get(f"/api/admin/audit?limit=2&cursor={page['next_cursor']}", headers=boss)).json()
+    legacy = await actions(f"limit=2&cursor={rest['items'][0]['id']}")
+    filtered = (await client.get("/api/admin/audit?category=auth", headers=boss)).json()
+
+    assert not page["next_cursor"].isdigit()
+    assert [e["action"] for e in rest["items"]] == ["admin.user_disabled", "auth.login"]
+    assert legacy == ["auth.login"]
+    assert page["total_estimate"] == 4
+    assert filtered["total_estimate"] is None
+    disabled = rest["items"][0]
+    assert disabled["actor"] == {"id": "boss", "name": "Иван Босс", "email": "boss@example.org"}
+    assert disabled["target_label"] == "Анна Петрова"
+    assert [(e["actor"], e["target_label"]) for e in page["items"]] == [
+        ({"id": "deleted:abc", "name": "deleted:abc", "email": None}, "lab"),
+        ({"id": "boss", "name": "Иван Босс", "email": "boss@example.org"}, "new@example.org"),
+    ]
+    assert await actions("category=auth&category=invite") == ["invite.create", "auth.login"]
+    assert await actions("action=invite.create&action=auth.login") == ["invite.create", "auth.login"]
+    assert await actions("action=admin.") == ["admin.user_disabled"]
+    assert await actions("category=admin&actor_id=boss") == ["admin.user_disabled"]
+    assert await actions("q=%D0%BF%D0%B5%D1%82%D1%80%D0%BE%D0%B2") == ["auth.login"]
+    assert await actions("q=INV_") == ["invite.create"]
+    assert await actions("target=anna") == ["admin.user_disabled"]
+    assert await actions("from=2000-01-01T00:00:00Z&to=2000-01-02T00:00:00Z") == []
+    assert len(await actions("since=2000-01-01T00:00:00Z")) == 4
+    assert (await client.get("/api/admin/audit?category=Bad.Cat", headers=boss)).status_code == 422
+
+
 async def test__audit__page_exactly_full_has_no_next_cursor(env: _Env) -> None:
     boss = await env.add("boss", admin=True)
     await env.audit.record("a.one", actor_id=None)

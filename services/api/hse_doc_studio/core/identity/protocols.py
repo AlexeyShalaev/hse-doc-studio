@@ -13,6 +13,7 @@ from hse_doc_studio.core.identity.entities import (
     ApiToken,
     AuditEntry,
     AuditQuery,
+    AuditView,
     AuthToken,
     AuthTokenKind,
     InviteQuery,
@@ -203,8 +204,16 @@ class IAuditLog(Protocol):
 
 
 class IAuditReader(Protocol):
-    async def query(self, query: AuditQuery) -> list[AuditEntry]:
-        """Не больше `query.limit` событий, новые первыми, старше `query.before_id`; фильтры сочетаются по И."""
+    async def query(self, query: AuditQuery) -> list[AuditView]:
+        """Не больше `query.limit` событий, новые первыми, старше `query.before_id`; фильтры сочетаются по И.
+
+        Имя действовавшего и подпись цели вычисляются в том же запросе: цель-человек по id, иначе
+        `details.name`, `label`, `email` или `slug`; удалённый человек остаётся псевдонимом.
+        """
+        ...
+
+    async def estimate_total(self) -> int | None:
+        """Примерное число событий журнала без фильтров по статистике таблицы; None, если её ещё нет."""
         ...
 
     async def list(

@@ -8,6 +8,8 @@
 # Без `from __future__ import annotations`: FastAPI читает аннотации зависимости `sort_param`, а шаблон
 # в них берётся из замыкания, которого нет в глобальных именах модуля.
 
+import base64
+import binascii
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -115,3 +117,26 @@ class PickerList(BaseModel):
 
     items: list[PickerItem]
     has_more: bool
+
+
+# Ключ страницы журналов с дописыванием непрозрачен для клиента: base64url от id последней строки.
+_CURSOR_PREFIX = "k:"
+_LEGACY_CURSOR = re.compile(r"^[0-9]{1,18}$")
+CURSOR_MAX = 64
+
+
+def encode_cursor(key: int) -> str:
+    return base64.urlsafe_b64encode(f"{_CURSOR_PREFIX}{key}".encode()).decode().rstrip("=")
+
+
+def decode_cursor(raw: str) -> int:
+    """Ключ из курсора; старый курсор из одних цифр ещё принимается. Негодный даёт ValueError."""
+    if _LEGACY_CURSOR.match(raw):
+        return int(raw)
+    try:
+        text = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)).decode()
+    except (binascii.Error, UnicodeDecodeError) as exc:
+        raise ValueError("cursor") from exc
+    if not text.startswith(_CURSOR_PREFIX) or not _LEGACY_CURSOR.match(text[len(_CURSOR_PREFIX) :]):
+        raise ValueError("cursor")
+    return int(text[len(_CURSOR_PREFIX) :])

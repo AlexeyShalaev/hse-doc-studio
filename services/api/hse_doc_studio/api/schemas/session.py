@@ -440,20 +440,36 @@ class AdminInvitationPage(StrictModel):
     offset: int
 
 
+class AdminAuditActor(StrictModel):
+    """Кто действовал; у удалённого человека имя это псевдоним из журнала, почты нет."""
+
+    id: str
+    name: str
+    email: str | None
+
+
 class AdminAuditEvent(StrictModel):
     id: int
     at: datetime
     action: str
     actor_id: str | None
+    # Имя и почта действовавшего: сервер подставляет их сам, клиент не собирает справочник людей.
+    actor: AdminAuditActor | None
     target: str | None
+    # Подпись цели: человек по id, организация, иначе name, label, email или slug из details.
+    target_label: str | None
     details: dict[str, Any]
 
 
 class AdminAuditPage(StrictModel):
-    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице."""
+    """Страница журнала по ключу: `next_cursor` непрозрачный, пустой на последней странице.
+
+    `total_estimate` оценка числа событий без фильтров; с фильтрами null, «из N» тогда не показывается.
+    """
 
     items: list[AdminAuditEvent]
     next_cursor: str | None
+    total_estimate: int | None
 
 
 class CreateAdminInvitationRequest(StrictModel):
