@@ -277,6 +277,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/runner/v1/announce"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/offline"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/deregister"): RouteScope.runner_token,
+    ("GET", "/account/runner-pairings/{user_code}"): _A,
+    ("POST", "/account/runner-pairings/{user_code}"): _A,
+    ("POST", "/api/runner/v1/pair/start"): _P,
+    ("POST", "/api/runner/v1/pair/poll"): _P,
     # Прокси к общим сервисам: токен задачи или вход проверяет сам маршрут
     ("POST", "/api/services/languagetool/v2/check"): RouteScope.job_token,
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу

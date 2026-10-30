@@ -53,6 +53,7 @@ MAX_UNUSED_PERSONAL_TOKENS = 5
 PERSONAL_TOKEN_LIST_KEEP = timedelta(days=7)
 # Отозванные личные раннеры видны хозяину ещё месяц.
 REVOKED_RUNNER_LIST_KEEP = timedelta(days=30)
+PAIRING_TOKEN_TTL = timedelta(minutes=10)
 
 
 @dataclass(frozen=True)
@@ -345,6 +346,30 @@ class RunnerRegistry:
             await self._audit.record(
                 "runner.personal_token_create", actor_id=owner, target=token.id, details={"label": token.label}
             )
+        return CreatedRegistrationToken(token=token, secret=secret)
+
+    async def create_pairing_token(self, owner: str, *, label: str) -> CreatedRegistrationToken:
+        """Токен для устройства, подтверждённого кодом: одно использование, срок как у кода; транзакция вызывающего."""
+        settings = await self.personal_settings()
+        if not settings.enabled:
+            raise IdentityError(IdentityErrorCode.personal_runners_disabled)
+        if await self._runners.count_active_owned(owner) >= settings.max_per_user:
+            raise IdentityError(IdentityErrorCode.personal_runner_limit)
+        now = self._clock()
+        secret = new_runner_secret(REGISTRATION_TOKEN_PREFIX)
+        token = RegistrationToken(
+            id=uuid4().hex,
+            token_hash=hash_runner_secret(secret),
+            created_by=owner,
+            created_at=now,
+            expires_at=now + PAIRING_TOKEN_TTL,
+            max_uses=1,
+            label=label.strip()[:MAX_RUNNER_NAME],
+            owner_kind=RunnerOwnerKind.user,
+            owner_id=owner,
+            purpose=RegistrationTokenPurpose.pairing,
+        )
+        await self._tokens.add(token)
         return CreatedRegistrationToken(token=token, secret=secret)
 
     async def list_personal_tokens(self, actor: Actor) -> list[RegistrationToken]:

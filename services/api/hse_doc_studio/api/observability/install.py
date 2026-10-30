@@ -235,3 +235,11 @@ def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -
         await (await container.get(JobQueueService)).sweep()
 
     app.state.background.register(PeriodicTask(name="job_reaper", interval_s=cfg.jobs.reaper_interval_s, run=_sweep))
+
+    from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService  # noqa: PLC0415
+
+    async def _purge_pairings() -> None:
+        # Сопряжения по коду живут 10 минут, записи старше суток больше не нужны.
+        await (await container.get(RunnerPairingService)).purge()
+
+    app.state.background.register(PeriodicTask(name="runner_pairings_purge", interval_s=600.0, run=_purge_pairings))

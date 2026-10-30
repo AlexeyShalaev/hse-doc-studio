@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from hse_doc_studio.api.actor import require_server_mode
+from hse_doc_studio.api.rate_limit import enforce, enforce_ip
 from hse_doc_studio.api.runner_commands import (
     registration_command,
     registration_docker_command,
@@ -24,6 +25,8 @@ from hse_doc_studio.api.schemas.personal_runners import (
     MyRunnerRotated,
     MyRunnerToken,
     MyRunnerTokenCreated,
+    RunnerPairingDecisionRequest,
+    RunnerPairingInfo,
     UpdateMyRunnerRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
@@ -31,7 +34,10 @@ from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.jobs.admin import runner_status
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
+from hse_doc_studio.core.jobs.pairing import RunnerPairing
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
+from hse_doc_studio.core.rate_limit import RUNNER_PAIRING
+from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
@@ -170,3 +176,38 @@ async def revoke_my_runner_token(token_id: str, request: Request) -> Response:
     except RunnerNotFoundError as exc:
         raise _not_found() from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _pairing_view(pairing: RunnerPairing) -> RunnerPairingInfo:
+    return RunnerPairingInfo(
+        user_code=pairing.user_code,
+        name=pairing.name,
+        host_kind=pairing.host_kind.value,
+        requested_at=pairing.created_at,
+        expires_at=pairing.expires_at,
+        client_ip=pairing.client_ip,
+        status=pairing.status.value,
+    )
+
+
+async def _pairing_service(request: Request, actor: Actor) -> RunnerPairingService:
+    # Неверные коды тоже считаются: подбирать чужой код и по человеку, и по адресу дорого.
+    await enforce(request, RUNNER_PAIRING, f"user:{actor.id}")
+    await enforce_ip(request, RUNNER_PAIRING)
+    return await request.state.dishka_container.get(RunnerPairingService)
+
+
+@router.get("/account/runner-pairings/{user_code}", response_model=RunnerPairingInfo)
+async def get_runner_pairing(user_code: str, request: Request, response: Response) -> RunnerPairingInfo:
+    response.headers.update(_NO_STORE)
+    actor = _account_actor()
+    return _pairing_view(await (await _pairing_service(request, actor)).info(actor, user_code))
+
+
+@router.post("/account/runner-pairings/{user_code}", response_model=RunnerPairingInfo)
+async def decide_runner_pairing(
+    user_code: str, body: RunnerPairingDecisionRequest, request: Request
+) -> RunnerPairingInfo:
+    actor = _account_actor()
+    service = await _pairing_service(request, actor)
+    return _pairing_view(await service.decide(actor, user_code, approve=body.decision == "approve"))

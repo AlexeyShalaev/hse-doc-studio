@@ -12,6 +12,7 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
@@ -50,6 +51,7 @@ from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.repositories.jobs_applied import SqlJobApplyLedger
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.project_route_policy import SqlProjectRoutePolicyRepository
+from hse_doc_studio.infra.db.repositories.runner_pairings import SqlRunnerPairingRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
@@ -63,6 +65,7 @@ from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.compile.compile_hooks_factory import CompileJobHooksFactory
+from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.routing import JobRouter
@@ -169,6 +172,17 @@ class ServerJobsProvider(Provider):
         return RunnerRegistry(
             runners, tokens, audit, uow, personal=personal, users=users, queue=queue_service, jobs=queue
         )
+
+    @provide
+    def get_runner_pairing_service(
+        self,
+        sessions: SessionProvider,
+        registry: RunnerRegistry,
+        cipher: ISecretCipher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> RunnerPairingService:
+        return RunnerPairingService(SqlRunnerPairingRepository(sessions), registry, cipher, audit, uow)
 
     @provide
     def get_job_token_signer(self, key_store: KeyFileStore) -> JobTokenSigner:
