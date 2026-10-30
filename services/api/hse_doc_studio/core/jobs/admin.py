@@ -147,10 +147,22 @@ class JobAdminFilter:
     # Время постановки: `queued_from` включительно, `queued_to` не включая.
     queued_from: datetime | None = None
     queued_to: datetime | None = None
+    # Поиск: id задачи целиком или подстрока в имени проекта, имени и почте человека.
+    q: str | None = None
 
     @property
     def empty(self) -> bool:
         return self == JobAdminFilter()
+
+    @property
+    def job_id(self) -> UUID | None:
+        """`q` как id задачи (с дефисами или без): тогда ищется одна задача, а не подстрока."""
+        if not self.q:
+            return None
+        try:
+            return UUID(self.q.strip())
+        except ValueError:
+            return None
 
 
 @dataclass(frozen=True)

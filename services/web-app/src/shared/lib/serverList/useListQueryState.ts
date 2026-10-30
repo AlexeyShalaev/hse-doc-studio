@@ -75,6 +75,11 @@ export type ListQueryState<
   offset: number;
   /** Есть поиск или хоть один фильтр: пустой ответ значит «ничего не найдено». */
   isFiltered: boolean;
+  /**
+   * Поиск, если кроме него условий нет, иначе "". Пустое состояние винит
+   * запрос только тогда, когда отсёк именно он, а не фильтр.
+   */
+  searchOnly: string;
   activeFilterCount: number;
   /** Сбросить поиск и фильтры; сортировка и размер страницы остаются. */
   reset: () => void;
@@ -150,6 +155,18 @@ export const useListQueryState = <
     for (const name of names) {
       const spec = specs?.[name] ?? {};
       out[name] = cleanValues(params.getAll(k(name)), spec);
+    }
+    // Перевёрнутый период из адреса (from позже to) меняется местами, а не
+    // молча даёт пустой ответ.
+    const fromName = names.find((name) => specs?.[name].date === "from");
+    const toName = names.find((name) => specs?.[name].date === "to");
+    if (fromName && toName) {
+      const [from] = out[fromName];
+      const [to] = out[toName];
+      if (from && to && from > to) {
+        out[fromName] = [to];
+        out[toName] = [from];
+      }
     }
     return out;
   }, [names, specs, params, k]);
@@ -329,6 +346,7 @@ export const useListQueryState = <
     pageSizes,
     offset: page * pageSize,
     isFiltered: q !== "" || activeFilterCount > 0,
+    searchOnly: activeFilterCount === 0 ? q : "",
     activeFilterCount,
     reset,
     params: request,

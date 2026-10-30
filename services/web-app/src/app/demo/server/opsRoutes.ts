@@ -9,10 +9,12 @@ import {
   boolParam,
   cursorList,
   enumParam,
+  hit,
   invalidQuery,
   offsetList,
   queryAll,
   queryOne,
+  searchOf,
   timeParam,
 } from "./demoList";
 import {
@@ -423,9 +425,19 @@ export const createOpsRoutes = (
         const states = enumParam(req, "state", JOB_STATES);
         const from = timeParam(req, "from");
         const to = timeParam(req, "to");
-        if (states === null || from === "bad" || to === "bad") {
+        const q = searchOf(req);
+        if (states === null || from === "bad" || to === "bad" || q === null) {
           return invalidQuery();
         }
+        // Как у сервера: id задачи целиком (с дефисами или без) или подстрока
+        // в проекте, имени и почте человека.
+        const bare = (id: string) => id.replaceAll("-", "").toLowerCase();
+        const byId = /^[0-9a-f]{32}$/i.test(bare(q)) ? bare(q) : null;
+        const matches = (j: AdminJob) =>
+          byId !== null
+            ? bare(j.id) === byId
+            : j.id.toLowerCase() === q ||
+              hit(q, j.project_name, j.user_name, emailOf(j.user_id));
         const kinds = queryAll(req, "kind");
         const user = queryOne(req, "user_id");
         const org = queryOne(req, "org_id");
@@ -440,7 +452,8 @@ export const createOpsRoutes = (
           kinds.length > 0 ||
           [user, org, project, runner].some((v) => v !== null) ||
           from !== null ||
-          to !== null;
+          to !== null ||
+          q !== "";
         return cursorList(req, ordered, key, {
           accept: (j) => {
             const at = Date.parse(j.created_at);
@@ -454,7 +467,8 @@ export const createOpsRoutes = (
               (project === null || j.project_id === project) &&
               (runner === null || j.runner_id === runner) &&
               (from === null || at >= from) &&
-              (to === null || at < to)
+              (to === null || at < to) &&
+              matches(j)
             );
           },
           view: wireJob,

@@ -142,7 +142,14 @@
       "current": "Последняя версия"
     },
     "tagFilter": "Показать раннеры с тегом {{tag}}",
-    "classFilter": "Показать раннеры этого класса"
+    "classFilter": "Показать раннеры этого класса",
+    "sort": {
+      "label": "Порядок",
+      "status": "По состоянию",
+      "lastSeen": "Последний сигнал",
+      "newest": "Сначала новые",
+      "name": "По имени"
+    }
   },
   "tokens": {
     "title": "Токены регистрации",
@@ -256,9 +263,8 @@
       "orgPlaceholder": "Название организации",
       "projectPlaceholder": "Название проекта",
       "runnerPlaceholder": "Имя раннера",
-      "periodRange": "с {{from}} по {{to}}",
-      "periodFrom": "с {{from}}",
-      "periodTo": "по {{to}}"
+      "search": "Поиск",
+      "searchPlaceholder": "Id задачи, проект или человек"
     },
     "columns": {
       "kind": "Задача",
@@ -484,7 +490,7 @@
     "owners": {
       "title": "Владельцы проектов",
       "lead": "Люди и организации по числу проектов и занятому месту.",
-      "rank": "Место",
+      "rank": "№",
       "who": "Владелец",
       "projectsCol": "Проекты",
       "shareCol": "Доля проектов",

@@ -285,7 +285,7 @@ export const AdminAuthSettings = ({
         ) : null
       }
       filtered={oidcState.isFiltered}
-      query={oidcState.q}
+      query={oidcState.searchOnly}
       onResetFilters={oidcState.reset}
       busy={providers.query.isPlaceholderData}
       baseUrl={baseUrlOf(publicUrl)}

@@ -364,7 +364,7 @@ export const MembersView = ({
         onSortingChange={list.onSortingChange}
         sortable={MEMBERS_SORTABLE}
         filtered={list.isFiltered && !empty}
-        searchQuery={list.q}
+        searchQuery={list.searchOnly}
         onResetFilters={list.reset}
         {...(pagination ? { pagination } : {})}
         emptyTitle={t("members.empty.title")}

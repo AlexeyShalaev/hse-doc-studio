@@ -382,10 +382,15 @@ class AdminUserPage(StrictModel):
 
 
 class AdminUserFacets(StrictModel):
-    """Счётчики на чипах списка людей под тем же поиском `q` (GET /api/admin/users/facets)."""
+    """Счётчики на чипах списка людей (GET /api/admin/users/facets).
+
+    Под теми же `q`, `status`, `is_admin` и `org`, что у списка, но каждый счётчик без своего фильтра:
+    `status` не смотрит на выбранные статусы, `admins` и `members` (не админы) не смотрят на роль.
+    """
 
     status: dict[AccountStatus, int]
     admins: int
+    members: int
 
 
 class AdminUserOrg(StrictModel):

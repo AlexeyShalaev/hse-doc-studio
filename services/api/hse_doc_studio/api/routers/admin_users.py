@@ -150,12 +150,20 @@ async def list_users(
 
 @router.get("/users/facets", response_model=AdminUserFacets)
 async def user_facets(
-    request: Request, response: Response, q: Annotated[str | None, Depends(search_param)]
+    request: Request,
+    response: Response,
+    q: Annotated[str | None, Depends(search_param)],
+    account_status: Annotated[list[AccountStatus] | None, Query(alias="status")] = None,
+    is_admin: bool | None = None,
+    org: Annotated[str | None, Query(max_length=64, description="Состоит в организации (slug)")] = None,
 ) -> AdminUserFacets:
-    """Счётчики на чипах статусов: один запрос вместо страницы на каждый статус."""
+    """Счётчики на чипах статусов и ролей под теми же фильтрами, что у списка; каждый без своего фильтра."""
     response.headers.update(_NO_STORE)
-    facets = await (await _uc(request, UserFacetsUC)).execute(_actor(), q)
-    return AdminUserFacets(status={s.value: n for s, n in facets.status.items()}, admins=facets.admins)
+    query = UserQuery(q=q, statuses=tuple(UserStatus(x) for x in account_status or ()), is_admin=is_admin, org_slug=org)
+    facets = await (await _uc(request, UserFacetsUC)).execute(_actor(), query)
+    return AdminUserFacets(
+        status={s.value: n for s, n in facets.status.items()}, admins=facets.admins, members=facets.members
+    )
 
 
 @router.get("/users/{user_id}", response_model=AdminUser)

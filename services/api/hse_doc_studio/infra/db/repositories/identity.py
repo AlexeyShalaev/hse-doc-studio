@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 
 from sqlalchemy import ColumnElement, delete, func, select, text
@@ -17,6 +18,7 @@ from hse_doc_studio.core.identity.entities import (
     UserPickQuery,
     UserQuery,
     UserStatus,
+    facets_of,
 )
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
@@ -280,19 +282,18 @@ class SqlUserDirectory:
             counts = await _project_counts(session, [r.id for r in rows])
             return Found([UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total)
 
-    async def facets(self, q: str | None) -> UserFacets:
-        stmt = select(UserRow.status, func.count(), func.count().filter(UserRow.is_instance_admin.is_(True))).group_by(
-            UserRow.status
+    async def facets(self, query: UserQuery) -> UserFacets:
+        # Одна группировка по статусу и роли (не больше восьми строк) под общими условиями: поиск и организация.
+        # Фильтры статуса и роли применяются уже к строкам, каждый счётчик без своего.
+        common = replace(query, statuses=(), is_admin=None)
+        stmt = (
+            select(UserRow.status, UserRow.is_instance_admin, func.count())
+            .where(*_user_conditions(common))
+            .group_by(UserRow.status, UserRow.is_instance_admin)
         )
-        if q:
-            stmt = stmt.where(_user_search(q))
         async with self._sessions.use() as session:
-            rows = (await session.execute(stmt)).all()
-        counts = {UserStatus(status): n for status, n, _ in rows}
-        return UserFacets(
-            status={status: counts.get(status, 0) for status in UserStatus},
-            admins=sum(admins for _, _, admins in rows),
-        )
+            rows = [(UserStatus(status), bool(admin), n) for status, admin, n in (await session.execute(stmt)).all()]
+        return facets_of(rows, query)
 
     async def pick(self, query: UserPickQuery) -> Picked[User]:
         stmt = select(UserRow)

@@ -346,6 +346,8 @@ export const AdminUserPageSchema = pageOf(AdminUserSchema);
 export const AdminUserFacetsSchema = z.strictObject({
   status: z.record(AccountStatusSchema, z.number().int()),
   admins: z.number().int(),
+  // Не админы установки; роли считаются без фильтра роли, статусы без фильтра статуса.
+  members: z.number().int(),
 });
 // Организация в карточке человека (GET /api/admin/users/{id}/orgs).
 export const AdminUserOrgSchema = z.strictObject({

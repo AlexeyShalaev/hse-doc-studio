@@ -88,7 +88,7 @@ export const createPeopleRoutes = (
   /** Люди с фильтрами списка «Люди»; null при неверном параметре. */
   const filteredUsers = (
     req: DemoReq,
-    { withStatus = true } = {},
+    { withStatus = true, withRole = true } = {},
   ): AdminUser[] | null => {
     const statuses = enumParam(req, "status", STATUSES);
     const isAdmin = boolParam(req, "is_admin");
@@ -104,7 +104,7 @@ export const createPeopleRoutes = (
     return state().users.filter(
       (u) =>
         (!withStatus || statuses.length === 0 || statuses.includes(u.status)) &&
-        (isAdmin === null || u.is_instance_admin === isAdmin) &&
+        (!withRole || isAdmin === null || u.is_instance_admin === isAdmin) &&
         (members === null || members.has(u.id)),
     );
   };
@@ -192,24 +192,26 @@ export const createPeopleRoutes = (
       },
     },
     {
-      // Числа на чипах под тем же поиском: вместо запроса на каждое состояние.
+      // Числа на чипах под теми же условиями, что у списка; каждый счётчик
+      // без своего фильтра: статусы при выбранной роли, роли при статусах.
       method: "GET",
       pattern: "/users/facets",
       handler: (req) => {
         const q = searchOf(req);
-        const rows = filteredUsers(req, { withStatus: false });
-        if (q === null || rows === null) return invalidQuery();
-        const found = rows.filter((u) => hit(q, u.name, u.email));
+        const byStatus = filteredUsers(req, { withStatus: false });
+        const byRole = filteredUsers(req, { withRole: false });
+        if (q === null || byStatus === null || byRole === null)
+          return invalidQuery();
+        const found = byStatus.filter((u) => hit(q, u.name, u.email));
+        const roles = byRole.filter((u) => hit(q, u.name, u.email));
         const status = Object.fromEntries(
           STATUSES.map((st) => [
             st,
             found.filter((u) => u.status === st).length,
           ]),
         );
-        return demoJson({
-          status,
-          admins: found.filter((u) => u.is_instance_admin).length,
-        });
+        const admins = roles.filter((u) => u.is_instance_admin).length;
+        return demoJson({ status, admins, members: roles.length - admins });
       },
     },
     {

@@ -475,7 +475,8 @@ describe("операционные разделы: экраны", () => {
     expect(await status("rn_01hxb3")).toBe("stale");
     expect(await status("rn_01hxb4")).toBe("paused");
     expect(await status("rn_01hxb5")).toBe("offline");
-    expect(await status("rn_01hxb6")).toBe("revoked");
+    // Удалённые без фильтра не показываются: таблица сходится со сводкой.
+    expect(screen.queryByTestId("runner-status-rn_01hxb6")).toBeNull();
     expect(screen.getByTestId("runners-stat-online")).toHaveTextContent(
       /2\s*из 5/,
     );
@@ -487,6 +488,14 @@ describe("операционные разделы: экраны", () => {
     expect(screen.getByTestId("runners-stat-version")).toHaveTextContent(
       "1 раннер на старой версии",
     );
+  }, 20_000);
+
+  it("раннеры: удалённые открывает фильтр состояния", async () => {
+    render(wrap(<RunnersPage />, "/?status=revoked"));
+    expect(
+      await screen.findByTestId("runner-status-rn_01hxb6"),
+    ).toHaveAttribute("data-status", "revoked");
+    expect(screen.queryByTestId("runner-status-rn_01hxb1")).toBeNull();
   }, 20_000);
 
   it("пауза и возврат раннера", async () => {
@@ -598,11 +607,9 @@ describe("операционные разделы: экраны", () => {
     expect(confirmButton).toBeDisabled();
     await user.type(screen.getByRole("textbox"), "runner-5");
     await user.click(confirmButton);
+    // Отозванный уходит из списка по умолчанию: там только живые раннеры.
     await waitFor(() => {
-      expect(screen.getByTestId("runner-status-rn_01hxb5")).toHaveAttribute(
-        "data-status",
-        "revoked",
-      );
+      expect(screen.queryByTestId("runner-status-rn_01hxb5")).toBeNull();
     });
   }, 20_000);
 

@@ -132,7 +132,14 @@
       "current": "Latest version"
     },
     "tagFilter": "Show runners tagged {{tag}}",
-    "classFilter": "Show runners of this class"
+    "classFilter": "Show runners of this class",
+    "sort": {
+      "label": "Order",
+      "status": "By state",
+      "lastSeen": "Last signal",
+      "newest": "Newest first",
+      "name": "By name"
+    }
   },
   "tokens": {
     "title": "Registration tokens",
@@ -244,9 +251,8 @@
       "orgPlaceholder": "Organization name",
       "projectPlaceholder": "Project name",
       "runnerPlaceholder": "Runner name",
-      "periodRange": "{{from}} to {{to}}",
-      "periodFrom": "from {{from}}",
-      "periodTo": "until {{to}}"
+      "search": "Search",
+      "searchPlaceholder": "Job id, project or person"
     },
     "columns": {
       "kind": "Job",
@@ -462,7 +468,7 @@
     "owners": {
       "title": "Project owners",
       "lead": "People and organizations by project count and space used.",
-      "rank": "Rank",
+      "rank": "No.",
       "who": "Owner",
       "projectsCol": "Projects",
       "shareCol": "Share of projects",

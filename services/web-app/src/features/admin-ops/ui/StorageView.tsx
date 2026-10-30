@@ -147,20 +147,27 @@ export const StorageView = ({
     [owners.items, state.offset, allProjects],
   );
 
+  // Номер строки читается как место в установке: он честный только без
+  // поиска и фильтра и при порядке по объёму, иначе столбца нет.
+  const ranked = !state.isFiltered && state.sort?.field !== "name";
   const columns = useMemo<ColumnDef<OwnerRow>[]>(
     () => [
-      {
-        id: "rank",
-        header: () => (
-          <span className="sr-only">{t("storage.owners.rank")}</span>
-        ),
-        enableSorting: false,
-        cell: ({ row }) => (
-          <span className="ops-rank">
-            {row.original.rank.toLocaleString(localeTag())}
-          </span>
-        ),
-      },
+      ...(ranked
+        ? [
+            {
+              id: "rank",
+              header: () => (
+                <span className="sr-only">{t("storage.owners.rank")}</span>
+              ),
+              enableSorting: false,
+              cell: ({ row }) => (
+                <span className="ops-rank">
+                  {row.original.rank.toLocaleString(localeTag())}
+                </span>
+              ),
+            } satisfies ColumnDef<OwnerRow>,
+          ]
+        : []),
       {
         id: "name",
         header: t("storage.owners.who"),
@@ -232,7 +239,7 @@ export const StorageView = ({
         ),
       },
     ],
-    [t],
+    [t, ranked],
   );
 
   // Пусто без условий: проектов ещё нет ни у кого.
@@ -377,7 +384,7 @@ export const StorageView = ({
                   sortable={OWNER_SORT}
                   pagination={owners.pagination}
                   filtered={state.isFiltered}
-                  searchQuery={state.q}
+                  searchQuery={state.searchOnly}
                   onResetFilters={state.reset}
                   columnWidths={{
                     rank: 56,

@@ -70,8 +70,11 @@ class IUserDirectory(Protocol):
         """
         ...
 
-    async def facets(self, q: str | None) -> UserFacets:
-        """Число людей каждого статуса и число админов установки под тем же поиском."""
+    async def facets(self, query: UserQuery) -> UserFacets:
+        """Число людей каждого статуса и каждой роли под условиями `query`, кроме условия самого счётчика.
+
+        Порядок и окно `query` не используются.
+        """
         ...
 
     async def pick(self, query: UserPickQuery) -> Picked[User]:

@@ -46,10 +46,10 @@ const client = () =>
     },
   });
 
-const wrap = (node: React.ReactNode) => (
+const wrap = (node: React.ReactNode, url = "/") => (
   <I18nextProvider i18n={i18n}>
     <QueryClientProvider client={client()}>
-      <MemoryRouter>{node}</MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>{node}</MemoryRouter>
     </QueryClientProvider>
   </I18nextProvider>
 );
@@ -477,6 +477,17 @@ describe("организации в админке: экраны", () => {
     await waitFor(() => {
       expect(screen.queryByText("Дмитрий Кузнецов")).toBeNull();
     });
+  });
+
+  it("вкладка в адресе: ссылка со страницей групп открывает группы", async () => {
+    const user = userEvent.setup();
+    const first = render(wrap(<Detail slug="ai-lab" />, "/?g.page=2"));
+    expect(await screen.findByTestId("org-panel-groups")).toBeVisible();
+    first.unmount();
+    render(wrap(<Detail slug="ai-lab" />, "/?tab=settings"));
+    expect(await screen.findByTestId("org-settings")).toBeVisible();
+    await user.click(screen.getByTestId("org-tab-groups"));
+    expect(await screen.findByTestId("org-panel-groups")).toBeVisible();
   });
 
   it("группы: создание с составом, правка и удаление", async () => {

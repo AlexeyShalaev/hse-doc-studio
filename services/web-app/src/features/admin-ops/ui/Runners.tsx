@@ -25,6 +25,7 @@ import {
 import { failureKey, type Failure } from "../lib/failure";
 import { busySlots } from "../lib/jobs";
 import { listView, useRunnerListState, useTokenListState } from "../lib/lists";
+import { RUNNER_STATUSES } from "../lib/runnerStatus";
 import { useNow } from "../lib/useNow";
 import { statusOf } from "../lib/viewStatus";
 import {
@@ -36,6 +37,8 @@ import { FailureNotice } from "./parts";
 import { RunnersView } from "./RunnersView";
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
+
+const LIVE_STATUSES = RUNNER_STATUSES.filter((s) => s !== "revoked");
 export const Runners = ({
   creating,
   onCreatingChange,
@@ -54,7 +57,13 @@ export const Runners = ({
   const runners = useServerList({
     state: runnerState,
     queryKey: opsKeys.runners,
-    fetchPage: (params, signal) => opsApi.runners(params, signal),
+    // Без фильтра состояния удалённые раннеры не показываются: таблица
+    // сходится с числом на вкладке и в сводке. Их открывает фильтр «Удалён».
+    fetchPage: (params, signal) =>
+      opsApi.runners(
+        params.status ? params : { ...params, status: LIVE_STATUSES },
+        signal,
+      ),
     refetchInterval: POLL_MS * 3,
   });
   const tokens = useServerList({

@@ -27,7 +27,7 @@ export const MEMBERS_LIST: ListStateOptions<"role", MembersSort> = {
   filters: { role: { multi: true, values: ROLE_VALUES } },
   sort: {
     fields: ["name", "email", "role", "joined_at"],
-    default: "joined_at",
+    default: "-joined_at",
   },
 };
 export const MEMBERS_SORTABLE: readonly MembersSort[] = [

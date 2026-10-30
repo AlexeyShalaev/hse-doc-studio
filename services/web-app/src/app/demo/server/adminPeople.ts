@@ -110,14 +110,17 @@ export const RECENT_AUDIT: (Omit<DemoAuditEvent, "id" | "at"> & {
   },
   {
     minutesAgo: 26 * 60,
-    action: "project.transfer",
+    action: "project.member.remove",
     actor_id: "u_01hx7k2c1d",
     target: "prj_01hxq8",
-    details: { title: "Курсовая работа: анализ рынка", to: "Пётр Орлов" },
+    details: {
+      title: "Курсовая работа: анализ рынка",
+      email: "petr.orlov@example.org",
+    },
   },
   {
     minutesAgo: 28 * 60,
-    action: "group.member_add",
+    action: "group.member.add",
     actor_id: ADMIN,
     target: "grp_01hxm2",
     details: { name: "БПИ-231", email: "petr.orlov@example.org" },
@@ -180,7 +183,7 @@ const OLDER_AUDIT: Omit<DemoAuditEvent, "id" | "at">[] = [
     details: { method: "oidc", provider: "HSE SSO" },
   },
   {
-    action: "project.member_set",
+    action: "project.member.set",
     actor_id: "u_01hx7k2c1d",
     target: "prj_01hxq8",
     details: { title: "Курсовая работа: анализ рынка", role: "member" },

@@ -214,7 +214,7 @@ const AiBody = ({
         <SharedProviders
           providers={list.items}
           filtered={state.isFiltered}
-          query={state.q}
+          query={state.searchOnly}
           onResetFilters={state.reset}
           busy={list.query.isPlaceholderData}
           pagination={

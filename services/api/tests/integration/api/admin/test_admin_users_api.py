@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -455,11 +456,39 @@ async def test__users__facets_count_statuses_and_admins_under_search(env: _Env) 
     assert everyone == {
         "status": {"active": 2, "pending_verification": 0, "pending_approval": 1, "disabled": 1},
         "admins": 1,
+        "members": 3,
     }
     assert searched["status"] == {"active": 1, "pending_verification": 0, "pending_approval": 0, "disabled": 1}
     assert searched["admins"] == 0
+    assert searched["members"] == 2
     student = await env.add("student")
     assert (await client.get("/api/admin/users/facets", headers=student)).status_code == 404
+
+
+async def test__users__facets_skip_only_their_own_filter(env: _Env) -> None:
+    boss = await env.add("boss", admin=True)
+    await env.add("root", admin=True, status=UserStatus.disabled)
+    await env.add("anna")
+    await env.add("annette", status=UserStatus.disabled)
+    client = env.make()
+
+    async def facets(query: str) -> dict[str, Any]:
+        res = await client.get(f"/api/admin/users/facets?{query}", headers=boss)
+        assert res.status_code == 200, res.text
+        return dict(res.json())
+
+    disabled = await facets("status=disabled")
+    admins = await facets("is_admin=true")
+    both = await facets("status=disabled&is_admin=true")
+
+    # Роли считаются среди отключённых, а статусы по всем: свой фильтр счётчик не сужает.
+    assert (disabled["admins"], disabled["members"]) == (1, 1)
+    assert disabled["status"] == {"active": 2, "pending_verification": 0, "pending_approval": 0, "disabled": 2}
+    assert admins["status"] == {"active": 1, "pending_verification": 0, "pending_approval": 0, "disabled": 1}
+    assert (admins["admins"], admins["members"]) == (2, 2)
+    assert both["status"]["disabled"] == 1
+    assert (both["admins"], both["members"]) == (1, 1)
+    assert (await client.get("/api/admin/users/facets?status=god", headers=boss)).status_code == 422
 
 
 async def test__approvals__search_and_oldest_first_by_default(env: _Env) -> None:

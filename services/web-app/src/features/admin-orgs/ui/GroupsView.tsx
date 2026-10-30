@@ -166,7 +166,7 @@ export const GroupsView = ({
         />
       )}
       {shown && groups.length === 0 && (
-        <NoResults framed query={list.q} onReset={list.reset} />
+        <NoResults framed query={list.searchOnly} onReset={list.reset} />
       )}
       {shown && groups.length > 0 && (
         <ul

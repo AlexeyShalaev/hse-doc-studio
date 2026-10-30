@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "@shared/api";
 import { Button, EmptyState, PageHeader, PageTabs } from "@shared/ui";
 import type { AdminUser } from "@entities/session";
-import { useApprovals, useUsers } from "../api/adminUsersQueries";
+import { useApprovalCount, useUserCount } from "../api/adminUsersQueries";
 import { ApprovalsPanel } from "./ApprovalsPanel";
 import { InvitationsPanel } from "./InvitationsPanel";
 import { UsersPanel } from "./UsersPanel";
@@ -37,14 +37,14 @@ export const AdminUsers = ({
     if (next === tab) return;
     setParams(next === "users" ? {} : { tab: next });
   };
-  // Те же ключи, что у первой страницы вкладок: лишних запросов нет.
-  const list = useUsers({ q: "", status: "", page: 0 });
-  const people = list.data?.total;
+  // Числа на вкладках: запросы из одной строки ради total, общие со сводкой.
+  const list = useUserCount();
+  const people = list.data;
   // Не админу установки сервер отвечает так, будто раздела нет.
   const forbidden =
     list.error instanceof ApiError &&
     (list.error.status === 403 || list.error.status === 404);
-  const pending = useApprovals(0).data?.total ?? 0;
+  const pending = useApprovalCount().data ?? 0;
   const emailRef = useRef<HTMLInputElement>(null);
   const count = (id: UsersTab) => {
     if (id === "users" && people !== undefined) return { count: people };

@@ -34,6 +34,7 @@ import {
   Section,
   SectionList,
   Select,
+  SortSelect,
   StatusDot,
   Tooltip,
   type ActiveFilter,
@@ -676,6 +677,36 @@ export const RunnersView = ({
                     },
                   ]}
                 />
+                {/* Последний сигнал и дата регистрации столбцов не имеют:
+                    их порядок выбирается здесь, как у людей. */}
+                <SortSelect
+                  sort={state.sort}
+                  onChange={state.setSort}
+                  testId="runners-sort"
+                  label={t("runners.sort.label")}
+                  options={[
+                    {
+                      field: "status",
+                      desc: false,
+                      label: t("runners.sort.status"),
+                    },
+                    {
+                      field: "last_seen_at",
+                      desc: true,
+                      label: t("runners.sort.lastSeen"),
+                    },
+                    {
+                      field: "created_at",
+                      desc: true,
+                      label: t("runners.sort.newest"),
+                    },
+                    {
+                      field: "name",
+                      desc: false,
+                      label: t("runners.sort.name"),
+                    },
+                  ]}
+                />
               </>
             }
           />
@@ -693,7 +724,7 @@ export const RunnersView = ({
             sortable={RUNNER_SORT}
             pagination={list.pagination}
             filtered={state.isFiltered}
-            searchQuery={state.q}
+            searchQuery={state.searchOnly}
             onResetFilters={state.reset}
             columnWidths={{
               version: 96,
@@ -830,7 +861,7 @@ const TokensSection = ({
           <div style={{ padding: "0 20px 16px" }}>
             <NoResults
               compact
-              query={state.q}
+              query={state.searchOnly}
               onReset={state.reset}
               testId="tokens-no-results"
             />

@@ -37,9 +37,9 @@ class UserFacetsUC:
     def __init__(self, directory: IUserDirectory) -> None:
         self._directory = directory
 
-    async def execute(self, actor: Actor, q: str | None) -> UserFacets:
+    async def execute(self, actor: Actor, query: UserQuery) -> UserFacets:
         require_admin(actor)
-        return await self._directory.facets(q)
+        return await self._directory.facets(query)
 
 
 class PickUsersUC:

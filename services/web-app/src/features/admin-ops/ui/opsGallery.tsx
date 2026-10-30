@@ -348,6 +348,7 @@ const QueueDemo = ({
         filter: (name) =>
           name === "state" ? (filteredBy[0] ?? "") : listState.filter(name),
         isFiltered: true,
+        searchOnly: "",
         activeFilterCount: 1,
       }
     : listState;

@@ -303,7 +303,7 @@ const ServerTableDemo = () => {
         sortable={PEOPLE_OPTIONS.sort.fields}
         pagination={people.pagination}
         filtered={state.isFiltered}
-        searchQuery={state.q}
+        searchQuery={state.searchOnly}
         onResetFilters={state.reset}
         emptyTitle="Людей пока нет"
         columnWidths={{ status: 160, created: 130 }}
@@ -315,8 +315,8 @@ const ServerTableDemo = () => {
 type LogRow = { id: number; at: number; action: string };
 const ACTIONS = [
   "auth.login",
-  "org.member_add",
-  "project.create",
+  "org.member.add",
+  "project.member.set",
   "runner.pause",
 ];
 const LOG_SIZE = 250_000;

@@ -237,7 +237,7 @@ export const OrgsListView = ({
             onSortingChange={list.onSortingChange}
             sortable={ORGS_SORTABLE}
             filtered={list.isFiltered}
-            searchQuery={list.q}
+            searchQuery={list.searchOnly}
             onResetFilters={list.reset}
             {...(pagination ? { pagination } : {})}
             onRowClick={(o) => {

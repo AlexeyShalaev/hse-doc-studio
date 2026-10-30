@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -93,10 +93,27 @@ class UserQuery:
 
 @dataclass(frozen=True)
 class UserFacets:
-    """Счётчики на чипах списка людей под тем же поиском: по статусам и число админов установки."""
+    """Счётчики на чипах списка людей под теми же условиями.
+
+    Каждый счётчик не учитывает свой фильтр: статусы считаются при выбранной роли, роли при выбранных статусах.
+    `members`: не админы установки.
+    """
 
     status: Mapping[UserStatus, int]
     admins: int
+    members: int
+
+
+def facets_of(rows: Iterable[tuple[UserStatus, bool, int]], query: UserQuery) -> UserFacets:
+    """Счётчики из групп «статус, админ ли, сколько» под общими условиями; фильтры статуса и роли из `query`."""
+    by_status = dict.fromkeys(UserStatus, 0)
+    roles = {True: 0, False: 0}
+    for status, admin, n in rows:
+        if query.is_admin is None or admin is query.is_admin:
+            by_status[status] += n
+        if not query.statuses or status in query.statuses:
+            roles[admin] += n
+    return UserFacets(status=by_status, admins=roles[True], members=roles[False])
 
 
 @dataclass(frozen=True)

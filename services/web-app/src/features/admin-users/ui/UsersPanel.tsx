@@ -95,6 +95,9 @@ const MENU_TESTID: Record<UserActionKind, string> = {
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
 
+// Окно и порядок к счётчикам чипов не относятся.
+const WINDOW_KEYS = new Set(["limit", "offset", "sort"]);
+
 /** Вкладка «Люди»: поиск, фильтр по состоянию, карточка человека и действия над аккаунтом. */
 export const UsersPanel = ({
   renderOrgs,
@@ -109,7 +112,11 @@ export const UsersPanel = ({
     queryKey: adminUsersKeys.usersList(),
     fetchPage: adminUsersApi.usersPage,
   });
-  const facets = useUserFacets(list.q).data;
+  // Условия списка без окна и порядка: числа на чипах те же, что в выдаче.
+  const facetParams = Object.fromEntries(
+    Object.entries(list.params).filter(([key]) => !WINDOW_KEYS.has(key)),
+  );
+  const facets = useUserFacets(facetParams).data;
   const org = usePickedItem(ORGS, list.filter("org") || null, null);
   const act = useUserAction();
   const issue = useIssueResetLink();
@@ -296,9 +303,6 @@ export const UsersPanel = ({
   const danger = confirm?.kind === "remove" || confirm?.kind === "disable";
   const statuses = list.filters.status as readonly AccountStatus[];
   const role = list.filter("is_admin");
-  const statusTotal = facets
-    ? ACCOUNT_STATUSES.reduce((sum, s) => sum + (facets.status[s] ?? 0), 0)
-    : null;
 
   const active: ActiveFilter[] = [
     ...(list.q
@@ -394,9 +398,7 @@ export const UsersPanel = ({
                 {
                   value: "false",
                   label: t("filters.members"),
-                  ...(facets && statusTotal !== null
-                    ? { count: Math.max(0, statusTotal - facets.admins) }
-                    : {}),
+                  ...(facets ? { count: facets.members } : {}),
                 },
               ]}
             />
@@ -448,7 +450,7 @@ export const UsersPanel = ({
         sortable={SORTABLE}
         pagination={users.pagination}
         filtered={list.isFiltered}
-        searchQuery={list.q}
+        searchQuery={list.searchOnly}
         onResetFilters={list.reset}
         emptyTitle={t("users.empty.title")}
         emptyHint={t("users.empty.body")}

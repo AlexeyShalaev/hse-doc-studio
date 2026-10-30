@@ -527,6 +527,27 @@ async def test__queue__filters_combine(world: World) -> None:
     assert len(by_time) == 50
 
 
+async def test__queue__search_by_job_id_project_and_person(world: World) -> None:
+    job = world.jobs[123]
+    by_id, _ = await _all_jobs(world, q=str(job["id"]))
+    by_hex, _ = await _all_jobs(world, q=job["id"].hex.upper())
+    by_person, _ = await _all_jobs(world, q="аННа петРова")
+    by_email, _ = await _all_jobs(world, q="person7@")
+    by_project, _ = await _all_jobs(world, q="100%_ready")
+    with_state, _ = await _all_jobs(world, q="Анна", state="failed")
+
+    def expected(pred: Any) -> set[str]:
+        return {str(j["id"]) for j in world.jobs if pred(j)}
+
+    assert [j["id"] for j in by_id] == [str(job["id"])]
+    assert [j["id"] for j in by_hex] == [str(job["id"])]
+    anna = expected(lambda j: j["user_id"] == UUID(world.users[7]))
+    assert {j["id"] for j in by_person} == anna
+    assert {j["id"] for j in by_email} == anna
+    assert {j["id"] for j in by_project} == expected(lambda j: j["project_id"] == world.projects[42])
+    assert {j["id"] for j in with_state} == anna & expected(lambda j: j["state"] == "failed")
+
+
 async def test__queue__rows_carry_names_and_estimate_only_without_filters(world: World) -> None:
     page = await world.get("/api/admin/queue", user_id=world.users[7], limit=200)
     plain = await world.get("/api/admin/queue", limit=1)

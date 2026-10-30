@@ -20,11 +20,13 @@ import {
   Button,
   DataTable,
   DateRangeFilter,
+  useDateRangeLabel,
   FilterMenu,
   KpiGrid,
   KpiTile,
   PersonCell,
   PickerFilter,
+  SearchInput,
   StatusDot,
   usePickedItem,
   type ActiveFilter,
@@ -105,15 +107,6 @@ const knownFrom = (
     if (item?.id === id) return item;
   }
   return null;
-};
-
-/** День из адреса (ГГГГ-ММ-ДД) коротко по языку интерфейса: «3 окт.». */
-const dayLabel = (day: string): string => {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
-    localeTag(),
-    { day: "numeric", month: "short" },
-  );
 };
 
 /** Очередь задач: сводка по состояниям, фильтры на сервере, таблица с отменой. */
@@ -377,7 +370,21 @@ export const QueueView = ({
   const kinds = state.filters.kind;
   const from = state.filter("from");
   const to = state.filter("to");
+  // Та же подпись, что на кнопке периода: «30 дней», а не две даты.
+  const periodLabel = useDateRangeLabel({ from: from || null, to: to || null });
   const active: ActiveFilter[] = [
+    ...(state.q
+      ? [
+          {
+            id: "q",
+            label: t("queue.filters.search"),
+            value: state.q,
+            onRemove: () => {
+              state.setQ("");
+            },
+          },
+        ]
+      : []),
     ...(states.length > 0
       ? [
           {
@@ -408,20 +415,12 @@ export const QueueView = ({
     ...picked("org_id", t("queue.filters.org"), orgId, org),
     ...picked("project_id", t("queue.filters.project"), projectId, project),
     ...picked("runner_id", t("queue.filters.runner"), runnerId, runner),
-    ...(from || to
+    ...(periodLabel
       ? [
           {
             id: "period",
             label: t("queue.filters.period"),
-            value:
-              from && to
-                ? t("queue.filters.periodRange", {
-                    from: dayLabel(from),
-                    to: dayLabel(to),
-                  })
-                : from
-                  ? t("queue.filters.periodFrom", { from: dayLabel(from) })
-                  : t("queue.filters.periodTo", { to: dayLabel(to) }),
+            value: periodLabel,
             onRemove: () => {
               state.setFilters({ from: null, to: null });
             },
@@ -546,14 +545,23 @@ export const QueueView = ({
         </div>
       )}
 
-      {/* Поиска по тексту у очереди нет: вместо него пикеры, которые ищут
-          человека, организацию, проект и раннер на сервере. */}
+      {/* Поиск находит задачу по id или по подстроке в проекте и человеке;
+          пикеры сужают до одного человека, организации, проекта и раннера. */}
       <div
         role="search"
         aria-label={t("queue.filters.label")}
         className="fbar"
         data-testid="queue-filters"
       >
+        <SearchInput
+          className="fbar-search"
+          value={state.q}
+          onChange={state.setQ}
+          label={t("queue.filters.search")}
+          placeholder={t("queue.filters.searchPlaceholder")}
+          busy={fetching}
+          testId="queue-search"
+        />
         <div className="fbar-extra">
           <FilterMenu
             label={t("queue.filters.status")}
@@ -635,8 +643,14 @@ export const QueueView = ({
         emptyTitle={t("queue.empty.title")}
         emptyHint={t("queue.empty.body")}
         filtered={state.isFiltered}
+        searchQuery={state.searchOnly}
         onResetFilters={state.reset}
-        pagination={pagination}
+        pagination={{
+          ...pagination,
+          pageSize: state.pageSize,
+          pageSizes: state.pageSizes,
+          onPageSizeChange: state.setPageSize,
+        }}
         onRowClick={(r) => {
           onOpen(r.job);
         }}

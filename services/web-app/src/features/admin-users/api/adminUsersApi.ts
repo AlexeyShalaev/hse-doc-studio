@@ -8,7 +8,6 @@ import {
   AdminSessionsRevokedSchema,
   AdminUserPageSchema,
   AdminUserSchema,
-  type AccountStatus,
   type AdminInvitationCreated,
   type AdminInvitationPage,
   type AdminResetLink,
@@ -20,15 +19,6 @@ import {
 // Ошибки действий показывают сами экраны: тост не нужен.
 const quiet = { silentError: true } as const;
 const enc = encodeURIComponent;
-
-/** Размер страницы прежних запросов (useUsers, useApprovals) для сводки админки. */
-export const PAGE_SIZE = 25;
-
-export type UsersQuery = {
-  q: string;
-  status: AccountStatus | "";
-  page: number;
-};
 
 // Списки вкладок идут по единому контракту: поиск, фильтры, сортировка и
 // окно считает сервер, экран получает одну страницу.
@@ -44,10 +34,16 @@ const page = (
 export const adminUsersApi = {
   usersPage: (params: ListRequestParams, signal: AbortSignal) =>
     page("/users", params, signal),
-  /** Числа на чипах при том же поиске: один запрос вместо запроса на чип. */
-  facets: (q: string, signal: AbortSignal): Promise<AdminUserFacets> =>
+  /**
+   * Числа на чипах при тех же условиях, что у списка (q, status, is_admin,
+   * org): один запрос вместо запроса на чип.
+   */
+  facets: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<AdminUserFacets> =>
     adminClient
-      .get("/users/facets", { ...quiet, signal, params: q ? { q } : {} })
+      .get("/users/facets", { ...quiet, signal, params })
       .then(parseResp(AdminUserFacetsSchema)),
   user: (id: string, signal: AbortSignal): Promise<AdminUser> =>
     adminClient
@@ -63,18 +59,6 @@ export const adminUsersApi = {
       .get("/invitations", { ...quiet, signal, params })
       .then(parseResp(AdminInvitationPageSchema)),
 
-  users: ({ q, status, page }: UsersQuery): Promise<AdminUserPage> =>
-    adminClient
-      .get("/users", {
-        ...quiet,
-        params: {
-          limit: PAGE_SIZE,
-          offset: page * PAGE_SIZE,
-          ...(q ? { q } : {}),
-          ...(status ? { status } : {}),
-        },
-      })
-      .then(parseResp(AdminUserPageSchema)),
   setAdmin: (id: string, isAdmin: boolean): Promise<AdminUser> =>
     adminClient
       .patch(`/users/${enc(id)}`, { is_instance_admin: isAdmin }, quiet)
@@ -100,13 +84,6 @@ export const adminUsersApi = {
       .then(parseResp(AdminSessionsRevokedSchema))
       .then((r) => r.revoked),
 
-  approvals: (page: number): Promise<AdminUserPage> =>
-    adminClient
-      .get("/approvals", {
-        ...quiet,
-        params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
-      })
-      .then(parseResp(AdminUserPageSchema)),
   approve: (id: string): Promise<AdminUser> =>
     adminClient
       .post(`/approvals/${enc(id)}/approve`, undefined, quiet)

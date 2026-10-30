@@ -175,13 +175,19 @@ async def test__users__search_sort_by_name_and_nulls_last(world: World) -> None:
 
 
 async def test__users__facets_and_picker(world: World) -> None:
-    facets = await world.directory.facets(None)
+    facets = await world.directory.facets(UserQuery())
+    admins_off = await world.directory.facets(UserQuery(statuses=(UserStatus.disabled,), is_admin=True))
     picked = await world.directory.pick(UserPickQuery(q="person 00", limit=5, not_in_org_slug="org-0000"))
     outside_group = await world.directory.pick(UserPickQuery(q="u00000", not_in_group_id="g000"))
 
     assert facets.status[UserStatus.active] == sum(1 for u in world.users if u["status"] == "active")
     assert facets.status[UserStatus.pending_verification] == 0
     assert facets.admins == 3
+    assert facets.admins + facets.members == len(world.users)
+    disabled = [u for u in world.users if u["status"] == "disabled"]
+    # Роли среди отключённых, статусы среди админов: каждый счётчик без своего фильтра.
+    assert admins_off.admins + admins_off.members == len(disabled)
+    assert sum(admins_off.status.values()) == 3
     assert len(picked.items) == 5
     assert picked.has_more is True
     assert all(p.id != "u00000" for p in picked.items)

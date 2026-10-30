@@ -8,7 +8,7 @@ import {
   useServices,
   useStorage,
 } from "@features/admin-ops";
-import { useApprovals } from "@features/admin-users";
+import { useApprovalCount } from "@features/admin-users";
 
 // Сведения для навигации админки: счётчики у пунктов и название установки.
 // Живут в своём lazy-чанке вместе с запросами разделов, чтобы оболочка
@@ -42,7 +42,7 @@ export const NavStatusProbe = ({
 }: {
   onChange: (status: NavStatus) => void;
 }) => {
-  const approvals = useApprovals(0).data?.total ?? 0;
+  const approvals = useApprovalCount().data ?? 0;
   const runners = useRunnerSummary().data;
   const services = useServices().data;
   const instance = useInstanceSettings().data;

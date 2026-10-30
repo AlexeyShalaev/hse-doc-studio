@@ -4,14 +4,15 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { ListRequestParams } from "@shared/lib";
 import type { AccountStatus, AdminUser } from "@entities/session";
-import { adminUsersApi, type UsersQuery } from "./adminUsersApi";
+import { adminUsersApi } from "./adminUsersApi";
 
 export const adminUsersKeys = {
   all: ["admin", "people"] as const,
-  users: (q: UsersQuery) => [...adminUsersKeys.all, "users", q] as const,
-  approvals: (page: number) =>
-    [...adminUsersKeys.all, "approvals", page] as const,
+  // Только total: сводка, вкладки и меню читают число, а не строки.
+  count: (list: "users" | "approvals") =>
+    [...adminUsersKeys.all, "count", list] as const,
   // Начала ключей серверных списков: параметры useServerList добавляет сам.
   usersList: () => [...adminUsersKeys.all, "users-list"] as const,
   facets: (q: string) => [...adminUsersKeys.all, "facets", q] as const,
@@ -20,11 +21,13 @@ export const adminUsersKeys = {
   invitationsList: () => [...adminUsersKeys.all, "invitations-list"] as const,
 };
 
-export const useUsers = (query: UsersQuery) =>
+/** Сколько людей в установке: total ответа из одной строки, без страницы. */
+export const useUserCount = () =>
   useQuery({
-    queryKey: adminUsersKeys.users(query),
-    queryFn: () => adminUsersApi.users(query),
-    placeholderData: keepPreviousData,
+    queryKey: adminUsersKeys.count("users"),
+    queryFn: ({ signal }) =>
+      adminUsersApi.usersPage({ limit: 1, offset: 0 }, signal),
+    select: (page) => page.total,
     staleTime: 0,
   });
 
@@ -35,11 +38,14 @@ export const ACCOUNT_STATUSES: readonly AccountStatus[] = [
   "disabled",
 ];
 
-/** Числа на чипах состояний и роли при текущем поиске: один запрос. */
-export const useUserFacets = (q: string) =>
+/**
+ * Числа на чипах состояний и роли при текущих условиях списка: один запрос.
+ * Сервер считает каждый счётчик без его собственного фильтра.
+ */
+export const useUserFacets = (params: ListRequestParams) =>
   useQuery({
-    queryKey: adminUsersKeys.facets(q),
-    queryFn: ({ signal }) => adminUsersApi.facets(q, signal),
+    queryKey: adminUsersKeys.facets(JSON.stringify(params)),
+    queryFn: ({ signal }) => adminUsersApi.facets(params, signal),
     placeholderData: keepPreviousData,
     staleTime: 0,
   });
@@ -58,11 +64,13 @@ export const useUser = (id: string | null, row: AdminUser | null) =>
     ...(row !== null && row.id === id ? { placeholderData: row } : {}),
   });
 
-export const useApprovals = (page: number) =>
+/** Сколько ждут одобрения: число для вкладки, сводки и меню. */
+export const useApprovalCount = () =>
   useQuery({
-    queryKey: adminUsersKeys.approvals(page),
-    queryFn: () => adminUsersApi.approvals(page),
-    placeholderData: keepPreviousData,
+    queryKey: adminUsersKeys.count("approvals"),
+    queryFn: ({ signal }) =>
+      adminUsersApi.approvalsPage({ limit: 1, offset: 0 }, signal),
+    select: (page) => page.total,
     staleTime: 0,
   });
 
@@ -120,13 +128,26 @@ export const useRevokeSessions = () => {
   });
 };
 
+/**
+ * Решение по заявке. В пачке (batch) списки не перечитываются после каждой
+ * заявки: вызывающий обновляет их один раз в конце через refresh.
+ */
 export const useDecideApproval = () => {
   const changed = useChanged();
-  return useMutation({
-    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
-      approve ? adminUsersApi.approve(id) : adminUsersApi.reject(id),
-    onSuccess: changed,
+  const mutation = useMutation({
+    mutationFn: ({
+      id,
+      approve,
+    }: {
+      id: string;
+      approve: boolean;
+      batch?: boolean;
+    }) => (approve ? adminUsersApi.approve(id) : adminUsersApi.reject(id)),
+    onSuccess: (_user, { batch = false }) => {
+      if (!batch) changed();
+    },
   });
+  return { ...mutation, refresh: changed };
 };
 
 export const useInvite = () => {

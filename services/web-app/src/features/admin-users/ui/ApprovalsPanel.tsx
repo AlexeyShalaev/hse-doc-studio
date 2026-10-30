@@ -26,7 +26,7 @@ import type { AdminUser } from "@entities/session";
 import { adminUsersApi } from "../api/adminUsersApi";
 import {
   adminUsersKeys,
-  useApprovals,
+  useApprovalCount,
   useDecideApproval,
 } from "../api/adminUsersQueries";
 import type { Failure } from "../lib/failure";
@@ -49,7 +49,7 @@ export const ApprovalsPanel = () => {
     fetchPage: adminUsersApi.approvalsPage,
   });
   // Сколько всего ждёт решения: тот же запрос, что у числа на вкладке.
-  const waiting = useApprovals(0).data?.total ?? list.total;
+  const waiting = useApprovalCount().data ?? list.total;
   const decide = useDecideApproval();
   const [failure, setFailure] = useState<Failure | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -73,8 +73,12 @@ export const ApprovalsPanel = () => {
   const allChosen = items.length > 0 && chosen.length === items.length;
   const busy = working.size > 0;
 
-  const decideOne = async (user: AdminUser, approve: boolean) => {
-    await decide.mutateAsync({ id: user.id, approve });
+  const decideOne = async (
+    user: AdminUser,
+    approve: boolean,
+    batch = false,
+  ) => {
+    await decide.mutateAsync({ id: user.id, approve, batch });
     setSelected((prev) => {
       const next = new Set(prev);
       next.delete(user.id);
@@ -111,7 +115,7 @@ export const ApprovalsPanel = () => {
     try {
       // По одному: сервер решает каждую заявку отдельно, отказ одной не трогает остальные.
       for (const user of people) {
-        await decideOne(user, true);
+        await decideOne(user, true, true);
         done += 1;
         setProgress(done);
       }
@@ -120,6 +124,8 @@ export const ApprovalsPanel = () => {
     } finally {
       setWorking(new Set());
       setProgress(null);
+      // Списки, счётчики и журнал перечитываются один раз за пачку, а не на каждую заявку.
+      if (done > 0) decide.refresh();
       if (done > 0) toast.success(t("approvals.approvedMany", { count: done }));
     }
   };
@@ -230,7 +236,7 @@ export const ApprovalsPanel = () => {
         }
       >
         {items.length === 0 && (
-          <NoResults compact query={state.q} onReset={state.reset} />
+          <NoResults compact query={state.searchOnly} onReset={state.reset} />
         )}
         {items.length > 0 && (
           <div className="ppl-queue-head">

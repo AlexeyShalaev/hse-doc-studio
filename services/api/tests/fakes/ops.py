@@ -19,6 +19,7 @@ from hse_doc_studio.core.repositories import InstanceAiProviderQuery
 from hse_doc_studio.core.storage.usage import StorageOwner, StorageOwnerQuery, StorageUsage
 
 from tests.fakes.job_queue import InMemoryJobQueue
+from tests.fakes.listing import matches
 
 
 def _matches(job: QueuedJob, flt: JobAdminFilter) -> bool:
@@ -31,6 +32,7 @@ def _matches(job: QueuedJob, flt: JobAdminFilter) -> bool:
         and (flt.runner_id is None or job.runner_id == flt.runner_id)
         and (flt.queued_from is None or job.queued_at >= flt.queued_from)
         and (flt.queued_to is None or job.queued_at < flt.queued_to)
+        and (flt.job_id is None or job.id == flt.job_id)
     )
 
 
@@ -48,7 +50,9 @@ class InMemoryJobAdminReader:
         jobs = [
             j
             for j in reversed(await self._queue.list())
-            if _matches(j, flt) and (before_seq is None or j.seq < before_seq)
+            if _matches(j, flt)
+            and (flt.job_id is not None or not flt.q or matches(flt.q, self._names.get(j.user_id) or ""))
+            and (before_seq is None or j.seq < before_seq)
         ]
         page = jobs[:limit]
         return JobAdminPage(

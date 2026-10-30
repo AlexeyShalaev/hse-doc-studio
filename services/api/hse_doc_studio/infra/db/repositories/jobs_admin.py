@@ -51,6 +51,15 @@ def _listing(row: Row[*tuple[Any, ...]]) -> JobListing:
     )
 
 
+def _search(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
+    """Поиск по id задачи целиком или подстрокой по подписям из того же соединения, что у страницы."""
+    if flt.job_id is not None:
+        return [JobRow.id == flt.job_id]
+    if flt.q:
+        return [matches_any(flt.q, [ProjectRow.name, UserRow.name, UserRow.email])]
+    return []
+
+
 def _conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
     found: list[ColumnElement[bool]] = []
     if flt.states:
@@ -69,7 +78,7 @@ def _conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
         found.append(JobRow.queued_at >= flt.queued_from)
     if flt.queued_to is not None:
         found.append(JobRow.queued_at < flt.queued_to)
-    return found
+    return [*found, *_search(flt)]
 
 
 class SqlJobAdminReader:

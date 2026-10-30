@@ -50,6 +50,31 @@ describe("useListQueryState", () => {
     expect(s.isFiltered).toBe(true);
   });
 
+  it("searchOnly есть, только когда кроме поиска условий нет", () => {
+    const only = renderHook(useHarness, { wrapper: wrapper("/x?q=петр") });
+    const both = renderHook(useHarness, {
+      wrapper: wrapper("/x?q=петр&status=active"),
+    });
+    expect(only.result.current.state.searchOnly).toBe("петр");
+    expect(both.result.current.state.searchOnly).toBe("");
+    expect(both.result.current.state.isFiltered).toBe(true);
+  });
+
+  it("перевёрнутый период из адреса меняется местами", () => {
+    const { result } = renderHook(
+      () =>
+        useListQueryState({
+          filters: { from: { date: "from" }, to: { date: "to" } },
+        }),
+      { wrapper: wrapper("/x?from=2026-10-30&to=2026-10-01") },
+    );
+    expect(result.current.filters.from).toEqual(["2026-10-01"]);
+    expect(result.current.filters.to).toEqual(["2026-10-30"]);
+    expect(result.current.params.from).toBe(
+      dayBoundaryIso("2026-10-01", "from"),
+    );
+  });
+
   it("неизвестная сортировка и размер дают значения по умолчанию", () => {
     const { result } = renderHook(useHarness, {
       wrapper: wrapper("/x?sort=password&size=7"),

@@ -781,6 +781,34 @@ const generateInvitations = (
 
 type AuditEvent = DemoAdminPeople["audit"][number];
 
+// Только коды, которые пишет сервер: подписи берутся из тех же ключей.
+const AUDIT_ACTIONS = [
+  ["auth.login", 420],
+  ["auth.logout", 90],
+  ["auth.login_failed", 60],
+  ["project.member.set", 60],
+  ["project.member.remove", 15],
+  ["pat.create", 10],
+  ["invite.create", 40],
+  ["invite.revoke", 10],
+  ["auth.register", 30],
+  ["org.member.add", 60],
+  ["org.member.role", 15],
+  ["group.member.add", 50],
+  ["group.create", 12],
+  ["admin.user_approved", 20],
+  ["admin.user_disabled", 8],
+  ["admin.reset_link_issued", 6],
+  ["runner.registration_token_create", 4],
+  ["runner.pause", 3],
+  ["settings.quotas_update", 2],
+] as const;
+
+/** Коды действий архива журнала: тест сверяет их с кодом сервера. */
+export const DEMO_AUDIT_ACTIONS: readonly string[] = AUDIT_ACTIONS.map(
+  ([action]) => action,
+);
+
 /** Журнал по id: те же действия и люди, что в живой установке. */
 const auditArchive = (
   people: readonly Person[],
@@ -793,30 +821,9 @@ const auditArchive = (
   const span = 365 * DAY;
   const gap = span / count;
   const admins = people.filter((p) => p.is_instance_admin);
-  const actions = [
-    ["auth.login", 420],
-    ["auth.logout", 90],
-    ["auth.login_failed", 60],
-    ["project.create", 60],
-    ["project.member_add", 50],
-    ["project.archive", 15],
-    ["project.transfer", 8],
-    ["invite.create", 40],
-    ["invite.accept", 30],
-    ["org.member_add", 60],
-    ["org.member_role", 15],
-    ["group.member_add", 50],
-    ["group.create", 12],
-    ["admin.user_approved", 20],
-    ["admin.user_disabled", 8],
-    ["admin.reset_link_issued", 6],
-    ["runner.registration_token_create", 4],
-    ["runner.pause", 3],
-    ["settings.quotas_update", 2],
-  ] as const;
   const at = (id: number): AuditEvent => {
     const r = rng(id * 2654435761);
-    const action = weighted(r, actions);
+    const action = weighted(r, AUDIT_ACTIONS);
     const byAdmin =
       action.startsWith("admin.") ||
       action.startsWith("runner.") ||
@@ -858,6 +865,8 @@ const auditArchive = (
       details = { name: group?.name ?? org.name, email: other.email };
     } else if (action.startsWith("admin.")) {
       target = other.id;
+    } else if (action === "pat.create") {
+      details = { name: "ci" };
     } else if (action.startsWith("runner.")) {
       const runner = pick(r, runners);
       target = runner.id;

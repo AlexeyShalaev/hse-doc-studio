@@ -533,7 +533,7 @@ export const AuditLog = () => {
         (state.isFiltered ? (
           <NoResults
             framed
-            query={state.q}
+            query={state.searchOnly}
             onReset={state.reset}
             testId="audit-empty"
           />

@@ -140,6 +140,7 @@ async def list_queue(
     queued_from: Annotated[AwareDatetime | None, Query(alias="from")] = None,
     queued_to: Annotated[AwareDatetime | None, Query(alias="to")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+    q: Annotated[str | None, Depends(search_param)] = None,
 ) -> AdminJobPage:
     response.headers.update(_NO_STORE)
     page = await (await _uc(request, ListQueueUC)).execute(
@@ -153,6 +154,7 @@ async def list_queue(
             runner_id=runner_id,
             queued_from=queued_from,
             queued_to=queued_to,
+            q=q,
         ),
         before_seq=before_seq,
         limit=limit,

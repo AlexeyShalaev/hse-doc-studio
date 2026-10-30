@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 
@@ -13,7 +14,7 @@ from hse_doc_studio.core.identity.entities import (
     UserListing,
     UserPickQuery,
     UserQuery,
-    UserStatus,
+    facets_of,
 )
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import normalize_email
@@ -122,12 +123,14 @@ class InMemoryUserDirectory:
         rows = ordered(found, query.sort, _USER_KEYS, lambda u: u.id)
         return page([self._listing(u) for u in rows], query.window)
 
-    async def facets(self, q: str | None) -> UserFacets:
-        found = self._found(q)
-        return UserFacets(
-            status={s: sum(1 for u in found if u.status is s) for s in UserStatus},
-            admins=sum(1 for u in found if u.is_instance_admin),
-        )
+    async def facets(self, query: UserQuery) -> UserFacets:
+        found = [
+            u
+            for u in self._found(query.q)
+            if query.org_slug is None or u.id in self.org_members.get(query.org_slug, set())
+        ]
+        groups = Counter((u.status, u.is_instance_admin) for u in found)
+        return facets_of([(status, admin, n) for (status, admin), n in groups.items()], query)
 
     async def pick(self, query: UserPickQuery) -> Picked[User]:
         found = [

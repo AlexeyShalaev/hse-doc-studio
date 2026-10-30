@@ -5493,21 +5493,31 @@ th button:focus-visible .dt-sort-hint {
     padding: 0;
     height: 34px;
   }
+  /* В полосе значков число не помещается и закрывает значок: вместо него
+     точка в углу, справа от значка, а число читается в подсказке. */
   .adm-nav-item .adm-count {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 4px;
-    font-size: 9.5px;
-  }
-  .adm-nav-item .adm-count[data-dot] {
-    top: 6px;
+    top: 7px;
     right: 6px;
-    min-width: 8px;
-    height: 8px;
+    min-width: 7px;
+    width: 7px;
+    height: 7px;
     padding: 0;
+    font-size: 0;
+    background: var(--fg-2);
+    box-shadow: 0 0 0 2px var(--bg-1);
+  }
+  .adm-nav-item .adm-count > [aria-hidden="true"] {
+    display: none;
+  }
+  .adm-nav-item .adm-count[data-tone="accent"] {
+    background: var(--accent);
+  }
+  .adm-nav-item .adm-count[data-tone="warning"] {
+    background: var(--c-warn);
+  }
+  .adm-nav-item .adm-count[data-tone="danger"] {
+    background: var(--c-err);
   }
   :root {
     --adm-gutter: 24px;

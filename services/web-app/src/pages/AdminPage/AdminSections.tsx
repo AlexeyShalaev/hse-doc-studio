@@ -51,10 +51,10 @@ import {
 import {
   auditTarget,
   isPseudonym,
-  useApprovals,
+  useApprovalCount,
   useAuditActionLabel,
   useRecentAudit,
-  useUsers,
+  useUserCount,
 } from "@features/admin-users";
 
 // Сводка установки: числа, то, что ждёт решения, последние действия и быстрые
@@ -62,8 +62,6 @@ import {
 // себя, остальная страница работает.
 
 const ACTIVITY_LIMIT = 7;
-
-const ALL_USERS = { q: "", status: "", page: 0 } as const;
 
 type Tone = "warning" | "danger" | "info";
 
@@ -97,14 +95,14 @@ const failedEmpty = (q: { data: unknown; isError: boolean }) =>
 const Kpis = () => {
   const { t } = useTranslation("adminShell");
   const num = useNumber();
-  const users = useUsers(ALL_USERS);
-  const approvals = useApprovals(0);
+  const users = useUserCount();
+  const approvals = useApprovalCount();
   const runners = useRunnerSummary();
   const summary = useQueueSummary();
   const services = useServices();
   const storage = useStorage();
 
-  const waiting = approvals.data?.total ?? 0;
+  const waiting = approvals.data ?? 0;
   const counts = runners.data;
   const live = counts ? liveRunners(counts) : 0;
   const online = counts?.online ?? 0;
@@ -140,7 +138,7 @@ const Kpis = () => {
         label={t("overview.kpi.people")}
         loading={users.isPending && !users.isError}
         error={failedEmpty(users) ? failed : undefined}
-        value={num(users.data?.total ?? 0)}
+        value={num(users.data ?? 0)}
         tone={waiting > 0 ? "warning" : "neutral"}
         secondary={
           waiting > 0
@@ -244,14 +242,14 @@ const Kpis = () => {
 
 const AttentionBlock = () => {
   const { t } = useTranslation("adminShell");
-  const approvals = useApprovals(0);
+  const approvals = useApprovalCount();
   const runners = useRunnerSummary();
   const services = useServices();
   const storage = useStorage();
   const auth = useBootstrap().data?.auth;
 
   const items: Attention[] = [];
-  const waiting = approvals.data?.total ?? 0;
+  const waiting = approvals.data ?? 0;
   if (waiting > 0) {
     items.push({
       id: "approvals",
