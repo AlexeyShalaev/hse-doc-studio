@@ -12,6 +12,7 @@ from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind
 from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.protocols import JobRunContext
+from hse_doc_studio.core.jobs.relay import RelayErrorCode
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerUnreachable
@@ -97,12 +98,18 @@ class CompileJobExecutor:
 
 
 class RoutingJobExecutor:
-    """compile уходит в `CompileJobExecutor`, остальное в исполнитель обработчиков."""
+    """compile уходит в `CompileJobExecutor`, `ai.relay` в исполнитель ретрансляции, остальное в обработчики."""
 
-    def __init__(self, compile_executor: JobExecutor, handlers: JobExecutor) -> None:
+    def __init__(self, compile_executor: JobExecutor, handlers: JobExecutor, relay: JobExecutor | None = None) -> None:
         self._compile = compile_executor
         self._handlers = handlers
+        self._relay = relay
 
     async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:
-        target = self._compile if envelope.spec.kind is JobKind.compile else self._handlers
+        kind = envelope.spec.kind
+        if kind is JobKind.ai_relay:
+            if self._relay is None:
+                raise JobFailure.of(JobErrorCategory.unavailable, RelayErrorCode.endpoint_unknown.value)
+            return await self._relay.execute(envelope, ctx)
+        target = self._compile if kind is JobKind.compile else self._handlers
         return await target.execute(envelope, ctx)
