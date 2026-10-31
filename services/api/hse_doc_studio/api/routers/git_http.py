@@ -19,13 +19,22 @@ from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.observability.client_ip import client_ip
 from hse_doc_studio.api.rate_limit import enforce
-from hse_doc_studio.api.schemas.git_remote import GitServerInfo, GitWhoami, GitWhoamiToken, GitWhoamiUser
+from hse_doc_studio.api.schemas.git_remote import (
+    GitProject,
+    GitProjectPage,
+    GitServerInfo,
+    GitWhoami,
+    GitWhoamiToken,
+    GitWhoamiUser,
+)
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.git_remote.entities import GitService
 from hse_doc_studio.core.git_remote.protocols import GitRpcOutcome, IGitSmartHttp
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.entities import TokenScope
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IUserRepository
+from hse_doc_studio.core.listing import DEFAULT_LIMIT, MAX_LIMIT, Window
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.rate_limit import GIT_AUTH_FAIL, GIT_HTTP
 from hse_doc_studio.infra.git_remote.smart_http import git_protocol
@@ -40,6 +49,7 @@ from hse_doc_studio.use_cases.git_remote.auth import (
     GitHttpErrorKind,
     GitPrincipal,
 )
+from hse_doc_studio.use_cases.git_remote.projects import ListGitProjectsUC
 from hse_doc_studio.use_cases.git_remote.receive import ProjectBusyError, PushSession, ReceivePushUC
 
 GIT_PREFIX = "/git"
@@ -138,6 +148,47 @@ async def git_whoami(request: Request) -> Response:
         token=GitWhoamiToken(id=token.id, name=token.name, expires_at=token.expires_at),
     )
     return JSONResponse(body.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/-/projects", response_model=GitProjectPage)
+async def git_projects(
+    request: Request,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> Response:
+    """Проекты, которые локальная Студия может клонировать этим токеном (S21)."""
+    try:
+        principal = await authenticate(request)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    uc = await _container_get(request, ListGitProjectsUC)
+    found = await uc.execute(
+        principal.actor,
+        q=q,
+        window=Window(limit=limit, offset=offset),
+        can_write=principal.has(TokenScope.git_write),
+    )
+    page = GitProjectPage(
+        items=[
+            GitProject(
+                id=str(item.id),
+                name=item.name,
+                owner_name=item.owner_name,
+                role=item.role.value,
+                can_push=item.can_push,
+                clone_url=item.clone_url,
+                updated_at=item.updated_at,
+            )
+            for item in found.items
+        ],
+        total=found.total,
+        limit=limit,
+        offset=offset,
+    )
+    return JSONResponse(page.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
 
 
 def _json_error(exc: GitHttpError) -> JSONResponse:

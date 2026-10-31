@@ -383,6 +383,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/git/{repo}/git-receive-pack"): RouteScope.git_token,
     ("GET", "/git/-/info"): _P,
     ("GET", "/git/-/whoami"): RouteScope.git_token,
+    ("GET", "/git/-/projects"): RouteScope.git_token,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

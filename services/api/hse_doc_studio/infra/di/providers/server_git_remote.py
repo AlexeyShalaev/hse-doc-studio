@@ -9,6 +9,7 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_remote.protocols import IExternalChangeReconciler, IGitSmartHttp, IPushRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry
 from hse_doc_studio.core.identity.protocols import IActorResolver, IApiTokenRepository, IAuditLog
+from hse_doc_studio.core.projects.browse import IProjectBrowser
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.git_remote.push_runtime import GitPushRuntime
@@ -21,6 +22,7 @@ from hse_doc_studio.use_cases.git_remote.auth import (
     GitFetchAudit,
     GitHttpAuthenticator,
 )
+from hse_doc_studio.use_cases.git_remote.projects import GetProjectGitRemoteUC, ListGitProjectsUC
 from hse_doc_studio.use_cases.git_remote.receive import PushLimits, ReceivePushUC
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC
 
@@ -77,3 +79,24 @@ class ServerGitRemoteProvider(Provider):
         cfg = settings.git_remote
         limits = PushLimits(max_push_bytes=cfg.max_push_bytes, lock_wait_s=cfg.lock_wait_s)
         return ReceivePushUC(project_access, operations, locks, vcs, runtime, reconciler, audit, limits)
+
+    @provide(scope=Scope.REQUEST)
+    def get_list_git_projects(self, browser: IProjectBrowser, acl: IProjectAclRepository) -> ListGitProjectsUC:
+        return ListGitProjectsUC(browser, acl, public_base_url())
+
+    @provide(scope=Scope.REQUEST)
+    def get_project_git_remote(
+        self,
+        acl: IProjectAclRepository,
+        project_repo: IProjectRepository,
+        project_index: IProjectIndexRepository,
+        vcs: IVcsService,
+    ) -> GetProjectGitRemoteUC:
+        return GetProjectGitRemoteUC(
+            acl, project_repo, project_index, vcs, enabled=settings.git_remote.enabled, public_url=public_base_url()
+        )
+
+
+def public_base_url() -> str:
+    """Внешний адрес сервера для ссылок клонирования; без public_url остаётся адрес по умолчанию."""
+    return (settings.auth.public_url or f"http://{settings.server.host}:{settings.server.port}").rstrip("/")

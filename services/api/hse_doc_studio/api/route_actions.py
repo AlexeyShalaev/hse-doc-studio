@@ -219,6 +219,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("DELETE", "/projects/{project_id}"): RouteRule(Action.PROJECT_DELETE),
     # Звонит контейнер Document Server: подлинность проверяют подпись и JWT внутри сценария.
     ("POST", "/office-editor/callback"): RouteRule(RouteExemption.system_callback, project_source="query"),
+    # gitremote: адрес клонирования проекта по git
+    ("GET", "/projects/{project_id}/git-remote"): RouteRule(Action.GIT_FETCH),
 }
 
 
