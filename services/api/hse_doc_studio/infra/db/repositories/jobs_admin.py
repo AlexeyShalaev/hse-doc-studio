@@ -61,6 +61,15 @@ def _search(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
     return []
 
 
+def _period_conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
+    found: list[ColumnElement[bool]] = []
+    if flt.queued_from is not None:
+        found.append(JobRow.queued_at >= flt.queued_from)
+    if flt.queued_to is not None:
+        found.append(JobRow.queued_at < flt.queued_to)
+    return found
+
+
 def _conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
     found: list[ColumnElement[bool]] = []
     if flt.states:
@@ -72,16 +81,11 @@ def _conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
         (JobRow.org_id, flt.org_id),
         (JobRow.project_id, flt.project_id),
         (JobRow.runner_id, flt.runner_id),
+        (JobRow.runner_scope, flt.runner_scope.value if flt.runner_scope is not None else None),
     ):
         if value is not None:
             found.append(column == value)
-    if flt.runner_scope is not None:
-        found.append(JobRow.runner_scope == flt.runner_scope.value)
-    if flt.queued_from is not None:
-        found.append(JobRow.queued_at >= flt.queued_from)
-    if flt.queued_to is not None:
-        found.append(JobRow.queued_at < flt.queued_to)
-    return [*found, *_search(flt)]
+    return [*found, *_period_conditions(flt), *_search(flt)]
 
 
 class SqlJobAdminReader:

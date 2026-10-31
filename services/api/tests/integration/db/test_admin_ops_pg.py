@@ -163,5 +163,5 @@ async def test__personal_routes__filter_by_scope_and_not_counted_as_waiting(pg_m
     assert await queue.claim(shared_runner, lease_s=45) is not None
     personal = await reader.list_jobs(JobAdminFilter(runner_scope=RunnerScope.personal), before_seq=None, limit=10)
     shared = await reader.list_jobs(JobAdminFilter(runner_scope=RunnerScope.shared), before_seq=None, limit=10)
-    assert [j.runner_scope for j in personal.items] == [RunnerScope.personal]
-    assert [j.runner_scope for j in shared.items] == [RunnerScope.shared]
+    assert [j.job.runner_scope for j in personal.items] == [RunnerScope.personal]
+    assert [j.job.runner_scope for j in shared.items] == [RunnerScope.shared]

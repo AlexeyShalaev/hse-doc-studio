@@ -157,9 +157,7 @@ class InMemoryRunnerAdminReader:
     async def _newest(self) -> Runner | None:
         # Устарел ли раннер считается от флота установки: версии личных раннеров не в счёт.
         live = [
-            r
-            for r in await self._runners.list()
-            if r.revoked_at is None and r.owner_kind is RunnerOwnerKind.instance
+            r for r in await self._runners.list() if r.revoked_at is None and r.owner_kind is RunnerOwnerKind.instance
         ]
         return max(live, key=lambda r: version_key(r.version), default=None)
 

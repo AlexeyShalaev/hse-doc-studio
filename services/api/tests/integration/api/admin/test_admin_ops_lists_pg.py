@@ -36,7 +36,11 @@ from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlAdminProjectPicker, SqlJobAdminReader
-from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
+from hse_doc_studio.infra.db.repositories.runners import (
+    SqlRegistrationTokenRepository,
+    SqlRunnerAdminReader,
+    SqlRunnerRepository,
+)
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.use_cases.admin.ops_ai_providers import ListInstanceAiProvidersUC
@@ -48,11 +52,13 @@ from hse_doc_studio.use_cases.admin.ops_runners import (
     RunnerSummaryUC,
 )
 from hse_doc_studio.use_cases.admin.ops_storage import ListStorageOwnersUC
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from tests.fakes.ops import ReversingCipher
+from tests.fakes.auth import InMemoryAuditLog
+from tests.fakes.ops import NoopUow, ReversingCipher
 
 pytestmark = pytest.mark.pg
 
@@ -263,6 +269,17 @@ class _Provider(Provider):
     @provide
     def list_runners(self) -> ListRunnersUC:
         return ListRunnersUC(SqlRunnerAdminReader(self.sessions))
+
+    @provide
+    def runner_registry(self) -> RunnerRegistry:
+        # Список раннеров разрешает владельца (owners_of) и настройки личных раннеров
+        # (personal_settings) через реестр; без личных раннеров в этом мире оба пусты.
+        return RunnerRegistry(
+            SqlRunnerRepository(self.sessions),
+            SqlRegistrationTokenRepository(self.sessions),
+            InMemoryAuditLog(),
+            NoopUow(),
+        )
 
     @provide
     def runner_summary(self) -> RunnerSummaryUC:

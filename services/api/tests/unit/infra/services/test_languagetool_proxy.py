@@ -13,8 +13,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.routers import services_api
-from hse_doc_studio.core.jobs.enums import JobState
+from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import IJobQueue
+from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner
 from hse_doc_studio.infra.services.languagetool import (
     LanguageToolProxy,
@@ -120,11 +121,11 @@ def test__remote_service__sends_job_token_headers() -> None:
 
 
 async def _running_job(_job_id: object) -> object:
-    return SimpleNamespace(state=JobState.running, runner_id=_RUNNER_ID)
+    return SimpleNamespace(state=JobState.running, kind=JobKind.compile, runner_id=_RUNNER_ID)
 
 
 async def _live_runner(_runner_id: str) -> object:
-    return SimpleNamespace(revoked_at=None)
+    return SimpleNamespace(revoked_at=None, scope=RunnerScope.shared)
 
 
 _RUNNING_JOB = SimpleNamespace(get=_running_job)

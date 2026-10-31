@@ -184,7 +184,7 @@ async def test__disabled_owner__runner_is_refused_and_deletion_revokes_it(stand:
     assert admin.delete(f"/api/admin/users/{anna.id}").status_code == 204
     gone = stand.client.post("/api/runner/v1/poll", json={"wait_s": 0, "free_slots": 1}, headers=runner)
     assert gone.status_code == 401
-    listed = admin.get("/api/admin/runners").json()
+    listed = admin.get("/api/admin/runners").json()["items"]
     assert [r["revoked"] for r in listed if r["id"] == runner_id] == [True]
 
 
@@ -193,14 +193,14 @@ async def test__admin__lists_personal_runners_with_owner_and_filters_by_kind(sta
     runner_id = stand.personal_runner(anna, "MacBook Анны")["X-Runner-Id"]
     admin = stand.admin()
 
-    personal = admin.get("/api/admin/runners", params={"owner_kind": "user"}).json()
+    personal = admin.get("/api/admin/runners", params={"owner_kind": "user"}).json()["items"]
     assert [(r["id"], r["owner_kind"], r["owner"]["id"], r["owner"]["email"]) for r in personal] == [
         (runner_id, "user", anna.id, anna.email)
     ]
-    assert admin.get("/api/admin/runners", params={"owner_kind": "instance"}).json() == []
+    assert admin.get("/api/admin/runners", params={"owner_kind": "instance"}).json()["items"] == []
 
     admin.put("/api/admin/settings/build", json={"personal_runners_enabled": False}).raise_for_status()
-    (row,) = admin.get("/api/admin/runners").json()
+    (row,) = admin.get("/api/admin/runners").json()["items"]
     assert row["status"] == "disabled"
     settings = admin.get("/api/admin/settings/build").json()
     assert (settings["personal_runners_enabled"], settings["fields"]["runners.personal_enabled"]["source"]) == (
