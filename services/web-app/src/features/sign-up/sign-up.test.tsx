@@ -64,6 +64,27 @@ describe("sign-up", () => {
     ).toBe("closed");
   });
 
+  it("без SMTP открытая регистрация просит приглашение, по доменам форма остаётся", () => {
+    const noSmtp = { ...AUTH, smtp_enabled: false };
+    expect(registerAvailability(noSmtp, false)).toBe("smtp_required");
+    expect(
+      registerAvailability({ ...noSmtp, registration_mode: "domains" }, false),
+    ).toBe("form");
+    // Приглашение открывает форму даже без SMTP.
+    expect(registerAvailability(noSmtp, true)).toBe("form");
+    // Со SMTP открытая регистрация по-прежнему форма.
+    expect(registerAvailability(AUTH, false)).toBe("form");
+  });
+
+  it("без SMTP в открытом режиме: формы нет, нужна ссылка-приглашение", () => {
+    render(wrap(<RegisterUnavailableCard reason="smtp_required" />));
+    expect(screen.queryByTestId("register-form")).toBeNull();
+    expect(screen.getByTestId("register-unavailable")).toHaveAttribute(
+      "aria-label",
+      "Регистрация по приглашению",
+    );
+  });
+
   it("открытый режим: форма без подсказки про домены", () => {
     render(wrap(<RegisterCard auth={AUTH} onSubmit={() => undefined} />));
     expect(screen.getByTestId("register-form")).toBeInTheDocument();

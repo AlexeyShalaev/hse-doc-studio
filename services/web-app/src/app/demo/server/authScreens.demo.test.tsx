@@ -55,16 +55,14 @@ describe("демо: регистрация и ссылки из писем", () 
   });
   afterEach(cleanup);
 
-  it("открытая регистрация без SMTP показывает ссылку подтверждения", async () => {
+  it("открытая регистрация без SMTP: формы нет, нужно приглашение", async () => {
     activateServerScenario("registration_open_nosmtp");
-    const user = userEvent.setup();
     mount(<SignUpForm />);
-    await fillRegistration(user, "maria@example.org");
-    expect(await screen.findByTestId("link-delivery")).toBeInTheDocument();
-    expect(screen.getByTestId("register-result")).toHaveAttribute(
-      "data-tone",
-      "ok",
+    expect(await screen.findByTestId("register-unavailable")).toHaveAttribute(
+      "aria-label",
+      "Регистрация по приглашению",
     );
+    expect(screen.queryByTestId("register-form")).toBeNull();
   });
 
   it("со SMTP итог нейтральный и без ссылки", async () => {

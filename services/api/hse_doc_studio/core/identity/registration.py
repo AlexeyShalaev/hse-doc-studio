@@ -38,9 +38,10 @@ def invite_usable(invite: RegistrationInvite, email: str, now: datetime) -> bool
 class RegistrationPolicy:
     """Режимы: open, domains, invite, closed и флаг одобрения. Действующее приглашение пускает в любом режиме.
 
-    Без приглашения: подтверждение почты письмом, если есть SMTP; без SMTP аккаунт активен с неподтверждённой
-    почтой (ссылку анониму не показываем: по ней подтвердили бы чужой адрес). Режим domains без SMTP не может
-    проверить владение адресом, поэтому такие аккаунты ждут одобрения админа.
+    Без приглашения: подтверждение почты письмом, если есть SMTP. Без SMTP открытая регистрация (open) не может
+    подтвердить владение адресом и анониму ссылку показать нельзя, поэтому она отказывает: нужно приглашение.
+    Режим domains без SMTP по той же причине не может проверить адрес, но там это не тупик: такие аккаунты
+    ждут одобрения админа.
     """
 
     def __init__(self, settings: AuthSettings, *, smtp_enabled: bool) -> None:
@@ -62,7 +63,8 @@ class RegistrationPolicy:
             )
         if self._smtp:
             return RegistrationDecision(UserStatus.pending_verification, False, True, RegistrationOutcome.check_email)
-        return RegistrationDecision(UserStatus.active, False, True, RegistrationOutcome.check_email)
+        # Open без SMTP не может подтвердить адрес и анониму ссылку не покажет: без приглашения тут тупик.
+        raise IdentityError(IdentityErrorCode.invitation_required)
 
     def evaluate_external(self, email: str) -> RegistrationDecision:
         """Новый человек пришёл через внешнего провайдера с подтверждённой там почтой (JIT).

@@ -29,7 +29,7 @@ from hse_doc_studio.use_cases.identity.register import RegisterUC
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import empty_bearer_resolver
-from tests.unit.use_cases.identity.conftest import T0, World
+from tests.unit.use_cases.identity.conftest import T0, FakeSender, World
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "server" / "fixtures"
 PASSWORD = "correct horse battery"
@@ -87,6 +87,7 @@ async def _login(world: World, secret: str = "secret") -> dict[str, str]:
 async def test_open_registration_answers_with_the_contract_shape(env: tuple[AsyncClient, World]) -> None:
     client, world = env
     await world.settings.set(KEY_REGISTRATION_MODE, "open", source="test")
+    world.sender = FakeSender(enabled=True)
 
     response = await client.post("/api/v1/auth/register", json=_fixture("RegisterRequest", "open"))
 
@@ -96,17 +97,31 @@ async def test_open_registration_answers_with_the_contract_shape(env: tuple[Asyn
     assert await world.users.get_by_email(_fixture("RegisterRequest", "open")["email"]) is not None
 
 
-async def test_register_never_returns_the_verify_link_even_without_smtp(env: tuple[AsyncClient, World]) -> None:
+async def test_open_registration_without_smtp_is_refused(env: tuple[AsyncClient, World]) -> None:
+    """Без SMTP открытая регистрация не создаёт аккаунт: по почте её не подтвердить, нужно приглашение."""
     client, world = env
     await world.settings.set(KEY_REGISTRATION_MODE, "open", source="test")
     assert not world.sender.enabled
     body = _fixture("RegisterRequest", "open")
 
-    fresh = await client.post("/api/v1/auth/register", json=body)
-    again = await client.post("/api/v1/auth/register", json=body)
+    response = await client.post("/api/v1/auth/register", json=body)
 
-    assert fresh.json() == again.json()
-    assert fresh.json()["link"] is None
+    assert (response.status_code, response.json()["code"]) == (403, "invitation_required")
+    assert await world.users.get_by_email(body["email"]) is None
+
+
+async def test_register_never_returns_the_verify_link_even_without_smtp(env: tuple[AsyncClient, World]) -> None:
+    """Приглашение без привязки к адресу тоже создаёт ссылку без SMTP, но HTTP-ответ её не отдаёт."""
+    client, world = env
+    await world.add_user("admin@example.org", user_id="admin")
+    created = await world.create_invite_uc().execute(Actor.user("admin", is_instance_admin=True))
+    assert not world.sender.enabled
+    body = {**_fixture("RegisterRequest", "open"), "invitation_token": created.token}
+
+    response = await client.post("/api/v1/auth/register", json=body)
+
+    assert response.status_code == 200
+    assert response.json()["link"] is None
 
 
 async def test_closed_registration_is_refused_with_a_code(env: tuple[AsyncClient, World]) -> None:

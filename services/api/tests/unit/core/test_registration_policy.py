@@ -50,6 +50,13 @@ def test_rejections(
     assert exc.value.code is code
 
 
+def test_open_without_smtp_and_without_invite_requires_one() -> None:
+    """Без SMTP анонимную почту не подтвердить, а ссылку показать нельзя: open без приглашения — тупик."""
+    with pytest.raises(IdentityError) as exc:
+        _ok(M.open, "a@gmail.com", None, smtp=False)
+    assert exc.value.code is CODE.invitation_required
+
+
 @pytest.mark.parametrize("mode", list(RegistrationMode))
 @pytest.mark.parametrize("email", ["ann@hse.ru", "ann@gmail.com"])
 @pytest.mark.parametrize("approval", [False, True])
@@ -75,7 +82,6 @@ def test_unbound_invite_does_not_prove_the_address(smtp: bool) -> None:
             True,
             RegistrationDecision(ST.pending_verification, False, True, OUT.check_email),
         ),
-        (M.open, "a@gmail.com", False, False, RegistrationDecision(ST.active, False, True, OUT.check_email)),
         (
             M.open,
             "a@gmail.com",

@@ -78,6 +78,14 @@ export const getSignUpGallery = (): GalleryGroup[] => [
         render: () => <RegisterUnavailableCard reason="invite_required" />,
       },
       {
+        id: "register_smtp_required",
+        title: "Открытая, без почты",
+        note: "Почту некому подтвердить: формы нет, нужна ссылка-приглашение.",
+        frame: "window",
+        width: W,
+        render: () => <RegisterUnavailableCard reason="smtp_required" />,
+      },
+      {
         id: "register_closed",
         title: "Закрыта",
         frame: "window",
@@ -248,7 +256,7 @@ export const getSignUpGallery = (): GalleryGroup[] => [
       {
         id: "register_live_nosmtp",
         title: "Открытая, без почты",
-        note: "После отправки ссылка подтверждения показывается на экране.",
+        note: "Почту некому подтвердить: формы нет, нужна ссылка-приглашение.",
         scenario: "registration_open_nosmtp",
         frame: "window",
         width: W,

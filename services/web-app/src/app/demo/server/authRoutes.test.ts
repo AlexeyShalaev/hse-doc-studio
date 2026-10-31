@@ -70,12 +70,11 @@ describe("демо регистрации и ссылок из писем", () =
     expect(taken).toEqual(free);
   });
 
-  it("открытый режим без SMTP: ссылка вместо письма", async () => {
+  it("открытый режим без SMTP: отказ, нужно приглашение", async () => {
     activateServerScenario("registration_open_nosmtp");
     const res = await call("POST", "/auth/register", open());
-    const body = RegisterResponseSchema.parse(res.data);
-    expect(body.status).toBe("check_email");
-    expect(body.link).toMatch(/\/verify\/vf_/);
+    expect(res.status).toBe(403);
+    expect(code(res)).toBe("invitation_required");
   });
 
   it("режим доменов: чужой домен отказ, свой проходит, approval@ ждёт", async () => {

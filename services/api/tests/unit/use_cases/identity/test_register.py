@@ -12,7 +12,7 @@ from hse_doc_studio.core.identity.auth_settings import (
     KEY_REQUIRE_APPROVAL,
     AuthEnvOverrides,
 )
-from hse_doc_studio.core.identity.entities import AuthTokenKind, InviteQuery, MailKind, RegistrationMode, UserStatus
+from hse_doc_studio.core.identity.entities import InviteQuery, RegistrationMode, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.registration import RegistrationOutcome
@@ -37,21 +37,13 @@ async def _register(world: World, email: str = "new@example.org", token: str | N
     return await world.register_uc().execute(email, "New", PASSWORD, token)
 
 
-async def test_open_without_smtp_activates_and_returns_copyable_link(world: World) -> None:
+async def test_open_without_smtp_and_without_invite_is_rejected(world: World) -> None:
+    """Без SMTP анонимная почта не подтверждается, а ссылку показать некому: open требует приглашение."""
     await _set(world, "open")
-    result = await _register(world)
-    user = await world.users.get_by_email("new@example.org")
-    assert user is not None
-    assert (user.status, user.email_verified) == (UserStatus.active, False)
-    assert result.outcome is RegistrationOutcome.check_email
-    assert result.link is not None
-    assert result.link.startswith("https://studio.test/verify/")
-    token = result.link.rpartition("/")[2]
-    consumed = await world.auth_tokens.consume(hash_token(token), AuthTokenKind.verify_email, world.clock.now)
-    assert consumed is not None
-    assert consumed.user_id == user.id
-    assert [e.kind for e in await world.outbox.list_active(world.clock.now)] == [MailKind.verify_email]
-    assert await world.creds.get_hash(user.id)
+    with pytest.raises(IdentityError) as exc:
+        await _register(world)
+    assert exc.value.code is IdentityErrorCode.invitation_required
+    assert await world.users.get_by_email("new@example.org") is None
 
 
 async def test_open_with_smtp_sends_mail_and_waits_for_verification(world: World) -> None:
@@ -171,6 +163,7 @@ async def test_failed_invite_consumption_creates_nobody(world: World) -> None:
 
 async def test_existing_email_gets_the_same_neutral_answer(world: World) -> None:
     await _set(world, "open")
+    world.sender = FakeSender(enabled=True)
     await world.add_user("taken@example.org")
     before = await world.users.count()
     hashes = world.hasher.hash_calls
@@ -183,7 +176,9 @@ async def test_existing_email_gets_the_same_neutral_answer(world: World) -> None
 
 
 async def test_parallel_registration_of_one_email_creates_one_account(world: World) -> None:
+    """SMTP формально включён, но недоступен: как и без SMTP, выигравший запрос получает ссылку сам."""
     await _set(world, "open")
+    world.sender = FakeSender(enabled=True, fail=True)
     results = await asyncio.gather(*(_register(world) for _ in range(6)))
     assert await world.users.count() == 1
     assert {r.outcome for r in results} == {RegistrationOutcome.check_email}
@@ -193,6 +188,7 @@ async def test_parallel_registration_of_one_email_creates_one_account(world: Wor
 
 async def test_env_wins_over_database(world: World) -> None:
     await _set(world, "closed")
+    world.sender = FakeSender(enabled=True)
     world.env = AuthEnvOverrides(registration_mode=RegistrationMode.open)
     result = await _register(world)
     assert result.outcome is RegistrationOutcome.check_email

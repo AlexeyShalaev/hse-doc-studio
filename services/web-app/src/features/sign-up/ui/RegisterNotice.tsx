@@ -7,7 +7,12 @@ import { Button, LinkDelivery } from "@shared/ui";
 export const RegisterUnavailableCard = ({
   reason,
 }: {
-  reason: "closed" | "invite_required" | "invitation_invalid" | "unreachable";
+  reason:
+    | "closed"
+    | "invite_required"
+    | "smtp_required"
+    | "invitation_invalid"
+    | "unreachable";
 }) => {
   const { t } = useTranslation("auth");
   return (

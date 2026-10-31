@@ -76,6 +76,14 @@ export const createAuthRoutes = (
             "Invitation is required",
           );
         }
+        // Открытая регистрация без SMTP не подтвердит почту и ссылку анониму не покажет: нужно приглашение.
+        if (auth.registration_mode === "open" && !auth.smtp_enabled) {
+          return demoError(
+            403,
+            "invitation_required",
+            "Invitation is required",
+          );
+        }
         const domain = email.split("@")[1] ?? "";
         if (
           auth.registration_mode === "domains" &&
