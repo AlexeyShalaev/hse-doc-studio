@@ -9,6 +9,7 @@ import {
   Cpu,
   DatabaseBackup,
   Drama,
+  Gauge,
   HardDrive,
   Info,
   KeyRound,
@@ -49,6 +50,7 @@ import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
 import { MyOrganizationsSection } from "@features/my-organizations";
 import { MyRunnersSection } from "@features/my-runners";
+import { UsageSection } from "@features/usage";
 import { RemoteRunnerSection } from "@features/remote-runner";
 import {
   LOCAL_BOOTSTRAP,
@@ -139,6 +141,14 @@ const SECTIONS: readonly SectionDef[] = [
     account: "with",
     labelKey: "settingsPage.sections.organizations",
     icon: Building2,
+  },
+  {
+    id: "usage",
+    group: "general",
+    scope: "user",
+    account: "with",
+    labelKey: "settingsPage.sections.usage",
+    icon: Gauge,
   },
   {
     id: "profile",
@@ -274,6 +284,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <AccountSection />;
     case "organizations":
       return <MyOrganizationsSection />;
+    case "usage":
+      return <UsageSection />;
     case "profile":
       return <AuthorProfileSection />;
     case "compiler":

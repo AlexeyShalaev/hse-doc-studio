@@ -7,6 +7,7 @@ import { useQueueSummary, useRunnerSummary } from "../api/opsQueries";
 import { LONG_WAIT_S } from "../lib/jobs";
 import { liveRunners } from "../lib/runnerStatus";
 import { Queue } from "./Queue";
+import { AutoscalePanel } from "./AutoscalePanel";
 import { Runners } from "./Runners";
 import { Tabs } from "./parts";
 
@@ -107,13 +108,16 @@ export const RunnersPage = ({
         className="ops-stack"
       >
         {tab === "runners" ? (
-          <Runners
-            creating={creating}
-            onCreatingChange={setCreating}
-            onOpenQueue={() => {
-              setTab("queue");
-            }}
-          />
+          <>
+            <Runners
+              creating={creating}
+              onCreatingChange={setCreating}
+              onOpenQueue={() => {
+                setTab("queue");
+              }}
+            />
+            <AutoscalePanel />
+          </>
         ) : (
           <Queue />
         )}

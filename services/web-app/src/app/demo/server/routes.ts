@@ -12,6 +12,7 @@ import { createGitRemoteRoutes } from "./gitRemoteRoutes";
 import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
+import { createUsageRoutes } from "./quotaRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createShareLinkRoutes, createSharingAdminRoutes } from "./shareLinks";
 import { createSystemRoutes } from "./systemRoutes";
@@ -161,6 +162,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createInvitationRoutes(() => world),
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
+  ...createUsageRoutes(() => world),
   ...createGitRemoteRoutes(() => world),
   ...createSharedProviderUserRoutes(() => world),
   ...catalogRoutes,
