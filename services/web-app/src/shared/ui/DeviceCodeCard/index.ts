@@ -1,4 +1,5 @@
 export {
+  DEVICE_CODE_ALPHABET,
   DeviceCodeDisplay,
   DeviceCodeShell,
   DeviceFact,

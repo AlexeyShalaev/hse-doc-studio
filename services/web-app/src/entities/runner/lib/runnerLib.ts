@@ -1,7 +1,6 @@
 import type { StatusDotStatus } from "@shared/ui";
 import {
   ENDPOINT_NAME_RE,
-  USER_CODE_ALPHABET,
   type MyRunnerState,
   type OwnerRunnerState,
   type RemoteRunnerState,
@@ -34,33 +33,14 @@ export const REMOTE_STATE_DOT: Record<RemoteRunnerState, StatusDotStatus> = {
   error: "danger",
 };
 
-const CODE_LENGTH = 8;
-const CODE_HALF = 4;
-
 /**
- * Код сопряжения из ввода человека: регистр, пробелы и дефис не важны, похожих
- * букв в алфавите нет. null, если это не код вида XXXX-XXXX.
+ * Код сопряжения из ввода человека и маска поля ввода: те же правила, что у
+ * входа устройства в git сервера, поэтому реализация общая (shared/ui/DeviceCodeCard).
  */
-export const normalizeUserCode = (input: string): string | null => {
-  const raw = input.toUpperCase().replace(/[\s-]/g, "");
-  if (raw.length !== CODE_LENGTH) return null;
-  // Алфавит кода только ASCII: разбор по символам безопасен.
-  for (let i = 0; i < raw.length; i += 1) {
-    if (!USER_CODE_ALPHABET.includes(raw.charAt(i))) return null;
-  }
-  return `${raw.slice(0, CODE_HALF)}-${raw.slice(CODE_HALF)}`;
-};
-
-/** Маска ввода кода: только буквы и цифры алфавита, дефис после четвёртого знака. */
-export const maskUserCode = (input: string): string => {
-  const raw = input
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, CODE_LENGTH);
-  return raw.length > CODE_HALF
-    ? `${raw.slice(0, CODE_HALF)}-${raw.slice(CODE_HALF)}`
-    : raw;
-};
+export {
+  maskDeviceCode as maskUserCode,
+  normalizeDeviceCode as normalizeUserCode,
+} from "@shared/ui/DeviceCodeCard";
 
 /** Сравнение версий вида 0.3.0: по числам, а не по строкам. */
 export const compareVersions = (a: string, b: string): number => {

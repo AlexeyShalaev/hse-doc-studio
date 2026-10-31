@@ -10,7 +10,8 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_SECOND = 1000;
 const CODE_HALF = 4;
 const CODE_LENGTH = CODE_HALF * 2;
-const DEVICE_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789";
+/** Алфавит кода устройства без похожих букв; тот же, что core/device_codes.py сервера. */
+export const DEVICE_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789";
 
 /** Оставшееся время кода: «8:42»; null, если срок вышел. */
 export const deviceCountdown = (

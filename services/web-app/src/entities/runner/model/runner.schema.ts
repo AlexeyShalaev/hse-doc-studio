@@ -250,5 +250,5 @@ export const RemoteRunnerTokenRequestSchema = z.strictObject({
 /** Имя ИИ-адреса раннера: те же правила, что у сервера (ENDPOINT_NAME_RE). */
 export const ENDPOINT_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
-/** Код сопряжения XXXX-XXXX из алфавита без похожих букв. */
-export const USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789";
+/** Код сопряжения XXXX-XXXX: общий алфавит кода устройства (раннеры и вход в git сервера). */
+export { DEVICE_CODE_ALPHABET as USER_CODE_ALPHABET } from "@shared/ui/DeviceCodeCard";
