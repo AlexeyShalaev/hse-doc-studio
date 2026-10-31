@@ -51,6 +51,7 @@ nav = [
         { "Общий сервер" = "deploy/index.md" },
         { "Установка сервера" = "deploy/install.md" },
         { "Люди и вход" = "deploy/accounts.md" },
+        { "Приглашения и запросы доступа" = "deploy/invitations.md" },
         { "Раннеры" = "deploy/runners.md" },
         { "Безопасность и ПДн" = "deploy/security.md" },
         { "Бэкап и обновление" = "deploy/operations.md" },
