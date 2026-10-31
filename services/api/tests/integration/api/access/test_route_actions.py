@@ -14,7 +14,10 @@ from tests.fixtures.app import create_test_app, create_test_container
 _PROJECT_FIELD = "project_id"
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
 # Действия, у которых пока нет ни одного маршрута.
-_RESERVED_ACTIONS = frozenset({Action.COMMENT, Action.SHARE, Action.PROJECT_TRANSFER})
+# git по HTTPS (`/git/<id>.git`) вне /api/v1: GIT_FETCH и GIT_PUSH решает сам маршрут, а не таблица.
+_RESERVED_ACTIONS = frozenset(
+    {Action.COMMENT, Action.SHARE, Action.PROJECT_TRANSFER, Action.GIT_FETCH, Action.GIT_PUSH}
+)
 _WRITE_ACTIONS = frozenset(
     {
         Action.FILES_WRITE,

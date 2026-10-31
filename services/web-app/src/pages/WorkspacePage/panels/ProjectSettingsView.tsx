@@ -46,6 +46,7 @@ import {
   SharedDocsSection,
   SupervisorSection,
   SyncCiSection,
+  SyncServerCloneSection,
   SyncExchangeSection,
   SyncOptionsSection,
   SyncRemoteSection,
@@ -114,7 +115,7 @@ export const ProjectSettingsView = ({
   const { mutate: instantiateNda } = useInstantiateNda();
   const { mutate: deleteNdaFiles } = useDeleteNdaFiles();
   const { mutate: moveProject, isPending: isMoving } = useMoveProject();
-  const { lacks } = useCapabilities();
+  const { lacks, has } = useCapabilities();
   const updateTeamSet = useUpdateTeamSet();
   const [ndaConfirmOpen, setNdaConfirmOpen] = useState(false);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
@@ -342,6 +343,7 @@ export const ProjectSettingsView = ({
     hasDocSetMeta: docSetCards.length > 0,
     hasMetaFields: metaFields.length > 0,
     hasAccess: project.my_role != null,
+    hasGitRemote: project.my_role != null && has("git_remote"),
     ...syncContext,
   };
   const activeGroup = resolveProjectSettingsGroup(section, sectionCtx);
@@ -578,6 +580,8 @@ export const ProjectSettingsView = ({
         return <SyncExchangeSection projectId={project.id} />;
       case "sync-ci":
         return <SyncCiSection projectId={project.id} />;
+      case "sync-server-clone":
+        return <SyncServerCloneSection projectId={project.id} />;
       case "danger-zone":
         return (
           <DangerZoneSection

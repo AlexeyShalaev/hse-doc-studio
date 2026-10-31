@@ -59,6 +59,7 @@ def _to_record(credential: GitCredential, sealed: str) -> dict[str, Any]:
         "created_at": credential.created_at.isoformat(),
         "last_used_at": None if credential.last_used_at is None else credential.last_used_at.isoformat(),
         "expires_at": None if credential.expires_at is None else credential.expires_at.isoformat(),
+        "origin": credential.origin,
         "secret": sealed,
     }
 
@@ -80,6 +81,8 @@ def _from_record(raw: dict[str, Any]) -> GitCredential:
         port=raw.get("port"),
         last_used_at=None if last_used is None else _parse_dt(last_used),
         expires_at=None if expires is None else _parse_dt(expires),
+        # Файлы до входа на сервер Студии поля не знают: это обычный доступ.
+        origin=raw.get("origin"),
     )
 
 

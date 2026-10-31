@@ -1,0 +1,6 @@
+{
+  "access_token": "hsd_pat_RGV2aWNlUGF0RXhhbXBsZVZhbHVlMDE",
+  "token_type": "bearer",
+  "expires_in": 7776000,
+  "scope": "git:read git:write"
+}

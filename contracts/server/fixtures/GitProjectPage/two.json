@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      "name": "ВКР: Анализ требований",
+      "owner_name": "Анна Петрова",
+      "role": "owner",
+      "can_push": true,
+      "clone_url": "https://studio.example.org/git/5b0c1d2e-3f40-4152-8364-758697a8b9c0.git",
+      "updated_at": "2026-11-01T09:00:00Z"
+    },
+    {
+      "id": "6c1d2e3f-4051-4263-9475-8697a8b9c0d1",
+      "name": "Курсовой проект",
+      "owner_name": "МСПИН",
+      "role": "reviewer",
+      "can_push": false,
+      "clone_url": "https://studio.example.org/git/6c1d2e3f-4051-4263-9475-8697a8b9c0d1.git",
+      "updated_at": "2026-10-30T09:00:00Z"
+    }
+  ],
+  "total": 2,
+  "limit": 50,
+  "offset": 0
+}

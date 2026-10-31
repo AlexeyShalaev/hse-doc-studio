@@ -30,7 +30,7 @@ class FakeAcl:
     def __init__(self) -> None:
         self.roles: dict[tuple[UUID, str], Role] = {}
 
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
         role = self.roles.get((project_id, actor.id or ""))
         if role is None:
             return None

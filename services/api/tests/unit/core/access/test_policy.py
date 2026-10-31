@@ -62,7 +62,7 @@ def test__required_role__personal_condition_guest_or_no_grant__none() -> None:
 
 _MATRIX = {
     Role.reader: {Action.PROJECT_VIEW, Action.OUTPUT_READ},
-    Role.reviewer: {Action.PROJECT_VIEW, Action.OUTPUT_READ, Action.SOURCES_READ, Action.COMMENT},
+    Role.reviewer: {Action.PROJECT_VIEW, Action.OUTPUT_READ, Action.SOURCES_READ, Action.COMMENT, Action.GIT_FETCH},
     Role.editor: {
         Action.PROJECT_VIEW,
         Action.OUTPUT_READ,
@@ -75,6 +75,8 @@ _MATRIX = {
         Action.HISTORY_REWRITE,
         Action.SUBMISSION_READ,
         Action.SUBMISSION_CREATE,
+        Action.GIT_FETCH,
+        Action.GIT_PUSH,
     },
     Role.owner: set(Action) - {Action.FILES_READ},
 }
@@ -305,3 +307,22 @@ def test__history_rewrite__team_editor__only_owner_or_edit_all() -> None:
     assert can(USER, Action.HISTORY_REWRITE, edit_all)
     assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.owner), team=True))
     assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.editor)))
+
+
+def test__git_fetch__reader_only_with_show_sources() -> None:
+    assert not can(USER, Action.GIT_FETCH, _acl(Grant(Role.reader)))
+    assert can(USER, Action.GIT_FETCH, _acl(Grant(Role.reader, show_sources=True)))
+    assert decide(USER, Action.GIT_FETCH, _acl(Grant(Role.reader))) is Decision.forbidden
+
+
+def test__git_push__editor_and_owner_without_path_reviewer_forbidden() -> None:
+    assert can(USER, Action.GIT_PUSH, _acl(Grant(Role.editor), team=True))
+    assert can(USER, Action.GIT_PUSH, _acl(Grant(Role.owner)))
+    assert required_role(USER, Action.GIT_PUSH, _acl(Grant(Role.reviewer))) is Role.editor
+
+
+@pytest.mark.parametrize("action", [Action.GIT_FETCH, Action.GIT_PUSH])
+def test__git__guest_is_forbidden_even_as_editor(action: Action) -> None:
+    acl = _acl(Grant(Role.editor, show_sources=True), actor=GUEST)
+
+    assert decide(GUEST, action, acl) is Decision.forbidden

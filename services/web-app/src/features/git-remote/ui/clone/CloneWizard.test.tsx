@@ -1367,3 +1367,57 @@ describe("мастер клонирования на сервере: без вы
     });
   });
 });
+
+describe("мастер клонирования: источник «Сервер HSE Doc Studio»", () => {
+  beforeEach(async () => {
+    await resetConnectEnvironment();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("выбранный проект сервера сразу проверяется с доступом входа по коду", async () => {
+    const user = userEvent.setup();
+    const { probe } = setup();
+    const serverUrl = "https://studio.example.org/git/5b0c1d2e.git";
+    mount({
+      serverSlot: (onPick) => (
+        <button
+          type="button"
+          data-testid="fake-server-project"
+          onClick={() => {
+            onPick(serverUrl, "cred_studio_ok");
+          }}
+        >
+          pick
+        </button>
+      ),
+    });
+    expect(await screen.findByTestId("clone-source-studio")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await user.click(screen.getByTestId("fake-server-project"));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: serverUrl,
+          credential_id: "cred_studio_ok",
+        }),
+      );
+    });
+    expect(await screen.findByText("Проект найден")).toBeInTheDocument();
+    expect(screen.getByTestId("clone-source-git")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("без входа на серверы источника нет: сразу адрес репозитория", async () => {
+    setup();
+    mount();
+    await screen.findByRole("textbox", { name: "Адрес репозитория" });
+    expect(screen.queryByTestId("clone-source-studio")).toBeNull();
+  });
+});

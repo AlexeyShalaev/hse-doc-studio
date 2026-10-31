@@ -44,6 +44,7 @@ import {
   hostSettingsView,
   tokenModeOf,
 } from "./providers";
+import { gitServerDemoRoutes } from "./gitServers";
 import { createWorld, projectOf } from "./scenarios";
 import { isServerDemoActive } from "./server/routes";
 import { useDemoScenarioStore } from "./scenarioStore";
@@ -1831,6 +1832,7 @@ const historyRoutes: DemoRoute[] = [
 ];
 
 export const gitDemoRoutes: DemoRoute[] = [
+  ...gitServerDemoRoutes,
   ...projectRoutes,
   ...globalRoutes,
   ...historyRoutes,

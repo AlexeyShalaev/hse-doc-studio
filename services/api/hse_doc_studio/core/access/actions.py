@@ -26,6 +26,9 @@ class Action(StrEnum):
     PROJECT_SETTINGS = "project.settings"
     TEMPLATE_MANAGE = "template.manage"
     PROJECT_DELETE = "project.delete"
+    # git по HTTPS (сервер как git-remote): выборка по праву «исходники», отправка по праву «правка».
+    GIT_FETCH = "git.fetch"
+    GIT_PUSH = "git.push"
     # Зарезервировано: маршрутов пока нет.
     COMMENT = "comment"
     # Ссылки доступа и приглашения; у редактора дополнительно нужен Grant.can_share.
@@ -42,7 +45,7 @@ class RouteExemption(StrEnum):
 
 
 _READER = frozenset({Action.PROJECT_VIEW, Action.OUTPUT_READ})
-_REVIEWER = _READER | {Action.SOURCES_READ, Action.COMMENT, Action.SIGN}
+_REVIEWER = _READER | {Action.SOURCES_READ, Action.COMMENT, Action.SIGN, Action.GIT_FETCH}
 _EDITOR = _REVIEWER | {
     Action.FILES_WRITE,
     Action.BUILD_RUN,
@@ -53,6 +56,7 @@ _EDITOR = _REVIEWER | {
     Action.SUBMISSION_CREATE,
     Action.SHARE,
     Action.ACCESS_MANAGE,
+    Action.GIT_PUSH,
 }
 _OWNER = _EDITOR | {
     Action.PROJECT_SETTINGS,
@@ -61,7 +65,7 @@ _OWNER = _EDITOR | {
     Action.PROJECT_TRANSFER,
 }
 
-# SOURCES_READ у читателя здесь нет: его открывает Grant.show_sources.
+# SOURCES_READ и GIT_FETCH у читателя здесь нет: их открывает Grant.show_sources.
 # SHARE и ACCESS_MANAGE у редактора дополнительно требуют Grant.can_share, SIGN и
 # SUBMISSION_CREATE — привязки к персоне (см. policy).
 ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
@@ -86,6 +90,8 @@ GUEST_DENIED: frozenset[Action] = frozenset(
         Action.TEMPLATE_MANAGE,
         Action.PROJECT_DELETE,
         Action.PROJECT_TRANSFER,
+        Action.GIT_FETCH,
+        Action.GIT_PUSH,
     }
 )
 

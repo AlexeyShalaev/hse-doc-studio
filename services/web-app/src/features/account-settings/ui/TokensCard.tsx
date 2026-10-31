@@ -32,6 +32,8 @@ export type TokensCardProps = {
   failure?: Failure | null;
   /** Форма создания открыта с самого начала (для галереи). */
   startOpen?: boolean;
+  /** Предустановка из адреса (`?preset=git`): форма открыта с правами только для git. */
+  preset?: "git" | null;
   onRetry?: () => void;
   /** done вызывают после успеха: форма очищается и закрывается. */
   onCreate: (body: CreateApiTokenRequest, done: () => void) => void;
@@ -40,6 +42,8 @@ export type TokensCardProps = {
 };
 
 const NAME_MAX = 80;
+/** Токен «для git»: клонирование и отправка, без доступа к API. */
+const GIT_SCOPES: readonly TokenScope[] = ["git:read", "git:write"];
 
 /** Личные токены доступа: для CLI и скриптов. Значение видно только при создании. */
 export const TokensCard = ({
@@ -51,6 +55,7 @@ export const TokensCard = ({
   revokingId = null,
   failure = null,
   startOpen = false,
+  preset = null,
   onRetry,
   onCreate,
   onRevoke,
@@ -58,9 +63,13 @@ export const TokensCard = ({
 }: TokensCardProps) => {
   const { t, i18n } = useTranslation("account");
   const uid = useId();
-  const [open, setOpen] = useState(startOpen);
-  const [name, setName] = useState("");
-  const [scopes, setScopes] = useState<TokenScope[]>(["api"]);
+  const [open, setOpen] = useState(startOpen || preset === "git");
+  const [name, setName] = useState(() =>
+    preset === "git" ? t("tokens.preset.gitName") : "",
+  );
+  const [scopes, setScopes] = useState<TokenScope[]>(
+    preset === "git" ? [...GIT_SCOPES] : ["api"],
+  );
   const [expiry, setExpiry] = useState<number | null>(DEFAULT_EXPIRY);
   const [touched, setTouched] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -200,6 +209,16 @@ export const TokensCard = ({
                         <span style={{ overflowWrap: "anywhere" }}>
                           {token.name}
                         </span>
+                        {token.origin === "device" && (
+                          <span data-testid={`token-origin-${token.id}`}>
+                            <Badge variant="subtle">
+                              {t("tokens.origin.device")}
+                              {token.client_kind
+                                ? ` · ${t(`tokens.origin.kind.${token.client_kind}`)}`
+                                : ""}
+                            </Badge>
+                          </span>
+                        )}
                         {expired && (
                           <Badge variant="error">{t("tokens.expired")}</Badge>
                         )}
@@ -354,6 +373,18 @@ export const TokensCard = ({
                 >
                   {t("tokens.scopesLegend")}
                 </legend>
+                <button
+                  type="button"
+                  className="btn xs"
+                  style={{ alignSelf: "flex-start" }}
+                  onClick={() => {
+                    setScopes([...GIT_SCOPES]);
+                  }}
+                  disabled={creating}
+                  data-testid="token-preset-git"
+                >
+                  {t("tokens.preset.git")}
+                </button>
                 {TOKEN_SCOPES.map((scope) => (
                   <label
                     key={scope}

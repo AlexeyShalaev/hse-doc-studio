@@ -252,3 +252,13 @@ def install_runner_pairings_purge(app: FastAPI, container: AsyncContainer) -> No
         await (await container.get(RunnerPairingService)).purge()
 
     app.state.background.register(PeriodicTask(name="runner_pairings_purge", interval_s=600.0, run=_purge_pairings))
+
+
+def install_device_authorizations_purge(app: FastAPI, container: AsyncContainer) -> None:
+    """Чистка входов устройств по коду (git сервера): записи старше суток больше не нужны."""
+    from hse_doc_studio.use_cases.identity.device_flow import DeviceFlowService  # noqa: PLC0415
+
+    async def _purge() -> None:
+        await (await container.get(DeviceFlowService)).purge()
+
+    app.state.background.register(PeriodicTask(name="device_authorizations_purge", interval_s=600.0, run=_purge))

@@ -102,6 +102,16 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.confirm_name_mismatch: _INPUT,
     IdentityErrorCode.transfer_expired: _GONE,
     IdentityErrorCode.transfer_outdated: _STATE,
+    IdentityErrorCode.git_scope_missing: _FORBIDDEN,
+    IdentityErrorCode.git_busy: _LIMIT,
+    IdentityErrorCode.git_project_busy: _STATE,
+    IdentityErrorCode.device_scope_invalid: _INPUT,
+    IdentityErrorCode.device_code_invalid: _NOT_FOUND,
+    IdentityErrorCode.device_code_expired: _GONE,
+    IdentityErrorCode.device_code_used: _STATE,
+    IdentityErrorCode.git_server_url_invalid: _INPUT,
+    IdentityErrorCode.git_server_not_studio: _INPUT,
+    IdentityErrorCode.git_server_unreachable: _BAD_GATEWAY,
 }
 
 

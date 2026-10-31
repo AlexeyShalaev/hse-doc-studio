@@ -28,6 +28,8 @@ from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
 
 # Порядок, в котором спрашиваем незнакомый сервер: самый вероятный для внутренних установок первым.
 _GUESS_ORDER = (GitProvider.gitlab, GitProvider.gitea, GitProvider.github)
+# Локальная Студия узнаёт и сервер HSE Doc Studio (`/git/-/info`); сам сервер с собой не синхронизируется.
+LOCAL_GUESS_ORDER = (GitProvider.hse_studio, *_GUESS_ORDER)
 
 
 @dataclass(frozen=True)
@@ -44,9 +46,15 @@ def _saas_hosts() -> frozenset[str]:
 
 
 class ProviderResolver:
-    def __init__(self, settings: IGitHostSettingsRepository, detector: IProviderDetector) -> None:
+    def __init__(
+        self,
+        settings: IGitHostSettingsRepository,
+        detector: IProviderDetector,
+        guess_order: tuple[GitProvider, ...] = _GUESS_ORDER,
+    ) -> None:
         self._settings = settings
         self._detector = detector
+        self._guess_order = guess_order
 
     async def known(self, host: str | None, port: int | None) -> ProviderInfo:
         """Провайдер без сети: выбор пользователя, имя хоста, ответ API при прошлой проверке."""
@@ -92,11 +100,10 @@ class ProviderResolver:
         overrides = {host: stored.provider_override} if host and stored and stored.provider_override else None
         return detect_provider(host, overrides=overrides, api=found or (stored.detected if stored else None))
 
-    @staticmethod
-    def _candidates(info: ProviderInfo) -> tuple[GitProvider, ...]:
+    def _candidates(self, info: ProviderInfo) -> tuple[GitProvider, ...]:
         if info.detected_by in {DetectedBy.override, DetectedBy.host}:
             return (info.id,) if provider_spec(info.id).api.detect is not None else ()
-        return _GUESS_ORDER
+        return self._guess_order
 
     @staticmethod
     def _api_base(url: RemoteUrl, info: ProviderInfo, detection: ApiDetection | None) -> str | None:

@@ -348,7 +348,12 @@
       "project_transfer_start": "Project transfer started",
       "project_transfer_cancel": "Project transfer cancelled",
       "project_transfer_accept": "Project transferred",
-      "project_transfer_decline": "Project transfer declined"
+      "project_transfer_decline": "Project transfer declined",
+      "git_push": "Git push",
+      "git_fetch": "Git fetch",
+      "git_auth_failed": "Failed git sign-in",
+      "device_approve": "Device allowed git access",
+      "device_deny": "Device denied git access"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

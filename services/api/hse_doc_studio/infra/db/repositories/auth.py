@@ -12,6 +12,7 @@ from sqlalchemy.orm import aliased
 from hse_doc_studio.core.identity.entities import (
     AUDIT_PEOPLE_LIMIT,
     ApiToken,
+    ApiTokenOrigin,
     AuditActor,
     AuditEntry,
     AuditQuery,
@@ -131,6 +132,9 @@ def _api_token(row: ApiTokenRow) -> ApiToken:
         created_at=row.created_at,
         expires_at=row.expires_at,
         last_used_at=row.last_used_at,
+        origin=ApiTokenOrigin(row.origin),
+        client_name=row.client_name,
+        client_kind=row.client_kind,
     )
 
 
@@ -151,6 +155,9 @@ class SqlApiTokenRepository:
                     created_at=token.created_at,
                     expires_at=token.expires_at,
                     last_used_at=token.last_used_at,
+                    origin=token.origin.value,
+                    client_name=token.client_name,
+                    client_kind=token.client_kind,
                 )
             )
             await db.flush()

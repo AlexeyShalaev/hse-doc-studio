@@ -237,6 +237,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_VIEW),
     ("POST", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
     ("DELETE", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
+    # gitremote: адрес клонирования проекта по git
+    ("GET", "/projects/{project_id}/git-remote"): RouteRule(Action.GIT_FETCH),
 }
 
 

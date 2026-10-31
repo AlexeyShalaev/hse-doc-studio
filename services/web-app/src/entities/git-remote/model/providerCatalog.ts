@@ -37,10 +37,13 @@ const ProviderSpecSchema = z.object({
         path: z.string(),
         version_header: z.string().nullable(),
         version_key: z.string().nullable(),
+        value: z.string().optional(),
       })
       .nullable(),
   }),
-  auth_variants: z.array(z.enum(["token", "ssh_user_key", "deploy_key"])),
+  auth_variants: z.array(
+    z.enum(["token", "ssh_user_key", "deploy_key", "device"]),
+  ),
   limits: z.object({ name: z.number(), description: z.number() }),
   token_links: z
     .object({

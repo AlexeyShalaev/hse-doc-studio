@@ -36,7 +36,9 @@
     "admin": false,
     "personal_signing_keys": true,
     "personal_runners": true,
-    "remote_runner": false
+    "remote_runner": false,
+    "git_remote": true,
+    "git_server_login": false
   },
   "csrf_token": "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o",
   "guest": null,

@@ -153,7 +153,8 @@
   "wizardPage": {
     "createTitle": "Новый проект",
     "connectTitle": "Подключить папку",
-    "cloneTitle": "Клонирование проекта"
+    "cloneTitle": "Клонирование проекта",
+    "studioDeviceName": "Студия на этом компьютере"
   },
   "accountMenu": {
     "title": "Аккаунт",

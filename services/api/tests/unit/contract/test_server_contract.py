@@ -16,6 +16,7 @@ from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import invitations as inv
+from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
@@ -211,6 +212,22 @@ _SCHEMAS: dict[str, Any] = {
     "NotificationPage": inv.NotificationPage,
     "MarkNotificationsReadRequest": inv.MarkNotificationsReadRequest,
     "InboxSummary": inv.InboxSummary,
+    # gitremote: git по HTTPS, вход устройства, адрес клонирования, вход локальной Студии на сервер
+    "GitServerInfo": gr.GitServerInfo,
+    "GitWhoami": gr.GitWhoami,
+    "GitProjectPage": gr.GitProjectPage,
+    "GitServerProjectPage": gr.GitProjectPage,
+    "DeviceCodeRequest": gr.DeviceCodeRequest,
+    "DeviceCodeResponse": gr.DeviceCodeResponse,
+    "DeviceTokenRequest": gr.DeviceTokenRequest,
+    "DeviceTokenResponse": gr.DeviceTokenResponse,
+    "DeviceTokenError": gr.DeviceTokenError,
+    "DeviceAuthorizationInfo": gr.DeviceAuthorizationInfo,
+    "DeviceDecisionRequest": gr.DeviceDecisionRequest,
+    "ProjectGitRemote": gr.ProjectGitRemote,
+    "GitServerLoginRequest": gr.GitServerLoginRequest,
+    "GitServerLogin": gr.GitServerLogin,
+    "GitServerList": gr.GitServerList,
 }
 
 

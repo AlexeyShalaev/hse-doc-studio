@@ -51,6 +51,11 @@ ACCESS_REQUEST = RateRule("access_request", limit=10, window_s=3600)
 LINK_IP = RateRule("link_ip", limit=60, window_s=60)
 LINK_TOKEN = RateRule("link_token", limit=300, window_s=60)  # noqa: S106 — имя правила, не секрет
 GUEST = RateRule("guest", limit=600, window_s=60)
+# git по HTTPS: неудачные входы по IP (перебор токенов) и все запросы git по человеку.
+GIT_AUTH_FAIL = RateRule("git_auth_fail", limit=30, window_s=60)
+GIT_HTTP = RateRule("git_http", limit=120, window_s=60)
+# Поиск кода устройства на странице /device: неверные коды тоже считаются (по человеку и по IP).
+DEVICE_CODE_LOOKUP = RateRule("device_code_lookup", limit=10, window_s=60)
 
 RULES: dict[str, RateRule] = {
     rule.name: rule
@@ -67,5 +72,8 @@ RULES: dict[str, RateRule] = {
         LINK_IP,
         LINK_TOKEN,
         GUEST,
+        GIT_AUTH_FAIL,
+        GIT_HTTP,
+        DEVICE_CODE_LOOKUP,
     )
 }

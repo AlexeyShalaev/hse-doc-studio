@@ -360,7 +360,12 @@
       "project_transfer_start": "Передача проекта начата",
       "project_transfer_cancel": "Передача проекта отменена",
       "project_transfer_accept": "Проект передан",
-      "project_transfer_decline": "Передача проекта отклонена"
+      "project_transfer_decline": "Передача проекта отклонена",
+      "git_push": "Отправка изменений по git",
+      "git_fetch": "Получение проекта по git",
+      "git_auth_failed": "Неудачный вход в git",
+      "device_approve": "Устройству разрешён git",
+      "device_deny": "Устройству отказано в git"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

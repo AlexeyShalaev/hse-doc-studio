@@ -36,7 +36,7 @@ from hse_doc_studio.core.git_sync.error_classifier import (
     scrub,
     tls_reason_is_hidden,
 )
-from hse_doc_studio.core.git_sync.error_messages import git_error
+from hse_doc_studio.core.git_sync.error_messages import git_error, push_rejected_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
@@ -386,6 +386,8 @@ class GitRemoteRunner:
             code = GitErrorCode.tls_untrusted_ca
         if code is GitErrorCode.tls_untrusted_ca:
             return await self._untrusted_ca_error(target)
+        if code is GitErrorCode.push_rejected:
+            return push_rejected_error(scrub(text, secrets))
         return git_error(code, tail=classified.detail)
 
     async def _issuer_untrusted(self, target: RemoteTarget) -> bool:

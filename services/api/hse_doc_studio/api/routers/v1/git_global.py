@@ -88,6 +88,7 @@ def _map_credential(view: CredentialView) -> GitCredentialResponse:
         created_at=credential.created_at,
         last_used_at=credential.last_used_at,
         expires_at=credential.expires_at,
+        origin="device" if credential.origin == "device" else None,
         used_by=[GitCredentialUsage(project_id=u.project_id, name=u.name) for u in view.used_by],
     )
 

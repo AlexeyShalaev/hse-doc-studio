@@ -2,7 +2,7 @@
   "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой.",
   "version": 1,
   "detected_by": ["override", "host", "api", "unknown"],
-  "auth_variants": ["token", "ssh_user_key", "deploy_key"],
+  "auth_variants": ["token", "ssh_user_key", "deploy_key", "device"],
   "defaults": {
     "token_name": {
       "with_project": "HSE Studio · {project}",
@@ -239,6 +239,42 @@
         "deploy_key": { "kind": "plain", "path": "/{path}/admin/access-keys/" }
       },
       "docs_url": "https://support.atlassian.com/bitbucket-cloud/docs/repository-access-tokens/"
+    },
+    {
+      "id": "hse_studio",
+      "label": "HSE Doc Studio",
+      "host_rules": [],
+      "api": {
+        "base": "{web_base}/git/-",
+        "base_by_host": {},
+        "detect": {
+          "path": "/git/-/info",
+          "version_header": null,
+          "version_key": "server",
+          "value": "hse-doc-studio"
+        }
+      },
+      "auth_variants": ["device"],
+      "limits": { "name": 128, "description": 1024 },
+      "token_links": null,
+      "permissions": {
+        "required": ["git:write"],
+        "optional": [],
+        "too_broad": ["api"],
+        "implies": {},
+        "human": {
+          "ru": "Вход через сайт сервера: чтение и запись по git (git:read, git:write)",
+          "en": "Sign-in on the server website: git read and write (git:read, git:write)"
+        }
+      },
+      "introspection": {
+        "method": "hse_studio_whoami",
+        "path": "/whoami",
+        "auth": "bearer",
+        "scopes": "body:scopes"
+      },
+      "ssh_links": null,
+      "docs_url": null
     },
     {
       "id": "other",

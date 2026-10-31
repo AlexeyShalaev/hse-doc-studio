@@ -36,6 +36,13 @@ class TokenScope(StrEnum):
     git_write = "git:write"
 
 
+class ApiTokenOrigin(StrEnum):
+    """Откуда токен доступа: создан человеком в «Токенах» или выдан устройству по коду (device flow)."""
+
+    manual = "manual"
+    device = "device"
+
+
 class AuthTokenKind(StrEnum):
     """Разовые токены из писем и ссылок."""
 
@@ -163,6 +170,10 @@ class ApiToken:
     created_at: datetime
     expires_at: datetime | None = None
     last_used_at: datetime | None = None
+    origin: ApiTokenOrigin = ApiTokenOrigin.manual
+    # Имя и вид устройства у токена из device flow («Студия на MacBook Анны», desktop).
+    client_name: str | None = None
+    client_kind: str | None = None
 
 
 @dataclass(frozen=True)

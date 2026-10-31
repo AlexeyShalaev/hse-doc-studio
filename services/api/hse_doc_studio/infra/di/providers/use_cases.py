@@ -63,6 +63,7 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -314,7 +315,7 @@ from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, T
 from hse_doc_studio.use_cases.git_sync.local_gate import LocalSyncGate
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
-from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
+from hse_doc_studio.use_cases.git_sync.provider_resolver import LOCAL_GUESS_ORDER, ProviderResolver
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
@@ -1559,6 +1560,8 @@ class UseCaseProvider(Provider):
     def get_git_provider_resolver(
         self, host_settings: IGitHostSettingsRepository, detector: IProviderDetector
     ) -> ProviderResolver:
+        if settings.mode is StudioMode.local:
+            return ProviderResolver(host_settings, detector, LOCAL_GUESS_ORDER)
         return ProviderResolver(host_settings, detector)
 
     @provide

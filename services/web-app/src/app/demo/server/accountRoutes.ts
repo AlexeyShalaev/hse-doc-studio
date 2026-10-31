@@ -246,6 +246,9 @@ export const createAccountRoutes = (
             ? null
             : new Date(now + days * 86_400_000).toISOString(),
         last_used_at: null,
+        origin: "manual",
+        client_name: null,
+        client_kind: null,
       };
       account.tokens = [item, ...account.tokens];
       return {

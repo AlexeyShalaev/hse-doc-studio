@@ -27,7 +27,7 @@ import {
   type FolderInspection,
 } from "./CloneFolderStep";
 import { CloneProgressStep } from "./CloneProgressStep";
-import { CloneSourceStep } from "./CloneSourceStep";
+import { CloneSourceStep, type CloneServerSlot } from "./CloneSourceStep";
 
 /**
  * Окно выбора папки и проверка выбранной папки делает другая фича
@@ -41,6 +41,8 @@ export type CloneFolderSlot = {
 
 export type CloneWizardProps = {
   folderSlot?: CloneFolderSlot | undefined;
+  /** Источник «Сервер HSE Doc Studio» (локальная Студия): выбор проекта на сервере Студии. */
+  serverSlot?: CloneServerSlot | undefined;
   /** Сервер: папку проекта выбирает сервер, шаг просит только название. */
   folderless?: boolean | undefined;
   /** Адрес и доступ, с которыми открыли мастер (из окна подключения). */
@@ -62,6 +64,7 @@ const noInspect = (): FolderInspection => IDLE_INSPECTION;
 // шагов лежит здесь, поэтому «Назад» ничего не стирает.
 const CloneWizardBody = ({
   folderSlot,
+  serverSlot,
   folderless = false,
   initialTarget = null,
   onExit,
@@ -281,6 +284,7 @@ const CloneWizardBody = ({
       {currentStep === "source" && (
         <CloneSourceStep
           source={source}
+          serverSlot={serverSlot}
           bundleError={bundleError}
           onCancel={onExit}
           onNext={() => {

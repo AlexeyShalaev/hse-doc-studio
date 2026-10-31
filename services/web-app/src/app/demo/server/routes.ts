@@ -8,6 +8,7 @@ import { catalogRoutes } from "./catalogRoutes";
 import { createSharedProviderUserRoutes } from "./installRoutes";
 import { createInvitationRoutes } from "./invitationRoutes";
 import { createMemberOrgRoutes } from "./memberOrgRoutes";
+import { createGitRemoteRoutes } from "./gitRemoteRoutes";
 import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
@@ -160,6 +161,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createInvitationRoutes(() => world),
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
+  ...createGitRemoteRoutes(() => world),
   ...createSharedProviderUserRoutes(() => world),
   ...catalogRoutes,
 ].map((route) => ({

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Применение принятого push к рабочей папке проекта (вместо updateInstead, стор не в .git папки).
+exec "$HSE_PYTHON" -I -m hse_doc_studio.infra.git_remote.push_to_checkout "$@"

@@ -1,0 +1,6 @@
+{
+  "decision": "approve",
+  "scopes": [
+    "git:read"
+  ]
+}

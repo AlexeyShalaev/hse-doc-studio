@@ -262,6 +262,9 @@ def _token_item(token: ApiTokenEntity) -> ApiToken:
         created_at=token.created_at,
         expires_at=token.expires_at,
         last_used_at=token.last_used_at,
+        origin=token.origin.value,
+        client_name=token.client_name,
+        client_kind="cli" if token.client_kind == "cli" else "desktop" if token.client_kind else None,
     )
 
 

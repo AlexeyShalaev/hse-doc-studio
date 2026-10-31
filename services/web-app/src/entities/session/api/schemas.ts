@@ -53,6 +53,9 @@ export const CapabilitiesSchema = z.strictObject({
   // Сервер: человек может подключать свои раннеры; локально: Студия умеет быть личным раннером.
   personal_runners: z.boolean(),
   remote_runner: z.boolean(),
+  // Сервер: git по HTTPS включён; локально: вход на сервер Студии по коду устройства.
+  git_remote: z.boolean(),
+  git_server_login: z.boolean(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 
@@ -278,6 +281,10 @@ export const ApiTokenSchema = z.strictObject({
   created_at: iso,
   expires_at: iso.nullable(),
   last_used_at: iso.nullable(),
+  // Токен создан вручную или выдан устройству по коду (device flow).
+  origin: z.enum(["manual", "device"]),
+  client_name: z.string().nullable(),
+  client_kind: z.enum(["desktop", "cli"]).nullable(),
 });
 export const CreateApiTokenRequestSchema = z.strictObject({
   name: z.string(),

@@ -80,6 +80,18 @@ const seedIdentities = (
 
 const seedTokens = (): ApiToken[] => [
   {
+    id: "pat_01hxdv",
+    name: "Студия на MacBook Анны",
+    prefix: "hsd_pat_7Rm",
+    scopes: ["git:read", "git:write"],
+    created_at: ago(24 * 3),
+    expires_at: ago(-24 * 87),
+    last_used_at: ago(2),
+    origin: "device",
+    client_name: "Студия на MacBook Анны",
+    client_kind: "desktop",
+  },
+  {
     id: "pat_01hx9b",
     name: "CLI на ноутбуке",
     prefix: "hsd_pat_4Kq",
@@ -87,6 +99,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 7),
     expires_at: ago(-24 * 83),
     last_used_at: null,
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx9c",
@@ -96,6 +111,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 60),
     expires_at: null,
     last_used_at: ago(30),
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx8z",
@@ -105,6 +123,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 200),
     expires_at: ago(24 * 20),
     last_used_at: ago(24 * 40),
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
 ];
 

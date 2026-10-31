@@ -72,9 +72,23 @@ export const useCloneSource = (initial: CloneSourceInit | null) => {
 
   const runCheck = useCallback(
     async (
-      overrides: { credentialId?: string | null; branch?: string } = {},
+      overrides: {
+        credentialId?: string | null;
+        branch?: string;
+        /** Адрес, выставленный тем же действием (проект сервера Студии): состояние ещё не обновилось. */
+        url?: string;
+      } = {},
     ) => {
-      if (!repoUrl) return;
+      const parsedOverride =
+        overrides.url !== undefined
+          ? parseRemoteUrl(overrides.url, { allow_local: true })
+          : null;
+      const target = parsedOverride
+        ? parsedOverride.ok
+          ? parsedOverride.url
+          : null
+        : repoUrl;
+      if (!target) return;
       const id =
         overrides.credentialId !== undefined
           ? overrides.credentialId
@@ -89,7 +103,7 @@ export const useCloneSource = (initial: CloneSourceInit | null) => {
       let answer: Probe | null = null;
       try {
         answer = await probe.mutateAsync({
-          url: repoUrl.display_url,
+          url: target.display_url,
           credential_id: id,
           ...(branchValue !== "" ? { branch: branchValue } : {}),
         });
@@ -139,6 +153,16 @@ export const useCloneSource = (initial: CloneSourceInit | null) => {
     setBundlePassword: (value: string): void => {
       setBundlePassword(value);
       setError(null);
+    },
+    /** Источник «Сервер HSE Doc Studio»: адрес проекта сервера и доступ входа по коду. */
+    pickServerProject: (url: string, id: string): void => {
+      invalidate();
+      setError(null);
+      setBranch("");
+      setTokenStripped(false);
+      setTab("url");
+      setUrlText(url);
+      void runCheck({ credentialId: id, url, branch: "" });
     },
     /** Ошибка, с которой человека вернули на шаг: отказ при запуске. */
     error,

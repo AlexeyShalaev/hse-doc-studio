@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response
 from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.git_remote_capabilities import git_remote_capabilities
 from hse_doc_studio.api.invitation_views import inbox_badge
 from hse_doc_studio.api.routers.v1.share_link_public import guest_bootstrap
 from hse_doc_studio.api.schemas.session import (
@@ -64,6 +65,7 @@ def _local_bootstrap() -> BootstrapResponse:
             personal_signing_keys=False,
             # Студия может собирать облачные проекты хозяина как его личный раннер (только по его включению).
             remote_runner=True,
+            **git_remote_capabilities(),
         ),
         csrf_token=None,
     )
@@ -106,6 +108,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             personal_signing_keys=caps.personal_signing_keys and result.personal_signing_keys,
             # Свои раннеры подключает вошедший человек, пока админ не выключил личные раннеры.
             personal_runners=result.user is not None and result.personal_runners,
+            **git_remote_capabilities(),
         ),
         csrf_token=result.session.csrf_token if result.session else guest_csrf,
         guest=guest,

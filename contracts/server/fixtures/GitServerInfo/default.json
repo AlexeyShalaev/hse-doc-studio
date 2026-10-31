@@ -1,0 +1,6 @@
+{
+  "server": "hse-doc-studio",
+  "version": "0.3.0",
+  "device_flow": true,
+  "api": "/api/v1"
+}

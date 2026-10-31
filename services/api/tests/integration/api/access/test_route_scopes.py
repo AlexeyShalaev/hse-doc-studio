@@ -27,7 +27,7 @@ from httpx import ASGITransport, AsyncClient
 from tests.fixtures.app import create_test_app, create_test_container
 
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
-_PREFIXES = ("/api/v1", "/api/admin", "/api/runner/", "/api/services/")
+_PREFIXES = ("/api/v1", "/api/admin", "/api/runner/", "/api/services/", "/git/")
 # Потолок общих пользовательских маршрутов: только уменьшается, когда срез переводит данные под владельца.
 # Общих пользовательских маршрутов не осталось.
 _PENDING_CEILING = 0

@@ -21,7 +21,9 @@
     "admin": false,
     "personal_signing_keys": false,
     "personal_runners": false,
-    "remote_runner": false
+    "remote_runner": false,
+    "git_remote": true,
+    "git_server_login": false
   },
   "csrf_token": null,
   "guest": null,

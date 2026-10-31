@@ -73,5 +73,15 @@
   "access_request_decided",
   "confirm_name_mismatch",
   "transfer_expired",
-  "transfer_outdated"
+  "transfer_outdated",
+  "git_scope_missing",
+  "git_busy",
+  "git_project_busy",
+  "device_scope_invalid",
+  "device_code_invalid",
+  "device_code_expired",
+  "device_code_used",
+  "git_server_url_invalid",
+  "git_server_not_studio",
+  "git_server_unreachable"
 ]

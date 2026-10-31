@@ -395,6 +395,9 @@ describe("токены доступа", () => {
             created_at: "2026-09-01T09:00:00Z",
             expires_at: null,
             last_used_at: null,
+            origin: "manual",
+            client_name: null,
+            client_kind: null,
           },
         ]}
         onCreate={vi.fn()}
@@ -478,5 +481,56 @@ describe("способы входа", () => {
       />,
     );
     expect(screen.getByRole("alert")).toHaveTextContent("единственный способ");
+  });
+});
+
+describe("токены для git", () => {
+  afterEach(cleanup);
+
+  it("?preset=git открывает форму с правами только на git", () => {
+    render(
+      <TokensCard
+        status="ready"
+        preset="git"
+        onCreate={vi.fn()}
+        onRevoke={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("token-form")).toBeInTheDocument();
+    expect(screen.getByTestId("token-scope-gitRead")).toBeChecked();
+    expect(screen.getByTestId("token-scope-gitWrite")).toBeChecked();
+    expect(screen.getByTestId("token-scope-api")).not.toBeChecked();
+  });
+
+  it("быстрый выбор «Для git» и значок устройства", async () => {
+    const user = userEvent.setup();
+    render(
+      <TokensCard
+        status="ready"
+        startOpen
+        tokens={[
+          {
+            id: "dev1",
+            name: "Студия на MacBook Анны",
+            prefix: "hsd_pat_7Rm",
+            scopes: ["git:read", "git:write"],
+            created_at: "2026-11-01T09:00:00Z",
+            expires_at: "2027-01-30T09:00:00Z",
+            last_used_at: null,
+            origin: "device",
+            client_name: "Студия на MacBook Анны",
+            client_kind: "desktop",
+          },
+        ]}
+        onCreate={vi.fn()}
+        onRevoke={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("token-origin-dev1")).toHaveTextContent(
+      "Устройство · Студия на компьютере",
+    );
+    await user.click(screen.getByTestId("token-preset-git"));
+    expect(screen.getByTestId("token-scope-api")).not.toBeChecked();
+    expect(screen.getByTestId("token-scope-gitWrite")).toBeChecked();
   });
 });

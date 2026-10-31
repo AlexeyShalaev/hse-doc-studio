@@ -8,6 +8,7 @@ import {
 
 import * as inv from "@entities/invitation/model/invitation.schema";
 import * as inst from "./installSchemas";
+import * as gs from "@entities/git-server/model/gitServer.schema";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
@@ -196,4 +197,20 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   NotificationPage: inv.NotificationPageSchema,
   MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
   InboxSummary: inv.InboxSummarySchema,
+  // gitremote
+  GitServerInfo: gs.GitServerInfoSchema,
+  GitWhoami: gs.GitWhoamiSchema,
+  GitProjectPage: gs.GitProjectPageSchema,
+  GitServerProjectPage: gs.GitProjectPageSchema,
+  DeviceCodeRequest: gs.DeviceCodeRequestSchema,
+  DeviceCodeResponse: gs.DeviceCodeResponseSchema,
+  DeviceTokenRequest: gs.DeviceTokenRequestSchema,
+  DeviceTokenResponse: gs.DeviceTokenResponseSchema,
+  DeviceTokenError: gs.DeviceTokenErrorSchema,
+  DeviceAuthorizationInfo: gs.DeviceAuthorizationInfoSchema,
+  DeviceDecisionRequest: gs.DeviceDecisionRequestSchema,
+  ProjectGitRemote: gs.ProjectGitRemoteSchema,
+  GitServerLoginRequest: gs.GitServerLoginRequestSchema,
+  GitServerLogin: gs.GitServerLoginSchema,
+  GitServerList: gs.GitServerListSchema,
 };

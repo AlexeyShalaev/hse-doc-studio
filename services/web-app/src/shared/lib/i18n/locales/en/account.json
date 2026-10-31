@@ -167,7 +167,18 @@
     "confirmRevoke": "Revoke token “{{name}}”?",
     "revokeYes": "Revoke",
     "revokeNo": "Cancel",
-    "toastRevoked": "Token revoked"
+    "toastRevoked": "Token revoked",
+    "preset": {
+      "git": "For git",
+      "gitName": "git on my computer"
+    },
+    "origin": {
+      "device": "Device",
+      "kind": {
+        "desktop": "desktop Studio",
+        "cli": "command line"
+      }
+    }
   },
   "identities": {
     "title": "Sign-in methods",

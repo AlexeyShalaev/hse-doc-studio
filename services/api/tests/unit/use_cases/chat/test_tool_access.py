@@ -37,7 +37,7 @@ class _AclRepo:
     def __init__(self, acl: ProjectAcl) -> None:
         self._acl = acl
 
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
         grant = self._acl.grants.get(actor.key or "")
         return ProjectAcl(
             project_id=self._acl.project_id,

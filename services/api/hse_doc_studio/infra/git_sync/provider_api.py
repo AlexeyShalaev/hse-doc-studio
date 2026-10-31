@@ -186,6 +186,8 @@ class HttpProviderDetector:
             version = _text(headers.get(_GITHUB_ENTERPRISE_HEADER))
             return (version,) if version is not None else None
         body = response.json_object()
+        if provider is GitProvider.hse_studio:
+            return _studio_version(response.status_code, body)
         if provider is GitProvider.gitea:
             version = _text(body.get("version")) if body else None
             return (version,) if response.status_code == _HTTP_OK and version is not None else None
@@ -196,6 +198,14 @@ class HttpProviderDetector:
             gitlab_header = any(name.lower().startswith("x-gitlab-") for name in headers)
             return (None,) if response.status_code == _HTTP_UNAUTHORIZED and gitlab_header else None
         return None
+
+
+def _studio_version(status: int, body: dict[str, Any] | None) -> tuple[str | None] | None:
+    """Сервер Студии отвечает на `/git/-/info` полем, значение которого задано в каталоге (`server`)."""
+    detect = provider_spec(GitProvider.hse_studio).api.detect
+    if status != _HTTP_OK or not body or detect is None or detect.version_key is None:
+        return None
+    return (_text(body.get("version")),) if body.get(detect.version_key) == detect.value else None
 
 
 class HttpTokenIntrospector:
@@ -239,6 +249,8 @@ class HttpTokenIntrospector:
             return await _github_user(fetcher, api, token)
         if provider is GitProvider.gitea:
             return await _gitea_user(fetcher, api, token)
+        if provider is GitProvider.hse_studio:
+            return await _hse_studio_whoami(fetcher, api, token)
         return TokenIntrospection(TokenState.unknown)
 
     async def _connect_error(self, exc: httpx.ConnectError, request: IntrospectionRequest) -> GitSyncError:
@@ -371,3 +383,32 @@ async def _gitea_user(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospec
         # Токен с узкими правами не читает /user: он может быть годным, просто о нём ничего не узнать.
         return TokenIntrospection(TokenState.unknown)
     return TokenIntrospection(TokenState.valid, login=_text(body.get("login") or body.get("username")))
+
+
+async def _hse_studio_whoami(fetcher: _Fetcher, api: str, token: str) -> TokenIntrospection:
+    """Сервер HSE Doc Studio: `/git/-/whoami` по git-токену называет человека, scope и срок токена."""
+    response = await fetcher.get(f"{api}/whoami", headers={"Authorization": f"Bearer {token}"})
+    if response.status_code == _HTTP_UNAUTHORIZED:
+        return TokenIntrospection(TokenState.rejected)
+    body = response.json_object()
+    if response.status_code != _HTTP_OK or body is None:
+        return TokenIntrospection(TokenState.unknown)
+    user = body.get("user") if isinstance(body.get("user"), dict) else {}
+    meta = body.get("token") if isinstance(body.get("token"), dict) else {}
+    expires_at = _iso(meta.get("expires_at")) if isinstance(meta, dict) else None
+    if _expired(expires_at):
+        return TokenIntrospection(TokenState.expired, expires_at=expires_at)
+    login = _text(user.get("name")) if isinstance(user, dict) else None
+    return TokenIntrospection(
+        TokenState.valid, login=login, scopes=_string_list(body.get("scopes")), expires_at=expires_at
+    )
+
+
+def _iso(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)

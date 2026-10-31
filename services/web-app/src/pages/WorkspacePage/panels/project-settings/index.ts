@@ -19,6 +19,7 @@ export type { SharedDocsSectionProps } from "./SharedDocsSection";
 export { SupervisorSection } from "./SupervisorSection";
 export type { SupervisorSectionProps } from "./SupervisorSection";
 export { SyncCiSection } from "./SyncCiSection";
+export { SyncServerCloneSection } from "./SyncServerCloneSection";
 export type { SyncCiSectionProps } from "./SyncCiSection";
 export { SyncExchangeSection } from "./SyncExchangeSection";
 export type { SyncExchangeSectionProps } from "./SyncExchangeSection";

@@ -425,3 +425,30 @@ describe("SyncPanelView", () => {
     });
   });
 });
+
+describe("отказ pre-receive сервера Студии", () => {
+  afterEach(cleanup);
+
+  it("показывает блок «Сервер отклонил отправку» с нарушениями", async () => {
+    await i18n.changeLanguage("ru");
+    const { SYNC_STATE_FIXTURES } = await import("../fixtures/syncStates");
+    const fixture = SYNC_STATE_FIXTURES.find(
+      (f) => f.id === "error_push_rejected",
+    );
+    render(<Harness status={fixture!.build(NOW)} />);
+    const block = screen.getByTestId("sync-push-rejected");
+    expect(
+      within(block).getByText("Сервер отклонил отправку"),
+    ).toBeInTheDocument();
+    expect(within(block).getAllByRole("listitem")).toHaveLength(2);
+    expect(block).toHaveTextContent("[path_outside_scope]");
+  });
+
+  it("строки нарушений берутся после двоеточия", async () => {
+    const { pushRejectedLines } = await import("./SyncPanelView");
+    expect(
+      pushRejectedLines("Сервер отклонил:\n- a.tex: вне папки [x]\n\n- b: y"),
+    ).toEqual(["- a.tex: вне папки [x]", "- b: y"]);
+    expect(pushRejectedLines("без строк")).toEqual([]);
+  });
+});

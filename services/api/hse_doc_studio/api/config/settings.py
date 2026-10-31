@@ -13,6 +13,7 @@ from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
+from hse_doc_studio.api.config.git_remote import GitRemoteConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
@@ -80,6 +81,7 @@ class Settings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     git: GitConfig = Field(default_factory=GitConfig)
+    git_remote: GitRemoteConfig = Field(default_factory=GitRemoteConfig)
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)

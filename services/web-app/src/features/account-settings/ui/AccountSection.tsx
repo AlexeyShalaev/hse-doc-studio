@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import { Spinner } from "@shared/ui";
@@ -39,6 +40,9 @@ const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
  */
 export const AccountSection = () => {
   const { t } = useTranslation("account");
+  // «Создать токен для git» из настроек проекта ведёт сюда с ?preset=git.
+  const [params] = useSearchParams();
+  const tokenPreset = params.get("preset") === "git" ? "git" : null;
   const bootstrap = useBootstrap().data;
   const account = useAccount();
   const sessions = useAccountSessions();
@@ -275,6 +279,7 @@ export const AccountSection = () => {
         )}
 
         <TokensCard
+          preset={tokenPreset}
           status={
             tokens.isError && !tokens.data
               ? "error"

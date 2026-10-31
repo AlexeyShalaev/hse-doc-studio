@@ -129,3 +129,12 @@ describe("группа «Синхронизация» в настройках п
     ).not.toContain("builds");
   });
 });
+
+describe("«Клонировать с сервера» в группе «Синхронизация»", () => {
+  it("видна только при git по HTTPS на сервере и идёт первой", () => {
+    const withGit = ctx({ hasAccess: true, hasGitRemote: true });
+    const group = resolveProjectSettingsGroup("sync", withGit);
+    expect(ids(groupSections(group, withGit))[0]).toBe("sync-server-clone");
+    expect(ids(groupSections(group, ctx()))).not.toContain("sync-server-clone");
+  });
+});

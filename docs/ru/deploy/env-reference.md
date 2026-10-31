@@ -186,6 +186,11 @@ tags:
 | `HSE_STUDIO__GIT__FETCH_STARTUP_DELAY_S` | float | `60.0` | оба | Delay before the first background fetch after the server starts. |
 | `HSE_STUDIO__GIT__FETCH_CONCURRENCY` | int | `2` | оба | Projects fetched in the background at the same time. |
 | `HSE_STUDIO__GIT__LARGE_FILE_WARN_BYTES` | int | `95000000` | оба | Blobs from this size are reported before push: hosting services reject files near 100 MB. |
+| `HSE_STUDIO__GIT_REMOTE__ENABLED` | bool | `true` | оба | Отдавать проекты по git (clone, fetch, push) на /git/<id>.git. |
+| `HSE_STUDIO__GIT_REMOTE__MAX_PUSH_BYTES` | int | `268435456` | оба | Предел тела одного push в байтах (и receive.maxInputSize). |
+| `HSE_STUDIO__GIT_REMOTE__MAX_CONCURRENT_PER_USER` | int | `4` | оба | Сколько запросов git одного человека выполняются одновременно. |
+| `HSE_STUDIO__GIT_REMOTE__TIMEOUT_S` | int | `600` | оба | Предел одного процесса git upload-pack или receive-pack. |
+| `HSE_STUDIO__GIT_REMOTE__LOCK_WAIT_S` | int | `30` | оба | Сколько push ждёт замок папки проекта. |
 | `HSE_STUDIO__SECRETS__KEY` 🔒 | str | секрет, не печатается | оба | Fernet key (urlsafe base64 of 32 bytes) taken from the environment. |
 | `HSE_STUDIO__SECRETS__KEY_FILE` | Path | не задано | оба | File holding the Fernet key (docker secret). |
 | `HSE_STUDIO__SECRETS__RETIRED_KEYS` 🔒 | str | секрет, не печатается | оба | Retired Fernet keys, comma separated: they only decrypt, which makes key rotation possible. |

@@ -3,6 +3,7 @@ export type { ConnectRemoteDialogProps } from "./ui/ConnectRemoteDialog";
 export type { CloneTarget } from "./ui/ConnectFlow";
 export { CloneWizard } from "./ui/clone/CloneWizard";
 export type { CloneFolderSlot, CloneWizardProps } from "./ui/clone/CloneWizard";
+export type { CloneServerSlot } from "./ui/clone/CloneSourceStep";
 export type {
   CloneFolderPickerProps,
   FolderInspection,

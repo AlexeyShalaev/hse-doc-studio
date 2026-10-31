@@ -13,6 +13,7 @@
 - runner_token, job_token, signed_token: подлинность проверяет сам маршрут по своему токену,
   цепочка cookie для них не запускается;
 - guest: гость по ссылке (или вошедший), например своя гостевая сессия;
+- git_token: git по HTTPS и его служебные вызовы `/git/-/*`; токен доступа с git-scope проверяет маршрут;
 - local_only: возможности одной локальной установки (файловая система хоста, docker, обновление
   самой Студии); в серверном режиме отвечают 404.
 """
@@ -41,10 +42,14 @@ class RouteScope(StrEnum):
     local_only = "local_only"
     # Гость по ссылке или вошедший: управление своей гостевой сессией (`/links/session`).
     guest = "guest"
+    # git по HTTPS (`/git/*`): только токен доступа с git-scope из Basic или Bearer, cookie не принимаются.
+    git_token = "git_token"  # noqa: S105 — имя области, не секрет
 
 
 # Области, где подлинность проверяет сам маршрут: актор по cookie или PAT ему не нужен.
-SELF_AUTHENTICATED = frozenset({RouteScope.runner_token, RouteScope.job_token, RouteScope.signed_token})
+SELF_AUTHENTICATED = frozenset(
+    {RouteScope.runner_token, RouteScope.job_token, RouteScope.signed_token, RouteScope.git_token}
+)
 
 _P = RouteScope.public
 _A = RouteScope.authenticated
@@ -399,6 +404,25 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/notifications"): _A,
     ("POST", "/account/notifications/read"): _A,
     ("GET", "/account/inbox/summary"): _A,
+    # gitremote: git по HTTPS вне /api/v1, ключ это полный шаблон маршрута (`{repo}` это `<project_id>.git`)
+    ("GET", "/git/{repo}/info/refs"): RouteScope.git_token,
+    ("POST", "/git/{repo}/git-upload-pack"): RouteScope.git_token,
+    ("POST", "/git/{repo}/git-receive-pack"): RouteScope.git_token,
+    ("GET", "/git/-/info"): _P,
+    ("GET", "/git/-/whoami"): RouteScope.git_token,
+    ("GET", "/git/-/projects"): RouteScope.git_token,
+    # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
+    # gitremote: вход локальной Студии на сервер Студии и его проекты
+    ("POST", "/git/servers/login"): _LOCAL,
+    ("GET", "/git/servers/login/{login_id}"): _LOCAL,
+    ("DELETE", "/git/servers/login/{login_id}"): _LOCAL,
+    ("GET", "/git/servers"): _LOCAL,
+    ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
+    ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
+    ("POST", "/auth/device/code"): _P,
+    ("POST", "/auth/device/token"): _P,
+    ("GET", "/account/device/{user_code}"): _A,
+    ("POST", "/account/device/{user_code}"): _A,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не
