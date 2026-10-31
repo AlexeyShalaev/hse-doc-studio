@@ -380,6 +380,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/links/{token}/open"): _P,
     ("PATCH", "/links/session"): RouteScope.guest,
     ("DELETE", "/links/session"): RouteScope.guest,
+    ("GET", "/orgs/{slug}/sharing-policy"): _A,
+    ("PUT", "/orgs/{slug}/sharing-policy"): _A,
+    ("GET", "/api/admin/settings/sharing"): _ADM,
+    ("PUT", "/api/admin/settings/sharing"): _ADM,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

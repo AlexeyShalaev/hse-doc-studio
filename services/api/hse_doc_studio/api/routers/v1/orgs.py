@@ -19,8 +19,11 @@ from hse_doc_studio.api.schemas.session import (
     UpdateGroupRequest,
     UpdateOrgRequest,
 )
+from hse_doc_studio.api.schemas.sharing import OrgSharingPolicy
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.links import LinkRole
+from hse_doc_studio.core.access.sharing_policy import OrgLinksMode, OrgSharing
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.orgs.entities import (
     GroupMemberView,
@@ -54,6 +57,7 @@ from hse_doc_studio.use_cases.orgs.orgs import (
     ListMyOrgsUC,
     UpdateOrgUC,
 )
+from hse_doc_studio.use_cases.orgs.sharing_policy import GetOrgSharingPolicyUC, OrgSharingView, UpdateOrgSharingPolicyUC
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
 
@@ -222,3 +226,34 @@ async def add_group_member(group_id: str, body: AddGroupMemberRequest, request: 
 async def remove_group_member(group_id: str, user_id: str, request: Request) -> Response:
     await (await _uc(request, RemoveGroupMemberUC)).execute(_actor(), group_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# links: политика общего доступа организации (смотрит участник, правит владелец или админ)
+
+
+def _sharing_policy(view: OrgSharingView) -> OrgSharingPolicy:
+    sharing = view.sharing
+    return OrgSharingPolicy(
+        links=sharing.links.value,
+        max_link_role=sharing.max_link_role.value,
+        nda_public_links=sharing.nda_public_links,
+        external_invites=sharing.external_invites,
+        editable=view.editable,
+    )
+
+
+@router.get("/orgs/{slug}/sharing-policy", response_model=OrgSharingPolicy)
+async def get_sharing_policy(slug: str, request: Request, response: Response) -> OrgSharingPolicy:
+    response.headers["Cache-Control"] = "no-store"
+    return _sharing_policy(await (await _uc(request, GetOrgSharingPolicyUC)).execute(_actor(), slug))
+
+
+@router.put("/orgs/{slug}/sharing-policy", response_model=OrgSharingPolicy)
+async def put_sharing_policy(slug: str, body: OrgSharingPolicy, request: Request) -> OrgSharingPolicy:
+    sharing = OrgSharing(
+        links=OrgLinksMode(body.links),
+        max_link_role=LinkRole(body.max_link_role),
+        nda_public_links=body.nda_public_links,
+        external_invites=body.external_invites,
+    )
+    return _sharing_policy(await (await _uc(request, UpdateOrgSharingPolicyUC)).execute(_actor(), slug, sharing))

@@ -30,6 +30,7 @@ from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclR
 from hse_doc_studio.infra.db.repositories.share_links import PostgresShareLinkRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.sharing.policy_reader import PostgresSharingPolicyReader
+from hse_doc_studio.use_cases.orgs.sharing_policy import GetOrgSharingPolicyUC, UpdateOrgSharingPolicyUC
 from hse_doc_studio.use_cases.sharing.links import (
     CreateShareLinkUC,
     ListLinkVisitsUC,
@@ -49,6 +50,7 @@ from hse_doc_studio.use_cases.sharing.open_link import (
     UpdateGuestSessionUC,
 )
 from hse_doc_studio.use_cases.sharing.payer import GuestBuildPayer
+from hse_doc_studio.use_cases.sharing.settings import GetSharingSettingsUC, UpdateSharingSettingsUC
 
 
 class ServerSharingProvider(Provider):
@@ -172,3 +174,30 @@ class ServerSharingProvider(Provider):
     @provide
     def get_build_payer(self, store: IShareLinkStore, acl: PostgresProjectAclRepository) -> IBuildPayerResolver:
         return GuestBuildPayer(store, acl)
+
+    @provide
+    def get_org_sharing_policy_uc(self, orgs: IOrgRepository) -> GetOrgSharingPolicyUC:
+        return GetOrgSharingPolicyUC(orgs)
+
+    @provide
+    def get_update_org_sharing_policy_uc(
+        self, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> UpdateOrgSharingPolicyUC:
+        return UpdateOrgSharingPolicyUC(orgs, audit, uow)
+
+    @provide
+    def get_sharing_settings_uc(
+        self, repo: IInstanceSettingsRepository, env: SharingEnvOverrides
+    ) -> GetSharingSettingsUC:
+        return GetSharingSettingsUC(repo, env)
+
+    @provide
+    def get_update_sharing_settings_uc(
+        self,
+        repo: IInstanceSettingsRepository,
+        env: SharingEnvOverrides,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        read: GetSharingSettingsUC,
+    ) -> UpdateSharingSettingsUC:
+        return UpdateSharingSettingsUC(repo, env, audit, uow, read)

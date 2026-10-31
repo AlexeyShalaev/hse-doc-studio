@@ -230,6 +230,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/users/{id}"): "admin.user_deleted",
     ("PUT", "/api/admin/settings/instance"): "settings.instance_update",
     ("PUT", "/api/admin/settings/build"): "settings.build_update",
+    # links: раздел «Общий доступ» проверяет tests/integration/api/sharing
+    ("PUT", "/api/admin/settings/sharing"): "settings.sharing_update",
     ("PUT", "/api/admin/settings/signing"): "settings.signing_policy_update",
     ("PUT", "/api/admin/quotas"): "settings.quotas_update",
     ("POST", "/api/admin/queue/{id}/cancel"): "queue.job_cancel",
