@@ -239,6 +239,10 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("DELETE", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
     # gitremote: адрес клонирования проекта по git
     ("GET", "/projects/{project_id}/git-remote"): RouteRule(Action.GIT_FETCH),
+    # PDF, выгруженные локальной Студией: читает любой, кто видит результат проекта; убирает тот, кто пишет файлы.
+    ("GET", "/projects/{project_id}/artifacts"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/artifacts/{artifact_id}/file"): RouteRule(Action.OUTPUT_READ),
+    ("DELETE", "/projects/{project_id}/artifacts/{artifact_id}"): RouteRule(Action.FILES_WRITE),
 }
 
 

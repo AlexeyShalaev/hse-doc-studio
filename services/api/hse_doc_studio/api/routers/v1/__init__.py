@@ -34,6 +34,7 @@ from hse_doc_studio.api.routers.v1 import (
     oidc,
     orgs,
     profile,
+    project_artifacts,
     project_build_runners,
     project_git_remote,
     project_import,
@@ -77,6 +78,7 @@ api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(project_members.router, tags=["projects"])
 api_router.include_router(project_build_runners.router, tags=["projects"])
 api_router.include_router(project_git_remote.router, tags=["projects"])
+api_router.include_router(project_artifacts.router, tags=["projects"])
 api_router.include_router(device_flow.router, tags=["device-flow"])
 api_router.include_router(project_import.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])

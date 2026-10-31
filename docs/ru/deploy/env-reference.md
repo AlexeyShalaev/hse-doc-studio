@@ -191,6 +191,8 @@ tags:
 | `HSE_STUDIO__GIT_REMOTE__MAX_CONCURRENT_PER_USER` | int | `4` | оба | Сколько запросов git одного человека выполняются одновременно. |
 | `HSE_STUDIO__GIT_REMOTE__TIMEOUT_S` | int | `600` | оба | Предел одного процесса git upload-pack или receive-pack. |
 | `HSE_STUDIO__GIT_REMOTE__LOCK_WAIT_S` | int | `30` | оба | Сколько push ждёт замок папки проекта. |
+| `HSE_STUDIO__ARTIFACTS__MAX_PDF_BYTES` | int | `104857600` | оба | Предел размера одного PDF, выгружаемого локальной Студией, в байтах. |
+| `HSE_STUDIO__ARTIFACTS__KEEP_PER_DOCUMENT` | int | `5` | оба | Сколько последних выгруженных PDF хранится на документ. |
 | `HSE_STUDIO__SECRETS__KEY` 🔒 | str | секрет, не печатается | оба | Fernet key (urlsafe base64 of 32 bytes) taken from the environment. |
 | `HSE_STUDIO__SECRETS__KEY_FILE` | Path | не задано | оба | File holding the Fernet key (docker secret). |
 | `HSE_STUDIO__SECRETS__RETIRED_KEYS` 🔒 | str | секрет, не печатается | оба | Retired Fernet keys, comma separated: they only decrypt, which makes key rotation possible. |

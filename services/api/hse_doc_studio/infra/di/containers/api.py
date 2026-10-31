@@ -20,6 +20,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     # Лениво: серверные модули тянут sqlalchemy, а локальная сборка живёт без extra server.
     from hse_doc_studio.infra.di.providers.server_admin_ops import ServerAdminOpsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_ai_relay import ServerAiRelayProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_artifacts import ServerArtifactsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_git_remote import ServerGitRemoteProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_identity import ServerIdentityProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_invitations import ServerInvitationsProvider  # noqa: PLC0415
@@ -37,6 +38,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerAiRelayProvider(),
         ServerSharingProvider(),
         ServerGitRemoteProvider(),
+        ServerArtifactsProvider(),
         # invites: идёт последним, перекрывает сценарии участников и подтверждения почты.
         ServerInvitationsProvider(),
     ]

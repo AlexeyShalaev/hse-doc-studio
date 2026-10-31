@@ -10,15 +10,18 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from collections.abc import AsyncIterator
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, BinaryIO, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
+from hse_doc_studio.api.artifact_mapping import map_artifact
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.observability.client_ip import client_ip
 from hse_doc_studio.api.rate_limit import enforce
+from hse_doc_studio.api.schemas.artifacts import PdfUploadResponse
 from hse_doc_studio.api.schemas.git_remote import (
     GitProject,
     GitProjectPage,
@@ -28,6 +31,7 @@ from hse_doc_studio.api.schemas.git_remote import (
     GitWhoamiUser,
 )
 from hse_doc_studio.core.access.context import set_current_actor
+from hse_doc_studio.core.artifacts.entities import ArtifactError, ArtifactErrorCode
 from hse_doc_studio.core.git_remote.entities import GitService
 from hse_doc_studio.core.git_remote.protocols import GitRpcOutcome, IGitSmartHttp
 from hse_doc_studio.core.i18n import localized_error
@@ -38,6 +42,7 @@ from hse_doc_studio.core.listing import DEFAULT_LIMIT, MAX_LIMIT, Window
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.rate_limit import GIT_AUTH_FAIL, GIT_HTTP
 from hse_doc_studio.infra.git_remote.smart_http import git_protocol
+from hse_doc_studio.use_cases.artifacts.pdf import PdfUploadMeta, PdfUploadResult, UploadProjectPdfUC
 from hse_doc_studio.use_cases.git_remote.auth import (
     AUTH_REALM,
     AuthorizeGitServiceUC,
@@ -191,6 +196,100 @@ async def git_projects(
     return JSONResponse(page.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
 
 
+_ARTIFACT_STATUS = {
+    ArtifactErrorCode.too_large: 413,
+    ArtifactErrorCode.not_pdf: 415,
+    ArtifactErrorCode.checksum_mismatch: 422,
+    ArtifactErrorCode.unknown_document: 404,
+    ArtifactErrorCode.forbidden: 403,
+    ArtifactErrorCode.not_found: 404,
+    ArtifactErrorCode.read_only: 423,
+}
+
+
+def _artifact_error(exc: ArtifactError) -> JSONResponse:
+    return JSONResponse(
+        {"detail": exc.message, "code": exc.code.value}, status_code=_ARTIFACT_STATUS[exc.code], headers=_NO_CACHE
+    )
+
+
+@router.put("/-/projects/{project_id}/documents/{doc_id}/pdf", response_model=PdfUploadResponse)
+async def git_upload_pdf(  # noqa: PLR0913 — параметры запроса одной выгрузки
+    request: Request,
+    project_id: UUID,
+    doc_id: Annotated[str, Path(max_length=128)],
+    sha256: Annotated[str | None, Query(pattern="^[0-9a-fA-F]{64}$")] = None,
+    name: Annotated[str | None, Query(max_length=255)] = None,
+    pages: Annotated[int | None, Query(ge=1, le=100_000)] = None,
+    commit: Annotated[str | None, Query(max_length=64, pattern="^[0-9a-fA-F]*$")] = None,
+    built_at: Annotated[datetime | None, Query()] = None,
+) -> Response:
+    """PDF локальной сборки как артефакт проекта (docs/design/local-sync.md, P2): токен с `git:write`, право сборки."""
+    uc = await _container_get(request, UploadProjectPdfUC)
+    try:
+        principal = await _writer(request)
+        # Права проверяются до чтения тела: чужой не заставит сервер принять сотню мегабайт.
+        await uc.authorize(principal.actor, project_id, doc_id)
+        if _body_over(request, uc.max_bytes):
+            raise uc.too_large()
+        concurrency = await _container_get(request, GitConcurrency)
+        if not concurrency.try_acquire(principal.user_id):
+            return _busy()
+        meta = PdfUploadMeta(
+            sha256=sha256,
+            file_name=name,
+            pages=pages,
+            source_commit=commit,
+            built_at=built_at,
+            client_name=principal.token.client_name or principal.token.name,
+        )
+        try:
+            result = await _receive_pdf(request, uc, principal, project_id, doc_id, meta)
+        finally:
+            concurrency.release(principal.user_id)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    except _BodyTooLargeError:
+        return _artifact_error(uc.too_large())
+    except ArtifactError as exc:
+        return _artifact_error(exc)
+    body = PdfUploadResponse(artifact=map_artifact(result.artifact), created=result.created)
+    return JSONResponse(body.model_dump(mode="json"), status_code=201 if result.created else 200, headers=_NO_CACHE)
+
+
+async def _writer(request: Request) -> GitPrincipal:
+    principal = await authenticate(request)
+    if not principal.has(TokenScope.git_write):
+        raise GitHttpError(
+            GitHttpErrorKind.scope_missing,
+            localized_error("Для выгрузки PDF нужен scope git:write.", "Uploading a PDF requires git:write."),
+        )
+    return principal
+
+
+async def _receive_pdf(  # noqa: PLR0913 — состояние одного приёма
+    request: Request,
+    uc: UploadProjectPdfUC,
+    principal: GitPrincipal,
+    project_id: UUID,
+    doc_id: str,
+    meta: PdfUploadMeta,
+) -> PdfUploadResult:
+    spool = await _spool(request, uc.max_bytes)
+    try:
+        # SpooledTemporaryFile читается и перематывается как обычный двоичный файл.
+        return await uc.execute(principal.actor, project_id, doc_id, cast("BinaryIO", spool), meta)
+    finally:
+        spool.close()
+
+
+def _body_over(request: Request, limit: int) -> bool:
+    length = request.headers.get("content-length")
+    return length is not None and length.isdigit() and int(length) > limit
+
+
 def _json_error(exc: GitHttpError) -> JSONResponse:
     code = {
         GitHttpErrorKind.unauthorized: IdentityErrorCode.auth_required,
@@ -251,17 +350,18 @@ class _BodyTooLargeError(Exception):
     pass
 
 
-async def _spool(request: Request) -> tempfile.SpooledTemporaryFile[bytes]:
+async def _spool(request: Request, limit: int | None = None) -> tempfile.SpooledTemporaryFile[bytes]:
     """Тело целиком до ответа: StreamingResponse сам слушает `receive` и съел бы куски тела у процесса git.
 
-    До 8 МБ в памяти, дальше во временном файле; сжатое тело больше предела отвергается сразу.
+    До 8 МБ в памяти, дальше во временном файле; тело больше предела (по умолчанию размер push) отвергается сразу.
     """
+    max_bytes = settings.git_remote.max_push_bytes if limit is None else limit
     spool: tempfile.SpooledTemporaryFile[bytes] = tempfile.SpooledTemporaryFile(max_size=_SPOOL_MEMORY)  # noqa: SIM115
     size = 0
     try:
         async for chunk in request.stream():
             size += len(chunk)
-            if size > settings.git_remote.max_push_bytes:
+            if size > max_bytes:
                 raise _BodyTooLargeError
             spool.write(chunk)
     except BaseException:
