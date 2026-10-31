@@ -14,7 +14,7 @@ from tests.fixtures.app import create_test_app, create_test_container
 _PROJECT_FIELD = "project_id"
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
 # Действия, у которых пока нет ни одного маршрута.
-_RESERVED_ACTIONS = frozenset({Action.COMMENT, Action.SHARE, Action.PROJECT_TRANSFER, Action.ACCESS_MANAGE})
+_RESERVED_ACTIONS = frozenset({Action.COMMENT, Action.SHARE, Action.PROJECT_TRANSFER})
 _WRITE_ACTIONS = frozenset(
     {
         Action.FILES_WRITE,

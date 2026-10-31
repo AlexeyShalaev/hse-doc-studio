@@ -1,4 +1,9 @@
-"""Участники проекта: роль человеку или группе и её снятие. Вызывает владелец проекта (гард: PROJECT_SETTINGS)."""
+"""Участники проекта: роль человеку или группе и её снятие. Вызывает владелец проекта (гард: PROJECT_SETTINGS).
+
+S10: нового человека в проект приводит только приглашение (`use_cases/projects/invitations.py`); напрямую меняется
+роль уже добавленного человека и группы. Исключение: проект организации, человек её участник, а действует админ
+этой организации (как с группой, D9).
+"""
 
 from __future__ import annotations
 
@@ -14,6 +19,9 @@ from hse_doc_studio.core.access.repositories import (
 )
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
+from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
+from hse_doc_studio.core.invitations.protocols import INotifier, IProjectCards, IProjectMemberLookup
+from hse_doc_studio.core.orgs.entities import OrgRole
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import user_id_of
@@ -38,8 +46,10 @@ class SetProjectMemberUC:
         directory: IProjectAccessDirectory,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        member_roles: IProjectMemberLookup,
     ) -> None:
         self._members = members
+        self._member_roles = member_roles
         self._directory = directory
         self._users = users
         self._groups = groups
@@ -92,14 +102,41 @@ class SetProjectMemberUC:
         user = await self._users.get(user_id)
         if user is None or not user.can_sign_in:
             raise IdentityError(IdentityErrorCode.not_found)
+        known = await self._member_roles.direct_user_role(project_id, user_id) is not None
+        if not known and not await self._direct_add_allowed(actor_id, ownership, user_id):
+            # S10: нового человека приводит приглашение с подтверждением, а не мгновенное добавление.
+            raise IdentityError(IdentityErrorCode.invitation_required, status=409)
         return user.name
+
+    async def _direct_add_allowed(self, actor_id: str, ownership: ProjectOwnership, user_id: str) -> bool:
+        """Исключение S10: админ организации-владельца добавляет её участника сразу."""
+        org_id = ownership.owner_org_id
+        if org_id is None:
+            return False
+        me = await self._orgs.get_member(org_id, actor_id)
+        if me is None or me.role not in (OrgRole.owner, OrgRole.admin):
+            return False
+        return await self._orgs.get_member(org_id, user_id) is not None
 
 
 class RemoveProjectMemberUC:
-    def __init__(self, members: IProjectMemberRepository, audit: IAuditLog, uow: IUnitOfWork) -> None:
+    def __init__(
+        self,
+        members: IProjectMemberRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        *,
+        notifier: INotifier | None = None,
+        cards: IProjectCards | None = None,
+        users: IUserRepository | None = None,
+    ) -> None:
         self._members = members
         self._audit = audit
         self._uow = uow
+        # invites: убранный человек получает уведомление `member_removed`.
+        self._notifier = notifier
+        self._cards = cards
+        self._users = users
 
     async def execute(self, actor: Actor, project_id: UUID, principal_kind: str, principal_id: str) -> None:
         actor_id = user_id_of(actor)
@@ -115,3 +152,20 @@ class RemoveProjectMemberUC:
                 target=str(project_id),
                 details={"kind": principal_kind, "principal_id": principal_id},
             )
+            if principal_kind == "user" and principal_id != actor_id:
+                await self._notify_removed(actor_id, project_id, principal_id)
+
+    async def _notify_removed(self, actor_id: str, project_id: UUID, user_id: str) -> None:
+        if self._notifier is None or self._cards is None:
+            return
+        card = await self._cards.card(project_id)
+        actor = await self._users.get(actor_id) if self._users is not None else None
+        await self._notifier.notify(
+            user_id,
+            NotificationKind.member_removed,
+            NotificationPayload(
+                project_id=str(project_id),
+                project_name=card.name if card else None,
+                actor_name=actor.name if actor else None,
+            ),
+        )

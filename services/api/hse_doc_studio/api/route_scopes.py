@@ -372,6 +372,21 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/api/admin/settings/instance"): _ADM,
     ("GET", "/api/admin/settings/build"): _ADM,
     ("PUT", "/api/admin/settings/build"): _ADM,
+    # invites
+    ("POST", "/access-requests"): _A,
+    ("GET", "/account/invitations"): _A,
+    ("POST", "/account/invitations/{invitation_id}/accept"): _A,
+    ("POST", "/account/invitations/{invitation_id}/decline"): _A,
+    ("GET", "/project-invitations/{token}"): _P,
+    ("POST", "/project-invitations/{token}/accept"): _A,
+    ("GET", "/account/access-requests"): _A,
+    ("DELETE", "/account/access-requests/{request_id}"): _A,
+    ("GET", "/account/transfers"): _A,
+    ("POST", "/account/transfers/{transfer_id}/accept"): _A,
+    ("POST", "/account/transfers/{transfer_id}/decline"): _A,
+    ("GET", "/account/notifications"): _A,
+    ("POST", "/account/notifications/read"): _A,
+    ("GET", "/account/inbox/summary"): _A,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

@@ -20,6 +20,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.registration import RegistrationOutcome, RegistrationPolicy, invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
@@ -52,8 +53,11 @@ class RegisterUC:
         *,
         public_url: str | None = None,
         clock: Clock = utc_now,
+        email_hook: IEmailVerifiedHook | None = None,
     ) -> None:
         self._users = users
+        # invites: подтверждённая при регистрации почта привязывает ожидающие приглашения в проекты.
+        self._email_hook = email_hook
         self._credentials = credentials
         self._auth_tokens = auth_tokens
         self._invites = invites
@@ -109,6 +113,8 @@ class RegisterUC:
             await self._audit.record("auth.register_duplicate", actor_id=None, details={"email": email_normalized})
             return RegisterResult(decision.outcome)
 
+        if user.email_verified and self._email_hook is not None:
+            await self._email_hook.on_email_verified(user.id, user.email_normalized)
         link = None
         if secret is not None:
             link = await self._delivery.deliver(

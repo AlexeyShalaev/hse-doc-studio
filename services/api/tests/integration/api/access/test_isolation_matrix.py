@@ -234,13 +234,19 @@ def reader_deviations(world: _World, routes: Mapping[RouteKey, RouteRule]) -> li
 
 def _share_with_bob_as_reader(world: _World) -> None:
     asyncio.run(_put_in_one_org(world.alice_id, world.bob_id))
+    # S10: нового человека приводит приглашение, доступ появляется после «Принять».
     with world.alice as client:
-        response = client.put(
-            f"/api/v1/projects/{world.project_id}/members/user:{world.bob_id}",
-            json={"role": "reader", "persona": None, "can_share": False, "show_sources": False, "can_edit_all": False},
+        response = client.post(
+            f"/api/v1/projects/{world.project_id}/invitations",
+            json={"user_id": world.bob_id, "role": "reader", "show_sources": False},
             headers=world.alice.headers,
         )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
+    with world.bob as client:
+        accepted = client.post(
+            f"/api/v1/account/invitations/{response.json()['invitation']['id']}/accept", headers=world.bob.headers
+        )
+    assert accepted.status_code == 200, accepted.text
 
 
 def test__route_actions__every_project_route__is_covered_by_the_matrix() -> None:

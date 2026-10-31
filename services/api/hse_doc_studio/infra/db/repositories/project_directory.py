@@ -301,3 +301,23 @@ class PostgresProjectAccessDirectory:
             visible = _visible_people(project.owner_org_id, actor_id, _scope_orgs(project.owner_org_id, actor_id))
             found = await session.execute(select(UserRow.id).where(UserRow.id == user_id, visible))
             return found.first() is not None
+
+    async def is_transfer_candidate(
+        self, project_id: UUID, actor_id: str, kind: Literal["user", "org"], target_id: str
+    ) -> bool:
+        """Входит ли получатель в круг `transfer_candidates` (у организации здесь её id, не slug)."""
+        async with self._sessions.use() as session:
+            project = (
+                await session.execute(
+                    select(ProjectRow.owner_user_id, ProjectRow.owner_org_id).where(
+                        ProjectRow.id == project_id, ProjectRow.deleted_at.is_(None)
+                    )
+                )
+            ).first()
+            if project is None:
+                return False
+            if kind == "org":
+                stmt: Any = _transfer_orgs(actor_id, project.owner_org_id, "").where(OrgRow.id == target_id)
+            else:
+                stmt = _transfer_people(actor_id, project.owner_user_id, "").where(UserRow.id == target_id)
+            return (await session.execute(stmt.limit(1))).first() is not None

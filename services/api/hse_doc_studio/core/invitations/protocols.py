@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.core.invitations.entities import (
     AccessRequest,
     AccessRequestView,
@@ -152,11 +153,15 @@ class IProjectPersonas(Protocol):
         ...
 
 
-class IInvitationMailer(Protocol):
-    """Письмо о приглашении со ссылкой: True, если ушло по SMTP (иначе ссылку отдают пригласившему)."""
+class INotificationMailer(Protocol):
+    """Письма трека: уведомление по виду (S15) и приглашение со ссылкой. True, если письмо ушло по SMTP."""
 
     @property
     def enabled(self) -> bool: ...
+
+    async def send_notification(
+        self, to_email: str, kind: NotificationKind, payload: NotificationPayload, *, locale: str | None
+    ) -> bool: ...
 
     async def send_invitation(
         self,
@@ -169,3 +174,15 @@ class IInvitationMailer(Protocol):
         message: str | None,
         locale: str | None,
     ) -> bool: ...
+
+
+class IProjectMemberLookup(Protocol):
+    async def direct_user_role(self, project_id: UUID, user_id: str) -> Role | None:
+        """Роль прямой записи человека в проекте; None, если записи нет (группы не считаются)."""
+        ...
+
+
+class IEmailVerifiedHook(Protocol):
+    """Вызывается identity, когда почта человека подтверждена (регистрация, подтверждение, смена адреса)."""
+
+    async def on_email_verified(self, user_id: str, email_normalized: str) -> None: ...

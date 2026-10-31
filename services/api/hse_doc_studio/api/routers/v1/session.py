@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response
 from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.invitation_views import inbox_badge
 from hse_doc_studio.api.schemas.session import (
     AuthOptions,
     BootstrapResponse,
@@ -104,4 +105,6 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             personal_runners=result.user is not None and result.personal_runners,
         ),
         csrf_token=result.session.csrf_token if result.session else None,
+        # invites: счётчик «Входящих» для шапки.
+        inbox=await inbox_badge(request, result.user.id if result.user else None),
     )

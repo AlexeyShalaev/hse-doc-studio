@@ -4,6 +4,7 @@ from hse_doc_studio.api.guards import project_access_guard, project_write_guard
 from hse_doc_studio.api.rate_limit import rate_limit_guard
 from hse_doc_studio.api.routers.v1 import (
     account,
+    account_invitations,
     account_runners,
     agent_personas,
     ai_providers,
@@ -33,6 +34,7 @@ from hse_doc_studio.api.routers.v1 import (
     profile,
     project_build_runners,
     project_import,
+    project_invitations,
     project_members,
     projects,
     remote_runner,
@@ -104,3 +106,6 @@ api_router.include_router(signing_identities.router, tags=["signing-identities"]
 api_router.include_router(profile.router, tags=["profile"])
 api_router.include_router(git_global.router, tags=["git-sync"])
 api_router.include_router(remote_runner.router, tags=["remote-runner"])
+# invites: приглашения, запросы доступа, передача владения, «Входящие»
+api_router.include_router(project_invitations.router, tags=["projects"])
+api_router.include_router(account_invitations.router, tags=["account"])
