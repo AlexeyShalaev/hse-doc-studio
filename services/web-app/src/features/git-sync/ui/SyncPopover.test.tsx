@@ -343,3 +343,62 @@ describe("SyncPopover", () => {
     expect(screen.getByText("No repository connected")).toBeTruthy();
   });
 });
+
+describe("SyncPopover auto sync", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const auto = (
+    patch: Partial<NonNullable<SyncPopoverProps["autoSync"]>> = {},
+  ): NonNullable<SyncPopoverProps["autoSync"]> => ({
+    available: true,
+    enabled: true,
+    explicit: false,
+    phase: "watching",
+    stop: null,
+    failures: 0,
+    isSaving: false,
+    setEnabled: vi.fn(),
+    ...patch,
+  });
+
+  it("offers the auto sync switch for a connected project", async () => {
+    const setEnabled = vi.fn();
+    render(<Harness status={connected()} autoSync={auto({ setEnabled })} />);
+
+    await userEvent.click(screen.getByRole("switch"));
+
+    expect(setEnabled).toHaveBeenCalledWith(false);
+  });
+
+  it("shows the last PDF upload only for a Studio server project", () => {
+    const { rerender } = render(
+      <Harness status={connected()} autoSync={auto()} />,
+    );
+    expect(screen.queryByTestId("pdf-upload-line")).toBeNull();
+
+    rerender(
+      <Harness
+        status={connected({
+          pdf_upload: { enabled: true, available: true, last: null },
+        })}
+        autoSync={auto()}
+      />,
+    );
+    expect(screen.getByTestId("pdf-upload-line")).toBeTruthy();
+  });
+
+  it("has no switch without a repository or when the client cannot sync", () => {
+    const { rerender } = render(
+      <Harness status={noRemote()} autoSync={auto({ available: false })} />,
+    );
+    expect(screen.queryByRole("switch")).toBeNull();
+
+    rerender(
+      <Harness status={connected()} autoSync={auto({ available: false })} />,
+    );
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+});

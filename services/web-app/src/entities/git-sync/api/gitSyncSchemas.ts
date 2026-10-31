@@ -360,6 +360,23 @@ export const GitStatusSchema = z.object({
     })
     .nullish(),
   bot_authored_commits: z.number(),
+  // Автосинхронизация окна: итог и то, выбрал ли его человек (иначе это умолчание).
+  auto_sync: z.object({ enabled: z.boolean(), explicit: z.boolean() }),
+  // Выгрузка собранного PDF на сервер Студии.
+  pdf_upload: z.object({
+    enabled: z.boolean(),
+    available: z.boolean(),
+    last: z
+      .object({
+        doc_id: z.string(),
+        at: z.string(),
+        ok: z.boolean(),
+        size: z.number().nullish(),
+        error: z.string().nullish(),
+        message: z.string().nullish(),
+      })
+      .nullish(),
+  }),
 });
 
 export const ConnectRemoteRequestSchema = z.object({
@@ -375,6 +392,19 @@ export const UpdateGitSettingsRequestSchema = z.object({
   auto_fetch: z.boolean().nullish(),
   interval_s: z.number().nullish(),
   shared_folder_ack: z.boolean().nullish(),
+  auto_sync: z.boolean().nullish(),
+  pdf_upload: z.boolean().nullish(),
+});
+
+export const PdfPublishRequestSchema = z.object({ doc_id: z.string() });
+
+export const PdfPublishResponseSchema = z.object({
+  status: z.string(),
+  doc_id: z.string(),
+  reason: z.string().nullish(),
+  error: z.string().nullish(),
+  message: z.string().nullish(),
+  size: z.number().nullish(),
 });
 
 export const GitContentsSchema = z.object({
@@ -590,6 +620,7 @@ export type GitCommitBrief = z.infer<typeof GitCommitBriefSchema>;
 export type GitRemoteInfo = z.infer<typeof GitRemoteInfoSchema>;
 export type GitStatus = z.infer<typeof GitStatusSchema>;
 export type ConnectRemoteRequest = z.infer<typeof ConnectRemoteRequestSchema>;
+export type PdfPublishResponse = z.infer<typeof PdfPublishResponseSchema>;
 export type UpdateGitSettingsRequest = z.infer<
   typeof UpdateGitSettingsRequestSchema
 >;

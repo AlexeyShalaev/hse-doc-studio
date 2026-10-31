@@ -164,5 +164,23 @@
     "placeSignature": "Разместить подпись",
     "moreActions": "Ещё действия",
     "signatures": "Подписи"
+  },
+  "artifacts": {
+    "title": "PDF из локальной Студии",
+    "hint": "Собранные на компьютере автора PDF. Видны тем же людям, что и проект.",
+    "latest": "Последний",
+    "older": "Предыдущие версии: {{count}}",
+    "pages": "{{count}} стр.",
+    "by": "выгрузил {{who}}",
+    "via": "из «{{client}}»",
+    "open": "Открыть",
+    "download": "Скачать",
+    "delete": "Удалить",
+    "deleteConfirm": "Удалить выгруженный PDF с сервера?",
+    "deleteFailed": "Не удалось удалить PDF",
+    "close": "Закрыть",
+    "viewerTitle": "{{doc}}: {{file}}",
+    "uploaded": "выгружен {{when}}",
+    "commit": "версия исходников {{commit}}"
   }
 }

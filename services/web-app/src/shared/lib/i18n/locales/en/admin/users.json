@@ -353,7 +353,9 @@
       "git_fetch": "Git fetch",
       "git_auth_failed": "Failed git sign-in",
       "device_approve": "Device allowed git access",
-      "device_deny": "Device denied git access"
+      "device_deny": "Device denied git access",
+      "artifact_pdf_uploaded": "Local-build PDF uploaded",
+      "artifact_deleted": "Uploaded PDF deleted"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

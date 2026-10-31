@@ -36,6 +36,7 @@ export {
   useGitContents,
   useImportBundle,
   useOperation,
+  usePublishPdf,
   useResolveConflicts,
   useSaveConflictDraft,
   useStartSync,

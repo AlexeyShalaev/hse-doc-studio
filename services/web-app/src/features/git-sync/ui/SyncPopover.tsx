@@ -11,6 +11,9 @@ import type { SyncText } from "../model/useSyncText";
 import { repoLabel } from "../model/repoLabel";
 import { SYNC_TONE_COLOR, SYNC_TONE_SOFT } from "../model/syncTone";
 import { sectionTitleStyle } from "../model/commitUi";
+import { pdfUploadStatus } from "../model/pdfUpload.model";
+import type { AutoSyncInfo } from "../model/useAutoSync";
+import { AutoSyncRow } from "./AutoSyncRow";
 import { CommitSection } from "./SyncCommitList";
 import { SyncStateIcon } from "./SyncStateIcon";
 
@@ -31,6 +34,8 @@ export type SyncPopoverProps = {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
   onOpenProfile: () => void;
+  /** Автосинхронизация проекта; без неё (галерея, старые тесты) строки в панели нет. */
+  autoSync?: AutoSyncInfo;
 };
 
 const PHASE_STEPS = ["snapshot", "fetch", "merge", "push"] as const;
@@ -59,6 +64,7 @@ export const SyncPopover = ({
   onOpenSettings,
   onOpenHistory,
   onOpenProfile,
+  autoSync,
 }: SyncPopoverProps) => {
   const { t } = useTranslation("gitSync");
   const { t: tRemote } = useTranslation("gitRemote");
@@ -282,6 +288,17 @@ export const SyncPopover = ({
         </button>,
       );
     }
+  }
+
+  if (autoSync?.available && ui.state !== "no_remote") {
+    body.push(
+      <AutoSyncRow
+        key="auto-sync"
+        auto={autoSync}
+        pdf={pdfUploadStatus(status)}
+        now={now}
+      />,
+    );
   }
 
   // --- подвал --------------------------------------------------------------------

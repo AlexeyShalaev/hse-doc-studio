@@ -232,6 +232,20 @@ export const useUpdateGitSettings = () => {
   });
 };
 
+// Выгрузка PDF на сервер Студии по кнопке: итог оседает в состоянии проекта, поэтому состояние читаем заново.
+export const usePublishPdf = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, docId }: { projectId: string; docId: string }) =>
+      gitSyncApi.publishPdf(projectId, docId),
+    onSettled: (_, __, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: gitSyncKeys.status(projectId),
+      });
+    },
+  });
+};
+
 // Что уйдёт в репозиторий: считается локально, в сеть не ходит.
 export const useGitContents = (projectId: string, enabled = true) =>
   useQuery({

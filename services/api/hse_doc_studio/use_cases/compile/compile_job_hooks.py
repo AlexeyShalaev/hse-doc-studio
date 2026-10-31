@@ -10,6 +10,7 @@ import structlog
 
 from hse_doc_studio.core.entities import ChangeLogEntry, CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, VcsCommitKind
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobStatus, RunnerErrorCode
@@ -43,6 +44,7 @@ class CompileJobHooks:
         vcs_locks: IVcsFolderLocks,
         artifacts: IArtifactStore,
         project_folder: Path,
+        pdf_observer: IBuiltPdfObserver | None = None,
     ) -> None:
         self._compile_repo = compile_repo
         self._project_repo = project_repo
@@ -52,6 +54,7 @@ class CompileJobHooks:
         self._vcs_locks = vcs_locks
         self._artifacts = artifacts
         self._project_folder = project_folder
+        self._pdf_observer = pdf_observer
         self._started_at: datetime | None = None
 
     @property
@@ -183,6 +186,8 @@ class CompileJobHooks:
             await self._artifacts.archive_pdf(
                 spec.project_id, self._project_folder, doc_id, compile_id, payload.source_file
             )
+            if not has_errors:
+                self._notify_pdf_built(spec, doc_id, pages)
 
         logger.debug(
             "compile task finished",
@@ -190,6 +195,15 @@ class CompileJobHooks:
             status=final_status,
             doc_id=doc_id,
         )
+
+    def _notify_pdf_built(self, spec: JobSpec, doc_id: str, pages: int | None) -> None:
+        """Выгрузка на сервер Студии (если проект оттуда) идёт фоном и сборку не задерживает."""
+        if self._pdf_observer is None:
+            return
+        try:
+            self._pdf_observer.on_pdf_built(spec.project_id, doc_id, pages)
+        except Exception as exc:  # noqa: BLE001 — выгрузка вторична
+            logger.warning("pdf observer failed", doc_id=doc_id, exc=str(exc))
 
     async def _restore_started_at(self, compile_id: uuid.UUID) -> None:
         """Хуки после рестарта не видели старт: время начала берём из записи сборки."""

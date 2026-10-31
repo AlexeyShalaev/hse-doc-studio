@@ -365,7 +365,9 @@
       "git_fetch": "Получение проекта по git",
       "git_auth_failed": "Неудачный вход в git",
       "device_approve": "Устройству разрешён git",
-      "device_deny": "Устройству отказано в git"
+      "device_deny": "Устройству отказано в git",
+      "artifact_pdf_uploaded": "Выгружен PDF локальной сборки",
+      "artifact_deleted": "Удалён выгруженный PDF"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

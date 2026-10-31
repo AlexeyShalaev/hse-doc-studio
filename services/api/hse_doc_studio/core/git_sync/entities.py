@@ -437,6 +437,18 @@ class GitResult:
 
 
 @dataclass(frozen=True)
+class PdfUploadRecord:
+    """Итог последней выгрузки PDF на сервер Студии (docs/design/local-sync.md, P7)."""
+
+    doc_id: str
+    at: datetime
+    ok: bool
+    size: int | None = None
+    code: str | None = None
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
 class SyncState:
     """Постоянное состояние синхронизации проекта (<git_dir>/hse-sync.json)."""
 
@@ -460,6 +472,11 @@ class SyncState:
     # На конце удалённой ветки проект записан более новой Студией: данные нельзя ни читать, ни писать.
     remote_schema_newer: bool = False
     remote_required_studio: str | None = None
+    # Автосинхронизация окна Студии; None значит «по умолчанию» (включена для проектов с сервера Студии).
+    auto_sync: bool | None = None
+    # Выгрузка PDF после локальной сборки; None: по умолчанию включена для проектов с сервера Студии.
+    pdf_upload: bool | None = None
+    last_pdf_upload: PdfUploadRecord | None = None
 
 
 @dataclass(frozen=True)

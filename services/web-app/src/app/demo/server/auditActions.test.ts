@@ -18,7 +18,7 @@ const API = join(
 );
 
 const DOMAINS =
-  "auth|admin|account|audit|group|invite|link|oidc|org|pat|project|queue|runner|settings|setup|signing|git|submission";
+  "auth|admin|account|audit|group|invite|link|oidc|org|pat|project|queue|runner|settings|setup|signing|git|submission|artifact";
 // Литерал действия в файле, который пишет в журнал: «домен.действие».
 const ACTION = new RegExp(`"((?:${DOMAINS})\\.[a-z_]+(?:\\.[a-z_]+)?)"`, "g");
 

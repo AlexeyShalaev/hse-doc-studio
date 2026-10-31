@@ -8,6 +8,7 @@ import {
   GitStatusSchema,
   OperationSchema,
   OperationStartedSchema,
+  PdfPublishResponseSchema,
   type ConnectRemoteRequest,
   type FileResolution,
   type GitErrorBody,
@@ -44,6 +45,8 @@ export const NO_REMOTE_STATUS: GitStatus = {
   auto_fetch: { enabled: false, interval_s: 0, next_fetch_at: null },
   shared_folder: null,
   bot_authored_commits: 0,
+  auto_sync: { enabled: false, explicit: false },
+  pdf_upload: { enabled: false, available: false, last: null },
 };
 
 export const toStatusView = (
@@ -130,6 +133,16 @@ export const gitSyncApi = {
         timeout: 120_000,
       })
       .then(parseResp(GitStatusSchema)),
+
+  // Выгрузить собранный PDF документа на сервер Студии сейчас (после сборки это делает сервер Студии сам).
+  publishPdf: (projectId: string, docId: string) =>
+    apiClient
+      .post(
+        `${gitPath(projectId)}/pdf`,
+        { doc_id: docId },
+        { silentError: true, timeout: 330_000 },
+      )
+      .then(parseResp(PdfPublishResponseSchema)),
 
   connectRemote: (projectId: string, params: ConnectRemoteParams) =>
     apiClient

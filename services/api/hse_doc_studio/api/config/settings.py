@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
 from hse_doc_studio.api.config.admin import AdminConfig
+from hse_doc_studio.api.config.artifacts import ArtifactsConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
@@ -82,6 +83,7 @@ class Settings(BaseSettings):
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     git: GitConfig = Field(default_factory=GitConfig)
     git_remote: GitRemoteConfig = Field(default_factory=GitRemoteConfig)
+    artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)

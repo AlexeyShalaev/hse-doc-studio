@@ -115,6 +115,14 @@ export {
 } from "./pendingSaves";
 export type { FlushResult, PendingSaveFlush } from "./pendingSaves";
 
+export {
+  getLastProjectEdit,
+  noteProjectEdit,
+  resetProjectEdits,
+  subscribeProjectEdits,
+  useProjectLastEdit,
+} from "./editActivity";
+
 export { GALLERY_PROJECT_ID } from "./stateGallery";
 export type {
   GalleryEntry,

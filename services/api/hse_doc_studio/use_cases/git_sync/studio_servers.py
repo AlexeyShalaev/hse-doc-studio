@@ -21,7 +21,10 @@ import structlog
 
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.client import (
+    DEVICE_ORIGIN,
     IStudioServerClient,
+    PdfUpload,
+    PdfUploadReply,
     StudioProjectPage,
     StudioServerError,
     StudioServerErrorCode,
@@ -36,7 +39,6 @@ from hse_doc_studio.core.i18n import localized_error
 
 logger = structlog.get_logger()
 
-DEVICE_ORIGIN = "device"
 STUDIO_USERNAME = "hse"
 _KEEP_S = 15 * 60
 _SLOW_DOWN_S = 5
@@ -290,6 +292,24 @@ class StudioServersService:
         try:
             return await self._client.projects(
                 await self._target(base, credential.host, credential.port), secret, q=q, limit=limit, offset=offset
+            )
+        except StudioServerError as exc:
+            if exc.code == StudioServerErrorCode.unauthorized:
+                with contextlib.suppress(Exception):
+                    await self._credentials.mark(credential_id, CredentialStatus.auth_failed)
+                raise GitSyncError(GitErrorCode.auth_failed) from None
+            raise
+
+    async def upload_pdf(self, credential_id: UUID, upload: PdfUpload) -> PdfUploadReply:
+        """Выгружает PDF на сервер входом из `credential_id`; отказ входа помечает доступ и бросает `auth_failed`."""
+        credential = await self._credentials.get(credential_id)
+        if credential is None or credential.origin != DEVICE_ORIGIN:
+            raise NotFoundError(localized_error("Сервер не найден", "Server not found"))
+        base = server_url_of(credential)
+        secret = await self._credentials.get_secret(credential_id)
+        try:
+            return await self._client.upload_pdf(
+                await self._target(base, credential.host, credential.port), secret, upload
             )
         except StudioServerError as exc:
             if exc.code == StudioServerErrorCode.unauthorized:

@@ -443,6 +443,29 @@ class GitAutoFetch(_Contract):
     next_fetch_at: datetime | None
 
 
+class GitAutoSync(_Contract):
+    # Включена ли автосинхронизация окна; explicit: выбор человека, иначе умолчание (включена для сервера Студии).
+    enabled: bool
+    explicit: bool
+
+
+class GitPdfUploadLast(_Contract):
+    doc_id: str
+    at: datetime
+    ok: bool
+    size: int | None
+    # Код отказа (`pdf_forbidden`, `auth_failed`, ...) и готовая подпись для человека; словарь не GitErrorCode.
+    error: str | None
+    message: str | None
+
+
+class GitPdfUpload(_Contract):
+    # Выгрузка собранного PDF на сервер Студии; available: remote проекта это сервер Студии.
+    enabled: bool
+    available: bool
+    last: GitPdfUploadLast | None
+
+
 class GitSharedFolder(_Contract):
     provider: str
     root: str
@@ -476,6 +499,8 @@ class GitStatusResponse(_Contract):
     auto_fetch: GitAutoFetch
     shared_folder: GitSharedFolder | None
     bot_authored_commits: int
+    auto_sync: GitAutoSync
+    pdf_upload: GitPdfUpload
 
 
 class ConnectRemoteRequest(_Contract):
@@ -491,6 +516,23 @@ class UpdateGitSettingsRequest(_Contract):
     auto_fetch: bool | None = None
     interval_s: int | None = None
     shared_folder_ack: bool | None = None
+    auto_sync: bool | None = None
+    pdf_upload: bool | None = None
+
+
+class PdfPublishRequest(_Contract):
+    doc_id: str
+
+
+class PdfPublishResponse(_Contract):
+    # uploaded | unchanged | skipped | failed
+    status: str
+    doc_id: str
+    # no_remote | not_studio_server | disabled | no_pdf (только для skipped)
+    reason: str | None
+    error: str | None
+    message: str | None
+    size: int | None
 
 
 class GitLargestFile(_Contract):

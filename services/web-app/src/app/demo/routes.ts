@@ -173,6 +173,15 @@ const statusOf = (projectId: string): GitStatus => {
       ? { ...project.sharedFolder, acknowledged: project.sharedAck }
       : null,
     bot_authored_commits: project.botAuthored,
+    auto_sync: {
+      enabled: project.autoSync ?? project.studioServer,
+      explicit: project.autoSync !== null,
+    },
+    pdf_upload: {
+      enabled: project.studioServer && (project.pdfUpload ?? true),
+      available: project.studioServer,
+      last: project.lastPdfUpload,
+    },
   };
 };
 
@@ -441,6 +450,10 @@ const projectRoutes: DemoRoute[] = [
         project.autoFetch.interval_s = Math.max(60, body.interval_s);
       }
       if (body.shared_folder_ack === true) project.sharedAck = true;
+      if (typeof body.auto_sync === "boolean")
+        project.autoSync = body.auto_sync;
+      if (typeof body.pdf_upload === "boolean")
+        project.pdfUpload = body.pdf_upload;
       return statusResponse(projectId);
     },
   },

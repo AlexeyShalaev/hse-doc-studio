@@ -9,6 +9,7 @@ import {
 import * as inv from "@entities/invitation/model/invitation.schema";
 import * as inst from "./installSchemas";
 import * as gs from "@entities/git-server/model/gitServer.schema";
+import * as pa from "@entities/project-artifact/model/artifact.schema";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
@@ -213,4 +214,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   GitServerLoginRequest: gs.GitServerLoginRequestSchema,
   GitServerLogin: gs.GitServerLoginSchema,
   GitServerList: gs.GitServerListSchema,
+  // local-sync: PDF локальной сборки на сервере
+  ProjectArtifactList: pa.ProjectArtifactListSchema,
+  PdfUploadResult: pa.PdfUploadResultSchema,
 };

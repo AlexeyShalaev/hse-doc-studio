@@ -11,6 +11,7 @@ import { useBackgroundFetch } from "../model/useBackgroundFetch";
 import { useIncomingToast } from "../model/useIncomingToast";
 import { useNowTick } from "../model/useNowTick";
 import { useSyncAnnouncer } from "../model/useSyncAnnouncer";
+import { useAutoSync } from "../model/useAutoSync";
 import { useSyncController } from "../model/useSyncController";
 import { useSyncText } from "../model/useSyncText";
 import { SyncButton, SyncButtonSkeleton } from "./SyncButton";
@@ -37,6 +38,10 @@ export const SyncControl = ({ projectId }: SyncControlProps) => {
   const isOpen = useSyncUiStore((state) => state.popoverOpen);
   const setOpen = useSyncUiStore((state) => state.setPopoverOpen);
   const announcement = useSyncAnnouncer(ui);
+  const autoSync = useAutoSync(projectId, controller, {
+    start: controller.runAuto,
+    result: controller.autoResult,
+  });
 
   useBackgroundFetch(projectId, controller);
   useIncomingToast(projectId, controller, () => {
@@ -66,6 +71,7 @@ export const SyncControl = ({ projectId }: SyncControlProps) => {
           ui={ui}
           text={text}
           isOpen={isOpen}
+          auto={autoSync.available && autoSync.enabled}
           onPrimary={() => {
             controller.runPrimary(ui.primary);
           }}
@@ -118,6 +124,7 @@ export const SyncControl = ({ projectId }: SyncControlProps) => {
               useSyncUiStore.getState().openConnectDialog("fix_access");
             }}
             onResolve={closeThen(controller.openConflicts)}
+            autoSync={autoSync}
             onOpenSettings={closeThen(() => {
               void navigate(gitSettingsPath(projectId));
             })}

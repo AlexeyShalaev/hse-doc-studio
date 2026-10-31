@@ -52,6 +52,12 @@ export type DemoProjectGit = {
   sharedFolder: { provider: string; root: string } | null;
   sharedAck: boolean;
   botAuthored: number;
+  // Проект подключён к серверу Студии (вход по коду устройства): по умолчанию автосинхронизация и выгрузка PDF включены.
+  studioServer: boolean;
+  // Явный выбор человека; null: по умолчанию.
+  autoSync: boolean | null;
+  pdfUpload: boolean | null;
+  lastPdfUpload: GitStatus["pdf_upload"]["last"];
   // Что покажет состав проекта перед подключением (GET /git/contents).
   ndaFiles: number;
   lfsPointers: number;
@@ -122,6 +128,10 @@ export const emptyProjectGit = (): DemoProjectGit => ({
   sharedFolder: null,
   sharedAck: false,
   botAuthored: 0,
+  studioServer: false,
+  autoSync: null,
+  pdfUpload: null,
+  lastPdfUpload: null,
   ndaFiles: 0,
   lfsPointers: 0,
   overLimit: [],

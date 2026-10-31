@@ -37,6 +37,8 @@ from hse_doc_studio.api.schemas.git_sync import (
     GitOverLimitFile,
     GitStatusResponse,
     OperationStartedResponse,
+    PdfPublishRequest,
+    PdfPublishResponse,
     ResolveConflictsRequest,
     SaveConflictDraftRequest,
     UpdateGitSettingsRequest,
@@ -73,6 +75,7 @@ from hse_doc_studio.use_cases.git_sync.get_conflict_file import (
     GetConflictFileUC,
 )
 from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsInput, GetConflictsUC
+from hse_doc_studio.use_cases.git_sync.publish_pdf import PublishPdfUC
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsInput, ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftInput, SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncInput, StartSyncUC
@@ -96,6 +99,25 @@ async def fetch_git_remote(project_id: UUID, uc: FromDishka[FetchGitRemoteUC]) -
         return map_status(await uc.execute(FetchGitRemoteInput(project_id=project_id)))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/projects/{project_id}/git/pdf", response_model=PdfPublishResponse)
+async def publish_pdf_to_server(
+    project_id: UUID, body: PdfPublishRequest, uc: FromDishka[PublishPdfUC]
+) -> PdfPublishResponse:
+    """Выгрузить собранный PDF документа на сервер Студии сейчас (автовыгрузка после сборки идёт сама)."""
+    try:
+        result = await uc.execute(project_id, body.doc_id, manual=True)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return PdfPublishResponse(
+        status=result.status.value,
+        doc_id=result.doc_id,
+        reason=result.reason.value if result.reason else None,
+        error=result.code,
+        message=result.detail,
+        size=result.size,
+    )
 
 
 @router.put("/projects/{project_id}/git/remote", response_model=GitStatusResponse)
@@ -143,6 +165,8 @@ async def update_git_settings(
                 interval_given="interval_s" in body.model_fields_set,
                 interval_s=body.interval_s,
                 shared_folder_ack=body.shared_folder_ack,
+                auto_sync=body.auto_sync,
+                pdf_upload=body.pdf_upload,
             )
         )
     except NotFoundError as exc:

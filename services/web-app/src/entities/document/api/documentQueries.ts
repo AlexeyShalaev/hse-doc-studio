@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UpdateDocumentRequest } from "@shared/api/types";
+import { noteProjectEdit } from "@shared/lib/editActivity";
 import { documentApi } from "./documentApi";
 
 type DocumentItem = Awaited<ReturnType<typeof documentApi.list>>[number];
@@ -50,6 +51,7 @@ export const useUpdateDocument = () => {
     mutationFn: ({ projectId, docId, data }) =>
       documentApi.update(projectId, docId, data),
     onSuccess: (doc, { projectId, docId }) => {
+      noteProjectEdit(projectId);
       queryClient.setQueryData(documentKeys.detail(projectId, docId), doc);
       // Switching chosen_variant makes the backend materialise the variant's
       // files and reset the status — refetch the detail (not just overlay the

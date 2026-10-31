@@ -27,6 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver, NoopBuiltPdfObserver
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
@@ -1000,6 +1001,11 @@ class DomainServiceProvider(Provider):
     @provide
     def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
         return SharedFolderDetector(paths)
+
+    @provide
+    def get_built_pdf_observer(self) -> IBuiltPdfObserver:
+        """Выгружать PDF на сервер Студии умеет только локальная Студия: её провайдер перекрывает этот."""
+        return NoopBuiltPdfObserver()
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

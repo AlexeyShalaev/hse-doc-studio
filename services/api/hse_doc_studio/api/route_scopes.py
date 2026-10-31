@@ -411,6 +411,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/-/info"): _P,
     ("GET", "/git/-/whoami"): RouteScope.git_token,
     ("GET", "/git/-/projects"): RouteScope.git_token,
+    ("PUT", "/git/-/projects/{project_id}/documents/{doc_id}/pdf"): RouteScope.git_token,
     # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
     # gitremote: вход локальной Студии на сервер Студии и его проекты
     ("POST", "/git/servers/login"): _LOCAL,

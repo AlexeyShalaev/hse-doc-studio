@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 import ssl
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -14,6 +16,8 @@ import httpx
 from hse_doc_studio.core.git_remote.client import (
     DeviceGrant,
     DeviceTokenReply,
+    PdfUpload,
+    PdfUploadReply,
     StudioAccount,
     StudioProject,
     StudioProjectPage,
@@ -28,6 +32,14 @@ _USER_AGENT = "HSE-Doc-Studio"
 _OK = 200
 _BAD_REQUEST = 400
 _UNAUTHORIZED = 401
+_FORBIDDEN = 403
+_NOT_FOUND = 404
+_TOO_LARGE = 413
+_REJECTED = frozenset({415, 422})
+_CREATED = 201
+_UPLOAD_CHUNK = 1 << 20
+# Загрузка файла идёт дольше обычных вызовов: ответ ждёт, пока сервер примет и запишет тело.
+_UPLOAD_TIMEOUT = httpx.Timeout(20.0, read=180.0, write=300.0)
 
 
 def _parse_dt(value: object) -> datetime | None:
@@ -148,6 +160,71 @@ class HttpStudioServerClient:
         return StudioProjectPage(
             tuple(items), int(body.get("total", len(items))), int(body.get("limit", limit)), int(body.get("offset", 0))
         )
+
+    async def upload_pdf(self, target: StudioServerTarget, token: Secret, upload: PdfUpload) -> PdfUploadReply:
+        params = _pdf_params(upload)
+        headers = {**_auth(token), "Content-Type": "application/pdf", "Content-Length": str(upload.size)}
+        path = f"/git/-/projects/{upload.project_id}/documents/{upload.doc_id}/pdf"
+        try:
+            async with self._client(target) as client:
+                response = await client.put(
+                    path, params=params, headers=headers, content=_file_chunks(upload.path), timeout=_UPLOAD_TIMEOUT
+                )
+        except (httpx.HTTPError, ssl.SSLError, OSError):
+            raise StudioServerError(StudioServerErrorCode.unreachable) from None
+        try:
+            parsed = response.json()
+        except ValueError:
+            parsed = None
+        body = parsed if isinstance(parsed, dict) else {}
+        if response.status_code not in {_OK, _CREATED}:
+            raise _pdf_failure(response.status_code, body)
+        artifact = _dict(body.get("artifact"))
+        return PdfUploadReply(
+            artifact_id=str(artifact.get("id", "")),
+            created=bool(body.get("created")),
+            size=int(artifact.get("size") or upload.size),
+        )
+
+
+def _pdf_params(upload: PdfUpload) -> dict[str, str | int]:
+    """Подпись к файлу в адресе запроса: имя может быть любым, а заголовки HTTP только ASCII."""
+    params: dict[str, str | int] = {"sha256": upload.sha256}
+    optional: dict[str, str | int | None] = {
+        "name": upload.name,
+        "pages": upload.pages,
+        "commit": upload.source_commit,
+        "built_at": upload.built_at.isoformat() if upload.built_at is not None else None,
+    }
+    params.update({key: value for key, value in optional.items() if value})
+    return params
+
+
+async def _file_chunks(path: Path) -> AsyncIterator[bytes]:
+    with path.open("rb") as handle:
+        while chunk := handle.read(_UPLOAD_CHUNK):
+            yield chunk
+
+
+def _pdf_failure(status: int, body: dict[str, Any]) -> StudioServerError:
+    code = body.get("code")
+    if status == _UNAUTHORIZED:
+        return StudioServerError(StudioServerErrorCode.unauthorized)
+    if status == _FORBIDDEN:
+        scope_missing = code == "git_scope_missing"
+        return StudioServerError(
+            StudioServerErrorCode.pdf_scope_missing if scope_missing else StudioServerErrorCode.pdf_forbidden
+        )
+    if status == _NOT_FOUND:
+        unknown = code == "artifact_unknown_document"
+        return StudioServerError(
+            StudioServerErrorCode.pdf_unknown_document if unknown else StudioServerErrorCode.pdf_unsupported
+        )
+    if status == _TOO_LARGE:
+        return StudioServerError(StudioServerErrorCode.pdf_too_large)
+    if status in _REJECTED:
+        return StudioServerError(StudioServerErrorCode.pdf_rejected)
+    return StudioServerError(StudioServerErrorCode.unreachable)
 
 
 def _dict(value: object) -> dict[str, Any]:
