@@ -7,9 +7,12 @@ S10: нового человека в проект приводит только
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import UTC, datetime
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor, Role
+from hse_doc_studio.core.access.links import IShareLinkStore, RevokeReason
 from hse_doc_studio.core.access.repositories import (
     IProjectAccessDirectory,
     IProjectMemberRepository,
@@ -34,6 +37,10 @@ async def _ownership(members: IProjectMemberRepository, project_id: UUID) -> Pro
     if ownership is None:
         raise IdentityError(IdentityErrorCode.not_found)
     return ownership
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 class SetProjectMemberUC:
@@ -129,6 +136,8 @@ class RemoveProjectMemberUC:
         notifier: INotifier | None = None,
         cards: IProjectCards | None = None,
         users: IUserRepository | None = None,
+        links: IShareLinkStore | None = None,
+        clock: Callable[[], datetime] = _utc_now,
     ) -> None:
         self._members = members
         self._audit = audit
@@ -137,6 +146,9 @@ class RemoveProjectMemberUC:
         self._notifier = notifier
         self._cards = cards
         self._users = users
+        # links: ссылки убранного человека отзываются вместе с его членством.
+        self._links = links
+        self._clock = clock
 
     async def execute(self, actor: Actor, project_id: UUID, principal_kind: str, principal_id: str) -> None:
         actor_id = user_id_of(actor)
@@ -152,8 +164,30 @@ class RemoveProjectMemberUC:
                 target=str(project_id),
                 details={"kind": principal_kind, "principal_id": principal_id},
             )
+            if principal_kind == "user":
+                await self._revoke_links(actor_id, project_id, principal_id)
             if principal_kind == "user" and principal_id != actor_id:
                 await self._notify_removed(actor_id, project_id, principal_id)
+
+    async def _revoke_links(self, actor_id: str, project_id: UUID, user_id: str) -> None:
+        """Ссылки, созданные убранным человеком, иначе пускали бы его (как гостя) в проект и после удаления."""
+        if self._links is None:
+            return
+        revoked = await self._links.revoke_created_by(
+            project_id, user_id, by=actor_id, reason=RevokeReason.member_removed, now=self._clock()
+        )
+        for link in revoked:
+            await self._audit.record(
+                "link.revoke",
+                actor_id=actor_id,
+                target=str(project_id),
+                details={
+                    "link_id": link.id,
+                    "label": link.label,
+                    "role": link.role.value,
+                    "reason": RevokeReason.member_removed.value,
+                },
+            )
 
     async def _notify_removed(self, actor_id: str, project_id: UUID, user_id: str) -> None:
         if self._notifier is None or self._cards is None:

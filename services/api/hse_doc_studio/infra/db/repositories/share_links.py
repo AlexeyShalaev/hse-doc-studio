@@ -202,6 +202,22 @@ class PostgresShareLinkRepository:
         async with self._sessions.use() as db:
             return (await db.execute(stmt)).scalar() is not None
 
+    async def revoke_created_by(
+        self, project_id: UUID, user_id: str, *, by: str | None, reason: RevokeReason, now: datetime
+    ) -> list[ShareLink]:
+        stmt = (
+            update(ShareLinkRow)
+            .where(
+                ShareLinkRow.project_id == project_id,
+                ShareLinkRow.created_by == user_id,
+                ShareLinkRow.revoked_at.is_(None),
+            )
+            .values(revoked_at=now, revoked_by=by, revoke_reason=reason.value, updated_at=now)
+            .returning(ShareLinkRow)
+        )
+        async with self._sessions.use() as db:
+            return [share_link_of(row) for row in (await db.execute(stmt)).scalars()]
+
     async def touch_opened(self, link_id: str, now: datetime) -> None:
         async with self._sessions.use() as db:
             await db.execute(update(ShareLinkRow).where(ShareLinkRow.id == link_id).values(last_opened_at=now))

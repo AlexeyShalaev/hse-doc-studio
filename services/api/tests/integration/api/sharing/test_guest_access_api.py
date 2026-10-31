@@ -324,7 +324,28 @@ def test__access_panel__guest_and_link_user_see_only_owner(world: World) -> None
     for person in (guest, world.dina):
         page = person.get(members).json()
         assert [x["name"] for x in page["items"]] == ["Анна Петрова"]
+        # Почта владельца по пересланной ссылке не раскрывается: имя и так видно на странице ссылки.
+        assert [x["detail"] for x in page["items"]] == [None]
         assert page["total"] == 1
+    assert full["items"][0]["detail"] == "anna@example.org"
+
+
+def test__member_removed__links_they_created_are_revoked(world: World) -> None:
+    """Убранный редактор не сохраняет доступ через свою же ссылку (и чужие гости по ней тоже)."""
+    link = world.create_link(world.boris, role="editor", label="Борис для группы")
+    kept = world.create_link(role="reader", label="Анна для всех")
+    guest = world.anonymous()
+    _open(guest, token_of(link), guest_name="Пётр")
+    assert guest.get(f"/api/v1/projects/{world.project_id}").status_code == 200
+
+    removed = world.anna.delete(f"/api/v1/projects/{world.project_id}/members/user:{world.ids['boris']}")
+
+    assert removed.status_code == 204, removed.text
+    gone = guest.get(f"/api/v1/projects/{world.project_id}")
+    assert (gone.status_code, gone.json()["code"]) == (404, "link_inactive")
+    assert world.anonymous().get(f"/api/v1/links/{token_of(link)}").json()["state"] == "inactive"
+    listing = {x["id"]: x["state"] for x in world.anna.get(f"{world.links_url}?include_revoked=true").json()["items"]}
+    assert listing == {link["id"]: "revoked", kept["id"]: "active"}
 
 
 def test__guest__reads_installation_references_but_not_personal_routes(world: World) -> None:

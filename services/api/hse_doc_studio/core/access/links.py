@@ -60,6 +60,8 @@ class RevokeReason(StrEnum):
     rotated = "rotated"
     policy = "policy"
     project_deleted = "project_deleted"
+    # Создателя убрали из проекта: его ссылки не должны оставлять ему (и кому угодно) доступ после удаления.
+    member_removed = "member_removed"
 
 
 LINK_TOKEN_PREFIX = "hsl_"  # noqa: S105 — префикс формата токена, не секрет
@@ -272,6 +274,12 @@ class IShareLinkStore(IShareLinkRepository, Protocol):
         self, link_id: str, *, by: str | None, reason: RevokeReason, now: datetime, replaced_by: str | None = None
     ) -> bool:
         """False, если ссылка уже отозвана или её нет."""
+        ...
+
+    async def revoke_created_by(
+        self, project_id: UUID, user_id: str, *, by: str | None, reason: RevokeReason, now: datetime
+    ) -> list[ShareLink]:
+        """Отзывает все действующие ссылки проекта, созданные человеком; возвращает отозванные."""
         ...
 
     async def touch_opened(self, link_id: str, now: datetime) -> None: ...

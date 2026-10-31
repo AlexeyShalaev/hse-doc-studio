@@ -10,6 +10,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.links import IShareLinkStore
 from hse_doc_studio.core.access.repositories import IProjectAccessDirectory, IProjectMemberRepository
 from hse_doc_studio.core.access.sharing_policy import SharingEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
@@ -484,8 +485,9 @@ class ServerInvitationsProvider(Provider):
         notifier: INotifier,
         cards: IProjectCards,
         users: IUserRepository,
+        links: IShareLinkStore,
     ) -> RemoveProjectMemberUC:
-        return RemoveProjectMemberUC(members, audit, uow, notifier=notifier, cards=cards, users=users)
+        return RemoveProjectMemberUC(members, audit, uow, notifier=notifier, cards=cards, users=users, links=links)
 
     @provide(override=True)
     def get_register_uc(
