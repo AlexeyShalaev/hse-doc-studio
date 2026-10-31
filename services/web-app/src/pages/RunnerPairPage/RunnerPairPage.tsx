@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { failureCode } from "@shared/api";
 import { useBootstrap } from "@entities/session";
@@ -8,6 +8,7 @@ import {
   useRunnerPairing,
   type RunnerPairingDecision,
 } from "@entities/runner";
+import { useNowTick } from "@shared/ui/DeviceCodeCard";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import {
@@ -26,21 +27,6 @@ const RESULT_OF: Record<string, PairResult> = {
   personal_runner_limit: "limit",
 };
 
-const COUNTDOWN_MS = 1000;
-
-const useTick = (): number => {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setNow(Date.now());
-    }, COUNTDOWN_MS);
-    return () => {
-      window.clearInterval(id);
-    };
-  }, []);
-  return now;
-};
-
 /**
  * Страница подтверждения сопряжения (/settings/runners/pair?code=…): человек
  * видит, какое устройство просит доступ, и подключает его как свой раннер.
@@ -53,7 +39,7 @@ export const RunnerPairPage = () => {
   const decide = useDecideRunnerPairing();
   const [decided, setDecided] = useState<PairResult | null>(null);
   const [deciding, setDeciding] = useState<RunnerPairingDecision | null>(null);
-  const now = useTick();
+  const now = useNowTick();
   const enabled = useBootstrap().data?.capabilities.personal_runners !== false;
 
   const state = ((): RunnerPairViewState => {

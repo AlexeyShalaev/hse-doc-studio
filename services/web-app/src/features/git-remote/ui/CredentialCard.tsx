@@ -10,6 +10,8 @@ import {
   type GitCredential,
 } from "@entities/git-remote";
 import { gitSettingsPath } from "@entities/git-sync";
+import { GitServerLoginFlow } from "@entities/git-server";
+import { Modal } from "@shared/ui";
 import { formatRelativeTime } from "@shared/lib";
 import { CopyField } from "@shared/ui/CopyField";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
@@ -37,9 +39,12 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
   const { t } = useTranslation("gitAccess");
   const { t: tRemote } = useTranslation("gitRemote");
   const [keyShown, setKeyShown] = useState(false);
-  const [dialog, setDialog] = useState<"replace" | "delete" | "tls" | null>(
-    null,
-  );
+  const { t: tServer } = useTranslation("gitServer");
+  const [dialog, setDialog] = useState<
+    "replace" | "delete" | "tls" | "relogin" | null
+  >(null);
+  // Доступ к серверу HSE Doc Studio получен входом по коду: заменяется новым входом.
+  const fromStudio = credential.origin === "device";
   const hostSettings = useHostSettings();
   const checkCredential = useCheckCredential();
   // null: проверку не просили; "running": идёт; иначе ответ сервера.
@@ -250,7 +255,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
             {t("access.credentials.check")}
           </button>
         )}
-        {!isKey && (
+        {!isKey && !fromStudio && (
           <button
             type="button"
             className={needsNewToken ? "btn xs primary" : "btn xs"}
@@ -260,6 +265,30 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
           >
             {t("access.credentials.replace")}
           </button>
+        )}
+        {fromStudio && (
+          <>
+            <button
+              type="button"
+              className={needsNewToken ? "btn xs primary" : "btn xs"}
+              onClick={() => {
+                setDialog("relogin");
+              }}
+              data-testid={`git-access-relogin-${credential.id}`}
+            >
+              {tServer("servers.relogin")}
+            </button>
+            <a
+              href={`${studioServerUrl(credential.host)}/settings/account#account-tokens`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="btn xs"
+              style={{ textDecoration: "none" }}
+              data-testid={`git-access-revoke-on-server-${credential.id}`}
+            >
+              {tServer("servers.revokeOnServer")}
+            </a>
+          </>
         )}
         <button
           type="button"
@@ -329,6 +358,27 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
         />
       )}
 
+      {dialog === "relogin" && (
+        <Modal
+          isOpen
+          title={tServer("login.title")}
+          onClose={() => {
+            setDialog(null);
+          }}
+          width={520}
+        >
+          <GitServerLoginFlow
+            initialUrl={studioServerUrl(credential.host)}
+            clientName={tServer("login.title")}
+            onApproved={() => {
+              setDialog(null);
+            }}
+            onCancel={() => {
+              setDialog(null);
+            }}
+          />
+        </Modal>
+      )}
       {dialog === "replace" && (
         <ReplaceTokenDialog
           credential={credential}
@@ -348,3 +398,9 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
     </li>
   );
 };
+
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/** Корень сервера Студии по хосту доступа: http только для своего компьютера. */
+const studioServerUrl = (host: string): string =>
+  `${LOOPBACK.has(host) ? "http" : "https"}://${host}`;

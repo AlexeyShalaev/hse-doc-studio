@@ -1,0 +1,140 @@
+{
+  "device": {
+    "pageTitle": "Studio sign-in to server git",
+    "enterTitle": "Enter the code from the Studio",
+    "enterLead": "The desktop Studio shows the code after you press “Sign in to server”.",
+    "codeLabel": "Code",
+    "codeInvalid": "An eight-character code, e.g. BCDF-2345",
+    "continue": "Continue",
+    "loading": "Loading the request…",
+    "loadFailed": "Could not load the request.",
+    "retry": "Retry",
+    "question": "Allow “{{name}}” to access your projects over git?",
+    "codeTitle": "Code on this page",
+    "codeHint": "It must match the code in the Studio.",
+    "kind": "Device",
+    "kindValue": {
+      "desktop": "Desktop Studio",
+      "cli": "Command line"
+    },
+    "requested": "Requested",
+    "ip": "IP address",
+    "expires": "Code valid",
+    "expiresIn": "for {{time}}",
+    "expiredNow": "expired",
+    "scopesTitle": "Permissions",
+    "scopeRead": "Read",
+    "scopeReadHint": "Clone and fetch projects where you can see the sources",
+    "scopeWrite": "Write",
+    "scopeWriteHint": "Push changes where you can edit",
+    "warning": "Approve only if you have just pressed “Sign in” in your own Studio. The device gets access to every project where you can see the sources, for 90 days. You can revoke it in Settings → Tokens.",
+    "approve": "Allow",
+    "deny": "Deny",
+    "otherCode": "Another code",
+    "toTokens": "To tokens",
+    "result": {
+      "approved": {
+        "title": "Done. Go back to the Studio",
+        "body": "The Studio gets access in a few seconds. The device token is listed under account Tokens."
+      },
+      "denied": {
+        "title": "Sign-in denied",
+        "body": "The device gets no access. If it was you, start signing in from the Studio again."
+      },
+      "expired": {
+        "title": "The code has expired",
+        "body": "A code is valid for 10 minutes. Start signing in from the Studio again."
+      },
+      "invalid": {
+        "title": "Code not found",
+        "body": "Check the code in the Studio or start signing in again."
+      },
+      "used": {
+        "title": "The code was already used",
+        "body": "This sign-in was already approved or denied."
+      }
+    }
+  },
+  "clone": {
+    "title": "Clone from the server",
+    "lead": "Open the project in the desktop Studio or any git client. Changes are pushed back here.",
+    "url": "git address",
+    "branch": "Branch: {{branch}}",
+    "canPush": "You can push changes",
+    "readOnly": "Read-only: you cannot push changes",
+    "tabs": {
+      "label": "How to clone",
+      "desktop": "Desktop Studio",
+      "cli": "Command line"
+    },
+    "desktopSteps": "In the desktop Studio: “Clone project” → “HSE Doc Studio server” → sign in to this server and pick the project.",
+    "cliCommand": "Command",
+    "cliAuth": "Any user name; the password is a token with git access.",
+    "createToken": "Create a token for git",
+    "disabled": "The administrator turned off git over HTTPS.",
+    "loading": "Loading the address…",
+    "loadFailed": "Could not load the git address."
+  },
+  "source": {
+    "label": "Clone from",
+    "studio": "HSE Doc Studio server",
+    "studioHint": "Projects on a Studio server: sign in with a code, no tokens",
+    "git": "Any git hosting",
+    "gitHint": "GitHub, GitLab, Gitea or your own server by address"
+  },
+  "servers": {
+    "title": "Studio servers",
+    "empty": "You have not signed in to any Studio server yet.",
+    "account": "Signed in: {{name}}",
+    "accessUntil": "access until {{date}}",
+    "state": {
+      "ok": "Access works",
+      "expired": "Access expired",
+      "revoked": "Access revoked",
+      "unreachable": "Server not responding"
+    },
+    "open": "Projects",
+    "relogin": "Sign in again",
+    "forget": "Forget server",
+    "revokeOnServer": "Revoke on the server",
+    "loginOpen": "Sign in to a server",
+    "loadFailed": "Could not load the server list."
+  },
+  "login": {
+    "title": "Sign in to a Studio server",
+    "url": "Server address",
+    "urlPlaceholder": "https://studio.hse.ru",
+    "urlHint": "https only; http works for localhost.",
+    "submit": "Sign in",
+    "cancel": "Cancel",
+    "codeTitle": "Confirmation code",
+    "codeHint": "Open the confirmation page on the server and check that the code matches.",
+    "openBrowser": "Open the confirmation page",
+    "waiting": "Waiting for approval on the website…",
+    "expiresIn": "Code valid for {{time}}",
+    "result": {
+      "approved": "Signed in. Pick a project.",
+      "denied": "Sign-in was denied on the website.",
+      "expired": "The code expired. Start again.",
+      "error": "Could not sign in to the server."
+    },
+    "again": "Start again"
+  },
+  "projects": {
+    "title": "Projects on the server",
+    "search": "Search by name",
+    "empty": "The server has no projects available to you.",
+    "authFailed": "Access to the server expired or was revoked. Sign in again.",
+    "loadFailed": "Could not load the server projects.",
+    "owner": "Owner: {{name}}",
+    "readOnly": "read-only",
+    "clone": "Clone",
+    "back": "Back to servers",
+    "role": {
+      "owner": "Owner",
+      "editor": "Editor",
+      "reviewer": "Reviewer",
+      "reader": "Reader"
+    }
+  }
+}

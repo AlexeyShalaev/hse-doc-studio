@@ -153,7 +153,8 @@
   "wizardPage": {
     "createTitle": "New project",
     "connectTitle": "Connect folder",
-    "cloneTitle": "Clone a project"
+    "cloneTitle": "Clone a project",
+    "studioDeviceName": "Studio on this computer"
   },
   "accountMenu": {
     "title": "Account",

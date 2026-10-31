@@ -64,7 +64,8 @@ const SERVER_CAPABILITIES: Capabilities = {
   personal_signing_keys: true,
   personal_runners: false,
   remote_runner: false,
-  git_remote: false,
+  // Сервер отдаёт проекты по git: «Клонировать с сервера» в настройках проекта.
+  git_remote: true,
   git_server_login: false,
 };
 
@@ -195,7 +196,8 @@ const localBase = (): Bootstrap => ({
     personal_runners: false,
     remote_runner: true,
     git_remote: false,
-    git_server_login: false,
+    // Локальная Студия входит на сервер Студии кодом и клонирует его проекты.
+    git_server_login: true,
   },
   csrf_token: null,
 });

@@ -327,7 +327,12 @@
       "settings_build_update": "Build settings changed",
       "settings_instance_update": "Instance settings changed",
       "settings_personal_runners_update": "Personal runner settings changed",
-      "submission_downloaded": "Submission archive downloaded"
+      "submission_downloaded": "Submission archive downloaded",
+      "git_push": "Git push",
+      "git_fetch": "Git fetch",
+      "git_auth_failed": "Failed git sign-in",
+      "device_approve": "Device allowed git access",
+      "device_deny": "Device denied git access"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

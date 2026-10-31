@@ -24,6 +24,7 @@ const EXPECTED: Record<string, { state: string; block?: string }> = {
   offline_browser: { state: "offline", block: "offline_browser" },
   error_remote_moved: { state: "error" },
   error_large_file: { state: "error" },
+  error_push_rejected: { state: "error" },
   error_unknown: { state: "error" },
   blocked_off_branch: { state: "blocked", block: "off_branch" },
   blocked_read_only: { state: "blocked", block: "read_only" },

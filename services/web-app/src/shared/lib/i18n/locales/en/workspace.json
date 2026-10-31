@@ -260,7 +260,8 @@
         "disabled": "Turned off"
       }
     },
-    "sectionBuilds": "Builds"
+    "sectionBuilds": "Builds",
+    "sectionSyncServerClone": "Clone from the server"
   },
   "files": {
     "editorTitle": "File editor",

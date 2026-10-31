@@ -25,7 +25,10 @@ vi.mock("@features/folder-picker", () => ({
 const absent = new Set<string>();
 vi.mock("@entities/session", async () => ({
   ...(await vi.importActual<Record<string, unknown>>("@entities/session")),
-  useCapabilities: () => ({ lacks: (name: string) => absent.has(name) }),
+  useCapabilities: () => ({
+    lacks: (name: string) => absent.has(name),
+    has: (name: string) => !absent.has(name) && name !== "git_server_login",
+  }),
 }));
 vi.mock("@features/git-remote", () => ({
   CloneWizard: ({

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n } from "@shared/lib";
 import { AuthErrorPage } from "@pages/AuthErrorPage";
+import { DevicePage } from "@pages/DevicePage";
 import { ErrorPage } from "@pages/ErrorPage";
 import { FirstRunPage } from "@pages/FirstRunPage";
 import { ForgotPage } from "@pages/ForgotPage";
@@ -46,11 +47,15 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { DevServerScreensPage },
             { getProjectsGallery },
             { getRunnerPairGallery },
+            { getDeviceGallery },
+            { getGitServerGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
             import("@pages/WelcomePage"),
             import("@pages/RunnerPairPage"),
+            import("@pages/DevicePage"),
+            import("@features/git-server"),
             import("./demo"),
           ]);
           const extraSections = [
@@ -63,6 +68,16 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
               id: "runner-pair",
               title: "Подтверждение сопряжения раннера",
               groups: getRunnerPairGallery(),
+            },
+            {
+              id: "device",
+              title: "Вход устройства в git сервера",
+              groups: getDeviceGallery(),
+            },
+            {
+              id: "git-server",
+              title: "Клонирование с сервера Студии",
+              groups: getGitServerGallery(),
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
@@ -118,6 +133,11 @@ export const router = createBrowserRouter([
       {
         path: "/settings/runners/pair",
         element: <RunnerPairPage />,
+      },
+      // Подтверждение входа Студии на компьютере в git сервера (device flow).
+      {
+        path: "/device",
+        element: <DevicePage />,
       },
       {
         path: "/settings/:section",

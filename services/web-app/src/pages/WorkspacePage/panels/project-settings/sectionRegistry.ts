@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   Cpu,
   CloudUpload,
+  Download,
   Files,
   FolderSync,
   GitBranch,
@@ -44,6 +45,7 @@ export type ProjectSettingsSectionId =
   | "sync-shared-folder"
   | "sync-exchange"
   | "sync-ci"
+  | "sync-server-clone"
   | "danger-zone";
 
 // Всё, от чего зависит показ условных секций. Вычисляется владельцем черновика
@@ -71,6 +73,8 @@ export type ProjectSettingsSectionContext = {
   hasSharedFolder: boolean;
   // Серверный проект: у него есть роль смотрящего и панель «Доступ».
   hasAccess?: boolean;
+  // Сервер отдаёт проекты по git (capabilities.git_remote) и это серверный проект.
+  hasGitRemote?: boolean;
 };
 
 export type ProjectSettingsSectionDef = {
@@ -191,6 +195,13 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     icon: Workflow,
     isAvailable: (ctx) => ctx.syncSupported,
   },
+  // gitremote: адрес проекта для git на сервере (раздел 10.12).
+  {
+    id: "sync-server-clone",
+    labelKey: "projectSettings.sectionSyncServerClone",
+    icon: Download,
+    isAvailable: (ctx) => ctx.hasGitRemote === true,
+  },
   {
     id: "danger-zone",
     labelKey: "projectSettings.sectionDangerZone",
@@ -271,6 +282,7 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     labelKey: "projectSettingsNav.groupSync",
     icon: CloudUpload,
     sections: [
+      "sync-server-clone",
       "sync-remote",
       "sync-options",
       "sync-shared-folder",

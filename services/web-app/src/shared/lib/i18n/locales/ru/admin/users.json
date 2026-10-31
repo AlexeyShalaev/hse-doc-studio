@@ -339,7 +339,12 @@
       "settings_build_update": "Изменены настройки сборки",
       "settings_instance_update": "Изменены настройки установки",
       "settings_personal_runners_update": "Изменены настройки личных раннеров",
-      "submission_downloaded": "Скачан архив сдачи"
+      "submission_downloaded": "Скачан архив сдачи",
+      "git_push": "Отправка изменений по git",
+      "git_fetch": "Получение проекта по git",
+      "git_auth_failed": "Неудачный вход в git",
+      "device_approve": "Устройству разрешён git",
+      "device_deny": "Устройству отказано в git"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

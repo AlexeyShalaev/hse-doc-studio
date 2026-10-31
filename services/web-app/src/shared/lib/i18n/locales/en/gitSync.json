@@ -385,5 +385,9 @@
     "showIncoming": "Show in the feed below",
     "showOutgoing": "Show in the feed below",
     "bundleLink": "Hand the project over as a file"
+  },
+  "pushRejected": {
+    "title": "The server rejected the push",
+    "lead": "Nothing was pushed. Fix the listed problems and sync again."
   }
 }

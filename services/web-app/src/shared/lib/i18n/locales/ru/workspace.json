@@ -262,7 +262,8 @@
         "disabled": "Выключен"
       }
     },
-    "sectionBuilds": "Сборки"
+    "sectionBuilds": "Сборки",
+    "sectionSyncServerClone": "Клонировать с сервера"
   },
   "files": {
     "editorTitle": "Редактор файлов",

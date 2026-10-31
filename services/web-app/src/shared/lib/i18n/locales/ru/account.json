@@ -173,7 +173,18 @@
     "confirmRevoke": "Отозвать токен «{{name}}»?",
     "revokeYes": "Отозвать",
     "revokeNo": "Отмена",
-    "toastRevoked": "Токен отозван"
+    "toastRevoked": "Токен отозван",
+    "preset": {
+      "git": "Для git",
+      "gitName": "git на компьютере"
+    },
+    "origin": {
+      "device": "Устройство",
+      "kind": {
+        "desktop": "Студия на компьютере",
+        "cli": "командная строка"
+      }
+    }
   },
   "identities": {
     "title": "Способы входа",
