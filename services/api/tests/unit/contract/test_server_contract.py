@@ -15,8 +15,8 @@ from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
-from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import git_remote as gr
+from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
