@@ -32,5 +32,6 @@
     "personal_runners": false,
     "remote_runner": false
   },
-  "csrf_token": null
+  "csrf_token": null,
+  "guest": null
 }

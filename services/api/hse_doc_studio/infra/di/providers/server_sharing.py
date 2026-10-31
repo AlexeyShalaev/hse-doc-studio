@@ -2,15 +2,31 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.access.links import IShareLinkRepository, IShareLinkStore, LinkRole
+from hse_doc_studio.core.access.links import (
+    IBuildPayerResolver,
+    IGuestSessionRepository,
+    IShareLinkRepository,
+    IShareLinkStore,
+    LinkRole,
+)
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.access.sharing_policy import ISharingPolicyReader, SharingEnvOverrides
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IPasswordHasher
+from hse_doc_studio.core.identity.protocols import (
+    IAuditLog,
+    IInstanceSettingsRepository,
+    ILoginAttemptRepository,
+    IPasswordHasher,
+)
+from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.infra.db.repositories.guest_sessions import PostgresGuestSessionRepository
+from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.share_links import PostgresShareLinkRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.sharing.policy_reader import PostgresSharingPolicyReader
@@ -23,6 +39,16 @@ from hse_doc_studio.use_cases.sharing.links import (
     ShareLinkService,
     UpdateShareLinkUC,
 )
+from hse_doc_studio.use_cases.sharing.open_link import (
+    GuestInfoUC,
+    GuestSessionService,
+    LeaveGuestSessionUC,
+    OpenShareLinkUC,
+    PreviewShareLinkUC,
+    ShareLinkResolver,
+    UpdateGuestSessionUC,
+)
+from hse_doc_studio.use_cases.sharing.payer import GuestBuildPayer
 
 
 class ServerSharingProvider(Provider):
@@ -95,3 +121,54 @@ class ServerSharingProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_link_visits_uc(self, service: ShareLinkService) -> ListLinkVisitsUC:
         return ListLinkVisitsUC(service)
+
+    @provide
+    def get_guest_sessions(self, sessions: SessionProvider) -> IGuestSessionRepository:
+        return PostgresGuestSessionRepository(sessions)
+
+    @provide
+    def get_guest_session_service(self, guests: IGuestSessionRepository) -> GuestSessionService:
+        return GuestSessionService(guests, lifetime=timedelta(days=settings.sharing.guest_session_days))
+
+    @provide
+    def get_link_resolver(
+        self, store: IShareLinkStore, policy: ISharingPolicyReader, orgs: IOrgRepository
+    ) -> ShareLinkResolver:
+        return ShareLinkResolver(store, policy, orgs)
+
+    @provide
+    def get_preview_uc(self, resolver: ShareLinkResolver) -> PreviewShareLinkUC:
+        return PreviewShareLinkUC(resolver)
+
+    @provide(scope=Scope.REQUEST)
+    def get_open_uc(  # noqa: PLR0913 — зависимости открытия ссылки
+        self,
+        resolver: ShareLinkResolver,
+        store: IShareLinkStore,
+        guests: IGuestSessionRepository,
+        guest_sessions: GuestSessionService,
+        acl: IProjectAclRepository,
+        hasher: IPasswordHasher,
+        attempts: ILoginAttemptRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> OpenShareLinkUC:
+        return OpenShareLinkUC(resolver, store, guests, guest_sessions, acl, hasher, attempts, audit, uow)
+
+    @provide
+    def get_guest_info_uc(
+        self, guests: IGuestSessionRepository, store: IShareLinkStore, policy: ISharingPolicyReader
+    ) -> GuestInfoUC:
+        return GuestInfoUC(guests, store, policy)
+
+    @provide
+    def get_update_guest_uc(self, guests: IGuestSessionRepository, info: GuestInfoUC) -> UpdateGuestSessionUC:
+        return UpdateGuestSessionUC(guests, info)
+
+    @provide
+    def get_leave_guest_uc(self, guests: IGuestSessionRepository) -> LeaveGuestSessionUC:
+        return LeaveGuestSessionUC(guests)
+
+    @provide
+    def get_build_payer(self, store: IShareLinkStore, acl: PostgresProjectAclRepository) -> IBuildPayerResolver:
+        return GuestBuildPayer(store, acl)

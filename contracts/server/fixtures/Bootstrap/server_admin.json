@@ -38,5 +38,6 @@
     "personal_runners": true,
     "remote_runner": false
   },
-  "csrf_token": "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i"
+  "csrf_token": "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i",
+  "guest": null
 }

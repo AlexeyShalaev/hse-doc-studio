@@ -13,6 +13,8 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from hse_doc_studio.api.logging_setup import mask_link_tokens
+
 logger = structlog.get_logger(__name__)
 
 DB_UNAVAILABLE_CODE = "db_unavailable"
@@ -42,7 +44,7 @@ async def _db_unavailable_handler(request: Request, exc: Exception) -> JSONRespo
     )
     if not db_error and not _raised_by_db_driver(exc):
         raise exc  # чужой ConnectionError или TimeoutError: обычная 500
-    logger.warning("db_unavailable", path=request.url.path, exc_type=type(exc).__name__)
+    logger.warning("db_unavailable", path=mask_link_tokens(request.url.path), exc_type=type(exc).__name__)
     return JSONResponse(
         status_code=_STATUS,
         content={"detail": "Database is unavailable, retry later", "code": DB_UNAVAILABLE_CODE},

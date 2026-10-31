@@ -114,6 +114,7 @@ from hse_doc_studio.infra.projects.usage_meter import ProjectQuotaService, Proje
 from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
+from hse_doc_studio.infra.sharing.policy_reader import PostgresSharingPolicyReader
 from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.factory import create_object_store
@@ -261,8 +262,11 @@ class ServerPersistenceProvider(Provider):
         return repo
 
     @provide
-    def get_postgres_project_acl(self, sessions: SessionProvider, flags: AclFlagsCache) -> PostgresProjectAclRepository:
-        return PostgresProjectAclRepository(sessions, flags)
+    def get_postgres_project_acl(
+        self, sessions: SessionProvider, flags: AclFlagsCache, sharing: PostgresSharingPolicyReader
+    ) -> PostgresProjectAclRepository:
+        # Ссылки доступа действуют по текущей политике установки (links): читатель политики из ServerSharingProvider.
+        return PostgresProjectAclRepository(sessions, flags, sharing)
 
     @provide(scope=Scope.REQUEST)
     def get_project_acl(self, inner: PostgresProjectAclRepository) -> IProjectAclRepository:

@@ -19,7 +19,7 @@ from enum import StrEnum
 from typing import Literal, Protocol
 from uuid import UUID
 
-from hse_doc_studio.core.access.entities import Role
+from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.listing import Found, Window
 
 
@@ -323,3 +323,10 @@ class IGuestSessionRepository(Protocol):
     async def delete(self, session_id: str) -> None: ...
 
     async def purge_expired(self, now: datetime) -> int: ...
+
+
+class IBuildPayerResolver(Protocol):
+    """Чья квота и чей маршрут раннеров у сборки: пользователь сам; гость по ссылке (S7) ставит сборку от имени
+    создателя ссылки, а если тот потерял право делиться или удалён, от имени владельца-человека проекта."""
+
+    async def payer_for(self, actor: Actor, project_id: UUID) -> UUID: ...

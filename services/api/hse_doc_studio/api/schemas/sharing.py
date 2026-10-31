@@ -12,13 +12,15 @@ from typing import Literal
 from pydantic import Field
 
 from hse_doc_studio.api.schemas.common import StrictModel
-from hse_doc_studio.api.schemas.session import SettingState
+from hse_doc_studio.api.schemas.session import GuestInfo, GuestLinkInfo, SettingState
 
 LinkRoleName = Literal["reader", "reviewer", "editor"]
 LinkStateName = Literal["active", "expired", "revoked", "blocked"]
 LinkBlockReasonName = Literal["links_disabled", "org_links_off", "org_role_cap", "nda"]
 LinkPreviewStateName = Literal["ok", "password_required", "login_required", "org_only", "inactive"]
 OrgLinksModeName = Literal["any", "org_only", "off"]
+
+__all__ = ["GuestInfo", "GuestLinkInfo"]
 
 
 class ShareLinkAuthor(StrictModel):
@@ -119,19 +121,6 @@ class OpenShareLinkResponse(StrictModel):
     show_sources: bool
     # Куда вести: рабочая область или просмотр PDF (читатель без исходников).
     landing: Literal["workspace", "view"]
-
-
-class GuestLinkInfo(StrictModel):
-    project_id: str
-    project_name: str
-    link_label: str
-    role: LinkRoleName
-    show_sources: bool
-
-
-class GuestInfo(StrictModel):
-    name: str | None
-    links: list[GuestLinkInfo]
 
 
 class UpdateGuestSessionRequest(StrictModel):

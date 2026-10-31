@@ -1,27 +1,42 @@
-"""Членство проекта в Postgres: владелец, организация, прямые участники и группы."""
+"""Членство проекта в Postgres: владелец, организация, прямые участники, группы и ссылки доступа."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any, Protocol
 from uuid import UUID
 
 import structlog
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hse_doc_studio.core.access.entities import Actor, ActorKind, Grant, ProjectAcl, Role
+from hse_doc_studio.core.access.links import LinkState
 from hse_doc_studio.core.access.repositories import (
     IProjectAclRepository,
     ProjectMemberGrant,
     ProjectMembership,
     ProjectOwnerView,
 )
-from hse_doc_studio.core.access.resolution import OrgStanding, resolve_grant
+from hse_doc_studio.core.access.resolution import LinkGrant, OrgStanding, resolve_grant
+from hse_doc_studio.core.access.sharing_policy import (
+    InstanceSharing,
+    OrgLinksMode,
+    SharingPolicy,
+    effective_policy,
+    guest_may_use,
+    link_state,
+    link_usable,
+    parse_org_sharing,
+)
 from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
+from hse_doc_studio.infra.db.orm.sharing import GuestSessionLinkRow, GuestSessionRow, ShareLinkGrantRow, ShareLinkRow
 from hse_doc_studio.infra.db.repositories.projects import GROUP_PRINCIPAL, USER_PRINCIPAL
+from hse_doc_studio.infra.db.repositories.share_links import share_link_of
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.projects.acl_flags import AclFlags, AclFlagsCache
 
@@ -30,54 +45,93 @@ logger = structlog.get_logger()
 _ORG_ADMIN_ROLES = frozenset({"owner", "admin"})
 
 
-class PostgresProjectAclRepository:
-    """Права берутся из Postgres на каждый вызов: владение, роль организации, прямая запись, группы.
-    Между запросами ничего не кэшируется, поэтому вышедший из группы теряет доступ сразу."""
+class _InstanceSharingSource(Protocol):
+    async def instance_sharing(self) -> InstanceSharing: ...
 
-    def __init__(self, sessions: SessionProvider, flags: AclFlagsCache) -> None:
+
+@dataclass(frozen=True)
+class _ProjectLinks:
+    """Действующие ссылки человека или гостя на один проект: новые первыми."""
+
+    grants: tuple[LinkGrant, ...] = ()
+    labels: Mapping[str, str] = field(default_factory=dict)
+
+
+_PROJECT_COLUMNS = (
+    ProjectRow.id,
+    ProjectRow.owner_user_id,
+    ProjectRow.owner_org_id,
+    ProjectRow.org_visible,
+    ProjectRow.team,
+    ProjectRow.shared_enabled,
+    ProjectRow.nda,
+    OrgRow.policies.label("org_policies"),
+)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+class PostgresProjectAclRepository:
+    """Права берутся из Postgres на каждый вызов: владение, роль организации, прямая запись, группы и ссылки.
+    Между запросами ничего не кэшируется, поэтому вышедший из группы и потерявший ссылку теряют доступ сразу.
+
+    Ссылка действует, если не отозвана и не истекла, проект не удалён и её пускает текущая политика установки и
+    организации (`core.access.sharing_policy`): ужесточение политики закрывает уже открытые ссылки без записи в БД.
+    """
+
+    def __init__(
+        self,
+        sessions: SessionProvider,
+        flags: AclFlagsCache,
+        sharing: _InstanceSharingSource | None = None,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
         self._sessions = sessions
         self._flags = flags
+        self._sharing = sharing
+        self._clock = clock
 
-    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:  # noqa: ARG002
-        if actor.kind is not ActorKind.user or actor.id is None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
+        if actor.id is None or actor.kind not in (ActorKind.user, ActorKind.guest):
+            return None
+        if actor.kind is ActorKind.guest and not include_links:
             return None
         async with self._sessions.use() as session:
             project = (
                 await session.execute(
-                    select(
-                        ProjectRow.id,
-                        ProjectRow.owner_user_id,
-                        ProjectRow.owner_org_id,
-                        ProjectRow.org_visible,
-                        ProjectRow.team,
-                        ProjectRow.shared_enabled,
-                    ).where(ProjectRow.id == project_id, ProjectRow.deleted_at.is_(None))
+                    select(*_PROJECT_COLUMNS)
+                    .select_from(ProjectRow)
+                    .outerjoin(OrgRow, OrgRow.id == ProjectRow.owner_org_id)
+                    .where(ProjectRow.id == project_id, ProjectRow.deleted_at.is_(None))
                 )
             ).first()
             if project is None:
                 return None
             self._flags.put(project_id, AclFlags(team=project.team, shared_enabled=project.shared_enabled))
-            grants = await _grants(session, actor.id, [project])
-        grant = grants.get(project_id)
-        if grant is None:
+            if actor.kind is ActorKind.guest:
+                links = await self._links_for_guest(session, actor.id, project)
+                grant = resolve_grant(is_owner=False, direct=None, links=links.grants)
+            else:
+                grants, _ = await self._grants(session, actor.id, [project], include_links=include_links)
+                grant = grants.get(project_id)
+        if grant is None or actor.key is None:
             return None
         return ProjectAcl(
             project_id=str(project_id),
             owner_id=project.owner_user_id,
             team=project.team,
             shared_enabled=project.shared_enabled,
-            grants={actor.id: grant},
+            grants={actor.key: grant},
         )
 
     async def memberships_for(self, actor: Actor, project_ids: Sequence[UUID]) -> dict[UUID, ProjectMembership]:
-        if actor.kind is not ActorKind.user or actor.id is None or not project_ids:
+        if actor.id is None or actor.kind not in (ActorKind.user, ActorKind.guest) or not project_ids:
             return {}
         stmt = (
             select(
-                ProjectRow.id,
-                ProjectRow.owner_user_id,
-                ProjectRow.owner_org_id,
-                ProjectRow.org_visible,
+                *_PROJECT_COLUMNS,
                 UserRow.name.label("owner_name"),
                 OrgRow.name.label("org_name"),
                 OrgRow.slug.label("org_slug"),
@@ -87,15 +141,31 @@ class PostgresProjectAclRepository:
             .outerjoin(OrgRow, OrgRow.id == ProjectRow.owner_org_id)
             .where(ProjectRow.id.in_(list(project_ids)), ProjectRow.deleted_at.is_(None))
         )
+        labels: dict[str, str] = {}
+        grants: dict[UUID, Grant] = {}
         async with self._sessions.use() as session:
             rows = (await session.execute(stmt)).all()
-            grants = await _grants(session, actor.id, rows)
+            if actor.kind is ActorKind.guest:
+                for row in rows:
+                    links = await self._links_for_guest(session, actor.id, row)
+                    labels.update(links.labels)
+                    if (grant := resolve_grant(is_owner=False, direct=None, links=links.grants)) is not None:
+                        grants[row.id] = grant
+            else:
+                grants, found_labels = await self._grants(session, actor.id, rows, include_links=True)
+                labels.update(found_labels)
         result: dict[UUID, ProjectMembership] = {}
         for row in rows:
-            grant = grants.get(row.id)
-            if grant is None:
+            found = grants.get(row.id)
+            if found is None:
                 continue
-            result[row.id] = ProjectMembership(project_id=row.id, owner=_owner_view(row), my_role=grant.role)
+            result[row.id] = ProjectMembership(
+                project_id=row.id,
+                owner=_owner_view(row),
+                my_role=found.role,
+                via_link=found.via_link,
+                link_label=labels.get(found.link_id) if found.link_id else None,
+            )
         return result
 
     async def set_shared_enabled(self, project_id: UUID, enabled: bool) -> None:
@@ -106,30 +176,103 @@ class PostgresProjectAclRepository:
         if current is not None:
             self._flags.put(project_id, AclFlags(team=current.team, shared_enabled=enabled))
 
+    async def _grants(
+        self, session: AsyncSession, user_id: str, projects: Sequence[Any], *, include_links: bool
+    ) -> tuple[dict[UUID, Grant], dict[str, str]]:
+        """Право человека на каждый из проектов и подписи ссылок, через которые право получено."""
+        ids = [p.id for p in projects]
+        direct = await _direct_grants(session, user_id, ids)
+        via_groups = await _group_grants(session, user_id, ids)
+        org_roles = await _org_roles(session, user_id, {p.owner_org_id for p in projects if p.owner_org_id})
+        links = await self._links_for_user(session, user_id, projects, org_roles) if include_links else {}
+        grants: dict[UUID, Grant] = {}
+        labels: dict[str, str] = {}
+        for project in projects:
+            org_role = org_roles.get(project.owner_org_id) if project.owner_org_id is not None else None
+            standing = (
+                None
+                if org_role is None
+                else OrgStanding(is_admin=org_role in _ORG_ADMIN_ROLES, org_visible=bool(project.org_visible))
+            )
+            found = links.get(project.id, _ProjectLinks())
+            labels.update(found.labels)
+            grant = resolve_grant(
+                is_owner=project.owner_user_id == user_id,
+                direct=direct.get(project.id),
+                groups=via_groups.get(project.id, ()),
+                org=standing,
+                links=found.grants,
+            )
+            if grant is not None:
+                grants[project.id] = grant
+        return grants, labels
 
-async def _grants(session: AsyncSession, user_id: str, projects: Sequence[Any]) -> dict[UUID, Grant]:
-    """Право человека на каждый из проектов; строки проектов несут id, владельцев и org_visible."""
-    ids = [p.id for p in projects]
-    direct = await _direct_grants(session, user_id, ids)
-    via_groups = await _group_grants(session, user_id, ids)
-    org_roles = await _org_roles(session, user_id, {p.owner_org_id for p in projects if p.owner_org_id is not None})
-    grants: dict[UUID, Grant] = {}
-    for project in projects:
-        org_role = org_roles.get(project.owner_org_id) if project.owner_org_id is not None else None
-        standing = (
-            None
-            if org_role is None
-            else OrgStanding(is_admin=org_role in _ORG_ADMIN_ROLES, org_visible=bool(project.org_visible))
+    async def _policy(self, project: Any) -> SharingPolicy:
+        instance = await self._sharing.instance_sharing() if self._sharing is not None else InstanceSharing()
+        org = parse_org_sharing(project.org_policies) if project.owner_org_id is not None else None
+        return effective_policy(instance, org)
+
+    async def _links_for_user(
+        self, session: AsyncSession, user_id: str, projects: Sequence[Any], org_roles: Mapping[str, str]
+    ) -> dict[UUID, _ProjectLinks]:
+        """Ссылочные права вошедшего (`share_link_grants`), которые сейчас действуют."""
+        now = self._clock()
+        by_id = {p.id: p for p in projects}
+        stmt = (
+            select(ShareLinkRow)
+            .join(ShareLinkGrantRow, ShareLinkGrantRow.link_id == ShareLinkRow.id)
+            .where(
+                ShareLinkGrantRow.user_id == user_id,
+                ShareLinkRow.project_id.in_(list(by_id)),
+                ShareLinkRow.revoked_at.is_(None),
+                or_(ShareLinkRow.expires_at.is_(None), ShareLinkRow.expires_at > now),
+            )
+            .order_by(ShareLinkRow.created_at.desc(), ShareLinkRow.id)
         )
-        grant = resolve_grant(
-            is_owner=project.owner_user_id == user_id,
-            direct=direct.get(project.id),
-            groups=via_groups.get(project.id, ()),
-            org=standing,
+        rows = list((await session.execute(stmt)).scalars())
+        result: dict[UUID, _ProjectLinks] = {}
+        policies: dict[UUID, SharingPolicy] = {}
+        for row in rows:
+            project = by_id[row.project_id]
+            if project.id not in policies:
+                policies[project.id] = await self._policy(project)
+            policy = policies[project.id]
+            link = share_link_of(row)
+            if not link_usable(link, now, policy, project_nda=project.nda):
+                continue
+            if policy.org_mode is OrgLinksMode.org_only and project.owner_org_id not in org_roles:
+                continue
+            current = result.get(project.id, _ProjectLinks())
+            result[project.id] = _ProjectLinks(
+                grants=(*current.grants, LinkGrant(link.id, link.role.role, link.sources_open)),
+                labels={**current.labels, link.id: link.label},
+            )
+        return result
+
+    async def _links_for_guest(self, session: AsyncSession, session_id: str, project: Any) -> _ProjectLinks:
+        """Ссылка гостевой сессии на этот проект, если она действует и пускает гостя."""
+        now = self._clock()
+        stmt = (
+            select(ShareLinkRow)
+            .join(GuestSessionLinkRow, GuestSessionLinkRow.link_id == ShareLinkRow.id)
+            .join(GuestSessionRow, GuestSessionRow.id == GuestSessionLinkRow.session_id)
+            .where(
+                GuestSessionLinkRow.session_id == session_id,
+                GuestSessionLinkRow.project_id == project.id,
+                GuestSessionRow.expires_at > now,
+            )
         )
-        if grant is not None:
-            grants[project.id] = grant
-    return grants
+        row = (await session.execute(stmt)).scalar()
+        if row is None:
+            return _ProjectLinks()
+        link = share_link_of(row)
+        policy = await self._policy(project)
+        state, _ = link_state(link, now, policy, project_nda=project.nda)
+        if state is not LinkState.active or not guest_may_use(link, policy, project_nda=project.nda):
+            return _ProjectLinks()
+        return _ProjectLinks(
+            grants=(LinkGrant(link.id, link.role.role, link.sources_open),), labels={link.id: link.label}
+        )
 
 
 async def _direct_grants(session: AsyncSession, user_id: str, ids: list[UUID]) -> dict[UUID, ProjectMemberGrant]:

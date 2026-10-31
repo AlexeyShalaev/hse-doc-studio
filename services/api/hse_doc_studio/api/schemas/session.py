@@ -77,6 +77,19 @@ class SessionUser(StrictModel):
     org_roles: list[OrgRole]
 
 
+class GuestLinkInfo(StrictModel):
+    project_id: str
+    project_name: str
+    link_label: str
+    role: Literal["reader", "reviewer", "editor"]
+    show_sources: bool
+
+
+class GuestInfo(StrictModel):
+    name: str | None
+    links: list[GuestLinkInfo]
+
+
 class BootstrapResponse(StrictModel):
     mode: StudioModeName
     version: str
@@ -86,6 +99,8 @@ class BootstrapResponse(StrictModel):
     capabilities: Capabilities
     # Токен CSRF текущей сессии; без сессии null. Шлётся в заголовке X-CSRF-Token.
     csrf_token: str | None
+    # links: гость по ссылке (без входа); у вошедшего и анонима null. CSRF-токен гостя лежит в csrf_token.
+    guest: GuestInfo | None = None
 
 
 class AuthErrorBody(StrictModel):
@@ -325,6 +340,8 @@ class ProjectSummary(StrictModel):
     pinned: bool
     archived: bool
     shared_enabled: bool
+    # links: роль держится на ссылке, а не на членстве (значок «По ссылке»).
+    via_link: bool = False
 
 
 class ProjectSummaryPage(StrictModel):

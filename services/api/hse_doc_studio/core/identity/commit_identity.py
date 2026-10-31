@@ -41,3 +41,9 @@ def commit_identity(user: User, domain: str) -> CommitIdentity:
     if user.commit_use_account_email:
         return CommitIdentity(name, user.email, is_noreply=False)
     return CommitIdentity(name, noreply_email(user.id, domain), is_noreply=True)
+
+
+def guest_commit_identity(name: str | None, link_id: str, label: str, domain: str) -> CommitIdentity:
+    """Подпись правок гостя по ссылке: «Гость: Борис (ссылка «Для группы»)», адрес `guest+<ссылка>@noreply`."""
+    who = name or "без имени"
+    return CommitIdentity(f"Гость: {who} (ссылка «{label}»)", f"guest+{link_id}@{domain}", is_noreply=True)

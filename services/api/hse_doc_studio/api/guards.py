@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 from uuid import UUID
 
@@ -41,6 +42,7 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.commit_identity import guest_commit_identity, noreply_domain
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
@@ -112,7 +114,7 @@ async def load_project_acl(request: Request, project_id: str) -> ProjectAcl | No
     return await repository.load_for(actor, parsed)
 
 
-async def project_access_guard(request: Request) -> None:
+async def project_access_guard(request: Request) -> None:  # noqa: C901 — ветки гарда идут по порядку таблиц
     """Проверка прав актора на маршрут по таблицам `api.route_actions` и `api.route_scopes`.
 
     Кладёт актора в контекст запроса для всего `/api/v1`. Локальный актор уходит
@@ -143,7 +145,14 @@ async def project_access_guard(request: Request) -> None:
         _require_project_in_body(rule)
         return
     acl = await load_project_acl(request, str(project_id))
+    grant = acl.grant_for(actor) if acl is not None else None
+    if grant is not None and grant.via_link:
+        # Гость и ссылочное право: история, аудит и ограничение частоты видят ссылку, через которую открыт проект.
+        actor = await _linked_actor(request, actor, grant.link_id)
+        set_current_actor(actor)
     decision = decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params))
+    if decision is Decision.not_found and actor.is_guest:
+        await _explain_lost_link(request, actor, str(project_id))
     _enforce(decision, required_role(actor, rule.action, acl))
 
 
@@ -214,11 +223,45 @@ def _handled_before_actor(request: Request) -> bool:
     return scope is RouteScope.public or scope in SELF_AUTHENTICATED
 
 
+async def _linked_actor(request: Request, actor: Actor, link_id: str | None) -> Actor:
+    """Актор со ссылкой; гостю ещё и подпись снимков «Гость: <имя> (ссылка «<подпись>»)» с noreply-адресом."""
+    linked = actor.with_link(link_id)
+    if not actor.is_guest or link_id is None:
+        return linked
+    from hse_doc_studio.core.access.links import IShareLinkRepository  # noqa: PLC0415
+
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    link = await (await container.get(IShareLinkRepository)).get(link_id)
+    if link is None:
+        return linked
+    author = guest_commit_identity(actor.name, link_id, link.label, noreply_domain(settings.auth.public_url))
+    return replace(linked, name=author.name, email=author.email)
+
+
+async def _explain_lost_link(request: Request, actor: Actor, project_id: str) -> None:
+    """Гостю, у чьей сессии была ссылка этого проекта, отвечаем `link_inactive`: интерфейс покажет «Ссылка больше
+    не действует». Остальным обычный 404, чтобы не выдавать существование проекта."""
+    from hse_doc_studio.core.access.links import IGuestSessionRepository  # noqa: PLC0415
+
+    try:
+        parsed = UUID(project_id)
+    except ValueError:
+        return
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    guests = await container.get(IGuestSessionRepository)
+    if actor.id is not None and await guests.had_link_for(actor.id, parsed):
+        raise IdentityError(IdentityErrorCode.link_inactive)
+
+
 def _enforce_scope(actor: Actor, request: Request) -> None:
     scope = scope_for_request(request)
     if scope is None:
         raise IdentityError(IdentityErrorCode.forbidden)
     if scope is RouteScope.local_only:
+        raise IdentityError(IdentityErrorCode.not_found)
+    if actor.is_guest and scope is not RouteScope.guest:
+        # Гостю открыты только публичные маршруты, свои (`guest`) и маршруты проекта: аккаунт, админка,
+        # настройки и списки установки для него не существуют.
         raise IdentityError(IdentityErrorCode.not_found)
     # Токен доступа (PAT) админа админских функций не открывает: утёкший токен работал бы без CSRF.
     if scope in {RouteScope.instance_admin, RouteScope.org_admin} and (

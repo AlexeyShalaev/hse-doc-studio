@@ -51,6 +51,8 @@ class ProjectCard:
     pinned: bool
     archived: bool
     shared_enabled: bool
+    # Роль держится на ссылке, а не на членстве: в списке значок «По ссылке».
+    via_link: bool = False
 
 
 class IProjectBrowser(Protocol):

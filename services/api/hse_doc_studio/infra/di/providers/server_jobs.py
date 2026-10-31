@@ -11,6 +11,7 @@ from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
+from hse_doc_studio.core.access.links import IBuildPayerResolver
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
@@ -328,6 +329,7 @@ class ServerJobsProvider(Provider):
         env: InstanceEnvOverrides,
         wakeup: JobWakeup,
         router: IJobRouter,
+        payer: IBuildPayerResolver,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -353,4 +355,6 @@ class ServerJobsProvider(Provider):
             build_timeout_source=build_timeout_s,
             wakeup=wakeup,
             router=router,
+            # links: гость по ссылке собирает в квоту создателя ссылки (S7).
+            payer=payer.payer_for,
         )

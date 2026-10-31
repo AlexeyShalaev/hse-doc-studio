@@ -5,7 +5,8 @@
 без cookie (вход, регистрация: Origin всё равно проверяется), запросы с `Authorization: Bearer` без cookie
 сессии (браузер такой заголовок сам не подставит; при наличии cookie заголовок защиту не отключает, иначе любой
 Bearer снимал бы проверку с запроса, который всё равно аутентифицирует cookie) и маршруты со своей подписью
-(раннер, обратный вызов ONLYOFFICE).
+(раннер, обратный вызов ONLYOFFICE). Гость по ссылке без пользовательской сессии присылает токен своей гостевой
+сессии (его тоже отдаёт bootstrap).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import hmac
 from collections.abc import Awaitable, Callable, Collection
 from urllib.parse import urlsplit
 
+from dishka.exceptions import NoFactoryError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -29,6 +31,20 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 CSRF_EXEMPT_PREFIXES = ("/api/runner/", "/api/v1/office-editor/callback")
 
 type CsrfTokenLookup = Callable[[Scope, str], Awaitable[str | None]]
+
+
+async def guest_csrf_token(scope: Scope, secret: str) -> str | None:
+    """Токен CSRF гостевой сессии по ссылке (угроза T6); None, если сессии нет или она погасла."""
+    from hse_doc_studio.use_cases.sharing.open_link import GuestSessionService  # noqa: PLC0415
+
+    container = scope["app"].state.dishka_container
+    try:
+        guests = await container.get(GuestSessionService)
+    except NoFactoryError:
+        # Локальная установка: гостевых сессий нет.
+        return None
+    session = await guests.resolve(secret)
+    return session.csrf_token if session else None
 
 
 async def session_csrf_token(scope: Scope, secret: str) -> str | None:
@@ -53,11 +69,13 @@ class CsrfMiddleware:
         allowed_origins: Collection[str] = (),
         exempt_prefixes: tuple[str, ...] = CSRF_EXEMPT_PREFIXES,
         lookup: CsrfTokenLookup = session_csrf_token,
+        guest_lookup: CsrfTokenLookup = guest_csrf_token,
     ) -> None:
         self.app = app
         self._allowed = frozenset(_origin(o) for o in allowed_origins if o and o != "*")
         self._exempt = exempt_prefixes
         self._lookup = lookup
+        self._guest_lookup = guest_lookup
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope["method"] in SAFE_METHODS or scope["path"].startswith(self._exempt):
@@ -66,17 +84,18 @@ class CsrfMiddleware:
         request = Request(scope)
         credentials = credentials_from_request(request)
         bearer_only = credentials.bearer_token is not None and not credentials.session_secret
-        if not bearer_only and not await self._passes(request, credentials.session_secret):
+        if not bearer_only and not await self._passes(request, credentials.session_secret, credentials.guest_secret):
             await self._reject(scope, receive, send)
             return
         await self.app(scope, receive, send)
 
-    async def _passes(self, request: Request, session_secret: str | None) -> bool:
+    async def _passes(self, request: Request, session_secret: str | None, guest_secret: str | None) -> bool:
         if not self._origin_allowed(request):
             return False
-        if not session_secret:
-            return True
-        expected = await self._lookup(request.scope, session_secret)
+        expected = await self._lookup(request.scope, session_secret) if session_secret else None
+        if expected is None and guest_secret:
+            # Пользовательской сессии нет: запрос аутентифицирует гостевая сессия, и у неё свой токен.
+            expected = await self._guest_lookup(request.scope, guest_secret)
         if expected is None:
             # Недействительная сессия: запрос анонимный, отказ 401 даст проверка входа.
             return True

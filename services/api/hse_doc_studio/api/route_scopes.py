@@ -375,6 +375,11 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/api/admin/settings/instance"): _ADM,
     ("GET", "/api/admin/settings/build"): _ADM,
     ("PUT", "/api/admin/settings/build"): _ADM,
+    # links: страница ссылки (публичная, сама определяет вошедшего) и своя гостевая сессия
+    ("GET", "/links/{token}"): _P,
+    ("POST", "/links/{token}/open"): _P,
+    ("PATCH", "/links/session"): RouteScope.guest,
+    ("DELETE", "/links/session"): RouteScope.guest,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

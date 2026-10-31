@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.access.repositories import (
     AccessQuery,
@@ -16,6 +17,7 @@ from hse_doc_studio.core.access.repositories import (
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.listing import PICKER_LIMIT, Found, Picked
 from hse_doc_studio.use_cases.orgs.access import user_id_of
+from hse_doc_studio.use_cases.sharing.visibility import visible_rows_for
 
 
 class ListProjectAccessUC:
@@ -26,7 +28,7 @@ class ListProjectAccessUC:
         found = await self._directory.page_access(project_id, query)
         if found is None:
             raise IdentityError(IdentityErrorCode.not_found)
-        return found
+        return visible_rows_for(current_actor(), found)
 
 
 class ListAccessCandidatesUC:

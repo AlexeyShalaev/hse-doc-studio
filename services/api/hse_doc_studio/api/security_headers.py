@@ -38,6 +38,8 @@ INLINE_CONTENT_TYPES = frozenset(
 _UNSANDBOXED = frozenset({"application/pdf"})
 _HSTS = "max-age=31536000; includeSubDomains"
 _REFERRER_POLICY = "strict-origin-when-cross-origin"
+# Страница ссылки доступа и её API несут токен в адресе: Referer не должен унести его наружу (T2).
+NO_REFERRER_PREFIXES = ("/s/", "/api/v1/links/")
 
 
 def media_type_of(content_type: str) -> str:
@@ -87,7 +89,10 @@ class SecurityHeadersMiddleware:
 
     def _apply(self, scope: Scope, headers: MutableHeaders) -> None:
         headers.setdefault("X-Content-Type-Options", "nosniff")
-        headers.setdefault("Referrer-Policy", _REFERRER_POLICY)
+        if str(scope.get("path", "")).startswith(NO_REFERRER_PREFIXES):
+            headers["Referrer-Policy"] = "no-referrer"
+        else:
+            headers.setdefault("Referrer-Policy", _REFERRER_POLICY)
         if self._hsts:
             headers.setdefault("Strict-Transport-Security", _HSTS)
         media_type = media_type_of(headers.get("content-type", ""))

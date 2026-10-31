@@ -8,9 +8,37 @@
 
 from __future__ import annotations
 
+import logging
+import re
 import sys
 
 import structlog
+
+# Токен ссылки доступа в адресе (`/s/hsl_…`, `/api/v1/links/hsl_…`) в журнал не попадает (T2).
+_LINK_TOKEN = re.compile(r"hsl_[A-Za-z0-9_\-]+")
+LINK_TOKEN_MASK = "hsl_****"  # noqa: S105 — маска в журнале, не секрет
+
+
+def mask_link_tokens(text: str) -> str:
+    return _LINK_TOKEN.sub(LINK_TOKEN_MASK, text)
+
+
+class LinkTokenMaskFilter(logging.Filter):
+    """Маскирует токены ссылок в записях журнала доступа uvicorn (путь лежит в `args`)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(mask_link_tokens(a) if isinstance(a, str) else a for a in record.args)
+        if isinstance(record.msg, str):
+            record.msg = mask_link_tokens(record.msg)
+        return True
+
+
+def install_access_log_mask() -> None:
+    """Фильтр на журнал доступа uvicorn: путь запроса с токеном ссылки пишется как `hsl_****`."""
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, LinkTokenMaskFilter) for f in access.filters):
+        access.addFilter(LinkTokenMaskFilter())
 
 
 def configure_logging(*, use_json: bool = False) -> None:
@@ -22,6 +50,7 @@ def configure_logging(*, use_json: bool = False) -> None:
     ``use_json`` (HSE_STUDIO__LOGGING__USE_JSON) включает одну JSON-строку на запись для сборщиков логов; исключение
     в ней тоже обычным текстом без локалей.
     """
+    install_access_log_mask()
     if use_json:
         structlog.configure(
             processors=[

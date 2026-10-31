@@ -358,10 +358,12 @@ class AuditPage:
 
 @dataclass(frozen=True)
 class ActorCredentials:
-    """Что запрос предъявил для входа: значение cookie сессии и токен из заголовка Authorization: Bearer."""
+    """Что запрос предъявил для входа: значение cookie сессии, токен из заголовка Authorization: Bearer
+    и секрет гостевой сессии по ссылке (cookie `hse_guest`)."""
 
     session_secret: str | None = None
     bearer_token: str | None = None
+    guest_secret: str | None = None
 
 
 @dataclass(frozen=True)
