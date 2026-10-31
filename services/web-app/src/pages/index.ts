@@ -14,3 +14,5 @@ export * from "./FirstRunPage";
 export * from "./AuthErrorPage";
 export * from "./ProjectUnavailablePage";
 export * from "./RunnerPairPage";
+export * from "./InboxPage";
+export * from "./ProjectInvitePage";

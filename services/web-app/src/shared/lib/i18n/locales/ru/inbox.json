@@ -1,0 +1,63 @@
+{
+  "bell_one": "Входящие: {{count}} новое",
+  "bell_few": "Входящие: {{count}} новых",
+  "bell_many": "Входящие: {{count}} новых",
+  "title": "Входящие",
+  "markAll": "Отметить всё прочитанным",
+  "tabs": {
+    "all": "Всё",
+    "invitations": "Приглашения",
+    "requests": "Запросы",
+    "transfers": "Передачи"
+  },
+  "empty": "Здесь будут приглашения, запросы и уведомления",
+  "accept": "Принять",
+  "decline": "Отклонить",
+  "approve": "Одобрить",
+  "deny": "Отклонить",
+  "invitation": {
+    "title": "{{actor}} приглашает вас в «{{project}}»",
+    "expired": "Срок приглашения истёк. Попросите прислать новое.",
+    "until": "до {{date}}",
+    "accepted": "Вы в проекте «{{project}}»",
+    "declined": "Приглашение отклонено"
+  },
+  "transfer": {
+    "title": "{{actor}} передаёт вам проект «{{project}}»",
+    "becomesEditor": "{{actor}} станет редактором",
+    "fromOrg": "Передача от организации",
+    "confirm": "Принять проект? Вы станете его владельцем.",
+    "accepted": "Теперь вы владелец «{{project}}»",
+    "declined": "Передача отклонена"
+  },
+  "request": {
+    "title": "{{actor}} просит доступ к «{{project}}»",
+    "denied": "Запрос отклонён"
+  },
+  "myRequests": {
+    "title": "Мои запросы доступа",
+    "hidden": "Проект (имя появится после одобрения)",
+    "cancel": "Отменить",
+    "status": {
+      "pending": "ждёт решения",
+      "approved": "одобрен",
+      "denied": "отклонён",
+      "cancelled": "отменён"
+    }
+  },
+  "feed": "Уведомления",
+  "kind": {
+    "project_invitation": "{{actor}} приглашает вас в «{{project}}»",
+    "invitation_accepted": "{{actor}} принял приглашение в «{{project}}»",
+    "invitation_declined": "{{actor}} отклонил приглашение в «{{project}}»",
+    "access_request": "{{actor}} просит доступ к «{{project}}»",
+    "access_request_decided": "Ваш запрос доступа рассмотрен",
+    "access_request_decided_approved": "Ваш запрос доступа к «{{project}}» одобрен: {{role}}",
+    "access_request_decided_denied": "Ваш запрос доступа отклонён",
+    "transfer_request": "{{actor}} передаёт вам проект «{{project}}»",
+    "transfer_decided": "Передача проекта «{{project}}» завершена",
+    "transfer_decided_accepted": "Передача проекта «{{project}}» принята",
+    "transfer_decided_declined": "{{actor}} отклонил передачу проекта «{{project}}»",
+    "member_removed": "Вас убрали из проекта «{{project}}»"
+  }
+}

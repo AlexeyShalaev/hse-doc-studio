@@ -1,0 +1,62 @@
+{
+  "bell_one": "Inbox: {{count}} new",
+  "bell_other": "Inbox: {{count}} new",
+  "title": "Inbox",
+  "markAll": "Mark all as read",
+  "tabs": {
+    "all": "All",
+    "invitations": "Invitations",
+    "requests": "Requests",
+    "transfers": "Transfers"
+  },
+  "empty": "Invitations, requests and notifications will show up here",
+  "accept": "Accept",
+  "decline": "Decline",
+  "approve": "Approve",
+  "deny": "Deny",
+  "invitation": {
+    "title": "{{actor}} invites you to “{{project}}”",
+    "expired": "The invitation has expired. Ask for a new one.",
+    "until": "until {{date}}",
+    "accepted": "You joined “{{project}}”",
+    "declined": "Invitation declined"
+  },
+  "transfer": {
+    "title": "{{actor}} is transferring “{{project}}” to you",
+    "becomesEditor": "{{actor}} becomes an editor",
+    "fromOrg": "Transfer from an organization",
+    "confirm": "Accept the project? You will become its owner.",
+    "accepted": "You now own “{{project}}”",
+    "declined": "Transfer declined"
+  },
+  "request": {
+    "title": "{{actor}} requests access to “{{project}}”",
+    "denied": "Request denied"
+  },
+  "myRequests": {
+    "title": "My access requests",
+    "hidden": "Project (the name shows after approval)",
+    "cancel": "Cancel",
+    "status": {
+      "pending": "waiting",
+      "approved": "approved",
+      "denied": "denied",
+      "cancelled": "cancelled"
+    }
+  },
+  "feed": "Notifications",
+  "kind": {
+    "project_invitation": "{{actor}} invites you to “{{project}}”",
+    "invitation_accepted": "{{actor}} accepted the invitation to “{{project}}”",
+    "invitation_declined": "{{actor}} declined the invitation to “{{project}}”",
+    "access_request": "{{actor}} requests access to “{{project}}”",
+    "access_request_decided": "Your access request was decided",
+    "access_request_decided_approved": "Your access request to “{{project}}” was approved: {{role}}",
+    "access_request_decided_denied": "Your access request was denied",
+    "transfer_request": "{{actor}} is transferring “{{project}}” to you",
+    "transfer_decided": "The transfer of “{{project}}” is complete",
+    "transfer_decided_accepted": "The transfer of “{{project}}” was accepted",
+    "transfer_decided_declined": "{{actor}} declined the transfer of “{{project}}”",
+    "member_removed": "You were removed from “{{project}}”"
+  }
+}

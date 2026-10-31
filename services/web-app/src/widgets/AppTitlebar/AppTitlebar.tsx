@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
+import { InboxBell } from "@features/inbox";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -224,6 +225,7 @@ export const AppTitlebar = ({
         >
           <Settings size={16} />
         </button>
+        <InboxBell />
         <AccountMenu />
       </div>
     </div>

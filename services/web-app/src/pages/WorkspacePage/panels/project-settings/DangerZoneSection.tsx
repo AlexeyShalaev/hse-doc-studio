@@ -7,6 +7,8 @@ export type DangerZoneSectionProps = {
   isRemoving: boolean;
   onToggleArchive: () => void;
   onUnlink: () => void;
+  /** invites: блок «Передать проект» (только владельцу серверного проекта). */
+  transferSlot?: React.ReactNode;
 };
 
 export const DangerZoneSection = ({
@@ -14,6 +16,7 @@ export const DangerZoneSection = ({
   isRemoving,
   onToggleArchive,
   onUnlink,
+  transferSlot,
 }: DangerZoneSectionProps) => {
   const { t } = useTranslation("workspace");
   return (
@@ -22,6 +25,7 @@ export const DangerZoneSection = ({
       fullSpan
       accent="err"
     >
+      {transferSlot}
       <div
         className="flex items-center justify-between"
         style={{
