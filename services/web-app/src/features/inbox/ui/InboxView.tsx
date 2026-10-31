@@ -369,6 +369,8 @@ export const InboxView = ({
                 {t(`kind.${n.kind}`, {
                   actor: n.payload.actor_name ?? "",
                   project: n.payload.project_name ?? "",
+                  path: n.payload.path ?? "",
+                  excerpt: n.payload.excerpt ?? "",
                   role: n.payload.role
                     ? roleLabel(n.payload.role as "reader")
                     : "",

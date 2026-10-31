@@ -57,6 +57,12 @@
     "transfer_decided": "The transfer of “{{project}}” is complete",
     "transfer_decided_accepted": "The transfer of “{{project}}” was accepted",
     "transfer_decided_declined": "{{actor}} declined the transfer of “{{project}}”",
-    "member_removed": "You were removed from “{{project}}”"
+    "member_removed": "You were removed from “{{project}}”",
+    "review_thread": "{{actor}} commented on “{{path}}” in “{{project}}”: {{excerpt}}",
+    "review_reply": "{{actor}} replied in a thread on “{{path}}”: {{excerpt}}",
+    "review_mention": "{{actor}} mentioned you in “{{path}}”: {{excerpt}}",
+    "review_resolved": "A thread in “{{path}}” was closed: {{excerpt}}",
+    "review_resolved_resolved": "{{actor}} resolved your thread in “{{path}}”: {{excerpt}}",
+    "review_resolved_reopened": "{{actor}} reopened your thread in “{{path}}”: {{excerpt}}"
   }
 }

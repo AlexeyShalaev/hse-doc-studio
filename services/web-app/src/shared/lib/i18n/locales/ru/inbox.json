@@ -58,6 +58,12 @@
     "transfer_decided": "Передача проекта «{{project}}» завершена",
     "transfer_decided_accepted": "Передача проекта «{{project}}» принята",
     "transfer_decided_declined": "{{actor}} отклонил передачу проекта «{{project}}»",
-    "member_removed": "Вас убрали из проекта «{{project}}»"
+    "member_removed": "Вас убрали из проекта «{{project}}»",
+    "review_thread": "{{actor}} комментирует «{{path}}» в «{{project}}»: {{excerpt}}",
+    "review_reply": "{{actor}} ответил в треде «{{path}}»: {{excerpt}}",
+    "review_mention": "{{actor}} упомянул вас в «{{path}}»: {{excerpt}}",
+    "review_resolved": "Тред в «{{path}}» закрыт: {{excerpt}}",
+    "review_resolved_resolved": "{{actor}} закрыл ваш тред в «{{path}}»: {{excerpt}}",
+    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}"
   }
 }

@@ -254,6 +254,10 @@ export const NOTIFICATION_KINDS = [
   "transfer_request",
   "transfer_decided",
   "member_removed",
+  "review_thread",
+  "review_reply",
+  "review_mention",
+  "review_resolved",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
@@ -269,7 +273,18 @@ export const NotificationSchema = z.strictObject({
     actor_name: z.string().nullable(),
     role: z.string().nullable(),
     ref_id: z.string().nullable(),
-    outcome: z.enum(["accepted", "declined", "approved", "denied"]).nullable(),
+    outcome: z
+      .enum([
+        "accepted",
+        "declined",
+        "approved",
+        "denied",
+        "resolved",
+        "reopened",
+      ])
+      .nullable(),
+    path: z.string().nullable(),
+    excerpt: z.string().nullable(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;
