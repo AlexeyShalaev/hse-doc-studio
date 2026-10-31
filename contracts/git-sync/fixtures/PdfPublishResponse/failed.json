@@ -1,0 +1,8 @@
+{
+  "status": "failed",
+  "doc_id": "coursework",
+  "reason": null,
+  "size": 482113,
+  "error": "pdf_forbidden",
+  "message": "Выгружать PDF в этот проект может редактор или владелец"
+}

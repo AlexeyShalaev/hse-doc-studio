@@ -1,4 +1,4 @@
-"""Настройки синхронизации одного проекта: фоновая выборка и подтверждение предупреждения об общей папке."""
+"""Настройки синхронизации одного проекта: выборка, автосинхронизация, выгрузка PDF и подтверждение об общей папке."""
 
 from __future__ import annotations
 
@@ -25,6 +25,8 @@ class UpdateGitSettingsInput:
     interval_given: bool = False
     interval_s: int | None = None
     shared_folder_ack: bool | None = None
+    auto_sync: bool | None = None
+    pdf_upload: bool | None = None
 
 
 class UpdateGitSettingsUC:
@@ -63,4 +65,8 @@ class UpdateGitSettingsUC:
             state = replace(state, fetch_interval_s=inp.interval_s)
         if inp.shared_folder_ack is not None:
             state = replace(state, shared_folder_ack=inp.shared_folder_ack)
+        if inp.auto_sync is not None:
+            state = replace(state, auto_sync=inp.auto_sync)
+        if inp.pdf_upload is not None:
+            state = replace(state, pdf_upload=inp.pdf_upload)
         return state

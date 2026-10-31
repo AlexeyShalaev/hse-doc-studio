@@ -16,6 +16,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.git_remote.client import is_studio_remote
 from hse_doc_studio.core.git_sync.entities import (
     CommitBrief,
     GitCredential,
@@ -23,6 +24,7 @@ from hse_doc_studio.core.git_sync.entities import (
     GitOperation,
     LastError,
     LastSync,
+    PdfUploadRecord,
     PendingSession,
     StoreRemoteConfig,
     SyncBlockReason,
@@ -115,6 +117,23 @@ class AutoFetchView:
 
 
 @dataclass(frozen=True)
+class AutoSyncView:
+    """Автосинхронизация окна: итог и то, выбрал ли его человек (иначе это умолчание)."""
+
+    enabled: bool
+    explicit: bool
+
+
+@dataclass(frozen=True)
+class PdfUploadView:
+    """Выгрузка PDF на сервер Студии: возможна ли она у этого remote, включена ли и чем кончилась последняя."""
+
+    enabled: bool
+    available: bool
+    last: PdfUploadRecord | None
+
+
+@dataclass(frozen=True)
 class SharedFolderView:
     provider: str
     root: str
@@ -145,6 +164,8 @@ class GitStatusView:
     last_sync: LastSync | None = None
     shared_folder: SharedFolderView | None = None
     bot_authored_commits: int = 0
+    auto_sync: AutoSyncView = field(default_factory=lambda: AutoSyncView(enabled=False, explicit=False))
+    pdf_upload: PdfUploadView = field(default_factory=lambda: PdfUploadView(enabled=False, available=False, last=None))
 
 
 @dataclass(frozen=True)
@@ -278,6 +299,7 @@ class GitStatusBuilder:
         )
         enabled, interval = fetch_interval(state, stored)
         data = comparison.data
+        studio_server = is_studio_remote(credential, config.url)
         return GitStatusView(
             connected=True,
             ui_state=ui_state,
@@ -301,6 +323,12 @@ class GitStatusBuilder:
             last_sync=state.last_sync,
             shared_folder=self._shared_folder(folder, state),
             bot_authored_commits=data.unpublished_bot_commits,
+            auto_sync=_auto_sync(state, studio_server),
+            pdf_upload=PdfUploadView(
+                enabled=studio_server and (True if state.pdf_upload is None else state.pdf_upload),
+                available=studio_server,
+                last=state.last_pdf_upload,
+            ),
         )
 
     def _without_remote(self, project: Project, stored: dict[str, object], profile_ok: bool) -> GitStatusView:
@@ -445,6 +473,13 @@ class GitStatusBuilder:
         if info is None:
             return None
         return SharedFolderView(info.provider.value, info.root, state.shared_folder_ack)
+
+
+def _auto_sync(state: SyncState, studio_server: bool) -> AutoSyncView:
+    """Явный выбор человека побеждает; по умолчанию автосинхронизация включена у проекта с сервера Студии."""
+    if state.auto_sync is not None:
+        return AutoSyncView(enabled=state.auto_sync, explicit=True)
+    return AutoSyncView(enabled=studio_server, explicit=False)
 
 
 def _operation_brief(operation: GitOperation | None) -> OperationBriefView | None:

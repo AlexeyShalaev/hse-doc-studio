@@ -152,6 +152,21 @@ def map_status(view: GitStatusView) -> schema.GitStatusResponse:
             acknowledged=view.shared_folder.acknowledged,
         ),
         bot_authored_commits=view.bot_authored_commits,
+        auto_sync=schema.GitAutoSync(enabled=view.auto_sync.enabled, explicit=view.auto_sync.explicit),
+        pdf_upload=schema.GitPdfUpload(
+            enabled=view.pdf_upload.enabled,
+            available=view.pdf_upload.available,
+            last=None
+            if view.pdf_upload.last is None
+            else schema.GitPdfUploadLast(
+                doc_id=view.pdf_upload.last.doc_id,
+                at=view.pdf_upload.last.at,
+                ok=view.pdf_upload.last.ok,
+                size=view.pdf_upload.last.size,
+                error=view.pdf_upload.last.code,
+                message=view.pdf_upload.last.detail,
+            ),
+        ),
     )
 
 

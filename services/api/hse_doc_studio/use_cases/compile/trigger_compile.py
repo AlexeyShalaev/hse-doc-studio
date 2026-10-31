@@ -12,6 +12,7 @@ from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.entities import CompileRecord, Project
 from hse_doc_studio.core.enums import CheckEngine, CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver, NoopBuiltPdfObserver
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, JobSpec, job_tags
@@ -60,6 +61,7 @@ class TriggerCompileUC:
         artifacts: IArtifactStore,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
+        pdf_observer: IBuiltPdfObserver | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._locator = locator
@@ -73,6 +75,7 @@ class TriggerCompileUC:
         self._artifacts = artifacts
         self._vcs_service = vcs_service
         self._vcs_locks = vcs_locks
+        self._pdf_observer = pdf_observer or NoopBuiltPdfObserver()
 
     async def execute(self, inp: TriggerCompileInput) -> TriggerCompileOutput:  # noqa: C901
         located = await self._locator.locate(inp.project_id)
@@ -214,6 +217,7 @@ class TriggerCompileUC:
                 vcs_locks=self._vcs_locks,
                 artifacts=self._artifacts,
                 project_folder=project_folder,
+                pdf_observer=self._pdf_observer,
             ),
         )
 

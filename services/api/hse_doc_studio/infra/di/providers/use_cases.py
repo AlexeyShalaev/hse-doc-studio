@@ -26,6 +26,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
@@ -2352,6 +2353,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         compile_repo: ICompileRepository,
+        pdf_observer: IBuiltPdfObserver,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
             project_repo=project_repo,
@@ -2366,6 +2368,7 @@ class UseCaseProvider(Provider):
             artifacts=artifacts,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
+            pdf_observer=pdf_observer,
         )
 
     @provide

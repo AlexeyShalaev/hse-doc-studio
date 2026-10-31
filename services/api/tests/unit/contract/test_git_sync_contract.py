@@ -57,6 +57,8 @@ _SCHEMAS: dict[str, Any] = {
     "GitStatus": s.GitStatusResponse,
     "ConnectRemoteRequest": s.ConnectRemoteRequest,
     "UpdateGitSettingsRequest": s.UpdateGitSettingsRequest,
+    "PdfPublishRequest": s.PdfPublishRequest,
+    "PdfPublishResponse": s.PdfPublishResponse,
     "GitContents": s.GitContentsResponse,
     "ConflictSession": s.ConflictSessionResponse,
     "ConflictFileDetail": s.ConflictFileDetail,
