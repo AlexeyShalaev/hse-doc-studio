@@ -1,4 +1,5 @@
 import {
+  Link2,
   Archive,
   Briefcase,
   Building,
@@ -74,6 +75,7 @@ export const ProjectCard = ({
 }: ProjectCardProps) => {
   const { t } = useTranslation("welcome");
   const { t: tAccess } = useTranslation("projectAccess");
+  const { t: tGuest } = useTranslation("guest");
   const roleLabel = useProjectRoleLabel();
   const meta = useTemplateMeta(project);
   const Icon = meta.icon;
@@ -282,6 +284,16 @@ export const ProjectCard = ({
             >
               <RoleIcon size={8} />
               {roleLabel(role)}
+            </span>
+          )}
+          {project.via_link === true && (
+            <span
+              className="chip shrink-0"
+              data-testid={`project-card-via-link-${project.id}`}
+              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+            >
+              <Link2 size={8} />
+              {tGuest("card.viaLink")}
             </span>
           )}
           {supervisor?.role === "company" && (

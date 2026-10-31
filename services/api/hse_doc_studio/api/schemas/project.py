@@ -91,6 +91,9 @@ class ProjectDetailResponse(BaseModel):
     # Только на сервере (GET /projects/{id}): чей проект и роль смотрящего, как в списке проектов.
     owner: ProjectOwner | None = None
     my_role: ProjectRoleName | None = None
+    # links: роль держится на ссылке (гость или ссылочное право) и подпись этой ссылки для баннера.
+    via_link: bool = False
+    link_label: str | None = None
 
 
 class NdaStatusResponse(BaseModel):

@@ -48,7 +48,8 @@ export type ServerDemoScenarioId =
   | "admin_runners_disabled"
   | "local_remote_off"
   | "local_remote_online"
-  | "local_remote_problems";
+  | "local_remote_problems"
+  | "links_guest";
 
 export const DEFAULT_SERVER_SCENARIO_ID: ServerDemoScenarioId = "student_ready";
 
@@ -117,6 +118,27 @@ export const DEMO_NEWCOMER: SessionUser = {
   org_roles: [],
 };
 
+const GUEST_DEMO_CSRF = "Gq8vT1mZ3xK0cR7bN5yH2wLsJp9eDg6o";
+const GUEST_DEMO_INFO: NonNullable<Bootstrap["guest"]> = {
+  name: "Борис",
+  links: [
+    {
+      project_id: "p_01hxa1c4de",
+      project_name: "Bertie: курсовой проект",
+      link_label: "Для группы",
+      role: "editor",
+      show_sources: true,
+    },
+    {
+      project_id: "p_01hxa3k2jm",
+      project_name: "Анализ нагрузки на очередь задач",
+      link_label: "Для научрука",
+      role: "reader",
+      show_sources: false,
+    },
+  ],
+};
+
 export const STUDENT_CSRF = "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o";
 export const ADMIN_CSRF = "Hq9dLz5TnXe2VwB7kYc0RmPa4sUfJg1i";
 
@@ -135,6 +157,7 @@ const base = (overrides: Partial<Bootstrap>): Bootstrap =>
     user: null,
     capabilities: { ...SERVER_CAPABILITIES },
     csrf_token: null,
+    guest: null,
     ...overrides,
   });
 
@@ -194,6 +217,7 @@ const localBase = (): Bootstrap => ({
     remote_runner: true,
   },
   csrf_token: null,
+  guest: null,
 });
 
 /** Токен установки демо: тот же, что в эталоне ServerSetupAdminRequest. */
@@ -770,6 +794,18 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
     tokenRequired: false,
     remoteSeed: "docker_missing",
     bootstrap: localBase,
+  },
+  // links: гость по ссылке без входа (Борис с двумя открытыми ссылками).
+  {
+    id: "links_guest",
+    tokenRequired: false,
+    bootstrap: () => ({
+      ...base({ csrf_token: GUEST_DEMO_CSRF, guest: GUEST_DEMO_INFO }),
+      capabilities: {
+        ...SERVER_CAPABILITIES,
+        personal_signing_keys: false,
+      },
+    }),
   },
 ];
 

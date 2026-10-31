@@ -69,6 +69,7 @@ from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsReposi
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.argon2_hasher import Argon2PasswordHasher
 from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
+from hse_doc_studio.infra.identity.guest_resolver import GuestSessionResolver
 from hse_doc_studio.infra.identity.oidc.catalog import OidcProviderCatalog
 from hse_doc_studio.infra.identity.oidc.client import OidcClient
 from hse_doc_studio.infra.identity.oidc.state import OIDC_STATE_KEY_PURPOSE, HmacOidcStateCodec
@@ -184,6 +185,7 @@ from hse_doc_studio.use_cases.server_setup.admin import CreateFirstAdminUC, Ensu
 from hse_doc_studio.use_cases.server_setup.settings import ApplyInitialSettingsUC, CompleteSetupUC
 from hse_doc_studio.use_cases.server_setup.state import GetSetupStatusUC, SetupStateService
 from hse_doc_studio.use_cases.server_setup.token import SetupToken
+from hse_doc_studio.use_cases.sharing.open_link import GuestSessionService
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
@@ -240,11 +242,16 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_actor_resolver(
-        self, sessions: SessionService, tokens: IApiTokenRepository, users: IUserRepository
+        self, sessions: SessionService, tokens: IApiTokenRepository, users: IUserRepository, guests: GuestSessionService
     ) -> IActorResolver:
         domain = noreply_domain(settings.auth.public_url)
         return ChainActorResolver(
-            [SessionCookieResolver(sessions, domain), BearerActorResolver(tokens, users, noreply_domain=domain)]
+            [
+                SessionCookieResolver(sessions, domain),
+                BearerActorResolver(tokens, users, noreply_domain=domain),
+                # links: гость по ссылке, только если ни сессия, ни токен не опознаны (S1).
+                GuestSessionResolver(guests),
+            ]
         )
 
     @provide(override=True)

@@ -26,8 +26,9 @@ class Action(StrEnum):
     PROJECT_SETTINGS = "project.settings"
     TEMPLATE_MANAGE = "template.manage"
     PROJECT_DELETE = "project.delete"
-    # Зарезервированы: маршрутов пока нет.
+    # Зарезервировано: маршрутов пока нет.
     COMMENT = "comment"
+    # Ссылки доступа и приглашения; у редактора дополнительно нужен Grant.can_share.
     SHARE = "share"
     PROJECT_TRANSFER = "project.transfer"
 
@@ -83,3 +84,6 @@ GUEST_DENIED: frozenset[Action] = frozenset(
         Action.PROJECT_TRANSFER,
     }
 )
+
+# Ссылочному праву вошедшего недоступно то же, что гостю, кроме агента: у человека свой ключ и своя квота.
+LINK_DENIED: frozenset[Action] = GUEST_DENIED - {Action.AGENT_USE}

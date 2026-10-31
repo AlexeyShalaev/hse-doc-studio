@@ -65,6 +65,19 @@ class IdentityErrorCode(StrEnum):
     remote_runner_url_invalid = "remote_runner_url_invalid"
     remote_runner_unreachable = "remote_runner_unreachable"
     remote_runner_disabled = "remote_runner_disabled"
+    # Ссылки доступа и гости.
+    links_disabled = "links_disabled"
+    link_limit = "link_limit"
+    link_role_too_high = "link_role_too_high"
+    link_password_invalid = "link_password_invalid"  # noqa: S105 — код ошибки, не пароль
+    link_revoked = "link_revoked"
+    link_login_required = "link_login_required"
+    link_password_wrong = "link_password_wrong"  # noqa: S105 — код ошибки, не пароль
+    link_password_locked = "link_password_locked"  # noqa: S105 — код ошибки, не пароль
+    link_org_only = "link_org_only"
+    link_inactive = "link_inactive"
+    guest_name_required = "guest_name_required"
+    guest_build_unavailable = "guest_build_unavailable"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -215,6 +228,54 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.remote_runner_disabled: (
         "На сервере выключены личные раннеры.",
         "Personal runners are turned off on the server.",
+    ),
+    IdentityErrorCode.links_disabled: (
+        "Ссылки на проекты выключены.",
+        "Project links are turned off.",
+    ),
+    IdentityErrorCode.link_limit: (
+        "Не больше 50 действующих ссылок на проект.",
+        "A project can have at most 50 active links.",
+    ),
+    IdentityErrorCode.link_role_too_high: (
+        "Роль ссылки выше допустимой.",
+        "The link role is higher than allowed.",
+    ),
+    IdentityErrorCode.link_password_invalid: (
+        "Пароль ссылки должен быть от 8 до 128 символов.",
+        "A link password must be 8 to 128 characters long.",
+    ),
+    IdentityErrorCode.link_revoked: (
+        "Ссылка уже отозвана.",
+        "The link has already been revoked.",
+    ),
+    IdentityErrorCode.link_login_required: (
+        "Чтобы открыть ссылку, войдите.",
+        "Sign in to open this link.",
+    ),
+    IdentityErrorCode.link_password_wrong: (
+        "Неверный пароль.",
+        "Wrong password.",
+    ),
+    IdentityErrorCode.link_password_locked: (
+        "Слишком много попыток. Попробуйте позже.",
+        "Too many attempts. Try again later.",
+    ),
+    IdentityErrorCode.link_org_only: (
+        "Ссылка только для участников организации.",
+        "This link is for organization members only.",
+    ),
+    IdentityErrorCode.link_inactive: (
+        "Ссылка не действует.",
+        "The link is no longer valid.",
+    ),
+    IdentityErrorCode.guest_name_required: (
+        "Введите имя.",
+        "Enter your name.",
+    ),
+    IdentityErrorCode.guest_build_unavailable: (
+        "Сборка по этой ссылке недоступна.",
+        "Builds are not available through this link.",
     ),
 }
 

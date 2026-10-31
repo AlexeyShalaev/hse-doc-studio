@@ -38,6 +38,8 @@ const fromSummary = (summary: ProjectSummary): ProjectItem => ({
   shared_enabled: summary.shared_enabled,
   owner: summary.owner,
   my_role: summary.my_role,
+  // links: роль по ссылке, а не по членству (значок «По ссылке» в списке).
+  via_link: summary.via_link ?? false,
 });
 
 const ProjectItemsSchema = z

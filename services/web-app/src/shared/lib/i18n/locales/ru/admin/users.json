@@ -339,7 +339,15 @@
       "settings_build_update": "Изменены настройки сборки",
       "settings_instance_update": "Изменены настройки установки",
       "settings_personal_runners_update": "Изменены настройки личных раннеров",
-      "submission_downloaded": "Скачан архив сдачи"
+      "submission_downloaded": "Скачан архив сдачи",
+      "settings_sharing_update": "Изменены настройки общего доступа",
+      "org_sharing_policy_update": "Изменена политика общего доступа организации",
+      "link_create": "Создана ссылка на проект",
+      "link_update": "Ссылка на проект изменена",
+      "link_rotate": "Ссылка на проект перевыпущена",
+      "link_revoke": "Ссылка на проект отозвана",
+      "link_open": "Открыта ссылка на проект",
+      "link_password_failed": "Неверный пароль ссылки"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

@@ -14,5 +14,6 @@
   "updated_at": "2026-10-26T18:20:00Z",
   "pinned": true,
   "archived": false,
-  "shared_enabled": true
+  "shared_enabled": true,
+  "via_link": false
 }

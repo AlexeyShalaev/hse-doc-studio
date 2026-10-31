@@ -222,6 +222,7 @@ def _map_project_card(card: ProjectCard) -> ProjectSummary:
         pinned=card.pinned,
         archived=card.archived,
         shared_enabled=card.shared_enabled,
+        via_link=card.via_link,
     )
 
 
@@ -366,6 +367,8 @@ async def get_project(
         owner = result.membership.owner
         response.owner = ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug)
         response.my_role = result.membership.my_role.value
+        response.via_link = result.membership.via_link
+        response.link_label = result.membership.link_label
     access = access_service.evaluate(result.project)
     response.access = ProjectAccessResponse(
         mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio

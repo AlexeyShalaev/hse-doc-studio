@@ -47,5 +47,17 @@
   "ai_provider_runner_invalid",
   "remote_runner_url_invalid",
   "remote_runner_unreachable",
-  "remote_runner_disabled"
+  "remote_runner_disabled",
+  "links_disabled",
+  "link_limit",
+  "link_role_too_high",
+  "link_password_invalid",
+  "link_revoked",
+  "link_login_required",
+  "link_password_wrong",
+  "link_password_locked",
+  "link_org_only",
+  "link_inactive",
+  "guest_name_required",
+  "guest_build_unavailable"
 ]

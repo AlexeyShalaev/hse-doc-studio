@@ -23,6 +23,8 @@ from hse_doc_studio.core.rate_limit import (
     AUTH_EMAIL,
     COMPILE,
     GIT_SYNC,
+    GUEST,
+    LINK_TOKEN,
     UPLOAD,
     IRateLimiter,
     RateRule,
@@ -99,13 +101,24 @@ async def email_send_allowed(request: Request, email: str, action: str, rule: Ra
 def _subject(request: Request) -> str:
     actor = current_actor()
     if actor is not None and actor.id:
-        return f"user:{actor.id}"
+        return f"{'guest' if actor.is_guest else 'user'}:{actor.id}"
     return f"ip:{client_ip(request)}"
+
+
+async def _guest_limits(request: Request) -> None:
+    """Гость по ссылке: 600 запросов в минуту на сессию и 300 на ссылку по всем её гостям (429)."""
+    actor = current_actor()
+    if actor is None or not actor.is_guest or actor.id is None:
+        return
+    await enforce(request, GUEST, f"guest:{actor.id}")
+    if actor.link_id is not None:
+        await enforce(request, LINK_TOKEN, f"link:{actor.link_id}")
 
 
 async def rate_limit_guard(request: Request) -> None:
     if getattr(request.app.state, "rate_limiter", None) is None:
         return
+    await _guest_limits(request)
     route = request.scope.get("route")
     path = getattr(route, "path", None)
     rule = EXPENSIVE_ROUTES.get(route_key(request.method, path)) if path else None

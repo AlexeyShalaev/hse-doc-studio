@@ -31,7 +31,7 @@ OUT_PATH = ROOT / "docs" / "ru" / "deploy" / "env-reference.md"
 API_ROOT = ROOT / "services" / "api"
 
 # Группы, которые имеют смысл только на общем сервере; остальное работает в обоих режимах.
-SERVER_GROUPS = frozenset({"db", "s3", "auth", "mail", "admin", "egress", "rate_limit", "observability"})
+SERVER_GROUPS = frozenset({"db", "s3", "auth", "mail", "admin", "egress", "rate_limit", "observability", "sharing"})
 # Секреты, не оформленные как SecretStr (в значении может быть пароль).
 EXTRA_SECRETS = frozenset({"DB__DSN", "OFFICE_EDITOR__JWT_SECRET"})
 # Значения по умолчанию, зависящие от места запуска: в справочнике они должны быть одинаковыми везде.

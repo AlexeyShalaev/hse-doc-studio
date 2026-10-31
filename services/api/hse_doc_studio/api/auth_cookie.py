@@ -9,6 +9,7 @@ from fastapi import Request, Response
 from hse_doc_studio.core.identity.entities import ActorCredentials
 
 SESSION_COOKIE = "hse_session"
+GUEST_COOKIE = "hse_guest"
 # Префикс `__Host-` браузер разрешает только по HTTPS (Secure, Path=/, без Domain).
 SECURE_SESSION_COOKIE = f"__Host-{SESSION_COOKIE}"
 _BEARER = "bearer"
@@ -16,6 +17,11 @@ _BEARER = "bearer"
 
 def session_cookie_name(*, secure: bool) -> str:
     return SECURE_SESSION_COOKIE if secure else SESSION_COOKIE
+
+
+def guest_cookie_name(*, secure: bool) -> str:
+    """`__Host-hse_guest` по HTTPS, `hse_guest` по HTTP: то же правило, что у cookie сессии."""
+    return f"__Host-{GUEST_COOKIE}" if secure else GUEST_COOKIE
 
 
 def bearer_token(request: Request) -> str | None:
@@ -38,7 +44,12 @@ def credentials_from_request(request: Request, *, secure: bool | None = None) ->
     secret = cookies.get(SECURE_SESSION_COOKIE)
     if not secret and not secure:
         secret = cookies.get(SESSION_COOKIE)
-    return ActorCredentials(session_secret=secret or None, bearer_token=bearer_token(request))
+    guest = cookies.get(guest_cookie_name(secure=True))
+    if not guest and not secure:
+        guest = cookies.get(GUEST_COOKIE)
+    return ActorCredentials(
+        session_secret=secret or None, bearer_token=bearer_token(request), guest_secret=guest or None
+    )
 
 
 def public_origin(public_url: str | None) -> str | None:
@@ -101,3 +112,22 @@ def clear_oidc_state_cookie(response: Response, *, secure: bool) -> None:
     response.delete_cookie(
         oidc_state_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax"
     )
+
+
+def set_guest_cookie(response: Response, secret: str, *, secure: bool, max_age_s: int) -> None:
+    """Гостевая сессия по ссылке: HttpOnly, SameSite=Lax, Secure и `__Host-` по HTTPS, без Domain (S1, T5)."""
+    response.set_cookie(
+        guest_cookie_name(secure=secure),
+        secret,
+        max_age=max_age_s,
+        path="/",
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+    )
+
+
+def clear_guest_cookie(response: Response, *, secure: bool) -> None:
+    response.delete_cookie(guest_cookie_name(secure=secure), path="/", httponly=True, secure=secure, samesite="lax")
+    if secure:
+        response.delete_cookie(GUEST_COOKIE, path="/", httponly=True, secure=False, samesite="lax")

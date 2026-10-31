@@ -16,7 +16,8 @@
       "updated_at": "2026-10-24T10:05:00Z",
       "pinned": false,
       "archived": false,
-      "shared_enabled": true
+      "shared_enabled": true,
+      "via_link": false
     },
     {
       "id": "p_01hxa1c4de",
@@ -34,7 +35,8 @@
       "updated_at": "2026-10-26T18:20:00Z",
       "pinned": true,
       "archived": false,
-      "shared_enabled": true
+      "shared_enabled": true,
+      "via_link": false
     }
   ],
   "total": 412,

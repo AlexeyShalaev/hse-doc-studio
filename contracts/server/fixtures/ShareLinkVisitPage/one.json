@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "visitor_kind": "guest",
+      "name": "Пётр Иванович",
+      "first_at": "2026-11-01T13:50:00Z",
+      "last_at": "2026-11-01T14:02:00Z",
+      "opens": 3
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "offset": 0
+}

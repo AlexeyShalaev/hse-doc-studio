@@ -12,6 +12,7 @@
 - org_admin: администратор организации; пока организаций нет, проходит только админ установки;
 - runner_token, job_token, signed_token: подлинность проверяет сам маршрут по своему токену,
   цепочка cookie для них не запускается;
+- guest: гость по ссылке (или вошедший), например своя гостевая сессия;
 - local_only: возможности одной локальной установки (файловая система хоста, docker, обновление
   самой Студии); в серверном режиме отвечают 404.
 """
@@ -38,6 +39,8 @@ class RouteScope(StrEnum):
     job_token = "job_token"  # noqa: S105 — имя области, не секрет
     signed_token = "signed_token"  # noqa: S105 — имя области, не секрет
     local_only = "local_only"
+    # Гость по ссылке или вошедший: управление своей гостевой сессией (`/links/session`).
+    guest = "guest"
 
 
 # Области, где подлинность проверяет сам маршрут: актор по cookie или PAT ему не нужен.
@@ -372,6 +375,15 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/api/admin/settings/instance"): _ADM,
     ("GET", "/api/admin/settings/build"): _ADM,
     ("PUT", "/api/admin/settings/build"): _ADM,
+    # links: страница ссылки (публичная, сама определяет вошедшего) и своя гостевая сессия
+    ("GET", "/links/{token}"): _P,
+    ("POST", "/links/{token}/open"): _P,
+    ("PATCH", "/links/session"): RouteScope.guest,
+    ("DELETE", "/links/session"): RouteScope.guest,
+    ("GET", "/orgs/{slug}/sharing-policy"): _A,
+    ("PUT", "/orgs/{slug}/sharing-policy"): _A,
+    ("GET", "/api/admin/settings/sharing"): _ADM,
+    ("PUT", "/api/admin/settings/sharing"): _ADM,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не
@@ -439,6 +451,27 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "/signing-identities/openpgp/keys",
         # Список корней доверия общий по замыслу: менять его может только админ установки.
         "/trusted-roots",
+    }
+)
+
+
+# links: гость по ссылке читает справочники установки, без которых рабочая область проекта не открывается
+# (каталог шаблонов, шрифты, состояние сервисов, сведения о сервере). Только чтение и ничего личного:
+# аккаунт, настройки людей, агент, подписи и git для гостя по-прежнему не существуют (404).
+GUEST_READABLE: frozenset[RouteKey] = frozenset(
+    {
+        ("GET", "/catalog/packs"),
+        ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions"),
+        ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions/{version}"),
+        ("GET", "/languagetool/status"),
+        ("GET", "/office-services/status"),
+        ("GET", "/fonts"),
+        ("GET", "/fonts/{filename}/file"),
+        ("GET", "/fonts/catalog"),
+        ("GET", "/system/info"),
+        ("GET", "/system/editors"),
+        ("GET", "/system/archive-formats"),
+        ("GET", "/system/runner-health"),
     }
 )
 

@@ -1,0 +1,8 @@
+{
+  "label": "Для научрука",
+  "role": "reader",
+  "show_sources": false,
+  "require_login": false,
+  "password": null,
+  "expires_in_days": 60
+}

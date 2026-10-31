@@ -32,6 +32,7 @@ const base = {
   pinned: false,
   archived: false,
   shared_enabled: true,
+  via_link: false,
 };
 
 export const DEMO_FOREIGN_PROJECT_ID = "p_01hxa9foreign";

@@ -26,8 +26,10 @@ from hse_doc_studio.api.schemas.session import (
     UpdateAdminRegistrationRequest,
     UpdateAdminSmtpRequest,
 )
+from hse_doc_studio.api.schemas.sharing import AdminSharingSettings, UpdateAdminSharingRequest
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.links import LinkRole
 from hse_doc_studio.core.identity.entities import OIDC_SORTS, OidcProvider, OidcProviderQuery, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.setting_source import SettingDescription
@@ -54,6 +56,12 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpPatch,
     SmtpSettingsView,
     UpdateSmtpSettingsUC,
+)
+from hse_doc_studio.use_cases.sharing.settings import (
+    GetSharingSettingsUC,
+    SharingSettingsPatch,
+    SharingSettingsView,
+    UpdateSharingSettingsUC,
 )
 
 router = APIRouter()
@@ -236,3 +244,32 @@ async def update_oidc_provider(
 async def delete_oidc_provider(provider_id: str, request: Request) -> Response:
     await (await _uc(request, DeleteOidcProviderUC)).execute(_actor(), provider_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# links: раздел «Общий доступ» (ссылки на проекты и регистрация по приглашению в проект)
+
+
+def _sharing(view: SharingSettingsView) -> AdminSharingSettings:
+    return AdminSharingSettings(
+        links_enabled=view.settings.links_enabled,
+        max_link_role=view.settings.max_link_role.value,
+        project_invites_allow_signup=view.settings.project_invites_allow_signup,
+        fields=_fields(view.descriptions),
+    )
+
+
+@router.get("/settings/sharing", response_model=AdminSharingSettings)
+async def get_sharing(request: Request, response: Response) -> AdminSharingSettings:
+    response.headers.update(_NO_STORE)
+    return _sharing(await (await _uc(request, GetSharingSettingsUC)).execute(_actor()))
+
+
+@router.put("/settings/sharing", response_model=AdminSharingSettings)
+async def put_sharing(body: UpdateAdminSharingRequest, request: Request, response: Response) -> AdminSharingSettings:
+    response.headers.update(_NO_STORE)
+    patch = SharingSettingsPatch(
+        links_enabled=body.links_enabled,
+        max_link_role=LinkRole(body.max_link_role) if body.max_link_role else None,
+        project_invites_allow_signup=body.project_invites_allow_signup,
+    )
+    return _sharing(await (await _uc(request, UpdateSharingSettingsUC)).execute(_actor(), patch))

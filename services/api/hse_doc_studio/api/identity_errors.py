@@ -75,6 +75,18 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.remote_runner_url_invalid: _INPUT,
     IdentityErrorCode.remote_runner_unreachable: _BAD_GATEWAY,
     IdentityErrorCode.remote_runner_disabled: _STATE,
+    IdentityErrorCode.links_disabled: _FORBIDDEN,
+    IdentityErrorCode.link_limit: _STATE,
+    IdentityErrorCode.link_role_too_high: _INPUT,
+    IdentityErrorCode.link_password_invalid: _INPUT,
+    IdentityErrorCode.link_revoked: _STATE,
+    IdentityErrorCode.link_login_required: _UNAUTHORIZED,
+    IdentityErrorCode.link_password_wrong: _FORBIDDEN,
+    IdentityErrorCode.link_password_locked: _LIMIT,
+    IdentityErrorCode.link_org_only: _FORBIDDEN,
+    IdentityErrorCode.link_inactive: _NOT_FOUND,
+    IdentityErrorCode.guest_name_required: _INPUT,
+    IdentityErrorCode.guest_build_unavailable: _STATE,
 }
 
 

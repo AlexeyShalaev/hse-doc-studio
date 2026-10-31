@@ -67,6 +67,9 @@ export const ProjectResponseSchema = z.object({
   // или приходят null (детали проекта отдают их всегда).
   owner: ProjectOwnerSchema.nullish(),
   my_role: ProjectRoleSchema.nullish(),
+  // links: роль держится на ссылке (гость или вошедший по ссылке) и подпись этой ссылки.
+  via_link: z.boolean().optional(),
+  link_label: z.string().nullish(),
   // Что эта Студия может делать с проектом (только в GET /projects/{id}).
   // mode ∈ full | read_only | files_only; reasons — коды причин ограничения.
   access: z

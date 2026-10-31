@@ -131,6 +131,18 @@
     "ai_provider_runner_invalid": "Pick your runner and an AI endpoint it has declared.",
     "remote_runner_url_invalid": "An https address is required. http only works for localhost.",
     "remote_runner_unreachable": "The server didn't respond. Check the address and your network.",
-    "remote_runner_disabled": "The server administrator turned personal runners off."
+    "remote_runner_disabled": "The server administrator turned personal runners off.",
+    "links_disabled": "Project links are turned off by the administrator or the organization.",
+    "link_limit": "No more than 50 active links.",
+    "link_role_too_high": "You cannot give this role by link: it is above yours or the organization limit.",
+    "link_password_invalid": "A link password must be 8 to 128 characters long.",
+    "link_revoked": "The link has already been revoked.",
+    "link_login_required": "Sign in to open this link.",
+    "link_password_wrong": "Wrong password.",
+    "link_password_locked": "Too many attempts, try again later.",
+    "link_org_only": "This link is for organization members only.",
+    "link_inactive": "The link is no longer valid.",
+    "guest_name_required": "Enter your name: the owner and co-authors will see it.",
+    "guest_build_unavailable": "Builds are not available through this link: ask the owner."
   }
 }

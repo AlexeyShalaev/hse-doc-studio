@@ -1,0 +1,7 @@
+{
+  "links": "org_only",
+  "max_link_role": "reviewer",
+  "nda_public_links": false,
+  "external_invites": false,
+  "editable": true
+}

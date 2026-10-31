@@ -85,6 +85,23 @@ export const SessionUserSchema = z.strictObject({
 });
 export type SessionUser = z.infer<typeof SessionUserSchema>;
 
+// links: гость по ссылке (без входа) и проекты, открытые ему ссылками.
+export const LinkRoleSchema = z.enum(["reader", "reviewer", "editor"]);
+export type LinkRole = z.infer<typeof LinkRoleSchema>;
+export const GuestLinkInfoSchema = z.strictObject({
+  project_id: z.string(),
+  project_name: z.string(),
+  link_label: z.string(),
+  role: LinkRoleSchema,
+  show_sources: z.boolean(),
+});
+export type GuestLinkInfo = z.infer<typeof GuestLinkInfoSchema>;
+export const GuestInfoSchema = z.strictObject({
+  name: z.string().nullable(),
+  links: z.array(GuestLinkInfoSchema),
+});
+export type GuestInfo = z.infer<typeof GuestInfoSchema>;
+
 export const BootstrapSchema = z.strictObject({
   mode: StudioModeSchema,
   version: z.string(),
@@ -93,6 +110,8 @@ export const BootstrapSchema = z.strictObject({
   user: SessionUserSchema.nullable(),
   capabilities: CapabilitiesSchema,
   csrf_token: z.string().nullable(),
+  // Гость по ссылке; у вошедшего и анонима null. CSRF-токен гостя лежит в csrf_token.
+  guest: GuestInfoSchema.nullish(),
 });
 export type Bootstrap = z.infer<typeof BootstrapSchema>;
 
@@ -293,6 +312,8 @@ export const ProjectSummarySchema = z.strictObject({
   pinned: z.boolean(),
   archived: z.boolean(),
   shared_enabled: z.boolean(),
+  // links: роль держится на ссылке, а не на членстве (значок «По ссылке»).
+  via_link: z.boolean().optional(),
 });
 // Серверный режим отдаёт список проектов страницей; локальный по-прежнему массивом.
 export const ProjectSummaryPageSchema = pageOf(ProjectSummarySchema);

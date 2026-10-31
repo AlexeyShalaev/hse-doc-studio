@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, ActorKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy, pseudonym_for
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
@@ -73,7 +73,8 @@ class ExportMyDataUC:
         self._audit = audit
 
     async def execute(self, actor: Actor) -> Mapping[str, object]:
-        if actor.id is None:
+        # У гостя по ссылке тоже есть id (сессии), но выгружать нечего: только вошедший человек.
+        if actor.kind is not ActorKind.user or actor.id is None:
             raise IdentityError(IdentityErrorCode.auth_required)
         data = await self._lifecycle.export(actor.id)
         await self._audit.record("account.data_exported", actor_id=actor.id, target=actor.id)

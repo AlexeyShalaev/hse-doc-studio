@@ -87,6 +87,10 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+# links: плательщик задачи по актору и проекту (`IBuildPayerResolver.payer_for`).
+type PayerSource = Callable[[Actor, UUID], Awaitable[UUID]]
+
+
 class QueueJobDispatcher:
     """Задачи идут через очередь; идущие в этом процессе отслеживаются для `is_active` и отмены."""
 
@@ -111,9 +115,12 @@ class QueueJobDispatcher:
         clock: Callable[[], datetime] = _utc_now,
         wakeup: JobWakeup | None = None,
         router: IJobRouter | None = None,
+        payer: PayerSource | None = None,
     ) -> None:
         self._wakeup = wakeup
         self._router = router
+        # links: от чьего имени ставится задача гостя по ссылке (S7); без него только пользователь сам.
+        self._payer = payer
         # Решение о маршруте считает нагрузку личных раннеров по очереди, а постановка её меняет:
         # без замка две сборки разом («Собрать всё») видят пустую очередь и обе ждут один слот
         # личного раннера, вместо того чтобы вторая сразу шла на общие. Одна реплика api (S6).
@@ -150,7 +157,7 @@ class QueueJobDispatcher:
                 return
         if self._router is not None and spec.actor.id is not None:
             decision = await self._router.decide(
-                kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=_user_id(spec.actor)
+                kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=await self._payer_of(spec)
             )
             if decision.route is JobRoute.personal_first:
                 return
@@ -425,7 +432,7 @@ class QueueJobDispatcher:
 
     async def _stage_and_enqueue(self, spec: JobSpec, timeout_s: float | None) -> QueuedJob | None:
         """Манифест, затем постановка; `None`, если задачу отменили, пока шла подготовка."""
-        user_id = _user_id(spec.actor)
+        user_id = await self._payer_of(spec)
         folder = _folder_of(spec)
         paths = await asyncio.to_thread(_manifest_paths, spec, folder)
         manifest = await self._uploader.ensure(spec.project_id, folder, paths, self._limits)
@@ -521,6 +528,12 @@ class QueueJobDispatcher:
         except (TypeError, ValueError):
             return spec
         return replace(spec, payload=replace(payload, default_passes=passes))
+
+    async def _payer_of(self, spec: JobSpec) -> UUID:
+        """Чья квота и чей маршрут раннеров: сам пользователь, у гостя по ссылке её создатель или владелец."""
+        if self._payer is not None:
+            return await self._payer(spec.actor, spec.project_id)
+        return _user_id(spec.actor)
 
     async def _role_of(self, spec: JobSpec) -> Role | None:
         if self._role_source is None:

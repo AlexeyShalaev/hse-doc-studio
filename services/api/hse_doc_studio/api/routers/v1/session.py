@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response
 from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.routers.v1.share_link_public import guest_bootstrap
 from hse_doc_studio.api.schemas.session import (
     AuthOptions,
     BootstrapResponse,
@@ -78,7 +79,9 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
     # С чужого host/IP админки для человека нет, даже если он админ установки
     is_admin = result.user is not None and result.user.is_instance_admin and admin_request_allowed(request)
     caps = ServerConfig.from_settings(settings).caps
-    return BootstrapResponse(
+    # links: без пользовательской сессии запрос может нести гостевую сессию по ссылке.
+    guest, guest_csrf = (None, None) if result.user is not None else await guest_bootstrap(request)
+    response_body = BootstrapResponse(
         mode="server",
         version=settings.get_app_version(),
         setup_state=result.setup_state,
@@ -103,5 +106,10 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             # Свои раннеры подключает вошедший человек, пока админ не выключил личные раннеры.
             personal_runners=result.user is not None and result.personal_runners,
         ),
-        csrf_token=result.session.csrf_token if result.session else None,
+        csrf_token=result.session.csrf_token if result.session else guest_csrf,
+        guest=guest,
     )
+    if guest is not None:
+        # Гостю недоступно ничего из возможностей установки.
+        response_body.capabilities = Capabilities(**dict.fromkeys(Capabilities.model_fields, False))
+    return response_body

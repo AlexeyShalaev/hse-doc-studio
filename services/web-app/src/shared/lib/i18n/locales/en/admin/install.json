@@ -151,5 +151,23 @@
     "deleteTitle": "Delete shared provider",
     "deleteBody": "Provider \"{{name}}\" disappears for every user. Agents that use it will ask to pick another one.",
     "deletedToast": "Provider \"{{name}}\" deleted"
+  },
+  "sharing": {
+    "title": "Sharing",
+    "lead": "Project links for people without an invitation and sign-up through a project invitation.",
+    "links": "Allow project links",
+    "linksHint": "Turning this off closes every link at once: guests and signed-in users lose access.",
+    "maxRole": "Highest role by link",
+    "maxRoleHint": "A link never grants a role above this, even if the owner created it.",
+    "inviteSignup": "A project invitation allows signing up",
+    "inviteSignupHint": "Applies in the invitation-only registration mode: a person invited to a project can create an account.",
+    "save": "Save",
+    "saved": "Sharing settings saved",
+    "lockedHint": "Set by the installation environment",
+    "roles": {
+      "reader": "Reader",
+      "reviewer": "Reviewer",
+      "editor": "Editor"
+    }
   }
 }

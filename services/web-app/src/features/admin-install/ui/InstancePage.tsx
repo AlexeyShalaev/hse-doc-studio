@@ -6,6 +6,7 @@ import {
   useUpdateBuild,
   useUpdateInstance,
 } from "../api/installQueries";
+import { AdminSharingSettingsSection } from "./AdminSharingSettings";
 import { InstanceForm } from "./InstanceForm";
 import { LoadState, PageHead } from "./parts";
 import { Ready } from "./Ready";
@@ -53,6 +54,8 @@ const InstanceBody = () => {
           }}
         />
       )}
+      {/* links: раздел «Общий доступ» (ссылки на проекты). */}
+      <AdminSharingSettingsSection />
     </div>
   );
 };

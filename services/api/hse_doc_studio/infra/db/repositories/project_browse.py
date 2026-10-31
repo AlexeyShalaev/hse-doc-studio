@@ -12,6 +12,7 @@ from hse_doc_studio.infra.db.listing import Expr, contains, fetch_page, ordering
 from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.orgs import OrgRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
+from hse_doc_studio.infra.db.orm.sharing import ShareLinkGrantRow, ShareLinkRow
 from hse_doc_studio.infra.db.repositories.projects import visible_to
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -32,8 +33,25 @@ def _owner_filter(query: ProjectBrowseQuery, user_id: str) -> list[ColumnElement
     return []
 
 
+def _via_link(user_id: str) -> ColumnElement[bool]:
+    """Проект открыт человеку действующей ссылкой (ссылочное право, S3). Политику установки и организации
+    проверяет загрузчик прав: строку без права страница не показывает."""
+    return (
+        select(ShareLinkGrantRow.link_id)
+        .join(ShareLinkRow, ShareLinkRow.id == ShareLinkGrantRow.link_id)
+        .where(
+            ShareLinkGrantRow.project_id == ProjectRow.id,
+            ShareLinkGrantRow.user_id == user_id,
+            ShareLinkRow.revoked_at.is_(None),
+            or_(ShareLinkRow.expires_at.is_(None), ShareLinkRow.expires_at > func.now()),
+        )
+        .exists()
+    )
+
+
 def _conditions(query: ProjectBrowseQuery, user_id: str) -> list[ColumnElement[bool]]:
-    conditions = [ProjectRow.deleted_at.is_(None), visible_to(user_id), *_owner_filter(query, user_id)]
+    visible = or_(visible_to(user_id), _via_link(user_id))
+    conditions = [ProjectRow.deleted_at.is_(None), visible, *_owner_filter(query, user_id)]
     if query.archived is not None:
         conditions.append(ProjectRow.archived_at.is_not(None) if query.archived else ProjectRow.archived_at.is_(None))
     if query.pinned is not None:
@@ -79,6 +97,7 @@ class PostgresProjectBrowser:
                 lang=r.lang,
                 owner=roles[r.id].owner,
                 my_role=roles[r.id].my_role,
+                via_link=roles[r.id].via_link,
                 updated_at=r.updated_at,
                 pinned=r.pinned,
                 archived=r.archived_at is not None,
