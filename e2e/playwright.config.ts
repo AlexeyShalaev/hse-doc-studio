@@ -64,5 +64,26 @@ export default defineConfig({
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },
+    {
+      // Сервер как git-remote: токен «Для git», clone/push настоящим git, вход устройства по коду.
+      name: "git-remote",
+      testMatch: /git-remote\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Доделка видения: ссылка-доступ, приглашения и запросы доступа, передача, git-remote для локальной Студии.
+      name: "collab-finish",
+      testMatch: /collab-finish\.spec\.ts/,
+      timeout: 10 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
   ],
 });
