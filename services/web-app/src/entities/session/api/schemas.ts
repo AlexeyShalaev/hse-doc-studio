@@ -112,6 +112,9 @@ export const BootstrapSchema = z.strictObject({
   csrf_token: z.string().nullable(),
   // Гость по ссылке; у вошедшего и анонима null. CSRF-токен гостя лежит в csrf_token.
   guest: GuestInfoSchema.nullish(),
+  // invites: счётчик «Входящих» для шапки вошедшего; без входа и локально null.
+  // Необязателен в типе, чтобы старые литералы bootstrap (демо, тесты) оставались верными.
+  inbox: z.strictObject({ unread: z.number().int() }).nullable().optional(),
 });
 export type Bootstrap = z.infer<typeof BootstrapSchema>;
 

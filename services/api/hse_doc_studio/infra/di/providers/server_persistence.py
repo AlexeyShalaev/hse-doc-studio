@@ -37,6 +37,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     ISecretCipher,
 )
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
+from hse_doc_studio.core.invitations.protocols import IProjectMemberLookup
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.projects.browse import IProjectBrowser
@@ -302,8 +303,9 @@ class ServerPersistenceProvider(Provider):
         directory: IProjectAccessDirectory,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        member_roles: IProjectMemberLookup,
     ) -> SetProjectMemberUC:
-        return SetProjectMemberUC(members, users, groups, orgs, directory, audit, uow)
+        return SetProjectMemberUC(members, users, groups, orgs, directory, audit, uow, member_roles)
 
     @provide
     def get_remove_project_member_uc(

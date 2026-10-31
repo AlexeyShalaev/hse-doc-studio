@@ -1,0 +1,14 @@
+{
+  "id": "ntf_1b2c3d4e5f6a47889900aabbccddeeff",
+  "kind": "access_request",
+  "created_at": "2026-11-01T09:00:00Z",
+  "read_at": null,
+  "payload": {
+    "project_id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    "project_name": "ВКР: Анализ требований",
+    "actor_name": "Вера Смирнова",
+    "role": null,
+    "ref_id": "arq_1a2b3c4d5e6f47089a0b1c2d3e4f5a6b",
+    "outcome": null
+  }
+}

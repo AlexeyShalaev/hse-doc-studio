@@ -84,7 +84,7 @@ _MATRIX = {
 def test__role_matrix__matches_design_7_1(role: Role) -> None:
     acl = _acl(Grant(role, persona_slug="ivanov", can_share=True, can_edit_all=True))
     # SIGN проверяется отдельно: для него нужен слот с владельцем
-    expected = _MATRIX[role] | ({Action.SHARE} if role in (Role.editor, Role.owner) else set())
+    expected = _MATRIX[role] | ({Action.SHARE, Action.ACCESS_MANAGE} if role in (Role.editor, Role.owner) else set())
     expected |= {Action.SIGN} if role is not Role.reader else set()
 
     allowed = {a for a in Action if a is not Action.FILES_READ and can(USER, a, acl, _path_for(a))}
@@ -203,6 +203,16 @@ def test__share__editor_needs_can_share() -> None:
     assert not can(USER, Action.SHARE, _acl(Grant(Role.editor)))
     assert can(USER, Action.SHARE, _acl(Grant(Role.editor, can_share=True)))
     assert can(USER, Action.SHARE, _acl(Grant(Role.owner)))
+
+
+def test__access_manage__same_condition_as_share() -> None:
+    assert not can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.editor)))
+    assert can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.editor, can_share=True)))
+    assert can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.owner)))
+    assert not can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.reviewer, can_share=True)))
+    assert decide(GUEST, Action.ACCESS_MANAGE, _acl(Grant(Role.editor, can_share=True), actor=GUEST)) is (
+        Decision.forbidden
+    )
 
 
 def test__submission_create__editor_in_team_only_own_package() -> None:

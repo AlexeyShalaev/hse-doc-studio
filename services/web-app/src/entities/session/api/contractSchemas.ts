@@ -6,6 +6,7 @@ import {
   CreateAIProviderRequestSchema,
 } from "@entities/ai-provider";
 
+import * as inv from "@entities/invitation/model/invitation.schema";
 import * as inst from "./installSchemas";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
@@ -171,4 +172,28 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   OrgSharingPolicy: sh.OrgSharingPolicySchema,
   AdminSharingSettings: sh.AdminSharingSettingsSchema,
   UpdateAdminSharingRequest: sh.UpdateAdminSharingRequestSchema,
+  // invites
+  ProjectInvitation: inv.ProjectInvitationSchema,
+  ProjectInvitationPage: inv.ProjectInvitationPageSchema,
+  CreateProjectInvitationRequest: inv.CreateProjectInvitationRequestSchema,
+  ProjectInvitationCreated: inv.ProjectInvitationCreatedSchema,
+  MyInvitation: inv.MyInvitationSchema,
+  MyInvitationList: inv.MyInvitationListSchema,
+  ProjectInvitationPreview: inv.ProjectInvitationPreviewSchema,
+  AccessRequestView: inv.AccessRequestViewSchema,
+  AccessRequestPage: inv.AccessRequestPageSchema,
+  ApproveAccessRequest: inv.ApproveAccessRequestSchema,
+  DenyAccessRequest: inv.DenyAccessRequestSchema,
+  CreateAccessRequest: inv.CreateAccessRequestSchema,
+  AccessRequestAccepted: inv.AccessRequestAcceptedSchema,
+  MyAccessRequest: inv.MyAccessRequestSchema,
+  MyAccessRequestList: inv.MyAccessRequestListSchema,
+  ProjectTransferState: inv.ProjectTransferStateSchema,
+  StartProjectTransferRequest: inv.StartProjectTransferRequestSchema,
+  MyTransfer: inv.MyTransferSchema,
+  MyTransferList: inv.MyTransferListSchema,
+  Notification: inv.NotificationSchema,
+  NotificationPage: inv.NotificationPageSchema,
+  MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
+  InboxSummary: inv.InboxSummarySchema,
 };

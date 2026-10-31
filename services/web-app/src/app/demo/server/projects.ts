@@ -10,6 +10,8 @@ export type DemoProject = {
   roles: Record<string, ProjectRole>;
   /** Роли групп организаций: каждый участник группы получает эту роль. */
   groupRoles?: Record<string, ProjectRole>;
+  /** Право «Может делиться» у прямых редакторов (ACCESS_MANAGE без роли владельца). */
+  canShare?: Record<string, boolean>;
 };
 
 const OWNER_PAVEL = {
@@ -55,6 +57,7 @@ export const seedProjects = (): DemoProject[] => [
     },
     roles: { [DEMO_STUDENT.id]: "owner", [DEMO_ADMIN.id]: "editor" },
     groupRoles: { g_01hx7m4c2d: "editor" },
+    canShare: { [DEMO_ADMIN.id]: true },
   },
   {
     summary: {

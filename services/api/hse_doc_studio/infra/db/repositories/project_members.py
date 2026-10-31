@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.core.access.repositories import ProjectMemberGrant, ProjectOwnership
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -58,3 +59,13 @@ class PostgresProjectMemberRepository:
         )
         async with self._sessions.use() as session:
             return (await session.execute(stmt)).first() is not None
+
+    async def direct_user_role(self, project_id: UUID, user_id: str) -> Role | None:
+        stmt = select(ProjectMemberRow.role).where(
+            ProjectMemberRow.project_id == project_id,
+            ProjectMemberRow.principal_kind == "user",
+            ProjectMemberRow.principal_id == user_id,
+        )
+        async with self._sessions.use() as session:
+            role = (await session.execute(stmt)).scalar_one_or_none()
+        return None if role is None else Role(role)

@@ -87,6 +87,8 @@ CSRF: токен привязан к строке сессии, приходит
 | `HSE_STUDIO__QUOTAS__*` | значения квот по умолчанию (раздел 6) |
 | `HSE_STUDIO__JOBS__RELAY_PICKUP_S`, `__RELAY_MAX_REQUEST_BYTES`, `__RELAY_MAX_RESPONSE_BYTES`, `__RELAY_MAX_PENDING_PER_USER`, `__RELAY_MAX_DURATION_S`, `__RELAY_MAX_PENDING_BYTES_PER_USER`, `__RELAY_MAX_PENDING_TOTAL`, `__RELAY_MAX_PENDING_BYTES_TOTAL` | ретрансляция ИИ через личный раннер: ожидание раннера, пределы запроса и ответа, одновременных на человека, потолок длительности, бюджет памяти api под тела на человека и на процесс |
 
+Трек invites (совместная работа, завершение): `HSE_STUDIO__AUTH__PROJECT_INVITES_ALLOW_SIGNUP` (по умолчанию `true`) разрешает регистрацию по приглашению в проект в режиме `invite` (S12). Таблицы `project_invitations`, `access_requests`, `project_transfers`, `notifications` (ревизия `cf_01_collab_finish`) принадлежат треку invites: `infra/db/repositories/{project_invitations,access_requests,project_transfers,notifications,project_cards}.py`, `use_cases/projects/{invitations,access_requests,transfer}.py`, `use_cases/notifications/*`, провайдер `infra/di/providers/server_invitations.py`.
+
 ## 6. Ключи квот
 
 Уровни: значение установки по умолчанию, затем переопределение организации, затем пользователя. Этап 2 учитывает только первые два ключа; поведение при исчерпании «ждать в очереди».

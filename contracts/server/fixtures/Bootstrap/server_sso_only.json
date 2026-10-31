@@ -33,5 +33,6 @@
     "remote_runner": false
   },
   "csrf_token": null,
-  "guest": null
+  "guest": null,
+  "inbox": null
 }

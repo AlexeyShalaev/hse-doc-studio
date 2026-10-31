@@ -2,7 +2,16 @@ import { safeNextPath, type Bootstrap } from "@entities/session";
 
 // Экраны, доступные без входа. Остальное в серверном режиме требует сессии.
 const PUBLIC_EXACT = ["/login", "/register", "/forgot", "/first-run"];
-const PUBLIC_PREFIXES = ["/invite/", "/verify/", "/reset/", "/auth/", "/s/"];
+const PUBLIC_PREFIXES = [
+  "/invite/",
+  "/verify/",
+  "/reset/",
+  "/auth/",
+  // links: страница ссылки доступа.
+  "/s/",
+  // invites: карточку приглашения видно и без входа.
+  "/project-invite/",
+];
 // links: гостю по ссылке открыты главная (его проекты) и проекты; аккаунт, настройки и админка нет.
 const GUEST_ALLOWED_PREFIXES = ["/projects/"];
 // Экраны только для гостей: вошедшему человеку на них делать нечего.

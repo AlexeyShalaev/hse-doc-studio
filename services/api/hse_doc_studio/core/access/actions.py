@@ -31,6 +31,8 @@ class Action(StrEnum):
     # Ссылки доступа и приглашения; у редактора дополнительно нужен Grant.can_share.
     SHARE = "share"
     PROJECT_TRANSFER = "project.transfer"
+    # Видеть и решать приглашения и запросы доступа проекта: то же условие, что у SHARE, без условий персоны.
+    ACCESS_MANAGE = "access.manage"
 
 
 class RouteExemption(StrEnum):
@@ -50,6 +52,7 @@ _EDITOR = _REVIEWER | {
     Action.SUBMISSION_READ,
     Action.SUBMISSION_CREATE,
     Action.SHARE,
+    Action.ACCESS_MANAGE,
 }
 _OWNER = _EDITOR | {
     Action.PROJECT_SETTINGS,
@@ -59,7 +62,7 @@ _OWNER = _EDITOR | {
 }
 
 # SOURCES_READ у читателя здесь нет: его открывает Grant.show_sources.
-# SHARE у редактора дополнительно требует Grant.can_share, SIGN и
+# SHARE и ACCESS_MANAGE у редактора дополнительно требуют Grant.can_share, SIGN и
 # SUBMISSION_CREATE — привязки к персоне (см. policy).
 ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
     Role.reader: _READER,
@@ -73,6 +76,7 @@ GUEST_DENIED: frozenset[Action] = frozenset(
     {
         Action.AGENT_USE,
         Action.SHARE,
+        Action.ACCESS_MANAGE,
         Action.SIGN,
         Action.SUBMISSION_READ,
         Action.SUBMISSION_CREATE,

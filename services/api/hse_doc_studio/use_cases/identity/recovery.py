@@ -19,6 +19,7 @@ from hse_doc_studio.core.identity.protocols import (
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
@@ -41,7 +42,10 @@ class VerifyEmailUC:
         audit: IAuditLog,
         uow: IUnitOfWork,
         clock: Clock = utc_now,
+        email_hook: IEmailVerifiedHook | None = None,
     ) -> None:
+        # invites: подтверждённая почта привязывает ожидающие приглашения в проекты.
+        self._email_hook = email_hook
         self._users = users
         self._auth_tokens = auth_tokens
         self._audit = audit
@@ -60,6 +64,8 @@ class VerifyEmailUC:
                 await self._users.update(replace(user, email_verified=True, status=status))
             await self._auth_tokens.invalidate_for_user(user.id, AuthTokenKind.verify_email, self._clock())
             await self._audit.record("auth.email_verified", actor_id=user.id)
+        if self._email_hook is not None:
+            await self._email_hook.on_email_verified(user.id, user.email_normalized)
 
 
 class _TokenIssuer:

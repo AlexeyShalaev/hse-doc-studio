@@ -78,6 +78,21 @@ class IdentityErrorCode(StrEnum):
     link_inactive = "link_inactive"
     guest_name_required = "guest_name_required"
     guest_build_unavailable = "guest_build_unavailable"
+    # invites: приглашения в проект, запросы доступа, передача владения.
+    invitation_pending = "invitation_pending"
+    invitation_limit = "invitation_limit"
+    external_invite_forbidden = "external_invite_forbidden"
+    invitee_cannot_register = "invitee_cannot_register"
+    invitation_role_too_high = "invitation_role_too_high"
+    persona_unknown = "persona_unknown"
+    invitation_not_pending = "invitation_not_pending"
+    invitation_resend_too_soon = "invitation_resend_too_soon"
+    invitation_expired = "invitation_expired"
+    invitation_email_mismatch = "invitation_email_mismatch"
+    access_request_decided = "access_request_decided"
+    confirm_name_mismatch = "confirm_name_mismatch"
+    transfer_expired = "transfer_expired"
+    transfer_outdated = "transfer_outdated"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -277,6 +292,63 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
         "Сборка по этой ссылке недоступна.",
         "Builds are not available through this link.",
     ),
+    # invites
+    IdentityErrorCode.invitation_pending: (
+        "Этому человеку уже отправлено приглашение.",
+        "This person already has a pending invitation.",
+    ),
+    IdentityErrorCode.invitation_limit: (
+        "Не больше 50 ожидающих приглашений в проект.",
+        "A project can have at most 50 pending invitations.",
+    ),
+    IdentityErrorCode.external_invite_forbidden: (
+        "Организация запретила приглашать людей с чужих доменов.",
+        "The organization does not allow inviting people from other domains.",
+    ),
+    IdentityErrorCode.invitee_cannot_register: (
+        "Регистрация на сервере выключена: у этого адреса нет аккаунта, и создать его нельзя.",
+        "Sign-up is turned off on this server: this address has no account and cannot get one.",
+    ),
+    IdentityErrorCode.invitation_role_too_high: (
+        "Нельзя выдать роль или права выше своих.",
+        "You cannot grant a role or rights above your own.",
+    ),
+    IdentityErrorCode.persona_unknown: (
+        "Такой персоны нет в проекте.",
+        "This persona does not exist in the project.",
+    ),
+    IdentityErrorCode.invitation_not_pending: (
+        "Приглашение уже принято, отклонено или отозвано.",
+        "The invitation has already been accepted, declined or revoked.",
+    ),
+    IdentityErrorCode.invitation_resend_too_soon: (
+        "Повторно отправить можно не чаще раза в 10 минут и не больше 5 раз.",
+        "You can resend at most once every 10 minutes and no more than 5 times.",
+    ),
+    IdentityErrorCode.invitation_expired: (
+        "Срок приглашения истёк. Попросите прислать новое.",
+        "The invitation has expired. Ask for a new one.",
+    ),
+    IdentityErrorCode.invitation_email_mismatch: (
+        "Приглашение отправлено на другой адрес. Войдите тем аккаунтом, на чью почту оно пришло.",
+        "The invitation was sent to another address. Sign in with the account it was sent to.",
+    ),
+    IdentityErrorCode.access_request_decided: (
+        "Запрос уже рассмотрен.",
+        "The request has already been decided.",
+    ),
+    IdentityErrorCode.confirm_name_mismatch: (
+        "Имя проекта введено неверно.",
+        "The project name does not match.",
+    ),
+    IdentityErrorCode.transfer_expired: (
+        "Срок передачи истёк.",
+        "The transfer has expired.",
+    ),
+    IdentityErrorCode.transfer_outdated: (
+        "Владелец проекта уже сменился: передача больше не действует.",
+        "The project owner has changed: this transfer no longer applies.",
+    ),
 }
 
 
@@ -288,10 +360,23 @@ def message_for(code: IdentityErrorCode) -> str:
 class IdentityError(Exception):
     """Ошибка identity с кодом из закрытого списка; `detail` уже локализован."""
 
-    def __init__(self, code: IdentityErrorCode, detail: str = "", *, retry_after_s: int | None = None) -> None:
+    def __init__(
+        self,
+        code: IdentityErrorCode,
+        detail: str = "",
+        *,
+        retry_after_s: int | None = None,
+        status: int | None = None,
+        extra: dict[str, object] | None = None,
+    ) -> None:
         detail = detail or message_for(code)
         super().__init__(detail)
         self.code = code
         self.detail = detail
         # Для rate_limited: через сколько секунд повторить (заголовок Retry-After).
         self.retry_after_s = retry_after_s
+        # Статус вместо табличного: один код в разных местах значит разное (`invitation_required` у
+        # регистрации 403, у добавления в проект 409).
+        self.status = status
+        # Дополнительные поля тела ответа (например, id ожидающего приглашения).
+        self.extra = extra or {}

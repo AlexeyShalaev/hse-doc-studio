@@ -87,17 +87,33 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.link_inactive: _NOT_FOUND,
     IdentityErrorCode.guest_name_required: _INPUT,
     IdentityErrorCode.guest_build_unavailable: _STATE,
+    # invites
+    IdentityErrorCode.invitation_pending: _STATE,
+    IdentityErrorCode.invitation_limit: _STATE,
+    IdentityErrorCode.external_invite_forbidden: _STATE,
+    IdentityErrorCode.invitee_cannot_register: _STATE,
+    IdentityErrorCode.invitation_role_too_high: _INPUT,
+    IdentityErrorCode.persona_unknown: _INPUT,
+    IdentityErrorCode.invitation_not_pending: _STATE,
+    IdentityErrorCode.invitation_resend_too_soon: _LIMIT,
+    IdentityErrorCode.invitation_expired: _GONE,
+    IdentityErrorCode.invitation_email_mismatch: _FORBIDDEN,
+    IdentityErrorCode.access_request_decided: _STATE,
+    IdentityErrorCode.confirm_name_mismatch: _INPUT,
+    IdentityErrorCode.transfer_expired: _GONE,
+    IdentityErrorCode.transfer_outdated: _STATE,
 }
 
 
 def identity_error_body(exc: IdentityError) -> dict[str, object]:
-    return {"detail": exc.detail, "code": exc.code.value}
+    return {**exc.extra, "detail": exc.detail, "code": exc.code.value}
 
 
 async def _identity_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, IdentityError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
     headers = {"Retry-After": str(exc.retry_after_s)} if exc.retry_after_s else None
-    return JSONResponse(status_code=IDENTITY_ERROR_STATUS[exc.code], content=identity_error_body(exc), headers=headers)
+    status = exc.status or IDENTITY_ERROR_STATUS[exc.code]
+    return JSONResponse(status_code=status, content=identity_error_body(exc), headers=headers)
 
 
 def install_identity_error_handlers(app: FastAPI) -> None:

@@ -16,6 +16,8 @@ import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
 import { ProjectAccessPanel } from "@features/project-access";
+import { InviteSupervisorButton } from "@features/project-invitations";
+import { TransferSection } from "@features/project-transfer";
 import { ShareLinksSection } from "@features/share-links";
 import { TemplateVersionPanel } from "@features/template-update";
 import { i18n, pickLocalized, toast } from "@shared/lib";
@@ -445,8 +447,10 @@ export const ProjectSettingsView = ({
             <ProjectAccessPanel
               projectId={project.id}
               myRole={project.my_role ?? null}
+              ownerKind={project.owner?.kind ?? "user"}
+              isTeam={isTeam}
             />
-            {/* links: «Доступ по ссылке» под участниками (10.1). */}
+            {/* links: «Доступ по ссылке» под участниками и приглашениями (10.1). */}
             <ShareLinksSection
               projectId={project.id}
               myRole={project.my_role ?? null}
@@ -555,6 +559,11 @@ export const ProjectSettingsView = ({
             onRemoveAcademicSupervisor={() => {
               saveNow({ academic_supervisor: null });
             }}
+            inviteSlot={
+              project.owner && project.my_role === "owner" ? (
+                <InviteSupervisorButton projectId={project.id} />
+              ) : null
+            }
           />
         );
       case "checks":
@@ -574,6 +583,15 @@ export const ProjectSettingsView = ({
           <DangerZoneSection
             isArchived={effective.archived}
             isRemoving={isRemoving}
+            transferSlot={
+              project.owner ? (
+                <TransferSection
+                  projectId={project.id}
+                  projectName={project.name}
+                  myRole={project.my_role ?? null}
+                />
+              ) : null
+            }
             onToggleArchive={() => {
               saveNow({ archived: !effective.archived });
             }}

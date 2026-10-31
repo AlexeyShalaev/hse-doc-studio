@@ -39,5 +39,8 @@
     "remote_runner": false
   },
   "csrf_token": "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o",
-  "guest": null
+  "guest": null,
+  "inbox": {
+    "unread": 3
+  }
 }

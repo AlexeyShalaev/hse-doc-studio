@@ -4,6 +4,7 @@ import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
 import { GuestBadge, useGuest } from "@features/guest-session";
+import { InboxBell } from "@features/inbox";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -231,6 +232,7 @@ export const AppTitlebar = ({
             <Settings size={16} />
           </button>
         )}
+        {!isGuest && <InboxBell />}
         <AccountMenu />
         <GuestBadge />
       </div>

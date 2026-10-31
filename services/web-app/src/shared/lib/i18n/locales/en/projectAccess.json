@@ -36,7 +36,14 @@
     "title": "Project not found or you do not have access",
     "message": "The project may have been deleted, or it was never shared with you. If you are waiting for an invitation, contact the project owner.",
     "home": "To my projects",
-    "back": "Back"
+    "back": "Back",
+    "requestAccess": "Request access",
+    "requestTitle": "Request access to the project",
+    "requestMessage": "Message to the owner",
+    "requestSend": "Send",
+    "requestSent": "Request sent. If the project exists, its owner will be notified.",
+    "requestFailed": "Could not send the request. Try again later.",
+    "signInToRequest": "Sign in to request access."
   },
   "panel": {
     "title": "Access",
@@ -73,7 +80,11 @@
       "error": "Search failed. Check your connection and try again.",
       "loading": "Searching…",
       "none": "No one found. A person must be a server user, a group must exist in an organization.",
-      "more": "Showing the first {{limit}}. Refine the search to find the rest."
+      "more": "Showing the first {{limit}}. Refine the search to find the rest.",
+      "invite": "Invite",
+      "inviteEmail": "Invite by email",
+      "inviteHint": "The person gets an invitation and joins after accepting it. A group is added right away.",
+      "direct": "Add now"
     },
     "toast": {
       "added": "{{name}}: added as “{{role}}”",

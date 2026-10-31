@@ -121,7 +121,7 @@ async def world(pg_migrated_engine, tmp_path: Path) -> World:  # type: ignore[no
 
 def _set_uc(w: World) -> SetProjectMemberUC:
     return SetProjectMemberUC(
-        w.members, w.users, w.groups, w.orgs, PostgresProjectAccessDirectory(w.sessions), w.audit, w.uow
+        w.members, w.users, w.groups, w.orgs, PostgresProjectAccessDirectory(w.sessions), w.audit, w.uow, w.members
     )
 
 
@@ -288,7 +288,11 @@ async def test__set_member__user_replaces_role_and_opens_access(world: World) ->
     pid = await world.project(owner="owner")
     uc = _set_uc(world)
 
-    await uc.execute(actor("owner"), pid, ProjectMemberGrant("user", "anna", Role.reader))
+    # S10: нового человека напрямую не добавить, только приглашением; роль уже добавленного меняется сразу.
+    with pytest.raises(IdentityError) as exc:
+        await uc.execute(actor("owner"), pid, ProjectMemberGrant("user", "anna", Role.reader))
+    assert (exc.value.code, exc.value.status) == (IdentityErrorCode.invitation_required, 409)
+    await world.grant(pid, "user", "anna", "reader")
     assert await world.role_of("anna", pid) is Role.reader
     await uc.execute(actor("owner"), pid, ProjectMemberGrant("user", "anna", Role.editor, persona="ivanov"))
 
@@ -308,14 +312,17 @@ async def test__set_member__user_outside_the_owners_circle__not_found_like_a_mis
     assert await world.role_of("anna", pid) is None
 
 
-async def test__set_member__user_known_from_owners_other_project__allowed(world: World) -> None:
+async def test__set_member__user_known_from_owners_other_project__needs_invitation(world: World) -> None:
     first = await world.project(owner="owner")
     second = await world.project(owner="owner")
     await world.grant(first, "user", "anna", "reader")
 
-    await _set_uc(world).execute(actor("owner"), second, ProjectMemberGrant("user", "anna", Role.reader))
+    # Человек в круге владельца (не 404), но нового участника приводит приглашение (S10).
+    with pytest.raises(IdentityError) as exc:
+        await _set_uc(world).execute(actor("owner"), second, ProjectMemberGrant("user", "anna", Role.reader))
 
-    assert await world.role_of("anna", second) is Role.reader
+    assert exc.value.code is IdentityErrorCode.invitation_required
+    assert await world.role_of("anna", second) is None
 
 
 @pytest.mark.parametrize(
@@ -334,7 +341,7 @@ async def test__set_member__invalid__rejected(world: World, principal: str, role
 async def test__remove_member__closes_access_and_reports_missing(world: World) -> None:
     await world.org("acme", owner=OrgRole.owner, anna=OrgRole.member)
     pid = await world.project(owner="owner")
-    await _set_uc(world).execute(actor("owner"), pid, ProjectMemberGrant("user", "anna", Role.editor))
+    await world.grant(pid, "user", "anna", "editor")
     remove = RemoveProjectMemberUC(world.members, world.audit, world.uow)
 
     await remove.execute(actor("owner"), pid, "user", "anna")

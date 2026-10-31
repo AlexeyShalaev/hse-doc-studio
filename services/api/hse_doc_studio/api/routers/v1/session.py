@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response
 from hse_doc_studio.api.admin_access import admin_request_allowed
 from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.invitation_views import inbox_badge
 from hse_doc_studio.api.routers.v1.share_link_public import guest_bootstrap
 from hse_doc_studio.api.schemas.session import (
     AuthOptions,
@@ -108,6 +109,8 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         ),
         csrf_token=result.session.csrf_token if result.session else guest_csrf,
         guest=guest,
+        # invites: счётчик «Входящих» для шапки.
+        inbox=await inbox_badge(request, result.user.id if result.user else None),
     )
     if guest is not None:
         # Гостю недоступно ничего из возможностей установки.

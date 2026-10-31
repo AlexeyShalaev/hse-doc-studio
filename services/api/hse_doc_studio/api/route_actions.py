@@ -226,6 +226,17 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/links/{link_id}/rotate"): RouteRule(Action.SHARE),
     ("DELETE", "/projects/{project_id}/links/{link_id}"): RouteRule(Action.SHARE),
     ("GET", "/projects/{project_id}/links/{link_id}/visits"): RouteRule(Action.SHARE),
+    # invites
+    ("GET", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/invitations/{invitation_id}/resend"): RouteRule(Action.ACCESS_MANAGE),
+    ("DELETE", "/projects/{project_id}/invitations/{invitation_id}"): RouteRule(Action.ACCESS_MANAGE),
+    ("GET", "/projects/{project_id}/access-requests"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/access-requests/{request_id}/approve"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/access-requests/{request_id}/deny"): RouteRule(Action.ACCESS_MANAGE),
+    ("GET", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_VIEW),
+    ("POST", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
+    ("DELETE", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
 }
 
 

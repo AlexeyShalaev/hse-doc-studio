@@ -16,6 +16,7 @@ from hse_doc_studio.core.identity.protocols import (
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
@@ -92,7 +93,10 @@ class ConfirmEmailChangeUC:
         audit: IAuditLog,
         uow: IUnitOfWork,
         clock: Clock = utc_now,
+        email_hook: IEmailVerifiedHook | None = None,
     ) -> None:
+        # invites: новый подтверждённый адрес привязывает ожидающие на него приглашения в проекты.
+        self._email_hook = email_hook
         self._users = users
         self._auth_tokens = auth_tokens
         self._audit = audit
@@ -115,3 +119,5 @@ class ConfirmEmailChangeUC:
                 )
             )
             await self._audit.record("auth.email_changed", actor_id=user.id, details={"old": user.email_normalized})
+        if self._email_hook is not None:
+            await self._email_hook.on_email_verified(user.id, normalize_email(consumed.payload))

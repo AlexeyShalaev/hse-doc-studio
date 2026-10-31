@@ -4,8 +4,10 @@ import { AuthErrorPage } from "@pages/AuthErrorPage";
 import { ErrorPage } from "@pages/ErrorPage";
 import { FirstRunPage } from "@pages/FirstRunPage";
 import { ForgotPage } from "@pages/ForgotPage";
+import { InboxPage } from "@pages/InboxPage";
 import { InvitePage } from "@pages/InvitePage";
 import { LoginPage } from "@pages/LoginPage";
+import { ProjectInvitePage } from "@pages/ProjectInvitePage";
 import { RegisterPage } from "@pages/RegisterPage";
 import { ResetPage } from "@pages/ResetPage";
 import { RunnerPairPage } from "@pages/RunnerPairPage";
@@ -113,12 +115,19 @@ export const router = createBrowserRouter([
           { path: "/auth/error", element: <AuthErrorPage /> },
           // links: страница ссылки доступа (без входа, токен уходит из адреса после открытия).
           { path: "/s/:token", element: <ShareLinkPage /> },
+          // invites: ссылка из письма-приглашения в проект (открывается и без входа).
+          { path: "/project-invite/:token", element: <ProjectInvitePage /> },
         ],
       },
       {
         path: "/",
         // links: гость по ссылке видит свои проекты по ссылкам вместо списка проектов.
         element: <HomeRoute welcome={<WelcomePage />} />,
+      },
+      // invites: «Входящие» вошедшего.
+      {
+        path: "/inbox",
+        element: <InboxPage />,
       },
       {
         path: "/wizard",
