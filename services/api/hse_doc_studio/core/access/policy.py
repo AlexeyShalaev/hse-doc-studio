@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from hse_doc_studio.core.access.actions import GUEST_DENIED, ROLE_ACTIONS, Action
+from hse_doc_studio.core.access.actions import GUEST_DENIED, LINK_DENIED, ROLE_ACTIONS, Action
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
 from hse_doc_studio.core.access.paths import classify_path, path_in_author_scope
 from hse_doc_studio.core.team import split_instance_id
@@ -31,7 +31,7 @@ def decide(actor: Actor, action: Action, acl: ProjectAcl | None, path: str | Non
     grant = acl.grant_for(actor) if acl is not None else None
     if acl is None or grant is None:
         return Decision.not_found
-    if actor.is_guest and action in GUEST_DENIED:
+    if _denied_by_source(actor, grant, action):
         return Decision.forbidden
     return Decision.allow if _allowed(action, acl, grant, path) else Decision.forbidden
 
@@ -43,9 +43,16 @@ def required_role(actor: Actor, action: Action, acl: ProjectAcl | None) -> Role 
     нельзя объяснить словом «нужна роль X», и клиент показывает обычный отказ.
     """
     grant = acl.grant_for(actor) if acl is not None else None
-    if grant is None or (actor.is_guest and action in GUEST_DENIED) or action in ROLE_ACTIONS[grant.role]:
+    if grant is None or _denied_by_source(actor, grant, action) or action in ROLE_ACTIONS[grant.role]:
         return None
     return next((role for role in _ROLE_ORDER if action in ROLE_ACTIONS[role]), None)
+
+
+def _denied_by_source(actor: Actor, grant: Grant, action: Action) -> bool:
+    """Гостю и ссылочному праву часть действий закрыта при любой роли ссылки."""
+    if actor.is_guest and action in GUEST_DENIED:
+        return True
+    return grant.via_link and action in LINK_DENIED
 
 
 def can(actor: Actor, action: Action, acl: ProjectAcl | None = None, path: str | None = None) -> bool:

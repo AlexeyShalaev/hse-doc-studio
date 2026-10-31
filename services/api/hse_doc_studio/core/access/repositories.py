@@ -12,11 +12,12 @@ from hse_doc_studio.core.listing import Found, Picked, SortKey, Window
 
 
 class IProjectAclRepository(Protocol):
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
         """Членство проекта для одного актора; None, если проекта нет или актор не участник.
 
         В `grants` лежит единственная запись: право самого актора. Поля team и shared_enabled
-        берутся из БД, `project.json` источником прав не служит.
+        берутся из БД, `project.json` источником прав не служит. Гость получает право только по ссылке
+        своей сессии; вошедший ещё и по открытым им ссылкам. `include_links=False` (git) ссылки не учитывает.
         """
         ...
 
@@ -40,6 +41,9 @@ class ProjectMembership:
     project_id: UUID
     owner: ProjectOwnerView
     my_role: Role
+    # Роль держится на ссылке (ссылочное право), а не на членстве; подпись ссылки для баннера.
+    via_link: bool = False
+    link_label: str | None = None
 
 
 class IProjectMemberships(Protocol):

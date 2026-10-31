@@ -44,6 +44,12 @@ GIT_SYNC = RateRule("git_sync", limit=20, window_s=60)
 # Поиск кода сопряжения раннера на сайте: и неверные коды тоже считаются (по человеку и по IP).
 RUNNER_PAIRING = RateRule("runner_pairing", limit=10, window_s=60)
 
+# Ссылки доступа: превью и открытие по IP, все гости одной ссылки вместе и каждая гостевая сессия.
+LINK_IP = RateRule("link_ip", limit=60, window_s=60)
+LINK_TOKEN = RateRule("link_token", limit=300, window_s=60)  # noqa: S106 — имя правила, не секрет
+GUEST = RateRule("guest", limit=600, window_s=60)
+
 RULES: dict[str, RateRule] = {
-    rule.name: rule for rule in (AUTH_IP, AUTH_EMAIL, COMPILE, UPLOAD, AGENT, GIT_SYNC, RUNNER_PAIRING)
+    rule.name: rule
+    for rule in (AUTH_IP, AUTH_EMAIL, COMPILE, UPLOAD, AGENT, GIT_SYNC, RUNNER_PAIRING, LINK_IP, LINK_TOKEN, GUEST)
 }
