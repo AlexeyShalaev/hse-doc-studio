@@ -18,6 +18,7 @@ from hse_doc_studio.api.routers.admin import make_admin_router
 from hse_doc_studio.api.routers.v1 import usage as usage_router
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.identity.protocols import IActorResolver
+from hse_doc_studio.core.jobs.autoscale import QueueMetrics
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.orgs.entities import Org, OrgMember, OrgRole
 from hse_doc_studio.core.quotas.kinds import QuotaKind
@@ -33,6 +34,7 @@ from hse_doc_studio.use_cases.admin.ops_quota_policy import (
     UpdateQuotaPolicyUC,
 )
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
+from hse_doc_studio.use_cases.jobs.autoscale import AutoscaleService, GetAutoscaleUC, UpdateAutoscaleUC
 from hse_doc_studio.use_cases.quotas.gate import QuotaGate
 from hse_doc_studio.use_cases.quotas.usage import GetMyUsageUC, GetOrgUsageUC
 from httpx import ASGITransport, AsyncClient
@@ -53,6 +55,16 @@ async def _set_actor(request: Request) -> None:
     set_current_actor(await resolve_actor(request))
 
 
+class _Metrics:
+    async def read(self, now: datetime) -> QueueMetrics:
+        return QueueMetrics(queued=12, oldest_wait_s=40, running=2, runners_online=1, slots_total=2)
+
+
+class _NoOrchestrator:
+    def create(self, policy: object) -> None:
+        return None
+
+
 class _Stack:
     def __init__(self, users: _UsersEnv) -> None:
         self.users = users
@@ -63,6 +75,13 @@ class _Stack:
         self.footprint = InMemoryFootprint()
         self.gate = QuotaGate(self.service, self.counters, self.footprint, clock=lambda: NOW)
         self.orgs = InMemoryOrgRepository(InMemoryOrgStore(users.store))
+        self.autoscale = AutoscaleService(
+            self.settings,
+            _Metrics(),
+            _NoOrchestrator(),
+            users.audit,
+            clock=lambda: NOW,  # type: ignore[arg-type]
+        )
         self.client: AsyncClient
 
 
@@ -124,6 +143,14 @@ class _Provider(Provider):
         return ResetUsageUC(self.s.gate, self.s.users.users, self.s.orgs, self.s.users.audit, NoopUow())
 
     @provide
+    def get_autoscale(self) -> GetAutoscaleUC:
+        return GetAutoscaleUC(self.s.autoscale)
+
+    @provide
+    def update_autoscale(self) -> UpdateAutoscaleUC:
+        return UpdateAutoscaleUC(self.s.settings, self.s.users.audit, NoopUow(), self.s.autoscale)
+
+    @provide
     def my_usage(self) -> GetMyUsageUC:
         return GetMyUsageUC(self.s.gate, self.s.orgs)
 
@@ -160,7 +187,24 @@ _POLICY = {
     "on_exceed": "reject",
 }
 
+_AUTOSCALE = {
+    "mode": "compose",
+    "min_runners": 1,
+    "max_runners": 6,
+    "target_queue_per_slot": 2.0,
+    "scale_up_wait_s": 30,
+    "cooldown_up_s": 60,
+    "cooldown_down_s": 300,
+    "idle_before_down_s": 300,
+    "step_up": 2,
+    "step_down": 1,
+    "webhook_url": None,
+}
+
 _ROUTES = [
+    ("GET", "/api/admin/autoscale", None),
+    ("PUT", "/api/admin/autoscale", _AUTOSCALE),
+    ("GET", "/api/admin/ai-gateway", None),
     ("GET", "/api/admin/quota-policy", None),
     ("PUT", "/api/admin/quota-policy", _POLICY),
     ("GET", "/api/admin/quota-overrides", None),
@@ -289,3 +333,57 @@ async def test__usage__admin_owner_summary_and_reset(stack: _Stack) -> None:
     assert reset.status_code == 204
     assert after["totals"]["builds"] == 0
     assert [e.action for e in await stack.users.audit.list()] == ["usage.reset"]
+
+
+async def test__usage__user_stored_as_hex_shares_counters_with_dashed_spelling(stack: _Stack) -> None:
+
+    owner = uuid4()
+    await stack.users.add(owner.hex, name="Вера")
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    c = stack.client
+    await stack.gate.charge(QuotaKind.builds, owner, None, 4)
+
+    seen = (await c.get(f"/api/admin/usage?owner_kind=user&owner_id={owner}", headers=boss)).json()
+    top = (await c.get("/api/admin/usage/summary", headers=boss)).json()["top_builds"]
+    reset = await c.post(
+        "/api/admin/usage/reset", json={"owner_kind": "user", "owner_id": owner.hex, "kind": "builds"}, headers=boss
+    )
+
+    assert {line["kind"]: line["used"] for line in seen["lines"]}["builds"] == 4
+    assert top == [{"user_id": str(owner), "name": "Вера", "used": 4}]
+    assert reset.status_code == 204
+    assert await stack.counters.total(QuotaKind.builds, NOW.date().replace(day=1)) == 0
+
+
+async def test__autoscale__put_persists_policy_and_status_shows_metrics_and_decision(stack: _Stack) -> None:
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    c = stack.client
+
+    initial = (await c.get("/api/admin/autoscale", headers=boss)).json()
+    saved = await c.put("/api/admin/autoscale", json=_AUTOSCALE, headers=boss)
+    bad_range = await c.put("/api/admin/autoscale", json={**_AUTOSCALE, "min_runners": 9}, headers=boss)
+    bad_hook = await c.put(
+        "/api/admin/autoscale", json={**_AUTOSCALE, "mode": "webhook", "webhook_url": None}, headers=boss
+    )
+    bad_url = await c.put("/api/admin/autoscale", json={**_AUTOSCALE, "webhook_url": "ftp://x"}, headers=boss)
+
+    assert initial["policy"]["mode"] == "off"
+    assert saved.status_code == 200
+    body = saved.json()
+    assert body["policy"]["max_runners"] == 6
+    assert body["metrics"] == {
+        "queued": 12,
+        "oldest_wait_s": 40.0,
+        "running": 2,
+        "runners_online": 1,
+        "slots_total": 2,
+        "slots_busy": 2,
+    }
+    assert (body["decision"]["action"], body["decision"]["desired"], body["decision"]["reason"]) == (
+        "up",
+        3,
+        "queue_depth",
+    )
+    assert body["webhook_secret_set"] is False
+    assert {bad_range.status_code, bad_hook.status_code, bad_url.status_code} == {422}
+    assert [e.action for e in await stack.users.audit.list()] == ["settings.autoscale_update"]

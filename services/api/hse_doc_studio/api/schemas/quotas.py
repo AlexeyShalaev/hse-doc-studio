@@ -120,3 +120,72 @@ class AdminGatewayProvider(StrictModel):
     denied_24h: int
     input_tokens_24h: int
     output_tokens_24h: int
+
+
+AutoscaleModeName = Literal["off", "webhook", "compose"]
+ScaleActionName = Literal["hold", "up", "down"]
+ScaleReasonName = Literal[
+    "below_min",
+    "above_max",
+    "queue_depth",
+    "queue_wait",
+    "at_max",
+    "cooldown_up",
+    "idle",
+    "idle_wait",
+    "cooldown_down",
+    "at_min",
+    "busy",
+    "balanced",
+]
+
+
+class AutoscalePolicyBody(StrictModel):
+    mode: AutoscaleModeName
+    min_runners: int = Field(ge=0, le=200)
+    max_runners: int = Field(ge=1, le=200)
+    target_queue_per_slot: float = Field(ge=0.1, le=100)
+    scale_up_wait_s: int = Field(ge=0, le=86400)
+    cooldown_up_s: int = Field(ge=0, le=86400)
+    cooldown_down_s: int = Field(ge=0, le=86400)
+    idle_before_down_s: int = Field(ge=0, le=86400)
+    step_up: int = Field(ge=1, le=200)
+    step_down: int = Field(ge=1, le=200)
+    webhook_url: str | None = Field(default=None, max_length=2048, pattern=r"^https?://")
+
+
+class AutoscaleMetricsBody(StrictModel):
+    queued: int
+    oldest_wait_s: float
+    running: int
+    runners_online: int
+    slots_total: int
+    slots_busy: int
+
+
+class AutoscaleDecisionBody(StrictModel):
+    current: int
+    desired: int
+    action: ScaleActionName
+    reason: ScaleReasonName
+    wait_s: int
+
+
+class AutoscaleOutcomeBody(StrictModel):
+    at: AwareDatetime
+    desired: int
+    ok: bool
+    error: str | None
+
+
+class AutoscaleStatusBody(StrictModel):
+    policy: AutoscalePolicyBody
+    metrics: AutoscaleMetricsBody
+    decision: AutoscaleDecisionBody
+    last_outcome: AutoscaleOutcomeBody | None
+    last_up_at: AwareDatetime | None
+    last_down_at: AwareDatetime | None
+    orchestrator_current: int | None
+    evaluated_at: AwareDatetime
+    # Секрет подписи webhook задаётся окружением, в ответе только факт.
+    webhook_secret_set: bool

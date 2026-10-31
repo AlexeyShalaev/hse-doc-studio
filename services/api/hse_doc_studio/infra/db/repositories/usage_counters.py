@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from hse_doc_studio.core.jobs.quotas import QuotaOwnerKind
+from hse_doc_studio.core.jobs.quotas import QuotaOwnerKind, user_key
 from hse_doc_studio.core.quotas.kinds import QuotaKind
 from hse_doc_studio.core.quotas.protocols import CounterTotal, ProjectOwner
 from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
@@ -88,10 +88,16 @@ class SqlUsageCounters:
             return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
 
+def _user_forms(owner_id: str) -> list[str]:
+    """Id человека лежит в базе в одном из написаний UUID (в установках это 32 hex без дефисов): ищем по обоим."""
+    key = user_key(owner_id)
+    return sorted({owner_id, key.hex, str(key)}) if key is not None else [owner_id]
+
+
 def _owner_filter(owner_kind: QuotaOwnerKind, owner_id: str):  # type: ignore[no-untyped-def]  # noqa: ANN202
     if owner_kind is QuotaOwnerKind.org:
         return ProjectRow.owner_org_id == owner_id
-    return (ProjectRow.owner_user_id == owner_id) & ProjectRow.owner_org_id.is_(None)
+    return ProjectRow.owner_user_id.in_(_user_forms(owner_id)) & ProjectRow.owner_org_id.is_(None)
 
 
 class SqlOwnerFootprint:

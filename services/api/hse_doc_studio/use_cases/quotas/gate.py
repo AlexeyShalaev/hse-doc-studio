@@ -212,5 +212,12 @@ class QuotaGate:
 
 
 def _counter_owner(owner_kind: QuotaOwnerKind, owner_id: str) -> str:
-    """Организация в счётчиках всегда UUID-ключ: `jobs.org_id` и slug-id сходятся на одной строке."""
-    return str(org_key(owner_id)) if owner_kind is QuotaOwnerKind.org else owner_id
+    """Владелец в счётчиках всегда в одном написании: UUID с дефисами у человека, UUID-ключ у организации.
+
+    Id человека в базе бывает 32 hex без дефисов, а списание идёт по `UUID`; без нормализации админский сброс
+    и итоги искали бы не ту строку.
+    """
+    if owner_kind is QuotaOwnerKind.org:
+        return str(org_key(owner_id))
+    key = user_key(owner_id)
+    return str(key) if key is not None else owner_id

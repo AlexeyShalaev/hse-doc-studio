@@ -173,6 +173,22 @@ def install_quota_housekeeping(app: FastAPI, container: AsyncContainer, cfg: Set
     )
 
 
+def install_autoscale(app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry) -> None:
+    """Цикл автомасштабирования раннеров и метрики очереди для внешних скейлеров; регистрируется до старта раннера."""
+    from hse_doc_studio.api.observability.autoscale_metrics import autoscale_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.jobs.autoscale import AutoscaleService  # noqa: PLC0415
+
+    async def _tick() -> None:
+        await (await container.get(AutoscaleService)).tick()
+
+    app.state.background.register(PeriodicTask(name="autoscale", interval_s=cfg.autoscale.interval_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _autoscale_metrics() -> None:
+        service = await container.get(AutoscaleService)
+        metrics.add_collector(autoscale_collector(lambda: service.last_seen))
+
+
 def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """На старте выставляет CORS бакета, если заданы источники: без него pdf.js не читает PDF по ссылке с Range."""
     if not cfg.s3.cors_origins:

@@ -160,3 +160,18 @@ async def test__ai_usage_log__records_and_summarizes_by_provider(world: World) -
     assert summary[second].denied == 1
     assert await log.prune(_NOW + timedelta(days=1)) == 3
     assert await log.summary(_NOW - timedelta(days=1)) == []
+
+
+async def test__footprint__user_stored_as_hex_is_found_by_both_uuid_spellings(world: World) -> None:
+    owner = uuid4()
+    await SqlUserRepository(world.sessions).add(make_user(owner.hex))
+    project_id = uuid4()
+    folder = world.volume.allocate(project_id)
+    world.projects.save(replace(make_project(folder=folder, documents=[make_document()]), id=project_id))
+    with as_actor(Actor.user(owner.hex, name="Борис")):
+        await world.locator.register(folder)
+    await world.usage.save(ProjectUsage(project_id, 7, 0, 0, _NOW))
+
+    assert await world.footprint.storage_bytes(QuotaOwnerKind.user, owner.hex) == 7
+    assert await world.footprint.storage_bytes(QuotaOwnerKind.user, str(owner)) == 7
+    assert await world.footprint.max_members(QuotaOwnerKind.user, str(owner)) >= 1

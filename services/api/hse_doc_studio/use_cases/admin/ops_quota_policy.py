@@ -6,9 +6,16 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.identity.entities import User
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
-from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository, QuotaOverride, QuotaOwnerKind, QuotaResource
+from hse_doc_studio.core.jobs.quotas import (
+    IQuotaOverrideRepository,
+    QuotaOverride,
+    QuotaOwnerKind,
+    QuotaResource,
+    user_key,
+)
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.quotas.kinds import KIND_SPECS, QuotaKind, QuotaScope
 from hse_doc_studio.core.quotas.policy import (
@@ -114,14 +121,22 @@ class _Names:
         if owner_kind is QuotaOwnerKind.org:
             org = await self._orgs.get(owner_id) or await self._orgs.get_by_slug(owner_id)
             return org.name if org is not None else None
-        user = await self._users.get(owner_id)
+        user = await self._find_user(owner_id)
         return (user.name or user.email) if user is not None else None
+
+    async def _find_user(self, owner_id: str) -> User | None:
+        """Id человека в счётчиках с дефисами, в базе может быть без них: пробуем оба написания."""
+        key = user_key(owner_id)
+        for form in (owner_id, key.hex, str(key)) if key is not None else (owner_id,):
+            if (user := await self._users.get(form)) is not None:
+                return user
+        return None
 
     async def canonical_id(self, owner_kind: QuotaOwnerKind, owner_id: str) -> str | None:
         if owner_kind is QuotaOwnerKind.org:
             org = await self._orgs.get(owner_id) or await self._orgs.get_by_slug(owner_id)
             return org.id if org is not None else None
-        user = await self._users.get(owner_id)
+        user = await self._find_user(owner_id)
         return user.id if user is not None else None
 
 

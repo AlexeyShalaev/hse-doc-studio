@@ -6,13 +6,18 @@ from dishka import AnyOf, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.ai_gateway.usage import IAiUsageLog
+from hse_doc_studio.core.egress import EgressPurpose, IEgressPolicy
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
+from hse_doc_studio.core.jobs.autoscale import IQueueMetricsReader
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.quotas.protocols import IOwnerFootprint, IQuotaGate, IUsageCounters
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.infra.db.repositories.queue_metrics import SqlQueueMetricsReader
 from hse_doc_studio.infra.db.repositories.usage_counters import SqlOwnerFootprint, SqlUsageCounters
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.egress.http import egress_client
+from hse_doc_studio.infra.runner_scaling.factory import OrchestratorFactory
 from hse_doc_studio.use_cases.admin.ops_quota_policy import (
     AdminOwnerUsageUC,
     AdminUsageSummaryUC,
@@ -24,6 +29,12 @@ from hse_doc_studio.use_cases.admin.ops_quota_policy import (
     UpdateQuotaPolicyUC,
 )
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
+from hse_doc_studio.use_cases.jobs.autoscale import (
+    AutoscaleService,
+    GetAutoscaleUC,
+    IOrchestratorFactory,
+    UpdateAutoscaleUC,
+)
 from hse_doc_studio.use_cases.quotas.gate import QuotaGate
 from hse_doc_studio.use_cases.quotas.housekeeping import QuotaHousekeeping
 from hse_doc_studio.use_cases.quotas.usage import GetMyUsageUC, GetOrgUsageUC
@@ -109,3 +120,35 @@ class ServerQuotasProvider(Provider):
     @provide
     def get_quota_housekeeping(self, counters: IUsageCounters, usage: IAiUsageLog) -> QuotaHousekeeping:
         return QuotaHousekeeping(counters, usage, usage_retention_days=settings.ai_gateway.usage_retention_days)
+
+    @provide
+    def get_queue_metrics_reader(self, sessions: SessionProvider) -> IQueueMetricsReader:
+        return SqlQueueMetricsReader(sessions)
+
+    @provide
+    def get_orchestrator_factory(self, egress: IEgressPolicy) -> IOrchestratorFactory:
+        cfg = settings.autoscale
+        return OrchestratorFactory(
+            cfg,
+            lambda: egress_client(egress, EgressPurpose.admin, timeout=cfg.webhook_timeout_s, follow_redirects=False),
+        )
+
+    @provide
+    def get_autoscale_service(
+        self,
+        repo: IInstanceSettingsRepository,
+        metrics: IQueueMetricsReader,
+        factory: IOrchestratorFactory,
+        audit: IAuditLog,
+    ) -> AutoscaleService:
+        return AutoscaleService(repo, metrics, factory, audit)
+
+    @provide
+    def get_get_autoscale_uc(self, service: AutoscaleService) -> GetAutoscaleUC:
+        return GetAutoscaleUC(service)
+
+    @provide
+    def get_update_autoscale_uc(
+        self, repo: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork, service: AutoscaleService
+    ) -> UpdateAutoscaleUC:
+        return UpdateAutoscaleUC(repo, audit, uow, service)
