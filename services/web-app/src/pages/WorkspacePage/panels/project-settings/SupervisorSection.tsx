@@ -149,6 +149,8 @@ export type SupervisorSectionProps = {
   onChangeAcademicSupervisor: (patch: Partial<Person>) => void;
   onAddAcademicSupervisor: () => void;
   onRemoveAcademicSupervisor: () => void;
+  /** invites: «Пригласить научрука» в серверный проект (кнопка открывает форму приглашения). */
+  inviteSlot?: React.ReactNode;
 };
 
 export const SupervisorSection = ({
@@ -164,10 +166,12 @@ export const SupervisorSection = ({
   onChangeAcademicSupervisor,
   onAddAcademicSupervisor,
   onRemoveAcademicSupervisor,
+  inviteSlot,
 }: SupervisorSectionProps) => {
   const { t } = useTranslation("workspace");
   return (
     <SectionCard title={t("projectSettings.sectionSupervisor")} fullSpan>
+      {inviteSlot && <div className="flex">{inviteSlot}</div>}
       <div className="flex flex-col" style={{ gap: 10 }}>
         {supervisor ? (
           <SupervisorRow

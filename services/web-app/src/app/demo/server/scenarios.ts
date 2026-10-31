@@ -142,6 +142,8 @@ const base = (overrides: Partial<Bootstrap>): Bootstrap =>
 const withPersonalRunners = (boot: Bootstrap): Bootstrap => ({
   ...boot,
   capabilities: { ...boot.capabilities, personal_runners: boot.user !== null },
+  // invites: счётчик «Входящих» есть только у вошедшего.
+  inbox: boot.inbox ?? (boot.user ? { unread: 0 } : null),
 });
 
 /** Анна на сервере с личными раннерами (или с выключенными администратором). */
@@ -539,6 +541,7 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
         },
         user: DEMO_STUDENT,
         csrf_token: STUDENT_CSRF,
+        inbox: { unread: 3 },
       }),
   },
   {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Lock, Plus, UserRound, Users, X } from "lucide-react";
+import { Building2, Lock, Mail, Plus, UserRound, Users, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PICKER_LIMIT } from "@shared/lib";
 import {
@@ -51,6 +51,16 @@ export type AccessViewProps = {
   selfId?: string | null;
   onRetry?: () => void;
   onAdd: (candidate: ProjectAccessCandidate, role: ProjectRole) => void;
+  /**
+   * invites (S10): человека приводит приглашение. Есть обработчик: «Добавить» у человека открывает форму
+   * приглашения (кандидат или почта, null), группа добавляется сразу, как раньше.
+   */
+  onInvite?: (
+    candidate: ProjectAccessCandidate | null,
+    role: ProjectRole,
+  ) => void;
+  /** Исключение S10: админ организации добавляет её участника сразу, рядом кнопка «Добавить сразу». */
+  directAdd?: boolean;
   onChangeRole: (entry: ProjectAccessEntry, role: ProjectRole) => void;
   onRemove: (entry: ProjectAccessEntry) => void;
 };
@@ -98,6 +108,8 @@ export const AccessView = ({
   selfId = null,
   onRetry,
   onAdd,
+  onInvite,
+  directAdd = false,
   onChangeRole,
   onRemove,
 }: AccessViewProps) => {
@@ -355,8 +367,25 @@ export const AccessView = ({
             </div>
           </div>
           <p style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}>
-            {t("panel.add.hint")}
+            {onInvite ? t("panel.add.inviteHint") : t("panel.add.hint")}
           </p>
+          {onInvite && (
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                style={{ gap: 6 }}
+                data-testid="access-invite-email"
+                onClick={() => {
+                  onInvite(null, role);
+                }}
+              >
+                <Mail size={12} aria-hidden="true" />
+                {t("panel.add.inviteEmail")}
+              </Button>
+            </div>
+          )}
           {candidatesLoading && (
             <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
               <Spinner size="sm" />
@@ -404,6 +433,8 @@ export const AccessView = ({
               {candidates.map((c) => {
                 const Icon = KIND_ICON[c.subject_kind];
                 const key = rowKey(c);
+                const invite = c.subject_kind === "user" ? onInvite : undefined;
+                const invites = invite !== undefined;
                 return (
                   <li
                     key={key}
@@ -437,12 +468,27 @@ export const AccessView = ({
                       style={{ gap: 6 }}
                       data-testid={`access-add-${key}`}
                       onClick={() => {
-                        onAdd(c, role);
+                        if (invite) invite(c, role);
+                        else onAdd(c, role);
                       }}
                     >
                       <Plus size={12} aria-hidden="true" />
-                      {t("panel.add.button")}
+                      {invites ? t("panel.add.invite") : t("panel.add.button")}
                     </Button>
+                    {invites && directAdd && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={adding}
+                        data-testid={`access-add-direct-${key}`}
+                        onClick={() => {
+                          onAdd(c, role);
+                        }}
+                      >
+                        {t("panel.add.direct")}
+                      </Button>
+                    )}
                   </li>
                 );
               })}

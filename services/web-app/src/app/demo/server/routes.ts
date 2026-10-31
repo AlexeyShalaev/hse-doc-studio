@@ -6,6 +6,7 @@ import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
 import { createSharedProviderUserRoutes } from "./installRoutes";
+import { createInvitationRoutes } from "./invitationRoutes";
 import { createMemberOrgRoutes } from "./memberOrgRoutes";
 import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
@@ -151,6 +152,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createSetupRoutes(() => world),
   ...createProjectRoutes(() => world),
   ...createProjectAccessRoutes(() => world),
+  // invites: приглашения, запросы доступа, передача владения, «Входящие».
+  ...createInvitationRoutes(() => world),
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
   ...createSharedProviderUserRoutes(() => world),
