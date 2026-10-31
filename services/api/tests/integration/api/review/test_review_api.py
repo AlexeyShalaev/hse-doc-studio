@@ -110,7 +110,8 @@ def test__status__author_or_editor_can_resolve_and_reopen(review: Review) -> Non
     foreign = review.rita.put(f"{review.base}/threads/{other['id']}/status", json={"status": "resolved"})
     by_editor = review.world.anna.put(f"{review.base}/threads/{other['id']}/status", json={"status": "resolved"})
 
-    assert own.status_code == 200 and own.json()["status"] == "resolved"
+    assert own.status_code == 200
+    assert own.json()["status"] == "resolved"
     assert own.json()["resolved_by_name"] == "Рита"
     assert foreign.status_code == 403
     assert by_editor.status_code == 200

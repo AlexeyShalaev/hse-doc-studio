@@ -51,7 +51,8 @@ CLOSE_BUSY = 4429
 CLOSE_TOO_BIG = 1009
 CLOSE_OVERLOADED = 1013
 
-_COLOR_COUNT = 8
+# Цвета курсоров: насыщенные, читаются на светлой и тёмной теме; подсветка выделения это тот же цвет с прозрачностью.
+_PALETTE = ("#d6336c", "#1c7ed6", "#2f9e44", "#e8590c", "#7048e8", "#0c8599", "#c2255c", "#5c940d")
 
 
 class CollabRefusedError(Exception):
@@ -79,8 +80,7 @@ class CollabIdentity:
 
     @property
     def color(self) -> str:
-        index = sum(self.key.encode("utf-8")) % _COLOR_COUNT
-        return f"c{index}"
+        return _PALETTE[sum(self.key.encode("utf-8")) % len(_PALETTE)]
 
 
 class _Bucket:
@@ -496,7 +496,14 @@ def _vouched_state(state: dict[str, object] | None, identity: CollabIdentity) ->
     """Присутствие с проверенным именем и цветом; из состояния клиента остаётся только курсор."""
     if state is None:
         return None
-    vouched: dict[str, object] = {"user": {"name": identity.name, "color": identity.color, "id": identity.key}}
+    vouched: dict[str, object] = {
+        "user": {
+            "name": identity.name,
+            "color": identity.color,
+            "colorLight": f"{identity.color}33",
+            "id": identity.key,
+        }
+    }
     cursor = state.get("cursor")
     if isinstance(cursor, dict | type(None)):
         vouched["cursor"] = cursor

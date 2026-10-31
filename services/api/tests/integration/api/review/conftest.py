@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 from hse_doc_studio.core.access.entities import Role
 
 from tests.integration.api.sharing.conftest import (  # noqa: F401 — фикстуры стенда
@@ -13,7 +14,6 @@ from tests.integration.api.sharing.conftest import (  # noqa: F401 — фикс�
     add_user,
     set_member,
     stand,
-    world,
 )
 
 NOTES = "notes.tex"
@@ -58,5 +58,5 @@ class Review:
 
 
 @pytest.fixture
-def review(world: World) -> Review:
-    return Review(world)
+def review(stand: TestClient) -> Review:  # noqa: F811 — фикстура стенда импортирована выше
+    return Review(World(stand))

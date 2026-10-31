@@ -354,7 +354,8 @@ async def test__awareness__name_is_vouched_by_server_and_removed_on_leave(manage
 
     seen = boris.awareness[-1]
     assert seen.state is not None
-    assert seen.state["user"] == {"name": "Anna", "color": anna.client.identity.color, "id": "anna"}
+    color = anna.client.identity.color
+    assert seen.state["user"] == {"name": "Anna", "color": color, "colorLight": f"{color}33", "id": "anna"}
     assert seen.state["cursor"] == {"a": 1}
     assert "x" not in seen.state
 
