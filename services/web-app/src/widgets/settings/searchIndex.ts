@@ -17,6 +17,7 @@ export type SettingsSectionId =
   | "appearance"
   | "account"
   | "organizations"
+  | "usage"
   | "profile"
   | "compiler"
   | "fonts"
@@ -115,6 +116,28 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "groups",
       "leave",
       "role",
+    ],
+  },
+
+  // ── Использование квот (серверный режим) ─────────────────────
+  {
+    sectionId: "usage",
+    anchorId: "usage",
+    labelKey: "search.usage",
+    keywords: [
+      "использование",
+      "квота",
+      "квоты",
+      "лимит",
+      "токены",
+      "сборки",
+      "место",
+      "usage",
+      "quota",
+      "limit",
+      "tokens",
+      "builds",
+      "storage",
     ],
   },
 

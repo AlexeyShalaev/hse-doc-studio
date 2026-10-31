@@ -14,6 +14,7 @@ from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 NO_PERIOD = "none"
+INT32_MAX = 2**31 - 1
 
 
 class SqlQuotaOverrideRepository:
@@ -24,7 +25,12 @@ class SqlQuotaOverrideRepository:
         async with self._sessions.use() as session:
             rows = (await session.execute(select(QuotaRow).where(QuotaRow.period == NO_PERIOD))).scalars()
             return tuple(
-                QuotaOverride(QuotaOwnerKind(row.owner_kind), row.owner_id, QuotaResource(row.resource), row.hard_limit)
+                QuotaOverride(
+                    QuotaOwnerKind(row.owner_kind),
+                    row.owner_id,
+                    QuotaResource(row.resource),
+                    row.hard_limit_big if row.hard_limit_big is not None else row.hard_limit,
+                )
                 for row in rows
                 if row.owner_kind in QuotaOwnerKind and row.resource in QuotaResource
             )
@@ -35,7 +41,8 @@ class SqlQuotaOverrideRepository:
             "owner_id": override.owner_id,
             "resource": override.resource.value,
             "period": NO_PERIOD,
-            "hard_limit": override.hard_limit,
+            "hard_limit": min(override.hard_limit, INT32_MAX),
+            "hard_limit_big": override.hard_limit,
         }
         async with self._sessions.use() as session:
             await session.execute(
@@ -43,7 +50,7 @@ class SqlQuotaOverrideRepository:
                 .values(**values)
                 .on_conflict_do_update(
                     index_elements=[QuotaRow.owner_kind, QuotaRow.owner_id, QuotaRow.resource, QuotaRow.period],
-                    set_={"hard_limit": override.hard_limit},
+                    set_={"hard_limit": values["hard_limit"], "hard_limit_big": override.hard_limit},
                 )
             )
 

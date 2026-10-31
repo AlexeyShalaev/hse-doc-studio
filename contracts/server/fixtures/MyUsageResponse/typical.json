@@ -1,0 +1,83 @@
+{
+  "user": {
+    "owner_id": "4f1d0c1a-0000-4000-8000-000000000001",
+    "owner_name": "Анна",
+    "lines": [
+      {
+        "kind": "storage",
+        "scope": "user",
+        "unit": "bytes",
+        "used": 52428800,
+        "limit": 1073741824,
+        "percent": 4,
+        "state": "ok",
+        "source": "installation",
+        "resets_at": null
+      },
+      {
+        "kind": "builds",
+        "scope": "user",
+        "unit": "builds",
+        "used": 27,
+        "limit": 30,
+        "percent": 90,
+        "state": "warning",
+        "source": "user",
+        "resets_at": "2026-12-01T00:00:00Z"
+      },
+      {
+        "kind": "ai_tokens_day",
+        "scope": "user",
+        "unit": "tokens",
+        "used": 1200,
+        "limit": null,
+        "percent": null,
+        "state": "unlimited",
+        "source": null,
+        "resets_at": "2026-11-11T00:00:00Z"
+      },
+      {
+        "kind": "ai_tokens_month",
+        "scope": "user",
+        "unit": "tokens",
+        "used": 200000,
+        "limit": 200000,
+        "percent": 100,
+        "state": "exceeded",
+        "source": "org",
+        "resets_at": "2026-12-01T00:00:00Z"
+      },
+      {
+        "kind": "members",
+        "scope": "user",
+        "unit": "members",
+        "used": 3,
+        "limit": 5,
+        "percent": 60,
+        "state": "ok",
+        "source": "installation",
+        "resets_at": null
+      }
+    ]
+  },
+  "orgs": [
+    {
+      "owner_id": "org_hse",
+      "owner_name": "Кафедра",
+      "lines": [
+        {
+          "kind": "storage",
+          "scope": "org",
+          "unit": "bytes",
+          "used": 1000,
+          "limit": 5000,
+          "percent": 20,
+          "state": "ok",
+          "source": "org",
+          "resets_at": null
+        }
+      ]
+    }
+  ],
+  "warn_percent": 80
+}

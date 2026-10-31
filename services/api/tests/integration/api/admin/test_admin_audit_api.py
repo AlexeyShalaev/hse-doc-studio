@@ -234,6 +234,12 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PUT", "/api/admin/settings/sharing"): "settings.sharing_update",
     ("PUT", "/api/admin/settings/signing"): "settings.signing_policy_update",
     ("PUT", "/api/admin/quotas"): "settings.quotas_update",
+    # quotas (этап 6): проверяет test_admin_quota_policy_api
+    ("PUT", "/api/admin/quota-policy"): "settings.quota_policy_update",
+    ("PUT", "/api/admin/quota-overrides"): "quota.override_set",
+    ("DELETE", "/api/admin/quota-overrides"): "quota.override_delete",
+    ("POST", "/api/admin/usage/reset"): "usage.reset",
+    ("PUT", "/api/admin/autoscale"): "settings.autoscale_update",
     ("POST", "/api/admin/queue/{id}/cancel"): "queue.job_cancel",
     ("POST", "/api/admin/runner-tokens"): "runner.registration_token_create",
     ("DELETE", "/api/admin/runner-tokens/{id}"): "runner.registration_token_revoke",

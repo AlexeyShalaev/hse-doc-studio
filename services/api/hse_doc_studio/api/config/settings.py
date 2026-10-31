@@ -8,8 +8,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from hse_doc_studio import __version__ as project_version
 from hse_doc_studio.api.config.admin import AdminConfig
+from hse_doc_studio.api.config.ai_gateway import AiGatewayConfig
 from hse_doc_studio.api.config.artifacts import ArtifactsConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
+from hse_doc_studio.api.config.autoscale import AutoscaleConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.egress import EgressConfig
@@ -86,6 +88,8 @@ class Settings(BaseSettings):
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
+    ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
+    autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)

@@ -487,6 +487,7 @@
     "gitAccessEncryption": "Шифрование токенов",
     "gitAccessFetch": "Фоновая проверка по умолчанию",
     "organizations": "Организации и группы",
+    "usage": "Использование: квоты и лимиты",
     "account": "Аккаунт",
     "accountEmail": "Почта аккаунта",
     "accountPassword": "Пароль",

@@ -53,3 +53,17 @@ def test__duration_cap__user_beats_org_beats_default() -> None:
     assert duration_cap(300, overrides, member, org) == 120
     assert duration_cap(300, overrides, member, uuid4()) == 300
     assert duration_cap(None, overrides, member, None) is None
+
+
+def test__duration_cap__user_override_found_in_any_uuid_spelling() -> None:
+    user, org = uuid4(), uuid4()
+    for spelling in (user.hex, str(user).upper(), f"{{{user}}}"):
+        overrides = [QuotaOverride(QuotaOwnerKind.user, spelling, QuotaResource.max_duration_s, 45)]
+
+        assert duration_cap(300, overrides, user, org) == 45, spelling
+
+
+def test__duration_cap__broken_user_id_is_ignored() -> None:
+    overrides = [QuotaOverride(QuotaOwnerKind.user, "not-a-uuid", QuotaResource.max_duration_s, 45)]
+
+    assert duration_cap(300, overrides, uuid4(), None) == 300

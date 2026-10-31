@@ -203,3 +203,38 @@ async def test__unlimited_policy__disabled() -> None:
 class DiskMeasurerStub:
     async def measure(self, project_id: UUID) -> ProjectUsage:
         raise AssertionError("не должен вызываться")
+
+
+class _OwnerGate:
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.checked: list[tuple[UUID, int]] = []
+
+    async def check_storage_write(self, project_id: UUID, delta_bytes: int) -> None:
+        self.checked.append((project_id, delta_bytes))
+        if self.error is not None:
+            raise self.error
+
+
+async def test__owner_gate__alone_enables_the_service_and_is_asked_only_about_growth() -> None:
+    gate = _OwnerGate()
+    quota = ProjectQuotaService(FakeUsageStore(), DiskMeasurerStub(), QuotaPolicy(0), owner_gate=gate)  # type: ignore[arg-type]
+    project = uuid4()
+
+    await quota.check_write(project, 50)
+    await quota.check_write(project, -10)
+
+    assert quota.enabled is True
+    assert gate.checked == [(project, 50)]
+    assert await quota.status(project) is None
+
+
+async def test__owner_gate__refusal_propagates() -> None:
+    from hse_doc_studio.core.quotas.errors import QuotaExceededError
+    from hse_doc_studio.core.quotas.kinds import QuotaKind, QuotaScope
+
+    gate = _OwnerGate(QuotaExceededError(QuotaKind.storage, QuotaScope.user, 9, 10, None))
+    quota = ProjectQuotaService(FakeUsageStore(), DiskMeasurerStub(), QuotaPolicy(0), owner_gate=gate)  # type: ignore[arg-type]
+
+    with pytest.raises(QuotaExceededError):
+        await quota.check_write(uuid4(), 5)

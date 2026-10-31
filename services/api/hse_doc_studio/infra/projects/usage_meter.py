@@ -26,6 +26,7 @@ from hse_doc_studio.core.projects.usage import (
     QuotaPolicy,
 )
 from hse_doc_studio.core.projects.volume import IProjectVolume
+from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.storage import IObjectStore
 from hse_doc_studio.infra.vcs.git_vcs_service import store_git_dir
 
@@ -89,6 +90,7 @@ class ProjectQuotaService:
         measurer: IProjectUsageMeasurer,
         policy: QuotaPolicy,
         *,
+        owner_gate: IQuotaGate | None = None,
         remeasure_min_s: float = 2.0,
         clock: Callable[[], datetime] | None = None,
         monotonic: Callable[[], float] = time.monotonic,
@@ -96,6 +98,8 @@ class ProjectQuotaService:
         self._store = store
         self._measurer = measurer
         self._policy = policy
+        # Предел владельца (пользователя или организации) поверх предела проекта; ему нужны измерения мест.
+        self._owner_gate = owner_gate
         self._remeasure_min_s = remeasure_min_s
         self._clock = clock or (lambda: datetime.now(tz=timezone.utc))
         self._monotonic = monotonic
@@ -103,11 +107,17 @@ class ProjectQuotaService:
 
     @property
     def enabled(self) -> bool:
-        return self._policy.enabled
+        return self._policy.enabled or self._owner_gate is not None
 
     async def check_write(self, project_id: UUID, delta_bytes: int) -> None:
-        if not self._policy.enabled or delta_bytes <= 0:
+        if delta_bytes <= 0:
             return
+        if self._policy.enabled:
+            await self._check_project(project_id, delta_bytes)
+        if self._owner_gate is not None:
+            await self._owner_gate.check_storage_write(project_id, delta_bytes)
+
+    async def _check_project(self, project_id: UUID, delta_bytes: int) -> None:
         usage = await self._usage(project_id)
         if usage.total + delta_bytes <= self._policy.limit_bytes:
             return
@@ -119,7 +129,7 @@ class ProjectQuotaService:
         raise ProjectQuotaExceededError(project_id, usage.total, self._policy.limit_bytes, delta_bytes)
 
     async def record_change(self, project_id: UUID, delta_bytes: int) -> None:
-        if not self._policy.enabled or delta_bytes == 0:
+        if not self.enabled or delta_bytes == 0:
             return
         if await self._store.get(project_id) is None:
             await self._remeasure(project_id)

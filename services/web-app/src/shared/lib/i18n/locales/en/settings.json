@@ -485,6 +485,7 @@
     "gitAccessEncryption": "Token encryption",
     "gitAccessFetch": "Default background check",
     "organizations": "Organizations and groups",
+    "usage": "Quota usage: limits and counters",
     "account": "Account",
     "accountEmail": "Account email",
     "accountPassword": "Password",

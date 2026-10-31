@@ -65,6 +65,11 @@ class IdentityErrorCode(StrEnum):
     remote_runner_url_invalid = "remote_runner_url_invalid"
     remote_runner_unreachable = "remote_runner_unreachable"
     remote_runner_disabled = "remote_runner_disabled"
+    # Квоты и ИИ-шлюз (этап 6): тело отказа несёт числа, см. api/quota_errors.py.
+    quota_exceeded = "quota_exceeded"
+    owner_storage_exceeded = "owner_storage_exceeded"
+    ai_model_not_allowed = "ai_model_not_allowed"
+    ai_provider_unavailable = "ai_provider_unavailable"
     # Ссылки доступа и гости.
     links_disabled = "links_disabled"
     link_limit = "link_limit"
@@ -238,6 +243,22 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.relay_busy: (
         "Слишком много запросов к раннеру одновременно, попробуйте через минуту.",
         "Too many requests to the runner at once, try again in a minute.",
+    ),
+    IdentityErrorCode.quota_exceeded: (
+        "Достигнут лимит квоты. Лимит и дата сброса указаны в разделе «Использование».",
+        "Quota limit reached. See the limit and the reset date under Usage.",
+    ),
+    IdentityErrorCode.owner_storage_exceeded: (
+        "Достигнут лимит места на сервере. Освободите место или попросите администратора увеличить квоту.",
+        "Server storage limit reached. Free some space or ask an administrator to raise the quota.",
+    ),
+    IdentityErrorCode.ai_model_not_allowed: (
+        "Эта модель не разрешена на выбранном провайдере. Выберите другую.",
+        "This model is not allowed on the selected provider. Pick another one.",
+    ),
+    IdentityErrorCode.ai_provider_unavailable: (
+        "Провайдер ИИ временно недоступен. Попробуйте позже или выберите другой.",
+        "The AI provider is temporarily unavailable. Try later or pick another one.",
     ),
     IdentityErrorCode.ai_provider_runner_invalid: (
         "Выберите свой раннер и объявленный им ИИ-адрес.",

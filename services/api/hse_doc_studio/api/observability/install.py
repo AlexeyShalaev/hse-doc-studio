@@ -81,6 +81,9 @@ def install_background(
     return runner
 
 
+_HOUSEKEEPING_INTERVAL_S = 6 * 3600.0
+
+
 def install_project_purge(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Периодическое стирание удалённых проектов по сроку хранения; регистрируется до старта раннера."""
     from hse_doc_studio.infra.projects.purge import ProjectPurger  # noqa: PLC0415 — sqlalchemy только с extra server
@@ -156,6 +159,34 @@ def install_audit_retention(app: FastAPI, container: AsyncContainer, cfg: Settin
     app.state.background.register(
         PeriodicTask(name="audit_retention", interval_s=cfg.server.audit_purge_interval_s, run=_purge)
     )
+
+
+def install_quota_housekeeping(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Периодическая уборка старых периодов счётчиков квот и журнала вызовов ИИ-шлюза."""
+    from hse_doc_studio.use_cases.quotas.housekeeping import QuotaHousekeeping  # noqa: PLC0415
+
+    async def _clean() -> None:
+        await (await container.get(QuotaHousekeeping)).run()
+
+    app.state.background.register(
+        PeriodicTask(name="quota_housekeeping", interval_s=_HOUSEKEEPING_INTERVAL_S, run=_clean)
+    )
+
+
+def install_autoscale(app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry) -> None:
+    """Цикл автомасштабирования раннеров и метрики очереди для внешних скейлеров; регистрируется до старта раннера."""
+    from hse_doc_studio.api.observability.autoscale_metrics import autoscale_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.jobs.autoscale import AutoscaleService  # noqa: PLC0415
+
+    async def _tick() -> None:
+        await (await container.get(AutoscaleService)).tick()
+
+    app.state.background.register(PeriodicTask(name="autoscale", interval_s=cfg.autoscale.interval_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _autoscale_metrics() -> None:
+        service = await container.get(AutoscaleService)
+        metrics.add_collector(autoscale_collector(lambda: service.last_seen))
 
 
 def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:

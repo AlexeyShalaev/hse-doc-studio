@@ -260,7 +260,10 @@ class QuotaRow(Base):
     resource: Mapped[str] = mapped_column(String(32), primary_key=True)
     period: Mapped[str] = mapped_column(String(16), primary_key=True, server_default="none")
     soft_limit: Mapped[int | None] = mapped_column(Integer)
+    # До 32 бит: старая версия api читает только его (правило expand/contract), значение больше предела обрезано.
     hard_limit: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Точное значение: байты и токены не влезают в 32 бита. Пусто у строк, записанных старой версией.
+    hard_limit_big: Mapped[int | None] = mapped_column(BigInteger)
 
 
 encrypted_columns.register(EncryptedColumn("runner_pairings", "token_secret_enc", pk="id"))

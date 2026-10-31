@@ -121,6 +121,7 @@
       "about": "About",
       "gitAccess": "Repository access",
       "organizations": "Organizations",
+      "usage": "Usage",
       "account": "Account",
       "runners": "My runners",
       "remoteRunner": "Cloud builds"

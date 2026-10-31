@@ -40,6 +40,7 @@ from hse_doc_studio.core.invitations.protocols import (
 )
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
+from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import IProjectIndexRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.access_requests import PostgresAccessRequestRepository
@@ -97,6 +98,7 @@ from hse_doc_studio.use_cases.projects.transfer import (
     ListMyTransfersUC,
     StartTransferUC,
 )
+from hse_doc_studio.use_cases.quotas.members_guard import QuotaGuardedMemberRepository
 
 
 class ServerInvitationsProvider(Provider):
@@ -274,9 +276,17 @@ class ServerInvitationsProvider(Provider):
         members: IProjectMemberRepository,
         member_roles: IProjectMemberLookup,
         notifier: INotifier,
+        gate: IQuotaGate,
     ) -> AcceptInvitationUC:
         return AcceptInvitationUC(
-            invitations, cards, users, audit, uow, members=members, member_roles=member_roles, notifier=notifier
+            invitations,
+            cards,
+            users,
+            audit,
+            uow,
+            members=QuotaGuardedMemberRepository(members, gate),
+            member_roles=member_roles,
+            notifier=notifier,
         )
 
     @provide
@@ -306,9 +316,17 @@ class ServerInvitationsProvider(Provider):
         members: IProjectMemberRepository,
         member_roles: IProjectMemberLookup,
         notifier: INotifier,
+        gate: IQuotaGate,
     ) -> AcceptInvitationTokenUC:
         return AcceptInvitationTokenUC(
-            invitations, cards, users, audit, uow, members=members, member_roles=member_roles, notifier=notifier
+            invitations,
+            cards,
+            users,
+            audit,
+            uow,
+            members=QuotaGuardedMemberRepository(members, gate),
+            member_roles=member_roles,
+            notifier=notifier,
         )
 
     @provide
@@ -353,9 +371,19 @@ class ServerInvitationsProvider(Provider):
         notifier: INotifier,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        gate: IQuotaGate,
     ) -> ApproveAccessRequestUC:
         return ApproveAccessRequestUC(
-            requests, cards, acl, members, member_roles, personas, users, notifier, audit, uow
+            requests,
+            cards,
+            acl,
+            QuotaGuardedMemberRepository(members, gate),
+            member_roles,
+            personas,
+            users,
+            notifier,
+            audit,
+            uow,
         )
 
     @provide

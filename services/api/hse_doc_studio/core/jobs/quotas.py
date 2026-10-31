@@ -35,6 +35,16 @@ class QuotaResource(StrEnum):
     concurrent_user = "jobs.concurrent_user"
     concurrent_org = "jobs.concurrent_org"
     max_duration_s = "jobs.max_duration_s"
+    storage_user = "storage.bytes_user"
+    storage_org = "storage.bytes_org"
+    builds_user = "builds.month_user"
+    builds_org = "builds.month_org"
+    ai_day_user = "ai.tokens_day_user"
+    ai_day_org = "ai.tokens_day_org"
+    ai_month_user = "ai.tokens_month_user"
+    ai_month_org = "ai.tokens_month_org"
+    members_user = "members.project_user"
+    members_org = "members.project_org"
 
 
 @dataclass(frozen=True)
@@ -83,9 +93,7 @@ def overrides_to_queue_quota(base: QueueQuota, overrides: Sequence[QuotaOverride
     org_caps: dict[UUID, int] = {}
     for item in overrides:
         if item.owner_kind is QuotaOwnerKind.user:
-            try:
-                key = UUID(item.owner_id)
-            except ValueError:
+            if (key := user_key(item.owner_id)) is None:
                 continue
             if item.resource is QuotaResource.concurrent_user:
                 user_caps[key] = item.hard_limit
@@ -96,20 +104,31 @@ def overrides_to_queue_quota(base: QueueQuota, overrides: Sequence[QuotaOverride
     return replace(base, user_caps=user_caps, org_user_caps=org_user_caps, org_caps=org_caps)
 
 
+def user_key(owner_id: str) -> UUID | None:
+    """Пользователь в переопределении может быть записан в любом написании UUID; не UUID даёт `None`."""
+    try:
+        return UUID(owner_id)
+    except ValueError:
+        return None
+
+
 def duration_cap(
     default: int | None, overrides: Sequence[QuotaOverride], user_id: UUID, org_id: UUID | None
 ) -> int | None:
     """Приоритет user > org > установка для предельной длительности."""
-    by_owner = {
-        (item.owner_kind, org_key(item.owner_id) if item.owner_kind is QuotaOwnerKind.org else item.owner_id): item
-        for item in overrides
-        if item.resource is QuotaResource.max_duration_s
-    }
-    own = by_owner.get((QuotaOwnerKind.user, str(user_id)))
-    if own is not None:
-        return own.hard_limit
-    if org_id is not None and (of_org := by_owner.get((QuotaOwnerKind.org, org_id))) is not None:
-        return of_org.hard_limit
+    by_user: dict[UUID, int] = {}
+    by_org: dict[UUID, int] = {}
+    for item in overrides:
+        if item.resource is not QuotaResource.max_duration_s:
+            continue
+        if item.owner_kind is QuotaOwnerKind.org:
+            by_org[org_key(item.owner_id)] = item.hard_limit
+        elif (key := user_key(item.owner_id)) is not None:
+            by_user[key] = item.hard_limit
+    if user_id in by_user:
+        return by_user[user_id]
+    if org_id is not None and org_id in by_org:
+        return by_org[org_id]
     return default
 
 

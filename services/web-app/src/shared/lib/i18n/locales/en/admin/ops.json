@@ -370,8 +370,8 @@
         "body": "A job running past the limit is interrupted with the \"Timed out\" state. The person can start it again."
       },
       "scope": {
-        "title": "Limits apply to everyone",
-        "body": "Separate limits for organizations and people cannot be set from the interface yet."
+        "title": "Limits for people and organizations",
+        "body": "Defaults apply to everyone. A limit for a single person or organization is set below, under overrides."
       }
     }
   },
@@ -557,5 +557,236 @@
     "pausedLabel": "Paused",
     "pausedHint": "Paused: the runner polls but takes no jobs.",
     "ownersHint": "People who have a runner of their own"
+  },
+  "resources": {
+    "title": "Quotas by resource",
+    "lead": "Installation defaults per person and per organization. An empty field removes the limit. Exceptions for a person or an organization are set below, under overrides.",
+    "kind": "Resource",
+    "perUser": "Per person",
+    "perOrg": "Per organization",
+    "loadFailed": "Could not load the resource quotas.",
+    "save": "Save",
+    "invalid": "Check the numbers: positive, no letters.",
+    "kinds": {
+      "storage": {
+        "label": "Server storage",
+        "hint": "All of the owner's projects together.",
+        "unit": "GB"
+      },
+      "builds": {
+        "label": "Builds per month",
+        "hint": "Shared runners only; builds on your own runner are free.",
+        "unit": "/ month"
+      },
+      "ai_tokens_day": {
+        "label": "AI tokens per day",
+        "hint": "The server's shared AI providers; the day is UTC.",
+        "unit": "tokens"
+      },
+      "ai_tokens_month": {
+        "label": "AI tokens per month",
+        "hint": "The server's shared AI providers; the month is UTC.",
+        "unit": "tokens"
+      },
+      "members": {
+        "label": "Project members",
+        "hint": "The largest member count in a single project.",
+        "unit": "people"
+      }
+    },
+    "behavior": {
+      "title": "When a limit is reached, and warnings",
+      "lead": "One rule for the whole installation."
+    },
+    "onExceed": {
+      "label": "What to do when a limit is reached",
+      "options": {
+        "deprioritize": "Build goes to the back of the queue",
+        "reject": "Refuse",
+        "warn": "Warn only"
+      },
+      "hint": {
+        "deprioritize": "The build goes to the back of the queue and runs on free runners, so a student is never left without one. Storage, AI and members are refused.",
+        "reject": "Any use over the limit is refused with a clear message.",
+        "warn": "Use goes through and the person sees a warning; the limit is not enforced."
+      }
+    },
+    "warn": {
+      "label": "Warn from",
+      "hint": "The share of the limit where the indicator turns yellow."
+    }
+  },
+  "overrides": {
+    "title": "Overrides",
+    "lead": "A limit set for a person or an organization beats the default. A person gets the organization's value when they have none of their own.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Find a person or an organization",
+    "ownerKind": {
+      "label": "For",
+      "user": "Person",
+      "org": "Organization"
+    },
+    "columns": {
+      "owner": "Owner",
+      "resource": "Resource",
+      "value": "Limit"
+    },
+    "add": "Set limit",
+    "remove": "Remove the override: {{name}}",
+    "empty": "No overrides",
+    "loadFailed": "Could not load the overrides.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "unit": {
+      "gb": "GB",
+      "s": "s"
+    },
+    "resources": {
+      "jobs_concurrent_user": "Concurrent tasks (per person)",
+      "jobs_concurrent_org": "Concurrent tasks (per organization)",
+      "jobs_max_duration_s": "Task time limit",
+      "storage_bytes_user": "Storage (per person)",
+      "storage_bytes_org": "Storage (per organization)",
+      "builds_month_user": "Builds per month (per person)",
+      "builds_month_org": "Builds per month (per organization)",
+      "ai_tokens_day_user": "AI tokens per day (per person)",
+      "ai_tokens_day_org": "AI tokens per day (per organization)",
+      "ai_tokens_month_user": "AI tokens per month (per person)",
+      "ai_tokens_month_org": "AI tokens per month (per organization)",
+      "members_project_user": "Project members (a person's projects)",
+      "members_project_org": "Project members (an organization's projects)"
+    }
+  },
+  "usageAdmin": {
+    "title": "Usage",
+    "lead": "Installation totals for the current period (since {{date}}) and the use of a chosen person or organization.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Pick whose usage to view",
+    "loadFailed": "Could not load the owner's usage.",
+    "reset": "Reset: {{kind}}"
+  },
+  "gateway": {
+    "title": "AI gateway",
+    "lead": "The installation's shared AI providers over the last day. The circuit breaker closes a provider after a run of failures and tries it again later.",
+    "loadFailed": "Could not load the gateway state.",
+    "empty": "No shared providers",
+    "emptyHint": "Add a shared AI provider under Installation.",
+    "columns": {
+      "provider": "Provider",
+      "state": "State",
+      "calls": "Calls",
+      "errors": "Errors",
+      "denied": "Refused",
+      "tokens": "Tokens"
+    },
+    "breaker": {
+      "closed": "Healthy",
+      "half_open": "Probing",
+      "open": "Closed"
+    }
+  },
+  "autoscale": {
+    "title": "Autoscaling",
+    "lead": "The number of shared runners follows the queue. The server does not start runners itself: it asks an orchestrator (docker compose or an external webhook) to reach the number.",
+    "loadFailed": "Could not load autoscaling.",
+    "invalid": "Check the values: the ceiling is not below the minimum and the address starts with http.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "metrics": {
+      "queue": "In queue",
+      "wait": "Oldest waits",
+      "runners": "Runners online",
+      "slots": "{{busy}} of {{total}} slots busy",
+      "decision": "Decision now",
+      "last": "Last call"
+    },
+    "action": {
+      "hold": "No change ({{to}})",
+      "up": "Add: {{from}} → {{to}}",
+      "down": "Remove: {{from}} → {{to}}"
+    },
+    "reason": {
+      "below_min": "fewer runners than the minimum",
+      "above_max": "more runners than the ceiling",
+      "queue_depth": "the queue is longer than normal",
+      "queue_wait": "a task waits longer than the threshold",
+      "at_max": "the ceiling is reached",
+      "cooldown_up": "cooling down after growth, {{seconds}} s left",
+      "idle": "the queue is empty and runners are free",
+      "idle_wait": "the queue is empty, waiting out the idle window, {{seconds}} s left",
+      "cooldown_down": "cooling down after a change, {{seconds}} s left",
+      "at_min": "at the minimum, the queue is empty",
+      "busy": "runners are busy",
+      "balanced": "the queue is within the norm"
+    },
+    "outcome": {
+      "ok": "{{at}}: the orchestrator accepted {{to}}",
+      "failed": "{{at}}: the orchestrator refused ({{error}})"
+    },
+    "mode": {
+      "label": "Mode",
+      "options": {
+        "off": "Off (hint only)",
+        "compose": "docker compose",
+        "webhook": "External webhook"
+      },
+      "hint": {
+        "off": "The decision is computed and shown here; nothing is started.",
+        "compose": "The server runs `docker compose up --scale`. It needs docker and daemon access where the api runs; project and file come from the environment.",
+        "webhook": "The server sends a POST with the wanted runner count. Plug in Nomad, a Kubernetes operator or your own script."
+      }
+    },
+    "url": {
+      "label": "Webhook address",
+      "hintSigned": "The body is signed with HMAC-SHA256 (header X-Autoscale-Signature); the secret is set in the environment.",
+      "hintUnsigned": "No signing secret is set in the environment: the request goes unsigned."
+    },
+    "fields": {
+      "min_runners": {
+        "label": "Minimum runners",
+        "hint": "Never go below this number; below it we grow at once.",
+        "unit": "pcs"
+      },
+      "max_runners": {
+        "label": "Runner ceiling",
+        "hint": "Never grow above this number.",
+        "unit": "pcs"
+      },
+      "target_queue_per_slot": {
+        "label": "Waiting tasks per slot",
+        "hint": "Grow when the queue per slot is above this number.",
+        "unit": "tasks"
+      },
+      "scale_up_wait_s": {
+        "label": "Wait threshold",
+        "hint": "Grow when the oldest task waits longer.",
+        "unit": "s"
+      },
+      "cooldown_up_s": {
+        "label": "Cooldown after growth",
+        "hint": "Pause before the next growth.",
+        "unit": "s"
+      },
+      "cooldown_down_s": {
+        "label": "Cooldown before shrinking",
+        "hint": "Pause after any change before shrinking.",
+        "unit": "s"
+      },
+      "idle_before_down_s": {
+        "label": "Idle window",
+        "hint": "How long the queue must stay empty before shrinking.",
+        "unit": "s"
+      },
+      "step_up": {
+        "label": "Growth step",
+        "hint": "How many runners to add at once.",
+        "unit": "pcs"
+      },
+      "step_down": {
+        "label": "Shrink step",
+        "hint": "How many runners to remove at once.",
+        "unit": "pcs"
+      }
+    }
   }
 }

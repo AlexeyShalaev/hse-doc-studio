@@ -14,7 +14,7 @@ import pytest
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.jobs.codec import decode_envelope, encode_result
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec
-from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobState, JobStatus
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobPriorityClass, JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, QueuedJob, RunnerRef
@@ -642,3 +642,91 @@ async def test__submit__two_builds_at_once__second_sees_the_first_in_personal_lo
     assert routes == sorted(
         [(JobRoute.personal_first, RouteReason.waiting_personal), (JobRoute.shared, RouteReason.fallback_busy)]
     )
+
+
+class _Gate:
+    """Допуск по квоте сборок: заранее заданный ответ и журнал вызовов."""
+
+    def __init__(self, admission: object = None, error: Exception | None = None) -> None:
+        from hse_doc_studio.core.quotas.protocols import Admission
+
+        self.admission = admission or Admission()
+        self.error = error
+        self.admitted: list[tuple[str, UUID | None, UUID | None]] = []
+        self.charged: list[tuple[str, UUID | None, UUID | None, int]] = []
+
+    async def admit(self, kind: object, user_id: UUID | None, org_id: UUID | None, amount: int = 1) -> object:
+        self.admitted.append((str(kind), user_id, org_id))
+        if self.error is not None:
+            raise self.error
+        return self.admission
+
+    async def charge(self, kind: object, user_id: UUID | None, org_id: UUID | None, amount: int = 1) -> None:
+        self.charged.append((str(kind), user_id, org_id, amount))
+
+
+async def test__submit__shared_build_is_admitted_and_charged_once(rig: Rig) -> None:
+    gate = _Gate()
+    dispatcher = QueueJobDispatcher(rig.queue, rig.uploader, rig.runners, quota_gate=gate, poll_interval_s=0.005)  # type: ignore[arg-type]
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    assert gate.admitted == [("builds", _USER, None)]
+    assert gate.charged == [("builds", _USER, None, 1)]
+    assert rig.queue._jobs[spec.id].priority_class == JobPriorityClass.interactive
+
+
+async def test__submit__exhausted_quota_in_deprioritize_mode__build_goes_to_the_back_of_the_queue(rig: Rig) -> None:
+    from hse_doc_studio.core.quotas.protocols import Admission
+
+    gate = _Gate(Admission(deprioritize=True))
+    dispatcher = QueueJobDispatcher(rig.queue, rig.uploader, rig.runners, quota_gate=gate, poll_interval_s=0.005)  # type: ignore[arg-type]
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    assert rig.queue._jobs[spec.id].priority_class == JobPriorityClass.low
+
+
+async def test__submit__rejected_by_quota__nothing_queued_and_failed_result_carries_numbers(rig: Rig) -> None:
+    import json
+
+    from hse_doc_studio.core.quotas.errors import QuotaExceededError
+    from hse_doc_studio.core.quotas.kinds import QuotaKind, QuotaScope
+
+    gate = _Gate(error=QuotaExceededError(QuotaKind.builds, QuotaScope.user, 30, 30, datetime(2026, 12, 1, tzinfo=UTC)))
+    dispatcher = QueueJobDispatcher(rig.queue, rig.uploader, rig.runners, quota_gate=gate, poll_interval_s=0.005)  # type: ignore[arg-type]
+    hooks = Hooks()
+    spec = rig.spec()
+
+    dispatcher.submit(spec, hooks)
+    await _until(lambda: hooks.events == ["on_finished"])
+
+    result, _ = hooks.finished[0]
+    assert rig.queue._jobs.get(spec.id) is None
+    assert result.error is not None
+    assert result.error.code == "quota_exceeded"
+    assert json.loads(result.error.detail or "{}")["limit"] == 30
+
+
+async def test__submit__build_on_personal_runner__is_not_metered(rig: Rig) -> None:
+    gate = _Gate()
+    router = _OneSlotRouter(rig.queue)
+    dispatcher = QueueJobDispatcher(
+        rig.queue,
+        rig.uploader,
+        rig.runners,
+        quota_gate=gate,
+        router=router,
+        poll_interval_s=0.005,  # type: ignore[arg-type]
+    )
+    spec = rig.spec()
+
+    dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    assert gate.admitted == []
+    assert gate.charged == []

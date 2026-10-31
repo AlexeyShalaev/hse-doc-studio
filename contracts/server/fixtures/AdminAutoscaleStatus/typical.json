@@ -1,0 +1,41 @@
+{
+  "policy": {
+    "mode": "webhook",
+    "min_runners": 1,
+    "max_runners": 6,
+    "target_queue_per_slot": 2.0,
+    "scale_up_wait_s": 30,
+    "cooldown_up_s": 60,
+    "cooldown_down_s": 300,
+    "idle_before_down_s": 300,
+    "step_up": 2,
+    "step_down": 1,
+    "webhook_url": "https://orch.example/scale"
+  },
+  "metrics": {
+    "queued": 12,
+    "oldest_wait_s": 40.0,
+    "running": 2,
+    "runners_online": 1,
+    "slots_total": 2,
+    "slots_busy": 2
+  },
+  "decision": {
+    "current": 1,
+    "desired": 3,
+    "action": "up",
+    "reason": "queue_depth",
+    "wait_s": 0
+  },
+  "last_outcome": {
+    "at": "2026-11-10T12:00:00Z",
+    "desired": 3,
+    "ok": false,
+    "error": "webhook answered 503"
+  },
+  "last_up_at": "2026-11-10T11:00:00Z",
+  "last_down_at": null,
+  "orchestrator_current": null,
+  "evaluated_at": "2026-11-10T12:00:05Z",
+  "webhook_secret_set": true
+}

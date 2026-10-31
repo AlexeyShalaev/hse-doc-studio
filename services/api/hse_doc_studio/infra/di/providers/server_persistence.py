@@ -51,6 +51,7 @@ from hse_doc_studio.core.projects.usage import (
     QuotaPolicy,
 )
 from hse_doc_studio.core.projects.volume import IProjectVolume
+from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -141,6 +142,7 @@ from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 from hse_doc_studio.use_cases.projects.members import RemoveProjectMemberUC, SetProjectMemberUC
 from hse_doc_studio.use_cases.projects.unregister_project import UnregisterProjectUC
 from hse_doc_studio.use_cases.projects.update_team_set import UpdateTeamSetUC
+from hse_doc_studio.use_cases.quotas.members_guard import QuotaGuardedMemberRepository
 from hse_doc_studio.use_cases.server_import.import_user_data import ImportUserDataUC
 from hse_doc_studio.use_cases.storage.gc_blobs import GcBlobsUC
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
@@ -304,8 +306,11 @@ class ServerPersistenceProvider(Provider):
         audit: IAuditLog,
         uow: IUnitOfWork,
         member_roles: IProjectMemberLookup,
+        gate: IQuotaGate,
     ) -> SetProjectMemberUC:
-        return SetProjectMemberUC(members, users, groups, orgs, directory, audit, uow, member_roles)
+        return SetProjectMemberUC(
+            QuotaGuardedMemberRepository(members, gate), users, groups, orgs, directory, audit, uow, member_roles
+        )
 
     @provide
     def get_remove_project_member_uc(
@@ -477,10 +482,10 @@ class ServerPersistenceProvider(Provider):
 
     @provide(override=True)
     def get_project_quota(
-        self, usage: IProjectUsageStore, measurer: IProjectUsageMeasurer, server_config: ServerConfig
+        self, usage: IProjectUsageStore, measurer: IProjectUsageMeasurer, server_config: ServerConfig, gate: IQuotaGate
     ) -> IProjectQuota:
         policy = QuotaPolicy(server_config.project_quota_bytes, server_config.project_quota_warn_percent / 100)
-        return ProjectQuotaService(usage, measurer, policy)
+        return ProjectQuotaService(usage, measurer, policy, owner_gate=gate)
 
     @provide
     def get_project_usage_sweeper(

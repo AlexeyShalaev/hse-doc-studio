@@ -35,6 +35,7 @@ from hse_doc_studio.core.jobs.runners import (
 )
 from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest
 from hse_doc_studio.core.projects.volume import IProjectVolume
+from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
@@ -330,6 +331,7 @@ class ServerJobsProvider(Provider):
         wakeup: JobWakeup,
         router: IJobRouter,
         payer: IBuildPayerResolver,
+        quota_gate: IQuotaGate,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -357,4 +359,5 @@ class ServerJobsProvider(Provider):
             router=router,
             # links: гость по ссылке собирает в квоту создателя ссылки (S7).
             payer=payer.payer_for,
+            quota_gate=quota_gate,
         )

@@ -10,6 +10,7 @@ import { boolParam, invalidQuery, offsetList } from "./demoList";
 import { createInstallRoutes } from "./installRoutes";
 import { createPickerRoutes } from "./pickerRoutes";
 import { createOpsRoutes } from "./opsRoutes";
+import { createQuotaAdminRoutes } from "./quotaRoutes";
 import { createOrgRoutes } from "./orgRoutes";
 import { createPeopleRoutes } from "./peopleRoutes";
 import { adminSettingsOf, type ServerDemoWorld } from "./world";
@@ -128,6 +129,7 @@ export const createAdminRoutes = (
       handler: guarded(route.handler),
     })),
     ...createOpsRoutes(getWorld),
+    ...createQuotaAdminRoutes(getWorld),
     ...createPickerRoutes(getWorld).map((route) => ({
       ...route,
       handler: guarded(route.handler),

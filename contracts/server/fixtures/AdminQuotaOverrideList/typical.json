@@ -1,0 +1,16 @@
+[
+  {
+    "owner_kind": "user",
+    "owner_id": "4f1d0c1a-0000-4000-8000-000000000001",
+    "owner_name": "Анна",
+    "resource": "builds.month_user",
+    "hard_limit": 100
+  },
+  {
+    "owner_kind": "org",
+    "owner_id": "org_hse",
+    "owner_name": "Кафедра",
+    "resource": "storage.bytes_org",
+    "hard_limit": 53687091200
+  }
+]

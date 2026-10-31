@@ -19,6 +19,7 @@ from hse_doc_studio.api.schemas import artifacts as art
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import personal_runners as pr
+from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
@@ -113,6 +114,17 @@ _SCHEMAS: dict[str, Any] = {
     "AdminJobPage": ops.AdminJobPage,
     "AdminQueueSummary": ops.AdminQueueSummary,
     "AdminQuotas": ops.AdminQuotas,
+    "MyUsageResponse": qt.MyUsageResponse,
+    "OwnerUsageResponse": qt.OwnerUsageResponse,
+    "AdminQuotaPolicy": qt.AdminQuotaPolicy,
+    "UpdateAdminQuotaPolicyRequest": qt.UpdateAdminQuotaPolicyRequest,
+    "AdminQuotaOverrideList": list[qt.AdminQuotaOverride],
+    "SetAdminQuotaOverrideRequest": qt.SetAdminQuotaOverrideRequest,
+    "ResetUsageRequest": qt.ResetUsageRequest,
+    "AdminUsageSummary": qt.AdminUsageSummary,
+    "AdminGatewayProviderList": list[qt.AdminGatewayProvider],
+    "AdminAutoscalePolicy": qt.AutoscalePolicyBody,
+    "AdminAutoscaleStatus": qt.AutoscaleStatusBody,
     "UpdateAdminQuotasRequest": ops.UpdateAdminQuotasRequest,
     "AdminServiceHealthList": list[ops.AdminServiceHealth],
     "AdminStorageUsage": ops.AdminStorageUsage,

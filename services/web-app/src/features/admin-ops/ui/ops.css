@@ -511,3 +511,68 @@
     width: 72px;
   }
 }
+
+/* Квоты по видам ресурсов, переопределения, использование, шлюз и автомасштабирование (этап 6). */
+.ops-resources {
+  display: flex;
+  flex-direction: column;
+}
+.ops-resources-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(150px, 1fr));
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.ops-resources-row:first-child {
+  border-top: none;
+}
+.ops-resources-head {
+  font-size: 12px;
+  color: var(--fg-3);
+  padding-top: 0;
+}
+.ops-resources-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.ops-override-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0 12px;
+}
+.ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ops-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 20px;
+  margin: 0 0 12px;
+}
+.ops-facts dt {
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.ops-facts dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  word-break: break-word;
+}
+@media (max-width: 720px) {
+  .ops-resources-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .ops-resources-head {
+    display: none;
+  }
+}

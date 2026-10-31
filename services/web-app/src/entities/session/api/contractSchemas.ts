@@ -7,6 +7,7 @@ import {
 } from "@entities/ai-provider";
 
 import * as inv from "@entities/invitation/model/invitation.schema";
+import * as q from "@entities/quota/model/quota.schema";
 import * as inst from "./installSchemas";
 import * as gs from "@entities/git-server/model/gitServer.schema";
 import * as pa from "@entities/project-artifact/model/artifact.schema";
@@ -73,6 +74,17 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminJobPage: s.AdminJobPageSchema,
   AdminQueueSummary: s.AdminQueueSummarySchema,
   AdminQuotas: s.AdminQuotasSchema,
+  MyUsageResponse: q.MyUsageResponseSchema,
+  OwnerUsageResponse: q.OwnerUsageResponseSchema,
+  AdminQuotaPolicy: q.AdminQuotaPolicySchema,
+  UpdateAdminQuotaPolicyRequest: q.UpdateAdminQuotaPolicyRequestSchema,
+  AdminQuotaOverrideList: q.AdminQuotaOverrideListSchema,
+  SetAdminQuotaOverrideRequest: q.SetAdminQuotaOverrideRequestSchema,
+  ResetUsageRequest: q.ResetUsageRequestSchema,
+  AdminUsageSummary: q.AdminUsageSummarySchema,
+  AdminGatewayProviderList: q.AdminGatewayProviderListSchema,
+  AdminAutoscalePolicy: q.AdminAutoscalePolicySchema,
+  AdminAutoscaleStatus: q.AdminAutoscaleStatusSchema,
   UpdateAdminQuotasRequest: s.UpdateAdminQuotasRequestSchema,
   AdminServiceHealthList: z.array(s.AdminServiceHealthSchema),
   AdminStorageUsage: s.AdminStorageUsageSchema,
