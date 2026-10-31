@@ -12,6 +12,11 @@ import * as inst from "./installSchemas";
 import * as gs from "@entities/git-server/model/gitServer.schema";
 import * as pa from "@entities/project-artifact/model/artifact.schema";
 import * as rn from "@entities/runner/model/runner.schema";
+import {
+  MentionCandidateListSchema,
+  ReviewThreadListSchema,
+  ReviewThreadSchema,
+} from "@entities/review/model/review.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
@@ -207,6 +212,9 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   MyTransfer: inv.MyTransferSchema,
   MyTransferList: inv.MyTransferListSchema,
   Notification: inv.NotificationSchema,
+  ReviewThread: ReviewThreadSchema,
+  ReviewThreadList: ReviewThreadListSchema,
+  MentionCandidateList: MentionCandidateListSchema,
   NotificationPage: inv.NotificationPageSchema,
   MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
   InboxSummary: inv.InboxSummarySchema,

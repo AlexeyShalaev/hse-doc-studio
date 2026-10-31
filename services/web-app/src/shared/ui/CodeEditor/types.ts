@@ -1,3 +1,6 @@
+import type { Extension } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+
 export type EditorLanguage =
   "latex" | "json" | "yaml" | "html" | "markdown" | "plain";
 
@@ -118,6 +121,8 @@ export type CodeEditorController = {
   undo: () => boolean;
   redo: () => boolean;
   focus: () => void;
+  /** Живой вид CodeMirror для хостов, которым нужны выделение и свои эффекты (ревью-комментарии). */
+  view: () => EditorView | null;
 };
 
 export type VisualHeadingAlignment = "left" | "center" | "right";
@@ -228,6 +233,13 @@ export type CodeEditorProps = {
   onEditBibliography?: (source: string, commit: (next: string) => void) => void;
   /** Ctrl/Cmd+click on a line → its 1-based number (e.g. SyncTeX forward jump). */
   onModClick?: (line: number) => void;
+  /**
+   * Расширение, которое владеет документом (общий Y.Text совместной правки). Его подключают при создании
+   * редактора; собственная история CodeMirror при этом отключается: отмена идёт через менеджер Yjs.
+   */
+  collab?: Extension;
+  /** Расширения хоста (подсветка комментариев); подключаются при создании редактора. */
+  extraExtensions?: Extension[];
   className?: string;
   ariaLabel?: string;
 };

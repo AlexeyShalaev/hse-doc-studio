@@ -22,6 +22,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     from hse_doc_studio.infra.di.providers.server_ai_gateway import ServerAiGatewayProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_ai_relay import ServerAiRelayProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_artifacts import ServerArtifactsProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_collab import ServerCollabProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_git_remote import ServerGitRemoteProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_identity import ServerIdentityProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_invitations import ServerInvitationsProvider  # noqa: PLC0415
@@ -45,6 +46,8 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerArtifactsProvider(),
         # invites: идёт последним, перекрывает сценарии участников и подтверждения почты.
         ServerInvitationsProvider(),
+        # stage 5: ревью и совместная правка; подменяет замок папки, поэтому последним.
+        ServerCollabProvider(),
     ]
 
 

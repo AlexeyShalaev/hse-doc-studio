@@ -289,6 +289,20 @@ tags:
 | `HSE_STUDIO__EGRESS__ALLOWLIST` | `list[str]` | пусто | server | Внутренние узлы, к которым пользователям можно ходить: имя (git.corp.local, *.corp.local), IP или CIDR. Адреса метаданных облака и link-local закрыты всегда. |
 | `HSE_STUDIO__RATE_LIMIT__ENABLED` | bool | `true` | server | Включить ограничение частоты (счётчики по реплике api). |
 | `HSE_STUDIO__RATE_LIMIT__SCALE` | float | `1.0` | server | Множитель лимитов: больше 1 ослабляет (организация за одним NAT), меньше 1 ужесточает. |
+| `HSE_STUDIO__COLLAB__ENABLED` | bool | `true` | оба | Включить совместную правку; выключена, редактор сохраняет сам. |
+| `HSE_STUDIO__COLLAB__MAX_CLIENTS_PER_ROOM` | int | `16` | оба | Одновременных подключений к одному файлу. |
+| `HSE_STUDIO__COLLAB__MAX_ROOMS_PER_PROJECT` | int | `8` | оба | Файлов проекта, открытых для совместной правки. |
+| `HSE_STUDIO__COLLAB__MAX_ROOMS_TOTAL` | int | `200` | оба | Открытых файлов на реплику api. |
+| `HSE_STUDIO__COLLAB__MAX_CONNECTIONS_PER_USER` | int | `8` | оба | Подключений одного человека (вкладки). |
+| `HSE_STUDIO__COLLAB__MAX_MESSAGE_BYTES` | int | `1048576` | оба | Размер одного сообщения от клиента. |
+| `HSE_STUDIO__COLLAB__MAX_DOC_BYTES` | int | `2097152` | оба | Размер текста, который открывается в комнате. |
+| `HSE_STUDIO__COLLAB__PERSIST_DELAY_S` | float | `0.8` | оба | Пауза после правки до записи на диск. |
+| `HSE_STUDIO__COLLAB__PERSIST_MAX_WAIT_S` | float | `5.0` | оба | Самое долгое ожидание записи при непрерывном вводе. |
+| `HSE_STUDIO__COLLAB__POLL_INTERVAL_S` | float | `1.0` | оба | Как часто комната сверяет файл с диском (git, агент). |
+| `HSE_STUDIO__COLLAB__IDLE_TTL_S` | float | `20.0` | оба | Сколько жить комнате после выхода последнего участника. |
+| `HSE_STUDIO__COLLAB__AWARENESS_PER_SECOND` | int | `30` | оба | Обновлений курсора в секунду от одного клиента. |
+| `HSE_STUDIO__COLLAB__RECHECK_S` | float | `20.0` | оба | Как часто пересматриваются права открытого подключения. |
+| `HSE_STUDIO__COLLAB__OUTBOX_SIZE` | int | `512` | оба | Очередь исходящих сообщений клиента, дальше он отключается. |
 | `HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN` 🔒 | str | секрет, не печатается | server | Bearer-токен, по которому /health/ready отдаёт детали проверок; без него детали только админу. |
 | `HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN` 🔒 | str | секрет, не печатается | server | Bearer-токен для /metrics; без токена эндпоинт отвечает 404. |
 | `HSE_STUDIO__HSE_PERSONS__BASE_URL` | str | `https://www.hse.ru` | оба | HSE site origin. |

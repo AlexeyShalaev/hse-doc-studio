@@ -100,6 +100,8 @@ export default defineConfig(({ mode }) => {
               "/api": {
                 target: devProxyTarget,
                 changeOrigin: true,
+                // Сокет совместной правки (/api/collab/…) идёт тем же префиксом.
+                ws: true,
                 secure: devProxyTarget.startsWith("https:"),
               },
             }

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from fastapi import Request, Response
+from fastapi import Response
+from starlette.requests import HTTPConnection
 
 from hse_doc_studio.core.identity.entities import ActorCredentials
 
@@ -24,13 +25,13 @@ def guest_cookie_name(*, secure: bool) -> str:
     return f"__Host-{GUEST_COOKIE}" if secure else GUEST_COOKIE
 
 
-def bearer_token(request: Request) -> str | None:
+def bearer_token(request: HTTPConnection) -> str | None:
     scheme, _, value = request.headers.get("authorization", "").partition(" ")
     value = value.strip()
     return value if scheme.lower() == _BEARER and value else None
 
 
-def credentials_from_request(request: Request, *, secure: bool | None = None) -> ActorCredentials:
+def credentials_from_request(request: HTTPConnection, *, secure: bool | None = None) -> ActorCredentials:
     """Данные для входа из запроса.
 
     По HTTPS читается только `__Host-hse_session`: простое имя может подложить соседний поддомен или посредник по

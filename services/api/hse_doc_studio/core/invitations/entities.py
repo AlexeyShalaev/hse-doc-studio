@@ -62,6 +62,11 @@ class NotificationKind(StrEnum):
     transfer_request = "transfer_request"
     transfer_decided = "transfer_decided"
     member_removed = "member_removed"
+    # Ревью-комментарии (этап 5): новый тред, ответ в треде, упоминание, тред закрыт.
+    review_thread = "review_thread"
+    review_reply = "review_reply"
+    review_mention = "review_mention"
+    review_resolved = "review_resolved"
 
 
 # Письмо уходит только для этих видов (S15), и только если SMTP настроен.
@@ -83,6 +88,9 @@ class NotificationPayload:
     role: str | None = None
     ref_id: str | None = None
     outcome: str | None = None
+    # Ревью: файл и выдержка из комментария.
+    path: str | None = None
+    excerpt: str | None = None
 
 
 @dataclass(frozen=True)

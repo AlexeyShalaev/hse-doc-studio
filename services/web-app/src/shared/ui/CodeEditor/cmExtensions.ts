@@ -110,6 +110,8 @@ type BuildExtensionsOptions = {
   onFormatState?: (state: EditorFormatState) => void;
   onOutline?: (outline: OutlineState) => void;
   onModClick?: (line: number) => void;
+  collab?: Extension;
+  extraExtensions?: Extension[];
   ariaLabel?: string;
 };
 
@@ -128,6 +130,8 @@ export const buildExtensions = ({
   onFormatState,
   onOutline,
   onModClick,
+  collab,
+  extraExtensions,
   ariaLabel,
 }: BuildExtensionsOptions): Extension[] => {
   const visualActive = visualMode && language === "latex";
@@ -157,7 +161,8 @@ export const buildExtensions = ({
     highlightSelectionMatches(),
     rectangularSelection(),
     crosshairCursor(),
-    history(),
+    // Под Yjs отмену ведёт его менеджер: две истории разошлись бы с общим текстом.
+    ...(collab ? [collab] : [history()]),
     search({ top: true }),
     sectionFoldService,
     hseHighlightExtension,
@@ -281,7 +286,7 @@ export const buildExtensions = ({
       indentWithTab,
       ...closeBracketsKeymap,
       ...defaultKeymap,
-      ...historyKeymap,
+      ...(collab ? [] : historyKeymap),
       ...foldKeymap,
       ...completionKeymap,
       ...searchKeymap,
@@ -343,6 +348,8 @@ export const buildExtensions = ({
       autocompletion(),
     );
   }
+
+  if (extraExtensions) extensions.push(...extraExtensions);
 
   // Must come after the language extension: the visual decorations' state
   // field reads the syntax tree during updates, and field update order follows

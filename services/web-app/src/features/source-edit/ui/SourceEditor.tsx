@@ -10,6 +10,7 @@ import { useNavigate } from "react-router";
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { yCollab } from "y-codemirror.next";
 import { useDebouncedCallback } from "use-debounce";
 import { clsx } from "clsx";
 import {
@@ -25,6 +26,8 @@ import {
   usePutFile,
   useUploadFile,
 } from "@entities/document";
+import { isReadOnlyRole, useProject } from "@entities/project";
+import { useBootstrap } from "@entities/session";
 import { apiClient } from "@shared/api/client";
 import { synctexApi } from "@entities/synctex";
 import {
@@ -68,6 +71,13 @@ import { FormatToolbar } from "./FormatToolbar";
 import { OutlinePanel } from "./OutlinePanel";
 import { ExternalChangeBanner } from "./ExternalChangeBanner";
 import { SourceEditorToolbar, type SaveStatus } from "./SourceEditorToolbar";
+import { CollabBadge } from "../realtime/ui/CollabBadge";
+import type {
+  CollabProvider,
+  CollabSnapshot,
+} from "../realtime/lib/collabProvider";
+import { useCollabSession } from "../realtime/lib/useCollabSession";
+import { useEditorReview } from "../review/lib/useEditorReview";
 import { TableEditorModal } from "./TableEditorModal";
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -203,10 +213,33 @@ export type SourceEditorProps = {
   onRevealConsumed?: () => void;
 };
 
+/** Сессия совместной правки, в которой открыт файл: общий текст, присутствие и состояние связи. */
+type CollabBinding = { provider: CollabProvider; snapshot: CollabSnapshot };
+
+/** Что редактору известно о ревью: серверный режим, роль и кто смотрит. */
+type ReviewContext = {
+  enabled: boolean;
+  canComment: boolean;
+  canModerate: boolean;
+  isOwner: boolean;
+  currentUserId: string | null;
+};
+
+const NO_REVIEW: ReviewContext = {
+  enabled: false,
+  canComment: false,
+  canModerate: false,
+  isOwner: false,
+  currentUserId: null,
+};
+
 type SourceEditorBodyProps = SourceEditorProps & {
   initialValue: string;
   // Версия, на которой открыли файл: с ней уходит `If-Match` при сохранении.
   initialEtag: string | null;
+  // Есть, когда файл правится вместе с другими: сохраняет сервер, а не этот редактор.
+  collab?: CollabBinding;
+  review: ReviewContext;
 };
 
 const SourceEditorBody = ({
@@ -215,14 +248,20 @@ const SourceEditorBody = ({
   docId,
   diagnostics: diagnosticsOverride,
   diagnosticActions,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
   readOnlyReason,
   revealLine,
   onRevealConsumed,
   initialValue,
   initialEtag,
+  collab,
+  review,
 }: SourceEditorBodyProps) => {
+  // Читатель живой сессии видит правки других, но не пишет: решение принимает сервер и присылает в snapshot.
+  const readOnly =
+    readOnlyProp || (collab !== undefined && !collab.snapshot.canWrite);
   const { t } = useTranslation("sourceEdit");
+  const { t: tRealtime } = useTranslation("realtime");
   const { mutateAsync: putFile } = usePutFile();
   const { data: checks } = useCheckResults(projectId, docId ?? "");
   const queryClient = useQueryClient();
@@ -233,7 +272,8 @@ const SourceEditorBody = ({
   // differs from on-disk content (the user's last in-editor work), flagged
   // dirty so the banner can offer reverting to the saved version.
   const [bootValue] = useState(() => {
-    if (readOnly) return initialValue;
+    // В совместной сессии текст редактора обязан совпадать с общим документом: черновик не подставляется.
+    if (readOnly || collab !== undefined) return initialValue;
     const raw = readDraft(draftKey);
     return raw != null && raw !== initialValue ? raw : initialValue;
   });
@@ -288,6 +328,25 @@ const SourceEditorBody = ({
   const visualMode = visualEligible && sourceMode === "visual";
   const controllerRef = useRef<CodeEditorController | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  // Растёт с каждой правкой: по нему ревью заново привязывает комментарии к тексту.
+  const [docRevision, setDocRevision] = useState(0);
+  const provider = collab?.provider;
+  const collabExtension = useMemo(
+    () => (provider ? yCollab(provider.text, provider.awareness) : undefined),
+    [provider],
+  );
+  const reviewUi = useEditorReview({
+    projectId,
+    path: relativePath,
+    enabled: review.enabled,
+    canComment: review.canComment,
+    canModerate: review.canModerate,
+    isOwner: review.isOwner,
+    currentUserId: review.currentUserId,
+    live: provider !== undefined,
+    controller: controllerRef,
+    docRevision,
+  });
 
   // A pane-local "focus" action becomes a true distraction-free writing
   // surface by covering the workspace chrome. Escape exits focus first, or
@@ -702,6 +761,12 @@ const SourceEditorBody = ({
   const save = useCallback(
     async (text: string, overrideEtag?: string) => {
       if (readOnly) return;
+      if (provider) {
+        // Запись делает сервер; «сохранить» просит его сбросить набранное на диск сейчас.
+        setStatus("saving");
+        setStatus((await provider.flush()) ? "saved" : "error");
+        return;
+      }
       setStatus("saving");
       try {
         const { etag } = await putFile({
@@ -729,7 +794,7 @@ const SourceEditorBody = ({
         setStatus("error");
       }
     },
-    [projectId, relativePath, readOnly, putFile, draftKey],
+    [projectId, relativePath, readOnly, provider, putFile, draftKey],
   );
 
   const debouncedSave = useDebouncedCallback(
@@ -740,6 +805,7 @@ const SourceEditorBody = ({
   const handleChange = useCallback(
     (text: string) => {
       valueRef.current = text;
+      setDocRevision((n) => n + 1);
       if (visualEligible) {
         const nextTargets = findLatexInputTargets(text);
         const nextSignature = JSON.stringify(nextTargets);
@@ -754,7 +820,8 @@ const SourceEditorBody = ({
           setDocumentMacros(nextMacros);
         }
       }
-      if (readOnly) return;
+      // Сессия совместной правки: набранное уходит на сервер само, автосохранение и черновик не нужны.
+      if (readOnly || provider !== undefined) return;
       if (text === savedRef.current) {
         debouncedSave.cancel();
         clearDraft(draftKey);
@@ -768,7 +835,7 @@ const SourceEditorBody = ({
         if (!conflict) debouncedSave(text);
       }
     },
-    [readOnly, debouncedSave, draftKey, visualEligible, conflict],
+    [readOnly, provider, debouncedSave, draftKey, visualEligible, conflict],
   );
 
   const handleSave = useCallback(() => {
@@ -780,7 +847,7 @@ const SourceEditorBody = ({
   // Тот же файл открыт в VS Code — опрашиваем его версию. Слежение за ФС здесь
   // не годится: события inotify не переходят границу бинд-маунта контейнера.
   const { data: diskVersion } = useFileVersion(projectId, relativePath, {
-    enabled: !readOnly && !conflict,
+    enabled: !readOnly && !conflict && provider === undefined,
   });
 
   const applyDiskContent = useCallback(
@@ -878,6 +945,17 @@ const SourceEditorBody = ({
       if (!ruleId || readOnly) return;
       const next = insertSuppression(valueRef.current, d.line, ruleId);
       if (next === valueRef.current) return;
+      if (provider) {
+        // Текст уйдёт в общий документ, а на диск его запишет сервер; проверки перечитываем после записи.
+        valueRef.current = next;
+        setEditorValue(next);
+        void provider.flush().then(() =>
+          queryClient.invalidateQueries({
+            queryKey: documentKeys.checkResults(projectId, docId ?? ""),
+          }),
+        );
+        return;
+      }
       const prevSaved = savedRef.current;
       valueRef.current = next;
       // Optimistic: matching savedRef stops the editor-sync from also autosaving.
@@ -901,6 +979,7 @@ const SourceEditorBody = ({
     },
     [
       readOnly,
+      provider,
       putFile,
       projectId,
       relativePath,
@@ -915,6 +994,10 @@ const SourceEditorBody = ({
   // the unsaved buffer first. A conflict with an outside edit is not ours to
   // resolve silently, so that case is left alone.
   usePendingSave(async () => {
+    if (provider && !readOnly) {
+      await provider.flush();
+      return;
+    }
     if (readOnly || conflict || valueRef.current === savedRef.current) return;
     debouncedSave.cancel();
     await save(valueRef.current);
@@ -929,7 +1012,27 @@ const SourceEditorBody = ({
     [debouncedSave],
   );
 
-  const isDirty = status === "dirty" || status === "error";
+  // Чужая правка (git, агент, другая вкладка) влилась в общий текст.
+  useEffect(() => {
+    if (!provider) return;
+    return provider.onEvent((event) => {
+      if (event.type !== "external") return;
+      setExternallyUpdated(true);
+      if (event.conflicts > 0) toast.warning(tRealtime("externalConflicts"));
+    });
+  }, [provider, tRealtime]);
+
+  // В сессии состояние сохранения это состояние связи: сервер пишет сам.
+  const shownStatus: SaveStatus = collab
+    ? collab.snapshot.problem !== null
+      ? "error"
+      : collab.snapshot.status === "connected"
+        ? status === "saving"
+          ? "saving"
+          : "saved"
+        : "dirty"
+    : status;
+  const isDirty = shownStatus === "dirty" || shownStatus === "error";
   const hasDiagnostics = diagnostics.length > 0;
 
   return (
@@ -950,7 +1053,7 @@ const SourceEditorBody = ({
         relativePath={relativePath}
         readOnly={readOnly}
         readOnlyReason={readOnlyReason}
-        status={status}
+        status={shownStatus}
         counts={counts}
         modeAvailable={visualEligible}
         mode={visualMode ? "visual" : "code"}
@@ -975,6 +1078,13 @@ const SourceEditorBody = ({
         isDirty={isDirty}
         onSave={handleSave}
         stats={stats}
+        hideSave={collab !== undefined}
+        extra={
+          <>
+            {collab && <CollabBadge snapshot={collab.snapshot} />}
+            {reviewUi.toolbar}
+          </>
+        }
       />
 
       {visualMode && (
@@ -1102,8 +1212,11 @@ const SourceEditorBody = ({
               ? { onDiagnosticClick: handleDiagnosticClick }
               : {})}
             {...(docId ? { onModClick: handleModClick } : {})}
+            {...(collabExtension ? { collab: collabExtension } : {})}
+            extraExtensions={reviewUi.extensions}
           />
         </div>
+        {reviewUi.panel}
       </div>
 
       {panelOpen && hasDiagnostics && (
@@ -1154,12 +1267,26 @@ const SourceEditorBody = ({
   );
 };
 
+type SourceEditorFlavorProps = SourceEditorProps & {
+  review: ReviewContext;
+  /** Роль не даёт править файл (читатель, рецензент): без сессии редактор открывается только для чтения. */
+  roleReadOnly?: boolean;
+  /** Почему файл открыт без совместной правки (показывается над редактором). */
+  notice?: string;
+};
+
 /**
- * Connected source editor: loads the file, wires save (debounced autosave +
- * ⌘S), shows the document's check findings inline + in a panel, and supports
- * jump-to-line. Keyed by path so switching files reloads fresh content.
+ * Редактор без совместной сессии: загружает файл, сохраняет по таймеру и по ⌘S (с `If-Match`), показывает
+ * находки проверок и комментарии. Так работает локальная Студия и сервер, когда сокет недоступен.
+ * Keyed by path so switching files reloads fresh content.
  */
-export const SourceEditor = ({ relativePath, ...rest }: SourceEditorProps) => {
+const ClassicSourceEditor = ({
+  relativePath,
+  review,
+  notice,
+  roleReadOnly = false,
+  ...rest
+}: SourceEditorFlavorProps) => {
   const { t } = useTranslation("sourceEdit");
   const {
     data: file,
@@ -1186,12 +1313,137 @@ export const SourceEditor = ({ relativePath, ...rest }: SourceEditorProps) => {
   }
 
   return (
+    <>
+      {notice && (
+        <div
+          role="status"
+          className="dim"
+          style={{
+            padding: "4px 12px",
+            fontSize: 11.5,
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          {notice}
+        </div>
+      )}
+      <SourceEditorBody
+        key={relativePath}
+        relativePath={relativePath}
+        initialValue={file.content}
+        initialEtag={file.etag}
+        review={review}
+        {...rest}
+        readOnly={(rest.readOnly ?? false) || roleReadOnly}
+      />
+    </>
+  );
+};
+
+/** Ждать подключения к комнате дольше этого не стоит: файл открывается обычным редактором. */
+const CONNECT_GIVE_UP_MS = 6000;
+
+/**
+ * Редактор в сессии совместной правки: текст берётся из общего документа, пишет сервер. Пока первый обмен
+ * не завершён, показывается ожидание; отказ сервера или долгое молчание переводят на обычный редактор.
+ */
+const LiveSourceEditor = ({
+  review,
+  roleReadOnly,
+  ...props
+}: SourceEditorFlavorProps) => {
+  const { t: tRealtime } = useTranslation("realtime");
+  const { provider, snapshot, generation } = useCollabSession({
+    projectId: props.projectId,
+    path: props.relativePath,
+    onReset: (text) => {
+      // Родословная документа на сервере пересобрана: ваш текст не пропадает, а ложится в буфер обмена.
+      void navigator.clipboard?.writeText(text).catch(() => undefined);
+      toast.warning(tRealtime("reset"));
+    },
+  });
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGaveUp(true);
+    }, CONNECT_GIVE_UP_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [provider]);
+
+  const ready = provider !== null && snapshot.everSynced;
+  if (!ready && (snapshot.status === "refused" || gaveUp)) {
+    const reason = snapshot.refusal
+      ? tRealtime(`refusal.${snapshot.refusal}`)
+      : tRealtime("status.refused");
+    return (
+      <ClassicSourceEditor
+        {...props}
+        review={review}
+        notice={reason}
+        {...(roleReadOnly !== undefined ? { roleReadOnly } : {})}
+      />
+    );
+  }
+  if (!ready || provider === null) {
+    return (
+      <div
+        className="flex flex-1 flex-col items-center justify-center"
+        style={{ gap: 8 }}
+      >
+        <Spinner />
+        <span className="dim" style={{ fontSize: 12 }}>
+          {tRealtime("connectingEditor")}
+        </span>
+      </div>
+    );
+  }
+  return (
     <SourceEditorBody
-      key={relativePath}
-      relativePath={relativePath}
-      initialValue={file.content}
-      initialEtag={file.etag}
-      {...rest}
+      key={`${props.relativePath}:${String(generation)}`}
+      {...props}
+      initialValue={provider.text.toJSON()}
+      initialEtag={null}
+      collab={{ provider, snapshot }}
+      review={review}
     />
+  );
+};
+
+/**
+ * Редактор исходников. На сервере файл открывается в сессии совместной правки (сохраняет сервер, видны курсоры
+ * других), читателю и рецензенту он доступен для чтения; в локальной Студии это обычный редактор с автосохранением.
+ */
+export const SourceEditor = (props: SourceEditorProps) => {
+  const { data: boot } = useBootstrap();
+  const { data: project } = useProject(props.projectId);
+  const serverMode = boot?.mode === "server";
+  if (boot === undefined || (serverMode && project === undefined)) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+  const role = serverMode ? (project?.my_role ?? null) : null;
+  if (role === null)
+    return <ClassicSourceEditor {...props} review={NO_REVIEW} />;
+  const review: ReviewContext = {
+    enabled: true,
+    canComment: role !== "reader",
+    canModerate: role === "editor" || role === "owner",
+    isOwner: role === "owner",
+    currentUserId: boot.user?.id ?? null,
+  };
+  const roleReadOnly = isReadOnlyRole(role);
+  return props.readOnly === true ? (
+    <ClassicSourceEditor
+      {...props}
+      review={review}
+      roleReadOnly={roleReadOnly}
+    />
+  ) : (
+    <LiveSourceEditor {...props} review={review} roleReadOnly={roleReadOnly} />
   );
 };

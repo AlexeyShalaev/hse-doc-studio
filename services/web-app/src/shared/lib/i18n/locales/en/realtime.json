@@ -1,0 +1,31 @@
+{
+  "status": {
+    "connecting": "Connecting…",
+    "connected": "Together",
+    "offline": "Offline: edits are kept in the browser and will be sent when the connection returns",
+    "refused": "Live editing is unavailable"
+  },
+  "refusal": {
+    "auth": "Sign in again: the session has ended",
+    "forbidden": "You are not allowed to open this file",
+    "not_found": "File not found",
+    "unsupported": "Live editing is not available for this file",
+    "busy": "The server is busy: too many people are editing this file",
+    "too_large": "The file is too large for live editing"
+  },
+  "problem": {
+    "save_failed": "The server could not write the file, retrying",
+    "too_large": "The text grew past the live editing limit and is not being saved",
+    "file_gone": "The file was deleted or replaced"
+  },
+  "readOnly": "Read mode: you see others' edits live but cannot write",
+  "peers": "In this file now: {{names}}",
+  "peersCount_one": "{{count}} participant",
+  "peersCount_other": "{{count}} participants",
+  "external": "Changes from git or another source were merged",
+  "externalConflicts": "Changes from git overlapped yours: the other version is kept in history",
+  "reset": "The server rebuilt the document: your unsaved text will come back from the draft",
+  "connectingEditor": "Connecting the editor…",
+  "saved": "Saved to the server automatically",
+  "retry": "Retry"
+}

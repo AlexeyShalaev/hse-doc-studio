@@ -23,6 +23,10 @@ NotificationKindName = Literal[
     "transfer_request",
     "transfer_decided",
     "member_removed",
+    "review_thread",
+    "review_reply",
+    "review_mention",
+    "review_resolved",
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000
@@ -254,7 +258,9 @@ class NotificationPayloadModel(StrictModel):
     actor_name: str | None
     role: str | None
     ref_id: str | None
-    outcome: Literal["accepted", "declined", "approved", "denied"] | None
+    outcome: Literal["accepted", "declined", "approved", "denied", "resolved", "reopened"] | None
+    path: str | None = None
+    excerpt: str | None = None
 
 
 class NotificationModel(StrictModel):

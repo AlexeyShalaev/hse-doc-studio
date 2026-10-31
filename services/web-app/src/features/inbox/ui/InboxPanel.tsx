@@ -22,6 +22,17 @@ import {
 import { InboxView, type InboxTab } from "./InboxView";
 
 /** Данные и действия «Входящих». Открытие страницы ничего не отмечает прочитанным. */
+/** Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев, остальное проект. */
+export const notificationTarget = (n: Notification): string => {
+  const project = `/projects/${n.payload.project_id ?? ""}`;
+  if (n.kind.startsWith("review_") && n.payload.path) {
+    const params = new URLSearchParams({ file: n.payload.path });
+    if (n.payload.ref_id) params.set("thread", n.payload.ref_id);
+    return `${project}/files?${params.toString()}`;
+  }
+  return project;
+};
+
 export const InboxPanel = () => {
   const { t, i18n } = useTranslation("inbox");
   const navigate = useNavigate();
@@ -129,7 +140,7 @@ export const InboxPanel = () => {
         onNotification={(n) => {
           if (n.read_at === null) markRead.mutate([n.id]);
           if (n.payload.project_id && n.kind !== "member_removed") {
-            void navigate(`/projects/${n.payload.project_id}`);
+            void navigate(notificationTarget(n));
           }
         }}
         onMarkAll={() => {

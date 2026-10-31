@@ -22,6 +22,10 @@ NOTIFICATION_KINDS = (
     "transfer_request",
     "transfer_decided",
     "member_removed",
+    "review_thread",
+    "review_reply",
+    "review_mention",
+    "review_resolved",
 )
 
 

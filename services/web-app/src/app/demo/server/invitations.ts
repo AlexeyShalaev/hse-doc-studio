@@ -176,6 +176,8 @@ const seed = (): DemoInvites => ({
         role: null,
         ref_id: "arq_demo_vera",
         outcome: null,
+        path: null,
+        excerpt: null,
       },
     },
     {
@@ -190,6 +192,8 @@ const seed = (): DemoInvites => ({
         role: "editor",
         ref_id: "inv_demo_done",
         outcome: "accepted",
+        path: null,
+        excerpt: null,
       },
     },
     {
@@ -204,6 +208,8 @@ const seed = (): DemoInvites => ({
         role: "reviewer",
         ref_id: "arq_demo_old",
         outcome: "approved",
+        path: null,
+        excerpt: null,
       },
     },
     {
@@ -218,6 +224,8 @@ const seed = (): DemoInvites => ({
         role: null,
         ref_id: null,
         outcome: null,
+        path: null,
+        excerpt: null,
       },
     },
   ],
