@@ -1,0 +1,14 @@
+[
+  {
+    "id": "0b9f2a0e-0000-4000-8000-000000000001",
+    "name": "OpenAI общий",
+    "type": "openai",
+    "breaker": "closed",
+    "failures": 0,
+    "calls_24h": 340,
+    "errors_24h": 2,
+    "denied_24h": 5,
+    "input_tokens_24h": 410000,
+    "output_tokens_24h": 96000
+  }
+]

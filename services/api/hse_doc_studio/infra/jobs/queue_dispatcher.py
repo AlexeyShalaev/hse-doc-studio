@@ -62,6 +62,7 @@ from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.quotas.errors import QUOTA_EXCEEDED, QuotaExceededError
 from hse_doc_studio.core.quotas.kinds import QuotaKind
+from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
@@ -209,7 +210,8 @@ class QueueJobDispatcher:
             queued = await self._stage_and_enqueue(spec, None)
         except Exception as exc:
             logger.warning("compile staging failed", compile_id=str(spec.id), exc=repr(exc))
-            await hooks.on_finished(spec, _staging_failure(spec, exc), f"[error] {exc}")
+            reason = describe_quota_exceeded(exc) if isinstance(exc, QuotaExceededError) else str(exc)
+            await hooks.on_finished(spec, _staging_failure(spec, exc), f"[error] {reason}")
             return
         if queued is None:
             await hooks.on_finished(spec, _unfinished(spec, JobStatus.cancelled, None), "[cancelled]")

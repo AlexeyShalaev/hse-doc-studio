@@ -1,0 +1,18 @@
+{
+  "totals": {
+    "storage": 123456789,
+    "builds": 412,
+    "ai_tokens_day": 9000,
+    "ai_tokens_month": 880000
+  },
+  "top_builds": [
+    {
+      "user_id": "4f1d0c1a-0000-4000-8000-000000000001",
+      "name": "Анна",
+      "used": 120
+    }
+  ],
+  "top_ai_tokens": [],
+  "period_start": "2026-11-01",
+  "on_exceed": "deprioritize"
+}

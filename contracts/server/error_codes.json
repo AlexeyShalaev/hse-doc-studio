@@ -83,5 +83,9 @@
   "device_code_used",
   "git_server_url_invalid",
   "git_server_not_studio",
-  "git_server_unreachable"
+  "git_server_unreachable",
+  "quota_exceeded",
+  "owner_storage_exceeded",
+  "ai_model_not_allowed",
+  "ai_provider_unavailable"
 ]

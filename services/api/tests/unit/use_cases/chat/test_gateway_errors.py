@@ -15,8 +15,8 @@ from hse_doc_studio.use_cases.chat._support import describe_run_error, run_error
 @pytest.mark.parametrize(
     ("lang", "expected"),
     [
-        ("ru", "Исчерпан лимит токенов ИИ за сутки: 100 из 100. Сбросится 11.11.2026 00:00 UTC."),
-        ("en", "AI token limit for the day is used up: 100 of 100. Resets 2026-11-11 00:00 UTC."),
+        ("ru", "Ваш лимит исчерпан: токены ИИ за сутки, 100 из 100. Сбросится 11.11.2026 00:00 UTC."),
+        ("en", "Your limit is used up: AI tokens for the day, 100 of 100. Resets 2026-11-11 00:00 UTC."),
     ],
 )
 def test__describe_run_error__token_quota_names_numbers_and_reset(lang: str, expected: str) -> None:
@@ -35,3 +35,12 @@ def test__describe_run_error__model_and_provider_refusals_have_codes() -> None:
     assert "временно недоступен" in describe_run_error(AiProviderUnavailableError("OpenAI"))
     assert run_error_code(AiProviderUnavailableError("OpenAI")) == "ai_provider_unavailable"
     assert run_error_code(ValueError("x")) is None
+
+
+def test__describe_quota_exceeded__storage_is_humanized_in_bytes_units() -> None:
+    from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
+
+    set_interface_language("en")
+    exc = QuotaExceededError(QuotaKind.storage, QuotaScope.org, 1100 * 1024**2, 1024**3, None)
+
+    assert describe_quota_exceeded(exc) == "Organization limit is used up: storage on the server, 1.1 GB of 1 GB."

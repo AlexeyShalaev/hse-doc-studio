@@ -9,7 +9,7 @@ from hse_doc_studio.core.ai_gateway.errors import (
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.relay import RelayErrorCode
 from hse_doc_studio.core.quotas.errors import QUOTA_EXCEEDED, QuotaExceededError
-from hse_doc_studio.core.quotas.kinds import QuotaKind
+from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
 from hse_doc_studio.use_cases.ai_relay.client import relay_error_of
 
 RELAY_UNAVAILABLE = "relay_unavailable"
@@ -48,14 +48,7 @@ def describe_run_error(exc: BaseException) -> str:
 def _gateway_message(exc: BaseException) -> str | None:
     """Отказы ИИ-шлюза сервера: квота токенов, модель вне списка, провайдер временно закрыт."""
     if isinstance(exc, QuotaExceededError):
-        period = "сутки" if exc.kind is QuotaKind.ai_tokens_day else "месяц"
-        period_en = "day" if exc.kind is QuotaKind.ai_tokens_day else "month"
-        until = f" Сбросится {exc.resets_at:%d.%m.%Y %H:%M} UTC." if exc.resets_at is not None else ""
-        until_en = f" Resets {exc.resets_at:%Y-%m-%d %H:%M} UTC." if exc.resets_at is not None else ""
-        return localized_error(
-            f"Исчерпан лимит токенов ИИ за {period}: {exc.used} из {exc.limit}.{until}",
-            f"AI token limit for the {period_en} is used up: {exc.used} of {exc.limit}.{until_en}",
-        )
+        return describe_quota_exceeded(exc)
     if isinstance(exc, AiModelNotAllowedError):
         return localized_error(
             f"Модель «{exc.model}» не разрешена на этом провайдере. Выберите другую.",

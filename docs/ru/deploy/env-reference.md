@@ -217,6 +217,19 @@ tags:
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` | int | `16777216` | оба | Сумма тел запросов к моделям одного человека в памяти api. |
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` | int | `32` | оба | Одновременных ретрансляций ИИ на весь процесс api (все люди). |
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` | int | `134217728` | оба | Сумма тел запросов к моделям в памяти api (все люди). |
+| `HSE_STUDIO__AI_GATEWAY__RETRIES` | int | `2` | оба | Повторов временной ошибки провайдера, пока в поток ничего не ушло. |
+| `HSE_STUDIO__AI_GATEWAY__RETRY_BASE_DELAY_S` | float | `0.5` | оба | Первая пауза перед повтором, дальше вдвое. |
+| `HSE_STUDIO__AI_GATEWAY__RETRY_MAX_DELAY_S` | float | `8.0` | оба | Потолок паузы между повторами. |
+| `HSE_STUDIO__AI_GATEWAY__BREAKER_THRESHOLD` | int | `5` | оба | Подряд идущих сбоев, после которых провайдер закрывается на время. |
+| `HSE_STUDIO__AI_GATEWAY__BREAKER_OPEN_S` | float | `30.0` | оба | Сколько закрытый провайдер отказывает сразу, прежде чем его пробуют. |
+| `HSE_STUDIO__AI_GATEWAY__USAGE_RETENTION_DAYS` | int | `90` | оба | Сколько дней хранится журнал вызовов шлюза (кто, куда, токены). |
+| `HSE_STUDIO__AUTOSCALE__INTERVAL_S` | float | `15.0` | оба | Как часто цикл сверяет очередь с числом раннеров. |
+| `HSE_STUDIO__AUTOSCALE__WEBHOOK_SECRET` 🔒 | str | секрет, не печатается | оба | Секрет подписи HMAC-SHA256 для вызова внешнего оркестратора (заголовок X-Autoscale-Signature). |
+| `HSE_STUDIO__AUTOSCALE__WEBHOOK_TIMEOUT_S` | float | `10.0` | оба | Таймаут вызова внешнего оркестратора. |
+| `HSE_STUDIO__AUTOSCALE__COMPOSE_PROJECT` | str | не задано | оба | Имя проекта docker compose для режима compose (`-p`); пусто значит по умолчанию. |
+| `HSE_STUDIO__AUTOSCALE__COMPOSE_FILE` | str | не задано | оба | Файл compose для режима compose (`-f`). |
+| `HSE_STUDIO__AUTOSCALE__COMPOSE_SERVICE` | str | `runner` | оба | Сервис раннеров в compose, который масштабируется. |
+| `HSE_STUDIO__AUTOSCALE__COMPOSE_TIMEOUT_S` | float | `120.0` | оба | Таймаут команды docker compose. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |
