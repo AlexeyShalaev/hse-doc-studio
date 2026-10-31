@@ -125,6 +125,21 @@ class Live:
         assert response.status_code in {200, 201}, response.text
         return str(response.json()["id"])
 
+    def create_team_project(self, owner: Person, name: str = "Командный проект") -> str:
+        body = {
+            "name": name,
+            "pack_id": "hse-cs-se",
+            "template_id": "coursework",
+            "version": "2026.1",
+            "kind": "project",
+            "staffing": "team",
+            "lang": "ru",
+            "authors": [{"name": "Анна Петрова"}, {"name": "Борис Иванов"}],
+        }
+        response = self.call("POST", "/api/v1/projects", owner, json=body)
+        assert response.status_code in {200, 201}, response.text
+        return str(response.json()["id"])
+
     def add_member(self, project_id: str, person: Person, role: str, **flags: Any) -> None:
         self.sql(
             "INSERT INTO project_members (project_id, principal_kind, principal_id, role, persona, can_share, "

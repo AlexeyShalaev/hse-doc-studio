@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import tempfile
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -21,7 +22,7 @@ from hse_doc_studio.api.rate_limit import enforce
 from hse_doc_studio.api.schemas.git_remote import GitServerInfo, GitWhoami, GitWhoamiToken, GitWhoamiUser
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.git_remote.entities import GitService
-from hse_doc_studio.core.git_remote.protocols import IGitSmartHttp
+from hse_doc_studio.core.git_remote.protocols import GitRpcOutcome, IGitSmartHttp
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IUserRepository
@@ -39,6 +40,7 @@ from hse_doc_studio.use_cases.git_remote.auth import (
     GitHttpErrorKind,
     GitPrincipal,
 )
+from hse_doc_studio.use_cases.git_remote.receive import ProjectBusyError, PushSession, ReceivePushUC
 
 GIT_PREFIX = "/git"
 _SPOOL_MEMORY = 8 * 1024 * 1024
@@ -176,23 +178,17 @@ async def git_info_refs(
     kind = GitService(service)
     try:
         access = await _authorize(request, repo, kind)
+        if kind is GitService.receive_pack:
+            await (await _container_get(request, ReceivePushUC)).advertise(access)
     except GitHttpError as exc:
         return git_error_response(exc)
     except IdentityError as exc:
         return _rate_limited(exc)
-    if kind is GitService.receive_pack:
-        refusal = await _receive_refusal(request, access)
-        if refusal is not None:
-            return refusal
+    except ProjectBusyError as exc:
+        return _text(409, str(exc))
     smart = await _smart_http(request)
     body = await smart.advertise(kind, access.git_dir, protocol=git_protocol(request.headers.get("git-protocol")))
     return Response(body, media_type=f"application/x-{kind.value}-advertisement", headers=_NO_CACHE)
-
-
-async def _receive_refusal(_request: Request, _access: GitAccess) -> Response | None:
-    return _text(
-        403, localized_error("Сервер пока не принимает отправку изменений.", "The server does not accept pushes yet.")
-    )
 
 
 def _too_large(request: Request) -> bool:
@@ -290,11 +286,65 @@ async def git_upload_pack(request: Request, repo: Annotated[str, Path()]) -> Res
 
 @router.post("/{repo}/git-receive-pack")
 async def git_receive_pack(request: Request, repo: Annotated[str, Path()]) -> Response:
+    """Отправка: проверки и снимок веб-правок до запуска git, политика путей в хуке pre-receive (раздел 7.3)."""
     try:
         access = await _authorize(request, repo, GitService.receive_pack)
     except GitHttpError as exc:
         return git_error_response(exc)
     except IdentityError as exc:
         return _rate_limited(exc)
-    refusal = await _receive_refusal(request, access)
-    return refusal or _text(403, "")
+    try:
+        spool = await _spool(request)
+    except _BodyTooLargeError:
+        return _text(413, localized_error("Отправка слишком большая.", "The push is too large."))
+    concurrency = await _container_get(request, GitConcurrency)
+    user_id = access.principal.user_id
+    if not concurrency.try_acquire(user_id):
+        spool.close()
+        return _busy()
+    uc = await _container_get(request, ReceivePushUC)
+    try:
+        session = await uc.begin(access)
+    except ProjectBusyError as exc:
+        spool.close()
+        concurrency.release(user_id)
+        return _text(409, str(exc))
+    except BaseException:
+        spool.close()
+        concurrency.release(user_id)
+        raise
+    smart = await _smart_http(request)
+    outcome: list[GitRpcOutcome] = []
+    stream = smart.rpc(
+        GitService.receive_pack,
+        access.git_dir,
+        _replay(spool),
+        gzip=_gzip(request),
+        protocol=git_protocol(request.headers.get("git-protocol")),
+        extra_config=session.hook.extra_config,
+        extra_env=session.hook.extra_env,
+        outcome=outcome,
+    )
+    return StreamingResponse(
+        _received(stream, uc, session, outcome, concurrency, user_id),
+        media_type="application/x-git-receive-pack-result",
+        headers=_NO_CACHE,
+    )
+
+
+async def _received(  # noqa: PLR0913 — состояние одного приёма
+    stream: AsyncIterator[bytes],
+    uc: ReceivePushUC,
+    session: PushSession,
+    outcome: list[GitRpcOutcome],
+    concurrency: GitConcurrency,
+    user_id: str,
+) -> AsyncIterator[bytes]:
+    try:
+        async for chunk in stream:
+            yield chunk
+    finally:
+        try:
+            await asyncio.shield(uc.finish(session, outcome[0] if outcome else None))
+        finally:
+            concurrency.release(user_id)

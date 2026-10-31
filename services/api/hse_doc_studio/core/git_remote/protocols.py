@@ -6,8 +6,9 @@ from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+from uuid import UUID
 
-from hse_doc_studio.core.git_remote.entities import GitService
+from hse_doc_studio.core.git_remote.entities import GitService, PushPolicy
 
 
 class GitBodyTooLargeError(Exception):
@@ -48,4 +49,32 @@ class IGitSmartHttp(Protocol):
 
         В `outcome` (если дан) по завершении кладётся итог процесса.
         """
+        ...
+
+
+@dataclass(frozen=True)
+class PushHookSession:
+    """Что нужно процессу `git receive-pack` для приёма: `-c` с хуками и окружение с файлом политики."""
+
+    extra_config: tuple[str, ...]
+    extra_env: Mapping[str, str]
+    policy_file: Path
+
+
+class IPushRuntime(Protocol):
+    def prepare(
+        self, policy: PushPolicy, *, git_dir: Path, work_tree: Path, actor_id: str, lang: str, max_input_bytes: int
+    ) -> PushHookSession:
+        """Файл политики (0600) и аргументы приёма; файл удаляет `cleanup`."""
+        ...
+
+    def cleanup(self, session: PushHookSession) -> None: ...
+    async def head(self, git_dir: Path) -> str | None: ...
+    async def branch(self, git_dir: Path) -> str | None: ...
+    async def changed_paths(self, git_dir: Path, old: str, new: str) -> list[str]: ...
+
+
+class IExternalChangeReconciler(Protocol):
+    async def after_external_change(self, project_id: UUID, folder: Path, *, project_json_changed: bool) -> None:
+        """Файлы проекта сменились мимо API (push): права из БД обратно в project.json, копия каталога, кэши."""
         ...

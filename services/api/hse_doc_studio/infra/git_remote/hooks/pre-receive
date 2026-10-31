@@ -1,0 +1,3 @@
+#!/bin/sh
+# Проверка push сервером Студии: правила в hse_doc_studio.infra.git_remote.pre_receive.
+exec "$HSE_PYTHON" -I -m hse_doc_studio.infra.git_remote.pre_receive
