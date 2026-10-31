@@ -377,6 +377,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/api/admin/settings/instance"): _ADM,
     ("GET", "/api/admin/settings/build"): _ADM,
     ("PUT", "/api/admin/settings/build"): _ADM,
+    # gitremote: git по HTTPS вне /api/v1, ключ это полный шаблон маршрута (`{repo}` это `<project_id>.git`)
+    ("GET", "/git/{repo}/info/refs"): RouteScope.git_token,
+    ("POST", "/git/{repo}/git-upload-pack"): RouteScope.git_token,
+    ("POST", "/git/{repo}/git-receive-pack"): RouteScope.git_token,
+    ("GET", "/git/-/info"): _P,
+    ("GET", "/git/-/whoami"): RouteScope.git_token,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не
