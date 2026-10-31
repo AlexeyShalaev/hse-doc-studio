@@ -6,7 +6,6 @@ import {
   AUTO_SYNC_MAX_FAILURES,
   AUTO_SYNC_MIN_GAP_MS,
   AUTO_SYNC_PULL_GAP_MS,
-  AUTO_SYNC_PULL_GAP_MS,
   AUTO_SYNC_PULL_DELAY_MS,
   autoSyncPhase,
   autoSyncWork,
