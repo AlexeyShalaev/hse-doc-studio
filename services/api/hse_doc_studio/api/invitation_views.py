@@ -134,7 +134,7 @@ def my_transfer(view: TransferView, now: datetime) -> s.MyTransfer:
 
 def notification(item: Notification) -> s.NotificationModel:
     p = item.payload
-    outcome = p.outcome if p.outcome in ("accepted", "declined", "approved", "denied") else None
+    outcome = p.outcome if p.outcome in ("accepted", "declined", "approved", "denied", "resolved", "reopened") else None
     return s.NotificationModel(
         id=item.id,
         kind=item.kind.value,
@@ -146,7 +146,9 @@ def notification(item: Notification) -> s.NotificationModel:
             actor_name=p.actor_name,
             role=p.role,
             ref_id=p.ref_id,
-            outcome=cast(Literal["accepted", "declined", "approved", "denied"] | None, outcome),
+            path=p.path,
+            excerpt=p.excerpt,
+            outcome=cast(Literal["accepted", "declined", "approved", "denied", "resolved", "reopened"] | None, outcome),
         ),
     )
 

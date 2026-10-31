@@ -122,6 +122,14 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/recheck"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"
     ),
+    # Ревью-комментарии: читает тот, кто читает исходники, пишет рецензент и выше; путь файла проверяет сценарий
+    ("GET", "/projects/{project_id}/review/threads"): RouteRule(Action.SOURCES_READ),
+    ("POST", "/projects/{project_id}/review/threads"): RouteRule(Action.COMMENT),
+    ("POST", "/projects/{project_id}/review/threads/{thread_id}/comments"): RouteRule(Action.COMMENT),
+    ("PUT", "/projects/{project_id}/review/threads/{thread_id}/status"): RouteRule(Action.COMMENT),
+    ("PATCH", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
+    ("DELETE", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
+    ("GET", "/projects/{project_id}/review/mentions"): RouteRule(Action.COMMENT),
     # Сборка и проверки
     ("POST", "/projects/{project_id}/documents/{doc_id}/compile"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/compiles/{compile_id}/cancel"): RouteRule(Action.BUILD_RUN),

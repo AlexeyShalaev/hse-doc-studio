@@ -43,6 +43,7 @@ from hse_doc_studio.api.routers.v1 import (
     projects,
     remote_runner,
     requirements,
+    review,
     server_setup,
     session,
     settings,
@@ -121,4 +122,5 @@ api_router.include_router(share_links.router, tags=["sharing"])
 api_router.include_router(share_link_public.router, tags=["sharing"])
 # invites: приглашения, запросы доступа, передача владения, «Входящие»
 api_router.include_router(project_invitations.router, tags=["projects"])
+api_router.include_router(review.router, tags=["review"])
 api_router.include_router(account_invitations.router, tags=["account"])

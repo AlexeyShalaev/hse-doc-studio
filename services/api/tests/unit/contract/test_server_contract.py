@@ -20,6 +20,7 @@ from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
+from hse_doc_studio.api.schemas import review
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
@@ -210,6 +211,9 @@ _SCHEMAS: dict[str, Any] = {
     "MyTransfer": inv.MyTransfer,
     "MyTransferList": inv.MyTransferList,
     "Notification": inv.NotificationModel,
+    "ReviewThread": review.ThreadModel,
+    "ReviewThreadList": review.ThreadList,
+    "MentionCandidateList": review.MentionCandidateList,
     "NotificationPage": inv.NotificationPage,
     "MarkNotificationsReadRequest": inv.MarkNotificationsReadRequest,
     "InboxSummary": inv.InboxSummary,

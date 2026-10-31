@@ -11,6 +11,7 @@ from hse_doc_studio.api.config.admin import AdminConfig
 from hse_doc_studio.api.config.artifacts import ArtifactsConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
+from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
@@ -93,6 +94,7 @@ class Settings(BaseSettings):
     admin: AdminConfig = Field(default_factory=AdminConfig)
     egress: EgressConfig = Field(default_factory=EgressConfig)
     rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
+    collab: CollabConfig = Field(default_factory=CollabConfig)
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
     sharing: SharingConfig = Field(default_factory=SharingConfig)

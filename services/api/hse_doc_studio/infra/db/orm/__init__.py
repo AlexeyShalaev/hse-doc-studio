@@ -45,6 +45,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
+from hse_doc_studio.infra.db.orm.review import ReviewCommentRow, ReviewThreadRow
 from hse_doc_studio.infra.db.orm.sharing import (
     GuestSessionLinkRow,
     GuestSessionRow,
@@ -98,6 +99,8 @@ __all__ = [
     "ProjectUsageRow",
     "QuotaRow",
     "RegistrationInviteRow",
+    "ReviewCommentRow",
+    "ReviewThreadRow",
     "RunnerPairingRow",
     "RunnerRegistrationTokenRow",
     "RunnerRow",

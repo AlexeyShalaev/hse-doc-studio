@@ -9,6 +9,8 @@
     "actor_name": "Анна Петрова",
     "role": null,
     "ref_id": null,
-    "outcome": null
+    "outcome": null,
+    "path": null,
+    "excerpt": null
   }
 }

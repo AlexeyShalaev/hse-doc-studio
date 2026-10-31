@@ -14,6 +14,7 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from starlette.requests import HTTPConnection
 
 from hse_doc_studio.api.actor import resolve_actor
 from hse_doc_studio.api.ai_relay_errors import install_ai_relay_error_handlers
@@ -23,6 +24,7 @@ from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.import_errors import install_project_import_error_handlers
 from hse_doc_studio.api.quota_errors import install_quota_error_handlers
+from hse_doc_studio.api.review_errors import install_review_error_handlers
 from hse_doc_studio.api.route_actions import RouteRule, route_key, rule_for, scope_for_rule
 from hse_doc_studio.api.route_scopes import (
     ADMIN_PREFIX,
@@ -149,7 +151,7 @@ async def project_access_guard(request: Request) -> None:  # noqa: C901 — ве
     grant = acl.grant_for(actor) if acl is not None else None
     if grant is not None and grant.via_link:
         # Гость и ссылочное право: история, аудит и ограничение частоты видят ссылку, через которую открыт проект.
-        actor = await _linked_actor(request, actor, grant.link_id)
+        actor = await linked_actor(request, actor, grant.link_id)
         set_current_actor(actor)
     decision = decide(actor, rule.action, acl, scope_for_rule(rule, request.path_params))
     if decision is Decision.not_found and actor.is_guest:
@@ -228,7 +230,7 @@ def route_key_of(request: Request) -> tuple[str, str]:
     return route_key(request.method, route_path_of(request))
 
 
-async def _linked_actor(request: Request, actor: Actor, link_id: str | None) -> Actor:
+async def linked_actor(request: HTTPConnection, actor: Actor, link_id: str | None) -> Actor:
     """Актор со ссылкой; гостю ещё и подпись снимков «Гость: <имя> (ссылка «<подпись>»)» с noreply-адресом."""
     linked = actor.with_link(link_id)
     if not actor.is_guest or link_id is None:
@@ -325,6 +327,7 @@ def install_exception_handlers(app: FastAPI) -> None:
     install_git_error_handlers(app)
     install_identity_error_handlers(app)
     install_quota_error_handlers(app)
+    install_review_error_handlers(app)
     install_project_import_error_handlers(app)
     install_runner_error_handlers(app)
     install_ai_relay_error_handlers(app)

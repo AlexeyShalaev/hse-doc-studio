@@ -196,6 +196,13 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 engine, auto_migrate=settings.db.auto_migrate, lock_wait_s=settings.db.migration_lock_wait_s
             )
 
+        @app.on_event("shutdown")
+        async def _collab_shutdown() -> None:
+            # Комнаты совместной правки записывают набранное на диск до остановки процесса.
+            from hse_doc_studio.infra.collab.manager import CollabManager  # noqa: PLC0415
+
+            await (await container.get(CollabManager)).shutdown()
+
         server_metrics = install_server_observability(app, settings, health_checks)
         install_background(
             app,
