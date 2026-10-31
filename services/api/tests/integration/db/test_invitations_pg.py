@@ -109,6 +109,7 @@ async def test__constraints__one_pending_transfer(sessions: SessionProvider) -> 
     async with sessions.use() as db:
         db.add(_row("trf_1"))
         await db.flush()
+
     async def _second() -> None:
         async with sessions.use() as db:
             db.add(_row("trf_2"))
