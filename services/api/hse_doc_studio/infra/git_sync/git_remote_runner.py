@@ -48,7 +48,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     ProgressCallback,
 )
 from hse_doc_studio.core.git_sync.secret import Secret
-from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
+from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, is_loopback_http
 from hse_doc_studio.infra.git_sync.auth_env import (
     allowed_protocols,
     build_http_auth,
@@ -328,7 +328,8 @@ class GitRemoteRunner:
 
     def _check_policy(self, target: RemoteTarget) -> None:
         kind = target.url.kind
-        if kind is RemoteKind.http and not (self._config.allow_insecure_http and target.insecure_http):
+        loopback = self._allow_local and is_loopback_http(target.url)
+        if kind is RemoteKind.http and not loopback and not (self._config.allow_insecure_http and target.insecure_http):
             raise git_error(GitErrorCode.url_scheme_forbidden)
         if kind is RemoteKind.file and not self._allow_local:
             raise git_error(GitErrorCode.url_scheme_forbidden)

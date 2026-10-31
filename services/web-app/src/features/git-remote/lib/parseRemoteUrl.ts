@@ -10,9 +10,12 @@ export type RemoteUrlKind = "https" | "http" | "ssh" | "file";
 export type RemoteUrlPolicy = {
   /** Открытый http: по умолчанию запрещён. */
   allow_http?: boolean;
-  /** Папка на этом компьютере: по умолчанию запрещена. */
+  /** Папка на этом компьютере (и http к localhost): по умолчанию запрещена. */
   allow_local?: boolean;
 };
+
+/** http к своему компьютеру токен в сеть не уносит: пускается вместе с локальными адресами. */
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1"]);
 
 export type ParsedRemoteUrl = {
   /** Каноничный адрес без пароля и токена. */
@@ -107,7 +110,12 @@ const finish = (
   draft: Draft,
   policy: RemoteUrlPolicy,
 ): ParseRemoteUrlResult => {
-  if (draft.kind === "http" && !policy.allow_http) return FORBIDDEN;
+  if (
+    draft.kind === "http" &&
+    !policy.allow_http &&
+    !(policy.allow_local && LOOPBACK_HOSTS.has(draft.host ?? ""))
+  )
+    return FORBIDDEN;
   if (draft.kind === "file" && !policy.allow_local) return FORBIDDEN;
   const { owner, repo } = ownerAndRepo(draft.path.segments);
   const authority =

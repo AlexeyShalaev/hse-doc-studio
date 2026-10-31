@@ -223,7 +223,7 @@ class CloneProjectUC:
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
-        require_http_consent(url, insecure_http=inp.insecure_http)
+        require_http_consent(url, insecure_http=inp.insecure_http, local_ok=self._policy.allow_local_remotes)
         if inp.credential_id is not None and await self._credentials.get(inp.credential_id) is None:
             raise git_error(GitErrorCode.credentials_missing)
         if inp.branch:
