@@ -114,6 +114,8 @@ const DOT: Record<RunnerStatus, StatusDotStatus> = {
   offline: "offline",
   paused: "paused",
   revoked: "neutral",
+  // Личные раннеры не попадают в эту таблицу (у неё только раннеры установки).
+  disabled: "neutral",
 };
 
 const TOKEN_DOT: Record<TokenStatus, StatusDotStatus> = {

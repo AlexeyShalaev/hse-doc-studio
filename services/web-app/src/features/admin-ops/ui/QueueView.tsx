@@ -638,6 +638,7 @@ export const QueueView = ({
           <FilterMenu
             label={t("queue.filters.where")}
             testId="queue-filter-where"
+            single
             values={runnerScope ? [runnerScope] : []}
             onChange={(values) => {
               state.setFilter("runner_scope", values[0] ?? null);

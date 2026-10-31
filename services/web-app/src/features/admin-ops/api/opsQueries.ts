@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  AdminUser,
   CreateAdminRunnerTokenRequest,
   UpdateAdminQuotasRequest,
 } from "@entities/session";
@@ -47,10 +46,7 @@ export const usePersonalRunners = () =>
     queryKey: opsKeys.personalRunners,
     queryFn: ({ signal }) =>
       opsApi
-        .runners(
-          { owner_kind: "user", limit: PERSONAL_RUNNERS_WINDOW },
-          signal,
-        )
+        .runners({ owner_kind: "user", limit: PERSONAL_RUNNERS_WINDOW }, signal)
         .then((page) => page.items),
     staleTime: 0,
     refetchInterval: POLL_MS * 3,

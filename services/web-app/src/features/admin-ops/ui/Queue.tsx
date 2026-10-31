@@ -70,7 +70,9 @@ export const Queue = () => {
         state={state}
         pagination={jobs.pagination}
         personalRunning={
-          personalEnabled.data ? personalRunning.data : undefined
+          personalEnabled.data
+            ? (personalRunning.data?.length ?? null)
+            : undefined
         }
         now={now}
         onOpen={setOpened}

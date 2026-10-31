@@ -6,8 +6,10 @@ import type { AdminRunner, AdminRunnerSummary } from "@entities/session";
 export const ONLINE_WITHIN_S = 60;
 export const STALE_WITHIN_S = 300;
 
+// "disabled" — только у личных раннеров людей, когда личные раннеры выключены на
+// установке; раннеры установки (эта таблица) этого состояния не знают.
 export type RunnerStatus =
-  "online" | "stale" | "offline" | "paused" | "revoked";
+  "online" | "stale" | "offline" | "paused" | "revoked" | "disabled";
 
 export const secondsSince = (
   iso: string | null,
@@ -45,10 +47,10 @@ export const quietRunners = (s: AdminRunnerSummary): number =>
   s.stale + s.offline;
 
 /** Порядок состояний, как у сортировки сервера по status. */
-export const RUNNER_STATUSES: readonly RunnerStatus[] = [
+export const RUNNER_STATUSES = [
   "online",
   "stale",
   "offline",
   "paused",
   "revoked",
-];
+] as const satisfies readonly RunnerStatus[];

@@ -4,13 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { z } from "zod";
 import { i18n } from "@shared/lib";
 import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
 import {
   AdminJobPageSchema,
-  AdminRunnerSchema,
+  AdminRunnerPageSchema,
   type AdminRunner,
 } from "@entities/session";
 import { installServerDemo } from "@/app/demo";
@@ -184,17 +183,20 @@ describe("админка: личные раннеры", () => {
   });
 
   it("демо: список с владельцами, смена токена личного 403, пауза и отзыв", async () => {
-    const all = z
-      .array(AdminRunnerSchema)
-      .parse((await call("GET", "/runners")).data);
+    const all = AdminRunnerPageSchema.parse(
+      (await call("GET", "/runners", undefined, { limit: "200" })).data,
+    ).items;
     const personal = all.filter((r) => r.owner_kind === "user");
     expect(personal.length).toBeGreaterThan(0);
     expect(personal.every((r) => r.owner !== null)).toBe(true);
-    const onlyUsers = z
-      .array(AdminRunnerSchema)
-      .parse(
-        (await call("GET", "/runners", undefined, { owner_kind: "user" })).data,
-      );
+    const onlyUsers = AdminRunnerPageSchema.parse(
+      (
+        await call("GET", "/runners", undefined, {
+          owner_kind: "user",
+          limit: "200",
+        })
+      ).data,
+    ).items;
     expect(onlyUsers.every((r) => r.owner_kind === "user")).toBe(true);
 
     const id = "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b";
@@ -241,7 +243,8 @@ describe("админка: личные раннеры", () => {
     await waitFor(() => {
       expect(screen.getByTestId("queue-stat-personal")).toHaveTextContent("2");
     });
-    await user.click(screen.getByRole("button", { name: /Личный/ }));
+    await user.click(screen.getByTestId("queue-filter-where"));
+    await user.click(await screen.findByRole("radio", { name: "Личный" }));
     await waitFor(() => {
       expect(screen.queryByTestId("queue-where-j_01hxd2")).toBeNull();
     });

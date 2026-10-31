@@ -46,6 +46,7 @@ const RUNNER_STATUSES = [
   "offline",
   "paused",
   "revoked",
+  "disabled",
 ] as const;
 const TOKEN_STATUSES = ["active", "expired", "exhausted", "revoked"] as const;
 const JOB_STATES = [
@@ -156,7 +157,10 @@ export const createOpsRoutes = (
   });
 
   // Личные раннеры людей: админ видит владельца и состояние, может приостановить
-  // и отозвать, но не сменить токен (403 forbidden).
+  // и отозвать, но не сменить токен (403 forbidden). Только в мирах, где
+  // сценарий их завёл: иначе createDemoPersonal дал бы заготовку по умолчанию
+  // и в мирах без личных раннеров (admin_scale и прочие) они бы подмешались сами.
+  const personalScenario = () => getWorld().scenario.personalSeed !== undefined;
   const personalRunners = () => personalOf(getWorld());
   const personalOfId = (
     id: string | undefined,
@@ -309,7 +313,7 @@ export const createOpsRoutes = (
         };
         const rows = [
           ...(owner === "user" ? [] : state().runners.map(wireRunner)),
-          ...(owner === "instance"
+          ...(owner === "instance" || !personalScenario()
             ? []
             : personalRunners().runners.map(wirePersonal)),
         ].filter(

@@ -29,6 +29,7 @@ import {
   type AdminService,
   type AdminStorage,
   type AdminStorageOwnerRow,
+  type AdminUser,
   type CreateAdminRunnerTokenRequest,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";

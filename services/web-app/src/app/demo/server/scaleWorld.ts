@@ -624,6 +624,11 @@ const generateRunners = (r: Rand, now: number): AdminRunner[] =>
         seen === null ? null : new Date(now - seen * 1000).toISOString(),
       paused: kind === "paused",
       revoked: kind === "revoked",
+      owner_kind: "instance",
+      owner: null,
+      host_kind: "cli",
+      ai_endpoints: [],
+      last_seen_ip: null,
     };
   });
 
