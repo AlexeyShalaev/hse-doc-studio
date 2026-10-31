@@ -52,7 +52,7 @@ export const useAutoSync = (
   const lastEditAt = useProjectLastEdit(projectId);
 
   const connected = !!status?.supported && status.connected;
-  const enabled = connected && (status.auto_sync.enabled ?? false);
+  const enabled = connected && status.auto_sync.enabled;
   const ahead = status?.ahead ?? 0;
   const behind = status?.behind ?? 0;
   const lastSyncId = status?.last_sync?.id ?? null;

@@ -100,7 +100,9 @@ describe("PdfArtifactsCard", () => {
 
     const rows = await screen.findAllByTestId("artifact-row");
     expect(rows).toHaveLength(2);
-    const first = within(rows[0]!);
+    const [top] = rows;
+    if (!top) throw new Error("no rows");
+    const first = within(top);
     expect(first.getByText("coursework.pdf")).toBeTruthy();
     expect(first.getByText(/42 стр\./)).toBeTruthy();
     expect(first.getByText(/выгрузил Анна Петрова/)).toBeTruthy();
