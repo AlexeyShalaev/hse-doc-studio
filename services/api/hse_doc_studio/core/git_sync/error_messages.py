@@ -223,3 +223,25 @@ def localized_resolution_error(exc: GitSyncError) -> GitSyncError:
         return resolution_error(exc.code, *map(str, paths))
     single = exc.ctx.get("path")
     return resolution_error(exc.code, str(single)) if single is not None else resolution_error(exc.code)
+
+
+_MAX_REMOTE_LINES = 25
+
+
+def push_rejected_error(output: str) -> GitSyncError:
+    """Отказ pre-receive: к тексту добавляются строки сервера (`remote:`), по одной на нарушение.
+
+    Сервер Студии печатает заголовок и строки `- путь: причина [код]`; другой сервер свой текст. Экран
+    синхронизации показывает их блоком «Сервер отклонил отправку».
+    """
+    lines = []
+    for raw in output.splitlines():
+        if not raw.startswith("remote:"):
+            continue
+        line = raw.removeprefix("remote:").strip()
+        if line and not line.startswith("HSE Doc Studio:"):
+            lines.append(line)
+    base = git_error(GitErrorCode.push_rejected).detail
+    if not lines:
+        return GitSyncError(GitErrorCode.push_rejected, base)
+    return GitSyncError(GitErrorCode.push_rejected, base + ":\n" + "\n".join(lines[:_MAX_REMOTE_LINES]))

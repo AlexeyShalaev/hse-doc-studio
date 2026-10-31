@@ -36,3 +36,19 @@ def test__git_error__git_error_without_tail__generic_text() -> None:
 
 def test__git_error__extra_context__kept() -> None:
     assert git_error(GitErrorCode.sync_busy, operation_id="op1").ctx == {"operation_id": "op1"}
+
+
+def test__push_rejected_error__keeps_server_lines_without_header() -> None:
+    from hse_doc_studio.core.git_sync.error_messages import push_rejected_error
+
+    output = (
+        "remote: HSE Doc Studio: push rejected (1 problems)\n"
+        "remote: - petrov/a.tex: outside your folder [path_outside_scope]\n"
+        " ! [remote rejected] master -> master (pre-receive hook declined)\n"
+    )
+
+    error = push_rejected_error(output)
+
+    assert error.code is GitErrorCode.push_rejected
+    assert error.detail.endswith(":\n- petrov/a.tex: outside your folder [path_outside_scope]")
+    assert push_rejected_error("nothing").detail == git_error(GitErrorCode.push_rejected).detail

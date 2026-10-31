@@ -385,6 +385,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/-/whoami"): RouteScope.git_token,
     ("GET", "/git/-/projects"): RouteScope.git_token,
     # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
+    # gitremote: вход локальной Студии на сервер Студии и его проекты
+    ("POST", "/git/servers/login"): _LOCAL,
+    ("GET", "/git/servers/login/{login_id}"): _LOCAL,
+    ("DELETE", "/git/servers/login/{login_id}"): _LOCAL,
+    ("GET", "/git/servers"): _LOCAL,
+    ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
+    ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
     ("POST", "/auth/device/code"): _P,
     ("POST", "/auth/device/token"): _P,
     ("GET", "/account/device/{user_code}"): _A,

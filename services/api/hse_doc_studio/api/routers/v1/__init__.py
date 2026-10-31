@@ -24,6 +24,7 @@ from hse_doc_studio.api.routers.v1 import (
     fs,
     git_global,
     git_project,
+    git_servers,
     hse_persons,
     images,
     languagetool,
@@ -106,5 +107,6 @@ api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(export_import.router, tags=["data"])
 api_router.include_router(signing_identities.router, tags=["signing-identities"])
 api_router.include_router(profile.router, tags=["profile"])
+api_router.include_router(git_servers.router, tags=["git-sync"])
 api_router.include_router(git_global.router, tags=["git-sync"])
 api_router.include_router(remote_runner.router, tags=["remote-runner"])

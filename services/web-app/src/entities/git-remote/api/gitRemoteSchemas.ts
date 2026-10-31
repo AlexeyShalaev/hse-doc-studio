@@ -84,6 +84,8 @@ export const GitCredentialSchema = z.object({
   created_at: z.string(),
   last_used_at: z.string().nullish(),
   expires_at: z.string().nullish(), // срок токена, если известен
+  // device: доступ к серверу HSE Doc Studio, выданный входом по коду.
+  origin: z.literal("device").nullish(),
   used_by: z.array(z.object({ project_id: z.string(), name: z.string() })),
 });
 

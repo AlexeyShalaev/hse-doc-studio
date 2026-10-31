@@ -6,6 +6,7 @@ from dishka import AsyncContainer, Provider, make_async_container
 from dishka.integrations.fastapi import FastapiProvider
 
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.infra.di.providers.local_git_servers import LocalGitServersProvider
 from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
 from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
@@ -44,5 +45,7 @@ def create_container(mode: StudioMode = StudioMode.local, *, engine: AsyncEngine
     else:
         # Облачные сборки на этой машине: локальная Студия как личный раннер сервера.
         providers.append(LocalRemoteRunnerProvider())
+        # Сервер HSE Doc Studio как git-remote: вход по коду и список проектов сервера.
+        providers.append(LocalGitServersProvider())
     providers.append(FastapiProvider())
     return make_async_container(*providers)

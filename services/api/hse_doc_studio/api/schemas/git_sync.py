@@ -130,6 +130,8 @@ class GitCredentialResponse(_Contract):
     created_at: datetime
     last_used_at: datetime | None
     expires_at: datetime | None  # срок токена, если известен
+    # device: доступ выдан сервером HSE Doc Studio входом по коду; иначе null (токен или ключ, введённый человеком)
+    origin: Literal["device"] | None
     used_by: list[GitCredentialUsage]
 
 

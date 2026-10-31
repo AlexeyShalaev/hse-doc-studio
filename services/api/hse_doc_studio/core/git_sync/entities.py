@@ -169,6 +169,8 @@ class GitCredential:
     last_used_at: datetime | None = None
     # Срок токена, если сервер его назвал при проверке; для ключей None.
     expires_at: datetime | None = None
+    # `device`: токен сервера HSE Doc Studio, полученный входом по коду; иначе введён человеком.
+    origin: str | None = None
 
 
 @dataclass(frozen=True)
