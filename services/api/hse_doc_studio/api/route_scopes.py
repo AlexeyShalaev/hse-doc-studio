@@ -455,6 +455,27 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
 )
 
 
+# links: гость по ссылке читает справочники установки, без которых рабочая область проекта не открывается
+# (каталог шаблонов, шрифты, состояние сервисов, сведения о сервере). Только чтение и ничего личного:
+# аккаунт, настройки людей, агент, подписи и git для гостя по-прежнему не существуют (404).
+GUEST_READABLE: frozenset[RouteKey] = frozenset(
+    {
+        ("GET", "/catalog/packs"),
+        ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions"),
+        ("GET", "/catalog/packs/{pack_id}/templates/{template_id}/versions/{version}"),
+        ("GET", "/languagetool/status"),
+        ("GET", "/office-services/status"),
+        ("GET", "/fonts"),
+        ("GET", "/fonts/{filename}/file"),
+        ("GET", "/fonts/catalog"),
+        ("GET", "/system/info"),
+        ("GET", "/system/editors"),
+        ("GET", "/system/archive-formats"),
+        ("GET", "/system/runner-health"),
+    }
+)
+
+
 def per_user_routes_problem(pending: frozenset[RouteKey] | None = None) -> str | None:
     """Причина красной готовности зоны `per_user_routes`; None, когда общих пользовательских маршрутов не осталось."""
     left = PER_USER_PENDING if pending is None else pending

@@ -325,3 +325,13 @@ def test__access_panel__guest_and_link_user_see_only_owner(world: World) -> None
         page = person.get(members).json()
         assert [x["name"] for x in page["items"]] == ["Анна Петрова"]
         assert page["total"] == 1
+
+
+def test__guest__reads_installation_references_but_not_personal_routes(world: World) -> None:
+    guest = world.anonymous()
+    _open(guest, token_of(world.create_link(role="editor")), guest_name="Борис")
+
+    assert guest.get("/api/v1/fonts").status_code == 200
+    assert guest.get("/api/v1/system/info").status_code == 200
+    assert guest.get("/api/v1/settings").status_code == 404
+    assert guest.get("/api/v1/agent/chats").status_code == 404

@@ -23,9 +23,10 @@ from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.import_errors import install_project_import_error_handlers
 from hse_doc_studio.api.quota_errors import install_quota_error_handlers
-from hse_doc_studio.api.route_actions import RouteRule, rule_for, scope_for_rule
+from hse_doc_studio.api.route_actions import RouteRule, route_key, rule_for, scope_for_rule
 from hse_doc_studio.api.route_scopes import (
     ADMIN_PREFIX,
+    GUEST_READABLE,
     SELF_AUTHENTICATED,
     RouteScope,
     route_path_of,
@@ -223,6 +224,10 @@ def _handled_before_actor(request: Request) -> bool:
     return scope is RouteScope.public or scope in SELF_AUTHENTICATED
 
 
+def route_key_of(request: Request) -> tuple[str, str]:
+    return route_key(request.method, route_path_of(request))
+
+
 async def _linked_actor(request: Request, actor: Actor, link_id: str | None) -> Actor:
     """Актор со ссылкой; гостю ещё и подпись снимков «Гость: <имя> (ссылка «<подпись>»)» с noreply-адресом."""
     linked = actor.with_link(link_id)
@@ -259,7 +264,7 @@ def _enforce_scope(actor: Actor, request: Request) -> None:
         raise IdentityError(IdentityErrorCode.forbidden)
     if scope is RouteScope.local_only:
         raise IdentityError(IdentityErrorCode.not_found)
-    if actor.is_guest and scope is not RouteScope.guest:
+    if actor.is_guest and scope is not RouteScope.guest and route_key_of(request) not in GUEST_READABLE:
         # Гостю открыты только публичные маршруты, свои (`guest`) и маршруты проекта: аккаунт, админка,
         # настройки и списки установки для него не существуют.
         raise IdentityError(IdentityErrorCode.not_found)
