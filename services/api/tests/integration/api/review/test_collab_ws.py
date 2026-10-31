@@ -8,11 +8,13 @@ from contextlib import contextmanager
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.infra.collab import protocol as proto
 from pycrdt import Doc, Text, create_sync_message, create_update_message, handle_sync_message
 from starlette.websockets import WebSocketDisconnect
 
-from tests.integration.api.review.conftest import NOTES, ORIGIN, TEXT, Person, Review
+from tests.integration.api.review.conftest import NOTES, ORIGIN, TEXT, Person, Review, run_sql, set_member
 
 pytestmark = pytest.mark.pg
 
@@ -42,6 +44,15 @@ class Peer:
                 self.events.append(json.loads(frame[1:]))
             if until is None and self.events and str(self.text):
                 return
+
+    def forge(self, index: int, value: str) -> None:
+        """Правка в обход редактора (он у читателя только для чтения): локальный документ не меняется."""
+        other = Doc()
+        other.apply_update(self.doc.get_update())
+        text = other.get("text", type=Text)
+        before = other.get_state()
+        text.insert(index, value)
+        self.ws.send_bytes(create_update_message(other.get_update(before)))
 
     def type(self, index: int, value: str) -> None:
         before = self.doc.get_state()
@@ -92,7 +103,7 @@ def test__reviewer__reads_live_but_cannot_write(review: Review) -> None:
         rita.drain(lambda: str(rita.text) == TEXT)
         assert next(e for e in rita.events if e["type"] == "hello")["can_write"] is False
 
-        rita.type(0, "ВЗЛОМ ")
+        rita.forge(0, "ВЗЛОМ ")
         anna.drain(lambda: str(anna.text) == TEXT)
         anna.type(0, "Ок ")
         rita.drain(lambda: str(rita.text).startswith("Ок "))
@@ -146,3 +157,26 @@ def test__binary_or_missing_file_is_refused(review: Review) -> None:
     with pytest.raises(WebSocketDisconnect) as missing, _open(review, review.world.anna, "net.tex") as peer:
         peer.drain(timeout=3)
     assert missing.value.code == 4415
+
+
+def test__role_change_during_session__switches_to_read_then_revoke_closes_socket(
+    review: Review, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.collab, "recheck_s", 0.3)
+    vera_id = review.world.ids["vera"]
+
+    def session() -> None:
+        with _open(review, review.world.vera) as vera:
+            vera.drain(lambda: str(vera.text) == TEXT)
+            assert next(e for e in vera.events if e["type"] == "hello")["can_write"] is True
+
+            set_member(review.project, vera_id, Role.reviewer)
+            vera.drain(lambda: any(e["type"] == "role" and e["can_write"] is False for e in vera.events))
+
+            run_sql("DELETE FROM project_members WHERE principal_id = :uid", uid=vera_id)
+            vera.drain(timeout=6)
+
+    with pytest.raises(WebSocketDisconnect) as closed:
+        session()
+
+    assert closed.value.code == 4403

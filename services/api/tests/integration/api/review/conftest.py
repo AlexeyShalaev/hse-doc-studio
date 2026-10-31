@@ -12,6 +12,7 @@ from tests.integration.api.sharing.conftest import (  # noqa: F401 — фикс�
     Person,
     World,
     add_user,
+    run_sql,
     set_member,
     stand,
 )
