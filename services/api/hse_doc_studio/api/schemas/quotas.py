@@ -107,3 +107,16 @@ class ResetUsageRequest(StrictModel):
     owner_kind: OwnerKindName
     owner_id: str = Field(min_length=1, max_length=64)
     kind: QuotaKindName
+
+
+class AdminGatewayProvider(StrictModel):
+    id: str
+    name: str
+    type: str
+    breaker: Literal["closed", "open", "half_open"]
+    failures: int
+    calls_24h: int
+    errors_24h: int
+    denied_24h: int
+    input_tokens_24h: int
+    output_tokens_24h: int

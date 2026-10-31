@@ -354,6 +354,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/quota-overrides"): _ADM,
     ("PUT", "/api/admin/quota-overrides"): _ADM,
     ("DELETE", "/api/admin/quota-overrides"): _ADM,
+    ("GET", "/api/admin/ai-gateway"): _ADM,
     ("GET", "/api/admin/usage"): _ADM,
     ("GET", "/api/admin/usage/summary"): _ADM,
     ("POST", "/api/admin/usage/reset"): _ADM,

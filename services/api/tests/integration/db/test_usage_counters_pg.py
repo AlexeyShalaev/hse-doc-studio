@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -120,3 +120,43 @@ async def test__override_repository__keeps_values_above_32_bits(world: World) ->
     assert stored[("anna", QuotaResource.storage_user)] == big
     await repo.delete(QuotaOwnerKind.org, "o1", QuotaResource.builds_org)
     assert ("o1", QuotaResource.builds_org) not in {(o.owner_id, o.resource) for o in await repo.list_all()}
+
+
+async def test__ai_usage_log__records_and_summarizes_by_provider(world: World) -> None:
+    from hse_doc_studio.core.ai_gateway.usage import AiOperation, AiOutcome, AiUsageRecord
+    from hse_doc_studio.infra.db.repositories.ai_usage import SqlAiUsageLog
+
+    log = SqlAiUsageLog(world.sessions)
+    first, second = uuid4(), uuid4()
+
+    def record(provider, outcome, tokens):  # type: ignore[no-untyped-def]
+        return AiUsageRecord(
+            uuid4(),
+            _NOW,
+            "u1",
+            None,
+            None,
+            provider,
+            "instance",
+            "m",
+            AiOperation.turn,
+            tokens,
+            tokens,
+            outcome,
+            None,
+            5,
+            True,
+        )
+
+    for item in (
+        record(first, AiOutcome.ok, 10),
+        record(first, AiOutcome.error, 0),
+        record(second, AiOutcome.denied, 0),
+    ):
+        await log.record(item)
+
+    summary = {s.provider_id: s for s in await log.summary(_NOW - timedelta(days=1))}
+    assert (summary[first].calls, summary[first].errors, summary[first].input_tokens) == (2, 1, 10)
+    assert summary[second].denied == 1
+    assert await log.prune(_NOW + timedelta(days=1)) == 3
+    assert await log.summary(_NOW - timedelta(days=1)) == []

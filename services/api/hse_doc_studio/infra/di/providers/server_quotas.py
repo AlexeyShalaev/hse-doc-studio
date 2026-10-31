@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dishka import AnyOf, Provider, Scope, provide
 
+from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.ai_gateway.usage import IAiUsageLog
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
@@ -23,6 +25,7 @@ from hse_doc_studio.use_cases.admin.ops_quota_policy import (
 )
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.quotas.gate import QuotaGate
+from hse_doc_studio.use_cases.quotas.housekeeping import QuotaHousekeeping
 from hse_doc_studio.use_cases.quotas.usage import GetMyUsageUC, GetOrgUsageUC
 
 
@@ -102,3 +105,7 @@ class ServerQuotasProvider(Provider):
         self, gate: QuotaGate, users: IUserRepository, orgs: IOrgRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> ResetUsageUC:
         return ResetUsageUC(gate, users, orgs, audit, uow)
+
+    @provide
+    def get_quota_housekeeping(self, counters: IUsageCounters, usage: IAiUsageLog) -> QuotaHousekeeping:
+        return QuotaHousekeeping(counters, usage, usage_retention_days=settings.ai_gateway.usage_retention_days)

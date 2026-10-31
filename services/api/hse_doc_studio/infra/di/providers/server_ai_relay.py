@@ -5,8 +5,6 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.agent.protocols import IAgentProvider
-from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.relay import IRelayHub
 from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
@@ -81,12 +79,12 @@ class ServerAiRelayProvider(Provider):
     ) -> ProviderRelayDescriber:
         return ProviderRelayDescriber(runners, personal)
 
-    @provide(override=True)
-    def get_ai_model_lister(self, relay: AiRelayClient) -> IAIModelLister:
+    @provide
+    def get_sdk_ai_model_lister(self, relay: AiRelayClient) -> SdkAIModelLister:
         return SdkAIModelLister(relay)
 
-    @provide(override=True)
-    def get_agent_provider(self, relay: AiRelayClient) -> IAgentProvider:
+    @provide
+    def get_sdk_agent_provider(self, relay: AiRelayClient) -> SdkAgentProvider:
         return SdkAgentProvider(relay=relay)
 
     @provide

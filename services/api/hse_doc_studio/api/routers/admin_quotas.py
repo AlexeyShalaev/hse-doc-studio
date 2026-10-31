@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Query, Request, Response, status
 
 from hse_doc_studio.api.schemas.quotas import (
+    AdminGatewayProvider,
     AdminQuotaDefault,
     AdminQuotaOverride,
     AdminQuotaPolicy,
@@ -36,6 +37,7 @@ from hse_doc_studio.use_cases.admin.ops_quota_policy import (
     SetQuotaOverrideUC,
     UpdateQuotaPolicyUC,
 )
+from hse_doc_studio.use_cases.ai_gateway.status import AiGatewayStatusUC
 
 router = APIRouter()
 
@@ -172,3 +174,23 @@ async def reset_usage(body: ResetUsageRequest, request: Request) -> Response:
         _actor(), QuotaOwnerKind(body.owner_kind), body.owner_id, QuotaKind(body.kind)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/ai-gateway", response_model=list[AdminGatewayProvider])
+async def ai_gateway_status(request: Request, response: Response) -> list[AdminGatewayProvider]:
+    response.headers.update(_NO_STORE)
+    return [
+        AdminGatewayProvider(
+            id=str(i.provider_id),
+            name=i.name,
+            type=i.type,
+            breaker=i.breaker.value,
+            failures=i.failures,
+            calls_24h=i.calls,
+            errors_24h=i.errors,
+            denied_24h=i.denied,
+            input_tokens_24h=i.input_tokens,
+            output_tokens_24h=i.output_tokens,
+        )
+        for i in await (await _uc(request, AiGatewayStatusUC)).execute(_actor())
+    ]
