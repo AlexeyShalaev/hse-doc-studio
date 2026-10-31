@@ -385,6 +385,7 @@ async def test__run__file_remote_in_server_mode__url_scheme_forbidden(
     assert stack.spy.network_calls() == []
 
 
+@pytest.mark.usefixtures("remote_not_loopback")
 async def test__run__plain_http_without_per_remote_flag__url_scheme_forbidden(
     stack: Stack, http_git_server: GitHttpServer
 ) -> None:
@@ -396,6 +397,7 @@ async def test__run__plain_http_without_per_remote_flag__url_scheme_forbidden(
     assert probe.error.code is GitErrorCode.url_scheme_forbidden
 
 
+@pytest.mark.usefixtures("remote_not_loopback")
 async def test__run__plain_http_when_server_forbids__url_scheme_forbidden(
     stack_factory: Callable[..., Stack], http_git_server: GitHttpServer
 ) -> None:

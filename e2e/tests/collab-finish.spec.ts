@@ -286,8 +286,6 @@ test.describe("доделка видения: ссылки, приглашени
       ["запросы доступа", () => api.get(`/api/v1/projects/${project.id}/access-requests`)],
       ["передача", () => api.post(`/api/v1/projects/${project.id}/transfer`, { to_kind: "user", to_id: anna.id })],
       ["git-remote", () => api.get(`/api/v1/projects/${project.id}/git-remote`)],
-      ["участники и их почты", () => api.get(`/api/v1/projects/${project.id}/members`)],
-      ["состояние передачи", () => api.get(`/api/v1/projects/${project.id}/transfer`)],
       ["аккаунт", () => api.get("/api/v1/account/invitations")],
       ["входящие", () => api.get("/api/v1/account/notifications")],
       ["админка", () => api.get("/api/admin/audit")],
@@ -298,6 +296,14 @@ test.describe("доделка видения: ссылки, приглашени
       log(`гость → ${name}: ${res.status()}`);
       expect([401, 403, 404], `${name}: ${res.status()} ${await res.text()}`).toContain(res.status());
     }
+    // Состав команды гостю не раскрывается: виден только владелец и без почты.
+    const members = await api.get(`/api/v1/projects/${project.id}/members`);
+    const team = (await members.json()) as { items: { name: string; detail: string | null }[] };
+    expect(members.status()).toBe(200);
+    expect(team.items.map((x) => [x.name, x.detail])).toEqual([[ANNA.name, null]]);
+    // Состояние передачи видно как факт (PROJECT_VIEW), без получателя.
+    const transfer = await api.get(`/api/v1/projects/${project.id}/transfer`);
+    expect([transfer.status(), await transfer.json()]).toEqual([200, { pending: false, transfer: null }]);
     // Чужой проект Анны, на который ссылки нет, гостю не виден.
     const other = await createProject(anna.client, `Без ссылки ${RUN}`);
     expect((await api.get(`/api/v1/projects/${other.id}`)).status()).toBe(404);

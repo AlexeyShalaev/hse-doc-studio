@@ -1102,6 +1102,7 @@ async def test__connect__http_remote_with_wrong_token__auth_failed(
     assert (await _status(client, project)).connected is False
 
 
+@pytest.mark.usefixtures("remote_not_loopback")
 async def test__connect__http_without_server_policy__forbidden(
     client: AsyncClient, project: dict[str, Any], http_git_server_factory: Callable[..., GitHttpServer]
 ) -> None:

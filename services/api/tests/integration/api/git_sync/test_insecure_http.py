@@ -34,6 +34,7 @@ async def _credential(client: AsyncClient) -> str:
     return str(resp.json()["id"])
 
 
+@pytest.mark.usefixtures("remote_not_loopback")
 async def test__probe__http_without_consent__refused_and_the_token_does_not_leave(
     test_app: AsyncClient, server: GitHttpServer
 ) -> None:
@@ -65,6 +66,7 @@ async def test__probe__http_with_consent__reaches_the_server_with_the_token(
     assert server.authorizations()
 
 
+@pytest.mark.usefixtures("remote_not_loopback")
 async def test__clone__http_without_consent__refused_before_any_request(
     boris: Studio, server: GitHttpServer, tmp_path: Path
 ) -> None:
