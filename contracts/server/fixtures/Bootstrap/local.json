@@ -23,5 +23,6 @@
     "personal_runners": false,
     "remote_runner": true
   },
-  "csrf_token": null
+  "csrf_token": null,
+  "inbox": null
 }

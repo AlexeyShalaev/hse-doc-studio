@@ -1,0 +1,11 @@
+{
+  "user_id": null,
+  "email": "petr@hse.ru",
+  "role": "reviewer",
+  "persona": "supervisor",
+  "can_share": false,
+  "show_sources": true,
+  "can_edit_all": false,
+  "message": "Посмотрите, пожалуйста, главу 2",
+  "expires_in_days": 7
+}

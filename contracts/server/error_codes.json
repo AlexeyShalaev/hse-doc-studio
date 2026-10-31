@@ -47,5 +47,19 @@
   "ai_provider_runner_invalid",
   "remote_runner_url_invalid",
   "remote_runner_unreachable",
-  "remote_runner_disabled"
+  "remote_runner_disabled",
+  "invitation_pending",
+  "invitation_limit",
+  "external_invite_forbidden",
+  "invitee_cannot_register",
+  "invitation_role_too_high",
+  "persona_unknown",
+  "invitation_not_pending",
+  "invitation_resend_too_soon",
+  "invitation_expired",
+  "invitation_email_mismatch",
+  "access_request_decided",
+  "confirm_name_mismatch",
+  "transfer_expired",
+  "transfer_outdated"
 ]

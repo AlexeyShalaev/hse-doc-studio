@@ -93,6 +93,9 @@ export const BootstrapSchema = z.strictObject({
   user: SessionUserSchema.nullable(),
   capabilities: CapabilitiesSchema,
   csrf_token: z.string().nullable(),
+  // invites: счётчик «Входящих» для шапки вошедшего; без входа и локально null.
+  // Необязателен в типе, чтобы старые литералы bootstrap (демо, тесты) оставались верными.
+  inbox: z.strictObject({ unread: z.number().int() }).nullable().optional(),
 });
 export type Bootstrap = z.infer<typeof BootstrapSchema>;
 

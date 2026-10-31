@@ -15,6 +15,7 @@ from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
+from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
@@ -171,6 +172,30 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateRemoteRunnerRequest": rr.UpdateRemoteRunnerRequest,
     "RemoteRunnerPairRequest": rr.RemoteRunnerPairRequest,
     "RemoteRunnerTokenRequest": rr.RemoteRunnerTokenRequest,
+    # invites
+    "ProjectInvitation": inv.ProjectInvitation,
+    "ProjectInvitationPage": inv.ProjectInvitationPage,
+    "CreateProjectInvitationRequest": inv.CreateProjectInvitationRequest,
+    "ProjectInvitationCreated": inv.ProjectInvitationCreated,
+    "MyInvitation": inv.MyInvitation,
+    "MyInvitationList": inv.MyInvitationList,
+    "ProjectInvitationPreview": inv.ProjectInvitationPreview,
+    "AccessRequestView": inv.AccessRequestView,
+    "AccessRequestPage": inv.AccessRequestPage,
+    "ApproveAccessRequest": inv.ApproveAccessRequest,
+    "DenyAccessRequest": inv.DenyAccessRequest,
+    "CreateAccessRequest": inv.CreateAccessRequest,
+    "AccessRequestAccepted": inv.AccessRequestAccepted,
+    "MyAccessRequest": inv.MyAccessRequest,
+    "MyAccessRequestList": inv.MyAccessRequestList,
+    "ProjectTransferState": inv.ProjectTransferState,
+    "StartProjectTransferRequest": inv.StartProjectTransferRequest,
+    "MyTransfer": inv.MyTransfer,
+    "MyTransferList": inv.MyTransferList,
+    "Notification": inv.NotificationModel,
+    "NotificationPage": inv.NotificationPage,
+    "MarkNotificationsReadRequest": inv.MarkNotificationsReadRequest,
+    "InboxSummary": inv.InboxSummary,
 }
 
 

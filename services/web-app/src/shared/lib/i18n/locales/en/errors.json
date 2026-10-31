@@ -131,6 +131,20 @@
     "ai_provider_runner_invalid": "Pick your runner and an AI endpoint it has declared.",
     "remote_runner_url_invalid": "An https address is required. http only works for localhost.",
     "remote_runner_unreachable": "The server didn't respond. Check the address and your network.",
-    "remote_runner_disabled": "The server administrator turned personal runners off."
+    "remote_runner_disabled": "The server administrator turned personal runners off.",
+    "invitation_pending": "This person already has a pending invitation.",
+    "invitation_limit": "A project can have at most 50 pending invitations.",
+    "external_invite_forbidden": "The organization does not allow inviting people from other domains.",
+    "invitee_cannot_register": "Sign-up is turned off on this server: this address has no account and cannot get one.",
+    "invitation_role_too_high": "You cannot grant a role or rights above your own.",
+    "persona_unknown": "This persona does not exist in the project.",
+    "invitation_not_pending": "The invitation has already been accepted, declined or revoked.",
+    "invitation_resend_too_soon": "You can resend at most once every 10 minutes and no more than 5 times.",
+    "invitation_expired": "The invitation has expired. Ask for a new one.",
+    "invitation_email_mismatch": "The invitation was sent to another address. Sign in with the account it was sent to.",
+    "access_request_decided": "The request has already been decided.",
+    "confirm_name_mismatch": "The project name does not match.",
+    "transfer_expired": "The transfer has expired.",
+    "transfer_outdated": "The project owner has changed: this transfer no longer applies."
   }
 }

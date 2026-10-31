@@ -13,6 +13,7 @@ from typing import Any, Literal
 from pydantic import Field, field_validator, model_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.api.schemas.invitations import InboxBadge
 from hse_doc_studio.core.identity.normalize import is_valid_email
 
 # Пределы полей, которые клиент присылает без входа: ключ попыток входа и журнал не должны раздуваться от ввода.
@@ -86,6 +87,8 @@ class BootstrapResponse(StrictModel):
     capabilities: Capabilities
     # Токен CSRF текущей сессии; без сессии null. Шлётся в заголовке X-CSRF-Token.
     csrf_token: str | None
+    # invites: счётчик «Входящих» для шапки вошедшего; без входа и в локальном режиме null.
+    inbox: InboxBadge | None = None
 
 
 class AuthErrorBody(StrictModel):

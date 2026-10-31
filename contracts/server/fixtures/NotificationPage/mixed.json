@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "id": "ntf_0a1b2c3d4e5f46778899aabbccddeeff",
+      "kind": "project_invitation",
+      "created_at": "2026-11-01T09:00:00Z",
+      "read_at": null,
+      "payload": {
+        "project_id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "project_name": "ВКР: Анализ требований",
+        "actor_name": "Анна Петрова",
+        "role": "reviewer",
+        "ref_id": "inv_9a8b7c6d5e4f40312233445566778899",
+        "outcome": null
+      }
+    },
+    {
+      "id": "ntf_1b2c3d4e5f6a47889900aabbccddeeff",
+      "kind": "access_request",
+      "created_at": "2026-11-01T09:00:00Z",
+      "read_at": null,
+      "payload": {
+        "project_id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "project_name": "ВКР: Анализ требований",
+        "actor_name": "Вера Смирнова",
+        "role": null,
+        "ref_id": "arq_1a2b3c4d5e6f47089a0b1c2d3e4f5a6b",
+        "outcome": null
+      }
+    },
+    {
+      "id": "ntf_2c3d4e5f6a7b48990011aabbccddeeff",
+      "kind": "access_request_decided",
+      "created_at": "2026-11-01T09:00:00Z",
+      "read_at": "2026-11-01T13:00:00Z",
+      "payload": {
+        "project_id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "project_name": "ВКР: Анализ требований",
+        "actor_name": "Анна Петрова",
+        "role": "editor",
+        "ref_id": "arq_1a2b3c4d5e6f47089a0b1c2d3e4f5a6b",
+        "outcome": "approved"
+      }
+    }
+  ],
+  "total": 3,
+  "limit": 50,
+  "offset": 0
+}

@@ -65,7 +65,7 @@ def _allowed(action: Action, acl: ProjectAcl, grant: Grant, path: str | None) ->
 def _extra_condition(action: Action, acl: ProjectAcl, grant: Grant, path: str | None) -> bool:
     """Условия поверх матрицы ролей: общий доступ, привязка к персоне, область автора."""
     match action:
-        case Action.SHARE:
+        case Action.SHARE | Action.ACCESS_MANAGE:
             return grant.role is Role.owner or grant.can_share
         case Action.SIGN:
             return _may_sign_slot(grant, path)
