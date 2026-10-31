@@ -11,6 +11,7 @@ from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.repositories import IProjectAccessDirectory, IProjectMemberRepository
+from hse_doc_studio.core.access.sharing_policy import SharingEnvOverrides
 from hse_doc_studio.core.identity.protocols import (
     IAuditLog,
     IAuthTokenRepository,
@@ -131,8 +132,10 @@ class ServerInvitationsProvider(Provider):
         return ProjectFilePersonas(index)
 
     @provide
-    def get_signup_setting(self, instance: IInstanceSettingsRepository) -> ProjectInviteSignupSetting:
-        return ProjectInviteSignupSetting(instance)
+    def get_signup_setting(
+        self, instance: IInstanceSettingsRepository, env: SharingEnvOverrides
+    ) -> ProjectInviteSignupSetting:
+        return ProjectInviteSignupSetting(instance, env)
 
     @provide
     def get_notification_mailer(self, sender: IMailSender) -> INotificationMailer:
