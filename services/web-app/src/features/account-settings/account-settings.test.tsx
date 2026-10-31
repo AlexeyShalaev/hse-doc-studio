@@ -395,6 +395,9 @@ describe("токены доступа", () => {
             created_at: "2026-09-01T09:00:00Z",
             expires_at: null,
             last_used_at: null,
+            origin: "manual",
+            client_name: null,
+            client_kind: null,
           },
         ]}
         onCreate={vi.fn()}

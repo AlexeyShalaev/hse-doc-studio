@@ -7,23 +7,40 @@
 
 from __future__ import annotations
 
-import re
-import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Protocol
 
+from hse_doc_studio.core.device_codes import (
+    USER_CODE_ALPHABET,
+    USER_CODE_HALF,
+    new_device_secret,
+    new_user_code,
+    normalize_user_code,
+)
 from hse_doc_studio.core.jobs.runners import RunnerHostKind
 
+__all__ = [
+    "DEVICE_CODE_PREFIX",
+    "PAIRING_INTERVAL_S",
+    "PAIRING_KEEP",
+    "PAIRING_TTL",
+    "USER_CODE_ALPHABET",
+    "USER_CODE_HALF",
+    "IRunnerPairingRepository",
+    "PairingStatus",
+    "RunnerPairing",
+    "new_device_code",
+    "new_user_code",
+    "normalize_user_code",
+]
+
 DEVICE_CODE_PREFIX = "hsdc_"
-USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789"
-USER_CODE_HALF = 4
 PAIRING_TTL = timedelta(minutes=10)
 PAIRING_INTERVAL_S = 3
 # Записи старше суток убирает периодический проход.
 PAIRING_KEEP = timedelta(days=1)
-_USER_CODE_RE = re.compile(rf"^[{USER_CODE_ALPHABET}]{{{USER_CODE_HALF * 2}}}$")
 
 
 class PairingStatus(StrEnum):
@@ -56,20 +73,7 @@ class RunnerPairing:
 
 
 def new_device_code() -> str:
-    return DEVICE_CODE_PREFIX + secrets.token_urlsafe(32)
-
-
-def new_user_code() -> str:
-    raw = "".join(secrets.choice(USER_CODE_ALPHABET) for _ in range(USER_CODE_HALF * 2))
-    return f"{raw[:USER_CODE_HALF]}-{raw[USER_CODE_HALF:]}"
-
-
-def normalize_user_code(value: str) -> str | None:
-    """Ввод без учёта регистра, пробелов и дефиса; негодный код даёт None."""
-    raw = re.sub(r"[\s-]", "", value).upper()
-    if not _USER_CODE_RE.match(raw):
-        return None
-    return f"{raw[:USER_CODE_HALF]}-{raw[USER_CODE_HALF:]}"
+    return new_device_secret(DEVICE_CODE_PREFIX)
 
 
 class IRunnerPairingRepository(Protocol):

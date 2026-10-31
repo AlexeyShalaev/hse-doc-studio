@@ -12,6 +12,7 @@
 - org_admin: администратор организации; пока организаций нет, проходит только админ установки;
 - runner_token, job_token, signed_token: подлинность проверяет сам маршрут по своему токену,
   цепочка cookie для них не запускается;
+- git_token: git по HTTPS и его служебные вызовы `/git/-/*`; токен доступа с git-scope проверяет маршрут;
 - local_only: возможности одной локальной установки (файловая система хоста, docker, обновление
   самой Студии); в серверном режиме отвечают 404.
 """
@@ -38,10 +39,14 @@ class RouteScope(StrEnum):
     job_token = "job_token"  # noqa: S105 — имя области, не секрет
     signed_token = "signed_token"  # noqa: S105 — имя области, не секрет
     local_only = "local_only"
+    # git по HTTPS (`/git/*`): только токен доступа с git-scope из Basic или Bearer, cookie не принимаются.
+    git_token = "git_token"  # noqa: S105 — имя области, не секрет
 
 
 # Области, где подлинность проверяет сам маршрут: актор по cookie или PAT ему не нужен.
-SELF_AUTHENTICATED = frozenset({RouteScope.runner_token, RouteScope.job_token, RouteScope.signed_token})
+SELF_AUTHENTICATED = frozenset(
+    {RouteScope.runner_token, RouteScope.job_token, RouteScope.signed_token, RouteScope.git_token}
+)
 
 _P = RouteScope.public
 _A = RouteScope.authenticated

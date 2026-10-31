@@ -4,7 +4,8 @@
     "gitlab": "GitLab",
     "gitea": "Gitea",
     "bitbucket": "Bitbucket",
-    "other": "Другой сервер"
+    "other": "Другой сервер",
+    "hse_studio": "HSE Doc Studio"
   },
   "urlKind": {
     "https": "https",
@@ -580,7 +581,8 @@
       "gitlab": "GitLab (gitlab.com или свой сервер)",
       "gitea": "Gitea, Forgejo, Codeberg",
       "bitbucket": "Bitbucket",
-      "other": "Другое"
+      "other": "Другое",
+      "hse_studio": "Сервер HSE Doc Studio"
     },
     "auto": "Определять автоматически",
     "path": "Путь установки",

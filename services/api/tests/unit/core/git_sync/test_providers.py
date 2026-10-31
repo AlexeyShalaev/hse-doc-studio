@@ -33,7 +33,19 @@ def test__catalog__lists_every_provider_once_with_known_auth_variants() -> None:
     assert sorted(ids) == sorted(provider.value for provider in p.GitProvider)
     for spec in p.catalog().providers:
         assert set(spec.auth_variants) <= set(raw["auth_variants"])
-        assert "token" in spec.auth_variants
+        # Сервер Студии выдаёт токен только входом по коду устройства.
+        assert ("device" if spec.id is p.GitProvider.hse_studio else "token") in spec.auth_variants
+
+
+def test__catalog__hse_studio_is_detected_only_by_its_info_endpoint() -> None:
+    spec = p.provider_spec("hse_studio")
+
+    assert spec.host_rules == ()
+    assert spec.api.detect == p.ApiDetect(
+        path="/git/-/info", version_header=None, version_key="server", value="hse-doc-studio"
+    )
+    assert spec.auth_variants == ("device",)
+    assert spec.token_primary is None
 
 
 def test__catalog__github_limits_follow_the_documented_ones() -> None:

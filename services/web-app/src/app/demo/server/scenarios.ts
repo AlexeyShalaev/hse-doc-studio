@@ -64,6 +64,8 @@ const SERVER_CAPABILITIES: Capabilities = {
   personal_signing_keys: true,
   personal_runners: false,
   remote_runner: false,
+  git_remote: false,
+  git_server_login: false,
 };
 
 export const DEMO_STUDENT: SessionUser = {
@@ -192,6 +194,8 @@ const localBase = (): Bootstrap => ({
     personal_signing_keys: false,
     personal_runners: false,
     remote_runner: true,
+    git_remote: false,
+    git_server_login: false,
   },
   csrf_token: null,
 });

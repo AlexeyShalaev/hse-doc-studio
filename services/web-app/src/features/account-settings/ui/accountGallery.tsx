@@ -81,6 +81,9 @@ const TOKENS: ApiToken[] = [
     created_at: "2026-10-21T12:00:00Z",
     expires_at: "2099-01-21T12:00:00Z",
     last_used_at: null,
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx9c",
@@ -90,6 +93,9 @@ const TOKENS: ApiToken[] = [
     created_at: "2026-09-01T09:00:00Z",
     expires_at: null,
     last_used_at: "2026-10-26T22:15:00Z",
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx8z",
@@ -99,6 +105,9 @@ const TOKENS: ApiToken[] = [
     created_at: "2025-03-01T09:00:00Z",
     expires_at: "2025-09-01T09:00:00Z",
     last_used_at: "2025-08-30T10:00:00Z",
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
 ];
 

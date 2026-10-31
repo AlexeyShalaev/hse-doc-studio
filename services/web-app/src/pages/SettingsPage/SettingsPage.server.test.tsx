@@ -62,6 +62,8 @@ const SERVER: Bootstrap = {
     personal_signing_keys: true,
     personal_runners: false,
     remote_runner: false,
+    git_remote: false,
+    git_server_login: false,
   },
 };
 

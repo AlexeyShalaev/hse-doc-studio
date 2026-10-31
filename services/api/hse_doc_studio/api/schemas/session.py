@@ -45,6 +45,10 @@ class Capabilities(StrictModel):
     personal_runners: bool = False
     # Локально: Студия может собирать облачные проекты хозяина как его личный раннер.
     remote_runner: bool = False
+    # Сервер: git по HTTPS (`/git/<project_id>.git`) включён в установке.
+    git_remote: bool = False
+    # Локально: вход на сервер Студии по коду устройства и клонирование его проектов.
+    git_server_login: bool = False
 
 
 class OidcProviderOption(StrictModel):
@@ -293,6 +297,10 @@ class ApiToken(StrictModel):
     created_at: datetime
     expires_at: datetime | None
     last_used_at: datetime | None
+    # Токен создан человеком (`manual`) или выдан устройству по коду (`device`, имя и вид устройства).
+    origin: Literal["manual", "device"]
+    client_name: str | None
+    client_kind: Literal["desktop", "cli"] | None
 
 
 class CreateApiTokenRequest(StrictModel):

@@ -74,6 +74,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.timeout: _UPSTREAM,
     GitErrorCode.remote_moved: _UPSTREAM,
     GitErrorCode.protected_branch: _UPSTREAM,
+    GitErrorCode.push_rejected: _UPSTREAM,
     GitErrorCode.large_file: _UPSTREAM,
     GitErrorCode.workflow_scope_missing: _UPSTREAM,
     GitErrorCode.email_privacy: _UPSTREAM,

@@ -52,6 +52,8 @@ class GitErrorCode(StrEnum):
     unresolved_markers = "unresolved_markers"
     remote_moved = "remote_moved"
     protected_branch = "protected_branch"
+    # Сервер Студии отклонил push проверкой pre-receive (область автора, служебные пути, размер, схема).
+    push_rejected = "push_rejected"
     large_file = "large_file"
     workflow_scope_missing = "workflow_scope_missing"
     email_privacy = "email_privacy"

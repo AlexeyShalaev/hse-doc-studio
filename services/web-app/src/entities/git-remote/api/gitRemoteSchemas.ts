@@ -25,6 +25,7 @@ export const GIT_PROVIDERS = [
   "gitlab",
   "gitea",
   "bitbucket",
+  "hse_studio",
   "other",
 ] as const;
 export type GitProvider = (typeof GIT_PROVIDERS)[number];

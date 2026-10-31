@@ -46,6 +46,7 @@ export const GIT_ERROR_CODES = [
   "unresolved_markers",
   "remote_moved",
   "protected_branch",
+  "push_rejected",
   "large_file",
   "workflow_scope_missing",
   "email_privacy",

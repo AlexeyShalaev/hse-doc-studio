@@ -23,7 +23,7 @@ class FakeAcl:
     def __init__(self) -> None:
         self.asked: list[tuple[str | None, UUID]] = []
 
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
         self.asked.append((actor.id, project_id))
         role = {"reader": Role.reader, "editor": Role.editor}.get(actor.id or "")
         if role is None:

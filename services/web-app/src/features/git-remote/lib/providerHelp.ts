@@ -24,6 +24,8 @@ export const TOKEN_STEPS: Record<HelpProvider, readonly string[]> = {
   gitlab: ["open", "scope", "copy"],
   gitea: ["open", "perm", "copy"],
   bitbucket: ["open", "perm", "copy"],
+  // Сервер Студии выдаёт доступ входом по коду устройства: шагов с токеном нет.
+  hse_studio: [],
   other: ["create", "copy"],
 };
 
@@ -33,6 +35,7 @@ export const KEY_STEPS: Record<HelpProvider, readonly string[]> = {
   gitlab: ["open", "paste", "write"],
   gitea: ["open", "paste", "write"],
   bitbucket: ["open", "paste", "write"],
+  hse_studio: [],
   other: ["paste", "write"],
 };
 
@@ -42,6 +45,7 @@ export const USER_KEY_STEPS: Record<HelpProvider, readonly string[]> = {
   gitlab: ["open", "paste"],
   gitea: ["open", "paste"],
   bitbucket: ["open", "paste"],
+  hse_studio: [],
   other: ["paste"],
 };
 

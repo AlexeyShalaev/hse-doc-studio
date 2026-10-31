@@ -146,6 +146,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Ветка защищена: прямая запись в неё запрещена",
         "The branch is protected: direct pushes are not allowed",
     ),
+    GitErrorCode.push_rejected: (
+        "Сервер отклонил отправку: изменения нарушают правила проекта",
+        "The server rejected the push: the changes break the project rules",
+    ),
     GitErrorCode.large_file: (
         "В проекте есть файл, который сервер не принимает по размеру",
         "The project has a file that the server rejects because of its size",

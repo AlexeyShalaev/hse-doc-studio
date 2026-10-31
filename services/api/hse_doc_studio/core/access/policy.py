@@ -55,7 +55,7 @@ def can(actor: Actor, action: Action, acl: ProjectAcl | None = None, path: str |
 def _allowed(action: Action, acl: ProjectAcl, grant: Grant, path: str | None) -> bool:
     if action is Action.FILES_READ:
         action = Action.OUTPUT_READ if classify_path(path) == "output" else Action.SOURCES_READ
-    if action is Action.SOURCES_READ and grant.role is Role.reader:
+    if action in (Action.SOURCES_READ, Action.GIT_FETCH) and grant.role is Role.reader:
         return grant.show_sources
     if action not in ROLE_ACTIONS[grant.role]:
         return False

@@ -38,7 +38,9 @@ class PostgresProjectAclRepository:
         self._sessions = sessions
         self._flags = flags
 
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
+        # Ссылочных прав здесь пока нет: `include_links` значим, когда их начнёт читать трек ссылок.
+        del include_links
         if actor.kind is not ActorKind.user or actor.id is None:
             return None
         async with self._sessions.use() as session:
@@ -198,12 +200,12 @@ class RequestAclCache:
 
     def __init__(self, inner: IProjectAclRepository) -> None:
         self._inner = inner
-        self._loaded: dict[tuple[str | None, UUID], ProjectAcl | None] = {}
+        self._loaded: dict[tuple[str | None, UUID, bool], ProjectAcl | None] = {}
 
-    async def load_for(self, actor: Actor, project_id: UUID) -> ProjectAcl | None:
-        key = (actor.key, project_id)
+    async def load_for(self, actor: Actor, project_id: UUID, *, include_links: bool = True) -> ProjectAcl | None:
+        key = (actor.key, project_id, include_links)
         if key not in self._loaded:
-            self._loaded[key] = await self._inner.load_for(actor, project_id)
+            self._loaded[key] = await self._inner.load_for(actor, project_id, include_links=include_links)
         return self._loaded[key]
 
     async def set_shared_enabled(self, project_id: UUID, enabled: bool) -> None:

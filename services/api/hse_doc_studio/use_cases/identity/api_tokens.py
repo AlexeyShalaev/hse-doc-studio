@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import timedelta
 
-from hse_doc_studio.core.identity.entities import ApiToken, TokenScope
+from hse_doc_studio.core.identity.entities import ApiToken, ApiTokenOrigin, TokenScope
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token, new_pat, pat_display_prefix
 from hse_doc_studio.core.identity.protocols import IApiTokenRepository, IAuditLog
@@ -36,8 +36,16 @@ class CreateApiTokenUC:
         self._uow = uow
         self._clock = clock
 
-    async def execute(
-        self, user_id: str, name: str, scopes: frozenset[TokenScope], expires_in_days: int | None
+    async def execute(  # noqa: PLR0913 — происхождение и устройство приходят только из device flow
+        self,
+        user_id: str,
+        name: str,
+        scopes: frozenset[TokenScope],
+        expires_in_days: int | None,
+        *,
+        origin: ApiTokenOrigin = ApiTokenOrigin.manual,
+        client_name: str | None = None,
+        client_kind: str | None = None,
     ) -> CreatedApiToken:
         now = self._clock()
         secret = new_pat()
@@ -50,15 +58,16 @@ class CreateApiTokenUC:
             scopes=scopes,
             created_at=now,
             expires_at=now + timedelta(days=expires_in_days) if expires_in_days else None,
+            origin=origin,
+            client_name=client_name,
+            client_kind=client_kind,
         )
+        details: dict[str, object] = {"name": token.name, "scopes": sorted(s.value for s in scopes)}
+        if origin is not ApiTokenOrigin.manual:
+            details["origin"] = origin.value
         async with self._uow.begin():
             await self._tokens.add(token)
-            await self._audit.record(
-                "pat.create",
-                actor_id=user_id,
-                target=token.id,
-                details={"name": token.name, "scopes": sorted(s.value for s in scopes)},
-            )
+            await self._audit.record("pat.create", actor_id=user_id, target=token.id, details=details)
         return CreatedApiToken(secret=secret, item=token)
 
 

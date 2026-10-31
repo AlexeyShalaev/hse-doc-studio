@@ -43,7 +43,24 @@ AGENT = RateRule("agent", limit=30, window_s=60)
 GIT_SYNC = RateRule("git_sync", limit=20, window_s=60)
 # Поиск кода сопряжения раннера на сайте: и неверные коды тоже считаются (по человеку и по IP).
 RUNNER_PAIRING = RateRule("runner_pairing", limit=10, window_s=60)
+# git по HTTPS: неудачные входы по IP (перебор токенов) и все запросы git по человеку.
+GIT_AUTH_FAIL = RateRule("git_auth_fail", limit=30, window_s=60)
+GIT_HTTP = RateRule("git_http", limit=120, window_s=60)
+# Поиск кода устройства на странице /device: неверные коды тоже считаются (по человеку и по IP).
+DEVICE_CODE_LOOKUP = RateRule("device_code_lookup", limit=10, window_s=60)
 
 RULES: dict[str, RateRule] = {
-    rule.name: rule for rule in (AUTH_IP, AUTH_EMAIL, COMPILE, UPLOAD, AGENT, GIT_SYNC, RUNNER_PAIRING)
+    rule.name: rule
+    for rule in (
+        AUTH_IP,
+        AUTH_EMAIL,
+        COMPILE,
+        UPLOAD,
+        AGENT,
+        GIT_SYNC,
+        RUNNER_PAIRING,
+        GIT_AUTH_FAIL,
+        GIT_HTTP,
+        DEVICE_CODE_LOOKUP,
+    )
 }

@@ -87,6 +87,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 7),
     expires_at: ago(-24 * 83),
     last_used_at: null,
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx9c",
@@ -96,6 +99,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 60),
     expires_at: null,
     last_used_at: ago(30),
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
   {
     id: "pat_01hx8z",
@@ -105,6 +111,9 @@ const seedTokens = (): ApiToken[] => [
     created_at: ago(24 * 200),
     expires_at: ago(24 * 20),
     last_used_at: ago(24 * 40),
+    origin: "manual",
+    client_name: null,
+    client_kind: null,
   },
 ];
 

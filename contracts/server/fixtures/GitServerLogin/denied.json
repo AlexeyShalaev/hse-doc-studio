@@ -1,0 +1,10 @@
+{
+  "login_id": "gsl_1f2e3d4c",
+  "server_url": "https://studio.example.org",
+  "state": "denied",
+  "user_code": "BCDF-2345",
+  "verification_uri_complete": "https://studio.example.org/device?code=BCDF-2345",
+  "expires_at": "2026-11-01T09:50:00Z",
+  "credential_id": null,
+  "code": null
+}

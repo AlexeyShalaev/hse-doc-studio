@@ -4,7 +4,8 @@
     "gitlab": "GitLab",
     "gitea": "Gitea",
     "bitbucket": "Bitbucket",
-    "other": "Other server"
+    "other": "Other server",
+    "hse_studio": "HSE Doc Studio"
   },
   "urlKind": {
     "https": "https",
@@ -564,7 +565,8 @@
       "gitlab": "GitLab (gitlab.com or your own server)",
       "gitea": "Gitea, Forgejo, Codeberg",
       "bitbucket": "Bitbucket",
-      "other": "Other"
+      "other": "Other",
+      "hse_studio": "HSE Doc Studio server"
     },
     "auto": "Detect automatically",
     "path": "Install path",

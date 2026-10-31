@@ -1,0 +1,10 @@
+{
+  "login_id": "gsl_1f2e3d4c",
+  "server_url": "https://studio.example.org",
+  "state": "error",
+  "user_code": null,
+  "verification_uri_complete": null,
+  "expires_at": null,
+  "credential_id": null,
+  "code": "git_server_unreachable"
+}

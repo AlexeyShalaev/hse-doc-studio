@@ -5,7 +5,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,7 +41,10 @@ class SessionRow(Base):
 
 class ApiTokenRow(Base):
     __tablename__ = "api_tokens"
-    __table_args__ = (Index("ix_api_tokens_user_id", "user_id"),)
+    __table_args__ = (
+        Index("ix_api_tokens_user_id", "user_id"),
+        CheckConstraint("origin IN ('manual', 'device')", name="origin"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -40,6 +55,10 @@ class ApiTokenRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Откуда токен: создан человеком в «Токенах» или выдан устройству по коду (device flow).
+    origin: Mapped[str] = mapped_column(String(16), nullable=False, server_default="manual")
+    client_name: Mapped[str | None] = mapped_column(String(128))
+    client_kind: Mapped[str | None] = mapped_column(String(16))
 
 
 class AuthTokenRow(Base):

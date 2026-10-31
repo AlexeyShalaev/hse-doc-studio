@@ -65,6 +65,17 @@ class IdentityErrorCode(StrEnum):
     remote_runner_url_invalid = "remote_runner_url_invalid"
     remote_runner_unreachable = "remote_runner_unreachable"
     remote_runner_disabled = "remote_runner_disabled"
+    # Сервер как git-remote: git по HTTPS, вход устройства по коду, вход локальной Студии на сервер.
+    git_scope_missing = "git_scope_missing"
+    git_busy = "git_busy"
+    git_project_busy = "git_project_busy"
+    device_scope_invalid = "device_scope_invalid"
+    device_code_invalid = "device_code_invalid"
+    device_code_expired = "device_code_expired"
+    device_code_used = "device_code_used"
+    git_server_url_invalid = "git_server_url_invalid"
+    git_server_not_studio = "git_server_not_studio"
+    git_server_unreachable = "git_server_unreachable"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -215,6 +226,37 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.remote_runner_disabled: (
         "На сервере выключены личные раннеры.",
         "Personal runners are turned off on the server.",
+    ),
+    IdentityErrorCode.git_scope_missing: (
+        "У токена нет доступа к git: нужен scope git:read или git:write.",
+        "The token has no git access: git:read or git:write is required.",
+    ),
+    IdentityErrorCode.git_busy: (
+        "Слишком много одновременных запросов git. Повторите позже.",
+        "Too many concurrent git requests. Try again later.",
+    ),
+    IdentityErrorCode.git_project_busy: (
+        "Проект сейчас занят (обновление шаблона или синхронизация). Повторите позже.",
+        "The project is busy (template update or sync). Try again later.",
+    ),
+    IdentityErrorCode.device_scope_invalid: (
+        "Устройство может просить только git:read и git:write.",
+        "A device may only ask for git:read and git:write.",
+    ),
+    IdentityErrorCode.device_code_invalid: ("Код не найден.", "Code not found."),
+    IdentityErrorCode.device_code_expired: ("Срок кода истёк.", "The code has expired."),
+    IdentityErrorCode.device_code_used: ("Код уже подтверждён или отклонён.", "The code was already decided."),
+    IdentityErrorCode.git_server_url_invalid: (
+        "Адрес сервера должен начинаться с https:// (http только для localhost).",
+        "The server address must start with https:// (http only for localhost).",
+    ),
+    IdentityErrorCode.git_server_not_studio: (
+        "По этому адресу нет сервера HSE Doc Studio.",
+        "There is no HSE Doc Studio server at this address.",
+    ),
+    IdentityErrorCode.git_server_unreachable: (
+        "Сервер не отвечает. Проверьте адрес и сеть.",
+        "The server isn't responding. Check the address and the network.",
     ),
 }
 

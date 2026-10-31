@@ -1,0 +1,15 @@
+{
+  "id": "pat_4d5e6f",
+  "name": "Студия на MacBook Анны",
+  "prefix": "hsd_pat_7Rm",
+  "scopes": [
+    "git:read",
+    "git:write"
+  ],
+  "created_at": "2026-11-01T09:42:00Z",
+  "expires_at": "2027-01-30T09:42:00Z",
+  "last_used_at": "2026-11-01T09:43:00Z",
+  "origin": "device",
+  "client_name": "Студия на MacBook Анны",
+  "client_kind": "desktop"
+}

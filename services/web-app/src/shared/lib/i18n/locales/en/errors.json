@@ -67,6 +67,7 @@
     "unresolved_markers": "The text still contains conflict markers.",
     "remote_moved": "The repository changed during the push. Sync again.",
     "protected_branch": "The branch is protected: direct pushes are not allowed.",
+    "push_rejected": "The server rejected the push: the changes break the project rules.",
     "large_file": "The history has a file larger than the server limit.",
     "workflow_scope_missing": "The token has no permission to change workflow files.",
     "email_privacy": "The server hides e-mails. Use a no-reply address in your profile or allow a public e-mail.",
@@ -131,6 +132,16 @@
     "ai_provider_runner_invalid": "Pick your runner and an AI endpoint it has declared.",
     "remote_runner_url_invalid": "An https address is required. http only works for localhost.",
     "remote_runner_unreachable": "The server didn't respond. Check the address and your network.",
-    "remote_runner_disabled": "The server administrator turned personal runners off."
+    "remote_runner_disabled": "The server administrator turned personal runners off.",
+    "git_scope_missing": "The token has no git access. Create a token with git:read or git:write.",
+    "git_busy": "Too many concurrent git requests. Try again later.",
+    "git_project_busy": "The project is busy (template update or sync). Try again later.",
+    "device_scope_invalid": "The device asked for invalid scopes. Only git:read and git:write are allowed.",
+    "device_code_invalid": "Code not found. Check it in the desktop Studio.",
+    "device_code_expired": "The code has expired. Start signing in from the Studio again.",
+    "device_code_used": "This code has already been approved or denied.",
+    "git_server_url_invalid": "An https address is required. http works only for localhost.",
+    "git_server_not_studio": "There is no HSE Doc Studio server at this address.",
+    "git_server_unreachable": "The server did not respond. Check the address and your connection."
   }
 }

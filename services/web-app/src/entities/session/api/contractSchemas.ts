@@ -7,6 +7,7 @@ import {
 } from "@entities/ai-provider";
 
 import * as inst from "./installSchemas";
+import * as gs from "@entities/git-server/model/gitServer.schema";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
@@ -156,4 +157,20 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateRemoteRunnerRequest: rn.UpdateRemoteRunnerRequestSchema,
   RemoteRunnerPairRequest: rn.RemoteRunnerPairRequestSchema,
   RemoteRunnerTokenRequest: rn.RemoteRunnerTokenRequestSchema,
+  // gitremote
+  GitServerInfo: gs.GitServerInfoSchema,
+  GitWhoami: gs.GitWhoamiSchema,
+  GitProjectPage: gs.GitProjectPageSchema,
+  GitServerProjectPage: gs.GitProjectPageSchema,
+  DeviceCodeRequest: gs.DeviceCodeRequestSchema,
+  DeviceCodeResponse: gs.DeviceCodeResponseSchema,
+  DeviceTokenRequest: gs.DeviceTokenRequestSchema,
+  DeviceTokenResponse: gs.DeviceTokenResponseSchema,
+  DeviceTokenError: gs.DeviceTokenErrorSchema,
+  DeviceAuthorizationInfo: gs.DeviceAuthorizationInfoSchema,
+  DeviceDecisionRequest: gs.DeviceDecisionRequestSchema,
+  ProjectGitRemote: gs.ProjectGitRemoteSchema,
+  GitServerLoginRequest: gs.GitServerLoginRequestSchema,
+  GitServerLogin: gs.GitServerLoginSchema,
+  GitServerList: gs.GitServerListSchema,
 };
