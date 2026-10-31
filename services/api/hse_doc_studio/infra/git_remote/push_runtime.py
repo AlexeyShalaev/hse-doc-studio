@@ -26,8 +26,7 @@ HOOK_NAMES = ("pre-receive", "push-to-checkout")
 
 
 @functools.lru_cache(maxsize=1)
-def hooks_dir() -> Path:
-    """Личный каталог процесса только с нашими хуками; другие хуки git не найдёт."""
+def _cached_hooks_dir() -> Path:
     target = Path(tempfile.mkdtemp(prefix="hse-studio-push-hooks-"))
     source = resources.files("hse_doc_studio.infra.git_remote") / "hooks"
     for name in HOOK_NAMES:
@@ -35,6 +34,33 @@ def hooks_dir() -> Path:
         path.write_bytes((source / name).read_bytes())
         path.chmod(stat.S_IRWXU)
     return target
+
+
+def _hooks_intact(target: Path) -> bool:
+    return all(os.access(target / name, os.X_OK) for name in HOOK_NAMES)
+
+
+def hooks_dir() -> Path:
+    """Личный каталог процесса только с нашими хуками; другие хуки git не найдёт.
+
+    Каталог лежит во временной папке, а её чистят (systemd-tmpfiles, tmpwatch): `core.hooksPath` на пропавший
+    каталог git молча принимает push без `pre-receive`, то есть без политики путей. Поэтому перед каждым приёмом
+    каталог проверяется и при пропаже хуков создаётся заново.
+    """
+    target = _cached_hooks_dir()
+    if not _hooks_intact(target):
+        _cached_hooks_dir.cache_clear()
+        target = _cached_hooks_dir()
+        if not _hooks_intact(target):
+            raise RuntimeError(f"push hooks are not executable in {target}")
+    return target
+
+
+def package_root() -> Path:
+    """Каталог, из которого импортируется `hse_doc_studio` (в образе это /app, в venv это src или site-packages)."""
+    import hse_doc_studio  # noqa: PLC0415 — сам пакет, путь нужен только хуку
+
+    return Path(hse_doc_studio.__file__).resolve().parent.parent
 
 
 def receive_config(hooks: Path, max_input_bytes: int) -> tuple[str, ...]:
@@ -63,6 +89,8 @@ class GitPushRuntime:
             "HSE_PUSH_ACTOR": actor_id,
             "HSE_PUSH_LANG": lang,
             "HSE_PYTHON": sys.executable,
+            # Хук запускает python с -I (без PYTHONPATH): корень пакета передаётся явно.
+            "HSE_PYTHON_ROOT": str(package_root()),
             "HSE_GIT_DIR": str(git_dir),
             "HSE_WORK_TREE": str(work_tree),
         }
@@ -103,6 +131,6 @@ async def _git(git_dir: Path, *args: str) -> str | None:
 
 def remove_hooks_dir() -> None:
     """Для тестов: следующий вызов `hooks_dir` создаст каталог заново."""
-    if hooks_dir.cache_info().currsize:
-        shutil.rmtree(hooks_dir(), ignore_errors=True)
-        hooks_dir.cache_clear()
+    if _cached_hooks_dir.cache_info().currsize:
+        shutil.rmtree(_cached_hooks_dir(), ignore_errors=True)
+        _cached_hooks_dir.cache_clear()

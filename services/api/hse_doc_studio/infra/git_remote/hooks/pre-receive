@@ -1,3 +1,5 @@
 #!/bin/sh
 # Проверка push сервером Студии: правила в hse_doc_studio.infra.git_remote.pre_receive.
-exec "$HSE_PYTHON" -I -m hse_doc_studio.infra.git_remote.pre_receive
+# -I отрезает PYTHONPATH и текущий каталог (стор недоверенный), поэтому корень пакета приходит от сервера явно:
+# в образе пакет лежит в /app и виден только через PYTHONPATH, а не через site-packages.
+exec "$HSE_PYTHON" -I -c 'import os, sys; sys.path.insert(0, os.environ["HSE_PYTHON_ROOT"]); from hse_doc_studio.infra.git_remote.pre_receive import main; sys.exit(main())'

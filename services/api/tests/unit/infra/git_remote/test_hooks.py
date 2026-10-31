@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,7 +13,7 @@ from hse_doc_studio.core.access.entities import Grant, ProjectAcl, Role
 from hse_doc_studio.core.git_remote.entities import PushViolation, PushViolationCode
 from hse_doc_studio.core.git_remote.push_policy import push_policy_for
 from hse_doc_studio.infra.git_remote.pre_receive import MAX_LINES, render
-from hse_doc_studio.infra.git_remote.push_runtime import GitPushRuntime
+from hse_doc_studio.infra.git_remote.push_runtime import GitPushRuntime, hooks_dir
 
 _ENV = {
     "PATH": os.environ.get("PATH", ""),
@@ -59,7 +61,9 @@ def store(tmp_path: Path) -> tuple[Path, Path]:
     return folder, tmp_path / "work"
 
 
-def _push(folder: Path, work: Path, grant: Grant, *args: str, team: bool = True) -> subprocess.CompletedProcess[str]:
+def _push(
+    folder: Path, work: Path, grant: Grant, *args: str, team: bool = True, python: str | None = None
+) -> subprocess.CompletedProcess[str]:
     runtime = GitPushRuntime()
     git_dir = folder / ".hse-studio" / "git"
     policy = push_policy_for(
@@ -70,9 +74,10 @@ def _push(folder: Path, work: Path, grant: Grant, *args: str, team: bool = True)
     )
     try:
         receive = " ".join(["git", *session.extra_config, "receive-pack"])
-        return _git(
-            "push", f"--receive-pack={receive}", "origin", *args, cwd=work, env=dict(session.extra_env), check=False
-        )
+        env = dict(session.extra_env)
+        if python is not None:
+            env["HSE_PYTHON"] = python
+        return _git("push", f"--receive-pack={receive}", "origin", *args, cwd=work, env=env, check=False)
     finally:
         runtime.cleanup(session)
         assert not session.policy_file.exists()
@@ -109,6 +114,45 @@ def test__push__several_violations__listed_and_nothing_applied(store: tuple[Path
     assert "petrov/a.tex" in result.stderr
     assert "[path_outside_scope]" in result.stderr
     assert "[symlink]" in result.stderr
+    assert not (folder / "petrov" / "a.tex").exists()
+
+
+def test__push__interpreter_without_package_on_sys_path__hooks_still_run(store: tuple[Path, Path]) -> None:
+    """Как в образе: пакет виден интерпретатору только через PYTHONPATH=/app, а хук запускает python с -I."""
+    folder, work = store
+    bare = getattr(sys, "_base_executable", None) or sys.executable
+    probe = subprocess.run(  # noqa: S603
+        [bare, "-I", "-c", "import hse_doc_studio"], capture_output=True, check=False
+    )
+    if probe.returncode == 0:
+        pytest.skip("базовый интерпретатор видит пакет сам: условие образа не воспроизвести")
+    _commit(work, "ivanov/chapter.tex", "глава")
+    _commit(work, "petrov/a.tex")
+
+    refused = _push(folder, work, Grant(Role.editor, persona_slug="ivanov"), "HEAD:master", python=bare)
+
+    assert "No module named" not in refused.stderr
+    assert "[path_outside_scope]" in refused.stderr
+
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=work)
+    accepted = _push(folder, work, Grant(Role.editor, persona_slug="ivanov"), "HEAD:master", python=bare)
+
+    assert accepted.returncode == 0, accepted.stderr
+    assert (folder / "ivanov" / "chapter.tex").read_text(encoding="utf-8") == "глава"
+
+
+def test__push__hooks_dir_wiped_by_tmp_cleaner__recreated_and_policy_still_enforced(
+    store: tuple[Path, Path],
+) -> None:
+    """Каталог хуков во временной папке чистят (tmpfiles): без проверки git принял бы push вовсе без pre-receive."""
+    folder, work = store
+    shutil.rmtree(hooks_dir())
+    _commit(work, "petrov/a.tex")
+
+    result = _push(folder, work, Grant(Role.editor, persona_slug="ivanov"), "HEAD:master")
+
+    assert result.returncode != 0
+    assert "[path_outside_scope]" in result.stderr
     assert not (folder / "petrov" / "a.tex").exists()
 
 
