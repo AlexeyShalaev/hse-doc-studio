@@ -5,6 +5,8 @@ import {
   AUTO_SYNC_DEBOUNCE_MS,
   AUTO_SYNC_MAX_FAILURES,
   AUTO_SYNC_MIN_GAP_MS,
+  AUTO_SYNC_PULL_GAP_MS,
+  AUTO_SYNC_PULL_GAP_MS,
   AUTO_SYNC_PULL_DELAY_MS,
   autoSyncPhase,
   autoSyncWork,
@@ -122,6 +124,23 @@ describe("decideAutoSync", () => {
       kind: "wait",
       delayMs: AUTO_SYNC_MIN_GAP_MS - 10_000,
       reason: "push",
+    });
+  });
+
+  it("lets a pull follow a run sooner than a push would", () => {
+    const decision = decideAutoSync(
+      facts({
+        state: "behind",
+        behind: 1,
+        needSince: NOW - AUTO_SYNC_PULL_DELAY_MS,
+        lastRunAt: NOW - 5_000,
+      }),
+    );
+
+    expect(decision).toEqual({
+      kind: "wait",
+      delayMs: AUTO_SYNC_PULL_GAP_MS - 5_000,
+      reason: "pull",
     });
   });
 

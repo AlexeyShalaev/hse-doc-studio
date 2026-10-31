@@ -38,6 +38,7 @@ from hse_doc_studio.core.artifacts.entities import (
 from hse_doc_studio.core.artifacts.protocols import IProjectArtifactRepository
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
 from hse_doc_studio.core.storage import ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.ports import IObjectStore
@@ -109,7 +110,9 @@ class UploadProjectPdfUC:
         audit: IAuditLog,
         uow: IUnitOfWork,
         limits: PdfUploadLimits,
+        quota: IProjectQuota,
     ) -> None:
+        self._quota = quota
         self._acl = acl
         self._projects = GetProjectUC(project_repo, project_index)
         self._artifacts = artifacts
@@ -152,6 +155,8 @@ class UploadProjectPdfUC:
         previous = await self._artifacts.latest(project_id, doc_id, ArtifactKind.pdf)
         if previous is not None and previous.sha256 == sha256:
             return PdfUploadResult(previous, created=False)
+        # Новый PDF занимает место проекта наравне с файлами; сверх предела ProjectQuotaExceededError (413).
+        await self._quota.check_write(project_id, size)
         artifact = self._new_artifact(actor, project_id, doc_id, size, sha256, meta)
         await self._store(artifact, source)
         try:

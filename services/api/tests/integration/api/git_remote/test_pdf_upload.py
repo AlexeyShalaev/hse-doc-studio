@@ -132,6 +132,24 @@ def test__upload__over_limit__413_by_length_and_by_stream(live: Live, monkeypatc
     assert _listed(live, project, anna) == []
 
 
+@pytest.fixture
+def tight_quota(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Предел размера проекта 2 МиБ: сервер читает его при создании приложения, поэтому фикстура идёт до `live`."""
+    monkeypatch.setattr(settings.server, "project_quota_bytes", 2 * 1024 * 1024)
+
+
+def test__upload__project_over_its_size_limit__413_and_nothing_stored(tight_quota: None, live: Live) -> None:
+    anna = live.person("anna")
+    project = live.create_project(anna)
+    doc = _doc_id(live, anna, project)
+    token = live.token(anna, ["git:write"])
+
+    status, reply = _put(live, project, doc, token, PDF + b"0" * (3 * 1024 * 1024))
+
+    assert (status, reply["code"]) == (413, "project_quota_exceeded")
+    assert _listed(live, project, anna) == []
+
+
 def test__upload__unknown_document__404(live: Live) -> None:
     anna = live.person("anna")
     project = live.create_project(anna)

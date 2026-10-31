@@ -9,6 +9,7 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.artifacts.entities import PdfUploadLimits
 from hse_doc_studio.core.artifacts.protocols import IProjectArtifactRepository
 from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
 from hse_doc_studio.core.storage import IObjectStore
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -39,10 +40,11 @@ class ServerArtifactsProvider(Provider):
         objects: IObjectStore,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        quota: IProjectQuota,
     ) -> UploadProjectPdfUC:
         cfg = settings.artifacts
         limits = PdfUploadLimits(max_bytes=cfg.max_pdf_bytes, keep_per_document=cfg.keep_per_document)
-        return UploadProjectPdfUC(acl, project_repo, project_index, artifacts, objects, audit, uow, limits)
+        return UploadProjectPdfUC(acl, project_repo, project_index, artifacts, objects, audit, uow, limits, quota)
 
     @provide
     def get_list_artifacts(self, artifacts: IProjectArtifactRepository) -> ListProjectArtifactsUC:

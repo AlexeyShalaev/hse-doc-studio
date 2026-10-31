@@ -8,6 +8,8 @@ import type { SyncViewState } from "./syncUi.model";
 export const AUTO_SYNC_DEBOUNCE_MS = 20_000;
 /** Не чаще одного автозапуска в этот срок (кроме первого). */
 export const AUTO_SYNC_MIN_GAP_MS = 60_000;
+/** Между двумя запусками, если нужно лишь забрать чужое: свои правки при этом не страдают. */
+export const AUTO_SYNC_PULL_GAP_MS = 15_000;
 /** Через сколько забираем чужие изменения, если своих правок нет. */
 export const AUTO_SYNC_PULL_DELAY_MS = 3_000;
 /** Задержка после первой неудачи; дальше вдвое дольше, но не больше потолка. */
@@ -124,7 +126,10 @@ export const decideAutoSync = (facts: AutoSyncFacts): AutoSyncDecision => {
     earliest.push(facts.needSince + AUTO_SYNC_PULL_DELAY_MS);
   }
   if (facts.lastRunAt !== null) {
-    earliest.push(facts.lastRunAt + AUTO_SYNC_MIN_GAP_MS);
+    earliest.push(
+      facts.lastRunAt +
+        (wants === "push" ? AUTO_SYNC_MIN_GAP_MS : AUTO_SYNC_PULL_GAP_MS),
+    );
   }
   const retryAt =
     facts.failures > 0 && facts.lastFailureAt !== null
