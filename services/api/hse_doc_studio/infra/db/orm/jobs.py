@@ -259,8 +259,8 @@ class QuotaRow(Base):
     owner_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     resource: Mapped[str] = mapped_column(String(32), primary_key=True)
     period: Mapped[str] = mapped_column(String(16), primary_key=True, server_default="none")
-    soft_limit: Mapped[int | None] = mapped_column(Integer)
-    hard_limit: Mapped[int] = mapped_column(Integer, nullable=False)
+    soft_limit: Mapped[int | None] = mapped_column(BigInteger)
+    hard_limit: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
 
 encrypted_columns.register(EncryptedColumn("runner_pairings", "token_secret_enc", pk="id"))

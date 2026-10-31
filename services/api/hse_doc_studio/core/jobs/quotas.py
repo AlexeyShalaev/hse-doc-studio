@@ -35,6 +35,16 @@ class QuotaResource(StrEnum):
     concurrent_user = "jobs.concurrent_user"
     concurrent_org = "jobs.concurrent_org"
     max_duration_s = "jobs.max_duration_s"
+    storage_user = "storage.bytes_user"
+    storage_org = "storage.bytes_org"
+    builds_user = "builds.month_user"
+    builds_org = "builds.month_org"
+    ai_day_user = "ai.tokens_day_user"
+    ai_day_org = "ai.tokens_day_org"
+    ai_month_user = "ai.tokens_month_user"
+    ai_month_org = "ai.tokens_month_org"
+    members_user = "members.project_user"
+    members_org = "members.project_org"
 
 
 @dataclass(frozen=True)

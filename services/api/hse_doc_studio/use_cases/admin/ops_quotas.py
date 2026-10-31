@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
@@ -20,12 +21,23 @@ from hse_doc_studio.core.jobs.quotas import (
     quota_settings_from,
 )
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
+from hse_doc_studio.core.quotas.policy import OverrideIndex, QuotaPolicy, policy_from
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import SOURCE_ADMIN
 
 # Раннер опрашивает очередь каждые секунды: читать базу на каждый опрос незачем, правка вступает за это время.
 QUOTA_CACHE_TTL_S = 5.0
+
+
+@dataclass(frozen=True)
+class QuotaSnapshot:
+    """Что читают квоты за один раз: умолчания очереди, умолчания по видам и переопределения."""
+
+    settings: QuotaSettings
+    policy: QuotaPolicy
+    overrides: tuple[QuotaOverride, ...]
+    index: OverrideIndex
 
 
 class QuotaService:
@@ -41,14 +53,24 @@ class QuotaService:
         self._overrides = overrides
         self._ttl = ttl_s
         self._monotonic = monotonic
-        self._cached: tuple[float, QuotaSettings, tuple[QuotaOverride, ...]] | None = None
+        self._cached: tuple[float, QuotaSnapshot] | None = None
 
-    async def _load(self) -> tuple[QuotaSettings, tuple[QuotaOverride, ...]]:
+    async def snapshot(self) -> QuotaSnapshot:
         now = self._monotonic()
         if self._cached is None or now - self._cached[0] >= self._ttl:
             overrides = tuple(await self._overrides.list_all()) if self._overrides is not None else ()
-            self._cached = (now, quota_settings_from(await self._repo.get_all()), overrides)
-        return self._cached[1], self._cached[2]
+            values = await self._repo.get_all()
+            self._cached = (
+                now,
+                QuotaSnapshot(
+                    quota_settings_from(values), policy_from(values), overrides, OverrideIndex.build(overrides)
+                ),
+            )
+        return self._cached[1]
+
+    async def _load(self) -> tuple[QuotaSettings, tuple[QuotaOverride, ...]]:
+        snap = await self.snapshot()
+        return snap.settings, snap.overrides
 
     async def settings(self) -> QuotaSettings:
         return (await self._load())[0]
