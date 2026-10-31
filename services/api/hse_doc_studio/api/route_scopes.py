@@ -384,6 +384,11 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/-/info"): _P,
     ("GET", "/git/-/whoami"): RouteScope.git_token,
     ("GET", "/git/-/projects"): RouteScope.git_token,
+    # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
+    ("POST", "/auth/device/code"): _P,
+    ("POST", "/auth/device/token"): _P,
+    ("GET", "/account/device/{user_code}"): _A,
+    ("POST", "/account/device/{user_code}"): _A,
 }
 
 # Маршруты `authenticated`, чьи данные пока общие на всю установку: у пользователей они ещё не

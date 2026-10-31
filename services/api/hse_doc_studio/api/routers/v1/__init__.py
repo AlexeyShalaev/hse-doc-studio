@@ -14,6 +14,7 @@ from hse_doc_studio.api.routers.v1 import (
     chat,
     checks,
     compile,
+    device_flow,
     docker_system,
     documents,
     export_import,
@@ -71,6 +72,7 @@ api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(project_members.router, tags=["projects"])
 api_router.include_router(project_build_runners.router, tags=["projects"])
 api_router.include_router(project_git_remote.router, tags=["projects"])
+api_router.include_router(device_flow.router, tags=["device-flow"])
 api_router.include_router(project_import.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])

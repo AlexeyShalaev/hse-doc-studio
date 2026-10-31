@@ -7,11 +7,14 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_remote.protocols import IExternalChangeReconciler, IGitSmartHttp, IPushRuntime
-from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry
+from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, ISecretCipher
 from hse_doc_studio.core.identity.protocols import IActorResolver, IApiTokenRepository, IAuditLog
 from hse_doc_studio.core.projects.browse import IProjectBrowser
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
+from hse_doc_studio.infra.db.repositories.device_authorizations import SqlDeviceAuthorizationRepository
+from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.git_remote.push_runtime import GitPushRuntime
 from hse_doc_studio.infra.git_remote.reconciler import ExternalChangeReconciler
 from hse_doc_studio.infra.git_remote.smart_http import GitSmartHttp
@@ -24,6 +27,8 @@ from hse_doc_studio.use_cases.git_remote.auth import (
 )
 from hse_doc_studio.use_cases.git_remote.projects import GetProjectGitRemoteUC, ListGitProjectsUC
 from hse_doc_studio.use_cases.git_remote.receive import PushLimits, ReceivePushUC
+from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, RevokeApiTokenUC
+from hse_doc_studio.use_cases.identity.device_flow import DeviceFlowService
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC
 
 
@@ -94,6 +99,20 @@ class ServerGitRemoteProvider(Provider):
     ) -> GetProjectGitRemoteUC:
         return GetProjectGitRemoteUC(
             acl, project_repo, project_index, vcs, enabled=settings.git_remote.enabled, public_url=public_base_url()
+        )
+
+    @provide
+    def get_device_flow(  # noqa: PLR0913 — порты одного сценария
+        self,
+        sessions: SessionProvider,
+        create_token: CreateApiTokenUC,
+        revoke_token: RevokeApiTokenUC,
+        cipher: ISecretCipher,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> DeviceFlowService:
+        return DeviceFlowService(
+            SqlDeviceAuthorizationRepository(sessions), create_token, revoke_token, cipher, audit, uow
         )
 
 
