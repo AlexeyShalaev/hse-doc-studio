@@ -319,3 +319,19 @@ async def test__transfer_candidates__managed_orgs_then_people_of_shared_orgs(wor
     assert [c.id for c in from_org.items] == ["club"]
     assert ([c.id for c in people.items], people.has_more) == (["anna"], True)
     assert all(c.id not in {"stranger", "other", "owner"} for c in found.items)
+
+
+async def test__transfer_candidates__direct_member_without_shared_org(world: World) -> None:
+    """Соавтор, пришедший по приглашению на почту, связан с владельцем только проектом: передать ему можно."""
+    project = await world.project(owner="owner")
+    other = await world.project(owner="owner")
+    await world.grant(project, "user", "stranger", "editor")
+    uc = ListTransferCandidatesUC(world.directory)
+
+    found = await uc.execute(Actor.user("owner"), project, "", kind="user")
+    elsewhere = await uc.execute(Actor.user("owner"), other, "", kind="user")
+
+    assert [c.id for c in found.items] == ["stranger"]
+    assert elsewhere.items == []
+    assert await world.directory.is_transfer_candidate(project, "owner", "user", "stranger")
+    assert not await world.directory.is_transfer_candidate(other, "owner", "user", "stranger")

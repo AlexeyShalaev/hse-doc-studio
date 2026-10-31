@@ -89,12 +89,21 @@ def _transfer_orgs(actor_id: str, owner_org_id: str | None, needle: str) -> Sele
     return stmt.order_by(func.lower(OrgRow.name), OrgRow.id)
 
 
-def _transfer_people(actor_id: str, owner_user_id: str | None, needle: str) -> Select[str, str, str]:
-    """Активные люди общих со смотрящим организаций, кроме него самого и нынешнего владельца."""
+def _transfer_people(actor_id: str, owner_user_id: str | None, needle: str, project_id: UUID) -> Select[str, str, str]:
+    """Активные люди общих со смотрящим организаций и прямые участники проекта, кроме него самого и владельца.
+
+    Участник проекта попадает в круг и без общей организации: после приглашения по почте соавтор связан с
+    владельцем только проектом, и передать проект именно ему естественно.
+    """
     mine = select(OrgMemberRow.org_id).where(OrgMemberRow.user_id == actor_id)
     shared = select(OrgMemberRow.user_id).where(OrgMemberRow.org_id.in_(mine))
+    members = select(ProjectMemberRow.principal_id).where(
+        ProjectMemberRow.project_id == project_id, ProjectMemberRow.principal_kind == USER_PRINCIPAL
+    )
     stmt = select(UserRow.id, UserRow.name, UserRow.email).where(
-        UserRow.id.in_(shared), UserRow.status == UserStatus.active.value, UserRow.id != actor_id
+        or_(UserRow.id.in_(shared), UserRow.id.in_(members)),
+        UserRow.status == UserStatus.active.value,
+        UserRow.id != actor_id,
     )
     if owner_user_id is not None:
         stmt = stmt.where(UserRow.id != owner_user_id)
@@ -285,7 +294,9 @@ class PostgresProjectAccessDirectory:
                 found += [TransferCandidate("org", slug, name, slug) for slug, name in orgs.all()]
             room = wanted - len(found)
             if kind != "org" and room > 0:
-                people = await session.execute(_transfer_people(actor_id, project.owner_user_id, needle).limit(room))
+                people = await session.execute(
+                    _transfer_people(actor_id, project.owner_user_id, needle, project_id).limit(room)
+                )
                 found += [TransferCandidate("user", uid, name, email) for uid, name, email in people.all()]
         return Picked.of(found, limit)
 
@@ -319,5 +330,5 @@ class PostgresProjectAccessDirectory:
             if kind == "org":
                 stmt: Any = _transfer_orgs(actor_id, project.owner_org_id, "").where(OrgRow.id == target_id)
             else:
-                stmt = _transfer_people(actor_id, project.owner_user_id, "").where(UserRow.id == target_id)
+                stmt = _transfer_people(actor_id, project.owner_user_id, "", project_id).where(UserRow.id == target_id)
             return (await session.execute(stmt.limit(1))).first() is not None
