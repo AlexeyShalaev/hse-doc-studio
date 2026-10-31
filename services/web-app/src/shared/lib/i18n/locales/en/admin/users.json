@@ -327,7 +327,15 @@
       "settings_build_update": "Build settings changed",
       "settings_instance_update": "Instance settings changed",
       "settings_personal_runners_update": "Personal runner settings changed",
-      "submission_downloaded": "Submission archive downloaded"
+      "submission_downloaded": "Submission archive downloaded",
+      "settings_sharing_update": "Sharing settings changed",
+      "org_sharing_policy_update": "Organization sharing policy changed",
+      "link_create": "Project link created",
+      "link_update": "Project link changed",
+      "link_rotate": "Project link reissued",
+      "link_revoke": "Project link revoked",
+      "link_open": "Project link opened",
+      "link_password_failed": "Wrong link password"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

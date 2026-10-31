@@ -46,6 +46,7 @@ nav = [
         { "Превью PDF" = "workbench/preview.md" },
         { "Визуальный редактор" = "workbench/editor-visual.md" },
         { "ИИ-агент" = "workbench/agent.md" },
+        { "Доступ по ссылке" = "workbench/share-links.md" },
     ] },
     { "Развёртывание" = [
         { "Общий сервер" = "deploy/index.md" },

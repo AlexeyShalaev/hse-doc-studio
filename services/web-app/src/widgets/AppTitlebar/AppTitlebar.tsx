@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
+import { GuestBadge, useGuest } from "@features/guest-session";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -58,6 +59,8 @@ export const AppTitlebar = ({
   const systemChatOpen = useWorkspaceStore((state) => state.systemChatOpen);
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
   const { data: systemInfo } = useSystemInfo();
+  // links: гостю по ссылке недоступны агент и настройки приложения; вместо меню аккаунта бейдж гостя.
+  const isGuest = useGuest() !== null;
 
   // Real backend version; drop the suffix until it resolves rather than show a
   // stale hardcoded number.
@@ -197,34 +200,39 @@ export const AppTitlebar = ({
             {projectActions}
           </div>
         )}
-        <button
-          type="button"
-          className={clsx("icon-btn tt", systemChatOpen && "active")}
-          data-tt={agentTooltip}
-          onClick={toggleSystemChat}
-          style={
-            systemChatOpen
-              ? { width: 32, height: 32, color: "var(--accent)" }
-              : { width: 32, height: 32 }
-          }
-        >
-          <Bot size={16} />
-        </button>
+        {!isGuest && (
+          <button
+            type="button"
+            className={clsx("icon-btn tt", systemChatOpen && "active")}
+            data-tt={agentTooltip}
+            onClick={toggleSystemChat}
+            style={
+              systemChatOpen
+                ? { width: 32, height: 32, color: "var(--accent)" }
+                : { width: 32, height: 32 }
+            }
+          >
+            <Bot size={16} />
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={clsx("icon-btn tt", settingsActive && "active")}
-          data-tt={t("titlebar.settings")}
-          onClick={handleOpenSettings}
-          style={
-            settingsActive
-              ? { width: 32, height: 32, color: "var(--accent)" }
-              : { width: 32, height: 32 }
-          }
-        >
-          <Settings size={16} />
-        </button>
+        {!isGuest && (
+          <button
+            type="button"
+            className={clsx("icon-btn tt", settingsActive && "active")}
+            data-tt={t("titlebar.settings")}
+            onClick={handleOpenSettings}
+            style={
+              settingsActive
+                ? { width: 32, height: 32, color: "var(--accent)" }
+                : { width: 32, height: 32 }
+            }
+          >
+            <Settings size={16} />
+          </button>
+        )}
         <AccountMenu />
+        <GuestBadge />
       </div>
     </div>
   );

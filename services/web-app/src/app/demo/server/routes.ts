@@ -11,6 +11,7 @@ import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
 import { createSetupRoutes } from "./setupRoutes";
+import { createShareLinkRoutes, createSharingAdminRoutes } from "./shareLinks";
 import { createSystemRoutes } from "./systemRoutes";
 import { createServerWorld, signIn, signOut } from "./world";
 
@@ -135,9 +136,10 @@ const withGuard = (route: DemoRoute): DemoRoute => ({
 });
 
 /** Маршруты клиента /api/admin: ставятся на adminClient отдельно от /api/v1. */
-export const serverAdminDemoRoutes: DemoRoute[] = createAdminRoutes(
-  () => world,
-).map(withGuard);
+export const serverAdminDemoRoutes: DemoRoute[] = [
+  ...createAdminRoutes(() => world),
+  ...createSharingAdminRoutes(() => world),
+].map(withGuard);
 
 /** Маршруты клиента systemClient (/api/v1/system/*): у него свой транспорт. */
 export const serverSystemDemoRoutes: DemoRoute[] = createSystemRoutes(
@@ -149,6 +151,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createAuthRoutes(() => world),
   ...createAccountRoutes(() => world),
   ...createSetupRoutes(() => world),
+  // links: раньше маршрутов проектов, чтобы гость видел свой проект по ссылке.
+  ...createShareLinkRoutes(() => world),
   ...createProjectRoutes(() => world),
   ...createProjectAccessRoutes(() => world),
   ...createMemberOrgRoutes(() => world),

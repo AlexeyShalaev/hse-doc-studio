@@ -46,6 +46,7 @@ nav = [
         { "PDF preview" = "workbench/preview.md" },
         { "Visual editor" = "workbench/editor-visual.md" },
         { "AI agent" = "workbench/agent.md" },
+        { "Link sharing" = "workbench/share-links.md" },
     ] },
     { "Deployment" = [
         { "Shared server" = "deploy/index.md" },

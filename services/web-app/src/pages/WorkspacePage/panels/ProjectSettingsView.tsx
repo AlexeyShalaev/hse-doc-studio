@@ -16,6 +16,7 @@ import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
 import { ProjectAccessPanel } from "@features/project-access";
+import { ShareLinksSection } from "@features/share-links";
 import { TemplateVersionPanel } from "@features/template-update";
 import { i18n, pickLocalized, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
@@ -440,10 +441,17 @@ export const ProjectSettingsView = ({
         );
       case "access":
         return (
-          <ProjectAccessPanel
-            projectId={project.id}
-            myRole={project.my_role ?? null}
-          />
+          <>
+            <ProjectAccessPanel
+              projectId={project.id}
+              myRole={project.my_role ?? null}
+            />
+            {/* links: «Доступ по ссылке» под участниками (10.1). */}
+            <ShareLinksSection
+              projectId={project.id}
+              myRole={project.my_role ?? null}
+            />
+          </>
         );
       case "authors":
         return (

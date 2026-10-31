@@ -2,7 +2,9 @@ import { safeNextPath, type Bootstrap } from "@entities/session";
 
 // Экраны, доступные без входа. Остальное в серверном режиме требует сессии.
 const PUBLIC_EXACT = ["/login", "/register", "/forgot", "/first-run"];
-const PUBLIC_PREFIXES = ["/invite/", "/verify/", "/reset/", "/auth/"];
+const PUBLIC_PREFIXES = ["/invite/", "/verify/", "/reset/", "/auth/", "/s/"];
+// links: гостю по ссылке открыты главная (его проекты) и проекты; аккаунт, настройки и админка нет.
+const GUEST_ALLOWED_PREFIXES = ["/projects/"];
 // Экраны только для гостей: вошедшему человеку на них делать нечего.
 const GUEST_ONLY = ["/login", "/register", "/forgot"];
 
@@ -56,6 +58,12 @@ export const resolveGateRedirect = (
 
   if (bootstrap.user === null) {
     if (isPublicPath(path) && path !== "/first-run") return null;
+    if (bootstrap.guest) {
+      return path === "/" ||
+        GUEST_ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix))
+        ? null
+        : "/";
+    }
     const target = `${location.pathname}${location.search}${location.hash}`;
     const next = safeNextPath(target, "");
     return next === "" || next === "/"

@@ -1,0 +1,89 @@
+{
+  "badge": {
+    "label": "Guest: {{name}}",
+    "noName": "Guest",
+    "menu": "Guest mode",
+    "rename": "Change name",
+    "signIn": "Sign in",
+    "leave": "Leave guest mode",
+    "hint": "You opened projects by links without signing in."
+  },
+  "rename": {
+    "title": "Your name",
+    "label": "Name",
+    "hint": "The owner and co-authors will see the name in history",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Name saved"
+  },
+  "leave": {
+    "title": "Leave guest mode?",
+    "text": "You will need to open the links again.",
+    "confirm": "Leave",
+    "cancel": "Cancel"
+  },
+  "home": {
+    "title": "My projects by link",
+    "lead": "Projects shared with you by link. Access lasts until the owner revokes the link.",
+    "empty": "No active links. Ask the owner to send a new one.",
+    "open": "Open",
+    "signIn": "Sign in"
+  },
+  "banner": {
+    "text": "You opened the project by link “{{label}}”. Available: {{allowed}}. Not available: agent, submission, signatures, git.",
+    "textUser": "You opened the project by link “{{label}}”. Available: {{allowed}}. Not available: submission, signatures, git, settings and access.",
+    "allowed": {
+      "reader": "PDF viewing",
+      "readerSources": "viewing sources",
+      "reviewer": "viewing sources",
+      "editor": "editing"
+    }
+  },
+  "revoked": {
+    "title": "The link is no longer valid",
+    "text": "The owner revoked or changed the link. Ask them to send a new one.",
+    "home": "Home"
+  },
+  "page": {
+    "title": "Project link",
+    "loading": "Checking the link…",
+    "offered": "{{owner}} shared “{{project}}” with you",
+    "role": {
+      "reader": "PDF viewing",
+      "readerSources": "Viewing sources",
+      "reviewer": "Reviewing",
+      "editor": "Editing"
+    },
+    "name": "Your name",
+    "nameHint": "The owner and co-authors will see the name in history",
+    "nameRequired": "Enter your name",
+    "signedInAs": "You will open it as {{name}}",
+    "open": "Open",
+    "password": "Password",
+    "passwordLead": "The link is protected with a password.",
+    "passwordWrong": "Wrong password",
+    "locked": "Too many attempts, try again in {{minutes}} min",
+    "loginLead": "Sign in to open it",
+    "login": "Sign in",
+    "orgOnly": "This link is for members of {{org}} only. Sign in with your organization account.",
+    "inactive": "The link is not valid. Ask the owner to send a new one.",
+    "home": "Home",
+    "failed": "Could not open the link"
+  },
+  "view": {
+    "title": "Project documents",
+    "lead": "The latest built PDFs. Sources are not shared by this link.",
+    "notBuilt": "The PDF has not been built yet",
+    "download": "Download",
+    "preview": "Preview",
+    "empty": "The project has no documents",
+    "loadFailed": "Could not load documents",
+    "back": "To projects"
+  },
+  "card": {
+    "viaLink": "By link"
+  },
+  "build": {
+    "unavailable": "Builds are not available through this link: ask the owner"
+  }
+}

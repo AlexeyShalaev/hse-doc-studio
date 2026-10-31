@@ -9,6 +9,8 @@ import { LoginPage } from "@pages/LoginPage";
 import { RegisterPage } from "@pages/RegisterPage";
 import { ResetPage } from "@pages/ResetPage";
 import { RunnerPairPage } from "@pages/RunnerPairPage";
+import { ShareLinkPage } from "@pages/ShareLinkPage";
+import { GuestViewPage } from "@pages/GuestViewPage";
 import { SettingsPage } from "@pages/SettingsPage";
 import { VerifyPage } from "@pages/VerifyPage";
 import { WelcomePage } from "@pages/WelcomePage";
@@ -17,6 +19,7 @@ import { WorkspacePage } from "@pages/WorkspacePage";
 import { AuthLayout } from "@widgets/AuthLayout";
 import { AdminGate } from "./AdminGate";
 import { ProjectAccessGate } from "./ProjectAccessGate";
+import { HomeRoute } from "./HomeRoute";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
 import { RootLayout } from "./RootLayout";
 
@@ -46,11 +49,15 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { DevServerScreensPage },
             { getProjectsGallery },
             { getRunnerPairGallery },
+            { getShareLinkPageGallery },
+            { getGuestViewGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
             import("@pages/WelcomePage"),
             import("@pages/RunnerPairPage"),
+            import("@pages/ShareLinkPage"),
+            import("@pages/GuestViewPage"),
             import("./demo"),
           ]);
           const extraSections = [
@@ -63,6 +70,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
               id: "runner-pair",
               title: "Подтверждение сопряжения раннера",
               groups: getRunnerPairGallery(),
+            },
+            {
+              id: "share-link-page",
+              title: "Ссылка доступа и просмотр PDF",
+              groups: [...getShareLinkPageGallery(), ...getGuestViewGallery()],
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
@@ -99,11 +111,14 @@ export const router = createBrowserRouter([
           { path: "/reset/:token", element: <ResetPage /> },
           { path: "/first-run", element: <FirstRunPage /> },
           { path: "/auth/error", element: <AuthErrorPage /> },
+          // links: страница ссылки доступа (без входа, токен уходит из адреса после открытия).
+          { path: "/s/:token", element: <ShareLinkPage /> },
         ],
       },
       {
         path: "/",
-        element: <WelcomePage />,
+        // links: гость по ссылке видит свои проекты по ссылкам вместо списка проектов.
+        element: <HomeRoute welcome={<WelcomePage />} />,
       },
       {
         path: "/wizard",
@@ -135,6 +150,11 @@ export const router = createBrowserRouter([
           // Инструменты выехали из слота :docId в собственные маршруты. Адрес
           // документа НЕ ТРОГАЕМ — на него ссылаются RecentActivity, палитра
           // команд, ссылки агента doc:<id> и закладки пользователей.
+          // links: просмотр PDF для читателя без исходников (гость или вошедший по ссылке).
+          {
+            path: "/projects/:projectId/view",
+            element: <GuestViewPage />,
+          },
           {
             path: "/projects/:projectId/documents",
             element: <WorkspacePage canvas="overview" />,

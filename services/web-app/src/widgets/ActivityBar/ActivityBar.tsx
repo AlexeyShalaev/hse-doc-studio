@@ -56,7 +56,12 @@ export type ActivityBarProps = {
   onToggleAgent: () => void;
   /** Настройки приложения: уводят из проекта на отдельную страницу. */
   onOpenSystemSettings: () => void;
+  /** Скрытые пункты: проект открыт по ссылке, и право на них сервер не даст. */
+  hidden?: readonly ActivityHiddenItem[];
 };
+
+export type ActivityHiddenItem =
+  "submit" | "projectSettings" | "agent" | "systemSettings";
 
 type ActivityDescriptor = {
   id: WorkbenchActivity;
@@ -94,6 +99,7 @@ export const ActivityBar = ({
   isAgentActive,
   onToggleAgent,
   onOpenSystemSettings,
+  hidden = [],
 }: ActivityBarProps): React.JSX.Element => {
   const { t } = useTranslation("workbench");
 
@@ -135,6 +141,10 @@ export const ActivityBar = ({
     },
   ];
 
+  const shown = items.filter(
+    (item) => !(item.id === "submit" && hidden.includes("submit")),
+  );
+
   const renderActivity = (item: ActivityDescriptor) => (
     <ActivityItem
       key={item.id}
@@ -158,19 +168,21 @@ export const ActivityBar = ({
 
   return (
     <nav className="activity-bar" aria-label={t("overview.title")}>
-      {items.map(renderActivity)}
+      {shown.map(renderActivity)}
 
       {/* Ползунки, а не шестерёнка: шестерёнка закреплена за настройками
           приложения — и внизу рейки, и в титулбаре. Проектные настройки — это
           параметры одной работы, а не системы. */}
-      <ActivityItem
-        icon={SlidersHorizontal}
-        label={t("activity.projectSettings")}
-        tooltip={t("activity.projectSettingsTooltip")}
-        isActive={isProjectSettingsActive}
-        badge={projectSettingsBadge}
-        onSelect={onOpenProjectSettings}
-      />
+      {!hidden.includes("projectSettings") && (
+        <ActivityItem
+          icon={SlidersHorizontal}
+          label={t("activity.projectSettings")}
+          tooltip={t("activity.projectSettingsTooltip")}
+          isActive={isProjectSettingsActive}
+          badge={projectSettingsBadge}
+          onSelect={onOpenProjectSettings}
+        />
+      )}
 
       {/* История — полноэкранная страница, как и настройки проекта: своей
           боковой панели у неё нет, поэтому она не режим, а переход. */}
@@ -195,22 +207,26 @@ export const ActivityBar = ({
         style={{ width: 24, margin: "4px 0" }}
       />
 
-      <ActivityItem
-        icon={Bot}
-        label={t("activity.agent")}
-        tooltip={t("activity.agentTooltip")}
-        isActive={isAgentActive}
-        onSelect={onToggleAgent}
-      />
-      <ActivityItem
-        icon={Settings}
-        label={t("activity.systemSettings")}
-        tooltip={t("activity.systemSettingsTooltip")}
-        // Настройки приложения — не режим панели и не канвас проекта: они
-        // уводят на /settings, поэтому подсвеченными в рейке не бывают.
-        isActive={false}
-        onSelect={onOpenSystemSettings}
-      />
+      {!hidden.includes("agent") && (
+        <ActivityItem
+          icon={Bot}
+          label={t("activity.agent")}
+          tooltip={t("activity.agentTooltip")}
+          isActive={isAgentActive}
+          onSelect={onToggleAgent}
+        />
+      )}
+      {!hidden.includes("systemSettings") && (
+        <ActivityItem
+          icon={Settings}
+          label={t("activity.systemSettings")}
+          tooltip={t("activity.systemSettingsTooltip")}
+          // Настройки приложения — не режим панели и не канвас проекта: они
+          // уводят на /settings, поэтому подсвеченными в рейке не бывают.
+          isActive={false}
+          onSelect={onOpenSystemSettings}
+        />
+      )}
     </nav>
   );
 };

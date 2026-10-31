@@ -9,6 +9,7 @@ import {
   useProjectRoleLabel,
 } from "@entities/project";
 import { ConflictScreen } from "@features/git-conflicts";
+import { LinkAccessBanner, useGuest } from "@features/guest-session";
 import { useResumeProjectStreams, useStartCompileAll } from "@entities/compile";
 import { DocumentTabs } from "@widgets/DocumentTabs";
 import { AppTitlebar } from "@widgets/AppTitlebar";
@@ -228,6 +229,9 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
 
   const myRole = project?.my_role ?? null;
   const readOnlyRole = isReadOnlyRole(myRole);
+  // links: проект открыт по ссылке (гость или ссылочное право) — баннер вместо баннера роли, без git.
+  const guest = useGuest();
+  const viaLink = project?.via_link === true;
 
   const projectIsNda = project?.meta?.nda === true;
 
@@ -240,16 +244,30 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
         projectName={project?.name ?? null}
         projectIsNda={projectIsNda}
         projectSwitcher={
-          <ProjectSwitcher
-            currentProjectId={projectId}
-            isOpen={isSwitcherOpen}
-            onOpenChange={setIsSwitcherOpen}
-          />
+          // Гостю список проектов недоступен: переключатель только мешал бы.
+          guest ? undefined : (
+            <ProjectSwitcher
+              currentProjectId={projectId}
+              isOpen={isSwitcherOpen}
+              onOpenChange={setIsSwitcherOpen}
+            />
+          )
         }
-        projectActions={<SyncCluster projectId={projectId} />}
+        projectActions={
+          viaLink ? undefined : <SyncCluster projectId={projectId} />
+        }
       />
 
-      {myRole && readOnlyRole && (
+      {viaLink && myRole && myRole !== "owner" && (
+        <LinkAccessBanner
+          label={project?.link_label ?? ""}
+          role={myRole}
+          showSources={myRole !== "reader"}
+          guest={guest !== null}
+        />
+      )}
+
+      {!viaLink && myRole && readOnlyRole && (
         <div style={{ padding: "8px 12px" }} data-testid="role-banner">
           <Notice
             tone="info"
@@ -263,6 +281,7 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
         projectId={projectId}
         selectedDocId={docId}
         isProjectSettingsActive={canvas === "project-settings"}
+        linkAccess={viaLink ? (guest ? "guest" : "user") : null}
         // Разбор конфликтов живёт на «Истории»: рейка подсвечивает её и
         // не показывает боковую панель.
         isVersionsActive={canvas === "versions" || canvas === "sync-conflicts"}

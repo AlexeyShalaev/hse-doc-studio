@@ -6,6 +6,7 @@ import { useBootstrap, type MyOrg } from "@entities/session";
 import { useLeaveOrg, useMyOrgs } from "../api/myOrgsQueries";
 import type { Failure } from "../lib/failure";
 import { MyOrganizationsView } from "./MyOrganizationsView";
+import { OrgSharingPolicySection } from "./OrgSharingPolicySection";
 
 /** Раздел настроек «Организации» серверного режима. */
 export const MyOrganizationsSection = () => {
@@ -32,20 +33,34 @@ export const MyOrganizationsSection = () => {
     });
   };
 
+  // links: «Общий доступ» организаций, где человек владелец или админ (правит политику ссылок).
+  const managed = (orgs.data ?? []).filter(
+    (org) => org.my_role === "owner" || org.my_role === "admin",
+  );
+
   return (
-    <MyOrganizationsView
-      status={orgs.data ? "ready" : orgs.isError ? "error" : "loading"}
-      orgs={orgs.data ?? []}
-      failure={failure}
-      leavingSlug={leavingSlug}
-      instanceAdmin={instanceAdmin}
-      onRetry={() => {
-        void orgs.refetch();
-      }}
-      onLeave={onLeave}
-      onReset={() => {
-        setFailure(null);
-      }}
-    />
+    <>
+      <MyOrganizationsView
+        status={orgs.data ? "ready" : orgs.isError ? "error" : "loading"}
+        orgs={orgs.data ?? []}
+        failure={failure}
+        leavingSlug={leavingSlug}
+        instanceAdmin={instanceAdmin}
+        onRetry={() => {
+          void orgs.refetch();
+        }}
+        onLeave={onLeave}
+        onReset={() => {
+          setFailure(null);
+        }}
+      />
+      {managed.map((org) => (
+        <OrgSharingPolicySection
+          key={org.slug}
+          slug={org.slug}
+          name={org.name}
+        />
+      ))}
+    </>
   );
 };

@@ -10,6 +10,7 @@ import * as inst from "./installSchemas";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
+import * as sh from "@entities/share-link/model/shareLink.schema";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
 export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
@@ -156,4 +157,18 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateRemoteRunnerRequest: rn.UpdateRemoteRunnerRequestSchema,
   RemoteRunnerPairRequest: rn.RemoteRunnerPairRequestSchema,
   RemoteRunnerTokenRequest: rn.RemoteRunnerTokenRequestSchema,
+  // links
+  ShareLink: sh.ShareLinkSchema,
+  ShareLinkList: sh.ShareLinkListSchema,
+  CreateShareLinkRequest: sh.CreateShareLinkRequestSchema,
+  UpdateShareLinkRequest: sh.UpdateShareLinkRequestSchema,
+  ShareLinkVisitPage: sh.ShareLinkVisitPageSchema,
+  ShareLinkPreview: sh.ShareLinkPreviewSchema,
+  OpenShareLinkRequest: sh.OpenShareLinkRequestSchema,
+  OpenShareLinkResponse: sh.OpenShareLinkResponseSchema,
+  GuestInfo: sh.GuestInfoSchema,
+  UpdateGuestSessionRequest: sh.UpdateGuestSessionRequestSchema,
+  OrgSharingPolicy: sh.OrgSharingPolicySchema,
+  AdminSharingSettings: sh.AdminSharingSettingsSchema,
+  UpdateAdminSharingRequest: sh.UpdateAdminSharingRequestSchema,
 };

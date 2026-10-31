@@ -45,5 +45,31 @@
     "csrf_failed": "The session expired: refresh the page and try again.",
     "network": "Cannot reach the server. Try again later.",
     "unknown": "Something went wrong. Try again later."
+  },
+  "sharing": {
+    "title": "Sharing",
+    "description": "How organization projects open by links and whom you may invite.",
+    "links": "Project links",
+    "linksAny": "Any",
+    "linksOrgOnly": "Organization members only",
+    "linksOff": "Forbidden",
+    "maxRole": "Highest role by link",
+    "nda": "Public links to NDA projects",
+    "ndaHint": "When off, a link to an NDA project requires sign-in",
+    "externalInvites": "Invite people from other domains",
+    "save": "Save",
+    "saved": "Sharing policy saved",
+    "readOnly": "Only organization owners and administrators can change the policy.",
+    "loadFailed": "Could not load the policy",
+    "confirmTitle": "Tighten the policy?",
+    "confirmText": "Active links that break the policy will stop working.",
+    "confirm": "Save",
+    "cancel": "Cancel",
+    "roles": {
+      "reader": "Reader",
+      "reviewer": "Reviewer",
+      "editor": "Editor"
+    },
+    "saveFailed": "Could not save the policy"
   }
 }

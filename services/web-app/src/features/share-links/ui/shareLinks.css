@@ -1,0 +1,142 @@
+/* «Доступ по ссылке»: список ссылок проекта, форма и переходы. Цвета из токенов index.css. */
+
+.share-link-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.share-link-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+.share-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-link-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  min-width: 0;
+}
+.share-link-row[data-state="revoked"],
+.share-link-row[data-state="expired"] {
+  opacity: 0.75;
+}
+.share-link-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.share-link-icon {
+  display: inline-flex;
+  color: var(--fg-2);
+}
+.share-link-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.share-link-chips {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.share-link-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.share-link-row-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.share-link-muted {
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+.share-link-visits-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--c-info);
+  cursor: pointer;
+  text-align: left;
+}
+.share-link-visits-link:hover {
+  text-decoration: underline;
+}
+.share-link-revoked-toggle {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.share-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.share-link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.share-link-field > label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-1);
+}
+.share-link-switch {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.share-link-switch label {
+  font-size: 13px;
+  color: var(--fg-0);
+}
+.share-link-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-1);
+}
+.share-link-visits-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.share-link-visits-table th,
+.share-link-visits-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.share-link-visits-table th {
+  color: var(--fg-2);
+  font-weight: 500;
+}

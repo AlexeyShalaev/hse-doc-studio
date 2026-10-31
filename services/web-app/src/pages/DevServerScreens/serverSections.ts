@@ -10,6 +10,10 @@ import { getRemoteRunnerGallery } from "@features/remote-runner";
 import { getRelayGallery } from "@features/agent-chat";
 import { getAiProviderRelayGallery } from "@features/manage-ai-provider";
 import { getProjectAccessGallery } from "@features/project-access";
+import { getShareLinksGallery } from "@features/share-links";
+import { getGuestSessionGallery } from "@features/guest-session";
+import { getOrgSharingGallery } from "@features/my-organizations";
+import { getAdminSharingGallery } from "@features/admin-install";
 import { getProjectImportGallery } from "@features/project-import";
 import { getAccountMenuGallery } from "@features/account-menu";
 import { getRecoveryGallery } from "@features/account-recovery";
@@ -74,6 +78,21 @@ export const buildServerSections = (): GallerySection[] => [
     id: "project-access",
     title: "Проект: доступ",
     groups: getProjectAccessGallery(),
+  },
+  {
+    id: "share-links",
+    title: "Проект: доступ по ссылке",
+    groups: getShareLinksGallery(),
+  },
+  {
+    id: "guest",
+    title: "Гость по ссылке",
+    groups: getGuestSessionGallery(),
+  },
+  {
+    id: "sharing-policy",
+    title: "Политика общего доступа",
+    groups: [...getOrgSharingGallery(), ...getAdminSharingGallery()],
   },
   {
     id: "project-import",
