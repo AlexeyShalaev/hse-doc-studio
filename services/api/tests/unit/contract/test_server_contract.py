@@ -15,6 +15,7 @@ from hse_doc_studio.api.schemas import admin as adm
 from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
+from hse_doc_studio.api.schemas import artifacts as art
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import personal_runners as pr
@@ -228,6 +229,9 @@ _SCHEMAS: dict[str, Any] = {
     "GitServerLoginRequest": gr.GitServerLoginRequest,
     "GitServerLogin": gr.GitServerLogin,
     "GitServerList": gr.GitServerList,
+    # local-sync: PDF локальной сборки на сервере
+    "ProjectArtifactList": art.ProjectArtifactListResponse,
+    "PdfUploadResult": art.PdfUploadResponse,
 }
 
 

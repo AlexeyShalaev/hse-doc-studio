@@ -34,6 +34,19 @@ const isSyncResult = (
 ): result is SyncResult =>
   !!result && typeof (result as { outcome?: unknown }).outcome === "string";
 
+/** Как закончился запуск автосинхронизации (для хука `useAutoSync`). */
+export type AutoRunResult = {
+  operationId: string;
+  /** false: сбой операции; отмена и конфликт сбоем не считаются. */
+  ok: boolean;
+  at: number;
+  /** Сколько запусков подряд закончились сбоем, включая этот; успех обнуляет. */
+  failures: number;
+};
+
+/** Итог попытки запустить автосинхронизацию. */
+export type AutoStart = "started" | "joined" | "failed";
+
 export type SyncController = SyncView & {
   /** Операция, за которой следит экран (запущена здесь, в другой вкладке или до перезагрузки). */
   operation: GitOperation | undefined;
@@ -41,6 +54,13 @@ export type SyncController = SyncView & {
   isChecking: boolean;
   isCancelling: boolean;
   run: () => Promise<void>;
+  /**
+   * Запуск от автосинхронизации: те же дописывание правок и операция, но без тостов успеха и без
+   * перехода на экран конфликтов; сбой не показывается тостом сам, о нём говорит `autoResult`.
+   */
+  runAuto: () => Promise<AutoStart>;
+  /** Итог последней автозапущенной операции. */
+  autoResult: AutoRunResult | null;
   check: () => Promise<void>;
   cancel: () => void;
   /** То, что делает щелчок по основной части элемента. */
@@ -63,6 +83,7 @@ export const useSyncController = (projectId: string): SyncController => {
   const { status, ui } = view;
 
   const startSync = useStartSync();
+  const { mutateAsync: startSyncAsync } = startSync;
   const fetchRemote = useFetchRemote();
   const cancelOperation = useCancelOperation();
 
@@ -76,6 +97,10 @@ export const useSyncController = (projectId: string): SyncController => {
 
   const startingRef = useRef(false);
   const startedHere = useRef(new Set<string>());
+  // Операции, запущенные автосинхронизацией: успех молчит, экран конфликтов сам не открывается.
+  const autoRuns = useRef(new Set<string>());
+  const [autoResult, setAutoResult] = useState<AutoRunResult | null>(null);
+  const autoFailures = useRef(0);
   const handled = useRef(new Set<string>());
   // Когда итог показан по операции: новую запись last_sync, что появится в
   // состоянии следом, «погасим» без второго тоста.
@@ -96,7 +121,18 @@ export const useSyncController = (projectId: string): SyncController => {
   // --- итог операции -----------------------------------------------------------
 
   const announceFinished = useCallback(
-    (op: GitOperation, mine: boolean): void => {
+    (op: GitOperation, mine: boolean, auto: boolean): void => {
+      if (op.status === "failed" && auto) {
+        // Автосинхронизация повторит попытку сама; человеку один отчёт на серию сбоев.
+        if (autoFailures.current === 1) {
+          toast.warning(t("autoSync.toast.failed"), {
+            title: t("autoSync.toast.failedTitle"),
+            duration: 10_000,
+            action: { label: t("toast.details"), onClick: openPopover },
+          });
+        }
+        return;
+      }
       if (op.status === "failed") {
         const message = op.error
           ? gitErrorMessage(op.error.code, op.error.detail)
@@ -132,7 +168,9 @@ export const useSyncController = (projectId: string): SyncController => {
       }
 
       expectSyncRecordAt.current = Date.now();
-      const auto = result.auto.length;
+      // Фоновая синхронизация о себе не кричит: итог виден в состоянии проекта.
+      if (auto) return;
+      const autoChanges = result.auto.length;
       const base = ((): string => {
         switch (result.outcome) {
           case "up_to_date":
@@ -149,7 +187,9 @@ export const useSyncController = (projectId: string): SyncController => {
         }
       })();
       const message =
-        auto > 0 ? `${base}. ${t("toast.auto", { count: auto })}` : base;
+        autoChanges > 0
+          ? `${base}. ${t("toast.auto", { count: autoChanges })}`
+          : base;
       toast.success(message, {
         title: t("toast.syncedTitle"),
         ...(result.outcome === "up_to_date"
@@ -188,7 +228,19 @@ export const useSyncController = (projectId: string): SyncController => {
       if (op.project_id !== projectId) return;
       if (handled.current.has(op.id)) return;
       handled.current.add(op.id);
-      announceFinished(op, startedHere.current.has(op.id));
+      const auto = autoRuns.current.has(op.id);
+      const failed = op.status === "failed";
+      // Счёт неудач ведут и ручные запуски: удачная ручная синхронизация снимает остановку автосинхронизации.
+      if (auto || !failed) {
+        autoFailures.current = failed ? autoFailures.current + 1 : 0;
+        setAutoResult({
+          operationId: op.id,
+          ok: !failed,
+          at: Date.now(),
+          failures: autoFailures.current,
+        });
+      }
+      announceFinished(op, startedHere.current.has(op.id) && !auto, auto);
       // Слияние поменяло файлы, версии, подписи и формы.
       invalidateAfterSync(queryClient, projectId);
     });
@@ -236,41 +288,81 @@ export const useSyncController = (projectId: string): SyncController => {
 
   // --- действия ----------------------------------------------------------------
 
-  const run = useCallback(async (): Promise<void> => {
-    if (startingRef.current) return;
-    startingRef.current = true;
-    setIsStarting(true);
-    try {
-      // Правки в редакторах дописываются с задержкой; снимок без них вышел бы
-      // неполным, а сами они потом легли бы поверх слитых файлов.
-      const flushed = await flushPendingSaves();
-      if (flushed.failed > 0) {
-        toast.error(t("toast.saveFailed"), {
-          title: t("toast.saveFailedTitle"),
-          duration: 10_000,
-        });
-        return;
-      }
-      const { operation_id: operationId } =
-        await startSync.mutateAsync(projectId);
-      startedHere.current.add(operationId);
-      setStartedId(operationId);
-    } catch (error) {
-      const body = readGitError(error);
-      if (body?.code === "sync_busy" && body.operation_id) {
-        // Уже идёт: подключаемся к ней, как будто сами запустили.
-        startedHere.current.add(body.operation_id);
-        setStartedId(body.operation_id);
-        return;
-      }
-      toast.error(describeGitError(error, t("toast.failedUnknown")), {
-        title: t("toast.startFailedTitle"),
+  // Автосинхронизация не смогла даже начать (правки не сохранились, сервер отказал в запуске): тоже неудача.
+  const noteAutoStartFailure = useCallback((): void => {
+    autoFailures.current += 1;
+    if (autoFailures.current === 1) {
+      toast.warning(t("autoSync.toast.failed"), {
+        title: t("autoSync.toast.failedTitle"),
+        duration: 10_000,
+        action: { label: t("toast.details"), onClick: openPopover },
       });
-    } finally {
-      startingRef.current = false;
-      setIsStarting(false);
     }
-  }, [projectId, startSync, t]);
+    setAutoResult({
+      operationId: `start-failed-${String(autoFailures.current)}-${String(Date.now())}`,
+      ok: false,
+      at: Date.now(),
+      failures: autoFailures.current,
+    });
+  }, [openPopover, t]);
+
+  // Общий запуск: ручной (`auto = false`) говорит о сбоях тостами, автоматический молчит и возвращает итог.
+  const start = useCallback(
+    async (auto: boolean): Promise<AutoStart> => {
+      if (startingRef.current) return "joined";
+      startingRef.current = true;
+      setIsStarting(true);
+      const track = (id: string): void => {
+        startedHere.current.add(id);
+        if (auto) autoRuns.current.add(id);
+        setStartedId(id);
+      };
+      try {
+        // Правки в редакторах дописываются с задержкой; снимок без них вышел бы
+        // неполным, а сами они потом легли бы поверх слитых файлов.
+        const flushed = await flushPendingSaves();
+        if (flushed.failed > 0) {
+          if (auto) {
+            noteAutoStartFailure();
+          } else {
+            toast.error(t("toast.saveFailed"), {
+              title: t("toast.saveFailedTitle"),
+              duration: 10_000,
+            });
+          }
+          return "failed";
+        }
+        const { operation_id: operationId } = await startSyncAsync(projectId);
+        track(operationId);
+        return "started";
+      } catch (error) {
+        const body = readGitError(error);
+        if (body?.code === "sync_busy" && body.operation_id) {
+          // Уже идёт: подключаемся к ней, как будто сами запустили.
+          track(body.operation_id);
+          return "joined";
+        }
+        if (auto) {
+          noteAutoStartFailure();
+        } else {
+          toast.error(describeGitError(error, t("toast.failedUnknown")), {
+            title: t("toast.startFailedTitle"),
+          });
+        }
+        return "failed";
+      } finally {
+        startingRef.current = false;
+        setIsStarting(false);
+      }
+    },
+    [noteAutoStartFailure, projectId, startSyncAsync, t],
+  );
+
+  const run = useCallback(async (): Promise<void> => {
+    await start(false);
+  }, [start]);
+
+  const runAuto = useCallback((): Promise<AutoStart> => start(true), [start]);
 
   const check = useCallback(async (): Promise<void> => {
     try {
@@ -354,6 +446,8 @@ export const useSyncController = (projectId: string): SyncController => {
     isChecking: fetchRemote.isPending,
     isCancelling: cancelOperation.isPending,
     run,
+    runAuto,
+    autoResult,
     check,
     cancel,
     runPrimary,

@@ -44,6 +44,8 @@ import {
   ResolveConflictsRequestSchema,
   SaveConflictDraftRequestSchema,
   SyncResultSchema,
+  PdfPublishRequestSchema,
+  PdfPublishResponseSchema,
   UpdateGitSettingsRequestSchema,
 } from "@entities/git-sync";
 
@@ -83,6 +85,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   GitStatus: GitStatusSchema,
   ConnectRemoteRequest: ConnectRemoteRequestSchema,
   UpdateGitSettingsRequest: UpdateGitSettingsRequestSchema,
+  PdfPublishRequest: PdfPublishRequestSchema,
+  PdfPublishResponse: PdfPublishResponseSchema,
   GitContents: GitContentsSchema,
   ConflictSession: ConflictSessionSchema,
   ConflictFileDetail: ConflictFileDetailSchema,

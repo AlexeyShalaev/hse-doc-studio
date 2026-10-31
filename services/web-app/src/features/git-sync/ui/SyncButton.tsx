@@ -10,6 +10,8 @@ export type SyncButtonProps = {
   text: SyncText;
   /** Открыта ли панель подробностей. */
   isOpen: boolean;
+  /** Автосинхронизация включена: на кнопке стоит метка «Авто». */
+  auto?: boolean;
   /** Щелчок по основной части: действие по состоянию (синхронизировать, решить...). */
   onPrimary: () => void;
   /** Правый щелчок и долгое нажатие открывают панель, как стрелка справа. */
@@ -65,6 +67,7 @@ export const SyncButton = ({
   ui,
   text,
   isOpen,
+  auto = false,
   onPrimary,
   onToggleDetails,
 }: SyncButtonProps) => {
@@ -106,6 +109,15 @@ export const SyncButton = ({
             </span>
           )}
           <Counts ui={ui} />
+          {auto && (
+            <span
+              className="sync-count"
+              data-testid="sync-auto-badge"
+              title={t("autoSync.title")}
+            >
+              {t("autoSync.badge")}
+            </span>
+          )}
         </button>
         <PopoverTrigger asChild>
           <button

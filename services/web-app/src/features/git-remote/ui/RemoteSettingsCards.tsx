@@ -571,11 +571,16 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
       label: intervalLabel(seconds),
     })),
   ];
-  const pendingKind = update.isPending
-    ? "auto_fetch" in update.variables.params
-      ? "toggle"
-      : "interval"
+  const pendingParam = update.isPending
+    ? Object.keys(update.variables.params)[0]
     : null;
+  const pendingKind =
+    pendingParam === "auto_fetch"
+      ? "toggle"
+      : pendingParam === "interval_s"
+        ? "interval"
+        : null;
+  const pdf = status.pdf_upload;
 
   return (
     <div
@@ -583,6 +588,55 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
       style={{ gap: 12 }}
       data-testid="fetch-options"
     >
+      <SwitchRow
+        id="git-auto-sync"
+        label={t("settings.options.autoSync")}
+        hint={
+          status.auto_sync.explicit
+            ? t("settings.options.autoSyncHint")
+            : `${t("settings.options.autoSyncHint")} ${t("settings.options.autoSyncDefault")}`
+        }
+        checked={status.auto_sync.enabled}
+        disabled={update.isPending}
+        busy={pendingParam === "auto_sync"}
+        onChange={(next) => {
+          update.mutate({ projectId, params: { auto_sync: next } });
+        }}
+      />
+
+      {pdf.available && (
+        <>
+          <SwitchRow
+            id="git-pdf-upload"
+            label={t("settings.options.pdfUpload")}
+            hint={t("settings.options.pdfUploadHint")}
+            checked={pdf.enabled}
+            disabled={update.isPending}
+            busy={pendingParam === "pdf_upload"}
+            onChange={(next) => {
+              update.mutate({ projectId, params: { pdf_upload: next } });
+            }}
+          />
+          {pdf.last && (
+            <span
+              className="dim"
+              style={{ fontSize: 11 }}
+              data-testid="pdf-upload-last"
+            >
+              {pdf.last.ok
+                ? t("settings.options.pdfUploadOk", {
+                    doc: pdf.last.doc_id,
+                    when: formatRelativeTime(pdf.last.at),
+                  })
+                : t("settings.options.pdfUploadFailed", {
+                    doc: pdf.last.doc_id,
+                    reason: pdf.last.message ?? pdf.last.error ?? "",
+                  })}
+            </span>
+          )}
+        </>
+      )}
+
       <SwitchRow
         id="git-auto-fetch"
         label={t("settings.options.autoFetch")}

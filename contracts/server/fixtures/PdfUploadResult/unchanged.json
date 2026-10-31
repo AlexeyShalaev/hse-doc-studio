@@ -1,0 +1,18 @@
+{
+  "artifact": {
+    "id": "7a2e6d0f-4c63-4f1b-8e7b-3c205d8b9f21",
+    "kind": "pdf",
+    "doc_id": "coursework",
+    "file_name": "coursework.pdf",
+    "size": 1024,
+    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "pages": null,
+    "source_commit": null,
+    "built_at": null,
+    "uploaded_at": "2026-11-02T10:00:00Z",
+    "uploaded_by_name": null,
+    "client_name": null,
+    "file_url": "/api/v1/projects/5b0c1d2e-3f40-4152-8364-758697a8b9c0/artifacts/7a2e6d0f-4c63-4f1b-8e7b-3c205d8b9f21/file"
+  },
+  "created": false
+}

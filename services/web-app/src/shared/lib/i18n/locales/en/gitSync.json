@@ -389,5 +389,42 @@
   "pushRejected": {
     "title": "The server rejected the push",
     "lead": "Nothing was pushed. Fix the listed problems and sync again."
+  },
+  "autoSync": {
+    "title": "Auto sync",
+    "badge": "Auto",
+    "switch": "Sync automatically",
+    "hint": "After a pause in editing the project goes to the server by itself, and incoming changes arrive while you have no unsent edits. A conflict stops auto sync.",
+    "default": "On by default for projects from a Studio server.",
+    "state": {
+      "off": "Off: sync manually",
+      "watching": "Watching for edits",
+      "waiting": "Will sync after a pause in editing",
+      "running": "Syncing…",
+      "retrying": "Did not work, will retry shortly",
+      "stopped": "Stopped"
+    },
+    "stop": {
+      "conflicts": "conflicts need to be resolved",
+      "auth_failed": "no access to the server",
+      "blocked": "sync is unavailable",
+      "no_remote": "no repository connected",
+      "offline": "offline, will continue when the network is back",
+      "failed": "several failures in a row, press Sync",
+      "read_only": "the project is read-only",
+      "busy": "a sync is running",
+      "unknown": "unknown state",
+      "disabled": "off"
+    },
+    "toast": {
+      "failedTitle": "Auto sync failed",
+      "failed": "Will retry later. If that fails too, it stops and tells you why."
+    }
+  },
+  "pdfUpload": {
+    "title": "PDF on the server",
+    "ok": "{{doc}}: uploaded {{when}}",
+    "failed": "{{doc}}: not uploaded ({{reason}})",
+    "none": "Built PDFs go to the server after a build"
   }
 }

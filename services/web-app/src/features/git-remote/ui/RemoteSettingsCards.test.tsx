@@ -455,6 +455,86 @@ describe("фоновая проверка в настройках проекта
     ).toBeDisabled();
   });
 
+  it("выключатель автосинхронизации отправляет auto_sync и объясняет умолчание", async () => {
+    const user = userEvent.setup();
+    const update = vi
+      .spyOn(gitSyncApi, "updateSettings")
+      .mockResolvedValue(
+        connected({ auto_sync: { enabled: false, explicit: true } }),
+      );
+    renderSettings(<FetchOptionsCard projectId={PROJECT_ID} />, {
+      status: connected({ auto_sync: { enabled: true, explicit: false } }),
+    });
+    const toggle = screen.getByRole("switch", {
+      name: "Синхронизировать автоматически",
+    });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(
+      screen.getByText(/Сейчас действует настройка по умолчанию/),
+    ).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith(PROJECT_ID, { auto_sync: false });
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("switch", { name: "Синхронизировать автоматически" }),
+      ).toHaveAttribute("aria-checked", "false");
+    });
+    expect(
+      screen.queryByText(/Сейчас действует настройка по умолчанию/),
+    ).toBeNull();
+  });
+
+  it("выгрузка PDF есть только у проекта с сервера Студии", async () => {
+    const user = userEvent.setup();
+    const update = vi.spyOn(gitSyncApi, "updateSettings").mockResolvedValue(
+      connected({
+        pdf_upload: { enabled: false, available: true, last: null },
+      }),
+    );
+    const { unmount } = renderSettings(
+      <FetchOptionsCard projectId={PROJECT_ID} />,
+      { status: connected() },
+    );
+    expect(
+      screen.queryByRole("switch", {
+        name: "Выгружать PDF на сервер после сборки",
+      }),
+    ).toBeNull();
+    unmount();
+
+    renderSettings(<FetchOptionsCard projectId={PROJECT_ID} />, {
+      status: connected({
+        pdf_upload: {
+          enabled: true,
+          available: true,
+          last: {
+            doc_id: "coursework",
+            at: "2026-11-02T10:00:00Z",
+            ok: false,
+            error: "pdf_forbidden",
+            message: "Выгружать PDF может редактор",
+          },
+        },
+      }),
+    });
+    expect(screen.getByTestId("pdf-upload-last").textContent).toContain(
+      "Последний PDF (coursework) не выгружен: Выгружать PDF может редактор",
+    );
+    await user.click(
+      screen.getByRole("switch", {
+        name: "Выгружать PDF на сервер после сборки",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith(PROJECT_ID, { pdf_upload: false });
+    });
+  });
+
   it("выбор интервала отправляет секунды, «по умолчанию» отправляет null", async () => {
     const user = userEvent.setup();
     const update = vi.spyOn(gitSyncApi, "updateSettings").mockResolvedValue(

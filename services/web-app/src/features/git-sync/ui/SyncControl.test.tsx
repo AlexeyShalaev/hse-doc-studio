@@ -6,7 +6,8 @@ import {
   useSyncUiStore,
   type SyncStatusView,
 } from "@entities/git-sync";
-import { useToastStore } from "@shared/lib";
+import { noteProjectEdit, resetProjectEdits, useToastStore } from "@shared/lib";
+import { AUTO_SYNC_DEBOUNCE_MS } from "../model/autoSync.model";
 import {
   commit,
   connected,
@@ -290,5 +291,97 @@ describe("SyncControl popover", () => {
     await waitFor(() => {
       expect(start).toHaveBeenCalledWith(PROJECT_ID);
     });
+  });
+});
+
+describe("SyncControl auto sync", () => {
+  beforeEach(async () => {
+    resetProjectEdits();
+    await resetSyncEnvironment();
+    useToastStore.getState().clear();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("marks the button with an auto badge only while auto sync is on", async () => {
+    const { unmount } = await mountWith(
+      connected({ auto_sync: { enabled: true, explicit: false } }),
+    );
+    expect(screen.getByTestId("sync-auto-badge").textContent).toBe("Авто");
+    unmount();
+
+    await mountWith(
+      connected({ auto_sync: { enabled: false, explicit: true } }),
+    );
+    expect(screen.queryByTestId("sync-auto-badge")).toBeNull();
+  });
+
+  it("shows the auto sync switch in the panel and saves the choice", async () => {
+    const user = userEvent.setup();
+    const update = vi
+      .spyOn(gitSyncApi, "updateSettings")
+      .mockResolvedValue(
+        connected({ auto_sync: { enabled: false, explicit: true } }),
+      );
+    await mountWith(
+      connected({ auto_sync: { enabled: true, explicit: false } }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Подробности синхронизации" }),
+    );
+    await user.click(await screen.findByRole("switch"));
+
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith(PROJECT_ID, { auto_sync: false });
+    });
+  });
+
+  it("pushes by itself after the pause that follows an edit", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    try {
+      const start = vi
+        .spyOn(gitSyncApi, "startSync")
+        .mockResolvedValue({ operation_id: "op-auto" });
+      vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue({
+        id: "op-auto",
+        kind: "sync",
+        project_id: PROJECT_ID,
+        status: "running",
+        phase: "snapshot",
+        percent: null,
+        message: null,
+        cancellable: true,
+        started_at: "2026-11-02T10:00:00Z",
+        finished_at: null,
+        result: null,
+        error: null,
+      });
+      const status = connected({
+        ui_state: "ahead",
+        relation: "ahead",
+        ahead: 1,
+        auto_sync: { enabled: true, explicit: false },
+      });
+      vi.spyOn(gitSyncApi, "getStatus").mockResolvedValue(status);
+      vi.spyOn(gitSyncApi, "fetchRemote").mockResolvedValue(status);
+      renderSync(<SyncControl projectId={PROJECT_ID} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      act(() => {
+        noteProjectEdit(PROJECT_ID);
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(AUTO_SYNC_DEBOUNCE_MS + 500);
+      });
+
+      expect(start).toHaveBeenCalledWith(PROJECT_ID);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

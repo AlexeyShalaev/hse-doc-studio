@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { noteProjectEdit } from "@shared/lib/editActivity";
 import { formApi } from "./formApi";
 import type { FormData, UpdateFormRequest } from "./formApi";
 
@@ -46,6 +47,7 @@ export const useUpdateForm = () => {
     mutationFn: ({ projectId, formId, body }) =>
       formApi.update(projectId, formId, body),
     onSuccess: (data, { projectId, formId }) => {
+      noteProjectEdit(projectId);
       queryClient.setQueryData(formKeys.detail(projectId, formId), data);
       // The rendered preview + the list's complete/completed flags now stale.
       void queryClient.invalidateQueries({

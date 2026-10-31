@@ -458,7 +458,12 @@ describe("useSyncController", () => {
       await act(async () => {
         await env.result.current.controller.run();
       });
-      return { ...env, finish: () => finish(final) };
+      return {
+        ...env,
+        finish: () => {
+          finish(final);
+        },
+      };
     };
 
     it("shows one toast when the status with last_sync arrives before the operation", async () => {
@@ -641,5 +646,151 @@ describe("useSyncController", () => {
       await result.current.controller.check();
     });
     expect(toasts()[0]?.message).toBe("В репозитории новых версий: 2");
+  });
+
+  describe("automatic runs", () => {
+    it("start quietly: no success toast, and the result is reported to auto sync", async () => {
+      vi.spyOn(gitSyncApi, "startSync").mockResolvedValue({
+        operation_id: "op-a",
+      });
+      vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+        operation({ id: "op-a" }),
+      );
+      const { result } = setup();
+      await waitFor(() => {
+        expect(result.current.controller.ui.visible).toBe(true);
+      });
+
+      let started = "";
+      await act(async () => {
+        started = await result.current.controller.runAuto();
+      });
+
+      expect(started).toBe("started");
+      await waitFor(() => {
+        expect(result.current.controller.autoResult).toMatchObject({
+          operationId: "op-a",
+          ok: true,
+        });
+      });
+      expect(toasts()).toHaveLength(0);
+    });
+
+    it("do not open the conflict screen by themselves but keep the standing toast", async () => {
+      vi.spyOn(gitSyncApi, "startSync").mockResolvedValue({
+        operation_id: "op-a",
+      });
+      vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+        operation({
+          id: "op-a",
+          result: {
+            ...RESULT,
+            outcome: "conflicts",
+            conflicts: { files_total: 2, files_open: 2 },
+          },
+        }),
+      );
+      const { result } = setup();
+      await waitFor(() => {
+        expect(result.current.controller.ui.visible).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.controller.runAuto();
+      });
+
+      await waitFor(() => {
+        expect(toasts()).toHaveLength(1);
+      });
+      expect(toasts()[0]).toMatchObject({ kind: "warning", duration: 0 });
+      expect(result.current.loc.pathname).toBe(
+        `/projects/${PROJECT_ID}/documents`,
+      );
+      // Конфликт не сбой: автосинхронизация встаёт по состоянию проекта, а не по счётчику неудач.
+      expect(result.current.controller.autoResult?.ok).toBe(true);
+    });
+
+    it("report a failed operation with one calm warning per streak, not an error", async () => {
+      vi.spyOn(gitSyncApi, "startSync").mockResolvedValue({
+        operation_id: "op-a",
+      });
+      vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+        operation({
+          id: "op-a",
+          status: "failed",
+          result: null,
+          error: { code: "offline", detail: "нет связи" },
+        }),
+      );
+      const { result } = setup();
+      await waitFor(() => {
+        expect(result.current.controller.ui.visible).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.controller.runAuto();
+      });
+
+      await waitFor(() => {
+        expect(result.current.controller.autoResult).toMatchObject({
+          operationId: "op-a",
+          ok: false,
+          failures: 1,
+        });
+      });
+      expect(toasts().map((t) => [t.kind, t.title])).toEqual([
+        ["warning", "Автосинхронизация не удалась"],
+      ]);
+    });
+
+    it("do not start when an editor could not save: a failure without the manual error toast", async () => {
+      const unregister = registerPendingSave(() => {
+        throw new Error("disk full");
+      });
+      try {
+        const start = vi.spyOn(gitSyncApi, "startSync");
+        const { result } = setup();
+        await waitFor(() => {
+          expect(result.current.controller.ui.visible).toBe(true);
+        });
+
+        let outcome = "";
+        await act(async () => {
+          outcome = await result.current.controller.runAuto();
+        });
+
+        expect(outcome).toBe("failed");
+        expect(start).not.toHaveBeenCalled();
+        expect(result.current.controller.autoResult).toMatchObject({
+          ok: false,
+          failures: 1,
+        });
+        expect(toasts().map((t) => t.title)).toEqual([
+          "Автосинхронизация не удалась",
+        ]);
+      } finally {
+        unregister();
+      }
+    });
+
+    it("join an operation that is already running", async () => {
+      vi.spyOn(gitSyncApi, "startSync").mockRejectedValue(
+        new ApiError("busy", "sync_busy", 409, { operation_id: "op-x" }),
+      );
+      vi.spyOn(gitSyncApi, "getOperation").mockResolvedValue(
+        operation({ id: "op-x", status: "running", result: null }),
+      );
+      const { result } = setup();
+      await waitFor(() => {
+        expect(result.current.controller.ui.visible).toBe(true);
+      });
+
+      let outcome = "";
+      await act(async () => {
+        outcome = await result.current.controller.runAuto();
+      });
+
+      expect(outcome).toBe("joined");
+    });
   });
 });

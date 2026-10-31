@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { FileText, LayoutDashboard } from "lucide-react";
 import { useDocuments } from "@entities/document";
+import { useProject } from "@entities/project";
+import { useCapabilities } from "@entities/session";
+import { PdfArtifactsCard } from "@features/project-artifacts";
 import { TemplateUpdateCard } from "@features/template-update";
 import { Spinner } from "@shared/ui";
 import { PageHead } from "./PageHead";
@@ -37,6 +40,8 @@ const StatusRow = ({ sev, count, label }: StatusRowProps) => (
 export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
   const { t } = useTranslation("workbench");
   const { data: documents, isLoading } = useDocuments(projectId);
+  const { has } = useCapabilities();
+  const { data: project } = useProject(projectId);
 
   const docs = documents ?? [];
   const total = docs.length;
@@ -111,6 +116,15 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
           )}
         </SectionCard>
       </div>
+
+      {has("git_remote") && (
+        <div style={{ marginTop: 14 }}>
+          <PdfArtifactsCard
+            projectId={projectId}
+            canDelete={project?.access?.mode === "full"}
+          />
+        </div>
+      )}
 
       {firstDoc && (
         <button

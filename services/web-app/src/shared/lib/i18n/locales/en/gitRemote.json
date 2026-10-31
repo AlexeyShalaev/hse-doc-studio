@@ -371,7 +371,7 @@
     },
     "options": {
       "autoFetch": "Check the repository in the background",
-      "autoFetchHint": "The Studio finds out that colleagues sent something new and shows it on the sync button. Nothing is downloaded into the project until you sync.",
+      "autoFetchHint": "Studio finds out on its own that colleagues sent something new and shows it on the sync button. Nothing is downloaded into the project until you sync (or auto sync is on).",
       "interval": "How often to check",
       "intervalDefault": "Same as default ({{interval}})",
       "intervalOff": "off",
@@ -380,7 +380,14 @@
       "neverChecked": "The repository has not been checked yet.",
       "personalNote": "These are personal Studio settings on this computer. They are not shared with colleagues and do not go into the repository.",
       "defaultLink": "Default interval",
-      "saveFailed": "Could not save the setting."
+      "saveFailed": "Could not save the setting.",
+      "autoSync": "Sync automatically",
+      "autoSyncHint": "After a pause in editing the project goes to the server by itself, and incoming changes arrive while you have no unsent edits. A conflict stops auto sync and opens the usual merge screen.",
+      "autoSyncDefault": "The default applies: auto sync is on for projects from a Studio server and off for the rest.",
+      "pdfUpload": "Upload the PDF to the server after a build",
+      "pdfUploadHint": "A PDF built on this computer goes to the Studio server and opens on the site for everyone who can see the project. Up to 100 MB; the server keeps the latest versions.",
+      "pdfUploadOk": "The last PDF ({{doc}}) was uploaded {{when}}.",
+      "pdfUploadFailed": "The last PDF ({{doc}}) was not uploaded: {{reason}}"
     },
     "interval": {
       "minutes": "{{count}} min",
