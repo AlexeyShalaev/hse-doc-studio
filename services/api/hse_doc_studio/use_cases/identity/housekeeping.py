@@ -18,6 +18,8 @@ from hse_doc_studio.core.identity.protocols import (
     ISessionRepository,
 )
 from hse_doc_studio.core.identity.session_policy import MAX_LOGIN_DELAY, Clock, utc_now
+from hse_doc_studio.core.invitations.entities import NOTIFICATION_RETENTION
+from hse_doc_studio.core.invitations.protocols import INotificationRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -31,6 +33,7 @@ class AuthCleanupReport:
     auth_tokens: int = 0
     mail_outbox: int = 0
     login_attempts: int = 0
+    notifications: int = 0
 
 
 class AuthCleanupService:
@@ -43,6 +46,7 @@ class AuthCleanupService:
         *,
         attempt_ttl: timedelta = LOGIN_ATTEMPT_TTL,
         clock: Clock = utc_now,
+        notifications: INotificationRepository | None = None,
     ) -> None:
         self._sessions = sessions
         self._auth_tokens = auth_tokens
@@ -50,6 +54,8 @@ class AuthCleanupService:
         self._attempts = attempts
         self._attempt_ttl = attempt_ttl
         self._clock = clock
+        # invites: уведомления «Входящих» хранятся 90 дней (S15).
+        self._notifications = notifications
 
     async def run(self) -> AuthCleanupReport:
         """Удаляет просроченное; сбой одной таблицы не мешает остальным, но не скрывается."""
@@ -61,6 +67,11 @@ class AuthCleanupService:
             ("auth_tokens", lambda: self._auth_tokens.delete_expired(now)),
             ("mail_outbox", lambda: self._outbox.delete_expired(now)),
             ("login_attempts", lambda: self._attempts.delete_stale(now - self._attempt_ttl)),
+            *(
+                (("notifications", lambda: notifications.purge(now - NOTIFICATION_RETENTION)),)
+                if (notifications := self._notifications) is not None
+                else ()
+            ),
         ):
             try:
                 setattr(report, name, await delete())
