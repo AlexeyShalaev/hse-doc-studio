@@ -55,6 +55,7 @@ from hse_doc_studio.api.routers.v1 import (
     synctex,
     system,
     template_update,
+    usage,
     vcs,
 )
 
@@ -122,3 +123,5 @@ api_router.include_router(share_link_public.router, tags=["sharing"])
 # invites: приглашения, запросы доступа, передача владения, «Входящие»
 api_router.include_router(project_invitations.router, tags=["projects"])
 api_router.include_router(account_invitations.router, tags=["account"])
+# quotas: использование квот человека и организации
+api_router.include_router(usage.router, tags=["quotas"])

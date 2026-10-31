@@ -26,6 +26,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     from hse_doc_studio.infra.di.providers.server_invitations import ServerInvitationsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_jobs import ServerJobsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_persistence import ServerPersistenceProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_quotas import ServerQuotasProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_services import ServerServicesProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_sharing import ServerSharingProvider  # noqa: PLC0415
 
@@ -34,6 +35,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerIdentityProvider(),
         ServerJobsProvider(),
         ServerAdminOpsProvider(),
+        ServerQuotasProvider(),
         ServerServicesProvider(),
         ServerAiRelayProvider(),
         ServerSharingProvider(),

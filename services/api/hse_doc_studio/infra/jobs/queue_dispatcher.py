@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import os
 import stat
 from collections.abc import Awaitable, Callable, Sequence
@@ -37,7 +38,14 @@ from hse_doc_studio.core.jobs.applier import (
 )
 from hse_doc_studio.core.jobs.codec import decode, decode_envelope, decode_result, encode_envelope
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
-from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobState, JobStatus, RunnerErrorCode
+from hse_doc_studio.core.jobs.enums import (
+    JobErrorCategory,
+    JobKind,
+    JobPriorityClass,
+    JobState,
+    JobStatus,
+    RunnerErrorCode,
+)
 from hse_doc_studio.core.jobs.errors import JobError, NoRunnerAvailableError, QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload
@@ -52,6 +60,9 @@ from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
+from hse_doc_studio.core.quotas.errors import QUOTA_EXCEEDED, QuotaExceededError
+from hse_doc_studio.core.quotas.kinds import QuotaKind
+from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
@@ -116,8 +127,11 @@ class QueueJobDispatcher:
         wakeup: JobWakeup | None = None,
         router: IJobRouter | None = None,
         payer: PayerSource | None = None,
+        quota_gate: IQuotaGate | None = None,
     ) -> None:
         self._wakeup = wakeup
+        # Сборка на общем маршруте тратит квоту сборок; на личном раннере не тратит (D5).
+        self._quota_gate = quota_gate
         self._router = router
         # links: от чьего имени ставится задача гостя по ссылке (S7); без него только пользователь сам.
         self._payer = payer
@@ -482,7 +496,14 @@ class QueueJobDispatcher:
         """Маршрут и постановка под одним замком: следующая постановка видит эту задачу в нагрузке."""
         decision = await self._route(spec, user_id)
         personal = decision is not None and decision.route is JobRoute.personal_first
-        return await self._queue.enqueue(
+        priority_class = policy.priority_class
+        metered = self._quota_gate is not None and spec.kind is JobKind.compile and not personal
+        if metered:
+            assert self._quota_gate is not None  # noqa: S101 — metered выставлен только при наличии шлюза
+            admission = await self._quota_gate.admit(QuotaKind.builds, user_id, org_id)
+            if admission.deprioritize:
+                priority_class = JobPriorityClass.low
+        outcome = await self._queue.enqueue(
             EnqueueRequest(
                 job_id=spec.id,
                 kind=spec.kind,
@@ -491,7 +512,7 @@ class QueueJobDispatcher:
                 org_id=org_id,
                 tags=spec.tags,
                 payload=payload,
-                priority_class=policy.priority_class,
+                priority_class=priority_class,
                 coalesce_key=_coalesce_key(spec),
                 max_attempts=policy.max_attempts,
                 timeout_s=timeout,
@@ -502,6 +523,10 @@ class QueueJobDispatcher:
                 timeout_personal_s=unquoted_timeout if personal and unquoted_timeout != timeout else None,
             )
         )
+        if metered:
+            assert self._quota_gate is not None  # noqa: S101
+            await self._quota_gate.charge(QuotaKind.builds, user_id, org_id)
+        return outcome
 
     async def _route(self, spec: JobSpec, user_id: UUID) -> RouteDecision | None:
         """Без маршрутизатора (тесты, старые сборки контейнера) всё идёт на общие раннеры, как до личных."""
@@ -608,6 +633,18 @@ def _artifacts_of(job: QueuedJob) -> tuple[ArtifactRef, ...]:
 def _staging_failure(spec: JobSpec, exc: Exception) -> JobResult:
     if isinstance(exc, ManifestError):
         error = JobError(JobErrorCategory.invalid_input, exc.code, str(exc))
+    elif isinstance(exc, QuotaExceededError):
+        # Интерфейс разбирает detail: ресурс, чей счётчик, расход, предел и дата сброса.
+        detail = json.dumps(
+            {
+                "resource": exc.kind.value,
+                "scope": exc.scope.value,
+                "used": exc.used,
+                "limit": exc.limit,
+                "resets_at": exc.resets_at.isoformat() if exc.resets_at is not None else None,
+            }
+        )
+        error = JobError(JobErrorCategory.unavailable, QUOTA_EXCEEDED, detail)
     else:
         error = JobError(JobErrorCategory.internal, ERROR_CODE_STAGING_FAILED, str(exc))
     data = CompileResult(build_ok=False, finished_at=_utc_now()) if spec.kind is JobKind.compile else None

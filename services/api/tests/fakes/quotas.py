@@ -51,6 +51,7 @@ class InMemoryFootprint:
         self.owners: dict[UUID, ProjectOwner] = {}
         self.storage: dict[tuple[QuotaOwnerKind, str], int] = {}
         self.members: dict[UUID, int] = {}
+        self.existing: set[tuple[UUID, str, str]] = set()
 
     async def project_owner(self, project_id: UUID) -> ProjectOwner | None:
         return self.owners.get(project_id)
@@ -63,6 +64,9 @@ class InMemoryFootprint:
 
     async def member_count(self, project_id: UUID) -> int:
         return self.members.get(project_id, 0)
+
+    async def has_member(self, project_id: UUID, principal_kind: str, principal_id: str) -> bool:
+        return (project_id, principal_kind, principal_id) in self.existing
 
     async def max_members(self, owner_kind: QuotaOwnerKind, owner_id: str) -> int:
         ids = [

@@ -1,4 +1,4 @@
-"""quotas_gateway: счётчики расхода по периодам, журнал ИИ-шлюза, 64-битные пределы квот
+"""quotas_gateway: счётчики расхода по периодам, журнал ИИ-шлюза, точные пределы квот
 
 Revision ID: s6_01_quotas_gateway
 Revises: ls_01_project_artifacts
@@ -17,9 +17,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Байты и токены не влезают в 32 бита.
-    op.alter_column("quotas", "hard_limit", existing_type=sa.Integer(), type_=sa.BigInteger(), existing_nullable=False)
-    op.alter_column("quotas", "soft_limit", existing_type=sa.Integer(), type_=sa.BigInteger(), existing_nullable=True)
+    # Байты и токены не влезают в 32 бита; менять тип нельзя (expand/contract), поэтому точное значение рядом.
+    op.add_column("quotas", sa.Column("hard_limit_big", sa.BigInteger(), nullable=True))
     op.create_table(
         "usage_counters",
         sa.Column("owner_kind", sa.String(length=16), nullable=False),
@@ -62,8 +61,4 @@ def downgrade() -> None:
     op.drop_table("ai_usage")
     op.drop_index("ix_usage_counters_period", table_name="usage_counters")
     op.drop_table("usage_counters")
-    # Значения вне 32 бит не помещаются обратно: их сначала ограничиваем.
-    op.execute("UPDATE quotas SET hard_limit = LEAST(hard_limit, 2147483647)")
-    op.execute("UPDATE quotas SET soft_limit = LEAST(soft_limit, 2147483647)")
-    op.alter_column("quotas", "soft_limit", existing_type=sa.BigInteger(), type_=sa.Integer(), existing_nullable=True)
-    op.alter_column("quotas", "hard_limit", existing_type=sa.BigInteger(), type_=sa.Integer(), existing_nullable=False)
+    op.drop_column("quotas", "hard_limit_big")

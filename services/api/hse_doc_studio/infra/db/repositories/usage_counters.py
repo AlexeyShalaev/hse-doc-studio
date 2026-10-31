@@ -137,6 +137,15 @@ class SqlOwnerFootprint:
         async with self._sessions.use() as session:
             return int((await session.execute(stmt)).scalar_one())
 
+    async def has_member(self, project_id: UUID, principal_kind: str, principal_id: str) -> bool:
+        stmt = select(ProjectMemberRow.project_id).where(
+            ProjectMemberRow.project_id == project_id,
+            ProjectMemberRow.principal_kind == principal_kind,
+            ProjectMemberRow.principal_id == principal_id,
+        )
+        async with self._sessions.use() as session:
+            return (await session.execute(stmt)).first() is not None
+
     async def max_members(self, owner_kind: QuotaOwnerKind, owner_id: str) -> int:
         counts = (
             select(func.count().label("n"))

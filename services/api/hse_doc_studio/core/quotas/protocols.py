@@ -8,6 +8,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.quotas import QuotaOwnerKind
 from hse_doc_studio.core.quotas.kinds import QuotaKind
+from hse_doc_studio.core.quotas.policy import Assessment
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,32 @@ class CounterTotal:
     owner_kind: QuotaOwnerKind
     owner_id: str
     used: int
+
+
+@dataclass(frozen=True)
+class Admission:
+    """Итог допуска: `deprioritize` ставит сборку в конец очереди, `warning` несёт превышение."""
+
+    deprioritize: bool = False
+    warning: Assessment | None = None
+
+
+class IQuotaGate(Protocol):
+    """Допуск по квотам для мест, где расход возникает: очередь, запись файлов, участники, ИИ-шлюз."""
+
+    async def admit(self, kind: QuotaKind, user_id: UUID | None, org_id: UUID | None, amount: int = 1) -> Admission:
+        """Пропускает расход или бросает `QuotaExceededError` по политике установки."""
+        ...
+
+    async def charge(self, kind: QuotaKind, user_id: UUID | None, org_id: UUID | None, amount: int = 1) -> None: ...
+
+    async def check_storage_write(self, project_id: UUID, delta_bytes: int) -> None: ...
+
+    async def ensure_member_slot(
+        self, project_id: UUID, principal_kind: str | None = None, principal_id: str | None = None
+    ) -> None:
+        """Место для нового участника; уже состоящий в проекте слот не занимает."""
+        ...
 
 
 class IUsageCounters(Protocol):
@@ -62,6 +89,8 @@ class IOwnerFootprint(Protocol):
         ...
 
     async def member_count(self, project_id: UUID) -> int: ...
+
+    async def has_member(self, project_id: UUID, principal_kind: str, principal_id: str) -> bool: ...
 
     async def max_members(self, owner_kind: QuotaOwnerKind, owner_id: str) -> int:
         """Наибольшее число участников среди живых проектов владельца."""
