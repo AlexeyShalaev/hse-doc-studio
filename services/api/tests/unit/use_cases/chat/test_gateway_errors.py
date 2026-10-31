@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
@@ -10,6 +11,13 @@ from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.quotas.kinds import QuotaKind, QuotaScope
 from hse_doc_studio.use_cases.chat._support import describe_run_error, run_error_code
+
+
+@pytest.fixture(autouse=True)
+def _restore_language() -> Iterator[None]:
+    """Язык интерфейса общий на процесс: не оставляем чужим тестам английский."""
+    yield
+    set_interface_language(None)
 
 
 @pytest.mark.parametrize(

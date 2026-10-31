@@ -19,8 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 pytestmark = pytest.mark.pg
 
-NOW = datetime.now(UTC)
-
 
 def _runner(name: str, *, seen: timedelta | None, concurrency: int = 2, **kwargs: object) -> Runner:
     return Runner(
@@ -31,8 +29,8 @@ def _runner(name: str, *, seen: timedelta | None, concurrency: int = 2, **kwargs
         concurrency=concurrency,
         resource_class="std",
         version="1",
-        created_at=NOW,
-        last_seen_at=NOW - seen if seen is not None else None,
+        created_at=datetime.now(UTC),
+        last_seen_at=datetime.now(UTC) - seen if seen is not None else None,
         **kwargs,  # type: ignore[arg-type]
     )
 
@@ -57,15 +55,19 @@ async def test__read__counts_only_the_shared_pool(pg_migrated_engine: AsyncEngin
         _runner("live-b", seen=timedelta(seconds=30), concurrency=3),
         _runner("silent", seen=timedelta(minutes=10)),
         _runner("paused", seen=timedelta(seconds=5), paused=True),
-        _runner("revoked", seen=timedelta(seconds=5), revoked_at=NOW),
-        _runner("goodbye", seen=timedelta(seconds=5), offline_at=NOW),
+        _runner("revoked", seen=timedelta(seconds=5), revoked_at=datetime.now(UTC)),
+        _runner("goodbye", seen=timedelta(seconds=5), offline_at=datetime.now(UTC)),
     ):
         await runners.add(item)
 
     await queue.enqueue(_job())
     await queue.enqueue(_job())
     await queue.enqueue(
-        _job(route=JobRoute.personal_first, route_owner_id=uuid4().hex, personal_until=NOW + timedelta(seconds=30))
+        _job(
+            route=JobRoute.personal_first,
+            route_owner_id=uuid4().hex,
+            personal_until=datetime.now(UTC) + timedelta(seconds=30),
+        )
     )
     await queue.enqueue(_job())
     await queue.claim(RunnerRef(id=uuid4(), tags=frozenset({"tex"}), concurrency=1), lease_s=45.0)

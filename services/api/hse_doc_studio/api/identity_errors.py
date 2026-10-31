@@ -18,6 +18,7 @@ _UNAUTHORIZED = 401
 _FORBIDDEN = 403
 _INPUT = 422
 _STATE = 409
+_TOO_LARGE = 413
 _LIMIT = 429
 _NOT_FOUND = 404
 _UNAVAILABLE = 503
@@ -75,6 +76,11 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.remote_runner_url_invalid: _INPUT,
     IdentityErrorCode.remote_runner_unreachable: _BAD_GATEWAY,
     IdentityErrorCode.remote_runner_disabled: _STATE,
+    # Квоты и ИИ-шлюз: те же статусы, что отдают api/quota_errors.py (там же числа в теле).
+    IdentityErrorCode.quota_exceeded: _LIMIT,
+    IdentityErrorCode.owner_storage_exceeded: _TOO_LARGE,
+    IdentityErrorCode.ai_model_not_allowed: _FORBIDDEN,
+    IdentityErrorCode.ai_provider_unavailable: _UNAVAILABLE,
     IdentityErrorCode.links_disabled: _FORBIDDEN,
     IdentityErrorCode.link_limit: _STATE,
     IdentityErrorCode.link_role_too_high: _INPUT,
