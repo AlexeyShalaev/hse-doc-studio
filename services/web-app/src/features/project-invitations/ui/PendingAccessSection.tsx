@@ -19,20 +19,29 @@ import { PendingAccessView } from "./PendingAccessView";
 export type PendingAccessSectionProps = {
   projectId: string;
   myRole: ProjectRole | null;
-  /** Право решать доступ (владелец или редактор с правом делиться). */
-  canManage?: boolean;
 };
 
-/** Слот «Ожидают» панели «Доступ»: данные, повтор, отзыв и решения по запросам. */
+/**
+ * Слот «Ожидают» панели «Доступ»: данные, повтор, отзыв и решения по запросам.
+ *
+ * ACCESS_MANAGE (владелец или редактор с `can_share`) панель не знает заранее: роль одна приходит в `myRole`,
+ * а `can_share` самого смотрящего в бутстрапе проекта нет (10.7). Владелец и редактор — единственные роли,
+ * у кого это право вообще может быть (policy.ACCESS_MANAGE нет у читателя и рецензента); для них секция
+ * запрашивает списки и прячет себя, если сервер ответил `forbidden` (значит, у редактора нет `can_share`).
+ */
 export const PendingAccessSection = ({
   projectId,
   myRole,
-  canManage = myRole === "owner",
 }: PendingAccessSectionProps) => {
   const { t, i18n } = useTranslation("invitations");
   const failureText = useFailureText();
-  const invitations = useProjectInvitations(projectId, canManage);
-  const requests = useProjectAccessRequests(projectId, canManage);
+  const mayHaveAccessManage = myRole === "owner" || myRole === "editor";
+  const invitations = useProjectInvitations(projectId, mayHaveAccessManage);
+  const requests = useProjectAccessRequests(projectId, mayHaveAccessManage);
+  const forbidden = (query: { isError: boolean; error: unknown }) =>
+    query.isError && failureCode(query.error) === "forbidden";
+  const canManage =
+    mayHaveAccessManage && !forbidden(invitations) && !forbidden(requests);
   const transfer = useProjectTransfer(projectId, myRole !== null);
   const resend = useResendInvitation(projectId);
   const revoke = useRevokeInvitation(projectId);

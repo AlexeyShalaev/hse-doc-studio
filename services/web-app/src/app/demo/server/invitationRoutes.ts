@@ -54,7 +54,11 @@ export const createInvitationRoutes = (
       );
       const role = p ? effectiveRole(world, p, userId) : null;
       if (!p || !role) return notFound();
-      if (need === "manage" && role !== "owner") {
+      // ACCESS_MANAGE (8.2): владелец или редактор с «Может делиться», как в core/access/policy.
+      const canManage =
+        role === "owner" ||
+        (role === "editor" && p.canShare?.[userId] === true);
+      if (need === "manage" && !canManage) {
         return demoError(403, "forbidden", "Forbidden");
       }
       return handler(req, p, state, world);

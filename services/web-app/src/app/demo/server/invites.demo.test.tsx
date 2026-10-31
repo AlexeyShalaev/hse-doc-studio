@@ -95,6 +95,33 @@ describe("демо invites: панель «Доступ»", () => {
     });
   });
 
+  it("ACCESS_MANAGE: редактор с «Может делиться» видит «Ожидают», обычный редактор нет", async () => {
+    const world = getServerWorld();
+    const project = world.projects.find((p) => p.summary.id === OWN);
+    if (!project) throw new Error("demo project not found");
+    const id = Object.keys(project.roles).find(
+      (userId) => project.roles[userId] === "editor",
+    );
+    if (id === undefined) throw new Error("demo editor not found");
+    const currentUser = world.bootstrap.user;
+    if (currentUser === null) throw new Error("demo user not signed in");
+    world.bootstrap = { ...world.bootstrap, user: { ...currentUser, id } };
+    project.canShare = { [id]: true };
+
+    mountWith(<ProjectAccessPanel projectId={OWN} myRole="editor" />);
+    const pending = await screen.findByTestId("project-access-pending");
+    expect(
+      within(pending).getByTestId("invitation-row-inv_demo_user"),
+    ).toBeTruthy();
+    cleanup();
+
+    project.canShare = { [id]: false };
+    mountWith(<ProjectAccessPanel projectId={OWN} myRole="editor" />);
+    await waitFor(() => {
+      expect(screen.queryByTestId("project-access-pending")).toBeNull();
+    });
+  });
+
   it("приглашение по почте без SMTP отдаёт ссылку для пересылки", async () => {
     activateServerScenario("student_nosmtp");
     const user = userEvent.setup();
