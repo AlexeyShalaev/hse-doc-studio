@@ -224,6 +224,18 @@ class GuestLink:
     project_name: str
 
 
+@dataclass(frozen=True)
+class LinkProject:
+    """Проект ссылки: имя, владелец (человек или организация) и признак NDA для политики."""
+
+    id: UUID
+    name: str
+    owner_user_id: str | None
+    owner_org_id: str | None
+    owner_name: str
+    nda: bool
+
+
 class IShareLinkRepository(Protocol):
     async def get(self, link_id: str) -> ShareLink | None: ...
 
@@ -234,6 +246,12 @@ class IShareLinkStore(IShareLinkRepository, Protocol):
     """Запись ссылок: используют сценарии `use_cases/sharing`."""
 
     async def add(self, record: NewShareLinkRecord) -> None: ...
+
+    async def project(self, project_id: UUID) -> LinkProject | None:
+        """Неудалённый проект ссылки; None, если проекта нет."""
+        ...
+
+    async def user_names(self, user_ids: Sequence[str]) -> dict[str, str]: ...
 
     async def secrets_of(self, link_id: str) -> ShareLinkSecrets | None: ...
 

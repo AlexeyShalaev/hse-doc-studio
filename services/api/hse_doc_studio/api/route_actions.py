@@ -219,6 +219,13 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("DELETE", "/projects/{project_id}"): RouteRule(Action.PROJECT_DELETE),
     # Звонит контейнер Document Server: подлинность проверяют подпись и JWT внутри сценария.
     ("POST", "/office-editor/callback"): RouteRule(RouteExemption.system_callback, project_source="query"),
+    # links: ссылки доступа проекта (владелец и редактор с правом делиться; гостю и ссылочному праву закрыто)
+    ("GET", "/projects/{project_id}/links"): RouteRule(Action.SHARE),
+    ("POST", "/projects/{project_id}/links"): RouteRule(Action.SHARE),
+    ("PATCH", "/projects/{project_id}/links/{link_id}"): RouteRule(Action.SHARE),
+    ("POST", "/projects/{project_id}/links/{link_id}/rotate"): RouteRule(Action.SHARE),
+    ("DELETE", "/projects/{project_id}/links/{link_id}"): RouteRule(Action.SHARE),
+    ("GET", "/projects/{project_id}/links/{link_id}/visits"): RouteRule(Action.SHARE),
 }
 
 

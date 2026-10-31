@@ -219,6 +219,7 @@ tags:
 | `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | `list[str]` | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__REQUIRE_APPROVAL` | bool | не задано | server | Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSWORD_ENABLED` | bool | не задано | server | Вход по паролю; заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__PROJECT_INVITES_ALLOW_SIGNUP` | bool | не задано | server | Приглашение в проект даёт право зарегистрироваться в режиме invite (по умолчанию да); заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__OIDC__ID` | str | `sso` | server | Идентификатор в адресах входа. |
 | `HSE_STUDIO__AUTH__OIDC__LABEL` | str | `SSO` | server | Название на кнопке входа. |
 | `HSE_STUDIO__AUTH__OIDC__ISSUER` | str | не задано | server | Адрес издателя (discovery лежит под ним). |
@@ -281,6 +282,9 @@ tags:
 | `HSE_STUDIO__HSE_PERSONS__LIST_CACHE_TTL_S` | float | `900.0` | оба | TTL of a cached listing page (querystring-keyed). |
 | `HSE_STUDIO__HSE_PERSONS__DETAIL_CACHE_TTL_S` | float | `86400.0` | оба | TTL of a cached profile detail (id-keyed). |
 | `HSE_STUDIO__HSE_PERSONS__FACETS_CACHE_TTL_S` | float | `86400.0` | оба | TTL of a cached facet vocabulary (campus-keyed). |
+| `HSE_STUDIO__SHARING__LINKS_ENABLED` | bool | не задано | server | Разрешить ссылки на проекты (по умолчанию да); заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__SHARING__MAX_LINK_ROLE` | reader / reviewer / editor | не задано | server | Предел роли по ссылке: reader, reviewer или editor (по умолчанию editor); блокирует правку. |
+| `HSE_STUDIO__SHARING__GUEST_SESSION_DAYS` | int | `30` | server | Срок гостевой сессии по ссылке, суток (скользящий). |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |

@@ -1,0 +1,9 @@
+{
+  "state": "inactive",
+  "project_name": null,
+  "owner_name": null,
+  "role": null,
+  "show_sources": false,
+  "guest_name_required": false,
+  "signed_in": false
+}

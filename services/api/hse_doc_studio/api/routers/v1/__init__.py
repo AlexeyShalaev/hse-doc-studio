@@ -41,6 +41,7 @@ from hse_doc_studio.api.routers.v1 import (
     session,
     settings,
     setup,
+    share_links,
     signatures,
     signing_identities,
     submission,
@@ -104,3 +105,5 @@ api_router.include_router(signing_identities.router, tags=["signing-identities"]
 api_router.include_router(profile.router, tags=["profile"])
 api_router.include_router(git_global.router, tags=["git-sync"])
 api_router.include_router(remote_runner.router, tags=["remote-runner"])
+# links
+api_router.include_router(share_links.router, tags=["sharing"])

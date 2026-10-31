@@ -19,6 +19,7 @@ from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import session as s
+from hse_doc_studio.api.schemas import sharing as sh
 from pydantic import TypeAdapter, ValidationError
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -171,6 +172,20 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateRemoteRunnerRequest": rr.UpdateRemoteRunnerRequest,
     "RemoteRunnerPairRequest": rr.RemoteRunnerPairRequest,
     "RemoteRunnerTokenRequest": rr.RemoteRunnerTokenRequest,
+    # links
+    "ShareLink": sh.ShareLink,
+    "ShareLinkList": sh.ShareLinkList,
+    "CreateShareLinkRequest": sh.CreateShareLinkRequest,
+    "UpdateShareLinkRequest": sh.UpdateShareLinkRequest,
+    "ShareLinkVisitPage": sh.ShareLinkVisitPage,
+    "ShareLinkPreview": sh.ShareLinkPreview,
+    "OpenShareLinkRequest": sh.OpenShareLinkRequest,
+    "OpenShareLinkResponse": sh.OpenShareLinkResponse,
+    "GuestInfo": sh.GuestInfo,
+    "UpdateGuestSessionRequest": sh.UpdateGuestSessionRequest,
+    "OrgSharingPolicy": sh.OrgSharingPolicy,
+    "AdminSharingSettings": sh.AdminSharingSettings,
+    "UpdateAdminSharingRequest": sh.UpdateAdminSharingRequest,
 }
 
 
@@ -297,3 +312,15 @@ def test_owner_runner_chips_carry_only_name_and_state() -> None:
     # Соавтор не видит у раннера владельца ничего, кроме имени и состояния.
     assert set(pr.OwnerRunnerChip.model_fields) == {"name", "state"}
     assert set(pr.CompilePlacement.model_fields) == {"state", "runner_name", "runner_owner", "fallback", "wait_s"}
+
+
+def test_share_link_url_only_for_active_and_blocked() -> None:
+    links = [_read(f) for d, _, f in _CASES if d == "ShareLink"]
+    assert {x["state"] for x in links} == {"active", "expired", "revoked", "blocked"}
+    assert all((x["url"] is not None) == (x["state"] in {"active", "blocked"}) for x in links)
+
+
+def test_share_link_preview_without_password_hides_project() -> None:
+    body = _read(_FIXTURES / "ShareLinkPreview" / "password_required.json")
+    assert body["project_name"] is None
+    assert body["role"] is None

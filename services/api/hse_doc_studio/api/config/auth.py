@@ -99,6 +99,13 @@ class AuthConfig(BaseModel):
     password_enabled: bool | None = Field(
         default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )
+    project_invites_allow_signup: bool | None = Field(
+        default=None,
+        description=(
+            "Приглашение в проект даёт право зарегистрироваться в режиме invite (по умолчанию да); "
+            "заданное значение блокирует правку в админке."
+        ),
+    )
 
     oidc: OidcEnvConfig = Field(default_factory=OidcEnvConfig, description="Провайдер OIDC из окружения.")
 
