@@ -240,6 +240,10 @@ jobs:
           pnpm exec playwright install --with-deps chromium
         working-directory: e2e
 
+      # Раннер собирает TeX в соседнем контейнере и сам образ не тянет: без него сборка кончается image_missing.
+      - name: Pull TeX Live image
+        run: docker pull texlive/texlive:latest
+
       - name: Run full smoke
         run: |
           eval "$(../scripts/dev/server-stack/stack.sh env)"
