@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import glob
+import logging
 from collections.abc import Callable
 from pathlib import PurePosixPath
 
@@ -20,6 +21,9 @@ from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOut
 from hse_doc_studio.infra.runner.handler_executor import CODE_BLOB_UNAVAILABLE, JobBlobFetcher
 from hse_doc_studio.infra.runner.outputs import collect_outputs
 from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, RunnerWorkspaces
+
+_LOG = logging.getLogger(__name__)
+_FAIL_TAIL_CHARS = 6000
 
 CODE_IMAGE_MISSING = "image_missing"
 CODE_DOCKER_UNAVAILABLE = "docker_unavailable"
@@ -80,6 +84,9 @@ class CompileJobExecutor:
                 async with self._workspaces.open(str(spec.project_id), envelope.manifest) as workspace:
                     run_ctx = JobRunContext(log=sink, workspace=workspace.root, on_process=lambda _process: None)
                     build = await self._runner.run_build(spec, run_ctx)
+                    if not build.success:
+                        # Журнал сборки живёт только в потоке задачи; без записи в журнал раннера причину не найти.
+                        _LOG.warning("compile %s failed, log tail:\n%s", spec.id, sink.text()[-_FAIL_TAIL_CHARS:])
                     result = await self._runner.run_post(spec, run_ctx, build)
                     source = PurePosixPath(payload.source_file)
                     final_pdf = (source.parent / f"{source.stem}.pdf").as_posix()

@@ -4,6 +4,7 @@
 #   stack.sh up        поднять стенд из образа ghcr.io/alexeyshalaev/hse-doc-studio:$TAG
 #   stack.sh env       напечатать переменные для e2e (E2E_BASE_URL, E2E_COMPOSE, ...)
 #   stack.sh logs      журнал сервиса: stack.sh logs api
+#   stack.sh psql ...  psql в базе стенда: stack.sh psql -c 'select 1'
 #   stack.sh down      остановить и стереть данные
 #   stack.sh personal-up TOKEN  поднять личный раннер Анны (токен hsrt_ из «Мои раннеры») и поддельный OpenAI
 #   stack.sh personal-stop      мягко остановить личный раннер (SIGTERM: раннер успевает сказать /offline)
@@ -76,6 +77,10 @@ case "${1:-}" in
     ;;
   logs)
     "${compose[@]}" logs --no-color "${2:-api}"
+    ;;
+  psql)
+    shift
+    "${compose[@]}" exec -T postgres psql -U studio -d studio "$@"
     ;;
   personal-up)
     ensure_env

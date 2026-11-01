@@ -240,9 +240,13 @@ jobs:
           pnpm exec playwright install --with-deps chromium
         working-directory: e2e
 
+      # Раннер собирает TeX в соседнем контейнере и сам образ не тянет: без него сборка кончается image_missing.
+      - name: Pull TeX Live image
+        run: docker pull texlive/texlive:TL2024-historic
+
       - name: Run full smoke
         run: |
-          eval "$(scripts/dev/server-stack/stack.sh env)"
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
           pnpm exec playwright test --project=full
         working-directory: e2e
 
@@ -252,6 +256,15 @@ jobs:
           for service in api runner postgres minio; do
             echo "::group::$service"; scripts/dev/server-stack/stack.sh logs "$service" | tail -300; echo "::endgroup::"
           done
+          echo "::group::docker events"
+          docker events --since 30m --until 0s --filter type=container --filter event=die --filter event=create --format '{{.Time}} {{.Action}} {{.Actor.Attributes.image}} exit={{.Actor.Attributes.exitCode}} {{.Actor.Attributes.name}}' | tail -40 || true
+          echo "::endgroup::"
+          echo "::group::latex logs"
+          sudo find scripts/dev/server-stack/runner-data -name '*.log' -print -exec tail -n 40 {} \; 2>&1 | tail -150 || true
+          echo "::endgroup::"
+          echo "::group::jobs"
+          scripts/dev/server-stack/stack.sh psql -At -c "select kind, state, error_code, result::text as result from jobs order by seq desc limit 10" || true
+          echo "::endgroup::"
 
       - uses: actions/upload-artifact@v7
         if: always()
