@@ -129,6 +129,9 @@ def _parser() -> argparse.ArgumentParser:
         "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
     )
     reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
+    from hse_doc_studio.cli_backup import add_backup_parser  # noqa: PLC0415
+
+    add_backup_parser(sub)
     server = sub.add_parser("server", help="перенос из локальной Студии на сервер (запускает оператор)")
     server_sub = server.add_subparsers(dest="server_command", required=True)
     data = server_sub.add_parser(
@@ -313,12 +316,20 @@ def _run_server(args: argparse.Namespace) -> int:
         return _EXIT_USAGE
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+def _run_operator_command(args: argparse.Namespace) -> int:
     if args.command == "db":
         return _run_db(args.db_command)
     if args.command == "server":
         return _run_server(args)
+    from hse_doc_studio.cli_backup import run_backup  # noqa: PLC0415
+
+    return run_backup(args)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    if args.command in {"db", "server", "backup"}:
+        return _run_operator_command(args)
     if args.command == "runner":
         return asyncio.run(_runner())
     if args.command == "secrets":

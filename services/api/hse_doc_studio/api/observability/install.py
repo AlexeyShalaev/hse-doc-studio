@@ -189,6 +189,29 @@ def install_autoscale(app: FastAPI, container: AsyncContainer, cfg: Settings, me
         metrics.add_collector(autoscale_collector(lambda: service.last_seen))
 
 
+def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
+    if not cfg.backups.enabled:
+        return
+    from hse_doc_studio.use_cases.backup.runs import ScheduledBackupTick  # noqa: PLC0415
+    from hse_doc_studio.use_cases.backup.service import BackupService  # noqa: PLC0415
+
+    async def _tick() -> None:
+        await (await container.get(ScheduledBackupTick)).run_once()
+
+    app.state.background.register(PeriodicTask(name="backup_schedule", interval_s=cfg.backups.tick_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _recover_backup_runs() -> None:
+        recovered = await (await container.get(BackupService)).recover_stale()
+        if recovered:
+            logger.warning("backup runs interrupted by a restart", count=recovered)
+
+    @app.on_event("shutdown")
+    async def _stop_backups() -> None:
+        await (await container.get(BackupService)).cancel_all()
+
+
 def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """На старте выставляет CORS бакета, если заданы источники: без него pdf.js не читает PDF по ссылке с Range."""
     if not cfg.s3.cors_origins:

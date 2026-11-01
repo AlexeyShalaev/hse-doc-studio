@@ -12,6 +12,7 @@ from hse_doc_studio.api.config.ai_gateway import AiGatewayConfig
 from hse_doc_studio.api.config.artifacts import ArtifactsConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.autoscale import AutoscaleConfig
+from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
@@ -91,6 +92,7 @@ class Settings(BaseSettings):
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
+    backups: BackupsConfig = Field(default_factory=BackupsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)

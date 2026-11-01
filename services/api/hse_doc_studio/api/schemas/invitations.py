@@ -27,6 +27,7 @@ NotificationKindName = Literal[
     "review_reply",
     "review_mention",
     "review_resolved",
+    "backup_failed",
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000
