@@ -64,6 +64,7 @@ const OPS_PARTS = [
   ["quotas", "narrow"],
   ["services", "wide"],
   ["storage", "wide"],
+  ["data", "wide"],
 ] as const;
 
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в

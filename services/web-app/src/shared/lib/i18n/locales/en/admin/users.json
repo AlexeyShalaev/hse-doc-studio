@@ -369,7 +369,10 @@
       "backup_settings_update": "Backup settings changed",
       "backup_run_start": "Backup started",
       "backup_run_finish": "Backup finished",
-      "backup_delete": "Backup deleted"
+      "backup_delete": "Backup deleted",
+      "settings_retention_update": "Data retention changed",
+      "settings_storage_thresholds_update": "Disk space thresholds changed",
+      "lifecycle_run_now": "Data source cleanup started"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

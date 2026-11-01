@@ -43,6 +43,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRegistrationTokenRow,
     RunnerRow,
 )
+from hse_doc_studio.infra.db.orm.lifecycle import LifecycleRunRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
@@ -89,6 +90,7 @@ __all__ = [
     "JobQueueStateRow",
     "JobRow",
     "JobRunnerPollRow",
+    "LifecycleRunRow",
     "LoginAttemptRow",
     "MailOutboxRow",
     "NotificationRow",

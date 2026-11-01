@@ -169,3 +169,75 @@ export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
 export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;
 export type AdminRunnerTokenPage = z.infer<typeof AdminRunnerTokenPageSchema>;
 export type AdminRunnerSummary = z.infer<typeof AdminRunnerSummarySchema>;
+
+// Хранение данных (api/schemas/lifecycle.py): источники роста, сроки хранения, тома и пороги места.
+export const LifecycleLevelSchema = z.enum(["ok", "warning", "critical"]);
+export const LifecycleLastRunSchema = z.strictObject({
+  at: iso.nullable(),
+  duration_ms: z.number().int().nullable(),
+  removed: z.number().int().nullable(),
+  error: z.string().nullable(),
+  runs: z.number().int(),
+  total_removed: z.number().int().nullable(),
+});
+export const LifecycleSourceSchema = z.strictObject({
+  key: z.string(),
+  group: z.enum(["database", "objects", "disk", "logs"]),
+  strategy: z.enum([
+    "partition_drop",
+    "delete_batches",
+    "file_sweep",
+    "own_task",
+    "on_write",
+    "infra",
+  ]),
+  growth: z.enum(["low", "medium", "high"]),
+  days: z.number().int().nullable(),
+  days_source: z.enum(["admin", "env", "default", "fixed"]),
+  min_days: z.number().int().nullable(),
+  max_days: z.number().int().nullable(),
+  default_days: z.number().int().nullable(),
+  editable: z.boolean(),
+  run_now: z.boolean(),
+  protected: z.boolean(),
+  env: z.string().nullable(),
+  bytes: z.number().int().nullable(),
+  rows: z.number().int().nullable(),
+  partitions: z.number().int().nullable(),
+  last_run: LifecycleLastRunSchema.nullable(),
+});
+export const LifecycleVolumeSchema = z.strictObject({
+  name: z.string(),
+  used_bytes: z.number().int(),
+  total_bytes: z.number().int().nullable(),
+  free_bytes: z.number().int().nullable(),
+  used_ratio: z.number().nullable(),
+  level: LifecycleLevelSchema,
+});
+export const StorageThresholdsSchema = z.strictObject({
+  warn_percent: z.number().int(),
+  critical_percent: z.number().int(),
+});
+export const AdminDataLifecycleSchema = z.strictObject({
+  sources: z.array(LifecycleSourceSchema),
+  volumes: z.array(LifecycleVolumeSchema),
+  thresholds: StorageThresholdsSchema,
+  level: LifecycleLevelSchema,
+  safe_mode: z.boolean(),
+});
+export const UpdateLifecycleRetentionRequestSchema = z.strictObject({
+  days: z.number().int().nullable(),
+});
+export const LifecycleRunSchema = z.strictObject({
+  key: z.string(),
+  removed: z.number().int(),
+  partitions_dropped: z.number().int(),
+  more: z.boolean(),
+  error: z.string().nullable(),
+});
+export type LifecycleLevel = z.infer<typeof LifecycleLevelSchema>;
+export type LifecycleSource = z.infer<typeof LifecycleSourceSchema>;
+export type LifecycleVolume = z.infer<typeof LifecycleVolumeSchema>;
+export type StorageThresholds = z.infer<typeof StorageThresholdsSchema>;
+export type AdminDataLifecycle = z.infer<typeof AdminDataLifecycleSchema>;
+export type LifecycleRun = z.infer<typeof LifecycleRunSchema>;

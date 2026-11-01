@@ -57,6 +57,7 @@ nav = [
         { "Безопасность и ПДн" = "deploy/security.md" },
         { "Бэкапы сервера" = "deploy/backups.md" },
         { "Обновление и потеря ключа" = "deploy/operations.md" },
+        { "Автономная работа и хранение данных" = "deploy/autonomy.md" },
     ] },
     { "Справочник" = [
         { "Карта справочника" = "reference/index.md" },

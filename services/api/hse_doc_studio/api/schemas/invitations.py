@@ -28,6 +28,10 @@ NotificationKindName = Literal[
     "review_mention",
     "review_resolved",
     "backup_failed",
+    "system_alert",
+]
+NotificationOutcome = Literal[
+    "accepted", "declined", "approved", "denied", "resolved", "reopened", "storage_warning", "storage_critical"
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000
@@ -259,7 +263,7 @@ class NotificationPayloadModel(StrictModel):
     actor_name: str | None
     role: str | None
     ref_id: str | None
-    outcome: Literal["accepted", "declined", "approved", "denied", "resolved", "reopened"] | None
+    outcome: NotificationOutcome | None
     path: str | None = None
     excerpt: str | None = None
 

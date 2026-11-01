@@ -27,6 +27,7 @@ NOTIFICATION_KINDS = (
     "review_mention",
     "review_resolved",
     "backup_failed",
+    "system_alert",
 )
 
 

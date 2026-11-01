@@ -29,13 +29,15 @@
       "runners_other": "{{count}} runners not responding",
       "services_one": "{{count}} service with problems",
       "services_other": "{{count}} services with problems",
-      "storage": "Running out of space"
+      "storage": "Running out of space",
+      "data": "Low disk space"
     },
     "back": "Back to Studio",
     "version": "Version {{version}}",
     "role": "Instance administrator",
     "instanceFallback": "HSE Doc Studio",
-    "backups": "Backups"
+    "backups": "Backups",
+    "data": "Data retention"
   },
   "overview": {
     "title": "Installation overview",

@@ -19,7 +19,6 @@ from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
-    install_audit_retention,
     install_auth_cleanup,
     install_autoscale,
     install_background,
@@ -29,7 +28,6 @@ from hse_doc_studio.api.observability.install import (
     install_device_authorizations_purge,
     install_health,
     install_job_reaper,
-    install_job_retention,
     install_object_store_health,
     install_project_purge,
     install_project_usage,
@@ -39,6 +37,7 @@ from hse_doc_studio.api.observability.install import (
     install_server_observability,
     install_service_pool_health,
 )
+from hse_doc_studio.api.observability.install_lifecycle import install_data_lifecycle
 from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
@@ -222,14 +221,14 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_blob_gc(app, container, settings)
         install_project_usage(app, container, settings)
         install_auth_cleanup(app, container, settings)
-        install_audit_retention(app, container, settings)
         install_quota_housekeeping(app, container, settings)
         install_autoscale(app, container, settings, server_metrics)
         install_backups(app, container, settings)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
         install_device_authorizations_purge(app, container)
-        install_job_retention(app, container, settings)
+        # Аудит, задачи, ИИ-журнал, уведомления и прочие растущие таблицы чистит один движок по реестру политик.
+        install_data_lifecycle(app, container, settings, server_metrics)
 
         @app.on_event("startup")
         async def _register_runner_bootstrap_token() -> None:

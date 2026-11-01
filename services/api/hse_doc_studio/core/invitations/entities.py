@@ -69,6 +69,8 @@ class NotificationKind(StrEnum):
     review_resolved = "review_resolved"
     # Бэкап сервера не удался: получают администраторы установки.
     backup_failed = "backup_failed"
+    # Сообщение установки администраторам (место на диске, сбой очистки): код в outcome, пояснение в excerpt.
+    system_alert = "system_alert"
 
 
 # Письмо уходит только для этих видов (S15), и только если SMTP настроен.

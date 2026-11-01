@@ -18,6 +18,7 @@ from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import artifacts as art
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
+from hse_doc_studio.api.schemas import lifecycle as lc
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
@@ -35,6 +36,10 @@ _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / 
 # Каталог эталонов -> модель, которой он обязан соответствовать.
 _SCHEMAS: dict[str, Any] = {
     "Bootstrap": s.BootstrapResponse,
+    "AdminDataLifecycle": lc.LifecycleOverviewBody,
+    "UpdateAdminRetentionRequest": lc.UpdateRetentionRequest,
+    "AdminStorageThresholds": lc.StorageThresholdsBody,
+    "AdminLifecycleRun": lc.LifecycleRunBody,
     "SessionUser": s.SessionUser,
     "LoginRequest": s.LoginRequest,
     "LoginResponse": s.LoginResponse,

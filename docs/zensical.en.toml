@@ -57,6 +57,7 @@ nav = [
         { "Security and personal data" = "deploy/security.md" },
         { "Server backups" = "deploy/backups.md" },
         { "Updates and key loss" = "deploy/operations.md" },
+        { "Autonomy and data retention" = "deploy/autonomy.md" },
     ] },
     { "Reference" = [
         { "Reference map" = "reference/index.md" },

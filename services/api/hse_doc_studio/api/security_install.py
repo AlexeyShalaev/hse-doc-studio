@@ -8,7 +8,9 @@ from hse_doc_studio.api.auth_cookie import is_secure_public_url, public_origin
 from hse_doc_studio.api.body_limit import BODY_OVERHEAD_BYTES, UploadBodyLimitMiddleware
 from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.csrf import CsrfMiddleware
+from hse_doc_studio.api.safe_mode import StorageSafeModeMiddleware
 from hse_doc_studio.api.security_headers import SecurityHeadersMiddleware
+from hse_doc_studio.core.lifecycle.disk import PROCESS_SAFE_MODE
 
 
 def install_server_security(app: FastAPI, cfg: Settings) -> None:
@@ -22,6 +24,8 @@ def install_server_security(app: FastAPI, cfg: Settings) -> None:
         path_suffix="/projects/import",
         max_bytes=cfg.server.project_import_max_bytes + BODY_OVERHEAD_BYTES,
     )
+    if cfg.lifecycle.safe_mode_enabled:
+        app.add_middleware(StorageSafeModeMiddleware, safe_mode=PROCESS_SAFE_MODE)
     app.add_middleware(CsrfMiddleware, allowed_origins=origins)
     app.add_middleware(
         SecurityHeadersMiddleware,

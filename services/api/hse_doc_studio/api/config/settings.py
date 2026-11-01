@@ -20,6 +20,7 @@ from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.git_remote import GitRemoteConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
@@ -93,6 +94,7 @@ class Settings(BaseSettings):
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
     backups: BackupsConfig = Field(default_factory=BackupsConfig)
+    lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)

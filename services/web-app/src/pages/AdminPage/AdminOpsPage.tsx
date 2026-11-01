@@ -1,11 +1,13 @@
 import {
+  DataLifecyclePage,
   QuotasPage,
   RunnersPage,
   ServicesPage,
   StoragePage,
 } from "@features/admin-ops";
 
-export type AdminOpsPart = "runners" | "quotas" | "services" | "storage";
+export type AdminOpsPart =
+  "runners" | "quotas" | "services" | "storage" | "data";
 
 /** Операционные разделы админки: раннеры и очередь, квоты, сервисы, хранилище. */
 export const AdminOpsPage = ({
@@ -25,5 +27,7 @@ export const AdminOpsPage = ({
       return <ServicesPage />;
     case "storage":
       return <StoragePage />;
+    case "data":
+      return <DataLifecyclePage />;
   }
 };

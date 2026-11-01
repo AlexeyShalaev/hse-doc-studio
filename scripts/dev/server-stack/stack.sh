@@ -105,7 +105,11 @@ case "${1:-}" in
   down)
     [ -f "$env_file" ] || exit 0
     "${compose[@]}" --profile personal down --volumes --remove-orphans
-    rm -rf "$env_file" "$here/runner-data$suffix" "$here/runner-personal-data$suffix"
+    rm -rf "$env_file"
+    # Каталоги раннера на Linux принадлежат его uid (10001): обычный rm не справляется, нужен sudo (в CI он без пароля).
+    for dir in "$here/runner-data$suffix" "$here/runner-personal-data$suffix"; do
+      rm -rf "$dir" 2>/dev/null || sudo -n rm -rf "$dir"
+    done
     ;;
   *)
     echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset" >&2

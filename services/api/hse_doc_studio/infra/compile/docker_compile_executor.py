@@ -159,6 +159,18 @@ class DockerCompileExecutor:
         self._fonts_host_dir = fonts_host_dir
         self._fonts_mount_target = fonts_mount_target
 
+    def _tex_launcher(self, engine: str) -> list[str]:
+        """Префикс команды: под не-root формат движка собирается заранее вне `-output-directory`.
+
+        При `-output-directory=<rel>` kpathsea отдаёт mktexfmt относительный TEXMFOUTPUT, и `xetex -ini` в
+        временном каталоге не может записать xelatex.log («I can't write on file»), формат не строится, latexmk
+        выходит с кодом 12. Каталоги TeX у не-root в tmpfs, поэтому формат нужен свежий на каждую сборку.
+        """
+        limits = self._limits
+        if limits is None or limits.user is None or not limits.read_only_rootfs:
+            return []
+        return ["sh", "-c", 'cd /tmp && fmtutil-user --byfmt "$0" >&2; cd "$OLDPWD" && exec "$@"', engine]
+
     def _isolation_args(self) -> list[str]:
         return self._limits.docker_args() if self._limits is not None else []
 
@@ -275,6 +287,7 @@ class DockerCompileExecutor:
             "-w",
             workdir,
             image,
+            *self._tex_launcher(engine),
             "latexmk",
             engine_flag,
             "-interaction=nonstopmode",

@@ -1,8 +1,8 @@
 """Бэкапы сервера: назначения, запуски, вид уведомления backup_failed
 
 Revision ID: bk_01_backups
-Revises: s5_01_review
-Create Date: 2026-11-04 10:00:00
+Revises: lc_02_partition_logs
+Create Date: 2026-11-04 12:00:00
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "bk_01_backups"
-down_revision: str | None = "s5_01_review"
+down_revision: str | None = "lc_02_partition_logs"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -29,6 +29,7 @@ _OLD_KINDS = (
     "review_reply",
     "review_mention",
     "review_resolved",
+    "system_alert",
 )
 _NEW_KINDS = (*_OLD_KINDS, "backup_failed")
 

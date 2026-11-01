@@ -381,7 +381,10 @@
       "backup_settings_update": "Изменены настройки бэкапов",
       "backup_run_start": "Запущен бэкап",
       "backup_run_finish": "Бэкап завершён",
-      "backup_delete": "Удалён бэкап"
+      "backup_delete": "Удалён бэкап",
+      "settings_retention_update": "Изменён срок хранения данных",
+      "settings_storage_thresholds_update": "Изменены пороги места на диске",
+      "lifecycle_run_now": "Запущена очистка источника данных"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

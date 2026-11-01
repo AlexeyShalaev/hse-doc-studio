@@ -20,6 +20,7 @@ from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
@@ -56,6 +57,7 @@ __all__ = [
     "HttpServerConfig",
     "JobsConfig",
     "LanguageToolConfig",
+    "LifecycleConfig",
     "LoggingConfig",
     "MailConfig",
     "ObservabilityConfig",

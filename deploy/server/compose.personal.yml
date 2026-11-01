@@ -26,9 +26,15 @@ services:
     networks: [default, personal-net]
     # Без перезапуска: stack.sh personal-stop и personal-kill проверяют уход раннера.
     restart: "no"
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: "${LOG_MAX_FILE:-5}"
 
   fake-openai:
     profiles: [personal]
+    logging: *logging
     image: python:3.13-alpine
     command: ["python", "/app/server.py"]
     environment:

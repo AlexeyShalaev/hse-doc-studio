@@ -13,6 +13,7 @@ import {
   Building2,
   ClipboardList,
   DatabaseBackup,
+  DatabaseZap,
   Gauge,
   Globe,
   HardDrive,
@@ -47,6 +48,7 @@ export type AdminSection =
   | "services"
   | "storage"
   | "backups"
+  | "data"
   | "instance"
   | "settings"
   | "signing"
@@ -84,6 +86,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "services", to: "/admin/services", icon: Activity },
       { id: "storage", to: "/admin/storage", icon: HardDrive },
       { id: "backups", to: "/admin/backups", icon: DatabaseBackup },
+      { id: "data", to: "/admin/data", icon: DatabaseZap },
     ],
   },
   {
@@ -126,6 +129,7 @@ const COUNTER_KEY: Record<string, string> = {
   runners: "nav.count.runners",
   services: "nav.count.services",
   storage: "nav.count.storage",
+  data: "nav.count.data",
 };
 
 const WithTip = ({

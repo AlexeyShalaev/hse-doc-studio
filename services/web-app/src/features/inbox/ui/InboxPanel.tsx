@@ -143,6 +143,10 @@ export const InboxPanel = () => {
             void navigate("/admin/backups");
             return;
           }
+          if (n.kind === "system_alert") {
+            void navigate("/admin/data");
+            return;
+          }
           if (n.payload.project_id && n.kind !== "member_removed") {
             void navigate(notificationTarget(n));
           }
