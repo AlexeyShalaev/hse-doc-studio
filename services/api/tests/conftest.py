@@ -45,7 +45,7 @@ def _reset_docker_binary() -> Iterator[None]:
 # Без extra server (CI-задача test-no-server) серверные тесты не собираются: они импортируют sqlalchemy и boto3.
 collect_ignore_glob: list[str] = []
 if importlib.util.find_spec("sqlalchemy") is None:
-    collect_ignore_glob += ["integration/db/*", "unit/infra/db/*"]
+    collect_ignore_glob += ["integration/db/*", "unit/infra/db/*", "unit/infra/backup/*"]
     collect_ignore_glob += [
         "contract/test_job_queue_contract.py",
         "contract/test_job_queue_service.py",
