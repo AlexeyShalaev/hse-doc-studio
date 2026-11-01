@@ -28,7 +28,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 CSRF_HEADER = "X-CSRF-Token"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Маршруты, которые авторизует подпись или токен, а не cookie.
-CSRF_EXEMPT_PREFIXES = ("/api/runner/", "/api/v1/office-editor/callback")
+CSRF_EXEMPT_PREFIXES = ("/api/runner/", "/api/updater/", "/api/v1/office-editor/callback")
 
 type CsrfTokenLookup = Callable[[Scope, str], Awaitable[str | None]]
 

@@ -25,6 +25,9 @@ Back up the database and the projects volume consistently: stop writes or snapsh
 
 ## Updating
 
+!!! tip "Auto-update"
+    Release checks, installing in a maintenance window with a backup, image verification and automatic rollback are done by the Studio itself: [Auto-update](auto-update.md). Below is the manual procedure.
+
 compose: change `TAG`, then `docker compose pull && docker compose up -d`. The api runs database migrations at startup under an advisory lock.
 
 Helm: `helm upgrade`; the migrations Job runs before the upgrade. Set `secrets.existingSecret` so the Job sees current secrets.

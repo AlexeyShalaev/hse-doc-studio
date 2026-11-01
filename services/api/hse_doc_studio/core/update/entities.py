@@ -15,6 +15,8 @@ class ReleaseEntry:
     version: str
     date: str  # YYYY-MM-DD
     notes: tuple[str, ...]
+    # Адрес файла с дайджестом образа, который publish.yml прикладывает к релизу (пусто у старых релизов).
+    digests_url: str = ""
 
 
 @dataclass(frozen=True)

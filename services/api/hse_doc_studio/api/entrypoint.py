@@ -35,6 +35,7 @@ from hse_doc_studio.api.observability.install import (
     install_runner_health,
     install_runner_pairings_purge,
     install_server_observability,
+    install_server_updates,
     install_service_pool_health,
 )
 from hse_doc_studio.api.observability.install_lifecycle import install_data_lifecycle
@@ -224,6 +225,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_quota_housekeeping(app, container, settings)
         install_autoscale(app, container, settings, server_metrics)
         install_backups(app, container, settings, server_metrics)
+        install_server_updates(app, container, settings, server_metrics)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
         install_device_authorizations_purge(app, container)

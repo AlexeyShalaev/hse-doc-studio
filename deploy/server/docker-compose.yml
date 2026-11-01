@@ -119,6 +119,10 @@ services:
       HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL: http://api:8000
       HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN: ${HEALTH_TOKEN:-}
       HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # Автообновление: api только проверяет релизы и ведёт учёт, ставит версию сервис updater (профиль updater).
+      # Без UPDATER_TOKEN исполнитель выключен: Студия лишь сообщает о новых версиях.
+      HSE_STUDIO__SERVER_UPDATE__EXECUTOR: compose
+      HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN: ${UPDATER_TOKEN:-}
     volumes:
       - api-data:/data
     healthcheck:
@@ -152,6 +156,34 @@ services:
     volumes:
       - ${RUNNER_DATA_DIR:-/var/lib/hse-runner}:${RUNNER_DATA_DIR:-/var/lib/hse-runner}
       - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    logging: *logging
+
+  # Автообновление версии (docs/design/auto-update.md): снимок базы, образ, миграции, перезапуск, проверка здоровья,
+  # автоматический откат. Включается профилем: docker compose --profile updater up -d (нужен UPDATER_TOKEN в .env).
+  #
+  # ОПАСНО: сокет docker равен root на хосте. У апдейтера он есть, чтобы пересоздавать api и раннер; у api сокета по-прежнему
+  # нет, а апдейтер слушает только исходящие запросы (портов не публикует) и принимает работу лишь от api по общему секрету.
+  # Он не входит в обновляемые сервисы: сам обновляется командой `docker compose pull updater && docker compose up -d updater`.
+  updater:
+    profiles: [updater]
+    image: *image
+    command: ["python", "-m", "hse_doc_studio.infra.update.server_updater"]
+    group_add:
+      - "${DOCKER_GID:-0}"
+    environment:
+      HSE_UPDATER__API_URL: http://api:8000
+      HSE_UPDATER__TOKEN: ${UPDATER_TOKEN:-}
+      HSE_UPDATER__SERVICES: api,runner
+      HSE_UPDATER__DATA_DIR: /var/lib/hse-updater
+      # Файл .env установки: после успешного обновления в нём меняется TAG, чтобы ручной `compose up` не вернул старую версию.
+      # Должен быть доступен на запись пользователю app (uid 10001), иначе TAG остаётся прежним и апдейтер предупредит.
+      HSE_UPDATER__ENV_FILE: /install/.env
+      HSE_UPDATER__HEALTH_TOKEN: ${HEALTH_TOKEN:-}
+    volumes:
+      - updater-data:/var/lib/hse-updater
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.env:/install/.env
     restart: unless-stopped
     logging: *logging
 
@@ -216,5 +248,6 @@ volumes:
   pg-data:
   minio-data:
   api-data:
+  updater-data:
   onlyoffice-data:
   ollama-models:
