@@ -9,6 +9,7 @@ import {
 import {
   Activity,
   ArrowLeft,
+  ArrowUpCircle,
   Bot,
   Building2,
   ClipboardList,
@@ -50,6 +51,7 @@ export type AdminSection =
   | "storage"
   | "backups"
   | "diagnostics"
+  | "updates"
   | "data"
   | "instance"
   | "settings"
@@ -88,6 +90,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "services", to: "/admin/services", icon: Activity },
       { id: "storage", to: "/admin/storage", icon: HardDrive },
       { id: "backups", to: "/admin/backups", icon: DatabaseBackup },
+      { id: "updates", to: "/admin/updates", icon: ArrowUpCircle },
       { id: "data", to: "/admin/data", icon: DatabaseZap },
       { id: "diagnostics", to: "/admin/diagnostics", icon: HeartPulse },
     ],

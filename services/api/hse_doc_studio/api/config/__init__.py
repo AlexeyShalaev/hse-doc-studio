@@ -27,6 +27,7 @@ from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.server import ServerCapabilities, ServerConfig
+from hse_doc_studio.api.config.server_update import ServerUpdateConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
     HsePersonsConfig,
@@ -71,6 +72,7 @@ __all__ = [
     "SecretsConfig",
     "ServerCapabilities",
     "ServerConfig",
+    "ServerUpdateConfig",
     "Settings",
     "StorageConfig",
     "VCSConfig",

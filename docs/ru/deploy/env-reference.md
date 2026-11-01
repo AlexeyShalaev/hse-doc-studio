@@ -239,6 +239,13 @@ tags:
 | `HSE_STUDIO__BACKUPS__PG_DUMP_BINARY` | str | `pg_dump` | оба | Исполняемый файл pg_dump (версия не ниже сервера Postgres). |
 | `HSE_STUDIO__BACKUPS__PG_RESTORE_BINARY` | str | `pg_restore` | оба | Исполняемый файл pg_restore. |
 | `HSE_STUDIO__BACKUPS__DUMP_TIMEOUT_S` | float | `21600.0` | оба | Сколько ждать завершения pg_dump и pg_restore. |
+| `HSE_STUDIO__SERVER_UPDATE__ENABLED` | bool | `true` | оба | Включает проверку релизов, планировщик и раздел админки. |
+| `HSE_STUDIO__SERVER_UPDATE__EXECUTOR` | compose / none | `none` | оба | Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI). |
+| `HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN` 🔒 | str | секрет, не печатается | оба | Общий секрет апдейтера (Bearer). Пусто: протокол апдейтера выключен и запуски не выдаются. |
+| `HSE_STUDIO__SERVER_UPDATE__TICK_S` | float | `60.0` | оба | Период планировщика обновлений. |
+| `HSE_STUDIO__SERVER_UPDATE__CHECK_INTERVAL_S` | float | `21600.0` | оба | Как часто спрашивать фид релизов. |
+| `HSE_STUDIO__SERVER_UPDATE__UPDATER_STALE_S` | float | `90.0` | оба | Сколько апдейтер может молчать и считаться живым. |
+| `HSE_STUDIO__SERVER_UPDATE__RUN_LOST_S` | float | `900.0` | оба | Сколько апдейтер молчит посреди запуска, прежде чем запуск потерян. |
 | `HSE_STUDIO__LIFECYCLE__ENABLED` | bool | `true` | оба | Включить фоновую очистку по реестру политик хранения. |
 | `HSE_STUDIO__LIFECYCLE__INTERVAL_S` | float | `3600.0` | оба | Как часто сервер очищает источники роста по срокам. |
 | `HSE_STUDIO__LIFECYCLE__BATCH_SIZE` | int | `2000` | оба | Строк в одной пачке удаления. |

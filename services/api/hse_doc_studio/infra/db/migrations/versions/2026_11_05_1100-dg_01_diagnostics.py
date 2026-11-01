@@ -1,8 +1,8 @@
 """diag_checks: последний результат и серия статусов каждой проверки самодиагностики
 
 Revision ID: dg_01_diagnostics
-Revises: bk_01_backups
-Create Date: 2026-11-05 10:00:00
+Revises: up_01_server_updates
+Create Date: 2026-11-05 11:00:00
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "dg_01_diagnostics"
-down_revision: str | None = "bk_01_backups"
+down_revision: str | None = "up_01_server_updates"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

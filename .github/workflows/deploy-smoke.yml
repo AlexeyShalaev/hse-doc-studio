@@ -250,6 +250,13 @@ jobs:
           pnpm exec playwright test --project=full
         working-directory: e2e
 
+      # Страница «Обновления» на том же стенде (администратор создан полным смоуком).
+      - name: Run updates page e2e
+        run: |
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=updates
+        working-directory: e2e
+
       - name: Stand logs on failure
         if: failure()
         run: |

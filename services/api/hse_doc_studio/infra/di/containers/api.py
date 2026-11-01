@@ -34,6 +34,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     from hse_doc_studio.infra.di.providers.server_quotas import ServerQuotasProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_services import ServerServicesProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_sharing import ServerSharingProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_updates import ServerUpdatesProvider  # noqa: PLC0415
 
     return [
         ServerPersistenceProvider(engine),
@@ -50,6 +51,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerArtifactsProvider(),
         ServerBackupsProvider(),
         ServerDiagnosticsProvider(),
+        ServerUpdatesProvider(),
         # invites: идёт последним, перекрывает сценарии участников и подтверждения почты.
         ServerInvitationsProvider(),
         # stage 5: ревью и совместная правка; подменяет замок папки, поэтому последним.

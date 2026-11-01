@@ -145,9 +145,11 @@ export const InboxPanel = () => {
           }
           if (n.kind === "system_alert") {
             void navigate(
-              n.payload.outcome?.startsWith("diag_")
-                ? "/admin/diagnostics"
-                : "/admin/data",
+              n.payload.outcome?.startsWith("update_")
+                ? "/admin/updates"
+                : n.payload.outcome?.startsWith("diag_")
+                  ? "/admin/diagnostics"
+                  : "/admin/data",
             );
             return;
           }

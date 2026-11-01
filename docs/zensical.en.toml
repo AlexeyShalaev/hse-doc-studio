@@ -57,6 +57,7 @@ nav = [
         { "Security and personal data" = "deploy/security.md" },
         { "Server backups" = "deploy/backups.md" },
         { "Server self-diagnostics" = "deploy/diagnostics.md" },
+        { "Server auto-update" = "deploy/auto-update.md" },
         { "Updates and key loss" = "deploy/operations.md" },
         { "Autonomy and data retention" = "deploy/autonomy.md" },
     ] },

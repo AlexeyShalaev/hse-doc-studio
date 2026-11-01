@@ -43,6 +43,7 @@
     "role": "Администратор установки",
     "instanceFallback": "HSE Doc Studio",
     "backups": "Бэкапы",
+    "updates": "Обновления",
     "data": "Хранение данных",
     "diagnostics": "Самодиагностика"
   },

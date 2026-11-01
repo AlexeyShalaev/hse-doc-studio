@@ -98,7 +98,7 @@ RUN addgroup --system --gid 10001 app && adduser --system --uid 10001 --ingroup 
 
 # Каталог данных принадлежит app: именованный том (стенд server-lite) наследует владельца при создании.
 # Привязанная папка хоста (deploy/all-in-one) закрывает его своим владельцем, как и раньше.
-RUN mkdir -p /data && chown app:app /data
+RUN mkdir -p /data /var/lib/hse-updater && chown app:app /data /var/lib/hse-updater
 
 COPY --from=backend-builder /usr/local /usr/local
 COPY --from=backend-builder /app /app
