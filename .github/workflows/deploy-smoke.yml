@@ -242,7 +242,7 @@ jobs:
 
       - name: Run full smoke
         run: |
-          eval "$(scripts/dev/server-stack/stack.sh env)"
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
           pnpm exec playwright test --project=full
         working-directory: e2e
 
