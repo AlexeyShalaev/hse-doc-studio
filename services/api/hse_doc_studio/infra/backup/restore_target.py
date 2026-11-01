@@ -13,11 +13,14 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from hse_doc_studio.api.config import Settings
 from hse_doc_studio.core.backup.errors import BackupError, BackupErrorCode
 from hse_doc_studio.core.backup.protocols import TargetState
 from hse_doc_studio.core.storage.ports import IObjectStore
+from hse_doc_studio.infra.backup.pgtools import resolve_binary, server_major
 from hse_doc_studio.infra.backup.producers import ARC_DATA, ARC_PROJECTS, pg_env
 from hse_doc_studio.infra.db import migrator
+from hse_doc_studio.infra.db.engine import async_dsn, create_engine
 
 _CHUNK = 1024 * 1024
 _MOVED = ("projects", "users", "gnupg")
@@ -34,7 +37,9 @@ class RestoreTarget:
         *,
         pg_restore_binary: str = "pg_restore",
         timeout_s: float = 6 * 3600.0,
+        owns_engine: bool = False,
     ) -> None:
+        self._owns_engine = owns_engine
         self._engine = engine
         self._dsn = dsn
         self._data_dir = data_dir
@@ -42,6 +47,10 @@ class RestoreTarget:
         self._store = store
         self._binary = pg_restore_binary
         self._timeout = timeout_s
+
+    async def close(self) -> None:
+        if self._owns_engine:
+            await self._engine.dispose()
 
     async def api_is_running(self) -> bool:
         """Есть ли другие соединения с этой базой: у остановленной установки их нет."""
@@ -154,3 +163,32 @@ class RestoreTarget:
                     asyncio.run_coroutine_threadsafe(self._store.put(member.name, spool), loop).result()  # type: ignore[arg-type]
                 count += 1
         return count
+
+
+class RestoreTargetFactory:
+    """Цель для восстановления из работающего api: свой движок БД, пул самого api не участвует."""
+
+    def __init__(self, cfg: Settings, store: IObjectStore) -> None:
+        self._cfg = cfg
+        self._store = store
+
+    async def open(self) -> RestoreTarget:
+        cfg = self._cfg
+        data_dir = cfg.data_dir.expanduser()
+        projects_root = (cfg.server.projects_root or data_dir / "projects").expanduser()
+        engine = create_engine(cfg.db)
+        try:
+            binary = resolve_binary(cfg.backups.pg_restore_binary, await server_major(engine))
+        except BaseException:
+            await engine.dispose()
+            raise
+        return RestoreTarget(
+            engine,
+            async_dsn(cfg.db.dsn),
+            data_dir,
+            projects_root,
+            self._store,
+            pg_restore_binary=binary,
+            timeout_s=cfg.backups.dump_timeout_s,
+            owns_engine=True,
+        )

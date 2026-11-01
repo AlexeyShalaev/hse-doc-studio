@@ -17,6 +17,8 @@ from hse_doc_studio.api.observability.request_id import RequestIdMiddleware
 from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from dishka import AsyncContainer
 
 logger = structlog.get_logger()
@@ -230,22 +232,35 @@ def _install_backup_provision(app: FastAPI, container: AsyncContainer, cfg: Sett
     )
 
 
-def install_backups(
-    app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry | None = None
-) -> None:
-    """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
-    if not cfg.backups.enabled:
-        return
+def _install_maintenance(app: FastAPI, container: AsyncContainer) -> None:
+    """Режим обслуживания для восстановления из админки: ответ 503 на `/api` и подхват метки прерванной записи."""
+    from hse_doc_studio.api.maintenance import MaintenanceMiddleware  # noqa: PLC0415
+    from hse_doc_studio.core.backup.protocols import IMaintenanceMode  # noqa: PLC0415
+    from hse_doc_studio.infra.backup.maintenance import MaintenanceController  # noqa: PLC0415
+
+    app.add_middleware(MaintenanceMiddleware)
+
+    @app.on_event("startup")
+    async def _maintenance_startup() -> None:
+        controller = await container.get(IMaintenanceMode)
+        assert isinstance(controller, MaintenanceController)  # noqa: S101
+        controller.bind(app.state.background)
+        await controller.adopt_marker()
+        app.state.maintenance = controller
+
+
+def _backup_metrics_refresh(
+    container: AsyncContainer, metrics: MetricsRegistry | None
+) -> Callable[[], Awaitable[None]]:
+    """Снимок метрик бэкапов и его обновление из таблицы запусков."""
     from hse_doc_studio.api.observability.backup_metrics import backup_collector  # noqa: PLC0415
     from hse_doc_studio.use_cases.backup.metrics import BackupMetricsRefresher, BackupMetricsState  # noqa: PLC0415
-    from hse_doc_studio.use_cases.backup.runs import ScheduledBackupTick  # noqa: PLC0415
-    from hse_doc_studio.use_cases.backup.service import BackupService  # noqa: PLC0415
 
     state = BackupMetricsState()
     if metrics is not None:
         metrics.add_collector(backup_collector(state))
 
-    async def _refresh_metrics() -> None:
+    async def _refresh() -> None:
         from hse_doc_studio.core.backup.protocols import IBackupRunRepository  # noqa: PLC0415
         from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository  # noqa: PLC0415
 
@@ -257,9 +272,23 @@ def install_backups(
         except Exception:
             logger.warning("backup metrics refresh failed", exc_info=True)
 
+    return _refresh
+
+
+def install_backups(
+    app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry | None = None
+) -> None:
+    """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
+    if not cfg.backups.enabled:
+        return
+    from hse_doc_studio.use_cases.backup.runs import ScheduledBackupTick  # noqa: PLC0415
+    from hse_doc_studio.use_cases.backup.service import BackupService  # noqa: PLC0415
+
+    refresh_metrics = _backup_metrics_refresh(container, metrics)
+
     async def _tick() -> None:
         await (await container.get(ScheduledBackupTick)).run_once()
-        await _refresh_metrics()
+        await refresh_metrics()
 
     app.state.background.register(PeriodicTask(name="backup_schedule", interval_s=cfg.backups.tick_s, run=_tick))
 
@@ -268,9 +297,10 @@ def install_backups(
         recovered = await (await container.get(BackupService)).recover_stale()
         if recovered:
             logger.warning("backup runs interrupted by a restart", count=recovered)
-        await _refresh_metrics()
+        await refresh_metrics()
 
     _install_backup_provision(app, container, cfg)
+    _install_maintenance(app, container)
 
     @app.on_event("shutdown")
     async def _stop_backups() -> None:

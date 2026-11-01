@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import datetime
@@ -159,3 +159,36 @@ class TargetState:
     @property
     def empty(self) -> bool:
         return self.users == 0 and self.projects == 0 and self.objects == 0
+
+
+class IMaintenanceMode(Protocol):
+    """Режим обслуживания api: пока он включён, приложение отвечает 503 и не трогает базу и диск."""
+
+    @property
+    def active(self) -> bool: ...
+
+    async def enter(self, *, reason: str) -> None:
+        """Включает режим, дожидается завершения начатых запросов, останавливает фоновые задачи и закрывает пул базы."""
+        ...
+
+    async def leave(self) -> None:
+        """Выключает режим и возвращает фоновые задачи (откат, когда ничего не записано)."""
+        ...
+
+    def publish(self, status: Mapping[str, object]) -> None:
+        """Состояние восстановления для открытой ручки `/api/maintenance`: она не ходит в базу и без входа."""
+        ...
+
+    def request_restart(self, *, delay_s: float) -> bool:
+        """Просит процесс завершиться, чтобы супервизор поднял его заново; False, если перезапуск отключён."""
+        ...
+
+
+class IRestoreTargetFactory(Protocol):
+    async def open(self) -> "IRestoreSession":
+        """Цель восстановления со своим соединением с базой (пул api не используется)."""
+        ...
+
+
+class IRestoreSession(IRestoreTarget, Protocol):
+    async def close(self) -> None: ...

@@ -54,6 +54,15 @@ class BackupsConfig(BaseModel):
         description="Где собираются зашифрованные части до загрузки (нужно места на самую большую часть). "
         "Пусто значит data_dir/tmp/backup.",
     )
+    restore_from_admin: bool = Field(
+        default=True,
+        description="Разрешает восстановление из админки (режим обслуживания). false оставляет только предпросмотр.",
+    )
+    restart_after_restore: bool = Field(
+        default=True,
+        description="После восстановления из админки процесс api завершается, и супервизор (compose, Kubernetes) "
+        "поднимает его заново. false оставляет api в режиме обслуживания до ручного перезапуска.",
+    )
     max_object_bytes: int = Field(
         default=256 * 1024**3, ge=1, description="Предел размера одной части бэкапа в назначении."
     )

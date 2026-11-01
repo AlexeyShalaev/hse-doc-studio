@@ -245,7 +245,10 @@ async def _restore(args: argparse.Namespace, *, verify_only: bool) -> int:
             confirm=_confirm,
             report=_write,
         )
+        if not result.applied:
+            _write("для восстановления добавьте --apply")
         if result.applied:
+            _clear_restore_marker()
             _write(
                 f"готово: база {'восстановлена' if result.database else 'нет'}, файлов {result.files}, "
                 f"объектов {result.objects}.\n"
@@ -255,6 +258,13 @@ async def _restore(args: argparse.Namespace, *, verify_only: bool) -> int:
         return _EXIT_OK
     finally:
         await engine.dispose()
+
+
+def _clear_restore_marker() -> None:
+    """Прерванное восстановление из админки оставляет метку, из-за которой api стартует в режиме обслуживания."""
+    from hse_doc_studio.infra.backup.maintenance import marker_path  # noqa: PLC0415
+
+    marker_path(settings.data_dir.expanduser()).unlink(missing_ok=True)
 
 
 def run_backup(args: argparse.Namespace) -> int:
