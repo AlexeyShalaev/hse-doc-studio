@@ -384,7 +384,9 @@
       "backup_delete": "Удалён бэкап",
       "settings_retention_update": "Изменён срок хранения данных",
       "settings_storage_thresholds_update": "Изменены пороги места на диске",
-      "lifecycle_run_now": "Запущена очистка источника данных"
+      "lifecycle_run_now": "Запущена очистка источника данных",
+      "diagnostics_run": "Запущена самодиагностика",
+      "settings_diagnostics_update": "Изменены пороги самодиагностики"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

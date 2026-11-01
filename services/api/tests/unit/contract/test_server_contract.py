@@ -16,6 +16,7 @@ from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import artifacts as art
+from hse_doc_studio.api.schemas import diagnostics as dg
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import lifecycle as lc
@@ -36,6 +37,9 @@ _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / 
 # Каталог эталонов -> модель, которой он обязан соответствовать.
 _SCHEMAS: dict[str, Any] = {
     "Bootstrap": s.BootstrapResponse,
+    "AdminDiagnostics": dg.DiagOverviewBody,
+    "UpdateAdminDiagnosticsThresholds": dg.DiagThresholdsRequest,
+    "RunAdminDiagnosticsRequest": dg.DiagRunRequest,
     "AdminDataLifecycle": lc.LifecycleOverviewBody,
     "UpdateAdminRetentionRequest": lc.UpdateRetentionRequest,
     "AdminStorageThresholds": lc.StorageThresholdsBody,

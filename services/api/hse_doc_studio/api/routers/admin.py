@@ -12,6 +12,7 @@ from hse_doc_studio.api.routers import (
     admin_audit,
     admin_autoscale,
     admin_backups,
+    admin_diagnostics,
     admin_install,
     admin_lifecycle,
     admin_ops,
@@ -52,6 +53,7 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_autoscale.router)
     router.include_router(admin_backups.router)
     router.include_router(admin_lifecycle.router)
+    router.include_router(admin_diagnostics.router)
     router.include_router(admin_orgs.router)
     router.include_router(admin_install.router)
     router.include_router(admin_pickers.router)

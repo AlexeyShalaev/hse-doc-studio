@@ -54,6 +54,10 @@ def head_revision() -> str:
     return heads[0]
 
 
+def known_revisions() -> set[str]:
+    return {script.revision for script in ScriptDirectory.from_config(_config()).walk_revisions()}
+
+
 def _raise_if_ahead(current: str | None, head: str) -> None:
     """Ревизия, которой нет в цепочке этого образа, значит базу мигрировал более новый код: апгрейдить нечего."""
     if current is None:

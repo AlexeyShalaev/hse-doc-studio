@@ -51,6 +51,15 @@ class StorageGuard:
         return self._last
 
     @property
+    def safe_mode_active(self) -> bool:
+        return self._safe.active
+
+    async def refresh(self) -> list[VolumeUsage]:
+        """Свежий замер без предупреждений и без смены безопасного режима (его ведёт `tick`)."""
+        self._last = await self._probe.volumes()
+        return self._last
+
+    @property
     def last(self) -> list[VolumeUsage]:
         return self._last
 
