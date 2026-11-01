@@ -8,7 +8,7 @@ tags:
 
 # Server backups
 
-<p class="hds-lede">The Studio takes backups on a schedule, encrypts them on the server and stores them in S3 or a directory. Everything is configured in the admin, section "Backups". An operator restores with a CLI command: verification first, then an explicit confirmation.</p>
+<p class="hds-lede">The Studio takes backups on a schedule, encrypts them on the server and stores them in S3 or a directory. Everything is configured in the admin, section "Backups". You can restore from the admin (preview, confirmation, maintenance mode) or with a CLI command.</p>
 
 Design and decisions: `docs/design/backups.md` in the repository (Russian).
 
@@ -88,7 +88,20 @@ The "Backups" section shows the running job, history (time, destination, size, d
 
 ## Restoring
 
-Restoring is a CLI command, not an admin action. It replaces the database the admin itself runs on, so it is safe only with api and runners stopped. In the admin every backup has a ready command with the values filled in.
+### From the admin
+
+**Backups, Destinations, Backups (button on a destination), Restore.** Steps:
+
+1. **Preview** starts by itself and writes nothing: the manifest, key or passphrase, schema revision, sha256 and decryption of every part are checked; the current server state (users, projects, objects) is shown. It is a dry run: close the window if you do not want to restore.
+2. **Confirmation.** Type the backup id. If the installation is not empty, also turn on "Overwrite existing data" (like `--overwrite`): otherwise the button stays disabled. The `projects/`, `users/`, `gnupg/` directories are not deleted but renamed to `*.before-restore-<time>`.
+3. **Write in maintenance mode.** While writing, every request to the app gets 503 with code `maintenance`; background tasks and the database pool are stopped. Runners wait and retry. Status is available at the open `GET /api/maintenance`.
+4. **Restart.** After success api exits by itself and compose (`restart: unless-stopped`) or Kubernetes starts it again. Sign in again: sessions now come from the backup. Without a supervisor set `HSE_STUDIO__BACKUPS__RESTART_AFTER_RESTORE=false` and restart api by hand.
+
+If nothing was written yet (for example, something else is connected to the database), maintenance mode is left by itself and the installation is unchanged. If the write stopped midway, the mode stays: press "Retry the write" (safe, like re-running the CLI) or "Leave maintenance mode" and inspect the installation. If the process died mid-write it starts in maintenance mode; finish the restore with the CLI below. Restore from the admin is disabled with `HSE_STUDIO__BACKUPS__RESTORE_FROM_ADMIN=false`. It needs a single api replica. Actions go to the audit log: `backup.restore_preview`, `backup.restore_start`, `backup.restore_finish`, `backup.restore_cancel`.
+
+### With the CLI
+
+Use the CLI when the admin is unavailable; it is the strictest path and is safe only with api and runners stopped. In the admin every backup has a ready command with the values filled in.
 
 ```bash
 # 1. a fresh installation with the same SECRETS_KEY and an image at least as new as the backup; run it once, then stop api
@@ -148,7 +161,7 @@ backups:
 - `backups.enabled=false` (default): the chart adds nothing, destinations are created in the admin UI.
 - The migration Job does not receive backup settings.
 
-Restore in Kubernetes is a CLI command run with the api stopped: `kubectl scale deploy/<release>-hse-doc-studio-api --replicas=0`, then a one-off pod with the same image, Secret and volumes (`kubectl run` or a Job running `hse-doc-studio backup restore ...`), then `--replicas=1`.
+Restore in Kubernetes is a CLI command run with the api stopped: `kubectl scale deploy/<release>-hse-doc-studio-api --replicas=0`, then a one-off pod with the same image, Secret and volumes (`kubectl run` or a Job running `hse-doc-studio backup restore ...`), then `--replicas=1`. Restore from the admin also works in Kubernetes: after the write the pod exits and the Deployment starts it again (same volume and Secret).
 
 ## Metrics and alerts
 
