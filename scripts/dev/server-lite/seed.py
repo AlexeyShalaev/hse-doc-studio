@@ -81,7 +81,10 @@ def ensure_projects(api_url: str, public_url: str, password: str) -> None:
             login = client.post("/api/v1/auth/login", json={"email": demo.email, "password": password})
             login.raise_for_status()
             headers = {"X-CSRF-Token": login.json()["csrf_token"]}
-            existing = {item["name"] for item in client.get("/api/v1/projects").raise_for_status().json()}
+            listing = client.get("/api/v1/projects", params={"limit": 100}).raise_for_status().json()
+            # Серверный режим отдаёт страницу {"items": [...]}, локальный (старый) массив.
+            cards = listing["items"] if isinstance(listing, dict) else listing
+            existing = {item["name"] for item in cards}
             for name in demo.projects:
                 if name in existing:
                     _log(f"project exists: {demo.email} / {name}")
