@@ -249,6 +249,10 @@ tags:
 | `HSE_STUDIO__LIFECYCLE__PROBE_INTERVAL_S` | float | `300.0` | оба | Как часто проверяется место на томах и в базе. |
 | `HSE_STUDIO__LIFECYCLE__DB_SIZE_LIMIT_BYTES` | int | `0` | оба | Сколько места отведено базе Postgres (диск базы api не видит); 0 значит предел неизвестен и доля занятости базы не считается. |
 | `HSE_STUDIO__LIFECYCLE__SAFE_MODE_ENABLED` | bool | `true` | оба | При критической нехватке места отказывать в крупных загрузках вместо падения. |
+| `HSE_STUDIO__DIAGNOSTICS__ENABLED` | bool | `true` | оба | Периодически проверять систему под лидерским локом. |
+| `HSE_STUDIO__DIAGNOSTICS__INTERVAL_S` | float | `300.0` | оба | Как часто идёт плановая проверка. |
+| `HSE_STUDIO__DIAGNOSTICS__CHECK_TIMEOUT_S` | float | `20.0` | оба | Предел времени одной проверки. |
+| `HSE_STUDIO__DIAGNOSTICS__PUBLIC_ENDPOINT` | bool | `false` | оба | Открыть без входа GET /health/diagnostics с общим итогом и статусами проверок (без причин и значений) для внешнего мониторинга. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |

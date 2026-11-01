@@ -67,6 +67,22 @@
     "backup_failed": "Backup to “{{path}}” failed: {{excerpt}}",
     "system_alert": "Installation notice",
     "system_alert_storage_warning": "Volume “{{volume}}” is running out of space: {{excerpt}}% used",
-    "system_alert_storage_critical": "Volume “{{volume}}” is critically low: {{excerpt}}% used. Large uploads are disabled"
+    "system_alert_storage_critical": "Volume “{{volume}}” is critically low: {{excerpt}}% used. Large uploads are disabled",
+    "system_alert_diag_fail": "Self-diagnostics: check “{{check}}” has failed",
+    "system_alert_diag_warn": "Self-diagnostics: check “{{check}}” needs attention",
+    "system_alert_diag_recovered": "Self-diagnostics: check “{{check}}” is back to normal"
+  },
+  "diagCheck": {
+    "database": "Database",
+    "migrations": "Database migrations",
+    "object_storage": "Object storage",
+    "disk": "Disk and data retention",
+    "runners": "Runners",
+    "jobs": "Queue and stuck jobs",
+    "scheduler": "Background jobs",
+    "tls_public": "Public address certificate",
+    "tls_s3": "S3 certificate",
+    "backups": "Backups",
+    "smtp": "Mail (SMTP)"
   }
 }

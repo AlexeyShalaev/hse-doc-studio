@@ -43,7 +43,8 @@
     "role": "Администратор установки",
     "instanceFallback": "HSE Doc Studio",
     "backups": "Бэкапы",
-    "data": "Хранение данных"
+    "data": "Хранение данных",
+    "diagnostics": "Самодиагностика"
   },
   "overview": {
     "title": "Обзор установки",
