@@ -40,7 +40,9 @@ class RestoreTarget:
         pg_restore_binary: str = "pg_restore",
         timeout_s: float = 6 * 3600.0,
         owns_engine: bool = False,
+        ignore_idle_api: bool = False,
     ) -> None:
+        self._ignore_idle_api = ignore_idle_api
         self._owns_engine = owns_engine
         self._engine = engine
         self._dsn = dsn
@@ -55,16 +57,18 @@ class RestoreTarget:
             await self._engine.dispose()
 
     async def api_is_running(self) -> bool:
-        """Есть ли другие соединения с этой базой: у остановленной установки их нет."""
+        """Есть ли другие соединения с этой базой: у остановленной установки их нет.
+
+        Из админки (`ignore_idle_api`) простаивающие соединения самого api не мешают: пул api и в режиме
+        обслуживания может держать одно, оно не держит блокировок и не пишет.
+        """
+        query = "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()"
+        params: dict[str, str] = {}
+        if self._ignore_idle_api:
+            query += " AND NOT (application_name = :app AND state = 'idle')"
+            params["app"] = API_APP_NAME
         async with self._engine.connect() as conn:
-            others = (
-                await conn.execute(
-                    text(
-                        "SELECT count(*) FROM pg_stat_activity "
-                        "WHERE datname = current_database() AND pid <> pg_backend_pid()"
-                    )
-                )
-            ).scalar_one()
+            others = (await conn.execute(text(query), params)).scalar_one()
         return int(others) > 0
 
     async def drop_api_connections(self) -> int:
@@ -225,4 +229,5 @@ class RestoreTargetFactory:
             pg_restore_binary=binary,
             timeout_s=cfg.backups.dump_timeout_s,
             owns_engine=True,
+            ignore_idle_api=True,
         )
