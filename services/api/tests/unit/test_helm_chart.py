@@ -44,6 +44,10 @@ def _paths(model: type[BaseModel], prefix: str = "") -> set[str]:
     return names
 
 
+def _squeeze(text: str) -> list[str]:
+    return [line for line in text.splitlines() if line.strip()]
+
+
 def test_lint() -> None:
     result = _helm("lint", str(_CHART), "-f", str(_VALUES), "--strict")
     assert result.returncode == 0, result.stdout + result.stderr
@@ -54,9 +58,9 @@ def test_template_matches_golden() -> None:
     assert result.returncode == 0, result.stderr
     if os.environ.get("UPDATE_GOLDEN"):
         _GOLDEN.write_text(result.stdout, encoding="utf-8")
-    # Хвостовые переводы строк зависят от версии helm (4.x оставляет пустую строку в конце, 3.x нет).
+    # Пустые строки между документами и в конце зависят от версии helm (4.x их оставляет, 3.x нет).
     golden = _GOLDEN.read_text(encoding="utf-8")
-    assert result.stdout.rstrip() == golden.rstrip(), "обновите: UPDATE_GOLDEN=1 pytest"
+    assert _squeeze(result.stdout) == _squeeze(golden), "обновите: UPDATE_GOLDEN=1 pytest"
 
 
 def test_api_single_replica_recreate() -> None:
