@@ -260,6 +260,8 @@ class PostgresKnownHostsStore:
         async with self._sessions.use() as session:
             rows = list((await session.execute(stmt)).scalars())
             session.expunge_all()
+        # Порядок строк не должен зависеть от правил сортировки (collation) конкретной БД: файл known_hosts стабилен.
+        rows.sort(key=lambda row: (row.pattern, row.key_type, row.fingerprint))
         return rows
 
     @staticmethod
