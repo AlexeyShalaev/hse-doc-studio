@@ -45,6 +45,14 @@ The `services` profile starts the replicas, but only `LANGUAGETOOL_REPLICAS` and
 
 The runner directory (`RUNNER_DATA_DIR`) is mounted at the same path on the host and in the container so sibling build containers see the files. Its owner is the image user `app` (uid 10001).
 
+### MinIO console and metrics
+
+Storage runs on the `pgsty/minio` image (a MinIO fork with the web console restored; upstream Docker Hub images no longer ship the management console). The tag is pinned (`RELEASE.2026-08-04T00-00-00Z`) and the image includes the `mc` client, so `minio-init` uses the same image.
+
+- Console: `http://127.0.0.1:19001` on the host (`MINIO_CONSOLE_BIND`, `MINIO_CONSOLE_PORT`). Sign in with `S3_ACCESS_KEY` and `S3_SECRET_KEY` from `.env` (the MinIO admin account). It shows buckets, users and metrics. The port listens on loopback only: from another machine use an SSH tunnel `ssh -L 19001:127.0.0.1:19001 host` or an authenticating reverse proxy with WebSocket support. Do not expose it publicly.
+- The S3 port (9000) is not published; the api reaches it over the internal compose network.
+- Prometheus metrics: `/minio/v2/metrics/cluster` (also `/node`, `/bucket`, `/resource`) on port 9000. By default `MINIO_PROMETHEUS_AUTH_TYPE=public`: no token, and the port is reachable only inside the compose network. Scrape it with a Prometheus attached to that network: `static_configs: [{targets: ["minio:9000"]}]`, `metrics_path: /minio/v2/metrics/cluster`. Quick check: `docker compose exec minio curl -s localhost:9000/minio/v2/metrics/cluster | head`. If you scrape over the host network, set `MINIO_PROMETHEUS_AUTH_TYPE=jwt`, get a token with `docker compose exec minio mc admin prometheus generate local` and pass it as `bearer_token` in the Prometheus job.
+
 ### Reverse proxy
 
 The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. The body limit must cover file uploads (up to 256 MiB) as well as project import.

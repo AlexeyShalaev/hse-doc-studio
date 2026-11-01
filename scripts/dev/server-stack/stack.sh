@@ -31,6 +31,7 @@ ensure_env() {
   {
     echo "TAG=${TAG:-ci}"
     echo "PORT=$port"
+    echo "MINIO_CONSOLE_PORT=$((port + 1000))"
     echo "PUBLIC_URL=http://localhost:$port"
     echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
     echo "SECRETS_KEY=$(openssl rand 32 | openssl base64 -A | tr '+/' '-_')"

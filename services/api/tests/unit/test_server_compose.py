@@ -49,6 +49,16 @@ def test_profiles(compose: dict[str, Any]) -> None:
     assert "redis" not in services
 
 
+def test_minio_pinned_console_loopback_metrics(compose: dict[str, Any]) -> None:
+    minio = compose["services"]["minio"]
+    assert minio["image"].startswith("pgsty/minio:RELEASE.")
+    assert "latest" not in minio["image"]
+    assert compose["services"]["minio-init"]["image"] == minio["image"]
+    # Консоль только на loopback по умолчанию, порт S3 наружу не публикуется.
+    assert minio["ports"] == ["${MINIO_CONSOLE_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-19001}:9001"]
+    assert "MINIO_PROMETHEUS_AUTH_TYPE" in minio["environment"]
+
+
 def test_api_env_names_exist_in_settings(compose: dict[str, Any]) -> None:
     known = _paths(Settings)
     env = compose["services"]["api"]["environment"]

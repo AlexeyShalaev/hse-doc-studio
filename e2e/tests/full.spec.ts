@@ -122,7 +122,9 @@ test.describe("Полный смоук сервера", () => {
     for (const lang of LANGS) {
       const p = await page(browser, lang);
       await p.goto("/register");
-      await expect(p.getByTestId("register-form")).toBeVisible();
+      // Стенд без SMTP: анониму форма не нужна, регистрация только по приглашению админа.
+      await expect(p.getByTestId("register-unavailable")).toBeVisible();
+      await expect(p.getByTestId("register-form")).toHaveCount(0);
       await shot(p, lang, "full-06-register");
       await p.context().close();
     }

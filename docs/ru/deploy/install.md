@@ -39,11 +39,19 @@ docker compose --profile services up -d   # добавить LanguageTool и ONL
 | `PUBLIC_URL` | внешний адрес: по схеме выбирается `Secure` у cookie, адрес входит в допустимые Origin |
 | `POSTGRES_PASSWORD` | пароль базы |
 | `SECRETS_KEY` | Fernet-ключ шифрования секретов в базе |
-| `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | доступ к MinIO и имя закрытого бакета |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | доступ к MinIO и имя закрытого бакета; те же ключи открывают консоль MinIO |
 | `RUNNER_BOOTSTRAP_TOKEN` | одноразовый токен регистрации первого раннера |
 | `TRUSTED_PROXIES` | адреса вашего обратного прокси списком JSON, по ним определяется адрес клиента |
 
 Каталог раннера (`RUNNER_DATA_DIR`) монтируется по одному и тому же пути на хосте и в контейнере, чтобы соседние контейнеры сборки видели файлы. Владелец каталога: пользователь `app` образа (uid 10001).
+
+### Консоль и метрики MinIO
+
+Хранилище работает на образе `pgsty/minio` (форк MinIO с возвращённой веб-консолью; в upstream-образах с Docker Hub консоли управления больше нет). Тег закреплён по версии (`RELEASE.2026-08-04T00-00-00Z`), клиент `mc` лежит в том же образе, поэтому `minio-init` использует его же.
+
+- Консоль: `http://127.0.0.1:19001` на хосте (`MINIO_CONSOLE_BIND`, `MINIO_CONSOLE_PORT`). Вход: `S3_ACCESS_KEY` и `S3_SECRET_KEY` из `.env` (учётка администратора MinIO). Там видны бакеты, пользователи и метрики. Порт слушает только loopback: с другой машины используйте SSH-туннель `ssh -L 19001:127.0.0.1:19001 host` или обратный прокси с аутентификацией и поддержкой WebSocket. Наружу без прокси его не открывайте.
+- Порт S3 (9000) наружу не публикуется, api ходит к нему по внутренней сети compose.
+- Метрики Prometheus: `/minio/v2/metrics/cluster` (также `/node`, `/bucket`, `/resource`) на порту 9000. По умолчанию `MINIO_PROMETHEUS_AUTH_TYPE=public`: токен не нужен, а порт доступен только внутри сети compose. Скрейпить можно Prometheus, подключённым к этой сети: `static_configs: [{targets: ["minio:9000"]}]`, `metrics_path: /minio/v2/metrics/cluster`. Разовая проверка: `docker compose exec minio curl -s localhost:9000/minio/v2/metrics/cluster | head`. Если скрейп идёт через сеть хоста, задайте `MINIO_PROMETHEUS_AUTH_TYPE=jwt`, получите токен `docker compose exec minio mc admin prometheus generate local` и передайте его в `bearer_token` задания Prometheus.
 
 ### Обратный прокси
 
