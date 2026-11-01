@@ -171,12 +171,18 @@ class SqlUpdateRunRepository:
         )
 
     async def failed_targets(self) -> frozenset[str]:
-        stmt = select(UpdateRunRow.to_version).where(
+        failed = select(UpdateRunRow.to_version).where(
             UpdateRunRow.kind == RunKind.update.value,
             UpdateRunRow.status.in_([RunStatus.rolled_back.value, RunStatus.failed.value]),
         )
+        # Версия, с которой админ откатился вручную, автоматически не возвращается.
+        undone = select(UpdateRunRow.from_version).where(
+            UpdateRunRow.kind == RunKind.rollback.value, UpdateRunRow.status == RunStatus.succeeded.value
+        )
         async with self._sessions.use() as session:
-            return frozenset((await session.execute(stmt)).scalars().all())
+            found = (await session.execute(failed)).scalars().all()
+            found = [*found, *(await session.execute(undone)).scalars().all()]
+        return frozenset(found)
 
     async def counts(self) -> dict[RunStatus, int]:
         stmt = select(UpdateRunRow.status, func.count()).group_by(UpdateRunRow.status)

@@ -20,8 +20,8 @@
       "failed": "The update to {{to}} ({{at}}) failed and the rollback did not finish. Manual action is needed.",
       "rolled_back": "The update to {{to}} ({{at}}) failed. The system went back to the previous version."
     },
-    "manual": "You install updates",
-    "manualBody": "The built-in executor is off (Helm or your own CI): the Studio checks releases and notifies you, the operator installs with the command below. Helm rolls back by itself with `--atomic`.",
+    "manual": "The update executor is not connected",
+    "manualBody": "The Studio checks releases and notifies you, the operator installs with the command below: that is how Helm works (rollback with `--atomic`); for compose enable the updater service: `docker compose --profile updater up -d` with UPDATER_TOKEN in .env.",
     "updaterOffline": "The updater service does not answer",
     "updaterOfflineBody": "Automatic installs and the update buttons do not work until it runs: `docker compose up -d updater`. Release checks and notifications still work.",
     "noBackup": "No backup destination configured",

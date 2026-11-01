@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.admin import PageParams, page_params
 from hse_doc_studio.api.schemas.server_update import (
     ReleaseOut,
@@ -76,9 +77,9 @@ def _settings_out(s: UpdateSettings) -> UpdateSettingsBody:
     )
 
 
-def manual_command(executor_enabled: bool, version: str | None) -> str:
-    """Подсказка для установок, где обновление ставит человек (helm) или апдейтер не отвечает."""
-    if executor_enabled:
+def manual_command(executor_kind: str, version: str | None) -> str:
+    """Подсказка для установок, где обновление ставит человек: compose без апдейтера или helm."""
+    if executor_kind == "compose":
         return "docker compose pull && docker compose up -d"
     tag = f" --set image.tag={version}" if version else ""
     return f"helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values{tag} --atomic --wait"
@@ -104,7 +105,7 @@ def _status(st: UpdateStatus) -> UpdateStatusOut:
         last_run=_run(st.last_run) if st.last_run else None,
         rollback_version=st.rollback_version,
         rollback_needs_restore=st.rollback_needs_restore,
-        manual_command=manual_command(st.executor_enabled, st.available.version if st.available else None),
+        manual_command=manual_command(settings.server_update.executor, st.available.version if st.available else None),
     )
 
 

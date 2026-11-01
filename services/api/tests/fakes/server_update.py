@@ -60,11 +60,17 @@ class InMemoryUpdateRuns:
         return max(ok, key=lambda r: r.created_at) if ok else None
 
     async def failed_targets(self) -> frozenset[str]:
-        return frozenset(
+        failed = {
             r.to_version
             for r in self.items.values()
             if r.kind is RunKind.update and r.status in {RunStatus.rolled_back, RunStatus.failed}
-        )
+        }
+        undone = {
+            r.from_version
+            for r in self.items.values()
+            if r.kind is RunKind.rollback and r.status is RunStatus.succeeded
+        }
+        return frozenset(failed | undone)
 
     async def counts(self) -> dict[RunStatus, int]:
         out: dict[RunStatus, int] = {}

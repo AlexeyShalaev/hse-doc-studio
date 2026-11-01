@@ -7,7 +7,7 @@ export type Policy = z.infer<typeof PolicySchema>;
 export const MaxBumpSchema = z.enum(["patch", "minor"]);
 export const VerifySchema = z.enum(["none", "digest", "cosign"]);
 
-export const UpdateSettingsSchema = z.object({
+export const UpdateSettingsSchema = z.strictObject({
   policy: PolicySchema,
   channel: z.literal("stable"),
   max_bump: MaxBumpSchema,
@@ -20,7 +20,7 @@ export const UpdateSettingsSchema = z.object({
 });
 export type UpdateSettings = z.infer<typeof UpdateSettingsSchema>;
 
-export const ReleaseSchema = z.object({
+export const ReleaseSchema = z.strictObject({
   version: z.string(),
   date: z.string(),
   notes: z.array(z.string()),
@@ -39,7 +39,7 @@ export const RunStatusSchema = z.enum([
 ]);
 export type RunStatus = z.infer<typeof RunStatusSchema>;
 
-export const RunEventSchema = z.object({
+export const RunEventSchema = z.strictObject({
   seq: z.number().int(),
   at: z.string(),
   phase: z.string(),
@@ -47,7 +47,7 @@ export const RunEventSchema = z.object({
   message: z.string(),
 });
 
-export const UpdateRunSchema = z.object({
+export const UpdateRunSchema = z.strictObject({
   id: z.string(),
   kind: z.enum(["update", "rollback"]),
   trigger: z.enum(["auto", "manual"]),
@@ -70,7 +70,7 @@ export const UpdateRunSchema = z.object({
 });
 export type UpdateRun = z.infer<typeof UpdateRunSchema>;
 
-export const UpdateRunPageSchema = z.object({
+export const UpdateRunPageSchema = z.strictObject({
   items: z.array(UpdateRunSchema),
   total: z.number().int(),
   limit: z.number().int(),
@@ -78,7 +78,7 @@ export const UpdateRunPageSchema = z.object({
 });
 export type UpdateRunPage = z.infer<typeof UpdateRunPageSchema>;
 
-export const UpdateStatusSchema = z.object({
+export const UpdateStatusSchema = z.strictObject({
   settings: UpdateSettingsSchema,
   current_version: z.string(),
   executor: z.enum(["compose", "none"]),
