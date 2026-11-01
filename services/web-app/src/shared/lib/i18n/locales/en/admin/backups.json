@@ -1,0 +1,224 @@
+{
+  "cancel": "Cancel",
+  "close": "Close",
+  "units": {
+    "h": "h",
+    "min": "min",
+    "s": "s"
+  },
+  "page": {
+    "title": "Backups",
+    "lead": "Server backups: database, project files, object storage and settings. Encrypted on the server, stored in the destinations you choose.",
+    "runNow": "Back up now"
+  },
+  "banner": {
+    "running": "Backing up to “{{name}}”",
+    "stage": "Stage: {{stage}}",
+    "failed": "The last backup ({{at}}) failed",
+    "noDestination": "No backup destination yet",
+    "noDestinationBody": "Add a destination: an S3 storage or a local directory. Nothing is backed up without one.",
+    "disabled": "The schedule is off: backups run only by hand"
+  },
+  "kind": {
+    "s3": "S3",
+    "local": "Server directory"
+  },
+  "destinations": {
+    "title": "Destinations",
+    "lead": "Several destinations, one is the default: the schedule writes there. Keys are stored encrypted and never shown again.",
+    "separate": "Backup storage must be physically separate from the primary one: another volume, better another host or provider. A copy on the same disk does not survive losing the disk.",
+    "add": "Add",
+    "default": "default",
+    "check": "Test connection",
+    "checkOk": "checked {{at}}",
+    "checkFailed": "error: {{error}}",
+    "backups": "Backups",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete destination?",
+    "loadFailed": "Could not load destinations.",
+    "localRoot": "Local destinations live inside {{root}}. To use a separate disk, mount it on this directory."
+  },
+  "dialog": {
+    "createTitle": "New destination",
+    "editTitle": "Edit destination",
+    "check": "Test connection",
+    "save": "Save",
+    "checkOk": "Connection works: a probe object was written, read back and deleted.",
+    "checkFailed": "Could not connect: {{error}}",
+    "fields": {
+      "name": "Name",
+      "kind": "Type",
+      "endpoint": "Endpoint",
+      "region": "Region",
+      "bucket": "Bucket",
+      "prefix": "Prefix",
+      "pathStyle": "Path-style bucket addressing",
+      "accessKey": "Access key",
+      "secretKey": "Secret key",
+      "localPath": "Subdirectory",
+      "makeDefault": "Default"
+    },
+    "hint": {
+      "on": "on",
+      "title": "How to connect your own S3 (MinIO from compose)",
+      "body": "Start the storage with the overlay deploy/server/compose.backup-s3.yml, then enter the values below. The bucket is private and has its own keys.",
+      "keys": "Keys",
+      "separate": "Take the keys from your .env (BACKUP_S3_ACCESS_KEY, BACKUP_S3_SECRET_KEY): they are not the primary storage keys. To survive losing the host, run the overlay on another machine.",
+      "fill": "Fill in the values",
+      "endpoint": "Empty means AWS by region.",
+      "prefix": "Backups go into this folder of the bucket.",
+      "pathStyle": "Needed for MinIO and Ceph; turn off for virtual-hosted addressing.",
+      "keepKey": "Empty keeps the saved one.",
+      "encrypted": "Stored encrypted with the installation key.",
+      "localPath": "A path inside {{root}}, without “..”.",
+      "localSame": "A server directory protects against mistakes but not against losing the disk if it sits on the same volume as the data.",
+      "makeDefault": "The schedule writes to the default destination."
+    },
+    "invalid": {
+      "name": "Enter a name up to 128 characters.",
+      "endpoint": "An address like https://host:port.",
+      "bucket": "Bucket name: 3–63 characters, lowercase letters, digits, dot and hyphen.",
+      "prefix": "Letters, digits, dot, hyphen and slash; no “..”.",
+      "localPath": "A path inside the root, without “..” or hidden names.",
+      "accessKey": "Enter the access key.",
+      "secretKey": "Enter the secret key."
+    }
+  },
+  "warnings": {
+    "same_as_primary": "This is the same storage or volume as the primary one: losing it takes both the data and the backups."
+  },
+  "settings": {
+    "title": "Schedule and retention",
+    "lead": "When to back up, how long to keep, and what to encrypt with. Schedule times are UTC.",
+    "save": "Save",
+    "loadFailed": "Could not load settings.",
+    "units": {
+      "h": "h",
+      "d": "days"
+    },
+    "enabled": {
+      "label": "Scheduled backups",
+      "hint": "Off: backups only by hand.",
+      "next": "Next run: {{at}}"
+    },
+    "kind": {
+      "label": "Schedule",
+      "options": {
+        "interval": "Interval",
+        "cron": "Cron"
+      },
+      "hint": {
+        "interval": "Every N hours from the previous scheduled run.",
+        "cron": "Five fields: minute, hour, day of month, month, day of week."
+      }
+    },
+    "interval": {
+      "label": "Interval",
+      "hint": "From 1 to 2160 hours."
+    },
+    "cron": {
+      "label": "Cron expression",
+      "hint": "For example, 0 3 * * * is every day at 03:00 UTC; lists, ranges and steps are supported."
+    },
+    "keepLast": {
+      "label": "Keep latest",
+      "hint": "This many newest backups are always kept. 0 turns the rule off."
+    },
+    "keepDays": {
+      "label": "Keep days",
+      "hint": "Of the rest, those older than this are deleted. 0 turns the rule off; both zeros keep everything. The latest successful backup is never deleted."
+    },
+    "encryption": {
+      "label": "Encryption",
+      "options": {
+        "installation": "Installation key",
+        "passphrase": "Passphrase"
+      },
+      "hint": {
+        "installation": "The key is derived from SECRETS_KEY. Backups stay readable while the key exists; store it separately.",
+        "passphrase": "A backup is readable only with the passphrase and does not depend on SECRETS_KEY. Lose the passphrase and the backups cannot be opened."
+      }
+    },
+    "passphrase": {
+      "label": "Passphrase",
+      "hint": "At least 12 characters. Stored encrypted on the server, never shown again.",
+      "kept": "A passphrase is saved. Enter a new one to replace it; empty keeps the current one."
+    },
+    "notify": {
+      "label": "Notify admins about failures",
+      "hint": "Every admin gets a message in the Inbox."
+    },
+    "invalid": {
+      "interval_hours": "A whole number of hours from 1 to 2160.",
+      "cron": "Five cron fields are required.",
+      "keep_last": "A whole number from 0 to 10000.",
+      "keep_days": "A whole number from 0 to 3650.",
+      "passphrase": "The passphrase must be at least 12 characters (required in this mode)."
+    }
+  },
+  "runs": {
+    "title": "Run history",
+    "lead": "Size, duration and errors of every run.",
+    "loadFailed": "Could not load history.",
+    "empty": "No runs yet",
+    "emptyHint": "Run a backup by hand or turn the schedule on.",
+    "removed": "removed by retention",
+    "cols": {
+      "started": "Started",
+      "status": "Status",
+      "trigger": "Trigger",
+      "destination": "Destination",
+      "size": "Size",
+      "duration": "Duration",
+      "result": "Result"
+    },
+    "status": {
+      "running": "running",
+      "ok": "done",
+      "failed": "failed",
+      "interrupted": "interrupted"
+    },
+    "trigger": {
+      "manual": "manual",
+      "schedule": "scheduled"
+    },
+    "stage": {
+      "starting": "starting",
+      "db.pgdump.enc": "database",
+      "files.tar.enc": "files",
+      "objects.tar.enc": "objects",
+      "settings.json.enc": "settings",
+      "manifest": "manifest"
+    }
+  },
+  "stored": {
+    "title": "Backups in “{{name}}”",
+    "lead": "Found by manifests in the storage.",
+    "empty": "No backups in this destination.",
+    "restoreNote": "An operator restores with the CLI while api and runners are stopped (from the admin it is unsafe: it replaces the database the admin itself runs on). Without --apply the command only verifies the backup.",
+    "meta": "Version {{version}}, schema {{schema}}, encryption: {{mode}}",
+    "command": "Restore command",
+    "delete": "Delete backup",
+    "confirmDelete": "Delete the backup permanently?"
+  },
+  "failure": {
+    "backup_invalid_input": "Check the entered data.",
+    "backup_not_found": "Not found.",
+    "backup_conflict": "Conflict: the name is taken or the destination is busy.",
+    "backup_already_running": "A backup is already running: wait for it to finish.",
+    "backup_no_destination": "No backup destination is selected.",
+    "backup_secrets_unavailable": "Saved keys cannot be decrypted (SECRETS_KEY does not match) or the passphrase is not set.",
+    "backup_unsupported": "This backup format is not supported by this version.",
+    "backup_unsafe_target": "The operation is unsafe in the current state.",
+    "backup_destination_unreachable": "The destination is unreachable.",
+    "backup_integrity": "The data failed the integrity check.",
+    "not_found": "Not found or no access.",
+    "forbidden": "Not enough rights.",
+    "rate_limited": "Too many requests. Try again later.",
+    "csrf_failed": "Session expired: reload the page.",
+    "input_invalid": "Check the entered data.",
+    "network": "No connection to the server.",
+    "unknown": "Something went wrong. Try again later."
+  }
+}

@@ -12,6 +12,7 @@ import {
   Bot,
   Building2,
   ClipboardList,
+  DatabaseBackup,
   Gauge,
   Globe,
   HardDrive,
@@ -45,6 +46,7 @@ export type AdminSection =
   | "quotas"
   | "services"
   | "storage"
+  | "backups"
   | "instance"
   | "settings"
   | "signing"
@@ -81,6 +83,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
     items: [
       { id: "services", to: "/admin/services", icon: Activity },
       { id: "storage", to: "/admin/storage", icon: HardDrive },
+      { id: "backups", to: "/admin/backups", icon: DatabaseBackup },
     ],
   },
   {

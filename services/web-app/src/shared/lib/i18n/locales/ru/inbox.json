@@ -64,6 +64,7 @@
     "review_mention": "{{actor}} упомянул вас в «{{path}}»: {{excerpt}}",
     "review_resolved": "Тред в «{{path}}» закрыт: {{excerpt}}",
     "review_resolved_resolved": "{{actor}} закрыл ваш тред в «{{path}}»: {{excerpt}}",
-    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}"
+    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}",
+    "backup_failed": "Бэкап в «{{path}}» не удался: {{excerpt}}"
   }
 }

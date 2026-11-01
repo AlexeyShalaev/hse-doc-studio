@@ -8,6 +8,9 @@ tags:
 
 # Backup, updates, key loss
 
+!!! tip "Automatic backups"
+    Scheduling, encryption, your own S3 and restoring with the CLI are described in [Server backups](backups.md). Below is the manual procedure: it is needed for volumes the backup does not cover (ONLYOFFICE), and as a fallback.
+
 ## What to back up
 
 | What | How |

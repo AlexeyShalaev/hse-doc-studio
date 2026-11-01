@@ -34,7 +34,8 @@
     "back": "Back to Studio",
     "version": "Version {{version}}",
     "role": "Instance administrator",
-    "instanceFallback": "HSE Doc Studio"
+    "instanceFallback": "HSE Doc Studio",
+    "backups": "Backups"
   },
   "overview": {
     "title": "Installation overview",

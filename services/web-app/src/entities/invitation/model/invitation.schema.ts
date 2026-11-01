@@ -258,6 +258,7 @@ export const NOTIFICATION_KINDS = [
   "review_reply",
   "review_mention",
   "review_resolved",
+  "backup_failed",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;

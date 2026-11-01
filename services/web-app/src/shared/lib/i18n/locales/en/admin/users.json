@@ -361,7 +361,15 @@
       "device_approve": "Device allowed git access",
       "device_deny": "Device denied git access",
       "artifact_pdf_uploaded": "Local-build PDF uploaded",
-      "artifact_deleted": "Uploaded PDF deleted"
+      "artifact_deleted": "Uploaded PDF deleted",
+      "backup_destination_create": "Backup destination added",
+      "backup_destination_update": "Backup destination changed",
+      "backup_destination_delete": "Backup destination deleted",
+      "backup_destination_test": "Backup destination connection tested",
+      "backup_settings_update": "Backup settings changed",
+      "backup_run_start": "Backup started",
+      "backup_run_finish": "Backup finished",
+      "backup_delete": "Backup deleted"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",
