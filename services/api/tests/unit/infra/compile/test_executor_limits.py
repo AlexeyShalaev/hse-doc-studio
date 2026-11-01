@@ -91,3 +91,21 @@ async def test__run__runner_profile__both_containers_are_isolated(tmp_path: Path
         # флаги стоят до образа и до команды внутри контейнера
         assert call.index("--read-only") < call.index("-v")
     assert any("pdf written" in line for line in lines)
+
+
+async def test__run__non_root_runner__format_built_before_latexmk(tmp_path: Path, docker_log: Path) -> None:
+    await _compile(ExecutorLimits(user="10001:10001"), tmp_path)
+
+    first_run = next(call for call in recorded_calls(docker_log) if call[:1] == ["run"])
+    tail = first_run[first_run.index("sh") :]
+    assert tail[:2] == ["sh", "-c"]
+    assert "fmtutil-user" in tail[2]
+    assert tail[3:5] == ["xelatex", "latexmk"]
+
+
+async def test__run__embedded_profile__latexmk_runs_directly(tmp_path: Path, docker_log: Path) -> None:
+    await _compile(None, tmp_path)
+
+    first_run = next(call for call in recorded_calls(docker_log) if call[:1] == ["run"])
+    assert "fmtutil-user" not in " ".join(first_run)
+    assert "latexmk" in first_run
