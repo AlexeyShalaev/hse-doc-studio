@@ -16,6 +16,7 @@ Create Date: 2026-11-04 11:00:00
 Откат копирует строки из партиций в обычную таблицу (долго на больших журналах, зато без потерь).
 """
 
+# ruff: noqa: S608 — имена таблиц в SQL берутся только из закрытого словаря _TABLES
 from collections.abc import Sequence
 
 from alembic import op
@@ -49,7 +50,8 @@ _TABLES = {
 # Месяцы считаем по UTC независимо от часового пояса сессии: имена партиций и границы не плавают.
 _CUTOVER_SQL = """
 SELECT (CASE
-    WHEN (now() AT TIME ZONE 'UTC') + interval '2 days' >= date_trunc('month', now() AT TIME ZONE 'UTC') + interval '1 month'
+    WHEN (now() AT TIME ZONE 'UTC') + interval '2 days'
+         >= date_trunc('month', now() AT TIME ZONE 'UTC') + interval '1 month'
     THEN date_trunc('month', now() AT TIME ZONE 'UTC') + interval '2 months'
     ELSE date_trunc('month', now() AT TIME ZONE 'UTC') + interval '1 month'
 END) AT TIME ZONE 'UTC'
@@ -80,7 +82,8 @@ BEGIN
             BEGIN
                 EXECUTE format(
                     'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
-                    part, parent, month_start AT TIME ZONE 'UTC', (month_start + interval '1 month') AT TIME ZONE 'UTC');
+                    part, parent,
+                    month_start AT TIME ZONE 'UTC', (month_start + interval '1 month') AT TIME ZONE 'UTC');
                 IF parent = 'audit_log' THEN
                     EXECUTE format(
                         'CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON %I '
@@ -168,18 +171,19 @@ def _swap(table: str, cutover: str) -> None:
     spec = _TABLES[table]
     op.execute(f"ALTER TABLE {table} DROP CONSTRAINT pk_{table}")
     op.execute(f"ALTER TABLE {table} ADD CONSTRAINT pk_{table}_legacy PRIMARY KEY USING INDEX {table}_idat_uq")
-    op.execute(
+    rename = (
         f"DO $$ DECLARE r record; BEGIN FOR r IN SELECT indexname FROM pg_indexes "
         f"WHERE tablename = '{table}' AND schemaname = 'public' AND indexname LIKE 'ix\\_%' "
         f"LOOP EXECUTE format('ALTER INDEX %I RENAME TO %I', r.indexname, r.indexname || '_l'); END LOOP; END $$"
     )
+    op.execute(rename)
     if table == "audit_log":
         op.execute("DROP TRIGGER audit_log_no_change ON audit_log")
         op.execute("DROP TRIGGER audit_log_no_truncate ON audit_log")
     op.execute(f"ALTER TABLE {table} RENAME TO {legacy}")
     op.execute(f"CREATE TABLE {table} (LIKE {legacy} INCLUDING DEFAULTS INCLUDING COMMENTS) PARTITION BY RANGE (at)")
     op.execute(f"ALTER TABLE {table} ADD CONSTRAINT pk_{table} PRIMARY KEY ({spec['key']}, at)")
-    for definition in spec["indexes"]:  # type: ignore[attr-defined]
+    for definition in spec["indexes"]:
         op.execute(definition)
     op.execute(f"ALTER TABLE {table} ATTACH PARTITION {legacy} FOR VALUES FROM (MINVALUE) TO ('{cutover}')")
     op.execute(f"CREATE TABLE {table}_default PARTITION OF {table} DEFAULT")
@@ -233,7 +237,7 @@ def _flatten(table: str) -> None:
     if table == "audit_log":
         op.execute("ALTER SEQUENCE audit_log_id_seq OWNED BY audit_log.id")
     op.execute(f"ALTER TABLE {table} ADD CONSTRAINT pk_{table} PRIMARY KEY ({spec['key']})")
-    for definition in spec["indexes"]:  # type: ignore[attr-defined]
+    for definition in spec["indexes"]:
         op.execute(definition)
     if table == "audit_log":
         op.execute("REVOKE ALL ON audit_log FROM PUBLIC")

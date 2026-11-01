@@ -230,6 +230,16 @@ tags:
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_FILE` | str | не задано | оба | Файл compose для режима compose (`-f`). |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_SERVICE` | str | `runner` | оба | Сервис раннеров в compose, который масштабируется. |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_TIMEOUT_S` | float | `120.0` | оба | Таймаут команды docker compose. |
+| `HSE_STUDIO__LIFECYCLE__ENABLED` | bool | `true` | оба | Включить фоновую очистку по реестру политик хранения. |
+| `HSE_STUDIO__LIFECYCLE__INTERVAL_S` | float | `3600.0` | оба | Как часто сервер очищает источники роста по срокам. |
+| `HSE_STUDIO__LIFECYCLE__BATCH_SIZE` | int | `2000` | оба | Строк в одной пачке удаления. |
+| `HSE_STUDIO__LIFECYCLE__RUN_BUDGET_S` | float | `120.0` | оба | Сколько секунд один источник может чиститься за прогон; остаток на следующем. |
+| `HSE_STUDIO__LIFECYCLE__BATCH_PAUSE_S` | float | `0.05` | оба | Пауза между пачками удаления: ограничивает нагрузку на базу. |
+| `HSE_STUDIO__LIFECYCLE__PARTITION_MONTHS_AHEAD` | int | `3` | оба | На сколько месяцев вперёд заранее создаются партиции журналов. |
+| `HSE_STUDIO__LIFECYCLE__PROBE_ENABLED` | bool | `true` | оба | Следить за местом на томах и размером базы. |
+| `HSE_STUDIO__LIFECYCLE__PROBE_INTERVAL_S` | float | `300.0` | оба | Как часто проверяется место на томах и в базе. |
+| `HSE_STUDIO__LIFECYCLE__DB_SIZE_LIMIT_BYTES` | int | `0` | оба | Сколько места отведено базе Postgres (диск базы api не видит); 0 значит предел неизвестен и доля занятости базы не считается. |
+| `HSE_STUDIO__LIFECYCLE__SAFE_MODE_ENABLED` | bool | `true` | оба | При критической нехватке места отказывать в крупных загрузках вместо падения. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |

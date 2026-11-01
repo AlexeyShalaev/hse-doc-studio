@@ -565,6 +565,6 @@ class ServerInvitationsProvider(Provider):
         auth_tokens: IAuthTokenRepository,
         outbox: IMailOutboxRepository,
         attempts: ILoginAttemptRepository,
-        notifications: INotificationRepository,
     ) -> AuthCleanupService:
-        return AuthCleanupService(sessions, auth_tokens, outbox, attempts, notifications=notifications)
+        # Уведомления чистит движок жизненного цикла данных: срок правится в админке, а не зашит в 90 суток.
+        return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
