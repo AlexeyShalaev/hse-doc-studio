@@ -158,3 +158,12 @@ class StoredBackup:
     backup_id: str
     manifest: Manifest
     manifest_sha256: str
+
+
+@dataclass(frozen=True)
+class RunStats:
+    """Сводка по истории запусков для метрик: счётчики по статусам и последний успешный запуск."""
+
+    by_status: dict[RunStatus, int] = field(default_factory=dict)
+    last_success: BackupRun | None = None
+    last_finished: BackupRun | None = None

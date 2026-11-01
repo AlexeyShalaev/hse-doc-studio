@@ -13,6 +13,7 @@ from hse_doc_studio.core.backup.entities import (
     BackupRun,
     DestinationKind,
     DestinationSpec,
+    RunStats,
     RunStatus,
     RunTrigger,
     StoredDestination,
@@ -301,6 +302,23 @@ class SqlBackupRunRepository:
         async with self._sessions.use() as session:
             row = (await session.execute(stmt)).scalar_one_or_none()
         return _run(row) if row else None
+
+    async def stats(self) -> RunStats:
+        counts = select(BackupRunRow.status, func.count()).group_by(BackupRunRow.status)
+        last_ok = (
+            select(BackupRunRow)
+            .where(BackupRunRow.status == RunStatus.ok.value)
+            .order_by(BackupRunRow.finished_at.desc())
+            .limit(1)
+        )
+        async with self._sessions.use() as session:
+            by_status = {RunStatus(name): int(total) for name, total in (await session.execute(counts)).all()}
+            ok_row = (await session.execute(last_ok)).scalar_one_or_none()
+        return RunStats(
+            by_status=by_status,
+            last_success=_run(ok_row) if ok_row else None,
+            last_finished=await self.last_finished(),
+        )
 
 
 class SqlAdminDirectory:

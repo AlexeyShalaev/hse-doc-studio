@@ -223,7 +223,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_auth_cleanup(app, container, settings)
         install_quota_housekeeping(app, container, settings)
         install_autoscale(app, container, settings, server_metrics)
-        install_backups(app, container, settings)
+        install_backups(app, container, settings, server_metrics)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
         install_device_authorizations_purge(app, container)

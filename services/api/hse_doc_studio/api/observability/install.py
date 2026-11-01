@@ -230,15 +230,36 @@ def _install_backup_provision(app: FastAPI, container: AsyncContainer, cfg: Sett
     )
 
 
-def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+def install_backups(
+    app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry | None = None
+) -> None:
     """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
     if not cfg.backups.enabled:
         return
+    from hse_doc_studio.api.observability.backup_metrics import backup_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.backup.metrics import BackupMetricsRefresher, BackupMetricsState  # noqa: PLC0415
     from hse_doc_studio.use_cases.backup.runs import ScheduledBackupTick  # noqa: PLC0415
     from hse_doc_studio.use_cases.backup.service import BackupService  # noqa: PLC0415
 
+    state = BackupMetricsState()
+    if metrics is not None:
+        metrics.add_collector(backup_collector(state))
+
+    async def _refresh_metrics() -> None:
+        from hse_doc_studio.core.backup.protocols import IBackupRunRepository  # noqa: PLC0415
+        from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository  # noqa: PLC0415
+
+        refresher = BackupMetricsRefresher(
+            state, await container.get(IBackupRunRepository), await container.get(IInstanceSettingsRepository)
+        )
+        try:
+            await refresher.refresh()
+        except Exception:
+            logger.warning("backup metrics refresh failed", exc_info=True)
+
     async def _tick() -> None:
         await (await container.get(ScheduledBackupTick)).run_once()
+        await _refresh_metrics()
 
     app.state.background.register(PeriodicTask(name="backup_schedule", interval_s=cfg.backups.tick_s, run=_tick))
 
@@ -247,6 +268,7 @@ def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> N
         recovered = await (await container.get(BackupService)).recover_stale()
         if recovered:
             logger.warning("backup runs interrupted by a restart", count=recovered)
+        await _refresh_metrics()
 
     _install_backup_provision(app, container, cfg)
 

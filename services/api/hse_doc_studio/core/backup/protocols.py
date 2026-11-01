@@ -15,6 +15,7 @@ from hse_doc_studio.core.backup.entities import (
     DestinationSecrets,
     DestinationSpec,
     ManifestPart,
+    RunStats,
     RunStatus,
     StoredDestination,
 )
@@ -68,6 +69,9 @@ class IBackupRunRepository(Protocol):
     async def interrupt_running(self, at: datetime) -> int: ...
     async def running(self) -> BackupRun | None: ...
     async def last_finished(self) -> BackupRun | None: ...
+    async def stats(self) -> RunStats:
+        """Счётчики запусков по статусам, последний успешный и последний завершённый (для метрик)."""
+        ...
 
 
 class IBackupStoreFactory(Protocol):
