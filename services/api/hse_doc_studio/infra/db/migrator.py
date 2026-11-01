@@ -108,7 +108,12 @@ async def _without_timeouts(connection: AsyncConnection) -> None:
 async def _migration_connection(engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
     """Отдельное соединение без клиентского `command_timeout` asyncpg: `SET LOCAL` его не снимает, а долгая
     миграция (индекс, бэкфилл) оборвалась бы на клиенте."""
-    own = create_async_engine(engine.url, poolclass=NullPool, connect_args={"command_timeout": None})
+    # Таймауты снимаются ещё в стартовом пакете: служебные запросы нового движка идут до `SET LOCAL`.
+    own = create_async_engine(
+        engine.url,
+        poolclass=NullPool,
+        connect_args={"command_timeout": None, "server_settings": {"statement_timeout": "0", "lock_timeout": "0"}},
+    )
     try:
         async with own.begin() as connection:
             await _without_timeouts(connection)
