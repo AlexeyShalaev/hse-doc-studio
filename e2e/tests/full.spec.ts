@@ -226,6 +226,16 @@ test.describe("Полный смоук сервера", () => {
       (v) => TERMINAL.has(v.status),
       COMPILE_MS,
     );
+    if (done.status !== "success") {
+      // Диагностика для CI: журнал сборки из потока, иначе причина видна только в логе раннера.
+      const stream = await alice.request
+        .get(`/api/v1/projects/${aliceProject.id}/compiles/${compileId}/stream`, {
+          timeout: 15_000,
+        })
+        .then((r) => r.text())
+        .catch((e: unknown) => `stream: ${String(e)}`);
+      console.log(`compile log:\n${stream.slice(-6000)}`);
+    }
     expect(done.status).toBe("success");
 
     // PDF отдаётся временной ссылкой на хранилище; адрес внутри compose, поэтому читаем его из контейнера api.
