@@ -61,7 +61,10 @@ describe("AdminGate", () => {
 
   it("renders the admin shell for an admin, in ru", async () => {
     mount(bootstrap(true));
-    expect(await screen.findByTestId("admin-overview")).toBeInTheDocument();
+    // Первый тест грузит чанк админки и все её словари: на медленном раннере CI это дольше секунды.
+    expect(
+      await screen.findByTestId("admin-overview", undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Обзор установки")).toBeInTheDocument();
     expect(screen.getByTestId("admin-nav-users")).toHaveTextContent(
       "Пользователи",
@@ -79,8 +82,11 @@ describe("AdminGate", () => {
 
   it("redirects an unknown section to the overview", async () => {
     mount(bootstrap(true), "/admin/nope");
-    await waitFor(() => {
-      expect(screen.getByTestId("admin-overview")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("admin-overview")).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
   });
 });
