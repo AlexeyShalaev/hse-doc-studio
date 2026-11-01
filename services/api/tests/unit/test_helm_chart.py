@@ -54,7 +54,9 @@ def test_template_matches_golden() -> None:
     assert result.returncode == 0, result.stderr
     if os.environ.get("UPDATE_GOLDEN"):
         _GOLDEN.write_text(result.stdout, encoding="utf-8")
-    assert result.stdout == _GOLDEN.read_text(encoding="utf-8"), "обновите: UPDATE_GOLDEN=1 pytest"
+    # Хвостовые переводы строк зависят от версии helm (4.x оставляет пустую строку в конце, 3.x нет).
+    golden = _GOLDEN.read_text(encoding="utf-8")
+    assert result.stdout.rstrip() == golden.rstrip(), "обновите: UPDATE_GOLDEN=1 pytest"
 
 
 def test_api_single_replica_recreate() -> None:
