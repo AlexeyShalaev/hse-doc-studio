@@ -92,6 +92,7 @@ export default defineConfig({
       timeout: 3 * 60_000,
       use: {
         ...devices["Desktop Chrome"],
+        actionTimeout: 15_000,
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },

@@ -47,7 +47,7 @@
   },
   "policy": {
     "title": "Policy and window",
-    "lead": "How the system learns about releases and whether it installs them. Window times are UTC.",
+    "lead": "How the system learns about releases and whether it installs them. Window times are UTC. The window applies to automatic installs.",
     "save": "Save",
     "mode": {
       "label": "Mode",

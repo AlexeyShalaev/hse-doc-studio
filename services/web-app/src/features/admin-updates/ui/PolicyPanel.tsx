@@ -41,7 +41,6 @@ export const PolicyPanel = ({
     problem === name || failure?.field === name;
   const hint = (name: SettingsProblem, normal: string) =>
     bad(name) ? t(`policy.invalid.${name}`) : normal;
-  const auto = draft.policy === "auto";
 
   return (
     <Section
@@ -133,7 +132,6 @@ export const PolicyPanel = ({
                 type="button"
                 variant={on ? "primary" : "ghost"}
                 aria-pressed={on}
-                disabled={!auto}
                 data-testid={`update-day-${String(day)}`}
                 onClick={() => {
                   set({
@@ -158,7 +156,6 @@ export const PolicyPanel = ({
           id="up-start"
           type="time"
           value={draft.start}
-          disabled={!auto}
           onChange={(e) => {
             set({ start: e.target.value });
           }}
@@ -178,7 +175,6 @@ export const PolicyPanel = ({
             max={24}
             step={0.25}
             value={draft.hours}
-            disabled={!auto}
             onChange={(e) => {
               set({ hours: e.target.value });
             }}
