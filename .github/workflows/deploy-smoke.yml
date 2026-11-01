@@ -259,6 +259,9 @@ jobs:
           echo "::group::docker events"
           docker events --since 30m --until 0s --filter type=container --filter event=die --filter event=create --format '{{.Time}} {{.Action}} {{.Actor.Attributes.image}} exit={{.Actor.Attributes.exitCode}} {{.Actor.Attributes.name}}' | tail -40 || true
           echo "::endgroup::"
+          echo "::group::latex logs"
+          sudo find scripts/dev/server-stack/runner-data -name '*.log' -print -exec tail -n 40 {} \; 2>&1 | tail -150 || true
+          echo "::endgroup::"
           echo "::group::jobs"
           scripts/dev/server-stack/stack.sh psql -At -c "select kind, state, error_code, result::text as result from jobs order by seq desc limit 10" || true
           echo "::endgroup::"
