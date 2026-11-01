@@ -55,7 +55,8 @@ nav = [
         { "Invitations and access requests" = "deploy/invitations.md" },
         { "Runners" = "deploy/runners.md" },
         { "Security and personal data" = "deploy/security.md" },
-        { "Backup and updates" = "deploy/operations.md" },
+        { "Server backups" = "deploy/backups.md" },
+        { "Updates and key loss" = "deploy/operations.md" },
         { "Autonomy and data retention" = "deploy/autonomy.md" },
     ] },
     { "Reference" = [

@@ -42,6 +42,11 @@ const AdminInstallPage = lazy(() =>
   import("./AdminInstallPage").then((m) => ({ default: m.AdminInstallPage })),
 );
 
+// Бэкапы сервера: назначения, расписание, история.
+const AdminBackupsPage = lazy(() =>
+  import("@features/admin-backups").then((m) => ({ default: m.BackupsPage })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -218,6 +223,14 @@ export const AdminApp = () => {
             }
           />
         ))}
+        <Route
+          path="backups"
+          element={
+            <Page width="wide">
+              <AdminBackupsPage />
+            </Page>
+          }
+        />
         <Route path="org/:slug" element={<OrgRedirect />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>

@@ -36,6 +36,7 @@
     "version": "Version {{version}}",
     "role": "Instance administrator",
     "instanceFallback": "HSE Doc Studio",
+    "backups": "Backups",
     "data": "Data retention"
   },
   "overview": {

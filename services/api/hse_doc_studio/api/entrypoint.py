@@ -22,6 +22,7 @@ from hse_doc_studio.api.observability.install import (
     install_auth_cleanup,
     install_autoscale,
     install_background,
+    install_backups,
     install_blob_gc,
     install_bucket_cors,
     install_device_authorizations_purge,
@@ -222,6 +223,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_auth_cleanup(app, container, settings)
         install_quota_housekeeping(app, container, settings)
         install_autoscale(app, container, settings, server_metrics)
+        install_backups(app, container, settings)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
         install_device_authorizations_purge(app, container)

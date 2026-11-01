@@ -11,6 +11,7 @@ from hse_doc_studio.api.rate_limit import rate_limit_guard
 from hse_doc_studio.api.routers import (
     admin_audit,
     admin_autoscale,
+    admin_backups,
     admin_install,
     admin_lifecycle,
     admin_ops,
@@ -49,6 +50,7 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_ops.router)
     router.include_router(admin_quotas.router)
     router.include_router(admin_autoscale.router)
+    router.include_router(admin_backups.router)
     router.include_router(admin_lifecycle.router)
     router.include_router(admin_orgs.router)
     router.include_router(admin_install.router)

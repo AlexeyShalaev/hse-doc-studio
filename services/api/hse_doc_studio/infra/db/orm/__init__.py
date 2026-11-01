@@ -12,6 +12,7 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.backup import BackupDestinationRow, BackupRunRow
 from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
 from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
@@ -66,6 +67,8 @@ __all__ = [
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
+    "BackupDestinationRow",
+    "BackupRunRow",
     "BlobRow",
     "ChatMessageRow",
     "ChatSessionRow",

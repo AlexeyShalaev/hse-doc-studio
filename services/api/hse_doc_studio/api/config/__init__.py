@@ -9,6 +9,7 @@ from hse_doc_studio.api.config.admin import AdminConfig
 from hse_doc_studio.api.config.ai_gateway import AiGatewayConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.autoscale import AutoscaleConfig
+from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import (
     CompileConfig,
     FontCatalogEntryConfig,
@@ -43,6 +44,7 @@ __all__ = [
     "AiGatewayConfig",
     "AuthConfig",
     "AutoscaleConfig",
+    "BackupsConfig",
     "CompileConfig",
     "CorsConfig",
     "DbConfig",

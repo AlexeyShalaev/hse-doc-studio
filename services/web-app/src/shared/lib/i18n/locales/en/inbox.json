@@ -64,6 +64,7 @@
     "review_resolved": "A thread in “{{path}}” was closed: {{excerpt}}",
     "review_resolved_resolved": "{{actor}} resolved your thread in “{{path}}”: {{excerpt}}",
     "review_resolved_reopened": "{{actor}} reopened your thread in “{{path}}”: {{excerpt}}",
+    "backup_failed": "Backup to “{{path}}” failed: {{excerpt}}",
     "system_alert": "Installation notice",
     "system_alert_storage_warning": "Volume “{{volume}}” is running out of space: {{excerpt}}% used",
     "system_alert_storage_critical": "Volume “{{volume}}” is critically low: {{excerpt}}% used. Large uploads are disabled"

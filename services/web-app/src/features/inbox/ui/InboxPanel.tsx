@@ -139,9 +139,15 @@ export const InboxPanel = () => {
         }}
         onNotification={(n) => {
           if (n.read_at === null) markRead.mutate([n.id]);
+          if (n.kind === "backup_failed") {
+            void navigate("/admin/backups");
+            return;
+          }
           if (n.kind === "system_alert") {
             void navigate("/admin/data");
-          } else if (n.payload.project_id && n.kind !== "member_removed") {
+            return;
+          }
+          if (n.payload.project_id && n.kind !== "member_removed") {
             void navigate(notificationTarget(n));
           }
         }}
