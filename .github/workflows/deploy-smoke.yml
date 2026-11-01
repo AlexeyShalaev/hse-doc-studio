@@ -242,7 +242,7 @@ jobs:
 
       # Раннер собирает TeX в соседнем контейнере и сам образ не тянет: без него сборка кончается image_missing.
       - name: Pull TeX Live image
-        run: docker pull texlive/texlive:latest
+        run: docker pull texlive/texlive:TL2024-historic
 
       - name: Run full smoke
         run: |
