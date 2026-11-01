@@ -156,8 +156,14 @@ $$
 """
 
 
-def _cutover() -> str:
-    return str(op.get_bind().exec_driver_sql(_CUTOVER_SQL).scalar_one().isoformat())
+def _cutover(table: str) -> str:
+    """Граница legacy-партиции: следующий месяц, но не раньше месяца самой поздней строки (часы с уходом вперёд)."""
+    sql = (
+        f"SELECT greatest(({_CUTOVER_SQL}), "
+        f"(date_trunc('month', (SELECT max(at) FROM {table}) AT TIME ZONE 'UTC') + interval '1 month') "
+        "AT TIME ZONE 'UTC')"
+    )
+    return str(op.get_bind().exec_driver_sql(sql).scalar_one().isoformat())
 
 
 def _prepare(table: str) -> None:
@@ -205,7 +211,6 @@ def _swap(table: str, cutover: str) -> None:
 
 
 def upgrade() -> None:
-    cutover = _cutover()
     for table in _TABLES:
         _prepare(table)
     op.execute(_BOUNDS)
@@ -213,7 +218,7 @@ def upgrade() -> None:
     op.execute(_DROP)
     op.execute(_PURGE_BATCH)
     for table in _TABLES:
-        _swap(table, cutover)
+        _swap(table, _cutover(table))
     for fn in (
         "lifecycle_partition_bounds(text)",
         "lifecycle_ensure_partitions(text, integer)",
