@@ -37,16 +37,18 @@ logger = structlog.get_logger()
 MAX_BLOB_BYTES = 95 * 1024 * 1024
 
 
+def project_busy_message() -> str:
+    return localized_error(
+        "Проект сейчас занят (обновление шаблона или синхронизация). Повторите позже.",
+        "The project is busy (template update or sync). Try again later.",
+    )
+
+
 class ProjectBusyError(Exception):
     """Проект нельзя писать сейчас: обновление шаблона, синхронизация, только чтение или занят замок."""
 
     def __init__(self) -> None:
-        super().__init__(
-            localized_error(
-                "Проект сейчас занят (обновление шаблона или синхронизация). Повторите позже.",
-                "The project is busy (template update or sync). Try again later.",
-            )
-        )
+        super().__init__(project_busy_message())
 
 
 @dataclass

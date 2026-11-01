@@ -57,7 +57,12 @@ from hse_doc_studio.use_cases.git_remote.auth import (
     denial_message,
 )
 from hse_doc_studio.use_cases.git_remote.projects import ListGitProjectsUC
-from hse_doc_studio.use_cases.git_remote.receive import ProjectBusyError, PushSession, ReceivePushUC
+from hse_doc_studio.use_cases.git_remote.receive import (
+    ProjectBusyError,
+    PushSession,
+    ReceivePushUC,
+    project_busy_message,
+)
 
 GIT_PREFIX = "/git"
 _SPOOL_MEMORY = 8 * 1024 * 1024
@@ -331,8 +336,8 @@ async def git_info_refs(
         return git_error_response(exc)
     except IdentityError as exc:
         return _rate_limited(exc)
-    except ProjectBusyError as exc:
-        return _text(409, str(exc))
+    except ProjectBusyError:
+        return _text(409, project_busy_message())
     smart = await _smart_http(request)
     body = await smart.advertise(kind, access.git_dir, protocol=git_protocol(request.headers.get("git-protocol")))
     return Response(body, media_type=f"application/x-{kind.value}-advertisement", headers=_NO_CACHE)
@@ -453,10 +458,10 @@ async def git_receive_pack(request: Request, repo: Annotated[str, Path()]) -> Re
     uc = await _container_get(request, ReceivePushUC)
     try:
         session = await uc.begin(access)
-    except ProjectBusyError as exc:
+    except ProjectBusyError:
         spool.close()
         concurrency.release(user_id)
-        return _text(409, str(exc))
+        return _text(409, project_busy_message())
     except BaseException:
         spool.close()
         concurrency.release(user_id)
