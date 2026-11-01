@@ -12,6 +12,14 @@ name: hse-doc-studio-server
 
 x-image: &image ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-latest}
 
+# Логи контейнеров: без лимитов драйвер json-file растёт бесконечно (годы работы забивают диск хоста).
+# По умолчанию до 5 файлов по 10 МБ на контейнер; пределы меняются LOG_MAX_SIZE и LOG_MAX_FILE в .env.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: "${LOG_MAX_FILE:-5}"
+
 services:
   postgres:
     image: postgres:16
@@ -27,6 +35,7 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *logging
 
   minio:
     # pgsty/minio: форк MinIO с возвращённой веб-консолью (в upstream после 2025-05 её убрали, образы с Docker Hub удалены).
@@ -50,6 +59,7 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging: *logging
 
   # Одноразово создаёт закрытый бакет и завершается. Клиент mc берётся из того же образа, что и сервер.
   minio-init:
@@ -69,6 +79,7 @@ services:
         mc mb --ignore-existing "local/$$S3_BUCKET" &&
         mc anonymous set none "local/$$S3_BUCKET"
     restart: "no"
+    logging: *logging
 
   api:
     image: *image
@@ -117,6 +128,7 @@ services:
       start_period: 30s
       retries: 10
     restart: unless-stopped
+    logging: *logging
 
   # Раннер тянет задачи у api по HTTPS (долгий опрос) и запускает TeX и проверки в соседних контейнерах.
   # Соседи видят пути ХОСТА, поэтому каталог данных монтируется по тому же пути, что и на хосте.
@@ -141,6 +153,7 @@ services:
       - ${RUNNER_DATA_DIR:-/var/lib/hse-runner}:${RUNNER_DATA_DIR:-/var/lib/hse-runner}
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
+    logging: *logging
 
   languagetool-1:
     profiles: [services]
@@ -156,6 +169,7 @@ services:
       start_period: 40s
       retries: 10
     restart: unless-stopped
+    logging: *logging
 
   languagetool-2:
     profiles: [services]
@@ -171,6 +185,7 @@ services:
       start_period: 40s
       retries: 10
     restart: unless-stopped
+    logging: *logging
 
   onlyoffice:
     profiles: [services]
@@ -187,6 +202,7 @@ services:
       start_period: 120s
       retries: 10
     restart: unless-stopped
+    logging: *logging
 
   ollama:
     profiles: [ai]
@@ -194,6 +210,7 @@ services:
     volumes:
       - ollama-models:/root/.ollama
     restart: unless-stopped
+    logging: *logging
 
 volumes:
   pg-data:

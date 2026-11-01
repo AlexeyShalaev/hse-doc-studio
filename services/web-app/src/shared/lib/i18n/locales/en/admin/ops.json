@@ -788,5 +788,150 @@
         "unit": "pcs"
       }
     }
+  },
+  "lifecycle": {
+    "title": "Data retention",
+    "lead": "Everything that grows on its own is cleaned by retention. Terms can be changed within allowed bounds.",
+    "loadFailed": "Could not load retention data.",
+    "safeMode": {
+      "title": "Safe mode: disk space is critically low",
+      "body": "Large uploads are rejected until space is freed."
+    },
+    "warning": {
+      "title": "Disk space is running out",
+      "body": "Free some space or grow the volume before the critical threshold."
+    },
+    "volumes": {
+      "title": "Disk and database",
+      "lead": "Warnings arrive in admins' inbox."
+    },
+    "volume": {
+      "disk": "Volume {{name}}",
+      "database": "Database"
+    },
+    "thresholds": {
+      "warn": "Warning, %",
+      "critical": "Critical, %"
+    },
+    "group": {
+      "database": "Database",
+      "objects": "Object storage",
+      "disk": "API disk",
+      "logs": "Logs and internals"
+    },
+    "col": {
+      "source": "Source",
+      "how": "How",
+      "size": "Size",
+      "retention": "Retention",
+      "last": "Last cleanup"
+    },
+    "strategy": {
+      "partition_drop": "Monthly partitions",
+      "delete_batches": "Batched DELETE",
+      "file_sweep": "File sweep",
+      "own_task": "Own background task",
+      "on_write": "Limit on write",
+      "infra": "Infrastructure"
+    },
+    "rows": "≈{{count}} rows",
+    "days": "days",
+    "daysAria": "Retention: {{name}}",
+    "daysSource": {
+      "admin": "set by admin",
+      "env": "from environment",
+      "default": "default",
+      "fixed": "fixed"
+    },
+    "bounds": "allowed {{min}}–{{max}}",
+    "forever": "kept forever",
+    "removed": "removed {{count}}",
+    "save": "Save",
+    "reset": "Reset",
+    "runNow": "Clean now",
+    "fixed": {
+      "guest_sessions": "7 days after expiry",
+      "compile_records": "50 per document",
+      "container_logs": "5 × 10 MB",
+      "auth_records": "on expiry"
+    },
+    "source": {
+      "audit_log": {
+        "title": "Audit log",
+        "body": "Who did what. Monthly partitions; old ones are dropped whole."
+      },
+      "ai_usage": {
+        "title": "AI call log",
+        "body": "One model call through the gateway, no bodies."
+      },
+      "jobs": {
+        "title": "Jobs and build logs",
+        "body": "Finished job rows, their logs and stored outputs."
+      },
+      "notifications": {
+        "title": "Inbox",
+        "body": "People's notifications."
+      },
+      "collab_requests": {
+        "title": "Invitations and access requests",
+        "body": "Closed invitations, access requests and transfers."
+      },
+      "share_links": {
+        "title": "Share links",
+        "body": "Revoked and expired links with their visits."
+      },
+      "guest_sessions": {
+        "title": "Guest sessions",
+        "body": "Expired guest sessions."
+      },
+      "collab_state": {
+        "title": "Co-editing state",
+        "body": ".ystate files on disk; secondary, rebuilt from the file."
+      },
+      "auth_records": {
+        "title": "Sessions, tokens, mail",
+        "body": "Expired sessions, one-time tokens, mail and device codes."
+      },
+      "deleted_projects": {
+        "title": "Deleted projects",
+        "body": "Trash: purged after the environment retention."
+      },
+      "blobs": {
+        "title": "Blobs and hash cache",
+        "body": "Unreferenced job inputs."
+      },
+      "orphans": {
+        "title": "Orphans",
+        "body": "Folders and objects of projects missing from the catalog."
+      },
+      "usage_counters": {
+        "title": "Quota counters",
+        "body": "Old usage periods."
+      },
+      "compile_records": {
+        "title": "Build records",
+        "body": "Last 50 per document, older ones removed on write."
+      },
+      "project_artifacts": {
+        "title": "Project PDFs",
+        "body": "Latest versions per document."
+      },
+      "chat_history": {
+        "title": "AI chat history",
+        "body": "Bounded by run count and trace size."
+      },
+      "container_logs": {
+        "title": "Container logs",
+        "body": "Docker rotation: up to 5 files of 10 MB."
+      },
+      "process_logs": {
+        "title": "Process logs",
+        "body": "stdout only, no files."
+      },
+      "postgres_wal": {
+        "title": "Postgres WAL and autovacuum",
+        "body": "Managed by Postgres; database size is shown above."
+      }
+    }
   }
 }

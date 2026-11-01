@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Literal, cast
+from typing import Literal, cast, get_args
 
 from fastapi import Request
 
@@ -132,9 +132,12 @@ def my_transfer(view: TransferView, now: datetime) -> s.MyTransfer:
     )
 
 
+_OUTCOMES = frozenset(get_args(s.NotificationOutcome))
+
+
 def notification(item: Notification) -> s.NotificationModel:
     p = item.payload
-    outcome = p.outcome if p.outcome in ("accepted", "declined", "approved", "denied", "resolved", "reopened") else None
+    outcome = p.outcome if p.outcome in _OUTCOMES else None
     return s.NotificationModel(
         id=item.id,
         kind=item.kind.value,
@@ -148,7 +151,7 @@ def notification(item: Notification) -> s.NotificationModel:
             ref_id=p.ref_id,
             path=p.path,
             excerpt=p.excerpt,
-            outcome=cast(Literal["accepted", "declined", "approved", "denied", "resolved", "reopened"] | None, outcome),
+            outcome=cast(s.NotificationOutcome | None, outcome),
         ),
     )
 

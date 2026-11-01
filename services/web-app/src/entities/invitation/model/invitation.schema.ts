@@ -258,6 +258,7 @@ export const NOTIFICATION_KINDS = [
   "review_reply",
   "review_mention",
   "review_resolved",
+  "system_alert",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
@@ -281,6 +282,8 @@ export const NotificationSchema = z.strictObject({
         "denied",
         "resolved",
         "reopened",
+        "storage_warning",
+        "storage_critical",
       ])
       .nullable(),
     path: z.string().nullable(),

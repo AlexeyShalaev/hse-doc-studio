@@ -361,7 +361,10 @@
       "device_approve": "Device allowed git access",
       "device_deny": "Device denied git access",
       "artifact_pdf_uploaded": "Local-build PDF uploaded",
-      "artifact_deleted": "Uploaded PDF deleted"
+      "artifact_deleted": "Uploaded PDF deleted",
+      "settings_retention_update": "Data retention changed",
+      "settings_storage_thresholds_update": "Disk space thresholds changed",
+      "lifecycle_run_now": "Data source cleanup started"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",
