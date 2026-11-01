@@ -371,6 +371,7 @@ export const InboxView = ({
                   project: n.payload.project_name ?? "",
                   path: n.payload.path ?? "",
                   excerpt: n.payload.excerpt ?? "",
+                  volume: n.payload.ref_id ?? "",
                   role: n.payload.role
                     ? roleLabel(n.payload.role as "reader")
                     : "",

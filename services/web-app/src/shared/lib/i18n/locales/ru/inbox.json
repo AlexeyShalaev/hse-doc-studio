@@ -64,6 +64,9 @@
     "review_mention": "{{actor}} упомянул вас в «{{path}}»: {{excerpt}}",
     "review_resolved": "Тред в «{{path}}» закрыт: {{excerpt}}",
     "review_resolved_resolved": "{{actor}} закрыл ваш тред в «{{path}}»: {{excerpt}}",
-    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}"
+    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}",
+    "system_alert": "Сообщение установки",
+    "system_alert_storage_warning": "Место на томе «{{volume}}» заканчивается: занято {{excerpt}}%",
+    "system_alert_storage_critical": "Критически мало места на томе «{{volume}}»: занято {{excerpt}}%. Крупные загрузки отключены"
   }
 }

@@ -87,3 +87,21 @@ def test_env_example_covers_required_variables() -> None:
     for var in ("POSTGRES_PASSWORD", "SECRETS_KEY", "S3_ACCESS_KEY", "S3_SECRET_KEY", "RUNNER_BOOTSTRAP_TOKEN"):
         assert var in defined
         assert var in text
+
+
+def test_every_service_rotates_container_logs(compose: dict[str, Any]) -> None:
+    """Без ограничений json-file растёт бесконечно: у каждого сервиса есть max-size и max-file."""
+    missing = []
+    for name, svc in compose["services"].items():
+        logging = svc.get("logging") or {}
+        options = logging.get("options") or {}
+        if logging.get("driver") != "json-file" or "max-size" not in options or "max-file" not in options:
+            missing.append(name)
+    assert missing == []
+
+
+def test_log_rotation_limits_are_overridable_from_env() -> None:
+    text = (_DEPLOY / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "${LOG_MAX_SIZE:-10m}" in text and "${LOG_MAX_FILE:-5}" in text
+    example = (_DEPLOY / ".env.example").read_text(encoding="utf-8")
+    assert "LOG_MAX_SIZE=" in example and "LOG_MAX_FILE=" in example

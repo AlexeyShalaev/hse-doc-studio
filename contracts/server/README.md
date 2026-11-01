@@ -37,3 +37,4 @@
 - `Admin*` эталоны черновые: они фиксируют имена полей до экранов админки и дополняются в срезах админки.
 
 Форму меняют так: сначала эталоны, затем обе стороны и оба набора тестов в одном коммите. Таблица владения и единый список URL, scopes и env-имён: `docs/design/stage2-ownership.md`.
+- хранение данных: `GET /api/admin/data-lifecycle` (`AdminDataLifecycle`: источники роста с размером, сроком, границами и итогом последней очистки; тома и база с уровнем `ok|warning|critical`; пороги; флаг безопасного режима), `PUT .../retention/{key}` (`UpdateAdminRetentionRequest`, `days: null` снимает правку; вне границ реестра 422), `PUT .../thresholds` (`AdminStorageThresholds`), `POST .../{key}/run` (`AdminLifecycleRun`; журнал аудита и источники без очистки 403 или 404). В безопасном режиме крупные записи получают `507 storage_critical`;
