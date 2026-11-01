@@ -1,0 +1,11 @@
+{
+  "run": {
+    "run_id": "3f2b8a1e-0c4d-4c1a-9d57-1d2f6a7b9c10",
+    "kind": "update",
+    "from_version": "0.3.1",
+    "to_version": "0.4.0",
+    "verify": "digest",
+    "digests_url": "https://github.com/AlexeyShalaev/hse-doc-studio/releases/download/v0.4.0/image-digest.json",
+    "restore_db": false
+  }
+}

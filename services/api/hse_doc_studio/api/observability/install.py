@@ -212,6 +212,24 @@ def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> N
         await (await container.get(BackupService)).cancel_all()
 
 
+def install_server_updates(app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry) -> None:
+    """Планировщик автообновления под лидерским локом и метрики `hse_update_*`."""
+    if not cfg.server_update.enabled:
+        return
+    from hse_doc_studio.api.observability.update_metrics import update_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.server_update.service import UpdateService  # noqa: PLC0415
+
+    async def _tick() -> None:
+        await (await container.get(UpdateService)).tick()
+
+    app.state.background.register(PeriodicTask(name="server_update", interval_s=cfg.server_update.tick_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _update_metrics() -> None:
+        service = await container.get(UpdateService)
+        metrics.add_collector(update_collector(lambda: service.snapshot))
+
+
 def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """На старте выставляет CORS бакета, если заданы источники: без него pdf.js не читает PDF по ссылке с Range."""
     if not cfg.s3.cors_origins:

@@ -24,6 +24,7 @@ from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import review
 from hse_doc_studio.api.schemas import runner_admin as ra
+from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
 from pydantic import TypeAdapter, ValidationError
@@ -37,6 +38,9 @@ _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / 
 _SCHEMAS: dict[str, Any] = {
     "Bootstrap": s.BootstrapResponse,
     "AdminDataLifecycle": lc.LifecycleOverviewBody,
+    "AdminUpdateStatus": upd.UpdateStatusOut,
+    "AdminUpdateRun": upd.RunOut,
+    "AdminUpdateSettings": upd.UpdateSettingsBody,
     "UpdateAdminRetentionRequest": lc.UpdateRetentionRequest,
     "AdminStorageThresholds": lc.StorageThresholdsBody,
     "AdminLifecycleRun": lc.LifecycleRunBody,

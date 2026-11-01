@@ -25,6 +25,16 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 автомиграции. Job берёт Secret предыдущей версии выпуска: меняя секреты, обновляйте их отдельно от версии образа
 или используйте `secrets.existingSecret`. Отключить: `migrations.enabled=false` (тогда мигрирует api).
 
+## Обновление версии
+
+Встроенного исполнителя в Kubernetes нет (`HSE_STUDIO__SERVER_UPDATE__EXECUTOR=none`): Студия проверяет релизы и уведомляет админов, страница «Обновления» показывает команду. Ставьте так, откат при неуспехе делает Helm:
+
+```bash
+helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=<версия> --atomic --wait
+```
+
+Проверку и уведомления выключает `api.extraEnv.HSE_STUDIO__SERVER_UPDATE__ENABLED=false`. Подробно: `docs/design/auto-update.md`.
+
 ## Ingress и долгий опрос
 
 Раннер держит запрос опроса до 25 секунд. Аннотации по умолчанию рассчитаны на ingress-nginx

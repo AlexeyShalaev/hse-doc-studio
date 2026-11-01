@@ -144,7 +144,11 @@ export const InboxPanel = () => {
             return;
           }
           if (n.kind === "system_alert") {
-            void navigate("/admin/data");
+            void navigate(
+              n.payload.outcome?.startsWith("update_")
+                ? "/admin/updates"
+                : "/admin/data",
+            );
             return;
           }
           if (n.payload.project_id && n.kind !== "member_removed") {

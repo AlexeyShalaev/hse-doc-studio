@@ -47,6 +47,11 @@ const AdminBackupsPage = lazy(() =>
   import("@features/admin-backups").then((m) => ({ default: m.BackupsPage })),
 );
 
+// Автообновление сервера: версия, политика и окно, история, откат.
+const AdminUpdatesPage = lazy(() =>
+  import("@features/admin-updates").then((m) => ({ default: m.UpdatesPage })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -228,6 +233,14 @@ export const AdminApp = () => {
           element={
             <Page width="wide">
               <AdminBackupsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="updates"
+          element={
+            <Page width="wide">
+              <AdminUpdatesPage />
             </Page>
           }
         />
