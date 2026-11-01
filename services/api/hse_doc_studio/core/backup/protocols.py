@@ -192,3 +192,10 @@ class IRestoreTargetFactory(Protocol):
 
 class IRestoreSession(IRestoreTarget, Protocol):
     async def close(self) -> None: ...
+    async def drop_api_connections(self) -> int:
+        """Обрывает соединения самого api (по application_name); число оборванных."""
+        ...
+
+    async def other_connections(self) -> list[str]:
+        """Оставшиеся соединения с базой в виде `приложение/состояние`."""
+        ...

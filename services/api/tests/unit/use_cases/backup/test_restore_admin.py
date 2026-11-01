@@ -34,6 +34,14 @@ class FakeTarget:
         self.others -= 1 if self.others > 0 else 0
         return self.others > 0
 
+    async def drop_api_connections(self) -> int:
+        dropped, self.others = self.others, 0
+        self.calls.append("drop")
+        return dropped
+
+    async def other_connections(self) -> list[str]:
+        return ["foreign/idle"] * self.others
+
     async def describe(self) -> TargetState:
         return self.state
 
@@ -94,7 +102,9 @@ class FakeMaintenance:
 
 
 class Stack:
-    def __init__(self, env: Env, target: FakeTarget, *, apply_allowed: bool = True) -> None:
+    def __init__(
+        self, env: Env, target: FakeTarget, *, apply_allowed: bool = True, wait_s: float = 0.0, poll_s: float = 0.0
+    ) -> None:
         self.env = env
         self.target = target
         self.maintenance = FakeMaintenance()
@@ -107,8 +117,8 @@ class Stack:
             PartFetcher(env.root / "fetch"),
             self.maintenance,
             env.audit,
-            others_wait_s=0.0,
-            others_poll_s=0.0,
+            others_wait_s=wait_s,
+            others_poll_s=poll_s,
             apply_allowed=apply_allowed,
         )
 
@@ -227,6 +237,16 @@ async def test__apply__connections_remain__fails_before_writing_and_leaves_maint
     assert not job.wrote
     assert stack.maintenance.events == ["enter", "leave"]
     assert stack.target.calls == []
+
+
+async def test__apply__lingering_api_connections__are_dropped_then_write_proceeds(env: Env) -> None:
+    stack = Stack(env, FakeTarget(EMPTY, others=10**6), wait_s=0.2, poll_s=0.01)
+    job = await stack.previewed()
+    await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
+    await stack.coordinator.drain()
+    assert job.phase is RestorePhase.done
+    assert stack.target.calls[:2] == ["drop", "db"] or "drop" in stack.target.calls
+    assert any("оборвано соединений api" in line for line in job.log)
 
 
 async def test__apply__db_failure__stays_in_maintenance_and_can_be_retried(env: Env) -> None:

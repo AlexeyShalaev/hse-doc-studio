@@ -20,8 +20,10 @@ from hse_doc_studio.core.storage.ports import IObjectStore
 from hse_doc_studio.infra.backup.pgtools import resolve_binary, server_major
 from hse_doc_studio.infra.backup.producers import ARC_DATA, ARC_PROJECTS, pg_env
 from hse_doc_studio.infra.db import migrator
+from hse_doc_studio.infra.db.engine import APP_NAME as API_APP_NAME
 from hse_doc_studio.infra.db.engine import async_dsn, create_engine
 
+RESTORE_APP_NAME = "hse-doc-studio-restore"
 _CHUNK = 1024 * 1024
 _MOVED = ("projects", "users", "gnupg")
 
@@ -64,6 +66,38 @@ class RestoreTarget:
                 )
             ).scalar_one()
         return int(others) > 0
+
+    async def drop_api_connections(self) -> int:
+        """Обрывает оставшиеся соединения самого api (потоки и запросы, начатые до режима обслуживания).
+
+        Чужие приложения не трогаются: их `api_is_running` по-прежнему считает помехой.
+        """
+        async with self._engine.connect() as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        "WHERE datname = current_database() AND pid <> pg_backend_pid() "
+                        "AND application_name = :app"
+                    ),
+                    {"app": API_APP_NAME},
+                )
+            ).all()
+        return len(rows)
+
+    async def other_connections(self) -> list[str]:
+        """Кто ещё подключён к базе: `приложение/состояние`, для сообщения об ошибке."""
+        async with self._engine.connect() as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT coalesce(nullif(application_name, ''), '?'), coalesce(state, '?') "
+                        "FROM pg_stat_activity "
+                        "WHERE datname = current_database() AND pid <> pg_backend_pid()"
+                    )
+                )
+            ).all()
+        return [f"{app}/{state}" for app, state in rows]
 
     async def describe(self) -> TargetState:
         users = projects = 0
@@ -176,7 +210,7 @@ class RestoreTargetFactory:
         cfg = self._cfg
         data_dir = cfg.data_dir.expanduser()
         projects_root = (cfg.server.projects_root or data_dir / "projects").expanduser()
-        engine = create_engine(cfg.db)
+        engine = create_engine(cfg.db, application_name=RESTORE_APP_NAME)
         try:
             binary = resolve_binary(cfg.backups.pg_restore_binary, await server_major(engine))
         except BaseException:

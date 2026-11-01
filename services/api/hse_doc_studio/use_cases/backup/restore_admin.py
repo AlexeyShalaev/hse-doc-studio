@@ -20,6 +20,7 @@ from hse_doc_studio.core.backup.protocols import (
     IBackupRunRepository,
     IMaintenanceMode,
     IPartFetcher,
+    IRestoreSession,
     IRestoreTargetFactory,
     TargetState,
 )
@@ -227,14 +228,23 @@ class RestoreCoordinator:
             self._publish(job)
         await self._record_finish(job, admin_id)
 
-    async def _wait_for_others(self, session: object, job: RestoreJob) -> None:
-        """Соединения api и ручек, начатых до включения режима, закрываются сами; ждём их, а не отказываем сразу."""
+    async def _wait_for_others(self, session: IRestoreSession, job: RestoreJob) -> None:
+        """Хвосты api (потоки, запросы, начатые до режима обслуживания) закрываются сами или обрываются здесь.
+
+        Соединения чужих приложений не трогаем: если они остались, `execute` откажет с понятным текстом.
+        """
         waited = 0.0
-        while await session.api_is_running():  # type: ignore[attr-defined]
+        dropped = False
+        while await session.api_is_running():
             if waited >= self._others_wait_s:
-                return  # execute сам откажет с понятным текстом
+                job.say("остались соединения: " + ", ".join(await session.other_connections()))
+                return
             if waited == 0:
                 job.say("жду, пока закроются прочие соединения с базой")
+            if waited >= self._others_wait_s / 2 and not dropped:
+                dropped = True
+                count = await session.drop_api_connections()
+                job.say(f"оборвано соединений api: {count}")
             await asyncio.sleep(self._others_poll_s)
             waited += self._others_poll_s
 

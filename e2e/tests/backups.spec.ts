@@ -92,6 +92,13 @@ test.describe("Бэкапы сервера", () => {
     await ensureAdmin(admin, ADMIN);
   });
 
+  /** Снимает оставшееся задание восстановления: повтор теста после сбоя не должен упираться в чужое состояние. */
+  const resetRestore = async (): Promise<void> => {
+    expect([204, 409]).toContain(
+      (await admin.delete("/api/admin/backups/restore")).status(),
+    );
+  };
+
   const waitBackup = async (previous: string | null): Promise<string> => {
     let id = "";
     await expect
@@ -214,6 +221,7 @@ test.describe("Бэкапы сервера", () => {
   test("verify: сухой прогон ничего не пишет, неверное подтверждение отклоняется", async ({
     browser,
   }) => {
+    await resetRestore();
     for (const lang of LANGS) {
       const p = await adminPage(browser, lang);
       await p.getByTestId(`backup-dest-open-${destId}`).click();
@@ -315,6 +323,7 @@ test.describe("Бэкапы сервера", () => {
   test("повреждённая часть: verify показывает ошибку целостности, запись недоступна", async ({
     browser,
   }) => {
+    await resetRestore();
     const path = `/data/backups/${DEST_PATH}/${secondBackup}/db.pgdump.enc`;
     compose(
       "exec",
@@ -349,6 +358,7 @@ test.describe("Бэкапы сервера", () => {
     browser,
     request,
   }) => {
+    await resetRestore();
     const p = await adminPage(browser, "ru");
     await p.getByTestId(`backup-dest-open-${destId}`).click();
     await p.getByTestId(`backup-stored-restore-${firstBackup}`).click();
