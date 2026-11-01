@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.fonts import (
     FontCatalogItemResponse,
     FontCatalogResponse,
@@ -33,7 +34,7 @@ from hse_doc_studio.use_cases.fonts.remove_font import RemoveFontInput, RemoveFo
 from hse_doc_studio.use_cases.fonts.search_marketplace import SearchMarketplaceInput, SearchMarketplaceUC
 from hse_doc_studio.use_cases.fonts.upload_font import UploadFontInput, UploadFontUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 _FONT_MEDIA_TYPES: dict[str, str] = {
     ".ttf": "font/ttf",

@@ -49,11 +49,11 @@ class TokenChecker:
             IntrospectionRequest(
                 provider=resolved.info.id,
                 api_base=resolved.api_base,
-                token=self._credentials.get_secret(credential.id),
+                token=await self._credentials.get_secret(credential.id),
                 ca_file=resolved.ca_file,
             )
         )
-        self._remember(credential, result.state, result.expires_at)
+        await self._remember(credential, result.state, result.expires_at)
         if result.state is TokenState.rejected:
             return TokenCheck(result.state, None)
         assessment = assess_scopes(resolved.info.id, result.scopes)
@@ -66,11 +66,11 @@ class TokenChecker:
         )
         return TokenCheck(result.state, info)
 
-    def _remember(self, credential: GitCredential, state: TokenState, expires_at: datetime | None) -> None:
+    async def _remember(self, credential: GitCredential, state: TokenState, expires_at: datetime | None) -> None:
         if expires_at is not None and expires_at != credential.expires_at:
-            self._credentials.update(replace(credential, expires_at=expires_at))
+            await self._credentials.update(replace(credential, expires_at=expires_at))
         if state in {TokenState.rejected, TokenState.expired}:
-            self._credentials.mark(credential.id, CredentialStatus.auth_failed)
+            await self._credentials.mark(credential.id, CredentialStatus.auth_failed)
         elif state is TokenState.valid and credential.status is CredentialStatus.auth_failed:
             # Сервер подтвердил токен: прежний отказ был временным или токен заменили, значок «обновить доступ» лишний.
-            self._credentials.mark(credential.id, CredentialStatus.ok)
+            await self._credentials.mark(credential.id, CredentialStatus.ok)

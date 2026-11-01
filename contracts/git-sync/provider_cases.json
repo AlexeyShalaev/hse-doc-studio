@@ -200,6 +200,14 @@
         "detected_by": "unknown",
         "version": null
       }
+    },
+    {
+      "host": "studio.example.org",
+      "expect": {
+        "id": "other",
+        "detected_by": "unknown",
+        "version": null
+      }
     }
   ],
   "web_base_cases": [
@@ -313,6 +321,12 @@
       "host": "gitlab.hse.local",
       "web_base": null,
       "expect": null
+    },
+    {
+      "provider": "hse_studio",
+      "host": "studio.example.org",
+      "web_base": "https://studio.example.org",
+      "expect": "https://studio.example.org/git/-"
     }
   ],
   "prefix_cases": [
@@ -717,6 +731,20 @@
         "primary": null,
         "fallback": null
       }
+    },
+    {
+      "name": "сервер HSE Doc Studio: токен только входом по коду",
+      "provider": "hse_studio",
+      "web_base": "https://studio.example.org",
+      "token_name": "HSE Studio · Курсовая",
+      "description": "Access for HSE Doc Studio, 2026-10-27",
+      "owner": "",
+      "repo": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      "expires_in_days": 90,
+      "expect": {
+        "primary": null,
+        "fallback": null
+      }
     }
   ],
   "ssh_link_cases": [
@@ -1017,6 +1045,29 @@
       "expect": {
         "sufficiency": "unknown",
         "missing": []
+      }
+    },
+    {
+      "provider": "hse_studio",
+      "scopes": [
+        "git:read",
+        "git:write"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "hse_studio",
+      "scopes": [
+        "git:read"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "git:write"
+        ]
       }
     }
   ]

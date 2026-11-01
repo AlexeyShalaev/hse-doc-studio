@@ -21,6 +21,7 @@ import structlog
 from hse_doc_studio.core.git_sync.entities import (
     LastError,
     LastSync,
+    PdfUploadRecord,
     PendingSession,
     SyncHealth,
     SyncOutcome,
@@ -37,7 +38,7 @@ logger = structlog.get_logger()
 SYNC_STATE_FILE = "hse-sync.json"
 SYNC_STATE_VERSION = 1
 
-_SHAPE = Struct({"pending": Struct(), "last_error": Struct(), "last_sync": Struct()})
+_SHAPE = Struct({"pending": Struct(), "last_error": Struct(), "last_sync": Struct(), "last_pdf_upload": Struct()})
 
 
 class JsonGitSyncStateRepository:
@@ -140,7 +141,41 @@ def _state_to_json(state: SyncState) -> dict[str, Any]:
         "last_error": _error_to_json(state.last_error),
         "last_sync": _sync_to_json(state.last_sync),
         "pending": _pending_to_json(state.pending),
+        "auto_sync": state.auto_sync,
+        "pdf_upload": state.pdf_upload,
+        "last_pdf_upload": _pdf_to_json(state.last_pdf_upload),
     }
+
+
+def _pdf_to_json(record: PdfUploadRecord | None) -> dict[str, Any] | None:
+    if record is None:
+        return None
+    return {
+        "doc_id": record.doc_id,
+        "at": _iso(record.at),
+        "ok": record.ok,
+        "size": record.size,
+        "code": record.code,
+        "detail": record.detail,
+    }
+
+
+def _pdf_from_json(raw: Any) -> PdfUploadRecord | None:
+    if not isinstance(raw, dict) or (at := _moment(raw.get("at"))) is None or not raw.get("doc_id"):
+        return None
+    size = raw.get("size")
+    return PdfUploadRecord(
+        doc_id=str(raw["doc_id"]),
+        at=at,
+        ok=raw.get("ok") is True,
+        size=size if isinstance(size, int) and not isinstance(size, bool) else None,
+        code=_text(raw.get("code")),
+        detail=_text(raw.get("detail")),
+    )
+
+
+def _flag(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
 
 
 def _error_to_json(error: LastError | None) -> dict[str, Any] | None:
@@ -198,6 +233,9 @@ def _state_from_json(raw: dict[str, Any]) -> SyncState:
         adopted_unrelated=raw.get("adopted_unrelated") is True,
         remote_schema_newer=raw.get("remote_schema_newer") is True,
         remote_required_studio=_text(raw.get("remote_required_studio")),
+        auto_sync=_flag(raw.get("auto_sync")),
+        pdf_upload=_flag(raw.get("pdf_upload")),
+        last_pdf_upload=_pdf_from_json(raw.get("last_pdf_upload")),
     )
 
 

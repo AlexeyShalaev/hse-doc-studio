@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "models": [
+    "llama3.1",
+    "qwen2.5"
+  ],
+  "error": null
+}

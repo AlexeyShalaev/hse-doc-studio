@@ -478,7 +478,7 @@ def deserialize_changelog_entry(data: dict[str, Any]) -> ChangeLogEntry:
 
 
 def serialize_pack_submission_record(record: PackSubmissionRecord) -> dict[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "id": str(record.id),
         "profile_id": record.profile_id,
         "created_at": record.created_at.isoformat(),
@@ -495,6 +495,9 @@ def serialize_pack_submission_record(record: PackSubmissionRecord) -> dict[str, 
         ),
         "archive_format": record.archive_format,
     }
+    if record.artifact_key is not None:
+        data["artifact_key"] = record.artifact_key
+    return data
 
 
 def deserialize_pack_submission_record(data: dict[str, Any], project_folder: Path) -> PackSubmissionRecord:
@@ -525,6 +528,7 @@ def deserialize_pack_submission_record(data: dict[str, Any], project_folder: Pat
         output_path=output_path,
         output_dir=output_dir,
         archive_format=data.get("archive_format", "zip"),
+        artifact_key=data.get("artifact_key"),
     )
 
 
@@ -913,6 +917,7 @@ def serialize_agent_run(record: AgentRunRecord) -> dict[str, Any]:
         "iterations": record.iterations,
         "usage": _serialize_token_usage(record.usage),
         "error": record.error,
+        "error_code": record.error_code,
         "diagnostics": record.diagnostics,
     }
 
@@ -934,6 +939,7 @@ def deserialize_agent_run(data: dict[str, Any], project_folder: Path) -> AgentRu
         iterations=int(data.get("iterations", 0)),
         usage=_deserialize_token_usage(data.get("usage")),
         error=data.get("error"),
+        error_code=data.get("error_code"),
         diagnostics=data.get("diagnostics") or [],
     )
 

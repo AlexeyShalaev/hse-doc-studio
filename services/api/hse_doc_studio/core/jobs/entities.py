@@ -12,6 +12,7 @@ from hse_doc_studio.core.jobs.base import JobPayload, JobResultData
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import JobError, JobFailedError
 from hse_doc_studio.core.jobs.pack import ArchiveFormat, PackSubmissionPayload
+from hse_doc_studio.core.jobs.relay import RELAY_TAG
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS
 from hse_doc_studio.core.value_objects import CheckResult
 
@@ -129,4 +130,6 @@ def job_tags(kind: JobKind, payload: JobPayload) -> frozenset[str]:
         return frozenset({"verify"})
     if kind is JobKind.pack_submission and isinstance(payload, PackSubmissionPayload):
         return pack_job_tags(payload.archive_format)
+    if kind is JobKind.ai_relay:
+        return frozenset({RELAY_TAG})
     raise ValueError(f"no tags for job kind {kind}")

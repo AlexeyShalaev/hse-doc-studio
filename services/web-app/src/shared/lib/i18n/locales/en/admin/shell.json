@@ -1,0 +1,148 @@
+{
+  "title": "Administration",
+  "subtitle": "The whole installation: people, organizations, runners and settings.",
+  "nav": {
+    "label": "Admin sections",
+    "overview": "Overview",
+    "users": "Users",
+    "orgs": "Organizations",
+    "runners": "Runners and queue",
+    "quotas": "Quotas",
+    "services": "Services",
+    "storage": "Storage",
+    "settings": "Sign-in and registration",
+    "audit": "Audit",
+    "instance": "Installation",
+    "signing": "Signing keys",
+    "aiProviders": "AI providers",
+    "groups": {
+      "people": "People",
+      "builds": "Builds",
+      "system": "System",
+      "settings": "Settings",
+      "log": "Log"
+    },
+    "count": {
+      "users_one": "{{count}} person awaiting approval",
+      "users_other": "{{count}} people awaiting approval",
+      "runners_one": "{{count}} runner not responding",
+      "runners_other": "{{count}} runners not responding",
+      "services_one": "{{count}} service with problems",
+      "services_other": "{{count}} services with problems",
+      "storage": "Running out of space"
+    },
+    "back": "Back to Studio",
+    "version": "Version {{version}}",
+    "role": "Instance administrator",
+    "instanceFallback": "HSE Doc Studio"
+  },
+  "overview": {
+    "title": "Installation overview",
+    "lead": "The state of the installation and what is waiting for your decision.",
+    "kpi": {
+      "people": "People",
+      "peopleWaiting_one": "{{count}} awaiting approval",
+      "peopleWaiting_other": "{{count}} awaiting approval",
+      "peopleNoWaiting": "No new requests",
+      "runners": "Runners online",
+      "runnersOf": "of {{total}}",
+      "runnersNone": "No runners yet",
+      "queue": "{{queued}} queued, {{running}} running",
+      "storage": "Space used",
+      "storageFree": "{{free}} free of {{total}}",
+      "storageProjects_one": "{{count}} project",
+      "storageProjects_other": "{{count}} projects",
+      "services": "Services healthy",
+      "servicesOf": "of {{total}}",
+      "servicesWarn_one": "{{count}} disrupted",
+      "servicesWarn_other": "{{count}} disrupted",
+      "runnersQuiet_one": "{{count}} not responding · {{queued}} queued",
+      "runnersQuiet_other": "{{count}} not responding · {{queued}} queued",
+      "servicesAllOk": "Everything works",
+      "servicesBad_one": "{{count}} with errors",
+      "servicesBad_other": "{{count}} with errors",
+      "failed": "Couldn't load",
+      "servicesOff_one": "{{count}} not configured",
+      "servicesOff_other": "{{count}} not configured"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "lead": "Things that block people now or will soon.",
+      "allClear": "All clear",
+      "allClearBody": "No requests, failures or warnings.",
+      "open": "Open",
+      "approvals_one": "{{count}} person is waiting for account approval",
+      "approvals_other": "{{count}} people are waiting for account approval",
+      "approvalsBody": "Until the request is approved, they cannot sign in.",
+      "runnersNone": "No runner is online",
+      "runnersNoneBody": "Builds and checks wait in the queue until a runner is back.",
+      "runnersQuiet_one": "{{count}} runner is not responding",
+      "runnersQuiet_other": "{{count}} runners are not responding",
+      "runnersQuietBody": "The others cope, but there is less spare capacity.",
+      "service": "{{name}}: {{status}}",
+      "serviceBody": "Check the service on the status page.",
+      "mail": "Mail is not configured",
+      "mailBody": "Confirmation emails, invitations and password resets are not sent.",
+      "openNoMail": "Registration is open but mail is not configured",
+      "openNoMailBody": "Anyone can create an account and nobody confirms the address.",
+      "lowSpace": "Running out of space",
+      "lowSpaceBody": "{{free}} free. New projects and builds may fail to save.",
+      "failed": "Some checks didn't load: the list may be incomplete.",
+      "runnersMissing": "No runners yet",
+      "runnersMissingBody": "Builds and checks cannot start without a runner. Create a token and connect a machine."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "all": "Full log",
+      "empty": "No entries yet",
+      "emptyBody": "Sign-ins and administrator actions will appear here.",
+      "system": "System",
+      "unknown": "Unknown user",
+      "failed": "Couldn't load the log."
+    },
+    "quick": {
+      "title": "Quick actions",
+      "invite": "Invite a person",
+      "inviteHint": "A link or an invitation email",
+      "token": "Create a runner token",
+      "tokenHint": "To connect a new machine",
+      "signIn": "Open sign-in settings",
+      "signInHint": "Registration, password, single sign-on and mail"
+    },
+    "instance": {
+      "title": "Installation",
+      "edit": "Edit",
+      "name": "Name",
+      "address": "Address",
+      "registration": "Registration",
+      "mail": "Mail",
+      "mailOff": "Not configured",
+      "modes": {
+        "open": "Open to everyone",
+        "domains": "By email domain",
+        "invite": "By invitation",
+        "closed": "Closed"
+      },
+      "mailFilled": "SMTP settings filled in",
+      "mailStatus": {
+        "ok": "Working",
+        "degraded": "Disruptions",
+        "down": "Down",
+        "unconfigured": "Not connected"
+      }
+    },
+    "serviceKind": {
+      "database": "Database",
+      "storage": "File storage",
+      "languagetool": "LanguageTool",
+      "onlyoffice": "ONLYOFFICE",
+      "runners": "Runners",
+      "smtp": "Mail"
+    },
+    "serviceStatus": {
+      "degraded": "intermittent errors",
+      "down": "not working"
+    }
+  },
+  "loading": "Loading administration"
+}

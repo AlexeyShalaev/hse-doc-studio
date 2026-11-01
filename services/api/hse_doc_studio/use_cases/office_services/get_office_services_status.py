@@ -60,7 +60,7 @@ class GetOfficeServicesStatusUC:
         docker_status = await self._image_manager.docker_status()
         services: list[OfficeServiceStatus] = []
         for service in OFFICE_SERVICES:
-            active_image = resolve_active_office_image(self._settings_repo, service)
+            active_image = await resolve_active_office_image(self._settings_repo, service)
             image_installed = False
             container = OfficeServiceContainerState(present=False, running=False, status_text=None)
             if docker_status.available:

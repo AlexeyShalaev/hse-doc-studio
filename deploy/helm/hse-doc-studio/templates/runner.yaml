@@ -1,0 +1,82 @@
+{{- if .Values.runner.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hds.fullname" . }}-runner
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  replicas: {{ .Values.runner.replicas }}
+  selector:
+    matchLabels:
+      {{- include "hds.selector" . | nindent 6 }}
+      app.kubernetes.io/component: runner
+  template:
+    metadata:
+      labels:
+        {{- include "hds.selector" . | nindent 8 }}
+        app.kubernetes.io/component: runner
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+        runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        supplementalGroups: [{{ .Values.runner.dockerGid }}]
+      initContainers:
+        # hostPath создаётся от root, fsGroup на него не действует: отдаём каталог пользователю раннера.
+        - name: fix-data-dir
+          image: {{ include "hds.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["chown", "-R", "{{ .Values.podSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.runAsGroup }}", {{ .Values.runner.dataDir | quote }}]
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL], add: [CHOWN, DAC_OVERRIDE]}
+          volumeMounts:
+            - {name: runner-data, mountPath: {{ .Values.runner.dataDir | quote }}}
+      containers:
+        - name: runner
+          image: {{ include "hds.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["hse-doc-studio", "runner"]
+          env:
+            - {name: HSE_RUNNER__API_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
+            - {name: HSE_RUNNER__DATA_DIR, value: {{ .Values.runner.dataDir | quote }}}
+            - {name: HSE_RUNNER__CONCURRENCY, value: {{ .Values.runner.concurrency | quote }}}
+            {{- if .Values.runner.tags }}
+            - {name: HSE_RUNNER__TAGS, value: {{ .Values.runner.tags | quote }}}
+            {{- end }}
+            {{- if .Values.runner.officeUrl }}
+            - {name: HSE_RUNNER__OFFICE_URL, value: {{ .Values.runner.officeUrl | quote }}}
+            {{- end }}
+            # Нужен один раз: выданный раннеру токен сохраняется в его каталоге данных.
+            - {name: HSE_RUNNER__TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: runner-bootstrap-token}}}
+          volumeMounts:
+            - {name: runner-data, mountPath: {{ .Values.runner.dataDir | quote }}}
+            - {name: docker-sock, mountPath: /var/run/docker.sock}
+          resources:
+            {{- toYaml .Values.runner.resources | nindent 12 }}
+      volumes:
+        - name: runner-data
+          hostPath: {path: {{ .Values.runner.dataDir | quote }}, type: DirectoryOrCreate}
+        - name: docker-sock
+          hostPath: {path: {{ .Values.runner.dockerSocket | quote }}, type: Socket}
+      {{- with .Values.runner.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

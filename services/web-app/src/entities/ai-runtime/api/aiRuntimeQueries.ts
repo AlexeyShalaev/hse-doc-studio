@@ -107,11 +107,12 @@ export const useModelCatalog = () =>
     staleTime: 5 * 60_000,
   });
 
-export const useOllamaRuntimeStatus = () =>
+export const useOllamaRuntimeStatus = (options?: { enabled?: boolean }) =>
   useQuery<OllamaRuntimeStatus>({
     queryKey: aiRuntimeKeys.status(),
     queryFn: () => aiRuntimeApi.status(),
     staleTime: 3_000,
+    enabled: options?.enabled ?? true,
   });
 
 // Refreshes only runtime-owned queries. The managed `ollama` provider lives in

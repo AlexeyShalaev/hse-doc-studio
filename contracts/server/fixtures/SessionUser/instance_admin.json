@@ -1,0 +1,16 @@
+{
+  "id": "u_01hx7k1a0b",
+  "name": "Иван Сидоров",
+  "email": "ivan.sidorov@example.org",
+  "avatar_initials": "ИС",
+  "is_instance_admin": true,
+  "email_verified": true,
+  "locale": "en",
+  "org_roles": [
+    {
+      "slug": "msp-2025",
+      "name": "МСПИН 2025",
+      "role": "owner"
+    }
+  ]
+}

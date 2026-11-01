@@ -1,19 +1,32 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { StatusDot } from "@shared/ui";
+import type { AIProviderSource } from "@entities/ai-provider";
 
 export type ModelProviderGroup = {
   providerId: string;
   providerName: string;
   models: string[];
+  /**
+   * Откуда провайдер; только в серверном режиме (см. toModelGroups). Без него
+   * список без групп, как раньше (локальный режим).
+   */
+  source?: AIProviderSource | undefined;
+  /** Почему модели недоступны (раннер не в сети, на паузе); null: доступны. */
+  unavailable?: string | null | undefined;
 };
+
+const SOURCES: readonly AIProviderSource[] = ["own", "org", "instance"];
 
 type ModelPickerProps = {
   groups: ModelProviderGroup[];
   selectedProviderId: string;
   selectedModel: string;
   disabled?: boolean;
+  /** Увеличьте число, чтобы открыть выбор снаружи (кнопка «Выбрать модель» у ошибки). */
+  openRequest?: number;
   onSelect: (providerId: string, model: string) => void;
 };
 
@@ -21,6 +34,7 @@ type ModelRow = {
   providerId: string;
   providerName: string;
   model: string;
+  unavailable: string | null;
 };
 
 type Rect = {
@@ -44,6 +58,7 @@ export const ModelPicker = ({
   selectedProviderId,
   selectedModel,
   disabled = false,
+  openRequest = 0,
   onSelect,
 }: ModelPickerProps) => {
   const { t } = useTranslation("agentChat");
@@ -59,8 +74,18 @@ export const ModelPicker = ({
       providerId: group.providerId,
       providerName: group.providerName,
       model,
+      unavailable: group.unavailable ?? null,
     })),
   );
+  // Серверный режим: модели по источникам «мои, организации, установки».
+  const grouped = groups.some((group) => group.source !== undefined);
+
+  // Запрос открыть выбор снаружи: новое число, ещё не обработанное.
+  const [handledRequest, setHandledRequest] = useState(0);
+  if (openRequest !== handledRequest) {
+    setHandledRequest(openRequest);
+    if (openRequest > 0 && !disabled) setOpen(true);
+  }
 
   // Primary = the active provider's models (capped); everything else collapses.
   const primaryProviderId =
@@ -87,6 +112,11 @@ export const ModelPicker = ({
     : null;
 
   const triggerLabel = selectedModel || t("model.trigger");
+  // Выбранная модель стала недоступна (раннер ушёл): сказать до отправки, а не ошибкой после.
+  const selectedUnavailable =
+    allRows.find(
+      (r) => r.providerId === selectedProviderId && r.model === selectedModel,
+    )?.unavailable ?? null;
   const activeProviderName =
     primaryAll[0]?.providerName ?? groups[0]?.providerName ?? "";
 
@@ -136,6 +166,7 @@ export const ModelPicker = ({
   }, [open]);
 
   const handlePick = (row: ModelRow) => {
+    if (row.unavailable) return;
     onSelect(row.providerId, row.model);
     setOpen(false);
     setQuery("");
@@ -149,23 +180,77 @@ export const ModelPicker = ({
         key={`${row.providerId}:::${row.model}`}
         type="button"
         className="modelpick-item"
+        disabled={row.unavailable !== null}
+        aria-disabled={row.unavailable !== null}
+        title={
+          row.unavailable
+            ? t("model.unavailable", { reason: row.unavailable })
+            : undefined
+        }
+        style={
+          row.unavailable ? { opacity: 0.55, cursor: "not-allowed" } : undefined
+        }
         onClick={() => {
           handlePick(row);
         }}
       >
-        <Check
-          size={13}
-          className="combo-check"
-          style={{ opacity: isActive ? 1 : 0 }}
-        />
+        {isActive && row.unavailable ? (
+          <TriangleAlert
+            size={13}
+            className="combo-check"
+            style={{ color: "var(--c-warn)" }}
+            aria-hidden="true"
+          />
+        ) : (
+          <Check
+            size={13}
+            className="combo-check"
+            style={{ opacity: isActive ? 1 : 0 }}
+          />
+        )}
         <span className="modelpick-name truncate">{row.model}</span>
-        <span className="modelpick-provider truncate">{row.providerName}</span>
+        {/* Чей провайдер и почему недоступен: имя не пропадает за причиной. */}
+        <span
+          className="modelpick-provider truncate"
+          style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          {row.unavailable && <StatusDot status="offline" hideLabel />}
+          {row.unavailable
+            ? t("model.providerUnavailable", {
+                provider: row.providerName,
+                reason: row.unavailable,
+              })
+            : row.providerName}
+        </span>
       </button>
     );
   };
 
   return (
     <>
+      {selectedUnavailable && (
+        <span
+          className="chip sans"
+          role="status"
+          data-testid="model-picker-unavailable"
+          style={{
+            fontSize: 11,
+            gap: 4,
+            display: "inline-flex",
+            alignItems: "center",
+            color: "var(--c-warn)",
+            maxWidth: 220,
+          }}
+          title={t("model.selectedUnavailable", {
+            reason: selectedUnavailable,
+          })}
+        >
+          <TriangleAlert size={11} aria-hidden="true" />
+          <span className="truncate">
+            {t("model.selectedUnavailable", { reason: selectedUnavailable })}
+          </span>
+        </span>
+      )}
       <button
         ref={triggerRef}
         type="button"
@@ -223,6 +308,46 @@ export const ModelPicker = ({
                 ) : (
                   filtered.map(renderRow)
                 )
+              ) : grouped ? (
+                <>
+                  <div
+                    className="combo-empty"
+                    style={{ textAlign: "left", fontSize: 11 }}
+                    data-testid="model-picker-default-order"
+                  >
+                    {t("model.defaultOrder")}
+                  </div>
+                  {SOURCES.map((source) => {
+                    const rows = groups
+                      .filter((g) => g.source === source)
+                      .flatMap((g) =>
+                        allRows.filter((r) => r.providerId === g.providerId),
+                      );
+                    // Пустая группа (организаций пока нет) не показывается.
+                    if (rows.length === 0) return null;
+                    return (
+                      <div
+                        key={source}
+                        role="group"
+                        aria-label={t(`model.group.${source}`)}
+                        data-testid={`model-picker-group-${source}`}
+                      >
+                        <div
+                          className="dim"
+                          style={{
+                            padding: "6px 10px 2px",
+                            fontSize: 10.5,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.4,
+                          }}
+                        >
+                          {t(`model.group.${source}`)}
+                        </div>
+                        {rows.map(renderRow)}
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 <>
                   {primaryRows.length === 0 && (

@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from pathlib import Path
 
 import structlog
 
@@ -13,15 +12,16 @@ from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.entities import CompileRecord, Project
 from hse_doc_studio.core.enums import CheckEngine, CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver, NoopBuiltPdfObserver
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
-    IProjectIndexRepository,
     IProjectRepository,
     ITemplateRepository,
 )
@@ -46,31 +46,11 @@ class TriggerCompileOutput:
     compile_id: uuid.UUID
 
 
-def _find_project(
-    project_id: uuid.UUID,
-    project_repo: IProjectRepository,
-    project_index_repo: IProjectIndexRepository,
-) -> tuple[Path, Project] | tuple[None, None]:
-    known_folders = project_index_repo.list_known()
-    for folder in known_folders:
-        try:
-            project = project_repo.get(folder)
-            if project is not None and project.id == project_id:
-                return folder, project
-        except Exception as exc:
-            logger.warning(
-                "trigger_compile: error loading project",
-                folder=str(folder),
-                exc=str(exc),
-            )
-    return None, None
-
-
 class TriggerCompileUC:
     def __init__(  # noqa: PLR0913
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
@@ -81,9 +61,10 @@ class TriggerCompileUC:
         artifacts: IArtifactStore,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
+        pdf_observer: IBuiltPdfObserver | None = None,
     ) -> None:
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._compile_repo = compile_repo
         self._template_repo = template_repo
         self._template_service = template_service
@@ -94,13 +75,15 @@ class TriggerCompileUC:
         self._artifacts = artifacts
         self._vcs_service = vcs_service
         self._vcs_locks = vcs_locks
+        self._pdf_observer = pdf_observer or NoopBuiltPdfObserver()
 
     async def execute(self, inp: TriggerCompileInput) -> TriggerCompileOutput:  # noqa: C901
-        project_folder, project = _find_project(inp.project_id, self._project_repo, self._project_index_repo)
-        if project is None or project_folder is None:
+        located = await self._locator.locate(inp.project_id)
+        if located is None:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id} не найден", f"Project not found: {inp.project_id}")
             )
+        project_folder, project = located
 
         doc = next((d for d in project.documents if d.id == inp.doc_id), None)
         if doc is None:
@@ -217,7 +200,7 @@ class TriggerCompileUC:
             check_results=[],
             pages=None,
         )
-        self._compile_repo.save(record)
+        await self._compile_repo.save(record)
 
         doc_index = project.documents.index(doc)
         project.documents[doc_index] = replace(doc, status=DocumentStatus.building, last_compile_id=compile_id)
@@ -234,6 +217,7 @@ class TriggerCompileUC:
                 vcs_locks=self._vcs_locks,
                 artifacts=self._artifacts,
                 project_folder=project_folder,
+                pdf_observer=self._pdf_observer,
             ),
         )
 

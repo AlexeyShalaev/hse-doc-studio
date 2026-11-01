@@ -7,14 +7,60 @@ import type {
 } from "@shared/api/types";
 import { CheckRuleSchema } from "@entities/document";
 import {
+  ProjectImportResultSchema,
+  ProjectSummaryPageSchema,
+  ProjectSummarySchema,
+} from "@entities/session";
+import {
   NdaStatusResponseSchema,
   ProjectResponseSchema,
   ProjectSuggestionsSchema,
 } from "./projectSchemas";
 
+type ProjectItem = z.infer<typeof ProjectResponseSchema>;
+type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
+
+// Сервер отдаёт в списке не папку и шаблон, а владельца и роль человека
+// (ProjectSummary). Приводим к форме списка локального режима, чтобы карточки,
+// переключатель и палитра команд не знали о двух форматах: папки нет (пустая
+// строка), шаблон не указан (пустой lock), владелец и роль лежат рядом.
+const fromSummary = (summary: ProjectSummary): ProjectItem => ({
+  id: summary.id,
+  name: summary.name,
+  folder: "",
+  lock: { pack_id: "", template_id: "", version: "", engine: "xelatex" },
+  kind: summary.kind,
+  staffing: summary.staffing,
+  lang: summary.lang,
+  updated_at: summary.updated_at,
+  pinned: summary.pinned,
+  archived: summary.archived,
+  shared_enabled: summary.shared_enabled,
+  owner: summary.owner,
+  my_role: summary.my_role,
+  // links: роль по ссылке, а не по членству (значок «По ссылке» в списке).
+  via_link: summary.via_link ?? false,
+});
+
+const ProjectItemsSchema = z
+  .array(z.union([ProjectResponseSchema, ProjectSummarySchema]))
+  .transform((items) =>
+    items.map((item) => ("folder" in item ? item : fromSummary(item))),
+  );
+
+// Локальный режим отдаёт массив папок, серверный страницу из каталога
+// ({items, total, limit, offset}): обе формы приводятся к массиву карточек.
+const ProjectListSchema = z.union([
+  ProjectItemsSchema,
+  ProjectSummaryPageSchema.transform((page) => page.items.map(fromSummary)),
+]);
+
 export const projectApi = {
+  // До перевода экранов на постраничный показ берётся одна страница наибольшего размера.
   list: () =>
-    apiClient.get("/projects").then(parseResp(z.array(ProjectResponseSchema))),
+    apiClient
+      .get("/projects", { params: { limit: 200 } })
+      .then(parseResp(ProjectListSchema)),
 
   suggestions: () =>
     apiClient
@@ -31,6 +77,31 @@ export const projectApi = {
     apiClient
       .post("/projects/connect", data)
       .then(parseResp(ProjectResponseSchema)),
+
+  // Проект из локальной Студии: zip с папкой проекта (только сервер).
+  importArchive: (
+    file: File,
+    options: {
+      signal?: AbortSignal;
+      onProgress?: (percent: number) => void;
+    } = {},
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient
+      .post("/projects/import", formData, {
+        // Границу multipart ставит браузер, иначе тело уйдёт как JSON.
+        headers: { "Content-Type": null },
+        // Отказ показывает окно импорта, общий тост не нужен.
+        silentError: true,
+        ...(options.signal ? { signal: options.signal } : {}),
+        onUploadProgress: (event) => {
+          if (event.total)
+            options.onProgress?.((event.loaded / event.total) * 100);
+        },
+      })
+      .then(parseResp(ProjectImportResultSchema));
+  },
 
   update: (id: string, data: UpdateProjectRequest) =>
     apiClient

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useThemeStore } from "@shared/lib";
+import { useCapabilities } from "@entities/session";
 import {
   systemApi,
   type ArchiveFormatsResponse,
@@ -38,13 +39,20 @@ export const useRunnerHealth = () =>
 // Editor availability doesn't change without app restart (user would need to
 // install/uninstall an editor). Cache aggressively; user can refresh the page
 // if they need a re-detect.
-export const useEditors = () =>
-  useQuery<EditorsResponse>({
+//
+// На сервере редакторы, найденные на его хосте, пользователю не нужны: ссылки
+// vscode://file/... открылись бы на его машине, а пути там нет. Без возможности
+// open_in_editor запрос не делаем, список остаётся пустым.
+export const useEditors = () => {
+  const { lacks } = useCapabilities();
+  return useQuery<EditorsResponse>({
     queryKey: systemKeys.editors(),
     queryFn: () => systemApi.getEditors(),
+    enabled: !lacks("open_in_editor"),
     retry: false,
     staleTime: Infinity,
   });
+};
 
 // Like editors: which archive tools (7z/rar) are on PATH only changes if the
 // user installs one and restarts. Cache for the session.

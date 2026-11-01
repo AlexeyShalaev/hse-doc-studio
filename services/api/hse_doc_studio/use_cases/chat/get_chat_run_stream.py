@@ -11,12 +11,11 @@ from hse_doc_studio.core.agent.entities import AgentEvent
 from hse_doc_studio.core.agent.protocols import IAgentRunBus
 from hse_doc_studio.core.entities import AgentRunRecord
 from hse_doc_studio.core.enums import AgentEventType, AgentRunStatus
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChatRepository,
-    IProjectIndexRepository,
-    IProjectRepository,
 )
-from hse_doc_studio.use_cases.chat._support import find_project_folder
+from hse_doc_studio.use_cases.chat.run_channel import CHANNEL_WAIT_S, await_run_channel
 
 logger = structlog.get_logger()
 
@@ -46,20 +45,25 @@ class GetChatRunStreamUC:
 
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
+        *,
+        channel_wait_s: float = CHANNEL_WAIT_S,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._chat_repo = chat_repo
         self._bus = bus
+        self._channel_wait_s = channel_wait_s
 
     async def execute(self, inp: GetChatRunStreamInput) -> AsyncGenerator[AgentEvent, None]:
-        folder = find_project_folder(inp.project_id, self._project_repo, self._project_index_repo)
+        folder = await self._locator.folder_of(inp.project_id)
         if folder is None:
             return self._error_stream("project not found")
+        # Чужой запуск (другая сессия или проект) не должен ни подписываться на шину, ни показывать события.
+        owned = await self._chat_repo.get_run(folder, inp.run_id)
+        if owned is None or owned.session_id != inp.session_id:
+            return self._error_stream("run not found")
         return self._stream(folder, inp.session_id, inp.run_id)
 
     def _error_stream(self, message: str) -> AsyncGenerator[AgentEvent, None]:
@@ -75,35 +79,38 @@ class GetChatRunStreamUC:
         chat_repo = self._chat_repo
         backfill = self._backfill_messages
         terminal = self._terminal_event
+        wait_s = self._channel_wait_s
 
         async def _gen() -> AsyncGenerator[AgentEvent, None]:
             seen_live = False
+            # Запуск мог быть принят только что: канал шины откроет его фоновая задача.
+            await await_run_channel(bus, chat_repo, folder, run_id, timeout_s=wait_s)
             if bus.has(run_id):
                 async for event in bus.subscribe(run_id):
                     seen_live = True
                     yield event
 
-            run = chat_repo.get_run(folder, run_id)
+            run = await chat_repo.get_run(folder, run_id)
             if run is None:
                 if not seen_live:
                     yield AgentEvent(type=AgentEventType.error, data={"status": "failed", "message": "run not found"})
                 return
 
             if not seen_live:
-                for event in backfill(folder, session_id, run_id):
+                for event in await backfill(folder, session_id, run_id):
                     yield event
             yield terminal(run)
 
         return _gen()
 
-    def _backfill_messages(self, folder: Path, session_id: UUID, run_id: UUID) -> list[AgentEvent]:
+    async def _backfill_messages(self, folder: Path, session_id: UUID, run_id: UUID) -> list[AgentEvent]:
         # Replay a finished run's messages as `message` events for a late subscriber.
         return [
             AgentEvent(
                 type=AgentEventType.message,
                 data={"id": str(m.id), "seq": m.seq, "role": m.role.value},
             )
-            for m in self._chat_repo.list_messages(folder, session_id)
+            for m in await self._chat_repo.list_messages(folder, session_id)
             if m.run_id == run_id and m.role.value in ("assistant", "tool")
         ]
 
@@ -113,6 +120,8 @@ class GetChatRunStreamUC:
         data: dict[str, object] = {"status": status, "run_id": str(run.id)}
         if run.error:
             data["message"] = run.error
+        if run.error_code:
+            data["code"] = run.error_code
         if run.usage is not None:
             data["usage"] = {
                 "input_tokens": run.usage.input_tokens,

@@ -1,0 +1,13 @@
+{
+  "enabled": null,
+  "server_url": null,
+  "name": null,
+  "concurrency": null,
+  "yield_to_local": null,
+  "ai_endpoints": [
+    {
+      "name": "ollama",
+      "provider_id": "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d"
+    }
+  ]
+}

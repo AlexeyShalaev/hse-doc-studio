@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.git_sync import ProfileRequest, ProfileResponse
 from hse_doc_studio.core.vcs.errors import ProfileInvalidError
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
@@ -10,7 +11,7 @@ from hse_doc_studio.use_cases.profile.get_profile import GetProfileUC
 from hse_doc_studio.use_cases.profile.profile_view import ProfileView
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileInput, UpdateProfileUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_profile(view: ProfileView) -> ProfileResponse:

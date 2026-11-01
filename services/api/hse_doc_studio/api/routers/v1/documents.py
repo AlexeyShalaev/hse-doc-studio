@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.document import (
     CustomFileOverrideResponse,
     DocumentDetailResponse,
@@ -39,7 +40,7 @@ from hse_doc_studio.use_cases.documents.upload_custom_file import (
     UploadCustomFileUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_custom_file(

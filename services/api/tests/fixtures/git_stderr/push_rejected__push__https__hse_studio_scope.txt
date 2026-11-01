@@ -1,0 +1,6 @@
+remote: HSE Doc Studio: push rejected (2 problems)
+remote: - petrov/main.tex: outside your folder in this team project [path_outside_scope]
+remote: - assets/logo.lnk: symbolic links are not accepted [symlink]
+To https://studio.example.org/git/5b0c1d2e-3f40-4152-8364-758697a8b9c0.git
+ ! [remote rejected] master -> master (pre-receive hook declined)
+error: failed to push some refs to 'https://studio.example.org/git/5b0c1d2e-3f40-4152-8364-758697a8b9c0.git'

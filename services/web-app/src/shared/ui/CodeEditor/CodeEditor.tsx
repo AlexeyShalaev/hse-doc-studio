@@ -58,6 +58,8 @@ export const CodeEditor = ({
   onEditTable,
   onEditBibliography,
   onModClick,
+  collab,
+  extraExtensions,
   className,
   ariaLabel,
 }: CodeEditorProps) => {
@@ -178,6 +180,8 @@ export const CodeEditor = ({
           ...(modClickEnabledRef.current
             ? { onModClick: (line: number) => onModClickRef.current?.(line) }
             : {}),
+          ...(collab ? { collab } : {}),
+          ...(extraExtensions ? { extraExtensions } : {}),
           ...(ariaLabel ? { ariaLabel } : {}),
         }),
       }),
@@ -192,6 +196,7 @@ export const CodeEditor = ({
         focus: () => {
           view.focus();
         },
+        view: () => viewRef.current,
       };
     }
     // Emit initial stats so the status bar isn't blank before the first edit.

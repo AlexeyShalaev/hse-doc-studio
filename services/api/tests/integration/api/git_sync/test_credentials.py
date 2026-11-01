@@ -61,7 +61,7 @@ async def test__post_credentials__pat__token_is_stored_only_encrypted(test_app: 
 
     assert _CANARY.encode() not in _all_bytes(_data_dir(tmp_path))
     repo = JsonGitCredentialRepository(_data_dir(tmp_path), FernetSecretCipher(KeyFileStore(_key_file(tmp_path))))
-    secret = repo.get_secret(UUID(created["id"]))
+    secret = await repo.get_secret(UUID(created["id"]))
     assert secret.reveal() == _CANARY
 
 
@@ -161,7 +161,7 @@ async def test__patch_credentials__label_only__keeps_the_secret(test_app: AsyncC
     assert resp.json()["label"] == "Переименован"
     assert _CANARY not in resp.text
     repo = JsonGitCredentialRepository(_data_dir(tmp_path), FernetSecretCipher(KeyFileStore(_key_file(tmp_path))))
-    assert repo.get_secret(UUID(created["id"])).reveal() == _CANARY
+    assert (await repo.get_secret(UUID(created["id"]))).reveal() == _CANARY
 
 
 @pytest.mark.parametrize("blank", ["", "   ", None])
@@ -176,7 +176,7 @@ async def test__patch_credentials__blank_token__keeps_the_stored_secret(
     assert resp.json()["username"] == "oauth2"
     assert resp.json()["token_family"] == "ghp"
     repo = JsonGitCredentialRepository(_data_dir(tmp_path), FernetSecretCipher(KeyFileStore(_key_file(tmp_path))))
-    assert repo.get_secret(UUID(created["id"])).reveal() == _CANARY
+    assert (await repo.get_secret(UUID(created["id"]))).reveal() == _CANARY
 
 
 async def test__patch_credentials__new_token__replaces_secret_resets_status_and_updates_family(
@@ -194,7 +194,7 @@ async def test__patch_credentials__new_token__replaces_secret_resets_status_and_
     assert new_token.encode() not in _all_bytes(_data_dir(tmp_path))
     assert _CANARY.encode() not in _all_bytes(_data_dir(tmp_path))
     repo = JsonGitCredentialRepository(_data_dir(tmp_path), FernetSecretCipher(KeyFileStore(_key_file(tmp_path))))
-    assert repo.get_secret(UUID(created["id"])).reveal() == new_token
+    assert (await repo.get_secret(UUID(created["id"]))).reveal() == new_token
 
 
 async def test__patch_credentials__empty_username__clears_it(test_app: AsyncClient) -> None:

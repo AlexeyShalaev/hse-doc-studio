@@ -7,9 +7,9 @@ import structlog
 
 from hse_doc_studio.core.enums import AgentRunStatus, Lang
 from hse_doc_studio.core.i18n import current_interface_language
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChatRepository,
-    IProjectIndexRepository,
     ISettingsRepository,
 )
 
@@ -35,11 +35,11 @@ class RecoverStaleChatRunsUC:
 
     def __init__(
         self,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         settings_repo: ISettingsRepository,
     ) -> None:
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._chat_repo = chat_repo
         self._settings_repo = settings_repo
 
@@ -47,18 +47,18 @@ class RecoverStaleChatRunsUC:
         now = datetime.now(timezone.utc)
         # Runs at startup (no request context), so resolve the saved interface
         # language directly as the fallback.
-        lang = current_interface_language(self._settings_repo.get().get(_INTERFACE_LANGUAGE_KEY))
+        lang = current_interface_language((await self._settings_repo.get()).get(_INTERFACE_LANGUAGE_KEY))
         error_text = _SERVER_RESTARTED.get(lang, _SERVER_RESTARTED[Lang.ru])
         recovered = 0
-        for folder in self._project_index_repo.list_known():
-            for run_id in self._chat_repo.list_all_run_ids(folder):
-                run = self._chat_repo.get_run(folder, run_id)
+        for folder in await self._locator.list_all():
+            for run_id in await self._chat_repo.list_all_run_ids(folder):
+                run = await self._chat_repo.get_run(folder, run_id)
                 if run is None or run.status not in _STALE:
                     continue
                 run.status = AgentRunStatus.interrupted
                 run.finished_at = now
                 run.error = error_text
-                self._chat_repo.save_run(run)
+                await self._chat_repo.save_run(run)
                 recovered += 1
         if recovered:
             logger.info("recovered stale agent runs", count=recovered)

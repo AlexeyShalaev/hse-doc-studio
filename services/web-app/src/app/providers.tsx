@@ -6,8 +6,15 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { I18nextProvider } from "react-i18next";
+import { isAxiosError } from "axios";
 import { ZodError, type ZodIssue } from "zod";
+import {
+  markSessionEnded,
+  sessionKeys,
+  type Bootstrap,
+} from "@entities/session";
 import { ApiError } from "@shared/api/client";
+import { setUnauthorizedHandler } from "@shared/api/session";
 import { SchemaParseError } from "@shared/api/parse";
 import {
   useApplyTheme,
@@ -103,6 +110,9 @@ const queryScope = (q: AnyQuery | undefined): string =>
 const reportError = (error: unknown, source: string): void => {
   if (error instanceof ApiError) return; // already toasted by axios interceptor
 
+  // Опрос в обход общего клиента получил 401: сессия кончилась, это покажет экран входа, а не тост.
+  if (isAxiosError(error) && error.response?.status === 401) return;
+
   if (error instanceof SchemaParseError) {
     const report = formatSchemaReport(error);
     /* eslint-disable no-console */
@@ -174,6 +184,18 @@ const queryClient = new QueryClient({
       reportError(error, `mutation [${keyPart}]`);
     },
   }),
+});
+
+// 401 или устаревший CSRF-токен: заново читаем bootstrap. Он сам 401 не отдаёт
+// (аноним получает user: null), поэтому цикла нет; пачку параллельных 401
+// транспорт сводит к одному вызову.
+setUnauthorizedHandler(() => {
+  // Был вошедший пользователь, а сервер ответил 401: сессия кончилась, форма
+  // входа это объяснит. (Для csrf_failed флаг погаснет, когда bootstrap вернёт
+  // того же пользователя.)
+  const current = queryClient.getQueryData<Bootstrap>(sessionKeys.bootstrap());
+  if (current?.user) markSessionEnded();
+  return queryClient.invalidateQueries({ queryKey: sessionKeys.bootstrap() });
 });
 
 type ProvidersProps = {

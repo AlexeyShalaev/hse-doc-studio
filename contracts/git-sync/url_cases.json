@@ -609,6 +609,38 @@
       "error": "url_scheme_forbidden"
     },
     {
+      "name": "http to localhost with local remotes",
+      "input": "http://localhost:17240/git/0b6f2c1e-4a8d-4f5e-9c3b-2d1e0f9a8b7c.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": true,
+      "url": {
+        "display_url": "http://localhost:17240/git/0b6f2c1e-4a8d-4f5e-9c3b-2d1e0f9a8b7c.git",
+        "kind": "http",
+        "host": "localhost",
+        "provider": "other",
+        "owner": "git",
+        "repo": "0b6f2c1e-4a8d-4f5e-9c3b-2d1e0f9a8b7c",
+        "token_stripped": false
+      }
+    },
+    {
+      "name": "http to localhost by default",
+      "input": "http://localhost:17240/git/repo.git",
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
+      "name": "http to another host with local remotes",
+      "input": "http://git.example.com/team/repo.git",
+      "policy": {
+        "allow_local": true
+      },
+      "ok": false,
+      "error": "url_scheme_forbidden"
+    },
+    {
       "name": "absolute path by default",
       "input": "/Users/anna/remotes/course-paper.git",
       "ok": false,

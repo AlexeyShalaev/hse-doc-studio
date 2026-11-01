@@ -378,7 +378,7 @@ class CloneFromBundleUC:
             self._policy.require_enabled()
             if self._profile.get() is None:
                 raise git_error(GitErrorCode.profile_required)
-            plan = await asyncio.to_thread(self._clone.plan_folder, inp.folder)
+            plan = await self._clone.plan_folder(inp.folder)
             await asyncio.to_thread(self._bundles.check_upload, inp.upload.path, inp.password)
             operation = self._operations.begin(OperationKind.clone, project_id=None, folder=plan.folder)
         except BaseException:

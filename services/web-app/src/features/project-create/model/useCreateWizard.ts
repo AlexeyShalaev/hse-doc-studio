@@ -112,6 +112,8 @@ type CreateWizardState = {
   kind: "research" | "project";
   title: string;
   folder: string;
+  // Только на сервере: организация-владелец (slug); null — проект личный.
+  ownerOrgSlug: string | null;
   lang: "ru" | "en";
   // Chosen presentation-doc variant id (pptx / reveal / beamer …). null → the
   // backend picks the template's first variant. Set explicitly on the
@@ -157,6 +159,7 @@ const initialState = {
   kind: "project" as "research" | "project",
   title: "",
   folder: "",
+  ownerOrgSlug: null as string | null,
   lang: "ru" as const,
   presVariant: null as string | null,
   authors: [emptyAuthor()],

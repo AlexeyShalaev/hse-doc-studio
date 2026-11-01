@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { CompilePlacementSchema } from "@entities/runner";
+import { CompileWaitSchema } from "@entities/session";
 
 const ChecksOverrideSchema = z.object({
   disabled_categories: z.array(z.string()).optional(),
@@ -124,6 +126,10 @@ export const CompileListItemSchema = z.object({
 export const CompileDetailSchema = CompileListItemSchema.extend({
   log: z.string().optional(),
   check_results: z.array(CheckResultSchema).optional(),
+  // Серверный режим: очередь, нет раннера, заменена. Локальный бэкенд поля не шлёт.
+  wait: CompileWaitSchema.nullish(),
+  // Где шла сборка: личный раннер, общий или фолбэк. null в локальном режиме.
+  placement: CompilePlacementSchema.nullish(),
 });
 
 export const CheckResultsResponseSchema = z.object({

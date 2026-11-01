@@ -1,0 +1,11 @@
+{
+  "defaults": [
+    { "kind": "storage", "user": 1073741824, "org": 10737418240 },
+    { "kind": "builds", "user": 30, "org": null },
+    { "kind": "ai_tokens_day", "user": null, "org": null },
+    { "kind": "ai_tokens_month", "user": 200000, "org": 2000000 },
+    { "kind": "members", "user": 5, "org": null }
+  ],
+  "warn_percent": 80,
+  "on_exceed": "deprioritize"
+}

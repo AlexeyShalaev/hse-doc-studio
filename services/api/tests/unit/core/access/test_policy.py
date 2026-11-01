@@ -7,7 +7,7 @@ from hse_doc_studio.core.access.paths import (
     path_in_author_scope,
     scope_path_of_instance_id,
 )
-from hse_doc_studio.core.access.policy import Decision, can, decide
+from hse_doc_studio.core.access.policy import Decision, can, decide, required_role
 
 USER = Actor.user("u1", "Иван", "ivan@example.com")
 GUEST = Actor.guest("l1", "Гость")
@@ -43,9 +43,26 @@ def test__decide__insufficient_role__forbidden() -> None:
     assert decide(USER, Action.PROJECT_VIEW, acl) is Decision.allow
 
 
+def test__required_role__lacking_role__names_weakest_role_with_action() -> None:
+    reader, editor = _acl(Grant(Role.reader)), _acl(Grant(Role.editor))
+
+    assert required_role(USER, Action.FILES_WRITE, reader) is Role.editor
+    assert required_role(USER, Action.COMMENT, reader) is Role.reviewer
+    assert required_role(USER, Action.PROJECT_DELETE, editor) is Role.owner
+
+
+def test__required_role__personal_condition_guest_or_no_grant__none() -> None:
+    editor = _acl(Grant(Role.editor))
+
+    assert required_role(USER, Action.FILES_WRITE, editor) is None
+    assert required_role(GUEST, Action.AGENT_USE, _acl(Grant(Role.editor), actor=GUEST)) is None
+    assert required_role(Actor.guest("other"), Action.PROJECT_VIEW, editor) is None
+    assert required_role(USER, Action.PROJECT_VIEW, None) is None
+
+
 _MATRIX = {
     Role.reader: {Action.PROJECT_VIEW, Action.OUTPUT_READ},
-    Role.reviewer: {Action.PROJECT_VIEW, Action.OUTPUT_READ, Action.SOURCES_READ, Action.COMMENT},
+    Role.reviewer: {Action.PROJECT_VIEW, Action.OUTPUT_READ, Action.SOURCES_READ, Action.COMMENT, Action.GIT_FETCH},
     Role.editor: {
         Action.PROJECT_VIEW,
         Action.OUTPUT_READ,
@@ -55,8 +72,11 @@ _MATRIX = {
         Action.BUILD_RUN,
         Action.AGENT_USE,
         Action.HISTORY_WRITE,
+        Action.HISTORY_REWRITE,
         Action.SUBMISSION_READ,
         Action.SUBMISSION_CREATE,
+        Action.GIT_FETCH,
+        Action.GIT_PUSH,
     },
     Role.owner: set(Action) - {Action.FILES_READ},
 }
@@ -66,7 +86,7 @@ _MATRIX = {
 def test__role_matrix__matches_design_7_1(role: Role) -> None:
     acl = _acl(Grant(role, persona_slug="ivanov", can_share=True, can_edit_all=True))
     # SIGN проверяется отдельно: для него нужен слот с владельцем
-    expected = _MATRIX[role] | ({Action.SHARE} if role in (Role.editor, Role.owner) else set())
+    expected = _MATRIX[role] | ({Action.SHARE, Action.ACCESS_MANAGE} if role in (Role.editor, Role.owner) else set())
     expected |= {Action.SIGN} if role is not Role.reader else set()
 
     allowed = {a for a in Action if a is not Action.FILES_READ and can(USER, a, acl, _path_for(a))}
@@ -187,6 +207,16 @@ def test__share__editor_needs_can_share() -> None:
     assert can(USER, Action.SHARE, _acl(Grant(Role.owner)))
 
 
+def test__access_manage__same_condition_as_share() -> None:
+    assert not can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.editor)))
+    assert can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.editor, can_share=True)))
+    assert can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.owner)))
+    assert not can(USER, Action.ACCESS_MANAGE, _acl(Grant(Role.reviewer, can_share=True)))
+    assert decide(GUEST, Action.ACCESS_MANAGE, _acl(Grant(Role.editor, can_share=True), actor=GUEST)) is (
+        Decision.forbidden
+    )
+
+
 def test__submission_create__editor_in_team_only_own_package() -> None:
     acl = _acl(Grant(Role.editor, persona_slug="ivanov"), team=True)
 
@@ -266,3 +296,33 @@ def test__files_write_by_instance_id__editor_writes_own_doc_not_others_nor_owner
     assert can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--alex"))
     assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr--boris"))
     assert not can(USER, Action.FILES_WRITE, acl, scope_path_of_instance_id("vkr"))
+
+
+def test__history_rewrite__team_editor__only_owner_or_edit_all() -> None:
+    plain = _acl(Grant(Role.editor, persona_slug="ivanov"), team=True)
+    edit_all = _acl(Grant(Role.editor, persona_slug="ivanov", can_edit_all=True), team=True)
+
+    assert decide(USER, Action.HISTORY_REWRITE, plain) is Decision.forbidden
+    assert can(USER, Action.HISTORY_WRITE, plain)
+    assert can(USER, Action.HISTORY_REWRITE, edit_all)
+    assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.owner), team=True))
+    assert can(USER, Action.HISTORY_REWRITE, _acl(Grant(Role.editor)))
+
+
+def test__git_fetch__reader_only_with_show_sources() -> None:
+    assert not can(USER, Action.GIT_FETCH, _acl(Grant(Role.reader)))
+    assert can(USER, Action.GIT_FETCH, _acl(Grant(Role.reader, show_sources=True)))
+    assert decide(USER, Action.GIT_FETCH, _acl(Grant(Role.reader))) is Decision.forbidden
+
+
+def test__git_push__editor_and_owner_without_path_reviewer_forbidden() -> None:
+    assert can(USER, Action.GIT_PUSH, _acl(Grant(Role.editor), team=True))
+    assert can(USER, Action.GIT_PUSH, _acl(Grant(Role.owner)))
+    assert required_role(USER, Action.GIT_PUSH, _acl(Grant(Role.reviewer))) is Role.editor
+
+
+@pytest.mark.parametrize("action", [Action.GIT_FETCH, Action.GIT_PUSH])
+def test__git__guest_is_forbidden_even_as_editor(action: Action) -> None:
+    acl = _acl(Grant(Role.editor, show_sources=True), actor=GUEST)
+
+    assert decide(GUEST, action, acl) is Decision.forbidden

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,7 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.meta_defaults import apply_meta_defaults
+from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -50,7 +52,8 @@ logger = structlog.get_logger()
 
 @dataclass
 class CreateProjectInput:
-    folder: Path
+    # В серверном режиме папку выделяет сервер, поэтому здесь None; в локальном она обязательна.
+    folder: Path | None
     pack_id: str
     template_id: str
     version: str
@@ -84,6 +87,7 @@ class CreateProjectUC:
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
         base_service: TemplateBaseService | None = None,
+        server_storage: ServerProjectStorage | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._project_index_repo = project_index_repo
@@ -92,14 +96,11 @@ class CreateProjectUC:
         self._template_renderer = template_renderer
         self._vcs = vcs_service
         self._base_service = base_service
+        self._server = server_storage
 
     async def execute(self, inp: CreateProjectInput) -> CreateProjectOutput:
-        folder = inp.folder.expanduser().resolve()
-
-        # 1. Папка обязана быть пустой и незарегистрированной. САМУ папку создаём
-        # ниже, уже после проверок шаблона: отказ не должен оставлять на диске
-        # пустой каталог, который потом мешает повторному созданию.
-        _validate_folder_free(folder, self._project_index_repo.list_known())
+        server = self._server
+        requested = self._check_folder(inp)
 
         # 2. Get TemplateVersion
         template_version = self._template_repo.get_version(inp.pack_id, inp.template_id, inp.version)
@@ -116,13 +117,85 @@ class CreateProjectUC:
         authors = _validate_team_authors(inp, template_version)
         _validate_lang(inp, template_version)
 
-        if not folder.exists():
-            folder.mkdir(parents=True, exist_ok=True)
-            logger.debug("created project folder", folder=str(folder))
-        # Скрытые файлы пользователя, лежавшие в папке до создания (`.vscode/`), —
-        # не часть шаблона: в базу обновлений они не попадают.
-        preexisting = frozenset(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file())
+        project_id = uuid.uuid4()
+        folder = self._provision_folder(requested, project_id)
+        transaction = server.uow.begin() if server is not None else nullcontext()
+        try:
+            async with transaction:
+                # Скрытые файлы пользователя, лежавшие в папке до создания (`.vscode/`), —
+                # не часть шаблона: в базу обновлений они не попадают.
+                preexisting = frozenset(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file())
+                project = self._build_project(inp, template_version, authors, folder, project_id)
 
+                # 5. Save project metadata
+                self._project_repo.save(project)
+
+                # 6. Register in index (на сервере: строка каталога и владелец в той же транзакции)
+                if server is None:
+                    self._project_index_repo.register(folder)
+                else:
+                    await server.locator.register(folder)
+
+                # 7. Copy template files
+                _render_template_files(
+                    template_version=template_version,
+                    template_repo=self._template_repo,
+                    renderer=self._template_renderer,
+                    project=project,
+                )
+        except BaseException:
+            # Сбой после выделения папки: строки каталога откатила транзакция, пустую папку убираем сами.
+            if server is not None:
+                _discard_allocated(server, project_id)
+            raise
+
+        await self._init_vcs_and_base(project, template_version, preexisting)
+        logger.info(
+            "project created",
+            project_id=str(project.id),
+            folder=str(folder),
+        )
+        return CreateProjectOutput(project=project)
+
+    def _check_folder(self, inp: CreateProjectInput) -> Path | None:
+        """Папка из запроса: в локальном режиме обязательна и свободна, на сервере её быть не должно."""
+        if self._server is not None:
+            if inp.folder is not None:
+                raise ValueError(
+                    localized_error(
+                        "На общем сервере папку проекта выбирает сервер: поле folder не принимается.",
+                        "On a shared server the folder is chosen by the server: the folder field is not accepted.",
+                    )
+                )
+            return None
+        if inp.folder is None:
+            raise ValueError(localized_error("Не указана папка проекта.", "Project folder is required."))
+        folder = inp.folder.expanduser().resolve()
+
+        # 1. Папка обязана быть пустой и незарегистрированной. САМУ папку создаём
+        # ниже, уже после проверок шаблона: отказ не должен оставлять на диске
+        # пустой каталог, который потом мешает повторному созданию.
+        _validate_folder_free(folder, self._project_index_repo.list_known())
+        return folder
+
+    def _provision_folder(self, requested: Path | None, project_id: uuid.UUID) -> Path:
+        if self._server is not None:
+            # Папка и id неразделимы: имя папки на томе и есть id проекта.
+            return self._server.volume.allocate(project_id)
+        assert requested is not None  # noqa: S101 — _check_folder в локальном режиме папку вернул
+        if not requested.exists():
+            requested.mkdir(parents=True, exist_ok=True)
+            logger.debug("created project folder", folder=str(requested))
+        return requested
+
+    def _build_project(
+        self,
+        inp: CreateProjectInput,
+        template_version: TemplateVersion,
+        authors: list[Author],
+        folder: Path,
+        project_id: uuid.UUID,
+    ) -> Project:
         # 3. Build documents from template definitions
         documents = _build_documents(
             template_version,
@@ -140,8 +213,8 @@ class CreateProjectUC:
         # blank, so the compiled PDF carries sensible values even when the client
         # sends nothing. Values the caller did supply are preserved verbatim.
         effective_meta = apply_meta_defaults(template_version, inp.meta, now.date())
-        project = Project(
-            id=uuid.uuid4(),
+        return Project(
+            id=project_id,
             name=inp.name,
             folder=folder,
             lock=lock_for(
@@ -168,20 +241,9 @@ class CreateProjectUC:
             shared_enabled=inp.shared_enabled,
         )
 
-        # 5. Save project metadata
-        self._project_repo.save(project)
-
-        # 6. Register in index
-        self._project_index_repo.register(folder)
-
-        # 7. Copy template files
-        _render_template_files(
-            template_version=template_version,
-            template_repo=self._template_repo,
-            renderer=self._template_renderer,
-            project=project,
-        )
-
+    async def _init_vcs_and_base(
+        self, project: Project, template_version: TemplateVersion, preexisting: frozenset[str]
+    ) -> None:
         # 8. Initialize the isolated VCS store (.hse-studio/git/) with a root
         # snapshot of the freshly seeded files. Best-effort: a VCS failure must
         # never block project creation.
@@ -200,12 +262,12 @@ class CreateProjectUC:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("template base not recorded on create", project_id=str(project.id), exc=str(exc))
 
-        logger.info(
-            "project created",
-            project_id=str(project.id),
-            folder=str(folder),
-        )
-        return CreateProjectOutput(project=project)
+
+def _discard_allocated(server: ServerProjectStorage, project_id: uuid.UUID) -> None:
+    try:
+        server.volume.remove(project_id)
+    except OSError as exc:
+        logger.exception("allocated project folder not removed", project_id=str(project_id), exc=str(exc))
 
 
 def _validate_folder_free(folder: Path, known: list[Path]) -> None:

@@ -1,7 +1,9 @@
 import {
   AlertTriangle,
   ArrowLeftRight,
+  Cpu,
   CloudUpload,
+  Download,
   Files,
   FolderSync,
   GitBranch,
@@ -12,6 +14,7 @@ import {
   Lock,
   Package,
   RefreshCw,
+  ShieldCheck,
   Tag,
   Timer,
   Type,
@@ -27,10 +30,12 @@ export type ProjectSettingsSectionId =
   | "general"
   | "template"
   | "confidentiality"
+  | "builds"
   | "doc-set"
   | "doc-formats"
   | "shared-docs"
   | "authors"
+  | "access"
   | "meta"
   | "fonts"
   | "supervisor"
@@ -40,6 +45,7 @@ export type ProjectSettingsSectionId =
   | "sync-shared-folder"
   | "sync-exchange"
   | "sync-ci"
+  | "sync-server-clone"
   | "danger-zone";
 
 // Всё, от чего зависит показ условных секций. Вычисляется владельцем черновика
@@ -65,6 +71,10 @@ export type ProjectSettingsSectionContext = {
   syncConnected: boolean;
   // Папка проекта лежит в облачном диске (бэкенд определил это сам).
   hasSharedFolder: boolean;
+  // Серверный проект: у него есть роль смотрящего и панель «Доступ».
+  hasAccess?: boolean;
+  // Сервер отдаёт проекты по git (capabilities.git_remote) и это серверный проект.
+  hasGitRemote?: boolean;
 };
 
 export type ProjectSettingsSectionDef = {
@@ -92,6 +102,14 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     labelKey: "projectSettings.sectionConfidentiality",
     icon: Lock,
   },
+  // Где идут сборки серверного проекта: личные раннеры владельца или общие.
+  // Видна всем участникам, править может только владелец.
+  {
+    id: "builds",
+    labelKey: "projectSettings.sectionBuilds",
+    icon: Cpu,
+    isAvailable: (ctx) => ctx.hasAccess === true,
+  },
   // Состав комплекта идёт ПЕРЕД форматами: сначала решают, какие документы
   // вообще входят в комплект, и только потом — в каком виде их собирать.
   {
@@ -116,6 +134,12 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     id: "authors",
     labelKey: "projectSettings.sectionAuthors",
     icon: Users,
+  },
+  {
+    id: "access",
+    labelKey: "projectSettings.sectionAccess",
+    icon: ShieldCheck,
+    isAvailable: (ctx) => ctx.hasAccess === true,
   },
   {
     id: "meta",
@@ -171,6 +195,13 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDef[] = [
     icon: Workflow,
     isAvailable: (ctx) => ctx.syncSupported,
   },
+  // gitremote: адрес проекта для git на сервере (раздел 10.12).
+  {
+    id: "sync-server-clone",
+    labelKey: "projectSettings.sectionSyncServerClone",
+    icon: Download,
+    isAvailable: (ctx) => ctx.hasGitRemote === true,
+  },
   {
     id: "danger-zone",
     labelKey: "projectSettings.sectionDangerZone",
@@ -214,13 +245,19 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     id: "project",
     labelKey: "projectSettingsNav.groupProject",
     icon: Info,
-    sections: ["general", "template", "confidentiality", "danger-zone"],
+    sections: [
+      "general",
+      "template",
+      "confidentiality",
+      "builds",
+      "danger-zone",
+    ],
   },
   {
     id: "people",
     labelKey: "projectSettingsNav.groupPeople",
     icon: Users,
-    sections: ["authors", "supervisor"],
+    sections: ["authors", "access", "supervisor"],
   },
   {
     id: "documents",
@@ -245,6 +282,7 @@ export const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroupDef[] = [
     labelKey: "projectSettingsNav.groupSync",
     icon: CloudUpload,
     sections: [
+      "sync-server-clone",
       "sync-remote",
       "sync-options",
       "sync-shared-folder",
@@ -262,7 +300,7 @@ const PROJECT_SETTINGS_PROJECT_GROUP: ProjectSettingsGroupDef = {
   id: "project",
   labelKey: "projectSettingsNav.groupProject",
   icon: Info,
-  sections: ["general", "template", "confidentiality", "danger-zone"],
+  sections: ["general", "template", "confidentiality", "builds", "danger-zone"],
 };
 
 /** Группа видна, пока хоть один её раздел доступен в этом проекте. */

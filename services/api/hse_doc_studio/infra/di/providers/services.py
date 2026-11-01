@@ -17,6 +17,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import CatalogModel
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog, FontCatalogFile, FontCatalogItem
@@ -26,6 +27,7 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver, NoopBuiltPdfObserver
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.merge.text import BASE_LABEL, OURS_LABEL, THEIRS_LABEL
@@ -33,6 +35,7 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
     ICiRenderer,
+    ICredentialAccess,
     IGitBundleService,
     IGitCloneStore,
     IGitCredentialRepository,
@@ -41,6 +44,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitMergeCommitter,
     IGitMergeEngine,
     IGitOperationRegistry,
+    IGitRemoteBindings,
     IGitRemoteRegistry,
     IGitRemoteRunner,
     IGitRepoReader,
@@ -69,8 +73,9 @@ from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeConvertService, IOfficeEditorService
 from hse_doc_studio.core.paths import Mount, PathMapping, looks_absolute
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
-    IProjectIndexRepository,
+    ILocalSettingsReader,
     IProjectRepository,
     ISettingsRepository,
     ISignatureRepository,
@@ -127,6 +132,7 @@ from hse_doc_studio.infra.compile.log_bus import CompileLogBus
 from hse_doc_studio.infra.docker.cleanup_jobs import DockerCleanupJobManager
 from hse_doc_studio.infra.docker.siblings import Reachability, SiblingNetwork
 from hse_doc_studio.infra.docker.system_manager import DockerSystemManager
+from hse_doc_studio.infra.egress.policy import AllowAllEgressPolicy, ResolvingEgressPolicy
 from hse_doc_studio.infra.fonts.font_downloader import HttpxFontDownloader
 from hse_doc_studio.infra.fonts.font_store import LocalFontStore
 from hse_doc_studio.infra.fonts.gfonts_marketplace import GoogleFontsMarketplace
@@ -136,14 +142,13 @@ from hse_doc_studio.infra.forms.form_renderer import FormOutputRenderer
 from hse_doc_studio.infra.git_sync.bundle import GitBundleService
 from hse_doc_studio.infra.git_sync.ci_renderer import JinjaCiRenderer
 from hse_doc_studio.infra.git_sync.clone_store import GitCloneStore
+from hse_doc_studio.infra.git_sync.credential_access import DirectCredentialAccess, LocalGitRemoteBindings
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.credential_usage import StoreConfigCredentialUsage
-from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.host_key_scanner import SshKeyscanScanner
 from hse_doc_studio.infra.git_sync.host_settings_repository import JsonGitHostSettingsRepository
-from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.infra.git_sync.known_hosts import FileKnownHostsStore
 from hse_doc_studio.infra.git_sync.merge_committer import GitMergeCommitter
 from hse_doc_studio.infra.git_sync.operation_registry import InMemoryGitOperationRegistry
@@ -179,6 +184,8 @@ from hse_doc_studio.infra.persistence.serializers import (
 from hse_doc_studio.infra.project_init.materializer import TemplateMaterializer
 from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
+from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
+from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
@@ -197,9 +204,11 @@ from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 from hse_doc_studio.infra.vcs.profile_source import ConfigAuthorProfile
 from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
@@ -207,6 +216,11 @@ from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseSe
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
 
 logger = structlog.get_logger()
+
+
+def _server_egress(egress: IEgressPolicy) -> IEgressPolicy | None:
+    """Политика egress нужна только общему серверу: в режиме local клиенты и git работают как прежде."""
+    return None if settings.mode is StudioMode.local else egress
 
 
 class DomainServiceProvider(Provider):
@@ -236,6 +250,11 @@ class DomainServiceProvider(Provider):
     def get_ai_model_lister(self) -> IAIModelLister:
         # Stateless: SDK clients are built per request from each provider's key.
         return SdkAIModelLister()
+
+    @provide
+    def get_provider_relay_describer(self) -> ProviderRelayDescriber:
+        # Локально раннеров нет: провайдеров через раннер не бывает, описывать нечего.
+        return ProviderRelayDescriber()
 
     @provide
     def get_agent_provider(self) -> IAgentProvider:
@@ -454,6 +473,11 @@ class DomainServiceProvider(Provider):
             client=lt_client,
             siblings=siblings,
         )
+
+    @provide
+    def get_office_access(self) -> IOfficeAccess:
+        # Локально токенов нет: документ отдаёт обычный маршрут, колбэк проверяют подпись и JWT DS.
+        return LocalOfficeAccess()
 
     @provide
     def get_sibling_network(self) -> SiblingNetwork:
@@ -759,6 +783,7 @@ class DomainServiceProvider(Provider):
             settings.data_dir.expanduser() / "secrets" / "master.keys.json",
             env_key=None if cfg.key is None else cfg.key.get_secret_value(),
             env_key_file=cfg.key_file,
+            retired_keys=None if cfg.retired_keys is None else cfg.retired_keys.get_secret_value(),
         )
 
     @provide
@@ -770,6 +795,14 @@ class DomainServiceProvider(Provider):
         return JsonGitCredentialRepository(settings.data_dir.expanduser(), cipher)
 
     @provide
+    def get_git_credential_access(self, credentials: IGitCredentialRepository) -> ICredentialAccess:
+        return DirectCredentialAccess(credentials)
+
+    @provide
+    def get_git_remote_bindings(self) -> IGitRemoteBindings:
+        return LocalGitRemoteBindings()
+
+    @provide
     def get_ssh_key_generator(self) -> ISshKeyGenerator:
         return Ed25519KeyGenerator()
 
@@ -778,36 +811,45 @@ class DomainServiceProvider(Provider):
         return FileKnownHostsStore(settings.data_dir.expanduser())
 
     @provide
-    def get_host_key_scanner(self) -> IHostKeyScanner:
-        return SshKeyscanScanner(settings.git)
+    def get_egress_policy(self) -> IEgressPolicy:
+        if settings.mode is StudioMode.local:
+            return AllowAllEgressPolicy()
+        return ResolvingEgressPolicy(settings.egress.allowlist)
+
+    @provide
+    def get_host_key_scanner(self, egress: IEgressPolicy) -> IHostKeyScanner:
+        return SshKeyscanScanner(settings.git, _server_egress(egress))
 
     @provide
     def get_git_host_settings_repo(self) -> IGitHostSettingsRepository:
         return JsonGitHostSettingsRepository(settings.data_dir.expanduser())
 
     @provide
-    def get_git_certificate_service(self) -> ICertificateService:
-        return TlsCertificateService(settings.git.scan_timeout_s)
+    def get_git_certificate_service(self, egress: IEgressPolicy) -> ICertificateService:
+        return TlsCertificateService(settings.git.scan_timeout_s, _server_egress(egress))
 
     @provide
-    def get_git_provider_detector(self) -> IProviderDetector:
-        return HttpProviderDetector(settings.git.provider_detect_timeout_s)
+    def get_git_provider_detector(self, egress: IEgressPolicy) -> IProviderDetector:
+        return HttpProviderDetector(settings.git.provider_detect_timeout_s, _server_egress(egress))
 
     @provide
-    def get_git_token_introspector(self, certificates: ICertificateService) -> ITokenIntrospector:
+    def get_git_token_introspector(
+        self, certificates: ICertificateService, egress: IEgressPolicy
+    ) -> ITokenIntrospector:
         return HttpTokenIntrospector(
-            settings.git.token_check_timeout_s, certificates, allow_insecure_http=settings.git.allow_insecure_http
+            settings.git.token_check_timeout_s,
+            certificates,
+            allow_insecure_http=settings.git.allow_insecure_http,
+            egress=_server_egress(egress),
         )
 
     @provide
-    def get_git_credential_usage(
-        self, project_index: IProjectIndexRepository, projects: IProjectRepository
-    ) -> IGitCredentialUsage:
-        return StoreConfigCredentialUsage(project_index, projects)
+    def get_git_credential_usage(self, locator: IProjectLocator, projects: IProjectRepository) -> IGitCredentialUsage:
+        return StoreConfigCredentialUsage(locator, projects)
 
     @provide
-    def get_local_author_profile(self, settings_repo: ISettingsRepository) -> ILocalAuthorProfile:
-        return ConfigAuthorProfile(settings_repo)
+    def get_local_author_profile(self, settings_reader: ILocalSettingsReader) -> ILocalAuthorProfile:
+        return ConfigAuthorProfile(settings_reader)
 
     @provide
     def get_ci_renderer(self) -> ICiRenderer:
@@ -848,10 +890,12 @@ class DomainServiceProvider(Provider):
     def get_git_remote_runner(
         self,
         credentials: IGitCredentialRepository,
+        access: ICredentialAccess,
         known_hosts: IKnownHostsStore,
         scanner: IHostKeyScanner,
         host_settings: IGitHostSettingsRepository,
         certificates: ICertificateService,
+        egress: IEgressPolicy,
     ) -> IGitRemoteRunner:
         return GitRemoteRunner(
             settings.git,
@@ -861,6 +905,8 @@ class DomainServiceProvider(Provider):
             scanner=scanner,
             host_settings=host_settings,
             certificates=certificates,
+            egress=_server_egress(egress),
+            access=access,
         )
 
     @provide
@@ -873,8 +919,8 @@ class DomainServiceProvider(Provider):
         return InMemoryGitOperationRegistry()
 
     @provide
-    def get_git_remote_registry(self, project_index: IProjectIndexRepository) -> IGitRemoteRegistry:
-        return ConfigScanRemoteRegistry(project_index)
+    def get_git_remote_registry(self, locator: IProjectLocator) -> IGitRemoteRegistry:
+        return ConfigScanRemoteRegistry(locator)
 
     @provide
     def get_ref_status_memo(self) -> RefStatusMemo:
@@ -955,6 +1001,11 @@ class DomainServiceProvider(Provider):
     @provide
     def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
         return SharedFolderDetector(paths)
+
+    @provide
+    def get_built_pdf_observer(self) -> IBuiltPdfObserver:
+        """Выгружать PDF на сервер Студии умеет только локальная Студия: её провайдер перекрывает этот."""
+        return NoopBuiltPdfObserver()
 
     @provide
     def get_vcs_folder_locks(self) -> IVcsFolderLocks:

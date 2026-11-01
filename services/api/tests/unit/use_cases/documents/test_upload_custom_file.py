@@ -18,6 +18,8 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertResult,
     OfficeConvertStatus,
 )
+from hse_doc_studio.core.projects.usage import ProjectQuotaExceededError
+from hse_doc_studio.core.value_objects import CustomFileOverride
 from hse_doc_studio.use_cases.documents.upload_custom_file import UploadCustomFileInput, UploadCustomFileUC
 from structlog.testing import capture_logs
 
@@ -194,3 +196,57 @@ async def test__upload_custom_file__conversion_job_failed__logs_error_detail_as_
     event = next(e for e in logs if e["event"] == "upload_custom_file: preview conversion failed")
     assert event["path"] == "tz/_custom/ТЗ.docx"
     assert event["exc"] == "converter exploded"
+
+
+class _FakeQuota:
+    enabled = True
+
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.recorded: list[int] = []
+
+    async def check_write(self, project_id, delta_bytes: int) -> None:
+        if delta_bytes > self.limit:
+            raise ProjectQuotaExceededError(project_id, 0, self.limit, delta_bytes)
+
+    async def record_change(self, project_id, delta_bytes: int) -> None:
+        self.recorded.append(delta_bytes)
+
+
+def _quota_harness(tmp_path, limit: int) -> tuple[Harness, _FakeQuota]:
+    h = Harness(tmp_path)
+    quota = _FakeQuota(limit)
+    h.uc._quota = quota
+    h.project.documents[0] = make_document(
+        "tz",
+        custom_file=CustomFileOverride(
+            original_filename="old.docx",
+            stored_path="tz/_custom/old.docx",
+            ext=".docx",
+            uploaded_at="2026-01-01T00:00:00+00:00",
+            convert_to_pdf_at_package=None,
+        ),
+    )
+    h.file_repo.exists.side_effect = lambda _f, p: p == "tz/_custom/old.docx"
+    h.file_repo.read.return_value = b"x" * 100
+    return h, quota
+
+
+async def test__upload_custom_file__quota_exceeded__old_file_kept_nothing_written(tmp_path) -> None:
+    h, quota = _quota_harness(tmp_path, limit=-97)
+
+    with pytest.raises(ProjectQuotaExceededError):
+        await h.upload("new.docx")
+
+    h.file_repo.delete.assert_not_called()
+    h.file_repo.write.assert_not_called()
+    assert quota.recorded == []
+
+
+async def test__upload_custom_file__replacing_file__freed_bytes_reduce_delta(tmp_path) -> None:
+    h, quota = _quota_harness(tmp_path, limit=0)
+
+    await h.upload("new.docx")
+
+    h.file_repo.delete.assert_called_once_with(tmp_path, "tz/_custom/old.docx")
+    assert quota.recorded == [4 - 100]

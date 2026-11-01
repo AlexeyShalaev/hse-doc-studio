@@ -148,7 +148,7 @@ class RunChecksUC:
             and any(rule.engine == CheckEngine.external for rule, _ in rules_with_severity)
         )
         if needs_external:
-            await self._lt_manager.ensure_running(resolve_active_languagetool_image(self._settings_repo))
+            await self._lt_manager.ensure_running(await resolve_active_languagetool_image(self._settings_repo))
 
         results = await asyncio.to_thread(
             self._check_runner.run_all,

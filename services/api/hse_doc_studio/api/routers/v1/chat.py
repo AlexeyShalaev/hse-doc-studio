@@ -5,10 +5,11 @@ from collections.abc import AsyncIterator
 from uuid import UUID
 
 import structlog
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.chat import (
     AgentToolResponse,
     AnswerTurnRequest,
@@ -64,7 +65,7 @@ from hse_doc_studio.use_cases.chat.system_start_chat_turn import (
     SystemStartChatTurnUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 logger = structlog.get_logger()
 
 
@@ -383,14 +384,17 @@ async def create_system_chat(
     body: CreateChatSessionRequest,
     uc: FromDishka[SystemCreateChatSessionUC],
 ) -> ChatSessionResponse:
-    result = await uc.execute(
-        title=body.title,
-        default_provider_id=body.provider_id,
-        default_model=body.model,
-        project_id=body.project_id,
-        persona=body.persona,
-        persona_instructions=body.persona_instructions,
-    )
+    try:
+        result = await uc.execute(
+            title=body.title,
+            default_provider_id=body.provider_id,
+            default_model=body.model,
+            project_id=body.project_id,
+            persona=body.persona,
+            persona_instructions=body.persona_instructions,
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _map_session(result.session)
 
 
@@ -525,7 +529,7 @@ async def cancel_system_run(
     uc: FromDishka[SystemCancelChatTurnUC],
 ) -> CancelTurnResponse:
     try:
-        result = await uc.execute(run_id)
+        result = await uc.execute(session_id, run_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return CancelTurnResponse(cancelled_task=result.cancelled_task, record_finalized=result.record_finalized)

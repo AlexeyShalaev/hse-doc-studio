@@ -45,5 +45,159 @@
     "current": "current step",
     "upcoming": "upcoming",
     "error": "failed"
+  },
+  "linkDelivery": {
+    "title": "Emails are not sent",
+    "kinds": {
+      "verify": "Email is not configured on this installation. Copy the confirmation link and open it in your browser.",
+      "reset": "Email is not configured on this installation. Copy the new-password link and open it in your browser.",
+      "invite": "Email is not configured on this installation. Copy the link and pass it to the invited person."
+    },
+    "once": "The link will not be shown again.",
+    "labels": {
+      "verify": "Confirmation link",
+      "reset": "New-password link",
+      "invite": "Invitation link"
+    }
+  },
+  "dataTable": {
+    "sortBy": "sort",
+    "sortedAsc": "ascending",
+    "sortedDesc": "descending",
+    "emptyTitle": "Nothing here yet",
+    "errorTitle": "Could not load the data",
+    "retry": "Retry",
+    "pagination": "Pages",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "pageOf": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "filterBar": {
+    "search": "Search",
+    "searchPlaceholder": "Search",
+    "all": "All",
+    "reset": "Reset"
+  },
+  "confirmByName": {
+    "cancel": "Cancel",
+    "prompt": "To confirm, type the name:"
+  },
+  "secretOnce": {
+    "warning": "The value is shown once: after you close this panel you cannot see it again.",
+    "notCopied": "You have not copied the value. After closing it cannot be retrieved again.",
+    "back": "Back",
+    "closeAnyway": "Close without copying",
+    "done": "Done"
+  },
+  "statusDot": {
+    "online": "Online",
+    "stale": "Not responding",
+    "offline": "Offline",
+    "paused": "Paused",
+    "degraded": "Degraded",
+    "success": "Healthy",
+    "warning": "Needs attention",
+    "danger": "Failing",
+    "neutral": "No data",
+    "info": "Info"
+  },
+  "adminKit": {
+    "loading": "Loading",
+    "locked": "Set by environment",
+    "lockedHint": "Set in the server environment and can only be changed there.",
+    "saveBar": {
+      "label": "Unsaved changes",
+      "unsaved_one": "{{count}} unsaved change",
+      "unsaved_other": "{{count}} unsaved changes",
+      "save": "Save",
+      "discard": "Discard",
+      "reveal": "Show"
+    },
+    "error": {
+      "title": "Couldn't load data",
+      "retry": "Retry"
+    },
+    "person": {
+      "unknown": "Unknown user"
+    }
+  },
+  "chunkError": {
+    "title": "Could not load this section",
+    "text": "Check your connection and try again. If the app was updated, reload the page."
+  },
+  "pagination": {
+    "pageSize": "Rows per page",
+    "perPage": "{{n}} per page",
+    "first": "First page",
+    "last": "Last page",
+    "page": "Page",
+    "of": "of {{pages}}",
+    "jump": "Page number, {{pages}} in total",
+    "shown_one": "Showing {{n}} entry",
+    "shown_other": "Showing {{n}} entries",
+    "shownOf_one": "Showing {{n}} of {{total}}",
+    "shownOf_other": "Showing {{n}} of {{total}}",
+    "more": "Show more",
+    "end": "No more entries"
+  },
+  "searchInput": {
+    "clear": "Clear search"
+  },
+  "noResults": {
+    "title": "Nothing found",
+    "hint": "Try changing the conditions or reset the filters.",
+    "withQuery": "Nothing matches “{{query}}”. Check the spelling or reset the filters.",
+    "reset": "Reset filters"
+  },
+  "filterMenu": {
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "clear": "Clear",
+    "clearOne": "Remove the “{{label}}” filter",
+    "narrow": "Find in list"
+  },
+  "dateRange": {
+    "label": "Period",
+    "presets": "Quick periods",
+    "from": "From",
+    "to": "To",
+    "between": "{{from}}–{{to}}",
+    "since": "since {{day}}",
+    "until": "until {{day}}",
+    "preset": {
+      "today": "Today",
+      "week": "7 days",
+      "month": "30 days",
+      "quarter": "90 days"
+    }
+  },
+  "sortMenu": {
+    "label": "Sort",
+    "field": "Sort by",
+    "direction": "Direction",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
+  "activeFilters": {
+    "label": "Active conditions",
+    "remove": "Remove condition {{label}}: {{value}}",
+    "found_one": "{{n}} entry found",
+    "found_other": "{{n}} entries found"
+  },
+  "picker": {
+    "placeholder": "Choose",
+    "searchPlaceholder": "Start typing a name",
+    "loading": "Loading",
+    "error": "Could not load the list",
+    "noMatches": "No matches",
+    "nothing": "Nothing to choose yet",
+    "refine": "Showing the first {{limit}}. Refine the search to find the rest.",
+    "clear": "Clear selection",
+    "selectedOne": "selected"
+  },
+  "sortSelect": {
+    "label": "Order",
+    "column": "By column"
   }
 }

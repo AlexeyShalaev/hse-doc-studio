@@ -1,0 +1,14 @@
+{
+  "registration_mode": "domains",
+  "registration_domains": [
+    "hse.ru",
+    "edu.hse.ru"
+  ],
+  "require_approval": true,
+  "password_enabled": true,
+  "locked_by_env": [
+    "registration_mode",
+    "registration_domains",
+    "require_approval"
+  ]
+}

@@ -55,7 +55,7 @@ class SetActiveOfficeServiceImageUC:
                     f"образ не установлен локально: {inp.image}", f"image not installed locally: {inp.image}"
                 )
             )
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         stored[office_service_settings_key(inp.service)] = inp.image
-        self._settings_repo.save(stored)
+        await self._settings_repo.save(stored)
         return SetActiveOfficeServiceImageOutput(image=inp.image)

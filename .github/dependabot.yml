@@ -12,6 +12,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+      # Стек серверного режима (extra server) обновляется отдельным PR: связка SQLAlchemy,
+      # asyncpg и alembic ломается вместе, и разбирать её удобнее отдельно от прочих минорных.
+      server-stack:
+        patterns: ["sqlalchemy", "asyncpg", "alembic", "boto3", "botocore", "argon2-cffi", "aiosmtplib", "joserfc", "moto", "aiosmtpd"]
       minor-and-patch:
         update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
@@ -31,6 +35,20 @@ updates:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
+
+  # Приёмочные e2e Playwright (отдельный пакет, образ приложения его не содержит).
+  - package-ecosystem: "npm"
+    directory: "/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      e2e:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "github-actions"
     directory: "/"

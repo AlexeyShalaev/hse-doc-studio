@@ -23,18 +23,18 @@ def _make_provider(name: str = "OpenAI", api_key: str = "sk-secret") -> AIProvid
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__no_file__returns_empty(tmp_path: Path) -> None:
+async def test__ai_provider_repository__no_file__returns_empty(tmp_path: Path) -> None:
     repo = JsonAIProviderRepository(tmp_path)
-    assert repo.list_all() == []
+    assert await repo.list_all() == []
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__create__roundtrips_via_new_instance(tmp_path: Path) -> None:
+async def test__ai_provider_repository__create__roundtrips_via_new_instance(tmp_path: Path) -> None:
     provider = _make_provider()
-    JsonAIProviderRepository(tmp_path).create(provider)
+    await JsonAIProviderRepository(tmp_path).create(provider)
 
     # A fresh instance reads the same file — verifies persistence, not memory.
-    loaded = JsonAIProviderRepository(tmp_path).get(provider.id)
+    loaded = await JsonAIProviderRepository(tmp_path).get(provider.id)
     assert loaded is not None
     assert loaded.name == provider.name
     assert loaded.type == AIProviderType.openai
@@ -43,10 +43,10 @@ def test__ai_provider_repository__create__roundtrips_via_new_instance(tmp_path: 
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__update__replaces_record(tmp_path: Path) -> None:
+async def test__ai_provider_repository__update__replaces_record(tmp_path: Path) -> None:
     repo = JsonAIProviderRepository(tmp_path)
     provider = _make_provider(name="Old")
-    repo.create(provider)
+    await repo.create(provider)
 
     updated = AIProvider(
         id=provider.id,
@@ -57,41 +57,41 @@ def test__ai_provider_repository__update__replaces_record(tmp_path: Path) -> Non
         models=["m1", "m2"],
         created_at=provider.created_at,
     )
-    repo.update(updated)
+    await repo.update(updated)
 
-    loaded = repo.get(provider.id)
+    loaded = await repo.get(provider.id)
     assert loaded is not None
     assert loaded.name == "New"
     assert loaded.base_url == "https://api.example.com/v1"
     assert loaded.models == ["m1", "m2"]
-    assert len(repo.list_all()) == 1
+    assert len(await repo.list_all()) == 1
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__delete__removes_record(tmp_path: Path) -> None:
+async def test__ai_provider_repository__delete__removes_record(tmp_path: Path) -> None:
     repo = JsonAIProviderRepository(tmp_path)
     provider = _make_provider()
-    repo.create(provider)
+    await repo.create(provider)
 
-    assert repo.delete(provider.id) is True
-    assert repo.get(provider.id) is None
-    assert repo.list_all() == []
+    assert await repo.delete(provider.id) is True
+    assert await repo.get(provider.id) is None
+    assert await repo.list_all() == []
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__delete_missing__returns_false(tmp_path: Path) -> None:
+async def test__ai_provider_repository__delete_missing__returns_false(tmp_path: Path) -> None:
     repo = JsonAIProviderRepository(tmp_path)
-    assert repo.delete(uuid4()) is False
+    assert await repo.delete(uuid4()) is False
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__corrupted_file__returns_empty(tmp_path: Path) -> None:
+async def test__ai_provider_repository__corrupted_file__returns_empty(tmp_path: Path) -> None:
     (tmp_path / "ai_providers.json").write_text("not valid json{{", encoding="utf-8")
-    assert JsonAIProviderRepository(tmp_path).list_all() == []
+    assert await JsonAIProviderRepository(tmp_path).list_all() == []
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__connection_fields_roundtrip(tmp_path: Path) -> None:
+async def test__ai_provider_repository__connection_fields_roundtrip(tmp_path: Path) -> None:
     provider = AIProvider(
         id=uuid4(),
         name="Internal",
@@ -104,9 +104,9 @@ def test__ai_provider_repository__connection_fields_roundtrip(tmp_path: Path) ->
         connect_timeout_s=5.0,
         request_timeout_s=120.0,
     )
-    JsonAIProviderRepository(tmp_path).create(provider)
+    await JsonAIProviderRepository(tmp_path).create(provider)
 
-    loaded = JsonAIProviderRepository(tmp_path).get(provider.id)
+    loaded = await JsonAIProviderRepository(tmp_path).get(provider.id)
     assert loaded is not None
     assert loaded.ssl_verify is False
     assert loaded.connect_timeout_s == 5.0
@@ -114,7 +114,7 @@ def test__ai_provider_repository__connection_fields_roundtrip(tmp_path: Path) ->
 
 
 @pytest.mark.unit
-def test__ai_provider_repository__legacy_record_without_connection_fields__defaults(tmp_path: Path) -> None:
+async def test__ai_provider_repository__legacy_record_without_connection_fields__defaults(tmp_path: Path) -> None:
     # A record written before the connection fields existed must still load,
     # falling back to the safe defaults (verify on, 10s connect, 60s request).
     (tmp_path / "ai_providers.json").write_text(
@@ -122,7 +122,7 @@ def test__ai_provider_repository__legacy_record_without_connection_fields__defau
         '"api_key": "sk", "base_url": "", "models": [], "created_at": "2024-01-01T00:00:00+00:00"}]',
         encoding="utf-8",
     )
-    [loaded] = JsonAIProviderRepository(tmp_path).list_all()
+    [loaded] = await JsonAIProviderRepository(tmp_path).list_all()
     assert loaded.ssl_verify is True
     assert loaded.connect_timeout_s == 10.0
     assert loaded.request_timeout_s == 60.0

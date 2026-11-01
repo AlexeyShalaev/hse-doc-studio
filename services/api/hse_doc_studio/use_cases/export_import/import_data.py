@@ -83,14 +83,14 @@ class ImportDataUC:
 
         if inp.settings is not None:
             try:
-                self._import_settings(inp.settings)
+                await self._import_settings(inp.settings)
                 result.settings_imported = True
             except Exception as exc:
                 result.errors.append(f"settings: {exc}")
 
         for record in inp.ai_providers:
             try:
-                self._import_provider(record, strategy, inp.decryption_password, result)
+                await self._import_provider(record, strategy, inp.decryption_password, result)
             except Exception as exc:
                 result.errors.append(f"provider {record.get('name', '?')}: {exc}")
 
@@ -131,8 +131,8 @@ class ImportDataUC:
                 ) from exc
             return
 
-    def _import_settings(self, imported: dict[str, Any]) -> None:
-        current = self._settings_repo.get()
+    async def _import_settings(self, imported: dict[str, Any]) -> None:
+        current = await self._settings_repo.get()
         patch: dict[str, Any] = {}
         for key, value in imported.items():
             if key not in _ALLOWED_SETTING_KEYS:
@@ -145,9 +145,9 @@ class ImportDataUC:
                 logger.warning("import_data: invalid setting skipped", key=key)
                 continue
             patch[key] = checked
-        self._settings_repo.save({**current, **patch})
+        await self._settings_repo.save({**current, **patch})
 
-    def _import_provider(
+    async def _import_provider(
         self,
         record: dict[str, Any],
         strategy: str,
@@ -159,13 +159,13 @@ class ImportDataUC:
             record["api_key"] = decrypt_token(str(record["api_key"]), password)
         provider = provider_from_export_dict(record)
 
-        if self._ai_provider_repo.get(provider.id) is not None:
+        if await self._ai_provider_repo.get(provider.id) is not None:
             if strategy == "skip":
                 result.ai_providers_skipped += 1
                 return
-            self._ai_provider_repo.update(provider)  # "replace" — overwrite in place, preserving id
+            await self._ai_provider_repo.update(provider)  # "replace" — overwrite in place, preserving id
         else:
-            self._ai_provider_repo.create(provider)
+            await self._ai_provider_repo.create(provider)
         result.ai_providers_imported += 1
 
     def _import_persona(self, record: dict[str, Any], strategy: str, result: ImportDataOutput) -> None:

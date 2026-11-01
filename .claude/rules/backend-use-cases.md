@@ -1,5 +1,7 @@
 # Use Case Layer Standards
 
+> Note: this file's `uow.transaction()` / `tx.<repo>` examples come from a template service. In this repo repositories are APP-scope and injected directly; `IUnitOfWork.begin()` only opens an ambient transaction boundary (see `backend-repositories.md` and `docs/design/persistence-server.md`). Where this file disagrees, those win.
+
 Use cases orchestrate business logic and MUST follow these patterns.
 
 ## Core Principles
@@ -140,7 +142,7 @@ class CreateUserUseCase:
 class CreateUserUseCase:
     def __init__(self, uow: AsyncUnitOfWork) -> None:
         self._uow = uow
-        self._user_repo = PostgresUserRepository(...)  # ❌ WRONG
+        self._user_repo = SqlUserRepository(...)  # ❌ WRONG
 ```
 
 ### ❌ NEVER call session.commit() manually
@@ -155,7 +157,7 @@ async def execute(self, email: str) -> User:
 ### ❌ NEVER import from infra in use cases
 ```python
 # ❌ WRONG
-from infra.repositories.user import PostgresUserRepository  # ❌ WRONG
+from infra.db.repositories.user import SqlUserRepository  # ❌ WRONG
 from infra.clients.google import GoogleOAuthClient  # ❌ WRONG
 ```
 

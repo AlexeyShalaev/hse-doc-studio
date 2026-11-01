@@ -1,15 +1,21 @@
 from fastapi import APIRouter, Depends
 
 from hse_doc_studio.api.guards import project_access_guard, project_write_guard
+from hse_doc_studio.api.rate_limit import rate_limit_guard
 from hse_doc_studio.api.routers.v1 import (
+    account,
+    account_invitations,
+    account_runners,
     agent_personas,
     ai_providers,
     ai_runtime,
+    auth,
     catalog,
     changelog,
     chat,
     checks,
     compile,
+    device_flow,
     docker_system,
     documents,
     export_import,
@@ -19,22 +25,38 @@ from hse_doc_studio.api.routers.v1 import (
     fs,
     git_global,
     git_project,
+    git_servers,
     hse_persons,
     images,
     languagetool,
     office_editor,
     office_services,
+    oidc,
+    orgs,
     profile,
+    project_artifacts,
+    project_build_runners,
+    project_git_remote,
+    project_import,
+    project_invitations,
+    project_members,
     projects,
+    remote_runner,
     requirements,
+    review,
+    server_setup,
+    session,
     settings,
     setup,
+    share_link_public,
+    share_links,
     signatures,
     signing_identities,
     submission,
     synctex,
     system,
     template_update,
+    usage,
     vcs,
 )
 
@@ -42,9 +64,25 @@ from hse_doc_studio.api.routers.v1 import (
 # Стоит первым, чтобы посторонний получил 404, а не 423.
 # Гард записи: проект, который эта Студия может только смотреть (данные более
 # новой Студии, нет версии шаблона, идёт обновление), не меняется ни одним запросом.
-api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(project_access_guard), Depends(project_write_guard)])
+api_router = APIRouter(
+    prefix="/api/v1",
+    dependencies=[Depends(project_access_guard), Depends(project_write_guard), Depends(rate_limit_guard)],
+)
 
+api_router.include_router(session.router, tags=["session"])
+api_router.include_router(auth.router, tags=["auth"])
+api_router.include_router(oidc.router, tags=["auth"])
+api_router.include_router(server_setup.router, tags=["server-setup"])
+api_router.include_router(account.router, tags=["account"])
+api_router.include_router(account_runners.router, tags=["account"])
+api_router.include_router(orgs.router, tags=["orgs"])
 api_router.include_router(catalog.router, tags=["catalog"])
+api_router.include_router(project_members.router, tags=["projects"])
+api_router.include_router(project_build_runners.router, tags=["projects"])
+api_router.include_router(project_git_remote.router, tags=["projects"])
+api_router.include_router(project_artifacts.router, tags=["projects"])
+api_router.include_router(device_flow.router, tags=["device-flow"])
+api_router.include_router(project_import.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])
 api_router.include_router(compile.router, tags=["compile"])
@@ -77,4 +115,15 @@ api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(export_import.router, tags=["data"])
 api_router.include_router(signing_identities.router, tags=["signing-identities"])
 api_router.include_router(profile.router, tags=["profile"])
+api_router.include_router(git_servers.router, tags=["git-sync"])
 api_router.include_router(git_global.router, tags=["git-sync"])
+api_router.include_router(remote_runner.router, tags=["remote-runner"])
+# links
+api_router.include_router(share_links.router, tags=["sharing"])
+api_router.include_router(share_link_public.router, tags=["sharing"])
+# invites: приглашения, запросы доступа, передача владения, «Входящие»
+api_router.include_router(project_invitations.router, tags=["projects"])
+api_router.include_router(review.router, tags=["review"])
+api_router.include_router(account_invitations.router, tags=["account"])
+# quotas: использование квот человека и организации
+api_router.include_router(usage.router, tags=["quotas"])

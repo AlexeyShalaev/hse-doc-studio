@@ -1,0 +1,792 @@
+{
+  "filters": {
+    "search": "Search"
+  },
+  "loading": "Loading",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "units": {
+    "s": "s",
+    "min": "min",
+    "h": "h"
+  },
+  "failure": {
+    "not_found": "Not found or no access.",
+    "forbidden": "You do not have enough rights for this action.",
+    "setting_locked": "The value is set by the environment and cannot be changed here.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "csrf_failed": "The session is out of date: reload the page and try again.",
+    "input_invalid": "Check the entered data.",
+    "network": "No connection to the server. Try again later.",
+    "unknown": "Something went wrong. Try again later."
+  },
+  "forbidden": {
+    "title": "No access",
+    "body": "Only instance administrators can see this section. If you were just granted the rights, reload the page."
+  },
+  "page": {
+    "title": "Runners and queue",
+    "lead": "Machines that run builds and checks, and the jobs waiting for them."
+  },
+  "tabs": {
+    "label": "Runners and queue",
+    "runners": "Runners",
+    "queue": "Queue"
+  },
+  "secret": {
+    "hint": "Copy it now and pass it to whoever starts the runner.",
+    "commandTitle": "Start command",
+    "commandLabel": "Runner start command",
+    "commandHint": "Run it on the runner machine. The Studio address and the secret are already filled in; after the first start the runner stores its own token and the value can be removed from the environment."
+  },
+  "runners": {
+    "caption": "Runners",
+    "loadFailed": "Could not load runners.",
+    "neverSeen": "Never connected",
+    "seenAgo": "Signal {{ago}}",
+    "slots_one": "up to {{count}} job",
+    "slots_other": "up to {{count}} jobs",
+    "load": "{{used}} of {{total}}",
+    "loadLabel": "Busy slots of {{name}}",
+    "pause": "Pause",
+    "resume": "Resume",
+    "rotate": "Issue a new token",
+    "revokeAction": "Revoke runner",
+    "actionsLabel": "Actions for runner {{name}}",
+    "class": {
+      "standard": "standard",
+      "large": "large",
+      "gpu": "GPU"
+    },
+    "noneOnline": {
+      "title": "No runner is online",
+      "body": "Builds and checks wait in the queue until a runner connects. Check that the runner machines are up and can reach the server.",
+      "queue_one": "{{count}} job waiting",
+      "queue_other": "{{count}} jobs waiting"
+    },
+    "stats": {
+      "online": "Online",
+      "of": "of {{total}}",
+      "allOnline": "All runners are connected",
+      "silent_one": "{{count}} not connected",
+      "silent_other": "{{count}} not connected",
+      "paused_one": "{{count}} paused",
+      "paused_other": "{{count}} paused",
+      "waiting": "Waiting for a runner",
+      "waitingFailed": "Could not load",
+      "nobodyWaits": "The queue is empty",
+      "oldest": "Oldest has waited {{ago}}",
+      "version": "Runner version",
+      "outdated_one": "{{count}} runner on an older version",
+      "outdated_other": "{{count}} runners on an older version",
+      "sameVersion": "All on the same version",
+      "running": "Running",
+      "runningHint": "Jobs on runners right now"
+    },
+    "status": {
+      "online": "Online",
+      "stale": "No signal",
+      "offline": "Offline",
+      "paused": "Paused",
+      "revoked": "Revoked"
+    },
+    "columns": {
+      "name": "Runner",
+      "status": "State",
+      "tags": "Tags",
+      "load": "Load",
+      "actions": "Actions",
+      "version": "Version"
+    },
+    "empty": {
+      "title": "No runners yet",
+      "body": "Without runners nothing gets built. Create a registration token and start a runner with it on any machine."
+    },
+    "rotateDialog": {
+      "title": "New token for {{name}}",
+      "body": "The previous runner token stops working and the runner loses its connection until it receives the new one. The secret is shown once.",
+      "confirm": "Issue token"
+    },
+    "rotated": {
+      "title": "New token for {{name}}",
+      "lead": "The previous token no longer works.",
+      "label": "Runner token"
+    },
+    "revoke": {
+      "title": "Revoke runner",
+      "body": "The runner loses access and stops taking jobs. Jobs it is running are handed to another runner.",
+      "confirm": "Revoke"
+    },
+    "newerVersion": "Newer available: {{version}}",
+    "versionOf": "Runner version",
+    "search": "Find a runner",
+    "searchPlaceholder": "Name, version or tag",
+    "filters": {
+      "status": "Status",
+      "version": "Version",
+      "tag": "Tag",
+      "class": "Class"
+    },
+    "version": {
+      "outdated": "Outdated",
+      "current": "Latest version"
+    },
+    "tagFilter": "Show runners tagged {{tag}}",
+    "classFilter": "Show runners of this class",
+    "sort": {
+      "label": "Order",
+      "status": "By state",
+      "lastSeen": "Last signal",
+      "newest": "Newest first",
+      "name": "By name"
+    }
+  },
+  "tokens": {
+    "title": "Registration tokens",
+    "lead": "A one-time secret a new runner uses to obtain its own token.",
+    "create": "Create token",
+    "noLabel": "Untitled",
+    "uses": "{{uses}} of {{max}} connected",
+    "expires": "expires {{when}}",
+    "expired": "expired {{when}}",
+    "revoke": "Revoke",
+    "actionsLabel": "Actions for token “{{label}}”",
+    "revokeLabel": "Revoke token \"{{label}}\"",
+    "howTo": "To connect a runner: create a token, run the command shown on the runner machine, and it appears in the table above within seconds.",
+    "loadFailed": "Could not load tokens.",
+    "empty": {
+      "title": "No tokens",
+      "body": "Create a token when you need to connect a new runner."
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "exhausted": "Used up",
+      "revoked": "Revoked"
+    },
+    "form": {
+      "title": "New registration token",
+      "lead": "The secret is shown once, right after it is created.",
+      "label": "Name",
+      "labelHint": "So you can tell later what it was for: for example, the server in room 305.",
+      "ttl": "Valid for",
+      "ttlOption": {
+        "1": "1 hour",
+        "24": "24 hours",
+        "168": "7 days",
+        "720": "30 days"
+      },
+      "maxUses": "How many runners can connect",
+      "maxUsesHint": "From 1 to 100. The token stops working after the last connection.",
+      "maxUsesInvalid": "Enter a whole number from 1 to 100.",
+      "submit": "Create"
+    },
+    "created": {
+      "title": "Token created",
+      "label": "Registration token"
+    },
+    "revokeDialog": {
+      "title": "Revoke token",
+      "body": "Token \"{{label}}\" will stop accepting new runners. Runners already connected keep working.",
+      "confirm": "Revoke"
+    },
+    "search": "Find a token",
+    "searchPlaceholder": "Token name",
+    "filters": {
+      "status": "Status"
+    },
+    "sort": {
+      "label": "Order",
+      "newest": "Newest first",
+      "expiring": "Expiring soon",
+      "byLabel": "By name"
+    }
+  },
+  "queue": {
+    "caption": "Job queue",
+    "loadFailed": "Could not load the queue.",
+    "summaryFailed": "Could not load",
+    "noProject": "No project",
+    "unknownPerson": "Deleted user",
+    "notStarted": "not started",
+    "noRunner": "not assigned",
+    "cancel": "Cancel",
+    "cancelLabel": "Cancel the \"{{kind}}\" job",
+    "empty": {
+      "title": "The queue is empty",
+      "body": "Jobs appear here when someone starts a build or a check."
+    },
+    "stats": {
+      "queued": "Queued",
+      "nobodyWaits": "Nobody is waiting",
+      "oldest": "Oldest has waited {{ago}}",
+      "running": "Running",
+      "runningHint": "On runners right now",
+      "wait": "Median wait",
+      "noData": "no data",
+      "waitHint": "Over recent jobs",
+      "p95": "95% of jobs wait under {{value}}",
+      "failed": "Finished with an error",
+      "failedHint_one": "Of {{n}} finished",
+      "failedHint_other": "Of {{n}} finished",
+      "personal_one": "{{count}} of them on personal runners",
+      "personal_other": "{{count}} of them on personal runners"
+    },
+    "classes": {
+      "title": "Waiting by priority:",
+      "name": {
+        "interactive": "urgent",
+        "checks": "normal",
+        "batch": "background"
+      }
+    },
+    "filters": {
+      "status": "State",
+      "kind": "Type",
+      "where": "Where",
+      "label": "Queue filters",
+      "user": "Person",
+      "org": "Organization",
+      "project": "Project",
+      "runner": "Runner",
+      "period": "Period",
+      "userPlaceholder": "Name or email",
+      "orgPlaceholder": "Organization name",
+      "projectPlaceholder": "Project name",
+      "runnerPlaceholder": "Runner name",
+      "search": "Search",
+      "searchPlaceholder": "Job id, project or person"
+    },
+    "columns": {
+      "kind": "Job",
+      "who": "Started by",
+      "status": "State",
+      "wait": "Wait",
+      "run": "Duration",
+      "runner": "Runner",
+      "actions": "Actions",
+      "where": "Where"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "timed_out": "Timed out"
+    },
+    "kind": {
+      "compile": "Build",
+      "office.convert": "Document conversion",
+      "signature.verify_detached": "Signature check",
+      "pack.submission": "Submission packing",
+      "ai.relay": "AI via a runner"
+    },
+    "priority": {
+      "interactive": "Urgent",
+      "checks": "Normal",
+      "batch": "Background"
+    },
+    "errors": {
+      "runner_lost": "The runner disappeared mid-job",
+      "job_timeout": "The job time limit was exceeded",
+      "timed_out": "The job time limit was exceeded",
+      "artifact_invalid": "The runner returned a damaged result",
+      "blob_missing": "A project file was not found",
+      "output_missing": "The build produced no result",
+      "superseded": "Replaced by a newer job",
+      "no_runner": "No suitable runner",
+      "quota": "The job limit was reached",
+      "unknown": "The job finished with an error"
+    },
+    "detail": {
+      "lead": "Created {{when}}",
+      "status": "State",
+      "user": "Started by",
+      "project": "Project",
+      "priority": "Priority",
+      "runner": "Runner",
+      "noRunner": "Not assigned yet",
+      "attempts": "Attempts",
+      "attemptsValue": "{{attempt}} of {{max}}",
+      "tags": "Tags",
+      "created": "Created",
+      "wait": "Wait",
+      "run": "Run time",
+      "error": "Error",
+      "org": "Organization"
+    },
+    "cancelDialog": {
+      "title": "Cancel job",
+      "body": "The \"{{kind}}\" job of {{user}} will be stopped.",
+      "running": "It is already running: the runner will interrupt it and the result will not be saved.",
+      "confirm": "Cancel job"
+    },
+    "where": {
+      "shared": "Shared",
+      "personal": "Personal",
+      "ai": "AI",
+      "waiting": "Waits for personal",
+      "none": "not taken"
+    }
+  },
+  "quotas": {
+    "title": "Quotas",
+    "lead": "How many jobs can run at once and how long a single job may take.",
+    "loadFailed": "Could not load quotas.",
+    "unlimited": "No limit",
+    "tasks_one": "job",
+    "tasks_other": "jobs",
+    "saved": "Saved",
+    "concurrentInvalid": "A whole number from 1 to 1000, or empty.",
+    "concurrent": {
+      "title": "Concurrent jobs",
+      "lead": "Builds and checks running at the same time. An empty field removes the limit."
+    },
+    "userConcurrent": {
+      "label": "Per person",
+      "hint": "The rest of the person's jobs wait in the queue."
+    },
+    "orgConcurrent": {
+      "label": "Per organization",
+      "hint": "A shared limit for all members of one organization."
+    },
+    "duration": {
+      "title": "Run time",
+      "lead": "Protects runners from stuck jobs.",
+      "label": "Any job time limit",
+      "hint": "From 0.5 to 1440 minutes; an empty field removes the limit. PDF builds also have their own limit in Installation: the smaller of the two applies.",
+      "invalid": "Minutes from 0.5 to 1440, or empty.",
+      "toInstance": "Open Installation"
+    },
+    "explain": {
+      "title": "What happens when a limit is reached",
+      "queue": {
+        "title": "The job waits instead of being rejected",
+        "body": "A new job joins the queue and starts as soon as the person or organization has a free slot."
+      },
+      "timeout": {
+        "title": "A long job is stopped",
+        "body": "A job running past the limit is interrupted with the \"Timed out\" state. The person can start it again."
+      },
+      "scope": {
+        "title": "Limits for people and organizations",
+        "body": "Defaults apply to everyone. A limit for a single person or organization is set below, under overrides."
+      }
+    }
+  },
+  "services": {
+    "title": "Services",
+    "lead": "Everything the Studio depends on. The state refreshes on its own.",
+    "loadFailed": "Could not load the service state.",
+    "check": "Check",
+    "checked": "Checked {{when}}",
+    "healthy": "Check passed",
+    "online": "{{online}} of {{total}} online",
+    "onlineLabel": "Runners online",
+    "connected": "Connected services",
+    "offTitle": "Not connected",
+    "offLead": "These services are not configured in the server environment. The Studio works without them, but some features are unavailable.",
+    "reasonCode": "Reason code for the server log",
+    "summary": {
+      "ok": "All connected services are working",
+      "none": "No connected services",
+      "down_one": "{{count}} service is down",
+      "down_other": "{{count}} services are down",
+      "downBody": "{{names}}. The cards below say what is affected.",
+      "degraded_one": "{{count}} service has disruptions",
+      "degraded_other": "{{count}} services have disruptions",
+      "degradedBody": "{{names}}. The Studio works, but slower than usual."
+    },
+    "status": {
+      "ok": "Working",
+      "degraded": "Disrupted",
+      "down": "Down",
+      "unconfigured": "Not set up",
+      "partial": "Partly offline"
+    },
+    "kind": {
+      "database": "Database",
+      "storage": "File storage",
+      "languagetool": "LanguageTool",
+      "onlyoffice": "ONLYOFFICE",
+      "runners": "Runners",
+      "smtp": "Mail"
+    },
+    "role": {
+      "database": "Accounts, projects and the job queue.",
+      "storage": "Project files, build results and attachments.",
+      "languagetool": "Spelling and grammar checks in the editor.",
+      "onlyoffice": "Editing Word, Excel and PowerPoint documents.",
+      "runners": "Machines that run builds and checks.",
+      "smtp": "Invitations, email confirmation and password reset."
+    },
+    "reason": {
+      "timeout": "Did not answer in time",
+      "no_healthy_replica": "No working instance left",
+      "no_online_runner": "No runner is online",
+      "no_runners": "No runners connected",
+      "unknown": "The check failed"
+    },
+    "impact": {
+      "database": "People cannot sign in or open projects.",
+      "storage": "Project files and build results do not open.",
+      "languagetool": "Spell checking in the editor is unavailable.",
+      "onlyoffice": "Office documents cannot be opened for editing.",
+      "runners": "Builds and checks wait in the queue.",
+      "smtp": "Invitation and password reset emails are not sent."
+    },
+    "off": {
+      "database": "The Studio does not work without a database.",
+      "storage": "Project files and builds have nowhere to be stored.",
+      "languagetool": "Spell checking in the editor is off.",
+      "onlyoffice": "Office documents cannot be edited in the Studio.",
+      "runners": "There are no runners, so nothing gets built.",
+      "smtp": "No emails are sent; invitations are shared as links."
+    }
+  },
+  "storage": {
+    "title": "Storage",
+    "lead": "How much space is used, how much is left and who has the most projects.",
+    "loadFailed": "Could not load storage information.",
+    "unknown": "Unknown",
+    "lowTitle": "Free space is running low: {{free}}",
+    "lowBody": "Free up space or extend the disk, otherwise saving files will stop working.",
+    "stats": {
+      "projects": "Projects",
+      "projectsHint_one": "{{n}} more deleted, awaiting erasure",
+      "projectsHint_other": "{{n}} more deleted, awaiting erasure",
+      "noDeleted": "None deleted",
+      "objects": "Builds and attachments",
+      "objectsHint_one": "{{n}} file in object storage",
+      "objectsHint_other": "{{n}} files in object storage",
+      "diskUnknown": "Disk size unknown",
+      "free": "Free",
+      "freeLow": "Time to free up space",
+      "freeOf": "Of {{total}} on the project disk"
+    },
+    "disk": {
+      "title": "Project disk",
+      "lead": "The volume holding the working copies of projects.",
+      "unknown": "Disk size unknown",
+      "unknownBody": "The server could not read the project volume details.",
+      "usedOf": "{{used}} of {{total}} used",
+      "aria": "{{used}} used, {{free}} free of {{total}}",
+      "usedTip": "Used {{value}} ({{pct}})",
+      "freeTip": "Free {{value}} ({{pct}})",
+      "used": "Used",
+      "free": "Free"
+    },
+    "owners": {
+      "title": "Project owners",
+      "lead": "People and organizations by project count and space used.",
+      "rank": "No.",
+      "who": "Owner",
+      "projectsCol": "Projects",
+      "shareCol": "Share of projects",
+      "share": "Share of projects: {{name}}",
+      "search": "Find an owner",
+      "searchPlaceholder": "Name or email",
+      "kind": "Owner",
+      "kinds": {
+        "user": "People",
+        "org": "Organizations"
+      },
+      "org": "Organization",
+      "bytesCol": "Size",
+      "loadFailed": "Could not load owners."
+    },
+    "empty": {
+      "title": "No projects yet",
+      "body": "Data appears when people start creating projects."
+    },
+    "note": "Counted from database records, without scanning the storage. Updated {{when}}.",
+    "noteNever": "Counted from database records, without scanning the storage. Not counted yet."
+  },
+  "personal": {
+    "title": "Personal runners",
+    "lead": "People's machines that build their own projects. Jobs on them don't use installation quotas; only the runner's owner can rotate its token.",
+    "online": "Online",
+    "onlineOf": "of {{total}}",
+    "onlineHint": "Personal runners taking jobs right now.",
+    "search": "Search by owner or runner name",
+    "searchPlaceholder": "Owner or runner",
+    "filterState": "State",
+    "caption": "Personal runners",
+    "columns": {
+      "owner": "Owner",
+      "runner": "Runner",
+      "state": "State",
+      "version": "Version",
+      "ai": "AI endpoints",
+      "actions": "Actions"
+    },
+    "kind": {
+      "desktop": "Studio on a computer",
+      "cli": "Console runner"
+    },
+    "status": {
+      "online": "Online",
+      "stale": "Not responding",
+      "offline": "Offline",
+      "paused": "Paused",
+      "revoked": "Revoked",
+      "disabled": "Turned off"
+    },
+    "seenIp": "{{ago}}, IP {{ip}}",
+    "noAi": "none",
+    "empty": {
+      "title": "No personal runners",
+      "body": "People connect them in their account settings: the Studio on a computer or a console runner."
+    },
+    "noMatch": "Nothing found. Change the search or filter.",
+    "disabled": {
+      "title": "Personal runners are off",
+      "body": "People's builds use shared runners and quotas, AI via runners doesn't work.",
+      "action": "Build settings"
+    },
+    "actionsLabel": "Actions for runner \"{{name}}\" ({{owner}})",
+    "pause": "Pause",
+    "resume": "Resume",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke personal runner",
+    "revokeBody": "Runner \"{{name}}\" of {{owner}} stops getting jobs right away. This can't be undone: the owner will have to connect the machine again.",
+    "revokeConfirm": "Revoke",
+    "unknownOwner": "Deleted user",
+    "ownersLabel": "Owners",
+    "pausedLabel": "Paused",
+    "pausedHint": "Paused: the runner polls but takes no jobs.",
+    "ownersHint": "People who have a runner of their own"
+  },
+  "resources": {
+    "title": "Quotas by resource",
+    "lead": "Installation defaults per person and per organization. An empty field removes the limit. Exceptions for a person or an organization are set below, under overrides.",
+    "kind": "Resource",
+    "perUser": "Per person",
+    "perOrg": "Per organization",
+    "loadFailed": "Could not load the resource quotas.",
+    "save": "Save",
+    "invalid": "Check the numbers: positive, no letters.",
+    "kinds": {
+      "storage": {
+        "label": "Server storage",
+        "hint": "All of the owner's projects together.",
+        "unit": "GB"
+      },
+      "builds": {
+        "label": "Builds per month",
+        "hint": "Shared runners only; builds on your own runner are free.",
+        "unit": "/ month"
+      },
+      "ai_tokens_day": {
+        "label": "AI tokens per day",
+        "hint": "The server's shared AI providers; the day is UTC.",
+        "unit": "tokens"
+      },
+      "ai_tokens_month": {
+        "label": "AI tokens per month",
+        "hint": "The server's shared AI providers; the month is UTC.",
+        "unit": "tokens"
+      },
+      "members": {
+        "label": "Project members",
+        "hint": "The largest member count in a single project.",
+        "unit": "people"
+      }
+    },
+    "behavior": {
+      "title": "When a limit is reached, and warnings",
+      "lead": "One rule for the whole installation."
+    },
+    "onExceed": {
+      "label": "What to do when a limit is reached",
+      "options": {
+        "deprioritize": "Build goes to the back of the queue",
+        "reject": "Refuse",
+        "warn": "Warn only"
+      },
+      "hint": {
+        "deprioritize": "The build goes to the back of the queue and runs on free runners, so a student is never left without one. Storage, AI and members are refused.",
+        "reject": "Any use over the limit is refused with a clear message.",
+        "warn": "Use goes through and the person sees a warning; the limit is not enforced."
+      }
+    },
+    "warn": {
+      "label": "Warn from",
+      "hint": "The share of the limit where the indicator turns yellow."
+    }
+  },
+  "overrides": {
+    "title": "Overrides",
+    "lead": "A limit set for a person or an organization beats the default. A person gets the organization's value when they have none of their own.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Find a person or an organization",
+    "ownerKind": {
+      "label": "For",
+      "user": "Person",
+      "org": "Organization"
+    },
+    "columns": {
+      "owner": "Owner",
+      "resource": "Resource",
+      "value": "Limit"
+    },
+    "add": "Set limit",
+    "remove": "Remove the override: {{name}}",
+    "empty": "No overrides",
+    "loadFailed": "Could not load the overrides.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "unit": {
+      "gb": "GB",
+      "s": "s"
+    },
+    "resources": {
+      "jobs_concurrent_user": "Concurrent tasks (per person)",
+      "jobs_concurrent_org": "Concurrent tasks (per organization)",
+      "jobs_max_duration_s": "Task time limit",
+      "storage_bytes_user": "Storage (per person)",
+      "storage_bytes_org": "Storage (per organization)",
+      "builds_month_user": "Builds per month (per person)",
+      "builds_month_org": "Builds per month (per organization)",
+      "ai_tokens_day_user": "AI tokens per day (per person)",
+      "ai_tokens_day_org": "AI tokens per day (per organization)",
+      "ai_tokens_month_user": "AI tokens per month (per person)",
+      "ai_tokens_month_org": "AI tokens per month (per organization)",
+      "members_project_user": "Project members (a person's projects)",
+      "members_project_org": "Project members (an organization's projects)"
+    }
+  },
+  "usageAdmin": {
+    "title": "Usage",
+    "lead": "Installation totals for the current period (since {{date}}) and the use of a chosen person or organization.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Pick whose usage to view",
+    "loadFailed": "Could not load the owner's usage.",
+    "reset": "Reset: {{kind}}"
+  },
+  "gateway": {
+    "title": "AI gateway",
+    "lead": "The installation's shared AI providers over the last day. The circuit breaker closes a provider after a run of failures and tries it again later.",
+    "loadFailed": "Could not load the gateway state.",
+    "empty": "No shared providers",
+    "emptyHint": "Add a shared AI provider under Installation.",
+    "columns": {
+      "provider": "Provider",
+      "state": "State",
+      "calls": "Calls",
+      "errors": "Errors",
+      "denied": "Refused",
+      "tokens": "Tokens"
+    },
+    "breaker": {
+      "closed": "Healthy",
+      "half_open": "Probing",
+      "open": "Closed"
+    }
+  },
+  "autoscale": {
+    "title": "Autoscaling",
+    "lead": "The number of shared runners follows the queue. The server does not start runners itself: it asks an orchestrator (docker compose or an external webhook) to reach the number.",
+    "loadFailed": "Could not load autoscaling.",
+    "invalid": "Check the values: the ceiling is not below the minimum and the address starts with http.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "metrics": {
+      "queue": "In queue",
+      "wait": "Oldest waits",
+      "runners": "Runners online",
+      "slots": "{{busy}} of {{total}} slots busy",
+      "decision": "Decision now",
+      "last": "Last call"
+    },
+    "action": {
+      "hold": "No change ({{to}})",
+      "up": "Add: {{from}} → {{to}}",
+      "down": "Remove: {{from}} → {{to}}"
+    },
+    "reason": {
+      "below_min": "fewer runners than the minimum",
+      "above_max": "more runners than the ceiling",
+      "queue_depth": "the queue is longer than normal",
+      "queue_wait": "a task waits longer than the threshold",
+      "at_max": "the ceiling is reached",
+      "cooldown_up": "cooling down after growth, {{seconds}} s left",
+      "idle": "the queue is empty and runners are free",
+      "idle_wait": "the queue is empty, waiting out the idle window, {{seconds}} s left",
+      "cooldown_down": "cooling down after a change, {{seconds}} s left",
+      "at_min": "at the minimum, the queue is empty",
+      "busy": "runners are busy",
+      "balanced": "the queue is within the norm"
+    },
+    "outcome": {
+      "ok": "{{at}}: the orchestrator accepted {{to}}",
+      "failed": "{{at}}: the orchestrator refused ({{error}})"
+    },
+    "mode": {
+      "label": "Mode",
+      "options": {
+        "off": "Off (hint only)",
+        "compose": "docker compose",
+        "webhook": "External webhook"
+      },
+      "hint": {
+        "off": "The decision is computed and shown here; nothing is started.",
+        "compose": "The server runs `docker compose up --scale`. It needs docker and daemon access where the api runs; project and file come from the environment.",
+        "webhook": "The server sends a POST with the wanted runner count. Plug in Nomad, a Kubernetes operator or your own script."
+      }
+    },
+    "url": {
+      "label": "Webhook address",
+      "hintSigned": "The body is signed with HMAC-SHA256 (header X-Autoscale-Signature); the secret is set in the environment.",
+      "hintUnsigned": "No signing secret is set in the environment: the request goes unsigned."
+    },
+    "fields": {
+      "min_runners": {
+        "label": "Minimum runners",
+        "hint": "Never go below this number; below it we grow at once.",
+        "unit": "pcs"
+      },
+      "max_runners": {
+        "label": "Runner ceiling",
+        "hint": "Never grow above this number.",
+        "unit": "pcs"
+      },
+      "target_queue_per_slot": {
+        "label": "Waiting tasks per slot",
+        "hint": "Grow when the queue per slot is above this number.",
+        "unit": "tasks"
+      },
+      "scale_up_wait_s": {
+        "label": "Wait threshold",
+        "hint": "Grow when the oldest task waits longer.",
+        "unit": "s"
+      },
+      "cooldown_up_s": {
+        "label": "Cooldown after growth",
+        "hint": "Pause before the next growth.",
+        "unit": "s"
+      },
+      "cooldown_down_s": {
+        "label": "Cooldown before shrinking",
+        "hint": "Pause after any change before shrinking.",
+        "unit": "s"
+      },
+      "idle_before_down_s": {
+        "label": "Idle window",
+        "hint": "How long the queue must stay empty before shrinking.",
+        "unit": "s"
+      },
+      "step_up": {
+        "label": "Growth step",
+        "hint": "How many runners to add at once.",
+        "unit": "pcs"
+      },
+      "step_down": {
+        "label": "Shrink step",
+        "hint": "How many runners to remove at once.",
+        "unit": "pcs"
+      }
+    }
+  }
+}

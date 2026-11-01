@@ -1,5 +1,7 @@
 export { AuthorsSection } from "./AuthorsSection";
 export type { AuthorsSectionProps } from "./AuthorsSection";
+export { BuildsSection } from "./BuildsSection";
+export type { BuildsSectionProps } from "./BuildsSection";
 export { ConfidentialitySection } from "./ConfidentialitySection";
 export type { ConfidentialitySectionProps } from "./ConfidentialitySection";
 export { DangerZoneSection } from "./DangerZoneSection";
@@ -17,6 +19,7 @@ export type { SharedDocsSectionProps } from "./SharedDocsSection";
 export { SupervisorSection } from "./SupervisorSection";
 export type { SupervisorSectionProps } from "./SupervisorSection";
 export { SyncCiSection } from "./SyncCiSection";
+export { SyncServerCloneSection } from "./SyncServerCloneSection";
 export type { SyncCiSectionProps } from "./SyncCiSection";
 export { SyncExchangeSection } from "./SyncExchangeSection";
 export type { SyncExchangeSectionProps } from "./SyncExchangeSection";

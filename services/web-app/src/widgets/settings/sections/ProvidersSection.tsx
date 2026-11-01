@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   aiProviderKeys,
+  orderProviders,
+  providerSource,
   useAIProviders,
   useDeleteAIProvider,
   type AIProvider,
@@ -11,8 +13,10 @@ import {
 } from "@entities/ai-provider";
 import { useOllamaRuntimeStatus, useSyncProvider } from "@entities/ai-runtime";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
+import { useBootstrap, useCapabilities } from "@entities/session";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
+import { StatusDot, type StatusDotStatus } from "@shared/ui/StatusDot";
 import { Spinner } from "@shared/ui/Spinner";
 import { toast } from "@shared/lib";
 import { SettingHead } from "./Setting";
@@ -22,10 +26,26 @@ const TYPE_LABEL: Record<AIProviderType, string> = {
   openai: "settings:providers.typeOpenai",
   openai_compat: "settings:providers.typeOpenaiCompat",
   ollama: "settings:providers.typeOllama",
+  runner: "settings:providers.typeRunner",
+};
+
+/** Точка состояния провайдера через раннер. */
+const RELAY_DOT: Record<
+  NonNullable<AIProvider["relay"]>["state"],
+  StatusDotStatus
+> = {
+  ready: "online",
+  runner_offline: "offline",
+  runner_paused: "paused",
+  runner_revoked: "neutral",
+  endpoint_missing: "warning",
+  disabled: "neutral",
 };
 
 type ProviderRowProps = {
   provider: AIProvider;
+  /** Серверный режим: метка источника («Мой», «Организация», «Установка»). */
+  showSource: boolean;
   isDefault: boolean;
   pending: boolean;
   managed: boolean;
@@ -35,6 +55,7 @@ type ProviderRowProps = {
 
 const ProviderRow = ({
   provider,
+  showSource,
   isDefault,
   pending,
   managed,
@@ -73,6 +94,30 @@ const ProviderRow = ({
           >
             {t(TYPE_LABEL[provider.type])}
           </span>
+          {showSource ? (
+            <span
+              className={
+                providerSource(provider) === "own" ? "chip" : "chip info"
+              }
+              style={{ fontSize: 10 }}
+              title={t(`providers.sourceTitle.${providerSource(provider)}`)}
+              data-testid={`ai-provider-source-${provider.id}`}
+              data-source={providerSource(provider)}
+            >
+              {t(`providers.source.${providerSource(provider)}`)}
+            </span>
+          ) : (
+            provider.shared === true && (
+              <span
+                className="chip info"
+                style={{ fontSize: 10 }}
+                title={t("providers.sharedTitle")}
+                data-testid="provider-shared"
+              >
+                {t("providers.shared")}
+              </span>
+            )
+          )}
           {isDefault && (
             <span
               className="mono"
@@ -82,6 +127,26 @@ const ProviderRow = ({
             </span>
           )}
         </div>
+        {provider.relay && (
+          <div
+            className="flex items-center"
+            style={{ gap: 8, fontSize: 11, flexWrap: "wrap" }}
+            data-testid={`ai-provider-relay-${provider.id}`}
+            data-state={provider.relay.state}
+          >
+            <StatusDot
+              status={RELAY_DOT[provider.relay.state]}
+              label={t(`providers.relayState.${provider.relay.state}`)}
+            />
+            <span className="dim">
+              {t("providers.via", {
+                // Раннер удалён из базы: сервер отдаёт null вместо имени.
+                runner: provider.relay.runner_name ?? t("providers.runnerGone"),
+                endpoint: provider.relay.endpoint,
+              })}
+            </span>
+          </div>
+        )}
         <div className="dim" style={{ fontSize: 11 }}>
           {provider.models.length > 0
             ? t("providers.modelCount", { count: provider.models.length })
@@ -93,27 +158,37 @@ const ProviderRow = ({
         </div>
       </div>
       <div className="flex items-center" style={{ gap: 6 }}>
-        {!managed && (
-          <button
-            type="button"
-            className="btn xs"
-            onClick={onEdit}
-            title={t("providers.edit")}
-          >
-            <Pencil size={11} />
-          </button>
+        {provider.shared === true ? (
+          <span className="dim" style={{ fontSize: 11 }}>
+            {t("providers.sharedKey")}
+          </span>
+        ) : (
+          <>
+            {!managed && (
+              <button
+                type="button"
+                className="btn xs"
+                onClick={onEdit}
+                title={t("providers.edit")}
+              >
+                <Pencil size={11} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn xs"
+              onClick={onDelete}
+              disabled={pending}
+              title={
+                managed
+                  ? t("providers.deleteManagedTitle")
+                  : t("providers.delete")
+              }
+            >
+              <Trash2 size={11} />
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className="btn xs"
-          onClick={onDelete}
-          disabled={pending}
-          title={
-            managed ? t("providers.deleteManagedTitle") : t("providers.delete")
-          }
-        >
-          <Trash2 size={11} />
-        </button>
       </div>
     </div>
   );
@@ -129,7 +204,11 @@ export const ProvidersSection = () => {
   // Живая локальная Ollama без провайдера — предлагаем подключить одним нажатием.
   // Бэкенд синкает провайдера сам (старт приложения, запуск/скачивание модели),
   // так что баннер — страховка для «Ollama появилась позже», не основной путь.
-  const runtimeStatus = useOllamaRuntimeStatus();
+  // На общем сервере локальной Ollama нет: ручка рантайма там не существует.
+  const { lacks } = useCapabilities();
+  const bootstrap = useBootstrap();
+  const localServices = !lacks("local_services_ui");
+  const runtimeStatus = useOllamaRuntimeStatus({ enabled: localServices });
   const syncProvider = useSyncProvider();
   const ollamaDetected = Boolean(runtimeStatus.data?.base_url);
   const hasOllamaProvider = (providersQuery.data ?? []).some(
@@ -150,7 +229,11 @@ export const ProvidersSection = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AIProvider | null>(null);
 
-  const providers = providersQuery.data ?? [];
+  // Свои сначала, затем организации и установки: тот же порядок, что у агентов.
+  const providers = orderProviders(providersQuery.data ?? []);
+  // Источник и порядок «свои, организации, установки» только на общем сервере:
+  // локальный бэкенд тоже присылает source: "own", но список там прежний.
+  const serverMode = bootstrap.data?.mode === "server";
   const defaultProviderId = settings.data?.default_ai_provider_id ?? "";
   const defaultModel = settings.data?.default_ai_model ?? "";
   const selectedProvider = providers.find((p) => p.id === defaultProviderId);
@@ -200,7 +283,9 @@ export const ProvidersSection = () => {
       <SettingHead
         anchorId="providers"
         title={t("providers.title")}
-        sub={t("providers.subtitle")}
+        sub={t(
+          localServices ? "providers.subtitle" : "providers.subtitleServer",
+        )}
       />
 
       <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
@@ -258,6 +343,7 @@ export const ProvidersSection = () => {
               <ProviderRow
                 key={provider.id}
                 provider={provider}
+                showSource={serverMode}
                 isDefault={provider.id === defaultProviderId}
                 pending={deleteProvider.isPending}
                 managed={provider.type === "ollama"}
@@ -278,6 +364,12 @@ export const ProvidersSection = () => {
             {t("providers.add")}
           </button>
         </div>
+
+        {serverMode && (
+          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+            {t("providers.order")}
+          </p>
+        )}
 
         {providers.length > 0 && (
           <div

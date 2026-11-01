@@ -18,7 +18,7 @@ from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
-    IGitCredentialRepository,
+    ICredentialAccess,
     IGitOperationRegistry,
     IGitRepoReader,
     IGitStoreGuard,
@@ -61,7 +61,7 @@ class StartSyncUC:
         state_repo: IGitSyncStateRepository,
         reader: IGitRepoReader,
         guard: IGitStoreGuard,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         profile: ILocalAuthorProfile,
         operations: IGitOperationRegistry,
         journals: IUpdateJournalRepository,
@@ -83,14 +83,20 @@ class StartSyncUC:
 
     async def execute(self, inp: StartSyncInput) -> StartSyncOutput:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
-        await asyncio.to_thread(self.preflight, project)
+        await self.preflight(project)
         operation = self._operations.begin(OperationKind.sync, project_id=project.id, folder=project.folder)
         task = asyncio.create_task(self._sync.run(project, operation.id), name=f"git-sync-{operation.id}")
         self._operations.attach_task(operation.id, task)
         return StartSyncOutput(operation_id=operation.id)
 
-    def preflight(self, project: Project) -> None:
+    async def preflight(self, project: Project) -> None:
         """Быстрые проверки перед любой операцией синхронизации; общие с применением решений по конфликтам."""
+        state, credential_id = await asyncio.to_thread(self._preflight_remote, project)
+        if credential_id is not None and await self._credentials.get(credential_id, project_id=project.id) is None:
+            raise git_error(GitErrorCode.credentials_missing)
+        await asyncio.to_thread(self._preflight_state, project, state)
+
+    def _preflight_remote(self, project: Project) -> tuple[SyncState, UUID | None]:
         self._policy.require_enabled()
         config = self._remotes.read(project)
         if config is None:
@@ -99,9 +105,9 @@ class StartSyncUC:
             raise git_error(GitErrorCode.profile_required)
         self._guard.ensure_trusted(project.folder)
         state = self._states.get(project.folder) or default_state(config, None)
-        credential_id = state.credential_id or config.credential_id
-        if credential_id is not None and self._credentials.get(credential_id) is None:
-            raise git_error(GitErrorCode.credentials_missing)
+        return state, state.credential_id or config.credential_id
+
+    def _preflight_state(self, project: Project, state: SyncState) -> None:
         if state.pending is not None and state.pending.theirs_ref is not None:
             # Открытое слияние с файлом: синхронизация с сервером затёрла бы сессию, а с ней решения человека.
             raise GitSyncError(GitErrorCode.sync_incomplete, localized_error(*_OPEN_FILE_MERGE))

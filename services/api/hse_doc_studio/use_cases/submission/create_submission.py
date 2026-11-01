@@ -8,6 +8,8 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, TemplateVersion
@@ -27,16 +29,17 @@ from hse_doc_studio.core.jobs.office import (
 from hse_doc_studio.core.jobs.pack import PackResult
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.office import ConvertRequest, custom_docs_to_convert
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     IPackSubmissionRepository,
-    IProjectIndexRepository,
     IProjectRepository,
     ISignatureRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SubmissionProfileService
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
+from hse_doc_studio.core.submission_archive import DisabledSubmissionArchive, ISubmissionArchive, archive_media_type
 from hse_doc_studio.core.team import (
     author_by_slug,
     base_dir_for_owner,
@@ -92,31 +95,11 @@ class CreateSubmissionOutput:
     submission: PackSubmissionRecord
 
 
-def _resolve_project(
-    project_id: UUID,
-    project_repo: IProjectRepository,
-    project_index_repo: IProjectIndexRepository,
-) -> tuple[Path, Project] | tuple[None, None]:
-    known_folders = project_index_repo.list_known()
-    for folder in known_folders:
-        try:
-            project = project_repo.get(folder)
-            if project is not None and project.id == project_id:
-                return folder, project
-        except Exception as exc:
-            logger.warning(
-                "create_submission: error loading project",
-                folder=str(folder),
-                exc=str(exc),
-            )
-    return None, None
-
-
 class CreateSubmissionUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         submission_repo: IPackSubmissionRepository,
         submission_profile_service: SubmissionProfileService,
@@ -128,9 +111,12 @@ class CreateSubmissionUC:
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        access: IProjectAccessChecker,
+        archive: ISubmissionArchive | None = None,
     ) -> None:
+        self._archive = archive or DisabledSubmissionArchive()
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._template_repo = template_repo
         self._submission_repo = submission_repo
         self._submission_profile_service = submission_profile_service
@@ -142,6 +128,7 @@ class CreateSubmissionUC:
         self._render_form_uc = render_form_uc
         self._dispatcher = dispatcher
         self._file_probes = file_probes
+        self._access = access
 
     @staticmethod
     def _reroute_form_extra(
@@ -168,12 +155,18 @@ class CreateSubmissionUC:
             format=extra.format,
         )
 
+    async def _require_package_access(self, inp: CreateSubmissionInput, *, team: bool) -> None:
+        # Гард маршрута слага из тела не видит: пакет чужого автора закрываем здесь.
+        if team:
+            await self._access.require(inp.project_id, Action.SUBMISSION_CREATE, inp.author_slug)
+
     async def execute(self, inp: CreateSubmissionInput) -> CreateSubmissionOutput:  # noqa: C901, PLR0915
-        project_folder, project = _resolve_project(inp.project_id, self._project_repo, self._project_index_repo)
-        if project is None or project_folder is None:
+        located = await self._locator.locate(inp.project_id)
+        if located is None:
             raise NotFoundError(
                 localized_error(f"Проект не найден: {inp.project_id}", f"Project not found: {inp.project_id}")
             )
+        project_folder, project = located
 
         version = self._template_repo.get_version(
             project.lock.pack_id,
@@ -207,6 +200,8 @@ class CreateSubmissionUC:
                     "Team project: specify an existing author (author_slug) for the submission package",
                 )
             )
+
+        await self._require_package_access(inp, team=team)
 
         validated_items = self._submission_profile_service.build_item_list(
             profile=profile,
@@ -291,6 +286,7 @@ class CreateSubmissionUC:
             base_name=base_name,
             profile_id=inp.profile_id,
             archive_format=inp.archive_format,
+            keep_folder=not self._archive.enabled,
         )
         spec = JobSpec(
             id=submission_id,
@@ -305,10 +301,9 @@ class CreateSubmissionUC:
         job = await self._dispatcher.run(spec)
         job.raise_for_error()
         packed = job.data_as(PackResult)
-        # Папку пакета запись хранит рядом с архивом: keep_folder в нагрузке всегда включен.
-        assert packed.folder is not None  # noqa: S101
-        output_path = project_folder / packed.archive.path
-        output_dir = project_folder / packed.folder.path
+        output_path, output_dir, artifact_key = await self._place_archive(
+            project.id, submission_id, project_folder, packed
+        )
 
         if inp.custom_doc_decisions:
             self._remember_custom_doc_decisions(project_folder, inp.custom_doc_decisions)
@@ -323,8 +318,9 @@ class CreateSubmissionUC:
             output_path=output_path,
             output_dir=output_dir,
             archive_format=inp.archive_format,
+            artifact_key=artifact_key,
         )
-        self._submission_repo.save(record)
+        await self._submission_repo.save(record)
 
         entry = ChangeLogEntry(
             id=uuid.uuid4(),
@@ -343,6 +339,22 @@ class CreateSubmissionUC:
         )
 
         return CreateSubmissionOutput(submission=record)
+
+    async def _place_archive(
+        self, project_id: UUID, submission_id: UUID, project_folder: Path, packed: PackResult
+    ) -> tuple[Path, Path | None, str | None]:
+        """Путь архива, папка пакета и ключ в хранилище.
+
+        На сервере архив уходит в хранилище, а папка пакета не создаётся: просмотр идёт через архив.
+        Локально папку пакета запись хранит рядом с архивом: keep_folder в нагрузке включен.
+        """
+        output_path = project_folder / packed.archive.path
+        if self._archive.enabled:
+            key = await self._archive.put(project_id, submission_id, output_path, archive_media_type(output_path.name))
+            output_path.unlink(missing_ok=True)
+            return output_path, None, key
+        assert packed.folder is not None  # noqa: S101
+        return output_path, project_folder / packed.folder.path, None
 
     async def _convert_custom_docs(
         self,

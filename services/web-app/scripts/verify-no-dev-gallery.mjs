@@ -7,7 +7,14 @@ import path from "node:path";
 const DIST = path.resolve(import.meta.dirname, "..", "dist");
 
 // Строки, которые есть только в коде галереи (метка страницы и маршрут).
-const MARKERS = ["hse-dev-sync-states-gallery", "/dev/sync-states"];
+const MARKERS = [
+  "hse-dev-sync-states-gallery",
+  "/dev/sync-states",
+  // Галерея серверных экранов и демо-мир сервера (VITE_SERVER_DEMO).
+  "hse-dev-server-screens-gallery",
+  "/dev/server-screens",
+  "server-demo-world",
+];
 
 const walk = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

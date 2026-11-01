@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": 5120,
+      "at": "2026-10-30T08:00:00Z",
+      "action": "org.member.add",
+      "actor_id": "deleted:3f9a1c2b7d10",
+      "actor": {
+        "id": "deleted:3f9a1c2b7d10",
+        "name": "deleted:3f9a1c2b7d10",
+        "email": null
+      },
+      "target": "org_01hx7m",
+      "target_label": "МСПИН 2025",
+      "details": {
+        "user_id": "u_01hx7k2m9c",
+        "role": "member"
+      }
+    },
+    {
+      "id": 5119,
+      "at": "2026-10-30T07:59:00Z",
+      "action": "audit.purged",
+      "actor_id": null,
+      "actor": null,
+      "target": null,
+      "target_label": null,
+      "details": {
+        "count": 12,
+        "keep_days": 365
+      }
+    }
+  ],
+  "next_cursor": null,
+  "total_estimate": 184233
+}

@@ -1,0 +1,22 @@
+{
+  "registration_mode": "domains",
+  "registration_domains": [
+    "edu.hse.ru",
+    "hse.ru"
+  ],
+  "require_approval": true,
+  "fields": {
+    "auth.registration_mode": {
+      "source": "admin",
+      "locked": false
+    },
+    "auth.registration_domains": {
+      "source": "admin",
+      "locked": false
+    },
+    "auth.require_approval": {
+      "source": "default",
+      "locked": false
+    }
+  }
+}

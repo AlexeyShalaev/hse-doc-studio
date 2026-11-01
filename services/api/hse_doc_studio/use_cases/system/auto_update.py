@@ -55,14 +55,14 @@ class AutoUpdateUC:
         self._updater = updater
         self._current = current_version
 
-    def _enabled(self) -> bool:
-        stored = self._settings_repo.get()
+    async def _enabled(self) -> bool:
+        stored = await self._settings_repo.get()
         # Ключа нет (настройки ни разу не сохраняли) → включено, как и дефолт.
         return bool(stored.get(AUTO_UPDATE_SETTING, True))
 
     async def _blocked(self) -> AutoUpdateOutcome | None:
         """Причина не обновляться прямо сейчас, если она есть."""
-        if not self._enabled():
+        if not await self._enabled():
             return AutoUpdateOutcome.disabled
         if not await self._updater.can_self_update():
             return AutoUpdateOutcome.unsupported

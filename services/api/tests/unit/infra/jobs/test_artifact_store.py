@@ -11,6 +11,7 @@ from hse_doc_studio.infra.jobs import artifact_store
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 
 _SOURCE = "vkr/vkr.tex"
+PROJECT_ID = uuid4()
 
 
 def _write(path: Path, data: bytes) -> None:
@@ -87,13 +88,13 @@ async def test__publish_pdf__transient_failure__retries_then_replaces(
 
 
 @pytest.mark.unit
-def test__archive_pdf__archives_build_copy_not_stale_neighbour_and_prunes_to_8(tmp_path: Path) -> None:
+async def test__archive_pdf__archives_build_copy_not_stale_neighbour_and_prunes_to_8(tmp_path: Path) -> None:
     store = LocalDiskArtifactStore()
     _write(tmp_path / "vkr/vkr.pdf", b"stale neighbour")
     _write(tmp_path / "vkr/.build/vkr/vkr.pdf", b"fresh build copy")
     first = uuid4()
-    store.archive_pdf(tmp_path, "vkr", first, _SOURCE)
-    assert store.read_archived_pdf(tmp_path, "vkr", first) == b"fresh build copy"
+    await store.archive_pdf(PROJECT_ID, tmp_path, "vkr", first, _SOURCE)
+    assert await store.read_archived_pdf(PROJECT_ID, tmp_path, "vkr", first) == b"fresh build copy"
 
     ids = [first]
     (tmp_path / "vkr/.build/vkr/vkr.pdf").unlink()
@@ -101,16 +102,16 @@ def test__archive_pdf__archives_build_copy_not_stale_neighbour_and_prunes_to_8(t
         _write(tmp_path / "vkr/vkr.pdf", f"build {i}".encode())
         job_id = uuid4()
         ids.append(job_id)
-        store.archive_pdf(tmp_path, "vkr", job_id, _SOURCE)
+        await store.archive_pdf(PROJECT_ID, tmp_path, "vkr", job_id, _SOURCE)
 
     archive_dir = tmp_path / ".hse-studio" / "pdf-archive" / "vkr"
     assert len(list(archive_dir.glob("*.pdf"))) == 8
-    assert store.read_archived_pdf(tmp_path, "vkr", ids[-1]) == b"build 9"
+    assert await store.read_archived_pdf(PROJECT_ID, tmp_path, "vkr", ids[-1]) == b"build 9"
     with pytest.raises(FileNotFoundError):
-        store.read_archived_pdf(tmp_path, "vkr", ids[0])
+        await store.read_archived_pdf(PROJECT_ID, tmp_path, "vkr", ids[0])
 
 
 @pytest.mark.unit
-def test__read_archived_pdf__missing__file_not_found(tmp_path: Path) -> None:
+async def test__read_archived_pdf__missing__file_not_found(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        LocalDiskArtifactStore().read_archived_pdf(tmp_path, "vkr", uuid4())
+        await LocalDiskArtifactStore().read_archived_pdf(PROJECT_ID, tmp_path, "vkr", uuid4())

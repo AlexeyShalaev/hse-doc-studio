@@ -1,0 +1,6 @@
+{
+  "owner_kind": "user",
+  "owner_id": "4f1d0c1a-0000-4000-8000-000000000001",
+  "resource": "ai.tokens_month_user",
+  "hard_limit": 500000
+}

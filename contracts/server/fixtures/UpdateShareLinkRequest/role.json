@@ -1,0 +1,10 @@
+{
+  "label": null,
+  "role": "reviewer",
+  "show_sources": null,
+  "require_login": null,
+  "password": null,
+  "clear_password": false,
+  "expires_in_days": null,
+  "clear_expiry": false
+}

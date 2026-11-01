@@ -60,7 +60,7 @@ class ResolveConflictsUC:
         if from_file:
             await asyncio.to_thread(self._gate.check, project, needs_profile=True)
         else:
-            await asyncio.to_thread(self._start.preflight, project)
+            await self._start.preflight(project)
         loaded = await asyncio.to_thread(self._sessions.load_for, project)
         if inp.resolutions is not None:
             resolutions = dict(inp.resolutions)

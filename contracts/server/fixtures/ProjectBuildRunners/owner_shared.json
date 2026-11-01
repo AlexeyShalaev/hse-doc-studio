@@ -1,0 +1,14 @@
+{
+  "policy": "shared",
+  "editable": true,
+  "project_kind": "personal",
+  "personal_runners_enabled": true,
+  "my_builds": "personal_first",
+  "wait_s": 5,
+  "owner_runners": [
+    {
+      "name": "MacBook Анны",
+      "state": "online"
+    }
+  ]
+}

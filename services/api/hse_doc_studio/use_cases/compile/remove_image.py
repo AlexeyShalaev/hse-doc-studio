@@ -35,7 +35,7 @@ class RemoveImageUC:
         self._settings_repo = settings_repo
 
     async def execute(self, inp: RemoveImageInput) -> RemoveImageOutput:
-        active = resolve_active_image(self._settings_repo)
+        active = await resolve_active_image(self._settings_repo)
         if inp.image == active:
             raise ValueError(
                 localized_error(

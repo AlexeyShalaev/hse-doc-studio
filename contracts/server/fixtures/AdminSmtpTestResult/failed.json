@@ -1,0 +1,4 @@
+{
+  "ok": false,
+  "error": "SMTPConnectError: connection refused"
+}

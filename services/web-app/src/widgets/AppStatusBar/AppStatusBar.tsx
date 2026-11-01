@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
+import { useCapabilities } from "@entities/session";
 import { useAppSettings } from "@entities/app-settings";
 import { useRunnerHealth } from "@entities/system";
 import { SyncStatusSegment } from "@features/git-sync";
@@ -16,6 +17,10 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
   const togglePalette = useUIStore((state) => state.togglePaletteOpen);
   const { data: health, isError: healthIsError } = useRunnerHealth();
   const { data: settings } = useAppSettings();
+  // На общем сервере Docker и локальный движок не показываем: они не про пользователя.
+  const { lacks } = useCapabilities();
+  const showDocker = !lacks("docker_ui");
+  const showEngine = !lacks("local_services_ui");
 
   const dockerStatus: "running" | "stopped" =
     !healthIsError && health?.docker === "running" ? "running" : "stopped";
@@ -30,17 +35,19 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
 
   return (
     <div className="statusbar">
-      <span className="seg-item">
-        <span className={dockerDotClass} />
-        docker · {dockerLabel}
-      </span>
+      {showDocker && (
+        <span className="seg-item">
+          <span className={dockerDotClass} />
+          docker · {dockerLabel}
+        </span>
+      )}
 
       <span className="flex-1" />
 
       {projectId && <SyncStatusSegment projectId={projectId} />}
       {projectId && <TemplateUpdateSegment projectId={projectId} />}
 
-      <span className="seg-item mono">{engine}</span>
+      {showEngine && <span className="seg-item mono">{engine}</span>}
       <span
         className="seg-item seg-clickable"
         role="button"

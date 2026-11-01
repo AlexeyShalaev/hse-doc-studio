@@ -1,5 +1,6 @@
 export {
   systemApi,
+  systemClient,
   RunnerHealthSchema,
   EditorEntrySchema,
   EditorsResponseSchema,

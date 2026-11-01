@@ -74,8 +74,7 @@ class _Setup:
         self, tmp_path: Path, process: _Process, scanner: _Scanner | None = None, *, known: bool = True
     ) -> None:
         self.known_hosts = FileKnownHostsStore(tmp_path / "data")
-        if known:
-            self.known_hosts.trust("github.com", None, [_scanned()])
+        self._known = known
         self.credentials = _Credentials()
         self.scanner = scanner or _Scanner([_scanned()])
         self.process = process
@@ -89,6 +88,15 @@ class _Setup:
             scanner=self.scanner,
         )
 
+    @classmethod
+    async def create(
+        cls, tmp_path: Path, process: _Process, scanner: _Scanner | None = None, *, known: bool = True
+    ) -> _Setup:
+        setup = cls(tmp_path, process, scanner, known=known)
+        if known:
+            await setup.known_hosts.trust("github.com", None, [_scanned()])
+        return setup
+
     def add_key(self, **kwargs: object) -> RemoteTarget:
         credential = _ssh_credential(**kwargs)  # type: ignore[arg-type]
         self.credentials.add(credential, Secret(_PEM))
@@ -100,7 +108,7 @@ class _Setup:
 
 async def test__run_ssh__builds_the_hardened_command_and_keeps_secrets_out_of_argv(tmp_path: Path) -> None:
     process = _Process()
-    setup = _Setup(tmp_path, process)
+    setup = await _Setup.create(tmp_path, process)
     target = setup.add_key()
 
     await setup.run(target)
@@ -134,7 +142,7 @@ async def test__run_ssh__key_file_is_private_while_running_and_removed_after_suc
         seen["dir_mode"] = stat.S_IMODE(key.parent.stat().st_mode)
         seen["text"] = key.read_text()
 
-    setup = _Setup(tmp_path, _Process(during=during))
+    setup = await _Setup.create(tmp_path, _Process(during=during))
     await setup.run(setup.add_key())
 
     assert seen["mode"] == 0o600
@@ -154,7 +162,7 @@ async def test__run_ssh__key_file_is_removed_after_a_failure(tmp_path: Path) -> 
         paths.append(Path(command[command.index("-i") + 1]))
 
     process = _Process(GitResult(128, stderr="git@github.com: Permission denied (publickey).\n"), during=during)
-    setup = _Setup(tmp_path, process)
+    setup = await _Setup.create(tmp_path, process)
     target = setup.add_key()
 
     with pytest.raises(GitSyncError) as raised:
@@ -174,7 +182,7 @@ async def test__run_ssh__key_file_is_removed_after_an_unexpected_error(tmp_path:
         paths.append(Path(command[command.index("-i") + 1]))
         raise KeyboardInterrupt
 
-    setup = _Setup(tmp_path, _Process(during=during))
+    setup = await _Setup.create(tmp_path, _Process(during=during))
     target = setup.add_key()
 
     with pytest.raises(KeyboardInterrupt):
@@ -185,7 +193,7 @@ async def test__run_ssh__key_file_is_removed_after_an_unexpected_error(tmp_path:
 
 async def test__run_ssh__unknown_host__host_key_unknown_with_keys_and_no_process(tmp_path: Path) -> None:
     process = _Process()
-    setup = _Setup(tmp_path, process, known=False)
+    setup = await _Setup.create(tmp_path, process, known=False)
     target = setup.add_key()
 
     with pytest.raises(GitSyncError) as raised:
@@ -200,7 +208,7 @@ async def test__run_ssh__unknown_host__host_key_unknown_with_keys_and_no_process
 async def test__run_ssh__unknown_host_without_a_credential__still_asks_to_confirm_the_host_first(
     tmp_path: Path,
 ) -> None:
-    setup = _Setup(tmp_path, _Process(), known=False)
+    setup = await _Setup.create(tmp_path, _Process(), known=False)
     target = RemoteTarget(parse_remote_url("git@github.com:hse/course.git"))
 
     with pytest.raises(GitSyncError) as raised:
@@ -211,7 +219,7 @@ async def test__run_ssh__unknown_host_without_a_credential__still_asks_to_confir
 
 async def test__run_ssh__unknown_host_and_unreachable__scan_error_is_reported(tmp_path: Path) -> None:
     offline = GitSyncError(GitErrorCode.offline, "offline")
-    setup = _Setup(tmp_path, _Process(), _Scanner(offline), known=False)
+    setup = await _Setup.create(tmp_path, _Process(), _Scanner(offline), known=False)
 
     with pytest.raises(GitSyncError) as raised:
         await setup.run(setup.add_key())
@@ -221,7 +229,7 @@ async def test__run_ssh__unknown_host_and_unreachable__scan_error_is_reported(tm
 
 async def test__run_ssh__known_host_without_a_credential__credentials_missing(tmp_path: Path) -> None:
     process = _Process()
-    setup = _Setup(tmp_path, process)
+    setup = await _Setup.create(tmp_path, process)
 
     with pytest.raises(GitSyncError) as raised:
         await setup.run(RemoteTarget(parse_remote_url("git@github.com:hse/course.git")))
@@ -231,7 +239,7 @@ async def test__run_ssh__known_host_without_a_credential__credentials_missing(tm
 
 
 async def test__run_ssh__token_instead_of_key__credential_invalid(tmp_path: Path) -> None:
-    setup = _Setup(tmp_path, _Process())
+    setup = await _Setup.create(tmp_path, _Process())
     credential = _ssh_credential(kind=GitCredentialKind.pat)
     setup.credentials.add(credential, Secret("ghp_x"))
     target = RemoteTarget(parse_remote_url("git@github.com:hse/course.git"), credential_id=credential.id)
@@ -243,7 +251,7 @@ async def test__run_ssh__token_instead_of_key__credential_invalid(tmp_path: Path
 
 
 async def test__run_ssh__key_for_another_host_or_port__credential_host_mismatch(tmp_path: Path) -> None:
-    setup = _Setup(tmp_path, _Process())
+    setup = await _Setup.create(tmp_path, _Process())
     other_host = setup.add_key(host="gitlab.com")
     other_port = setup.add_key(port=2222)
 
@@ -257,7 +265,7 @@ async def test__run_ssh__host_key_changed__expected_and_actual_fingerprints(tmp_
     process = _Process(
         GitResult(128, stderr="Offending ED25519 key in /d/known_hosts:1\nHost key verification failed.\n")
     )
-    setup = _Setup(tmp_path, process, _Scanner([_scanned(_OTHER)]))
+    setup = await _Setup.create(tmp_path, process, _Scanner([_scanned(_OTHER)]))
 
     with pytest.raises(GitSyncError) as raised:
         await setup.run(setup.add_key())
@@ -276,7 +284,7 @@ async def test__run_ssh__strict_check_failure_after_preflight__keys_from_a_fresh
             ),
         )
     )
-    setup = _Setup(tmp_path, process)
+    setup = await _Setup.create(tmp_path, process)
 
     with pytest.raises(GitSyncError) as raised:
         await setup.run(setup.add_key())
@@ -291,7 +299,7 @@ async def test__run_ssh__scan_fails_while_explaining_a_changed_key__code_is_kept
     process = _Process(
         GitResult(128, stderr="REMOTE HOST IDENTIFICATION HAS CHANGED!\nHost key verification failed.\n")
     )
-    setup = _Setup(tmp_path, process, _Scanner(GitSyncError(GitErrorCode.offline, "offline")))
+    setup = await _Setup.create(tmp_path, process, _Scanner(GitSyncError(GitErrorCode.offline, "offline")))
 
     with pytest.raises(GitSyncError) as raised:
         await setup.run(setup.add_key())
@@ -301,7 +309,7 @@ async def test__run_ssh__scan_fails_while_explaining_a_changed_key__code_is_kept
 
 
 async def test__run_ssh__success__marks_the_credential_ok(tmp_path: Path) -> None:
-    setup = _Setup(tmp_path, _Process())
+    setup = await _Setup.create(tmp_path, _Process())
     target = setup.add_key()
 
     await setup.run(target)
@@ -310,7 +318,7 @@ async def test__run_ssh__success__marks_the_credential_ok(tmp_path: Path) -> Non
 
 
 async def test__run_ssh__no_ssh_client__ssh_unavailable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    setup = _Setup(tmp_path, _Process())
+    setup = await _Setup.create(tmp_path, _Process())
     target = setup.add_key()
     monkeypatch.setattr(_Caps, "ssh_path", lambda self: None)
 

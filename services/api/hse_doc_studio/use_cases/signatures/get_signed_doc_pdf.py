@@ -4,6 +4,7 @@ import contextlib
 import os
 import tempfile
 import zipfile
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
@@ -96,7 +97,15 @@ class GetSignedDocPdfUC:
         self._pyhanko_signer = pyhanko_signer
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
-    async def execute(self, inp: GetSignedDocPdfInput) -> GetSignedDocPdfOutput:  # noqa: C901,PLR0912,PLR0915
+    async def execute(self, inp: GetSignedDocPdfInput) -> GetSignedDocPdfOutput:
+        # Закрытые ключи живут ровно столько, сколько идёт подпись; подписанный файл к этому
+        # моменту уже лежит отдельно, так что каталоги ключей можно закрывать до ответа.
+        async with AsyncExitStack() as key_sessions:
+            return await self._execute(inp, key_sessions)
+
+    async def _execute(  # noqa: C901,PLR0912,PLR0915
+        self, inp: GetSignedDocPdfInput, key_sessions: AsyncExitStack
+    ) -> GetSignedDocPdfOutput:
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
         project = result.project
 
@@ -198,7 +207,7 @@ class GetSignedDocPdfUC:
             wants_crypto = use_crypto and mode != SignMode.image and identity_id_str is not None
 
             if wants_crypto:
-                identity = self._signing_identity_repo.get(_UUID(identity_id_str))
+                identity = await self._signing_identity_repo.get(_UUID(identity_id_str))
                 if identity is None:
                     logger.warning(
                         "signed pdf: signing identity not found, falling back to image",
@@ -208,7 +217,9 @@ class GetSignedDocPdfUC:
                     wants_crypto = False
 
             if wants_crypto and identity_id_str:
-                key_dir = self._signing_identity_repo.key_dir(_UUID(identity_id_str))
+                key_dir = await key_sessions.enter_async_context(
+                    self._signing_identity_repo.private_key_session(_UUID(identity_id_str))
+                )
 
                 if mode == SignMode.detached:
                     # Visual: image stamp (so the page shows where the signature is).

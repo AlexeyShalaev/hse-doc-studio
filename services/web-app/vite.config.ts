@@ -100,6 +100,8 @@ export default defineConfig(({ mode }) => {
               "/api": {
                 target: devProxyTarget,
                 changeOrigin: true,
+                // Сокет совместной правки (/api/collab/…) идёт тем же префиксом.
+                ws: true,
                 secure: devProxyTarget.startsWith("https:"),
               },
             }
@@ -126,6 +128,28 @@ export default defineConfig(({ mode }) => {
           // Vite 8 (Rolldown) принимает manualChunks только функцией: пакет из
           // node_modules → имя чанка по таблице ниже, остальное — по умолчанию.
           manualChunks: (id: string) => chunkFor(id),
+          // Админка уходит в динамический чанк assets/admin-*.js (по имени его
+          // узнаёт scripts/verify-admin-chunk.mjs), её словари в отдельные
+          // locale-admin-*: так ни то ни другое не входит в entry.
+          chunkFileNames: (chunk: {
+            name: string;
+            facadeModuleId?: string | null;
+          }) => {
+            const id = (chunk.facadeModuleId ?? "").replace(/\\/g, "/");
+            if (id.endsWith("/src/pages/AdminPage/index.ts")) {
+              return "assets/admin-[hash].js";
+            }
+            if (/\/locales\/[a-z]{2}\/admin\//.test(id)) {
+              return "assets/locale-admin-[hash].js";
+            }
+            // Общие куски разделов админки (features/admin-ops и т.п.) сборщик
+            // называет по папке; без префикса они совпали бы с маской admin-*.js
+            // единственного чанка оболочки.
+            if (chunk.name.startsWith("admin-")) {
+              return "assets/section-[name]-[hash].js";
+            }
+            return "assets/[name]-[hash].js";
+          },
         },
       },
     },

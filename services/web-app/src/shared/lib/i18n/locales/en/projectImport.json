@@ -1,0 +1,49 @@
+{
+  "title": "Import a project from a local Studio",
+  "description": "Upload a zip with the project folder: it will appear on the server together with its version history and agent chats.",
+  "open": "Import from zip",
+  "empty": "Upload a project from zip",
+  "drop": "Drop a project zip here or",
+  "choose": "choose a file",
+  "dropActive": "Release to upload",
+  "accept": ".zip only",
+  "inputLabel": "Project archive",
+  "wrongKind": "The file must have a .zip extension.",
+  "explain": "Zip the whole project folder, including the hidden .hse-studio folder: it keeps the project settings, version history and chats. The archive size is limited by the server.",
+  "replace": "Replace",
+  "remove": "Remove file",
+  "cancel": "Cancel",
+  "submit": "Import",
+  "uploading": {
+    "lead": "Uploading the archive. Keep this window open until the upload finishes.",
+    "label": "Uploading the archive",
+    "percent": "{{percent}}%",
+    "unpacking": "Unpacking and checking the project",
+    "cancel": "Stop"
+  },
+  "done": {
+    "title": "Project imported",
+    "lead": "\"{{name}}\" is now on the server. You are its owner.",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "chats_one": "{{count}} chat",
+    "chats_other": "{{count}} chats",
+    "regenerated": "The identifier from the archive is already taken, so the project got a new one. The earlier project is untouched.",
+    "warningsTitle": "Good to know",
+    "later": "Close",
+    "open": "Open project"
+  },
+  "warnings": {
+    "remote_needs_access": "The project still points at a remote repository, but the server has no access to it. Add access in the project settings to keep syncing.",
+    "records_skipped_one": "One build record was not transferred: it points at files on your computer. Build the document again.",
+    "records_skipped_other": "{{count}} build and submission records were not transferred: they point at files on your computer. Build the documents again.",
+    "store_hardened": "Foreign hooks and settings were removed from the version store ({{count}}): they never run on the server.",
+    "junk_skipped": "System junk files (.DS_Store, __MACOSX and alike) were skipped: {{count}}.",
+    "chats_unreadable": "The agent chats could not be read, the project was transferred without them."
+  },
+  "failure": {
+    "title": "Could not import",
+    "generic": "The import failed. Check the connection and try again.",
+    "retry": "Choose another file"
+  }
+}

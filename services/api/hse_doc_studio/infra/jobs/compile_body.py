@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -180,7 +180,7 @@ async def run_copy_only(  # noqa: PLR0913
     state: BuildState,
     converter: IOfficeConvertService,
     outputs: IJobOutputs,
-    resolve_office_image: Callable[[], str],
+    resolve_office_image: Callable[[], Awaitable[str]],
 ) -> None:
     """Copy-only вариант (engine: none, например pptx/reveal): файл и есть артефакт.
 
@@ -213,7 +213,7 @@ async def _convert_office_preview(  # noqa: PLR0913
     log: JobLogSink,
     converter: IOfficeConvertService,
     outputs: IJobOutputs,
-    resolve_office_image: Callable[[], str],
+    resolve_office_image: Callable[[], Awaitable[str]],
 ) -> int | None:
     """office-файл → соседний PDF-предпросмотр; возвращает число страниц или None.
 
@@ -236,7 +236,7 @@ async def _convert_office_preview(  # noqa: PLR0913
         workspace,
         source_file,
         output_path,
-        image=resolve_office_image(),
+        image=await resolve_office_image(),
         want_pages=True,
     )
     if result.status is not OfficeConvertStatus.ok:
@@ -269,7 +269,7 @@ async def run_checks(  # noqa: PLR0913
     outcome_success: bool,
     check_runner: ICheckRunner,
     lt_manager: ILanguageCheckService,
-    resolve_lt_image: Callable[[], str],
+    resolve_lt_image: Callable[[], Awaitable[str]],
 ) -> list[CheckResult]:
     """Фаза проверок после сборки; идёт вне охраны сборки, как и раньше."""
     # Live heartbeat: docker-фаза закончилась, а проверки (включая HTTP-вызов
@@ -282,7 +282,7 @@ async def run_checks(  # noqa: PLR0913
     # `external`, контейнер поднимается лениво перед проверками. В custom_mode
     # `external` подавляется принудительно, поэтому там контейнер не нужен.
     if plan.needs_languagetool and not payload.custom_mode:
-        await lt_manager.ensure_running(resolve_lt_image())
+        await lt_manager.ensure_running(await resolve_lt_image())
 
     # run_all читает файлы и ходит по HTTP в LanguageTool: уносим в поток, чтобы
     # цикл событий и живой SSE-лог этой сборки не вставали на время проверок.

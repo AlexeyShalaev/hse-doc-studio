@@ -119,7 +119,12 @@
       "disk": "Disk",
       "data": "Import / Export",
       "about": "About",
-      "gitAccess": "Repository access"
+      "gitAccess": "Repository access",
+      "organizations": "Organizations",
+      "usage": "Usage",
+      "account": "Account",
+      "runners": "My runners",
+      "remoteRunner": "Cloud builds"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",
@@ -149,6 +154,23 @@
   "wizardPage": {
     "createTitle": "New project",
     "connectTitle": "Connect folder",
-    "cloneTitle": "Clone a project"
+    "cloneTitle": "Clone a project",
+    "studioDeviceName": "Studio on this computer"
+  },
+  "accountMenu": {
+    "title": "Account",
+    "open": "Account menu: {{name}}",
+    "openAdmin": "Administration",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "logoutFailed": "Could not sign out: the server did not respond. Try again.",
+    "admin": "Administrator",
+    "unverified": "Email not verified",
+    "orgs": "Organizations",
+    "orgRole": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
+    }
   }
 }

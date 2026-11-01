@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 from contextlib import suppress
+from dataclasses import asdict
 
 import structlog
 from dishka.integrations.fastapi import setup_dishka
@@ -11,15 +12,49 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
+from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
+from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
 from hse_doc_studio.api.logging_setup import configure_logging
+from hse_doc_studio.api.observability.install import (
+    install_audit_retention,
+    install_auth_cleanup,
+    install_autoscale,
+    install_background,
+    install_blob_gc,
+    install_bucket_cors,
+    install_device_authorizations_purge,
+    install_health,
+    install_job_reaper,
+    install_job_retention,
+    install_object_store_health,
+    install_project_purge,
+    install_project_usage,
+    install_quota_housekeeping,
+    install_runner_health,
+    install_runner_pairings_purge,
+    install_server_observability,
+    install_service_pool_health,
+)
+from hse_doc_studio.api.rate_limit import install_rate_limiter
+from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
+from hse_doc_studio.api.security_install import install_server_security
+from hse_doc_studio.api.server_setup import prepare_server_setup
+from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
-from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.readiness import (
+    ReadinessZone,
+    ServerReadinessCheck,
+    ServerReadinessRegistry,
+    server_readiness,
+)
+from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
@@ -28,6 +63,7 @@ from hse_doc_studio.infra.git_sync.ssh_command import sweep_stale_key_dirs
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.office.editor_manager import OfficeEditorManager
+from hse_doc_studio.infra.signatures.key_session import sweep_stale_key_sessions
 from hse_doc_studio.infra.update.auto_update_scheduler import AutoUpdateScheduler
 from hse_doc_studio.infra.update.deployment import docker_alive
 from hse_doc_studio.use_cases.ai_runtime.sync_local_provider import SyncLocalOllamaProviderUC
@@ -46,57 +82,188 @@ logger = structlog.get_logger(__name__)
 _TEX_PULL_TIMEOUT_S = 3600.0
 
 
-def ensure_supported_mode(cfg: Settings) -> None:
-    """Отказать на старте в режиме, которого пока нет (общий сервер — этап 2 совместной работы)."""
+_secrets_cfg_by_registry: dict[int, Settings] = {}
+
+
+def _register_secrets_check(cfg: Settings, readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.infra.secrets.server_keys import secrets_key_problem  # noqa: PLC0415
+
+    # create_app зовут не один раз за процесс (тесты, перезапуск воркера): проверка одна, настройки берутся свежие
+    _secrets_cfg_by_registry[id(readiness)] = cfg
+    check = ServerReadinessCheck(
+        ReadinessZone.persistence,
+        "secrets_key",
+        lambda: secrets_key_problem(_secrets_cfg_by_registry[id(readiness)]),
+    )
+    with suppress(ValueError):
+        readiness.register(check)
+
+
+def _register_per_user_routes_check(readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.api.route_scopes import per_user_routes_problem  # noqa: PLC0415
+
+    check = ServerReadinessCheck(ReadinessZone.per_user_routes, "global_user_routes", per_user_routes_problem)
+    with suppress(ValueError):
+        readiness.register(check)
+
+
+def _register_server_checks(readiness: ServerReadinessRegistry) -> None:
+    from hse_doc_studio.api.server_readiness import server_checks  # noqa: PLC0415
+
+    for check in server_checks(lambda: _secrets_cfg_by_registry[id(readiness)]):
+        with suppress(ValueError):
+            readiness.register(check)
+
+
+def ensure_supported_mode(cfg: Settings, readiness: ServerReadinessRegistry = server_readiness) -> None:
+    """Пустить на старт server только при зелёном реестре готовности: все зоны зарегистрированы и проверены.
+
+    Local не проверяется. Отказ называет всё недостающее сразу, чтобы настроить установку за один заход.
+    """
     if cfg.mode is StudioMode.server:
-        msg = "HSE_STUDIO__MODE=server is not supported yet (stage 2 of collaboration); use local"
-        raise RuntimeError(msg)
+        _register_secrets_check(cfg, readiness)
+        _register_per_user_routes_check(readiness)
+        _register_server_checks(readiness)
+        if problems := readiness.unmet():
+            msg = f"HSE_STUDIO__MODE=server cannot start. Not ready: {'; '.join(problems)}"
+            raise RuntimeError(msg)
+
+
+# Имя файла выгрузки (bundle, PDF) приходит в Content-Disposition; без него фронт на другом origin сохраняет файл
+# под запасным именем. Retry-After нужен форме входа: по нему идёт обратный отсчёт блокировки (429), без него
+# при кросс-доменной разработке (Vite на :5173) браузер скрывает заголовок и отсчёт берёт значение по умолчанию.
+CORS_EXPOSE_HEADERS = ["Content-Disposition", "Retry-After"]
 
 
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: routers, DI, lifecycle hooks
     """Factory function for uvicorn to create the app instance."""
     ensure_supported_mode(settings)
-    configure_logging()
+    configure_logging(use_json=settings.logging.use_json)
+    # Документация API лежит вне /api/v1, поэтому гард и реестр маршрутов её не видят: на сервере без входа
+    # она открыта всем. В серверном режиме её нет вовсе.
+    docs_enabled = settings.mode is not StudioMode.server
     app = FastAPI(
         title="hse-doc-studio",
         version=settings.get_app_version(),
-        openapi_url="/system/openapi.json",
-        docs_url="/system/docs",
-        redoc_url="/system/redoc",
+        openapi_url="/system/openapi.json" if docs_enabled else None,
+        docs_url="/system/docs" if docs_enabled else None,
+        redoc_url="/system/redoc" if docs_enabled else None,
         redirect_slashes=False,
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    if settings.mode is StudioMode.server:
+        install_server_security(app, settings)
+        install_rate_limiter(app, settings)
+        install_admin_access(app, settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,
         allow_credentials=settings.cors.allow_credentials,
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
-        # Имя файла выгрузки (bundle, PDF) приходит в Content-Disposition; без этой строки фронт на другом
-        # origin его не видит и сохраняет файл под запасным именем.
-        expose_headers=["Content-Disposition"],
+        expose_headers=CORS_EXPOSE_HEADERS,
     )
 
-    @app.middleware("http")
-    async def _interface_language_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
-        # Bind the UI language for this request (and any background task spawned
-        # within it, e.g. an agent run, which inherits the context). Absent header
-        # → None, so downstream code falls back to settings.interface_language.
-        set_interface_language(request.headers.get("X-Interface-Language"))
-        return await call_next(request)
+    app.add_middleware(InterfaceLanguageMiddleware)
 
     app.include_router(api_router)
+    include_server_routers(app)
     install_exception_handlers(app)
 
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    health_checks = install_health(app, settings)
+
     configure_docker_binary(settings.docker_binary)
 
-    container = create_container()
+    container = create_container(settings.mode)
     setup_dishka(container, app)
+
+    if settings.mode is StudioMode.server:
+        install_db_error_handlers(app)
+
+        @app.on_event("startup")
+        async def _ensure_db_current() -> None:
+            # Раньше всех фоновых задач и мастера: им нужна схема. В compose мигрируем сами под advisory-локом,
+            # иначе отказываем с db_outdated (в helm мигрирует отдельный job).
+            from sqlalchemy.ext.asyncio import AsyncEngine  # noqa: PLC0415
+
+            from hse_doc_studio.infra.db.migrator import ensure_db_current  # noqa: PLC0415
+
+            engine = await container.get(AsyncEngine)
+            await ensure_db_current(
+                engine, auto_migrate=settings.db.auto_migrate, lock_wait_s=settings.db.migration_lock_wait_s
+            )
+
+        @app.on_event("shutdown")
+        async def _collab_shutdown() -> None:
+            # Комнаты совместной правки записывают набранное на диск до остановки процесса.
+            from hse_doc_studio.infra.collab.manager import CollabManager  # noqa: PLC0415
+
+            await (await container.get(CollabManager)).shutdown()
+
+        server_metrics = install_server_observability(app, settings, health_checks)
+        install_background(
+            app,
+            container,
+            health_checks,
+            server_metrics,
+            shutdown_timeout_s=settings.server.timeout_graceful_shutdown,
+        )
+        install_object_store_health(app, container, health_checks)
+        install_service_pool_health(app, container, health_checks, settings)
+        install_runner_health(app, container, health_checks)
+        install_bucket_cors(app, container, settings)
+        install_project_purge(app, container, settings)
+        install_blob_gc(app, container, settings)
+        install_project_usage(app, container, settings)
+        install_auth_cleanup(app, container, settings)
+        install_audit_retention(app, container, settings)
+        install_quota_housekeeping(app, container, settings)
+        install_autoscale(app, container, settings, server_metrics)
+        install_job_reaper(app, container, settings)
+        install_runner_pairings_purge(app, container)
+        install_device_authorizations_purge(app, container)
+        install_job_retention(app, container, settings)
+
+        @app.on_event("startup")
+        async def _register_runner_bootstrap_token() -> None:
+            from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry  # noqa: PLC0415
+
+            bootstrap = settings.jobs.runner_bootstrap_token
+            if bootstrap is not None and bootstrap.get_secret_value().strip():
+                await (await container.get(RunnerRegistry)).ensure_bootstrap_token(bootstrap.get_secret_value().strip())
+
+        @app.on_event("shutdown")
+        async def _drain_project_mirror() -> None:
+            # Копии name/kind/lang уходят задачами: дожидаемся их, чтобы остановка не потеряла последние.
+            from hse_doc_studio.infra.projects.catalog_sync import MirroringProjectRepository  # noqa: PLC0415
+
+            await (await container.get(MirroringProjectRepository)).drain()
+
+        @app.on_event("shutdown")
+        async def _drain_link_delivery() -> None:
+            # Письма уходят фоновыми задачами: без ожидания ссылка последнего приглашения не попала бы в outbox.
+            from hse_doc_studio.use_cases.identity.mail import LinkDelivery  # noqa: PLC0415
+
+            await (await container.get(LinkDelivery)).drain()
+
+        @app.on_event("startup")
+        async def _prepare_server_setup() -> None:
+            await prepare_server_setup(app, container, settings, health_checks)
+
+        @app.on_event("startup")
+        async def _recover_queued_jobs() -> None:
+            # Хуки и применение выходов жили в памяти прошлого процесса: довершаем задачи без метки применённого.
+            from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher  # noqa: PLC0415
+
+            dispatcher = await container.get(IJobDispatcher)
+            if isinstance(dispatcher, QueueJobDispatcher):
+                report = await dispatcher.recover()
+                logger.info("queued jobs recovered", **asdict(report))
 
     @app.on_event("startup")
     async def _probe_docker() -> None:
@@ -195,7 +362,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 if not (await inspect_uc.execute()).report.is_ready:
                     return
                 settings_repo = await request_container.get(ISettingsRepository)
-                image = resolve_active_image(settings_repo)
+                image = await resolve_active_image(settings_repo)
             if await image_present(image):
                 return
         except Exception:
@@ -232,7 +399,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         try:
             async with container() as request_container:
                 uc = await request_container.get(RecoverStaleCompilesUC)
-                result = uc.execute()
+                result = await uc.execute()
                 if result.recovered_compiles or result.unstuck_documents:
                     logger.info(
                         "startup recovery",
@@ -272,6 +439,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 result = await uc.execute()
                 if result.recovered_runs:
                     logger.info("startup chat recovery", recovered_runs=result.recovered_runs)
+        except ActorRequired:
+            # На сервере чаты принадлежат пользователям, а системного актора у старта нет: восстановление пропущено.
+            logger.info("startup chat recovery skipped: server mode has no startup actor")
         except Exception:
             logger.exception("startup chat recovery failed")
 
@@ -279,6 +449,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     async def _sweep_ssh_key_dirs() -> None:
         # Каталог временного ключа ssh удаляется в finally; остаться он может только после kill -9.
         sweep_stale_key_dirs()
+        sweep_stale_key_sessions()
 
     @app.on_event("startup")
     async def _auto_update_startup() -> None:
@@ -456,6 +627,23 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             await runtime.stop()
         except Exception:
             logger.exception("ollama shutdown stop failed")
+
+    if settings.mode is StudioMode.local:
+
+        @app.on_event("startup")
+        async def _remote_runner_startup() -> None:
+            # Облачные сборки на этой машине: с выключенным переключателем супервизор только читает настройки.
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).start()
+            except Exception:
+                logger.exception("remote runner startup failed")
+
+        @app.on_event("shutdown")
+        async def _remote_runner_shutdown() -> None:
+            try:
+                await (await container.get(IRemoteRunnerSupervisor)).stop()
+            except Exception:
+                logger.exception("remote runner shutdown failed")
 
     if settings.static_dir is not None:
         _mount_spa(app, settings)

@@ -46,6 +46,7 @@ export const GIT_ERROR_CODES = [
   "unresolved_markers",
   "remote_moved",
   "protected_branch",
+  "push_rejected",
   "large_file",
   "workflow_scope_missing",
   "email_privacy",
@@ -55,6 +56,7 @@ export const GIT_ERROR_CODES = [
   "bundle_password_wrong",
   "bundle_prerequisites_missing",
   "operation_not_cancellable",
+  "egress_blocked",
   "git_error",
 ] as const;
 

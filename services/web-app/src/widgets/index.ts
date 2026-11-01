@@ -11,3 +11,4 @@ export * from "./SyncCluster";
 export * from "./CommandPalette";
 export * from "./ChatDock";
 export * from "./settings";
+export * from "./AuthLayout";

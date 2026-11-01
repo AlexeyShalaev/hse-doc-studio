@@ -4,10 +4,12 @@ import json
 from collections.abc import AsyncIterator
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 
+from hse_doc_studio.api.compile_stream import merged_events, placement_schema, wait_schema
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
     CheckResultsResponse,
 )
@@ -20,7 +22,9 @@ from hse_doc_studio.api.schemas.compile import (
     CompileListItemResponse,
     TriggerCompileResponse,
 )
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.compile.errors import CompileSetupError
+from hse_doc_studio.core.compile.wait import ICompileWaitReader
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CheckSeverity
 from hse_doc_studio.core.errors import NotFoundError
@@ -45,7 +49,7 @@ from hse_doc_studio.use_cases.compile.get_compile_stream import (
 from hse_doc_studio.use_cases.compile.list_compiles import ListCompilesInput, ListCompilesUC
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _severity_counts(check_results: list[CheckResult]) -> tuple[int, int]:
@@ -102,7 +106,7 @@ async def list_compiles(
     doc_id: str,
     uc: FromDishka[ListCompilesUC],
 ) -> list[CompileListItemResponse]:
-    records = uc.execute(ListCompilesInput(project_id=project_id, doc_id=doc_id))
+    records = await uc.execute(ListCompilesInput(project_id=project_id, doc_id=doc_id))
     return [_to_list_item(r) for r in records]
 
 
@@ -117,12 +121,15 @@ async def get_archived_pdf(
 ) -> Response:
     """Serve a previously-archived compiled PDF (for visual diff)."""
     try:
-        result = uc.execute(GetArchivedPdfInput(project_id=project_id, doc_id=doc_id, compile_id=compile_id))
+        result = await uc.execute(GetArchivedPdfInput(project_id=project_id, doc_id=doc_id, compile_id=compile_id))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return Response(content=result.content, media_type="application/pdf")
+    if result.redirect_url is not None:
+        # Временная ссылка на хранилище: тело и Range отдаёт оно, права уже проверил гард.
+        return RedirectResponse(result.redirect_url, status_code=307, headers={"Cache-Control": "no-store"})
+    return Response(content=result.content or b"", media_type="application/pdf")
 
 
 @router.get(
@@ -134,10 +141,12 @@ async def get_compile(
     doc_id: str,
     compile_id: UUID,
     uc: FromDishka[GetCompileUC],
+    waits: FromDishka[ICompileWaitReader],
 ) -> CompileDetailResponse:
-    record = uc.execute(GetCompileInput(project_id=project_id, compile_id=compile_id))
+    record = await uc.execute(GetCompileInput(project_id=project_id, compile_id=compile_id))
     if record is None:
         raise HTTPException(status_code=404, detail=f"Compile record not found: {compile_id}")
+    waiting = await waits.of(record.id)
     warnings, errors = _severity_counts(record.check_results)
     return CompileDetailResponse(
         id=str(record.id),
@@ -153,7 +162,14 @@ async def get_compile(
         warnings=warnings,
         errors=errors,
         check_results=[_map_check_result(r).model_dump() for r in record.check_results],
+        wait=wait_schema(waiting),
+        placement=placement_schema(await waits.placement_of(record.id, _viewer_id())),
     )
+
+
+def _viewer_id() -> str | None:
+    actor = current_actor()
+    return actor.id if actor is not None else None
 
 
 @router.get(
@@ -163,6 +179,7 @@ async def get_compile_stream(
     project_id: UUID,
     compile_id: UUID,
     uc: FromDishka[GetCompileStreamUC],
+    waits: FromDishka[ICompileWaitReader],
 ) -> StreamingResponse:
     # GetCompileStreamUC needs doc_id — use a placeholder since the route doesn't include it.
     # The real lookup is by compile_id within the project, doc_id is used only for searching.
@@ -173,6 +190,8 @@ async def get_compile_stream(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    viewer = _viewer_id()
+
     async def _event_stream() -> AsyncIterator[str]:
         done_payload: dict[str, object] = {
             "status": "success",
@@ -180,12 +199,15 @@ async def get_compile_stream(
             "warnings": 0,
             "errors": 0,
         }
-        async for line in stream:
-            if line.startswith("__STATUS__:"):
-                done_payload["status"] = line.split(":", 1)[1] or "success"
+        async for kind, value in merged_events(stream, waits, compile_id, viewer):
+            if kind in ("wait", "placement"):
+                yield f"event: {kind}\ndata: {value}\n\n"
+                continue
+            if value.startswith("__STATUS__:"):
+                done_payload["status"] = value.split(":", 1)[1] or "success"
                 continue
             # JSON-encode so the client can do JSON.parse on event.data.
-            yield f"event: log\ndata: {json.dumps(line, ensure_ascii=False)}\n\n"
+            yield f"event: log\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
         yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
 
     return StreamingResponse(

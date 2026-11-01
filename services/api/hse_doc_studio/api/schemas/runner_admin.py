@@ -1,0 +1,90 @@
+"""Админка раннеров: токены регистрации и список раннеров (`/api/admin`).
+
+Секреты (`token`, `runner_token`) есть только в ответах на создание и ротацию; в списках их нет.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import Field
+
+from hse_doc_studio.api.schemas.common import StrictModel
+
+
+class CreateRegistrationTokenRequest(StrictModel):
+    label: str = Field(default="", max_length=128)
+    ttl_hours: int = Field(default=24, ge=1, le=24 * 30)
+    max_uses: int = Field(default=1, ge=1, le=100)
+
+
+class RegistrationTokenInfo(StrictModel):
+    id: str
+    label: str
+    created_at: datetime
+    expires_at: datetime | None
+    max_uses: int
+    uses: int
+    revoked: bool
+
+
+class CreatedRegistrationTokenResponse(StrictModel):
+    token: RegistrationTokenInfo
+    secret: str
+    # Готовая команда запуска раннера с этим токеном; секрет в ней виден так же один раз.
+    command: str
+
+
+RunnerStatusName = Literal["online", "stale", "offline", "paused", "revoked", "disabled"]
+RegistrationTokenStatusName = Literal["active", "expired", "exhausted", "revoked"]
+
+
+class RunnerOwner(StrictModel):
+    """Хозяин личного раннера: админу видны имя и почта, чтобы связаться с человеком."""
+
+    id: str
+    name: str
+    email: str
+
+
+class RunnerInfo(StrictModel):
+    id: str
+    name: str
+    status: RunnerStatusName
+    tags: list[str]
+    concurrency: int
+    resource_class: str
+    version: str
+    created_at: datetime
+    last_seen_at: datetime | None
+    paused: bool
+    revoked: bool
+    owner_kind: Literal["instance", "user"] = "instance"
+    owner: RunnerOwner | None = None
+    host_kind: Literal["cli", "desktop"] = "cli"
+    # Имена объявленных раннером ИИ-адресов, без URL.
+    ai_endpoints: list[str] = Field(default_factory=list)
+    last_seen_ip: str | None = None
+
+
+class UpdateRunnerRequest(StrictModel):
+    paused: bool
+
+
+class RotatedRunnerTokenResponse(StrictModel):
+    runner: RunnerInfo
+    runner_token: str
+    command: str
+
+
+class RunnerSummaryInfo(StrictModel):
+    """Счётчики раннеров по статусам для KPI; `outdated` и `newest_version` только среди неотозванных."""
+
+    online: int
+    paused: int
+    stale: int
+    offline: int
+    revoked: int
+    outdated: int
+    newest_version: str | None

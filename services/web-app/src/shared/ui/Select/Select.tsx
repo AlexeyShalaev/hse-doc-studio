@@ -2,6 +2,9 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { clsx } from "clsx";
 import { forwardRef } from "react";
 
+/** Слой выпадающего списка: над модальными окнами, вровень с Combobox и тостами. */
+export const SELECT_LAYER = 200;
+
 export type SelectOption = {
   value: string;
   label: string;
@@ -17,6 +20,8 @@ export type SelectProps = {
   isDisabled?: boolean;
   className?: string;
   id?: string;
+  /** Доступное имя триггера; по умолчанию берётся placeholder. */
+  ariaLabel?: string;
   /**
    * Radix refocuses the trigger when the popup closes; callers embedding the
    * select in an editor toolbar can preventDefault here and refocus the
@@ -36,6 +41,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
       isDisabled = false,
       className,
       id,
+      ariaLabel,
       onCloseAutoFocus,
     },
     ref,
@@ -57,7 +63,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className,
           )}
-          aria-label={placeholder}
+          aria-label={ariaLabel ?? placeholder}
         >
           <span className="truncate min-w-0 flex-1 text-left">
             <SelectPrimitive.Value placeholder={placeholder} />
@@ -81,13 +87,17 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
         <SelectPrimitive.Portal>
           <SelectPrimitive.Content
             className={clsx(
-              "z-50 overflow-hidden rounded-r-2 border border-border bg-bg-1 shadow-elev-2",
+              "overflow-hidden rounded-r-2 border border-border bg-bg-1 shadow-elev-2",
               "animate-in fade-in-0 zoom-in-95",
             )}
             position="popper"
             sideOffset={4}
             {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
             style={{
+              // Список уходит в портал поверх всего: выше затемнения модального
+              // окна (.scrim, 100) и его панели (102), как Combobox. Иначе
+              // в окне щелчок по пункту попадал в затемнение и закрывал окно.
+              zIndex: SELECT_LAYER,
               // Match the trigger width and bound the height so long model
               // lists scroll instead of running off-screen.
               width: "var(--radix-select-trigger-width)",

@@ -397,7 +397,11 @@ export const SyncPanelView = ({
       />,
     );
   }
-  if (lastError) {
+  if (lastError?.code === "push_rejected") {
+    notices.push(
+      <PushRejected key="push-rejected" detail={lastError.detail} />,
+    );
+  } else if (lastError) {
     notices.push(
       <div
         key="error"
@@ -733,6 +737,57 @@ export const SyncPanelView = ({
           </>
         )}
       </p>
+    </div>
+  );
+};
+
+/** Строки нарушений из текста отказа: после «…:» по одной на строку (сервер Студии печатает их сам). */
+export const pushRejectedLines = (detail: string): string[] => {
+  const split = detail.indexOf(":\n");
+  if (split < 0) return [];
+  return detail
+    .slice(split + 2)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+};
+
+/** Сервер (pre-receive) отклонил отправку: что не так, по строке на нарушение. */
+const PushRejected = ({ detail }: { detail: string }) => {
+  const { t } = useTranslation("gitSync");
+  const lines = pushRejectedLines(detail);
+  return (
+    <div
+      role="alert"
+      data-testid="sync-push-rejected"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        padding: "10px 12px",
+        borderRadius: "var(--r-2)",
+        border: "1px solid var(--c-err)",
+        background: "var(--bg-1)",
+        fontSize: 12.5,
+      }}
+    >
+      <strong style={{ color: "var(--c-err)" }}>
+        {t("pushRejected.title")}
+      </strong>
+      <span className="dim">{t("pushRejected.lead")}</span>
+      {lines.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {lines.map((line) => (
+            <li
+              key={line}
+              className="mono"
+              style={{ overflowWrap: "anywhere" }}
+            >
+              {line}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

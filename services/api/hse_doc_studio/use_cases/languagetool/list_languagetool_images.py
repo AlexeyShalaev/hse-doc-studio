@@ -33,7 +33,7 @@ class ListLanguageToolImagesUC:
         self._settings_repo = settings_repo
 
     async def execute(self) -> ListLanguageToolImagesOutput:
-        active = resolve_active_languagetool_image(self._settings_repo)
+        active = await resolve_active_languagetool_image(self._settings_repo)
         repos = settings.languagetool.allowed_repos
         installed: list[LocalImageInfo] = []
         for repo in repos:
@@ -45,13 +45,13 @@ class ListLanguageToolImagesUC:
         )
 
 
-def resolve_active_languagetool_image(settings_repo: ISettingsRepository) -> str:
+async def resolve_active_languagetool_image(settings_repo: ISettingsRepository) -> str:
     """Return the LanguageTool image the managed container will run.
 
     User-configured `languagetool_image` in settings.json wins; if absent or
     empty we fall back to the deployment-level default in api.config.
     """
-    stored = settings_repo.get()
+    stored = await settings_repo.get()
     choice = stored.get("languagetool_image")
     if isinstance(choice, str) and choice.strip():
         return choice

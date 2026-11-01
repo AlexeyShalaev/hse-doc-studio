@@ -39,7 +39,7 @@ class SyncLocalOllamaProviderUC:
     async def execute(self) -> SyncLocalProviderResult:
         status = await self._runtime.status()
         existing = next(
-            (p for p in self._ai_provider_repo.list_all() if p.type == AIProviderType.ollama),
+            (p for p in await self._ai_provider_repo.list_all() if p.type == AIProviderType.ollama),
             None,
         )
 
@@ -68,7 +68,7 @@ class SyncLocalOllamaProviderUC:
                 connect_timeout_s=existing.connect_timeout_s,
                 request_timeout_s=existing.request_timeout_s,
             )
-            self._ai_provider_repo.update(updated)
+            await self._ai_provider_repo.update(updated)
             return SyncLocalProviderResult(provider_id=existing.id, models=models)
 
         created = AIProvider(
@@ -80,5 +80,5 @@ class SyncLocalOllamaProviderUC:
             models=models,
             created_at=datetime.now(timezone.utc),
         )
-        self._ai_provider_repo.create(created)
+        await self._ai_provider_repo.create(created)
         return SyncLocalProviderResult(provider_id=created.id, models=models)

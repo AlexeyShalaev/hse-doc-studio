@@ -1,14 +1,32 @@
-import { useSearchParams, useNavigate } from "react-router";
+import { Navigate, useSearchParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { CloneWizard, type CloneFolderSlot } from "@features/git-remote";
+import {
+  CloneWizard,
+  type CloneFolderSlot,
+  type CloneServerSlot,
+} from "@features/git-remote";
+import { GitServerSource } from "@features/git-server";
 import { FolderPickerModal, useInspectFolder } from "@features/folder-picker";
 import { ProjectCreateWizard } from "@features/project-create";
 import { ProjectConnectWizard } from "@features/project-connect";
 import { readCloneTarget } from "@entities/git-sync";
+import { useCapabilities } from "@entities/session";
 import { useWorkspaceStore } from "@shared/lib";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { ChatDock } from "@widgets/ChatDock";
+
+// Источник «Сервер HSE Doc Studio» живёт в своей фиче: мастер получает его слотом.
+const cloneServerSlot =
+  (clientName: string): CloneServerSlot =>
+  (onPick) => (
+    <GitServerSource
+      clientName={clientName}
+      onPick={(project, credentialId) => {
+        onPick(project.clone_url, credentialId);
+      }}
+    />
+  );
 
 // Мастер клонирования не знает про фичу выбора папки (фичи друг друга не
 // импортируют): окно выбора и проверку папки передаёт страница.
@@ -36,10 +54,20 @@ export const WizardPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") ?? "create";
+  const { lacks, has } = useCapabilities();
+  // На сервере папок нет, подключения папки нет, и клонирования по git пока нет: маршрутов на сервере нет.
+  const folderless = lacks("fs_browse");
   // The one unified agent, docked between the title and status bars. No project
   // exists yet here, so it runs with app/system tools (no project context).
   const systemChatOpen = useWorkspaceStore((state) => state.systemChatOpen);
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
+
+  if (
+    (mode === "connect" && lacks("connect_folder")) ||
+    (mode === "clone" && folderless)
+  ) {
+    return <Navigate to="/" replace />;
+  }
 
   const projectLabel =
     mode === "create"
@@ -58,7 +86,13 @@ export const WizardPage = () => {
             <ProjectCreateWizard />
           ) : mode === "clone" ? (
             <CloneWizard
-              folderSlot={CLONE_FOLDER_SLOT}
+              folderSlot={folderless ? undefined : CLONE_FOLDER_SLOT}
+              serverSlot={
+                has("git_server_login")
+                  ? cloneServerSlot(t("wizardPage.studioDeviceName"))
+                  : undefined
+              }
+              folderless={folderless}
               initialTarget={readCloneTarget(searchParams)}
               onExit={() => {
                 void navigate("/");

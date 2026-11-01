@@ -95,6 +95,8 @@ _RULES: tuple[_Rule, ...] = (
         r"|without [`'\"]?workflow[`'\"]? scope",
         ops=_PUSH,
     ),
+    # Сервер Студии сам называет нарушения (pre-receive): его отказ важнее общих правил о размере и ветке.
+    _rule(GitErrorCode.push_rejected, r"HSE Doc Studio: (?:push rejected|отправка отклонена)", ops=_PUSH),
     _rule(
         GitErrorCode.large_file,
         r"GH001|exceeds GitHub's file size limit|this exceeds|Large files detected"
@@ -107,6 +109,7 @@ _RULES: tuple[_Rule, ...] = (
         r"protected branch|GH006|GH013|Repository rule violations|Changes must be made through a pull request",
         ops=_PUSH,
     ),
+    _rule(GitErrorCode.push_rejected, r"pre-receive hook declined", ops=_PUSH),
     _rule(
         GitErrorCode.remote_moved,
         r"\[rejected\][^\n]*\((?:fetch first|non-fast-forward|stale info)\)"

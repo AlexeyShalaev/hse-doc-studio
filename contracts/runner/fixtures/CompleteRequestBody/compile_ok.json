@@ -1,0 +1,46 @@
+{
+  "attempt": 1,
+  "result": {
+    "status": "succeeded",
+    "data": {
+      "build_ok": true,
+      "check_results": [
+        {
+          "rule_id": "gost/margins",
+          "severity": "warn",
+          "message": "Поля меньше 2.5 см",
+          "location": {
+            "file": "tz/main.tex",
+            "line": 12
+          },
+          "fix": {
+            "file": "tz/main.tex",
+            "search": "a",
+            "replace": "b",
+            "line": 12,
+            "title": "Исправить"
+          }
+        },
+        {
+          "rule_id": "lt:TYPO",
+          "severity": "info",
+          "message": "m",
+          "location": null,
+          "fix": null
+        }
+      ],
+      "pages": 7,
+      "words": 1200,
+      "chars": 9000,
+      "finished_at": "2026-10-26T09:30:15.123456+00:00"
+    },
+    "error": null
+  },
+  "artifacts": [
+    {
+      "path": "tz/main.pdf",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 5000
+    }
+  ]
+}

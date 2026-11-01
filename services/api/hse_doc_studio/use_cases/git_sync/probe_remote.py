@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from hse_doc_studio.core.access.actions import Action
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.git_sync.entities import (
     GitCredential,
     GitCredentialKind,
@@ -34,7 +36,7 @@ from hse_doc_studio.core.git_sync.remote_project import (
     remote_required_studio,
     remote_schema_access,
 )
-from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
+from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, is_loopback_http, parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.refs import validate_ref_name
@@ -95,13 +97,14 @@ def valid_branch(name: str) -> str:
         raise ValueError(str(exc)) from exc
 
 
-def require_http_consent(url: RemoteUrl, *, insecure_http: bool) -> None:
+def require_http_consent(url: RemoteUrl, *, insecure_http: bool, local_ok: bool = False) -> None:
     """Открытый http без согласия человека отвергается до любого обращения к серверу: токен по нему ушёл бы открыто.
 
     Политика сервера лишь разрешает такие адреса, а согласие даёт человек для каждого адреса отдельно (как у
-    подключения); без него и проверка адреса, и запрос к API хостинга с токеном не выполняются.
+    подключения); без него и проверка адреса, и запрос к API хостинга с токеном не выполняются. Исключение
+    `local_ok`: локальная Студия и http к localhost (сервер Студии на этом же компьютере), токен не покидает машину.
     """
-    if url.kind is RemoteKind.http and not insecure_http:
+    if url.kind is RemoteKind.http and not insecure_http and not (local_ok and is_loopback_http(url)):
         raise git_error(GitErrorCode.url_scheme_forbidden)
 
 
@@ -132,8 +135,10 @@ class ProbeRemoteUC:
         policy: GitSyncPolicy,
         resolver: ProviderResolver,
         token_checker: TokenChecker,
+        access: IProjectAccessChecker,
     ) -> None:
         self._get_project = GetProjectUC(project_repo, project_index_repo)
+        self._access = access
         self._transport = transport
         self._credentials = credentials
         self._templates = template_repo
@@ -146,12 +151,13 @@ class ProbeRemoteUC:
         url = parse_remote_url(
             inp.url, allow_http=self._policy.allow_insecure_http, allow_local=self._policy.allow_local_remotes
         )
-        require_http_consent(url, insecure_http=inp.insecure_http)
-        credential = self._credentials.get(inp.credential_id) if inp.credential_id is not None else None
+        require_http_consent(url, insecure_http=inp.insecure_http, local_ok=self._policy.allow_local_remotes)
+        credential = await self._credentials.get(inp.credential_id) if inp.credential_id is not None else None
         if inp.credential_id is not None and credential is None:
             raise git_error(GitErrorCode.credentials_missing)
         local_id = None
         if inp.project_id is not None:
+            await self._access.require(inp.project_id, Action.PROJECT_SETTINGS)
             local_id = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project.id
         # Открытый http сюда доходит только с согласием человека (`require_http_consent`).
         target = RemoteTarget(url, inp.credential_id, insecure_http=url.kind is RemoteKind.http)

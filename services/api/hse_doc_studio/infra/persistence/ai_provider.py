@@ -82,7 +82,7 @@ class JsonAIProviderRepository:
         os.replace(tmp, self._path)
         logger.debug("ai_providers saved", path=str(self._path), count=len(items))
 
-    def list_all(self) -> list[AIProvider]:
+    async def list_all(self) -> list[AIProvider]:
         out: list[AIProvider] = []
         for raw in self._read():
             try:
@@ -91,15 +91,15 @@ class JsonAIProviderRepository:
                 logger.warning("ai_providers.json skipped malformed record", exc=str(exc))
         return out
 
-    def get(self, provider_id: UUID) -> AIProvider | None:
-        return next((p for p in self.list_all() if p.id == provider_id), None)
+    async def get(self, provider_id: UUID) -> AIProvider | None:
+        return next((p for p in await self.list_all() if p.id == provider_id), None)
 
-    def create(self, provider: AIProvider) -> None:
+    async def create(self, provider: AIProvider) -> None:
         items = self._read()
         items.append(_to_dict(provider))
         self._write(items)
 
-    def update(self, provider: AIProvider) -> None:
+    async def update(self, provider: AIProvider) -> None:
         items = self._read()
         target = str(provider.id)
         for idx, raw in enumerate(items):
@@ -112,7 +112,7 @@ class JsonAIProviderRepository:
         items.append(_to_dict(provider))
         self._write(items)
 
-    def delete(self, provider_id: UUID) -> bool:
+    async def delete(self, provider_id: UUID) -> bool:
         items = self._read()
         target = str(provider_id)
         remaining = [raw for raw in items if raw.get("id") != target]

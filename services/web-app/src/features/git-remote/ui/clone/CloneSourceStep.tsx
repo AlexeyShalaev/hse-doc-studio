@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useCredentials,
@@ -19,8 +19,15 @@ import { CloneBundleSource } from "./CloneBundleSource";
 import { CloneStepLayout } from "./CloneStepLayout";
 import { CloneVerdictCard } from "./CloneVerdictCard";
 
+/** Источник «Сервер HSE Doc Studio»: страница отдаёт его из своей фичи (выбор проекта на сервере). */
+export type CloneServerSlot = (
+  onPick: (cloneUrl: string, credentialId: string) => void,
+) => ReactNode;
+
 export type CloneSourceStepProps = {
   source: CloneSource;
+  /** Есть источник «Сервер HSE Doc Studio» (локальная Студия умеет входить на сервер). */
+  serverSlot?: CloneServerSlot | undefined;
   /** Отказ запуска, с которым вернули на этот шаг (bundle: файл, пароль). */
   bundleError: { code: string; message: string } | null;
   onCancel: () => void;
@@ -43,6 +50,7 @@ const isTlsCode = (
 // bundle. Результат проверки показывает, что за проект там лежит и как он откроется.
 export const CloneSourceStep = ({
   source,
+  serverSlot,
   bundleError,
   onCancel,
   onNext,
@@ -56,6 +64,9 @@ export const CloneSourceStep = ({
   const [hostKeyClosedFor, setHostKeyClosedFor] = useState<unknown>(null);
   const [tlsClosedFor, setTlsClosedFor] = useState<unknown>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [origin, setOrigin] = useState<"studio" | "git">(
+    serverSlot ? "studio" : "git",
+  );
 
   const { tab, parsed, check } = source;
   // Провайдер решён с учётом выбора человека и ответа сервера.
@@ -165,138 +176,176 @@ export const CloneSourceStep = ({
         </button>
       }
     >
-      <div
-        className="seg"
-        role="tablist"
-        aria-label={t("clone.source.tabs.label")}
-        style={{ alignSelf: "flex-start" }}
-      >
-        {TABS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`${uid}-tab-${value}`}
-            aria-selected={tab === value}
-            aria-controls={`${uid}-panel-${value}`}
-            className={tab === value ? "active" : undefined}
-            onClick={() => {
-              source.setTab(value);
-            }}
-          >
-            {t(`clone.source.tabs.${value}`)}
-          </button>
-        ))}
-      </div>
-
-      {tab === "url" ? (
+      {serverSlot && (
         <div
-          role="tabpanel"
-          id={`${uid}-panel-url`}
-          aria-labelledby={`${uid}-tab-url`}
-          className="flex flex-col"
-          style={{ gap: 16 }}
+          className="seg"
+          role="radiogroup"
+          aria-label={t("gitServer:source.label")}
+          style={{ alignSelf: "flex-start" }}
         >
-          <RepoUrlField
-            url={source.urlText}
-            onChange={source.changeUrl}
-            onCommit={source.commitUrl}
-            parsed={parsed}
-            tokenStripped={source.tokenStripped}
-            forceError={submitted}
-            disabled={checking}
-          />
-
-          {source.error && (
-            <Notice tone="err" role="alert" text={source.error} />
-          )}
-
-          {showAuth && (
-            <section
-              className="flex flex-col"
-              style={{ gap: 12 }}
-              aria-label={t("clone.source.access")}
-              data-testid="clone-access"
-            >
-              <RemoteAuthFields
-                auth={auth}
-                url={repoUrl}
-                isLoadingCredentials={credentialsQuery.isLoading}
-                secretsOk={secretsOk}
-                onSwitchUrl={source.setUrlText}
-              />
-            </section>
-          )}
-
-          {checking && (
-            <div
-              role="status"
-              className="flex items-start"
-              data-testid="clone-checking"
-              style={{
-                gap: 10,
-                padding: "12px 14px",
-                borderRadius: "var(--r-3)",
-                border: "1px solid var(--border)",
-                background: "var(--bg-1)",
+          {(["studio", "git"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={origin === value}
+              className={origin === value ? "active" : undefined}
+              title={t(`gitServer:source.${value}Hint`)}
+              onClick={() => {
+                setOrigin(value);
               }}
+              data-testid={`clone-source-${value}`}
             >
-              <Spinner size="sm" />
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>
-                  {t("clone.source.checking.title")}
+              {t(`gitServer:source.${value}`)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {serverSlot && origin === "studio" ? (
+        serverSlot((cloneUrl, credentialId) => {
+          source.pickServerProject(cloneUrl, credentialId);
+          setOrigin("git");
+        })
+      ) : (
+        <>
+          <div
+            className="seg"
+            role="tablist"
+            aria-label={t("clone.source.tabs.label")}
+            style={{ alignSelf: "flex-start" }}
+          >
+            {TABS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                id={`${uid}-tab-${value}`}
+                aria-selected={tab === value}
+                aria-controls={`${uid}-panel-${value}`}
+                className={tab === value ? "active" : undefined}
+                onClick={() => {
+                  source.setTab(value);
+                }}
+              >
+                {t(`clone.source.tabs.${value}`)}
+              </button>
+            ))}
+          </div>
+
+          {tab === "url" ? (
+            <div
+              role="tabpanel"
+              id={`${uid}-panel-url`}
+              aria-labelledby={`${uid}-tab-url`}
+              className="flex flex-col"
+              style={{ gap: 16 }}
+            >
+              <RepoUrlField
+                url={source.urlText}
+                onChange={source.changeUrl}
+                onCommit={source.commitUrl}
+                parsed={parsed}
+                tokenStripped={source.tokenStripped}
+                forceError={submitted}
+                disabled={checking}
+              />
+
+              {source.error && (
+                <Notice tone="err" role="alert" text={source.error} />
+              )}
+
+              {showAuth && (
+                <section
+                  className="flex flex-col"
+                  style={{ gap: 12 }}
+                  aria-label={t("clone.source.access")}
+                  data-testid="clone-access"
+                >
+                  <RemoteAuthFields
+                    auth={auth}
+                    url={repoUrl}
+                    isLoadingCredentials={credentialsQuery.isLoading}
+                    secretsOk={secretsOk}
+                    onSwitchUrl={source.setUrlText}
+                  />
+                </section>
+              )}
+
+              {checking && (
+                <div
+                  role="status"
+                  className="flex items-start"
+                  data-testid="clone-checking"
+                  style={{
+                    gap: 10,
+                    padding: "12px 14px",
+                    borderRadius: "var(--r-3)",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-1)",
+                  }}
+                >
+                  <Spinner size="sm" />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>
+                      {t("clone.source.checking.title")}
+                    </div>
+                    <div
+                      className="dim"
+                      style={{ fontSize: 12.5, marginTop: 2 }}
+                    >
+                      {t("clone.source.checking.text")}
+                    </div>
+                  </div>
                 </div>
-                <div className="dim" style={{ fontSize: 12.5, marginTop: 2 }}>
-                  {t("clone.source.checking.text")}
-                </div>
-              </div>
+              )}
+
+              {verdict && (
+                <CloneVerdictCard
+                  verdict={verdict}
+                  probe={check.status === "done" ? check.probe : null}
+                  url={repoUrl}
+                  branch={source.branch}
+                  onPickBranch={(picked) => {
+                    source.setBranch(picked);
+                    void source.runCheck({ branch: picked });
+                  }}
+                  onChange={source.resetCheck}
+                  issueHandlers={{
+                    onRetry: () => {
+                      void source.runCheck();
+                    },
+                    onBackToRepo: source.resetCheck,
+                    onBackToAccess: source.resetCheck,
+                    onReviewHostKey: openHostKey,
+                    onReviewCertificate: () => {
+                      setTlsClosedFor(null);
+                    },
+                    onPickBranch: (picked) => {
+                      source.setBranch(picked);
+                      void source.runCheck({ branch: picked });
+                    },
+                    onClose: onCancel,
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div
+              role="tabpanel"
+              id={`${uid}-panel-bundle`}
+              aria-labelledby={`${uid}-tab-bundle`}
+            >
+              <CloneBundleSource
+                file={source.bundleFile}
+                onFileChange={source.setBundleFile}
+                password={source.bundlePassword}
+                onPasswordChange={source.setBundlePassword}
+                error={bundleError}
+              />
             </div>
           )}
-
-          {verdict && (
-            <CloneVerdictCard
-              verdict={verdict}
-              probe={check.status === "done" ? check.probe : null}
-              url={repoUrl}
-              branch={source.branch}
-              onPickBranch={(picked) => {
-                source.setBranch(picked);
-                void source.runCheck({ branch: picked });
-              }}
-              onChange={source.resetCheck}
-              issueHandlers={{
-                onRetry: () => {
-                  void source.runCheck();
-                },
-                onBackToRepo: source.resetCheck,
-                onBackToAccess: source.resetCheck,
-                onReviewHostKey: openHostKey,
-                onReviewCertificate: () => {
-                  setTlsClosedFor(null);
-                },
-                onPickBranch: (picked) => {
-                  source.setBranch(picked);
-                  void source.runCheck({ branch: picked });
-                },
-                onClose: onCancel,
-              }}
-            />
-          )}
-        </div>
-      ) : (
-        <div
-          role="tabpanel"
-          id={`${uid}-panel-bundle`}
-          aria-labelledby={`${uid}-tab-bundle`}
-        >
-          <CloneBundleSource
-            file={source.bundleFile}
-            onFileChange={source.setBundleFile}
-            password={source.bundlePassword}
-            onPasswordChange={source.setBundlePassword}
-            error={bundleError}
-          />
-        </div>
+        </>
       )}
 
       {tab === "url" && repoUrl?.host && (

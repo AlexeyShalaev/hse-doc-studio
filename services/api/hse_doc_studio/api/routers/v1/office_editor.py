@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Request
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.office_editor import OfficeEditorConfigResponse
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.office import IOfficeEditorService
@@ -19,7 +20,7 @@ from hse_doc_studio.use_cases.office_editor.handle_callback import (
     OfficeEditorCallbackUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 @router.get(
@@ -49,6 +50,8 @@ async def get_office_editor_config(
         image=result.image,
         detail=result.detail,
         settings_section=result.settings_section,
+        retry_after_s=result.retry_after_s,
+        limit=result.limit,
     )
 
 
@@ -56,9 +59,10 @@ async def get_office_editor_config(
 async def office_editor_callback(
     project_id: UUID,
     doc_id: str,
-    sig: str,
     request: Request,
     uc: FromDishka[OfficeEditorCallbackUC],
+    sig: str = "",
+    office_token: str | None = None,
 ) -> dict[str, int]:
     """Приёмник колбэков Document Server (вызывает ТОЛЬКО контейнер, не фронт)."""
     try:
@@ -75,6 +79,7 @@ async def office_editor_callback(
                 sig=sig,
                 body=body,
                 authorization=request.headers.get("Authorization"),
+                office_token=office_token,
             )
         )
     except PermissionError as exc:
@@ -92,9 +97,9 @@ async def office_editor_callback(
 )
 async def touch_office_editor(
     project_id: UUID,  # noqa: ARG001 — единый контейнер на все проекты; путь — для симметрии API
-    doc_id: str,  # noqa: ARG001
+    doc_id: str,
     manager: FromDishka[IOfficeEditorService],
 ) -> None:
     """Keepalive открытой вкладки редактора: не даёт idle-reaper'у погасить
     контейнер под живым редактором (фронт шлёт каждые ~120 с)."""
-    manager.touch()
+    manager.touch(doc_id)

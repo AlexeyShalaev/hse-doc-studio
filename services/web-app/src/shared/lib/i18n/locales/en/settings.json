@@ -217,10 +217,12 @@
   "providers": {
     "title": "Providers",
     "subtitle": "External AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored locally and never passed to the browser. Local models are on the adjacent tab.",
+    "subtitleServer": "AI providers (Anthropic, OpenAI, OpenAI-compatible) and the default provider for agents. Keys are stored encrypted on the server and never passed to the browser. A \"via my runner\" provider stores no key: your runner relays requests to your model.",
     "typeClaude": "Anthropic",
     "typeOpenai": "OpenAI",
     "typeOpenaiCompat": "OpenAI-compat.",
     "typeOllama": "Local",
+    "typeRunner": "Via runner",
     "modelCount_one": "{{count}} model",
     "modelCount_other": "{{count}} models",
     "modelsNotLoaded": "Models not loaded",
@@ -244,7 +246,31 @@
     "ollamaDetectedTitle": "Local Ollama detected",
     "ollamaDetectedText": "It is already running, but there is no provider for it — without one the agent cannot see local models. Connecting requires no keys.",
     "ollamaDetectedAdd": "Connect",
-    "ollamaDetectedToast": "Local Ollama provider connected"
+    "ollamaDetectedToast": "Local Ollama provider connected",
+    "shared": "shared",
+    "sharedTitle": "Shared installation provider: the administrator set it up and you cannot see its key",
+    "sharedKey": "key hidden",
+    "source": {
+      "own": "Mine",
+      "org": "Organization",
+      "instance": "Installation"
+    },
+    "sourceTitle": {
+      "own": "Your provider with your own key or runner",
+      "org": "Your organization's provider",
+      "instance": "Installation-wide provider: the administrator set the key"
+    },
+    "runnerGone": "a removed runner",
+    "via": "via \"{{runner}}\", endpoint {{endpoint}}",
+    "relayState": {
+      "ready": "Ready",
+      "runner_offline": "Runner offline",
+      "runner_paused": "Runner paused",
+      "runner_revoked": "Runner revoked",
+      "endpoint_missing": "Endpoint gone",
+      "disabled": "Turned off by admin"
+    },
+    "order": "Without an explicit choice, agents take the first ready one: yours, then the organization's, then the installation's."
   },
   "agentPersonas": {
     "title": "Agent roles",
@@ -316,8 +342,15 @@
       "title": "Trusted CA certificates",
       "hint": "CryptoARM and CryptoPro signatures are shown as «trusted chain» only when the CA root certificate is added here (for example the Минцифры root from the official site). Without it the signer and file integrity are still checked.",
       "add": "Add a certificate (.cer, .crt, .pem)",
-      "addedToast": "Certificate added"
-    }
+      "addedToast": "Certificate added",
+      "adminOnly": "CA certificates are managed by the installation administrator."
+    },
+    "forbiddenTitle": "The server does not store secret keys",
+    "forbiddenBody": "The installation administrator has forbidden storing secret signing keys on the server, so you cannot create or upload a key here. Keys that were already stored stay blocked until the policy changes.",
+    "forbiddenAltTitle": "How to sign a document",
+    "forbiddenAlt1": "Sign in the browser with CryptoPro: the key stays with you.",
+    "forbiddenAlt2": "Upload a ready signature made outside Studio.",
+    "forbiddenAsk": "Need to keep a key on the server? Ask the administrator to change the policy."
   },
   "disk": {
     "title": "Disk",
@@ -450,6 +483,15 @@
     "gitAccessServers": "Git servers",
     "gitAccessHosts": "Trusted servers",
     "gitAccessEncryption": "Token encryption",
-    "gitAccessFetch": "Default background check"
+    "gitAccessFetch": "Default background check",
+    "organizations": "Organizations and groups",
+    "usage": "Quota usage: limits and counters",
+    "account": "Account",
+    "accountEmail": "Account email",
+    "accountPassword": "Password",
+    "accountCommit": "Version signature",
+    "accountSessions": "Sessions",
+    "runners": "My runners: build on your own machine",
+    "remoteRunner": "Cloud builds on this machine"
   }
 }

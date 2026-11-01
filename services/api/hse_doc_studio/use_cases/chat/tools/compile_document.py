@@ -75,7 +75,7 @@ class CompileDocumentTool:
     async def _poll(self, folder: Path, compile_id: UUID) -> CompileRecord | None:
         deadline = time.monotonic() + _POLL_TIMEOUT_S
         while time.monotonic() < deadline:
-            record = self._compile_repo.get_for_project(folder, compile_id)
+            record = await self._compile_repo.get_for_project(folder, compile_id)
             if record is not None and record.status in _TERMINAL:
                 return record
             await asyncio.sleep(_POLL_INTERVAL_S)

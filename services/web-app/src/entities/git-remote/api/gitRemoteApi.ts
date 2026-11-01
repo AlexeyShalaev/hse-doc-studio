@@ -26,7 +26,8 @@ import {
 
 export type CloneFromBundleParams = {
   file: File;
-  folder: string;
+  // Нет на сервере: папку выбирает сервер.
+  folder?: string;
   name?: string;
   password?: string;
 };
@@ -128,7 +129,7 @@ export const gitRemoteApi = {
   startCloneFromBundle: (params: CloneFromBundleParams) => {
     const formData = new FormData();
     formData.append("file", params.file);
-    formData.append("folder", params.folder);
+    if (params.folder !== undefined) formData.append("folder", params.folder);
     if (params.name) formData.append("name", params.name);
     if (params.password) formData.append("password", params.password);
     return apiClient

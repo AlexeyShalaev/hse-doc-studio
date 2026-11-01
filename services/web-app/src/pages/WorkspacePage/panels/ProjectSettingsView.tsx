@@ -11,9 +11,14 @@ import {
   useTemplateMeta,
   useUpdateTeamSet,
 } from "@entities/project";
+import { useCapabilities } from "@entities/session";
 import { useDocuments, useUpdateDocument } from "@entities/document";
 import { useVersionDetail } from "@entities/template-catalog";
 import { FolderPickerModal } from "@features/folder-picker";
+import { ProjectAccessPanel } from "@features/project-access";
+import { InviteSupervisorButton } from "@features/project-invitations";
+import { TransferSection } from "@features/project-transfer";
+import { ShareLinksSection } from "@features/share-links";
 import { TemplateVersionPanel } from "@features/template-update";
 import { i18n, pickLocalized, toast } from "@shared/lib";
 import { Modal } from "@shared/ui";
@@ -23,6 +28,7 @@ import { ProjectChecksSection } from "./ProjectChecksSection";
 import { useProjectAutosave } from "./useProjectAutosave";
 import {
   AuthorsSection,
+  BuildsSection,
   buildMetaBlocks,
   buildMetaGroupCards,
   collectManagedTeamAuthors,
@@ -40,6 +46,7 @@ import {
   SharedDocsSection,
   SupervisorSection,
   SyncCiSection,
+  SyncServerCloneSection,
   SyncExchangeSection,
   SyncOptionsSection,
   SyncRemoteSection,
@@ -108,6 +115,7 @@ export const ProjectSettingsView = ({
   const { mutate: instantiateNda } = useInstantiateNda();
   const { mutate: deleteNdaFiles } = useDeleteNdaFiles();
   const { mutate: moveProject, isPending: isMoving } = useMoveProject();
+  const { lacks, has } = useCapabilities();
   const updateTeamSet = useUpdateTeamSet();
   const [ndaConfirmOpen, setNdaConfirmOpen] = useState(false);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
@@ -334,6 +342,8 @@ export const ProjectSettingsView = ({
     hasDocFormats: variantRows.length > 0,
     hasDocSetMeta: docSetCards.length > 0,
     hasMetaFields: metaFields.length > 0,
+    hasAccess: project.my_role != null,
+    hasGitRemote: project.my_role != null && has("git_remote"),
     ...syncContext,
   };
   const activeGroup = resolveProjectSettingsGroup(section, sectionCtx);
@@ -372,6 +382,8 @@ export const ProjectSettingsView = ({
         return (
           <ConfidentialitySection isNda={isNda} onToggle={handleToggleNda} />
         );
+      case "builds":
+        return <BuildsSection projectId={project.id} />;
       case "doc-set":
         // Пак-driven карточки: по одной на уведённую сюда группу. Переключатель
         // блоков рисует только первая — состав у ведомых авторов свой, но два
@@ -430,6 +442,22 @@ export const ProjectSettingsView = ({
               });
             }}
           />
+        );
+      case "access":
+        return (
+          <>
+            <ProjectAccessPanel
+              projectId={project.id}
+              myRole={project.my_role ?? null}
+              ownerKind={project.owner?.kind ?? "user"}
+              isTeam={isTeam}
+            />
+            {/* links: «Доступ по ссылке» под участниками и приглашениями (10.1). */}
+            <ShareLinksSection
+              projectId={project.id}
+              myRole={project.my_role ?? null}
+            />
+          </>
         );
       case "authors":
         return (
@@ -533,6 +561,11 @@ export const ProjectSettingsView = ({
             onRemoveAcademicSupervisor={() => {
               saveNow({ academic_supervisor: null });
             }}
+            inviteSlot={
+              project.owner && project.my_role === "owner" ? (
+                <InviteSupervisorButton projectId={project.id} />
+              ) : null
+            }
           />
         );
       case "checks":
@@ -547,11 +580,22 @@ export const ProjectSettingsView = ({
         return <SyncExchangeSection projectId={project.id} />;
       case "sync-ci":
         return <SyncCiSection projectId={project.id} />;
+      case "sync-server-clone":
+        return <SyncServerCloneSection projectId={project.id} />;
       case "danger-zone":
         return (
           <DangerZoneSection
             isArchived={effective.archived}
             isRemoving={isRemoving}
+            transferSlot={
+              project.owner ? (
+                <TransferSection
+                  projectId={project.id}
+                  projectName={project.name}
+                  myRole={project.my_role ?? null}
+                />
+              ) : null
+            }
             onToggleArchive={() => {
               saveNow({ archived: !effective.archived });
             }}
@@ -634,16 +678,18 @@ export const ProjectSettingsView = ({
         }
       />
 
-      <FolderPickerModal
-        isOpen={movePickerOpen}
-        onClose={() => {
-          setMovePickerOpen(false);
-        }}
-        onSelect={moveToParent}
-        initialPath={project.folder
-          .replace(/[/\\]+$/, "")
-          .replace(/[/\\][^/\\]+$/, "")}
-      />
+      {!lacks("move_project") && (
+        <FolderPickerModal
+          isOpen={movePickerOpen}
+          onClose={() => {
+            setMovePickerOpen(false);
+          }}
+          onSelect={moveToParent}
+          initialPath={project.folder
+            .replace(/[/\\]+$/, "")
+            .replace(/[/\\][^/\\]+$/, "")}
+        />
+      )}
     </div>
   );
 };

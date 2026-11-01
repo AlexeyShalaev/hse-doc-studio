@@ -9,6 +9,7 @@ import {
   useOpenPgpKeys,
   useTrustedRoots,
 } from "@entities/signing-identity";
+import { useBootstrap } from "@entities/session";
 import { localeTag, toast } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { formatFingerprint } from "./formatFingerprint";
@@ -247,6 +248,10 @@ export const TrustedRootsBlock = () => {
   const add = useAddTrustedRoot();
   const del = useDeleteTrustedRoot();
   const fileRef = useRef<HTMLInputElement>(null);
+  const bootstrap = useBootstrap().data;
+  // На сервере доверенные корни общие для установки: менять их может только админ (иначе 403).
+  const readOnly =
+    bootstrap?.mode === "server" && !bootstrap.capabilities.admin;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -278,49 +283,60 @@ export const TrustedRootsBlock = () => {
               {formatDate(r.not_after)}
             </div>
           </div>
-          <button
-            className="btn btn-ghost icon"
-            disabled={del.isPending}
-            title={t("signing.delete")}
-            style={{ padding: 4, color: "var(--fg-2)" }}
-            onClick={() => {
-              del.mutate(r.fingerprint, {
-                onError: (err) => toast.error(err.message),
-              });
-            }}
-          >
-            <Trash2 size={14} />
-          </button>
+          {!readOnly && (
+            <button
+              className="btn btn-ghost icon"
+              disabled={del.isPending}
+              title={t("signing.delete")}
+              style={{ padding: 4, color: "var(--fg-2)" }}
+              onClick={() => {
+                del.mutate(r.fingerprint, {
+                  onError: (err) => toast.error(err.message),
+                });
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       ))}
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".cer,.crt,.pem,.der"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          add.mutate(file, {
-            onSuccess: () => {
-              toast.success(t("signing.roots.addedToast"));
-            },
-            onError: (err) => toast.error(err.message),
-          });
-        }}
-      />
-      <div>
-        <button
-          className="btn btn-secondary"
-          style={{ fontSize: 12, gap: 6 }}
-          disabled={add.isPending}
-          onClick={() => fileRef.current?.click()}
-        >
-          {add.isPending ? <Spinner size="sm" /> : <FileUp size={14} />}
-          {t("signing.roots.add")}
-        </button>
-      </div>
+      {readOnly && (
+        <div style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+          {t("signing.roots.adminOnly")}
+        </div>
+      )}
+      {!readOnly && (
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".cer,.crt,.pem,.der"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            add.mutate(file, {
+              onSuccess: () => {
+                toast.success(t("signing.roots.addedToast"));
+              },
+              onError: (err) => toast.error(err.message),
+            });
+          }}
+        />
+      )}
+      {!readOnly && (
+        <div>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 12, gap: 6 }}
+            disabled={add.isPending}
+            onClick={() => fileRef.current?.click()}
+          >
+            {add.isPending ? <Spinner size="sm" /> : <FileUp size={14} />}
+            {t("signing.roots.add")}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

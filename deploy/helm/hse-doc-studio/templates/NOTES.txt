@@ -1,0 +1,8 @@
+HSE Doc Studio развёрнут в режиме server.
+{{- if .Values.ingress.enabled }}
+Адрес: {{ .Values.publicUrl }}
+{{- else }}
+Ingress выключен: kubectl port-forward svc/{{ include "hds.fullname" . }} 8000:{{ .Values.service.port }}
+{{- end }}
+Токен установки для мастера первого запуска печатается в журнале api:
+  kubectl logs deploy/{{ include "hds.fullname" . }}-api | grep -i setup

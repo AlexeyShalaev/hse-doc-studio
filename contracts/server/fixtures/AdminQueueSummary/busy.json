@@ -1,0 +1,17 @@
+{
+  "by_state": {
+    "queued": 3,
+    "running": 2,
+    "succeeded": 120,
+    "failed": 4,
+    "cancelled": 1,
+    "timed_out": 0
+  },
+  "queued_by_class": {
+    "interactive": 2,
+    "batch": 1
+  },
+  "oldest_queued_at": "2026-10-27T09:30:00Z",
+  "wait_p50_s": 1.5,
+  "wait_p95_s": 12.0
+}

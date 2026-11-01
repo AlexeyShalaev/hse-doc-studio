@@ -18,7 +18,8 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.ci import CiOptions, CiProvider, CiPublish, RenderedCiFile, parse_ci_options
 from hse_doc_studio.core.git_sync.protocols import ICiRenderer
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.repositories import IFileRepository, IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.repositories import IFileRepository
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 
 logger = structlog.get_logger()
@@ -66,28 +67,23 @@ def _normalized(text: str) -> str:
 class _CiBase:
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         file_repo: IFileRepository,
         renderer: ICiRenderer,
         default_image: str,
     ) -> None:
-        self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._file_repo = file_repo
         self._renderer = renderer
         self._default_image = default_image
 
-    def _find(self, project_id: UUID) -> tuple[Path, Project]:
-        for folder in self._project_index_repo.list_known():
-            try:
-                project = self._project_repo.get(folder)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("ci: project load failed", folder=str(folder), exc=str(exc))
-                continue
-            if project is not None and project.id == project_id:
-                return folder, project
-        raise NotFoundError(localized_error(f"Проект {project_id!r} не найден", f"Project {project_id!r} not found"))
+    async def _find(self, project_id: UUID) -> tuple[Path, Project]:
+        located = await self._locator.locate(project_id)
+        if located is None:
+            raise NotFoundError(
+                localized_error(f"Проект {project_id!r} не найден", f"Project {project_id!r} not found")
+            )
+        return located
 
     def _options(self, inp: CiInput, project: Project) -> CiOptions:
         options = parse_ci_options(
@@ -125,7 +121,7 @@ class _CiBase:
 
 class PreviewCiUC(_CiBase):
     async def execute(self, inp: CiInput) -> CiPreview:
-        folder, project = self._find(inp.project_id)
+        folder, project = await self._find(inp.project_id)
         options = self._options(inp, project)
         rendered = self._renderer.render(options)
         return CiPreview(
@@ -138,18 +134,17 @@ class PreviewCiUC(_CiBase):
 class WriteCiUC(_CiBase):
     def __init__(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         file_repo: IFileRepository,
         renderer: ICiRenderer,
         default_image: str,
         vcs_locks: IVcsFolderLocks,
     ) -> None:
-        super().__init__(project_repo, project_index_repo, file_repo, renderer, default_image)
+        super().__init__(locator, file_repo, renderer, default_image)
         self._vcs_locks = vcs_locks
 
     async def execute(self, inp: CiWriteInput) -> CiWritten:
-        folder, project = self._find(inp.project_id)
+        folder, project = await self._find(inp.project_id)
         options = self._options(inp, project)
         file = self._inspect(folder, self._renderer.render(options))
         if file.same or (file.exists and not inp.overwrite):

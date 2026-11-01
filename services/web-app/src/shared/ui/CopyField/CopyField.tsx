@@ -13,6 +13,11 @@ export type CopyFieldProps = {
   label: string;
   /** Show the whole value on several lines (keys, commands) instead of one. */
   multiline?: boolean;
+  /**
+   * Где переносить многострочное значение: anywhere рвёт длинные ключи,
+   * spaces переносит команды только по пробелам, длинное слово прокручивается.
+   */
+  wrap?: "anywhere" | "spaces";
   /** Called after the value reached the clipboard. */
   onCopied?: () => void;
   className?: string;
@@ -26,6 +31,7 @@ export const CopyField = ({
   value,
   label,
   multiline = false,
+  wrap = "anywhere",
   onCopied,
   className,
 }: CopyFieldProps) => {
@@ -86,7 +92,14 @@ export const CopyField = ({
                 resize: "none",
                 minHeight: 72,
                 lineHeight: 1.45,
-                wordBreak: "break-all",
+                ...(wrap === "spaces"
+                  ? {
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "normal",
+                      overflowWrap: "normal",
+                      overflowX: "auto",
+                    }
+                  : { wordBreak: "break-all" }),
               }
             : { textOverflow: "ellipsis" }),
         }}

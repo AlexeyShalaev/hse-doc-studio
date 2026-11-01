@@ -1,0 +1,4 @@
+remote: Commit message does not follow the policy
+To https://git.example.org/team/thesis.git
+ ! [remote rejected] main -> main (pre-receive hook declined)
+error: failed to push some refs to 'https://git.example.org/team/thesis.git'

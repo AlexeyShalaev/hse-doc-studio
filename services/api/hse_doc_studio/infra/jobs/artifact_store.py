@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.artifacts import PublishPdfOutcome, PublishPdfRequest
+from hse_doc_studio.core.storage.models import PresignedUrl
 from hse_doc_studio.infra.compile.pdf_archive import (
     archive_compiled_pdf,
     archived_pdf_path,
@@ -45,8 +46,11 @@ class LocalDiskArtifactStore:
                     await asyncio.sleep(self._retry_delay_s)
         return PublishPdfOutcome(replaced=move_error is None, final_name=final.name)
 
-    def archive_pdf(self, workspace: Path, doc_id: str, job_id: UUID, source_file: str) -> None:
-        archive_compiled_pdf(workspace, doc_id, job_id, source_file)
+    async def archive_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID, source_file: str) -> None:
+        await asyncio.to_thread(archive_compiled_pdf, workspace, doc_id, job_id, source_file)
 
-    def read_archived_pdf(self, workspace: Path, doc_id: str, job_id: UUID) -> bytes:
-        return archived_pdf_path(workspace, doc_id, job_id).read_bytes()
+    async def read_archived_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID) -> bytes:
+        return await asyncio.to_thread(archived_pdf_path(workspace, doc_id, job_id).read_bytes)
+
+    async def archived_pdf_link(self, project_id: UUID, doc_id: str, job_id: UUID) -> PresignedUrl | None:
+        return None

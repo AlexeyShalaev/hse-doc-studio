@@ -1,0 +1,19 @@
+{
+  "registration_mode": "closed",
+  "registration_domains": [],
+  "require_approval": false,
+  "fields": {
+    "auth.registration_mode": {
+      "source": "env",
+      "locked": true
+    },
+    "auth.registration_domains": {
+      "source": "default",
+      "locked": false
+    },
+    "auth.require_approval": {
+      "source": "default",
+      "locked": false
+    }
+  }
+}

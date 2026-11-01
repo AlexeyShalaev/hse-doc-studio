@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
 
 import pytest
 from hse_doc_studio.use_cases.git_sync.clone_project import GetCloneDefaultsUC
@@ -10,9 +11,9 @@ pytestmark = pytest.mark.unit
 
 
 def _uc(root: Path, known: list[Path] | None = None) -> GetCloneDefaultsUC:
-    index = MagicMock()
-    index.list_known.return_value = known or []
-    return GetCloneDefaultsUC(root, index)
+    locator = MagicMock()
+    locator.list_all = AsyncMock(return_value=known or [])
+    return GetCloneDefaultsUC(root, locator)
 
 
 @pytest.mark.parametrize(
@@ -43,3 +44,13 @@ async def test__execute__folder_known_to_index__is_skipped(tmp_path: Path) -> No
     known = tmp_path / "course-paper"
 
     assert await _uc(tmp_path, [known]).execute("course-paper") == tmp_path / "course-paper-2"
+
+
+async def test__execute__server_names__are_free_uuid_folders_under_the_root(tmp_path: Path) -> None:
+    locator = MagicMock()
+    locator.list_all = AsyncMock(return_value=[])
+
+    folder = await GetCloneDefaultsUC(tmp_path, locator, uuid_names=True).execute("Курсовая")
+
+    assert folder.parent == tmp_path
+    assert UUID(folder.name)

@@ -1,0 +1,9 @@
+{
+  "online": 3,
+  "paused": 1,
+  "stale": 0,
+  "offline": 1,
+  "revoked": 2,
+  "outdated": 1,
+  "newest_version": "0.3.1"
+}

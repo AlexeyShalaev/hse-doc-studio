@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "kind": "user",
+      "id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "detail": "anna.petrova@example.org"
+    },
+    {
+      "kind": "user",
+      "id": "u_01hx7k5r1e",
+      "name": "Анна Смирнова",
+      "detail": "a.smirnova@example.org"
+    }
+  ],
+  "has_more": true
+}

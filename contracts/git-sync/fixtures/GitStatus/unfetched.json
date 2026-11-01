@@ -43,5 +43,14 @@
     "next_fetch_at": null
   },
   "shared_folder": null,
-  "bot_authored_commits": 5
+  "bot_authored_commits": 5,
+  "auto_sync": {
+    "enabled": false,
+    "explicit": false
+  },
+  "pdf_upload": {
+    "enabled": false,
+    "available": false,
+    "last": null
+  }
 }

@@ -1,5 +1,6 @@
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { clsx } from "clsx";
+import { useUiVariant } from "../UiVariant";
 
 export type TooltipProps = {
   content: React.ReactNode;
@@ -23,6 +24,8 @@ export const Tooltip = ({
   collisionPadding = 8,
   className,
 }: TooltipProps) => {
+  // В консоли подсказка набрана обычным шрифтом, как весь её интерфейс.
+  const sans = useUiVariant() === "console";
   return (
     <TooltipPrimitive.Provider delayDuration={delayDuration}>
       <TooltipPrimitive.Root>
@@ -37,16 +40,25 @@ export const Tooltip = ({
             // PostCSS engine (used with the legacy `@tailwind` directives + `@config`)
             // does not regenerate brand-new spacing utilities on HMR, so changing the
             // class had no effect. Inline style is immune to that and always applies.
-            style={{ padding: "6px 12px" }}
+            style={
+              sans
+                ? { padding: "6px 10px", maxWidth: 320, lineHeight: 1.45 }
+                : { padding: "6px 12px" }
+            }
             className={clsx(
-              "z-50 overflow-hidden rounded-r-1 border border-border-strong bg-bg-3 text-2xs font-mono text-fg-0 shadow-elev-1",
+              "z-50 overflow-hidden rounded-r-1 border shadow-elev-1",
+              sans
+                ? "border-border bg-bg-2 font-sans text-xs text-fg-1"
+                : "border-border-strong bg-bg-3 text-2xs font-mono text-fg-0",
               "animate-in fade-in-0 zoom-in-95",
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
               className,
             )}
           >
             {content}
-            <TooltipPrimitive.Arrow className="fill-bg-3" />
+            <TooltipPrimitive.Arrow
+              className={sans ? "fill-bg-2" : "fill-bg-3"}
+            />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>

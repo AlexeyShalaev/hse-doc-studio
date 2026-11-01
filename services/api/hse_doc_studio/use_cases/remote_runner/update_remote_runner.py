@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from hse_doc_studio.core.remote_runner import (
+    IRemoteRunnerSupervisor,
+    RemoteAiEndpointChoice,
+    RemoteRunnerSettingsPatch,
+    RemoteRunnerStatusInfo,
+    cloud_flavor,
+)
+from hse_doc_studio.core.repositories import IAIProviderRepository
+
+
+@dataclass(frozen=True)
+class UpdateRemoteRunnerInput:
+    """None значит «не менять»: интерфейс шлёт только то, что человек тронул."""
+
+    enabled: bool | None = None
+    server_url: str | None = None
+    name: str | None = None
+    concurrency: int | None = None
+    yield_to_local: bool | None = None
+    ai_endpoints: tuple[RemoteAiEndpointChoice, ...] | None = None
+
+
+class UpdateRemoteRunnerUC:
+    """Частичная правка настроек облачных сборок поверх текущих; перезапуск цикла решает супервизор."""
+
+    def __init__(self, supervisor: IRemoteRunnerSupervisor, providers: IAIProviderRepository) -> None:
+        self._supervisor = supervisor
+        self._providers = providers
+
+    async def execute(self, data: UpdateRemoteRunnerInput) -> RemoteRunnerStatusInfo:
+        names = [choice.name for choice in data.ai_endpoints or ()]
+        if len(set(names)) != len(names):
+            raise ValueError("AI endpoint names must be unique")
+        if data.ai_endpoints:
+            await self._check_providers(data.ai_endpoints)
+        # Слияние с текущими настройками делает супервизор под своим замком: пока здесь шла проверка
+        # провайдеров, сопряжение или другой запрос могли их поменять.
+        await self._supervisor.apply_patch(
+            RemoteRunnerSettingsPatch(
+                enabled=data.enabled,
+                server_url=data.server_url,
+                name=data.name,
+                concurrency=data.concurrency,
+                yield_to_local=data.yield_to_local,
+                ai_endpoints=data.ai_endpoints,
+            )
+        )
+        return self._supervisor.status()
+
+    async def _check_providers(self, choices: tuple[RemoteAiEndpointChoice, ...]) -> None:
+        """Открыть облаку можно только свой локальный провайдер: Ollama или OpenAI-совместимый адрес в своей сети."""
+        by_id = {str(p.id): p for p in await self._providers.list_all()}
+        for choice in choices:
+            provider = by_id.get(choice.provider_id)
+            if provider is None:
+                raise ValueError(f"AI provider {choice.provider_id} not found")
+            if cloud_flavor(provider.type.value, provider.base_url) is None:
+                raise ValueError(f"AI provider {provider.name} cannot be opened to the cloud")

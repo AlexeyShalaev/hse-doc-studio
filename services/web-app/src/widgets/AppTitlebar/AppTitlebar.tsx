@@ -2,6 +2,9 @@ import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
+import { AccountMenu } from "@features/account-menu";
+import { GuestBadge, useGuest } from "@features/guest-session";
+import { InboxBell } from "@features/inbox";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -20,6 +23,8 @@ export type AppTitlebarProps = {
    * Так же, слотом, а не импортом: виджет не может подтянуть другой виджет.
    */
   projectActions?: React.ReactNode;
+  /** Строка версии под логотипом. Админка прячет её: версия есть в её меню. */
+  showVersion?: boolean;
 };
 
 const Logomark = () => (
@@ -47,6 +52,7 @@ export const AppTitlebar = ({
   projectIsNda,
   projectSwitcher,
   projectActions,
+  showVersion = true,
 }: AppTitlebarProps) => {
   const { t } = useTranslation("appChrome");
   const navigate = useNavigate();
@@ -54,6 +60,8 @@ export const AppTitlebar = ({
   const systemChatOpen = useWorkspaceStore((state) => state.systemChatOpen);
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
   const { data: systemInfo } = useSystemInfo();
+  // links: гостю по ссылке недоступны агент и настройки приложения; вместо меню аккаунта бейдж гостя.
+  const isGuest = useGuest() !== null;
 
   // Real backend version; drop the suffix until it resolves rather than show a
   // stale hardcoded number.
@@ -103,23 +111,25 @@ export const AppTitlebar = ({
           >
             HSE Studio
           </div>
-          <div
-            className="mono"
-            style={{
-              fontSize: 9.5,
-              color: "var(--fg-3)",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              marginTop: -2,
-            }}
-          >
-            {versionLabel}
-          </div>
+          {showVersion && (
+            <div
+              className="mono"
+              style={{
+                fontSize: 9.5,
+                color: "var(--fg-3)",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginTop: -2,
+              }}
+            >
+              {versionLabel}
+            </div>
+          )}
         </div>
       </button>
 
       <div
-        className="flex items-center flex-1 min-w-0 overflow-hidden"
+        className="flex items-center flex-1 min-w-0 overflow-hidden max-sm:!ml-2"
         style={{
           gap: 8,
           marginLeft: 26,
@@ -137,9 +147,11 @@ export const AppTitlebar = ({
             color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
           }}
           onClick={handleBackToWelcome}
+          aria-label={t("titlebar.projects")}
         >
           <GraduationCap size={15} />
-          {t("titlebar.projects")}
+          {/* На телефоне подпись схлопывалась до одной буквы: оставляем значок */}
+          <span className="max-sm:hidden">{t("titlebar.projects")}</span>
         </button>
         {projectName && (
           <>
@@ -189,33 +201,40 @@ export const AppTitlebar = ({
             {projectActions}
           </div>
         )}
-        <button
-          type="button"
-          className={clsx("icon-btn tt", systemChatOpen && "active")}
-          data-tt={agentTooltip}
-          onClick={toggleSystemChat}
-          style={
-            systemChatOpen
-              ? { width: 32, height: 32, color: "var(--accent)" }
-              : { width: 32, height: 32 }
-          }
-        >
-          <Bot size={16} />
-        </button>
+        {!isGuest && (
+          <button
+            type="button"
+            className={clsx("icon-btn tt", systemChatOpen && "active")}
+            data-tt={agentTooltip}
+            onClick={toggleSystemChat}
+            style={
+              systemChatOpen
+                ? { width: 32, height: 32, color: "var(--accent)" }
+                : { width: 32, height: 32 }
+            }
+          >
+            <Bot size={16} />
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={clsx("icon-btn tt", settingsActive && "active")}
-          data-tt={t("titlebar.settings")}
-          onClick={handleOpenSettings}
-          style={
-            settingsActive
-              ? { width: 32, height: 32, color: "var(--accent)" }
-              : { width: 32, height: 32 }
-          }
-        >
-          <Settings size={16} />
-        </button>
+        {!isGuest && (
+          <button
+            type="button"
+            className={clsx("icon-btn tt", settingsActive && "active")}
+            data-tt={t("titlebar.settings")}
+            onClick={handleOpenSettings}
+            style={
+              settingsActive
+                ? { width: 32, height: 32, color: "var(--accent)" }
+                : { width: 32, height: 32 }
+            }
+          >
+            <Settings size={16} />
+          </button>
+        )}
+        {!isGuest && <InboxBell />}
+        <AccountMenu />
+        <GuestBadge />
       </div>
     </div>
   );

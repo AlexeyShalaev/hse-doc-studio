@@ -27,6 +27,8 @@ export type FolderInspection = {
 export type CloneFolderStepProps = {
   /** Что клонируем: «github.com/org/repo» или имя файла bundle. */
   sourceLabel: string;
+  /** Сервер: поля папки нет, проект ляжет в хранилище сервера. */
+  folderless?: boolean | undefined;
   name: string;
   namePlaceholder: string;
   onNameChange: (value: string) => void;
@@ -110,6 +112,7 @@ const InspectNote = ({
 // запуска, чтобы не ждать отказа сервера; но решает сервер (папка не пуста).
 export const CloneFolderStep = ({
   sourceLabel,
+  folderless = false,
   name,
   namePlaceholder,
   onNameChange,
@@ -130,7 +133,7 @@ export const CloneFolderStep = ({
   const folderId = `${uid}-folder`;
   const folderHintId = `${uid}-folder-hint`;
   const trimmed = folder.trim();
-  const sharedFolder = useSharedFolder(trimmed, trimmed !== "");
+  const sharedFolder = useSharedFolder(trimmed, !folderless && trimmed !== "");
 
   // Папки может не быть вовсе: сервер тогда отвечает is_dir=false, но это не
   // «файл на месте папки», Студия создаст её сама.
@@ -138,7 +141,7 @@ export const CloneFolderStep = ({
     inspection.state === "ready" &&
     inspection.exists !== false &&
     (inspection.isDir === false || inspection.hasProject === true);
-  const canStart = trimmed !== "" && !blocked && !isStarting;
+  const canStart = (folderless || trimmed !== "") && !blocked && !isStarting;
 
   return (
     <CloneStepLayout
@@ -200,6 +203,7 @@ export const CloneFolderStep = ({
           type="text"
           className="input"
           value={name}
+          autoFocus={folderless}
           placeholder={namePlaceholder || t("clone.folder.name.placeholder")}
           autoComplete="off"
           aria-describedby={nameHintId}
@@ -212,49 +216,62 @@ export const CloneFolderStep = ({
         </p>
       </div>
 
-      <div className="field">
-        <label htmlFor={folderId}>{t("clone.folder.path.label")}</label>
-        <div className="flex" style={{ gap: 8 }}>
-          <input
-            id={folderId}
-            type="text"
-            className="input mono"
-            style={{ flex: 1, minWidth: 0 }}
-            value={folder}
-            autoFocus
-            spellCheck={false}
-            autoComplete="off"
-            autoCapitalize="off"
-            placeholder={t("clone.folder.path.placeholder")}
-            aria-invalid={folderError !== null || blocked}
-            aria-describedby={folderHintId}
-            onChange={(event) => {
-              onFolderChange(event.target.value);
-            }}
+      {folderless ? (
+        <>
+          <Notice
+            tone="info"
+            role="status"
+            text={t("clone.folder.nameOnly.note")}
           />
-          {onBrowse && (
-            <button type="button" className="btn" onClick={onBrowse}>
-              <FolderOpen size={13} aria-hidden="true" />
-              {t("clone.folder.path.browse")}
-            </button>
-          )}
-        </div>
-        <p id={folderHintId} className="hint" style={{ margin: 0 }}>
-          {t("clone.folder.path.hint")}
-        </p>
-      </div>
-
-      {folderError ? (
-        <Notice tone="err" role="alert" text={folderError} />
+          {startError && <Notice tone="err" role="alert" text={startError} />}
+        </>
       ) : (
-        <InspectNote inspection={inspection} hasFolder={trimmed !== ""} />
-      )}
+        <>
+          <div className="field">
+            <label htmlFor={folderId}>{t("clone.folder.path.label")}</label>
+            <div className="flex" style={{ gap: 8 }}>
+              <input
+                id={folderId}
+                type="text"
+                className="input mono"
+                style={{ flex: 1, minWidth: 0 }}
+                value={folder}
+                autoFocus
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="off"
+                placeholder={t("clone.folder.path.placeholder")}
+                aria-invalid={folderError !== null || blocked}
+                aria-describedby={folderHintId}
+                onChange={(event) => {
+                  onFolderChange(event.target.value);
+                }}
+              />
+              {onBrowse && (
+                <button type="button" className="btn" onClick={onBrowse}>
+                  <FolderOpen size={13} aria-hidden="true" />
+                  {t("clone.folder.path.browse")}
+                </button>
+              )}
+            </div>
+            <p id={folderHintId} className="hint" style={{ margin: 0 }}>
+              {t("clone.folder.path.hint")}
+            </p>
+          </div>
 
-      {sharedFolder.data?.detected && sharedFolder.data.provider && (
-        <SharedFolderWarning provider={sharedFolder.data.provider} />
-      )}
+          {folderError ? (
+            <Notice tone="err" role="alert" text={folderError} />
+          ) : (
+            <InspectNote inspection={inspection} hasFolder={trimmed !== ""} />
+          )}
 
-      {startError && <Notice tone="err" role="alert" text={startError} />}
+          {sharedFolder.data?.detected && sharedFolder.data.provider && (
+            <SharedFolderWarning provider={sharedFolder.data.provider} />
+          )}
+
+          {startError && <Notice tone="err" role="alert" text={startError} />}
+        </>
+      )}
     </CloneStepLayout>
   );
 };

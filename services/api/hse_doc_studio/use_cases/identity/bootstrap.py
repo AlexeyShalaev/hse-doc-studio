@@ -1,0 +1,71 @@
+"""Состояние входа для клиента: нужен ли мастер первого запуска, способы входа, текущий пользователь."""
+
+from __future__ import annotations
+
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import Literal
+
+from hse_doc_studio.core.identity.entities import AuthSettings, Session, User
+from hse_doc_studio.core.identity.passwords import PASSWORD_MIN_LENGTH
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
+from hse_doc_studio.use_cases.identity.sessions import SessionService
+from hse_doc_studio.use_cases.server_setup.state import SetupStateService
+
+SetupState = Literal["needs_admin", "ready"]
+
+
+@dataclass(frozen=True)
+class BootstrapResult:
+    setup_state: SetupState
+    auth: AuthSettings
+    smtp_enabled: bool
+    password_min_length: int
+    user: User | None
+    session: Session | None
+    # Кнопки единого входа: пары (id, название).
+    oidc_providers: tuple[tuple[str, str], ...] = ()
+    # Разрешил ли админ установки хранить на сервере личные закрытые ключи подписи.
+    personal_signing_keys: bool = True
+    # Разрешены ли в установке личные раннеры (свои машины для сборки своих проектов).
+    personal_runners: bool = False
+
+
+class BootstrapUC:
+    def __init__(
+        self,
+        setup: SetupStateService,
+        settings: AuthSettingsService,
+        sessions: SessionService,
+        *,
+        smtp_enabled: bool | Callable[[], bool] = False,
+        oidc_providers: Callable[[], Awaitable[list[tuple[str, str]]]] | None = None,
+        signing_keys_allowed: Callable[[], Awaitable[bool]] | None = None,
+        personal_runners_allowed: Callable[[], Awaitable[bool]] | None = None,
+    ) -> None:
+        self._personal_runners_allowed = personal_runners_allowed
+        self._setup = setup
+        self._settings = settings
+        self._sessions = sessions
+        self._smtp_enabled = smtp_enabled
+        self._oidc_providers = oidc_providers
+        self._signing_keys_allowed = signing_keys_allowed
+
+    async def auth_settings(self) -> AuthSettings:
+        return await self._settings.effective()
+
+    async def execute(self, session_secret: str | None) -> BootstrapResult:
+        """Пока мастер первого запуска не завершён, клиент ведёт к нему (/first-run)."""
+        needs_admin = not await self._setup.is_completed()
+        resolved = await self._sessions.resolve(session_secret) if session_secret else None
+        return BootstrapResult(
+            setup_state="needs_admin" if needs_admin else "ready",
+            auth=await self.auth_settings(),
+            smtp_enabled=self._smtp_enabled() if callable(self._smtp_enabled) else self._smtp_enabled,
+            password_min_length=PASSWORD_MIN_LENGTH,
+            user=resolved.user if resolved else None,
+            session=resolved.session if resolved else None,
+            oidc_providers=tuple(await self._oidc_providers()) if self._oidc_providers else (),
+            personal_signing_keys=await self._signing_keys_allowed() if self._signing_keys_allowed else True,
+            personal_runners=await self._personal_runners_allowed() if self._personal_runners_allowed else False,
+        )

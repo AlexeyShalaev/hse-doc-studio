@@ -15,6 +15,9 @@
 
 export type SettingsSectionId =
   | "appearance"
+  | "account"
+  | "organizations"
+  | "usage"
   | "profile"
   | "compiler"
   | "fonts"
@@ -27,6 +30,8 @@ export type SettingsSectionId =
   | "disk"
   | "data"
   | "git-access"
+  | "runners"
+  | "remote-runner"
   | "about";
 
 export type SettingSearchEntry = {
@@ -93,6 +98,95 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "language",
       "локализация",
       "перевод",
+    ],
+  },
+
+  // ── Организации (серверный режим) ────────────────────────────
+  {
+    sectionId: "organizations",
+    anchorId: "organizations",
+    labelKey: "search.organizations",
+    keywords: [
+      "организации",
+      "организация",
+      "группы",
+      "выйти из организации",
+      "роль",
+      "organizations",
+      "groups",
+      "leave",
+      "role",
+    ],
+  },
+
+  // ── Использование квот (серверный режим) ─────────────────────
+  {
+    sectionId: "usage",
+    anchorId: "usage",
+    labelKey: "search.usage",
+    keywords: [
+      "использование",
+      "квота",
+      "квоты",
+      "лимит",
+      "токены",
+      "сборки",
+      "место",
+      "usage",
+      "quota",
+      "limit",
+      "tokens",
+      "builds",
+      "storage",
+    ],
+  },
+
+  // ── Аккаунт (серверный режим) ────────────────────────────────
+  {
+    sectionId: "account",
+    anchorId: "account",
+    labelKey: "search.account",
+    keywords: ["аккаунт", "учётная запись", "профиль", "account", "profile"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-email",
+    labelKey: "search.accountEmail",
+    keywords: ["почта", "e-mail", "email", "mail", "адрес", "сменить почту"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-password",
+    labelKey: "search.accountPassword",
+    keywords: ["пароль", "password", "сменить пароль", "смена пароля"],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-commit",
+    labelKey: "search.accountCommit",
+    keywords: [
+      "подпись",
+      "коммиты",
+      "версии",
+      "noreply",
+      "commit",
+      "author",
+      "signature",
+      "приватность",
+      "privacy",
+    ],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-sessions",
+    labelKey: "search.accountSessions",
+    keywords: [
+      "сессии",
+      "устройства",
+      "выйти",
+      "sessions",
+      "devices",
+      "sign out",
     ],
   },
 
@@ -453,6 +547,46 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
 
   // ── Доступ к репозиториям ────────────────────────────────────
+  // ── Облачные сборки (локальная Студия) ───────────────────────
+  {
+    sectionId: "remote-runner",
+    anchorId: "remote-runner",
+    labelKey: "search.remoteRunner",
+    keywords: [
+      "облачные сборки",
+      "облако",
+      "сервер",
+      "раннер",
+      "собирать на этой машине",
+      "модели для облака",
+      "cloud builds",
+      "cloud",
+      "runner",
+      "build on this machine",
+    ],
+  },
+
+  // ── Мои раннеры (серверный режим) ────────────────────────────
+  {
+    sectionId: "runners",
+    anchorId: "runners",
+    labelKey: "search.runners",
+    keywords: [
+      "раннер",
+      "раннеры",
+      "мои раннеры",
+      "сборка на своём компьютере",
+      "сборка на своем компьютере",
+      "свой компьютер",
+      "токен раннера",
+      "runner",
+      "runners",
+      "my runners",
+      "self-hosted",
+      "build on my machine",
+    ],
+  },
+
   {
     sectionId: "git-access",
     anchorId: "git-access",

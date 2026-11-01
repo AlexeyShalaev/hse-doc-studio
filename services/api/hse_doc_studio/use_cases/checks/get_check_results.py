@@ -89,7 +89,7 @@ class GetCheckResultsUC:
         if doc.last_compile_id is None:
             return GetCheckResultsOutput(compile_id=None, results=[])
 
-        record = self._compile_repo.get_for_project(project.folder, doc.last_compile_id)
+        record = await self._compile_repo.get_for_project(project.folder, doc.last_compile_id)
         if record is None:
             logger.warning(
                 "GetCheckResultsUC: last_compile_id points to a missing record",
@@ -104,11 +104,8 @@ class GetCheckResultsUC:
         # finished record instead, so the «Проверки» tab keeps the last known
         # findings during the build rather than flashing empty/0%.
         if record.status in (CompileStatus.pending, CompileStatus.running):
-            finished = [
-                r
-                for r in self._compile_repo.list_for_document(project.folder, inp.doc_id)
-                if r.status in (CompileStatus.success, CompileStatus.failure)
-            ]
+            history = await self._compile_repo.list_for_document(project.folder, inp.doc_id)
+            finished = [r for r in history if r.status in (CompileStatus.success, CompileStatus.failure)]
             if finished:
                 record = finished[-1]
 

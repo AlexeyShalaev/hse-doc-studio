@@ -53,5 +53,14 @@
     "root": "/Users/anna/Yandex.Disk",
     "acknowledged": false
   },
-  "bot_authored_commits": 0
+  "bot_authored_commits": 0,
+  "auto_sync": {
+    "enabled": false,
+    "explicit": false
+  },
+  "pdf_upload": {
+    "enabled": false,
+    "available": false,
+    "last": null
+  }
 }

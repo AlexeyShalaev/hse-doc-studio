@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.api.config import AgentConfig, settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.agent.edits import select_edit_format
 from hse_doc_studio.core.agent.entities import (
     AgentEvent,
@@ -35,6 +36,7 @@ from hse_doc_studio.core.enums import (
     StopReason,
     ToolKind,
 )
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.repositories import IChatRepository
 from hse_doc_studio.core.services import ChatContextService
@@ -42,6 +44,7 @@ from hse_doc_studio.infra.ai.agent.trace import install_tracer, open_tracer, tra
 from hse_doc_studio.use_cases.chat._budget import TokenBudget, truncate_tool_result
 from hse_doc_studio.use_cases.chat._prompt import chat_history_to_agent_messages
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
+from hse_doc_studio.use_cases.chat.tool_access import require_tool_access
 
 logger = structlog.get_logger()
 
@@ -134,10 +137,12 @@ class AgentLoop:
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
         config: AgentConfig,
+        access: IProjectAccessChecker,
         context_service: ChatContextService | None = None,
         summarizer: IChatSummarizer | None = None,
         allowed_tools: frozenset[str] | None = None,
     ) -> None:
+        self._access = access
         self._provider = provider
         self._ai_provider = ai_provider
         self._model = model
@@ -156,6 +161,7 @@ class AgentLoop:
         self._diagnostics: list[dict[str, Any]] = []
         # Whether the current run has a project in context (set in run()).
         self._has_project = True
+        self._project_id: UUID | None = None
 
     @property
     def diagnostics(self) -> list[dict[str, Any]]:
@@ -228,9 +234,10 @@ class AgentLoop:
         answers = tool_answers or {}
         self._diagnostics = []
         self._has_project = project_id is not None
+        self._project_id = project_id
         await self._maybe_compact(project_folder, session_id, run_id, system)
-        summaries = self._chat_repo.list_summaries(project_folder, session_id)
-        history = [m for m in self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
+        summaries = await self._chat_repo.list_summaries(project_folder, session_id)
+        history = [m for m in await self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
         agent_messages = chat_history_to_agent_messages(history)
         system = self._system_with_summaries(system, summaries)
         weak = self._ai_provider.type == AIProviderType.ollama
@@ -273,6 +280,7 @@ class AgentLoop:
                 temperature=self._config.temperature,
                 sink=sink,
                 cancel=cancel,
+                project_id=project_id,
             )
             turn_duration_ms = int((time.monotonic() - started_at) * 1000)
             tool_names = [c.name for c in turn.tool_calls]
@@ -341,7 +349,7 @@ class AgentLoop:
             budget.add(turn.usage)
             self._bus.publish(run_id, AgentEvent(type=AgentEventType.usage, data=_usage_payload(total)))
 
-            last_seq = self._persist_assistant(project_folder, session_id, run_id, turn)
+            last_seq = await self._persist_assistant(project_folder, session_id, run_id, turn)
             agent_messages.append(AgentMessage(role="assistant", content=turn.text, tool_calls=turn.tool_calls))
 
             if not turn.tool_calls or turn.stop_reason in _STOP_STATES:
@@ -389,8 +397,8 @@ class AgentLoop:
     async def _maybe_compact(self, project_folder: Path, session_id: UUID, run_id: UUID, system: str) -> None:
         if self._context_service is None or self._summarizer is None:
             return
-        messages = [m for m in self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
-        summaries = self._chat_repo.list_summaries(project_folder, session_id)
+        messages = [m for m in await self._chat_repo.list_messages(project_folder, session_id) if not m.compacted]
+        summaries = await self._chat_repo.list_summaries(project_folder, session_id)
         if not self._context_service.needs_compaction(
             system=system,
             messages=messages,
@@ -410,7 +418,9 @@ class AgentLoop:
         if not to_summarize:
             return
         prior = summaries[-1] if summaries else None
-        text = await self._summarizer.summarize(to_summarize, prior, self._model, self._ai_provider)
+        text = await self._summarizer.summarize(
+            to_summarize, prior, self._model, self._ai_provider, project_id=self._project_id
+        )
         summary = ChatSummaryBlock(
             id=uuid4(),
             session_id=session_id,
@@ -420,8 +430,8 @@ class AgentLoop:
             text=text,
             model=self._model,
         )
-        self._chat_repo.append_summary(project_folder, summary)
-        self._chat_repo.mark_compacted(project_folder, session_id, cutoff)
+        await self._chat_repo.append_summary(project_folder, summary)
+        await self._chat_repo.mark_compacted(project_folder, session_id, cutoff)
         self._bus.publish(
             run_id,
             AgentEvent(
@@ -454,11 +464,13 @@ class AgentLoop:
             if b.kind == ChatContentKind.tool_call and (b.call_id or "") not in answered
         ]
 
-    def _requires_gate(self, call: ToolCall) -> bool:
+    async def _requires_gate(self, call: ToolCall) -> bool:
         tool = self._registry.get(call.name)
-        return tool is not None and self._approval_gate.requires_approval(tool.kind)
+        return tool is not None and await self._approval_gate.requires_approval(tool.kind)
 
-    def _persist_assistant(self, project_folder: Path, session_id: UUID, run_id: UUID, turn: NormalizedTurn) -> int:
+    async def _persist_assistant(
+        self, project_folder: Path, session_id: UUID, run_id: UUID, turn: NormalizedTurn
+    ) -> int:
         blocks: list[ChatContentBlock] = []
         if turn.text:
             blocks.append(ChatContentBlock(kind=ChatContentKind.text, text=turn.text))
@@ -478,7 +490,7 @@ class AgentLoop:
             provider_id=self._ai_provider.id,
             usage=turn.usage,
         )
-        seq = self._chat_repo.append_message(project_folder, message)
+        seq = await self._chat_repo.append_message(project_folder, message)
         self._bus.publish(
             run_id,
             AgentEvent(type=AgentEventType.message, data={"id": str(message.id), "seq": seq, "role": "assistant"}),
@@ -515,7 +527,7 @@ class AgentLoop:
                 )
             return last_seq, True
         for call in ask_calls:
-            last_seq = self._emit_tool_result(
+            last_seq = await self._emit_tool_result(
                 call,
                 _answer_result(tool_answers.get(call.id, {})),
                 project_folder,
@@ -528,7 +540,7 @@ class AgentLoop:
         remaining = [c for c in calls if not self._is_ask(c)]
         # 2) Approval: if any remaining call needs approval and wasn't approved,
         # suspend the whole batch so the user reviews before any side effect.
-        unapproved = [c for c in remaining if self._requires_gate(c) and c.id not in approved_call_ids]
+        unapproved = [c for c in remaining if c.id not in approved_call_ids and await self._requires_gate(c)]
         if unapproved:
             trace(
                 "loop_suspend",
@@ -555,12 +567,12 @@ class AgentLoop:
         # 3) Execute the remaining (read/write/exec) calls.
         for call in remaining:
             result = truncate_tool_result(await self._execute_tool(ctx, call), self._config.max_tool_result_tokens)
-            last_seq = self._emit_tool_result(
+            last_seq = await self._emit_tool_result(
                 call, result, project_folder, session_id, run_id, agent_messages, last_seq
             )
         return last_seq, False
 
-    def _emit_tool_result(  # noqa: PLR0913 — small event/persist fan-out
+    async def _emit_tool_result(  # noqa: PLR0913 — small event/persist fan-out
         self,
         call: ToolCall,
         result: ToolResult,
@@ -592,7 +604,7 @@ class AgentLoop:
             blocks=[block],
             created_at=_now(),
         )
-        seq = self._chat_repo.append_message(project_folder, message)
+        seq = await self._chat_repo.append_message(project_folder, message)
         self._bus.publish(
             run_id,
             AgentEvent(
@@ -606,6 +618,20 @@ class AgentLoop:
     def _is_ask(self, call: ToolCall) -> bool:
         tool = self._registry.get(call.name)
         return tool is not None and tool.kind == ToolKind.ask
+
+    async def _authorize(self, ctx: AgentToolContext, call: ToolCall) -> ToolResult | None:
+        """Права актора на этот вызов; None, если вызов разрешён."""
+        try:
+            await require_tool_access(self._access, ctx.project_id, call.name, call.arguments)
+        except (ProjectForbiddenError, NotFoundError):
+            logger.warning("agent tool denied", tool=call.name)
+            self._diag({"kind": "tool", "name": call.name, "result": "forbidden"})
+            return ToolResult.error(
+                f"tool {call.name} is not allowed for your role in this project"
+                if _en()
+                else f"инструмент {call.name} недоступен вашей роли в этом проекте"
+            )
+        return None
 
     async def _execute_tool(self, ctx: AgentToolContext, call: ToolCall) -> ToolResult:
         tool = self._registry.get(call.name)
@@ -627,6 +653,8 @@ class AgentLoop:
                 if _en()
                 else f"инструмент {call.name} отключён в настройках"
             )
+        if tool.requires_project and (denied := await self._authorize(ctx, call)) is not None:
+            return denied
         # Approval gating already happened in _dispatch_tool_calls before we reach here.
         trace("tool_exec", name=call.name, arguments=call.arguments)
         started_at = time.monotonic()

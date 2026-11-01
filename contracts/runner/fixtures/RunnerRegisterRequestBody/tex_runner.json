@@ -1,0 +1,11 @@
+{
+  "name": "runner-1",
+  "protocol": 1,
+  "version": "0.3.0",
+  "tags": [
+    "office",
+    "tex"
+  ],
+  "concurrency": 2,
+  "resource_class": "standard"
+}

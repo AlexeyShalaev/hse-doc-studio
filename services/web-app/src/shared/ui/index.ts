@@ -10,6 +10,9 @@ export type { SpinnerProps } from "./Spinner";
 export { Tooltip, TooltipProvider } from "./Tooltip";
 export type { TooltipProps } from "./Tooltip";
 
+export { UiVariantContext, useUiVariant } from "./UiVariant";
+export type { UiVariant } from "./UiVariant";
+
 export { Modal } from "./Modal";
 export type { ModalProps } from "./Modal";
 
@@ -112,6 +115,9 @@ export type { PopoverContentProps } from "./Popover";
 export { CopyField } from "./CopyField";
 export type { CopyFieldProps } from "./CopyField";
 
+export { LinkDelivery } from "./LinkDelivery";
+export type { LinkDeliveryProps } from "./LinkDelivery";
+
 export { ProgressBar } from "./ProgressBar";
 export type { ProgressBarProps } from "./ProgressBar";
 export { FileDropZone } from "./FileDropZone";
@@ -155,3 +161,105 @@ export type {
   ViewTab,
   ViewTabsProps,
 } from "./ConflictKit";
+
+export { DataTable } from "./DataTable";
+export type { DataTableProps, DataTablePagination } from "./DataTable";
+
+export {
+  ActiveFilters,
+  DateRangeFilter,
+  FilterBar,
+  FilterMenu,
+  isoDay,
+  SortSelect,
+  SortMenu,
+  useDateRangeLabel,
+} from "./FilterBar";
+export type {
+  ActiveFilter,
+  ActiveFiltersProps,
+  DateRange,
+  DateRangeFilterProps,
+  FilterBarProps,
+  FilterGroup,
+  FilterMenuProps,
+  FilterOption,
+  SortOption,
+  SortSelectProps,
+  SortMenuOption,
+  SortMenuProps,
+  SortMenuValue,
+} from "./FilterBar";
+
+// Серверные списки: листание, поиск и пикеры (галерея «Примитивы админки»).
+export { Pagination, offsetPagerShown } from "./Pagination";
+export type {
+  CursorPaginationProps,
+  OffsetPaginationProps,
+  PaginationProps,
+} from "./Pagination";
+export { SearchInput } from "./SearchInput";
+export type { SearchInputProps } from "./SearchInput";
+export {
+  Picker,
+  PickerFilter,
+  PickerItemIcon,
+  PickerPanel,
+  usePickedItem,
+} from "./Picker";
+export type {
+  PickerFilterProps,
+  PickerPanelProps,
+  PickerProps,
+  PickerSource,
+} from "./Picker";
+
+export { ConfirmByName } from "./ConfirmByName";
+export type { ConfirmByNameProps } from "./ConfirmByName";
+
+export { SecretOnce } from "./SecretOnce";
+export type { SecretOnceProps } from "./SecretOnce";
+
+export { StatusDot } from "./StatusDot";
+export type { StatusDotProps, StatusDotStatus } from "./StatusDot";
+
+// Набор блоков страниц админки (галерея: /dev/server-screens → «Примитивы админки»).
+export { AdminPage, PageContainer, PageHeader, PageTabs } from "./AdminPage";
+export type {
+  AdminPageProps,
+  PageContainerProps,
+  PageHeaderProps,
+  PageTab,
+  PageTabsProps,
+  PageWidth,
+} from "./AdminPage";
+
+export { ListRow, Section, SectionList, SettingRow } from "./Section";
+export type {
+  ListRowProps,
+  ListRowTone,
+  SectionProps,
+  SettingRowProps,
+} from "./Section";
+
+export { StickySaveBar } from "./StickySaveBar";
+export type { StickySaveBarProps } from "./StickySaveBar";
+
+export { KpiGrid, KpiTile, Meter, Sparkline } from "./KpiTile";
+export type { KpiTileProps, KpiTone } from "./KpiTile";
+
+export { EmptyState, ErrorState, NoResults } from "./EmptyState";
+export type {
+  EmptyStateProps,
+  ErrorStateProps,
+  NoResultsProps,
+} from "./EmptyState";
+
+export { TableSkeleton } from "./TableSkeleton";
+export type { TableSkeletonProps } from "./TableSkeleton";
+
+export { Avatar, PersonCell } from "./PersonCell";
+export type { AvatarProps, PersonCellProps } from "./PersonCell";
+
+export { ActionMenu } from "./ActionMenu";
+export type { ActionMenuItem, ActionMenuProps } from "./ActionMenu";

@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Briefcase,
   Building,
+  Building2,
   Check,
   Compass,
   Database,
@@ -25,6 +26,7 @@ import {
   Presentation,
   Tag,
   Trash2,
+  User,
   UserCheck,
   Users,
   type LucideIcon,
@@ -37,6 +39,7 @@ import {
 } from "@entities/template-catalog";
 import { useCreateProject, useProjectSuggestions } from "@entities/project";
 import { HsePersonLookupButton } from "@entities/hse-person";
+import { useBootstrap, useCapabilities } from "@entities/session";
 import { FolderPickerModal } from "@features/folder-picker";
 import {
   emptyAuthor,
@@ -97,7 +100,11 @@ const STEPS: readonly StepDef[] = [
   { id: "review", icon: Check },
 ];
 
-const TOTAL_STEPS = STEPS.length;
+// На сервере папки нет: вместо шага «Папка» идёт шаг «Название» (с выбором
+// владельца). Остальные шаги те же, поэтому список строится из общего.
+const SERVER_STEPS: readonly StepDef[] = STEPS.map((step) =>
+  step.id === "folder" ? { id: "name", icon: Tag } : step,
+);
 
 const Logomark = () => (
   <div
@@ -625,6 +632,130 @@ const StepFolder = () => {
         }}
         initialPath={folder || null}
       />
+    </div>
+  );
+};
+
+// ── Step 4 на сервере: название и владелец ───────────────────────────────────
+const OWNER_ORG_ROLES = new Set(["owner", "admin"]);
+
+const OwnerOption = ({
+  active,
+  icon: OptionIcon,
+  title,
+  hint,
+  onSelect,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  title: string;
+  hint: string;
+  onSelect: () => void;
+}) => (
+  <button
+    type="button"
+    role="radio"
+    aria-checked={active}
+    onClick={onSelect}
+    className="flex items-center gap-2"
+    style={{
+      padding: "9px 12px",
+      borderRadius: "var(--r-2)",
+      border: active
+        ? "1px solid var(--accent)"
+        : "1px solid var(--border-strong)",
+      background: active ? "var(--accent-soft)" : "var(--bg-1)",
+      cursor: "pointer",
+      textAlign: "left",
+      minWidth: 0,
+      flex: "1 1 200px",
+    }}
+  >
+    <OptionIcon
+      size={14}
+      style={{
+        color: active ? "var(--accent)" : "var(--fg-3)",
+        flexShrink: 0,
+      }}
+    />
+    <span className="flex flex-col" style={{ minWidth: 0, gap: 1 }}>
+      <span
+        className="truncate"
+        style={{
+          fontSize: 12.5,
+          fontWeight: 500,
+          color: active ? "var(--accent)" : "var(--fg-0)",
+        }}
+      >
+        {title}
+      </span>
+      <span className="dim truncate" style={{ fontSize: 11 }}>
+        {hint}
+      </span>
+    </span>
+  </button>
+);
+
+const StepName = () => {
+  const { t } = useTranslation("projectCreate");
+  const { title, ownerOrgSlug, setField } = useCreateWizard();
+  const user = useBootstrap().data?.user ?? null;
+  // Организацией можно владеть, только если ты в ней владелец или администратор.
+  const orgs = (user?.org_roles ?? []).filter((org) =>
+    OWNER_ORG_ROLES.has(org.role),
+  );
+
+  return (
+    <div className="flex flex-col" style={{ gap: 16, maxWidth: 560 }}>
+      <div className="field" style={{ gap: 4 }}>
+        <label>{t("name.nameLabel")}</label>
+        <input
+          type="text"
+          className="input"
+          placeholder={t("name.namePlaceholder")}
+          value={title}
+          onChange={(e) => {
+            setField("title", e.target.value);
+          }}
+          autoFocus
+        />
+        <div className="hint">{t("name.nameHint")}</div>
+      </div>
+
+      {orgs.length > 0 && (
+        <div className="field" style={{ gap: 4 }}>
+          <label id="owner-label">{t("name.ownerLabel")}</label>
+          <div
+            role="radiogroup"
+            aria-labelledby="owner-label"
+            className="flex"
+            style={{ flexWrap: "wrap", gap: 8 }}
+          >
+            <OwnerOption
+              active={ownerOrgSlug === null}
+              icon={User}
+              title={t("name.ownerMe")}
+              hint={t("name.ownerMeHint")}
+              onSelect={() => {
+                setField("ownerOrgSlug", null);
+              }}
+            />
+            {orgs.map((org) => (
+              <OwnerOption
+                key={org.slug}
+                active={ownerOrgSlug === org.slug}
+                icon={Building2}
+                title={org.name}
+                hint={t("name.ownerOrgHint")}
+                onSelect={() => {
+                  setField("ownerOrgSlug", org.slug);
+                }}
+              />
+            ))}
+          </div>
+          <div className="hint">{t("name.ownerHint")}</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1789,6 +1920,9 @@ const SupervisorRow = ({
 
 const StepReview = () => {
   const { t, i18n } = useTranslation("projectCreate");
+  const { lacks } = useCapabilities();
+  const folderless = lacks("fs_browse");
+  const orgRoles = useBootstrap().data?.user?.org_roles ?? [];
   const {
     packId,
     templateId,
@@ -1796,6 +1930,7 @@ const StepReview = () => {
     kind,
     title,
     folder,
+    ownerOrgSlug,
     lang,
     presVariant,
     authors,
@@ -1805,6 +1940,7 @@ const StepReview = () => {
     coSupervisor,
     nda,
   } = useCreateWizard();
+  const orgName = orgRoles.find((org) => org.slug === ownerOrgSlug)?.name;
   const { data: packs } = usePacks();
   const { data: versionDetail } = useVersionDetail(
     packId ?? "",
@@ -1881,21 +2017,30 @@ const StepReview = () => {
           </div>
         </div>
 
-        <FieldRow icon={Folder} label={t("review.folderLabel")}>
-          <span
-            className="mono"
-            style={{
-              fontSize: 11.5,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              display: "block",
-            }}
-            title={folder}
-          >
-            {folder || "—"}
-          </span>
-        </FieldRow>
+        {folderless ? (
+          <FieldRow icon={Building2} label={t("review.ownerLabel")}>
+            {orgName ?? t("name.ownerMe")}
+            <span className="dim" style={{ marginLeft: 6 }}>
+              · {t("review.storedOnServer")}
+            </span>
+          </FieldRow>
+        ) : (
+          <FieldRow icon={Folder} label={t("review.folderLabel")}>
+            <span
+              className="mono"
+              style={{
+                fontSize: 11.5,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "block",
+              }}
+              title={folder}
+            >
+              {folder || "—"}
+            </span>
+          </FieldRow>
+        )}
 
         <FieldRow icon={Layers} label={t("review.packLabel")}>
           {pickLocalized(pack?.name, i18n.language, packId ?? "—")}
@@ -2067,6 +2212,7 @@ export const ProjectCreateWizard = () => {
     kind,
     title,
     folder,
+    ownerOrgSlug,
     lang,
     presVariant,
     authors,
@@ -2083,10 +2229,16 @@ export const ProjectCreateWizard = () => {
     reset,
   } = useCreateWizard();
 
+  // На сервере папок нет: шаг «Папка» заменён шагом «Название» с владельцем.
+  const { lacks } = useCapabilities();
+  const folderless = lacks("fs_browse");
+  const stepDefs = folderless ? SERVER_STEPS : STEPS;
+  const totalSteps = stepDefs.length;
+
   // Prefill folder from ?folder= when arriving from connect → "Create here".
   useEffect(() => {
     const prefill = searchParams.get("folder");
-    if (prefill && folder === "") {
+    if (prefill && folder === "" && !folderless) {
       setField("folder", prefill);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2160,7 +2312,7 @@ export const ProjectCreateWizard = () => {
   // Gate «Далее» by step ID (not index) so inserting/reordering steps — e.g. the
   // «Презентация» step — never silently shifts another step's validation.
   const isStepValid = (() => {
-    switch (STEPS[step]?.id) {
+    switch (stepDefs[step]?.id) {
       case "pack":
         return !!packId;
       case "template":
@@ -2169,6 +2321,8 @@ export const ProjectCreateWizard = () => {
         return !!version;
       case "folder":
         return title.trim().length > 0 && folder.trim().length > 0;
+      case "name":
+        return title.trim().length > 0;
       case "authors":
         return authorsValid;
       case "supervisor":
@@ -2185,7 +2339,6 @@ export const ProjectCreateWizard = () => {
       !packId ||
       !templateId ||
       !version ||
-      !folder ||
       !title.trim() ||
       !versionLoaded ||
       !authorsValid ||
@@ -2193,6 +2346,7 @@ export const ProjectCreateWizard = () => {
       !metaComplete
     )
       return;
+    if (!folderless && !folder) return;
 
     // The LaTeX title block reads `project.meta.group`; we don't show this
     // field in the wizard anymore, so backfill it from the first non-empty
@@ -2208,7 +2362,8 @@ export const ProjectCreateWizard = () => {
 
     const payload = {
       name: title.trim(),
-      folder,
+      // На сервере папку выбирает сервер, а проект получает владельца.
+      ...(folderless ? { owner_org_slug: ownerOrgSlug } : { folder }),
       pack_id: packId,
       template_id: templateId,
       version,
@@ -2267,7 +2422,7 @@ export const ProjectCreateWizard = () => {
     <StepTemplate key="template" />,
     <StepVersion key="version" />,
     <StepKind key="kind" />,
-    <StepFolder key="folder" />,
+    folderless ? <StepName key="name" /> : <StepFolder key="folder" />,
     <StepLang key="lang" />,
     <StepPresentation key="presentation" />,
     <StepAuthors key="authors" />,
@@ -2276,25 +2431,27 @@ export const ProjectCreateWizard = () => {
     <StepReview key="review" />,
   ];
 
-  const cur: StepDef = STEPS[step] ?? STEPS[0] ?? { id: "pack", icon: Layers };
+  const cur: StepDef = stepDefs[step] ??
+    stepDefs[0] ?? { id: "pack", icon: Layers };
   const CurIcon = cur.icon;
-  const isLastStep = step === TOTAL_STEPS - 1;
+  const isLastStep = step === totalSteps - 1;
 
   return (
-    <div className="flex h-full" style={{ background: "var(--bg-0)" }}>
-      {/* Sidebar */}
+    <div
+      className="flex h-full flex-col sm:flex-row"
+      style={{ background: "var(--bg-0)" }}
+    >
+      {/* Список шагов: колонка слева, а на узком экране полоса сверху с прокруткой */}
       <div
-        className="flex flex-col shrink-0"
+        className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[220px] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
+        data-testid="wizard-steps"
         style={{
-          width: 220,
           padding: "20px 8px 24px",
           background: "var(--bg-1)",
-          borderRight: "1px solid var(--border)",
-          overflowY: "auto",
         }}
       >
         <div
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 max-sm:hidden"
           style={{ padding: "0 12px 16px" }}
         >
           <Logomark />
@@ -2314,13 +2471,13 @@ export const ProjectCreateWizard = () => {
             >
               {t("wizard.stepCounter", {
                 current: step + 1,
-                total: TOTAL_STEPS,
+                total: totalSteps,
               })}
             </div>
           </div>
         </div>
 
-        {STEPS.map((s, i) => {
+        {stepDefs.map((s, i) => {
           const done = i < step;
           const active = i === step;
           const reachable = i <= maxReached;
@@ -2339,7 +2496,7 @@ export const ProjectCreateWizard = () => {
               disabled={!reachable}
               aria-current={active ? "step" : undefined}
               title={reachable ? undefined : t("wizard.lockedStepTitle")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 max-sm:!w-auto max-sm:shrink-0 max-sm:whitespace-nowrap"
               style={{
                 width: "100%",
                 padding: "6px 14px",
@@ -2414,7 +2571,7 @@ export const ProjectCreateWizard = () => {
 
       {/* Right pane */}
       <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
-        <div style={{ padding: "20px 28px 8px" }}>
+        <div className="max-sm:!px-4" style={{ padding: "20px 28px 8px" }}>
           <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
             <CurIcon size={14} style={{ color: "var(--accent)" }} />
             <span
@@ -2426,7 +2583,7 @@ export const ProjectCreateWizard = () => {
                 textTransform: "uppercase",
               }}
             >
-              {t("wizard.stepBadge", { current: step + 1, total: TOTAL_STEPS })}
+              {t("wizard.stepBadge", { current: step + 1, total: totalSteps })}
             </span>
           </div>
           <h2
@@ -2448,7 +2605,7 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex-1"
+          className="flex-1 max-sm:!px-4"
           style={{
             padding: "20px 28px 24px",
             overflowY: "auto",
@@ -2460,7 +2617,7 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex items-center justify-between"
+          className="flex flex-wrap items-center justify-between gap-2 max-sm:!px-3"
           style={{
             padding: "12px 20px",
             borderTop: "1px solid var(--border)",
@@ -2508,7 +2665,7 @@ export const ProjectCreateWizard = () => {
                   !packId ||
                   !templateId ||
                   !version ||
-                  !folder ||
+                  (!folderless && !folder) ||
                   !title.trim() ||
                   !versionLoaded ||
                   !authorsValid ||

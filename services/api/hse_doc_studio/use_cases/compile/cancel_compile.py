@@ -13,12 +13,11 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
-    IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.use_cases.compile.trigger_compile import _find_project
 
 logger = structlog.get_logger()
 
@@ -50,34 +49,27 @@ class CancelCompileUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
         dispatcher: IJobDispatcher,
         log_stream: IJobLogStream,
     ) -> None:
         self._project_repo = project_repo
-        self._project_index_repo = project_index_repo
+        self._locator = locator
         self._compile_repo = compile_repo
         self._dispatcher = dispatcher
         self._log_stream = log_stream
 
     async def execute(self, inp: CancelCompileInput) -> CancelCompileOutput:
-        if self._dispatcher.is_active(inp.compile_id):
-            await self._dispatcher.cancel(inp.compile_id)
-            return CancelCompileOutput(cancelled_task=True, record_finalised=False)
-
-        # No live task → force-finalise the record so the UI lock unsticks.
-        project_folder, project = _find_project(
-            inp.project_id,
-            self._project_repo,
-            self._project_index_repo,
-        )
-        if project is None or project_folder is None:
+        # Сначала принадлежность: реестр задач глобальный и знает только compile_id, а проект в URL может быть чужим.
+        located = await self._locator.locate(inp.project_id)
+        if located is None:
             raise NotFoundError(
                 localized_error(f"Проект {inp.project_id} не найден", f"Project not found: {inp.project_id}")
             )
+        project_folder, project = located
 
-        record = self._compile_repo.get_for_project(project_folder, inp.compile_id)
+        record = await self._compile_repo.get_for_project(project_folder, inp.compile_id)
         if record is None:
             raise NotFoundError(
                 localized_error(
@@ -85,6 +77,11 @@ class CancelCompileUC:
                 )
             )
 
+        if self._dispatcher.is_active(inp.compile_id):
+            await self._dispatcher.cancel(inp.compile_id)
+            return CancelCompileOutput(cancelled_task=True, record_finalised=False)
+
+        # No live task → force-finalise the record so the UI lock unsticks.
         if record.status in (CompileStatus.success, CompileStatus.failure, CompileStatus.cancelled):
             # Already terminal. Still flip the document if it's somehow
             # stuck in `building` because the previous save was interrupted.
@@ -109,7 +106,7 @@ class CancelCompileUC:
             check_results=record.check_results,
             pages=record.pages,
         )
-        self._compile_repo.save(cancelled_record)
+        await self._compile_repo.save(cancelled_record)
 
         # Best-effort close the log bus in case any SSE subscriber is camped
         # on this id. discard() drops the channel entirely so subscribe()

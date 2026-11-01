@@ -19,7 +19,9 @@ import {
   type SigningIdentity,
   type SigningIdentityKind,
 } from "@entities/signing-identity";
+import { useBootstrap } from "@entities/session";
 import { Spinner } from "@shared/ui/Spinner";
+import { Notice } from "@shared/ui/ConflictKit";
 import { localeTag, toast } from "@shared/lib";
 import { SettingHead } from "./Setting";
 import { formatFingerprint } from "./formatFingerprint";
@@ -391,7 +393,60 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
 
 type Mode = "none" | "self-signed" | "pkcs12" | "openpgp" | "openpgp-import";
 
+/**
+ * Администратор запретил серверу хранить секретные ключи: вместо форм показываем пояснение
+ * и пути без хранения. В локальном режиме политики нет.
+ */
+const SigningForbidden = () => {
+  const { t } = useTranslation("settings");
+  return (
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      data-testid="signing-forbidden"
+    >
+      <SettingHead
+        anchorId="signing"
+        title={t("signing.title")}
+        sub={t("signing.subtitle")}
+      />
+      <Notice
+        tone="info"
+        text={`${t("signing.forbiddenTitle")}. ${t("signing.forbiddenBody")}`}
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <strong style={{ fontSize: 12.5 }}>
+          {t("signing.forbiddenAltTitle")}
+        </strong>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 18,
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: "var(--fg-2)",
+          }}
+        >
+          <li>{t("signing.forbiddenAlt1")}</li>
+          <li>{t("signing.forbiddenAlt2")}</li>
+        </ul>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--fg-2)" }}>
+          {t("signing.forbiddenAsk")}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 export const SigningIdentitiesSection = () => {
+  const bootstrap = useBootstrap().data;
+  // Только серверный режим: в локальном personal_signing_keys всегда ложно и ничего не значит.
+  const forbidden =
+    bootstrap?.mode === "server" &&
+    !bootstrap.capabilities.personal_signing_keys;
+  return forbidden ? <SigningForbidden /> : <SigningIdentitiesList />;
+};
+
+const SigningIdentitiesList = () => {
   const { t } = useTranslation("settings");
   const { data: identities, isLoading } = useSigningIdentities();
   const [mode, setMode] = useState<Mode>("none");

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import structlog
 
-from hse_doc_studio.core.entities import SigningIdentity
+from hse_doc_studio.core.entities import SigningIdentity, SigningKeyMaterial
 from hse_doc_studio.core.enums import SigningIdentityKind
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISigningIdentityRepository
@@ -29,9 +29,9 @@ class ImportPkcs12Output:
 class ImportPkcs12UC:
     """Import a PKCS#12 (.p12 / .pfx) bundle as a signing identity.
 
-    Extracts the end-entity certificate, saves key + cert as PEM files in
-    data_dir/signing_keys/<id>/. The identity is marked `trusted=True` only
-    when the certificate chains to an externally-recognised root (which we
+    Extracts the end-entity certificate and hands key + cert (PEM) to the
+    repository, which decides where they live (data_dir/signing_keys/<id>/ locally).
+    The identity is marked `trusted=True` only when the certificate chains to an externally-recognised root (which we
     cannot verify offline without the full chain — so we set trusted=False and
     let the UI show an informational note; the user knows whether their cert
     came from a real УЦ).
@@ -49,8 +49,7 @@ class ImportPkcs12UC:
         identity_id = uuid.uuid4()
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        key_dir = self._repo.key_dir(identity_id)
-        subject_cn, not_after = _extract_and_save(inp.p12_bytes, inp.passphrase, key_dir)
+        subject_cn, not_after, material = _extract(inp.p12_bytes, inp.passphrase)
 
         identity = SigningIdentity(
             id=identity_id,
@@ -61,14 +60,14 @@ class ImportPkcs12UC:
             trusted=False,  # set to True manually if chain is verified
             created_at=now,
         )
-        self._repo.create(identity)
+        await self._repo.create(identity, material)
         logger.info("signing_identity: pkcs12 imported", id=str(identity_id), cn=subject_cn)
         return ImportPkcs12Output(identity=identity)
 
 
-def _extract_and_save(  # noqa: PLC0415
-    p12_bytes: bytes, passphrase: bytes | None, key_dir: object
-) -> tuple[str, datetime.datetime]:
+def _extract(  # noqa: PLC0415
+    p12_bytes: bytes, passphrase: bytes | None
+) -> tuple[str, datetime.datetime, SigningKeyMaterial]:
     from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
     from cryptography.hazmat.primitives.serialization import pkcs12  # noqa: PLC0415
     from cryptography.x509.oid import NameOID  # noqa: PLC0415
@@ -94,17 +93,12 @@ def _extract_and_save(  # noqa: PLC0415
     subject_cn = cn_value if isinstance(cn_value, str) else cn_value.decode("utf-8", errors="replace")
     not_after = cert.not_valid_after_utc
 
-    from pathlib import Path  # noqa: PLC0415
-
-    key_dir_path = Path(str(key_dir))
-    key_dir_path.mkdir(parents=True, exist_ok=True)
-
-    (key_dir_path / "key.pem").write_bytes(
-        private_key.private_bytes(
+    material = SigningKeyMaterial(
+        key_pem=private_key.private_bytes(
             serialization.Encoding.PEM,
             serialization.PrivateFormat.PKCS8,
             serialization.NoEncryption(),
-        )
+        ),
+        cert_pem=cert.public_bytes(serialization.Encoding.PEM),
     )
-    (key_dir_path / "cert.pem").write_bytes(cert.public_bytes(serialization.Encoding.PEM))
-    return subject_cn, not_after
+    return subject_cn, not_after, material

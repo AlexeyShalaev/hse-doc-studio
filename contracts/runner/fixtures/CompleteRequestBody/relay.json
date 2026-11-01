@@ -1,0 +1,13 @@
+{
+  "attempt": 1,
+  "result": {
+    "status": "succeeded",
+    "data": {
+      "status_code": 200,
+      "bytes_out": 18234,
+      "upstream_ms": 5321
+    },
+    "error": null
+  },
+  "artifacts": []
+}

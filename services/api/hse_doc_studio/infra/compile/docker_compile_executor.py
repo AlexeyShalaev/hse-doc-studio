@@ -7,6 +7,7 @@ import uuid
 from asyncio import subprocess as asubprocess
 from collections.abc import AsyncGenerator, Callable
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 import structlog
@@ -41,10 +42,17 @@ _TEXCOUNT_TOTAL_RE = re.compile(r"^\s*(\d+)\+(\d+)\+(\d+)\b")
 
 DEFAULT_IDLE_TIMEOUT_S = 120.0
 DEFAULT_IMAGE = "texlive/texlive:TL2024-historic"
+_NONROOT_TEX_ENV = (
+    ("HOME", "/tmp"),  # noqa: S108
+    ("TEXMFVAR", "/tmp/texmf-var"),  # noqa: S108
+    ("TEXMFCONFIG", "/tmp/texmf-config"),  # noqa: S108
+)
 DEFAULT_CACHE_VOLUME = "hse-tex-cache"
 DEFAULT_CACHE_TARGET = "/root"
 
 _PROCESS_TERMINATE_TIMEOUT_S = 5.0
+_CONTAINER_KILL_TIMEOUT_S = 15.0
+CONTAINER_NAME_PREFIX = "hds-build-"
 
 # Map our EngineType strings onto latexmk's mode-selector flags. Latexmk
 # decides how many engine + biber + makeindex passes to run; we just tell it
@@ -57,6 +65,50 @@ _ENGINE_FLAG = {
 
 
 ProcessCallback = Callable[[asubprocess.Process], None]
+
+
+@dataclass(frozen=True)
+class ExecutorLimits:
+    """Изоляция контейнера сборки на общем раннере; встроенный раннер работает без неё (None)."""
+
+    network_none: bool = True
+    read_only_rootfs: bool = True
+    tmpfs_tmp: str = "512m"
+    cpus: float | None = 2.0
+    memory: str | None = "4g"
+    pids_limit: int | None = 512
+    no_new_privileges: bool = True
+    cap_drop_all: bool = True
+    user: str | None = None
+
+    def docker_args(self) -> list[str]:
+        """Флаги `docker run`; кэш в `/root` это том, поэтому read-only корень ему не мешает."""
+        args: list[str] = []
+        if self.network_none:
+            args += ["--network", "none"]
+        if self.read_only_rootfs:
+            args += ["--read-only", "--tmpfs", f"/tmp:rw,exec,nosuid,size={self.tmpfs_tmp}"]  # noqa: S108
+        if self.cpus is not None:
+            args += ["--cpus", f"{self.cpus:g}"]
+        if self.memory is not None:
+            args += ["--memory", self.memory]
+        if self.pids_limit is not None:
+            args += ["--pids-limit", str(self.pids_limit)]
+        if self.no_new_privileges:
+            args += ["--security-opt", "no-new-privileges"]
+        return args + self._identity_args()
+
+    def _identity_args(self) -> list[str]:
+        args = ["--cap-drop", "ALL"] if self.cap_drop_all else []
+        if self.user is None:
+            return args
+        args += ["--user", self.user]
+        if self.read_only_rootfs:
+            # Не root: HOME образа это «/» на read-only корне, и mktexfmt не может собрать формат в /.texlive*.
+            # Кэш /root принадлежит root, поэтому каталоги TeX уходят в tmpfs /tmp.
+            for name, value in _NONROOT_TEX_ENV:
+                args += ["-e", f"{name}={value}"]
+        return args
 
 
 class DockerCompileExecutor:
@@ -91,8 +143,10 @@ class DockerCompileExecutor:
         fonts_host_dir: str | None = None,
         fonts_mount_target: str = "/usr/local/share/fonts/hse",
         artifacts: IArtifactStore | None = None,
+        limits: ExecutorLimits | None = None,
     ) -> None:
         self._artifacts = artifacts or LocalDiskArtifactStore()
+        self._limits = limits
         self._resolver = host_path_resolver
         self._image = image
         self._cache_volume_name = cache_volume_name
@@ -104,6 +158,21 @@ class DockerCompileExecutor:
         self._fonts_dir = fonts_dir
         self._fonts_host_dir = fonts_host_dir
         self._fonts_mount_target = fonts_mount_target
+
+    def _tex_launcher(self, engine: str) -> list[str]:
+        """Префикс команды: под не-root формат движка собирается заранее вне `-output-directory`.
+
+        При `-output-directory=<rel>` kpathsea отдаёт mktexfmt относительный TEXMFOUTPUT, и `xetex -ini` в
+        временном каталоге не может записать xelatex.log («I can't write on file»), формат не строится, latexmk
+        выходит с кодом 12. Каталоги TeX у не-root в tmpfs, поэтому формат нужен свежий на каждую сборку.
+        """
+        limits = self._limits
+        if limits is None or limits.user is None or not limits.read_only_rootfs:
+            return []
+        return ["sh", "-c", 'cd /tmp && fmtutil-user --byfmt "$0" >&2; cd "$OLDPWD" && exec "$@"', engine]
+
+    def _isolation_args(self) -> list[str]:
+        return self._limits.docker_args() if self._limits is not None else []
 
     def _fonts_mount_args(self) -> list[str]:
         """`-v <host_fonts>:<target>:ro` when the managed folder has fonts, else []."""
@@ -129,6 +198,7 @@ class DockerCompileExecutor:
         compile_id: uuid.UUID,
         image: str | None = None,
         on_process_started: ProcessCallback | None = None,
+        project_id: uuid.UUID | None = None,
     ) -> AsyncGenerator[str, None]:
         return self._stream(
             project_folder=project_folder,
@@ -139,6 +209,7 @@ class DockerCompileExecutor:
             compile_id=compile_id,
             image=image or self._image,
             on_process_started=on_process_started,
+            project_id=project_id,
         )
 
     async def _stream(  # noqa: C901, PLR0911, PLR0912, PLR0915
@@ -151,6 +222,7 @@ class DockerCompileExecutor:
         compile_id: uuid.UUID,
         image: str,
         on_process_started: ProcessCallback | None,
+        project_id: uuid.UUID | None,
     ) -> AsyncGenerator[str, None]:
         engine_flag = _ENGINE_FLAG.get(engine)
         if engine_flag is None:
@@ -186,10 +258,16 @@ class DockerCompileExecutor:
 
         yield (f"[compile:{compile_id}] {engine} via latexmk (max_repeat={max_iterations}, image={image})")
 
+        container = _container_name(compile_id)
+
         cmd = [
             docker_binary(),
             "run",
             "--rm",
+            "--init",
+            "--name",
+            container,
+            *self._isolation_args(),
             "-e",
             "TEXINPUTS=/work:",
             "-e",
@@ -209,6 +287,7 @@ class DockerCompileExecutor:
             "-w",
             workdir,
             image,
+            *self._tex_launcher(engine),
             "latexmk",
             engine_flag,
             "-interaction=nonstopmode",
@@ -252,14 +331,15 @@ class DockerCompileExecutor:
                 if not raw_line:
                     break
                 yield raw_line.decode("utf-8", errors="replace").rstrip()
-        except asyncio.CancelledError:
-            # Runner has issued cancel — make sure docker is killed before
-            # re-raising or the child container keeps running with /work
-            # mounted.
+        except BaseException:
+            # Отмена, остановка раннера или закрытие генератора: убиваем сам контейнер, а не CLI.
+            # Без этого `docker run` отцепляется, а PID 1 контейнера на SIGTERM не реагирует.
+            await _kill_container(container)
             await _terminate_process(proc)
             raise
 
         if timed_out:
+            await _kill_container(container)
             await _terminate_process(proc)
             _reset_latexmk_state(host_build_dir, stem)
             yield _SENTINEL_FAILED
@@ -291,7 +371,13 @@ class DockerCompileExecutor:
         # The move is retried inside the store (on Windows the target PDF may be
         # briefly locked by an antivirus scan, an indexer or an open viewer).
         outcome = await self._artifacts.publish_pdf(
-            PublishPdfRequest(workspace=project_folder, doc_id=doc_id, job_id=compile_id, source_file=source_file)
+            PublishPdfRequest(
+                workspace=project_folder,
+                doc_id=doc_id,
+                job_id=compile_id,
+                source_file=source_file,
+                project_id=project_id,
+            )
         )
         if not outcome.replaced:
             # A persistent lock (typically the PDF is open in a desktop viewer)
@@ -310,7 +396,7 @@ class DockerCompileExecutor:
         if pages is not None:
             yield f"{_SENTINEL_PAGES}{pages}"
 
-        counts = await self._run_texcount(host_project_path, workdir, image, src_basename)
+        counts = await self._run_texcount(host_project_path, workdir, image, src_basename, _container_name(compile_id))
         if counts is not None:
             words, chars = counts
             yield f"{_SENTINEL_WORDS}{words}:{chars}"
@@ -322,6 +408,7 @@ class DockerCompileExecutor:
         workdir: str,
         image: str,
         src_basename: str,
+        container: str,
     ) -> tuple[int, int] | None:
         """Prose word + character totals for the document, via texcount.
 
@@ -343,6 +430,10 @@ class DockerCompileExecutor:
             docker_binary(),
             "run",
             "--rm",
+            "--init",
+            "--name",
+            container,
+            *self._isolation_args(),
             "-v",
             f"{host_project_path}:/work:z",
             "-v",
@@ -362,7 +453,11 @@ class DockerCompileExecutor:
             )
             raw, _ = await asyncio.wait_for(proc.communicate(), timeout=self._idle_timeout_s)
         except (OSError, asyncio.TimeoutError):
+            await _kill_container(container)
             return None
+        except asyncio.CancelledError:
+            await _kill_container(container)
+            raise
         if not raw:
             return None
         words_block, _sep, chars_block = raw.decode("utf-8", errors="replace").partition(sep)
@@ -410,6 +505,35 @@ def _extract_log_page_count(log_path: Path) -> int | None:
         # "Output written on" phrase is unique, so unwrapping is safe.
         m = _LOG_PAGE_COUNT_RE.search(text.replace("\n", ""))
     return int(m.group(1)) if m is not None else None
+
+
+def _container_name(compile_id: uuid.UUID) -> str:
+    return f"{CONTAINER_NAME_PREFIX}{compile_id}-{uuid.uuid4().hex[:8]}"
+
+
+async def _docker_quiet(*args: str) -> str:
+    """Короткий вызов docker, которому нельзя падать: вывод или пустая строка."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            docker_binary(), *args, stdout=asubprocess.PIPE, stderr=asubprocess.DEVNULL
+        )
+        raw, _ = await asyncio.wait_for(proc.communicate(), timeout=_CONTAINER_KILL_TIMEOUT_S)
+    except (OSError, asyncio.TimeoutError):
+        return ""
+    return raw.decode("utf-8", errors="replace")
+
+
+async def _kill_container(name: str) -> None:
+    """Убивает контейнер по имени и ждёт; повторная отмена посреди ожидания не должна оставить его жить."""
+    await asyncio.shield(_docker_quiet("rm", "-f", name))
+
+
+async def sweep_build_containers() -> int:
+    """Удаляет контейнеры сборки, оставшиеся от прошлого запуска раннера."""
+    names = (await _docker_quiet("ps", "-aq", "--filter", f"name={CONTAINER_NAME_PREFIX}")).split()
+    if names:
+        await _docker_quiet("rm", "-f", *names)
+    return len(names)
 
 
 async def _terminate_process(proc: asubprocess.Process) -> None:

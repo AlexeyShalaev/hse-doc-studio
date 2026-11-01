@@ -90,7 +90,7 @@ class GetSettingsUC:
         self._capacity_probe = capacity_probe
 
     async def execute(self) -> GetSettingsOutput:
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         # Порядок склейки: статические дефолты → дефолты «по железу» → выбор
         # пользователя. Сохранённое значение всегда сильнее подсчитанного.
         merged = {**_DEFAULTS, **self._capacity_defaults(), **stored}

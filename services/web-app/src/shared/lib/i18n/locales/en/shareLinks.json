@@ -1,0 +1,110 @@
+{
+  "section": {
+    "title": "Link sharing",
+    "description": "Anyone who opens the link gets the chosen role without an invitation. Revoke the link and access is gone.",
+    "create": "Create link",
+    "createDisabled": "Only the owner and editors who may share can create links",
+    "createBlocked": "Links to this project are forbidden by policy",
+    "empty": "No links. Only members can see the project.",
+    "error": "Could not load links",
+    "showRevoked": "Show revoked ({{count}})",
+    "hideRevoked": "Hide revoked",
+    "forcedLogin": "Policy requires sign-in: links to this project open only for signed-in users."
+  },
+  "row": {
+    "sources": "Sources",
+    "loginRequired": "Sign-in required",
+    "password": "Password",
+    "until": "until {{date}}",
+    "expired": "Expired",
+    "revoked": "Revoked",
+    "noExpiry": "No expiry",
+    "author": "Created by {{name}}",
+    "visitsNone": "No visits yet",
+    "visits_one": "{{count}} visit",
+    "visits_other": "{{count}} visits",
+    "visitors_one": "{{count}} person",
+    "visitors_other": "{{count}} people",
+    "lastVisit": "last {{when}}",
+    "url": "Link address",
+    "actions": "Actions for link “{{label}}”",
+    "edit": "Edit",
+    "extend": "Extend",
+    "rotate": "Reissue",
+    "visitsAction": "Visits",
+    "revoke": "Revoke"
+  },
+  "blocked": {
+    "links_disabled": "Inactive: the administrator turned links off",
+    "org_links_off": "Inactive: the organization forbids links",
+    "org_role_cap": "Inactive: the organization limited the link role",
+    "nda": "Inactive: the project is under NDA, sign-in required"
+  },
+  "roles": {
+    "reader": "Reader",
+    "reviewer": "Reviewer",
+    "editor": "Editor"
+  },
+  "form": {
+    "createTitle": "New link",
+    "editTitle": "Edit link",
+    "label": "Label",
+    "labelPlaceholder": "For example, for the supervisor",
+    "labelHint": "Visible only to those who manage links",
+    "role": "Role",
+    "roleCapped": "Organization limit",
+    "editorWarning": "The guest will be able to change project files. History will keep their name.",
+    "sources": "Show sources and history",
+    "sourcesHint": "Without it a reader sees only the PDF",
+    "requireLogin": "Require sign-in",
+    "requireLoginHint": "Only signed-in users can open it",
+    "requireLoginForced": "Sign-in is required by NDA or the organization policy",
+    "password": "Password",
+    "passwordPlaceholder": "Not set",
+    "passwordKeep": "Leave empty to keep it",
+    "passwordHint": "8 to 128 characters",
+    "clearPassword": "Remove password",
+    "expiry": "Expiry",
+    "expiryNone": "No expiry",
+    "expiryDays_one": "{{count}} day",
+    "expiryDays_other": "{{count}} days",
+    "expiryKeep": "Keep",
+    "submitCreate": "Create",
+    "submitSave": "Save",
+    "cancel": "Cancel"
+  },
+  "created": {
+    "title": "Link created",
+    "description": "Send the address to the people you share the project with.",
+    "hint": "You can copy the link again from the list",
+    "done": "Done"
+  },
+  "rotate": {
+    "title": "Reissue the link?",
+    "text": "The old link stops working for everyone who opened it. Settings are kept.",
+    "confirm": "Reissue"
+  },
+  "revoke": {
+    "title": "Revoke the link?",
+    "text": "Everyone who opened the link loses access at once.",
+    "confirm": "Revoke"
+  },
+  "visits": {
+    "title": "Visits of link “{{label}}”",
+    "who": "Who",
+    "first": "First",
+    "last": "Last",
+    "opens": "Opens",
+    "guest": "Guest: {{name}}",
+    "guestNoName": "Unnamed guest",
+    "empty": "No visits yet",
+    "close": "Close"
+  },
+  "toast": {
+    "created": "Link “{{label}}” created",
+    "saved": "Link saved",
+    "rotated": "Link reissued",
+    "revoked": "Link revoked",
+    "copied": "Address copied"
+  }
+}

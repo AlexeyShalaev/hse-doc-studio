@@ -1,0 +1,8 @@
+{
+  "name": "CLI на ноутбуке",
+  "scopes": [
+    "api",
+    "git:read"
+  ],
+  "expires_in_days": 90
+}

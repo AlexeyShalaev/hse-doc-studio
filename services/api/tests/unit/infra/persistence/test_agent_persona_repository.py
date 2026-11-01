@@ -5,8 +5,13 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from hse_doc_studio.core.access.context import ActorRequired, set_current_actor
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import AgentPersona
-from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
+from hse_doc_studio.infra.persistence.agent_persona import (
+    ActorScopedAgentPersonaRepository,
+    JsonAgentPersonaRepository,
+)
 
 
 def _make_persona(label: str = "Ревьюер") -> AgentPersona:
@@ -80,3 +85,30 @@ def test__agent_persona_repo__delete_missing__returns_false(tmp_path: Path) -> N
 def test__agent_persona_repo__corrupted_file__returns_empty(tmp_path: Path) -> None:
     (tmp_path / "agent_personas.json").write_text("not json{{", encoding="utf-8")
     assert JsonAgentPersonaRepository(tmp_path).list_all() == []
+
+
+@pytest.mark.unit
+def test__actor_scoped_persona_repo__people_do_not_see_each_others_roles(tmp_path: Path) -> None:
+    repo = ActorScopedAgentPersonaRepository(tmp_path)
+    persona = _make_persona()
+
+    set_current_actor(Actor.user("alice"))
+    repo.create(persona)
+    assert repo.get(persona.id) == persona
+
+    set_current_actor(Actor.user("bob"))
+    assert repo.list_all() == []
+    assert repo.get(persona.id) is None
+    assert repo.delete(persona.id) is False
+
+    set_current_actor(Actor.user("alice"))
+    assert [p.id for p in repo.list_all()] == [persona.id]
+    set_current_actor(None)
+
+
+@pytest.mark.unit
+def test__actor_scoped_persona_repo__without_actor__raises(tmp_path: Path) -> None:
+    set_current_actor(None)
+
+    with pytest.raises(ActorRequired):
+        ActorScopedAgentPersonaRepository(tmp_path).list_all()

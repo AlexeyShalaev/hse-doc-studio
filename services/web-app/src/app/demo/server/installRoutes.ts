@@ -1,0 +1,437 @@
+import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
+import type { DemoResponse, DemoRoute } from "@shared/api/demo";
+import type { AdminSettingState } from "@entities/session";
+import type { DemoSharedProvider } from "./adminInstall";
+import { enumParam, invalidQuery, offsetList } from "./demoList";
+import { ownProviderView } from "./personalRunners";
+import { adminInstallOf, personalOf, type ServerDemoWorld } from "./world";
+
+const PROVIDER_TYPES = ["claude", "openai", "openai_compat", "ollama"] as const;
+
+// Демо админки: название и адрес, сборка, политика ключей подписи, общие ИИ-провайдеры.
+// Тела совпадают с contracts/server/fixtures. Правила как у настоящего API: только админ
+// установки (остальным 404), значения окружения не меняются (409 setting_locked), ключ
+// провайдера принимается на запись и не возвращается.
+//
+// Особые значения: имя провайдера с limit в начале даёт 429 rate_limited; имя с fail в начале
+// не проходит проверку моделей; публичный адрес не https (кроме localhost) даёт 422.
+
+const str = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
+const notFound = () => demoError(404, "not_found", "Not Found");
+const invalid = () => demoError(422, "input_invalid", "Invalid input");
+const locked = () =>
+  demoError(409, "setting_locked", "The value is set by the environment");
+
+const admin = (): AdminSettingState => ({ source: "admin", locked: false });
+
+const isHttpUrl = (value: string, secureOnly: boolean): boolean => {
+  try {
+    const url = new URL(value);
+    if (url.hostname === "") return false;
+    if (url.protocol === "https:") return true;
+    return (
+      !secureOnly ||
+      (url.protocol === "http:" &&
+        ["localhost", "127.0.0.1"].includes(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+};
+
+const TYPES = ["claude", "openai", "openai_compat"] as const;
+
+export const createInstallRoutes = (
+  getWorld: () => ServerDemoWorld,
+): DemoRoute[] => {
+  const guard = (): DemoResponse | null => {
+    const { user } = getWorld().bootstrap;
+    if (user === null)
+      return demoError(401, "auth_required", "Authentication required");
+    return user.is_instance_admin
+      ? null
+      : demoError(404, "not_found", "Not Found");
+  };
+  const guarded =
+    (handler: DemoRoute["handler"]): DemoRoute["handler"] =>
+    (req) =>
+      guard() ?? handler(req);
+  const state = () => adminInstallOf(getWorld());
+
+  // Значения runners.* по умолчанию; в env_locked флаг задан окружением, как у настоящего сервера.
+  // Правка админом записывается в s.build.fields и перекрывает умолчание.
+  const personalFields = (): Record<string, AdminSettingState> => {
+    const env = getWorld().scenario.installSeed === "env_locked";
+    const source: AdminSettingState = env
+      ? { source: "env", locked: true }
+      : { source: "default", locked: false };
+    return {
+      "runners.personal_enabled": source,
+      "runners.personal_wait_s": { source: "default", locked: false },
+      "runners.personal_max_per_user": { source: "default", locked: false },
+    };
+  };
+
+  const buildView = () => {
+    const personal = personalOf(getWorld());
+    const s = state();
+    return {
+      ...s.build,
+      personal_runners_enabled: personal.enabled,
+      personal_runner_wait_s: personal.waitS,
+      personal_runners_max_per_user: personal.maxPerUser,
+      fields: { ...personalFields(), ...s.build.fields },
+    };
+  };
+
+  /** Выключение личных раннеров видно людям в bootstrap, как на сервере. */
+  const syncPersonalBootstrap = (enabled: boolean) => {
+    const world = getWorld();
+    world.bootstrap = {
+      ...world.bootstrap,
+      capabilities: {
+        ...world.bootstrap.capabilities,
+        personal_runners: enabled,
+      },
+    };
+  };
+
+  /** Пользователь узнаёт политику из bootstrap: держим его в согласии с админкой. */
+  const syncBootstrap = () => {
+    const world = getWorld();
+    world.bootstrap = {
+      ...world.bootstrap,
+      capabilities: {
+        ...world.bootstrap.capabilities,
+        personal_signing_keys: state().signing.server_keys === "allowed",
+      },
+    };
+  };
+
+  const providerFrom = (
+    body: Record<string, unknown>,
+    base: DemoSharedProvider,
+  ): DemoSharedProvider | null => {
+    const next = { ...base };
+    if (typeof body.name === "string") next.name = body.name.trim();
+    if (
+      typeof body.type === "string" &&
+      (TYPES as readonly string[]).includes(body.type)
+    ) {
+      next.type = body.type as DemoSharedProvider["type"];
+    }
+    if (typeof body.base_url === "string") next.base_url = body.base_url.trim();
+    if (Array.isArray(body.models)) next.models = body.models.map(str);
+    if (typeof body.ssl_verify === "boolean") next.ssl_verify = body.ssl_verify;
+    if (typeof body.connect_timeout_s === "number") {
+      next.connect_timeout_s = body.connect_timeout_s;
+    }
+    if (typeof body.request_timeout_s === "number") {
+      next.request_timeout_s = body.request_timeout_s;
+    }
+    if (typeof body.api_key === "string" && body.api_key !== "") {
+      next.key_set = true;
+    }
+    if (body.clear_key === true) next.key_set = false;
+    if (next.name === "") return null;
+    if (next.type === "openai_compat" && next.base_url === "") return null;
+    return next;
+  };
+
+  return [
+    {
+      method: "GET",
+      pattern: "/settings/instance",
+      handler: guarded(() => demoJson(state().instance)),
+    },
+    {
+      method: "PUT",
+      pattern: "/settings/instance",
+      handler: guarded((req) => {
+        const s = state();
+        const body = (req.body ?? {}) as Record<string, unknown>;
+        const f = s.instance.fields;
+        for (const key of ["name", "public_url", "docs_url"] as const) {
+          if (body[key] != null && f[`instance.${key}`]?.locked)
+            return locked();
+        }
+        const next = { ...s.instance };
+        const fields = { ...f };
+        if (typeof body.name === "string") {
+          const name = body.name.trim();
+          if (name === "" || name.length > 120) return invalid();
+          next.name = name;
+          fields["instance.name"] = admin();
+        }
+        if (typeof body.public_url === "string") {
+          if (!isHttpUrl(body.public_url.trim(), true)) return invalid();
+          next.public_url = body.public_url.trim();
+          fields["instance.public_url"] = admin();
+        }
+        if (typeof body.docs_url === "string") {
+          const docs = body.docs_url.trim();
+          if (docs !== "" && !isHttpUrl(docs, false)) return invalid();
+          next.docs_url = docs === "" ? null : docs;
+          fields["instance.docs_url"] = admin();
+        }
+        s.instance = { ...next, fields };
+        return demoJson(s.instance);
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/settings/build",
+      handler: guarded(() => demoJson(buildView())),
+    },
+    {
+      method: "PUT",
+      pattern: "/settings/build",
+      handler: guarded((req) => {
+        const s = state();
+        const body = (req.body ?? {}) as Record<string, unknown>;
+        const f = s.build.fields;
+        if (body.timeout_s != null && f["build.timeout_s"]?.locked) {
+          return locked();
+        }
+        if (
+          body.artifact_retention_days != null &&
+          f["build.artifact_retention_days"]?.locked
+        ) {
+          return locked();
+        }
+        const next = { ...s.build };
+        const fields = { ...f };
+        if (typeof body.timeout_s === "number") {
+          if (
+            !Number.isInteger(body.timeout_s) ||
+            body.timeout_s < 30 ||
+            body.timeout_s > 3600
+          ) {
+            return invalid();
+          }
+          next.timeout_s = body.timeout_s;
+          fields["build.timeout_s"] = admin();
+        }
+        if (typeof body.artifact_retention_days === "number") {
+          const days = body.artifact_retention_days;
+          if (!Number.isInteger(days) || days < 1 || days > 365) {
+            return invalid();
+          }
+          next.artifact_retention_days = days;
+          fields["build.artifact_retention_days"] = admin();
+        }
+        // Личные раннеры живут в своём мире: их флаг видят и люди, и админка.
+        const personal = personalOf(getWorld());
+        const pf = personalFields();
+        if (
+          (body.personal_runners_enabled != null &&
+            pf["runners.personal_enabled"]?.locked) ||
+          (body.personal_runner_wait_s != null &&
+            pf["runners.personal_wait_s"]?.locked)
+        ) {
+          return locked();
+        }
+        if (typeof body.personal_runners_enabled === "boolean") {
+          personal.enabled = body.personal_runners_enabled;
+          fields["runners.personal_enabled"] = admin();
+          syncPersonalBootstrap(personal.enabled);
+        }
+        if (typeof body.personal_runner_wait_s === "number") {
+          const wait = body.personal_runner_wait_s;
+          if (!Number.isInteger(wait) || wait < 0 || wait > 60)
+            return invalid();
+          personal.waitS = wait;
+          fields["runners.personal_wait_s"] = admin();
+        }
+        if (typeof body.personal_runners_max_per_user === "number") {
+          const max = body.personal_runners_max_per_user;
+          if (!Number.isInteger(max) || max < 1 || max > 20) return invalid();
+          personal.maxPerUser = max;
+          fields["runners.personal_max_per_user"] = admin();
+        }
+        s.build = { ...next, fields };
+        return demoJson(buildView());
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/settings/signing",
+      handler: guarded(() => demoJson(state().signing)),
+    },
+    {
+      method: "PUT",
+      pattern: "/settings/signing",
+      handler: guarded((req) => {
+        const s = state();
+        const { server_keys: value } = (req.body ?? {}) as Record<
+          string,
+          unknown
+        >;
+        if (value == null) return demoJson(s.signing);
+        if (value !== "allowed" && value !== "forbidden") return invalid();
+        // Ключи не стираются: при запрете они лишь блокируются.
+        s.signing = { ...s.signing, server_keys: value };
+        syncBootstrap();
+        return demoJson(s.signing);
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/ai-providers",
+      handler: guarded((req) => {
+        const types = enumParam(req, "type", PROVIDER_TYPES);
+        if (types === null) return invalidQuery();
+        return offsetList(
+          req,
+          state().providers.filter(
+            (p) => types.length === 0 || types.includes(p.type),
+          ),
+          {
+            sort: {
+              name: (p: DemoSharedProvider) => p.name,
+              type: (p: DemoSharedProvider) => p.type,
+              created_at: (p: DemoSharedProvider) => p.created_at,
+            },
+            defaultSort: "created_at",
+            search: (p) => [p.name, p.base_url],
+            id: (p) => p.id,
+          },
+        );
+      }),
+    },
+    {
+      method: "POST",
+      pattern: "/ai-providers",
+      handler: guarded((req) => {
+        const body = (req.body ?? {}) as Record<string, unknown>;
+        if (str(body.name).trim().toLowerCase().startsWith("limit")) {
+          return demoError(429, "rate_limited", "Too many requests", {
+            retry_after: 20,
+          });
+        }
+        if (str(body.api_key) === "") return invalid();
+        const s = state();
+        const created = providerFrom(body, {
+          id: `aip_${Math.random().toString(36).slice(2, 10)}`,
+          name: "",
+          type: "claude",
+          base_url: "",
+          models: [],
+          key_set: false,
+          created_at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+          ssl_verify: true,
+          connect_timeout_s: 10,
+          request_timeout_s: 60,
+        });
+        if (!created) return invalid();
+        s.providers = [...s.providers, created];
+        return demoJson(created, 201);
+      }),
+    },
+    {
+      method: "PATCH",
+      pattern: "/ai-providers/:id",
+      handler: guarded((req) => {
+        const s = state();
+        const current = s.providers.find((p) => p.id === req.params.id);
+        if (!current) return notFound();
+        const updated = providerFrom(
+          (req.body ?? {}) as Record<string, unknown>,
+          current,
+        );
+        if (!updated) return invalid();
+        s.providers = s.providers.map((p) =>
+          p.id === current.id ? updated : p,
+        );
+        return demoJson(updated);
+      }),
+    },
+    {
+      method: "DELETE",
+      pattern: "/ai-providers/:id",
+      handler: guarded((req) => {
+        const s = state();
+        if (!s.providers.some((p) => p.id === req.params.id)) {
+          return notFound();
+        }
+        s.providers = s.providers.filter((p) => p.id !== req.params.id);
+        return demoNoContent();
+      }),
+    },
+    {
+      method: "POST",
+      pattern: "/ai-providers/:id/check",
+      handler: guarded((req) => {
+        const found = state().providers.find((p) => p.id === req.params.id);
+        if (!found) return notFound();
+        // Сбой провайдера приходит ответом ok=false, а не ошибкой запроса.
+        if (found.name.toLowerCase().startsWith("fail")) {
+          return demoJson({ ok: false, models: [], error: "ConnectError" });
+        }
+        return demoJson({
+          ok: true,
+          models: ["model-large", "model-small"],
+          error: null,
+        });
+      }),
+    },
+  ];
+};
+
+/**
+ * Маршрут пользователя (/api/v1): общие провайдеры в его списке. Ключа в ответе нет,
+ * `shared: true` отличает их от личных.
+ */
+export const createSharedProviderUserRoutes = (
+  getWorld: () => ServerDemoWorld,
+): DemoRoute[] => [
+  {
+    method: "GET",
+    pattern: "/ai-providers",
+    handler: () => {
+      const world = getWorld();
+      // Локальная Студия (сценарии local_remote_*): локальные провайдеры машины.
+      if (world.bootstrap.mode === "local") {
+        return demoJson(
+          personalOf(world).localProviders.map((p) => ({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            base_url: p.base_url,
+            models: p.type === "ollama" ? ["qwen2.5:7b"] : [],
+            has_api_key: p.type === "claude",
+            created_at: "2026-10-20T08:00:00Z",
+            ssl_verify: true,
+            connect_timeout_s: 10,
+            request_timeout_s: 60,
+          })),
+        );
+      }
+      if (world.bootstrap.user === null) {
+        return demoError(401, "auth_required", "Authentication required");
+      }
+      // Миры с личными раннерами знают источник: свои провайдеры впереди.
+      const withSources = world.scenario.personalSeed !== undefined;
+      const personal = withSources ? personalOf(world) : null;
+      const own = personal
+        ? personal.providers
+            .filter((p) => p.owner_id === world.bootstrap.user?.id)
+            .map((p) => ownProviderView(personal, p))
+        : [];
+      return demoJson([
+        ...own,
+        ...adminInstallOf(world).providers.map(
+          ({ key_set: _keySet, ...rest }) => ({
+            ...rest,
+            // Ключа пользователь не видит, но запись общая.
+            has_api_key: true,
+            shared: true,
+            ...(withSources ? { source: "instance", relay: null } : {}),
+          }),
+        ),
+      ]);
+    },
+  },
+];

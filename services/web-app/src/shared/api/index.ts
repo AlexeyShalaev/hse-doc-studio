@@ -1,5 +1,20 @@
-export { apiClient, ApiError } from "./client";
+export { apiClient, adminClient, createApiClient, ApiError } from "./client";
+export type { ApiClientOptions } from "./client";
+export {
+  getCsrfToken,
+  notifyUnauthorized,
+  setCsrfToken,
+  setUnauthorizedHandler,
+} from "./session";
 export { parseResp, SchemaParseError } from "./parse";
+export {
+  PickerItemSchema,
+  PickerPageSchema,
+  cursorPageOf,
+  listPageOf,
+} from "./listSchemas";
+export { startRedirectFlow } from "./redirectFlow";
+export { failureCode } from "./failure";
 export type {
   LocalizedString,
   DocumentStatus,

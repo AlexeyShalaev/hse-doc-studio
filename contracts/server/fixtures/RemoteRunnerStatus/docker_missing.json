@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "server_url": "https://studio.example.org",
+  "paired": true,
+  "runner_id": "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "runner_name": "MacBook Анны",
+  "state": "online",
+  "detail_code": null,
+  "running_jobs": 0,
+  "concurrency": 1,
+  "yield_to_local": true,
+  "docker": "missing",
+  "tex_image": "missing",
+  "ai_endpoints": [
+    {
+      "name": "ollama",
+      "provider_id": "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d",
+      "flavor": "ollama",
+      "url": "http://localhost:11434/v1",
+      "announced": false
+    }
+  ],
+  "pairing": null
+}

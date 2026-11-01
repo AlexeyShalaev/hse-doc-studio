@@ -134,8 +134,10 @@ describe("ссылки на страницы сервера", () => {
 describe("инструкции", () => {
   it("у каждого провайдера есть шаги для токена и для ключей", () => {
     for (const steps of [TOKEN_STEPS, KEY_STEPS, USER_KEY_STEPS]) {
-      for (const list of Object.values(steps)) {
-        expect(list.length).toBeGreaterThan(0);
+      for (const [provider, list] of Object.entries(steps)) {
+        // Сервер Студии выдаёт доступ входом по коду устройства, а не токеном или ключом.
+        if (provider === "hse_studio") expect(list).toEqual([]);
+        else expect(list.length).toBeGreaterThan(0);
       }
     }
   });

@@ -169,6 +169,8 @@ class GitCredential:
     last_used_at: datetime | None = None
     # Срок токена, если сервер его назвал при проверке; для ключей None.
     expires_at: datetime | None = None
+    # `device`: токен сервера HSE Doc Studio, полученный входом по коду; иначе введён человеком.
+    origin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -177,6 +179,18 @@ class CredentialUsage:
 
     project_id: UUID
     name: str
+
+
+@dataclass(frozen=True)
+class RemoteBinding:
+    """Привязка доступа к проекту: для какой схемы, хоста и порта владелец разрешил им пользоваться."""
+
+    project_id: UUID
+    credential_id: UUID
+    bound_by: str | None
+    scheme: str
+    host: str
+    port: int | None
 
 
 @dataclass(frozen=True)
@@ -201,6 +215,8 @@ class RemoteTarget:
     credential_id: UUID | None = None
     # Явное согласие на открытый http: токен пойдёт по сети без шифрования.
     insecure_http: bool = False
+    # Проект, чей это удалённый репозиторий: по нему сервер находит привязку доступа.
+    project_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -284,6 +300,9 @@ class GitOperation:
     finished_at: datetime | None = None
     result: SyncResult | CloneResult | None = None
     error: GitOperationError | None = None
+    # Ключ актора, начавшего операцию (`Actor.key`); None в локальном режиме и без запроса.
+    # Другим акторам операция не видна.
+    owner: str | None = None
 
 
 @dataclass(frozen=True)
@@ -418,6 +437,18 @@ class GitResult:
 
 
 @dataclass(frozen=True)
+class PdfUploadRecord:
+    """Итог последней выгрузки PDF на сервер Студии (docs/design/local-sync.md, P7)."""
+
+    doc_id: str
+    at: datetime
+    ok: bool
+    size: int | None = None
+    code: str | None = None
+    detail: str | None = None
+
+
+@dataclass(frozen=True)
 class SyncState:
     """Постоянное состояние синхронизации проекта (<git_dir>/hse-sync.json)."""
 
@@ -441,6 +472,11 @@ class SyncState:
     # На конце удалённой ветки проект записан более новой Студией: данные нельзя ни читать, ни писать.
     remote_schema_newer: bool = False
     remote_required_studio: str | None = None
+    # Автосинхронизация окна Студии; None значит «по умолчанию» (включена для проектов с сервера Студии).
+    auto_sync: bool | None = None
+    # Выгрузка PDF после локальной сборки; None: по умолчанию включена для проектов с сервера Студии.
+    pdf_upload: bool | None = None
+    last_pdf_upload: PdfUploadRecord | None = None
 
 
 @dataclass(frozen=True)

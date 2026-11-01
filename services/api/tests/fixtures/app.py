@@ -8,12 +8,17 @@ from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI, Request
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentProvider
 from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOllamaRuntime
 from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
 from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
+from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -23,6 +28,7 @@ from hse_doc_studio.core.repositories import (
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
+    ILocalSettingsReader,
     IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -41,6 +47,12 @@ from hse_doc_studio.core.setup import (
     MountProbeStatus,
     SetupEnvironment,
 )
+from hse_doc_studio.core.submission_archive import (
+    DisabledSubmissionArchive,
+    ISubmissionArchive,
+    ISubmissionAudit,
+    NoSubmissionAudit,
+)
 from hse_doc_studio.core.update.entities import UpdateFeedProbe
 from hse_doc_studio.core.update.repositories import (
     IReleaseNotesRepository,
@@ -48,8 +60,10 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateCheckRepository,
     IUpdateFeedGateway,
 )
+from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -60,6 +74,7 @@ from hse_doc_studio.infra.persistence.filesystem_browser import LocalFilesystemB
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_index import JsonProjectIndexRepository
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.persistence.settings import JsonSettingsRepository
 from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository
@@ -226,6 +241,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     setup_applier: ISetupApplier | None = None,
     packs_dir: Path | None = None,
     host_key_scanner: IHostKeyScanner | None = None,
+    remote_runner: IRemoteRunnerSupervisor | None = None,
 ) -> AsyncContainer:
     # A handful of providers (font store, office-editor JWT secret, compile host
     # mounts, the agent loop's rules file) read the module-level `settings.data_dir`
@@ -255,6 +271,16 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
             return JsonProjectIndexRepository(self._data_dir)
 
         @provide
+        def get_project_locator(
+            self, project_index: IProjectIndexRepository, project_repo: IProjectRepository
+        ) -> IProjectLocator:
+            return LocalProjectLocator(project_index, project_repo)
+
+        @provide
+        def get_project_access_checker(self) -> IProjectAccessChecker:
+            return LocalProjectAccessChecker()
+
+        @provide
         def get_template_repo(self) -> ITemplateRepository:
             repo = YamlTemplateRepository(packs_dir or _PACKS_DIR)
             repo.load()
@@ -281,6 +307,18 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
             return JsonPackSubmissionRepository()
 
         @provide
+        def get_project_quota(self) -> IProjectQuota:
+            return NoopProjectQuota()
+
+        @provide
+        def get_submission_archive(self) -> ISubmissionArchive:
+            return DisabledSubmissionArchive()
+
+        @provide
+        def get_submission_audit(self) -> ISubmissionAudit:
+            return NoSubmissionAudit()
+
+        @provide
         def get_file_repo(self) -> IFileRepository:
             return LocalFileRepository()
 
@@ -290,6 +328,10 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
 
         @provide
         def get_settings_repo(self) -> ISettingsRepository:
+            return JsonSettingsRepository(self._data_dir)
+
+        @provide
+        def get_local_settings_reader(self) -> ILocalSettingsReader:
             return JsonSettingsRepository(self._data_dir)
 
         @provide
@@ -356,6 +398,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         TestRepositoryProvider(data_dir),
         DomainServiceProvider(),
         UseCaseProvider(),
+        LocalRemoteRunnerProvider(),
         FastapiProvider(),
     ]
     if agent_provider is not None:
@@ -422,6 +465,17 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
 
         providers.append(_HostKeyScannerOverride())
 
+    if remote_runner is not None:
+        # Настоящий супервизор ходит на сервер и запускает цикл раннера: тесты облачных сборок подставляют свой.
+        class _RemoteRunnerOverride(Provider):
+            scope = Scope.APP
+
+            @provide(override=True)
+            def get_remote_runner(self) -> IRemoteRunnerSupervisor:
+                return remote_runner
+
+        providers.append(_RemoteRunnerOverride())
+
     return make_async_container(*providers)
 
 
@@ -441,6 +495,7 @@ def create_test_app(container: AsyncContainer) -> FastAPI:
         return await call_next(request)
 
     app.include_router(api_router)
+    include_server_routers(app)
     install_exception_handlers(app)
     setup_dishka(container, app)
     return app

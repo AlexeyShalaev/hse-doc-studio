@@ -8,6 +8,7 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.catalog import DocumentDefinition, TemplateVersion
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import DocumentStatus, ProjectStaffing, VcsCommitKind
@@ -69,8 +70,10 @@ class UpdateTeamSetUC:
         template_renderer: TemplateRenderer,
         vcs_service: IVcsService,
         base_service: TemplateBaseService | None = None,
+        acl: IProjectAclRepository | None = None,
     ) -> None:
         self._project_repo = project_repo
+        self._acl = acl
         self._template_repo = template_repo
         self._template_renderer = template_renderer
         self._vcs = vcs_service
@@ -112,6 +115,7 @@ class UpdateTeamSetUC:
             project.authors = [replace(a, managed=inp.enabled) if a.slug == author.slug else a for a in project.authors]
         else:
             project.shared_enabled = inp.enabled
+            await self._store_shared_flag(project.id, inp.enabled)
 
         project.updated_at = datetime.now(tz=timezone.utc)
         self._project_repo.save(project)
@@ -130,6 +134,11 @@ class UpdateTeamSetUC:
             enabled=inp.enabled,
         )
         return UpdateTeamSetOutput(project=project)
+
+    async def _store_shared_flag(self, project_id: UUID, enabled: bool) -> None:
+        # На сервере флаг влияет на права, поэтому сначала БД, а файл перезапишется её значением.
+        if self._acl is not None:
+            await self._acl.set_shared_enabled(project_id, enabled)
 
     async def _snapshot(self, project: Project, author: Author | None, *, enabled: bool) -> None:
         try:

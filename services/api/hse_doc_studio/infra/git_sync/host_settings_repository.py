@@ -65,15 +65,18 @@ class JsonGitHostSettingsRepository:
         self._trust_dir = data_dir / "git" / "trust"
         self._lock = threading.RLock()
 
-    def get(self, host: str, port: int | None) -> GitHostSettings | None:
+    async def get(self, host: str, port: int | None) -> GitHostSettings | None:
         wanted = host_settings_key(host, port)
-        return next((item for item in self.list() if item.key == wanted), None)
+        return next((item for item in await self.list() if item.key == wanted), None)
 
-    def list(self) -> _Items:
+    async def list(self) -> _Items:
         with self._lock:
             return self._read(for_write=False)
 
-    def save(self, settings: GitHostSettings) -> None:
+    async def materialize(self) -> None:
+        """Источник правды здесь сам файл JSON, а PEM собирается при обращении к `trust_file`."""
+
+    async def save(self, settings: GitHostSettings) -> None:
         with self._lock:
             kept = [item for item in self._read(for_write=True) if item.key != settings.key]
             if not settings.is_empty:
@@ -82,7 +85,10 @@ class JsonGitHostSettingsRepository:
         logger.info("git host settings saved", host=settings.host, port=settings.port, empty=settings.is_empty)
 
     def trust_file(self, host: str, port: int | None) -> Path | None:
-        settings = self.get(host, port)
+        with self._lock:
+            settings = next(
+                (item for item in self._read(for_write=False) if item.key == host_settings_key(host, port)), None
+            )
         if settings is None or not settings.has_trust:
             return None
         bundle = "".join(pem.rstrip("\n") + "\n" for pem in (settings.ca_pem, settings.pinned_pem) if pem)

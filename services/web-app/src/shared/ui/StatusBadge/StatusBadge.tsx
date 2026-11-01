@@ -30,7 +30,7 @@ export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   const labelKey = labelKeyByStatus[status];
   const label = labelKey ? t(labelKey) : "OK";
   return (
-    <span className={clsx("sev", sevClassByStatus[status], className)}>
+    <span className={clsx("sev sans", sevClassByStatus[status], className)}>
       {label}
     </span>
   );

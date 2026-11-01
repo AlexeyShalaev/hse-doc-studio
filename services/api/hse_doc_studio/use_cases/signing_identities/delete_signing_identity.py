@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -26,7 +25,7 @@ class DeleteSigningIdentityUC:
         self._keyring = keyring
 
     async def execute(self, inp: DeleteSigningIdentityInput) -> None:
-        identity = self._repo.get(inp.identity_id)
+        identity = await self._repo.get(inp.identity_id)
         if identity is None:
             raise NotFoundError(
                 localized_error(
@@ -35,18 +34,8 @@ class DeleteSigningIdentityUC:
                 )
             )
 
-        key_dir = self._repo.key_dir(inp.identity_id)
-        self._repo.delete(inp.identity_id)
+        await self._repo.delete(inp.identity_id)
         if identity.kind is SigningIdentityKind.openpgp and identity.fingerprint and self._keyring is not None:
             self._keyring.delete(identity.fingerprint)
-
-        # Remove key material AFTER the metadata is gone from the JSON so a
-        # partial failure (e.g. locked file on Windows) never leaves a dangling
-        # entry with broken key references.
-        if key_dir.exists():
-            try:
-                shutil.rmtree(key_dir)
-            except OSError as exc:
-                logger.warning("signing_identity: could not remove key dir", exc=str(exc), dir=str(key_dir))
 
         logger.info("signing_identity: deleted", id=str(inp.identity_id))

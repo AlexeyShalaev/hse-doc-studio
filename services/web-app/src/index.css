@@ -1097,7 +1097,7 @@
     color: var(--fg-0);
     border-color: transparent;
   }
-  .btn.outline {
+  .btn.btn-outline {
     background: transparent;
   }
   .btn.danger {
@@ -1641,6 +1641,32 @@
     background: var(--bg-1);
     color: var(--fg-0);
     box-shadow: var(--shadow-1);
+  }
+  /* Сегменты на всю ширину: подписи не обрезаются, переносятся. */
+  .seg.seg-fill {
+    display: flex;
+    width: 100%;
+  }
+  .seg.seg-fill button {
+    flex: 1 1 0;
+    min-width: 0;
+    height: auto;
+    min-height: 26px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  /* Подпись и пояснение поля в формах, собранных без <Input label>. */
+  .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-1);
+  }
+  .form-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--fg-3);
   }
 
   /* ── toggle ─────────────────────────────────────────────────── */
@@ -2905,6 +2931,18 @@
     max-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
+    /* Фон середины и кнопок не выходит за скруглённые углы. */
+    overflow: hidden;
+  }
+  /* Прокручиваемая середина окна: пока ниже есть содержимое, над кнопками
+     видна черта. Заплатка с attachment: local едет вместе с содержимым и
+     закрывает черту, когда прокрутили до конца или прокручивать нечего. */
+  .modal-body {
+    background:
+      linear-gradient(var(--bg-1), var(--bg-1)) bottom / 100% 6px no-repeat
+        local,
+      linear-gradient(var(--border-strong), var(--border-strong)) bottom / 100%
+        1px no-repeat scroll;
   }
 
   /* ── rendered markdown preview (e.g. NDA documents) ───────────── */
@@ -4587,4 +4625,2103 @@
 .setup-row:focus-visible {
   outline: 2px solid var(--c-info);
   outline-offset: -2px;
+}
+
+/* Мастер первого запуска: степпер с подписями на широком экране, строка
+   «Шаг N из 6» на узком. Свои классы по той же причине, что и выше. */
+.setup-progress-wide {
+  display: none;
+}
+.setup-progress-narrow {
+  display: block;
+}
+@media (min-width: 560px) {
+  .setup-progress-wide {
+    display: block;
+  }
+  .setup-progress-narrow {
+    display: none;
+  }
+}
+
+/* ── Админка: оболочка и набор блоков страниц ───────────────────────────────
+   Спокойная плотная консоль: sans везде, моноширинный только для машинных
+   значений. Классы без слоя, как у экрана первого запуска: так правила
+   оболочки перекрывают общие .chip/.sev внутри админки и не зависят от
+   порядка слоёв. Ширины страниц: --adm-wide для таблиц и сводок,
+   --adm-narrow для форм настроек. */
+:root {
+  --adm-wide: 1120px;
+  --adm-narrow: 760px;
+  --adm-gutter: 32px;
+  /* Одна ширина числового поля с единицей на всех страницах настроек. */
+  --adm-num-width: 96px;
+}
+
+/* Поля в консоли (страницы и окна админки): подпись 13px, поле, пояснение
+   12px сразу под полем. Окна получают .ui-console через UiVariantContext,
+   потому что рисуются в портале вне .adm-shell. */
+.ui-console .field {
+  gap: 6px;
+}
+/* Одна высота у полей, списков и кнопок в ряду: 32px, как у .btn. */
+.ui-console .input:not(textarea) {
+  height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+/* Стрелки числового поля наезжают на значение: число вводят с клавиатуры. */
+.ui-console input[type="number"].input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.ui-console input[type="number"].input::-webkit-inner-spin-button,
+.ui-console input[type="number"].input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ui-console .field > p[role="alert"] {
+  margin: -2px 0 0;
+  font-size: 12px;
+}
+.ui-console .field > label,
+.ui-console .form-label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-0);
+}
+.ui-console .field > .hint,
+.ui-console .form-hint {
+  margin: -2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.ui-console .seg {
+  background: var(--bg-2);
+}
+.ui-console .seg button {
+  font-size: 12.5px;
+  color: var(--fg-2);
+  border: 1px solid transparent;
+}
+.ui-console .seg button.active {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+  color: var(--fg-0);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+[data-theme="light"] .ui-console .seg button.active {
+  background: var(--bg-1);
+  box-shadow: 0 1px 2px rgba(15, 25, 60, 0.1);
+}
+
+/* Внутри админки чипы и метки статусов читаются как текст, а не как вывод
+   отладки. Машинные значения помечают классом .mono явно. */
+.adm-shell .chip:not(.mono),
+.chip.sans {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  letter-spacing: 0;
+  font-weight: 500;
+  height: 20px;
+  padding: 0 8px;
+}
+.adm-shell .sev,
+.sev.sans {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+}
+
+.adm-shell a.btn {
+  text-decoration: none;
+}
+
+/* ── навигация ── */
+.adm-nav {
+  width: 236px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg-1);
+  min-height: 0;
+}
+.adm-nav-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 10px 12px;
+}
+.adm-nav-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.adm-nav-mark {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-line);
+}
+.adm-nav-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-0);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-nav-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--fg-2);
+  min-width: 0;
+}
+.adm-nav-who > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-nav-group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.adm-nav-caption {
+  padding: 14px 10px 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.adm-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--r-2);
+  font-size: 13px;
+  color: var(--fg-1);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.08s,
+    color 0.08s;
+}
+.adm-nav-item > svg {
+  flex-shrink: 0;
+  color: var(--fg-2);
+}
+.adm-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.adm-nav-item.active {
+  background: var(--bg-3);
+  color: var(--fg-0);
+  font-weight: 500;
+}
+.adm-nav-item.active > svg {
+  color: var(--accent);
+}
+.adm-nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.adm-nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adm-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+/* ── панель фильтров над таблицей ── */
+.fbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  /* Первый ряд чипов по центру поля поиска, следующие ниже. */
+  align-items: flex-start;
+}
+.fbar-search {
+  position: relative;
+  flex: 0 1 300px;
+  min-width: 200px;
+}
+.fbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  /* Чипы переносятся внутри своей группы, а не выталкивают поиск. */
+  flex: 1 1 0;
+  min-width: 240px;
+  /* Чипы 26px по центру поля поиска 32px. */
+  padding-top: 3px;
+}
+.fbar-select {
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 8px;
+  padding-top: 0;
+}
+.fbar-select > .input {
+  width: auto;
+  min-width: 150px;
+}
+.fbar-caption {
+  font-size: 12px;
+  color: var(--fg-2);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+.fbar-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding-top: 3px;
+}
+.fbar-active {
+  flex: 1 0 100%;
+}
+/* ── поле поиска серверного списка ── */
+.search-input {
+  position: relative;
+}
+.search-input > .input {
+  width: 100%;
+  padding-left: 30px;
+  padding-right: 52px;
+}
+.search-input > .input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-3);
+  pointer-events: none;
+}
+.search-input-end {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-2);
+}
+.search-input-clear {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-1);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.search-input-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.search-input-clear:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* ── фильтр-кнопка с выпадающим списком ── */
+.fmenu {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  font-size: 12px;
+  color: var(--fg-1);
+  max-width: 320px;
+}
+.fmenu.is-active {
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.fmenu-trigger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 10px;
+  cursor: pointer;
+  min-width: 0;
+  border-radius: var(--r-pill);
+}
+.fmenu.is-active .fmenu-trigger {
+  padding-right: 4px;
+}
+.fmenu-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.fmenu-label {
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.fmenu.is-active .fmenu-label {
+  color: var(--fg-1);
+}
+.fmenu-sep {
+  margin-left: -4px;
+  color: var(--fg-2);
+}
+.fmenu-value {
+  color: var(--accent);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* Порядок не отбирает строки: значение обычным цветом, не как выбранный фильтр. */
+.fmenu.is-sort .fmenu-value {
+  color: var(--fg-0);
+}
+.fmenu.is-sort svg {
+  color: var(--fg-2);
+}
+.fmenu-clear {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 3px;
+  border-radius: 50%;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.fmenu-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.fmenu-clear:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.fmenu-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.fmenu-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-1);
+  font-size: 12.5px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.fmenu-item:hover,
+.fmenu-item:focus-visible {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.fmenu-box {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  color: var(--accent-ink);
+}
+.fmenu-box.is-radio {
+  border-radius: 50%;
+}
+.fmenu-box[data-on="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.fmenu-text {
+  flex: 1;
+  min-width: 0;
+}
+.fmenu-count {
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+.fmenu-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px;
+  border-top: 1px solid var(--border);
+}
+/* ── период в журналах ── */
+.drange-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 10px 4px;
+}
+.drange-presets > .chip {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.drange-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+/* ── выбранные условия под панелью фильтров ── */
+.factive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.factive-total {
+  color: var(--fg-2);
+  margin-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.factive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 4px 0 9px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  max-width: 280px;
+}
+.factive-name {
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.factive-value {
+  color: var(--fg-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.factive-chip > button {
+  all: unset;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.factive-chip > button:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.factive-chip > button:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* ── листание ── */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.pager-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.pager-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pager-icon {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+.pager-of {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Выше правила .ui-console .input: кнопки листания ниже обычных полей. */
+.pager .pager-input.input {
+  box-sizing: border-box;
+  height: 26px;
+  min-height: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pager .pager-size > .input.input {
+  box-sizing: border-box;
+  height: 26px;
+  min-height: 0;
+  padding-block: 0;
+  font-size: 12px;
+  min-width: 110px;
+}
+.pager-end {
+  color: var(--fg-3);
+}
+/* Подсказка о сортировке видна при наведении на заголовок. */
+.dt-sort-hint {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+th:hover .dt-sort-hint,
+th button:focus-visible .dt-sort-hint {
+  opacity: 0.6;
+}
+/* ── пикер: поиск на сервере ── */
+.picker-field {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.picker-trigger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.picker-trigger-detail {
+  color: var(--fg-2);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.picker-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--fg-2);
+}
+.picker-field:has(.picker-clear) .picker-chevron {
+  margin-right: 22px;
+}
+.picker-clear {
+  all: unset;
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-1);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.picker-clear:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.picker-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, var(--radix-popover-content-available-height, 420px));
+}
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-3);
+}
+.picker-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-0);
+  font-size: 12.5px;
+  outline: none;
+}
+.picker-input::placeholder {
+  color: var(--fg-3);
+}
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.picker-option.is-active {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.picker-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.picker-option-name,
+.picker-option-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-option-detail {
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+.picker-kind {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-1);
+  background: var(--bg-2);
+  color: var(--fg-2);
+}
+.picker-note {
+  padding: 14px 12px;
+  text-align: center;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.picker-note.is-error {
+  color: var(--c-err);
+}
+.picker-more {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--fg-2);
+}
+/* ── секрет, показанный один раз ── */
+.secret-once {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-color: color-mix(in oklch, var(--c-warn) 45%, transparent);
+}
+.secret-once-warning {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+/* В окне рамка уже есть: без второй рамки, предупреждение тонированной полосой. */
+.modal-panel .secret-once {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.modal-panel .secret-once-warning {
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  background: var(--c-warn-soft);
+  color: var(--fg-1);
+}
+
+/* Точка без числа: «здесь проблема», когда считать нечего. */
+.adm-count[data-dot] {
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+}
+.adm-count[data-dot][data-tone="danger"] {
+  background: var(--c-err);
+}
+.adm-count[data-tone="accent"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.adm-count[data-tone="warning"] {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.adm-count[data-tone="danger"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.adm-nav-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.adm-nav-version {
+  padding: 4px 10px 0;
+  font-size: 11px;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+/* На узком окне навигация сжимается до значков, подписи уходят в подсказки. */
+@media (max-width: 1024px) {
+  .adm-nav {
+    width: 60px;
+  }
+  .adm-nav-head {
+    justify-content: center;
+    padding: 12px 0;
+  }
+  .adm-nav-head-text,
+  .adm-nav-label,
+  .adm-nav-version {
+    display: none;
+  }
+  .adm-nav-scroll,
+  .adm-nav-foot {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .adm-nav-caption {
+    height: 1px;
+    padding: 0;
+    margin: 9px 6px;
+    background: var(--border);
+    font-size: 0;
+  }
+  .adm-nav-item {
+    justify-content: center;
+    padding: 0;
+    height: 34px;
+  }
+  /* В полосе значков число не помещается и закрывает значок: вместо него
+     точка в углу, справа от значка, а число читается в подсказке. */
+  .adm-nav-item .adm-count {
+    position: absolute;
+    top: 7px;
+    right: 6px;
+    min-width: 7px;
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    font-size: 0;
+    background: var(--fg-2);
+    box-shadow: 0 0 0 2px var(--bg-1);
+  }
+  .adm-nav-item .adm-count > [aria-hidden="true"] {
+    display: none;
+  }
+  .adm-nav-item .adm-count[data-tone="accent"] {
+    background: var(--accent);
+  }
+  .adm-nav-item .adm-count[data-tone="warning"] {
+    background: var(--c-warn);
+  }
+  .adm-nav-item .adm-count[data-tone="danger"] {
+    background: var(--c-err);
+  }
+  :root {
+    --adm-gutter: 24px;
+  }
+}
+/* На телефоне поля страницы уже, чтобы таблицам осталось место рядом с полосой значков. */
+@media (max-width: 640px) {
+  :root {
+    --adm-gutter: 12px;
+  }
+}
+
+/* ── страница ── */
+.adm-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.adm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-height: 100%;
+  padding: 28px var(--adm-gutter) 32px;
+  max-width: calc(var(--adm-wide) + 2 * var(--adm-gutter));
+}
+.adm-page[data-width="narrow"] {
+  max-width: calc(var(--adm-narrow) + 2 * var(--adm-gutter));
+}
+.adm-page[data-width="full"] {
+  max-width: none;
+}
+.adm-pagehead {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.adm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.adm-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.adm-header h1 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg-0);
+}
+.adm-header-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-2);
+  max-width: 72ch;
+}
+.adm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.adm-tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.adm-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 2px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.1s,
+    border-color 0.1s;
+}
+.adm-tab:hover {
+  color: var(--fg-0);
+}
+.adm-tab[aria-selected="true"] {
+  color: var(--fg-0);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+.adm-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--r-1);
+}
+
+/* ── раздел и строки настроек ── */
+.adm-section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  min-width: 0;
+}
+.adm-section[data-variant="plain"] {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.adm-section-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+.adm-section[data-variant="plain"] .adm-section-head {
+  padding: 0 0 12px;
+}
+.adm-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Текст ghost-кнопки встаёт по правому краю содержимого, а не её подложки. */
+.adm-section-actions > .btn.ghost:last-child,
+.adm-header-actions > .btn.ghost:last-child {
+  margin-right: -10px;
+}
+.adm-section-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fg-0);
+}
+.adm-section-desc {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+.adm-section-body {
+  padding: 12px 20px 16px;
+  min-width: 0;
+}
+.adm-section[data-variant="plain"] .adm-section-body {
+  padding: 0;
+}
+.adm-section-body[data-flush="true"] {
+  padding: 12px 0 0;
+}
+.adm-section-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elev);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.adm-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 24px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.adm-setting:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+.adm-setting:last-child {
+  padding-bottom: 0;
+}
+.adm-setting[data-layout="stacked"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.adm-setting-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-0);
+}
+.adm-setting-hint {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+.adm-hint-link {
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.adm-hint-link:hover {
+  text-decoration: underline;
+}
+.adm-hint-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--r-1);
+}
+.adm-setting-control {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.adm-setting-control[data-align="stretch"] {
+  justify-content: stretch;
+}
+.adm-setting-control[data-align="stretch"] > * {
+  flex: 1;
+  min-width: 0;
+}
+.adm-setting[data-layout="stacked"] .adm-setting-control {
+  justify-content: flex-start;
+}
+.adm-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: help;
+}
+.adm-setting-label-text {
+  min-width: 0;
+}
+.adm-setting-label > .adm-lock {
+  flex-shrink: 0;
+}
+.adm-lock[data-style="icon"] {
+  width: 20px;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+  color: var(--fg-2);
+}
+.adm-lock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@container (max-width: 560px) {
+  .adm-setting {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .adm-setting-control {
+    justify-content: flex-start;
+  }
+}
+
+/* ── панель сохранения ── */
+.adm-savebar-slot {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  margin-top: auto;
+  padding: 12px 0 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.adm-savebar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(620px, 100%);
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-2);
+  box-shadow: var(--shadow-pop);
+  animation: adm-rise 160ms var(--ease);
+}
+.adm-savebar-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--fg-0);
+}
+.adm-savebar-text[data-error="true"] {
+  color: var(--c-err);
+}
+/* Ошибки полей отдельной строкой под счётчиком, вровень с его текстом. */
+.adm-savebar-issue {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding-left: 14px;
+  font-size: 12.5px;
+  color: var(--c-err);
+  min-width: 0;
+}
+.adm-savebar-reveal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.adm-savebar-reveal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+@keyframes adm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── страницы настроек: выключатель, выбор карточками, поле с единицей ── */
+.adm-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.adm-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Поле, заданное окружением: без заливки ввода, пунктирная рамка, текст
+   приглушён, замок внутри справа. Фокус не подсвечивает его как поле ввода. */
+.input-locked-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.input[data-locked="true"] {
+  background: var(--bg-1);
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--fg-2);
+  cursor: default;
+  padding-right: 32px;
+}
+.input[data-locked="true"]:focus {
+  background: var(--bg-1);
+  border-color: var(--border-strong);
+  outline: none;
+  box-shadow: none;
+}
+.input-lock {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--fg-2);
+  cursor: help;
+  border-radius: var(--r-1);
+}
+.input-lock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.adm-unit .input[data-locked="true"] {
+  padding-right: 28px;
+}
+.adm-unit .input-lock {
+  right: 8px;
+}
+/* Под полем ошибка или пометка: подпись строки держится у верха поля. */
+.adm-setting:has(.adm-setting-control [role="alert"], .adm-fields > * + *) {
+  align-items: start;
+}
+.adm-setting-control .field > p {
+  margin: 0;
+}
+.adm-setting-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 14px;
+}
+.adm-setting-extra:last-child {
+  padding-bottom: 0;
+}
+.adm-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.adm-fields-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.adm-fields-row > .field:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.adm-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.adm-unit .input {
+  width: var(--adm-num-width);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adm-unit-label {
+  min-width: 48px;
+}
+.adm-field-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--c-err);
+}
+.adm-field-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.adm-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+@container (max-width: 520px) {
+  .adm-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.adm-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  cursor: pointer;
+  transition:
+    border-color 0.1s,
+    background 0.1s;
+}
+.adm-choice:hover {
+  border-color: var(--border-strong);
+}
+.adm-choice[data-active="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.adm-choice[data-disabled="true"] {
+  cursor: default;
+}
+.adm-choice[data-disabled="true"]:not([data-active="true"]) {
+  opacity: 0.55;
+}
+.adm-choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.adm-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.adm-choice-mark {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fg-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.adm-choice[data-active="true"] .adm-choice-mark {
+  border-color: var(--accent);
+}
+.adm-choice[data-active="true"] .adm-choice-mark::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.adm-choice-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-0);
+  line-height: 1.35;
+}
+.adm-choice-body {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+/* ── строка списка с меню действий (провайдеры) ── */
+.adm-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 20px;
+  min-width: 0;
+}
+.adm-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.adm-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-0);
+  min-width: 0;
+}
+.adm-item-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.adm-item-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.adm-dotsep {
+  white-space: nowrap;
+}
+.adm-dotsep::before {
+  content: "·";
+  margin: 0 6px;
+  color: var(--fg-3);
+}
+@container (max-width: 520px) {
+  .adm-item {
+    flex-wrap: wrap;
+  }
+  .adm-item-meta {
+    order: 3;
+    width: 100%;
+    padding-left: 42px;
+  }
+}
+
+/* ── журнал аудита: дни, строки событий, подробности ── */
+.adm-audit {
+  container-type: inline-size;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+  min-width: 0;
+}
+.adm-audit-day + .adm-audit-day {
+  border-top: 1px solid var(--border);
+}
+.adm-audit-dayhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.adm-audit-day:first-child .adm-audit-dayhead {
+  border-radius: var(--r-3) var(--r-3) 0 0;
+}
+.adm-audit-dayhead > span:last-child {
+  font-weight: 400;
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.adm-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adm-audit-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.adm-audit-row {
+  display: grid;
+  /* Время во всю длину «52 минуты назад» / «52 minutes ago»: правый край ровный. */
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 190px) 124px 16px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px 10px 20px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+.adm-audit-row:hover {
+  background: var(--bg-hover);
+}
+.adm-audit-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.adm-audit-row[aria-expanded="true"] {
+  background: var(--bg-elev);
+}
+.adm-audit-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+.adm-audit-icon[data-tone="danger"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.adm-audit-icon[data-tone="warning"] {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.adm-audit-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.adm-audit-title {
+  font-size: 13px;
+  color: var(--fg-0);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-audit-target {
+  color: var(--fg-2);
+}
+.adm-audit-sub {
+  font-size: 12px;
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-audit-sub[data-mobile] {
+  display: none;
+}
+.adm-audit-time {
+  font-size: 12px;
+  color: var(--fg-2);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.adm-audit-chevron {
+  color: var(--fg-3);
+  transition: transform 0.12s var(--ease);
+}
+.adm-audit-row[aria-expanded="true"] .adm-audit-chevron {
+  transform: rotate(90deg);
+  color: var(--fg-1);
+}
+.adm-audit-details {
+  padding: 4px 20px 14px 60px;
+  background: var(--bg-elev);
+}
+.adm-audit-details .adm-kv {
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+  gap: 6px 20px;
+  max-width: 560px;
+}
+.adm-audit-details .adm-kv dd {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* «Все действия этого человека»: текст кнопок по краю подписей подробностей. */
+.adm-audit-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 0 -10px;
+}
+.adm-audit-foot {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+@container (max-width: 620px) {
+  .adm-audit-row {
+    grid-template-columns: 28px minmax(0, 1fr) 116px 16px;
+  }
+  .adm-audit-row > .adm-person {
+    display: none;
+  }
+  .adm-audit-sub[data-mobile] {
+    display: block;
+  }
+  .adm-audit-details {
+    padding-left: 20px;
+  }
+}
+
+/* ── сводные плитки ── */
+.adm-kpi-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.adm-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+a.adm-kpi:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+a.adm-kpi:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.adm-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.adm-kpi-label > svg {
+  flex-shrink: 0;
+}
+.adm-kpi-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-0);
+  white-space: nowrap;
+}
+.adm-kpi-unit {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-2);
+}
+.adm-kpi-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-2);
+  min-height: 17px;
+}
+/* Тон строки передаёт точка, текст остаётся контрастным в обеих темах. */
+.adm-kpi-sub:not([data-tone="neutral"]) {
+  color: var(--fg-1);
+}
+.adm-kpi-sub[data-tone="danger"][role="alert"] {
+  color: var(--c-err);
+}
+.adm-meter {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.adm-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 300ms var(--ease);
+}
+.adm-meter[data-tone="success"] > span {
+  background: var(--c-ok);
+}
+.adm-meter[data-tone="warning"] > span {
+  background: var(--c-warn);
+}
+.adm-meter[data-tone="danger"] > span {
+  background: var(--c-err);
+}
+
+/* ── состояния: пусто, ошибка, загрузка ── */
+.adm-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 40px 20px;
+}
+.adm-state[data-framed="true"] {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-3);
+}
+.adm-state-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--fg-2);
+}
+.adm-state[data-tone="danger"] .adm-state-icon {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.adm-state-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.adm-state-desc {
+  margin: 0;
+  max-width: 420px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+.adm-state-action {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+.adm-state[data-compact="true"] {
+  flex-direction: row;
+  text-align: left;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.adm-state[data-compact="true"] .adm-state-icon {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.adm-state[data-compact="true"] .adm-state-text {
+  flex: 1;
+  min-width: 0;
+}
+.adm-state[data-compact="true"] .adm-state-action {
+  margin: 0;
+}
+.adm-skel {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-3) 0%,
+    var(--bg-2) 50%,
+    var(--bg-3) 100%
+  );
+  background-size: 200% 100%;
+  animation: adm-skel 1.4s ease-in-out infinite;
+}
+@keyframes adm-skel {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-skel,
+  .adm-savebar {
+    animation: none;
+  }
+}
+
+/* ── человек: аватар, имя, почта ── */
+.adm-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+.adm-person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.adm-person-name {
+  font-size: 13px;
+  color: var(--fg-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-person-name[data-unknown="true"] {
+  color: var(--fg-2);
+}
+.adm-person-sub {
+  font-size: 12px;
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  user-select: none;
+  color: var(--adm-av, var(--fg-1));
+  background: color-mix(in oklch, var(--adm-av, var(--fg-3)) 18%, var(--bg-2));
+}
+
+/* ── меню действий строки ── */
+.adm-menu {
+  z-index: 60;
+  min-width: 190px;
+  padding: 4px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-pop);
+  animation: editor-menu-in 120ms var(--ease);
+}
+.adm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--r-2);
+  font-size: 13px;
+  color: var(--fg-0);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+.adm-menu-item > svg {
+  color: var(--fg-2);
+  flex-shrink: 0;
+}
+.adm-menu-item[data-highlighted] {
+  background: var(--bg-hover);
+}
+.adm-menu-item[data-danger="true"],
+.adm-menu-item[data-danger="true"] > svg {
+  color: var(--c-err);
+}
+.adm-menu-item[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.adm-menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+/* ── строки списка внутри раздела ── */
+.adm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adm-list > li + li {
+  border-top: 1px solid var(--border);
+}
+/* Поиск и фильтры над списком внутри раздела (провайдеры входа). */
+.adm-section-toolbar {
+  padding: 0 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+/* Листание под списком-карточками (провайдеры): та же линия, что между строками. */
+.adm-list-pager {
+  padding: 10px 12px 10px 20px;
+  border-top: 1px solid var(--border);
+}
+.adm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+a.adm-row,
+button.adm-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+a.adm-row:hover,
+button.adm-row:hover {
+  background: var(--bg-hover);
+}
+a.adm-row:focus-visible,
+button.adm-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.adm-row-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+.adm-row-icon[data-tone="success"] {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+.adm-row-icon[data-tone="warning"] {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.adm-row-icon[data-tone="danger"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.adm-row-icon[data-tone="info"],
+.adm-row-icon[data-tone="accent"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.adm-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.adm-row-title {
+  font-size: 13px;
+  color: var(--fg-0);
+  line-height: 1.35;
+}
+.adm-row-desc {
+  font-size: 12px;
+  color: var(--fg-2);
+  line-height: 1.45;
+}
+.adm-row-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.adm-row-chevron {
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+a.adm-row:hover .adm-row-chevron {
+  color: var(--fg-1);
+}
+
+/* ── сводка: две колонки, на узком окне одна ── */
+.adm-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.adm-overview-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .adm-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.adm-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.adm-kv dt {
+  color: var(--fg-2);
+}
+.adm-kv dd {
+  margin: 0;
+  color: var(--fg-0);
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

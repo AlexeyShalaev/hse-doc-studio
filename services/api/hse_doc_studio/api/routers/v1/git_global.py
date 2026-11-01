@@ -9,9 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
+from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.git_mapping import map_operation, map_probe, map_provider_info, map_token_info
 from hse_doc_studio.api.schemas.git_sync import (
     CloneDefaultsResponse,
@@ -38,6 +40,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import GitCredentialKind
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.secret import Secret
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.use_cases.git_sync.bundles import BundleScratch, CloneFromBundleInput, CloneFromBundleUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectInput, CloneProjectUC, GetCloneDefaultsUC
@@ -67,7 +70,7 @@ from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetO
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeInput, ProbeRemoteUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderInput, DetectSharedFolderUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_credential(view: CredentialView) -> GitCredentialResponse:
@@ -85,6 +88,7 @@ def _map_credential(view: CredentialView) -> GitCredentialResponse:
         created_at=credential.created_at,
         last_used_at=credential.last_used_at,
         expires_at=credential.expires_at,
+        origin="device" if credential.origin == "device" else None,
         used_by=[GitCredentialUsage(project_id=u.project_id, name=u.name) for u in view.used_by],
     )
 
@@ -311,7 +315,9 @@ async def get_git_clone_defaults(
     name: str | None = Query(default=None, max_length=256),
 ) -> CloneDefaultsResponse:
     """Свободная папка под клон, в терминах хозяина машины: как её видит пользователь."""
-    return CloneDefaultsResponse(folder=paths.display(str(await uc.execute(name))))
+    folder = await uc.execute(name)
+    # Путь тома сервера клиенту не показывается: на сервере папку выбирает сам сервер.
+    return CloneDefaultsResponse(folder="" if settings.mode is StudioMode.server else paths.display(str(folder)))
 
 
 @router.get("/git/operations/{operation_id}", response_model=OperationResponse)

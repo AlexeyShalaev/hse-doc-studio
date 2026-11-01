@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from hse_doc_studio.api.config import AgentConfig, settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.entities import (
     AgentToolContext,
     NormalizedTurn,
@@ -28,6 +29,7 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.services import ChatContextService
 from hse_doc_studio.infra.ai.agent.approval import ConfigApprovalGate
 from hse_doc_studio.infra.ai.agent.run_bus import AgentRunBus
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.chat import JsonChatRepository
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
@@ -40,12 +42,12 @@ def _ai_provider() -> AIProvider:
     )
 
 
-def _seed_session(repo: JsonChatRepository, folder: Path, text: str = "привет") -> ChatSession:
+async def _seed_session(repo: JsonChatRepository, folder: Path, text: str = "привет") -> ChatSession:
     session = ChatSession(
         id=uuid4(), project_folder=folder, title="t", doc_id=None, created_at=_now(), updated_at=_now()
     )
-    repo.save_session(session)
-    repo.append_message(
+    await repo.save_session(session)
+    await repo.append_message(
         folder,
         ChatMessage(
             id=uuid4(),
@@ -64,8 +66,10 @@ class _FakeProvider:
     def __init__(self, turns: list[NormalizedTurn]) -> None:
         self._turns = turns
         self._i = 0
+        self.project_ids: list[UUID | None] = []
 
-    async def run_turn(self, *, sink: Any = None, **_: Any) -> NormalizedTurn:
+    async def run_turn(self, *, sink: Any = None, project_id: UUID | None = None, **_: Any) -> NormalizedTurn:
+        self.project_ids.append(project_id)
         turn = self._turns[self._i]
         self._i += 1
         if sink is not None and turn.text:
@@ -76,9 +80,13 @@ class _FakeProvider:
 class _FakeSummarizer:
     def __init__(self) -> None:
         self.called = False
+        self.project_id: UUID | None = None
 
-    async def summarize(self, messages: Any, prior: Any, model: str, provider: AIProvider) -> str:
+    async def summarize(
+        self, messages: Any, prior: Any, model: str, provider: AIProvider, project_id: UUID | None = None
+    ) -> str:
         self.called = True
+        self.project_id = project_id
         return "КРАТКОЕ СОДЕРЖАНИЕ"
 
 
@@ -118,6 +126,7 @@ def _make_loop(
     config: AgentConfig | None = None,
     context_service: ChatContextService | None = None,
     summarizer: Any = None,
+    access: IProjectAccessChecker | None = None,
 ) -> AgentLoop:
     return AgentLoop(
         provider=provider,
@@ -128,6 +137,7 @@ def _make_loop(
         chat_repo=repo,
         bus=bus or AgentRunBus(),
         config=config or settings.agent,
+        access=access or LocalProjectAccessChecker(),
         context_service=context_service,
         summarizer=summarizer,
     )
@@ -135,7 +145,7 @@ def _make_loop(
 
 async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_events(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path)
+    session = await _seed_session(repo, tmp_path)
     bus = AgentRunBus()
     provider = _FakeProvider(
         [
@@ -155,9 +165,10 @@ async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_e
     )
     loop = _make_loop(repo, provider, ToolRegistry([_EchoTool().definition()]), bus=bus)
     run_id = uuid4()
+    project_id = uuid4()
 
     result = await loop.run(
-        project_id=uuid4(),
+        project_id=project_id,
         project_folder=tmp_path,
         session_id=session.id,
         run_id=run_id,
@@ -168,8 +179,10 @@ async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_e
     assert result.status == AgentRunStatus.succeeded
     assert result.iterations == 2
     assert result.usage.total_tokens == 18
+    # Проект чата доходит до провайдера: ретрансляция через раннер пишет его в задачу очереди.
+    assert provider.project_ids == [project_id, project_id]
 
-    messages = repo.list_messages(tmp_path, session.id)
+    messages = await repo.list_messages(tmp_path, session.id)
     assert [m.role.value for m in messages] == ["user", "assistant", "tool", "assistant"]
     assert messages[2].blocks[0].result == "echoed: hi"
     assert messages[3].blocks[0].text == "готово"
@@ -184,7 +197,7 @@ async def test__run__read_tool_call_then_finish__persists_transcript_and_emits_e
 
 async def test__run__unknown_tool_requested__reported_as_tool_error_not_fatal(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path, "go")
+    session = await _seed_session(repo, tmp_path, "go")
     provider = _FakeProvider(
         [
             NormalizedTurn(
@@ -208,14 +221,14 @@ async def test__run__unknown_tool_requested__reported_as_tool_error_not_fatal(tm
     )
 
     assert result.status == AgentRunStatus.succeeded
-    tool_msg = repo.list_messages(tmp_path, session.id)[2]
+    tool_msg = (await repo.list_messages(tmp_path, session.id))[2]
     assert tool_msg.blocks[0].is_error is True
     assert "неизвестный инструмент" in (tool_msg.blocks[0].result or "")
 
 
 async def test__run__write_tool_call_without_approval__suspends_without_running_tool(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path, "сделай правку")
+    session = await _seed_session(repo, tmp_path, "сделай правку")
     bus = AgentRunBus()
     write_tool = _FakeWriteTool()
     registry = ToolRegistry([write_tool.definition()])
@@ -242,7 +255,7 @@ async def test__run__write_tool_call_without_approval__suspends_without_running_
 
     assert result.status == AgentRunStatus.awaiting_approval
     assert write_tool.calls == 0
-    assert [m.role.value for m in repo.list_messages(tmp_path, session.id)] == ["user", "assistant"]
+    assert [m.role.value for m in await repo.list_messages(tmp_path, session.id)] == ["user", "assistant"]
     bus.close(run_id)
     kinds = [e.type async for e in bus.subscribe(run_id)]
     assert AgentEventType.approval_required in kinds
@@ -250,7 +263,7 @@ async def test__run__write_tool_call_without_approval__suspends_without_running_
 
 async def test__run__resumed_with_approved_call_id__runs_pending_write_tool_and_finishes(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path, "сделай правку")
+    session = await _seed_session(repo, tmp_path, "сделай правку")
     bus = AgentRunBus()
     write_tool = _FakeWriteTool()
     registry = ToolRegistry([write_tool.definition()])
@@ -292,14 +305,14 @@ async def test__run__resumed_with_approved_call_id__runs_pending_write_tool_and_
 
     assert result.status == AgentRunStatus.succeeded
     assert write_tool.calls == 1
-    messages = repo.list_messages(tmp_path, session.id)
+    messages = await repo.list_messages(tmp_path, session.id)
     assert [m.role.value for m in messages] == ["user", "assistant", "tool", "assistant"]
     assert messages[2].blocks[0].result == "written"
 
 
 async def test__run__auto_approve_writes_enabled__write_tool_runs_immediately(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path, "сделай правку")
+    session = await _seed_session(repo, tmp_path, "сделай правку")
     write_tool = _FakeWriteTool()
     registry = ToolRegistry([write_tool.definition()])
     provider = _FakeProvider(
@@ -334,10 +347,10 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
     session = ChatSession(
         id=uuid4(), project_folder=tmp_path, title="t", doc_id=None, created_at=_now(), updated_at=_now()
     )
-    repo.save_session(session)
+    await repo.save_session(session)
     for i in range(6):
         role = ChatMessageRole.user if i % 2 == 0 else ChatMessageRole.assistant
-        repo.append_message(
+        await repo.append_message(
             tmp_path,
             ChatMessage(
                 id=uuid4(),
@@ -369,9 +382,10 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
         context_service=ChatContextService(),
         summarizer=summarizer,
     )
+    project_id = uuid4()
 
     await loop.run(
-        project_id=uuid4(),
+        project_id=project_id,
         project_folder=tmp_path,
         session_id=session.id,
         run_id=uuid4(),
@@ -380,11 +394,12 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
     )
 
     assert summarizer.called is True
-    summaries = repo.list_summaries(tmp_path, session.id)
+    assert summarizer.project_id == project_id
+    summaries = await repo.list_summaries(tmp_path, session.id)
     assert len(summaries) == 1
     assert summaries[0].text == "КРАТКОЕ СОДЕРЖАНИЕ"
     # the older messages are now flagged compacted (kept on disk, excluded from replay)
-    messages = repo.list_messages(tmp_path, session.id)
+    messages = await repo.list_messages(tmp_path, session.id)
     assert any(m.compacted for m in messages)
     assert not all(m.compacted for m in messages)  # recent tail kept verbatim
     assert len(messages) >= 6  # raw transcript is never lost
@@ -392,7 +407,7 @@ async def test__run__transcript_over_token_budget__compacts_older_messages(tmp_p
 
 async def test__run__transcript_under_token_budget__no_compaction(tmp_path: Path) -> None:
     repo = JsonChatRepository()
-    session = _seed_session(repo, tmp_path)
+    session = await _seed_session(repo, tmp_path)
     summarizer = _FakeSummarizer()
     provider = _FakeProvider(
         [NormalizedTurn(text="ок", tool_calls=(), stop_reason=StopReason.end_turn, usage=TokenUsage())]
@@ -416,4 +431,4 @@ async def test__run__transcript_under_token_budget__no_compaction(tmp_path: Path
     )
 
     assert summarizer.called is False
-    assert repo.list_summaries(tmp_path, session.id) == []
+    assert await repo.list_summaries(tmp_path, session.id) == []

@@ -10,6 +10,7 @@ from hse_doc_studio.core.agent.entities import TokenUsage
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem
 from hse_doc_studio.core.enums import (
     AgentRunStatus,
+    AIProviderOwnerKind,
     AIProviderType,
     ChangeLogKind,
     ChatContentKind,
@@ -138,6 +139,8 @@ class PackSubmissionRecord:
     output_path: Path
     output_dir: Path | None = None
     archive_format: str = "zip"
+    # Ключ архива в объектном хранилище (серверный режим); тогда output_dir не создаётся.
+    artifact_key: str | None = None
 
 
 @dataclass
@@ -160,6 +163,11 @@ class AIProvider:
     ssl_verify: bool = True
     connect_timeout_s: float = 10.0
     request_timeout_s: float = 60.0
+    # Локальный режим знает только личных провайдеров; общие создаёт сервер.
+    owner_kind: AIProviderOwnerKind = AIProviderOwnerKind.user
+    # Вид `runner`: личный раннер-ретранслятор и имя ИИ-адреса, объявленного им (URL знает только раннер).
+    runner_id: str | None = None
+    runner_endpoint: str | None = None
 
 
 @dataclass
@@ -183,6 +191,14 @@ class SigningIdentity:
     fingerprint: str | None = None
     # OpenPGP: the secret key is passphrase-protected, so signing asks for it every time.
     protected: bool = False
+
+
+@dataclass(frozen=True)
+class SigningKeyMaterial:
+    """Закрытый ключ и сертификат в PEM: передаётся репозиторию при создании идентичности и нигде не печатается."""
+
+    key_pem: bytes = field(repr=False)
+    cert_pem: bytes
 
 
 @dataclass
@@ -366,6 +382,8 @@ class AgentRunRecord:
     iterations: int = 0
     usage: TokenUsage | None = None
     error: str | None = None
+    # Машинный код причины падения для интерфейса (например `relay_unavailable`: раннер не ответил).
+    error_code: str | None = None
     # Per-turn diagnostics captured by the agent loop (stop reasons, tool
     # timings, warnings) for post-hoc debugging — survives reloads via the run JSON.
     diagnostics: list[dict[str, Any]] = field(default_factory=list)

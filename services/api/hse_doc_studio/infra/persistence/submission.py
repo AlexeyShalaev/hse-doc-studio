@@ -23,7 +23,7 @@ class JsonPackSubmissionRepository:
     def _submissions_dir(self, project_folder: Path) -> Path:
         return project_folder / _HSE_STUDIO / "submissions"
 
-    def list_for_project(self, project_folder: Path) -> list[PackSubmissionRecord]:
+    async def list_for_project(self, project_folder: Path) -> list[PackSubmissionRecord]:
         submissions_dir = self._submissions_dir(project_folder)
         if not submissions_dir.exists():
             return []
@@ -37,7 +37,7 @@ class JsonPackSubmissionRepository:
         records.sort(key=lambda r: r.created_at)
         return records
 
-    def get(self, project_folder: Path, submission_id: UUID) -> PackSubmissionRecord | None:
+    async def get(self, project_folder: Path, submission_id: UUID) -> PackSubmissionRecord | None:
         path = self._submissions_dir(project_folder) / f"{submission_id}.json"
         if not path.exists():
             return None
@@ -48,7 +48,7 @@ class JsonPackSubmissionRepository:
             logger.warning("submission record read error", path=str(path), exc=str(exc))
             return None
 
-    def save(self, record: PackSubmissionRecord) -> None:
+    async def save(self, record: PackSubmissionRecord) -> None:
         submissions_dir = self._submissions_dir(record.project_folder)
         submissions_dir.mkdir(parents=True, exist_ok=True)
         path = submissions_dir / f"{record.id}.json"

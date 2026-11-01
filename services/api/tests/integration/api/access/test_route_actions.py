@@ -14,19 +14,27 @@ from tests.fixtures.app import create_test_app, create_test_container
 _PROJECT_FIELD = "project_id"
 _SKIPPED_METHODS = frozenset({"HEAD", "OPTIONS"})
 # Действия, у которых пока нет ни одного маршрута.
-_RESERVED_ACTIONS = frozenset({Action.COMMENT, Action.SHARE, Action.PROJECT_TRANSFER})
+# git по HTTPS (`/git/<id>.git`) вне /api/v1: GIT_FETCH и GIT_PUSH решает сам маршрут, а не таблица.
+_RESERVED_ACTIONS = frozenset({Action.SHARE, Action.PROJECT_TRANSFER, Action.GIT_FETCH, Action.GIT_PUSH})
 _WRITE_ACTIONS = frozenset(
     {
         Action.FILES_WRITE,
         Action.HISTORY_WRITE,
+        Action.HISTORY_REWRITE,
         Action.PROJECT_SETTINGS,
         Action.TEMPLATE_MANAGE,
         Action.PROJECT_DELETE,
         Action.SUBMISSION_CREATE,
     }
 )
-# GET, который открывает сессию редактирования, поэтому требует записи.
-_GET_WITH_WRITE = frozenset({("GET", "/projects/{project_id}/documents/{doc_id}/office-editor")})
+# GET, который требует записи: открывает сессию редактирования или показывает владельцу то, что остальным закрыто
+# (подбор людей и групп для панели «Доступ» не должен подсказывать список людей читателю).
+_GET_WITH_WRITE = frozenset(
+    {
+        ("GET", "/projects/{project_id}/documents/{doc_id}/office-editor"),
+        ("GET", "/projects/{project_id}/members/candidates"),
+    }
+)
 
 
 @dataclass(frozen=True)

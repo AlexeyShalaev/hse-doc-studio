@@ -126,6 +126,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
         "Эту операцию уже нельзя отменить",
         "This operation can no longer be cancelled",
     ),
+    GitErrorCode.egress_blocked: (
+        "Этот адрес закрыт политикой сервера: внутренние сети недоступны",
+        "This address is blocked by the server policy: internal networks are not reachable",
+    ),
     GitErrorCode.remote_schema_newer: (
         "Проект в репозитории записан более новой Студией. Обновите Студию",
         "The project in the repository was saved by a newer Studio. Update the Studio",
@@ -141,6 +145,10 @@ _MESSAGES: dict[GitErrorCode, tuple[str, str]] = {
     GitErrorCode.protected_branch: (
         "Ветка защищена: прямая запись в неё запрещена",
         "The branch is protected: direct pushes are not allowed",
+    ),
+    GitErrorCode.push_rejected: (
+        "Сервер отклонил отправку: изменения нарушают правила проекта",
+        "The server rejected the push: the changes break the project rules",
     ),
     GitErrorCode.large_file: (
         "В проекте есть файл, который сервер не принимает по размеру",
@@ -215,3 +223,25 @@ def localized_resolution_error(exc: GitSyncError) -> GitSyncError:
         return resolution_error(exc.code, *map(str, paths))
     single = exc.ctx.get("path")
     return resolution_error(exc.code, str(single)) if single is not None else resolution_error(exc.code)
+
+
+_MAX_REMOTE_LINES = 25
+
+
+def push_rejected_error(output: str) -> GitSyncError:
+    """Отказ pre-receive: к тексту добавляются строки сервера (`remote:`), по одной на нарушение.
+
+    Сервер Студии печатает заголовок и строки `- путь: причина [код]`; другой сервер свой текст. Экран
+    синхронизации показывает их блоком «Сервер отклонил отправку».
+    """
+    lines = []
+    for raw in output.splitlines():
+        if not raw.startswith("remote:"):
+            continue
+        line = raw.removeprefix("remote:").strip()
+        if line and not line.startswith("HSE Doc Studio:"):
+            lines.append(line)
+    base = git_error(GitErrorCode.push_rejected).detail
+    if not lines:
+        return GitSyncError(GitErrorCode.push_rejected, base)
+    return GitSyncError(GitErrorCode.push_rejected, base + ":\n" + "\n".join(lines[:_MAX_REMOTE_LINES]))

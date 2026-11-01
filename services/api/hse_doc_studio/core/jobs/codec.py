@@ -16,15 +16,18 @@ from enum import Enum
 from typing import Any, Literal, Union, cast
 from uuid import UUID
 
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.jobs.entities import JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import JobError
+from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.registry import job_kind_spec
+from hse_doc_studio.core.jobs.wire import JobEnvelope, PollResponse
 
 _SPEC_FIELDS = {"id", "kind", "tags", "project_id", "actor", "locale", "payload"}
 _RESULT_FIELDS = {"status", "data", "error"}
+_ENVELOPE_FIELDS = {"spec", "manifest", "timeout_s", "attempt", "job_token", "actor_role"}
 
 
 _STRINGIFY: tuple[tuple[type, Callable[[Any], str]], ...] = ((UUID, str), (datetime, datetime.isoformat))
@@ -234,3 +237,48 @@ def decode_result(kind: JobKind, data: dict[str, object]) -> JobResult:
         data=None if data["data"] is None else decode(spec.result_cls, data["data"]),
         error=cast("JobError | None", _decode(JobError | None, data["error"])),
     )
+
+
+def encode_envelope(envelope: JobEnvelope) -> dict[str, object]:
+    return {
+        "spec": encode_spec(envelope.spec),
+        "manifest": encode(envelope.manifest),
+        "timeout_s": encode(envelope.timeout_s),
+        "attempt": encode(envelope.attempt),
+        "job_token": encode(envelope.job_token),
+        "actor_role": encode(envelope.actor_role),
+    }
+
+
+def decode_envelope(data: dict[str, object]) -> JobEnvelope:
+    unknown = set(data) - _ENVELOPE_FIELDS
+    if unknown:
+        raise ValueError(f"unknown envelope fields {sorted(unknown)}")
+    spec = data["spec"]
+    if not isinstance(spec, dict):
+        raise TypeError("expected object for spec")
+    return JobEnvelope(
+        spec=decode_spec(spec),
+        manifest=decode(tuple[ManifestFile, ...], data["manifest"]),
+        timeout_s=decode(float, data["timeout_s"]),
+        attempt=decode(int, data["attempt"]),
+        job_token=decode(str, data["job_token"]),
+        actor_role=cast("Role | None", _decode(Role | None, data["actor_role"])),
+    )
+
+
+def encode_poll_response(response: PollResponse) -> dict[str, object]:
+    # Конверт полиморфен по виду задачи, поэтому общий encode его не кодирует.
+    return {"envelope": None if response.envelope is None else encode_envelope(response.envelope)}
+
+
+def decode_poll_response(data: dict[str, object]) -> PollResponse:
+    unknown = set(data) - {"envelope"}
+    if unknown:
+        raise ValueError(f"unknown poll response fields {sorted(unknown)}")
+    envelope = data["envelope"]
+    if envelope is None:
+        return PollResponse()
+    if not isinstance(envelope, dict):
+        raise TypeError("expected object for envelope")
+    return PollResponse(envelope=decode_envelope(envelope))

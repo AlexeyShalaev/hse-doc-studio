@@ -1,0 +1,51 @@
+{
+  "kind": {
+    "storage": "Server storage",
+    "builds": "Builds this month",
+    "ai_tokens_day": "AI tokens today",
+    "ai_tokens_month": "AI tokens this month",
+    "members": "Members per project"
+  },
+  "kindShort": {
+    "storage": "Storage",
+    "builds": "Builds",
+    "ai_tokens_day": "AI per day",
+    "ai_tokens_month": "AI per month",
+    "members": "Members"
+  },
+  "units": {
+    "bytes": ["B", "KB", "MB", "GB", "TB"]
+  },
+  "usedOf": "{{used}} of {{limit}}",
+  "usedNoLimit": "{{used}}, no limit",
+  "resets": "resets {{date}}",
+  "noLimitHint": "No limit set",
+  "source": {
+    "user": "Your own value",
+    "org": "Organization value",
+    "installation": "Installation value"
+  },
+  "state": {
+    "warning": "Near limit",
+    "exceeded": "Used up"
+  },
+  "section": {
+    "title": "Usage",
+    "lead": "How much of your quotas you have used. Build and AI counters reset at the start of each period.",
+    "mine": "You",
+    "org": "Organization \"{{name}}\"",
+    "loading": "Loading usage…",
+    "loadFailed": "Could not load usage.",
+    "retry": "Retry",
+    "none": "No quotas are set: there are no limits.",
+    "membersHint": "Members: the largest count in one of your projects.",
+    "aiHint": "Tokens are counted only on the server's shared AI providers. Your own providers and models via your runner are not counted."
+  },
+  "exceeded": {
+    "title": "Quota used up",
+    "builds": "Monthly builds used up ({{used}} of {{limit}}).",
+    "generic": "Limit used up ({{used}} of {{limit}}).",
+    "resets": "Resets {{date}}.",
+    "see": "Details in settings"
+  }
+}

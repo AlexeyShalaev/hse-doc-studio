@@ -114,4 +114,27 @@ describe("группа «Синхронизация» в настройках п
     ]);
     expect(resolveProjectSettingsGroup("fonts", ctx()).id).toBe("documents");
   });
+
+  it("«Сборки» видны в «Проекте» только у серверного проекта", () => {
+    const group = resolveProjectSettingsGroup(
+      "builds",
+      ctx({ hasAccess: true }),
+    );
+    expect(group.id).toBe("project");
+    expect(ids(groupSections(group, ctx({ hasAccess: true })))).toContain(
+      "builds",
+    );
+    expect(
+      ids(groupSections(resolveProjectSettingsGroup("project", ctx()), ctx())),
+    ).not.toContain("builds");
+  });
+});
+
+describe("«Клонировать с сервера» в группе «Синхронизация»", () => {
+  it("видна только при git по HTTPS на сервере и идёт первой", () => {
+    const withGit = ctx({ hasAccess: true, hasGitRemote: true });
+    const group = resolveProjectSettingsGroup("sync", withGit);
+    expect(ids(groupSections(group, withGit))[0]).toBe("sync-server-clone");
+    expect(ids(groupSections(group, ctx()))).not.toContain("sync-server-clone");
+  });
 });

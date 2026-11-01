@@ -1,32 +1,146 @@
 import { z } from "zod";
-import { apiClient, parseResp } from "@shared/api";
+import { adminClient, apiClient, listPageOf, parseResp } from "@shared/api";
+import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AIProviderSchema,
   ProviderModelsSchema,
+  type AIProvider,
   type CreateAIProviderInput,
   type UpdateAIProviderInput,
 } from "../model/aiProvider.schema";
 
 const AIProviderListSchema = z.array(AIProviderSchema);
 
-export const aiProviderApi = {
+// Общие провайдеры установки админка отдаёт в своей форме (api/schemas/admin_ops.py): ключ там
+// только признак `key_set`, правка принимает все поля сразу, а проверка подключения идёт отдельным запросом.
+const InstanceProviderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: AIProviderSchema.shape.type,
+  base_url: z.string(),
+  models: z.array(z.string()),
+  key_set: z.boolean(),
+  ssl_verify: z.boolean(),
+  connect_timeout_s: z.number(),
+  request_timeout_s: z.number(),
+  created_at: z.string(),
+});
+const InstanceCheckSchema = z.object({
+  ok: z.boolean(),
+  models: z.array(z.string()),
+  error: z.string().nullable(),
+});
+
+// Страница общих провайдеров (единый контракт списков). Сервер до перехода на
+// контракт отдавал весь список массивом: он читается как одна страница.
+const InstancePageSchema = z.union([
+  listPageOf(InstanceProviderSchema),
+  z.array(InstanceProviderSchema).transform((items) => ({
+    items,
+    total: items.length,
+    limit: items.length,
+    offset: 0,
+  })),
+]);
+
+// Схема провайдера строгая, поэтому `key_set` админки переносим в `has_api_key`, а не тащим как есть.
+const fromInstance = ({
+  key_set,
+  ...wire
+}: z.infer<typeof InstanceProviderSchema>) =>
+  AIProviderSchema.parse({
+    ...wire,
+    has_api_key: key_set,
+    shared: true,
+  });
+
+const toInstanceUpdate = (body: UpdateAIProviderInput) => ({
+  name: null,
+  type: null,
+  api_key: null,
+  clear_key: false,
+  base_url: null,
+  models: null,
+  ssl_verify: null,
+  connect_timeout_s: null,
+  request_timeout_s: null,
+  ...body,
+});
+
+/** Чей это провайдер: личный (по умолчанию) или общий провайдер установки (админка). */
+export type AIProviderOwner = "user" | "instance";
+
+export const aiProviderApiFor = (owner: AIProviderOwner = "user") => {
+  if (owner === "instance") return instanceApi;
+  return {
+    list: () =>
+      apiClient.get(`/ai-providers`).then(parseResp(AIProviderListSchema)),
+
+    create: (body: CreateAIProviderInput) =>
+      apiClient.post(`/ai-providers`, body).then(parseResp(AIProviderSchema)),
+
+    update: (id: string, body: UpdateAIProviderInput) =>
+      apiClient
+        .patch(`/ai-providers/${id}`, body)
+        .then(parseResp(AIProviderSchema)),
+
+    remove: (id: string) =>
+      apiClient.delete(`/ai-providers/${id}`).then(() => id),
+
+    // Live model listing — doubles as a connection/credentials check.
+    fetchModels: (id: string) =>
+      apiClient
+        .get(`/ai-providers/${id}/models`)
+        .then(parseResp(ProviderModelsSchema)),
+  };
+};
+
+// У общих провайдеров отказ показывает сама страница админки, а не общий тост.
+const quiet = { silentError: true } as const;
+
+const instanceApi = {
+  /** Страница списка: поиск, тип, сортировка и окно считает сервер. */
+  page: (
+    params: ListRequestParams,
+    signal: AbortSignal,
+  ): Promise<ListPage<AIProvider>> =>
+    adminClient
+      .get(`/ai-providers`, { ...quiet, signal, params })
+      .then(parseResp(InstancePageSchema))
+      .then((page) => ({ ...page, items: page.items.map(fromInstance) })),
+
   list: () =>
-    apiClient.get(`/ai-providers`).then(parseResp(AIProviderListSchema)),
+    adminClient
+      .get(`/ai-providers`, { ...quiet, params: { limit: 200 } })
+      .then(parseResp(z.object({ items: z.array(InstanceProviderSchema) })))
+      .then((page) => page.items.map(fromInstance)),
 
   create: (body: CreateAIProviderInput) =>
-    apiClient.post(`/ai-providers`, body).then(parseResp(AIProviderSchema)),
+    adminClient
+      .post(`/ai-providers`, body)
+      .then(parseResp(InstanceProviderSchema))
+      .then(fromInstance),
 
   update: (id: string, body: UpdateAIProviderInput) =>
-    apiClient
-      .patch(`/ai-providers/${id}`, body)
-      .then(parseResp(AIProviderSchema)),
+    adminClient
+      .patch(`/ai-providers/${id}`, toInstanceUpdate(body))
+      .then(parseResp(InstanceProviderSchema))
+      .then(fromInstance),
 
   remove: (id: string) =>
-    apiClient.delete(`/ai-providers/${id}`).then(() => id),
+    adminClient.delete(`/ai-providers/${id}`, quiet).then(() => id),
 
-  // Live model listing — doubles as a connection/credentials check.
-  fetchModels: (id: string) =>
-    apiClient
-      .get(`/ai-providers/${id}/models`)
-      .then(parseResp(ProviderModelsSchema)),
+  // Проверка подключения: сбой провайдера приходит ответом ok=false, а не ошибкой запроса.
+  fetchModels: async (id: string) => {
+    const check = await adminClient
+      .post(`/ai-providers/${id}/check`, {})
+      .then(parseResp(InstanceCheckSchema));
+    if (!check.ok) throw new Error(check.error ?? "provider_unavailable");
+    return { models: check.models };
+  },
 };
+
+export const aiProviderApi = aiProviderApiFor("user");
+
+/** Общие провайдеры установки (админка): страницы списка, правка, проверка. */
+export const instanceAiProviderApi = instanceApi;

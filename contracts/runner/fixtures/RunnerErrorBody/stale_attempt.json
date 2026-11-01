@@ -1,0 +1,4 @@
+{
+  "detail": "attempt 1 is stale, current is 2",
+  "code": "stale_attempt"
+}

@@ -16,7 +16,15 @@ class JsonSettingsRepository:
         self._data_dir = data_dir
         self._path = data_dir / "config.json"
 
-    def get(self) -> dict[str, Any]:
+    async def get(self) -> dict[str, Any]:
+        return self.read_local()
+
+    async def save(self, settings: dict[str, Any]) -> None:
+        self._data_dir.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.debug("settings saved", path=str(self._path))
+
+    def read_local(self) -> dict[str, Any]:
         if not self._path.exists():
             return {}
         try:
@@ -24,8 +32,3 @@ class JsonSettingsRepository:
         except Exception as exc:
             logger.warning("config.json read error", path=str(self._path), exc=str(exc))
             return {}
-
-    def save(self, settings: dict[str, Any]) -> None:
-        self._data_dir.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8")
-        logger.debug("settings saved", path=str(self._path))

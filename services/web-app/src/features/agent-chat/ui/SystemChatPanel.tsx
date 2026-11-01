@@ -14,9 +14,15 @@ import {
   X,
 } from "lucide-react";
 import { useAgentTools } from "@entities/agent-chat";
-import { useAIProviders } from "@entities/ai-provider";
+import {
+  defaultProvider,
+  orderProviders,
+  useAIProviders,
+} from "@entities/ai-provider";
+import { RelayErrorBlock } from "./RelayErrorBlock";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { requirementsKeys } from "@entities/requirements";
+import { useBootstrap } from "@entities/session";
 import {
   systemAgentApi,
   systemAgentKeys,
@@ -36,6 +42,7 @@ import { vcsKeys } from "@entities/vcs";
 import { localeTag, useWorkspaceStore } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { applyAgentToolEffect } from "../lib/applyAgentToolEffect";
+import { toModelGroups } from "../lib/modelGroups";
 import { useAgentRunStream } from "../lib/useAgentRunStream";
 import { ChatApprovalBar } from "./ChatApprovalBar";
 import { ChatComposer } from "./ChatComposer";
@@ -85,6 +92,7 @@ export const SystemChatPanel = ({
   const queryClient = useQueryClient();
   const sessionsQuery = useSystemChats();
   const providersQuery = useAIProviders();
+  const bootstrapQuery = useBootstrap();
   const settingsQuery = useAppSettings();
   const updateSettings = useUpdateAppSettings();
   const toolsQuery = useAgentTools();
@@ -122,6 +130,9 @@ export const SystemChatPanel = ({
   const [composerPersonaInstructions, setComposerPersonaInstructions] =
     useState<string | null>(null);
   const [trackedSessionId, setTrackedSessionId] = useState<string | null>(null);
+  // Раннер провайдера, на котором запущен ран: блок ошибки ретрансляции
+  // называет его, даже если потом выбрали другую модель.
+  const [runRunnerName, setRunRunnerName] = useState<string | null>(null);
 
   const activeId = selectedId ?? sessions[0]?.id ?? null;
   const activeSession = sessions.find((session) => session.id === activeId);
@@ -131,6 +142,7 @@ export const SystemChatPanel = ({
     setTrackedSessionId(activeId);
     setComposerPersona(null);
     setComposerPersonaInstructions(null);
+    setRunRunnerName(null);
   }
   const filteredSessions = sessions.filter((session) =>
     session.title.toLowerCase().includes(historyQuery.trim().toLowerCase()),
@@ -140,9 +152,15 @@ export const SystemChatPanel = ({
   const activeRunId = detailQuery.data?.active_run_id ?? null;
   const messages = detailQuery.data?.messages ?? [];
 
-  const providers = providersQuery.data ?? [];
+  // Свои, затем организации, затем установки: тот же порядок, что у сервера.
+  const providers = orderProviders(providersQuery.data ?? []);
   const sessionProviderId = detailQuery.data?.default_provider_id ?? null;
   const settingsProviderId = settingsQuery.data?.default_ai_provider_id ?? null;
+  // Провайдер чата: после перезагрузки страницы ран идёт на нём.
+  const sessionProvider =
+    sessionProviderId !== null
+      ? providers.find((provider) => provider.id === sessionProviderId)
+      : undefined;
   const preferredProviderId =
     composerProviderId ?? sessionProviderId ?? settingsProviderId ?? "";
   const settingsProvider =
@@ -152,6 +170,7 @@ export const SystemChatPanel = ({
   const selectedProvider =
     providers.find((provider) => provider.id === preferredProviderId) ??
     settingsProvider ??
+    defaultProvider(providers) ??
     providers[0] ??
     null;
   const selectedProviderId = selectedProvider?.id ?? "";
@@ -168,13 +187,12 @@ export const SystemChatPanel = ({
       : (selectedProvider?.models[0] ?? "");
   const providerReady = selectedProvider !== null && selectedModel !== "";
   // One compact model picker: all providers' models grouped by provider.
-  const modelGroups = providers
-    .map((provider) => ({
-      providerId: provider.id,
-      providerName: provider.name,
-      models: provider.models,
-    }))
-    .filter((group) => group.models.length > 0);
+  // Группы по источнику только на общем сервере: локально выбор как раньше.
+  const serverMode = bootstrapQuery.data?.mode === "server";
+  const modelGroups = toModelGroups(providers, serverMode, (state) =>
+    t(`model.relayState.${state}`),
+  );
+  const [pickerRequest, setPickerRequest] = useState(0);
   const autoApprove =
     composerAutoApprove ??
     settingsQuery.data?.agent_auto_approve_writes ??
@@ -329,6 +347,7 @@ export const SystemChatPanel = ({
   const handleSend = (text: string) => {
     if (activeId === null) return;
     const sessionId = activeId;
+    setRunRunnerName(selectedProvider?.relay?.runner_name ?? null);
     startTurn.mutate(
       {
         sessionId,
@@ -724,17 +743,31 @@ export const SystemChatPanel = ({
               projectId={projectId ?? ""}
             />
           )}
-          {stream.state.error && (
-            <div
-              style={{
-                padding: "6px 12px",
-                fontSize: 11.5,
-                color: "var(--c-err)",
+          {(stream.state.errorCode === "relay_unavailable" ||
+            stream.state.errorCode === "relay_busy") && (
+            <RelayErrorBlock
+              code={stream.state.errorCode}
+              runnerName={
+                runRunnerName ?? sessionProvider?.relay?.runner_name ?? null
+              }
+              onPickModel={() => {
+                setPickerRequest((n) => n + 1);
               }}
-            >
-              {stream.state.error}
-            </div>
+            />
           )}
+          {stream.state.error &&
+            stream.state.errorCode !== "relay_unavailable" &&
+            stream.state.errorCode !== "relay_busy" && (
+              <div
+                style={{
+                  padding: "6px 12px",
+                  fontSize: 11.5,
+                  color: "var(--c-err)",
+                }}
+              >
+                {stream.state.error}
+              </div>
+            )}
           {pendingQuestion ? (
             <ChatQuestionForm
               pending={pendingQuestion}
@@ -767,6 +800,7 @@ export const SystemChatPanel = ({
             providerReady={providerReady}
             running={running}
             modelGroups={modelGroups}
+            modelPickerRequest={pickerRequest}
             selectedProviderId={selectedProviderId}
             selectedModel={selectedModel}
             autoApprove={autoApprove}

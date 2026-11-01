@@ -1,0 +1,12 @@
+{
+  "id": "u_01hx7k2m9c",
+  "name": "Анна Петрова",
+  "email": "anna.petrova@example.org",
+  "locale": "ru",
+  "commit_name": null,
+  "commit_email": null,
+  "commit_use_account_email": false,
+  "effective_commit_name": "Анна Петрова",
+  "effective_commit_email": "u_01hx7k2m9c@noreply.studio.example.org",
+  "commit_email_is_noreply": true
+}

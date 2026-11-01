@@ -465,7 +465,7 @@ async def test__chaos__token_goes_bad__background_fetch_asks_once_stops_and_resu
     healed = await anna.status()
     assert (healed.ui_state, healed.health) == ("up_to_date", "ok")
     repo = await anna.get(IGitCredentialRepository)
-    credential = repo.get(UUID(http_remote.credential_id))
+    credential = await repo.get(UUID(http_remote.credential_id))
     assert credential is not None
     assert credential.status is not CredentialStatus.auth_failed
     assert waits > 0

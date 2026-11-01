@@ -17,11 +17,13 @@ from urllib.parse import unquote, urlsplit
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
+from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.entities import ServerCertificate
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.host_settings import DEFAULT_HTTPS_PORT
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.infra.git_sync.egress_guard import authorize_git_host
 
 _MAX_CA_PEM_BYTES = 128 * 1024
 _MAX_CA_CERTIFICATES = 10
@@ -69,8 +71,9 @@ def _invalid_ca() -> GitSyncError:
 
 
 class TlsCertificateService:
-    def __init__(self, timeout_s: float) -> None:
+    def __init__(self, timeout_s: float, egress: IEgressPolicy | None = None) -> None:
         self._timeout_s = timeout_s
+        self._egress = egress
 
     def normalize_ca_pem(self, pem: str) -> str:
         raw = pem.strip().encode("utf-8", errors="replace")
@@ -85,6 +88,7 @@ class TlsCertificateService:
         return "".join(cert.public_bytes(serialization.Encoding.PEM).decode("ascii") for cert in certificates)
 
     async def fetch(self, host: str, port: int | None) -> ServerCertificate:
+        await authorize_git_host(self._egress, host, port)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
@@ -116,6 +120,7 @@ class TlsCertificateService:
         в первом случае.
         Любой другой исход (сеть, срок, имя, успех) даёт False: решает тот отказ, который назвал git.
         """
+        await authorize_git_host(self._egress, host, port)
         writer: asyncio.StreamWriter | None = None
         try:
             writer = await asyncio.wait_for(

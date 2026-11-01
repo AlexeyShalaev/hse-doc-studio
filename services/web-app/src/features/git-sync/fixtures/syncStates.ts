@@ -337,6 +337,19 @@ export const SYNC_STATE_FIXTURES: SyncStateFixture[] = [
       ),
   },
   {
+    id: "error_push_rejected",
+    title: "Ошибка: сервер Студии отклонил отправку",
+    note: "Pre-receive сервера HSE Doc Studio: блок «Сервер отклонил отправку» с перечнем нарушений.",
+    build: (now) =>
+      failed(
+        now,
+        "error",
+        "error",
+        "push_rejected",
+        "Сервер отклонил отправку: изменения нарушают правила проекта:\n- petrov/main.tex: вне вашей папки в командном проекте [path_outside_scope]\n- assets/logo.lnk: символьные ссылки не принимаются [symlink]",
+      ),
+  },
+  {
     id: "error_unknown",
     title: "Ошибка без названия",
     note: "Незнакомый код: общий текст и техническая строка.",

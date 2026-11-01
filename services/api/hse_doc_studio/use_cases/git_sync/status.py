@@ -16,12 +16,15 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.git_remote.client import is_studio_remote
 from hse_doc_studio.core.git_sync.entities import (
     CommitBrief,
+    GitCredential,
     GitCredentialKind,
     GitOperation,
     LastError,
     LastSync,
+    PdfUploadRecord,
     PendingSession,
     StoreRemoteConfig,
     SyncBlockReason,
@@ -38,7 +41,7 @@ from hse_doc_studio.core.git_sync.policy import (
     GitSyncPolicy,
 )
 from hse_doc_studio.core.git_sync.protocols import (
-    IGitCredentialRepository,
+    ICredentialAccess,
     IGitOperationRegistry,
     IGitRepoReader,
     IGitStoreGuard,
@@ -114,6 +117,23 @@ class AutoFetchView:
 
 
 @dataclass(frozen=True)
+class AutoSyncView:
+    """Автосинхронизация окна: итог и то, выбрал ли его человек (иначе это умолчание)."""
+
+    enabled: bool
+    explicit: bool
+
+
+@dataclass(frozen=True)
+class PdfUploadView:
+    """Выгрузка PDF на сервер Студии: возможна ли она у этого remote, включена ли и чем кончилась последняя."""
+
+    enabled: bool
+    available: bool
+    last: PdfUploadRecord | None
+
+
+@dataclass(frozen=True)
 class SharedFolderView:
     provider: str
     root: str
@@ -144,6 +164,8 @@ class GitStatusView:
     last_sync: LastSync | None = None
     shared_folder: SharedFolderView | None = None
     bot_authored_commits: int = 0
+    auto_sync: AutoSyncView = field(default_factory=lambda: AutoSyncView(enabled=False, explicit=False))
+    pdf_upload: PdfUploadView = field(default_factory=lambda: PdfUploadView(enabled=False, available=False, last=None))
 
 
 @dataclass(frozen=True)
@@ -193,7 +215,7 @@ class GitStatusBuilder:
         reader: IGitRepoReader,
         operations: IGitOperationRegistry,
         profile: ILocalAuthorProfile,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         access: ProjectAccessService,
         guard: IGitStoreGuard,
         settings_repo: ISettingsRepository,
@@ -216,11 +238,47 @@ class GitStatusBuilder:
         self._shared = shared_folders
         self._providers = providers
 
-    def build(self, project: Project) -> GitStatusView:
-        """Блокирует на запусках git: вызывающий уводит вызов в поток."""
+    async def view(self, project: Project) -> GitStatusView:
+        """Настройки читаются здесь, а блокирующая часть с запусками git уходит в поток."""
+        stored = await self._settings.get()
+        credential_id = await asyncio.to_thread(self._credential_id, project)
+        credential = await self._credentials.get(credential_id, project_id=project.id) if credential_id else None
+        provider = await self._provider_of(project)
+        return await asyncio.to_thread(self.build, project, stored, credential, provider)
+
+    async def _provider_of(self, project: Project) -> ProviderInfo | None:
+        """Провайдер сервера из настроек хостов: они лежат в хранилище с async-доступом, а `build` синхронный."""
+        if self._providers is None:
+            return None
+        config = await asyncio.to_thread(self._remotes.read, project)
+        if config is None:
+            return None
+        try:
+            url = parse_remote_url(config.url, allow_http=True, allow_local=True)
+        except GitSyncError:
+            return None
+        return await self._providers.known(url.host, url.port)
+
+    def _credential_id(self, project: Project) -> UUID | None:
+        config = self._remotes.read(project)
+        if config is None:
+            return None
+        state = self._states.get(project.folder)
+        return (state.credential_id if state else None) or config.credential_id
+
+    def build(
+        self,
+        project: Project,
+        stored: dict[str, object],
+        credential: GitCredential | None,
+        provider: ProviderInfo | None = None,
+    ) -> GitStatusView:
+        """Блокирует на запусках git: вызывающий уводит вызов в поток. `credential`: доступ, подключённый к проекту.
+
+        `provider`: провайдер сервера, найденный заранее по настройкам хостов; без него определяется по имени хоста.
+        """
         profile_ok = self._profile.get() is not None
         config = self._remotes.read(project)
-        stored = self._settings.get()
         if config is None:
             return self._without_remote(project, stored, profile_ok)
         folder = project.folder
@@ -241,10 +299,11 @@ class GitStatusBuilder:
         )
         enabled, interval = fetch_interval(state, stored)
         data = comparison.data
+        studio_server = is_studio_remote(credential, config.url)
         return GitStatusView(
             connected=True,
             ui_state=ui_state,
-            remote=self._remote_info(config, state),
+            remote=self._remote_info(config, state, credential, provider),
             relation=comparison.relation,
             health=state.health,
             profile_ok=profile_ok,
@@ -264,6 +323,12 @@ class GitStatusBuilder:
             last_sync=state.last_sync,
             shared_folder=self._shared_folder(folder, state),
             bot_authored_commits=data.unpublished_bot_commits,
+            auto_sync=_auto_sync(state, studio_server),
+            pdf_upload=PdfUploadView(
+                enabled=studio_server and (True if state.pdf_upload is None else state.pdf_upload),
+                available=studio_server,
+                last=state.last_pdf_upload,
+            ),
         )
 
     def _without_remote(self, project: Project, stored: dict[str, object], profile_ok: bool) -> GitStatusView:
@@ -373,15 +438,15 @@ class GitStatusBuilder:
             for b in briefs
         )
 
-    def _remote_info(self, config: StoreRemoteConfig, state: SyncState) -> RemoteInfoView | None:
+    def _remote_info(
+        self, config: StoreRemoteConfig, state: SyncState, credential: GitCredential | None, known: ProviderInfo | None
+    ) -> RemoteInfoView | None:
         try:
             url = parse_remote_url(config.url, allow_http=True, allow_local=True)
         except GitSyncError:
             # Адрес в config не разбирается: хранилище уже помечено недоверенным, показывать нечего.
             return None
-        credential_id = state.credential_id or config.credential_id
-        credential = self._credentials.get(credential_id) if credential_id else None
-        provider = self._providers.known(url.host, url.port) if self._providers else detect_provider(url.host)
+        provider = known or detect_provider(url.host)
         return RemoteInfoView(
             display_url=url.display_url,
             kind=url.kind,
@@ -408,6 +473,13 @@ class GitStatusBuilder:
         if info is None:
             return None
         return SharedFolderView(info.provider.value, info.root, state.shared_folder_ack)
+
+
+def _auto_sync(state: SyncState, studio_server: bool) -> AutoSyncView:
+    """Явный выбор человека побеждает; по умолчанию автосинхронизация включена у проекта с сервера Студии."""
+    if state.auto_sync is not None:
+        return AutoSyncView(enabled=state.auto_sync, explicit=True)
+    return AutoSyncView(enabled=studio_server, explicit=False)
 
 
 def _operation_brief(operation: GitOperation | None) -> OperationBriefView | None:
@@ -444,4 +516,4 @@ class GetGitStatusUC:
         # Выключенная синхронизация не обещает подключения: клиент читает отказ как «не поддерживается».
         self._policy.require_enabled()
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        return await asyncio.to_thread(self._builder.build, project)
+        return await self._builder.view(project)

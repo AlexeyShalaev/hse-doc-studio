@@ -3,6 +3,7 @@ import { Download, FolderOpen, Inbox, Package } from "lucide-react";
 import type { z } from "zod";
 import type { ProjectResponseSchema } from "@entities/project";
 import { submissionApi, useSubmissions } from "@entities/submission";
+import { useCapabilities } from "@entities/session";
 import { useEditors } from "@entities/system";
 import { Spinner } from "@shared/ui/Spinner";
 import { localeTag, toast } from "@shared/lib";
@@ -39,6 +40,7 @@ export const CheckpointBuilds = ({
   const { t } = useTranslation("workspace");
   const { data: submissions, isLoading } = useSubmissions(project.id);
   const { data: editorsData } = useEditors();
+  const { lacks } = useCapabilities();
   const availableEditors = (editorsData?.editors ?? []).filter(
     (e) => e.available,
   );
@@ -117,10 +119,12 @@ export const CheckpointBuilds = ({
               >
                 {formatBytes(s.size_bytes)}
               </span>
-              <OpenInEditorMenu
-                outputDir={s.output_dir}
-                editors={availableEditors}
-              />
+              {!lacks("open_in_editor") && (
+                <OpenInEditorMenu
+                  outputDir={s.output_dir}
+                  editors={availableEditors}
+                />
+              )}
               {s.output_path && (
                 <a
                   href={submissionApi.downloadUrl(project.id, s.id)}

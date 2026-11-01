@@ -34,12 +34,12 @@ class GetDockerDiskUsageUC:
         self._always_protected = always_protected
 
     async def execute(self) -> GetDockerDiskUsageOutput:
-        usage = ours_only(await self._manager.disk_usage(self.protected_refs()))
+        usage = ours_only(await self._manager.disk_usage(await self.protected_refs()))
         return GetDockerDiskUsageOutput(usage=usage, cleanable_bytes=cleanable_bytes(usage))
 
-    def protected_refs(self) -> frozenset[str]:
+    async def protected_refs(self) -> frozenset[str]:
         """Images that must survive cleanup: each category's configured/active ref."""
-        stored = self._settings_repo.get()
+        stored = await self._settings_repo.get()
         refs = {str(stored.get(key) or default) for key, default in self._default_images.items()}
         return frozenset(refs) | self._always_protected
 

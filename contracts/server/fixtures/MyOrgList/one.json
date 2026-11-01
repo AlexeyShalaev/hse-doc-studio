@@ -1,0 +1,21 @@
+[
+  {
+    "slug": "msp-2025",
+    "name": "МСПИН 2025",
+    "my_role": "owner",
+    "member_count": 6,
+    "groups": [],
+    "sole_owner": true
+  },
+  {
+    "slug": "ai-lab",
+    "name": "Лаборатория ИИ",
+    "my_role": "member",
+    "member_count": 3,
+    "groups": [
+      "Наставники",
+      "Команда Bertie"
+    ],
+    "sole_owner": false
+  }
+]

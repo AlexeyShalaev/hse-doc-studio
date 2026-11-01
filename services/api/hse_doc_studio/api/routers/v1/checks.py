@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.checks import (
     ApplyFixRequest,
     CheckResultsResponse,
@@ -34,7 +35,7 @@ from hse_doc_studio.use_cases.checks.list_project_check_rules import (
 )
 from hse_doc_studio.use_cases.checks.run_checks import RunChecksInput, RunChecksUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_counts(c: SeverityCounts) -> SeverityCountsResponse:

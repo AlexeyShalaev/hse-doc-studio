@@ -3,11 +3,10 @@ from __future__ import annotations
 import datetime
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
 
 import structlog
 
-from hse_doc_studio.core.entities import SigningIdentity
+from hse_doc_studio.core.entities import SigningIdentity, SigningKeyMaterial
 from hse_doc_studio.core.enums import SigningIdentityKind
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISigningIdentityRepository
@@ -31,9 +30,8 @@ class CreateSelfSignedUC:
     """Generates a self-signed RSA certificate + private key in-app.
 
     Uses only `cryptography` (already a base dependency — no pyHanko needed
-    here). The private key is written to data_dir/signing_keys/<id>/key.pem
-    and the certificate to .../cert.pem. The identity metadata (without any
-    key material) is persisted in signing_identities.json.
+    here). The key and the certificate go to the repository together with the identity
+    record; the repository decides where the private key lives.
 
     The resulting identity is always marked `trusted=False` because it does
     not chain to any externally-accredited root CA. It is suitable for
@@ -61,8 +59,7 @@ class CreateSelfSignedUC:
         now = datetime.datetime.now(datetime.timezone.utc)
         not_after = now + datetime.timedelta(days=inp.validity_days)
 
-        key_dir = self._repo.key_dir(identity_id)
-        _generate_self_signed(inp.subject_cn, not_after, key_dir)
+        material = _generate_self_signed(inp.subject_cn, not_after)
 
         identity = SigningIdentity(
             id=identity_id,
@@ -73,12 +70,12 @@ class CreateSelfSignedUC:
             trusted=False,
             created_at=now,
         )
-        self._repo.create(identity)
+        await self._repo.create(identity, material)
         logger.info("signing_identity: self-signed created", id=str(identity_id), cn=inp.subject_cn)
         return CreateSelfSignedOutput(identity=identity)
 
 
-def _generate_self_signed(subject_cn: str, not_after: datetime.datetime, key_dir: Path) -> None:  # noqa: PLC0415
+def _generate_self_signed(subject_cn: str, not_after: datetime.datetime) -> SigningKeyMaterial:  # noqa: PLC0415
     from cryptography import x509  # noqa: PLC0415
     from cryptography.hazmat.primitives import hashes, serialization  # noqa: PLC0415
     from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: PLC0415
@@ -118,11 +115,11 @@ def _generate_self_signed(subject_cn: str, not_after: datetime.datetime, key_dir
         .sign(key, hashes.SHA256())
     )
 
-    (key_dir / "key.pem").write_bytes(
-        key.private_bytes(
+    return SigningKeyMaterial(
+        key_pem=key.private_bytes(
             serialization.Encoding.PEM,
             serialization.PrivateFormat.PKCS8,
             serialization.NoEncryption(),
-        )
+        ),
+        cert_pem=cert.public_bytes(serialization.Encoding.PEM),
     )
-    (key_dir / "cert.pem").write_bytes(cert.public_bytes(serialization.Encoding.PEM))

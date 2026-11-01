@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "trf_5e6f7a8b9c0d41e2f3a4b5c6d7e8f9a0",
+      "project": {
+        "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "name": "ВКР: Анализ требований"
+      },
+      "from": {
+        "kind": "user",
+        "name": "Анна Петрова"
+      },
+      "message": null,
+      "created_at": "2026-11-01T11:00:00Z",
+      "expires_at": "2026-11-08T11:00:00Z",
+      "status": "pending",
+      "previous_owner_role": "editor"
+    }
+  ]
+}

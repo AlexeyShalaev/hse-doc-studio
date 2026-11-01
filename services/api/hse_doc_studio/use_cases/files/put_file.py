@@ -7,6 +7,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.file_version import etag_matches, file_etag
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
     IFileRepository,
     IProjectIndexRepository,
@@ -17,6 +18,7 @@ from hse_doc_studio.core.vcs.protocols import (
     IVcsFolderLocks,
     IVcsService,
 )
+from hse_doc_studio.use_cases.files._quota import reserve_write
 from hse_doc_studio.use_cases.files._vcs_edit import maybe_edit_commit
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -60,8 +62,10 @@ class PutFileUC:
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota | None = None,
     ) -> None:
         self._file_repo = file_repo
+        self._quota: IProjectQuota = quota or NoopProjectQuota()
         self._vcs = vcs_service
         self._vcs_locks = vcs_locks
         self._vcs_throttle = vcs_throttle
@@ -76,7 +80,9 @@ class PutFileUC:
         async with self._vcs_locks.for_folder(project.folder):
             if inp.if_match is not None:
                 self._ensure_not_stale(project.folder, inp.path, inp.if_match)
+            delta = await reserve_write(self._quota, self._file_repo, project.id, project.folder, inp.path, inp.content)
             self._file_repo.write(project.folder, inp.path, inp.content)
+            await self._quota.record_change(project.id, delta)
 
         logger.debug(
             "file written via use case",

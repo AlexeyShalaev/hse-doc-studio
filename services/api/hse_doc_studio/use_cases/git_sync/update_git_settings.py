@@ -1,4 +1,4 @@
-"""Настройки синхронизации одного проекта: фоновая выборка и подтверждение предупреждения об общей папке."""
+"""Настройки синхронизации одного проекта: выборка, автосинхронизация, выгрузка PDF и подтверждение об общей папке."""
 
 from __future__ import annotations
 
@@ -25,6 +25,8 @@ class UpdateGitSettingsInput:
     interval_given: bool = False
     interval_s: int | None = None
     shared_folder_ack: bool | None = None
+    auto_sync: bool | None = None
+    pdf_upload: bool | None = None
 
 
 class UpdateGitSettingsUC:
@@ -45,15 +47,15 @@ class UpdateGitSettingsUC:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
         if inp.interval_given and inp.interval_s is not None and inp.interval_s < MIN_FETCH_INTERVAL_S:
             raise ValueError(f"interval_s must be at least {MIN_FETCH_INTERVAL_S} seconds")
-        return await asyncio.to_thread(self._apply, project, inp)
+        await asyncio.to_thread(self._apply, project, inp)
+        return await self._status.view(project)
 
-    def _apply(self, project: Project, inp: UpdateGitSettingsInput) -> GitStatusView:
+    def _apply(self, project: Project, inp: UpdateGitSettingsInput) -> None:
         config = self._remotes.read(project)
         if config is None:
             raise NotFoundError(localized_error("Удалённый репозиторий не подключён", "No remote is connected"))
         state = self._states.get(project.folder) or default_state(config, None)
         self._states.save(project.folder, self._changed(state, inp))
-        return self._status.build(project)
 
     @staticmethod
     def _changed(state: SyncState, inp: UpdateGitSettingsInput) -> SyncState:
@@ -63,4 +65,8 @@ class UpdateGitSettingsUC:
             state = replace(state, fetch_interval_s=inp.interval_s)
         if inp.shared_folder_ack is not None:
             state = replace(state, shared_folder_ack=inp.shared_folder_ack)
+        if inp.auto_sync is not None:
+            state = replace(state, auto_sync=inp.auto_sync)
+        if inp.pdf_upload is not None:
+            state = replace(state, pdf_upload=inp.pdf_upload)
         return state

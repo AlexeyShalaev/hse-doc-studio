@@ -1,0 +1,7 @@
+{
+  "state": "waiting_personal",
+  "runner_name": "MacBook Анны",
+  "runner_owner": "owner",
+  "fallback": null,
+  "wait_s": 5
+}

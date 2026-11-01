@@ -1,0 +1,17 @@
+{
+  "owner_id": "org_hse",
+  "owner_name": "Кафедра",
+  "lines": [
+    {
+      "kind": "builds",
+      "scope": "org",
+      "unit": "builds",
+      "used": 10,
+      "limit": null,
+      "percent": null,
+      "state": "unlimited",
+      "source": null,
+      "resets_at": "2026-12-01T00:00:00Z"
+    }
+  ]
+}

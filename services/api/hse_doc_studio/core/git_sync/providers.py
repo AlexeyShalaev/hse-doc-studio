@@ -32,6 +32,8 @@ class GitProvider(StrEnum):
     gitlab = "gitlab"
     gitea = "gitea"
     bitbucket = "bitbucket"
+    # Сервер HSE Doc Studio как git-remote: вход по коду устройства, определение по `/git/-/info`.
+    hse_studio = "hse_studio"
     other = "other"
 
 
@@ -94,6 +96,8 @@ class ApiDetect:
     path: str
     version_header: str | None
     version_key: str | None
+    # Если задано: значение `version_key` в ответе обязано совпасть (сервер Студии отвечает `server: hse-doc-studio`).
+    value: str | None = None
 
 
 @dataclass(frozen=True)
@@ -206,7 +210,12 @@ def _api(raw: dict[str, Any]) -> ApiSpec:
         base=raw["base"],
         base_by_host=dict(raw["base_by_host"]),
         detect=(
-            ApiDetect(path=detect["path"], version_header=detect["version_header"], version_key=detect["version_key"])
+            ApiDetect(
+                path=detect["path"],
+                version_header=detect["version_header"],
+                version_key=detect["version_key"],
+                value=detect.get("value"),
+            )
             if detect
             else None
         ),

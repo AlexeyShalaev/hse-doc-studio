@@ -6,6 +6,7 @@ import httpx
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.agent.protocols import IAgentProvider, IAgentRunBus, IApprovalGate
 from hse_doc_studio.core.ai import IAIModelLister, IChatSummarizer
 from hse_doc_studio.core.ai_catalog import ModelCatalog
@@ -16,6 +17,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.compile.wait import ICompileWaitReader, NoCompileWait
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
@@ -24,12 +26,14 @@ from hse_doc_studio.core.fonts.repositories import (
     IFontStore,
     ISystemFontProvider,
 )
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.git_sync.fetch_schedule import FetchBook
 from hse_doc_studio.core.git_sync.merge.rules import StateFileMerge
 from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     ICertificateService,
     ICiRenderer,
+    ICredentialAccess,
     IGitBundleService,
     IGitCloneStore,
     IGitCredentialRepository,
@@ -37,6 +41,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitHostSettingsRepository,
     IGitMergeCommitter,
     IGitOperationRegistry,
+    IGitRemoteBindings,
     IGitRemoteRegistry,
     IGitRepoReader,
     IGitStoreGuard,
@@ -59,8 +64,11 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -98,6 +106,7 @@ from hse_doc_studio.core.signatures.ports import (
     IPublicKeyExporter,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_update.protocols import (
@@ -148,6 +157,7 @@ from hse_doc_studio.use_cases.ai_providers.delete_ai_provider import DeleteAIPro
 from hse_doc_studio.use_cases.ai_providers.get_ai_provider import GetAIProviderUC
 from hse_doc_studio.use_cases.ai_providers.list_ai_providers import ListAIProvidersUC
 from hse_doc_studio.use_cases.ai_providers.list_provider_models import ListProviderModelsUC
+from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.ai_providers.update_ai_provider import UpdateAIProviderUC
 
 # --- AI Runtime (local Ollama) ---
@@ -306,7 +316,7 @@ from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, T
 from hse_doc_studio.use_cases.git_sync.local_gate import LocalSyncGate
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
-from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
+from hse_doc_studio.use_cases.git_sync.provider_resolver import LOCAL_GUESS_ORDER, ProviderResolver
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
@@ -333,6 +343,7 @@ from hse_doc_studio.use_cases.languagetool.set_active_languagetool_image import 
 )
 
 # --- Office editor (ONLYOFFICE Document Server) ---
+from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess
 from hse_doc_studio.use_cases.office_editor.get_editor_config import GetOfficeEditorConfigUC
 from hse_doc_studio.use_cases.office_editor.handle_callback import OfficeEditorCallbackUC
 
@@ -572,11 +583,11 @@ class UseCaseProvider(Provider):
     def get_list_projects_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
     ) -> ListProjectsUC:
         return ListProjectsUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
         )
 
     @provide
@@ -650,27 +661,23 @@ class UseCaseProvider(Provider):
     @provide
     def get_get_nda_status_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
     ) -> GetNdaStatusUC:
         return GetNdaStatusUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
         )
 
     @provide
     def get_instantiate_nda_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         base_service: TemplateBaseService,
     ) -> InstantiateNdaUC:
         return InstantiateNdaUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
             base_service=base_service,
         )
@@ -678,13 +685,11 @@ class UseCaseProvider(Provider):
     @provide
     def get_delete_nda_files_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
     ) -> DeleteNdaFilesUC:
         return DeleteNdaFilesUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
         )
 
@@ -745,6 +750,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> UploadCustomFileUC:
         return UploadCustomFileUC(
             project_repo=project_repo,
@@ -756,6 +762,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide
@@ -1072,23 +1079,21 @@ class UseCaseProvider(Provider):
     @provide
     def get_preview_ci_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         file_repo: IFileRepository,
         ci_renderer: ICiRenderer,
     ) -> PreviewCiUC:
-        return PreviewCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image())
+        return PreviewCiUC(locator, file_repo, ci_renderer, _ci_image())
 
     @provide
     def get_write_ci_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         file_repo: IFileRepository,
         ci_renderer: ICiRenderer,
         vcs_locks: IVcsFolderLocks,
     ) -> WriteCiUC:
-        return WriteCiUC(project_repo, project_index_repo, file_repo, ci_renderer, _ci_image(), vcs_locks)
+        return WriteCiUC(locator, file_repo, ci_renderer, _ci_image(), vcs_locks)
 
     # ------------------------------------------------------------------ Template updates
 
@@ -1213,12 +1218,12 @@ class UseCaseProvider(Provider):
     def get_recover_template_updates_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         journal_repo: IUpdateJournalRepository,
         base_store: ITemplateBaseStore,
         vcs_service: IVcsService,
     ) -> RecoverTemplateUpdatesUC:
-        return RecoverTemplateUpdatesUC(project_repo, project_index_repo, journal_repo, base_store, vcs_service)
+        return RecoverTemplateUpdatesUC(project_repo, locator, journal_repo, base_store, vcs_service)
 
     @provide
     def get_get_vcs_settings_uc(
@@ -1341,6 +1346,7 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         vcs_throttle: IVcsEditThrottle,
+        quota: IProjectQuota,
     ) -> PutFileUC:
         return PutFileUC(
             project_repo=project_repo,
@@ -1349,6 +1355,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             vcs_throttle=vcs_throttle,
+            quota=quota,
         )
 
     @provide
@@ -1554,6 +1561,8 @@ class UseCaseProvider(Provider):
     def get_git_provider_resolver(
         self, host_settings: IGitHostSettingsRepository, detector: IProviderDetector
     ) -> ProviderResolver:
+        if settings.mode is StudioMode.local:
+            return ProviderResolver(host_settings, detector, LOCAL_GUESS_ORDER)
         return ProviderResolver(host_settings, detector)
 
     @provide
@@ -1601,7 +1610,7 @@ class UseCaseProvider(Provider):
         reader: IGitRepoReader,
         operations: IGitOperationRegistry,
         profile: ILocalAuthorProfile,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         access: ProjectAccessService,
         guard: IGitStoreGuard,
         settings_repo: ISettingsRepository,
@@ -1647,9 +1656,18 @@ class UseCaseProvider(Provider):
         policy: GitSyncPolicy,
         resolver: ProviderResolver,
         token_checker: TokenChecker,
+        access: IProjectAccessChecker,
     ) -> ProbeRemoteUC:
         return ProbeRemoteUC(
-            project_repo, project_index_repo, transport, credentials, template_repo, policy, resolver, token_checker
+            project_repo,
+            project_index_repo,
+            transport,
+            credentials,
+            template_repo,
+            policy,
+            resolver,
+            token_checker,
+            access,
         )
 
     @provide
@@ -1664,6 +1682,7 @@ class UseCaseProvider(Provider):
         transport: IGitTransport,
         guard: IGitStoreGuard,
         credentials: IGitCredentialRepository,
+        bindings: IGitRemoteBindings,
         profile: ILocalAuthorProfile,
         operations: IGitOperationRegistry,
         registry: IGitRemoteRegistry,
@@ -1681,6 +1700,7 @@ class UseCaseProvider(Provider):
             transport=transport,
             guard=guard,
             credentials=credentials,
+            bindings=bindings,
             profile=profile,
             operations=operations,
             registry=registry,
@@ -1700,6 +1720,7 @@ class UseCaseProvider(Provider):
         operations: IGitOperationRegistry,
         registry: IGitRemoteRegistry,
         credentials: IGitCredentialRepository,
+        bindings: IGitRemoteBindings,
         usage: IGitCredentialUsage,
         book: FetchBook,
     ) -> DisconnectRemoteUC:
@@ -1710,6 +1731,7 @@ class UseCaseProvider(Provider):
             operations=operations,
             registry=registry,
             credentials=credentials,
+            bindings=bindings,
             credential_usage=usage,
             fetch_book=book,
         )
@@ -1793,7 +1815,7 @@ class UseCaseProvider(Provider):
         state_repo: IGitSyncStateRepository,
         reader: IGitRepoReader,
         guard: IGitStoreGuard,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         profile: ILocalAuthorProfile,
         operations: IGitOperationRegistry,
         journal_repo: IUpdateJournalRepository,
@@ -2026,7 +2048,7 @@ class UseCaseProvider(Provider):
         store_remotes: IGitStoreRemotes,
         state_repo: IGitSyncStateRepository,
         operations: IGitOperationRegistry,
-        credentials: IGitCredentialRepository,
+        credentials: ICredentialAccess,
         settings_repo: ISettingsRepository,
         fetch: FetchGitRemoteUC,
         book: FetchBook,
@@ -2050,7 +2072,7 @@ class UseCaseProvider(Provider):
     def get_clone_git_project_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         base_service: TemplateBaseService,
         clone_store: IGitCloneStore,
@@ -2066,7 +2088,7 @@ class UseCaseProvider(Provider):
     ) -> CloneProjectUC:
         return CloneProjectUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
             base_service=base_service,
             clone_store=clone_store,
@@ -2083,8 +2105,8 @@ class UseCaseProvider(Provider):
         )
 
     @provide
-    def get_git_clone_defaults_uc(self, project_index_repo: IProjectIndexRepository) -> GetCloneDefaultsUC:
-        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", project_index_repo)
+    def get_git_clone_defaults_uc(self, locator: IProjectLocator) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", locator)
 
     @provide
     def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:
@@ -2320,7 +2342,7 @@ class UseCaseProvider(Provider):
     def get_trigger_compile_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         check_resolution_service: CheckResolutionService,
@@ -2331,10 +2353,11 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         compile_repo: ICompileRepository,
+        pdf_observer: IBuiltPdfObserver,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
             template_repo=template_repo,
             template_service=template_service,
@@ -2345,6 +2368,7 @@ class UseCaseProvider(Provider):
             artifacts=artifacts,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
+            pdf_observer=pdf_observer,
         )
 
     @provide
@@ -2585,55 +2609,51 @@ class UseCaseProvider(Provider):
     @provide
     def get_get_compile_stream_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
         log_stream: IJobLogStream,
     ) -> GetCompileStreamUC:
         return GetCompileStreamUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
             log_stream=log_stream,
         )
 
     @provide
+    def get_compile_wait_reader(self) -> ICompileWaitReader:
+        return NoCompileWait()
+
+    @provide
     def get_get_compile_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
     ) -> GetCompileUC:
         return GetCompileUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
         )
 
     @provide
     def get_archived_pdf_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         artifacts: IArtifactStore,
     ) -> GetArchivedPdfUC:
         return GetArchivedPdfUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             artifacts=artifacts,
         )
 
     @provide
     def get_synctex_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
     ) -> SyncTexUC:
         return SyncTexUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
             template_service=template_service,
         )
@@ -2641,13 +2661,11 @@ class UseCaseProvider(Provider):
     @provide
     def get_list_compiles_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
     ) -> ListCompilesUC:
         return ListCompilesUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
         )
 
@@ -2655,14 +2673,14 @@ class UseCaseProvider(Provider):
     def get_cancel_compile_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
         dispatcher: IJobDispatcher,
         log_stream: IJobLogStream,
     ) -> CancelCompileUC:
         return CancelCompileUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
             dispatcher=dispatcher,
             log_stream=log_stream,
@@ -2672,12 +2690,12 @@ class UseCaseProvider(Provider):
     def get_recover_stale_compiles_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         compile_repo: ICompileRepository,
     ) -> RecoverStaleCompilesUC:
         return RecoverStaleCompilesUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             compile_repo=compile_repo,
         )
 
@@ -2746,6 +2764,7 @@ class UseCaseProvider(Provider):
         reachability: IBackendReachability,
         settings_repo: ISettingsRepository,
         ai_provider_repo: IAIProviderRepository,
+        office_access: IOfficeAccess,
     ) -> GetOfficeEditorConfigUC:
         # reachability — как DS-контейнер достучится до нас: по общей сети или
         # через хостовый шлюз, выясняется в рантайме.
@@ -2759,6 +2778,8 @@ class UseCaseProvider(Provider):
             reachability=reachability,
             settings_repo=settings_repo,
             ai_provider_repo=ai_provider_repo,
+            access=office_access,
+            busy_retry_after_s=settings.office_editor.pool_retry_after_s,
         )
 
     @provide
@@ -2772,6 +2793,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         settings_repo: ISettingsRepository,
         client: httpx.Client,
+        office_access: IOfficeAccess,
     ) -> OfficeEditorCallbackUC:
         # Запись сохранённого документа идёт через put-file: guard путей +
         # edit-коммит в ProjectVCS — как у любой другой правки файла.
@@ -2786,6 +2808,7 @@ class UseCaseProvider(Provider):
             dispatcher=dispatcher,
             settings_repo=settings_repo,
             client=client,
+            access=office_access,
         )
 
     # ------------------------------------------------------------------ Office services (images)
@@ -3133,19 +3156,21 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         submission_profile_service: SubmissionProfileService,
+        access: IProjectAccessChecker,
     ) -> PreviewSubmissionCustomDocsUC:
         return PreviewSubmissionCustomDocsUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             submission_profile_service=submission_profile_service,
+            access=access,
         )
 
     @provide
     def get_create_submission_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         template_repo: ITemplateRepository,
         submission_repo: IPackSubmissionRepository,
         submission_profile_service: SubmissionProfileService,
@@ -3157,10 +3182,12 @@ class UseCaseProvider(Provider):
         render_form_uc: RenderFormUC,
         dispatcher: IJobDispatcher,
         file_probes: IProjectFileProbeFactory,
+        archive: ISubmissionArchive,
+        access: IProjectAccessChecker,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             template_repo=template_repo,
             submission_repo=submission_repo,
             submission_profile_service=submission_profile_service,
@@ -3172,6 +3199,8 @@ class UseCaseProvider(Provider):
             render_form_uc=render_form_uc,
             dispatcher=dispatcher,
             file_probes=file_probes,
+            access=access,
+            archive=archive,
         )
 
     @provide
@@ -3181,12 +3210,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
         template_repo: ITemplateRepository,
+        archive: ISubmissionArchive,
     ) -> ListSubmissionsUC:
         return ListSubmissionsUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
             template_repo=template_repo,
+            archive=archive,
         )
 
     @provide
@@ -3195,11 +3226,15 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         submission_repo: IPackSubmissionRepository,
+        archive: ISubmissionArchive,
+        audit: ISubmissionAudit,
     ) -> GetSubmissionFileUC:
         return GetSubmissionFileUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             submission_repo=submission_repo,
+            archive=archive,
+            audit=audit,
         )
 
     # ------------------------------------------------------------------ Chat (AI agent)
@@ -3211,14 +3246,12 @@ class UseCaseProvider(Provider):
     @provide
     def get_list_chat_sessions_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         run_manager: AgentRunManager,
     ) -> ListChatSessionsUC:
         return ListChatSessionsUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             run_manager=run_manager,
         )
@@ -3226,40 +3259,34 @@ class UseCaseProvider(Provider):
     @provide
     def get_create_chat_session_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
     ) -> CreateChatSessionUC:
         return CreateChatSessionUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
         )
 
     @provide
     def get_rename_chat_session_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
     ) -> RenameChatSessionUC:
         return RenameChatSessionUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
         )
 
     @provide
     def get_delete_chat_session_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         run_manager: AgentRunManager,
     ) -> DeleteChatSessionUC:
         return DeleteChatSessionUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             run_manager=run_manager,
         )
@@ -3267,14 +3294,12 @@ class UseCaseProvider(Provider):
     @provide
     def get_get_chat_session_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         run_manager: AgentRunManager,
     ) -> GetChatSessionUC:
         return GetChatSessionUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             run_manager=run_manager,
         )
@@ -3284,6 +3309,7 @@ class UseCaseProvider(Provider):
         self,
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         file_repo: IFileRepository,
         get_file_uc: GetFileUC,
         put_file_uc: PutFileUC,
@@ -3310,7 +3336,7 @@ class UseCaseProvider(Provider):
         # a project, so the same agent serves both project and no-project chats.
         get_project_uc = GetProjectUC(project_repo, project_index_repo)
         list_documents_uc = ListDocumentsUC(project_repo, project_index_repo)
-        list_projects_uc = ListProjectsUC(project_repo, project_index_repo)
+        list_projects_uc = ListProjectsUC(project_repo, locator)
         definitions = [
             # --- project-scoped (require a project) ---
             ReadTexTool(get_file_uc).definition(),
@@ -3346,7 +3372,7 @@ class UseCaseProvider(Provider):
     def get_start_chat_turn_uc(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         ai_provider_repo: IAIProviderRepository,
         settings_repo: ISettingsRepository,
@@ -3358,10 +3384,12 @@ class UseCaseProvider(Provider):
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
         agent_persona_repo: IAgentPersonaRepository,
+        access: IProjectAccessChecker,
+        relay: ProviderRelayDescriber,
     ) -> StartChatTurnUC:
         return StartChatTurnUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            relay=relay,
+            locator=locator,
             chat_repo=chat_repo,
             ai_provider_repo=ai_provider_repo,
             settings_repo=settings_repo,
@@ -3373,19 +3401,18 @@ class UseCaseProvider(Provider):
             context_service=context_service,
             summarizer=summarizer,
             agent_persona_repo=agent_persona_repo,
+            access=access,
         )
 
     @provide
     def get_get_chat_run_stream_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
     ) -> GetChatRunStreamUC:
         return GetChatRunStreamUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             bus=bus,
         )
@@ -3393,15 +3420,13 @@ class UseCaseProvider(Provider):
     @provide
     def get_cancel_chat_turn_uc(
         self,
-        project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         bus: IAgentRunBus,
         run_manager: AgentRunManager,
     ) -> CancelChatTurnUC:
         return CancelChatTurnUC(
-            project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             bus=bus,
             run_manager=run_manager,
@@ -3410,12 +3435,12 @@ class UseCaseProvider(Provider):
     @provide
     def get_recover_stale_chat_runs_uc(
         self,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         chat_repo: IChatRepository,
         settings_repo: ISettingsRepository,
     ) -> RecoverStaleChatRunsUC:
         return RecoverStaleChatRunsUC(
-            project_index_repo=project_index_repo,
+            locator=locator,
             chat_repo=chat_repo,
             settings_repo=settings_repo,
         )
@@ -3436,8 +3461,10 @@ class UseCaseProvider(Provider):
         return SystemListChatSessionsUC(self._system_folder(), chat_repo, run_manager)
 
     @provide
-    def get_system_create_chat_session_uc(self, chat_repo: IChatRepository) -> SystemCreateChatSessionUC:
-        return SystemCreateChatSessionUC(self._system_folder(), chat_repo)
+    def get_system_create_chat_session_uc(
+        self, chat_repo: IChatRepository, access: IProjectAccessChecker
+    ) -> SystemCreateChatSessionUC:
+        return SystemCreateChatSessionUC(self._system_folder(), chat_repo, access)
 
     @provide
     def get_system_get_chat_session_uc(
@@ -3481,7 +3508,8 @@ class UseCaseProvider(Provider):
         context_service: ChatContextService,
         summarizer: IChatSummarizer,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
+        access: IProjectAccessChecker,
         agent_persona_repo: IAgentPersonaRepository,
     ) -> SystemStartChatTurnUC:
         return SystemStartChatTurnUC(
@@ -3497,7 +3525,8 @@ class UseCaseProvider(Provider):
             context_service=context_service,
             summarizer=summarizer,
             project_repo=project_repo,
-            project_index_repo=project_index_repo,
+            locator=locator,
+            access=access,
             agent_persona_repo=agent_persona_repo,
         )
 
@@ -3564,5 +3593,5 @@ class UseCaseProvider(Provider):
         return ExportOpenPgpPublicKeyUC(repo=repo, keyring=keyring)
 
     @provide
-    def get_list_openpgp_keys_uc(self, keyring: GpgKeyring) -> ListOpenPgpKeysUC:
-        return ListOpenPgpKeysUC(keyring=keyring)
+    def get_list_openpgp_keys_uc(self, keyring: GpgKeyring, repo: ISigningIdentityRepository) -> ListOpenPgpKeysUC:
+        return ListOpenPgpKeysUC(keyring=keyring, repo=repo)

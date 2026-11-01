@@ -1,0 +1,16 @@
+{
+  "user": {
+    "id": "7a1d2c3b4e5f",
+    "name": "Анна Петрова",
+    "email": "anna.petrova@example.org"
+  },
+  "scopes": [
+    "git:read",
+    "git:write"
+  ],
+  "token": {
+    "id": "pat_4d5e6f",
+    "name": "Студия на MacBook Анны",
+    "expires_at": "2027-01-30T09:00:00Z"
+  }
+}

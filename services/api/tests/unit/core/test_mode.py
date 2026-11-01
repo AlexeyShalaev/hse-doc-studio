@@ -24,8 +24,8 @@ def test__settings__env_banana__raises_validation_error(monkeypatch: pytest.Monk
         Settings(_env_file=None)
 
 
-def test__ensure_supported_mode__server__raises_with_variable_name_and_stage() -> None:
-    with pytest.raises(RuntimeError, match=r"HSE_STUDIO__MODE=server.*stage 2"):
+def test__ensure_supported_mode__server_unconfigured__raises_with_variable_name_and_missing() -> None:
+    with pytest.raises(RuntimeError, match=r"HSE_STUDIO__MODE=server.*HSE_STUDIO__DB__DSN"):
         ensure_supported_mode(Settings(_env_file=None, mode=StudioMode.server))
 
 

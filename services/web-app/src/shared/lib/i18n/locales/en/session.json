@@ -1,0 +1,155 @@
+{
+  "unavailable": {
+    "title": "Server unavailable",
+    "body": "Could not get the session state. Check your connection and try again: until the server answers, it is unknown who you are and what you can access.",
+    "retry": "Try again"
+  },
+  "demo": {
+    "open": "Server demo scenarios",
+    "prefix": "Demo:",
+    "title": "Server demo",
+    "subtitle": "Data lives in the tab memory, no backend needed.",
+    "scenario": {
+      "fresh_install": {
+        "title": "Fresh install",
+        "hint": "No administrator yet: the first-run wizard is waiting."
+      },
+      "admin_ready": {
+        "title": "Administrator",
+        "hint": "The instance administrator is signed in, admin area is available."
+      },
+      "admin_scale": {
+        "title": "Large installation",
+        "hint": "Administrator with 12,000 people, 800 organizations and 250,000 audit entries: search, filters and paging."
+      },
+      "student_ready": {
+        "title": "Student",
+        "hint": "A regular organisation member is signed in."
+      },
+      "newcomer": {
+        "title": "Newcomer",
+        "hint": "First sign-in: no projects and no organizations."
+      },
+      "registration_closed": {
+        "title": "Registration closed",
+        "hint": "Only existing accounts can sign in."
+      },
+      "sso_only": {
+        "title": "SSO only",
+        "hint": "Passwords are off, sign-in goes through external providers."
+      },
+      "registration_open": {
+        "title": "Registration open",
+        "hint": "Any address, emails are sent."
+      },
+      "registration_domains": {
+        "title": "Registration by domain",
+        "hint": "Allowed domains only, emails are sent."
+      },
+      "admin_env_locked": {
+        "title": "Admin, environment-set",
+        "hint": "Registration and mail are set by the environment: read-only."
+      },
+      "admin_sso": {
+        "title": "Admin, SSO only",
+        "hint": "Password is off, two providers, no mail."
+      },
+      "admin_no_orgs": {
+        "title": "Admin, no organizations",
+        "hint": "The organization list is empty: create the first one."
+      },
+      "ops_runners_offline": {
+        "title": "Admin, runners offline",
+        "hint": "Every runner is silent and jobs pile up in the queue."
+      },
+      "ops_services_degraded": {
+        "title": "Admin, services failing",
+        "hint": "Storage and LanguageTool are down and disk is almost full."
+      },
+      "ops_fresh": {
+        "title": "Admin, fresh install",
+        "hint": "No runners, no jobs, services not connected."
+      },
+      "install_env_locked": {
+        "title": "Admin, environment-set settings",
+        "hint": "Address, build limit and key policy are set by the environment."
+      },
+      "install_fresh": {
+        "title": "Admin, factory settings",
+        "hint": "Factory values, key storage forbidden, no shared providers."
+      },
+      "org_admin": {
+        "title": "Organization admin",
+        "hint": "Not an installation admin: sees only their two organizations."
+      },
+      "registration_open_nosmtp": {
+        "title": "Open, no email",
+        "hint": "Emails are not sent: links are shown on screen."
+      },
+      "fresh_install_env": {
+        "title": "Install, admin from env",
+        "hint": "The admin is already created by the environment and the sign-up mode is set: the wizard is read-only."
+      },
+      "fresh_install_raced": {
+        "title": "Setup already in progress",
+        "hint": "Someone else created the admin: neutral screen and a sign-in form."
+      },
+      "fresh_install_broken": {
+        "title": "Install, storage is down",
+        "hint": "The environment check is red: setup cannot be finished."
+      },
+      "student_nosmtp": {
+        "title": "Student, no email",
+        "hint": "A student is signed in and email is not configured: links appear on screen."
+      },
+      "student_sso": {
+        "title": "Student, SSO sign-in",
+        "hint": "A student is signed in and the account has no password."
+      },
+      "student_linked": {
+        "title": "Student, password and SSO",
+        "hint": "A student is signed in with a password and linked HSE SSO; Google can be linked."
+      },
+      "runners_ready": {
+        "title": "Personal runners: all states",
+        "hint": "Anna: runners online, paused, stale, offline and revoked; a token, a runner-relayed provider, pairing codes."
+      },
+      "runners_none": {
+        "title": "Personal runners: none yet",
+        "hint": "Anna hasn't connected any runner yet."
+      },
+      "runners_offline": {
+        "title": "Personal runners: runner offline",
+        "hint": "Anna's only runner is off: builds use shared runners, AI via the runner is unavailable."
+      },
+      "runners_disabled": {
+        "title": "Personal runners: turned off by admin",
+        "hint": "The administrator turned personal runners off installation-wide."
+      },
+      "admin_runners_disabled": {
+        "title": "Admin: personal runners off",
+        "hint": "Instance admin: personal runners are turned off in build settings."
+      },
+      "local_remote_off": {
+        "title": "Studio: cloud builds off",
+        "hint": "Local Studio, the cloud builds switch is not on yet."
+      },
+      "local_remote_online": {
+        "title": "Studio: cloud builds online",
+        "hint": "Local Studio is connected to the server and builds cloud projects."
+      },
+      "local_remote_problems": {
+        "title": "Studio: no Docker or image",
+        "hint": "The Studio is connected, but Docker is unavailable and the TeX image is missing."
+      },
+      "admin_personal_runners": {
+        "title": "Admin: personal runners",
+        "hint": "Instance admin: people's personal runners, their jobs and AI via a runner in the queue."
+      },
+      "links_guest": {
+        "title": "Guest by link",
+        "hint": "Boris opened two projects by links: editing in Bertie and PDF viewing in Pavel's project."
+      }
+    }
+  }
+}

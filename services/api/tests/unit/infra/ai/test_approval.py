@@ -10,34 +10,34 @@ class _FakeSettingsRepo:
     def __init__(self, data: dict[str, Any]) -> None:
         self._data = data
 
-    def get(self) -> dict[str, Any]:
+    async def get(self) -> dict[str, Any]:
         return self._data
 
-    def save(self, settings: dict[str, Any]) -> None:
+    async def save(self, settings: dict[str, Any]) -> None:
         self._data = settings
 
 
-def test__requires_approval__auto_approve_disabled__gates_writes_and_exec_not_reads() -> None:
+async def test__requires_approval__auto_approve_disabled__gates_writes_and_exec_not_reads() -> None:
     gate = ConfigApprovalGate(auto_approve_writes=False)
 
-    assert gate.requires_approval(ToolKind.read) is False
-    assert gate.requires_approval(ToolKind.write) is True
-    assert gate.requires_approval(ToolKind.exec_) is True
+    assert await gate.requires_approval(ToolKind.read) is False
+    assert await gate.requires_approval(ToolKind.write) is True
+    assert await gate.requires_approval(ToolKind.exec_) is True
 
 
-def test__requires_approval__auto_approve_enabled__writes_no_longer_gated() -> None:
+async def test__requires_approval__auto_approve_enabled__writes_no_longer_gated() -> None:
     gate = ConfigApprovalGate(auto_approve_writes=True)
 
-    assert gate.requires_approval(ToolKind.write) is False
+    assert await gate.requires_approval(ToolKind.write) is False
 
 
-def test__requires_approval__settings_repo_provided__reflects_live_runtime_setting() -> None:
+async def test__requires_approval__settings_repo_provided__reflects_live_runtime_setting() -> None:
     repo = _FakeSettingsRepo({"agent_auto_approve_writes": False})
     gate = ConfigApprovalGate(False, settings_repo=repo)  # type: ignore[arg-type]
 
-    assert gate.requires_approval(ToolKind.write) is True
+    assert await gate.requires_approval(ToolKind.write) is True
 
     # Flip the runtime setting → the gate reflects it without reconstruction.
-    repo.save({"agent_auto_approve_writes": True})
+    await repo.save({"agent_auto_approve_writes": True})
 
-    assert gate.requires_approval(ToolKind.write) is False
+    assert await gate.requires_approval(ToolKind.write) is False

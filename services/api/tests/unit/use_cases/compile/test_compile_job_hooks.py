@@ -7,18 +7,20 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, EngineType
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec
-from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus
+from hse_doc_studio.core.jobs.errors import JobError
 from hse_doc_studio.core.value_objects import CheckResult
+from hse_doc_studio.use_cases.compile.compile_hooks_factory import CompileJobHooksFactory
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
 
 from tests.factories import make_document, make_project
-from tests.unit.core.jobs.samples import JOB_ID, make_compile_spec
+from tests.unit.core.jobs.samples import JOB_ID, PROJECT_ID, make_compile_spec
 
 STARTED_AT = datetime(2026, 10, 26, 9, 0, tzinfo=timezone.utc)
 FINISHED_AT = datetime(2026, 10, 26, 9, 5, tzinfo=timezone.utc)
@@ -48,7 +50,7 @@ class Env:
     def __init__(self, tmp_path: Path) -> None:
         self.folder = tmp_path
         self.events: list[str] = []
-        self.compile_repo = MagicMock()
+        self.compile_repo = AsyncMock()
         self.compile_repo.get_for_project.return_value = _record(tmp_path)
         self.project = make_project(folder=tmp_path, documents=[make_document("tz"), make_document("other")])
         self.project_repo = MagicMock()
@@ -60,7 +62,7 @@ class Env:
         self.vcs_service.commit.side_effect = lambda *a, **kw: self.events.append("vcs")
         self.vcs_locks = MagicMock()
         self.vcs_locks.for_folder.side_effect = lambda folder: self._lock()
-        self.artifacts = MagicMock()
+        self.artifacts = AsyncMock()
         self.artifacts.archive_pdf.side_effect = lambda *a: self.events.append("archive")
         self.hooks = CompileJobHooks(
             compile_repo=self.compile_repo,
@@ -297,7 +299,7 @@ async def test__on_finished__success__vcs_commit_then_archive_in_that_order(tmp_
     await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
 
     assert env.events == ["vcs", "archive"]
-    env.artifacts.archive_pdf.assert_called_once_with(tmp_path, "tz", JOB_ID, "tz/main.tex")
+    env.artifacts.archive_pdf.assert_called_once_with(PROJECT_ID, tmp_path, "tz", JOB_ID, "tz/main.tex")
     commit = env.vcs_service.commit.call_args
     assert commit.kwargs["message"] == "Сборка: tz · 7 стр."
     assert commit.kwargs["include_pdf"] is False
@@ -366,3 +368,87 @@ async def test__on_finished__not_a_compile_spec__raises_type_error(tmp_path: Pat
 
     with pytest.raises(TypeError):
         await env.hooks.on_finished(spec, _result(JobStatus.succeeded), "log")
+
+
+# --- заменённая сборка и хуки после рестарта ---
+
+
+async def test__on_finished__superseded__record_closed_but_document_state_belongs_to_newer_build(
+    tmp_path: Path,
+) -> None:
+    env = Env(tmp_path)
+    superseded = JobResult(status=JobStatus.cancelled, error=JobError(JobErrorCategory.internal, "superseded"))
+
+    await env.hooks.on_finished(env.spec, superseded, "")
+
+    assert env.saved[-1].status is CompileStatus.cancelled
+    assert env.doc_status is None
+    env.changelog_repo.append.assert_not_called()
+
+
+async def test__on_finished__hooks_rebuilt_after_restart__started_at_comes_from_the_record(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "")
+
+    assert env.saved[-1].started_at == STARTED_AT
+
+
+def test__factory__compile_spec__builds_hooks_for_the_spec_folder(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    factory = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    )
+
+    assert factory.for_spec(env.spec) is not None
+    assert factory.for_spec(replace(env.spec, local_root=None)) is None
+    assert factory.for_spec(replace(env.spec, kind=JobKind.office_convert)) is None
+
+
+# --- хуки после рестарта ---
+
+
+async def test__recovered_hooks__finished_record__outcome_is_not_applied_twice(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.compile_repo.get_for_project.return_value = replace(_record(tmp_path), status=CompileStatus.success)
+    hooks = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    ).for_spec(env.spec)
+    assert hooks is not None
+
+    await hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    env.compile_repo.save.assert_not_called()
+    env.changelog_repo.append.assert_not_called()
+    env.artifacts.archive_pdf.assert_not_called()
+
+
+async def test__recovered_hooks__record_missing__nothing_is_recreated(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.compile_repo.get_for_project.return_value = None
+    hooks = CompileJobHooksFactory(
+        env.compile_repo,
+        env.project_repo,
+        env.changelog_repo,
+        MagicMock(),
+        env.vcs_service,
+        env.vcs_locks,
+        env.artifacts,
+    ).for_spec(env.spec)
+    assert hooks is not None
+
+    await hooks.on_finished(env.spec, _result(JobStatus.failed), "log")
+
+    env.compile_repo.save.assert_not_called()

@@ -110,7 +110,7 @@ class FetchGitRemoteUC:
         """По просьбе интерфейса: не чаще раза в FETCH_DEBOUNCE_S, итог всегда в статусе."""
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
         await self.fetch(project, manual=True)
-        return await asyncio.to_thread(self._status.build, project)
+        return await self._status.view(project)
 
     async def fetch(self, project: Project, *, manual: bool) -> FetchOutcome:
         """Одна выборка. `manual=False` это расписание: занятую папку и недоверенное хранилище оно молча пропускает.
@@ -177,6 +177,7 @@ class FetchGitRemoteUC:
             ),
             state.credential_id or config.credential_id,
             insecure_http=state.insecure_http,
+            project_id=project.id,
         )
         tracking = f"{TRACKING_PREFIX}{state.remote_branch}"
         before = await asyncio.to_thread(self._reader.rev_parse, folder, tracking)

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.requirements import (
     RequirementEntryResponse,
     RequirementFormatSchema,
@@ -24,7 +25,7 @@ from hse_doc_studio.use_cases.requirements.update_requirements_format import (
     UpdateRequirementsFormatUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _fmt_to_schema(fmt: RequirementsFormat) -> RequirementFormatSchema:

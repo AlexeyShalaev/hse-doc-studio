@@ -59,6 +59,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.plan_outdated: _STATE,
     GitErrorCode.remote_schema_newer: _STATE,
     GitErrorCode.operation_not_cancellable: _STATE,
+    GitErrorCode.egress_blocked: _INPUT,
     GitErrorCode.no_conflicts: _MISSING,
     GitErrorCode.auth_failed: _UPSTREAM,
     GitErrorCode.forbidden_write: _UPSTREAM,
@@ -73,6 +74,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
     GitErrorCode.timeout: _UPSTREAM,
     GitErrorCode.remote_moved: _UPSTREAM,
     GitErrorCode.protected_branch: _UPSTREAM,
+    GitErrorCode.push_rejected: _UPSTREAM,
     GitErrorCode.large_file: _UPSTREAM,
     GitErrorCode.workflow_scope_missing: _UPSTREAM,
     GitErrorCode.email_privacy: _UPSTREAM,
@@ -85,7 +87,8 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
 
 # Запросы Git-синхронизации: в теле лежит секрет (токен, пароль пакета) или адрес, в который вставили токен
 # (`https://user:TOKEN@host/...`). Эхо входных данных в ответе проверки (`input`) вернуло бы его вызывающему.
-_SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/)")
+# Токен регистрации раннера в облачных сборках локальной Студии такой же секрет.
+SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/|remote-runner/token$)")
 
 
 def git_error_body(exc: GitSyncError) -> dict[str, object]:
@@ -100,7 +103,7 @@ async def _git_error_handler(_request: Request, exc: Exception) -> JSONResponse:
 async def _validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)  # noqa: S101
     errors = exc.errors()
-    if _SECRET_BODY_PATHS.match(request.url.path):
+    if SECRET_BODY_PATHS.match(request.url.path):
         errors = [{key: value for key, value in error.items() if key not in {"input", "ctx"}} for error in errors]
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 

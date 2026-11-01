@@ -1,0 +1,97 @@
+{
+  "failure": {
+    "network": "The server is unreachable. Check the connection and try again.",
+    "unknown": "Something went wrong. Try again later."
+  },
+  "persona": {
+    "none": "No persona",
+    "supervisor": "Supervisor",
+    "co_supervisor": "Co-supervisor",
+    "academic_supervisor": "Academic supervisor"
+  },
+  "form": {
+    "title": "Invite to the project",
+    "titleUser": "Invite: {{name}}",
+    "lead": "Access starts once the person accepts the invitation.",
+    "email": "Email",
+    "role": "Role",
+    "persona": "Persona",
+    "showSources": "Can see sources and history",
+    "canShare": "Can share",
+    "canEditAll": "Edits everything (outside own folder)",
+    "expiry": "Expires in",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "message": "Message",
+    "messagePlaceholder": "For example: please take a look at chapter 2",
+    "submit": "Invite",
+    "cancel": "Cancel",
+    "done": "Done",
+    "sentEmail": "Invitation sent by email",
+    "sentInbox": "The invitation is in {{name}}'s Inbox",
+    "manualTitle": "Invitation link",
+    "manualHint": "Email is not configured: send the link yourself.",
+    "linkLabel": "Invitation link"
+  },
+  "pending": {
+    "title": "Pending",
+    "lead": "Invitations not accepted yet and requests for access to the project.",
+    "invitations": "Invitations",
+    "requests": "Access requests",
+    "sent_one": "sent {{count}} time, last on {{date}}",
+    "sent_other": "sent {{count}} times, last on {{date}}",
+    "expiresIn_one": "expires in {{count}} day",
+    "expiresIn_other": "expires in {{count}} days",
+    "expired": "Expired",
+    "actions": "Invitation actions: {{name}}",
+    "resend": "Resend",
+    "revoke": "Revoke",
+    "resent": "Invitation resent",
+    "revoked": "Invitation revoked"
+  },
+  "requests": {
+    "approve": "Approve",
+    "deny": "Deny",
+    "approveTitle": "Approve request: {{name}}",
+    "approved": "{{name}} is now in the project: {{role}}",
+    "denied": "Request from {{name}} denied"
+  },
+  "transfer": {
+    "title": "Transfer project",
+    "hint": "The new owner gets every right; you become an editor.",
+    "start": "Transfer",
+    "cancel": "Cancel",
+    "cancelled": "Transfer cancelled",
+    "pending": "Waiting for {{name}} to confirm until {{date}}",
+    "pendingNotice": "The project is being transferred to a new owner.",
+    "dialogTitle": "Transfer project",
+    "target": "To",
+    "search": "Name, email or organization",
+    "none": "Nobody found",
+    "submit": "Transfer",
+    "userHint": "The recipient becomes the owner after confirming. You become an editor.",
+    "orgHint": "The project moves to {{name}} right away. The organization admins become its owners.",
+    "orgConfirmTitle": "Transfer the project to {{name}}",
+    "sent": "Transfer sent: {{name}} will find it in the Inbox",
+    "doneOrg": "Project transferred to {{name}}"
+  },
+  "supervisor": {
+    "invite": "Invite supervisor"
+  },
+  "page": {
+    "title": "Project invitation",
+    "lead": "{{actor}} invites you to “{{project}}” as {{role}}.",
+    "signInAs": "Sign in or sign up with the account {{hint}}.",
+    "accept": "Accept",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "home": "Home",
+    "accepted": "Invitation accepted.",
+    "mismatch": "The invitation was sent to {{hint}}, but you are signed in as {{email}}.",
+    "state": {
+      "expired": "The invitation has expired. Ask for a new one.",
+      "used": "The invitation has already been accepted or declined.",
+      "invalid": "The link is not valid."
+    }
+  }
+}

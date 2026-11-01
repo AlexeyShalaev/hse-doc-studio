@@ -1,0 +1,11 @@
+{
+  "user_id": "2b3c4d5e-6f70-4812-9a3b-4c5d6e7f8091",
+  "email": null,
+  "role": "reviewer",
+  "persona": "supervisor",
+  "can_share": false,
+  "show_sources": true,
+  "can_edit_all": false,
+  "message": "Посмотрите, пожалуйста, главу 2",
+  "expires_in_days": 7
+}

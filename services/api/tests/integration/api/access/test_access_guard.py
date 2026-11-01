@@ -5,14 +5,20 @@ import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
 from fastapi import APIRouter, Depends, FastAPI
-from hse_doc_studio.api import guards
-from hse_doc_studio.api.guards import project_access_guard
+from hse_doc_studio.api import guards, route_scopes
+from hse_doc_studio.api.guards import install_exception_handlers, project_access_guard
+from hse_doc_studio.api.route_scopes import RouteScope
+from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.context import current_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
+from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.identity.errors import IdentityErrorCode, message_for
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
@@ -110,7 +116,7 @@ async def test__guard__stub_non_local_user_without_grant__404_before_423(
     resp = await guarded_app.patch(_base(project), json={"name": "Чужое"})
 
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Project not found"}
+    assert resp.json() == {"detail": message_for(IdentityErrorCode.not_found), "code": "not_found"}
 
 
 async def test__guard__stub_non_local_owner__reaches_write_guard(
@@ -129,7 +135,13 @@ async def test__guard__stub_non_local_reader__member_with_too_little_role_gets_4
     base = _base(project)
 
     assert (await guarded_app.get(base)).status_code == 200
-    assert (await guarded_app.patch(base, json={"name": "Не моё"})).status_code == 403
+    denied = await guarded_app.patch(base, json={"name": "Не моё"})
+    assert denied.status_code == 403
+    assert denied.json() == {
+        "detail": message_for(IdentityErrorCode.forbidden_role),
+        "code": "forbidden_role",
+        "required_role": "owner",
+    }
     assert (await guarded_app.get(f"{base}/files", params={"path": "."})).status_code == 403
 
 
@@ -146,7 +158,9 @@ async def test__guard__non_local_project_route_without_rule__denied(monkeypatch:
 
     app = FastAPI()
     app.include_router(router)
+    install_exception_handlers(app)
     _stub_server(monkeypatch, _OWNER, _OWNER_ACL_GRANTS)
+    monkeypatch.setattr(route_scopes, "ROUTE_SCOPES", {("GET", "/open-route"): RouteScope.authenticated})
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         assert (await client.get("/api/v1/unlisted/abc")).status_code == 403
@@ -194,3 +208,30 @@ async def test__guard__office_callback_reachable_for_non_local(
 
     assert resp.status_code == 400
     assert resp.json() == {"detail": "callback body must be a JSON object"}
+
+
+async def test__guard__body_scoped_route__reaches_use_case_and_checker_maps_to_404_403(
+    guarded_app: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_server(monkeypatch, _STRANGER)
+    foreign, weak = uuid4(), uuid4()
+
+    async def require(_self: object, project_id: UUID, _action: object) -> None:
+        if project_id == foreign:
+            raise NotFoundError("Project not found")
+        if project_id == weak:
+            raise ProjectForbiddenError("Forbidden")
+
+    monkeypatch.setattr(LocalProjectAccessChecker, "require", require)
+
+    assert (await guarded_app.post("/api/v1/agent/chats", json={})).status_code == 201
+    chat = await guarded_app.post("/api/v1/agent/chats", json={"project_id": str(foreign)})
+    assert (chat.status_code, chat.json()) == (404, {"detail": "Project not found"})
+    assert (await guarded_app.post("/api/v1/agent/chats", json={"project_id": str(weak)})).status_code == 403
+    probe = {"url": "https://example.test/a.git"}
+    assert (
+        await guarded_app.post("/api/v1/git/remote/probe", json=probe | {"project_id": str(foreign)})
+    ).status_code == 404
+    assert (
+        await guarded_app.post("/api/v1/git/remote/probe", json=probe | {"project_id": str(weak)})
+    ).status_code == 403

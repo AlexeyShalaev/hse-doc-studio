@@ -7,27 +7,39 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { GitBranch, History, Plus, Search, Upload } from "lucide-react";
+import {
+  FileArchive,
+  GitBranch,
+  History,
+  Plus,
+  Search,
+  Upload,
+} from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
 import { CLONE_PATH } from "@entities/git-sync";
+import { useBootstrap, useCapabilities } from "@entities/session";
 import type { ProjectResponseSchema } from "@entities/project";
 import {
   useProjects,
   useTemplateMeta,
   useUpdateProject,
 } from "@entities/project";
+import { ProjectImportDialog } from "@features/project-import";
 import { useRecentProjectIds, useWorkspaceStore } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { ChatDock } from "@widgets/ChatDock";
 import { EmptyState } from "./EmptyState";
+import { LoadError } from "./LoadError";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { RecentActivity } from "./RecentActivity";
 
 type FilterType = "active" | "all" | "archived";
+/** Чьи проекты: только на сервере, где у проекта есть владелец. */
+type ScopeType = "all" | "mine" | "orgs";
 type SortMode = "recent" | "pinned" | "name";
 type ProjectItem = z.infer<typeof ProjectResponseSchema>;
 
@@ -109,11 +121,12 @@ const RecentProjectTile = ({ project, onOpen }: RecentProjectTileProps) => {
         >
           {project.name}
         </span>
+        {/* На сервере папки нет: под названием владелец проекта. */}
         <span
-          className="mono truncate"
+          className={clsx("truncate", project.folder !== "" && "mono")}
           style={{ fontSize: 10, color: "var(--fg-3)" }}
         >
-          {project.folder}
+          {project.folder !== "" ? project.folder : project.owner?.name}
         </span>
       </span>
     </button>
@@ -123,7 +136,20 @@ const RecentProjectTile = ({ project, onOpen }: RecentProjectTileProps) => {
 export const WelcomePage = () => {
   const { t, i18n } = useTranslation("welcome");
   const navigate = useNavigate();
-  const { data: projects, isLoading } = useProjects();
+  const { t: tAccess } = useTranslation("projectAccess");
+  const { t: tImport } = useTranslation("projectImport");
+  const {
+    data: projects,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useProjects();
+  const { lacks } = useCapabilities();
+  const user = useBootstrap().data?.user ?? null;
+  // Папок на диске нет там, где bootstrap так сказал: проекты лежат на сервере.
+  const isServerList = lacks("fs_browse");
+  const canConnectFolder = !lacks("connect_folder");
   const { mutate: updateProject } = useUpdateProject();
   const recentIds = useRecentProjectIds();
   // The one unified agent, docked between the title and status bars (same
@@ -133,7 +159,9 @@ export const WelcomePage = () => {
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("active");
+  const [scope, setScope] = useState<ScopeType>("all");
   const [sort, setSort] = useState<SortMode>(readStoredSortMode);
+  const [importOpen, setImportOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -169,12 +197,19 @@ export const WelcomePage = () => {
     if (filter === "active") xs = xs.filter((p) => !p.archived);
     else if (filter === "archived") xs = xs.filter((p) => p.archived);
 
+    if (scope === "mine") {
+      xs = xs.filter((p) => p.owner?.kind !== "org");
+    } else if (scope === "orgs") {
+      xs = xs.filter((p) => p.owner?.kind === "org");
+    }
+
     if (query.trim()) {
       const ql = query.trim().toLowerCase();
       xs = xs.filter(
         (p) =>
           p.name.toLowerCase().includes(ql) ||
           p.folder.toLowerCase().includes(ql) ||
+          (p.owner?.name ?? "").toLowerCase().includes(ql) ||
           (p.supervisor?.name ?? "").toLowerCase().includes(ql),
       );
     }
@@ -195,7 +230,14 @@ export const WelcomePage = () => {
       const rankB = recentRank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
       return rankA === rankB ? byName(a, b) : rankA - rankB;
     });
-  }, [projects, filter, query, sort, collator, recentRank]);
+  }, [projects, filter, scope, query, sort, collator, recentRank]);
+
+  // Переключатель «Мои / Организации» нужен, только когда есть что разделять:
+  // человек состоит в организации или ему уже открыли проект организации.
+  const showScopeFilter =
+    isServerList &&
+    ((user?.org_roles.length ?? 0) > 0 ||
+      (projects ?? []).some((p) => p.owner?.kind === "org"));
 
   const recentProjects = useMemo(() => {
     const byId = new Map((projects ?? []).map((p) => [p.id, p] as const));
@@ -238,6 +280,10 @@ export const WelcomePage = () => {
 
   const handleCloneFromGit = () => {
     void navigate(CLONE_PATH);
+  };
+
+  const handleImportArchive = () => {
+    setImportOpen(true);
   };
 
   const handleChangeSort = (next: SortMode) => {
@@ -298,7 +344,7 @@ export const WelcomePage = () => {
           >
             <div
               className="flex items-center justify-between"
-              style={{ marginBottom: 32 }}
+              style={{ marginBottom: 32, gap: 16, flexWrap: "wrap" }}
             >
               <div className="flex flex-col" style={{ gap: 6 }}>
                 <span
@@ -309,7 +355,7 @@ export const WelcomePage = () => {
                     letterSpacing: "0.08em",
                   }}
                 >
-                  {t("header.kicker")}
+                  {isServerList ? tAccess("header.kicker") : t("header.kicker")}
                 </span>
                 <h1
                   className="text-fg-0"
@@ -326,26 +372,42 @@ export const WelcomePage = () => {
                   className="dim"
                   style={{ margin: 0, fontSize: 13, maxWidth: 620 }}
                 >
-                  {t("header.subtitle")}
+                  {isServerList
+                    ? tAccess("header.subtitle")
+                    : t("header.subtitle")}
                 </p>
               </div>
               <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleConnectFolder}
-                >
-                  <Upload size={13} />
-                  {t("header.openFolder")}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleCloneFromGit}
-                >
-                  <GitBranch size={13} />
-                  {t("header.cloneFromGit")}
-                </button>
+                {canConnectFolder && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleConnectFolder}
+                  >
+                    <Upload size={13} />
+                    {t("header.openFolder")}
+                  </button>
+                )}
+                {isServerList && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleImportArchive}
+                  >
+                    <FileArchive size={13} />
+                    {tImport("open")}
+                  </button>
+                )}
+                {!isServerList && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleCloneFromGit}
+                  >
+                    <GitBranch size={13} />
+                    {t("header.cloneFromGit")}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn primary lg"
@@ -424,6 +486,27 @@ export const WelcomePage = () => {
                   </button>
                 ))}
               </div>
+              {showScopeFilter && (
+                <div
+                  className="seg shrink-0"
+                  role="group"
+                  aria-label={tAccess("scope.label")}
+                >
+                  {(["all", "mine", "orgs"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setScope(value);
+                      }}
+                      aria-pressed={scope === value}
+                      className={clsx(scope === value && "active")}
+                    >
+                      {tAccess(`scope.${value}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div
                 className="seg shrink-0"
                 role="group"
@@ -484,12 +567,25 @@ export const WelcomePage = () => {
               <div className="flex justify-center py-16">
                 <Spinner />
               </div>
+            ) : isError && !projects ? (
+              <LoadError
+                retrying={isFetching}
+                onRetry={() => {
+                  void refetch();
+                }}
+              />
             ) : filtered.length === 0 ? (
               <EmptyState
                 onCreate={handleCreateProject}
-                onClone={handleCloneFromGit}
+                onClone={isServerList ? undefined : handleCloneFromGit}
+                onImport={isServerList ? handleImportArchive : undefined}
                 query={query}
                 onResetQuery={handleResetQuery}
+                variant={isServerList ? "server" : "local"}
+                scopeFiltered={showScopeFilter && scope !== "all"}
+                onResetScope={() => {
+                  setScope("all");
+                }}
               />
             ) : (
               <div
@@ -497,7 +593,8 @@ export const WelcomePage = () => {
                 onKeyDown={handleGridKeyDown}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(min(360px, 100%), 1fr))",
                   gap: 16,
                 }}
               >
@@ -520,7 +617,8 @@ export const WelcomePage = () => {
               </div>
             )}
 
-            <RecentActivity />
+            {/* Лента строится из локальных логов сборки: на сервере её нет. */}
+            {!lacks("local_services_ui") && <RecentActivity />}
           </div>
         </div>
 
@@ -528,6 +626,14 @@ export const WelcomePage = () => {
       </div>
 
       <AppStatusBar />
+      {isServerList && (
+        <ProjectImportDialog
+          isOpen={importOpen}
+          onClose={() => {
+            setImportOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

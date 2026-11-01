@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
+from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectRoleName
 
 
 class ProjectListItemResponse(BaseModel):
@@ -53,6 +54,15 @@ class ProjectAccessResponse(BaseModel):
     required_studio: str | None = None
 
 
+class ProjectStorageResponse(BaseModel):
+    # Только на сервере: занятое место проекта и предупреждение с доли предела (по умолчанию 80%).
+    used_bytes: int
+    limit_bytes: int
+    warning: bool
+    exceeded: bool
+    measured_at: datetime
+
+
 class ProjectDetailResponse(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
@@ -76,6 +86,14 @@ class ProjectDetailResponse(BaseModel):
     checks_override: ChecksOverrideSchema
     # Что эта Студия может делать с проектом; заполняется в GET /projects/{id}.
     access: ProjectAccessResponse = ProjectAccessResponse()
+    # Заполняется в GET /projects/{id} на сервере; в локальном режиме None.
+    storage: ProjectStorageResponse | None = None
+    # Только на сервере (GET /projects/{id}): чей проект и роль смотрящего, как в списке проектов.
+    owner: ProjectOwner | None = None
+    my_role: ProjectRoleName | None = None
+    # links: роль держится на ссылке (гость или ссылочное право) и подпись этой ссылки для баннера.
+    via_link: bool = False
+    link_label: str | None = None
 
 
 class NdaStatusResponse(BaseModel):
@@ -89,7 +107,10 @@ class NdaStatusResponse(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     name: str
-    folder: str
+    # В локальном режиме обязательна; на общем сервере папку выбирает сервер, и поле отклоняется.
+    folder: str | None = None
+    # Из контракта серверного режима (CreateServerProjectRequest): организаций пока нет, непустое значение отклоняется.
+    owner_org_slug: str | None = None
     pack_id: str
     template_id: str
     version: str

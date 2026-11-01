@@ -1,5 +1,6 @@
 import { FolderInput, FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCapabilities } from "@entities/session";
 import { OpenFolderInEditor } from "@entities/system";
 import { toast } from "@shared/lib";
 import { SectionCard } from "../SectionCard";
@@ -27,6 +28,11 @@ export const GeneralSection = ({
   onRequestMove,
 }: GeneralSectionProps) => {
   const { t } = useTranslation("workspace");
+  // На сервере папка проекта служебная: путь, редактор и перенос не показываем.
+  const { lacks } = useCapabilities();
+  const showFolder = !lacks("fs_browse");
+  const showEditor = !lacks("open_in_editor");
+  const showMove = !lacks("move_project");
   return (
     <SectionCard title={t("projectSettings.sectionGeneral")}>
       <div className="field">
@@ -81,42 +87,46 @@ export const GeneralSection = ({
           </span>
         </div>
       </div>
-      <div className="field">
-        <label>{t("projectSettings.localFolder")}</label>
-        <div className="flex gap-2">
-          <input className="input mono" value={project.folder} readOnly />
-          <button
-            type="button"
-            className="btn tt"
-            data-tt={t("projectSettings.copyPath")}
-            onClick={() => {
-              navigator.clipboard
-                .writeText(project.folder)
-                .then(() => {
-                  toast.info(t("projectSettings.pathCopied"));
-                })
-                .catch(() => {
-                  toast.error(t("projectSettings.copyFailed"));
-                });
-            }}
-          >
-            <FolderOpen size={12} />
-          </button>
-          <OpenFolderInEditor path={project.folder} />
+      {showFolder && (
+        <div className="field">
+          <label>{t("projectSettings.localFolder")}</label>
+          <div className="flex gap-2">
+            <input className="input mono" value={project.folder} readOnly />
+            <button
+              type="button"
+              className="btn tt"
+              data-tt={t("projectSettings.copyPath")}
+              onClick={() => {
+                navigator.clipboard
+                  .writeText(project.folder)
+                  .then(() => {
+                    toast.info(t("projectSettings.pathCopied"));
+                  })
+                  .catch(() => {
+                    toast.error(t("projectSettings.copyFailed"));
+                  });
+              }}
+            >
+              <FolderOpen size={12} />
+            </button>
+            {showEditor && <OpenFolderInEditor path={project.folder} />}
+          </div>
+          {showMove && (
+            <button
+              type="button"
+              className="btn ghost self-start"
+              style={{ marginTop: 8 }}
+              disabled={isMoving}
+              onClick={onRequestMove}
+            >
+              <FolderInput size={11} />
+              {isMoving
+                ? t("projectSettings.moving")
+                : t("projectSettings.moveToAnotherFolder")}
+            </button>
+          )}
         </div>
-        <button
-          type="button"
-          className="btn ghost self-start"
-          style={{ marginTop: 8 }}
-          disabled={isMoving}
-          onClick={onRequestMove}
-        >
-          <FolderInput size={11} />
-          {isMoving
-            ? t("projectSettings.moving")
-            : t("projectSettings.moveToAnotherFolder")}
-        </button>
-      </div>
+      )}
     </SectionCard>
   );
 };

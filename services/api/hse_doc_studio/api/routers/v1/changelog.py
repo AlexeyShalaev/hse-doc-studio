@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.changelog import (
     AddChangeLogEntryRequest,
     ChangeLogEntryResponse,
@@ -21,7 +22,7 @@ from hse_doc_studio.use_cases.changelog.list_changelog import (
     ListChangelogUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_entry(entry: ChangeLogEntry) -> ChangeLogEntryResponse:

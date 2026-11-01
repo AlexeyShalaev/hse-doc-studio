@@ -1,0 +1,14 @@
+{
+  "user_code": "BCDF-2345",
+  "client_name": "Студия на MacBook Анны",
+  "client_kind": "desktop",
+  "requested_scopes": [
+    "git:read",
+    "git:write"
+  ],
+  "granted_scopes": null,
+  "client_ip": "203.0.113.7",
+  "requested_at": "2026-11-01T09:40:00Z",
+  "expires_at": "2026-11-01T09:50:00Z",
+  "status": "pending"
+}

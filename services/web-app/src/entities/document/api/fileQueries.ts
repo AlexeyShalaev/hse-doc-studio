@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import axios from "axios";
 import { z } from "zod";
 import { apiClient } from "@shared/api/client";
+import { noteProjectEdit } from "@shared/lib/editActivity";
 import type { FileTreeItemResponse } from "@shared/api/types";
 
 const FileTreeItemSchema = z.object({
@@ -203,6 +204,7 @@ export const usePutFile = () => {
       }
     },
     onSuccess: (_, { projectId, path }) => {
+      noteProjectEdit(projectId);
       void queryClient.invalidateQueries({
         queryKey: fileKeys.content(projectId, path),
       });
@@ -219,6 +221,7 @@ export const useDeleteFile = () => {
     mutationFn: ({ projectId, path }: { projectId: string; path: string }) =>
       apiClient.delete(`/projects/${projectId}/files/${path}`),
     onSuccess: (_, { projectId }) => {
+      noteProjectEdit(projectId);
       void queryClient.invalidateQueries({
         queryKey: fileKeys.tree(projectId),
       });
@@ -239,6 +242,7 @@ export const useMoveFile = () => {
       dst: string;
     }) => apiClient.post(`/projects/${projectId}/file-ops/move`, { src, dst }),
     onSuccess: (_, { projectId }) => {
+      noteProjectEdit(projectId);
       void queryClient.invalidateQueries({
         queryKey: fileKeys.tree(projectId),
       });
@@ -252,6 +256,7 @@ export const useCreateDir = () => {
     mutationFn: ({ projectId, path }: { projectId: string; path: string }) =>
       apiClient.post(`/projects/${projectId}/file-ops/mkdir`, { path }),
     onSuccess: (_, { projectId }) => {
+      noteProjectEdit(projectId);
       void queryClient.invalidateQueries({
         queryKey: fileKeys.tree(projectId),
       });
@@ -279,6 +284,7 @@ export const useUploadFile = () => {
         },
       }),
     onSuccess: (_, { projectId }) => {
+      noteProjectEdit(projectId);
       void queryClient.invalidateQueries({
         queryKey: fileKeys.tree(projectId),
       });

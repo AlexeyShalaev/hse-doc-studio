@@ -160,5 +160,23 @@
     "placeSignature": "Place signature",
     "moreActions": "More actions",
     "signatures": "Signatures"
+  },
+  "artifacts": {
+    "title": "PDFs from the local Studio",
+    "hint": "PDFs built on the author's computer. Visible to the same people as the project.",
+    "latest": "Latest",
+    "older": "Earlier versions: {{count}}",
+    "pages": "{{count}} pp.",
+    "by": "uploaded by {{who}}",
+    "via": "from \"{{client}}\"",
+    "open": "Open",
+    "download": "Download",
+    "delete": "Delete",
+    "deleteConfirm": "Delete the uploaded PDF from the server?",
+    "deleteFailed": "Could not delete the PDF",
+    "close": "Close",
+    "viewerTitle": "{{doc}}: {{file}}",
+    "uploaded": "uploaded {{when}}",
+    "commit": "source version {{commit}}"
   }
 }

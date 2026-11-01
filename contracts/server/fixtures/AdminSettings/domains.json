@@ -1,0 +1,11 @@
+{
+  "registration_mode": "domains",
+  "require_approval": true,
+  "password_enabled": true,
+  "allowed_domains": [
+    "edu.hse.ru",
+    "hse.ru"
+  ],
+  "smtp_enabled": true,
+  "public_url": "https://studio.example.org"
+}

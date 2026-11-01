@@ -14,10 +14,11 @@ import json
 from collections.abc import AsyncIterator
 from typing import Literal
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.office_services import (
     OfficeServiceContainerResponse,
     OfficeServiceImageResponse,
@@ -51,7 +52,7 @@ from hse_doc_studio.use_cases.office_services.set_active_office_service_image im
     SetActiveOfficeServiceImageUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 # 422 на любой сервис, кроме известных (см. контракт: convert | editor).
 OfficeService = Literal["convert", "editor"]

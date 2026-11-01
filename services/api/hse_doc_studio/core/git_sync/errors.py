@@ -52,6 +52,8 @@ class GitErrorCode(StrEnum):
     unresolved_markers = "unresolved_markers"
     remote_moved = "remote_moved"
     protected_branch = "protected_branch"
+    # Сервер Студии отклонил push проверкой pre-receive (область автора, служебные пути, размер, схема).
+    push_rejected = "push_rejected"
     large_file = "large_file"
     workflow_scope_missing = "workflow_scope_missing"
     email_privacy = "email_privacy"
@@ -61,6 +63,7 @@ class GitErrorCode(StrEnum):
     bundle_password_wrong = "bundle_password_wrong"  # noqa: S105 — код ошибки, не пароль
     bundle_prerequisites_missing = "bundle_prerequisites_missing"
     operation_not_cancellable = "operation_not_cancellable"
+    egress_blocked = "egress_blocked"
     git_error = "git_error"
 
 

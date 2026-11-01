@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "id": "database",
+      "status": "ok",
+      "reason": null
+    },
+    {
+      "id": "storage",
+      "status": "fail",
+      "reason": "ClientConnectorError"
+    },
+    {
+      "id": "runner",
+      "status": "ok",
+      "reason": null
+    }
+  ]
+}

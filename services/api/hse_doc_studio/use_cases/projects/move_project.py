@@ -126,8 +126,9 @@ class MoveProjectUC:
             )
 
         # Выборка, которая ещё идёт, писала бы состояние в старую папку: переносим, дождавшись её конца.
+        had_remote = old in {folder.resolve() for folder in await self._git_remotes.list()}
         async with self._fetch_book.lock(old):
-            self._relocate(old, new)
+            self._relocate(old, new, had_remote=had_remote)
         self._fetch_book.forget(old)
 
         # Reload from the new location and refresh updated_at so the move shows
@@ -150,7 +151,7 @@ class MoveProjectUC:
         )
         return MoveProjectOutput(project=moved)
 
-    def _relocate(self, old: Path, new: Path) -> None:
+    def _relocate(self, old: Path, new: Path, *, had_remote: bool) -> None:
         # Move the tree. shutil.move renames within a device and copies+removes
         # across devices. When the (empty) target already exists, move children
         # into it and drop the old shell.
@@ -168,6 +169,6 @@ class MoveProjectUC:
         # Repoint the index: drop the old location, register the new one.
         self._project_index_repo.unregister(old)
         self._project_index_repo.register(new)
-        if old in {folder.resolve() for folder in self._git_remotes.list()}:
+        if had_remote:
             self._git_remotes.remove(old)
             self._git_remotes.add(new)

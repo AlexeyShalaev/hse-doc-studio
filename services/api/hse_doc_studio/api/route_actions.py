@@ -122,6 +122,14 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/recheck"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"
     ),
+    # Ревью-комментарии: читает тот, кто читает исходники, пишет рецензент и выше; путь файла проверяет сценарий
+    ("GET", "/projects/{project_id}/review/threads"): RouteRule(Action.SOURCES_READ),
+    ("POST", "/projects/{project_id}/review/threads"): RouteRule(Action.COMMENT),
+    ("POST", "/projects/{project_id}/review/threads/{thread_id}/comments"): RouteRule(Action.COMMENT),
+    ("PUT", "/projects/{project_id}/review/threads/{thread_id}/status"): RouteRule(Action.COMMENT),
+    ("PATCH", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
+    ("DELETE", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
+    ("GET", "/projects/{project_id}/review/mentions"): RouteRule(Action.COMMENT),
     # Сборка и проверки
     ("POST", "/projects/{project_id}/documents/{doc_id}/compile"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/compiles/{compile_id}/cancel"): RouteRule(Action.BUILD_RUN),
@@ -142,25 +150,26 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/chats/{session_id}/runs/{run_id}/cancel"): RouteRule(Action.AGENT_USE),
     # История проекта, она же git
     ("GET", "/projects/{project_id}/git"): RouteRule(Action.SOURCES_READ),
-    ("POST", "/projects/{project_id}/git/sync"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/sync"): RouteRule(Action.HISTORY_REWRITE),
     ("GET", "/projects/{project_id}/git/conflicts"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/git/conflicts/file"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/git/conflicts/diff"): RouteRule(Action.SOURCES_READ),
     ("GET", "/projects/{project_id}/git/conflicts/blob"): RouteRule(Action.SOURCES_READ),
     ("PUT", "/projects/{project_id}/git/conflicts/draft"): RouteRule(Action.HISTORY_WRITE),
-    ("POST", "/projects/{project_id}/git/conflicts/resolve"): RouteRule(Action.HISTORY_WRITE),
-    ("DELETE", "/projects/{project_id}/git/conflicts"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/conflicts/resolve"): RouteRule(Action.HISTORY_REWRITE),
+    ("DELETE", "/projects/{project_id}/git/conflicts"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/git/fetch"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/pdf"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/git/bundle/export"): RouteRule(Action.HISTORY_WRITE),
-    ("POST", "/projects/{project_id}/git/bundle/import"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/git/bundle/import"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/ci/write"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/init"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/vcs/snapshots"): RouteRule(Action.HISTORY_WRITE),
-    ("POST", "/projects/{project_id}/vcs/restore"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/vcs/restore"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/vcs/branches"): RouteRule(Action.HISTORY_WRITE),
     ("DELETE", "/projects/{project_id}/vcs/branches"): RouteRule(Action.HISTORY_WRITE),
-    ("POST", "/projects/{project_id}/vcs/branches/switch"): RouteRule(Action.HISTORY_WRITE),
+    ("POST", "/projects/{project_id}/vcs/branches/switch"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/vcs/tags"): RouteRule(Action.HISTORY_WRITE),
     ("DELETE", "/projects/{project_id}/vcs/tags"): RouteRule(Action.HISTORY_WRITE),
     # Сдача работы (автор пакета для SUBMISSION_CREATE лежит в теле запроса)
@@ -190,9 +199,19 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ),
     ("POST", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
     ("DELETE", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
+    # Панель «Доступ»: список видит любой участник проекта
+    ("GET", "/projects/{project_id}/members"): RouteRule(Action.PROJECT_VIEW),
     # Настройки проекта (владелец)
     ("PATCH", "/projects/{project_id}"): RouteRule(Action.PROJECT_SETTINGS),
+    ("GET", "/projects/{project_id}/members/candidates"): RouteRule(Action.PROJECT_SETTINGS),
+    # Кому передать проект: только тот, кто вправе его передать
+    ("GET", "/projects/{project_id}/transfer-candidates"): RouteRule(Action.PROJECT_TRANSFER),
+    ("PUT", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
+    ("DELETE", "/projects/{project_id}/members/{principal}"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/move"): RouteRule(Action.PROJECT_SETTINGS),
+    # Где идут сборки: видят все участники, политику сборок соавторов меняет владелец
+    ("GET", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_VIEW),
+    ("PUT", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_SETTINGS),
     ("POST", "/projects/{project_id}/team/sets"): RouteRule(Action.PROJECT_SETTINGS),
     ("PATCH", "/projects/{project_id}/vcs/settings"): RouteRule(Action.PROJECT_SETTINGS),
     ("PUT", "/projects/{project_id}/git/remote"): RouteRule(Action.PROJECT_SETTINGS),
@@ -209,6 +228,30 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("DELETE", "/projects/{project_id}"): RouteRule(Action.PROJECT_DELETE),
     # Звонит контейнер Document Server: подлинность проверяют подпись и JWT внутри сценария.
     ("POST", "/office-editor/callback"): RouteRule(RouteExemption.system_callback, project_source="query"),
+    # links: ссылки доступа проекта (владелец и редактор с правом делиться; гостю и ссылочному праву закрыто)
+    ("GET", "/projects/{project_id}/links"): RouteRule(Action.SHARE),
+    ("POST", "/projects/{project_id}/links"): RouteRule(Action.SHARE),
+    ("PATCH", "/projects/{project_id}/links/{link_id}"): RouteRule(Action.SHARE),
+    ("POST", "/projects/{project_id}/links/{link_id}/rotate"): RouteRule(Action.SHARE),
+    ("DELETE", "/projects/{project_id}/links/{link_id}"): RouteRule(Action.SHARE),
+    ("GET", "/projects/{project_id}/links/{link_id}/visits"): RouteRule(Action.SHARE),
+    # invites
+    ("GET", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/invitations/{invitation_id}/resend"): RouteRule(Action.ACCESS_MANAGE),
+    ("DELETE", "/projects/{project_id}/invitations/{invitation_id}"): RouteRule(Action.ACCESS_MANAGE),
+    ("GET", "/projects/{project_id}/access-requests"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/access-requests/{request_id}/approve"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/access-requests/{request_id}/deny"): RouteRule(Action.ACCESS_MANAGE),
+    ("GET", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_VIEW),
+    ("POST", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
+    ("DELETE", "/projects/{project_id}/transfer"): RouteRule(Action.PROJECT_TRANSFER),
+    # gitremote: адрес клонирования проекта по git
+    ("GET", "/projects/{project_id}/git-remote"): RouteRule(Action.GIT_FETCH),
+    # PDF, выгруженные локальной Студией: читает любой, кто видит результат проекта; убирает тот, кто пишет файлы.
+    ("GET", "/projects/{project_id}/artifacts"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/artifacts/{artifact_id}/file"): RouteRule(Action.OUTPUT_READ),
+    ("DELETE", "/projects/{project_id}/artifacts/{artifact_id}"): RouteRule(Action.FILES_WRITE),
 }
 
 

@@ -1,0 +1,89 @@
+name: E2E server-lite
+
+# Приёмка M1 на реальном стенде: образ приложения в режиме server и Postgres в compose, данные заливает seed,
+# Playwright проходит вход, список своих проектов, создание проекта и изоляцию второго пользователя
+# на двух языках интерфейса. Скриншоты ru/en лежат в артефакте e2e-screenshots.
+#
+# Не required-статус (required — sentinel из ci.yml): джоб собирает образ целиком и идёт
+# только когда меняются код сервера, стенд или сами тесты.
+
+on:
+  push:
+    branches: [master]
+    paths: &paths
+      - "services/**"
+      - "packs/**"
+      - "contracts/server/**"
+      - "deploy/all-in-one/**"
+      - "scripts/dev/server-lite/**"
+      - "scripts/dev/Makefile"
+      - "e2e/**"
+      - ".github/workflows/e2e-server-lite.yml"
+  pull_request:
+    branches: [master]
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-server-lite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: M1 acceptance (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Stand up
+        run: make server-lite-up
+
+      - name: Seed demo data
+        run: make server-lite-seed
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: e2e/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: e2e/pnpm-lock.yaml
+
+      - name: Install Playwright
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Typecheck
+        run: pnpm typecheck
+        working-directory: e2e
+
+      - name: Run scenarios
+        run: make e2e-m1
+
+      - name: Stand logs on failure
+        if: failure()
+        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env logs --no-color --tail 300
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/screenshots
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
+
+      - name: Stand down
+        if: always()
+        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env --profile seed down --volumes --remove-orphans

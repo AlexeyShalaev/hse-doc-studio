@@ -12,6 +12,7 @@ from hse_doc_studio.core.value_objects import ChecksOverride
 from hse_doc_studio.use_cases.checks.run_checks import RunChecksInput, RunChecksUC
 
 from tests.factories import make_check_rule
+from tests.fakes.settings import InMemorySettingsRepository
 
 
 def _make_uc(
@@ -29,7 +30,7 @@ def _make_uc(
         check_resolution_service=MagicMock(),
         check_runner=MagicMock(),
         lt_manager=AsyncMock(),
-        settings_repo=MagicMock(),
+        settings_repo=InMemorySettingsRepository(),
     )
     doc = SimpleNamespace(
         id="vkr",

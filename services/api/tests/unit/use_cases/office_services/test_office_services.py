@@ -26,11 +26,11 @@ from hse_doc_studio.use_cases.office_services.set_active_office_service_image im
     SetActiveOfficeServiceImageUC,
 )
 
+from tests.fakes.settings import InMemorySettingsRepository
 
-def _settings_repo(stored: dict[str, Any] | None = None) -> MagicMock:
-    repo = MagicMock()
-    repo.get.return_value = dict(stored or {})
-    return repo
+
+def _settings_repo(stored: dict[str, Any] | None = None) -> InMemorySettingsRepository:
+    return InMemorySettingsRepository(stored)
 
 
 def _image_info(image: str) -> ImageInfo:
@@ -41,15 +41,15 @@ def _image_info(image: str) -> ImageInfo:
 
 
 @pytest.mark.unit
-def test__resolve_active_office_image__defaults_from_api_config() -> None:
+async def test__resolve_active_office_image__defaults_from_api_config() -> None:
     repo = _settings_repo()
 
-    assert resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:8"
-    assert resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:latest"
+    assert await resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:8"
+    assert await resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:latest"
 
 
 @pytest.mark.unit
-def test__resolve_active_office_image__settings_override_wins() -> None:
+async def test__resolve_active_office_image__settings_override_wins() -> None:
     repo = _settings_repo(
         {
             "office_convert_image": "gotenberg/gotenberg:9",
@@ -57,22 +57,22 @@ def test__resolve_active_office_image__settings_override_wins() -> None:
         }
     )
 
-    assert resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:9"
-    assert resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:9.0"
+    assert await resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:9"
+    assert await resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:9.0"
 
 
 @pytest.mark.unit
-def test__resolve_active_office_image__blank_override_falls_back() -> None:
+async def test__resolve_active_office_image__blank_override_falls_back() -> None:
     repo = _settings_repo({"office_convert_image": "   ", "office_editor_image": None})
 
-    assert resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:8"
-    assert resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:latest"
+    assert await resolve_active_office_image(repo, "convert") == "gotenberg/gotenberg:8"
+    assert await resolve_active_office_image(repo, "editor") == "onlyoffice/documentserver:latest"
 
 
 @pytest.mark.unit
-def test__resolve_active_office_image__unknown_service_raises() -> None:
+async def test__resolve_active_office_image__unknown_service_raises() -> None:
     with pytest.raises(ValueError, match="неизвестный офисный сервис"):
-        resolve_active_office_image(_settings_repo(), "languagetool")
+        await resolve_active_office_image(_settings_repo(), "languagetool")
 
 
 @pytest.mark.unit
@@ -104,7 +104,7 @@ async def test__set_active__rejects_image_outside_allowlist(image: str) -> None:
     with pytest.raises(ValueError, match="разрешённых репозиториев"):
         await uc.execute(SetActiveOfficeServiceImageInput(service="convert", image=image))
 
-    repo.save.assert_not_called()
+    assert await repo.get() == {}
 
 
 @pytest.mark.unit
@@ -116,7 +116,7 @@ async def test__set_active__rejects_not_installed_image() -> None:
 
     with pytest.raises(NotFoundError, match="не установлен локально"):
         await uc.execute(SetActiveOfficeServiceImageInput(service="editor", image="onlyoffice/documentserver:9.0"))
-    repo.save.assert_not_called()
+    assert await repo.get() == {}
 
 
 @pytest.mark.unit
@@ -129,7 +129,7 @@ async def test__set_active__persists_per_service_settings_key() -> None:
     out = await uc.execute(SetActiveOfficeServiceImageInput(service="convert", image="gotenberg/gotenberg:9"))
 
     assert out.image == "gotenberg/gotenberg:9"
-    saved = repo.save.call_args.args[0]
+    saved = await repo.get()
     assert saved["office_convert_image"] == "gotenberg/gotenberg:9"
     assert saved["theme"] == "dark"  # остальные настройки не потеряны
 

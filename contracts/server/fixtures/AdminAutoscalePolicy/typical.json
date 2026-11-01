@@ -1,0 +1,13 @@
+{
+  "mode": "compose",
+  "min_runners": 1,
+  "max_runners": 6,
+  "target_queue_per_slot": 2.0,
+  "scale_up_wait_s": 30,
+  "cooldown_up_s": 60,
+  "cooldown_down_s": 300,
+  "idle_before_down_s": 300,
+  "step_up": 2,
+  "step_down": 1,
+  "webhook_url": null
+}

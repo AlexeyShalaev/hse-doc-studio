@@ -20,13 +20,14 @@ from typing import TextIO
 
 import structlog
 from dishka import Provider, Scope, make_async_container, provide
+from pydantic import ValidationError
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import IProjectIndexRepository
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.di.providers.repositories import RepositoryProvider
+from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
@@ -78,7 +79,7 @@ def _report(line: str) -> None:
 async def _build(folder: Path, out_dir: Path, doc_ids: tuple[str, ...] | None) -> BuildProjectOutput:
     configure_docker_binary(settings.docker_binary)
     container = make_async_container(
-        RepositoryProvider(), DomainServiceProvider(), UseCaseProvider(), _CliProvider(folder)
+        LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider(), _CliProvider(folder)
     )
     try:
         async with container() as scope:
@@ -117,11 +118,211 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("build"),
         help="куда положить готовые файлы; относительный путь считается от папки проекта (по умолчанию build)",
     )
+    db = sub.add_parser("db", help="миграции базы серверного режима")
+    db_sub = db.add_subparsers(dest="db_command", required=True)
+    db_sub.add_parser("upgrade", help="довести схему до последней ревизии")
+    db_sub.add_parser("current", help="показать ревизию базы и head")
+    db_sub.add_parser("check", help="проверить, что база на head и без дрейфа (код 1, если нет)")
+    secrets_cmd = sub.add_parser("secrets", help="секреты серверного режима")
+    secrets_sub = secrets_cmd.add_subparsers(dest="secrets_command", required=True)
+    reencrypt = secrets_sub.add_parser(
+        "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
+    )
+    reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
+    server = sub.add_parser("server", help="перенос из локальной Студии на сервер (запускает оператор)")
+    server_sub = server.add_subparsers(dest="server_command", required=True)
+    data = server_sub.add_parser(
+        "import", help="перенести настройки и ИИ-провайдеров из каталога данных локальной Студии"
+    )
+    data.add_argument("--data-dir", required=True, type=Path, help="каталог данных локальной Студии (с config.json)")
+    data.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, чьи записи создаются")
+    data.add_argument("--dry-run", action="store_true", help="только показать, что будет перенесено")
+    data.add_argument(
+        "--include-instance", action="store_true", help="переносить и настройки всей установки (нужен админ)"
+    )
+    project = server_sub.add_parser("import-project", help="перенести проект из папки или zip локальной Студии")
+    project.add_argument("source", type=Path, help="папка проекта или zip-архив")
+    project.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, который станет владельцем")
+    project.add_argument("--dry-run", action="store_true", help="только проверить архив, ничего не записывать")
+    sub.add_parser(
+        "runner",
+        help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
+    )
     return parser
+
+
+_FATAL_HINTS = {
+    "runner_unauthorized": "раннер отозван или его токен сменили на сайте; подключите раннер заново. ",
+    "runner_disabled": "раннер выключен: администратор выключил личные раннеры или отключил хозяина. ",
+}
+
+
+async def _runner() -> int:
+    # Лениво: раннеру не нужны ни настройки api, ни extra server.
+    import contextlib  # noqa: PLC0415
+    import signal  # noqa: PLC0415
+
+    from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
+    from hse_doc_studio.infra.di.containers.runner import RunnerConfigError, create_runner_container  # noqa: PLC0415
+    from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
+    from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
+
+    try:
+        config = RunnerConfig()
+    except ValidationError as exc:
+        missing = ", ".join(f"HSE_RUNNER__{'.'.join(map(str, e['loc'])).upper()}" for e in exc.errors())
+        _write(f"error: настройки раннера неверны или не заданы: {missing}", stream=sys.stderr)
+        return _EXIT_USAGE
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    container = create_runner_container(config)
+    try:
+        # Контейнеры сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
+        if (swept := await sweep_build_containers()) > 0:
+            logging.getLogger(__name__).warning("removed %d leftover build containers", swept)
+        try:
+            loop = await container.get(RunnerLoop)
+        except RunnerConfigError as exc:
+            _write(f"error: {exc}", stream=sys.stderr)
+            return _EXIT_USAGE
+        running = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            with contextlib.suppress(NotImplementedError):
+                running.add_signal_handler(sig, loop.request_stop)
+        try:
+            await loop.run()
+        except RunnerFatalError as exc:
+            _write(f"error: {_FATAL_HINTS.get(exc.code or '', '')}{exc}", stream=sys.stderr)
+            return _EXIT_BUILD_FAILED
+        return _EXIT_OK
+    finally:
+        await container.close()
+
+
+async def _reencrypt(*, dry_run: bool) -> int:
+    from hse_doc_studio.core.secrets import encrypted_columns  # noqa: PLC0415
+    from hse_doc_studio.infra.db import orm  # noqa: F401, PLC0415 — регистрирует шифруемые колонки таблиц
+    from hse_doc_studio.infra.db.engine import create_engine  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.reencrypt import reencrypt_all  # noqa: PLC0415
+    from hse_doc_studio.infra.secrets.server_keys import SecretsKeyMissingError, server_key_store  # noqa: PLC0415
+
+    try:
+        cipher = FernetSecretCipher(server_key_store(settings))
+    except SecretsKeyMissingError as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
+    engine = create_engine(settings.db)
+    try:
+        report = await reencrypt_all(engine, cipher, encrypted_columns, dry_run=dry_run)
+    finally:
+        await engine.dispose()
+    verb = "будет перешифровано" if dry_run else "перешифровано"
+    _write(
+        f"{verb}: {report.updated}; уже на первичном ключе: {report.current}; нечитаемых: {len(report.unreadable)}; "
+        f"изменились за время работы: {len(report.skipped)}"
+    )
+    for item in report.skipped:
+        _write(f"  изменилась во время работы, запустите команду ещё раз: {item}")
+    for item in report.unreadable:
+        _write(f"unreadable: {item}", stream=sys.stderr)
+    return _EXIT_OK if report.ok else _EXIT_BUILD_FAILED
+
+
+async def _db(command: str) -> int:
+    # extra server необязателен: local-режим не должен тянуть SQLAlchemy при импорте CLI
+    from hse_doc_studio.infra.db import migrator  # noqa: PLC0415
+    from hse_doc_studio.infra.db.engine import create_engine  # noqa: PLC0415
+
+    engine = create_engine(settings.db)
+    try:
+        if command == "upgrade":
+            await migrator.migrate_if_needed(engine)
+            _write(f"ok: {await migrator.current_revision(engine)}")
+            return _EXIT_OK
+        current = await migrator.current_revision(engine)
+        head = migrator.head_revision()
+        _write(f"current: {current or '-'}\nhead: {head}")
+        if command == "current":
+            return _EXIT_OK
+        if current != head:
+            _write("db_outdated: выполните `hse-doc-studio db upgrade`", stream=sys.stderr)
+            return _EXIT_BUILD_FAILED
+        drift = await migrator.check_drift(engine)
+        for diff in drift:
+            _write(f"drift: {diff}", stream=sys.stderr)
+        return _EXIT_BUILD_FAILED if drift else _EXIT_OK
+    finally:
+        await engine.dispose()
+
+
+def _run_db(command: str) -> int:
+    try:
+        return asyncio.run(_db(command))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
+    except RuntimeError as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
+
+
+def _run_secrets(*, dry_run: bool) -> int:
+    try:
+        return asyncio.run(_reencrypt(dry_run=dry_run))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
+
+
+async def _server_import(args: argparse.Namespace) -> int:
+    from hse_doc_studio import cli_import  # noqa: PLC0415 — extra server нужен только этим командам
+    from hse_doc_studio.core.mode import StudioMode  # noqa: PLC0415
+    from hse_doc_studio.core.projects.importer import ProjectImportError  # noqa: PLC0415
+    from hse_doc_studio.infra.di.containers.api import create_container  # noqa: PLC0415
+
+    container = create_container(StudioMode.server)
+    try:
+        if args.server_command == "import":
+            data_report = await cli_import.import_user_data(
+                container,
+                email=args.user,
+                data_dir=args.data_dir.expanduser().resolve(),
+                dry_run=args.dry_run,
+                include_instance=args.include_instance,
+            )
+            cli_import.format_data_report(data_report, _write)
+            return _EXIT_OK if data_report.ok else _EXIT_BUILD_FAILED
+        project_report = await cli_import.import_project(
+            container, email=args.user, source=args.source.expanduser().resolve(), dry_run=args.dry_run
+        )
+        cli_import.format_project_report(project_report, _write)
+    except (cli_import.ImportCliError, ProjectImportError) as exc:
+        _write(f"error: {exc}", stream=sys.stderr)
+        return _EXIT_USAGE
+    else:
+        return _EXIT_OK
+    finally:
+        await container.close()
+
+
+def _run_server(args: argparse.Namespace) -> int:
+    try:
+        return asyncio.run(_server_import(args))
+    except ImportError:
+        _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
+        return _EXIT_USAGE
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "db":
+        return _run_db(args.db_command)
+    if args.command == "server":
+        return _run_server(args)
+    if args.command == "runner":
+        return asyncio.run(_runner())
+    if args.command == "secrets":
+        return _run_secrets(dry_run=args.dry_run)
     folder = args.project_dir.expanduser().resolve()
     out_dir = args.out if args.out.is_absolute() else folder / args.out
     doc_ids = tuple(args.docs) if args.docs else None

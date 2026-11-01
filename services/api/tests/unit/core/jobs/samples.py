@@ -30,6 +30,7 @@ from hse_doc_studio.core.jobs.pack import (
     PackSkip,
     PackSubmissionPayload,
 )
+from hse_doc_studio.core.jobs.relay import AiRelayPayload, AiRelayResult, RelayMethod, RelayPath
 from hse_doc_studio.core.jobs.verify import (
     OpenPgpTrust,
     OpenPgpTrustMode,
@@ -263,3 +264,35 @@ def make_pack_result() -> JobResult:
             skipped=(PackSkip(arcname="Презентация.pptx", reason="missing_source", detail="no such file"),),
         ),
     )
+
+
+def make_relay_payload(*, stream: bool = True) -> AiRelayPayload:
+    return AiRelayPayload(
+        endpoint="ollama",
+        path=RelayPath.chat_completions,
+        method=RelayMethod.post,
+        content_type="application/json",
+        body_sha256="ab" * 32,
+        body_size=2048,
+        stream=stream,
+        head_timeout_s=120.0,
+        idle_timeout_s=120.0,
+    )
+
+
+def make_relay_spec(*, local_root: object = None) -> JobSpec:
+    payload = make_relay_payload()
+    return JobSpec(
+        id=JOB_ID,
+        kind=JobKind.ai_relay,
+        tags=job_tags(JobKind.ai_relay, payload),
+        project_id=PROJECT_ID,
+        actor=Actor.user("u1", "Иван"),
+        locale=Lang.ru,
+        payload=payload,
+        local_root=local_root,  # type: ignore[arg-type]
+    )
+
+
+def make_relay_result() -> JobResult:
+    return JobResult(status=JobStatus.succeeded, data=AiRelayResult(status_code=200, bytes_out=18234, upstream_ms=5321))

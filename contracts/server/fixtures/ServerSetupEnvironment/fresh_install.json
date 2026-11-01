@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "id": "database",
+      "status": "ok",
+      "reason": null
+    },
+    {
+      "id": "storage",
+      "status": "not_configured",
+      "reason": null
+    },
+    {
+      "id": "runner",
+      "status": "not_configured",
+      "reason": null
+    }
+  ]
+}

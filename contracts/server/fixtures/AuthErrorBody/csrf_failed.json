@@ -1,0 +1,4 @@
+{
+  "detail": "CSRF token is missing or invalid",
+  "code": "csrf_failed"
+}

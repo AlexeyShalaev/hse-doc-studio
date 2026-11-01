@@ -1,0 +1,30 @@
+{
+  "attempt": 2,
+  "result": {
+    "status": "succeeded",
+    "data": {
+      "signature": {
+        "format": "cms",
+        "verdict": "valid",
+        "signer": "Иванов Иван Иванович",
+        "signer_id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "issuer": "Тестовый УЦ",
+        "algorithm": "GOST R 34.10-2012 / Streebog-256",
+        "signed_at": "2026-10-01T12:00:00+00:00",
+        "not_before": "2020-01-01T00:00:00+00:00",
+        "not_after": "2049-01-01T00:00:00+00:00",
+        "chain": "untrusted_root",
+        "root_subject": "Тестовый корень",
+        "root_fingerprint": "1212121212121212121212121212121212121212121212121212121212121212",
+        "extension": ".p7s",
+        "missing_key_id": null,
+        "notes": [
+          "chain_untrusted_root",
+          "no_revocation_check"
+        ]
+      }
+    },
+    "error": null
+  },
+  "artifacts": []
+}

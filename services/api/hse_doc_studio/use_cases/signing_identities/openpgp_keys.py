@@ -8,6 +8,8 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.access.context import current_actor
+from hse_doc_studio.core.access.entities import ActorKind
 from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import SigningIdentityKind
 from hse_doc_studio.core.errors import NotFoundError
@@ -77,7 +79,7 @@ class CreateOpenPgpKeyUC:
         except GpgError as exc:
             raise ValueError(str(exc)) from exc
         identity = _identity_for(key, inp.label.strip() or name, protected=bool(inp.passphrase))
-        self._repo.create(identity)
+        await self._repo.create(identity)
         logger.info("signing_identity: openpgp key generated", id=str(identity.id), fpr=key.fingerprint)
         return CreateOpenPgpKeyOutput(identity=identity)
 
@@ -114,7 +116,7 @@ class ImportOpenPgpKeyUC:
         except GpgError as exc:
             raise ValueError(str(exc)) from exc
 
-        known = {i.fingerprint for i in self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
+        known = {i.fingerprint for i in await self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
         out = ImportOpenPgpKeyOutput()
         for key in keys:
             if not key.has_secret:
@@ -125,7 +127,7 @@ class ImportOpenPgpKeyUC:
             protected = await asyncio.to_thread(self._keyring.is_protected, key.fingerprint)
             label = inp.label.strip() or (key.uids[0] if key.uids else key.key_id)
             identity = _identity_for(key, label, protected)
-            self._repo.create(identity)
+            await self._repo.create(identity)
             out.identities.append(identity)
         logger.info(
             "openpgp key imported", identities=len(out.identities), public=len(out.public_keys), total=len(keys)
@@ -150,7 +152,7 @@ class ExportOpenPgpPublicKeyUC:
         self._keyring = keyring
 
     async def execute(self, inp: ExportOpenPgpPublicKeyInput) -> ExportOpenPgpPublicKeyOutput:
-        identity = self._repo.get(inp.identity_id)
+        identity = await self._repo.get(inp.identity_id)
         if identity is None or identity.kind is not SigningIdentityKind.openpgp or not identity.fingerprint:
             raise NotFoundError(localized_error("Ключ OpenPGP не найден", "OpenPGP key not found"))
         blob = await asyncio.to_thread(self._keyring.export_public, identity.fingerprint)
@@ -164,14 +166,22 @@ class ListOpenPgpKeysOutput:
 
 
 class ListOpenPgpKeysUC:
-    """Every key in the Studio keyring (own and imported public ones) and the gpg version, if installed."""
+    """Keys of the Studio keyring (own and imported public ones) and the gpg version, if installed.
 
-    def __init__(self, keyring: GpgKeyring) -> None:
+    On a shared server the keyring is common: public keys are visible to everyone, secret keys only to their owner.
+    """
+
+    def __init__(self, keyring: GpgKeyring, repo: ISigningIdentityRepository) -> None:
         self._keyring = keyring
+        self._repo = repo
 
     async def execute(self) -> ListOpenPgpKeysOutput:
         if not self._keyring.available:
             return ListOpenPgpKeysOutput(keys=[], gpg_version=None)
         keys = await asyncio.to_thread(self._keyring.list_keys)
+        actor = current_actor()
+        if actor is not None and actor.kind is ActorKind.user:
+            mine = {i.fingerprint for i in await self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
+            keys = [k for k in keys if not k.has_secret or k.fingerprint in mine]
         version = await asyncio.to_thread(self._keyring.version)
         return ListOpenPgpKeysOutput(keys=keys, gpg_version=version)

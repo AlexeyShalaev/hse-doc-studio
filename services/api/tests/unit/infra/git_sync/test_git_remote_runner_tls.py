@@ -48,10 +48,10 @@ class _Caps:
 
 
 class _Credentials:
-    def get(self, credential_id: object) -> None:
+    async def get(self, credential_id: object) -> None:
         return None
 
-    def mark(self, *args: object, **kwargs: object) -> None:
+    async def mark(self, *args: object, **kwargs: object) -> None:
         return None
 
 
@@ -60,8 +60,11 @@ class _Settings:
         self.items = {(item.host, item.port): item for item in items}
         self.trust = trust
 
-    def get(self, host: str, port: int | None) -> GitHostSettings | None:
+    async def get(self, host: str, port: int | None) -> GitHostSettings | None:
         return self.items.get((host, port))
+
+    async def materialize(self) -> None:
+        return None
 
     def trust_file(self, host: str, port: int | None) -> Path | None:
         return self.trust if self.items.get((host, port)) else None

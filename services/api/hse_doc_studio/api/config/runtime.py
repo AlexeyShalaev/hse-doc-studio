@@ -1,0 +1,153 @@
+"""Настройки HTTP-сервера, CORS и логирования."""
+
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+
+class HttpServerConfig(BaseModel):
+    """HTTP server configuration."""
+
+    host: str = Field(default="0.0.0.0", description="Server bind address")  # noqa: S104
+    port: int = Field(default=17240, description="Server port")
+    workers: int = Field(default=1, description="Number of worker processes")
+    timeout_keep_alive: int = Field(default=5, description="Keep-alive timeout in seconds")
+    timeout_graceful_shutdown: int = Field(default=10, description="Graceful shutdown timeout in seconds")
+    access_log: bool = Field(default=False, description="Enable uvicorn access log")
+    proxy_headers: bool = Field(
+        default=False,
+        description=(
+            "Пусть uvicorn сам подменяет адрес клиента по X-Forwarded-For. Выключено: адрес за прокси определяет "
+            "client_ip() по auth.trusted_proxies, иначе любой пир подставит себе произвольный адрес."
+        ),
+    )
+    forwarded_allow_ips: str = Field(
+        default="127.0.0.1", description="Пиры, чьим заголовкам верит uvicorn при proxy_headers=true"
+    )
+    projects_root: Path | None = Field(
+        default=None,
+        description="Корень томов проектов сервера (projects_root/<project_id>); по умолчанию data_dir/projects.",
+    )
+    instance_name: str | None = Field(
+        default=None,
+        description="Название установки из окружения: заданное побеждает правку админа и не меняется в админке.",
+    )
+    docs_url: str | None = Field(
+        default=None,
+        description="Ссылка на документацию установки из окружения: заданная не меняется в админке.",
+    )
+    project_retention_days: int = Field(
+        default=30,
+        ge=0,
+        description="Через сколько суток удалённый проект стирается с тома и из каталога; 0 выключает стирание.",
+    )
+    project_purge_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер ищет удалённые проекты с истёкшим сроком."
+    )
+    audit_retention_days: int = Field(
+        default=365, ge=0, description="Сколько суток хранится журнал аудита; 0 хранит его без срока."
+    )
+    audit_purge_interval_s: float = Field(
+        default=86400.0, gt=0, description="Как часто сервер стирает события аудита старше срока хранения."
+    )
+    compile_records_per_document: int = Field(
+        default=50,
+        ge=1,
+        description="Сколько последних записей сборок хранится на документ; старые стираются при записи новой.",
+    )
+    compile_log_limit_bytes: int = Field(
+        default=1024 * 1024,
+        ge=1024,
+        description="Предел размера лога в записи сборки; у более длинного лога теряется начало.",
+    )
+    blob_gc_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер стирает блобы входа задач, на которые давно нет ссылок."
+    )
+    blob_gc_min_age_days: float = Field(
+        default=14.0,
+        ge=0,
+        description="Сколько суток блоб живёт без упоминаний в манифестах до удаления; 0 выключает сборку мусора.",
+    )
+    manifest_max_file_bytes: int = Field(
+        default=256 * 1024 * 1024,
+        ge=1,
+        description="Предел размера одного файла во входе задачи; больший файл даёт типизированный отказ.",
+    )
+    manifest_max_job_bytes: int = Field(
+        default=1024 * 1024 * 1024,
+        ge=1,
+        description="Предел суммарного размера входа одной задачи; не зависит от квоты проекта.",
+    )
+    project_quota_bytes: int = Field(
+        default=2 * 1024**3,
+        ge=0,
+        description="Предел размера проекта (дерево, git-стор, S3); запись сверх него отклоняется, 0 без предела.",
+    )
+    project_import_max_bytes: int = Field(
+        default=500 * 1024**2,
+        ge=1,
+        description="Предел размера проекта в архиве при импорте (после распаковки); не больше предела проекта.",
+    )
+    project_import_max_files: int = Field(
+        default=50_000, ge=1, description="Сколько файлов допускается в архиве проекта при импорте."
+    )
+    project_quota_warn_percent: int = Field(
+        default=80, ge=1, le=100, description="С какого процента предела статус проекта предупреждает о нехватке места."
+    )
+    project_usage_interval_s: float = Field(
+        default=3600.0, gt=0, description="Как часто сервер переизмеряет размер проектов (пачкой самых давних)."
+    )
+    project_usage_batch: int = Field(default=20, ge=1, description="Сколько проектов измеряется за один прогон.")
+    orphan_gc_interval_s: float = Field(
+        default=21600.0, gt=0, description="Как часто сервер ищет папки тома и префиксы S3 без записи в projects."
+    )
+    orphan_gc_min_age_hours: float = Field(
+        default=24.0, ge=1, description="Сколько часов сирота должен пролежать, прежде чем его удалят."
+    )
+    job_retention_days: int = Field(
+        default=30,
+        ge=0,
+        description="Через сколько суток после применения результата терминальная задача и её лог стираются; "
+        "0 выключает стирание.",
+    )
+    job_retention_interval_s: float = Field(
+        default=21600.0,
+        gt=0,
+        description="Как часто сервер убирает выходы задач без владельца и устаревшие записи задач.",
+    )
+    job_output_min_age_hours: float = Field(
+        default=24.0,
+        ge=1,
+        description="Сколько часов выходы терминальной или неизвестной задачи в S3 должны пролежать, "
+        "прежде чем их удалят.",
+    )
+    auth_cleanup_interval_s: float = Field(
+        default=3600.0,
+        gt=0,
+        description="Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов.",
+    )
+
+
+class CorsConfig(BaseModel):
+    """CORS configuration."""
+
+    allow_origins: list[str] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:17240",
+        ],
+        description="Allowed origins",
+    )
+    allow_credentials: bool = Field(
+        default=True, description="Отдавать Access-Control-Allow-Credentials (cookie и заголовки авторизации)."
+    )
+    allow_methods: list[str] = Field(default=["*"], description="Разрешённые методы CORS.")
+    allow_headers: list[str] = Field(default=["*"], description="Разрешённые заголовки запроса CORS.")
+
+
+class LoggingConfig(BaseModel):
+    """Logging configuration."""
+
+    level: str = Field(default="INFO", description="Log level")
+    use_json: bool = Field(default=False, description="JSON format (False = console)")

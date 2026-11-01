@@ -41,10 +41,10 @@ class _Settings:
     def __init__(self, stored: dict[str, Any] | None = None) -> None:
         self.stored = stored if stored is not None else {}
 
-    def get(self) -> dict[str, Any]:
+    async def get(self) -> dict[str, Any]:
         return self.stored
 
-    def save(self, settings: dict[str, Any]) -> None:
+    async def save(self, settings: dict[str, Any]) -> None:
         self.stored = settings
 
 

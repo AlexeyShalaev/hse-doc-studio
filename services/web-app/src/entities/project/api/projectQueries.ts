@@ -4,6 +4,7 @@ import type {
   ConnectProjectRequest,
   UpdateProjectRequest,
 } from "@shared/api/types";
+import { noteProjectEdit } from "@shared/lib/editActivity";
 import { projectApi } from "./projectApi";
 
 type ProjectItem = Awaited<ReturnType<typeof projectApi.get>>;
@@ -70,6 +71,7 @@ export const useUpdateProject = () => {
   >({
     mutationFn: ({ id, data }) => projectApi.update(id, data),
     onSuccess: (project) => {
+      noteProjectEdit(project.id);
       queryClient.setQueryData(projectKeys.detail(project.id), project);
       void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
       // Project-level checks_override changes affect rule enabled flags and

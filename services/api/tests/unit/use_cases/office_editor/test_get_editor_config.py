@@ -22,6 +22,7 @@ from hse_doc_studio.use_cases.office_editor.get_editor_config import (
 )
 
 from tests.factories import make_document, make_document_definition, make_project, make_template_version
+from tests.fakes.settings import InMemorySettingsRepository
 
 _SECRET = "test-secret"  # noqa: S105
 _BACKEND_BASE = "http://host.docker.internal:17240"
@@ -58,6 +59,8 @@ def _manager_mock() -> MagicMock:
     manager.is_image_missing = AsyncMock(return_value=False)
     manager.ensure_running = AsyncMock(return_value="http://127.0.0.1:9999")
     manager.jwt_secret = _SECRET
+    manager.base_url_for = MagicMock(return_value="http://127.0.0.1:9999")
+    manager.try_open_session = MagicMock(return_value=True)
     manager.image = "onlyoffice/documentserver:latest"
     return manager
 
@@ -69,8 +72,7 @@ def _make_uc(
 ) -> GetOfficeEditorConfigUC:
     template_repo = MagicMock()
     template_repo.get_version.return_value = make_template_version(documents=(_pres_definition(),))
-    settings_repo = MagicMock()
-    settings_repo.get.return_value = dict(stored_settings or {})
+    settings_repo = InMemorySettingsRepository(stored_settings)
     uc = GetOfficeEditorConfigUC(
         project_repo=MagicMock(),
         project_index_repo=MagicMock(),
@@ -277,7 +279,7 @@ async def test__editor_config__syncs_ai_plugin_settings_before_session(tmp_path:
         created_at=datetime.now(timezone.utc),
     )
     ai_repo = MagicMock()
-    ai_repo.list_all.return_value = [provider]
+    ai_repo.list_all = AsyncMock(return_value=[provider])
     uc._ai_provider_repo = ai_repo
 
     out = await uc.execute(GetOfficeEditorConfigInput(project_id=uuid4(), doc_id="pres"))

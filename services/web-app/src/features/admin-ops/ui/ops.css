@@ -1,0 +1,578 @@
+/* Операционные разделы админки: раннеры и очередь, квоты, сервисы, хранилище.
+   Только раскладка и мелкие блоки этих экранов; цвета и размеры из токенов index.css. */
+
+.ops-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ── баннер: что-то не так, и что из этого следует ── */
+.ops-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.ops-banner[data-tone="danger"] {
+  border-color: color-mix(in oklch, var(--c-err) 45%, var(--border));
+  background: color-mix(in oklch, var(--c-err-soft) 70%, var(--bg-1));
+}
+.ops-banner[data-tone="warning"] {
+  border-color: color-mix(in oklch, var(--c-warn) 45%, var(--border));
+  background: color-mix(in oklch, var(--c-warn-soft) 70%, var(--bg-1));
+}
+.ops-banner-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--fg-2);
+}
+.ops-banner[data-tone="danger"] .ops-banner-icon {
+  color: var(--c-err);
+}
+.ops-banner[data-tone="warning"] .ops-banner-icon {
+  color: var(--c-warn);
+}
+.ops-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ops-banner-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.ops-banner-body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-1);
+}
+.ops-banner-action {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ── таблицы ── */
+.ops-table tbody tr {
+  transition: background 0.08s;
+}
+.ops-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+.ops-table td {
+  height: 52px;
+}
+/* Строки без перехода по клику не подсвечиваются: подсветка обещает действие. */
+.ops-table.ops-static tbody tr:hover {
+  background: transparent;
+}
+.ops-version {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-1);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+/* Таблица во всю ширину карточки раздела: без второй рамки. */
+.ops-flush-table > .card {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+  box-shadow: none;
+  background: transparent;
+}
+.ops-flush-table tbody tr:last-child {
+  border-bottom: 0 !important;
+}
+
+.ops-num {
+  display: block;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ops-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ops-cell-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-0);
+  white-space: nowrap;
+}
+.ops-cell-sub {
+  font-size: 12px;
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Имя раннера в очереди в одну строку: длинное режется, а не ломает ряд. */
+.ops-ellipsis {
+  display: block;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-muted {
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.ops-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+  letter-spacing: 0;
+}
+.ops-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* Тег и класс раннера в строке: щелчок ставит фильтр списка. */
+.ops-tag-btn {
+  all: unset;
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: var(--r-1);
+}
+.ops-tag-btn:hover .chip {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.ops-tag-btn:focus-visible,
+.ops-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ops-link {
+  all: unset;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.ops-link:hover {
+  color: var(--fg-0);
+}
+/* Поиск и фильтры внутри карточки раздела (токены): те же отступы, что у строк. */
+.ops-section-bar {
+  padding: 0 20px 12px;
+}
+.ops-section-pager {
+  padding: 10px 20px 4px;
+  border-top: 1px solid var(--border);
+}
+.ops-sort > button {
+  min-width: 170px;
+}
+.ops-owner-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ops-version[data-outdated] {
+  gap: 3px;
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+  cursor: help;
+}
+.ops-token-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 28px;
+  flex-shrink: 0;
+}
+.ops-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+/* Отмена в очереди видна у строки под курсором или с фокусом: одинаковые
+   кнопки в каждой строке только шумят. На сенсорных экранах видна всегда. */
+@media (hover: hover) {
+  .ops-row-actions[data-reveal="hover"] {
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .ops-table tbody tr:hover .ops-row-actions[data-reveal="hover"],
+  .ops-table tbody tr:focus-within .ops-row-actions[data-reveal="hover"] {
+    opacity: 1;
+  }
+}
+.ops-dim-row {
+  opacity: 0.6;
+}
+
+/* Загрузка раннера: «1 из 2» и тонкая полоса под числом. */
+.ops-load {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 96px;
+}
+.ops-load-text {
+  font-size: 12.5px;
+  color: var(--fg-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── сводка очереди по приоритетам ── */
+.ops-classes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.ops-classes-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-1);
+}
+.ops-classes-item strong {
+  font-weight: 600;
+  color: var(--fg-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.ops-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+/* ── сервисы ── */
+.ops-services {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  /* Карточки в ряду одной высоты: нижняя строка прижата к низу. */
+  align-items: stretch;
+}
+.ops-service {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-1);
+  min-width: 0;
+}
+.ops-service[data-status="down"] {
+  border-color: color-mix(in oklch, var(--c-err) 50%, var(--border));
+  box-shadow:
+    inset 3px 0 0 var(--c-err),
+    var(--shadow-1);
+}
+.ops-service[data-status="degraded"],
+.ops-service[data-health="partial"] {
+  border-color: color-mix(in oklch, var(--c-warn) 50%, var(--border));
+  box-shadow:
+    inset 3px 0 0 var(--c-warn),
+    var(--shadow-1);
+}
+.ops-service[data-status="unconfigured"] {
+  background: transparent;
+  box-shadow: none;
+  border-style: dashed;
+}
+.ops-service-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ops-service-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-2);
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+.ops-service[data-status="down"] .ops-service-icon {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.ops-service[data-status="degraded"] .ops-service-icon,
+.ops-service[data-health="partial"] .ops-service-icon {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.ops-service[data-status="unconfigured"] .ops-service-icon {
+  color: var(--fg-3);
+}
+.ops-service-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ops-service-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.ops-service-role {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.ops-service-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--fg-1);
+}
+.ops-service-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ops-service-impact {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+/* ── хранилище: полоса диска ── */
+.ops-disk {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ops-disk-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.ops-disk-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fg-0);
+  letter-spacing: -0.01em;
+}
+.ops-disk-of {
+  font-size: 13px;
+  color: var(--fg-2);
+}
+.ops-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-1);
+}
+.ops-bar > span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+.ops-bar > span:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.ops-bar > span:last-child {
+  border-radius: 0 4px 4px 0;
+}
+.ops-bar > span:only-child {
+  border-radius: 4px;
+}
+.ops-bar [data-part="used"] {
+  background: var(--accent);
+}
+.ops-bar [data-part="used"][data-tone="warning"] {
+  background: var(--c-warn);
+}
+.ops-bar [data-part="used"][data-tone="danger"] {
+  background: var(--c-err);
+}
+.ops-bar [data-part="free"] {
+  background: var(--bg-3);
+}
+
+/* Доля владельца: число справа и короткая полоса. */
+.ops-share {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.ops-share .adm-meter {
+  width: 120px;
+  flex-shrink: 0;
+}
+/* Без tabular-nums: у Inter моноширинные цифры с «%» выглядят разреженными,
+   а выравнивание по правому краю и так держит столбец. */
+.ops-share-pct {
+  width: 36px;
+  text-align: right;
+  color: var(--fg-1);
+  font-size: 12px;
+}
+.ops-rank {
+  width: 20px;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+/* ── квоты: поле с единицей ── */
+.ops-unit-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ops-unit-field .input {
+  width: var(--adm-num-width);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ops-unit-field .field {
+  gap: 0;
+}
+.ops-unit {
+  min-width: 48px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.ops-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.ops-steps li {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-1);
+}
+.ops-steps li + li {
+  border-top: 1px solid var(--border);
+}
+.ops-steps li > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--fg-2);
+}
+.ops-steps strong {
+  display: block;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+@media (max-width: 1180px) {
+  .ops-share .adm-meter {
+    width: 72px;
+  }
+}
+
+/* Квоты по видам ресурсов, переопределения, использование, шлюз и автомасштабирование (этап 6). */
+.ops-resources {
+  display: flex;
+  flex-direction: column;
+}
+.ops-resources-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(150px, 1fr));
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.ops-resources-row:first-child {
+  border-top: none;
+}
+.ops-resources-head {
+  font-size: 12px;
+  color: var(--fg-3);
+  padding-top: 0;
+}
+.ops-resources-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.ops-override-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0 12px;
+}
+.ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ops-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 20px;
+  margin: 0 0 12px;
+}
+.ops-facts dt {
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.ops-facts dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  word-break: break-word;
+}
+@media (max-width: 720px) {
+  .ops-resources-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .ops-resources-head {
+    display: none;
+  }
+}

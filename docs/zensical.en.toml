@@ -46,6 +46,16 @@ nav = [
         { "PDF preview" = "workbench/preview.md" },
         { "Visual editor" = "workbench/editor-visual.md" },
         { "AI agent" = "workbench/agent.md" },
+        { "Link sharing" = "workbench/share-links.md" },
+    ] },
+    { "Deployment" = [
+        { "Shared server" = "deploy/index.md" },
+        { "Server installation" = "deploy/install.md" },
+        { "People and sign-in" = "deploy/accounts.md" },
+        { "Invitations and access requests" = "deploy/invitations.md" },
+        { "Runners" = "deploy/runners.md" },
+        { "Security and personal data" = "deploy/security.md" },
+        { "Backup and updates" = "deploy/operations.md" },
     ] },
     { "Reference" = [
         { "Reference map" = "reference/index.md" },

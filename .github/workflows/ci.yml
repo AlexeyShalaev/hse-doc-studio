@@ -27,13 +27,16 @@ jobs:
           # (deploy/all-in-one/Dockerfile: python:3.14-slim-bookworm).
           python-version: "3.14"
       - name: Sync
-        run: uv sync --frozen --extra dev
+        run: uv sync --frozen --extra dev --extra server
       - name: Ruff lint
         run: uv run ruff check
       - name: Ruff format
         run: uv run ruff format --check
       - name: Mypy
         run: uv run mypy hse_doc_studio
+      # Справочник переменных окружения генерируется из Settings; поле без description тоже падает здесь.
+      - name: Env reference in sync with Settings
+        run: uv run --frozen --all-extras python ../../scripts/gen_env_reference.py --check
       # Гейт релиза: release-notes.json корректен, у версии из __init__.py есть
       # заметки, CHANGELOG.md им соответствует. Падает в релизном PR (там и бампится
       # версия), то есть ДО тега и публикации образа. Скрипту хватает stdlib.
@@ -91,6 +94,22 @@ jobs:
     defaults:
       run:
         working-directory: services/api
+    # Сервисы для pg и s3 тестов: без DSN pg-тесты пропускаются, но в CI они должны идти.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      HSE_TEST_PG_DSN: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -98,6 +117,9 @@ jobs:
           python-version: "3.14"
       - name: Sync
         run: uv sync --frozen --all-extras
+      # Миграции на настоящем Postgres 16: upgrade head с пустой базы, откат, дрейф схемы (alembic check).
+      - name: Migrations on Postgres 16
+        run: uv run pytest tests/integration/db/test_migrations.py tests/integration/db/test_upgrade_path.py --no-cov
       # Порог = текущий факт (замерено 80% на полном прогоне). Взят на 2 пункта ниже:
       # часть строк — платформенные ветки win32/darwin, на ubuntu они не исполняются.
       # Поднимать по мере добавления тестов, цель — 90.
@@ -109,6 +131,25 @@ jobs:
           files: services/api/coverage.xml
           flags: backend
         continue-on-error: true
+
+  # Локальный режим обязан работать без extra server: sqlalchemy, boto3 и прочие не установлены,
+  # серверные тесты не собираются (tests/conftest.py).
+  backend-test-no-server:
+    name: Backend · Local mode without server extra
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
+        run: uv sync --frozen --extra api --extra test
+      - name: Pytest (without server extra)
+        run: uv run pytest -m "not pg and not s3" --no-cov
 
   # ── Frontend ─────────────────────────────────────────────────────────────
   # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
@@ -155,6 +196,12 @@ jobs:
       # обнаруживается уже на релизном теге, когда чинить поздно.
       - name: Build
         run: pnpm build
+      # Админка в отдельном lazy-чанке: в entry и в экранах входа её кода нет,
+      # а размеры основного бандла и чанка укладываются в бюджет.
+      - name: Admin chunk isolation
+        run: pnpm verify:admin-chunk
+      - name: Bundle size
+        run: pnpm bundlesize
 
   # ── Sentinel — единственный required-статус в branch protection. ──────────
   # Список джобов правится здесь, а не в настройках репозитория.
@@ -162,7 +209,7 @@ jobs:
   all-checks-passed:
     name: All checks passed
     if: always()
-    needs: [backend-lint, backend-test-unit, backend-coverage, frontend]
+    needs: [backend-lint, backend-test-unit, backend-test-no-server, backend-coverage, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Verify

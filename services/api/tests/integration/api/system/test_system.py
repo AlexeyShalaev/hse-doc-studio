@@ -16,6 +16,7 @@ async def test__api__system_info__returns_shape(test_app: AsyncClient) -> None:
     data = resp.json()
     for key in (
         "version",
+        "mode",
         "deployment_mode",
         "os",
         "os_version",
@@ -38,6 +39,7 @@ async def test__api__system_info__returns_shape(test_app: AsyncClient) -> None:
 
     # version is the backend's real version, not a hardcoded UI literal
     assert data["version"] == settings.get_app_version()
+    assert data["mode"] == "local"
     assert data["deployment_mode"] in ("all-in-one", "standard", "native")
     assert data["docker"] in ("running", "stopped")
     assert isinstance(data["can_self_update"], bool)

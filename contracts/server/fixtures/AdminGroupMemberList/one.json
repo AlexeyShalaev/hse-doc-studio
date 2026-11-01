@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "user_id": "u_01hx7k2m9c",
+      "name": "Анна Петрова",
+      "email": "anna.petrova@example.org",
+      "added_at": "2026-10-30T09:45:00Z"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}

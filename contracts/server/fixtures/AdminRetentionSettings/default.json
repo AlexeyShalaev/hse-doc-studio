@@ -1,0 +1,5 @@
+{
+  "audit_days": 365,
+  "deleted_projects_days": 30,
+  "unused_blobs_days": 14
+}

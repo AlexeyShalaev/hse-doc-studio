@@ -1,0 +1,19 @@
+{
+  "links_enabled": true,
+  "max_link_role": "editor",
+  "project_invites_allow_signup": true,
+  "fields": {
+    "sharing.links_enabled": {
+      "source": "default",
+      "locked": false
+    },
+    "sharing.max_link_role": {
+      "source": "default",
+      "locked": false
+    },
+    "registration.project_invites_allow_signup": {
+      "source": "default",
+      "locked": false
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "policy": "shared",
+  "editable": true,
+  "project_kind": "personal",
+  "personal_runners_enabled": true,
+  "my_builds": "shared",
+  "wait_s": 5,
+  "owner_runners": []
+}

@@ -1,0 +1,88 @@
+---
+title: Server installation
+description: Deploying the shared server with docker compose or Helm, and the first run that creates the administrator.
+tags:
+  - Deployment
+  - Docker
+  - Kubernetes
+---
+
+# Server installation
+
+<p class="hds-lede">Two ways: docker compose on one machine, or the Helm chart for Kubernetes. Both bring up the api, Postgres, S3 and a runner.</p>
+
+## What to prepare
+
+- a domain and a TLS-terminating reverse proxy with an address like `https://studio.example.org`;
+- a Docker machine for the api and a separate, ideally dedicated one for the runner: the Docker socket is root on the host;
+- two secrets: the Postgres password and the secrets encryption key (Fernet), see [key loss](operations.md).
+
+## docker compose
+
+The files are in the repository under `deploy/server`.
+
+```bash
+cd deploy/server
+cp .env.example .env              # fill in the required values, hints are inside the file
+sudo mkdir -p /var/lib/hse-runner # runner data directory
+sudo chown 10001:10001 /var/lib/hse-runner # owner: the image user app
+docker compose up -d
+docker compose --profile services up -d   # add LanguageTool and ONLYOFFICE
+```
+
+Required values in `.env`:
+
+| Variable | Purpose |
+|---|---|
+| `PUBLIC_URL` | external address: its scheme sets the cookie `Secure` flag, and it joins the allowed Origins |
+| `POSTGRES_PASSWORD` | database password |
+| `SECRETS_KEY` | Fernet key that encrypts secrets in the database |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | MinIO credentials and the private bucket name |
+| `RUNNER_BOOTSTRAP_TOKEN` | one-time registration token for the first runner |
+| `TRUSTED_PROXIES` | your reverse proxy addresses as a JSON list, used to determine the client address |
+
+The `services` profile starts the replicas, but only `LANGUAGETOOL_REPLICAS` and `OFFICE_EDITOR_REPLICAS` in `.env` connect them to the api (ready values are in the comments of `.env.example`). While the lists are empty, text checking and the office editor are unavailable. In Helm the addresses go to `services.languagetoolReplicas` and `services.officeEditorReplicas`.
+
+The runner directory (`RUNNER_DATA_DIR`) is mounted at the same path on the host and in the container so sibling build containers see the files. Its owner is the image user `app` (uid 10001).
+
+### MinIO console and metrics
+
+Storage runs on the `pgsty/minio` image (a MinIO fork with the web console restored; upstream Docker Hub images no longer ship the management console). The tag is pinned (`RELEASE.2026-08-04T00-00-00Z`) and the image includes the `mc` client, so `minio-init` uses the same image.
+
+- Console: `http://127.0.0.1:19001` on the host (`MINIO_CONSOLE_BIND`, `MINIO_CONSOLE_PORT`). Sign in with `S3_ACCESS_KEY` and `S3_SECRET_KEY` from `.env` (the MinIO admin account). It shows buckets, users and metrics. The port listens on loopback only: from another machine use an SSH tunnel `ssh -L 19001:127.0.0.1:19001 host` or an authenticating reverse proxy with WebSocket support. Do not expose it publicly.
+- The S3 port (9000) is not published; the api reaches it over the internal compose network.
+- Prometheus metrics: `/minio/v2/metrics/cluster` (also `/node`, `/bucket`, `/resource`) on port 9000. By default `MINIO_PROMETHEUS_AUTH_TYPE=public`: no token, and the port is reachable only inside the compose network. Scrape it with a Prometheus attached to that network: `static_configs: [{targets: ["minio:9000"]}]`, `metrics_path: /minio/v2/metrics/cluster`. Quick check: `docker compose exec minio curl -s localhost:9000/minio/v2/metrics/cluster | head`. If you scrape over the host network, set `MINIO_PROMETHEUS_AUTH_TYPE=jwt`, get a token with `docker compose exec minio mc admin prometheus generate local` and pass it as `bearer_token` in the Prometheus job.
+
+### Reverse proxy
+
+The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. The body limit must cover file uploads (up to 256 MiB) as well as project import.
+
+The api is published on `127.0.0.1` by default (`BIND_ADDRESS` in `.env`): the proxy must run on the same host, otherwise set the address explicitly. Run one runner per host and data directory; `--scale runner=N` is not supported because the registration token is single-use.
+
+Project upload is a large request body. Set `client_max_body_size` to at least `HSE_STUDIO__SERVER__PROJECT_IMPORT_MAX_BYTES` plus about 1 MB (by default `client_max_body_size 501m;`). The api itself rejects an oversized body with 413 before anything is written to a temporary file.
+
+## Kubernetes
+
+The chart is in `deploy/helm/hse-doc-studio`: the api (one replica, Recreate strategy), a migrations Job before upgrade, a runner, ingress, Secret and PVC. Postgres and S3 are external. Prefer your own Secret (`secrets.existingSecret`) over values. Details and limits are in the chart README.
+
+## First run
+
+1. Open `PUBLIC_URL`. While there is no administrator, the Studio shows the first-run wizard.
+2. If the server listens on more than loopback, or an external `PUBLIC_URL` or trusted proxies are set, the wizard asks for the setup token. It is printed in the api log: `docker compose logs api | grep -i setup`.
+3. Create the administrator, choose the registration mode and configure mail if needed.
+4. In the admin area open the runners section and check that the runner is registered and takes jobs.
+
+Without the wizard you can create the administrator from the environment: `HSE_STUDIO__AUTH__ADMIN_EMAIL` and `HSE_STUDIO__AUTH__ADMIN_PASSWORD` (or `..._PASSWORD_FILE`). Creation is idempotent: an existing administrator's password is not changed. This is the recommended path for automation.
+
+Settings fixed in the environment (registration mode, domains, password, approval) win over database values and appear locked in the admin area.
+
+## Checks
+
+- `GET /health` answers `ok` or `fail`, with no details.
+- `GET /health/ready` with `Authorization: Bearer <HEALTH_TOKEN>` returns check details. Without the token only an administrator sees them.
+- `/metrics` answers 404 until `METRICS_TOKEN` is set.
+- Database schema: `hse-doc-studio db check` (exit code 1 if the database is not at the latest revision).
+
+## Restricting the admin area
+
+`HSE_STUDIO__ADMIN__ALLOWED_HOSTS` and `HSE_STUDIO__ADMIN__ALLOWED_CIDRS` narrow where `/admin` can be opened from. If both are set, a request must pass both.

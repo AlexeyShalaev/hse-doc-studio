@@ -1,0 +1,12 @@
+{
+  "name": "Ollama на ноутбуке",
+  "type": "runner",
+  "api_key": "",
+  "base_url": "",
+  "models": [],
+  "ssl_verify": true,
+  "connect_timeout_s": 10.0,
+  "request_timeout_s": 120.0,
+  "runner_id": "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "runner_endpoint": "ollama"
+}

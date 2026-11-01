@@ -10,9 +10,10 @@ import structlog
 
 from hse_doc_studio.core.entities import ChangeLogEntry, CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, VcsCommitKind
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
-from hse_doc_studio.core.jobs.enums import JobStatus
+from hse_doc_studio.core.jobs.enums import JobStatus, RunnerErrorCode
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
@@ -43,6 +44,7 @@ class CompileJobHooks:
         vcs_locks: IVcsFolderLocks,
         artifacts: IArtifactStore,
         project_folder: Path,
+        pdf_observer: IBuiltPdfObserver | None = None,
     ) -> None:
         self._compile_repo = compile_repo
         self._project_repo = project_repo
@@ -52,15 +54,20 @@ class CompileJobHooks:
         self._vcs_locks = vcs_locks
         self._artifacts = artifacts
         self._project_folder = project_folder
+        self._pdf_observer = pdf_observer
         self._started_at: datetime | None = None
 
+    @property
+    def project_folder(self) -> Path:
+        return self._project_folder
+
     async def on_started(self, spec: JobSpec) -> bool:
-        record = self._compile_repo.get_for_project(self._project_folder, spec.id)
+        record = await self._compile_repo.get_for_project(self._project_folder, spec.id)
         if record is None:
             logger.warning("compile task: record not found", compile_id=str(spec.id))
             return False
         self._started_at = record.started_at
-        self._compile_repo.save(
+        await self._compile_repo.save(
             CompileRecord(
                 id=record.id,
                 project_folder=record.project_folder,
@@ -79,7 +86,7 @@ class CompileJobHooks:
         )
         return True
 
-    async def on_finished(self, spec: JobSpec, result: JobResult, log: str) -> None:  # noqa: C901
+    async def on_finished(self, spec: JobSpec, result: JobResult, log: str) -> None:  # noqa: C901, PLR0912
         payload = compile_payload_of(spec)
         compile_id = spec.id
         doc_id = payload.doc_id
@@ -95,11 +102,12 @@ class CompileJobHooks:
         else:
             final_status = CompileStatus.failure
         success = final_status is CompileStatus.success
+        await self._restore_started_at(compile_id)
 
         has_errors = any(r.severity == CheckSeverity.err for r in check_results)
         has_warnings = any(r.severity == CheckSeverity.warn for r in check_results)
 
-        self._compile_repo.save(
+        await self._compile_repo.save(
             CompileRecord(
                 id=compile_id,
                 project_folder=self._project_folder,
@@ -116,6 +124,10 @@ class CompileJobHooks:
                 chars=data.chars if data is not None else None,
             )
         )
+
+        if result.error is not None and result.error.code == RunnerErrorCode.superseded.value:
+            # Заменённую сборку закрываем одной записью: состояние документа уже принадлежит новой сборке.
+            return
 
         if final_status in (CompileStatus.cancelled, CompileStatus.failure) or has_errors:
             new_doc_status = DocumentStatus.err
@@ -171,7 +183,11 @@ class CompileJobHooks:
         if success:
             await self._vcs_commit_on_success(doc_id, pages)
             # PDF сохраняется для визуального diff с последующими сборками.
-            self._artifacts.archive_pdf(self._project_folder, doc_id, compile_id, payload.source_file)
+            await self._artifacts.archive_pdf(
+                spec.project_id, self._project_folder, doc_id, compile_id, payload.source_file
+            )
+            if not has_errors:
+                self._notify_pdf_built(spec, doc_id, pages)
 
         logger.debug(
             "compile task finished",
@@ -179,6 +195,21 @@ class CompileJobHooks:
             status=final_status,
             doc_id=doc_id,
         )
+
+    def _notify_pdf_built(self, spec: JobSpec, doc_id: str, pages: int | None) -> None:
+        """Выгрузка на сервер Студии (если проект оттуда) идёт фоном и сборку не задерживает."""
+        if self._pdf_observer is None:
+            return
+        try:
+            self._pdf_observer.on_pdf_built(spec.project_id, doc_id, pages)
+        except Exception as exc:  # noqa: BLE001 — выгрузка вторична
+            logger.warning("pdf observer failed", doc_id=doc_id, exc=str(exc))
+
+    async def _restore_started_at(self, compile_id: uuid.UUID) -> None:
+        """Хуки после рестарта не видели старт: время начала берём из записи сборки."""
+        if self._started_at is None:
+            existing = await self._compile_repo.get_for_project(self._project_folder, compile_id)
+            self._started_at = existing.started_at if existing is not None else None
 
     async def _vcs_commit_on_success(self, doc_id: str, pages: int | None) -> None:
         """Record a `compile` snapshot in the project's VCS store. Best-effort:

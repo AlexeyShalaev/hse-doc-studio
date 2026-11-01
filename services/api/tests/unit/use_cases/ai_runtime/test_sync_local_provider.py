@@ -20,19 +20,19 @@ class _FakeProviderRepo:
     def __init__(self) -> None:
         self.items: list[AIProvider] = []
 
-    def list_all(self) -> list[AIProvider]:
+    async def list_all(self) -> list[AIProvider]:
         return list(self.items)
 
-    def get(self, provider_id: UUID) -> AIProvider | None:
+    async def get(self, provider_id: UUID) -> AIProvider | None:
         return next((p for p in self.items if p.id == provider_id), None)
 
-    def create(self, provider: AIProvider) -> None:
+    async def create(self, provider: AIProvider) -> None:
         self.items.append(provider)
 
-    def update(self, provider: AIProvider) -> None:
+    async def update(self, provider: AIProvider) -> None:
         self.items = [provider if p.id == provider.id else p for p in self.items]
 
-    def delete(self, provider_id: UUID) -> bool:
+    async def delete(self, provider_id: UUID) -> bool:
         before = len(self.items)
         self.items = [p for p in self.items if p.id != provider_id]
         return len(self.items) != before

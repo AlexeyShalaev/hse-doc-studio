@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException
+from dishka.integrations.fastapi import FromDishka
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 
+from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -18,15 +23,24 @@ from hse_doc_studio.api.schemas.project import (
     ProjectAccessResponse,
     ProjectDetailResponse,
     ProjectListItemResponse,
+    ProjectStorageResponse,
     ProjectSuggestionsResponse,
     UpdateProjectRequest,
     UpdateTeamSetRequest,
 )
+from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectSummary, ProjectSummaryPage
+from hse_doc_studio.core.access.repositories import ProjectMembership
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.listing import SortKey
+from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.projects.browse import PROJECT_SORTS, ProjectBrowseQuery, ProjectCard, ProjectOwnerFilter
+from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
+from hse_doc_studio.use_cases.projects.browse_projects import BrowseProjectsUC
 from hse_doc_studio.use_cases.projects.connect_project import (
     ConnectProjectInput,
     ConnectProjectUC,
@@ -63,7 +77,7 @@ from hse_doc_studio.use_cases.projects.update_team_set import (
     UpdateTeamSetUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 def _map_lock(project: Project) -> LockResponse:
@@ -112,6 +126,23 @@ def _map_project_list_item(project: Project, paths: PathMapping) -> ProjectListI
     )
 
 
+def _map_project_summary(project: Project, membership: ProjectMembership) -> ProjectSummary:
+    owner = membership.owner
+    return ProjectSummary(
+        id=str(project.id),
+        name=project.name,
+        kind=project.kind.value,
+        staffing=project.staffing.value,
+        lang=project.lang.value,
+        owner=ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug),
+        my_role=membership.my_role.value,
+        updated_at=project.updated_at,
+        pinned=project.pinned,
+        archived=project.archived,
+        shared_enabled=project.shared_enabled,
+    )
+
+
 def _map_checks_override(co: ChecksOverride) -> ChecksOverrideSchema:
     return ChecksOverrideSchema(
         disabled_categories=list(co.disabled_categories),
@@ -134,7 +165,8 @@ def _map_project_detail(project: Project, paths: PathMapping) -> ProjectDetailRe
     return ProjectDetailResponse(
         id=str(project.id),
         name=project.name,
-        folder=paths.display(str(project.folder)),
+        # Путь на томе проектов сервера наружу не отдаётся (как и в списке).
+        folder="" if settings.mode is StudioMode.server else paths.display(str(project.folder)),
         lock=_map_lock(project),
         kind=str(project.kind),
         staffing=str(project.staffing),
@@ -176,13 +208,59 @@ def _parse_person(schema: PersonSchema | None) -> Person | None:
     )
 
 
-@router.get("/projects", response_model=list[ProjectListItemResponse])
-async def list_projects(
+def _map_project_card(card: ProjectCard) -> ProjectSummary:
+    owner = card.owner
+    return ProjectSummary(
+        id=str(card.id),
+        name=card.name,
+        kind=card.kind,
+        staffing=card.staffing,
+        lang=card.lang,
+        owner=ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug),
+        my_role=card.my_role.value,
+        updated_at=card.updated_at,
+        pinned=card.pinned,
+        archived=card.archived,
+        shared_enabled=card.shared_enabled,
+        via_link=card.via_link,
+    )
+
+
+_project_sort = sort_param(allowed=PROJECT_SORTS, default="-updated_at")
+
+
+@router.get("/projects", response_model=list[ProjectListItemResponse] | ProjectSummaryPage)
+async def list_projects(  # noqa: PLR0913 — фильтры списка приходят отдельными параметрами запроса
+    request: Request,
     uc: FromDishka[ListProjectsUC],
     paths: FromDishka[PathMapping],
-) -> list[ProjectListItemResponse]:
-    result = await uc.execute()
-    return [_map_project_list_item(p, paths) for p in result.projects]
+    params: Annotated[PageParams, Depends(page_params)],
+    q: Annotated[str | None, Depends(search_param)],
+    sort: Annotated[SortKey, Depends(_project_sort)],
+    archived: bool | None = None,
+    owner: ProjectOwnerFilter | None = None,
+    org: Annotated[str | None, Query(max_length=64, description="Проекты организации (slug)")] = None,
+    pinned: bool | None = None,
+) -> list[ProjectListItemResponse] | ProjectSummaryPage:
+    """Локальный режим: весь список папок массивом, как раньше (параметры не действуют).
+
+    Серверный режим: страница из каталога с поиском по названию, владельцу и руководителю; путь папки наружу
+    не отдаётся, вместо него владелец и роль человека.
+    """
+    if settings.mode is StudioMode.local:
+        result = await uc.execute()
+        return [_map_project_list_item(p, paths) for p in result.projects]
+    browse = await request.state.dishka_container.get(BrowseProjectsUC)
+    query = ProjectBrowseQuery(
+        q=q, archived=archived, owner=owner, org_slug=org, pinned=pinned, sort=sort, window=params.window
+    )
+    found = await browse.execute(query)
+    return ProjectSummaryPage(
+        items=[_map_project_card(c) for c in found.items],
+        total=found.total,
+        limit=params.limit,
+        offset=params.offset,
+    )
 
 
 @router.get("/projects/suggestions", response_model=ProjectSuggestionsResponse)
@@ -206,9 +284,27 @@ async def create_project(
     uc: FromDishka[CreateProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if body.folder is None and settings.mode is StudioMode.local:
+        # Как раньше, когда поле было обязательным: список ошибок pydantic с loc ['body','folder'].
+        missing = "folder" not in body.model_fields_set
+        raise RequestValidationError(
+            [
+                {
+                    "type": "missing" if missing else "string_type",
+                    "loc": ("body", "folder"),
+                    "msg": "Field required" if missing else "Input should be a valid string",
+                    "input": body.model_dump(exclude_unset=True) if missing else None,
+                }
+            ]
+        )
+    if body.owner_org_slug is not None and settings.mode is StudioMode.server:
+        # Организаций в M1 нет: молча создать личный проект вместо организационного было бы подменой.
+        raise RequestValidationError(
+            [{"type": "value_error", "loc": ("body", "owner_org_slug"), "msg": "Organizations are not available yet"}]
+        )
     try:
         inp = CreateProjectInput(
-            folder=Path(paths.accept(body.folder)),
+            folder=Path(paths.accept(body.folder)) if body.folder is not None else None,
             pack_id=body.pack_id,
             template_id=body.template_id,
             version=body.version,
@@ -258,6 +354,7 @@ async def get_project(
     uc: FromDishka[GetProjectUC],
     paths: FromDishka[PathMapping],
     access_service: FromDishka[ProjectAccessService],
+    quota: FromDishka[IProjectQuota],
 ) -> ProjectDetailResponse:
     try:
         result = await uc.execute(GetProjectInput(project_id=project_id))
@@ -266,10 +363,25 @@ async def get_project(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     response = _map_project_detail(result.project, paths)
+    if result.membership is not None:
+        owner = result.membership.owner
+        response.owner = ProjectOwner(kind=owner.kind, id=owner.id, name=owner.name, slug=owner.slug)
+        response.my_role = result.membership.my_role.value
+        response.via_link = result.membership.via_link
+        response.link_label = result.membership.link_label
     access = access_service.evaluate(result.project)
     response.access = ProjectAccessResponse(
         mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio
     )
+    storage = await quota.status(project_id)
+    if storage is not None:
+        response.storage = ProjectStorageResponse(
+            used_bytes=storage.used_bytes,
+            limit_bytes=storage.limit_bytes,
+            warning=storage.warning,
+            exceeded=storage.exceeded,
+            measured_at=storage.measured_at,
+        )
     return response
 
 
@@ -315,6 +427,18 @@ async def move_project(
     uc: FromDishka[MoveProjectUC],
     paths: FromDishka[PathMapping],
 ) -> ProjectDetailResponse:
+    if settings.mode is StudioMode.server and not ServerConfig.from_settings(settings).caps.move_project:
+        # Переезд на другую папку хоста на общем сервере не существует: том выбирает сервер.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "not_available_in_server_mode",
+                "detail": localized_error(
+                    "На общем сервере проект нельзя перенести: папку выбирает сервер.",
+                    "A project cannot be moved on a shared server: the server chooses the folder.",
+                ),
+            },
+        )
     try:
         result = await uc.execute(MoveProjectInput(project_id=project_id, new_folder=Path(paths.accept(body.folder))))
     except NotFoundError as exc:

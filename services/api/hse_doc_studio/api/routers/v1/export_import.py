@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.export_import import (
     ExportBundle,
     ExportRequest,
@@ -12,7 +13,7 @@ from hse_doc_studio.api.schemas.export_import import (
 from hse_doc_studio.use_cases.export_import.export_data import ExportDataInput, ExportDataUC
 from hse_doc_studio.use_cases.export_import.import_data import ImportDataInput, ImportDataUC
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 
 @router.post("/data/export", response_model=ExportBundle)

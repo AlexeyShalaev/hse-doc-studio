@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import StringConstraints
 
+from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.vcs import (
     CreateBranchRequest,
     CreateSnapshotRequest,
@@ -88,7 +89,7 @@ from hse_doc_studio.use_cases.vcs.vcs_tags import (
     ListVcsTagsUC,
 )
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(route_class=SafeDishkaRoute)
 
 # Вид коммита из трейлера Hse-Kind: строчные буквы, цифры, подчёркивание и дефис.
 _KIND_PATTERN = r"^[a-z][a-z0-9_-]{0,31}$"

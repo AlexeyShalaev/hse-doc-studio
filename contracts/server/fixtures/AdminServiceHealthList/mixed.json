@@ -1,0 +1,44 @@
+[
+  {
+    "id": "database",
+    "state": "ok",
+    "reason": null,
+    "total": null,
+    "online": null
+  },
+  {
+    "id": "s3",
+    "state": "down",
+    "reason": "timeout",
+    "total": null,
+    "online": null
+  },
+  {
+    "id": "languagetool",
+    "state": "not_configured",
+    "reason": null,
+    "total": null,
+    "online": null
+  },
+  {
+    "id": "onlyoffice",
+    "state": "not_configured",
+    "reason": null,
+    "total": null,
+    "online": null
+  },
+  {
+    "id": "runners",
+    "state": "ok",
+    "reason": null,
+    "total": 3,
+    "online": 2
+  },
+  {
+    "id": "smtp",
+    "state": "not_configured",
+    "reason": null,
+    "total": null,
+    "online": null
+  }
+]

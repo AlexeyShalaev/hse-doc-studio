@@ -1,0 +1,18 @@
+{
+  "id": "inv_9a8b7c6d5e4f40312233445566778899",
+  "project": {
+    "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    "name": "ВКР: Анализ требований",
+    "owner_name": "Анна Петрова"
+  },
+  "role": "reviewer",
+  "persona": "supervisor",
+  "message": "Посмотрите, пожалуйста, главу 2",
+  "invited_by": {
+    "id": "7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+    "name": "Анна Петрова"
+  },
+  "created_at": "2026-11-01T09:00:00Z",
+  "expires_at": "2026-11-08T09:00:00Z",
+  "status": "accepted"
+}

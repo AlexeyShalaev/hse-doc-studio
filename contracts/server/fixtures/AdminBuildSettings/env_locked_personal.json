@@ -1,0 +1,29 @@
+{
+  "timeout_s": 300,
+  "artifact_retention_days": 30,
+  "personal_runners_enabled": true,
+  "personal_runner_wait_s": 5,
+  "personal_runners_max_per_user": 5,
+  "fields": {
+    "build.timeout_s": {
+      "source": "default",
+      "locked": false
+    },
+    "build.artifact_retention_days": {
+      "source": "admin",
+      "locked": false
+    },
+    "runners.personal_enabled": {
+      "source": "env",
+      "locked": true
+    },
+    "runners.personal_wait_s": {
+      "source": "default",
+      "locked": false
+    },
+    "runners.personal_max_per_user": {
+      "source": "default",
+      "locked": false
+    }
+  }
+}

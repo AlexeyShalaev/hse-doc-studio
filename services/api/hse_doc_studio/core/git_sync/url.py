@@ -18,6 +18,9 @@ from hse_doc_studio.core.i18n import localized_error
 
 MAX_URL_LENGTH = 2048
 DEFAULT_SSH_USER = "git"
+# Открытый http к своему компьютеру: токен не уходит в сеть. Пускается вместе с локальными адресами (`allow_local`,
+# только локальная Студия), как вход на сервер Студии по `http://localhost` (use_cases.git_sync.studio_servers).
+LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1"})
 
 _FORBIDDEN_CHARS = frozenset("\\`\"'<>|;$&{}()*!^[]#?")
 _ENCODED_CONTROL = re.compile(r"%(?:[01][0-9a-f]|7f)", re.IGNORECASE)
@@ -224,7 +227,7 @@ def parse_remote_url(raw: str, *, allow_http: bool = False, allow_local: bool = 
     """Разобрать и нормализовать адрес репозитория.
 
     Принимаются https, ssh, scp-подобный `user@host:путь` (переписывается в ssh://),
-    http только при `allow_http`, file:// и абсолютный путь только при `allow_local`.
+    http только при `allow_http` (к localhost и при `allow_local`), file:// и абсолютный путь только при `allow_local`.
     Всё остальное (ext::, fd::, git://, ведущий дефис, управляющие символы, пробелы) отвергается.
     Токен в userinfo https/http отбрасывается и не возвращается.
     """
@@ -253,7 +256,7 @@ def _parse_with_scheme(scheme: str, rest: str, *, allow_http: bool, allow_local:
         return _from_authority(RemoteKind(scheme), rest)
     if scheme == "http":
         parsed = _from_authority(RemoteKind.http, rest)
-        if not allow_http:
+        if not allow_http and not (allow_local and parsed.host in LOOPBACK_HOSTS):
             raise _forbidden()
         return parsed
     if scheme == "file":
@@ -261,3 +264,8 @@ def _parse_with_scheme(scheme: str, rest: str, *, allow_http: bool, allow_local:
             raise _invalid()
         return _checked_local(_from_file(rest), allow_local=allow_local)
     raise _forbidden()
+
+
+def is_loopback_http(url: RemoteUrl) -> bool:
+    """Открытый http к своему компьютеру (localhost): токен по нему в сеть не уходит."""
+    return url.kind is RemoteKind.http and url.host in LOOPBACK_HOSTS

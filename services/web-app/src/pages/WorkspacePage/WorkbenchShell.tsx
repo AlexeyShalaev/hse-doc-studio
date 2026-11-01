@@ -44,6 +44,11 @@ export type WorkbenchShellProps = {
   /** Активный блок «Метаданных»; выбирается и в оглавлении, и в карточке. */
   /** Центральный канвас — его выбирает маршрут в WorkspacePage. */
   canvas: React.ReactNode;
+  /**
+   * links: проект открыт по ссылке. Сдача, настройки проекта и (у гостя) агент
+   * и настройки приложения сервер всё равно не откроет — пункты скрыты.
+   */
+  linkAccess?: "guest" | "user" | null;
 };
 
 /**
@@ -70,6 +75,7 @@ export const WorkbenchShell = ({
   onSelectDoc,
   projectSettingsSection,
   canvas,
+  linkAccess = null,
 }: WorkbenchShellProps) => {
   const { t } = useTranslation("workbench");
   const navigate = useNavigate();
@@ -372,6 +378,13 @@ export const WorkbenchShell = ({
         counts={counts}
         isAgentActive={systemChatOpen}
         onToggleAgent={toggleSystemChat}
+        hidden={
+          linkAccess === "guest"
+            ? ["submit", "projectSettings", "agent", "systemSettings"]
+            : linkAccess === "user"
+              ? ["submit", "projectSettings"]
+              : []
+        }
         onOpenSystemSettings={() => {
           void navigate("/settings");
         }}
@@ -424,7 +437,7 @@ export const WorkbenchShell = ({
 
       {/* Пристыкованный агент — прямой ребёнок .workbench-body, см. инвариант
           в шапке файла. */}
-      {systemChatOpen && (
+      {systemChatOpen && linkAccess !== "guest" && (
         <ChatDock projectId={projectId} onClose={toggleSystemChat} />
       )}
     </div>

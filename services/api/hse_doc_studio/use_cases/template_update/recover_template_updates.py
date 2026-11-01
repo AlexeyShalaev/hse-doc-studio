@@ -6,7 +6,8 @@ from pathlib import Path
 
 import structlog
 
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.repositories import IProjectRepository
 from hse_doc_studio.core.template_update.entities import UpdateJournalKind
 from hse_doc_studio.core.template_update.protocols import ITemplateBaseStore, IUpdateJournalRepository
 from hse_doc_studio.core.vcs.protocols import IVcsService
@@ -41,13 +42,13 @@ class RecoverTemplateUpdatesUC:
     def __init__(
         self,
         project_repo: IProjectRepository,
-        project_index_repo: IProjectIndexRepository,
+        locator: IProjectLocator,
         journal_repo: IUpdateJournalRepository,
         base_store: ITemplateBaseStore,
         vcs_service: IVcsService,
     ) -> None:
         self._project_repo = project_repo
-        self._index = project_index_repo
+        self._locator = locator
         self._journals = journal_repo
         self._transactions = {
             UpdateJournalKind.template: TemplateUpdateTransaction(journal_repo, base_store, vcs_service),
@@ -55,11 +56,12 @@ class RecoverTemplateUpdatesUC:
         }
 
     async def execute(self) -> RecoverTemplateUpdatesOutput:
-        return await asyncio.to_thread(self._recover_all)
+        known = await self._locator.list_all()
+        return await asyncio.to_thread(self._recover_all, known)
 
-    def _recover_all(self) -> RecoverTemplateUpdatesOutput:
+    def _recover_all(self, known: list[Path]) -> RecoverTemplateUpdatesOutput:
         recovered: list[RecoveredUpdate] = []
-        for folder in self._journals.list_active(self._index.list_known()):
+        for folder in self._journals.list_active(known):
             project = self._project_repo.get(folder)
             journal = self._journals.get(folder)
             if project is None or journal is None:

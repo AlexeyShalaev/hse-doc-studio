@@ -1,0 +1,10 @@
+{
+  "name": "OpenAI",
+  "type": "openai",
+  "api_key": "sk-example",
+  "base_url": "",
+  "models": [],
+  "ssl_verify": true,
+  "connect_timeout_s": 10.0,
+  "request_timeout_s": 60.0
+}

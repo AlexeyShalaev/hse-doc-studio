@@ -3,7 +3,10 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
     IAgentPersonaRepository,
     IAIProviderRepository,
@@ -13,6 +16,7 @@ from hse_doc_studio.core.repositories import (
     IFileRepository,
     IFilesystemBrowser,
     IFormStateRepository,
+    ILocalSettingsReader,
     IPackSubmissionRepository,
     IProjectIndexRepository,
     IProjectRepository,
@@ -28,6 +32,12 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
+from hse_doc_studio.core.submission_archive import (
+    DisabledSubmissionArchive,
+    ISubmissionArchive,
+    ISubmissionAudit,
+    NoSubmissionAudit,
+)
 from hse_doc_studio.core.update.repositories import (
     IReleaseNotesRepository,
     ISelfUpdateGateway,
@@ -38,6 +48,7 @@ from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.infra.docker.environment_probe import DockerEnvironmentProbe
 from hse_doc_studio.infra.docker.mount_probe import DockerHealthProbe, MountProbe
 from hse_doc_studio.infra.docker.self_info import DockerSelfInfo
+from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -48,6 +59,7 @@ from hse_doc_studio.infra.persistence.filesystem_browser import LocalFilesystemB
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_index import JsonProjectIndexRepository
+from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.persistence.settings import JsonSettingsRepository
 from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository
@@ -62,7 +74,7 @@ from hse_doc_studio.infra.update.self_update_gateway import DockerSelfUpdateGate
 from hse_doc_studio.infra.update.update_manager import UpdateManager
 
 
-class RepositoryProvider(Provider):
+class LocalPersistenceProvider(Provider):
     scope = Scope.APP
 
     @provide
@@ -72,6 +84,16 @@ class RepositoryProvider(Provider):
     @provide
     def get_project_index_repo(self) -> IProjectIndexRepository:
         return JsonProjectIndexRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_project_locator(
+        self, project_index: IProjectIndexRepository, project_repo: IProjectRepository
+    ) -> IProjectLocator:
+        return LocalProjectLocator(project_index, project_repo)
+
+    @provide
+    def get_project_access_checker(self) -> IProjectAccessChecker:
+        return LocalProjectAccessChecker()
 
     @provide
     def get_template_repo(self) -> ITemplateRepository:
@@ -100,6 +122,18 @@ class RepositoryProvider(Provider):
         return JsonPackSubmissionRepository()
 
     @provide
+    def get_project_quota(self) -> IProjectQuota:
+        return NoopProjectQuota()
+
+    @provide
+    def get_submission_archive(self) -> ISubmissionArchive:
+        return DisabledSubmissionArchive()
+
+    @provide
+    def get_submission_audit(self) -> ISubmissionAudit:
+        return NoSubmissionAudit()
+
+    @provide
     def get_file_repo(self) -> IFileRepository:
         return LocalFileRepository()
 
@@ -109,6 +143,10 @@ class RepositoryProvider(Provider):
 
     @provide
     def get_settings_repo(self) -> ISettingsRepository:
+        return JsonSettingsRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_local_settings_reader(self) -> ILocalSettingsReader:
         return JsonSettingsRepository(settings.data_dir.expanduser())
 
     @provide

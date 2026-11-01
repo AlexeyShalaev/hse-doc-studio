@@ -14,6 +14,7 @@ import {
   WrapText,
   XCircle,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import type { SourceEditorMode } from "@shared/lib";
@@ -56,6 +57,10 @@ export type SourceEditorToolbarProps = {
   onSave: () => void;
   /** Live word/char/caret stats (null until the editor reports them). */
   stats?: EditorStats | null;
+  /** Дополнительные элементы справа (состояние совместной правки, комментарии). */
+  extra?: ReactNode;
+  /** Сохранение делает сервер совместной правки: кнопка «Сохранить» не нужна. */
+  hideSave?: boolean;
 };
 
 export const SourceEditorToolbar = ({
@@ -78,6 +83,8 @@ export const SourceEditorToolbar = ({
   isDirty,
   onSave,
   stats,
+  extra,
+  hideSave = false,
 }: SourceEditorToolbarProps) => {
   const { t } = useTranslation("sourceEdit");
   const st = STATUS_META[status];
@@ -249,6 +256,8 @@ export const SourceEditorToolbar = ({
           </button>
         )}
 
+        {extra}
+
         <span
           className="source-editor-save-status"
           style={{ color: st.color }}
@@ -267,7 +276,7 @@ export const SourceEditorToolbar = ({
           <span>{t(`toolbar.status.${status}`)}</span>
         </span>
 
-        {!readOnly && (
+        {!readOnly && !hideSave && (
           <button
             type="button"
             className="btn sm source-editor-save-button tt"
