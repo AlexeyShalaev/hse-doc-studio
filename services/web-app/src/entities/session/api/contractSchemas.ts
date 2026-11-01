@@ -137,6 +137,10 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ProjectAccessCandidateList: s.ProjectAccessCandidateListSchema,
   ProjectTransferCandidateList: s.PickerListSchema,
   AdminRunnerList: ops.AdminRunnerPageSchema,
+  AdminDiagnostics: ops.AdminDiagnosticsSchema,
+  UpdateAdminDiagnosticsThresholds:
+    ops.UpdateDiagnosticsThresholdsRequestSchema,
+  RunAdminDiagnosticsRequest: ops.RunDiagnosticsRequestSchema,
   AdminDataLifecycle: ops.AdminDataLifecycleSchema,
   AdminUpdateStatus: upd.UpdateStatusSchema,
   AdminUpdateRun: upd.UpdateRunSchema,

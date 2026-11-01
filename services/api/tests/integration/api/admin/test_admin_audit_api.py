@@ -253,6 +253,9 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PUT", "/api/admin/data-lifecycle/retention/{id}"): "settings.retention_update",
     ("PUT", "/api/admin/data-lifecycle/thresholds"): "settings.storage_thresholds_update",
     ("POST", "/api/admin/data-lifecycle/{id}/run"): "lifecycle.run_now",
+    # самодиагностика: проверяет test_admin_diagnostics_api
+    ("POST", "/api/admin/diagnostics/run"): "diagnostics.run",
+    ("PUT", "/api/admin/diagnostics/thresholds"): "settings.diagnostics_update",
     # updates: проверяют test_admin_updates_api и unit-тесты use_cases/server_update
     ("PUT", "/api/admin/updates/settings"): "update.settings_update",
     ("POST", "/api/admin/updates/check"): "update.check",

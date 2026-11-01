@@ -16,6 +16,7 @@ from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.diagnostics import DiagnosticsConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.git_remote import GitRemoteConfig
@@ -97,6 +98,7 @@ class Settings(BaseSettings):
     backups: BackupsConfig = Field(default_factory=BackupsConfig)
     server_update: ServerUpdateConfig = Field(default_factory=ServerUpdateConfig)
     lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)
+    diagnostics: DiagnosticsConfig = Field(default_factory=DiagnosticsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)

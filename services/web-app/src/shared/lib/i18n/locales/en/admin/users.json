@@ -372,7 +372,9 @@
       "backup_delete": "Backup deleted",
       "settings_retention_update": "Data retention changed",
       "settings_storage_thresholds_update": "Disk space thresholds changed",
-      "lifecycle_run_now": "Data source cleanup started"
+      "lifecycle_run_now": "Data source cleanup started",
+      "diagnostics_run": "Self-diagnostics run",
+      "settings_diagnostics_update": "Self-diagnostics thresholds changed"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

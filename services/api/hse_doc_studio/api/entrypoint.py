@@ -38,6 +38,7 @@ from hse_doc_studio.api.observability.install import (
     install_server_updates,
     install_service_pool_health,
 )
+from hse_doc_studio.api.observability.install_diagnostics import install_diagnostics
 from hse_doc_studio.api.observability.install_lifecycle import install_data_lifecycle
 from hse_doc_studio.api.rate_limit import install_rate_limiter
 from hse_doc_studio.api.routers.server_routers import include_server_routers
@@ -231,6 +232,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_device_authorizations_purge(app, container)
         # Аудит, задачи, ИИ-журнал, уведомления и прочие растущие таблицы чистит один движок по реестру политик.
         install_data_lifecycle(app, container, settings, server_metrics)
+        install_diagnostics(app, container, settings, server_metrics)
 
         @app.on_event("startup")
         async def _register_runner_bootstrap_token() -> None:

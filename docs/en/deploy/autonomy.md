@@ -26,3 +26,5 @@ The audit and AI logs are split into monthly Postgres partitions: old partitions
 Container logs rotate (`json-file`, 5 files of 10 MB per container; `LOG_MAX_SIZE` and `LOG_MAX_FILE` in `.env`). Every 5 minutes the server checks the data volumes and the database size; at 80% admins get an inbox warning, at 90% a safe mode starts: uploads over 1 MB are refused with `507 storage_critical` while small edits, sign-in, admin and runners keep working. Thresholds are editable on the page. Metrics: `hse_lifecycle_*`, `hse_storage_*` in `/metrics`.
 
 Upgrade note: migration `lc_02_partition_logs` attaches the old tables as partitions without copying rows; inserts into the logs wait about a second per million rows. For huge logs pre-build the index: `CREATE UNIQUE INDEX CONCURRENTLY audit_log_idat_uq ON audit_log (id, at);` (same for `ai_usage`).
+
+Server health is visible on the **Self-diagnostics** page (`/admin/diagnostics`); disk space from this subsystem is one of its checks, with the same thresholds. See [Server self-diagnostics](diagnostics.md).
