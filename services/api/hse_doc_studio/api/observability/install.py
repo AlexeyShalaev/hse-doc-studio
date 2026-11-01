@@ -189,6 +189,47 @@ def install_autoscale(app: FastAPI, container: AsyncContainer, cfg: Settings, me
         metrics.add_collector(autoscale_collector(lambda: service.last_seen))
 
 
+def _install_backup_provision(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Начальная настройка бэкапов из окружения (Helm, compose): один раз на пустой установке, под лидерским локом."""
+    if cfg.backups.provision.destination_kind == "none":
+        return
+
+    async def _provision() -> None:
+        from hse_doc_studio.use_cases.backup.provision import ProvisionBackupUC, build_plan  # noqa: PLC0415
+
+        p = cfg.backups.provision
+
+        def reveal(value: object) -> str | None:
+            return value.get_secret_value() if value is not None else None  # type: ignore[attr-defined]
+
+        plan = build_plan(
+            kind=p.destination_kind,
+            name=p.name,
+            local_path=p.local_path,
+            endpoint=p.endpoint,
+            region=p.region,
+            bucket=p.bucket,
+            prefix=p.prefix,
+            path_style=p.path_style,
+            access_key=reveal(p.access_key),
+            secret_key=reveal(p.secret_key),
+            schedule_enabled=p.schedule_enabled,
+            schedule_kind=p.schedule_kind,
+            interval_hours=p.interval_hours,
+            cron=p.cron,
+            keep_last=p.keep_last,
+            keep_days=p.keep_days,
+            encryption_mode=p.encryption_mode,
+            passphrase=reveal(p.passphrase),
+            notify_admins=p.notify_admins,
+        )
+        await (await container.get(ProvisionBackupUC)).execute(plan)
+
+    app.state.background.register(
+        PeriodicTask(name="backup_provision", interval_s=365 * 86400.0, run=_provision, run_on_start=True)
+    )
+
+
 def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
     """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
     if not cfg.backups.enabled:
@@ -206,6 +247,8 @@ def install_backups(app: FastAPI, container: AsyncContainer, cfg: Settings) -> N
         recovered = await (await container.get(BackupService)).recover_stale()
         if recovered:
             logger.warning("backup runs interrupted by a restart", count=recovered)
+
+    _install_backup_provision(app, container, cfg)
 
     @app.on_event("shutdown")
     async def _stop_backups() -> None:

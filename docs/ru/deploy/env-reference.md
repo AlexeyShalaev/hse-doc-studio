@@ -239,6 +239,25 @@ tags:
 | `HSE_STUDIO__BACKUPS__PG_DUMP_BINARY` | str | `pg_dump` | оба | Исполняемый файл pg_dump (версия не ниже сервера Postgres). |
 | `HSE_STUDIO__BACKUPS__PG_RESTORE_BINARY` | str | `pg_restore` | оба | Исполняемый файл pg_restore. |
 | `HSE_STUDIO__BACKUPS__DUMP_TIMEOUT_S` | float | `21600.0` | оба | Сколько ждать завершения pg_dump и pg_restore. |
+| `HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND` | none / local / s3 | `none` | оба | Тип назначения по умолчанию; none отключает провижининг. |
+| `HSE_STUDIO__BACKUPS__PROVISION__NAME` | str | `default` | оба | Имя назначения. |
+| `HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH` | str | `main` | оба | Подкаталог корня локальных назначений (kind=local). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT` | str | не задано | оба | Адрес S3 (пусто значит AWS). |
+| `HSE_STUDIO__BACKUPS__PROVISION__REGION` | str | `us-east-1` | оба | Регион S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__BUCKET` | str | не задано | оба | Бакет S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PREFIX` | str | пусто | оба | Префикс бэкапов в бакете. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE` | bool | `true` | оба | Адресация bucket в пути (MinIO, Ceph). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY` 🔒 | str | секрет, не печатается | оба | Ключ доступа S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY` 🔒 | str | секрет, не печатается | оба | Секретный ключ S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED` | bool | `true` | оба | Включить расписание. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND` | interval / cron | `interval` | оба | Вид расписания. |
+| `HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS` | int | `24` | оба | Интервал в часах (schedule_kind=interval). |
+| `HSE_STUDIO__BACKUPS__PROVISION__CRON` | str | `0 3 * * *` | оба | Cron из пяти полей, UTC (schedule_kind=cron). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST` | int | `7` | оба | Хранить последних N бэкапов (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS` | int | `30` | оба | Хранить дней (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE` | installation / passphrase | `installation` | оба | Ключ шифрования: ключ установки или парольная фраза. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE` 🔒 | str | секрет, не печатается | оба | Парольная фраза (от 12 символов). |
+| `HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS` | bool | `true` | оба | Уведомлять администраторов о сбое бэкапа. |
 | `HSE_STUDIO__LIFECYCLE__ENABLED` | bool | `true` | оба | Включить фоновую очистку по реестру политик хранения. |
 | `HSE_STUDIO__LIFECYCLE__INTERVAL_S` | float | `3600.0` | оба | Как часто сервер очищает источники роста по срокам. |
 | `HSE_STUDIO__LIFECYCLE__BATCH_SIZE` | int | `2000` | оба | Строк в одной пачке удаления. |

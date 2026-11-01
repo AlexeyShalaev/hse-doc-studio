@@ -41,6 +41,7 @@ from hse_doc_studio.use_cases.backup.destinations import (
     TestDestinationUC,
     UpdateDestinationUC,
 )
+from hse_doc_studio.use_cases.backup.provision import ProvisionBackupUC
 from hse_doc_studio.use_cases.backup.runs import (
     DeleteStoredBackupUC,
     GetRunUC,
@@ -230,3 +231,12 @@ class ServerBackupsProvider(Provider):
         audit: IAuditLog,
     ) -> DeleteStoredBackupUC:
         return DeleteStoredBackupUC(destinations, runs, service, audit)
+
+    @provide
+    def get_provision(
+        self,
+        destinations: IBackupDestinationRepository,
+        create: CreateDestinationUC,
+        settings_uc: UpdateBackupSettingsUC,
+    ) -> ProvisionBackupUC:
+        return ProvisionBackupUC(destinations, create, settings_uc)

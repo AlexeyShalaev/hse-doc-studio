@@ -121,6 +121,52 @@ docker compose up -d api runner
 
 Проверяйте восстановление на пустой машине регулярно: бэкап, который ни разу не восстанавливали, не считается бэкапом. `hse-doc-studio backup verify` можно запускать из cron оператора.
 
+## Kubernetes (Helm)
+
+Назначения и расписание лежат в базе, поэтому чарт не пишет их в конфиг, а передаёт начальные значения окружением (`HSE_STUDIO__BACKUPS__PROVISION__*`). На старте api, под лидерским локом, создаёт назначение по умолчанию и настройки расписания, **только если назначений ещё нет**. Дальше всё правится в админке, а рестарты правки не затирают. Если удалить все назначения, при следующем старте будут созданы заново.
+
+```yaml
+backups:
+  enabled: true
+  local:                      # том под локальные бэкапы: PVC <release>-backups, монтируется в /backups
+    enabled: true
+    persistence: {size: 100Gi, storageClassName: slow}
+  destination:
+    kind: s3                  # или local
+    name: offsite
+    endpoint: https://s3.example.org
+    bucket: studio-backups
+    prefix: studio
+    accessKey: ...            # лучше в Secret: backup-access-key
+    secretKey: ...            # backup-secret-key
+  schedule: {kind: cron, cron: "30 2 * * *", keepLast: 14, keepDays: 60}
+  encryptionMode: installation   # или passphrase + backups.passphrase (Secret: backup-passphrase)
+```
+
+- PVC бэкапов помечен `helm.sh/resource-policy: keep`: `helm uninstall` его не удаляет. Берите другой класс хранения или внешний S3: бэкап на томе данных не защищает от его потери.
+- Секреты можно не класть в values, а завести в своём Secret (`secrets.existingSecret`) с ключами `backup-access-key`, `backup-secret-key`, `backup-passphrase`.
+- `backups.enabled=false` (умолчание): чарт ничего не добавляет, назначения заводятся в админке.
+- Job миграций бэкапов не получает.
+
+Восстановление в Kubernetes делается командой CLI при остановленном api: `kubectl scale deploy/<release>-hse-doc-studio-api --replicas=0`, затем одноразовый под с тем же образом, Secret и томами (`kubectl run` или Job с `hse-doc-studio backup restore ...`), затем `--replicas=1`.
+
+## Метрики и оповещения
+
+`/metrics` (нужен `METRICS_TOKEN`) отдаёт состояние бэкапов. Значения обновляются раз в тик планировщика (по умолчанию 30 секунд) и на старте; счётчики берутся из таблицы запусков, поэтому не обнуляются при перезапуске api.
+
+| Метрика | Смысл |
+|---|---|
+| `hse_backup_enabled` | расписание включено (1) или нет (0) |
+| `hse_backup_running` | бэкап идёт сейчас |
+| `hse_backup_last_success_timestamp_seconds` | время окончания последнего успеха (0, если успехов не было) |
+| `hse_backup_last_success_age_seconds` | возраст последнего успеха, считается при каждом сборе; без успехов огромен |
+| `hse_backup_last_duration_seconds`, `hse_backup_last_size_bytes` | длительность и размер последнего успешного бэкапа |
+| `hse_backup_last_run_ok` | последний завершённый запуск успешен (1) или нет (0) |
+| `hse_backup_runs_total{status}` | запусков по статусам `running`, `ok`, `failed`, `interrupted` |
+| `hse_backup_failures_total` | запусков со статусом `failed` за всё время |
+
+Готовые правила оповещений: `deploy/monitoring/backup-alerts.yml` (нет успеха дольше 26 часов при включённом расписании, последний запуск неудачен, были сбои за сутки, размер упал вдвое). Дашборд Grafana: `deploy/monitoring/backup-dashboard.json`. Порог 26 часов подберите под своё расписание.
+
 ## Настройки окружения
 
 Расписание, назначения и хранение лежат в базе и правятся в админке. В окружении задаются только технические параметры: `HSE_STUDIO__BACKUPS__ENABLED`, `..._LOCAL_ROOT`, `..._TMP_DIR` (нужно места на самую большую часть бэкапа), `..._PG_DUMP_BINARY`. Полный список в [справочнике](env-reference.md).

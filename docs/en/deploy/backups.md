@@ -121,6 +121,52 @@ After restoring: `hse-doc-studio db check`, `GET /health/ready`, sign in as admi
 
 Test restores on a clean machine regularly: a backup you never restored is not a backup. `hse-doc-studio backup verify` can run from the operator's cron.
 
+## Kubernetes (Helm)
+
+Destinations and the schedule live in the database, so the chart passes initial values through the environment (`HSE_STUDIO__BACKUPS__PROVISION__*`). On startup the api, under the leader lock, creates the default destination and the schedule settings **only if there are no destinations yet**. After that everything is edited in the admin UI and restarts do not overwrite your changes. If you delete all destinations they are created again on the next start.
+
+```yaml
+backups:
+  enabled: true
+  local:                      # volume for local backups: PVC <release>-backups mounted at /backups
+    enabled: true
+    persistence: {size: 100Gi, storageClassName: slow}
+  destination:
+    kind: s3                  # or local
+    name: offsite
+    endpoint: https://s3.example.org
+    bucket: studio-backups
+    prefix: studio
+    accessKey: ...            # better in a Secret: backup-access-key
+    secretKey: ...            # backup-secret-key
+  schedule: {kind: cron, cron: "30 2 * * *", keepLast: 14, keepDays: 60}
+  encryptionMode: installation   # or passphrase + backups.passphrase (Secret: backup-passphrase)
+```
+
+- The backups PVC carries `helm.sh/resource-policy: keep`, so `helm uninstall` does not delete it. Use another storage class or an external S3: a backup on the data volume does not survive its loss.
+- Secrets can stay out of values: create your own Secret (`secrets.existingSecret`) with the keys `backup-access-key`, `backup-secret-key`, `backup-passphrase`.
+- `backups.enabled=false` (default): the chart adds nothing, destinations are created in the admin UI.
+- The migration Job does not receive backup settings.
+
+Restore in Kubernetes is a CLI command run with the api stopped: `kubectl scale deploy/<release>-hse-doc-studio-api --replicas=0`, then a one-off pod with the same image, Secret and volumes (`kubectl run` or a Job running `hse-doc-studio backup restore ...`), then `--replicas=1`.
+
+## Metrics and alerts
+
+`/metrics` (requires `METRICS_TOKEN`) exposes backup state. Values refresh on every scheduler tick (30 seconds by default) and at startup; counters come from the runs table, so they survive an api restart.
+
+| Metric | Meaning |
+|---|---|
+| `hse_backup_enabled` | schedule is on (1) or off (0) |
+| `hse_backup_running` | a backup is running now |
+| `hse_backup_last_success_timestamp_seconds` | finish time of the last success (0 if there never was one) |
+| `hse_backup_last_success_age_seconds` | age of the last success, computed on every scrape; huge if there was none |
+| `hse_backup_last_duration_seconds`, `hse_backup_last_size_bytes` | duration and size of the last successful backup |
+| `hse_backup_last_run_ok` | the last finished run succeeded (1) or not (0) |
+| `hse_backup_runs_total{status}` | runs by status: `running`, `ok`, `failed`, `interrupted` |
+| `hse_backup_failures_total` | runs with status `failed`, all time |
+
+Ready-made alert rules: `deploy/monitoring/backup-alerts.yml` (no success for over 26 hours while the schedule is on, last run failed, failures within a day, size halved). Grafana dashboard: `deploy/monitoring/backup-dashboard.json`. Tune the 26-hour threshold to your schedule.
+
 ## Environment
 
 Schedule, destinations and retention live in the database and are edited in the admin. Only technical parameters are in the environment: `HSE_STUDIO__BACKUPS__ENABLED`, `..._LOCAL_ROOT`, `..._TMP_DIR` (needs room for the largest backup part), `..._PG_DUMP_BINARY`. The full list is in the [reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md).
