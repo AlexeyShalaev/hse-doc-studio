@@ -102,6 +102,8 @@ def test_every_service_rotates_container_logs(compose: dict[str, Any]) -> None:
 
 def test_log_rotation_limits_are_overridable_from_env() -> None:
     text = (_DEPLOY / "docker-compose.yml").read_text(encoding="utf-8")
-    assert "${LOG_MAX_SIZE:-10m}" in text and "${LOG_MAX_FILE:-5}" in text
+    assert "${LOG_MAX_SIZE:-10m}" in text
+    assert "${LOG_MAX_FILE:-5}" in text
     example = (_DEPLOY / ".env.example").read_text(encoding="utf-8")
-    assert "LOG_MAX_SIZE=" in example and "LOG_MAX_FILE=" in example
+    assert "LOG_MAX_SIZE=" in example
+    assert "LOG_MAX_FILE=" in example

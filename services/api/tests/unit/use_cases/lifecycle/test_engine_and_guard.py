@@ -204,7 +204,8 @@ async def test__guard__below_warning__quiet() -> None:
     guard, _, notifier, mode = _guard(0.5)
 
     assert await guard.tick() is StorageLevel.ok
-    assert notifier.sent == [] and not mode.active
+    assert notifier.sent == []
+    assert not mode.active
 
 
 async def test__guard__warning__notifies_every_admin_without_safe_mode() -> None:
@@ -228,7 +229,8 @@ async def test__guard__critical__safe_mode_on_then_off_after_recovery() -> None:
     guard, probe, notifier, mode = _guard(0.95)
 
     await guard.tick()
-    assert mode.active and mode.reason == "data"
+    assert mode.active
+    assert mode.reason == "data"
     assert notifier.sent[0][2].outcome == "storage_critical"
 
     probe.ratio = 0.4
@@ -241,7 +243,8 @@ async def test__guard__critical_with_safe_mode_disabled__only_notifies() -> None
 
     await guard.tick()
 
-    assert notifier.sent and not mode.active
+    assert notifier.sent
+    assert not mode.active
 
 
 async def test__guard__thresholds_from_admin_settings() -> None:
@@ -250,7 +253,8 @@ async def test__guard__thresholds_from_admin_settings() -> None:
     await settings.set(KEY_CRITICAL_PERCENT, 60, source="admin")
     guard, _, _, mode = _guard(0.65, settings)
 
-    assert await guard.tick() is StorageLevel.critical and mode.active
+    assert await guard.tick() is StorageLevel.critical
+    assert mode.active
 
 
 async def test__overview__lists_every_policy_with_days_source_and_volumes() -> None:

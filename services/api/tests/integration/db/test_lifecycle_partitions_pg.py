@@ -156,8 +156,10 @@ async def test__purge__deadline_reached__reports_more_and_resumes(pg_migrated_en
     first = await source.purge(expired)
     second = await source.purge(_ctx(now - timedelta(days=365), batch=1))
 
-    assert first.more and first.removed == 0
-    assert second.removed == 3 and not second.more
+    assert first.more
+    assert first.removed == 0
+    assert second.removed == 3
+    assert not second.more
 
 
 async def test__ai_usage__purge_deletes_old_rows_and_keeps_recent(pg_migrated_engine: AsyncEngine) -> None:
@@ -232,7 +234,9 @@ async def test__downgrade_then_upgrade__keeps_every_row(pg_db_factory) -> None: 
             await conn.execute(text("SELECT relkind::text FROM pg_class WHERE oid = 'audit_log'::regclass"))
         ).scalar_one()
         nxt = (await conn.execute(text("SELECT nextval('audit_log_id_seq')"))).scalar_one()
-    assert flat == before and kind == "r" and nxt > max(r[0] for r in before)
+    assert flat == before
+    assert kind == "r"
+    assert nxt > max(r[0] for r in before)
     with pytest.raises(DBAPIError, match="append-only"):
         async with engine.begin() as conn:
             await conn.execute(text("DELETE FROM audit_log"))
@@ -243,7 +247,8 @@ async def test__downgrade_then_upgrade__keeps_every_row(pg_db_factory) -> None: 
         kind = (
             await conn.execute(text("SELECT relkind::text FROM pg_class WHERE oid = 'audit_log'::regclass"))
         ).scalar_one()
-    assert again == before and kind == "p"
+    assert again == before
+    assert kind == "p"
     assert await migrator.check_drift(engine) == []
 
 

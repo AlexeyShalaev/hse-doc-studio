@@ -142,14 +142,17 @@ async def test__overview__lists_sources_volumes_and_levels(stack: _Stack) -> Non
         True,
         False,
     )
-    assert audit["protected"] is True and audit["env"] == "HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS"
+    assert audit["protected"] is True
+    assert audit["env"] == "HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS"
     assert by_key["notifications"]["last_run"]["removed"] == 3
     assert by_key["notifications"]["run_now"] is True
     assert by_key["auth_records"]["last_run"]["runs"] == 3
-    assert by_key["container_logs"]["editable"] is False and by_key["container_logs"]["days"] is None
+    assert by_key["container_logs"]["editable"] is False
+    assert by_key["container_logs"]["days"] is None
     assert body["thresholds"] == {"warn_percent": 80, "critical_percent": 90}
     assert [v["level"] for v in body["volumes"]] == ["warning", "ok"]
-    assert body["level"] == "warning" and body["safe_mode"] is False
+    assert body["level"] == "warning"
+    assert body["safe_mode"] is False
 
 
 async def test__retention__roundtrip_bounds_and_reset(stack: _Stack) -> None:
@@ -164,7 +167,8 @@ async def test__retention__roundtrip_bounds_and_reset(stack: _Stack) -> None:
     reset = await c.put("/api/admin/data-lifecycle/retention/notifications", json={"days": None}, headers=boss)
 
     notif = {s["key"]: s for s in saved.json()["sources"]}["notifications"]
-    assert saved.status_code == 200 and (notif["days"], notif["days_source"]) == (120, "admin")
+    assert saved.status_code == 200
+    assert (notif["days"], notif["days_source"]) == (120, "admin")
     assert {too_low.status_code, zero.status_code, not_editable.status_code} == {422}
     assert unknown.status_code == 404
     back = {s["key"]: s for s in reset.json()["sources"]}["notifications"]

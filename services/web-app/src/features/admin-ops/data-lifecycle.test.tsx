@@ -136,7 +136,7 @@ describe("Хранение данных", () => {
     await user.clear(days);
     await user.type(days, "30");
     expect(
-      (screen.getByTestId("lc-save-audit_log") as HTMLButtonElement).disabled,
+      screen.getByTestId<HTMLButtonElement>("lc-save-audit_log").disabled,
     ).toBe(true);
   });
 

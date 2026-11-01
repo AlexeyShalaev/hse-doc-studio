@@ -132,11 +132,13 @@ async def test__overview__sizes_stats_and_audit_events(
     view = await (await container.get(GetLifecycleUC)).execute(ADMIN)
 
     by_key = {s.policy.key: s for s in view.sources}
-    assert by_key["audit_log"].size is not None and by_key["audit_log"].size.partitions >= 4  # type: ignore[operator]
+    assert by_key["audit_log"].size is not None
+    assert by_key["audit_log"].size.partitions >= 4
     assert by_key["notifications"].last_run is not None
     assert by_key["compile_records"].size is not None
     names = [v.usage.name for v in view.volumes]
-    assert names[-1] == "database" and names[0].startswith("data")
+    assert names[-1] == "database"
+    assert names[0].startswith("data")
     assert view.safe_mode is False
 
 
@@ -188,7 +190,8 @@ async def test__probe__reports_database_and_data_volume(pg_migrated_engine: Asyn
 
     volumes = {v.name: v for v in await probe.volumes()}
 
-    assert volumes["data"].total_bytes and 0 <= (volumes["data"].used_ratio or 0) <= 1
+    assert volumes["data"].total_bytes
+    assert 0 <= (volumes["data"].used_ratio or 0) <= 1
     assert volumes["database"].used_bytes > 0
     assert 0 < (volumes["database"].used_ratio or 0) < 1
 

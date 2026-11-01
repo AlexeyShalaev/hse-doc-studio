@@ -40,7 +40,9 @@ async def test__collab_state__removes_only_stale_files_and_empty_folders(tmp_pat
     result = await source.purge(_ctx(datetime.now(UTC) - timedelta(days=90)))
 
     assert result.removed == 2
-    assert not old.exists() and fresh.exists() and foreign.exists()
+    assert not old.exists()
+    assert fresh.exists()
+    assert foreign.exists()
     assert not (tmp_path / "p3").exists()
     assert (await source.measure()).bytes == 100 + len("не состояние".encode())
 
@@ -59,7 +61,8 @@ async def test__collab_state__budget_exhausted__reports_more(tmp_path: Path) -> 
 
     result = await CollabStateSource(tmp_path).purge(_ctx(NOW, deadline=time.monotonic() - 1))
 
-    assert result.more and result.removed == 0
+    assert result.more
+    assert result.removed == 0
 
 
 def test__collector__exposes_sources_volumes_and_safe_mode() -> None:
