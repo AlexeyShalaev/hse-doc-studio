@@ -41,30 +41,68 @@ class GitHttpErrorKind(StrEnum):
     not_found = "not_found"
 
 
-class GitHttpError(Exception):
-    """Отказ git-запроса; `message` уже локализован и уходит клиенту текстом (git печатает его как remote:)."""
+class GitDenial(StrEnum):
+    """Причина отказа из закрытого списка: клиенту уходит только заранее заготовленный текст."""
 
-    def __init__(self, kind: GitHttpErrorKind, message: str) -> None:
-        super().__init__(message)
+    unauthorized = "unauthorized"
+    no_git_scope = "no_git_scope"
+    pdf_scope = "pdf_scope"
+    push_scope_missing = "push_scope_missing"
+    no_push_right = "no_push_right"
+    no_read_right = "no_read_right"
+    not_found = "not_found"
+
+
+# (ru, en); git печатает текст клиенту как `remote:`.
+DENIAL_TEXT: dict[GitDenial, tuple[str, str]] = {
+    GitDenial.unauthorized: (
+        "Нужен токен с доступом git (Настройки → Токены).",
+        "A token with git access is required (Settings → Tokens).",
+    ),
+    GitDenial.no_git_scope: (
+        "У токена нет доступа к git: нужен scope git:read или git:write.",
+        "The token has no git access: git:read or git:write is required.",
+    ),
+    GitDenial.pdf_scope: ("Для выгрузки PDF нужен scope git:write.", "Uploading a PDF requires git:write."),
+    GitDenial.push_scope_missing: (
+        "Токен только для чтения: для отправки нужен scope git:write.",
+        "The token is read-only: pushing requires the git:write scope.",
+    ),
+    GitDenial.no_push_right: (
+        "У вас нет права отправлять изменения в этот проект.",
+        "You may not push to this project.",
+    ),
+    GitDenial.no_read_right: (
+        "У вас нет права читать исходники этого проекта.",
+        "You may not read the sources of this project.",
+    ),
+    GitDenial.not_found: ("Репозиторий не найден.", "Repository not found."),
+}
+
+
+def denial_message(reason: GitDenial) -> str:
+    return localized_error(*DENIAL_TEXT[reason])
+
+
+class GitHttpError(Exception):
+    """Отказ git-запроса: вид (статус) и причина из закрытого списка `GitDenial`."""
+
+    def __init__(self, kind: GitHttpErrorKind, reason: GitDenial) -> None:
+        super().__init__(reason.value)
         self.kind = kind
-        self.message = message
+        self.reason = reason
+
+    @property
+    def message(self) -> str:
+        return denial_message(self.reason)
 
 
 def _unauthorized() -> GitHttpError:
-    return GitHttpError(
-        GitHttpErrorKind.unauthorized,
-        localized_error(
-            "Нужен токен с доступом git (Настройки → Токены).",
-            "A token with git access is required (Settings → Tokens).",
-        ),
-    )
+    return GitHttpError(GitHttpErrorKind.unauthorized, GitDenial.unauthorized)
 
 
 def _not_found() -> GitHttpError:
-    return GitHttpError(
-        GitHttpErrorKind.not_found,
-        localized_error("Репозиторий не найден.", "Repository not found."),
-    )
+    return GitHttpError(GitHttpErrorKind.not_found, GitDenial.not_found)
 
 
 @dataclass(frozen=True)
@@ -129,13 +167,7 @@ class GitHttpAuthenticator:
             raise _unauthorized()
         principal = GitPrincipal(actor=actor, token=token)
         if not (principal.has(TokenScope.git_read) or principal.has(TokenScope.git_write)):
-            raise GitHttpError(
-                GitHttpErrorKind.scope_missing,
-                localized_error(
-                    "У токена нет доступа к git: нужен scope git:read или git:write.",
-                    "The token has no git access: git:read or git:write is required.",
-                ),
-            )
+            raise GitHttpError(GitHttpErrorKind.scope_missing, GitDenial.no_git_scope)
         return principal
 
     async def _failed(self, ip: str) -> None:
@@ -192,23 +224,9 @@ class AuthorizeGitServiceUC:
         push = service is GitService.receive_pack
         action = Action.GIT_PUSH if push else Action.GIT_FETCH
         if decide(principal.actor, action, acl) is not Decision.allow:
-            raise GitHttpError(
-                GitHttpErrorKind.forbidden,
-                localized_error(
-                    "У вас нет права отправлять изменения в этот проект."
-                    if push
-                    else "У вас нет права читать исходники этого проекта.",
-                    "You may not push to this project." if push else "You may not read the sources of this project.",
-                ),
-            )
+            raise GitHttpError(GitHttpErrorKind.forbidden, GitDenial.no_push_right if push else GitDenial.no_read_right)
         if push and not principal.has(TokenScope.git_write):
-            raise GitHttpError(
-                GitHttpErrorKind.scope_missing,
-                localized_error(
-                    "Токен только для чтения: для отправки нужен scope git:write.",
-                    "The token is read-only: pushing requires the git:write scope.",
-                ),
-            )
+            raise GitHttpError(GitHttpErrorKind.scope_missing, GitDenial.push_scope_missing)
         try:
             project = (await self._projects.execute(GetProjectInput(project_id=project_id))).project
         except NotFoundError:

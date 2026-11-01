@@ -83,8 +83,12 @@ async def _respond(
         await action()
     except RemoteRunnerError as exc:
         return JSONResponse(status_code=_ERROR_STATUS[exc.code], content={"detail": exc.detail, "code": exc.code.value})
-    except ValueError as exc:
-        return JSONResponse(status_code=_INVALID, content={"detail": str(exc), "code": "input_invalid"})
+    except ValueError:
+        # Текст исключения наружу не отдаём (в нём могут оказаться детали проверки); причину показывает код.
+        return JSONResponse(
+            status_code=_INVALID,
+            content={"detail": "Invalid remote runner settings", "code": "input_invalid"},
+        )
     return status_body(supervisor.status())
 
 

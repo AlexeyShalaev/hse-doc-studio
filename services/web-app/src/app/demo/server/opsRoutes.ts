@@ -116,10 +116,10 @@ const API_URL = "https://studio.example.org";
 
 const ACTIVE: readonly AdminJob["status"][] = ["running", "queued"];
 
-const secret = (prefix: string): string =>
-  `${prefix}_${Math.random().toString(36).slice(2, 12)}${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
+const secret = (prefix: string): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(9));
+  return `${prefix}_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+};
 
 const commandFor = (value: string): string =>
   `HSE_RUNNER__API_URL=${API_URL} HSE_RUNNER__TOKEN=${value} hse-doc-studio runner`;

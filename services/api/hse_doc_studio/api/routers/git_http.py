@@ -48,11 +48,13 @@ from hse_doc_studio.use_cases.git_remote.auth import (
     AuthorizeGitServiceUC,
     GitAccess,
     GitConcurrency,
+    GitDenial,
     GitFetchAudit,
     GitHttpAuthenticator,
     GitHttpError,
     GitHttpErrorKind,
     GitPrincipal,
+    denial_message,
 )
 from hse_doc_studio.use_cases.git_remote.projects import ListGitProjectsUC
 from hse_doc_studio.use_cases.git_remote.receive import ProjectBusyError, PushSession, ReceivePushUC
@@ -84,7 +86,7 @@ def _text(status: int, message: str, headers: dict[str, str] | None = None) -> P
 
 def git_error_response(exc: GitHttpError) -> PlainTextResponse:
     headers = {"WWW-Authenticate": AUTH_REALM} if exc.kind is GitHttpErrorKind.unauthorized else None
-    return _text(_STATUS[exc.kind], exc.message, headers)
+    return _text(_STATUS[exc.kind], denial_message(exc.reason), headers)
 
 
 def _project_id(repo: str) -> UUID | None:
@@ -262,10 +264,7 @@ async def git_upload_pdf(  # noqa: PLR0913 — параметры запроса
 async def _writer(request: Request) -> GitPrincipal:
     principal = await authenticate(request)
     if not principal.has(TokenScope.git_write):
-        raise GitHttpError(
-            GitHttpErrorKind.scope_missing,
-            localized_error("Для выгрузки PDF нужен scope git:write.", "Uploading a PDF requires git:write."),
-        )
+        raise GitHttpError(GitHttpErrorKind.scope_missing, GitDenial.pdf_scope)
     return principal
 
 
@@ -305,9 +304,7 @@ async def _authorize(request: Request, repo: str, service: GitService) -> GitAcc
     project_id = _project_id(repo)
     principal = await authenticate(request)
     if project_id is None:
-        raise GitHttpError(
-            GitHttpErrorKind.not_found, localized_error("Репозиторий не найден.", "Repository not found.")
-        )
+        raise GitHttpError(GitHttpErrorKind.not_found, GitDenial.not_found)
     uc = await _container_get(request, AuthorizeGitServiceUC)
     return await uc.execute(principal, project_id, service)
 

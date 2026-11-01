@@ -61,10 +61,10 @@ const disabled = () =>
     "Personal runners are turned off on this installation",
   );
 
-const secret = (prefix: string): string =>
-  `${prefix}_${Math.random().toString(36).slice(2, 14)}${Math.random()
-    .toString(36)
-    .slice(2, 12)}`;
+const secret = (prefix: string): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(11));
+  return `${prefix}_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+};
 
 const tokenCommand = (value: string): string =>
   `HSE_RUNNER__API_URL=${DEMO_SERVER_URL} HSE_RUNNER__TOKEN=${value} hse-doc-studio runner`;
