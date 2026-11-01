@@ -125,7 +125,30 @@ class RestoreTarget:
         return revision in known
 
     async def restore_database(self, source: BinaryIO) -> None:
+        await self._drop_partitioned_tables()
         await asyncio.to_thread(self._pg_restore, source)
+
+    async def _drop_partitioned_tables(self) -> None:
+        """`pg_restore --clean` не умеет снимать унаследованные ограничения секций («cannot drop inherited constraint»),
+        поэтому партиционированные таблицы (журналы) убираются заранее вместе с секциями; всё остальное чистит сам
+        pg_restore. Их содержимое возвращает дамп; повтор восстановления безопасен."""
+        async with self._engine.begin() as conn:
+            names = (
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) "
+                            "FROM pg_partitioned_table p JOIN pg_class c ON c.oid = p.partrelid "
+                            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                            "WHERE n.nspname = current_schema() AND NOT c.relispartition"
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for name in names:
+                await conn.execute(text(f"DROP TABLE IF EXISTS {name} CASCADE"))  # noqa: S608 — имена из каталога, в кавычках
 
     def _pg_restore(self, source: BinaryIO) -> None:
         args, env = pg_env(self._dsn)
