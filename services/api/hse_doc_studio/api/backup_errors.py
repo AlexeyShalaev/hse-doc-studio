@@ -18,6 +18,8 @@ BACKUP_ERROR_STATUS: Mapping[BackupErrorCode, int] = {
     BackupErrorCode.no_destination: 409,
     BackupErrorCode.secrets_unavailable: 409,
     BackupErrorCode.unsafe_target: 409,
+    BackupErrorCode.restore_busy: 409,
+    BackupErrorCode.restore_unconfirmed: 422,
     BackupErrorCode.destination_unreachable: 502,
     BackupErrorCode.integrity: 502,
 }

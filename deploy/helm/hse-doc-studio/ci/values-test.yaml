@@ -24,3 +24,23 @@ services:
 runner:
   enabled: true
   tags: tex
+backups:
+  enabled: true
+  local:
+    enabled: true
+    persistence:
+      size: 100Gi
+      storageClassName: slow
+  destination:
+    kind: s3
+    name: offsite
+    endpoint: https://backup.example.org
+    bucket: studio-backups
+    prefix: studio
+    accessKey: AKIABACKUP
+    secretKey: backup-test-secret
+  schedule:
+    kind: cron
+    cron: "30 2 * * *"
+    keepLast: 14
+    keepDays: 60

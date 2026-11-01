@@ -144,3 +144,49 @@ class StoredBackupInfo(StrictModel):
     parts: list[StoredBackupPart]
     manifest_sha256: str
     restore_command: str
+
+
+class RestoreStartBody(StrictModel):
+    destination_id: str = Field(max_length=64)
+    backup_id: str = Field(max_length=64)
+
+
+class RestoreApplyBody(StrictModel):
+    job_id: str = Field(max_length=64)
+    # Id бэкапа, набранный руками: защита от щелчка не по той строке.
+    confirm: str = Field(max_length=64)
+    # Согласие затереть непустую установку (как --overwrite в CLI).
+    overwrite: bool = False
+
+
+class RestoreTargetInfo(StrictModel):
+    users: int
+    projects: int
+    objects: int
+    empty: bool
+
+
+class RestoreJobInfo(StrictModel):
+    id: str
+    destination_id: str
+    destination_name: str
+    backup_id: str
+    phase: str
+    started_at: AwareDatetime
+    finished_at: AwareDatetime | None
+    app_version: str | None
+    schema_revision: str | None
+    backup_created_at: AwareDatetime | None
+    size: int | None
+    target: RestoreTargetInfo | None
+    requires_overwrite: bool
+    wrote: bool
+    restarting: bool
+    error_code: str | None
+    error: str | None
+    log: list[str]
+    apply_allowed: bool
+
+
+class RestoreCurrent(StrictModel):
+    job: RestoreJobInfo | None

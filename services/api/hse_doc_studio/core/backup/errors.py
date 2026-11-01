@@ -16,6 +16,8 @@ class BackupErrorCode(StrEnum):
     integrity = "backup_integrity"
     unsupported = "backup_unsupported"
     unsafe_target = "backup_unsafe_target"
+    restore_busy = "backup_restore_busy"
+    restore_unconfirmed = "backup_restore_unconfirmed"
 
 
 class BackupError(Exception):

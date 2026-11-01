@@ -94,7 +94,10 @@ class UpdateBackupSettingsUC:
 
     async def execute(self, actor: Actor, new: BackupSettings, *, passphrase: str | None = None) -> BackupStatus:
         """Полная замена настроек. `passphrase=None` оставляет фразу как есть; в режиме `passphrase` она обязательна."""
-        admin_id = require_admin(actor)
+        return await self.apply(require_admin(actor), new, passphrase=passphrase)
+
+    async def apply(self, admin_id: str | None, new: BackupSettings, *, passphrase: str | None = None) -> BackupStatus:
+        """То же без проверки роли: для провижининга из окружения (`admin_id=None`)."""
         validate_settings(new)
         values = await self._repo.get_all()
         before = settings_from(values)

@@ -1,6 +1,6 @@
 """Восстановление из бэкапа: проверка манифеста и частей, безопасные проверки цели, запись по стадиям.
 
-Вызывается из CLI при остановленных api и раннерах; из работающего приложения восстановление не запускается
+Вызывается из CLI при остановленных api и раннерах и из админки через `RestoreCoordinator` в режиме обслуживания
 (см. docs/design/backups.md, раздел 5).
 """
 
@@ -115,6 +115,7 @@ class RestoreBackupUC:
         overwrite: bool,
         confirm: Confirm,
         report: Report,
+        before_write: Callable[[], None] | None = None,
     ) -> RestoreResult:
         manifest = backup.manifest
         report(f"бэкап {manifest.backup_id}: версия {manifest.app_version}, схема {manifest.schema_revision or '-'}")
@@ -128,8 +129,16 @@ class RestoreBackupUC:
         state = await self._target.describe()
         report(f"цель: пользователей {state.users}, проектов {state.projects}, объектов {state.objects}")
         if not apply:
-            report("проверка пройдена; для восстановления добавьте --apply")
+            report("проверка пройдена, ничего не записано")
             return RestoreResult(applied=False, state=state)
+        await self._check_target(state, overwrite=overwrite, confirm=confirm)
+        if before_write is not None:
+            before_write()
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        done = await self._apply(source, backup, move_existing=not state.empty, stamp=stamp, report=report)
+        return RestoreResult(applied=True, database=done[0], files=done[1], objects=done[2], state=state)
+
+    async def _check_target(self, state: TargetState, *, overwrite: bool, confirm: Confirm) -> None:
         if await self._target.api_is_running():
             raise BackupError(
                 BackupErrorCode.unsafe_target,
@@ -144,9 +153,6 @@ class RestoreBackupUC:
                 )
             if not confirm(state):
                 raise BackupError(BackupErrorCode.unsafe_target, "overwrite was not confirmed")
-        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        done = await self._apply(source, backup, move_existing=not state.empty, stamp=stamp, report=report)
-        return RestoreResult(applied=True, database=done[0], files=done[1], objects=done[2], state=state)
 
     async def _apply(
         self, source: BackupSource, backup: VerifiedBackup, *, move_existing: bool, stamp: str, report: Report

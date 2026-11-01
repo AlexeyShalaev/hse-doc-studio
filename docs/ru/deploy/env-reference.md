@@ -234,11 +234,32 @@ tags:
 | `HSE_STUDIO__BACKUPS__TICK_S` | float | `30.0` | оба | Как часто планировщик проверяет, не пора ли запустить бэкап по расписанию. |
 | `HSE_STUDIO__BACKUPS__LOCAL_ROOT` | Path | не задано | оба | Корень локальных назначений: каталог бэкапа это подкаталог корня. Пусто значит data_dir/backups. Для защиты от потери диска смонтируйте сюда отдельный том. |
 | `HSE_STUDIO__BACKUPS__TMP_DIR` | Path | не задано | оба | Где собираются зашифрованные части до загрузки (нужно места на самую большую часть). Пусто значит data_dir/tmp/backup. |
+| `HSE_STUDIO__BACKUPS__RESTORE_FROM_ADMIN` | bool | `true` | оба | Разрешает восстановление из админки (режим обслуживания). false оставляет только предпросмотр. |
+| `HSE_STUDIO__BACKUPS__RESTART_AFTER_RESTORE` | bool | `true` | оба | После восстановления из админки процесс api завершается, и супервизор (compose, Kubernetes) поднимает его заново. false оставляет api в режиме обслуживания до ручного перезапуска. |
 | `HSE_STUDIO__BACKUPS__MAX_OBJECT_BYTES` | int | `274877906944` | оба | Предел размера одной части бэкапа в назначении. |
 | `HSE_STUDIO__BACKUPS__MULTIPART_THRESHOLD_BYTES` | int | `67108864` | оба | С какого размера часть уходит в S3 кусками. |
 | `HSE_STUDIO__BACKUPS__PG_DUMP_BINARY` | str | `pg_dump` | оба | Исполняемый файл pg_dump (версия не ниже сервера Postgres). |
 | `HSE_STUDIO__BACKUPS__PG_RESTORE_BINARY` | str | `pg_restore` | оба | Исполняемый файл pg_restore. |
 | `HSE_STUDIO__BACKUPS__DUMP_TIMEOUT_S` | float | `21600.0` | оба | Сколько ждать завершения pg_dump и pg_restore. |
+| `HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND` | none / local / s3 | `none` | оба | Тип назначения по умолчанию; none отключает провижининг. |
+| `HSE_STUDIO__BACKUPS__PROVISION__NAME` | str | `default` | оба | Имя назначения. |
+| `HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH` | str | `main` | оба | Подкаталог корня локальных назначений (kind=local). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT` | str | не задано | оба | Адрес S3 (пусто значит AWS). |
+| `HSE_STUDIO__BACKUPS__PROVISION__REGION` | str | `us-east-1` | оба | Регион S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__BUCKET` | str | не задано | оба | Бакет S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PREFIX` | str | пусто | оба | Префикс бэкапов в бакете. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE` | bool | `true` | оба | Адресация bucket в пути (MinIO, Ceph). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY` 🔒 | str | секрет, не печатается | оба | Ключ доступа S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY` 🔒 | str | секрет, не печатается | оба | Секретный ключ S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED` | bool | `true` | оба | Включить расписание. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND` | interval / cron | `interval` | оба | Вид расписания. |
+| `HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS` | int | `24` | оба | Интервал в часах (schedule_kind=interval). |
+| `HSE_STUDIO__BACKUPS__PROVISION__CRON` | str | `0 3 * * *` | оба | Cron из пяти полей, UTC (schedule_kind=cron). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST` | int | `7` | оба | Хранить последних N бэкапов (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS` | int | `30` | оба | Хранить дней (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE` | installation / passphrase | `installation` | оба | Ключ шифрования: ключ установки или парольная фраза. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE` 🔒 | str | секрет, не печатается | оба | Парольная фраза (от 12 символов). |
+| `HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS` | bool | `true` | оба | Уведомлять администраторов о сбое бэкапа. |
 | `HSE_STUDIO__SERVER_UPDATE__ENABLED` | bool | `true` | оба | Включает проверку релизов, планировщик и раздел админки. |
 | `HSE_STUDIO__SERVER_UPDATE__EXECUTOR` | compose / none | `none` | оба | Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI). |
 | `HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN` 🔒 | str | секрет, не печатается | оба | Общий секрет апдейтера (Bearer). Пусто: протокол апдейтера выключен и запуски не выдаются. |

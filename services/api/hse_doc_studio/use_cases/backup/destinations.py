@@ -112,7 +112,10 @@ class _DestinationBase:
 
 class CreateDestinationUC(_DestinationBase):
     async def execute(self, actor: Actor, data: DestinationInput) -> BackupDestination:
-        admin_id = require_admin(actor)
+        return await self.create(require_admin(actor), data)
+
+    async def create(self, admin_id: str | None, data: DestinationInput) -> BackupDestination:
+        """Создание без проверки роли: для админки (после `require_admin`) и провижининга (`admin_id=None`)."""
         spec = validate_spec(data.spec)
         self._require_keys(spec, data.access_key, data.secret_key)
         if await self._destinations.name_taken(spec.name):

@@ -250,6 +250,13 @@ jobs:
           pnpm exec playwright test --project=full
         working-directory: e2e
 
+      # Бэкапы идут на том же стенде: восстановление в конце перезапускает api и заменяет данные из бэкапа.
+      - name: Run backups e2e
+        run: |
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=backups
+        working-directory: e2e
+
       # Страница «Обновления» на том же стенде (администратор создан полным смоуком).
       - name: Run updates page e2e
         run: |

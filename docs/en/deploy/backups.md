@@ -8,7 +8,7 @@ tags:
 
 # Server backups
 
-<p class="hds-lede">The Studio takes backups on a schedule, encrypts them on the server and stores them in S3 or a directory. Everything is configured in the admin, section "Backups". An operator restores with a CLI command: verification first, then an explicit confirmation.</p>
+<p class="hds-lede">The Studio takes backups on a schedule, encrypts them on the server and stores them in S3 or a directory. Everything is configured in the admin, section "Backups". You can restore from the admin (preview, confirmation, maintenance mode) or with a CLI command.</p>
 
 Design and decisions: `docs/design/backups.md` in the repository (Russian).
 
@@ -88,7 +88,20 @@ The "Backups" section shows the running job, history (time, destination, size, d
 
 ## Restoring
 
-Restoring is a CLI command, not an admin action. It replaces the database the admin itself runs on, so it is safe only with api and runners stopped. In the admin every backup has a ready command with the values filled in.
+### From the admin
+
+**Backups, Destinations, Backups (button on a destination), Restore.** Steps:
+
+1. **Preview** starts by itself and writes nothing: the manifest, key or passphrase, schema revision, sha256 and decryption of every part are checked; the current server state (users, projects, objects) is shown. It is a dry run: close the window if you do not want to restore.
+2. **Confirmation.** Type the backup id. If the installation is not empty, also turn on "Overwrite existing data" (like `--overwrite`): otherwise the button stays disabled. The `projects/`, `users/`, `gnupg/` directories are not deleted but renamed to `*.before-restore-<time>`.
+3. **Write in maintenance mode.** While writing, every request to the app gets 503 with code `maintenance`; background tasks and the database pool are stopped. Runners wait and retry. Status is available at the open `GET /api/maintenance`.
+4. **Restart.** After success api exits by itself and compose (`restart: unless-stopped`) or Kubernetes starts it again. Sign in again: sessions now come from the backup. Without a supervisor set `HSE_STUDIO__BACKUPS__RESTART_AFTER_RESTORE=false` and restart api by hand.
+
+If nothing was written yet (for example, something else is connected to the database), maintenance mode is left by itself and the installation is unchanged. If the write stopped midway, the mode stays: press "Retry the write" (safe, like re-running the CLI) or "Leave maintenance mode" and inspect the installation. If the process died mid-write it starts in maintenance mode; finish the restore with the CLI below. Restore from the admin is disabled with `HSE_STUDIO__BACKUPS__RESTORE_FROM_ADMIN=false`. It needs a single api replica. Actions go to the audit log: `backup.restore_preview`, `backup.restore_start`, `backup.restore_finish`, `backup.restore_cancel`.
+
+### With the CLI
+
+Use the CLI when the admin is unavailable; it is the strictest path and is safe only with api and runners stopped. In the admin every backup has a ready command with the values filled in.
 
 ```bash
 # 1. a fresh installation with the same SECRETS_KEY and an image at least as new as the backup; run it once, then stop api
@@ -120,6 +133,52 @@ What is checked, and what the command will not do without your say-so:
 After restoring: `hse-doc-studio db check`, `GET /health/ready`, sign in as admin, open a project, build a PDF. See the [manual procedure](operations.md) for orphan garbage collection caveats.
 
 Test restores on a clean machine regularly: a backup you never restored is not a backup. `hse-doc-studio backup verify` can run from the operator's cron.
+
+## Kubernetes (Helm)
+
+Destinations and the schedule live in the database, so the chart passes initial values through the environment (`HSE_STUDIO__BACKUPS__PROVISION__*`). On startup the api, under the leader lock, creates the default destination and the schedule settings **only if there are no destinations yet**. After that everything is edited in the admin UI and restarts do not overwrite your changes. If you delete all destinations they are created again on the next start.
+
+```yaml
+backups:
+  enabled: true
+  local:                      # volume for local backups: PVC <release>-backups mounted at /backups
+    enabled: true
+    persistence: {size: 100Gi, storageClassName: slow}
+  destination:
+    kind: s3                  # or local
+    name: offsite
+    endpoint: https://s3.example.org
+    bucket: studio-backups
+    prefix: studio
+    accessKey: ...            # better in a Secret: backup-access-key
+    secretKey: ...            # backup-secret-key
+  schedule: {kind: cron, cron: "30 2 * * *", keepLast: 14, keepDays: 60}
+  encryptionMode: installation   # or passphrase + backups.passphrase (Secret: backup-passphrase)
+```
+
+- The backups PVC carries `helm.sh/resource-policy: keep`, so `helm uninstall` does not delete it. Use another storage class or an external S3: a backup on the data volume does not survive its loss.
+- Secrets can stay out of values: create your own Secret (`secrets.existingSecret`) with the keys `backup-access-key`, `backup-secret-key`, `backup-passphrase`.
+- `backups.enabled=false` (default): the chart adds nothing, destinations are created in the admin UI.
+- The migration Job does not receive backup settings.
+
+Restore in Kubernetes is a CLI command run with the api stopped: `kubectl scale deploy/<release>-hse-doc-studio-api --replicas=0`, then a one-off pod with the same image, Secret and volumes (`kubectl run` or a Job running `hse-doc-studio backup restore ...`), then `--replicas=1`. Restore from the admin also works in Kubernetes: after the write the pod exits and the Deployment starts it again (same volume and Secret).
+
+## Metrics and alerts
+
+`/metrics` (requires `METRICS_TOKEN`) exposes backup state. Values refresh on every scheduler tick (30 seconds by default) and at startup; counters come from the runs table, so they survive an api restart.
+
+| Metric | Meaning |
+|---|---|
+| `hse_backup_enabled` | schedule is on (1) or off (0) |
+| `hse_backup_running` | a backup is running now |
+| `hse_backup_last_success_timestamp_seconds` | finish time of the last success (0 if there never was one) |
+| `hse_backup_last_success_age_seconds` | age of the last success, computed on every scrape; huge if there was none |
+| `hse_backup_last_duration_seconds`, `hse_backup_last_size_bytes` | duration and size of the last successful backup |
+| `hse_backup_last_run_ok` | the last finished run succeeded (1) or not (0) |
+| `hse_backup_runs_total{status}` | runs by status: `running`, `ok`, `failed`, `interrupted` |
+| `hse_backup_failures_total` | runs with status `failed`, all time |
+
+Ready-made alert rules: `deploy/monitoring/backup-alerts.yml` (no success for over 26 hours while the schedule is on, last run failed, failures within a day, size halved). Grafana dashboard: `deploy/monitoring/backup-dashboard.json`. Tune the 26-hour threshold to your schedule.
 
 ## Environment
 

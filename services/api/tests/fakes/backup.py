@@ -13,6 +13,7 @@ from hse_doc_studio.core.backup.entities import (
     DestinationKind,
     DestinationSecrets,
     DestinationSpec,
+    RunStats,
     RunStatus,
     StoredDestination,
 )
@@ -135,6 +136,17 @@ class InMemoryRuns:
     async def last_finished(self) -> BackupRun | None:
         done = [r for r in self.items.values() if r.status is not RunStatus.running]
         return max(done, key=lambda r: r.started_at) if done else None
+
+    async def stats(self) -> RunStats:
+        by_status: dict[RunStatus, int] = {}
+        for run in self.items.values():
+            by_status[run.status] = by_status.get(run.status, 0) + 1
+        ok = [r for r in self.items.values() if r.status is RunStatus.ok and r.finished_at]
+        return RunStats(
+            by_status=by_status,
+            last_success=max(ok, key=lambda r: r.finished_at) if ok else None,  # type: ignore[arg-type,return-value]
+            last_finished=await self.last_finished(),
+        )
 
 
 class DirStores:

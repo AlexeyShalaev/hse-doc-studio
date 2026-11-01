@@ -131,3 +131,56 @@ export type DestinationBody = {
 export type SettingsBody = Omit<BackupSettings, "passphrase_set"> & {
   passphrase: string | null;
 };
+
+export const RestorePhaseSchema = z.enum([
+  "verifying",
+  "verified",
+  "applying",
+  "done",
+  "failed",
+]);
+export type RestorePhase = z.infer<typeof RestorePhaseSchema>;
+
+export const RestoreJobSchema = z.object({
+  id: z.string(),
+  destination_id: z.string(),
+  destination_name: z.string(),
+  backup_id: z.string(),
+  phase: RestorePhaseSchema,
+  started_at: z.string(),
+  finished_at: z.string().nullable(),
+  app_version: z.string().nullable(),
+  schema_revision: z.string().nullable(),
+  backup_created_at: z.string().nullable(),
+  size: z.number().nullable(),
+  target: z
+    .object({
+      users: z.number(),
+      projects: z.number(),
+      objects: z.number(),
+      empty: z.boolean(),
+    })
+    .nullable(),
+  requires_overwrite: z.boolean(),
+  wrote: z.boolean(),
+  restarting: z.boolean(),
+  error_code: z.string().nullable(),
+  error: z.string().nullable(),
+  log: z.array(z.string()),
+  apply_allowed: z.boolean(),
+});
+export type RestoreJob = z.infer<typeof RestoreJobSchema>;
+
+export const RestoreCurrentSchema = z.object({
+  job: RestoreJobSchema.nullable(),
+});
+
+/** Открытая ручка `/api/maintenance`: без входа и без базы, работает и пока админка недоступна. */
+export const MaintenanceStatusSchema = z.object({
+  active: z.boolean(),
+  phase: RestorePhaseSchema.optional(),
+  error_code: z.string().nullable().optional(),
+  wrote: z.boolean().optional(),
+  restarting: z.boolean().optional(),
+});
+export type MaintenanceStatus = z.infer<typeof MaintenanceStatusSchema>;

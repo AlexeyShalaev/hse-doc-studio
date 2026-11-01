@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -203,3 +205,40 @@ async def test__notification_kind_backup_failed_is_accepted(pg_migrated_engine: 
 def test__secret_columns_registered_for_reencrypt() -> None:
     labels = {column.label for column in encrypted_columns.all()}
     assert {"backup_destinations.access_key_enc", "backup_destinations.secret_key_enc"} <= labels
+
+
+async def test__restore_database__into_migrated_database_with_partitioned_logs(
+    pg_db_factory: Callable[[], Awaitable[AsyncEngine]],
+) -> None:
+    """Регресс: `pg_restore --clean` падал на унаследованных ограничениях секций журналов в мигрированной базе."""
+    import io
+    import subprocess
+    from pathlib import Path
+
+    from hse_doc_studio.infra.backup.producers import pg_env
+    from hse_doc_studio.infra.backup.restore_target import RestoreTarget
+
+    pg_dump, pg_restore = shutil.which("pg_dump"), shutil.which("pg_restore")
+    if not (pg_dump and pg_restore):
+        pytest.skip("нужны pg_dump и pg_restore")
+    source, target = await pg_db_factory(), await pg_db_factory()
+    async with source.begin() as conn:
+        await conn.execute(text("INSERT INTO audit_log (action) VALUES ('x')"))
+    dsn = source.url.render_as_string(hide_password=False)
+    args, env = pg_env(dsn)
+    dump = subprocess.run(  # noqa: S603
+        [pg_dump, "--format=custom", "--no-owner", "--no-acl", *args], capture_output=True, env=env, check=False
+    )
+    if dump.returncode != 0:
+        pytest.skip(f"pg_dump не снял базу (версия клиента?): {dump.stderr.decode()[-200:]}")
+    restore_target = RestoreTarget(
+        target,
+        target.url.render_as_string(hide_password=False),
+        Path("/nonexistent"),
+        Path("/nonexistent"),
+        None,  # type: ignore[arg-type]
+        pg_restore_binary=pg_restore,
+    )
+    await restore_target.restore_database(io.BytesIO(dump.stdout))
+    async with target.connect() as conn:
+        assert (await conn.execute(text("SELECT count(*) FROM audit_log WHERE action = 'x'"))).scalar_one() == 1

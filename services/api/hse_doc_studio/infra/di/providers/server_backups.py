@@ -16,15 +16,19 @@ from hse_doc_studio.core.backup.protocols import (
     IBackupPlanFactory,
     IBackupRunRepository,
     IBackupStoreFactory,
+    IMaintenanceMode,
     IPartFetcher,
     IPartUploader,
+    IRestoreTargetFactory,
 )
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.storage import IObjectStore
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.infra.backup.maintenance import MaintenanceController, marker_path
 from hse_doc_studio.infra.backup.parts import PartFetcher, PartUploader
+from hse_doc_studio.infra.backup.restore_target import RestoreTargetFactory
 from hse_doc_studio.infra.backup.runtime import BackupEnvironment, BackupKeySource, BackupPlanFactory
 from hse_doc_studio.infra.backup.stores import BackupStoreFactory
 from hse_doc_studio.infra.db.repositories.backup import (
@@ -41,6 +45,8 @@ from hse_doc_studio.use_cases.backup.destinations import (
     TestDestinationUC,
     UpdateDestinationUC,
 )
+from hse_doc_studio.use_cases.backup.provision import ProvisionBackupUC
+from hse_doc_studio.use_cases.backup.restore_admin import RestoreCoordinator
 from hse_doc_studio.use_cases.backup.runs import (
     DeleteStoredBackupUC,
     GetRunUC,
@@ -124,6 +130,42 @@ class ServerBackupsProvider(Provider):
     ) -> BackupService:
         return BackupService(
             destinations, runs, repo, stores, uploader, plans, env, keys, cipher, audit, notifier, admins
+        )
+
+    @provide
+    def get_maintenance(self, engine: AsyncEngine) -> IMaintenanceMode:
+        return MaintenanceController(
+            engine,
+            marker_path(settings.data_dir.expanduser()),
+            restart=settings.backups.restart_after_restore,
+        )
+
+    @provide
+    def get_restore_targets(self, objects: IObjectStore) -> IRestoreTargetFactory:
+        return RestoreTargetFactory(settings, objects)
+
+    @provide
+    def get_restore_coordinator(
+        self,
+        destinations: IBackupDestinationRepository,
+        runs: IBackupRunRepository,
+        service: BackupService,
+        keys: IBackupKeySource,
+        targets: IRestoreTargetFactory,
+        fetcher: IPartFetcher,
+        maintenance: IMaintenanceMode,
+        audit: IAuditLog,
+    ) -> RestoreCoordinator:
+        return RestoreCoordinator(
+            destinations,
+            runs,
+            service,
+            keys,
+            targets,
+            fetcher,
+            maintenance,
+            audit,
+            apply_allowed=settings.backups.restore_from_admin,
         )
 
     @provide
@@ -230,3 +272,12 @@ class ServerBackupsProvider(Provider):
         audit: IAuditLog,
     ) -> DeleteStoredBackupUC:
         return DeleteStoredBackupUC(destinations, runs, service, audit)
+
+    @provide
+    def get_provision(
+        self,
+        destinations: IBackupDestinationRepository,
+        create: CreateDestinationUC,
+        settings_uc: UpdateBackupSettingsUC,
+    ) -> ProvisionBackupUC:
+        return ProvisionBackupUC(destinations, create, settings_uc)

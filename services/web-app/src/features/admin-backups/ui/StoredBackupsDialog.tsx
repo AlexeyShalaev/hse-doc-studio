@@ -5,6 +5,7 @@ import { Button, CopyField, EmptyState, Modal, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useDeleteStored, useStoredBackups } from "../api/queries";
 import type { BackupDestination } from "../api/schemas";
+import { RestoreDialog } from "./RestoreDialog";
 import { failureKey, failureOf } from "../lib/failure";
 
 /** Бэкапы, лежащие в назначении: манифест, размер и готовая команда восстановления. */
@@ -19,6 +20,7 @@ export const StoredBackupsDialog = ({
   const stored = useStoredBackups(destination.id, true);
   const remove = useDeleteStored();
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const failure = stored.isError
     ? failureOf(stored.error)
     : remove.isError
@@ -79,6 +81,17 @@ export const StoredBackupsDialog = ({
               multiline
               wrap="spaces"
             />
+            <div className="flex items-center" style={{ gap: 8 }}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setRestoring(item.backup_id);
+                }}
+                data-testid={`backup-stored-restore-${item.backup_id}`}
+              >
+                {t("stored.restore")}
+              </Button>
+            </div>
             {confirm === item.backup_id ? (
               <div className="flex items-center" style={{ gap: 8 }}>
                 <span>{t("stored.confirmDelete")}</span>
@@ -125,6 +138,15 @@ export const StoredBackupsDialog = ({
           </div>
         ))}
       </div>
+      {restoring && (
+        <RestoreDialog
+          destinationId={destination.id}
+          backupId={restoring}
+          onClose={() => {
+            setRestoring(null);
+          }}
+        />
+      )}
     </Modal>
   );
 };

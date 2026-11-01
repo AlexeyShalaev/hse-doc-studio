@@ -13,12 +13,17 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from hse_doc_studio.api.config import Settings
 from hse_doc_studio.core.backup.errors import BackupError, BackupErrorCode
 from hse_doc_studio.core.backup.protocols import TargetState
 from hse_doc_studio.core.storage.ports import IObjectStore
+from hse_doc_studio.infra.backup.pgtools import resolve_binary, server_major
 from hse_doc_studio.infra.backup.producers import ARC_DATA, ARC_PROJECTS, pg_env
 from hse_doc_studio.infra.db import migrator
+from hse_doc_studio.infra.db.engine import APP_NAME as API_APP_NAME
+from hse_doc_studio.infra.db.engine import async_dsn, create_engine
 
+RESTORE_APP_NAME = "hse-doc-studio-restore"
 _CHUNK = 1024 * 1024
 _MOVED = ("projects", "users", "gnupg")
 
@@ -34,7 +39,11 @@ class RestoreTarget:
         *,
         pg_restore_binary: str = "pg_restore",
         timeout_s: float = 6 * 3600.0,
+        owns_engine: bool = False,
+        ignore_idle_api: bool = False,
     ) -> None:
+        self._ignore_idle_api = ignore_idle_api
+        self._owns_engine = owns_engine
         self._engine = engine
         self._dsn = dsn
         self._data_dir = data_dir
@@ -43,18 +52,56 @@ class RestoreTarget:
         self._binary = pg_restore_binary
         self._timeout = timeout_s
 
+    async def close(self) -> None:
+        if self._owns_engine:
+            await self._engine.dispose()
+
     async def api_is_running(self) -> bool:
-        """Есть ли другие соединения с этой базой: у остановленной установки их нет."""
+        """Есть ли другие соединения с этой базой: у остановленной установки их нет.
+
+        Из админки (`ignore_idle_api`) простаивающие соединения самого api не мешают: пул api и в режиме
+        обслуживания может держать одно, оно не держит блокировок и не пишет.
+        """
+        query = "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()"
+        params: dict[str, str] = {}
+        if self._ignore_idle_api:
+            query += " AND NOT (application_name = :app AND state = 'idle')"
+            params["app"] = API_APP_NAME
         async with self._engine.connect() as conn:
-            others = (
+            others = (await conn.execute(text(query), params)).scalar_one()
+        return int(others) > 0
+
+    async def drop_api_connections(self) -> int:
+        """Обрывает оставшиеся соединения самого api (потоки и запросы, начатые до режима обслуживания).
+
+        Чужие приложения не трогаются: их `api_is_running` по-прежнему считает помехой.
+        """
+        async with self._engine.connect() as conn:
+            rows = (
                 await conn.execute(
                     text(
-                        "SELECT count(*) FROM pg_stat_activity "
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                        "WHERE datname = current_database() AND pid <> pg_backend_pid() "
+                        "AND application_name = :app"
+                    ),
+                    {"app": API_APP_NAME},
+                )
+            ).all()
+        return len(rows)
+
+    async def other_connections(self) -> list[str]:
+        """Кто ещё подключён к базе: `приложение/состояние`, для сообщения об ошибке."""
+        async with self._engine.connect() as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT coalesce(nullif(application_name, ''), '?'), coalesce(state, '?') "
+                        "FROM pg_stat_activity "
                         "WHERE datname = current_database() AND pid <> pg_backend_pid()"
                     )
                 )
-            ).scalar_one()
-        return int(others) > 0
+            ).all()
+        return [f"{app}/{state}" for app, state in rows]
 
     async def describe(self) -> TargetState:
         users = projects = 0
@@ -78,7 +125,30 @@ class RestoreTarget:
         return revision in known
 
     async def restore_database(self, source: BinaryIO) -> None:
+        await self._drop_partitioned_tables()
         await asyncio.to_thread(self._pg_restore, source)
+
+    async def _drop_partitioned_tables(self) -> None:
+        """`pg_restore --clean` не умеет снимать унаследованные ограничения секций («cannot drop inherited constraint»),
+        поэтому партиционированные таблицы (журналы) убираются заранее вместе с секциями; всё остальное чистит сам
+        pg_restore. Их содержимое возвращает дамп; повтор восстановления безопасен."""
+        async with self._engine.begin() as conn:
+            names = (
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) "
+                            "FROM pg_partitioned_table p JOIN pg_class c ON c.oid = p.partrelid "
+                            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                            "WHERE n.nspname = current_schema() AND NOT c.relispartition"
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for name in names:
+                await conn.execute(text(f"DROP TABLE IF EXISTS {name} CASCADE"))  # noqa: S608 — имена из каталога, в кавычках
 
     def _pg_restore(self, source: BinaryIO) -> None:
         args, env = pg_env(self._dsn)
@@ -154,3 +224,33 @@ class RestoreTarget:
                     asyncio.run_coroutine_threadsafe(self._store.put(member.name, spool), loop).result()  # type: ignore[arg-type]
                 count += 1
         return count
+
+
+class RestoreTargetFactory:
+    """Цель для восстановления из работающего api: свой движок БД, пул самого api не участвует."""
+
+    def __init__(self, cfg: Settings, store: IObjectStore) -> None:
+        self._cfg = cfg
+        self._store = store
+
+    async def open(self) -> RestoreTarget:
+        cfg = self._cfg
+        data_dir = cfg.data_dir.expanduser()
+        projects_root = (cfg.server.projects_root or data_dir / "projects").expanduser()
+        engine = create_engine(cfg.db, application_name=RESTORE_APP_NAME)
+        try:
+            binary = resolve_binary(cfg.backups.pg_restore_binary, await server_major(engine))
+        except BaseException:
+            await engine.dispose()
+            raise
+        return RestoreTarget(
+            engine,
+            async_dsn(cfg.db.dsn),
+            data_dir,
+            projects_root,
+            self._store,
+            pg_restore_binary=binary,
+            timeout_s=cfg.backups.dump_timeout_s,
+            owns_engine=True,
+            ignore_idle_api=True,
+        )

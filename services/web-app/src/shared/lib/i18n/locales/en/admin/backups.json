@@ -196,11 +196,12 @@
     "title": "Backups in “{{name}}”",
     "lead": "Found by manifests in the storage.",
     "empty": "No backups in this destination.",
-    "restoreNote": "An operator restores with the CLI while api and runners are stopped (from the admin it is unsafe: it replaces the database the admin itself runs on). Without --apply the command only verifies the backup.",
+    "restoreNote": "Restore with the button (maintenance mode, then an api restart) or with the CLI while api and runners are stopped. Without --apply the command only verifies the backup.",
     "meta": "Version {{version}}, schema {{schema}}, encryption: {{mode}}",
     "command": "Restore command",
     "delete": "Delete backup",
-    "confirmDelete": "Delete the backup permanently?"
+    "confirmDelete": "Delete the backup permanently?",
+    "restore": "Restore"
   },
   "failure": {
     "backup_invalid_input": "Check the entered data.",
@@ -219,6 +220,36 @@
     "csrf_failed": "Session expired: reload the page.",
     "input_invalid": "Check the entered data.",
     "network": "No connection to the server.",
-    "unknown": "Something went wrong. Try again later."
+    "unknown": "Something went wrong. Try again later.",
+    "backup_restore_busy": "A restore or a backup is already running: wait for it to finish.",
+    "backup_restore_unconfirmed": "Type the backup id exactly.",
+    "backup_restore_failed": "The restore failed.",
+    "backup_restore_interrupted": "The previous restore stopped midway. Finish it with the CLI command.",
+    "maintenance": "The app is in maintenance mode."
+  },
+  "restore": {
+    "title": "Restore from a backup",
+    "verifying": "Checking the backup: manifest, key, schema revision, sha256 and decryption of every part. Nothing is written.",
+    "verified": "The check passed and nothing was written. This is a dry run: close the window if you do not want to restore.",
+    "applying": "Writing: database, files, objects. Do not close the tab.",
+    "maintenanceNote": "The restore runs in maintenance mode: every request to the app gets 503, background tasks and the database pool are stopped. When it is done api restarts itself (a supervisor is required: compose or Kubernetes), then sign in again.",
+    "destroys": "The installation is not empty: users {{users}}, projects {{projects}}, objects {{objects}}. The restore will destroy them; projects/, users/ and gnupg/ are renamed to *.before-restore-*.",
+    "overwrite": "Overwrite existing data",
+    "typeId": "To confirm, type the backup id: {{id}}",
+    "apply": "Restore",
+    "retry": "Retry the write",
+    "leave": "Leave maintenance mode",
+    "partial": "The write stopped midway. The database is restored in one transaction, but files and objects may be incomplete. Retry the write (it is idempotent) or leave maintenance mode and inspect the installation.",
+    "done": "The write is finished. The app is restarting, it takes under a minute.",
+    "doneBack": "The write is finished and the app responds again. Previous sessions were replaced by the backup data.",
+    "relogin": "Sign in again",
+    "otherJob": "Another restore is in progress. Open its backup or wait for it to finish.",
+    "disabled": "Restore from the admin is turned off (HSE_STUDIO__BACKUPS__RESTORE_FROM_ADMIN=false). Use the CLI command from the list.",
+    "facts": {
+      "backup": "Backup",
+      "version": "Version and schema",
+      "target": "Now on the server",
+      "targetValue": "users {{users}}, projects {{projects}}, objects {{objects}}"
+    }
   }
 }

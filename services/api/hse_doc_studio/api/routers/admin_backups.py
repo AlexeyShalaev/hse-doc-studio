@@ -1,7 +1,7 @@
 """`/api/admin/backups`: назначения, расписание и хранение, запуск, история, бэкапы в хранилище.
 
-Восстановления здесь нет намеренно: оно заменяет базу, из которой живёт сам api (docs/design/backups.md, раздел 5).
-Админка показывает готовую команду CLI.
+Восстановление: предпросмотр (сухой прогон), подтверждение, запись в режиме обслуживания
+(docs/design/backups.md, раздел 5). Готовая команда CLI остаётся запасным путём.
 """
 
 from __future__ import annotations
@@ -18,6 +18,11 @@ from hse_doc_studio.api.schemas.backups import (
     CheckResultInfo,
     DestinationBody,
     DestinationInfo,
+    RestoreApplyBody,
+    RestoreCurrent,
+    RestoreJobInfo,
+    RestoreStartBody,
+    RestoreTargetInfo,
     RunInfo,
     RunPage,
     SettingsBody,
@@ -37,6 +42,7 @@ from hse_doc_studio.core.backup.entities import (
     EncryptionMode,
     StoredBackup,
 )
+from hse_doc_studio.core.backup.restore_job import RestoreJob
 from hse_doc_studio.core.backup.schedule import Schedule, ScheduleKind
 from hse_doc_studio.use_cases.backup.destinations import (
     CheckResult,
@@ -47,6 +53,7 @@ from hse_doc_studio.use_cases.backup.destinations import (
     TestDestinationUC,
     UpdateDestinationUC,
 )
+from hse_doc_studio.use_cases.backup.restore_admin import RestoreCoordinator
 from hse_doc_studio.use_cases.backup.runs import (
     DeleteStoredBackupUC,
     GetRunUC,
@@ -304,3 +311,57 @@ async def list_runs(
 async def get_run(run_id: str, request: Request, response: Response) -> RunInfo:
     response.headers.update(_NO_STORE)
     return _run(await (await request.state.dishka_container.get(GetRunUC)).execute(require_actor(), run_id))
+
+
+def _restore_job(job: RestoreJob) -> RestoreJobInfo:
+    m = job.manifest
+    t = job.target
+    return RestoreJobInfo(
+        id=job.id,
+        destination_id=job.destination_id,
+        destination_name=job.destination_name,
+        backup_id=job.backup_id,
+        phase=job.phase.value,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        app_version=m.app_version if m else None,
+        schema_revision=m.schema_revision if m else None,
+        backup_created_at=m.created_at if m else None,
+        size=m.total_size if m else None,
+        target=RestoreTargetInfo(users=t.users, projects=t.projects, objects=t.objects, empty=t.empty) if t else None,
+        requires_overwrite=job.requires_overwrite,
+        wrote=job.wrote,
+        restarting=job.restarting,
+        error_code=job.error_code,
+        error=job.error,
+        log=list(job.log),
+        apply_allowed=settings.backups.restore_from_admin,
+    )
+
+
+@router.get("/restore", response_model=RestoreCurrent)
+async def get_restore(request: Request, response: Response) -> RestoreCurrent:
+    response.headers.update(_NO_STORE)
+    job = (await request.state.dishka_container.get(RestoreCoordinator)).current(require_actor())
+    return RestoreCurrent(job=_restore_job(job) if job else None)
+
+
+@router.post("/restore/preview", response_model=RestoreJobInfo, status_code=status.HTTP_202_ACCEPTED)
+async def start_restore_preview(body: RestoreStartBody, request: Request, response: Response) -> RestoreJobInfo:
+    response.headers.update(_NO_STORE)
+    coordinator = await request.state.dishka_container.get(RestoreCoordinator)
+    return _restore_job(await coordinator.preview(require_actor(), body.destination_id, body.backup_id))
+
+
+@router.post("/restore/apply", response_model=RestoreJobInfo, status_code=status.HTTP_202_ACCEPTED)
+async def apply_restore(body: RestoreApplyBody, request: Request, response: Response) -> RestoreJobInfo:
+    response.headers.update(_NO_STORE)
+    coordinator = await request.state.dishka_container.get(RestoreCoordinator)
+    job = await coordinator.apply(require_actor(), body.job_id, overwrite=body.overwrite, confirm=body.confirm)
+    return _restore_job(job)
+
+
+@router.delete("/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_restore(request: Request) -> Response:
+    await (await request.state.dishka_container.get(RestoreCoordinator)).cancel(require_actor())
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

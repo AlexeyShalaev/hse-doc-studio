@@ -1,0 +1,27 @@
+{
+  "title": "HSE Doc Studio: бэкапы",
+  "uid": "hse-backups",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {"from": "now-7d", "to": "now"},
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Возраст последнего успеха", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+     "fieldConfig": {"defaults": {"unit": "s"}},
+     "targets": [{"expr": "hse_backup_last_success_age_seconds", "refId": "A"}]},
+    {"id": 2, "type": "stat", "title": "Идёт сейчас", "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+     "targets": [{"expr": "hse_backup_running", "refId": "A"}]},
+    {"id": 3, "type": "stat", "title": "Расписание включено", "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+     "targets": [{"expr": "hse_backup_enabled", "refId": "A"}]},
+    {"id": 4, "type": "stat", "title": "Сбоев всего", "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+     "targets": [{"expr": "hse_backup_failures_total", "refId": "A"}]},
+    {"id": 5, "type": "timeseries", "title": "Размер бэкапа", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+     "fieldConfig": {"defaults": {"unit": "bytes"}},
+     "targets": [{"expr": "hse_backup_last_size_bytes", "refId": "A"}]},
+    {"id": 6, "type": "timeseries", "title": "Длительность последнего бэкапа", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+     "fieldConfig": {"defaults": {"unit": "s"}},
+     "targets": [{"expr": "hse_backup_last_duration_seconds", "refId": "A"}]},
+    {"id": 7, "type": "timeseries", "title": "Запуски по статусам", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+     "targets": [{"expr": "hse_backup_runs_total", "legendFormat": "{{status}}", "refId": "A"}]}
+  ]
+}
