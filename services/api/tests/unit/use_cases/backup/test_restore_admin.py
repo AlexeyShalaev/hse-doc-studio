@@ -15,7 +15,8 @@ from hse_doc_studio.core.identity.errors import IdentityError
 from hse_doc_studio.infra.backup.parts import PartFetcher
 from hse_doc_studio.use_cases.backup.restore_admin import RestoreCoordinator
 
-from tests.unit.use_cases.backup.test_backup_service import Env, admin, env  # noqa: F401
+from tests.unit.use_cases.backup import test_backup_service as base
+from tests.unit.use_cases.backup.test_backup_service import Env, admin
 
 
 class FakeTarget:
@@ -124,15 +125,17 @@ class Stack:
         return job
 
 
+env = base.env
 EMPTY = TargetState(0, 0, 0)
 BUSY = TargetState(3, 2, 10)
 
 
-async def test__preview__verifies_and_writes_nothing(env: Env) -> None:  # noqa: F811
+async def test__preview__verifies_and_writes_nothing(env: Env) -> None:
     stack = Stack(env, FakeTarget(BUSY))
     job = await stack.previewed()
     assert job.phase is RestorePhase.verified
-    assert job.manifest is not None and job.manifest.app_version == "9.9.9"
+    assert job.manifest is not None
+    assert job.manifest.app_version == "9.9.9"
     assert job.requires_overwrite
     assert stack.target.calls == []
     assert stack.target.closed
@@ -140,7 +143,7 @@ async def test__preview__verifies_and_writes_nothing(env: Env) -> None:  # noqa:
     assert any("sha256" in line for line in job.log)
 
 
-async def test__preview__corrupted_part_fails_with_integrity(env: Env) -> None:  # noqa: F811
+async def test__preview__corrupted_part_fails_with_integrity(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY))
     dest_id, backup_id = await stack.backup()
     folder = env.root / "dest" / "main" / backup_id
@@ -153,7 +156,7 @@ async def test__preview__corrupted_part_fails_with_integrity(env: Env) -> None: 
     assert job.error_code == BackupErrorCode.integrity.value
 
 
-async def test__apply__requires_admin_and_preview(env: Env) -> None:  # noqa: F811
+async def test__apply__requires_admin_and_preview(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY))
     nobody = Actor(id="u", kind=ActorKind.user, source=ActorSource.session, is_instance_admin=False)
     dest_id, backup_id = await stack.backup()
@@ -164,7 +167,7 @@ async def test__apply__requires_admin_and_preview(env: Env) -> None:  # noqa: F8
     assert caught.value.code is BackupErrorCode.not_found
 
 
-async def test__apply__wrong_confirmation_is_rejected(env: Env) -> None:  # noqa: F811
+async def test__apply__wrong_confirmation_is_rejected(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY))
     job = await stack.previewed()
     with pytest.raises(BackupError) as caught:
@@ -173,7 +176,7 @@ async def test__apply__wrong_confirmation_is_rejected(env: Env) -> None:  # noqa
     assert stack.maintenance.events == []
 
 
-async def test__apply__non_empty_target_needs_overwrite(env: Env) -> None:  # noqa: F811
+async def test__apply__non_empty_target_needs_overwrite(env: Env) -> None:
     stack = Stack(env, FakeTarget(BUSY))
     job = await stack.previewed()
     with pytest.raises(BackupError) as caught:
@@ -182,7 +185,7 @@ async def test__apply__non_empty_target_needs_overwrite(env: Env) -> None:  # no
     assert stack.target.calls == []
 
 
-async def test__apply__disabled_by_config(env: Env) -> None:  # noqa: F811
+async def test__apply__disabled_by_config(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY), apply_allowed=False)
     job = await stack.previewed()
     with pytest.raises(BackupError) as caught:
@@ -190,13 +193,14 @@ async def test__apply__disabled_by_config(env: Env) -> None:  # noqa: F811
     assert caught.value.code is BackupErrorCode.unsupported
 
 
-async def test__apply__empty_target__writes_in_maintenance_and_restarts(env: Env) -> None:  # noqa: F811
+async def test__apply__empty_target__writes_in_maintenance_and_restarts(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
     await stack.coordinator.drain()
     assert job.phase is RestorePhase.done
-    assert job.wrote and job.restarting
+    assert job.wrote
+    assert job.restarting
     assert stack.maintenance.events == ["enter", "restart"]
     assert stack.target.calls == ["db", "files move=False"]
     assert stack.maintenance.status["phase"] == "done"
@@ -204,7 +208,7 @@ async def test__apply__empty_target__writes_in_maintenance_and_restarts(env: Env
     assert actions == ["backup.restore_preview", "backup.restore_start", "backup.restore_finish"]
 
 
-async def test__apply__overwrite__moves_existing_folders(env: Env) -> None:  # noqa: F811
+async def test__apply__overwrite__moves_existing_folders(env: Env) -> None:
     stack = Stack(env, FakeTarget(BUSY))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=True, confirm=job.backup_id)
@@ -213,7 +217,7 @@ async def test__apply__overwrite__moves_existing_folders(env: Env) -> None:  # n
     assert stack.target.calls[-1] == "files move=True"
 
 
-async def test__apply__connections_remain__fails_before_writing_and_leaves_maintenance(env: Env) -> None:  # noqa: F811
+async def test__apply__connections_remain__fails_before_writing_and_leaves_maintenance(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY, others=10**6))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
@@ -225,12 +229,13 @@ async def test__apply__connections_remain__fails_before_writing_and_leaves_maint
     assert stack.target.calls == []
 
 
-async def test__apply__db_failure__stays_in_maintenance_and_can_be_retried(env: Env) -> None:  # noqa: F811
+async def test__apply__db_failure__stays_in_maintenance_and_can_be_retried(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY, fail_db=True))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
     await stack.coordinator.drain()
-    assert job.phase is RestorePhase.failed and job.wrote
+    assert job.phase is RestorePhase.failed
+    assert job.wrote
     assert stack.maintenance.active
     stack.target.fail_db = False
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
@@ -238,7 +243,7 @@ async def test__apply__db_failure__stays_in_maintenance_and_can_be_retried(env: 
     assert job.phase is RestorePhase.done
 
 
-async def test__cancel__leaves_maintenance_and_forgets_job(env: Env) -> None:  # noqa: F811
+async def test__cancel__leaves_maintenance_and_forgets_job(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY, fail_db=True))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)
@@ -248,7 +253,7 @@ async def test__cancel__leaves_maintenance_and_forgets_job(env: Env) -> None:  #
     assert not stack.maintenance.active
 
 
-async def test__preview__rejected_while_backup_or_restore_in_progress(env: Env) -> None:  # noqa: F811
+async def test__preview__rejected_while_backup_or_restore_in_progress(env: Env) -> None:
     stack = Stack(env, FakeTarget(EMPTY, fail_db=True))
     job = await stack.previewed()
     await stack.coordinator.apply(admin(), job.id, overwrite=False, confirm=job.backup_id)

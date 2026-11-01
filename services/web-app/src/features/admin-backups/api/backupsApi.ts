@@ -6,12 +6,17 @@ import {
   BackupRunSchema,
   BackupStatusSchema,
   CheckResultSchema,
+  MaintenanceStatusSchema,
+  RestoreCurrentSchema,
+  RestoreJobSchema,
   StoredBackupListSchema,
   type BackupDestination,
   type BackupRun,
   type BackupRunPage,
   type BackupStatus,
   type CheckResult,
+  type MaintenanceStatus,
+  type RestoreJob,
   type DestinationBody,
   type SettingsBody,
   type StoredBackup,
@@ -84,4 +89,42 @@ export const backupsApi = {
     adminClient
       .get("/backups/runs", { ...quiet, params: { limit, offset } })
       .then(parseResp(BackupRunPageSchema)),
+
+  restoreCurrent: (): Promise<RestoreJob | null> =>
+    adminClient
+      .get("/backups/restore", quiet)
+      .then(parseResp(RestoreCurrentSchema))
+      .then((r) => r.job),
+  restorePreview: (
+    destinationId: string,
+    backupId: string,
+  ): Promise<RestoreJob> =>
+    adminClient
+      .post(
+        "/backups/restore/preview",
+        { destination_id: destinationId, backup_id: backupId },
+        quiet,
+      )
+      .then(parseResp(RestoreJobSchema)),
+  restoreApply: (body: {
+    job_id: string;
+    confirm: string;
+    overwrite: boolean;
+  }): Promise<RestoreJob> =>
+    adminClient
+      .post("/backups/restore/apply", body, quiet)
+      .then(parseResp(RestoreJobSchema)),
+  restoreCancel: async (): Promise<void> => {
+    await adminClient.delete("/backups/restore", quiet);
+  },
+  /** Не через adminClient: ручка открыта без входа и должна отвечать, пока api перезапускается. */
+  maintenance: async (): Promise<MaintenanceStatus | null> => {
+    try {
+      const res = await fetch("/api/maintenance", { cache: "no-store" });
+      if (!res.ok) return null;
+      return MaintenanceStatusSchema.parse(await res.json());
+    } catch {
+      return null;
+    }
+  },
 };

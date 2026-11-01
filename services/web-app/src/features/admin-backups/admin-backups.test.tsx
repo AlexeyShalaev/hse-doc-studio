@@ -20,7 +20,12 @@ import {
 } from "vitest";
 import { i18n } from "@shared/lib";
 import { backupsApi } from "./api/backupsApi";
-import type { BackupDestination, BackupRun, BackupStatus } from "./api/schemas";
+import type {
+  BackupDestination,
+  BackupRun,
+  BackupStatus,
+  RestoreJob,
+} from "./api/schemas";
 import {
   bodyFromDraft,
   draftProblem,
@@ -453,6 +458,135 @@ describe("раздел «Бэкапы»", () => {
       cron: "30 2 * * 1",
       keep_last: 7,
       passphrase: null,
+    });
+  });
+
+  describe("восстановление из админки", () => {
+    const BID = "20261101T110016Z-0b725f";
+    const job = (patch: Partial<RestoreJob> = {}): RestoreJob => ({
+      id: "j1",
+      destination_id: "d1",
+      destination_name: "Свой S3",
+      backup_id: BID,
+      phase: "verified",
+      started_at: NOW,
+      finished_at: NOW,
+      app_version: "0.2.0",
+      schema_revision: "bk_01_backups",
+      backup_created_at: NOW,
+      size: 2_236_042,
+      target: { users: 0, projects: 0, objects: 0, empty: true },
+      requires_overwrite: false,
+      wrote: false,
+      restarting: false,
+      error_code: null,
+      error: null,
+      log: ["проверка db.pgdump.enc"],
+      apply_allowed: true,
+      ...patch,
+    });
+    const stored = {
+      backup_id: BID,
+      created_at: NOW,
+      app_version: "0.2.0",
+      schema_revision: "bk_01_backups",
+      installation_id: null,
+      encryption_mode: "installation" as const,
+      size: 2_236_042,
+      parts: [],
+      manifest_sha256: "a".repeat(64),
+      restore_command: "hse-doc-studio backup restore",
+    };
+
+    const open = async (user: ReturnType<typeof userEvent.setup>) => {
+      vi.spyOn(backupsApi, "stored").mockResolvedValue([stored]);
+      render(wrap(<BackupsPage />));
+      await user.click(await screen.findByTestId("backup-dest-open-d1"));
+      await user.click(
+        await screen.findByTestId(`backup-stored-restore-${BID}`),
+      );
+    };
+
+    it("предпросмотр запускается сам, восстановить можно только набрав id бэкапа", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(backupsApi, "restoreCurrent").mockResolvedValue(null);
+      const preview = vi
+        .spyOn(backupsApi, "restorePreview")
+        .mockResolvedValue(job());
+      const apply = vi
+        .spyOn(backupsApi, "restoreApply")
+        .mockResolvedValue(job({ phase: "applying" }));
+      vi.spyOn(backupsApi, "maintenance").mockResolvedValue({ active: true });
+      await open(user);
+      await waitFor(() => {
+        expect(preview).toHaveBeenCalledWith("d1", BID);
+      });
+      const button = await screen.findByTestId("backup-restore-apply");
+      expect(button).toBeDisabled();
+      expect(screen.getByTestId("backup-restore-facts").textContent).toContain(
+        "bk_01_backups",
+      );
+      await user.type(screen.getByTestId("backup-restore-confirm"), "не то");
+      expect(button).toBeDisabled();
+      await user.clear(screen.getByTestId("backup-restore-confirm"));
+      await user.type(screen.getByTestId("backup-restore-confirm"), BID);
+      expect(button).toBeEnabled();
+      await user.click(button);
+      await waitFor(() => {
+        expect(apply).toHaveBeenCalledWith({
+          job_id: "j1",
+          confirm: BID,
+          overwrite: false,
+        });
+      });
+    });
+
+    it("непустая установка требует отдельного согласия на перезапись", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(backupsApi, "restoreCurrent").mockResolvedValue(
+        job({
+          target: { users: 3, projects: 2, objects: 10, empty: false },
+          requires_overwrite: true,
+        }),
+      );
+      await open(user);
+      const button = await screen.findByTestId("backup-restore-apply");
+      await user.type(screen.getByTestId("backup-restore-confirm"), BID);
+      expect(button).toBeDisabled();
+      expect(screen.getByTestId("backup-restore").textContent).toContain(
+        "пользователей 3",
+      );
+      await user.click(screen.getByRole("switch"));
+      expect(button).toBeEnabled();
+    });
+
+    it("ошибка проверки показана с кодом и без кнопки записи", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(backupsApi, "restoreCurrent").mockResolvedValue(
+        job({
+          phase: "failed",
+          error_code: "backup_integrity",
+          error: "db.pgdump.enc: sha256 mismatch",
+        }),
+      );
+      await open(user);
+      const error = await screen.findByTestId("backup-restore-error");
+      expect(error.textContent).toContain("sha256 mismatch");
+      expect(screen.queryByTestId("backup-restore-apply")).toBeNull();
+    });
+
+    it("после неудачной записи можно повторить или выйти из режима обслуживания", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(backupsApi, "restoreCurrent").mockResolvedValue(
+        job({ phase: "failed", wrote: true, error_code: "backup_integrity" }),
+      );
+      const cancel = vi.spyOn(backupsApi, "restoreCancel").mockResolvedValue();
+      await open(user);
+      expect(await screen.findByTestId("backup-restore-apply")).toBeDisabled();
+      await user.click(screen.getByTestId("backup-restore-leave"));
+      await waitFor(() => {
+        expect(cancel).toHaveBeenCalledOnce();
+      });
     });
   });
 });
