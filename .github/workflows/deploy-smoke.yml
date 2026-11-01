@@ -257,7 +257,7 @@ jobs:
             echo "::group::$service"; scripts/dev/server-stack/stack.sh logs "$service" | tail -300; echo "::endgroup::"
           done
           echo "::group::jobs"
-          scripts/dev/server-stack/stack.sh psql -c "select kind, state, error_code, left(result::text, 400) as result from jobs order by seq desc limit 10" || true
+          scripts/dev/server-stack/stack.sh psql -At -c "select kind, state, error_code, result::text as result from jobs order by seq desc limit 10" || true
           echo "::endgroup::"
 
       - uses: actions/upload-artifact@v7
