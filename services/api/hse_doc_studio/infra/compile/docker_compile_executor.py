@@ -42,6 +42,11 @@ _TEXCOUNT_TOTAL_RE = re.compile(r"^\s*(\d+)\+(\d+)\+(\d+)\b")
 
 DEFAULT_IDLE_TIMEOUT_S = 120.0
 DEFAULT_IMAGE = "texlive/texlive:TL2024-historic"
+_NONROOT_TEX_ENV = (
+    ("HOME", "/tmp"),  # noqa: S108
+    ("TEXMFVAR", "/tmp/texmf-var"),  # noqa: S108
+    ("TEXMFCONFIG", "/tmp/texmf-config"),  # noqa: S108
+)
 DEFAULT_CACHE_VOLUME = "hse-tex-cache"
 DEFAULT_CACHE_TARGET = "/root"
 
@@ -95,7 +100,15 @@ class ExecutorLimits:
 
     def _identity_args(self) -> list[str]:
         args = ["--cap-drop", "ALL"] if self.cap_drop_all else []
-        return args + ["--user", self.user] if self.user is not None else args
+        if self.user is None:
+            return args
+        args += ["--user", self.user]
+        if self.read_only_rootfs:
+            # Не root: HOME образа это «/» на read-only корне, и mktexfmt не может собрать формат в /.texlive*.
+            # Кэш /root принадлежит root, поэтому каталоги TeX уходят в tmpfs /tmp.
+            for name, value in _NONROOT_TEX_ENV:
+                args += ["-e", f"{name}={value}"]
+        return args
 
 
 class DockerCompileExecutor:

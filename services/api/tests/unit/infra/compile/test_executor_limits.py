@@ -55,6 +55,12 @@ def test__docker_args__hardened_profile__lists_every_flag() -> None:
         "ALL",
         "--user",
         "1000:1000",
+        "-e",
+        "HOME=/tmp",
+        "-e",
+        "TEXMFVAR=/tmp/texmf-var",
+        "-e",
+        "TEXMFCONFIG=/tmp/texmf-config",
     ]
 
 
