@@ -282,6 +282,8 @@ export const NotificationSchema = z.strictObject({
         "denied",
         "resolved",
         "reopened",
+        "storage_warning",
+        "storage_critical",
       ])
       .nullable(),
     path: z.string().nullable(),
