@@ -248,6 +248,9 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("POST", "/api/admin/backups/destinations/{id}/test"): "backup.destination_test",
     ("DELETE", "/api/admin/backups/destinations/{id}/backups/{id}"): "backup.delete",
     ("POST", "/api/admin/backups/runs"): "backup.run_start",
+    ("POST", "/api/admin/backups/restore/preview"): "backup.restore_preview",
+    ("POST", "/api/admin/backups/restore/apply"): "backup.restore_start",
+    ("DELETE", "/api/admin/backups/restore"): "backup.restore_cancel",
     ("PUT", "/api/admin/backups/settings"): "backup.settings_update",
     # хранение данных: проверяет test_admin_lifecycle_api и test_lifecycle_engine_pg
     ("PUT", "/api/admin/data-lifecycle/retention/{id}"): "settings.retention_update",
