@@ -285,6 +285,9 @@ export const NotificationSchema = z.strictObject({
         "reopened",
         "storage_warning",
         "storage_critical",
+        "diag_fail",
+        "diag_warn",
+        "diag_recovered",
       ])
       .nullable(),
     path: z.string().nullable(),

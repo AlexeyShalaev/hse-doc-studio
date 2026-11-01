@@ -44,7 +44,8 @@
     "instanceFallback": "HSE Doc Studio",
     "backups": "Бэкапы",
     "updates": "Обновления",
-    "data": "Хранение данных"
+    "data": "Хранение данных",
+    "diagnostics": "Самодиагностика"
   },
   "overview": {
     "title": "Обзор установки",

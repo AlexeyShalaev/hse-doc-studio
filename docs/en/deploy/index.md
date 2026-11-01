@@ -36,5 +36,6 @@ Redis is not needed: the job queue runs on Postgres.
 4. [Security and personal data](security.md): runner threat model, what the administrator sees, operator duties.
 5. [Server backups](backups.md): schedule, encryption, your own S3, restore.
 6. [Auto-update](auto-update.md): release checks, maintenance window, rollback.
-7. [Manual updates, key loss](operations.md).
+7. [Server self-diagnostics](diagnostics.md): health checks, hints, monitoring.
+8. [Manual updates, key loss](operations.md).
 8. [Environment variables](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md): the full settings reference (generated from the code, Russian descriptions).

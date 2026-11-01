@@ -47,6 +47,13 @@ const AdminBackupsPage = lazy(() =>
   import("@features/admin-backups").then((m) => ({ default: m.BackupsPage })),
 );
 
+// Самодиагностика: проверки состояния, подсказки и пороги.
+const AdminDiagnosticsPage = lazy(() =>
+  import("@features/admin-diagnostics").then((m) => ({
+    default: m.DiagnosticsPage,
+  })),
+);
+
 // Автообновление сервера: версия, политика и окно, история, откат.
 const AdminUpdatesPage = lazy(() =>
   import("@features/admin-updates").then((m) => ({ default: m.UpdatesPage })),
@@ -241,6 +248,14 @@ export const AdminApp = () => {
           element={
             <Page width="wide">
               <AdminUpdatesPage />
+            </Page>
+          }
+        />
+        <Route
+          path="diagnostics"
+          element={
+            <Page width="wide">
+              <AdminDiagnosticsPage />
             </Page>
           }
         />

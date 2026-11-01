@@ -241,3 +241,49 @@ export type LifecycleVolume = z.infer<typeof LifecycleVolumeSchema>;
 export type StorageThresholds = z.infer<typeof StorageThresholdsSchema>;
 export type AdminDataLifecycle = z.infer<typeof AdminDataLifecycleSchema>;
 export type LifecycleRun = z.infer<typeof LifecycleRunSchema>;
+
+// Самодиагностика (api/schemas/diagnostics.py): проверки со статусом, причиной и подсказкой, итог, пороги.
+export const DiagStatusSchema = z.enum(["ok", "warn", "fail"]);
+export const DiagCheckSchema = z.strictObject({
+  id: z.string(),
+  group: z.enum(["data", "compute", "security", "operations"]),
+  // null: проверка ещё не выполнялась (свежая установка до первого прохода).
+  status: DiagStatusSchema.nullable(),
+  reason: z.string().nullable(),
+  hint: z.string().nullable(),
+  values: z.record(z.string(), z.union([z.string(), z.number()])),
+  applicable: z.boolean(),
+  checked_at: iso.nullable(),
+  status_since: iso.nullable(),
+  duration_ms: z.number().int().nullable(),
+});
+export const DiagThresholdSchema = z.strictObject({
+  name: z.string(),
+  value: z.number().int(),
+  default: z.number().int(),
+  min: z.number().int(),
+  max: z.number().int(),
+});
+export const AdminDiagnosticsSchema = z.strictObject({
+  overall: DiagStatusSchema,
+  enabled: z.boolean(),
+  interval_s: z.number(),
+  last_tick_at: iso.nullable(),
+  checks: z.array(DiagCheckSchema),
+  thresholds: z.array(DiagThresholdSchema),
+  notify: z.boolean(),
+});
+export const UpdateDiagnosticsThresholdsRequestSchema = z.strictObject({
+  values: z.record(z.string(), z.number().int()),
+  notify: z.boolean(),
+});
+export const RunDiagnosticsRequestSchema = z.strictObject({
+  check: z.string().nullable(),
+});
+export type DiagStatus = z.infer<typeof DiagStatusSchema>;
+export type DiagCheck = z.infer<typeof DiagCheckSchema>;
+export type DiagThreshold = z.infer<typeof DiagThresholdSchema>;
+export type AdminDiagnostics = z.infer<typeof AdminDiagnosticsSchema>;
+export type UpdateDiagnosticsThresholdsRequest = z.infer<
+  typeof UpdateDiagnosticsThresholdsRequestSchema
+>;

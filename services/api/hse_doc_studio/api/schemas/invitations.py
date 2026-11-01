@@ -31,7 +31,17 @@ NotificationKindName = Literal[
     "system_alert",
 ]
 NotificationOutcome = Literal[
-    "accepted", "declined", "approved", "denied", "resolved", "reopened", "storage_warning", "storage_critical"
+    "accepted",
+    "declined",
+    "approved",
+    "denied",
+    "resolved",
+    "reopened",
+    "storage_warning",
+    "storage_critical",
+    "diag_fail",
+    "diag_warn",
+    "diag_recovered",
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000

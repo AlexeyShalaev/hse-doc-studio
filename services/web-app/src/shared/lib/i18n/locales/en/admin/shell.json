@@ -38,7 +38,8 @@
     "instanceFallback": "HSE Doc Studio",
     "backups": "Backups",
     "updates": "Updates",
-    "data": "Data retention"
+    "data": "Data retention",
+    "diagnostics": "Self-diagnostics"
   },
   "overview": {
     "title": "Installation overview",

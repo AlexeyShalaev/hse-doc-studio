@@ -147,7 +147,9 @@ export const InboxPanel = () => {
             void navigate(
               n.payload.outcome?.startsWith("update_")
                 ? "/admin/updates"
-                : "/admin/data",
+                : n.payload.outcome?.startsWith("diag_")
+                  ? "/admin/diagnostics"
+                  : "/admin/data",
             );
             return;
           }

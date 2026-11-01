@@ -18,6 +18,7 @@ import {
   Gauge,
   Globe,
   HardDrive,
+  HeartPulse,
   KeyRound,
   LayoutDashboard,
   Server,
@@ -49,6 +50,7 @@ export type AdminSection =
   | "services"
   | "storage"
   | "backups"
+  | "diagnostics"
   | "updates"
   | "data"
   | "instance"
@@ -90,6 +92,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "backups", to: "/admin/backups", icon: DatabaseBackup },
       { id: "updates", to: "/admin/updates", icon: ArrowUpCircle },
       { id: "data", to: "/admin/data", icon: DatabaseZap },
+      { id: "diagnostics", to: "/admin/diagnostics", icon: HeartPulse },
     ],
   },
   {
