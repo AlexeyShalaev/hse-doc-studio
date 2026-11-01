@@ -20,6 +20,7 @@ from hse_doc_studio.api.routers import (
     admin_quotas,
     admin_runners,
     admin_settings,
+    admin_updates,
     admin_users,
 )
 from hse_doc_studio.core.access.context import set_current_actor
@@ -51,6 +52,7 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_quotas.router)
     router.include_router(admin_autoscale.router)
     router.include_router(admin_backups.router)
+    router.include_router(admin_updates.router)
     router.include_router(admin_lifecycle.router)
     router.include_router(admin_orgs.router)
     router.include_router(admin_install.router)

@@ -25,6 +25,7 @@ from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
+from hse_doc_studio.api.config.server_update import ServerUpdateConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
     HsePersonsConfig,
@@ -94,6 +95,7 @@ class Settings(BaseSettings):
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
     backups: BackupsConfig = Field(default_factory=BackupsConfig)
+    server_update: ServerUpdateConfig = Field(default_factory=ServerUpdateConfig)
     lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)

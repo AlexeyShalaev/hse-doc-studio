@@ -44,11 +44,19 @@ class RouteScope(StrEnum):
     guest = "guest"
     # git по HTTPS (`/git/*`): только токен доступа с git-scope из Basic или Bearer, cookie не принимаются.
     git_token = "git_token"  # noqa: S105 — имя области, не секрет
+    # Апдейтер сервера (`/api/updater/v1`): общий секрет в Bearer проверяет сам маршрут.
+    updater_token = "updater_token"  # noqa: S105 — имя области, не секрет
 
 
 # Области, где подлинность проверяет сам маршрут: актор по cookie или PAT ему не нужен.
 SELF_AUTHENTICATED = frozenset(
-    {RouteScope.runner_token, RouteScope.job_token, RouteScope.signed_token, RouteScope.git_token}
+    {
+        RouteScope.runner_token,
+        RouteScope.job_token,
+        RouteScope.signed_token,
+        RouteScope.git_token,
+        RouteScope.updater_token,
+    }
 )
 
 _P = RouteScope.public
@@ -357,6 +365,16 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/ai-gateway"): _ADM,
     ("GET", "/api/admin/autoscale"): _ADM,
     ("PUT", "/api/admin/autoscale"): _ADM,
+    ("GET", "/api/admin/updates/status"): _ADM,
+    ("PUT", "/api/admin/updates/settings"): _ADM,
+    ("POST", "/api/admin/updates/check"): _ADM,
+    ("POST", "/api/admin/updates/runs"): _ADM,
+    ("POST", "/api/admin/updates/rollback"): _ADM,
+    ("POST", "/api/admin/updates/runs/{run_id}/cancel"): _ADM,
+    ("GET", "/api/admin/updates/runs"): _ADM,
+    ("GET", "/api/admin/updates/runs/{run_id}"): _ADM,
+    ("POST", "/api/updater/v1/poll"): RouteScope.updater_token,
+    ("POST", "/api/updater/v1/runs/{run_id}/events"): RouteScope.updater_token,
     ("GET", "/api/admin/backups/status"): _ADM,
     ("PUT", "/api/admin/backups/settings"): _ADM,
     ("GET", "/api/admin/backups/destinations"): _ADM,

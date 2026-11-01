@@ -15,7 +15,16 @@ from hse_doc_studio.core.i18n import localized_error, set_interface_language
 from hse_doc_studio.core.lifecycle.disk import SAFE_MODE_MAX_BODY_BYTES, SafeMode
 
 _WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
-_EXEMPT_PREFIXES = ("/api/admin", "/api/runner", "/api/v1/runner", "/health", "/metrics", "/api/auth", "/api/v1/auth")
+_EXEMPT_PREFIXES = (
+    "/api/admin",
+    "/api/runner",
+    "/api/updater",
+    "/api/v1/runner",
+    "/health",
+    "/metrics",
+    "/api/auth",
+    "/api/v1/auth",
+)
 _INSUFFICIENT_STORAGE = 507
 
 
