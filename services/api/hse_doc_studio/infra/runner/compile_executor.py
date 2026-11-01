@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import glob
 import logging
+import os
 from collections.abc import Callable
 from pathlib import PurePosixPath
 
@@ -86,7 +87,15 @@ class CompileJobExecutor:
                     build = await self._runner.run_build(spec, run_ctx)
                     if not build.success:
                         # Журнал сборки живёт только в потоке задачи; без записи в журнал раннера причину не найти.
-                        _LOG.warning("compile %s failed, log tail:\n%s", spec.id, sink.text()[-_FAIL_TAIL_CHARS:])
+                        root_stat = workspace.root.stat()
+                        _LOG.warning(
+                            "compile %s failed (runner uid=%s, workspace uid=%s mode=%o), log tail:\n%s",
+                            spec.id,
+                            os.getuid() if hasattr(os, "getuid") else "-",
+                            root_stat.st_uid,
+                            root_stat.st_mode & 0o7777,
+                            sink.text()[-_FAIL_TAIL_CHARS:],
+                        )
                     result = await self._runner.run_post(spec, run_ctx, build)
                     source = PurePosixPath(payload.source_file)
                     final_pdf = (source.parent / f"{source.stem}.pdf").as_posix()
