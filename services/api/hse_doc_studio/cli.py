@@ -171,7 +171,7 @@ async def _runner() -> int:
     import contextlib  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
-    from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
+    from hse_doc_studio.infra.compile.backend import BuildBackend  # noqa: PLC0415
     from hse_doc_studio.infra.di.containers.runner import RunnerConfigError, create_runner_container  # noqa: PLC0415
     from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
     from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
@@ -185,10 +185,11 @@ async def _runner() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     container = create_runner_container(config)
     try:
-        # Контейнеры сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
-        if (swept := await sweep_build_containers()) > 0:
-            logging.getLogger(__name__).warning("removed %d leftover build containers", swept)
         try:
+            backend = await container.get(BuildBackend)
+            # Контейнеры и поды сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
+            if (swept := await backend.sweep()) > 0:
+                logging.getLogger(__name__).warning("removed %d leftover %s builds", swept, backend.name)
             loop = await container.get(RunnerLoop)
         except RunnerConfigError as exc:
             _write(f"error: {exc}", stream=sys.stderr)

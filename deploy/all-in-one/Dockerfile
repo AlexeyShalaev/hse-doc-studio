@@ -36,11 +36,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential ca-certificates libffi-dev libssl-dev \
   && rm -rf /var/lib/apt/lists/*
 
-# Дополнительные extras бэкенда (dev-стенд server-lite собирает с `--extra server`); по умолчанию только api.
+# Дополнительные extras бэкенда (dev-стенд server-lite собирает с `--extra server`); по умолчанию api и kubernetes (исполнитель раннера).
 ARG BACKEND_EXTRAS=""
 COPY services/api/pyproject.toml services/api/uv.lock* ./
 # shellcheck disable=SC2086 — BACKEND_EXTRAS намеренно раскрывается в несколько аргументов
-RUN /uv/bin/uv export --frozen --no-hashes --extra api ${BACKEND_EXTRAS} | grep -v "^-e \.$" > requirements.txt
+RUN /uv/bin/uv export --frozen --no-hashes --extra api --extra kubernetes ${BACKEND_EXTRAS} | grep -v "^-e \.$" > requirements.txt
 RUN --mount=type=cache,target=/root/.cache/uv \
     /uv/bin/uv pip install --system -r requirements.txt
 

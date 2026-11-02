@@ -1001,7 +1001,7 @@ wheels = [
 
 [[package]]
 name = "hse-doc-studio"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -1036,6 +1036,9 @@ dev = [
     { name = "pre-commit" },
     { name = "ruff" },
     { name = "types-pyyaml" },
+]
+kubernetes = [
+    { name = "websockets" },
 ]
 server = [
     { name = "aiosmtplib" },
@@ -1112,8 +1115,9 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.32" },
     { name = "uvloop", marker = "sys_platform != 'win32'", specifier = ">=0.22.1" },
+    { name = "websockets", marker = "extra == 'kubernetes'", specifier = ">=14" },
 ]
-provides-extras = ["api", "server", "test", "dev"]
+provides-extras = ["api", "kubernetes", "server", "test", "dev"]
 
 [[package]]
 name = "httpcore"
