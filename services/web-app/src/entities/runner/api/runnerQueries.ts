@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  buildAvailabilityApi,
   myRunnersApi,
   projectBuildRunnersApi,
   remoteRunnerApi,
@@ -21,6 +22,8 @@ export const runnerKeys = {
   project: (projectId: string) =>
     [...runnerKeys.all, "project", projectId] as const,
   remote: () => [...runnerKeys.all, "remote"] as const,
+  availability: (projectId: string) =>
+    [...runnerKeys.all, "availability", projectId] as const,
 };
 
 // Пока открыт диалог подключения, список опрашивается чаще: новый раннер
@@ -127,6 +130,29 @@ export const useProjectBuildRunners = (projectId: string) =>
     queryKey: runnerKeys.project(projectId),
     queryFn: () => projectBuildRunnersApi.get(projectId),
     staleTime: 30_000,
+  });
+
+// Раннеры приходят и уходят: пока сборка недоступна, спрашиваем чаще, чтобы
+// кнопка ожила вскоре после подключения раннера, без перезагрузки страницы.
+export const AVAILABILITY_POLL_BLOCKED_MS = 10_000;
+const AVAILABILITY_POLL_MS = 30_000;
+
+/**
+ * Для каких тегов сборки сейчас есть раннер. Только сервер: локально собирает
+ * сама Студия, запрос не нужен (`enabled: false`).
+ */
+export const useBuildAvailability = (projectId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: runnerKeys.availability(projectId),
+    queryFn: () => buildAvailabilityApi.get(projectId),
+    enabled: enabled && projectId !== "",
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const full = data?.any_runner === true && data.tags.length >= 2;
+      return full ? AVAILABILITY_POLL_MS : AVAILABILITY_POLL_BLOCKED_MS;
+    },
   });
 
 export const useUpdateProjectBuildRunners = (projectId: string) => {

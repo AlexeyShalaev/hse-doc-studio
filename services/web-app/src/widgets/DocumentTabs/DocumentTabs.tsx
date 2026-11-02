@@ -31,6 +31,7 @@ import {
 } from "@entities/document";
 import { useStartCompile } from "@entities/compile";
 import { UploadCustomFileModal } from "@features/custom-document";
+import { BuildBlockedNotice } from "@features/build-states";
 import { useProject } from "@entities/project";
 import { useCapabilities } from "@entities/session";
 import { EditorIcon, openInEditor, useEditors } from "@entities/system";
@@ -120,6 +121,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
     start: handleBuild,
     isRunning,
     slot,
+    block: buildBlock,
   } = useStartCompile(projectId, docId);
   const hasPriorBuild = slot !== undefined || doc?.last_compile_id != null;
   const { remove: removeCustomFile, isRemoving: isRevertingCustomFile } =
@@ -478,7 +480,8 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
             type="button"
             className="btn primary document-build-action"
             onClick={handleBuild}
-            disabled={isRunning}
+            disabled={isRunning || buildBlock !== null}
+            data-testid="document-build-button"
           >
             {isRunning ? (
               <>
@@ -499,6 +502,8 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
           </button>
         </div>
       </div>
+
+      {buildBlock !== null && <BuildBlockedNotice block={buildBlock} />}
 
       <div
         className="tabs"

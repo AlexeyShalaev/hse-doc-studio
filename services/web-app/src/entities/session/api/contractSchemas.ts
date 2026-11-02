@@ -183,6 +183,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   RunnerPairingInfo: rn.RunnerPairingInfoSchema,
   RunnerPairingDecisionRequest: rn.RunnerPairingDecisionRequestSchema,
   ProjectBuildRunners: rn.ProjectBuildRunnersSchema,
+  BuildAvailability: rn.BuildAvailabilitySchema,
   UpdateProjectBuildRunnersRequest: rn.UpdateProjectBuildRunnersRequestSchema,
   CompilePlacement: rn.CompilePlacementSchema,
   RemoteRunnerStatus: rn.RemoteRunnerStatusSchema,

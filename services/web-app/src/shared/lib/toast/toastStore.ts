@@ -14,6 +14,11 @@ export type Toast = {
   message: string;
   duration?: number;
   action?: ToastAction;
+  /**
+   * Ключ одинаковых тостов: пока такой тост на экране, новый с тем же ключом
+   * не появляется (пачка одинаковых отказов от «Собрать всё» даёт один тост).
+   */
+  key?: string;
 };
 
 type Store = {
@@ -26,6 +31,10 @@ type Store = {
 export const useToastStore = create<Store>((set, get) => ({
   toasts: [],
   push: (t) => {
+    if (t.key !== undefined) {
+      const same = get().toasts.find((x) => x.key === t.key);
+      if (same) return same.id;
+    }
     const id =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -53,6 +62,7 @@ export type ToastOptions = {
   title?: string;
   action?: ToastAction;
   duration?: number;
+  key?: string;
 };
 
 const mk = (

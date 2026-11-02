@@ -14,7 +14,16 @@ export {
   useStartCompileAll,
   useIsProjectBuilding,
 } from "./lib/useStartCompile";
-export { useHandleCompileError } from "./lib/handleCompileError";
+export {
+  NO_RUNNER_CODES,
+  useHandleCompileError,
+} from "./lib/handleCompileError";
+export {
+  buildBlockOf,
+  useBuildAvailabilityOf,
+  useProjectBuildBlocks,
+} from "./lib/buildBlock";
+export type { BuildBlock } from "./lib/buildBlock";
 export {
   useCancelProjectCompiles,
   useCancelDocCompile,
