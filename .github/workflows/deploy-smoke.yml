@@ -31,7 +31,7 @@ on:
       - ".hadolint.yaml"
       - ".github/workflows/deploy-smoke.yml"
   pull_request:
-    branches: [master]
+    branches: [master, next]
     paths: *paths
   workflow_dispatch:
 
