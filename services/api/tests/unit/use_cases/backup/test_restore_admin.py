@@ -237,6 +237,7 @@ async def test__apply__connections_remain__fails_before_writing_and_leaves_maint
     assert not job.wrote
     assert stack.maintenance.events == ["enter", "leave"]
     assert stack.target.calls == []
+    assert any("foreign/idle" in line for line in job.log)
 
 
 async def test__apply__lingering_api_connections__are_dropped_then_write_proceeds(env: Env) -> None:
