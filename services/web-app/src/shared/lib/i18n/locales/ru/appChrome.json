@@ -124,7 +124,8 @@
       "usage": "Использование",
       "account": "Аккаунт",
       "runners": "Мои раннеры",
-      "remoteRunner": "Облачные сборки"
+      "remoteRunner": "Облачные сборки",
+      "mcp": "ИИ-клиенты (MCP)"
     },
     "title": "Настройки",
     "searchPlaceholder": "Поиск по настройкам",

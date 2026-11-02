@@ -30,7 +30,13 @@ export const AccountStatusSchema = z.enum([
   "pending_approval",
   "disabled",
 ]);
-export const TokenScopeSchema = z.enum(["api", "git:read", "git:write"]);
+export const TokenScopeSchema = z.enum([
+  "api",
+  "git:read",
+  "git:write",
+  "mcp",
+  "mcp:admin",
+]);
 export const ProjectRoleSchema = z.enum([
   "reader",
   "reviewer",

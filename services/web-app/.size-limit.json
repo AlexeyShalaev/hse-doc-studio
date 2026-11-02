@@ -100,5 +100,11 @@
     "path": "dist/assets/locale-admin-diagnostics-*.js",
     "gzip": true,
     "limit": "10.0 kB"
+  },
+  {
+    "name": "Словарь админки: mcp",
+    "path": "dist/assets/locale-admin-mcp-*.js",
+    "gzip": true,
+    "limit": "0.65 kB"
   }
 ]

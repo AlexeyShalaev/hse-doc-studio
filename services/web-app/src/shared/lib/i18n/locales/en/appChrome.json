@@ -124,7 +124,8 @@
       "usage": "Usage",
       "account": "Account",
       "runners": "My runners",
-      "remoteRunner": "Cloud builds"
+      "remoteRunner": "Cloud builds",
+      "mcp": "AI clients (MCP)"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",
