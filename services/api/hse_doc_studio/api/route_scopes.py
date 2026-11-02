@@ -251,6 +251,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/profile"): _A,
     ("PUT", "/profile"): _A,
     ("DELETE", "/profile"): _A,
+    # Онбординг у каждого свой: строка пользователя на сервере, файл в data_dir локально.
+    ("GET", "/onboarding"): _A,
+    ("PATCH", "/onboarding"): _A,
+    ("POST", "/onboarding/reset"): _A,
     # Git: доступы, хосты, клонирование
     ("GET", "/git/credentials"): _A,
     ("POST", "/git/credentials"): _A,

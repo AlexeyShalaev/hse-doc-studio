@@ -8,6 +8,7 @@ import { ForgotPage } from "@pages/ForgotPage";
 import { InboxPage } from "@pages/InboxPage";
 import { InvitePage } from "@pages/InvitePage";
 import { LoginPage } from "@pages/LoginPage";
+import { OnboardingDemoPage } from "@pages/OnboardingDemoPage";
 import { ProjectInvitePage } from "@pages/ProjectInvitePage";
 import { RegisterPage } from "@pages/RegisterPage";
 import { ResetPage } from "@pages/ResetPage";
@@ -147,6 +148,11 @@ export const router = createBrowserRouter([
       {
         path: "/wizard",
         element: <WizardPage />,
+      },
+      // Онбординг: демо-проект в песочнице, всё в памяти вкладки.
+      {
+        path: "/onboarding/demo",
+        element: <OnboardingDemoPage />,
       },
       {
         path: "/settings",

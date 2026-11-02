@@ -411,6 +411,7 @@ export const WelcomePage = () => {
                 <button
                   type="button"
                   className="btn primary lg"
+                  data-tour="home-new-project"
                   onClick={handleCreateProject}
                 >
                   <Plus size={14} />
@@ -425,6 +426,7 @@ export const WelcomePage = () => {
             >
               <div
                 className="flex items-center flex-1"
+                data-tour="home-search"
                 style={{
                   gap: 8,
                   minWidth: 220,

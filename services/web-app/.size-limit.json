@@ -100,5 +100,23 @@
     "path": "dist/assets/locale-admin-diagnostics-*.js",
     "gzip": true,
     "limit": "10.0 kB"
+  },
+  {
+    "name": "Онбординг: песочница демо-проекта (lazy)",
+    "path": "dist/assets/DemoSandbox-*.js",
+    "gzip": true,
+    "limit": "9.2 kB"
+  },
+  {
+    "name": "Онбординг: анкета, экскурсия и итог (lazy)",
+    "path": "dist/assets/OnboardingFlow-*.js",
+    "gzip": true,
+    "limit": "3 kB"
+  },
+  {
+    "name": "Онбординг: движок тура с подсветкой (lazy, общий кусок)",
+    "path": "dist/assets/tourText-*.js",
+    "gzip": true,
+    "limit": "4.5 kB"
   }
 ]

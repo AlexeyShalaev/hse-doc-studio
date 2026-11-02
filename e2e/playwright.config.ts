@@ -97,6 +97,17 @@ export default defineConfig({
       },
     },
     {
+      // Онбординг: анкета, экскурсия, демо-проект в песочнице, пропуск; идёт после полного смоука на том же стенде.
+      name: "onboarding",
+      testMatch: /onboarding\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,

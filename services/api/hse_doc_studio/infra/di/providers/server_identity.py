@@ -42,6 +42,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
+from hse_doc_studio.core.onboarding.protocols import IExistingUserProbe, IOnboardingRepository
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.signatures.key_policy import ServerKeyPolicy, server_key_policy_from
@@ -64,6 +65,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlUserRepository,
 )
 from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
+from hse_doc_studio.infra.db.repositories.onboarding import MigratedExistingUserProbe, SqlOnboardingRepository
 from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -263,6 +265,15 @@ class ServerIdentityProvider(Provider):
     def get_settings_repo(self, sessions: SessionProvider) -> ISettingsRepository:
         """Настройки живут в Postgres: свои у пользователя, общие ключи только у админа."""
         return PostgresSettingsRepository(sessions)
+
+    @provide(override=True)
+    def get_onboarding_repo(self, sessions: SessionProvider) -> IOnboardingRepository:
+        """Онбординг у каждого пользователя свой, строкой в user_onboarding."""
+        return SqlOnboardingRepository(sessions)
+
+    @provide(override=True)
+    def get_existing_user_probe(self) -> IExistingUserProbe:
+        return MigratedExistingUserProbe()
 
     @provide
     def get_account_uc(self, users: IUserRepository) -> GetAccountUC:

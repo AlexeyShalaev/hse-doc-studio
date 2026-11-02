@@ -17,3 +17,4 @@ export * from "./RunnerPairPage";
 export * from "./InboxPage";
 export * from "./ProjectInvitePage";
 export * from "./DevicePage";
+export * from "./OnboardingDemoPage";

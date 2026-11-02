@@ -143,7 +143,8 @@ describe("RootLayout gate", () => {
     await waitFor(() => {
       expect(screen.getByTestId("project")).toBeInTheDocument();
     });
-    expect(calls).toEqual(["/session/bootstrap"]);
+    // Состояние онбординга есть у каждого вошедшего; установки и Docker не спрашиваются.
+    expect(calls).toEqual(["/session/bootstrap", "/onboarding"]);
     expect(screen.queryByTestId("docker-banner")).not.toBeInTheDocument();
     expect(screen.queryByTestId("startup-checks")).not.toBeInTheDocument();
     expect(screen.queryByTestId("setup-page")).not.toBeInTheDocument();
