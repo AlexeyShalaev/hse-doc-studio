@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.jobs.entities import compile_job_tags
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -48,6 +50,9 @@ class DocumentListEntry:
     # Визуальный блок из определения пака — фронтенд рисует дивайдер между
     # соседними доками разных групп.
     group: str | None = None
+    # Теги раннера, нужные сборке документа (`tex`, `office` или пусто): по ним интерфейс сервера
+    # заранее гасит «Собрать», если такого раннера сейчас нет.
+    build_tags: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -107,6 +112,12 @@ class ListDocumentsUC:
                 output_file = doc.custom_file.stored_path
             owner = author_by_slug(project, doc.owner)
             engine = self._template_service.resolve_document_engine(doc_def, doc.chosen_variant, project.lock.engine)
+            needs_compile = doc.custom_file is None and engine is not None
+            build_tags = (
+                compile_job_tags(needs_compile, PurePosixPath(source_file).suffix)
+                if source_file is not None
+                else frozenset()
+            )
             entries.append(
                 DocumentListEntry(
                     document=doc,
@@ -117,6 +128,7 @@ class ListDocumentsUC:
                     code=dict(doc_def.code) if doc_def is not None else None,
                     engine=str(engine) if engine is not None else None,
                     group=doc_def.group if doc_def is not None else None,
+                    build_tags=build_tags,
                 )
             )
         return ListDocumentsOutput(documents=visible_docs, entries=entries)
