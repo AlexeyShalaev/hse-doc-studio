@@ -46,6 +46,16 @@ The list shows version, tags, capacity and last poll time.
 - The api and runner versions are checked at registration; an incompatible runner is rejected.
 - After registering, a new runner negotiates capabilities with the api (`/announce`): AI relay, separate slots for it and a stop notice. With an older api that does not know this call the runner keeps working as before, without the relay; an older runner works with a newer api too.
 
+## When there are no runners
+
+On a server, documents are built only on runners. The interface learns in advance which tags (`tex`, `office`) have a live runner right now, shared or the project owner's personal one, and refreshes this by itself without a page reload (`GET /api/v1/projects/{id}/build-availability`).
+
+- No runner at all: Build, Build all and rebuild are disabled, with an explanation next to them. The document can be built locally in the desktop Studio (the project syncs, and the finished PDF is uploaded to the server), or the administrator can connect a runner; administrators get a link to Runners.
+- Runners exist but without the needed tag (for example, no runner with `office`): only those documents are blocked, Build all builds the rest.
+- If a runner disappears between the check and the click, the server answers 409 with code `no_runners` or `no_runner_for_tags` and a `tags` list, and the interface shows a single message.
+
+Local mode needs no runners and never blocks the build.
+
 ## AI through your own runner
 
 The server never reaches into users' internal networks. To use a model on your own hardware (Ollama, vLLM, LM Studio, any OpenAI-compatible endpoint), the owner of a personal runner declares endpoints in the runner's environment and adds a "Via my runner" provider on the site. The server only knows the endpoint name; the URL and key stay with the runner.
