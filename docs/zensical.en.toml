@@ -35,6 +35,7 @@ nav = [
         { "Installation" = "start/install.md" },
         { "First project" = "start/first-project.md" },
         { "Updating and uninstalling" = "start/update.md" },
+        { "Local version from the cloud" = "start/local-from-cloud.md" },
         { "Troubleshooting" = "start/troubleshooting.md" },
     ] },
     { "Workbench" = [
