@@ -1,6 +1,64 @@
 {
   "releases": [
     {
+      "version": "0.3.0",
+      "date": "2026-11-02",
+      "notes": [
+        {
+          "ru": "Общий сервер: Студией могут пользоваться команды. Аккаунты и организации, права на проект по ролям, админка установки (/admin: люди, вход и OIDC, почта, раннеры, очередь, аудит), сборки на раннерах в изолированных контейнерах. Развёртывание через Docker Compose или Helm, инструкции в разделе «Общий сервер» документации",
+          "en": "Shared server: teams can use the Studio together. Accounts and organisations, role-based project access, an installation admin area (/admin: people, sign-in and OIDC, mail, runners, queue, audit), builds on runners in isolated containers. Deploy with Docker Compose or Helm, see the Shared server section of the docs"
+        },
+        {
+          "ru": "Совместная работа: ссылки доступа с ролью, сроком, паролем и гостевым входом; приглашения по почте или логину, запросы доступа и передача владения проектом; рецензенты оставляют комментарии к тексту, а несколько человек правят один документ одновременно и видят курсоры друг друга",
+          "en": "Collaboration: access links with a role, expiry, password and guest sign-in; invitations by e-mail or login, access requests and project ownership transfer; reviewers comment on the text and several people edit one document at the same time, seeing each other's cursors"
+        },
+        {
+          "ru": "Сервер Студии как git-remote: локальная Студия входит на сервер по коду устройства (device flow), видит проекты сервера, клонирует и синхронизирует их по git через HTTPS. Проекты из локальной Студии можно перенести на сервер вместе с данными",
+          "en": "The Studio server as a git remote: the local Studio signs in to the server with a device code (device flow), sees the server's projects and clones and syncs them over git via HTTPS. Projects can be moved from the local Studio to the server together with their data"
+        },
+        {
+          "ru": "Локальная Студия: автосинхронизация проекта с сервером (включена по умолчанию для проектов, полученных входом на сервер; выключается для проекта) и выгрузка PDF успешной сборки на сервер, чтобы научрук и рецензенты видели результат без сборки",
+          "en": "Local Studio: automatic project sync with the server (on by default for projects obtained by signing in to a server, can be turned off per project) and PDF upload after a successful build, so supervisors and reviewers see the result without building"
+        },
+        {
+          "ru": "Личные раннеры и ИИ-провайдеры: подключите свою машину как раннер по коду сопряжения и собирайте на ней документы; ИИ-агент может работать через ваш раннер, ключи при этом остаются у вас. Облачные сборки на этой машине доступны прямо из локальной Студии",
+          "en": "Personal runners and AI providers: attach your own machine as a runner with a pairing code and build documents on it; the AI agent can work through your runner while your keys stay with you. Cloud builds on this machine are available right from the local Studio"
+        },
+        {
+          "ru": "Квоты, ИИ-шлюз и автомасштабирование: лимиты на место, сборки в месяц, токены ИИ в сутки и месяц и участников проекта (умолчание установки, организация, пользователь), при исчерпании на выбор низкий приоритет (по умолчанию), отказ или предупреждение. ИИ-шлюз ведёт учёт вызовов и переключается на другой провайдер при сбое. Число раннеров можно менять автоматически по очереди (webhook, compose или метрики для KEDA); по умолчанию выключено",
+          "en": "Quotas, AI gateway and runner autoscaling: limits on storage, builds per month, AI tokens per day and month and project members (installation default, organisation, user); when exhausted, choose low priority (default), reject or warn. The AI gateway records calls and fails over to another provider. The runner count can follow the queue automatically (webhook, compose or KEDA metrics); off by default"
+        },
+        {
+          "ru": "Автономность данных: всё, что растёт само, имеет срок хранения и фоновую очистку (аудит 365 дней, журнал ИИ 90, логи сборок 30 и т.д., сроки меняются в админке на странице «Хранение данных»). Журналы аудита и ИИ разбиты на месячные партиции, логи контейнеров ротируются, а при заполнении диска на 90% включается безопасный режим: крупные загрузки отклоняются, остальное работает",
+          "en": "Data autonomy: everything that grows has a retention period and background cleanup (audit 365 days, AI log 90, build logs 30 and so on; adjust them on the Data retention admin page). Audit and AI logs are split into monthly partitions, container logs are rotated, and when a disk reaches 90% a safe mode rejects large uploads while everything else keeps working"
+        },
+        {
+          "ru": "Бэкапы: расписание, полный бэкап базы, файлов и объектов, шифрование на сервере, назначения S3 или каталог (свой MinIO одним оверлеем compose), проверка подключения, оповещение о сбое. Восстановление из админки с предпросмотром, подтверждением и режимом обслуживания или командой hse-doc-studio backup restore",
+          "en": "Backups: schedule, full backup of the database, files and objects, server-side encryption, S3 or directory destinations (your own MinIO via one compose overlay), a connection test and failure alerts. Restore from the admin area with a preview, confirmation and maintenance mode, or with the hse-doc-studio backup restore command"
+        },
+        {
+          "ru": "Самодиагностика: страница «Самодиагностика» в админке проверяет базу, миграции, хранилище, диск, раннеры, очередь, планировщик, TLS, бэкапы и почту, объясняет причину и подсказывает, что делать; сообщает только об устойчивых проблемам. Метрики hse_diag_* и публичный /health/diagnostics",
+          "en": "Self-diagnostics: the Self-diagnostics admin page checks the database, migrations, storage, disk, runners, queue, scheduler, TLS, backups and mail, explains the cause and suggests what to do; it alerts only on persistent problems. hse_diag_* metrics and a public /health/diagnostics"
+        },
+        {
+          "ru": "Автообновление сервера: проверка релизов раз в 6 часов, установка вручную кнопкой или автоматически в окно обслуживания, бэкап и снимок базы перед обновлением, проверка дайджеста и подписи cosign образа, автоматический откат, если новая версия не поднялась. Режим по умолчанию: только уведомлять",
+          "en": "Automatic server updates: release check every 6 hours, install by button or automatically in a maintenance window, backup and database snapshot first, image digest and cosign signature verification, automatic rollback if the new version does not come up. Default mode: notify only"
+        },
+        {
+          "ru": "Для администраторов, обновление: версия 0.2.0 была только локальной, серверных установок на ней нет, поэтому миграции БД с 0.2.0 не нужны: сервер сам применяет всю цепочку при первом запуске, от 0001 до dg_01_diagnostics (последние: lc_02_partition_logs, bk_01_backups, up_01_server_updates, dg_01_diagnostics). Локальные установки 0.2.0 обновляются кнопкой «Обновить» или update.sh / update.ps1, их данные не меняются. Серверное автообновление ставит только релизы, к которым приложен image-digest.json, то есть начиная с 0.3.0: версии старше 0.3.0 им не ставятся, а при отсутствии дайджеста запуск отменяется (digest_missing), если не выбрать проверку «Без проверки»",
+          "en": "For administrators, upgrading: 0.2.0 was local-only, so there are no server installs on it and no database migration from 0.2.0 is needed: the server applies the whole chain on first start, from 0001 to dg_01_diagnostics (the latest being lc_02_partition_logs, bk_01_backups, up_01_server_updates, dg_01_diagnostics). Local 0.2.0 installs update with the Update button or update.sh / update.ps1 and their data is untouched. The server auto-updater installs only releases that ship an image-digest.json, i.e. 0.3.0 and later: it cannot install anything older, and when the digest is missing the run is cancelled (digest_missing) unless verification is set to None"
+        },
+        {
+          "ru": "Для администраторов, окружение и образы: MinIO в compose заменён на форк pgsty/minio (с возвращённой веб-консолью, тег закреплён); задайте S3_ACCESS_KEY и S3_SECRET_KEY, а для шифрования секретов и бэкапов сохраните SECRETS_KEY. Автообновление включается профилем updater: UPDATER_TOKEN в .env и docker compose --profile updater up -d (сервис получает доступ к сокету docker, поэтому по умолчанию выключен). Новые переменные: HSE_STUDIO__SERVER_UPDATE__*, HSE_STUDIO__BACKUPS__*, HSE_STUDIO__LIFECYCLE__*, LOG_MAX_SIZE и LOG_MAX_FILE; полный список в справочнике переменных. Выключено по умолчанию: автоустановка обновлений (режим «Уведомлять»), автомасштабирование раннеров; бэкапы по расписанию заработают после добавления назначения",
+          "en": "For administrators, environment and images: MinIO in compose is replaced with the pgsty/minio fork (web console restored, tag pinned); set S3_ACCESS_KEY and S3_SECRET_KEY, and keep SECRETS_KEY safe, since it encrypts secrets and backups. Auto-update is enabled by the updater profile: UPDATER_TOKEN in .env and docker compose --profile updater up -d (the service gets the docker socket, so it is off by default). New variables: HSE_STUDIO__SERVER_UPDATE__*, HSE_STUDIO__BACKUPS__*, HSE_STUDIO__LIFECYCLE__*, LOG_MAX_SIZE and LOG_MAX_FILE; see the variable reference for the full list. Off by default: automatic update installation (notify-only mode) and runner autoscaling; scheduled backups start working once a destination is added"
+        },
+        {
+          "ru": "Код и тесты работают на Windows и macOS: исправлены пути, права на каталоги, кодировки и сетевые проверки, мешавшие запуску на этих системах",
+          "en": "The code and tests run on Windows and macOS: fixed paths, directory permissions, encodings and network checks that broke running on those systems"
+        }
+      ]
+    },
+    {
       "version": "0.2.0",
       "date": "2026-10-26",
       "notes": [
