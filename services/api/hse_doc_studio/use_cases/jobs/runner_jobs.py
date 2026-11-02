@@ -68,18 +68,20 @@ class RunnerJobService:
         """Держит запрос до `wait_s`: отвечает, как только появилась подходящая задача, иначе пустым ответом.
 
         Раннер на паузе работы не получает, но опрос принимается: он остаётся живым для админки.
-        `gone` сообщает, что клиент опроса отключился (раннер убит без `/offline`): такой опрос заканчивается.
+        `gone` сообщает, что опрос некому отвечать: клиент отключился (раннер убит без `/offline`) или api ушёл
+        в режим обслуживания; такой опрос заканчивается.
         `runner` это снимок, прошедший проверку токена: его хеш и есть токен, которым опрос подписан.
         """
         deadline = time.monotonic() + request.wait_s
         started = self._clock()
         while True:
+            # Сначала `gone`, до любого запроса в базу: пока api в режиме обслуживания (восстановление из админки),
+            # опрос, начатый раньше, не должен ни писать `touch`, ни брать задачу, ни держать соединение с базой.
+            if gone is not None and await gone():
+                return PollResponse()
             # Снимок раннера взят при входе, а опрос долгий: пауза, отзыв и выключение могли случиться за это время.
             current = await self._runners.get(runner.id)
-            if current is None or await _poll_over(current, started, gone):
-                return PollResponse()
-            # Хозяин сменил утёкший токен или его отключили посреди опроса: старый токен задачу уже не получает.
-            if current.token_hash != runner.token_hash or not await self._owner_active(current):
+            if current is None or await _poll_over(current, started, gone) or await self._superseded(current, runner):
                 return PollResponse()
             await self._runners.touch(runner.id, self._clock())
             if not current.paused and await self._may_work(current):
@@ -107,6 +109,10 @@ class RunnerJobService:
         await self._runners.touch(runner.id, self._clock())
         beat = await self._service.heartbeat(job_id, attempt)
         return HeartbeatResponse(cancel=beat.cancel, lease_until=beat.lease_until)
+
+    async def _superseded(self, current: Runner, snapshot: Runner) -> bool:
+        """Хозяин сменил утёкший токен или его отключили посреди опроса: старый токен задачу уже не получает."""
+        return current.token_hash != snapshot.token_hash or not await self._owner_active(current)
 
     async def _owner_active(self, runner: Runner) -> bool:
         """Хозяин личного раннера всё ещё может входить: `authenticate` проверял это только в начале опроса."""

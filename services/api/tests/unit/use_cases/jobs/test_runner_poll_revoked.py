@@ -136,3 +136,25 @@ async def test__poll__client_disconnected__ends_without_claiming_or_touching() -
 
     assert response.envelope is None
     assert queue.claim.await_count <= claims + 1
+
+
+async def test__poll__gone_before_first_query__touches_nothing_and_holds_no_connection() -> None:
+    """Api в режиме обслуживания: опрос, начатый раньше, не ходит в базу (иначе мешает записи восстановления)."""
+    runner = _runner()
+    runners = MagicMock()
+    runners.get = AsyncMock()
+    runners.touch = AsyncMock()
+    queue = AsyncMock()
+    service = RunnerJobService(
+        queue, MagicMock(), runners, MagicMock(), AsyncMock(), lease_s=45, timeout_grace_s=10, poll_interval_s=0.01
+    )
+
+    async def gone() -> bool:
+        return True
+
+    response = await service.poll(runner, PollRequest(wait_s=5), gone=gone)
+
+    assert response.envelope is None
+    runners.get.assert_not_called()
+    runners.touch.assert_not_called()
+    queue.claim.assert_not_called()

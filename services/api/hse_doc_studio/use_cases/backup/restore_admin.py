@@ -218,6 +218,8 @@ class RestoreCoordinator:
             job.restarting = self._maintenance.request_restart(delay_s=self._restart_delay_s)
         except Exception as exc:
             self._fail(job, exc)
+            if session is not None and job.error_code == BackupErrorCode.unsafe_target.value:
+                await self._say_connections(session, job)
             if not job.wrote:
                 # Ничего не записано: установка цела, возвращаем её в работу.
                 await self._leave_quietly()
@@ -297,9 +299,18 @@ class RestoreCoordinator:
         except Exception:
             logger.warning("maintenance mode was not left", exc_info=True)
 
+    @staticmethod
+    async def _say_connections(session: IRestoreSession, job: RestoreJob) -> None:
+        """Кто держал базу в момент отказа: без этого «база занята» не разобрать ни по журналу, ни по форме."""
+        try:
+            job.say("соединения с базой в момент отказа: " + (", ".join(await session.other_connections()) or "нет"))
+        except Exception:
+            logger.warning("restore: connections not listed", exc_info=True)
+
     def _fail(self, job: RestoreJob, exc: Exception) -> None:
         if isinstance(exc, BackupError):
             job.error_code, job.error = exc.code.value, exc.message
+            logger.warning("restore failed", backup_id=job.backup_id, error_code=job.error_code, error=job.error)
         else:
             logger.warning("restore failed", backup_id=job.backup_id, exc_info=True)
             job.error_code, job.error = INTERNAL_CODE, short_error(exc)
