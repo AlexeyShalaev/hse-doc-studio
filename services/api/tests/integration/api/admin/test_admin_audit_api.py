@@ -240,6 +240,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/quota-overrides"): "quota.override_delete",
     ("POST", "/api/admin/usage/reset"): "usage.reset",
     ("PUT", "/api/admin/autoscale"): "settings.autoscale_update",
+    # MCP: проверяет tests/integration/api/mcp/server
+    ("PUT", "/api/admin/mcp/settings"): "settings.mcp_update",
     # backups: проверяют test_admin_backups_api и unit-тесты use_cases/backup
     ("POST", "/api/admin/backups/destinations"): "backup.destination_create",
     ("POST", "/api/admin/backups/destinations/test"): "backup.destination_test",

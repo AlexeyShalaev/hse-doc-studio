@@ -10,10 +10,10 @@ from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader, IIns
 from hse_doc_studio.core.mcp.entities import McpCallOutcome, McpCallQuery, McpCallRecord, McpSettings
 from hse_doc_studio.core.settings_scope import SOURCE_ADMIN
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.use_cases.mcp.settings import SETTINGS_AUDIT_ACTION
 
 SETTINGS_KEY = "mcp.config"
 CALL_ACTION = "mcp.call"
-SETTINGS_ACTION = "settings.mcp_update"
 # Фильтр по исходу и тулу идёт после чтения: берём с запасом.
 _OVERFETCH = 4
 
@@ -33,7 +33,7 @@ class ServerMcpSettingsStore:
         async with self._uow.begin():
             await self._repo.set(SETTINGS_KEY, settings.to_dict(), source=SOURCE_ADMIN)
             await self._audit.record(
-                SETTINGS_ACTION,
+                SETTINGS_AUDIT_ACTION,
                 actor_id=actor.id if actor is not None else None,
                 details={"before": before.to_dict(), "after": settings.to_dict()},
             )
