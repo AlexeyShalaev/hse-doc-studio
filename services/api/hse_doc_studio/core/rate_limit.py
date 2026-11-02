@@ -56,6 +56,8 @@ GIT_AUTH_FAIL = RateRule("git_auth_fail", limit=30, window_s=60)
 GIT_HTTP = RateRule("git_http", limit=120, window_s=60)
 # Поиск кода устройства на странице /device: неверные коды тоже считаются (по человеку и по IP).
 DEVICE_CODE_LOOKUP = RateRule("device_code_lookup", limit=10, window_s=60)
+# Вызовы тулов MCP по человеку (docs/design/mcp.md, M11); дорогие тулы ещё и под правилами своих маршрутов.
+MCP_CALL = RateRule("mcp_call", limit=120, window_s=60)
 
 RULES: dict[str, RateRule] = {
     rule.name: rule
@@ -75,5 +77,6 @@ RULES: dict[str, RateRule] = {
         GIT_AUTH_FAIL,
         GIT_HTTP,
         DEVICE_CODE_LOOKUP,
+        MCP_CALL,
     )
 }
