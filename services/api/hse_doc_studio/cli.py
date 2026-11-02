@@ -153,6 +153,10 @@ def _parser() -> argparse.ArgumentParser:
     project.add_argument("source", type=Path, help="папка проекта или zip-архив")
     project.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, который станет владельцем")
     project.add_argument("--dry-run", action="store_true", help="только проверить архив, ничего не записывать")
+    mcp = sub.add_parser("mcp", help="MCP-сервер Студии по stdio: мост к работающей Студии (docs/design/mcp.md)")
+    mcp.add_argument("--url", default=None, help="адрес Студии или её /mcp; по умолчанию локальная Студия")
+    mcp.add_argument("--token", default=None, help="токен доступа с правом mcp (или переменная HSE_STUDIO_TOKEN)")
+    mcp.add_argument("--lang", choices=("ru", "en"), default=None, help="язык ответов и ошибок")
     sub.add_parser(
         "runner",
         help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
@@ -351,6 +355,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_operator_command(args)
     if args.command == "runner":
         return asyncio.run(_runner())
+    if args.command == "mcp":
+        from hse_doc_studio.cli_mcp import run_cli  # noqa: PLC0415
+
+        return run_cli(args.url, args.token, args.lang)
     if args.command == "secrets":
         return _run_secrets(dry_run=args.dry_run)
     folder = args.project_dir.expanduser().resolve()
