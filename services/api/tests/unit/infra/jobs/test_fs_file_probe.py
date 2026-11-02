@@ -38,7 +38,7 @@ def test__fs_file_probe__reads_size_hash_text_bytes(tmp_path) -> None:
     assert probe.size("tz/_custom/ТЗ.docx") == 4
     assert probe.sha256("tz/_custom/ТЗ.docx") == hashlib.sha256(b"docx").hexdigest()
     assert probe.read_bytes("tz/_custom/ТЗ.docx") == b"docx"
-    assert probe.read_text("tz/note.txt", encoding="utf-8") == "заметка"
+    assert probe.read_text("tz/note.txt") == "заметка"
 
 
 def test__fs_file_probe__list_files__sorted_relative_posix_under_prefix(tmp_path) -> None:
@@ -85,7 +85,7 @@ def test__fs_file_probe__symlink_staying_inside_project__still_a_file(tmp_path) 
     probe = FsProjectFileProbe(project)
 
     assert probe.is_file("inner-link.txt") is True
-    assert probe.read_text("inner-link.txt", encoding="utf-8") == "ok"
+    assert probe.read_text("inner-link.txt") == "ok"
 
 
 def test__fs_file_probe__list_files__skips_links_leading_outside(tmp_path) -> None:
