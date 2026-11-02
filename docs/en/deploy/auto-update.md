@@ -73,4 +73,4 @@ Migrations run as a separate Job before the upgrade. To stop notifications set `
 | Update cancelled `unsupported_container_options` | a container has options the updater cannot carry over; update by hand |
 | TAG in `.env` does not change | the file is not writable by the app user: `chmod o+w .env` |
 
-Metrics for alerts: `hse_update_available`, `hse_update_updater_up`, `hse_update_last_run_success`, `hse_update_runs_total{result}`. Process settings: `HSE_STUDIO__SERVER_UPDATE__*` in the [reference](env-reference.md).
+Metrics for alerts: `hse_update_available`, `hse_update_updater_up`, `hse_update_last_run_success`, `hse_update_runs_total{result}`. Process settings: `HSE_STUDIO__SERVER_UPDATE__*` in the [reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md).
