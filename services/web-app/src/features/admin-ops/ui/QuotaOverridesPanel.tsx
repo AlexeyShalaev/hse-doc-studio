@@ -26,7 +26,7 @@ export const resourcesFor = (owner: OwnerKind): QuotaResource[] =>
 
 /** Значение переопределения словами: место в байтах, время в секундах, остальное числом. */
 const useValueText = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const quantity = useQuantity();
   return (
     item: Pick<AdminQuotaOverride, "resource" | "hard_limit">,
@@ -50,7 +50,7 @@ const toStored = (resource: QuotaResource, text: string): number | null => {
 
 /** Переопределения для людей и организаций: список, добавление и снятие. */
 export const QuotaOverridesPanel = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const overrides = useQuotaOverrides();
   const setOverride = useSetQuotaOverride();
   const remove = useDeleteQuotaOverride();

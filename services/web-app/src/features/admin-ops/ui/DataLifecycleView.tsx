@@ -34,7 +34,7 @@ const SourceRow = ({
   onSetRetention: DataLifecycleViewProps["onSetRetention"];
   onRun: DataLifecycleViewProps["onRun"];
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminData");
   const [draft, setDraft] = useState(String(source.days ?? ""));
   const value = Number(draft);
   const valid =
@@ -153,7 +153,7 @@ const Thresholds = ({
   value: StorageThresholds;
   onSave: (body: StorageThresholds) => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminData");
   const [warn, setWarn] = useState(String(value.warn_percent));
   const [crit, setCrit] = useState(String(value.critical_percent));
   const w = Number(warn);
@@ -199,7 +199,7 @@ const Thresholds = ({
 
 /** «Хранение данных»: тома и база с порогами, затем источники роста со сроками и очисткой. */
 export const DataLifecycleView = (props: DataLifecycleViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminData");
   const { data } = props;
   return (
     <div className="ops-stack" data-testid="lifecycle">
@@ -215,8 +215,8 @@ export const DataLifecycleView = (props: DataLifecycleViewProps) => {
       />
       {props.failure && (
         <div role="alert" style={{ color: "var(--c-err)" }}>
-          {t(`failure.${props.failure}`, {
-            defaultValue: t("failure.unknown"),
+          {t(`adminOps:failure.${props.failure}`, {
+            defaultValue: t("adminOps:failure.unknown"),
           })}
         </div>
       )}

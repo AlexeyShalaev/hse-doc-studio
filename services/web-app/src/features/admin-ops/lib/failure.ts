@@ -11,7 +11,7 @@ export const KNOWN_FAILURES = [
 
 export const failureKey = (code: string): string =>
   (KNOWN_FAILURES as readonly string[]).includes(code)
-    ? `failure.${code}`
-    : "failure.unknown";
+    ? `adminOps:failure.${code}`
+    : "adminOps:failure.unknown";
 
 export type Failure = { code: string };

@@ -106,8 +106,8 @@ const useDetails = (): ((
   details: Record<string, unknown>,
   skip: string | null,
 ) => Detail[]) => {
-  const { t, i18n } = useTranslation("adminUsers");
-  const known = (key: string) => i18n.exists(key, { ns: "adminUsers" });
+  const { t, i18n } = useTranslation("adminAudit");
+  const known = (key: string) => i18n.exists(key, { ns: "adminAudit" });
   return (details, skip) =>
     Object.entries(details)
       .filter(([key]) => key !== skip)
@@ -140,7 +140,7 @@ const useDetails = (): ((
  * период считает сервер; дальше журнал подгружается по курсору.
  */
 export const AuditLog = () => {
-  const { t } = useTranslation("adminUsers");
+  const { t } = useTranslation("adminAudit");
   const state = useListQueryState(LIST);
   const log = useCursorList({
     state,

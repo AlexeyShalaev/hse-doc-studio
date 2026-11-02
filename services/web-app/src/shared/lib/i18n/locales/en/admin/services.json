@@ -1,0 +1,72 @@
+{
+  "services": {
+    "title": "Services",
+    "lead": "Everything the Studio depends on. The state refreshes on its own.",
+    "loadFailed": "Could not load the service state.",
+    "check": "Check",
+    "checked": "Checked {{when}}",
+    "healthy": "Check passed",
+    "online": "{{online}} of {{total}} online",
+    "onlineLabel": "Runners online",
+    "connected": "Connected services",
+    "offTitle": "Not connected",
+    "offLead": "These services are not configured in the server environment. The Studio works without them, but some features are unavailable.",
+    "reasonCode": "Reason code for the server log",
+    "summary": {
+      "ok": "All connected services are working",
+      "none": "No connected services",
+      "down_one": "{{count}} service is down",
+      "down_other": "{{count}} services are down",
+      "downBody": "{{names}}. The cards below say what is affected.",
+      "degraded_one": "{{count}} service has disruptions",
+      "degraded_other": "{{count}} services have disruptions",
+      "degradedBody": "{{names}}. The Studio works, but slower than usual."
+    },
+    "status": {
+      "ok": "Working",
+      "degraded": "Disrupted",
+      "down": "Down",
+      "unconfigured": "Not set up",
+      "partial": "Partly offline"
+    },
+    "kind": {
+      "database": "Database",
+      "storage": "File storage",
+      "languagetool": "LanguageTool",
+      "onlyoffice": "ONLYOFFICE",
+      "runners": "Runners",
+      "smtp": "Mail"
+    },
+    "role": {
+      "database": "Accounts, projects and the job queue.",
+      "storage": "Project files, build results and attachments.",
+      "languagetool": "Spelling and grammar checks in the editor.",
+      "onlyoffice": "Editing Word, Excel and PowerPoint documents.",
+      "runners": "Machines that run builds and checks.",
+      "smtp": "Invitations, email confirmation and password reset."
+    },
+    "reason": {
+      "timeout": "Did not answer in time",
+      "no_healthy_replica": "No working instance left",
+      "no_online_runner": "No runner is online",
+      "no_runners": "No runners connected",
+      "unknown": "The check failed"
+    },
+    "impact": {
+      "database": "People cannot sign in or open projects.",
+      "storage": "Project files and build results do not open.",
+      "languagetool": "Spell checking in the editor is unavailable.",
+      "onlyoffice": "Office documents cannot be opened for editing.",
+      "runners": "Builds and checks wait in the queue.",
+      "smtp": "Invitation and password reset emails are not sent."
+    },
+    "off": {
+      "database": "The Studio does not work without a database.",
+      "storage": "Project files and builds have nowhere to be stored.",
+      "languagetool": "Spell checking in the editor is off.",
+      "onlyoffice": "Office documents cannot be edited in the Studio.",
+      "runners": "There are no runners, so nothing gets built.",
+      "smtp": "No emails are sent; invitations are shared as links."
+    }
+  }
+}
