@@ -30,12 +30,10 @@ from hse_doc_studio.core.system_capacity import (
 )
 from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.compile.docker_compile_executor import (
-    _SENTINEL_DONE,
-    _SENTINEL_FAILED,
-    _SENTINEL_PAGES,
-    _SENTINEL_WORDS,
-)
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_PAGES as _SENTINEL_PAGES
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_WORDS as _SENTINEL_WORDS
 from hse_doc_studio.infra.jobs.office_convert import convert_office_to_sibling
 
 # Пока сборка ждёт слот в очереди, поток логов пустой — фронтовый сторож

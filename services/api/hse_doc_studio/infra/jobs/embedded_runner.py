@@ -14,9 +14,8 @@ from hse_doc_studio.core.jobs.protocols import JobRunContext
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IOfficeConvertService
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
+from hse_doc_studio.infra.compile.backend import IBuildEnvironment, ITexBuildExecutor
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
-from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
 from hse_doc_studio.infra.jobs.compile_body import (
     BuildState,
     CapacityGate,
@@ -35,12 +34,12 @@ _MIN_LATEX_PASSES = 3
 
 
 class EmbeddedCompileRunner:
-    """Раннер compile-задачи внутри процесса приложения: docker-сборка или copy-only, затем проверки."""
+    """Раннер compile-задачи: сборка исполнителем (docker или под kubernetes) или copy-only, затем проверки."""
 
     def __init__(  # noqa: PLR0913
         self,
-        executor: DockerCompileExecutor,
-        image_manager: DockerImageManager,
+        executor: ITexBuildExecutor,
+        image_manager: IBuildEnvironment,
         office_convert: IOfficeConvertService,
         check_runner: ICheckRunner,
         lt_manager: ILanguageCheckService,
