@@ -117,6 +117,17 @@ jobs:
           python-version: "3.14"
       - name: Sync
         run: uv sync --frozen --all-extras
+      # pg_dump/pg_restore той же версии, что сервис postgres:16: клиент новее сервера пишет в дамп
+      # настройки (transaction_timeout), которых сервер не знает. На образе раннера свой клиент другой версии.
+      - name: Postgres 16 client tools
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          ls /usr/lib/postgresql/16/bin/pg_dump
       # Миграции на настоящем Postgres 16: upgrade head с пустой базы, откат, дрейф схемы (alembic check).
       - name: Migrations on Postgres 16
         run: uv run pytest tests/integration/db/test_migrations.py tests/integration/db/test_upgrade_path.py --no-cov
