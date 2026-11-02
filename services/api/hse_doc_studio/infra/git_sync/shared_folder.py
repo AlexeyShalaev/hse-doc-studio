@@ -96,7 +96,7 @@ class SharedFolderDetector:
 
     def _host(self, path: Path) -> str:
         # пути машины пользователя разбираются как POSIX, поэтому на Windows разделители приводятся к `/`
-        return self._paths.to_host(str(path)) or path.as_posix()
+        return self._paths.to_host(path.as_posix()) or path.as_posix()
 
 
 def _candidates(folder: Path) -> list[Path]:

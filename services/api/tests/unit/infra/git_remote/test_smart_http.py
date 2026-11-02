@@ -47,7 +47,7 @@ def test__git_args__hardened_hidden_refs_and_stateless_rpc() -> None:
     ):
         assert value in args
     receive = git_args(GitService.receive_pack, Path("/g"), advertise=False, extra_config=["-c", "x.y=1"])
-    assert receive[-4:] == ["x.y=1", "receive-pack", "--stateless-rpc", "/g"]
+    assert receive[-4:] == ["x.y=1", "receive-pack", "--stateless-rpc", str(Path("/g"))]
 
 
 def test__git_env__whitelist_plus_protocol(monkeypatch: pytest.MonkeyPatch) -> None:

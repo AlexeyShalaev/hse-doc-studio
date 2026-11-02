@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import hashlib
 import os
+import sys
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import replace
 from pathlib import Path
@@ -149,6 +150,9 @@ async def test__execute__image_missing__typed_failure_before_any_build(
     assert not [call for call in recorded_calls(docker_log) if "latexmk" in call]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="docker.cmd запускает python дочерним процессом cmd.exe: kill гасит лишь обёртку"
+)
 async def test__execute__cancelled__container_process_is_killed(
     tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,9 @@ from hse_doc_studio.infra.git_sync.shared_folder import SharedFolderDetector
 pytestmark = pytest.mark.unit
 
 _P = Provider
+
+
+_POSIX_LITERALS = "литералы путей POSIX: Path('/home/..') на Windows получает диск текущего каталога"
 
 
 @pytest.mark.parametrize(
@@ -52,6 +56,7 @@ _P = Provider
         ("/home/anna/pCloudDrive/p", _P.unknown, "/home/anna/pCloudDrive"),
     ],
 )
+@pytest.mark.skipif(sys.platform == "win32", reason=_POSIX_LITERALS)
 def test__detect__service_folder_in_ancestors__names_provider_and_root(
     folder: str, provider: Provider, root: str
 ) -> None:
@@ -167,6 +172,10 @@ def test__detect__ancestors_beyond_the_cap__are_not_looked_at() -> None:
     assert SharedFolderDetector().detect(deep) is None
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="пути контейнера POSIX: Path('/projects') на Windows получает диск текущего каталога",
+)
 def test__detect__docker_path__judged_by_host_path_of_the_mount() -> None:
     mapping = PathMapping([Mount(container="/projects", host="/Users/anna/Yandex.Disk.localized/projects")])
 
@@ -182,6 +191,10 @@ def test__detect__docker_path_without_mapping__container_name_says_nothing() -> 
     assert SharedFolderDetector().detect(Path("/projects/course-paper")) is None
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="пути контейнера POSIX: Path('/projects') на Windows получает диск текущего каталога",
+)
 def test__detect__docker_path_to_windows_host__root_keeps_host_form() -> None:
     mapping = PathMapping([Mount(container="/projects", host="C:/Users/anna/OneDrive/projects")])
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -179,6 +180,7 @@ def test__read_files__unsafe_path__is_none(repo: Repo, path: str) -> None:
     assert _reader().read_files(repo.folder, "HEAD", [path]) == {path: None}
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="двоеточие в имени файла недопустимо на NTFS")
 def test__read_files__name_with_spaces_and_colons(repo: Repo) -> None:
     repo.snap("odd", **{"my file": "a\n", "a:b": "c\n"})
     got = _reader().read_files(repo.folder, "HEAD", ["my file", "a:b"])
