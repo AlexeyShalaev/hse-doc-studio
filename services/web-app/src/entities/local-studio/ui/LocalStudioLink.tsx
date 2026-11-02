@@ -7,12 +7,12 @@ import { localStudioPath } from "../model/paths";
 
 export type LocalStudioLinkProps = {
   /** Проект, который предложить открыть в локальной Студии. */
-  projectId?: string | null;
+  projectId?: string | null | undefined;
   /** button: кнопка `btn`; link: ссылка в тексте. */
-  variant?: "button" | "link";
+  variant?: "button" | "link" | undefined;
   /** Своя подпись вместо «Локальная версия». */
-  children?: ReactNode;
-  className?: string;
+  children?: ReactNode | undefined;
+  className?: string | undefined;
 };
 
 /**
