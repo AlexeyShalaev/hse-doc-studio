@@ -139,6 +139,10 @@ services:
   runner:
     image: *image
     command: ["hse-doc-studio", "runner"]
+    # Образ несёт проверку api (curl :8000/health); у процесса без HTTP она вечно unhealthy, и автообновление
+    # (ждёт здоровья всех сервисов) откатывало бы каждое обновление. Отключаем её.
+    healthcheck:
+      disable: true
     depends_on:
       api:
         condition: service_healthy
@@ -169,6 +173,10 @@ services:
     profiles: [updater]
     image: *image
     command: ["python", "-m", "hse_doc_studio.infra.update.server_updater"]
+    # Образ несёт проверку api (curl :8000/health); у процесса без HTTP она вечно unhealthy, и автообновление
+    # (ждёт здоровья всех сервисов) откатывало бы каждое обновление. Отключаем её.
+    healthcheck:
+      disable: true
     group_add:
       - "${DOCKER_GID:-0}"
     environment:

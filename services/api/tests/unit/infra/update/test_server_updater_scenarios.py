@@ -183,6 +183,26 @@ async def test__unhealthy_new_version_with_schema_change_restores_snapshot_and_r
     assert rig.journal.run is None
 
 
+async def test__rollback_recreates_containers_by_name_so_the_next_update_knows_the_repository(
+    tmp_path: Path, host: FakeHost
+) -> None:
+    # найдено на живом docker: пересоздание по идентификатору оставляло в Config.Image `sha256:..`, и следующий запуск
+    # падал на `docker tag <id> sha256:..:rollback-prev` («ambiguous tag»)
+    host.new_image_healthy = False
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = await rig.request()
+
+    rig.engine.execute(spec)
+    await rig.final(spec)
+
+    assert {s["image_ref"] for s in host.services.values()} == {f"{REPO}:0.3.1"}
+    # контейнер уже на идентификаторе (установка, пострадавшая от прежней версии): имя берётся из тегов образа
+    for svc in host.services.values():
+        svc["image_ref"] = svc["image_id"]
+    svcs = rig.engine._discover()  # noqa: SLF001
+    assert svcs["api"].image_ref == f"{REPO}:0.3.1"
+
+
 async def test__unhealthy_new_version_without_schema_change_rolls_back_without_restore(
     tmp_path: Path,
 ) -> None:

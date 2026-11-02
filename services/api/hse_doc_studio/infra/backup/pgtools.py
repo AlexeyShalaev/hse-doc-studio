@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 PG_LIB = Path("/usr/lib/postgresql")
-DEFAULT_NAMES = {"pg_dump", "pg_restore"}
+DEFAULT_NAMES = {"pg_dump", "pg_restore", "psql"}
 
 
 async def server_major(engine: AsyncEngine) -> int:

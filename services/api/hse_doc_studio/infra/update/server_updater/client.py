@@ -8,6 +8,7 @@ import urllib.request
 from typing import Any, Protocol
 
 PROTOCOL = 1
+HTTP_NOT_FOUND = 404
 
 
 class ApiUnavailableError(Exception):
@@ -46,4 +47,11 @@ class HttpApi:
         return run if isinstance(run, dict) else None
 
     def post_event(self, run_id: str, event: dict[str, Any]) -> None:
-        self._post(f"/runs/{run_id}/events", event)
+        try:
+            self._post(f"/runs/{run_id}/events", event)
+        except ApiUnavailableError as exc:
+            # api не знает такого запуска (базу откатили к снимку, где его ещё не было): доставлять некуда, а очередь
+            # за таким событием встала бы навсегда
+            if isinstance(exc.__cause__, urllib.error.HTTPError) and exc.__cause__.code == HTTP_NOT_FOUND:
+                return
+            raise

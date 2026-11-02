@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import time
 from collections.abc import Callable
@@ -28,6 +29,7 @@ from hse_doc_studio.infra.update.server_updater.journal import Journal
 
 HttpGet = Callable[[str, dict[str, str], float], tuple[int, str]]
 SNAP_DIR = "snapshots"
+_IMAGE_ID = re.compile(r"^(sha256:.+|[0-9a-f]{12,64})$")
 
 
 class AbortError(Exception):
@@ -145,9 +147,28 @@ class Engine:
                 name=str(info.get("Name", "")).lstrip("/"),
                 container=info,
                 image_id=str(info.get("Image", "")),
-                image_ref=str((info.get("Config") or {}).get("Image", "")),
+                image_ref=self._named_ref(str(info.get("Image", "")), str((info.get("Config") or {}).get("Image", ""))),
             )
         return found
+
+    def _named_ref(self, image_id: str, ref: str) -> str:
+        """Имя образа с репозиторием. Контейнер, созданный из идентификатора (после отката), несёт `sha256:..` вместо
+        имени: репозиторий для pull и тег `rollback-prev` из такого значения не получить, поэтому берём тег образа."""
+        if not _IMAGE_ID.match(ref):
+            return ref
+        tags = [str(t) for t in (inspect(self._d, image_id) or {}).get("RepoTags") or [] if t]
+        # тег отката годится, если другого нет: репозиторий у него тот же
+        tags.sort(key=lambda t: t.endswith(f":{plan.ROLLBACK_TAG}"))
+        return tags[0] if tags else ref
+
+    def _pinned(self, entry: dict[str, Any], fallback_id: str) -> str:
+        """Чем пересоздавать контейнер из прежнего образа: именем, если тег всё ещё указывает на тот же образ, иначе
+        идентификатором. Контейнер из идентификатора теряет имя, и следующее обновление не знает репозитория."""
+        image_id = str(entry.get("id") or fallback_id)
+        ref = str(entry.get("ref") or "")
+        if ref and not _IMAGE_ID.match(ref) and (inspect(self._d, ref) or {}).get("Id") == image_id:
+            return ref
+        return image_id
 
     def _env_file(self, api: _Svc) -> Path:
         path = self._c.data_dir / "run.env"
@@ -356,6 +377,7 @@ class Engine:
         stable_since: float | None = None
         baseline = {s.service: self._restarts(s.name) for s in svcs.values()}
         while self._mono() < deadline:
+            self.flush()  # события migrate/restart ждали в очереди (api был остановлен), иначе страница висит на «stop»
             ok = self._healthy_once(svcs, baseline)
             if ok is None:
                 raise _StepError("health_failed", "a container is crash-looping or exited")
@@ -447,8 +469,8 @@ class Engine:
                 return
         try:
             for svc in svcs.values():
-                image = inspect(self._d, old[svc.service]["id"]) or {}
-                self._recreate(svc, image, old[svc.service]["id"])
+                target_id = old[svc.service]["id"]
+                self._recreate(svc, inspect(self._d, target_id) or {}, self._pinned(old[svc.service], target_id))
             self._wait_healthy(svcs)
         except _StepError as exc:
             self.emit(
@@ -556,7 +578,9 @@ class Engine:
             try:
                 for svc in svcs.values():
                     target_id = old.get(svc.service, {}).get("id", svc.image_id)
-                    self._recreate(svc, inspect(self._d, target_id) or {}, target_id)
+                    self._recreate(
+                        svc, inspect(self._d, target_id) or {}, self._pinned(old.get(svc.service, {}), target_id)
+                    )
                 self._wait_healthy(svcs)
             except _StepError as exc:
                 self._rollback_undo(svcs, exc.message, restored=restore)
@@ -576,7 +600,9 @@ class Engine:
         try:
             for svc in svcs.values():
                 image_id = before.get(svc.service, {}).get("id", svc.image_id)
-                self._recreate(svc, inspect(self._d, image_id) or {}, image_id)
+                self._recreate(
+                    svc, inspect(self._d, image_id) or {}, self._pinned(before.get(svc.service, {}), image_id)
+                )
             self._wait_healthy(svcs)
             state = "the previous state is back"
         except _StepError as exc:
