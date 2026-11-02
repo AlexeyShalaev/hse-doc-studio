@@ -34,6 +34,7 @@ nav = [
         { "Where to start" = "start/index.md" },
         { "Installation" = "start/install.md" },
         { "First project" = "start/first-project.md" },
+        { "Introduction to the Studio" = "start/onboarding.md" },
         { "Updating and uninstalling" = "start/update.md" },
         { "Troubleshooting" = "start/troubleshooting.md" },
     ] },
