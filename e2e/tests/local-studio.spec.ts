@@ -30,7 +30,11 @@ for (const lang of LANGS) {
       await login(page, USERS.anna.email);
       const info = (await (
         await page.request.get("/api/v1/local-studio")
-      ).json()) as { server_url: string; server_version: string };
+      ).json()) as {
+        server_url: string;
+        server_version: string;
+        install_base_url: string;
+      };
       expect(info.server_url).toBe(new URL(baseURL ?? "").origin);
 
       await page.getByTestId("account-menu-trigger").click();
@@ -42,9 +46,7 @@ for (const lang of LANGS) {
       await page.getByTestId("local-studio-os-macos").click();
       const field = commandField(page, lang);
       await expect(field).toHaveValue(
-        new RegExp(
-          `install\\.sh \\| HSE_STUDIO_LANG=${lang} HSE_STUDIO_CONNECT='${info.server_url.replace(/[.]/g, "\\.")}' sh$`,
-        ),
+        `curl -fsSL ${info.install_base_url}/install.sh | HSE_STUDIO_LANG=${lang} HSE_STUDIO_CONNECT='${info.server_url}' sh`,
       );
       await page
         .getByTestId("local-studio-install-command")
