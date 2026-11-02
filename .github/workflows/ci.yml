@@ -178,7 +178,7 @@ jobs:
           python-version: "3.14"
       - name: Sync
         working-directory: services/api
-        run: uv sync --frozen --extra kubernetes --extra test
+        run: uv sync --frozen --extra api --extra kubernetes --extra test
       - name: Create kind cluster
         run: |
           mkdir -p .kind
