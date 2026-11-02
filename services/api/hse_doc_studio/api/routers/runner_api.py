@@ -162,6 +162,14 @@ async def poll_runner_pairing(body: RunnerPairPollRequestBody, request: Request)
     return RunnerPairPollResponseBody(status=status, registration_token=polled.registration_token)
 
 
+async def _poll_gone(request: Request) -> bool:
+    """Опрос закрывается, когда клиент ушёл или api в режиме обслуживания: тогда он не должен трогать базу."""
+    maintenance = getattr(request.app.state, "maintenance", None)
+    if maintenance is not None and maintenance.active:
+        return True
+    return await request.is_disconnected()
+
+
 @router.post("/poll", response_model=PollResponseBody)
 async def poll_job(
     body: PollRequestBody, request: Request, runner: Runner = Depends(authenticated_runner)
@@ -171,7 +179,7 @@ async def poll_job(
     response = await service.poll(
         runner,
         PollRequest(wait_s=body.wait_s, free_slots=body.free_slots, free_ai_slots=body.free_ai_slots),
-        gone=request.is_disconnected,
+        gone=lambda: _poll_gone(request),
     )
     return encode_poll_response(response)
 

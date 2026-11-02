@@ -41,6 +41,23 @@ const localeOf = (lang: Lang): string => (lang === "ru" ? "ru-RU" : "en-US");
 const newClient = async (): Promise<Client> =>
   new Client(await pwRequest.newContext({ baseURL }), ORIGIN);
 
+/** Причина провала восстановления из задания: код, текст и хвост журнала (иначе в CI видно лишь «failed»). */
+const restoreFailure = async (admin: Client): Promise<string> => {
+  try {
+    const { job } = await admin.json<RestoreJob>(
+      await admin.get("/api/admin/backups/restore"),
+      200,
+    );
+    if (!job) return "восстановление завершилось с phase=failed, задания нет";
+    return [
+      `восстановление завершилось с phase=failed: ${job.error_code}: ${job.error} (wrote=${job.wrote})`,
+      ...job.log.slice(-8),
+    ].join("\n");
+  } catch (e) {
+    return `восстановление завершилось с phase=failed; задание не прочитано: ${String(e)}`;
+  }
+};
+
 const adminPage = async (browser: Browser, lang: Lang): Promise<Page> => {
   const context = await browser.newContext({
     baseURL,
@@ -72,7 +89,9 @@ type RestoreJob = {
     id: string;
     phase: string;
     error_code: string | null;
+    error: string | null;
     wrote: boolean;
+    log: string[];
   } | null;
 };
 
@@ -376,22 +395,23 @@ test.describe("Бэкапы сервера", () => {
     await apply.click();
 
     // Пока идёт запись и после неё, обычные ручки отвечают 503 с кодом maintenance.
+    // Провал записи (phase "failed") не ждём 5 минут: сразу падаем с кодом, текстом и журналом задания.
     let sawMaintenance = false;
-    await expect
-      .poll(
-        async () => {
-          const res = await request.get("/api/v1/projects").catch(() => null);
-          if (
-            res?.status() === 503 &&
-            ((await res.json()) as Json).code === "maintenance"
-          )
-            sawMaintenance = true;
-          const st = await request.get("/api/maintenance").catch(() => null);
-          return st ? ((await st.json()) as Json).phase : "down";
-        },
-        { timeout: RESTART_MS, intervals: [300, 500, 1000] },
+    const deadline = Date.now() + RESTART_MS;
+    for (let phase = ""; !/^(done|down)$/.test(phase);) {
+      if (Date.now() > deadline)
+        throw new Error(`восстановление не дошло до done/down: phase=${phase}`);
+      await p.waitForTimeout(400);
+      const res = await request.get("/api/v1/projects").catch(() => null);
+      if (
+        res?.status() === 503 &&
+        ((await res.json()) as Json).code === "maintenance"
       )
-      .toMatch(/done|down/);
+        sawMaintenance = true;
+      const st = await request.get("/api/maintenance").catch(() => null);
+      phase = st ? (((await st.json()) as Json).phase as string) : "down";
+      if (phase === "failed") throw new Error(await restoreFailure(admin));
+    }
     expect(sawMaintenance).toBe(true);
     await shot(p, "ru", "bk-06-restore-applying");
 
