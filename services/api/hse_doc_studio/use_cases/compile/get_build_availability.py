@@ -21,3 +21,13 @@ class GetBuildAvailabilityUC:
 
     async def execute(self, inp: GetBuildAvailabilityInput) -> BuildAvailability:
         return await self._availability.of(inp.project_id, current_actor() or Actor.local())
+
+
+class GetGeneralBuildAvailabilityUC:
+    """Без проекта: живы ли общие раннеры установки (итог онбординга говорит об этом честно)."""
+
+    def __init__(self, availability: IBuildAvailability) -> None:
+        self._availability = availability
+
+    async def execute(self) -> BuildAvailability:
+        return await self._availability.general()

@@ -120,3 +120,34 @@ async def test__local__everything_served() -> None:
 
     assert not result.cloud
     assert result.serves({"tex", "office"})
+
+
+async def _general(*runners: Runner) -> BuildAvailability:
+    repo = InMemoryRunnerRepository()
+    for runner in runners:
+        await repo.add(runner)
+    return await RunnerBuildAvailability(repo, router=_PersonalRouter(frozenset({"tex"})), clock=lambda: _NOW).general()
+
+
+@pytest.mark.parametrize(
+    ("runners", "any_runner", "tags"),
+    [
+        ((), False, frozenset()),
+        ((_runner("tex", "pack"),), True, frozenset({"tex"})),
+        ((_runner("tex", paused=True),), False, frozenset()),
+    ],
+    ids=["none", "live_shared", "paused"],
+)
+async def test__general__only_live_shared_runners_count(
+    runners: tuple[Runner, ...], any_runner: bool, tags: frozenset[str]
+) -> None:
+    result = await _general(*runners)
+
+    assert result == BuildAvailability(cloud=True, any_runner=any_runner, tags=tags)
+
+
+async def test__local__general__everything_served() -> None:
+    result = await LocalBuildAvailability().general()
+
+    assert not result.cloud
+    assert result.serves({"tex"})

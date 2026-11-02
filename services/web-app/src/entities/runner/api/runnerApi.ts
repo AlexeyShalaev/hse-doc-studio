@@ -97,6 +97,12 @@ export const buildAvailabilityApi = {
     apiClient
       .get(`/projects/${enc(projectId)}/build-availability`, quiet)
       .then(parseResp(BuildAvailabilitySchema)),
+
+  /** Без проекта: живы ли общие раннеры установки. */
+  general: (): Promise<BuildAvailability> =>
+    apiClient
+      .get("/build-availability", quiet)
+      .then(parseResp(BuildAvailabilitySchema)),
 };
 
 /** Разобрать тело события `placement` потока сборки; непонятное тело даёт null. */

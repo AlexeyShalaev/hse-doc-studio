@@ -104,10 +104,36 @@ describe("шаблон из ответов", () => {
 });
 
 describe("доступность сборки", () => {
-  it("локально Docker, на сервере по признаку раннеров или «неизвестно»", () => {
+  const runners = (any: boolean, tags: string[]) => ({
+    cloud: true,
+    any_runner: any,
+    tags,
+  });
+
+  it("локально Docker, на сервере по живым раннерам или «неизвестно»", () => {
     expect(resolveBuildAvailability("local")).toBe("local");
     expect(resolveBuildAvailability("server")).toBe("unknown");
-    expect(resolveBuildAvailability("server", false)).toBe("unavailable");
-    expect(resolveBuildAvailability("server", true)).toBe("available");
+    expect(resolveBuildAvailability("server", runners(true, ["tex"]))).toBe(
+      "available",
+    );
+    expect(resolveBuildAvailability("server", runners(false, []))).toBe(
+      "unavailable",
+    );
+  });
+
+  it("раннер без TeX сборку PDF не берёт", () => {
+    expect(resolveBuildAvailability("server", runners(true, ["office"]))).toBe(
+      "unavailable",
+    );
+  });
+
+  it("ответ «не облако» значит локальная сборка", () => {
+    expect(
+      resolveBuildAvailability("server", {
+        cloud: false,
+        any_runner: true,
+        tags: [],
+      }),
+    ).toBe("local");
   });
 });

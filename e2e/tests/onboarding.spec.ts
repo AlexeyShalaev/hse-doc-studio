@@ -97,7 +97,11 @@ test("онбординг (ru): анкета, экскурсия, демо-про
   const finish = page.getByTestId("onboarding-finish");
   await walkTour(page, () => finish.isVisible());
   await shot(page, "ru", "ob-04-finish");
-  await expect(page.getByTestId("onboarding-build-note")).toBeVisible();
+  // Итог спрашивает сервер, живы ли общие раннеры: ответ «доступна» или «недоступна», не догадка.
+  await expect(page.getByTestId("onboarding-build-note")).toHaveAttribute(
+    "data-availability",
+    /^(available|unavailable)$/,
+  );
 
   const answers = (
     await session.json<Json>(await session.get("/api/v1/onboarding"), 200)

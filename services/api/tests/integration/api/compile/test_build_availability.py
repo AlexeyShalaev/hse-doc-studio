@@ -37,3 +37,11 @@ async def test__api__documents__carry_build_tags(test_app: AsyncClient, tmp_path
     assert docs
     assert all(set(doc["build_tags"]) <= {"tex", "office"} for doc in docs)
     assert any(doc["build_tags"] == ["tex"] for doc in docs if doc["engine"] is not None)
+
+
+async def test__api__general_build_availability__local_mode__not_restricted(test_app: AsyncClient) -> None:
+    resp = await test_app.get("/api/v1/build-availability")
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"cloud": False, "any_runner": True, "tags": ["office", "tex"]}
+    assert resp.headers["cache-control"] == "no-store"

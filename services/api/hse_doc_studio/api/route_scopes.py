@@ -253,6 +253,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/profile"): _A,
     # Онбординг у каждого свой: строка пользователя на сервере, файл в data_dir локально.
     ("GET", "/onboarding"): _A,
+    # Без проекта: живы ли общие раннеры (итог онбординга честно говорит, доступна ли облачная сборка).
+    ("GET", "/build-availability"): _A,
     ("PATCH", "/onboarding"): _A,
     ("POST", "/onboarding/reset"): _A,
     # Git: доступы, хосты, клонирование
