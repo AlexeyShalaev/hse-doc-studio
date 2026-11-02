@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "fmtutil-user: fake format $*" >&2
