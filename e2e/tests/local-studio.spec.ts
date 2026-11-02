@@ -16,6 +16,34 @@ const commandField = (page: Page, lang: (typeof LANGS)[number]) =>
     .getByTestId("local-studio-install-command")
     .getByLabel(COMMAND[lang]);
 
+/** Свой проект Анны: из демо-данных, а если их нет, создаётся тут же. */
+const ownProject = async (page: Page, lang: string): Promise<string> => {
+  const list = (await (
+    await page.request.get("/api/v1/projects?limit=1")
+  ).json()) as { items: { id: string }[] };
+  const found = list.items[0]?.id;
+  if (found) return found;
+  const boot = (await (
+    await page.request.get("/api/v1/session/bootstrap")
+  ).json()) as { csrf_token: string };
+  const created = await page.request.post("/api/v1/projects", {
+    data: {
+      name: `E2E локальная версия ${lang}`,
+      pack_id: "hse-cs-sse",
+      template_id: "coursework",
+      version: "2026.1",
+      lang: "ru",
+      authors: [{ name: "Анна Иванова" }],
+    },
+    headers: {
+      "X-CSRF-Token": boot.csrf_token,
+      Origin: new URL(page.url()).origin,
+    },
+  });
+  expect(created.status()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
+};
+
 for (const lang of LANGS) {
   test.describe(`Локальная версия [${lang}]`, () => {
     test.use({
@@ -74,11 +102,7 @@ for (const lang of LANGS) {
       page,
     }) => {
       await login(page, USERS.anna.email);
-      const list = (await (
-        await page.request.get("/api/v1/projects?limit=1")
-      ).json()) as { items: { id: string }[] };
-      const projectId = list.items[0]?.id ?? "";
-      expect(projectId).not.toBe("");
+      const projectId = await ownProject(page, lang);
 
       await page.goto(`/local-studio?project=${projectId}`);
       const block = page.getByTestId("local-studio-project");
@@ -94,7 +118,10 @@ for (const lang of LANGS) {
       await page.goto(`/projects/${projectId}/project-settings/sync`);
       await expect(
         page.getByTestId("project-git-remote").getByTestId("open-in-local-studio"),
-      ).toHaveAttribute("href", new RegExp(`project=${projectId}`));
+      ).toHaveAttribute("href", new RegExp(`project=${projectId}`), {
+        // Ссылка появляется после ответа /local-studio; настройки проекта грузят много запросов разом.
+        timeout: 30_000,
+      });
       await expect(page.getByText(MENU[lang]).first()).toBeVisible();
     });
   });
