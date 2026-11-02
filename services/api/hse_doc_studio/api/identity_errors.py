@@ -81,6 +81,9 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.owner_storage_exceeded: _TOO_LARGE,
     IdentityErrorCode.ai_model_not_allowed: _FORBIDDEN,
     IdentityErrorCode.ai_provider_unavailable: _UNAVAILABLE,
+    # Сборка без раннера: тот же статус, что отдаёт api/runner_errors.py (теги в теле).
+    IdentityErrorCode.no_runners: _STATE,
+    IdentityErrorCode.no_runner_for_tags: _STATE,
     IdentityErrorCode.links_disabled: _FORBIDDEN,
     IdentityErrorCode.link_limit: _STATE,
     IdentityErrorCode.link_role_too_high: _INPUT,

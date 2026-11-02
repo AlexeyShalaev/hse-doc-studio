@@ -158,16 +158,14 @@ describe("useStartCompile / useStartCompileAll", () => {
   });
 
   it("build all: not blocked while some document needs no runner", async () => {
-    mockServer(NONE);
+    const { get } = mockServer(NONE);
     const { result } = renderHook(() => useStartCompileAll(P), {
       wrapper: wrapper(SERVER),
     });
 
     await waitFor(() => {
       expect(
-        vi
-          .mocked(apiClient.get)
-          .mock.calls.some(([url]) => url.endsWith("/build-availability")),
+        get.mock.calls.some(([url]) => url.endsWith("/build-availability")),
       ).toBe(true);
     });
     // Готовый PDF без тегов собирается и без раннера.
@@ -189,7 +187,7 @@ describe("useStartCompile / useStartCompileAll", () => {
   });
 
   it("build all: skips documents without a runner and builds the rest", async () => {
-    const { post } = mockServer(TEX_ONLY);
+    const { get, post } = mockServer(TEX_ONLY);
     post.mockResolvedValue({ data: { compile_id: "c" } });
     const { result } = renderHook(() => useStartCompileAll(P), {
       wrapper: wrapper(SERVER),
@@ -197,9 +195,7 @@ describe("useStartCompile / useStartCompileAll", () => {
     // Ждём, пока подтянется доступность: без неё блокировок ещё нет.
     await waitFor(() => {
       expect(
-        vi
-          .mocked(apiClient.get)
-          .mock.calls.some(([url]) => url.endsWith("/build-availability")),
+        get.mock.calls.some(([url]) => url.endsWith("/build-availability")),
       ).toBe(true);
     });
     await act(async () => {

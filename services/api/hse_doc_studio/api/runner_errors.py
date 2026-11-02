@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from hse_doc_studio.core.identity.errors import IdentityErrorCode, message_for
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import (
     ArtifactInvalidError,
@@ -52,7 +53,11 @@ async def _no_runner_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, NoRunnerAvailableError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
     return JSONResponse(
         status_code=409,
-        content={"detail": str(exc), "code": exc.code, "tags": sorted(exc.tags)},
+        content={
+            "detail": message_for(IdentityErrorCode(exc.code)),
+            "code": exc.code,
+            "tags": sorted(exc.tags),
+        },
     )
 
 
