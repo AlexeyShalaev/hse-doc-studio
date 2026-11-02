@@ -20,6 +20,7 @@
   "code": {
     "docker_unavailable": "Docker не доступен — запусти Docker Desktop.",
     "image_missing": "Docker-образ не установлен.",
+    "build_backend_unavailable": "Исполнитель сборок недоступен: раннер не смог запустить под сборки. Сообщи администратору.",
     "compile_setup_error": "Окружение сборки не готово.",
     "not_self_updatable": "Это сборка не поддерживает автообновление.",
     "self_update_failed": "Не удалось запустить обновление.",

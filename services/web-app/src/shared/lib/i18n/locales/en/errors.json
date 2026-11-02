@@ -20,6 +20,7 @@
   "code": {
     "docker_unavailable": "Docker is unavailable — start Docker Desktop.",
     "image_missing": "The Docker image is not installed.",
+    "build_backend_unavailable": "The build executor is unavailable: the runner could not start a build pod. Tell the administrator.",
     "compile_setup_error": "The build environment is not ready.",
     "not_self_updatable": "This build does not support self-update.",
     "self_update_failed": "Could not start the update.",

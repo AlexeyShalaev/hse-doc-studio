@@ -1,0 +1,24 @@
+#!/bin/sh
+# Поддельный latexmk: пишет PDF и лог в -output-directory; исходник с \fail даёт код 12.
+out=.
+for arg in "$@"; do
+  case "$arg" in
+    -output-directory=*) out="${arg#-output-directory=}" ;;
+  esac
+  src="$arg"
+done
+stem="${src%.tex}"
+mkdir -p "$out"
+echo "Latexmk: fake build of $src in $(pwd)"
+if grep -q 'hang' "$src"; then
+  echo "Latexmk: hanging"
+  sleep 600
+fi
+if grep -q 'fail' "$src"; then
+  echo "! fake error" | tee "$out/$stem.log"
+  echo "state" > "$out/$stem.fdb_latexmk"
+  exit 12
+fi
+printf 'Output written on %s.xdv (2 pages, 100 bytes).\n' "$stem" > "$out/$stem.log"
+printf '%%PDF-1.5 fake %s\n' "$stem" > "$out/$stem.pdf"
+echo "Latexmk: All targets are up-to-date"
