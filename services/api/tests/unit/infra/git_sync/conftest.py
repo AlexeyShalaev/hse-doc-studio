@@ -46,7 +46,7 @@ class Repo:
         if isinstance(data, bytes):
             target.write_bytes(data)
         else:
-            target.write_text(data, encoding="utf-8")
+            target.write_text(data, encoding="utf-8", newline="\n")
 
     def remove(self, path: str) -> None:
         (self.folder / path).unlink()

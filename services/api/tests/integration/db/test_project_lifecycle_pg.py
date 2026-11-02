@@ -222,7 +222,7 @@ async def test__purge__zero_retention__never_purges(world: World) -> None:
 async def test__purge__symlinked_folder__link_removed_target_kept(world: World, tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
-    (outside / "precious.txt").write_text("keep")
+    (outside / "precious.txt").write_text("keep", encoding="utf-8", newline="\n")
     project_id = await _create(world)
     await _delete(world, project_id)
     await _age(world, project_id, 31)
@@ -232,7 +232,7 @@ async def test__purge__symlinked_folder__link_removed_target_kept(world: World, 
 
     await _purger(world).purge_expired()
 
-    assert (outside / "precious.txt").read_text() == "keep"
+    assert (outside / "precious.txt").read_text(encoding="utf-8") == "keep"
     assert not folder.exists()
     assert await world.rows() == []
 
@@ -240,7 +240,7 @@ async def test__purge__symlinked_folder__link_removed_target_kept(world: World, 
 async def test__purge__tampered_workspace_path__does_not_leave_root(world: World, tmp_path: Path) -> None:
     victim = tmp_path / "victim"
     victim.mkdir()
-    (victim / "data.txt").write_text("keep")
+    (victim / "data.txt").write_text("keep", encoding="utf-8", newline="\n")
     project_id = await _create(world)
     await _delete(world, project_id)
     await _age(world, project_id, 31)
@@ -249,7 +249,7 @@ async def test__purge__tampered_workspace_path__does_not_leave_root(world: World
 
     await _purger(world).purge_expired()
 
-    assert (victim / "data.txt").read_text() == "keep"
+    assert (victim / "data.txt").read_text(encoding="utf-8") == "keep"
     assert world.folders() == []
 
 

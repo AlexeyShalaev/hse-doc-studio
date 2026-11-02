@@ -39,7 +39,7 @@ def test__split_lang_qualifier__parses_declared_codes_only(rel: str, expected: t
 def _touch(root: Path, rel: str, content: str = "x") -> None:
     p = root / rel
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(content, encoding="utf-8")
+    p.write_text(content, encoding="utf-8", newline="\n")
 
 
 def test__collect__picks_project_lang_with_default_fallback(tmp_path: Path) -> None:

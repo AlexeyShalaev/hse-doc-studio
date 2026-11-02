@@ -105,7 +105,7 @@ async def test__gc__removes_orphan_folder_and_prefix_but_keeps_projects(world: W
     kept = await world.add_project()
     orphan = uuid4()
     orphan_folder = world.volume.allocate(orphan)
-    (orphan_folder / "x.tex").write_text("x")
+    (orphan_folder / "x.tex").write_text("x", encoding="utf-8", newline="\n")
     young = uuid4()
     world.volume.allocate(young)
     stray = world.volume.root / "not-a-project"

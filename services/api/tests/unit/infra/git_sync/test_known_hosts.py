@@ -45,7 +45,7 @@ async def test__trust__port_22_and_no_port_are_one_entry(store: FileKnownHostsSt
     await store.trust("github.com", 22, [_key()])
 
     assert await store.find("github.com", None) is not None
-    assert "[github.com]:22" not in store.file_path().read_text()
+    assert "[github.com]:22" not in store.file_path().read_text(encoding="utf-8")
 
 
 async def test__trust__other_port_is_a_separate_entry_and_forget_touches_only_it(store: FileKnownHostsStore) -> None:
@@ -62,7 +62,7 @@ async def test__trust__same_key_twice_is_stored_once(store: FileKnownHostsStore)
     await store.trust("github.com", None, [_key()])
     await store.trust("github.com", None, [_key()])
 
-    assert len(store.file_path().read_text().splitlines()) == 1
+    assert len(store.file_path().read_text(encoding="utf-8").splitlines()) == 1
 
 
 async def test__trust__second_key_type_is_added_and_replace_drops_the_old_ones(store: FileKnownHostsStore) -> None:
@@ -93,7 +93,7 @@ async def test__file__is_private_and_readable_by_openssh_format(store: FileKnown
     path = store.file_path()
     if os.name == "posix":
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    line = path.read_text().splitlines()[0].split()
+    line = path.read_text(encoding="utf-8").splitlines()[0].split()
     assert line[:3] == ["[git.hse.ru]:2222", "ssh-ed25519", GITHUB_ED25519]
     assert line[3].startswith("hse-added=")
 
@@ -107,7 +107,9 @@ async def test__list__survives_garbage_lines_and_a_missing_file(store: FileKnown
         + GITHUB_ED25519
         + "\ngithub.com ssh-ed25519 "
         + GITHUB_ED25519
-        + "\n"
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
 
     assert [h.host for h in await store.list()] == ["github.com"]
@@ -123,6 +125,7 @@ async def test__file__round_trip_with_ssh_keygen_lookup(store: FileKnownHostsSto
             ["ssh-keygen", "-F", pattern, "-f", str(store.file_path())],  # noqa: S607
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=False,
         )
         assert found.returncode == 0, found.stderr

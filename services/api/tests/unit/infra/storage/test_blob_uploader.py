@@ -160,7 +160,7 @@ async def test__ensure__path_escaping_folder__refused(world: World, path: str) -
 
 async def test__ensure__symlink_file__refused(world: World, tmp_path: Path) -> None:
     outside = tmp_path / "outside.txt"
-    outside.write_text("secret")
+    outside.write_text("secret", encoding="utf-8", newline="\n")
     (world.folder / "link.txt").symlink_to(outside)
 
     with pytest.raises(ManifestUnsafePathError):
@@ -169,7 +169,7 @@ async def test__ensure__symlink_file__refused(world: World, tmp_path: Path) -> N
 
 async def test__ensure__symlinked_parent_dir__refused(world: World, tmp_path: Path) -> None:
     (tmp_path / "outside").mkdir()
-    (tmp_path / "outside" / "x.txt").write_text("secret")
+    (tmp_path / "outside" / "x.txt").write_text("secret", encoding="utf-8", newline="\n")
     (world.folder / "dir").symlink_to(tmp_path / "outside")
 
     with pytest.raises(ManifestUnsafePathError):

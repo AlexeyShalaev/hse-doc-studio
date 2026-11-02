@@ -44,5 +44,5 @@ def test__stamp__repr_and_stamps_digest__golden_value_unchanged() -> None:
         ),
     ]
 
-    assert repr(stamps) == _GOLDEN_REPR
+    assert repr(stamps).replace("WindowsPath", "PosixPath") == _GOLDEN_REPR  # класс пути зависит от ОС
     assert stamps_digest(stamps) == _GOLDEN_DIGEST

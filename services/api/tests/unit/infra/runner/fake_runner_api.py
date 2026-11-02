@@ -21,7 +21,9 @@ _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "runner" / "fixt
 
 
 def envelope_body(kind: str = "compile", *, attempt: int = 1, job_id: str | None = None) -> dict[str, Any]:
-    body: dict[str, Any] = copy.deepcopy(json.loads((_FIXTURES / "JobEnvelopeBody" / f"{kind}.json").read_text()))
+    body: dict[str, Any] = copy.deepcopy(
+        json.loads((_FIXTURES / "JobEnvelopeBody" / f"{kind}.json").read_text(encoding="utf-8"))
+    )
     body["attempt"] = attempt
     if job_id is not None:
         body["spec"]["id"] = job_id
@@ -135,7 +137,7 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
 
     @app.post("/api/runner/v1/pair/start")
     async def pair_start(body: schemas.RunnerPairStartRequestBody) -> Any:
-        return json.loads((_FIXTURES / "RunnerPairStartResponseBody" / "default.json").read_text())
+        return json.loads((_FIXTURES / "RunnerPairStartResponseBody" / "default.json").read_text(encoding="utf-8"))
 
     @app.post("/api/runner/v1/pair/poll")
     async def pair_poll(body: schemas.RunnerPairPollRequestBody) -> Any:

@@ -33,7 +33,7 @@ def test__docker_binary__cli_is_on_path__uses_the_bare_name(monkeypatch) -> None
 @pytest.mark.unit
 def test__docker_binary__not_on_path_but_installed__falls_back_to_a_known_location(monkeypatch, tmp_path: Path) -> None:
     installed = tmp_path / "docker"
-    installed.write_text("#!/bin/sh\n", encoding="utf-8")
+    installed.write_text("#!/bin/sh\n", encoding="utf-8", newline="\n")
     monkeypatch.setattr(cli.shutil, "which", lambda _name: None)
     monkeypatch.setattr(cli, "_KNOWN_LOCATIONS", ("/nope/docker", str(installed)))
 

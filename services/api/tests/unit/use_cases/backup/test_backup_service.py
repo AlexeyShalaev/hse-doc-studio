@@ -135,7 +135,7 @@ async def test__run__writes_encrypted_parts_and_manifest_last(env: Env) -> None:
     names = sorted(p.name for p in folder.iterdir())
     assert names == ["db.pgdump.enc", "files.tar.enc", "manifest.json"]
     assert b"DUMPDUMP" not in (folder / "db.pgdump.enc").read_bytes()
-    manifest = json.loads((folder / "manifest.json").read_text())
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["app_version"] == "9.9.9"
     assert manifest["installation_id"] == "install-1"
     assert {p["name"] for p in manifest["parts"]} == {"db.pgdump.enc", "files.tar.enc"}

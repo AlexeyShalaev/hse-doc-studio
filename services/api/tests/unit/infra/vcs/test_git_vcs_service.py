@@ -27,7 +27,7 @@ def _init_with_files(tmp_path: Path) -> tuple[GitVcsService, object]:
     project = make_project(folder=tmp_path)
     svc = _service()
     (tmp_path / "vkr").mkdir()
-    (tmp_path / "vkr" / "vkr.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     return svc, project
 
@@ -44,11 +44,11 @@ def test__init__root_commit_tracks_sources_and_excludes_junk(tmp_path: Path) -> 
     project = make_project(folder=tmp_path)
     svc = _service()
     (tmp_path / "vkr").mkdir()
-    (tmp_path / "vkr" / "vkr.tex").write_text("hi\n", encoding="utf-8")
-    (tmp_path / "vkr" / "vkr.aux").write_text("junk\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("hi\n", encoding="utf-8", newline="\n")
+    (tmp_path / "vkr" / "vkr.aux").write_text("junk\n", encoding="utf-8", newline="\n")
     (tmp_path / "vkr" / "vkr.pdf").write_bytes(b"%PDF fake")
     (tmp_path / ".build").mkdir()
-    (tmp_path / ".build" / "x.log").write_text("log\n", encoding="utf-8")
+    (tmp_path / ".build" / "x.log").write_text("log\n", encoding="utf-8", newline="\n")
 
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     commits = svc.log(project)
@@ -63,8 +63,8 @@ def test__init__coexists_with_a_user_git(tmp_path: Path) -> None:
     project = make_project(folder=tmp_path)
     svc = _service()
     (tmp_path / ".git").mkdir()
-    (tmp_path / ".git" / "config").write_text("[user]\n", encoding="utf-8")
-    (tmp_path / "doc.tex").write_text("x\n", encoding="utf-8")
+    (tmp_path / ".git" / "config").write_text("[user]\n", encoding="utf-8", newline="\n")
+    (tmp_path / "doc.tex").write_text("x\n", encoding="utf-8", newline="\n")
 
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     tracked = {f.path for f in svc.commit_detail(project, svc.log(project)[0].id).files}
@@ -88,7 +88,7 @@ def test__commit__none_when_only_untracked_pdf_present(tmp_path: Path) -> None:
 
 def test__commit_and_log__manual_snapshot_appends_history(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
-    (Path(project.folder) / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+    (Path(project.folder) / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8", newline="\n")
     commit = svc.commit(project, message="manual edit", kind=VcsCommitKind.manual)
     assert commit is not None
     assert commit.kind == VcsCommitKind.manual
@@ -100,7 +100,7 @@ def test__status__reflects_dirty_then_clean(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
     settings = VcsSettings()
     assert svc.status(project, settings).dirty is False
-    (Path(project.folder) / "vkr" / "vkr.tex").write_text("dirty\n", encoding="utf-8")
+    (Path(project.folder) / "vkr" / "vkr.tex").write_text("dirty\n", encoding="utf-8", newline="\n")
     dirty = svc.status(project, settings)
     assert dirty.dirty is True
     assert dirty.modified == 1
@@ -116,7 +116,7 @@ def test__status__pdf_changes_ignored_unless_track_pdf(tmp_path: Path) -> None:
 
 def test__diff__shows_modified_file(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
-    (Path(project.folder) / "vkr" / "vkr.tex").write_text("v2 changed\n", encoding="utf-8")
+    (Path(project.folder) / "vkr" / "vkr.tex").write_text("v2 changed\n", encoding="utf-8", newline="\n")
     commit = svc.commit(project, message="edit", kind=VcsCommitKind.manual)
     assert commit is not None
     diff = svc.diff(project, to_id=commit.id)
@@ -130,7 +130,7 @@ def test__restore__snapshot_mode_reverts_and_keeps_history(tmp_path: Path) -> No
     svc, project = _init_with_files(tmp_path)
     init_commit = svc.log(project)[0]
     tex = Path(project.folder) / "vkr" / "vkr.tex"
-    tex.write_text("v2\n", encoding="utf-8")
+    tex.write_text("v2\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="edit", kind=VcsCommitKind.manual)
 
     result = svc.restore(project, commit_id=init_commit.id, mode=VcsRestoreMode.snapshot)
@@ -145,9 +145,9 @@ def test__restore__autosnapshots_dirty_work_before_reverting(tmp_path: Path) -> 
     svc, project = _init_with_files(tmp_path)
     init_commit = svc.log(project)[0]
     tex = Path(project.folder) / "vkr" / "vkr.tex"
-    tex.write_text("committed v2\n", encoding="utf-8")
+    tex.write_text("committed v2\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="edit", kind=VcsCommitKind.manual)
-    tex.write_text("UNCOMMITTED work\n", encoding="utf-8")  # dirty before restore
+    tex.write_text("UNCOMMITTED work\n", encoding="utf-8", newline="\n")  # dirty before restore
 
     result = svc.restore(project, commit_id=init_commit.id, mode=VcsRestoreMode.snapshot)
     assert result.pre_snapshot_id is not None  # work-in-progress was snapshotted
@@ -183,7 +183,7 @@ def test__create_branch__switches_and_isolates_content(tmp_path: Path) -> None:
     assert branch.name == "draft-2"
     assert branch.is_current is True
 
-    tex.write_text("draft-2 work\n", encoding="utf-8")
+    tex.write_text("draft-2 work\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="work", kind=VcsCommitKind.manual)
     svc.switch_branch(project, VcsSettings(), name="master")
     assert tex.read_text(encoding="utf-8").strip() == "v1"  # master is untouched
@@ -193,7 +193,7 @@ def test__switch_branch__autosnapshots_dirty(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
     svc.create_branch(project, VcsSettings(), name="b2", switch=False)
     tex = Path(project.folder) / "vkr" / "vkr.tex"
-    tex.write_text("dirty\n", encoding="utf-8")
+    tex.write_text("dirty\n", encoding="utf-8", newline="\n")
     svc.switch_branch(project, VcsSettings(), name="b2")
     # the dirty work was committed on master before switching → master's HEAD is the autosnapshot
     svc.switch_branch(project, VcsSettings(), name="master")
@@ -246,7 +246,7 @@ def test__create_tag__duplicate__error_names_the_tag_not_the_separator(tmp_path:
 
 def test__commit__sync_kind__is_read_back_from_the_trailer(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
-    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8", newline="\n")
 
     commit = svc.commit(project, message="Слияние с удалённым репозиторием", kind=VcsCommitKind.sync)
 

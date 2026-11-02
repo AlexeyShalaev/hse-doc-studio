@@ -25,8 +25,7 @@ _ONE_RELEASE: dict[str, Any] = {
 def _write(tmp_path: Path, payload: Any) -> Path:
     path = tmp_path / "release-notes.json"
     path.write_text(
-        payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False),
-        encoding="utf-8",
+        payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False), encoding="utf-8", newline="\n"
     )
     return path
 

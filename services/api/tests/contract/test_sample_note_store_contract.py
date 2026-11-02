@@ -52,7 +52,7 @@ class JsonNoteStore:
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
     def _save(self, data: dict[str, str]) -> None:
-        self._path().write_text(json.dumps(data), encoding="utf-8")
+        self._path().write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     def put(self, note_id: str, text: str) -> None:
         data = self._load()

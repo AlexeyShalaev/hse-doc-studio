@@ -30,7 +30,7 @@ class Journal:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self._path.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.data, ensure_ascii=False), encoding="utf-8")
-        with tmp.open("rb") as handle:
+        with tmp.open("r+b") as handle:  # fsync на Windows требует дескриптор с записью
             os.fsync(handle.fileno())
         tmp.replace(self._path)
 

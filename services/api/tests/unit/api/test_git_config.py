@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from hse_doc_studio.api.config import GitConfig, Settings
 
@@ -59,4 +61,4 @@ def test__secrets_config__env_overrides__are_read_and_the_key_is_masked(monkeypa
     assert secrets.key is not None
     assert secrets.key.get_secret_value() == "a-very-secret-key-value"
     assert "a-very-secret-key-value" not in repr(secrets)
-    assert str(secrets.key_file) == "/run/secrets/hse-key"
+    assert secrets.key_file == Path("/run/secrets/hse-key")

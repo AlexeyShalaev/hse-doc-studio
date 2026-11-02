@@ -344,7 +344,7 @@ def test__author_counts__accepts_a_range(repo: Repo) -> None:
 
 
 def test__reader__does_not_touch_the_work_tree_or_index(repo: Repo) -> None:
-    (repo.folder / "vkr" / "vkr.tex").write_text("dirty\n", encoding="utf-8")
+    (repo.folder / "vkr" / "vkr.tex").write_text("dirty\n", encoding="utf-8", newline="\n")
     before = repo.git.text(repo.folder, ["status", "--porcelain"])
     reader = _reader()
     reader.rev_parse(repo.folder, "HEAD")

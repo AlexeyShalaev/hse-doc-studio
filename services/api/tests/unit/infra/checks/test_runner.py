@@ -68,7 +68,7 @@ def test__run_all__custom_mode__file_exists_engine_still_runs(tmp_path: Path) ->
 @pytest.mark.unit
 def test__run_all__custom_mode_false__suppressed_engines_run_normally(tmp_path: Path) -> None:
     runner = _make_runner()
-    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,

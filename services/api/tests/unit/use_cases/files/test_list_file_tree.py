@@ -14,18 +14,18 @@ def _make_uc(tmp_path: Path) -> tuple[ListFileTreeUC, Path]:
     packs = tmp_path / "packs"
     files_dir = packs / "p" / "templates" / "t" / "versions" / "1" / "files"
     (files_dir / "vkr").mkdir(parents=True)
-    (files_dir / "vkr" / "vkr.tex").write_text("template", encoding="utf-8")
+    (files_dir / "vkr" / "vkr.tex").write_text("template", encoding="utf-8", newline="\n")
     (files_dir / "common").mkdir(parents=True)
-    (files_dir / "common" / "preamble.tex").write_text("pre", encoding="utf-8")
-    (files_dir / "common" / "meta.tex.j2").write_text("{{ x }}", encoding="utf-8")
+    (files_dir / "common" / "preamble.tex").write_text("pre", encoding="utf-8", newline="\n")
+    (files_dir / "common" / "meta.tex.j2").write_text("{{ x }}", encoding="utf-8", newline="\n")
 
     project_folder = tmp_path / "project"
     (project_folder / "vkr").mkdir(parents=True)
-    (project_folder / "vkr" / "vkr.tex").write_text("edited by user", encoding="utf-8")
-    (project_folder / "vkr" / "diagram.png").write_text("user asset", encoding="utf-8")
+    (project_folder / "vkr" / "vkr.tex").write_text("edited by user", encoding="utf-8", newline="\n")
+    (project_folder / "vkr" / "diagram.png").write_text("user asset", encoding="utf-8", newline="\n")
     (project_folder / "common").mkdir(parents=True)
-    (project_folder / "common" / "preamble.tex").write_text("pre", encoding="utf-8")
-    (project_folder / "common" / "meta.tex").write_text("generated", encoding="utf-8")
+    (project_folder / "common" / "preamble.tex").write_text("pre", encoding="utf-8", newline="\n")
+    (project_folder / "common" / "meta.tex").write_text("generated", encoding="utf-8", newline="\n")
 
     template_repo = MagicMock()
     template_repo._packs_dir = str(packs)

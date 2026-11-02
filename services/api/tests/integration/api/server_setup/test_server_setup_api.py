@@ -515,7 +515,7 @@ async def test__startup__without_env_admin__prints_the_setup_token_once(world: _
 
 async def test__startup__env_admin__created_idempotently_and_password_is_not_logged(tmp_path: Path) -> None:
     password_file = tmp_path / "admin_password"
-    password_file.write_text(f"{PASSWORD}\n", encoding="utf-8")
+    password_file.write_text(f"{PASSWORD}\n", encoding="utf-8", newline="\n")
     world = _World(AuthEnvOverrides(registration_mode=RegistrationMode.invite))
     cfg = _cfg(admin_email="root@example.org", admin_password_file=password_file)
     container = _startup_container(world)

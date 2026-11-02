@@ -51,18 +51,18 @@ def _target(tmp_path: Path, store: FsObjectStore | None = None) -> RestoreTarget
 async def test__files__roundtrip_preserves_tree_symlinks_and_skips_excluded(tmp_path: Path) -> None:
     data = tmp_path / "src"
     (data / "projects" / "p1" / ".hse-studio").mkdir(parents=True)
-    (data / "projects" / "p1" / "main.tex").write_text("текст проекта", encoding="utf-8")
-    (data / "projects" / "p1" / ".hse-studio" / "project.json").write_text("{}")
+    (data / "projects" / "p1" / "main.tex").write_text("текст проекта", encoding="utf-8", newline="\n")
+    (data / "projects" / "p1" / ".hse-studio" / "project.json").write_text("{}", encoding="utf-8", newline="\n")
     (data / "users" / "h").mkdir(parents=True)
-    (data / "users" / "h" / "role.json").write_text("[1]")
+    (data / "users" / "h" / "role.json").write_text("[1]", encoding="utf-8", newline="\n")
     (data / "gnupg").mkdir()
     (data / "gnupg" / "pubring.kbx").write_bytes(b"\x00\x01")
     (data / "tmp").mkdir()
-    (data / "tmp" / "scratch").write_text("temp")
+    (data / "tmp" / "scratch").write_text("temp", encoding="utf-8", newline="\n")
     (data / "jobs").mkdir()
-    (data / "jobs" / "log").write_text("log")
+    (data / "jobs" / "log").write_text("log", encoding="utf-8", newline="\n")
     (data / "backups" / "local").mkdir(parents=True)
-    (data / "backups" / "local" / "old.enc").write_text("old backup")
+    (data / "backups" / "local" / "old.enc").write_text("old backup", encoding="utf-8", newline="\n")
     (data / "link").symlink_to("projects/p1/main.tex")
     (data / "empty-dir").mkdir()
 
@@ -86,7 +86,7 @@ async def test__files__roundtrip_preserves_tree_symlinks_and_skips_excluded(tmp_
 async def test__files__vanishing_file_is_skipped_not_fatal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     data = tmp_path / "src"
     data.mkdir()
-    (data / "a.txt").write_text("a")
+    (data / "a.txt").write_text("a", encoding="utf-8", newline="\n")
     producer = FilesProducer([FilesRoot("data", data)])
     original = Path.lstat
 
@@ -103,24 +103,24 @@ async def test__files__vanishing_file_is_skipped_not_fatal(tmp_path: Path, monke
 async def test__files__second_root_outside_data_dir(tmp_path: Path) -> None:
     projects = tmp_path / "vol"
     (projects / "p").mkdir(parents=True)
-    (projects / "p" / "f.txt").write_text("x")
+    (projects / "p" / "f.txt").write_text("x", encoding="utf-8", newline="\n")
     blob = await _seal(FilesProducer([FilesRoot("data", tmp_path / "missing"), FilesRoot("projects_root", projects)]))
     target = _target(tmp_path)
     await target.restore_files(_plain(blob), move_existing=False, stamp="s")
-    assert (tmp_path / "data" / "projects" / "p" / "f.txt").read_text() == "x"
+    assert (tmp_path / "data" / "projects" / "p" / "f.txt").read_text(encoding="utf-8") == "x"
 
 
 async def test__files__restore_moves_existing_instead_of_deleting(tmp_path: Path) -> None:
     src = tmp_path / "src"
     (src / "projects" / "new").mkdir(parents=True)
-    (src / "projects" / "new" / "f").write_text("new")
+    (src / "projects" / "new" / "f").write_text("new", encoding="utf-8", newline="\n")
     blob = await _seal(FilesProducer([FilesRoot("data", src)]))
     existing = tmp_path / "data" / "projects" / "old"
     existing.mkdir(parents=True)
-    (existing / "f").write_text("old")
+    (existing / "f").write_text("old", encoding="utf-8", newline="\n")
     await _target(tmp_path).restore_files(_plain(blob), move_existing=True, stamp="STAMP")
-    assert (tmp_path / "data" / "projects.before-restore-STAMP" / "old" / "f").read_text() == "old"
-    assert (tmp_path / "data" / "projects" / "new" / "f").read_text() == "new"
+    assert (tmp_path / "data" / "projects.before-restore-STAMP" / "old" / "f").read_text(encoding="utf-8") == "old"
+    assert (tmp_path / "data" / "projects" / "new" / "f").read_text(encoding="utf-8") == "new"
     assert not (tmp_path / "data" / "projects" / "old").exists()
 
 
@@ -191,7 +191,7 @@ def test__pg_env__password_only_in_environment() -> None:
 
 def test__resolve_binary__prefers_matching_major_and_keeps_custom(tmp_path: Path) -> None:
     (tmp_path / "16" / "bin").mkdir(parents=True)
-    (tmp_path / "16" / "bin" / "pg_dump").write_text("")
+    (tmp_path / "16" / "bin" / "pg_dump").write_text("", encoding="utf-8", newline="\n")
     assert resolve_binary("pg_dump", 16, lib=tmp_path) == str(tmp_path / "16" / "bin" / "pg_dump")
     assert resolve_binary("pg_dump", 15, lib=tmp_path) == "pg_dump"
     assert resolve_binary("/opt/pg/bin/pg_dump", 16, lib=tmp_path) == "/opt/pg/bin/pg_dump"

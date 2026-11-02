@@ -95,7 +95,8 @@ class SharedFolderDetector:
         return SharedFolderInfo(provider=nearest.provider, root=same[0].root, evidence=evidence)
 
     def _host(self, path: Path) -> str:
-        return self._paths.to_host(str(path)) or str(path)
+        # пути машины пользователя разбираются как POSIX, поэтому на Windows разделители приводятся к `/`
+        return self._paths.to_host(str(path)) or path.as_posix()
 
 
 def _candidates(folder: Path) -> list[Path]:

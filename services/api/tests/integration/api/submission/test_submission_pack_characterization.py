@@ -165,10 +165,12 @@ def _build_extras_pack(packs_dir: Path) -> None:
     anchor = "  profiles:\n    - id: checkpoint-1"
     assert anchor in text
     text = text.replace(anchor, "  profiles:\n" + _EXTRAS_PROFILE_YAML + "    - id: checkpoint-1", 1)
-    manifest.write_text(text + "\nnda:\n  source_dir: nda-files\n  submission_dir: NDA\n", encoding="utf-8")
+    manifest.write_text(
+        text + "\nnda:\n  source_dir: nda-files\n  submission_dir: NDA\n", encoding="utf-8", newline="\n"
+    )
     nda_dir = version_dir / "files" / "nda-files"
     nda_dir.mkdir()
-    (nda_dir / "receipt.txt").write_text(_NDA_RECEIPT, encoding="utf-8")
+    (nda_dir / "receipt.txt").write_text(_NDA_RECEIPT, encoding="utf-8", newline="\n")
     (nda_dir / "scan.png").write_bytes(_NDA_SCAN)
 
 
@@ -524,9 +526,9 @@ async def test__api__create_submission__nda_files_included_team_author_base(
 def _prepare_notes(folder: Path) -> None:
     notes = folder / "notes"
     notes.mkdir()
-    (notes / "answers.json").write_text(json.dumps({"alpha": 1, "beta": "два"}), encoding="utf-8")
-    (notes / "readme.txt").write_text("читай меня\n", encoding="utf-8")
-    (folder.parent / "outside.txt").write_text("за пределами проекта\n", encoding="utf-8")
+    (notes / "answers.json").write_text(json.dumps({"alpha": 1, "beta": "два"}), encoding="utf-8", newline="\n")
+    (notes / "readme.txt").write_text("читай меня\n", encoding="utf-8", newline="\n")
+    (folder.parent / "outside.txt").write_text("за пределами проекта\n", encoding="utf-8", newline="\n")
 
 
 async def test__api__create_submission__form_extra_rendered_and_static_extras(

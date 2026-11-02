@@ -40,12 +40,12 @@ def _setup(tmp_path: Path) -> tuple[MagicMock, SimpleNamespace]:
     packs = tmp_path / "packs"
     files_dir = packs / "p" / "templates" / "t" / "versions" / "1" / "files" / "vkr"
     files_dir.mkdir(parents=True)
-    (files_dir / "vkr.tex").write_text("tmpl", encoding="utf-8")
+    (files_dir / "vkr.tex").write_text("tmpl", encoding="utf-8", newline="\n")
 
     project_folder = tmp_path / "project"
     (project_folder / "vkr").mkdir(parents=True)
-    (project_folder / "vkr" / "vkr.tex").write_text("edited", encoding="utf-8")
-    (project_folder / "vkr" / "diagram.png").write_text("user", encoding="utf-8")
+    (project_folder / "vkr" / "vkr.tex").write_text("edited", encoding="utf-8", newline="\n")
+    (project_folder / "vkr" / "diagram.png").write_text("user", encoding="utf-8", newline="\n")
 
     template_repo = MagicMock()
     template_repo._packs_dir = str(packs)

@@ -10,7 +10,7 @@ from tests.factories import project_api_payload
 async def test__api__browse__lists_directories_and_files(test_app: AsyncClient, tmp_path: Path) -> None:
     (tmp_path / "subdir-a").mkdir()
     (tmp_path / "subdir-b").mkdir()
-    (tmp_path / "file.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "file.txt").write_text("x", encoding="utf-8", newline="\n")
 
     resp = await test_app.get("/api/v1/fs/browse", params={"path": str(tmp_path)})
 
@@ -50,7 +50,7 @@ async def test__api__browse__not_yet_created_path__lands_on_nearest_existing_anc
 
 async def test__api__browse__path_is_a_file__returns_400(test_app: AsyncClient, tmp_path: Path) -> None:
     file_path = tmp_path / "file.txt"
-    file_path.write_text("x", encoding="utf-8")
+    file_path.write_text("x", encoding="utf-8", newline="\n")
 
     resp = await test_app.get("/api/v1/fs/browse", params={"path": str(file_path)})
 
@@ -97,7 +97,7 @@ async def test__api__inspect__nonexistent_path(test_app: AsyncClient, tmp_path: 
 
 async def test__api__inspect__path_is_file(test_app: AsyncClient, tmp_path: Path) -> None:
     file_path = tmp_path / "a.txt"
-    file_path.write_text("x", encoding="utf-8")
+    file_path.write_text("x", encoding="utf-8", newline="\n")
 
     resp = await test_app.get("/api/v1/fs/inspect", params={"path": str(file_path)})
 

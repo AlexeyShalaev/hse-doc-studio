@@ -81,7 +81,7 @@ def test__decrypt__key_replaced_by_another__is_refused_and_unreadable(key_path: 
     token = FernetSecretCipher(KeyFileStore(key_path)).encrypt(Secret(_CANARY), aad=_AAD)
     data = json.loads(key_path.read_text(encoding="utf-8"))
     data["keys"][0]["fernet_key"] = Fernet.generate_key().decode()
-    key_path.write_text(json.dumps(data), encoding="utf-8")
+    key_path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
     cipher = FernetSecretCipher(KeyFileStore(key_path))
 
     assert cipher.can_read(token) is True  # ключ с таким идентификатором есть, но не тот
@@ -108,7 +108,7 @@ def test__rotation_ready__old_key_still_decrypts_after_a_new_primary_is_added(ke
     data = json.loads(key_path.read_text(encoding="utf-8"))
     data["primary"] = "k2"
     data["keys"].insert(0, {"id": "k2", "fernet_key": Fernet.generate_key().decode()})
-    key_path.write_text(json.dumps(data), encoding="utf-8")
+    key_path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
     cipher = FernetSecretCipher(KeyFileStore(key_path))
 
     new_token = cipher.encrypt(Secret("another"), aad=_AAD)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -50,13 +51,17 @@ def test__public_key_fingerprint__known_vector() -> None:
 
 
 @pytest.mark.skipif(shutil.which("ssh-keygen") is None, reason="ssh-keygen is not installed")
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="ssh-keygen на Windows отвергает файл ключа с ACL по умолчанию (UNPROTECTED PRIVATE KEY)",
+)
 def test__generate__matches_ssh_keygen(tmp_path: Path) -> None:
     key = Ed25519KeyGenerator().generate("cross-check")
     private = tmp_path / "id_ed25519"
-    private.write_text(key.private_key.reveal(), encoding="utf-8")
+    private.write_text(key.private_key.reveal(), encoding="utf-8", newline="\n")
     private.chmod(0o600)
     pub = tmp_path / "id_ed25519.pub"
-    pub.write_text(key.public_key + "\n", encoding="utf-8")
+    pub.write_text(key.public_key + "\n", encoding="utf-8", newline="\n")
 
     fingerprint = subprocess.run(  # noqa: S603 — аргументы свои, ssh-keygen найден через which
         ["ssh-keygen", "-lf", str(pub)], capture_output=True, text=True, check=True

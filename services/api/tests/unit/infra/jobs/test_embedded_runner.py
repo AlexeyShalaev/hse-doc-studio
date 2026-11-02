@@ -505,7 +505,7 @@ async def test__run_build__copy_only_office_write_fails__logs_error_and_keeps_su
     h = Harness(tmp_path)
     h.converter.convert_to_pdf.return_value = _pdf_bytes(1)
     # Папки tz/_custom нет, а на её месте лежит файл: записать PDF нельзя.
-    (tmp_path / "tz").write_text("not a directory")
+    (tmp_path / "tz").write_text("not a directory", encoding="utf-8", newline="\n")
 
     outcome = await h.runner.run_build(h.spec(**_copy_only()), h.ctx)
 

@@ -223,7 +223,7 @@ async def test__log__batches_are_appended_and_repeat_is_idempotent(env: _Env) ->
         response = await env.client.post(env.url(leased, "log"), json=body, headers=leased.auth)
         assert response.status_code == 204
 
-    log = (env.root / "logs" / str(leased.job_id) / "1.log").read_text()
+    log = (env.root / "logs" / str(leased.job_id) / "1.log").read_text(encoding="utf-8")
     assert log == "a\nb\nc\n"
 
 

@@ -32,7 +32,7 @@ async def test__api__get_file__existing_file__returns_content(test_app: AsyncCli
     proj_folder = tmp_path / "proj"
     project = await _create_project(test_app, proj_folder)
     project_id = project["id"]
-    (proj_folder / "hello.txt").write_text("hello world", encoding="utf-8")
+    (proj_folder / "hello.txt").write_text("hello world", encoding="utf-8", newline="\n")
 
     resp = await test_app.get(f"/api/v1/projects/{project_id}/files/hello.txt")
 
@@ -82,7 +82,7 @@ async def test__api__list_files__contains_created_file(test_app: AsyncClient, tm
     proj_folder = tmp_path / "proj"
     project = await _create_project(test_app, proj_folder)
     project_id = project["id"]
-    (proj_folder / "notes.md").write_text("# Notes", encoding="utf-8")
+    (proj_folder / "notes.md").write_text("# Notes", encoding="utf-8", newline="\n")
 
     resp = await test_app.get(f"/api/v1/projects/{project_id}/files")
 

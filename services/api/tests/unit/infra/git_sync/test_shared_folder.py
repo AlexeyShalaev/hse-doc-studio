@@ -95,14 +95,14 @@ def test__detect__marker_in_ancestor__finds_it_without_help_of_names(
     root = tmp_path / "files"
     folder = root / "a" / "b" / "project"
     folder.mkdir(parents=True)
-    (root / marker).mkdir() if is_dir else (root / marker).write_text("")
+    (root / marker).mkdir() if is_dir else (root / marker).write_text("", encoding="utf-8", newline="\n")
 
     info = SharedFolderDetector().detect(folder)
 
     assert info is not None
     assert info.provider is provider
-    assert info.root == str(root)
-    assert info.evidence == (f"{root}/{marker}",)
+    assert info.root == root.as_posix()
+    assert info.evidence == (f"{root.as_posix()}/{marker}",)
 
 
 def test__detect__marker_in_project_folder_itself__is_found(tmp_path: Path) -> None:
@@ -112,7 +112,7 @@ def test__detect__marker_in_project_folder_itself__is_found(tmp_path: Path) -> N
     info = SharedFolderDetector().detect(folder)
 
     assert info is not None
-    assert (info.provider, info.root) == (_P.syncthing, str(folder))
+    assert (info.provider, info.root) == (_P.syncthing, folder.as_posix())
 
 
 def test__detect__name_and_marker_of_same_service__root_is_the_outermost_and_evidence_lists_both(
@@ -121,13 +121,13 @@ def test__detect__name_and_marker_of_same_service__root_is_the_outermost_and_evi
     root = tmp_path / "Dropbox"
     folder = root / "course" / "project"
     folder.mkdir(parents=True)
-    (root / ".dropbox").write_text("")
+    (root / ".dropbox").write_text("", encoding="utf-8", newline="\n")
 
     info = SharedFolderDetector().detect(folder)
 
     assert info is not None
-    assert info.root == str(root)
-    assert info.evidence == (str(root), f"{root}/.dropbox")
+    assert info.root == root.as_posix()
+    assert info.evidence == (root.as_posix(), f"{root.as_posix()}/.dropbox")
 
 
 def test__detect__two_services__nearest_names_the_provider(tmp_path: Path) -> None:
@@ -137,7 +137,7 @@ def test__detect__two_services__nearest_names_the_provider(tmp_path: Path) -> No
     info = SharedFolderDetector().detect(folder)
 
     assert info is not None
-    assert (info.provider, info.root) == (_P.yandex_disk, str(tmp_path / "Dropbox" / "Yandex.Disk"))
+    assert (info.provider, info.root) == (_P.yandex_disk, (tmp_path / "Dropbox" / "Yandex.Disk").as_posix())
 
 
 @pytest.mark.skipif(os.name != "posix", reason="символьные ссылки")

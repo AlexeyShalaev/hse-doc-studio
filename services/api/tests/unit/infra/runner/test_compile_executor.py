@@ -162,7 +162,7 @@ async def test__execute__cancelled__container_process_is_killed(
         if pid_file.exists() and any("started" in line for line in lines):
             break
         await asyncio.sleep(0.025)
-    pid = int(pid_file.read_text())
+    pid = int(pid_file.read_text(encoding="utf-8"))
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task

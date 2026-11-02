@@ -36,7 +36,9 @@ def _folder(project: dict[str, Any]) -> Path:
 def _edit_intro(project: dict[str, Any]) -> None:
     report = _folder(project) / "report" / "report.tex"
     report.write_text(
-        report.read_text(encoding="utf-8").replace("Текст введения из шаблона.", USER_INTRO), encoding="utf-8"
+        report.read_text(encoding="utf-8").replace("Текст введения из шаблона.", USER_INTRO),
+        encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -67,6 +69,7 @@ def _git(project: dict[str, Any], *args: str) -> str:
         ["git", "--git-dir", str(folder / ".hse-studio" / "git"), "--work-tree", str(folder), *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     return out.stdout
@@ -164,7 +167,7 @@ async def test__untouched_project__after_update_equals_a_fresh_one(
 
 async def test__apply__refuses_an_outdated_plan(update_app: AsyncClient, project: dict[str, Any]) -> None:
     plan = await _plan(update_app, project)
-    (_folder(project) / "report" / "preamble.tex").write_text("% моя преамбула\n", encoding="utf-8")
+    (_folder(project) / "report" / "preamble.tex").write_text("% моя преамбула\n", encoding="utf-8", newline="\n")
 
     resp = await update_app.post(
         f"{_base(project)}/template-update/apply",
@@ -180,7 +183,7 @@ async def test__conflict__default_keeps_mine_markers_on_request(
 ) -> None:
     preamble = _folder(project) / "report" / "preamble.tex"
     mine = "\\usepackage{xcolor}\n\\definecolor{accent}{RGB}{255,0,0}\n"
-    preamble.write_text(mine, encoding="utf-8")
+    preamble.write_text(mine, encoding="utf-8", newline="\n")
     plan = await _plan(update_app, project)
     conflict = next(f for f in plan["files"] if f["path"] == "report/preamble.tex")
     assert conflict["action"] == "conflict"
@@ -211,7 +214,9 @@ async def test__revert__restores_files_and_lock_but_keeps_later_edits(
     await _apply(update_app, project, await _plan(update_app, project))
     # Правка после обновления в файле, который обновление тоже меняло.
     report = folder / "report" / "report.tex"
-    report.write_text(report.read_text(encoding="utf-8").replace("Выводы.", "Мои выводы."), encoding="utf-8")
+    report.write_text(
+        report.read_text(encoding="utf-8").replace("Выводы.", "Мои выводы."), encoding="utf-8", newline="\n"
+    )
 
     dry = await update_app.post(f"{_base(project)}/template-update/revert", json={"dry_run": True})
     assert dry.status_code == 200, dry.text
@@ -277,7 +282,7 @@ async def test__project_without_history__base_is_approximate(update_app: AsyncCl
 
 async def test__ignored_file__is_left_alone(update_app: AsyncClient, project: dict[str, Any]) -> None:
     preamble = _folder(project) / "report" / "preamble.tex"
-    preamble.write_text("% полностью своя преамбула\n", encoding="utf-8")
+    preamble.write_text("% полностью своя преамбула\n", encoding="utf-8", newline="\n")
     resp = await update_app.put(
         f"{_base(project)}/template/tracking", json={"path": "report/preamble.tex", "tracked": False}
     )
@@ -315,7 +320,7 @@ async def test__project_written_by_a_newer_studio__is_read_only(
     project_json = _folder(project) / ".hse-studio" / "project.json"
     data = json.loads(project_json.read_text(encoding="utf-8"))
     data["schema"] = {"version": 7, "read_compat": 1, "write_compat": 7, "written_by": "9.0.0"}
-    project_json.write_text(json.dumps(data), encoding="utf-8")
+    project_json.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     detail = (await update_app.get(_base(project))).json()
     assert detail["access"] == {"mode": "read_only", "reasons": ["schema_write"], "required_studio": "9.0.0"}
@@ -334,7 +339,7 @@ async def test__project_on_a_template_version_this_studio_lacks__is_read_only(
     data = json.loads(project_json.read_text(encoding="utf-8"))
     data["lock"]["version"] = "2027.0.0"
     data["lock"]["min_studio"] = "1.4.0"
-    project_json.write_text(json.dumps(data), encoding="utf-8")
+    project_json.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     detail = (await update_app.get(_base(project))).json()
 

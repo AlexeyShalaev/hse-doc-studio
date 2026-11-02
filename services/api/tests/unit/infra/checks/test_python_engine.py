@@ -12,7 +12,7 @@ engine = PythonCheckEngine()
 
 
 def _tex(folder: Path, filename: str, content: str) -> None:
-    (folder / filename).write_text(content, encoding="utf-8")
+    (folder / filename).write_text(content, encoding="utf-8", newline="\n")
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -318,10 +318,7 @@ def test__python_engine__no_code_to_run__no_results(tmp_path: Path, rule_id: str
 @pytest.mark.unit
 def test__python_engine__script_file_loaded(tmp_path: Path) -> None:
     (tmp_path / ".hse-studio").mkdir()
-    (tmp_path / ".hse-studio" / "check.py").write_text(
-        "ctx.violation('from script')",
-        encoding="utf-8",
-    )
+    (tmp_path / ".hse-studio" / "check.py").write_text("ctx.violation('from script')", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="script",
         engine=CheckEngine.python,

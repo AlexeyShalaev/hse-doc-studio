@@ -40,7 +40,7 @@ def _project_json(folder: Path) -> dict[str, Any]:
 
 
 def _write_project_json(folder: Path, data: dict[str, Any]) -> None:
-    (folder / ".hse-studio" / "project.json").write_text(json.dumps(data), encoding="utf-8")
+    (folder / ".hse-studio" / "project.json").write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
 
 # ── схема ────────────────────────────────────────────────────────────────────
@@ -197,7 +197,7 @@ def test__signatures_and_forms__unknown_fields_survive_rewrite(tmp_path: Path) -
     raw = json.loads(sig_path.read_text(encoding="utf-8"))
     raw["slots"]["sup"]["future_slot"] = "f"
     raw["future_block"] = {}
-    sig_path.write_text(json.dumps(raw), encoding="utf-8")
+    sig_path.write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     signatures.save_state(tmp_path, signatures.get_state(tmp_path))
 
@@ -210,7 +210,7 @@ def test__signatures_and_forms__unknown_fields_survive_rewrite(tmp_path: Path) -
     form_path = tmp_path / ".hse-studio" / "forms" / "decl.json"
     raw_form = json.loads(form_path.read_text(encoding="utf-8"))
     raw_form["reviewed_at"] = "2027-01-01"
-    form_path.write_text(json.dumps(raw_form), encoding="utf-8")
+    form_path.write_text(json.dumps(raw_form), encoding="utf-8", newline="\n")
 
     forms.save_state(tmp_path, "decl", FormState(schema_version=1, completed=True, answers={}))
 
@@ -225,7 +225,7 @@ def test__signatures_and_forms__unknown_fields_survive_rewrite(tmp_path: Path) -
 def test__migrations__run_in_order_back_up_and_persist(tmp_path: Path) -> None:
     repo.save(make_project(folder=tmp_path))
     studio = tmp_path / ".hse-studio"
-    (studio / "signatures.json").write_text(json.dumps({"slots": {"old": {}}}), encoding="utf-8")
+    (studio / "signatures.json").write_text(json.dumps({"slots": {"old": {}}}), encoding="utf-8", newline="\n")
     original = _project_json(tmp_path)
 
     def to_2(bundle: ProjectStateBundle) -> None:

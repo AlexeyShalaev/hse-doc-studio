@@ -338,7 +338,9 @@ async def test__sync__compiles_on_both_sides__project_json_merges_without_confli
     mine["updated_at"] = "2030-01-01T10:00:00Z"
     theirs["documents"][0]["last_compile_id"] = _COMPILE_THEIRS
     theirs["updated_at"] = "2030-01-02T10:00:00Z"
-    _file(project, project_file).write_text(json.dumps(mine, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _file(project, project_file).write_text(
+        json.dumps(mine, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     _git(project, "add", "-A")
     _git(project, "-c", "user.name=T", "-c", "user.email=t@test.local", "commit", "--quiet", "-m", "my compile")
     peer.write(project_file, json.dumps(theirs, ensure_ascii=False, indent=2) + "\n")
@@ -393,7 +395,7 @@ async def _make_text_conflict(stack: Stack, project: dict[str, Any], remote: Bar
     lines = path.read_text(encoding="utf-8").splitlines()
     mine = [*lines[:-1], "% conflicting line: mine", ""]
     theirs = [*lines[:-1], "% conflicting line: theirs", ""]
-    path.write_text("\n".join(mine), encoding="utf-8")
+    path.write_text("\n".join(mine), encoding="utf-8", newline="\n")
     _git(project, "add", "-A")
     _git(project, "-c", "user.name=T", "-c", "user.email=t@test.local", "commit", "--quiet", "-m", "mine")
     peer.write(TRACKED_FILE, "\n".join(theirs))
@@ -439,7 +441,7 @@ async def test__sync__conflicts_again__keeps_session_while_conflict_is_the_same(
     await _sync_ok(stack, project)
     first = _state(project)["pending"]["session_id"]
     _snapshot_unrelated = _file(project, "notes.txt")
-    _snapshot_unrelated.write_text("unrelated edit\n", encoding="utf-8")
+    _snapshot_unrelated.write_text("unrelated edit\n", encoding="utf-8", newline="\n")
 
     result = await _sync_ok(stack, project)
 
@@ -580,7 +582,7 @@ async def test__sync__conflict_markers_in_a_file__stop_before_upload(
     await _connect_in_sync(stack, project, remote)
     before = remote.head()
     marked = "a\n<<<<<<< hse:ours\nx\n||||||| hse:base\ny\n=======\nz\n>>>>>>> hse:theirs\n"
-    _file(project, "notes.txt").write_text(marked, encoding="utf-8")
+    _file(project, "notes.txt").write_text(marked, encoding="utf-8", newline="\n")
 
     operation = await _sync(stack, project)
 
@@ -742,7 +744,7 @@ async def test__sync__file_and_folder_with_one_name__refused_clearly_and_nothing
     peer = await _connect_in_sync(stack, project, remote)
     mine, theirs = ("notes/x.txt", "notes") if their_side == "file" else ("notes", "notes/x.txt")
     _file(project, mine).parent.mkdir(parents=True, exist_ok=True)
-    _file(project, mine).write_text("мой\n", encoding="utf-8")
+    _file(project, mine).write_text("мой\n", encoding="utf-8", newline="\n")
     peer.write(theirs, "чужой\n")
     peer.commit_push("same name")
 
@@ -790,7 +792,9 @@ async def test__sync__editor_save_while_the_merge_is_being_applied__is_not_overw
     await _sync_ok(stack, project)
     peer.write("notes.txt", base.replace("строка 1\n", "строка 1 (коллега)\n"))
     peer.commit_push("colleague edit")
-    _file(project, "notes.txt").write_text(base.replace("строка 10\n", "строка 10 (моя)\n"), encoding="utf-8")
+    _file(project, "notes.txt").write_text(
+        base.replace("строка 10\n", "строка 10 (моя)\n"), encoding="utf-8", newline="\n"
+    )
     typed = "строка, которую человек допечатал во время синхронизации\n"
     loop = asyncio.get_running_loop()
     saves: list[Any] = []
@@ -874,7 +878,7 @@ async def test__sync__read_only_project__423_and_nothing_changes(
     path = _file(project, ".hse-studio/project.json")
     data = json.loads(path.read_text(encoding="utf-8"))
     data["schema"] = {**data.get("schema", {}), "version": 99, "read_compat": 1, "write_compat": 99}
-    path.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
     before = _git(project, "rev-parse", "master")
 
     resp = await _start(stack, project)

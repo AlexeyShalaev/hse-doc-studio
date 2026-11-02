@@ -22,7 +22,7 @@ def host_fonts(tmp_path: Path) -> Path:
     (root / "sub").mkdir(parents=True)
     (root / "times.ttf").write_bytes(b"TIMES")
     (root / "sub" / "Arial Bold.otf").write_bytes(b"ARIAL")
-    (root / "readme.txt").write_text("not a font", encoding="utf-8")
+    (root / "readme.txt").write_text("not a font", encoding="utf-8", newline="\n")
     return root
 
 

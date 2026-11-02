@@ -140,7 +140,7 @@ async def test__list__damaged_file__is_empty_and_set_aside_on_the_next_write(
 ) -> None:
     path = tmp_path / "data" / "git" / "host_settings.json"
     path.parent.mkdir(parents=True)
-    path.write_text("{not json", encoding="utf-8")
+    path.write_text("{not json", encoding="utf-8", newline="\n")
 
     assert await repo.list() == []
     await repo.save(GitHostSettings("git.hse.local", None, provider_override=GitProvider.gitlab))
@@ -176,6 +176,7 @@ async def test__list__malformed_record__is_skipped_and_others_are_kept(
     path.write_text(
         path.read_text(encoding="utf-8").replace('"hosts": [', '"hosts": [{"port": 1, "provider_override": "nope"}, '),
         encoding="utf-8",
+        newline="\n",
     )
 
     assert [item.host for item in await repo.list()] == ["git.hse.local"]

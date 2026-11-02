@@ -48,8 +48,15 @@ elif argv[:1] == ["run"]:
 
 
 def install_fake_docker(directory: Path) -> Path:
+    body = _SCRIPT.format(python=sys.executable)
+    if sys.platform == "win32":
+        # Windows не исполняет файл по шебангу: питоновский скрипт запускает обёртка .cmd
+        (directory / "docker_fake.py").write_text(body.split("\n", 1)[1], encoding="utf-8", newline="\n")
+        wrapper = directory / "docker.cmd"
+        wrapper.write_text(f'@"{sys.executable}" "%~dp0docker_fake.py" %*\r\n', encoding="utf-8", newline="")
+        return wrapper
     path = directory / "docker"
-    path.write_text(_SCRIPT.format(python=sys.executable))
+    path.write_text(body, encoding="utf-8", newline="\n")
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
     return path
 
@@ -57,4 +64,4 @@ def install_fake_docker(directory: Path) -> Path:
 def recorded_calls(log: Path) -> list[list[str]]:
     if not log.exists():
         return []
-    return [json.loads(line) for line in log.read_text().splitlines()]
+    return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]

@@ -33,7 +33,7 @@ def _init(tmp_path: Path) -> tuple[GitVcsService, object]:
     project = make_project(folder=tmp_path)
     svc = _service()
     (tmp_path / "vkr").mkdir()
-    (tmp_path / "vkr" / "vkr.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     return svc, project
 
@@ -138,14 +138,14 @@ def _plant_canaries(tmp_path: Path, git_dir: Path) -> Path:
     hooks.mkdir(exist_ok=True)
     for name in ("pre-commit", "post-commit", "commit-msg", "post-checkout", "reference-transaction"):
         hook = hooks / name
-        hook.write_text(script, encoding="utf-8")
+        hook.write_text(script, encoding="utf-8", newline="\n")
         hook.chmod(hook.stat().st_mode | stat.S_IXUSR)
     fsmonitor = tmp_path / "fsmonitor-canary.sh"
-    fsmonitor.write_text(script + "printf '\\0'\n", encoding="utf-8")
+    fsmonitor.write_text(script + "printf '\\0'\n", encoding="utf-8", newline="\n")
     fsmonitor.chmod(fsmonitor.stat().st_mode | stat.S_IXUSR)
     elsewhere = tmp_path / "elsewhere-hooks"
     elsewhere.mkdir()
-    (elsewhere / "pre-commit").write_text(script, encoding="utf-8")
+    (elsewhere / "pre-commit").write_text(script, encoding="utf-8", newline="\n")
     (elsewhere / "pre-commit").chmod(0o755)
     with (git_dir / "config").open("a", encoding="utf-8") as fh:
         fh.write(
@@ -159,7 +159,7 @@ def _plant_canaries(tmp_path: Path, git_dir: Path) -> Path:
 def test__hostile_store_config__does_not_execute_canary(tmp_path: Path) -> None:
     svc, project = _init(tmp_path)
     canary = _plant_canaries(tmp_path, tmp_path / ".hse-studio" / "git")
-    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8", newline="\n")
 
     svc.status(project, VcsSettings())
     commit = svc.commit(project, message="edit", kind=VcsCommitKind.manual)
@@ -178,7 +178,7 @@ def test__hostile_store_config__canary_runs_without_hardening(tmp_path: Path) ->
     svc, project = _init(tmp_path)
     git_dir = tmp_path / ".hse-studio" / "git"
     canary = _plant_canaries(tmp_path, git_dir)
-    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8", newline="\n")
     env = {
         "PATH": os.environ["PATH"],
         "GIT_CONFIG_GLOBAL": os.devnull,
@@ -249,11 +249,11 @@ def test__commit_detail__merge_commit_lists_files_against_first_parent(tmp_path:
     svc, project = _init(tmp_path)
     settings = VcsSettings()
     svc.create_branch(project, settings, name="side", switch=True)
-    (tmp_path / "vkr" / "side.tex").write_text("from side\n", encoding="utf-8")
-    (tmp_path / "vkr" / "vkr.tex").write_text("v1\nside line\n", encoding="utf-8")
+    (tmp_path / "vkr" / "side.tex").write_text("from side\n", encoding="utf-8", newline="\n")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v1\nside line\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="side edit", kind=VcsCommitKind.manual)
     svc.switch_branch(project, settings, name="master")
-    (tmp_path / "vkr" / "main.tex").write_text("from master\n", encoding="utf-8")
+    (tmp_path / "vkr" / "main.tex").write_text("from master\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="master edit", kind=VcsCommitKind.manual)
     svc._run(project, ["merge", "--no-ff", "-m", "merge side", "side"], check=True)  # noqa: SLF001
 
@@ -274,7 +274,7 @@ def test__commit_detail__root_and_regular_commits_unchanged(tmp_path: Path) -> N
     root = svc.log(project)[0]
     assert [(f.path, f.change) for f in svc.commit_detail(project, root.id).files] == [("vkr/vkr.tex", VcsChange.added)]
 
-    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("v2\n", encoding="utf-8", newline="\n")
     commit = svc.commit(project, message="edit", kind=VcsCommitKind.manual)
     assert commit is not None
     detail = svc.commit_detail(project, commit.id)
@@ -312,7 +312,7 @@ def _blob(svc: GitVcsService, project: object, rel: str) -> bytes:
 
 def test__commit__foreign_gitattributes__files_are_committed_byte_for_byte(tmp_path: Path) -> None:
     svc, project = _init(tmp_path)
-    (tmp_path / ".gitattributes").write_text(_FOREIGN_ATTRIBUTES, encoding="utf-8")
+    (tmp_path / ".gitattributes").write_text(_FOREIGN_ATTRIBUTES, encoding="utf-8", newline="\n")
     ident = b"line $Id: SECRET-USER-DATA $ keep\n"
     (tmp_path / "notes.txt").write_bytes(ident + b"two\n")
     (tmp_path / "enc.md").write_bytes(b"plain, no BOM\n")
@@ -330,7 +330,7 @@ def test__commit__store_created_before_the_attributes_file__gets_it_on_the_next_
     svc, project = _init(tmp_path)
     attributes = tmp_path / ".hse-studio" / "git" / "info" / "attributes"
     attributes.unlink()
-    (tmp_path / ".gitattributes").write_text("*.md working-tree-encoding=UTF-16\n", encoding="utf-8")
+    (tmp_path / ".gitattributes").write_text("*.md working-tree-encoding=UTF-16\n", encoding="utf-8", newline="\n")
     (tmp_path / "enc.md").write_bytes(b"plain, no BOM\n")
 
     commit = svc.commit(project, message="old store", kind=VcsCommitKind.manual)  # type: ignore[arg-type]

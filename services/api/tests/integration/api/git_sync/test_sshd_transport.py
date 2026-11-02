@@ -84,7 +84,7 @@ def sshd(tmp_path: Path) -> Iterator[Sshd]:
         check=True,
     )
     authorized = root / "authorized_keys"
-    authorized.write_text("")
+    authorized.write_text("", encoding="utf-8", newline="\n")
     authorized.chmod(0o600)
     port = _free_port()
     config = root / "sshd_config"
@@ -92,7 +92,9 @@ def sshd(tmp_path: Path) -> Iterator[Sshd]:
         f"Port {port}\nListenAddress 127.0.0.1\nHostKey {host_key}\nPidFile {root / 'sshd.pid'}\n"
         f"AuthorizedKeysFile {authorized}\nStrictModes no\nUsePAM no\nPasswordAuthentication no\n"
         f"KbdInteractiveAuthentication no\nPubkeyAuthentication yes\nAllowUsers {getpass.getuser()}\n"
-        f"SetEnv PATH={base_git_env().get('PATH', os.defpath)}\n"
+        f"SetEnv PATH={base_git_env().get('PATH', os.defpath)}\n",
+        encoding="utf-8",
+        newline="\n",
     )
     process = subprocess.Popen(  # noqa: S603 — sshd для теста на свободном порту
         [binary, "-f", str(config), "-D", "-e"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -113,6 +115,7 @@ def sshd(tmp_path: Path) -> Iterator[Sshd]:
             ["ssh-keygen", "-lf", f"{host_key}.pub"],  # noqa: S607
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=True,
         ).stdout.split()[1]
         remote = make_bare_remote(root / "repo.git")
@@ -147,7 +150,7 @@ class Stack:
         )
         await self.credentials.add(credential, generated.private_key)
         if authorize:
-            self.server.authorized_keys.write_text(generated.public_key + "\n")
+            self.server.authorized_keys.write_text(generated.public_key + "\n", encoding="utf-8", newline="\n")
         return credential.id
 
     def target(self, credential_id: UUID | None) -> RemoteTarget:

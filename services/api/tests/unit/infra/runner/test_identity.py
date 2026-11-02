@@ -31,7 +31,7 @@ def test_load__missing_or_broken_file__is_not_registered(tmp_path: Path) -> None
     store = RunnerIdentityStore(tmp_path)
     assert store.load("http://api") is None
 
-    (tmp_path / IDENTITY_FILE).write_text("{not json", encoding="utf-8")
+    (tmp_path / IDENTITY_FILE).write_text("{not json", encoding="utf-8", newline="\n")
     assert store.load("http://api") is None
 
 

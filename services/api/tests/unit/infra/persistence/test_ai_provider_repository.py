@@ -86,7 +86,7 @@ async def test__ai_provider_repository__delete_missing__returns_false(tmp_path: 
 
 @pytest.mark.unit
 async def test__ai_provider_repository__corrupted_file__returns_empty(tmp_path: Path) -> None:
-    (tmp_path / "ai_providers.json").write_text("not valid json{{", encoding="utf-8")
+    (tmp_path / "ai_providers.json").write_text("not valid json{{", encoding="utf-8", newline="\n")
     assert await JsonAIProviderRepository(tmp_path).list_all() == []
 
 
@@ -121,6 +121,7 @@ async def test__ai_provider_repository__legacy_record_without_connection_fields_
         '[{"id": "11111111-1111-1111-1111-111111111111", "name": "Old", "type": "openai", '
         '"api_key": "sk", "base_url": "", "models": [], "created_at": "2024-01-01T00:00:00+00:00"}]',
         encoding="utf-8",
+        newline="\n",
     )
     [loaded] = await JsonAIProviderRepository(tmp_path).list_all()
     assert loaded.ssl_verify is True

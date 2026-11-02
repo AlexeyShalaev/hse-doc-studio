@@ -105,7 +105,7 @@ def test__get__file_without_the_new_flags__reads_them_as_off(folder: Path) -> No
     repo.save(folder, SyncState(local_branch="master", remote_branch="main"))
     data = json.loads(_file(folder).read_text(encoding="utf-8"))
     del data["remote_empty"], data["adopted_unrelated"], data["remote_schema_newer"], data["remote_required_studio"]
-    _file(folder).write_text(json.dumps(data), encoding="utf-8")
+    _file(folder).write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     state = repo.get(folder)
 
@@ -147,7 +147,7 @@ def test__save__keeps_unknown_keys_at_top_level_and_nested(folder: Path) -> None
     raw["future_flag"] = {"a": 1}
     raw["pending"]["future_note"] = {"vkr.tex": "mine"}
     raw["last_sync"]["note"] = "x"
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     repo.save(folder, _full_state())
 
@@ -162,7 +162,7 @@ def test__save__new_pending_session__drops_the_drafts_of_the_old_one(folder: Pat
     repo.save(folder, _full_state())
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
     raw["pending"]["future_note"] = {"a": 1}
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     repo.save(folder, replace(_full_state(), pending=PendingSession("p2", 1, 1)))
 
@@ -182,7 +182,7 @@ def test__save__newer_version_is_not_downgraded(folder: Path) -> None:
     repo.save(folder, _full_state())
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
     raw["version"] = 7
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
     repo.save(folder, _full_state())
     assert json.loads(_file(folder).read_text(encoding="utf-8"))["version"] == 7
 
@@ -191,7 +191,7 @@ def test__save__newer_version_is_not_downgraded(folder: Path) -> None:
     "content", ["", "not json", "[1, 2]", "{}", '{"local_branch": "m"}', '{"local_branch": "", "remote_branch": "m"}']
 )
 def test__get__unusable_file__returns_none(folder: Path, content: str) -> None:
-    _file(folder).write_text(content, encoding="utf-8")
+    _file(folder).write_text(content, encoding="utf-8", newline="\n")
     assert JsonGitSyncStateRepository().get(folder) is None
 
 
@@ -205,7 +205,7 @@ def test__get__unknown_values_from_a_newer_studio__fall_back_instead_of_failing(
         "last_sync": {"id": "s", "at": "2026-10-26T12:30:05Z", "outcome": "teleported"},
         "last_fetch_at": "garbage",
     }
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     state = JsonGitSyncStateRepository().get(folder)
 
@@ -221,7 +221,7 @@ def test__get__unknown_values_from_a_newer_studio__fall_back_instead_of_failing(
 
 
 def test__save__over_a_corrupt_file__replaces_it(folder: Path) -> None:
-    _file(folder).write_text("{{{", encoding="utf-8")
+    _file(folder).write_text("{{{", encoding="utf-8", newline="\n")
     repo = JsonGitSyncStateRepository()
     repo.save(folder, _full_state())
     assert repo.get(folder) == _full_state()
@@ -253,7 +253,7 @@ def test__get__pending_written_by_older_studio_without_commits__reads_with_empty
     repo.save(folder, _full_state())
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
     raw["pending"] = {"session_id": "old", "files_total": 2, "files_open": 1}
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     pending = repo.get(folder).pending  # type: ignore[union-attr]
 
@@ -266,7 +266,7 @@ def test__get__damaged_draft__is_dropped_and_the_rest_is_kept(folder: Path) -> N
     raw = json.loads(_file(folder).read_text(encoding="utf-8"))
     raw["pending"]["drafts"]["figures/a.png"] = {"kind": "file", "choice": "sideways"}
     raw["pending"]["drafts"]["strange"] = "mine"
-    _file(folder).write_text(json.dumps(raw), encoding="utf-8")
+    _file(folder).write_text(json.dumps(raw), encoding="utf-8", newline="\n")
 
     pending = repo.get(folder).pending  # type: ignore[union-attr]
 

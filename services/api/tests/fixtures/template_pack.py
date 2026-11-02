@@ -101,7 +101,7 @@ def _write(path: Path, content: str | bytes) -> None:
     if isinstance(content, bytes):
         path.write_bytes(content)
     else:
-        path.write_text(content, encoding="utf-8")
+        path.write_text(content, encoding="utf-8", newline="\n")
 
 
 def _version(template_dir: Path, version: str, files: dict[str, Any], change: tuple[str, str]) -> None:

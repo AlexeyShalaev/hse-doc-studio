@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import sys
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -99,7 +100,7 @@ async def test__add__expiry__survives_a_reload_and_an_old_record_without_it_read
     path = _file(tmp_path)
     data = json.loads(path.read_text(encoding="utf-8"))
     del data["credentials"][1]["expires_at"]
-    path.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     assert (await repo.get(with_expiry.id)).expires_at == expiry  # type: ignore[union-attr]
     assert (await repo.get(legacy.id)).expires_at is None  # type: ignore[union-attr]
@@ -116,6 +117,9 @@ async def test__update__sets_the_expiry_without_touching_the_secret(repo: JsonGi
     assert (await repo.get_secret(credential.id)).reveal() == _CANARY
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="права доступа POSIX (0o600/0o700) на NTFS не выражаются: stat отдаёт 0o666/0o777"
+)
 async def test__add__file_is_private(repo: JsonGitCredentialRepository, tmp_path: Path) -> None:
     await repo.add(_credential(), Secret(_CANARY))
 
@@ -257,7 +261,7 @@ async def test__get_secret__ciphertext_moved_to_another_record__is_refused(
     await repo.add(second, Secret("second-secret"))
     data = json.loads(_file(tmp_path).read_text(encoding="utf-8"))
     data["credentials"][1]["secret"] = data["credentials"][0]["secret"]
-    _file(tmp_path).write_text(json.dumps(data), encoding="utf-8")
+    _file(tmp_path).write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     with pytest.raises(GitSyncError) as exc:
         await repo.get_secret(second.id)
@@ -273,7 +277,7 @@ async def test__list__malformed_record__is_skipped_and_logged_without_its_body(
     data = json.loads(_file(tmp_path).read_text(encoding="utf-8"))
     broken_id = str(uuid4())
     data["credentials"].append({"id": broken_id, "kind": "nope", "secret": "hs1:k1:" + _CANARY})
-    _file(tmp_path).write_text(json.dumps(data), encoding="utf-8")
+    _file(tmp_path).write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     with structlog.testing.capture_logs() as logs:
         listed = await repo.list()
@@ -287,7 +291,7 @@ async def test__add__damaged_file__is_set_aside_before_writing(
     repo: JsonGitCredentialRepository, tmp_path: Path
 ) -> None:
     _file(tmp_path).parent.mkdir(parents=True)
-    _file(tmp_path).write_text("{ damaged", encoding="utf-8")
+    _file(tmp_path).write_text("{ damaged", encoding="utf-8", newline="\n")
 
     assert await repo.list() == []
     await repo.add(_credential(), Secret(_CANARY))
@@ -332,7 +336,7 @@ async def test__mark__read_error_or_damaged_file__is_skipped_without_touching_th
         await repo.mark(credential.id, CredentialStatus.ok, used_at=_NOW)
     assert _file(tmp_path).read_bytes() == before
 
-    _file(tmp_path).write_text("{ damaged", encoding="utf-8")
+    _file(tmp_path).write_text("{ damaged", encoding="utf-8", newline="\n")
     await repo.mark(credential.id, CredentialStatus.ok, used_at=_NOW)
     assert list(_file(tmp_path).parent.iterdir()) == [_file(tmp_path)]
     assert _file(tmp_path).read_text(encoding="utf-8") == "{ damaged"

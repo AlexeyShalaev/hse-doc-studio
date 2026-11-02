@@ -213,7 +213,7 @@ async def test__real_container__office_convert_job__runs_through_the_registered_
 async def test__real_container__pack_job__runs_through_the_registered_handler(tmp_path: Path) -> None:
     workspace = tmp_path / "project"
     workspace.mkdir()
-    (workspace / "a.txt").write_text("hello", encoding="utf-8")
+    (workspace / "a.txt").write_text("hello", encoding="utf-8", newline="\n")
     payload = PackSubmissionPayload(
         base_name="final-x",
         profile_id="final",

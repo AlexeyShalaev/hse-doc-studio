@@ -120,9 +120,11 @@ def test__render__jinja2_template__substitutes_placeholders(tmp_path: Path) -> N
     dest_dir.mkdir()
 
     (version_dir / "tz").mkdir()
-    (version_dir / "tz" / "tz.tex").write_text("\\title{{ '{' }}{{ project.name }}{{ '}' }}", encoding="utf-8")
+    (version_dir / "tz" / "tz.tex").write_text(
+        "\\title{{ '{' }}{{ project.name }}{{ '}' }}", encoding="utf-8", newline="\n"
+    )
     # Simpler: just write a plain Jinja expression in a .tex file
-    (version_dir / "main.tex").write_text("{{ project.name }}", encoding="utf-8")
+    (version_dir / "main.tex").write_text("{{ project.name }}", encoding="utf-8", newline="\n")
 
     project = _make_project(tmp_path)
     ctx = build_context(project, _make_pack_info(), _make_template_info(), _make_version())
@@ -165,7 +167,7 @@ def test__render__document_with_variants__copies_all_variant_files(tmp_path: Pat
     (version_dir / "pres" / "pptx").mkdir(parents=True)
     (version_dir / "pres" / "reveal").mkdir(parents=True)
     (version_dir / "pres" / "pptx" / "slides.pptx").write_bytes(b"pptx-content")
-    (version_dir / "pres" / "reveal" / "index.html").write_text("<html></html>", encoding="utf-8")
+    (version_dir / "pres" / "reveal" / "index.html").write_text("<html></html>", encoding="utf-8", newline="\n")
 
     pptx_variant = DocumentVariant(
         id="pptx",
@@ -217,11 +219,11 @@ def test__render__skip_existing__preserves_user_edits_and_fills_missing_files(tm
     dest_dir.mkdir()
 
     (version_dir / "tz").mkdir()
-    (version_dir / "tz" / "tz.tex").write_text("pack content", encoding="utf-8")
-    (version_dir / "tz" / "extra.tex").write_text("{{ project.name }}", encoding="utf-8")
+    (version_dir / "tz" / "tz.tex").write_text("pack content", encoding="utf-8", newline="\n")
+    (version_dir / "tz" / "extra.tex").write_text("{{ project.name }}", encoding="utf-8", newline="\n")
 
     (dest_dir / "tz").mkdir()
-    (dest_dir / "tz" / "tz.tex").write_text("edited by student", encoding="utf-8")
+    (dest_dir / "tz" / "tz.tex").write_text("edited by student", encoding="utf-8", newline="\n")
 
     project = _make_project(tmp_path)
     ctx = build_context(project, _make_pack_info(), _make_template_info(), _make_version())

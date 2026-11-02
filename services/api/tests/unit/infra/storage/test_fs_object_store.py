@@ -74,7 +74,7 @@ async def test__presign__fs_gives_no_links(store: FsObjectStore) -> None:
 
 async def test__check__unwritable_root__store_error(tmp_path: Path) -> None:
     blocker = tmp_path / "file"
-    blocker.write_text("x")
+    blocker.write_text("x", encoding="utf-8", newline="\n")
     store = FsObjectStore(blocker / "objects", max_object_bytes=10)
 
     with pytest.raises(ObjectStoreError):

@@ -21,7 +21,7 @@ def _clone(live: Live, project: str, token: str, name: str = "work") -> Path:
 def _commit(work: Path, path: str, content: str, message: str = "edit") -> None:
     target = work / path
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
     git("add", "-A", cwd=work)
     git("commit", "-q", "-m", message, cwd=work)
 
@@ -114,7 +114,7 @@ def test__push__web_edits_are_snapshotted_first_then_client_merges(live: Live) -
     assert saved.status_code in {200, 204}, saved.text
     # Правка, ещё не попавшая в историю (частые правки сворачиваются в один снимок позже): прямо в папке проекта.
     (folder,) = [p for p in (live.tmp / "data").rglob(project) if (p / ".hse-studio" / "git").is_dir()]
-    (folder / "notes" / "draft.txt").write_text("draft", encoding="utf-8")
+    (folder / "notes" / "draft.txt").write_text("draft", encoding="utf-8", newline="\n")
 
     _commit(work, "notes/git.txt", "git")
     stale = git("push", "origin", "HEAD", cwd=work, check=False)

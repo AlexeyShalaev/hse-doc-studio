@@ -612,7 +612,9 @@ async def test__compile__pptx_preview__uses_active_image(
     # Сборка конвертирует на АКТИВНОМ образе из настроек (в отличие от загрузки и упаковки, где образ не передаётся).
     active_image = "gotenberg/gotenberg:9-active"
     (tmp_path / "data").mkdir(exist_ok=True)
-    (tmp_path / "data" / "config.json").write_text(json.dumps({"office_convert_image": active_image}), encoding="utf-8")
+    (tmp_path / "data" / "config.json").write_text(
+        json.dumps({"office_convert_image": active_image}), encoding="utf-8", newline="\n"
+    )
     convert = mocker.patch.object(OfficeConvertManager, "convert_to_pdf", autospec=True, return_value=_pdf_bytes(2))
 
     record = await _compile(test_app, project, "presentation")

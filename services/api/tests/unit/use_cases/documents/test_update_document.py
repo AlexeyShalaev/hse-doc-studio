@@ -40,10 +40,12 @@ def _switch_env(tmp_path: Path) -> tuple[Project, MagicMock]:
     (files_dir / "pres" / "pptx").mkdir(parents=True)
     (files_dir / "pres" / "pptx" / "presentation.pptx").write_bytes(b"pack pptx")
     (files_dir / "pres" / "beamer").mkdir()
-    (files_dir / "pres" / "beamer" / "pres.tex").write_text("pack beamer {{ project.name }}", encoding="utf-8")
+    (files_dir / "pres" / "beamer" / "pres.tex").write_text(
+        "pack beamer {{ project.name }}", encoding="utf-8", newline="\n"
+    )
     (files_dir / "common").mkdir()
-    (files_dir / "common" / "preamble.tex").write_text("pack preamble", encoding="utf-8")
-    (files_dir / ".latexmkrc").write_text("pack rc", encoding="utf-8")
+    (files_dir / "common" / "preamble.tex").write_text("pack preamble", encoding="utf-8", newline="\n")
+    (files_dir / ".latexmkrc").write_text("pack rc", encoding="utf-8", newline="\n")
 
     project = make_project(
         folder=tmp_path / "project",

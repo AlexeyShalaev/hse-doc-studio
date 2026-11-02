@@ -150,10 +150,11 @@ def test__filter_by_document_scope__own_and_imported_files__kept_others_dropped(
     (tmp_path / "vkr" / "main.tex").write_text(
         "\\documentclass{article}\n\\input{sections/intro}\n\\begin{document}\nhi\n\\end{document}\n",
         encoding="utf-8",
+        newline="\n",
     )
-    (tmp_path / "vkr" / "sections" / "intro.tex").write_text("intro body\n", encoding="utf-8")
+    (tmp_path / "vkr" / "sections" / "intro.tex").write_text("intro body\n", encoding="utf-8", newline="\n")
     (tmp_path / "tp").mkdir()
-    (tmp_path / "tp" / "tp.tex").write_text("other document\n", encoding="utf-8")
+    (tmp_path / "tp" / "tp.tex").write_text("other document\n", encoding="utf-8", newline="\n")
 
     version = _version_with_rule(CheckSeverity.err)
     doc = make_document("vkr")
@@ -175,7 +176,7 @@ def test__filter_by_document_scope__non_tex_project_artifact__kept(tmp_path: Pat
     # document scope, otherwise the tab shows nothing while the doc status
     # still says «с замечаниями».
     (tmp_path / "vkr").mkdir(parents=True)
-    (tmp_path / "vkr" / "main.tex").write_text("\\begin{document}hi\\end{document}\n", encoding="utf-8")
+    (tmp_path / "vkr" / "main.tex").write_text("\\begin{document}hi\\end{document}\n", encoding="utf-8", newline="\n")
 
     version = _version_with_rule(CheckSeverity.err)
     doc = make_document("vkr")

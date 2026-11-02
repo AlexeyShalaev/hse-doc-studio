@@ -33,7 +33,7 @@ def test__git_args__hardened_hidden_refs_and_stateless_rpc() -> None:
     args = git_args(GitService.upload_pack, Path("/p/.hse-studio/git"), advertise=True)
 
     assert args[0] == "git"
-    assert args[-3:] == ["--stateless-rpc", "--advertise-refs", "/p/.hse-studio/git"]
+    assert args[-3:] == ["--stateless-rpc", "--advertise-refs", str(Path("/p/.hse-studio/git"))]
     assert "upload-pack" in args
     for value in (
         "uploadpack.hideRefs=refs/hse",

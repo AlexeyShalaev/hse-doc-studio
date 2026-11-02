@@ -654,7 +654,7 @@ async def test__tick__one_broken_project__does_not_stop_the_others(
         await _age_fetch(stack, item, timedelta(hours=1))
     seed_remote(other_remote, {"a.txt": "x"}, message="коллега")
     broken = (Path(project["folder"]) / ".hse-studio" / "project.json").read_bytes()
-    (Path(project["folder"]) / ".hse-studio" / "project.json").write_text("{не json", encoding="utf-8")
+    (Path(project["folder"]) / ".hse-studio" / "project.json").write_text("{не json", encoding="utf-8", newline="\n")
     try:
         result = await _tick(stack, Clock())
     finally:
@@ -878,7 +878,7 @@ async def test__tick__untrusted_store__is_not_retried_on_every_tick(
 ) -> None:
     await _connected(client, project, remote)
     (_store(project) / "hooks").mkdir(exist_ok=True)
-    (_store(project) / "hooks" / "post-checkout").write_text("#!/bin/sh\n", encoding="utf-8")
+    (_store(project) / "hooks" / "post-checkout").write_text("#!/bin/sh\n", encoding="utf-8", newline="\n")
     await _age_fetch(stack, project, _PERIOD_PASSED)
     clock = Clock()
     guard_calls = 0

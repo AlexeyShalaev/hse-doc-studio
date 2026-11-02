@@ -105,7 +105,7 @@ async def test__session__server_down__reports_offline(tmp_path: Path) -> None:
 
 async def test__session__revoked_token__raises_unauthorized(tmp_path: Path) -> None:
     (tmp_path / IDENTITY_FILE).write_text(
-        '{"api_url": "http://api", "runner_id": "r1", "runner_token": "hsrn_revoked"}', encoding="utf-8"
+        '{"api_url": "http://api", "runner_id": "r1", "runner_token": "hsrn_revoked"}', encoding="utf-8", newline="\n"
     )
     factory = runner_session_factory(
         cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(FakeRunnerState()))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -114,6 +115,9 @@ def test__write_output__long_target_name__temp_name_does_not_grow_with_it(
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="ошибка записи моделируется chmod каталога, на Windows он не запрещает запись"
+)
 def test__write_output__os_error__names_the_target_not_the_temp_file(tmp_path: Path) -> None:
     (tmp_path / "out").mkdir()
     (tmp_path / "out").chmod(0o500)

@@ -248,7 +248,7 @@ async def test__probe__server_certificate_changed_after_pinning__is_pin_mismatch
     await _put_settings(test_app, host="127.0.0.1", port=tls_server.port, pinned_fingerprint=real)
     path = _data_dir(tmp_path) / "git" / "host_settings.json"
     other = "SHA256:" + "B" * 43
-    path.write_text(path.read_text(encoding="utf-8").replace(real, other), encoding="utf-8")
+    path.write_text(path.read_text(encoding="utf-8").replace(real, other), encoding="utf-8", newline="\n")
     before = len([r for r in tls_server.requests if "paper.git" in r.path])
 
     probe = await _probe(test_app, _url(tls_server))

@@ -87,7 +87,7 @@ async def test__api__write_ci__edited_file__needs_overwrite_to_be_replaced(
 ) -> None:
     target = Path(project["folder"]) / _GITHUB_PATH
     target.parent.mkdir(parents=True)
-    target.write_text("name: mine\n", encoding="utf-8")
+    target.write_text("name: mine\n", encoding="utf-8", newline="\n")
 
     preview = await test_app.post(_url(project, "preview"), json=_BODY)
     kept = await test_app.post(_url(project, "write"), json={**_BODY, "overwrite": False})

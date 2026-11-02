@@ -62,7 +62,7 @@ def _leaf(
 def _write(directory: Path, name: str, cert: x509.Certificate, key: ec.EllipticCurvePrivateKey) -> tuple[Path, Path]:
     directory.mkdir(parents=True, exist_ok=True)
     cert_file, key_file = directory / f"{name}.crt", directory / f"{name}.key"
-    cert_file.write_text(_pem(cert), encoding="ascii")
+    cert_file.write_text(_pem(cert), encoding="ascii", newline="\n")
     key_file.write_bytes(
         key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
     )

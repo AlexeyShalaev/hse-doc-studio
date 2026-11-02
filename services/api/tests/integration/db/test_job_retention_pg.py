@@ -103,7 +103,7 @@ async def test__rows__old_applied_terminal_jobs_and_logs_removed(
     pending = await w.job("failed")
     log = w.root / "logs" / str(old)
     log.mkdir(parents=True)
-    (log / "1.log").write_text("x")
+    (log / "1.log").write_text("x", encoding="utf-8", newline="\n")
 
     report = await w.sweep.run()
 

@@ -66,6 +66,7 @@ def _processes_for(marker: str) -> list[str]:
         ["ps", "-axo", "command="],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         timeout=30,
     ).stdout
@@ -532,6 +533,7 @@ def _age_the_project(studio: Studio) -> None:
             line for line in exclude.read_text(encoding="utf-8").splitlines(keepends=True) if line.strip() not in newer
         ),
         encoding="utf-8",
+        newline="\n",
     )
     for state_file in (studio.store / "hse-sync.json",):
         state_file.unlink(missing_ok=True)

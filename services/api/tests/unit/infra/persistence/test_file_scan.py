@@ -12,19 +12,19 @@ from hse_doc_studio.infra.persistence.files import LocalFileRepository
 def project(tmp_path: Path) -> Path:
     """Проект с пользовательским содержимым и служебными каталогами рядом."""
     (tmp_path / "thesis").mkdir()
-    (tmp_path / "thesis" / "thesis.tex").write_text("x", encoding="utf-8")
+    (tmp_path / "thesis" / "thesis.tex").write_text("x", encoding="utf-8", newline="\n")
     (tmp_path / "images").mkdir()  # пустая пользовательская папка
 
     # Промежуточные файлы latexmk — пересоздаются на каждой сборке.
     build = tmp_path / "thesis" / ".build" / "thesis"
     build.mkdir(parents=True)
-    (build / "thesis.aux").write_text("x", encoding="utf-8")
-    (build / "thesis.log").write_text("x", encoding="utf-8")
+    (build / "thesis.aux").write_text("x", encoding="utf-8", newline="\n")
+    (build / "thesis.log").write_text("x", encoding="utf-8", newline="\n")
 
     # Служебное хранилище Студии: git версий, записи сборок.
     studio = tmp_path / ".hse-studio" / "git"
     studio.mkdir(parents=True)
-    (studio / "HEAD").write_text("x", encoding="utf-8")
+    (studio / "HEAD").write_text("x", encoding="utf-8", newline="\n")
     return tmp_path
 
 

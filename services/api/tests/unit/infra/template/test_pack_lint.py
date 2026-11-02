@@ -27,8 +27,7 @@ def _real_version_dirs() -> list[Path]:
 def _write_version(version_dir: Path, manifest: dict) -> None:
     (version_dir / "files").mkdir(parents=True, exist_ok=True)
     (version_dir / "version.yaml").write_text(
-        yaml.safe_dump(manifest, allow_unicode=True),
-        encoding="utf-8",
+        yaml.safe_dump(manifest, allow_unicode=True), encoding="utf-8", newline="\n"
     )
 
 

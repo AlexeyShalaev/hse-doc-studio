@@ -36,6 +36,7 @@ def _git(
         env={**_ENV, "HOME": str(cwd), **(env or {})},
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     if check:
@@ -51,10 +52,10 @@ def store(tmp_path: Path) -> tuple[Path, Path]:
     store_args = ["--git-dir", str(git_dir), "--work-tree", str(folder)]
     _git(*store_args, "init", "-q", "-b", "master", cwd=tmp_path)
     (git_dir / "info").mkdir(exist_ok=True)
-    (git_dir / "info" / "exclude").write_text(".hse-studio/git/\n", encoding="utf-8")
+    (git_dir / "info" / "exclude").write_text(".hse-studio/git/\n", encoding="utf-8", newline="\n")
     for path in ("ivanov/main.tex", "petrov/main.tex", "shared/intro.tex"):
         (folder / path).parent.mkdir(parents=True, exist_ok=True)
-        (folder / path).write_text(path, encoding="utf-8")
+        (folder / path).write_text(path, encoding="utf-8", newline="\n")
     _git(*store_args, "add", "-A", cwd=tmp_path)
     _git(*store_args, "commit", "-q", "-m", "init", cwd=tmp_path)
     _git("clone", "-q", str(git_dir), "work", cwd=tmp_path)
@@ -85,7 +86,7 @@ def _push(
 
 def _commit(work: Path, path: str, content: str = "x") -> None:
     (work / path).parent.mkdir(parents=True, exist_ok=True)
-    (work / path).write_text(content, encoding="utf-8")
+    (work / path).write_text(content, encoding="utf-8", newline="\n")
     _git("add", "-A", cwd=work)
     _git("commit", "-q", "-m", path, cwd=work)
 
@@ -171,7 +172,7 @@ def test__push__owner_large_file_and_new_branch_refused(store: tuple[Path, Path]
 
 def test__push__dirty_folder_conflict__rejected_by_checkout_hook(store: tuple[Path, Path]) -> None:
     folder, work = store
-    (folder / "ivanov" / "main.tex").write_text("правка в браузере", encoding="utf-8")
+    (folder / "ivanov" / "main.tex").write_text("правка в браузере", encoding="utf-8", newline="\n")
     _commit(work, "ivanov/main.tex", "правка из git")
 
     result = _push(folder, work, Grant(Role.owner), "HEAD:master")

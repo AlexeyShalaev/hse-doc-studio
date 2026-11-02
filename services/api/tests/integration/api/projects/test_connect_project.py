@@ -17,7 +17,7 @@ async def test__connect__nonexistent_folder__404(test_app: AsyncClient, tmp_path
 
 async def test__connect__path_is_file__400(test_app: AsyncClient, tmp_path: Path) -> None:
     file_path = tmp_path / "not-a-folder.txt"
-    file_path.write_text("hi", encoding="utf-8")
+    file_path.write_text("hi", encoding="utf-8", newline="\n")
 
     resp = await test_app.post("/api/v1/projects/connect", json={"folder": str(file_path)})
 

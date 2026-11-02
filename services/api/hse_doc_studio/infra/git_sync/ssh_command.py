@@ -46,7 +46,7 @@ def build_ssh_command(ssh_binary: str, *, key_file: Path, known_hosts: Path) -> 
         "IdentitiesOnly=yes",
         "BatchMode=yes",
         "StrictHostKeyChecking=yes",
-        f"UserKnownHostsFile={_config_value(str(known_hosts))}",
+        f"UserKnownHostsFile={_config_value(known_hosts.as_posix())}",
         f"GlobalKnownHostsFile={os.devnull}",
         "IdentityAgent=none",
         "ProxyCommand=none",
@@ -63,7 +63,7 @@ def build_ssh_command(ssh_binary: str, *, key_file: Path, known_hosts: Path) -> 
         f"ServerAliveInterval={_ALIVE_INTERVAL_S}",
         f"ServerAliveCountMax={_ALIVE_COUNT}",
     ]
-    argv = [ssh_binary, "-F", os.devnull, "-i", _escape_percent(str(key_file))]
+    argv = [ssh_binary, "-F", os.devnull, "-i", _escape_percent(key_file.as_posix())]
     for option in options:
         argv += ["-o", option]
     return shlex.join(argv)

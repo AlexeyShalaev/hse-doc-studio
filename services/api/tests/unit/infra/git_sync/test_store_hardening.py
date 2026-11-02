@@ -43,7 +43,7 @@ def _plant_hook(repo: Repo, name: str, canary: Path) -> Path:
     hooks = repo.folder / ".hse-studio" / "git" / "hooks"
     hooks.mkdir(exist_ok=True)
     hook = hooks / name
-    hook.write_text(_canary_script(canary), encoding="utf-8")
+    hook.write_text(_canary_script(canary), encoding="utf-8", newline="\n")
     hook.chmod(hook.stat().st_mode | stat.S_IXUSR)
     return hook
 
@@ -174,7 +174,7 @@ def test__audit__invalid_values_of_allowed_keys__are_flagged(repo: Repo, key: st
 
 
 def test__audit__garbage_config__is_unreadable(repo: Repo) -> None:
-    _config(repo).write_text("[core\nthis is not = a config\n\x00\n", encoding="utf-8")
+    _config(repo).write_text("[core\nthis is not = a config\n\x00\n", encoding="utf-8", newline="\n")
     assert (StoreFindingKind.config_unreadable, "config") in _subjects(repo)
 
 
@@ -262,7 +262,7 @@ def test__harden__keeps_the_last_value_of_a_single_valued_key(repo: Repo) -> Non
 
 
 def test__harden__unreadable_config__is_replaced_by_a_working_one(repo: Repo) -> None:
-    _config(repo).write_text("[core\nbroken\n", encoding="utf-8")
+    _config(repo).write_text("[core\nbroken\n", encoding="utf-8", newline="\n")
     cleaned = GitStoreGuard().harden(repo.folder)
     assert cleaned[0].kind is StoreFindingKind.config_unreadable
     assert GitStoreGuard().audit(repo.folder).trusted
@@ -290,7 +290,7 @@ def test__harden__replaces_a_hooks_symlink_with_an_empty_directory(repo: Repo, t
     hooks = repo.folder / ".hse-studio" / "git" / "hooks"
     target = tmp_path / "elsewhere"
     target.mkdir()
-    (target / "pre-commit").write_text("#!/bin/sh\n", encoding="utf-8")
+    (target / "pre-commit").write_text("#!/bin/sh\n", encoding="utf-8", newline="\n")
     for child in hooks.iterdir():
         child.unlink()
     hooks.rmdir()
@@ -315,7 +315,7 @@ def test__harden__clean_store__changes_nothing(repo: Repo) -> None:
 def test__hostile_store__audit_and_harden_never_execute_the_canary(repo: Repo, tmp_path: Path) -> None:
     canary = tmp_path / "canary"
     fsmonitor = tmp_path / "fsmonitor.sh"
-    fsmonitor.write_text(_canary_script(canary) + "printf '\\0'\n", encoding="utf-8")
+    fsmonitor.write_text(_canary_script(canary) + "printf '\\0'\n", encoding="utf-8", newline="\n")
     fsmonitor.chmod(0o755)
     for name in ("pre-commit", "post-commit", "reference-transaction"):
         _plant_hook(repo, name, canary)
@@ -341,7 +341,7 @@ def _foreign_repo_with_uploadpack(base: Path, canary: Path) -> Path:
     foreign = base / "foreign.git"
     subprocess.run(["git", "init", "--bare", "-q", str(foreign)], check=True)  # noqa: S603, S607
     script = base / "uploadpack.sh"
-    script.write_text(_canary_script(canary), encoding="utf-8")
+    script.write_text(_canary_script(canary), encoding="utf-8", newline="\n")
     script.chmod(0o755)
     with (foreign / "config").open("a", encoding="utf-8") as fh:
         fh.write(f'[remote "origin"]\n\tuploadpack = {script}\n')
@@ -350,11 +350,11 @@ def _foreign_repo_with_uploadpack(base: Path, canary: Path) -> Path:
 
 def _replace_store(repo: Repo, replacement: Path, *, symlink: bool) -> Path:
     git_dir = repo.folder / ".hse-studio" / "git"
-    shutil.rmtree(git_dir)
+    shutil.rmtree(git_dir, onexc=lambda func, target, _exc: (os.chmod(target, 0o700), func(target)))  # git: read-only
     if symlink:
         git_dir.symlink_to(replacement, target_is_directory=True)
     else:
-        git_dir.write_text(f"gitdir: {replacement}\n", encoding="utf-8")
+        git_dir.write_text(f"gitdir: {replacement}\n", encoding="utf-8", newline="\n")
     return git_dir
 
 
@@ -401,7 +401,7 @@ def test__audit__hse_studio_folder_is_a_symlink__is_untrusted(repo: Repo, tmp_pa
 
 def test__harden__symlinked_config_temp_name__does_not_write_outside_the_store(repo: Repo, tmp_path: Path) -> None:
     victim = tmp_path / "victim"
-    victim.write_text("precious", encoding="utf-8")
+    victim.write_text("precious", encoding="utf-8", newline="\n")
     (repo.folder / ".hse-studio" / "git" / "config.hse-new").symlink_to(victim)
     _append(repo, "[core]\n\tfsmonitor = /tmp/pwn.sh\n")
 

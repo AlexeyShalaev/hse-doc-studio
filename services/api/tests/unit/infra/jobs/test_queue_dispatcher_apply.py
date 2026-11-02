@@ -141,7 +141,7 @@ def rig(tmp_path: Path) -> Rig:
     volume = LocalDiskProjectVolume(tmp_path / "volume")
     folder = volume.allocate(_PROJECT)
     (folder / "tz").mkdir()
-    (folder / "tz" / "main.tex").write_text("x")
+    (folder / "tz" / "main.tex").write_text("x", encoding="utf-8", newline="\n")
     queue = InMemoryJobQueue()
     journal = Journal()
     built = Rig(
